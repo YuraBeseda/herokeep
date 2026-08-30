@@ -14,3 +14,4 @@ export * from './content/index.ts';
 export * from './content/choices.ts';
 export * from './content/refs.ts';
 export * from './content/validate.ts';
+export * from './i18n/localizer.ts';
