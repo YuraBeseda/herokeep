@@ -1,0 +1,27 @@
+{
+  "name": "@hk/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -b tsconfig.build.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hk/protocol": "workspace:*",
+    "semver": "catalog:"
+  },
+  "devDependencies": {
+    "@types/semver": "catalog:"
+  }
+}

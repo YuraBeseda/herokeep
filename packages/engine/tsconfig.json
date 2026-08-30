@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "..",
+    "erasableSyntaxOnly": false,
+    "paths": { "@hk/protocol": ["../protocol/src/index.ts"] }
+  },
+  "include": ["src", "test", "vitest.config.ts", "../protocol/src"]
+}

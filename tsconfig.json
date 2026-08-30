@@ -1,5 +1,5 @@
 {
   "compilerOptions": { "noEmit": true },
   "include": ["vitest.config.ts"],
-  "references": [{ "path": "packages/protocol/tsconfig.build.json" }]
+  "references": [{ "path": "packages/protocol/tsconfig.build.json" }, { "path": "packages/engine/tsconfig.build.json" }]
 }
