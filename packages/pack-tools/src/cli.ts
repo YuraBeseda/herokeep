@@ -2,6 +2,7 @@
 import { parseArgs } from 'node:util';
 import { runValidate } from './commands/validate.ts';
 import { runBuild } from './commands/build.ts';
+import { runDiff } from './commands/diff.ts';
 import type { CommandResult } from './result.ts';
 
 const USAGE = [
@@ -34,6 +35,16 @@ export function main(argv: string[]): CommandResult {
       const dir = positionals[0];
       if (!dir) return { exitCode: 2, lines: [USAGE] };
       return runBuild({ dir, ...(values.out !== undefined && { out: values.out }), ...(values.packs !== undefined && { packsDir: values.packs }) });
+    }
+    if (command === 'diff') {
+      const { positionals } = parseArgs({
+        args: rest,
+        allowPositionals: true,
+      });
+      const a = positionals[0];
+      const b = positionals[1];
+      if (!a || !b) return { exitCode: 2, lines: [USAGE] };
+      return runDiff({ a, b });
     }
     return { exitCode: 2, lines: [USAGE] };
   } catch (e) {
