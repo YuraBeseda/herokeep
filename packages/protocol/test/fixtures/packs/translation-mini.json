@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "id": "core-mini-ru",
+  "version": "1.0.0",
+  "kind": "translation",
+  "system": "mini",
+  "locale": "ru",
+  "name": "Mini core — Russian",
+  "translates": { "id": "core-mini", "range": "^1" },
+  "strings": {
+    "spell/fireball": { "name": "Огненный шар", "description": "Яркая вспышка." },
+    "class/fighter": { "name": "Воин" },
+    "class/fighter@1/fighting-style": { "prompt": "Боевой стиль" }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "id": "homebrew-mini",
+  "version": "1.2.0",
+  "kind": "content",
+  "system": "mini",
+  "name": "Homebrew mini (test)",
+  "dependencies": [{ "id": "core-mini", "range": "^1" }],
+  "entities": [
+    {
+      "id": "homebrew-mini:feature/cat-reflexes",
+      "type": "feature",
+      "name": "Cat Reflexes",
+      "description": "Bonus to initiative.",
+      "effects": [{ "type": "initiative.bonus", "value": 2 }]
+    },
+    {
+      "id": "homebrew-mini:species/catfolk",
+      "type": "species",
+      "name": "Catfolk",
+      "size": "medium",
+      "speed": 30,
+      "creatureType": "humanoid",
+      "grants": [{ "feature": "core-mini:feature/darkvision" }, { "feature": "homebrew-mini:feature/cat-reflexes" }]
+    }
+  ],
+  "overrides": [
+    {
+      "target": "core-mini:class/fighter",
+      "patch": [
+        { "op": "add", "path": "/levels/0/grants/-", "value": { "feature": "homebrew-mini:feature/cat-reflexes" } }
+      ]
+    }
+  ],
+  "i18n": { "ru": { "species/catfolk": { "name": "Кошколюд" } } }
+}

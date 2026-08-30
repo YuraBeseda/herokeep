@@ -1,0 +1,284 @@
+{
+  "format": 1,
+  "id": "core-mini",
+  "version": "1.0.0",
+  "kind": "core",
+  "system": "mini",
+  "name": "Mini core (test)",
+  "license": "CC-BY-4.0",
+  "locale": "en",
+  "entities": [
+    {
+      "id": "core-mini:system/mini",
+      "type": "system",
+      "name": "Mini system",
+      "abilities": [
+        { "id": "str", "name": "Strength" },
+        { "id": "dex", "name": "Dexterity" },
+        { "id": "con", "name": "Constitution" },
+        { "id": "int", "name": "Intelligence" },
+        { "id": "wis", "name": "Wisdom" },
+        { "id": "cha", "name": "Charisma" }
+      ],
+      "skills": [
+        { "id": "athletics", "name": "Athletics", "ability": "str" },
+        { "id": "stealth", "name": "Stealth", "ability": "dex" },
+        { "id": "perception", "name": "Perception", "ability": "wis" }
+      ],
+      "saves": ["str", "dex", "con", "int", "wis", "cha"],
+      "compositionSlots": [
+        { "id": "species", "entityType": "species", "count": 1, "at": "creation" },
+        { "id": "background", "entityType": "background", "count": 1, "at": "creation" },
+        { "id": "class", "entityType": "class", "count": "many", "at": "levelUp" }
+      ],
+      "restTypes": ["shortRest", "longRest"],
+      "tables": {
+        "xp": [0, 300, 900, 2700, 6500],
+        "proficiency": [2, 2, 2, 2, 3],
+        "spellSlots": { "full": [[2], [3], [4, 2], [4, 3], [4, 3, 2]], "none": [[], [], [], [], []] }
+      },
+      "currencies": [
+        { "id": "cp", "name": "Copper", "inCopper": 1 },
+        { "id": "gp", "name": "Gold", "inCopper": 100 }
+      ],
+      "damageTypes": ["slashing", "piercing", "bludgeoning", "fire", "cold"],
+      "sizes": ["small", "medium"],
+      "conditions": ["core-mini:condition/prone", "core-mini:condition/exhaustion"],
+      "restRules": {
+        "shortRest": { "allowHitDice": true },
+        "longRest": {
+          "hpToMax": true,
+          "restoreAllSlots": true,
+          "hitDiceRegainDivisor": 2,
+          "hitDiceRegainMin": 1,
+          "exhaustionReduce": 1
+        }
+      },
+      "hpRules": { "firstLevelMaxHitDie": true, "averageRounding": "up" },
+      "attunementMax": 3,
+      "abilityGeneration": {
+        "standardArray": [15, 14, 13, 12, 10, 8],
+        "pointBuy": {
+          "budget": 27,
+          "min": 8,
+          "max": 15,
+          "costs": { "8": 0, "9": 1, "10": 2, "11": 3, "12": 4, "13": 5, "14": 7, "15": 9 }
+        },
+        "roll": "4d6kh3",
+        "manual": { "min": 3, "max": 18 }
+      },
+      "choices": [
+        {
+          "id": "core-mini:system/mini@0/ability-scores",
+          "prompt": "Ability scores",
+          "at": { "kind": "creation" },
+          "pick": { "abilityGeneration": true }
+        }
+      ]
+    },
+    { "id": "core-mini:condition/prone", "type": "condition", "name": "Prone", "description": "You are lying down." },
+    { "id": "core-mini:condition/exhaustion", "type": "condition", "name": "Exhaustion", "levels": 6 },
+    { "id": "core-mini:language/common", "type": "language", "name": "Common" },
+    { "id": "core-mini:skill/stealth", "type": "skill", "name": "Stealth", "ability": "dex" },
+    {
+      "id": "core-mini:feature/darkvision",
+      "type": "feature",
+      "name": "Darkvision",
+      "description": "See in dim light within 60 feet.",
+      "effects": [{ "type": "sense.grant", "sense": "darkvision", "range": 60 }]
+    },
+    {
+      "id": "core-mini:species/elf",
+      "type": "species",
+      "name": "Elf",
+      "size": "medium",
+      "speed": 30,
+      "creatureType": "humanoid",
+      "grants": [{ "feature": "core-mini:feature/darkvision" }],
+      "effects": [{ "type": "language.grant", "language": "core-mini:language/common" }]
+    },
+    {
+      "id": "core-mini:feat/alert",
+      "type": "feat",
+      "name": "Alert",
+      "category": "origin",
+      "effects": [{ "type": "initiative.bonus", "value": "prof" }]
+    },
+    {
+      "id": "core-mini:feat/defense",
+      "type": "feat",
+      "name": "Defense",
+      "category": "fightingStyle",
+      "tags": ["fighting-style"],
+      "effects": [
+        { "type": "ac.bonus", "value": 1, "key": "defense", "when": { "not": { "armor": { "category": ["none"] } } } }
+      ]
+    },
+    {
+      "id": "core-mini:feat/archery",
+      "type": "feat",
+      "name": "Archery",
+      "category": "fightingStyle",
+      "tags": ["fighting-style"],
+      "effects": [{ "type": "attack.bonus", "value": 2, "filter": { "weapon": "ranged" } }]
+    },
+    {
+      "id": "core-mini:background/acolyte",
+      "type": "background",
+      "name": "Acolyte",
+      "abilityScores": ["int", "wis", "cha"],
+      "originFeat": "core-mini:feat/alert",
+      "skillProficiencies": ["perception"]
+    },
+    {
+      "id": "core-mini:feature/second-wind",
+      "type": "feature",
+      "name": "Second Wind",
+      "description": "Regain hit points.",
+      "effects": [
+        { "type": "resource.define", "id": "second-wind", "name": "Second Wind", "max": "2", "reset": "shortRest" }
+      ]
+    },
+    {
+      "id": "core-mini:feature/action-surge",
+      "type": "feature",
+      "name": "Action Surge",
+      "description": "One extra action.",
+      "effects": [
+        {
+          "type": "action.define",
+          "id": "action-surge",
+          "name": "Action Surge",
+          "kind": "free",
+          "description": "Take one additional action.",
+          "uses": { "count": "1", "per": "shortRest" }
+        }
+      ]
+    },
+    {
+      "id": "core-mini:feature/extra-attack",
+      "type": "feature",
+      "name": "Extra Attack",
+      "description": "Attack twice.",
+      "effects": [{ "type": "extraAttack.set", "count": 2 }]
+    },
+    {
+      "id": "core-mini:feature/improved-critical",
+      "type": "feature",
+      "name": "Improved Critical",
+      "description": "Crit on 19–20.",
+      "effects": [{ "type": "tag.grant", "tag": "improved-critical" }]
+    },
+    {
+      "id": "core-mini:item/longsword",
+      "type": "item",
+      "name": "Longsword",
+      "category": "weapon",
+      "cost": { "amount": 15, "currency": "gp" },
+      "weight": 3,
+      "weapon": {
+        "kind": "melee",
+        "category": "martial",
+        "damage": "1d8",
+        "damageType": "slashing",
+        "versatile": "1d10",
+        "properties": ["versatile"],
+        "mastery": "sap"
+      }
+    },
+    {
+      "id": "core-mini:item/chain-mail",
+      "type": "item",
+      "name": "Chain Mail",
+      "category": "armor",
+      "cost": { "amount": 75, "currency": "gp" },
+      "weight": 55,
+      "armor": { "category": "heavy", "ac": 16, "strength": 13, "stealthDisadvantage": true }
+    },
+    {
+      "id": "core-mini:item/shield",
+      "type": "item",
+      "name": "Shield",
+      "category": "shield",
+      "weight": 6,
+      "shield": { "ac": 2 }
+    },
+    {
+      "id": "core-mini:spell/fireball",
+      "type": "spell",
+      "name": "Fireball",
+      "description": "A bright streak flashes.",
+      "level": 3,
+      "school": "evocation",
+      "castingTime": { "value": 1, "unit": "action" },
+      "range": { "kind": "feet", "distance": 150 },
+      "components": { "v": true, "s": true, "m": true, "materialText": "a ball of bat guano and sulfur" },
+      "duration": { "kind": "instantaneous" },
+      "concentration": false,
+      "ritual": false,
+      "classes": ["wizard"],
+      "damage": { "dice": "8d6", "type": "fire" },
+      "save": "dex"
+    },
+    {
+      "id": "core-mini:class/fighter",
+      "type": "class",
+      "name": "Fighter",
+      "hitDie": 10,
+      "primaryAbility": ["str", "dex"],
+      "saves": ["str", "con"],
+      "armorTraining": ["light", "medium", "heavy", "shields"],
+      "weaponProficiencies": ["simple", "martial"],
+      "skillChoice": { "from": ["athletics", "perception", "stealth"], "count": 2 },
+      "subclassLevel": 3,
+      "levels": [
+        {
+          "level": 1,
+          "grants": [{ "feature": "core-mini:feature/second-wind" }],
+          "choices": [
+            {
+              "id": "core-mini:class/fighter@1/fighting-style",
+              "prompt": "Fighting Style",
+              "at": { "kind": "classLevel", "class": "fighter", "level": 1 },
+              "pick": { "query": { "type": "feat", "tags": ["fighting-style"] } }
+            },
+            {
+              "id": "core-mini:class/fighter@1/equipment",
+              "prompt": "Starting equipment",
+              "at": { "kind": "classLevel", "class": "fighter", "level": 1 },
+              "pick": {
+                "equipmentOption": [
+                  [
+                    { "item": "core-mini:item/chain-mail" },
+                    { "item": "core-mini:item/longsword" },
+                    { "item": "core-mini:item/shield" }
+                  ]
+                ]
+              }
+            }
+          ]
+        },
+        { "level": 2, "grants": [{ "feature": "core-mini:feature/action-surge" }] },
+        {
+          "level": 3,
+          "choices": [
+            {
+              "id": "core-mini:class/fighter@3/subclass",
+              "prompt": "Subclass",
+              "at": { "kind": "classLevel", "class": "fighter", "level": 3 },
+              "pick": { "query": { "type": "subclass", "classes": ["fighter"] } }
+            }
+          ]
+        },
+        { "level": 5, "grants": [{ "feature": "core-mini:feature/extra-attack" }] }
+      ]
+    },
+    {
+      "id": "core-mini:subclass/champion",
+      "type": "subclass",
+      "name": "Champion",
+      "class": "core-mini:class/fighter",
+      "levels": [{ "level": 3, "grants": [{ "feature": "core-mini:feature/improved-critical" }] }]
+    }
+  ]
+}
