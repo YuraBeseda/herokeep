@@ -11,3 +11,5 @@ export * from './effects/validate.ts';
 export * from './content/patch.ts';
 export * from './content/deps.ts';
 export * from './content/index.ts';
+export * from './content/refs.ts';
+export * from './content/validate.ts';
