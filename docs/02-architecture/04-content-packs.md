@@ -130,7 +130,7 @@ Every effect may carry `when: Predicate` and `source` is filled by the engine.
 | `spell.listAdd` | `class, spells[]` | subclass spell lists |
 | `damage.resistance` / `damage.immunity` / `damage.vulnerability` | `types[]` | |
 | `condition.immunity` | `conditions[]` | |
-| `attack.bonus` / `damage.bonus` | `value (formula), filter {weapon?: melee\|ranged\|category\|property, spell?: true}` | Archery |
+| `attack.bonus` / `damage.bonus` | `value (formula), filter {weapon?: melee\|ranged\|any, spell?: true}` | Archery |
 | `damage.rerollBelow` | `value, filter` | Great Weapon Fighting |
 | `initiative.bonus` / `save.bonus` / `skill.bonus` / `check.bonus` | `value, target?` | |
 | `advantage.grant` / `disadvantage.impose` | `on: save.<ability>\|skill.<id>\|attack\|initiative, when?` | shown on sheet as reminders; not auto-applied to rolls without the user's tap |

@@ -18,4 +18,4 @@ Read `docs/README.md` first; decisions live in `docs/01-decisions/` (ADRs are ne
 
 ## Commands
 
-`pnpm install` · `pnpm check` · `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build`
+`pnpm install` · `pnpm check` · `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` · `pnpm --filter @hk/protocol build:schema` (after any schema change; CI fails on drift) · `node packages/pack-tools/dist/cli.js validate <pack> --packs <dir>`
