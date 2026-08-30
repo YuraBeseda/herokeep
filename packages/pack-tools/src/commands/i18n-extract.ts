@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { type Choice, type Pack, formatIssues, parsePack } from '@hk/protocol';
-import { readPackFile } from '../io.ts';
+import { type Choice, type Pack } from '@hk/protocol';
+import { loadPackFile } from '../io.ts';
 import type { CommandResult } from '../result.ts';
 
 type Strings = Record<string, Record<string, string>>;
@@ -29,7 +29,9 @@ export function collectTranslatableStrings(pack: Pack): Strings {
       } else if (ef.type === 'resource.define') add(key, `effects.${i}.name`, ef.name);
     });
     e.choices.forEach((c) => choiceStrings(out, c));
-    if (e.type === 'class' || e.type === 'subclass') e.levels.forEach((row) => row.choices.forEach((c) => choiceStrings(out, c)));
+    if (e.type === 'class' || e.type === 'subclass') {
+      e.levels.forEach((row) => row.choices.forEach((c) => choiceStrings(out, c)));
+    }
   }
   return out;
 }
@@ -63,12 +65,16 @@ export function buildTranslationSkeleton(pack: Pack, locale: string): string {
 }
 
 export function runI18nExtract(opts: { path: string; locale: string; out?: string }): CommandResult {
-  if (!existsSync(opts.path)) return { exitCode: 2, lines: [`file not found: ${opts.path}`] };
-  const r = parsePack(readPackFile(opts.path));
-  if (!r.ok) return { exitCode: 1, lines: ['schema errors:', ...formatIssues(r.issues)] };
-  const out = opts.out ?? join(dirname(opts.path), `${r.pack.id}-${opts.locale}.yaml`);
+  const loaded = loadPackFile(opts.path);
+  if (!loaded.ok) return loaded.result;
+  const pack = loaded.pack;
+  const out = opts.out ?? join(dirname(opts.path), `${pack.id}-${opts.locale}.yaml`);
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, buildTranslationSkeleton(r.pack, opts.locale));
-  const count = Object.values(collectTranslatableStrings(r.pack)).reduce((n, f) => n + Object.keys(f).length, 0);
-  return { exitCode: 0, lines: [`wrote ${basename(out)} (${count} strings to translate)`] };
+  writeFileSync(out, buildTranslationSkeleton(pack, opts.locale));
+  const strings = collectTranslatableStrings(pack);
+  const count = Object.values(strings).reduce((n, f) => n + Object.keys(f).length, 0);
+  return {
+    exitCode: 0,
+    lines: [`wrote ${basename(out)} (${count} strings to translate)`],
+  };
 }

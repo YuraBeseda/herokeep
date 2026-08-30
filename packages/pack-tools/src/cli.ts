@@ -35,7 +35,11 @@ export function main(argv: string[]): CommandResult {
       });
       const dir = positionals[0];
       if (!dir) return { exitCode: 2, lines: [USAGE] };
-      return runBuild({ dir, ...(values.out !== undefined && { out: values.out }), ...(values.packs !== undefined && { packsDir: values.packs }) });
+      return runBuild({
+        dir,
+        ...(values.out !== undefined && { out: values.out }),
+        ...(values.packs !== undefined && { packsDir: values.packs }),
+      });
     }
     if (command === 'diff') {
       const { positionals } = parseArgs({

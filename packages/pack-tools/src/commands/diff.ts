@@ -1,7 +1,6 @@
-import { existsSync } from 'node:fs';
-import { type Entity, type Pack, formatIssues, parsePack } from '@hk/protocol';
+import { type Entity, type Pack } from '@hk/protocol';
 import { canonicalJson } from '../canonical.ts';
-import { readPackFile } from '../io.ts';
+import { loadPackFile } from '../io.ts';
 import type { CommandResult } from '../result.ts';
 
 export interface PackDiff {
@@ -14,7 +13,9 @@ export interface PackDiff {
 
 function changedFields(a: Entity, b: Entity): string[] {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  return [...keys].filter((k) => canonicalJson((a as Record<string, unknown>)[k]) !== canonicalJson((b as Record<string, unknown>)[k])).sort();
+  const aRec = a as Record<string, unknown>;
+  const bRec = b as Record<string, unknown>;
+  return [...keys].filter((k) => canonicalJson(aRec[k]) !== canonicalJson(bRec[k])).sort();
 }
 
 export function diffPacks(a: Pack, b: Pack): PackDiff {
@@ -37,23 +38,21 @@ export function diffPacks(a: Pack, b: Pack): PackDiff {
     dependencies: {
       added: [...db.keys()].filter((id) => !da.has(id)).map((id) => `${id} ${db.get(id)}`),
       removed: [...da.keys()].filter((id) => !db.has(id)).map((id) => `${id} ${da.get(id)}`),
-      changed: [...da.keys()].filter((id) => db.has(id) && db.get(id) !== da.get(id)).map((id) => `${id} ${da.get(id)} → ${db.get(id)}`),
+      changed: [...da.keys()]
+        .filter((id) => db.has(id) && db.get(id) !== da.get(id))
+        .map((id) => `${id} ${da.get(id)} → ${db.get(id)}`),
     },
   };
 }
 
 export function runDiff(opts: { a: string; b: string }): CommandResult {
-  const load = (p: string): Pack | string => {
-    if (!existsSync(p)) return `file not found: ${p}`;
-    const r = parsePack(readPackFile(p));
-    return r.ok ? r.pack : `${p}: ${formatIssues(r.issues)[0]}`;
-  };
-  const a = load(opts.a);
-  const b = load(opts.b);
-  if (typeof a === 'string' || typeof b === 'string') return { exitCode: 2, lines: [typeof a === 'string' ? a : (b as string)] };
-  const d = diffPacks(a, b);
+  const a = loadPackFile(opts.a);
+  if (!a.ok) return a.result;
+  const b = loadPackFile(opts.b);
+  if (!b.ok) return b.result;
+  const d = diffPacks(a.pack, b.pack);
   const lines = [
-    `${a.id}: version: ${d.version[0]} → ${d.version[1]}`,
+    `${a.pack.id}: version: ${d.version[0]} → ${d.version[1]}`,
     ...d.dependencies.added.map((x) => `dependency added: ${x}`),
     ...d.dependencies.removed.map((x) => `dependency removed: ${x}`),
     ...d.dependencies.changed.map((x) => `dependency changed: ${x}`),

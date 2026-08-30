@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { dirname, extname, join } from 'node:path';
 import { type Pack, formatIssues, parsePack } from '@hk/protocol';
 import { parse as parseYaml } from 'yaml';
+import type { CommandResult } from './result.ts';
 
 export function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8')) as unknown;
@@ -41,4 +42,32 @@ export function loadAvailablePacks(dir?: string): { packs: Pack[]; lines: string
     }
   }
   return { packs, lines };
+}
+
+export type LoadPackResult = { ok: true; pack: Pack } | { ok: false; result: CommandResult };
+
+export function loadPackFile(path: string): LoadPackResult {
+  if (!existsSync(path)) {
+    return { ok: false, result: { exitCode: 2, lines: [`file not found: ${path}`] } };
+  }
+  let input: unknown;
+  try {
+    input = readPackFile(path);
+  } catch (e) {
+    return {
+      ok: false,
+      result: { exitCode: 2, lines: [`cannot read ${path}: ${(e as Error).message}`] },
+    };
+  }
+  const parsed = parsePack(input);
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      result: {
+        exitCode: 1,
+        lines: ['schema errors:', ...formatIssues(parsed.issues).map((l) => `  ${l}`)],
+      },
+    };
+  }
+  return { ok: true, pack: parsed.pack };
 }

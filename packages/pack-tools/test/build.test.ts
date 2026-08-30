@@ -9,13 +9,40 @@ const fixtures = fileURLToPath(new URL('../../protocol/test/fixtures/packs/', im
 
 function scaffold(): string {
   const dir = mkdtempSync(join(tmpdir(), 'hk-build-'));
-  writeFileSync(join(dir, 'pack.yaml'), ['format: 1', 'id: yaml-pack', 'version: 0.1.0', 'kind: content', 'system: mini', 'name: Yaml pack', 'dependencies:', '  - id: core-mini', '    range: ^1'].join('\n'));
+  writeFileSync(
+    join(dir, 'pack.yaml'),
+    [
+      'format: 1',
+      'id: yaml-pack',
+      'version: 0.1.0',
+      'kind: content',
+      'system: mini',
+      'name: Yaml pack',
+      'dependencies:',
+      '  - id: core-mini',
+      '    range: ^1',
+    ].join('\n'),
+  );
   mkdirSync(join(dir, 'entities', 'feats'), { recursive: true });
-  writeFileSync(join(dir, 'entities', 'feats', 'lucky.yaml'), ['id: yaml-pack:feat/lucky', 'type: feat', 'name: Lucky', 'category: origin', 'effects:', '  - type: tag.grant', '    tag: lucky'].join('\n'));
-  writeFileSync(join(dir, 'entities', 'features.json'), JSON.stringify([
-    { id: 'yaml-pack:feature/a', type: 'feature', name: 'A' },
-    { id: 'yaml-pack:feature/b', type: 'feature', name: 'B', grants: [{ feature: 'core-mini:feature/darkvision' }] },
-  ]));
+  writeFileSync(
+    join(dir, 'entities', 'feats', 'lucky.yaml'),
+    [
+      'id: yaml-pack:feat/lucky',
+      'type: feat',
+      'name: Lucky',
+      'category: origin',
+      'effects:',
+      '  - type: tag.grant',
+      '    tag: lucky',
+    ].join('\n'),
+  );
+  writeFileSync(
+    join(dir, 'entities', 'features.json'),
+    JSON.stringify([
+      { id: 'yaml-pack:feature/a', type: 'feature', name: 'A' },
+      { id: 'yaml-pack:feature/b', type: 'feature', name: 'B', grants: [{ feature: 'core-mini:feature/darkvision' }] },
+    ]),
+  );
   return dir;
 }
 
@@ -25,12 +52,21 @@ describe('build', () => {
     const r = runBuild({ dir, packsDir: fixtures });
     expect(r.exitCode, r.lines.join('\n')).toBe(0);
     const out = JSON.parse(readFileSync(join(dir, 'dist', 'pack.json'), 'utf8')) as { entities: { id: string }[] };
-    expect(out.entities.map((e) => e.id)).toEqual(['yaml-pack:feat/lucky', 'yaml-pack:feature/a', 'yaml-pack:feature/b']);
+    expect(out.entities.map((e) => e.id)).toEqual([
+      'yaml-pack:feat/lucky',
+      'yaml-pack:feature/a',
+      'yaml-pack:feature/b',
+    ]);
   });
 
   it('does not write output when validation fails', () => {
     const dir = scaffold();
-    writeFileSync(join(dir, 'entities', 'broken.yaml'), ['id: yaml-pack:feature/c', 'type: feature', 'name: C', 'grants:', '  - feature: core-mini:feature/nope'].join('\n'));
+    writeFileSync(
+      join(dir, 'entities', 'broken.yaml'),
+      ['id: yaml-pack:feature/c', 'type: feature', 'name: C', 'grants:', '  - feature: core-mini:feature/nope'].join(
+        '\n',
+      ),
+    );
     const r = runBuild({ dir, packsDir: fixtures, out: join(dir, 'custom.json') });
     expect(r.exitCode).toBe(1);
     expect(r.lines.join('\n')).toMatch(/ref\.missing/);

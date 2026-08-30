@@ -43,13 +43,15 @@ export function runBuild(opts: BuildOptions): CommandResult {
     }
   }
   const parsed = parsePack({ ...manifest, entities });
-  if (!parsed.ok) return { exitCode: 1, lines: ['schema errors:', ...formatIssues(parsed.issues).map((l) => `  ${l}`)] };
+  if (!parsed.ok)
+    return { exitCode: 1, lines: ['schema errors:', ...formatIssues(parsed.issues).map((l) => `  ${l}`)] };
 
   const available = loadAvailablePacks(opts.packsDir);
   lines.push(...available.lines);
   const diagnostics = validatePack(parsed.pack, available.packs);
   lines.push(...diagnostics.map(formatDiagnostic));
-  if (hasErrors(diagnostics)) return { exitCode: 1, lines: [...lines, `FAILED: ${parsed.pack.id}@${parsed.pack.version}`] };
+  if (hasErrors(diagnostics))
+    return { exitCode: 1, lines: [...lines, `FAILED: ${parsed.pack.id}@${parsed.pack.version}`] };
 
   const out = opts.out ?? join(opts.dir, 'dist', 'pack.json');
   writeJson(out, parsed.pack);
