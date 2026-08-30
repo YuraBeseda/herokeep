@@ -33,6 +33,13 @@
     "facts.name": "Ivan",
     "facts.pins.core-mini": "1.0.0",
     "facts.decisions[\"core-mini:class/fighter@1/fighting-style\"]": ["core-mini:feat/defense"],
-    "facts.skipped": []
+    "facts.skipped": [],
+    "sheet.level": 0,
+    "sheet.outstandingChoices": [
+      { "choiceId": "core-mini:system/mini@0/ability-scores", "ownerId": "core-mini:system/mini", "count": 1 },
+      { "choiceId": "core-mini:system/mini@0/background", "ownerId": "core-mini:system/mini", "count": 1 },
+      { "choiceId": "core-mini:system/mini@0/species", "ownerId": "core-mini:system/mini", "count": 1 }
+    ],
+    "sheet.issues": []
   }
 }

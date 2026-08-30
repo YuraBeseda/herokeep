@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { type Event, parseEvent } from '@hk/protocol';
 import { createContentIndex } from '../../src/content/index.ts';
+import { derive } from '../../src/derive/index.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
 import { loadFixturePack } from './fixtures.ts';
 
@@ -42,7 +43,8 @@ export function runGolden(fx: GoldenFixture): { actual: Record<string, unknown>;
     if (!r.ok) throw new Error(`${fx.name}: bad event ${JSON.stringify(r.issues)}`);
     return r.event;
   });
-  const root = { facts: reduce(events) };
+  const facts = reduce(events);
+  const root = { facts, sheet: derive(facts, index) };
   const actual: Record<string, unknown> = {};
   for (const path of Object.keys(fx.expect)) actual[path] = getPath(root, path);
   return { actual, expected: fx.expect };

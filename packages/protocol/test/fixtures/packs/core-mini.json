@@ -73,6 +73,18 @@
           "prompt": "Ability scores",
           "at": { "kind": "creation" },
           "pick": { "abilityGeneration": true }
+        },
+        {
+          "id": "core-mini:system/mini@0/species",
+          "prompt": "Species",
+          "at": { "kind": "creation" },
+          "pick": { "query": { "type": "species" } }
+        },
+        {
+          "id": "core-mini:system/mini@0/background",
+          "prompt": "Background",
+          "at": { "kind": "creation" },
+          "pick": { "query": { "type": "background" } }
         }
       ]
     },

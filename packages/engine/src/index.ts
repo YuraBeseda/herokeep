@@ -20,3 +20,4 @@ export * from './i18n/search.ts';
 export * from './version.ts';
 export * from './reduce/facts.ts';
 export * from './reduce/reducer.ts';
+export * from './derive/index.ts';
