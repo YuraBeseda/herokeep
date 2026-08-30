@@ -37,6 +37,26 @@ export default defineConfig([
     },
   },
   {
+    // Locale-dependent ops restricted outside i18n/ (docs/02-architecture/05-rules-engine.md)
+    files: ['packages/engine/src/**/*.ts'],
+    ignores: ['packages/engine/src/dice/**', 'packages/engine/src/i18n/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: "NewExpression[callee.name='Date']", message: 'Engine code must be deterministic.' },
+        {
+          selector: "CallExpression[callee.property.name='localeCompare']",
+          message: 'Locale-dependent string ops only in i18n/.',
+        },
+        {
+          selector: 'CallExpression[callee.property.name=/^toLocale/]',
+          message: 'Locale-dependent string ops only in i18n/.',
+        },
+        { selector: "MemberExpression[object.name='Intl']", message: 'Intl only in i18n/.' },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     extends: [js.configs.recommended, tseslint.configs.disableTypeChecked],
   },

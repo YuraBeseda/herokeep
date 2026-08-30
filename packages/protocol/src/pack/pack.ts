@@ -93,7 +93,7 @@ export const PackSchema = PackShape.superRefine((pack, ctx) => {
       if (!pack.system) issue('Core packs must declare "system"', ['system']);
       if (systems.length !== 1) issue('Core packs must define exactly one system entity', ['entities']);
       else if (pack.system && parseEntityId(systems[0]!.id)?.slug !== pack.system)
-        issue('System entity slug must equal "system"', ['entities']);
+        issue(`System entity slug must equal the pack's system ("${pack.system}")`, ['entities']);
       break;
     case 'content':
       if (!pack.system) issue('Content packs must declare "system"', ['system']);

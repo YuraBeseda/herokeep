@@ -13,7 +13,6 @@ export interface FormulaSite {
 }
 
 /** Field names that hold a formula (or an int-or-formula value) per effect type. */
-/** Field names that hold a formula (or an int-or-formula value) per effect type. */
 const FORMULA_FIELDS: Record<string, string[]> = {
   'ac.formula': ['formula'],
   'ac.bonus': ['value'],
