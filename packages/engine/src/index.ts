@@ -17,3 +17,6 @@ export * from './content/validate.ts';
 export * from './i18n/localizer.ts';
 export * from './i18n/normalize.ts';
 export * from './i18n/search.ts';
+export * from './version.ts';
+export * from './reduce/facts.ts';
+export * from './reduce/reducer.ts';

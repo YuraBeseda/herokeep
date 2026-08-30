@@ -1,0 +1,38 @@
+{
+  "name": "fighter-created-with-defense",
+  "packs": ["core-mini"],
+  "events": [
+    {
+      "id": "018f6d2e-7b1a-7c3d-9e4f-000000000001",
+      "stream": "char:2b7a1f22-1111-4c9d-a8f2-0a1b2c3d4e5f",
+      "seq": 1,
+      "ts": "2026-08-30T12:00:00.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Ivan",
+        "system": "mini",
+        "corePack": { "id": "core-mini", "version": "1.0.0" },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "masculine"
+      }
+    },
+    {
+      "id": "018f6d2e-7b1a-7c3d-9e4f-000000000002",
+      "stream": "char:2b7a1f22-1111-4c9d-a8f2-0a1b2c3d4e5f",
+      "seq": 2,
+      "ts": "2026-08-30T12:00:01.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "core-mini:class/fighter@1/fighting-style", "selection": ["core-mini:feat/defense"] }
+    }
+  ],
+  "expect": {
+    "facts.name": "Ivan",
+    "facts.pins.core-mini": "1.0.0",
+    "facts.decisions[\"core-mini:class/fighter@1/fighting-style\"]": ["core-mini:feat/defense"],
+    "facts.skipped": []
+  }
+}
