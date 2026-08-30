@@ -15,3 +15,5 @@ export * from './content/choices.ts';
 export * from './content/refs.ts';
 export * from './content/validate.ts';
 export * from './i18n/localizer.ts';
+export * from './i18n/normalize.ts';
+export * from './i18n/search.ts';
