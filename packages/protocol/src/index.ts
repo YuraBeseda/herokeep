@@ -4,3 +4,4 @@ export * from './pack/formula.ts';
 export * from './pack/predicate.ts';
 export * from './pack/enums.ts';
 export * from './pack/effects.ts';
+export * from './pack/choice.ts';
