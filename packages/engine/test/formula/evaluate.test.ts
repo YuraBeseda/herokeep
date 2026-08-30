@@ -27,6 +27,8 @@ describe('evaluateFormula', () => {
     ['mod(dex) == 3', 0],
     ['1 / 0', 0],
     ['-level', -5],
+    ['level / 2 * 2', 4],
+    ['ceil(level / 2) + 1', 4],
   ])('%s → %d', (src, expected) => {
     expect(evalFormulaString(src, ctx)).toBe(expected);
   });

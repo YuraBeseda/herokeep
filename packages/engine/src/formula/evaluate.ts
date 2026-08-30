@@ -15,6 +15,8 @@ export function constantContext(): FormulaContext {
   return { level: 0, prof: 0, classLevel: () => 0, mod: () => 0, score: () => 0, hitDie: () => 0, resource: () => 0 };
 }
 
+const intDiv = (a: number, b: number): number => (b === 0 ? 0 : Math.floor(a / b));
+
 export function evaluateFormula(ast: FormulaAst, ctx: FormulaContext): number {
   switch (ast.k) {
     case 'num':
@@ -34,7 +36,7 @@ export function evaluateFormula(ast: FormulaAst, ctx: FormulaContext): number {
         case '*':
           return l * r;
         case '/':
-          return r === 0 ? 0 : l / r;
+          return intDiv(l, r);
       }
       break;
     }
@@ -74,8 +76,15 @@ export function evaluateFormula(ast: FormulaAst, ctx: FormulaContext): number {
           return Math.min(...ast.args.map((a) => evaluateFormula(a, ctx)));
         case 'floor':
           return Math.floor(evaluateFormula(ast.args[0]!, ctx));
-        case 'ceil':
-          return Math.ceil(evaluateFormula(ast.args[0]!, ctx));
+        case 'ceil': {
+          const arg = ast.args[0]!;
+          if (arg.k === 'bin' && arg.op === '/') {
+            const l = evaluateFormula(arg.l, ctx);
+            const r = evaluateFormula(arg.r, ctx);
+            return r === 0 ? 0 : Math.ceil(l / r);
+          }
+          return Math.ceil(evaluateFormula(arg, ctx));
+        }
         case 'abs':
           return Math.abs(evaluateFormula(ast.args[0]!, ctx));
       }
@@ -85,5 +94,5 @@ export function evaluateFormula(ast: FormulaAst, ctx: FormulaContext): number {
 }
 
 export function evalFormulaString(src: string, ctx: FormulaContext): number {
-  return Math.floor(evaluateFormula(parseFormula(src), ctx));
+  return evaluateFormula(parseFormula(src), ctx);
 }
