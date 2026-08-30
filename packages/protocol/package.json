@@ -16,6 +16,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -b tsconfig.build.json",
+    "build:schema": "node scripts/build-schema.ts",
     "test": "vitest run"
   },
   "dependencies": {

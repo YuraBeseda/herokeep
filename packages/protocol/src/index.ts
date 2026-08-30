@@ -12,3 +12,4 @@ export * from './pack/entities-progression.ts';
 export * from './pack/entities-content.ts';
 export * from './pack/entity.ts';
 export * from './pack/pack.ts';
+export * from './pack/json-schema.ts';

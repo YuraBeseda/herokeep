@@ -1,3 +1,4 @@
 docs/
 .superpowers/
 pnpm-lock.yaml
+packages/*/schema/
