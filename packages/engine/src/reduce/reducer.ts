@@ -32,15 +32,14 @@ export const HANDLERS: Record<string, Handler> = {
 };
 
 /**
- * Partitions committed (seq-assigned) events ahead of pending (not-yet-committed) ones,
- * preserving the caller's relative order within each group. Deliberately not a numeric
- * sort by seq: callers are expected to pass committed events already in commit order,
- * and a stable partition (rather than a resort) is what keeps skip semantics — e.g. a
- * decision recorded before its character.created is committed — reproducible from the
- * event log's own order.
+ * Committed (seq-assigned) events replay in strict seq order — the whole point of a
+ * seq number is to give every replica the same total order regardless of the array
+ * order events arrive in. Pending (not-yet-committed) events have no seq and apply
+ * last, in the caller's given order. `Array#sort` is stable in modern engines, so
+ * same-seq events (e.g. a duplicate delivery) keep their relative arrival order.
  */
 function orderEvents(events: Event[]): Event[] {
-  const committed = events.filter((e) => e.seq !== undefined);
+  const committed = events.filter((e) => e.seq !== undefined).sort((a, b) => a.seq! - b.seq!);
   const pending = events.filter((e) => e.seq === undefined);
   return [...committed, ...pending];
 }

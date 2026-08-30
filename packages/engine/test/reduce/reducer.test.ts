@@ -47,12 +47,22 @@ describe('reduce', () => {
   });
 
   it('never throws: unknown types and out-of-order creation are recorded as skipped', () => {
-    const f = reduce([
-      decided,
-      ev(4, 'hp.exploded', {}),
-      created,
-      { ...created, id: '018f6d2e-7b1a-7c3d-9e4f-bbbbbbbbbbbb', seq: 5 },
-    ]);
+    const earlyDecision = ev(1, 'decision.made', {
+      choiceId: 'core-mini:class/fighter@1/fighting-style',
+      selection: ['core-mini:feat/defense'],
+    });
+    const unknown = ev(2, 'hp.exploded', {});
+    const createdAt3 = ev(3, 'character.created', {
+      name: 'Ivan',
+      system: 'mini',
+      corePack: { id: 'core-mini', version: '1.0.0' },
+      engineVersion: '0.1.0',
+      grammaticalGender: 'masculine',
+    });
+    const dupCreated = { ...createdAt3, id: '018f6d2e-7b1a-7c3d-9e4f-bbbbbbbbbbbb', seq: 4 };
+    // Passed out of seq order on purpose: replay must still apply strictly by seq
+    // (1, 2, 3, 4), so the decision at seq 1 legitimately precedes character.created at seq 3.
+    const f = reduce([createdAt3, earlyDecision, dupCreated, unknown]);
     expect(f.skipped.map((s) => s.reason)).toEqual(['not-created', 'unknown-type', 'already-created']);
     expect(f.name).toBe('Ivan');
   });
@@ -61,5 +71,10 @@ describe('reduce', () => {
     const first = reduce([created, pinned]);
     const resumed = reduce([created, pinned, decided], { seq: 2, facts: first, engineVersion: '0.1.0' });
     expect(resumed).toEqual(reduce([created, pinned, decided]));
+  });
+
+  it('is independent of array arrival order: replay converges by seq alone', () => {
+    expect(reduce([created, pinned, decided])).toEqual(reduce([decided, created, pinned]));
+    expect(reduce([created, pinned, decided])).toEqual(reduce([pinned, decided, created]));
   });
 });
