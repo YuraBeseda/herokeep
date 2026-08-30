@@ -62,7 +62,7 @@ const PackShape = z.strictObject({
   attribution: z.string().max(4000).optional(),
   dependencies: z.array(DependencySchema).max(50).default([]),
   locale: LocaleSchema.default('en'),
-  translates: z.strictObject({ id: PackIdSchema, range: z.string().min(1).max(64) }).optional(),
+  translates: DependencySchema.optional(),
   entities: z.array(EntitySchema).max(PACK_LIMITS.maxEntities).default([]),
   overrides: z.array(OverrideSchema).max(500).default([]),
   assets: z.array(AssetSchema).max(PACK_LIMITS.maxAssets).default([]),
