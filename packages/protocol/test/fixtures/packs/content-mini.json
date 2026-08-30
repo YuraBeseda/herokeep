@@ -21,7 +21,15 @@
       "size": "medium",
       "speed": 30,
       "creatureType": "humanoid",
-      "grants": [{ "feature": "core-mini:feature/darkvision" }, { "feature": "homebrew-mini:feature/cat-reflexes" }]
+      "grants": [{ "feature": "core-mini:feature/darkvision" }, { "feature": "homebrew-mini:feature/cat-reflexes" }],
+      "choices": [
+        {
+          "id": "homebrew-mini:species/catfolk@0/whisker-style",
+          "prompt": "Whisker style",
+          "at": { "kind": "creation" },
+          "pick": { "literal": "text" }
+        }
+      ]
     }
   ],
   "overrides": [
