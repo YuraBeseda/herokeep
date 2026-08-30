@@ -49,4 +49,32 @@ describe('effects', () => {
     ]);
     expect(d.every((x) => x.entityId === 'x:feat/y')).toBe(true);
   });
+
+  it('reports schema validation errors with correct paths', () => {
+    const unrecognizedKey = validateEffects(
+      [{ type: 'ac.bonus', value: 1, extraField: 'nope' }],
+      'effects',
+      'x:feat/y',
+    );
+    expect(unrecognizedKey).toHaveLength(1);
+    expect(unrecognizedKey[0]).toMatchObject({
+      severity: 'error',
+      code: 'effect.invalid',
+      path: 'effects.0',
+      entityId: 'x:feat/y',
+    });
+
+    const nestedBadField = validateEffects(
+      [{ type: 'spell.grant', spell: 'core:spell/mm', uses: { count: 'prof', per: 'weekly' } }],
+      'effects',
+      'core:feat/test',
+    );
+    expect(nestedBadField).toHaveLength(1);
+    expect(nestedBadField[0]).toMatchObject({
+      severity: 'error',
+      code: 'effect.invalid',
+      path: 'effects.0.uses.per',
+      entityId: 'core:feat/test',
+    });
+  });
 });

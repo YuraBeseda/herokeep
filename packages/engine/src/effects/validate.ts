@@ -13,6 +13,7 @@ export interface FormulaSite {
 }
 
 /** Field names that hold a formula (or an int-or-formula value) per effect type. */
+/** Field names that hold a formula (or an int-or-formula value) per effect type. */
 const FORMULA_FIELDS: Record<string, string[]> = {
   'ac.formula': ['formula'],
   'ac.bonus': ['value'],
@@ -27,6 +28,9 @@ const FORMULA_FIELDS: Record<string, string[]> = {
   'check.bonus': ['value'],
   'mastery.grant': ['count'],
 };
+
+const joinPath = (base: string, segments: readonly PropertyKey[]): string =>
+  segments.length ? `${base}.${segments.map(String).join('.')}` : base;
 
 export function collectEffectFormulas(effect: Effect, path: string): FormulaSite[] {
   const sites: FormulaSite[] = [];
@@ -57,7 +61,7 @@ export function validateEffect(effect: unknown, path: string, entityId: string):
   const parsed = EffectSchema.safeParse(effect);
   if (!parsed.success) {
     return parsed.error.issues.map((i) =>
-      error('effect.invalid', i.message, { path: `${path}.${i.path.map(String).join('.')}`, entityId }),
+      error('effect.invalid', i.message, { path: joinPath(path, i.path), entityId }),
     );
   }
   return collectEffectFormulas(parsed.data, path).flatMap((s) =>
