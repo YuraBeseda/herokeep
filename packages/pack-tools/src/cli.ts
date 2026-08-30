@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { runValidate } from './commands/validate.ts';
+import { runBuild } from './commands/build.ts';
 import type { CommandResult } from './result.ts';
 
 const USAGE = [
@@ -12,18 +13,36 @@ const USAGE = [
 ].join('\n');
 
 export function main(argv: string[]): CommandResult {
-  const [command, ...rest] = argv;
-  if (command === 'validate') {
-    const { values, positionals } = parseArgs({
-      args: rest,
-      options: { packs: { type: 'string' } },
-      allowPositionals: true,
-    });
-    const path = positionals[0];
-    if (!path) return { exitCode: 2, lines: [USAGE] };
-    return runValidate({ path, ...(values.packs !== undefined && { packsDir: values.packs }) });
+  try {
+    const [command, ...rest] = argv;
+    if (command === 'validate') {
+      const { values, positionals } = parseArgs({
+        args: rest,
+        options: { packs: { type: 'string' } },
+        allowPositionals: true,
+      });
+      const path = positionals[0];
+      if (!path) return { exitCode: 2, lines: [USAGE] };
+      return runValidate({ path, ...(values.packs !== undefined && { packsDir: values.packs }) });
+    }
+    if (command === 'build') {
+      const { values, positionals } = parseArgs({
+        args: rest,
+        options: { out: { type: 'string' }, packs: { type: 'string' } },
+        allowPositionals: true,
+      });
+      const dir = positionals[0];
+      if (!dir) return { exitCode: 2, lines: [USAGE] };
+      return runBuild({ dir, ...(values.out !== undefined && { out: values.out }), ...(values.packs !== undefined && { packsDir: values.packs }) });
+    }
+    return { exitCode: 2, lines: [USAGE] };
+  } catch (e) {
+    const err = e as Error & { code?: string };
+    if (err.code && String(err.code).startsWith('ERR_PARSE_ARGS')) {
+      return { exitCode: 2, lines: [String(err.message), USAGE] };
+    }
+    throw e;
   }
-  return { exitCode: 2, lines: [USAGE] };
 }
 
 if (process.argv[1] && /cli\.(js|ts)$/.test(process.argv[1])) {
