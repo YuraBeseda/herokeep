@@ -70,4 +70,19 @@ describe('resolveDependencyOrder', () => {
     const deep = resolveDependencyOrder(new Map(chain.map((p) => [p.id, p])), ['p1']);
     expect(deep.diagnostics.map((d) => d.code)).toContain('deps.depth');
   });
+
+  it('handles translation pack dependencies via translates', () => {
+    const ru = loadFixturePack('translation-mini');
+    const { order, diagnostics } = resolveDependencyOrder(
+      new Map([
+        [core.id, core],
+        [ru.id, ru],
+      ]),
+      [ru.id],
+    );
+    expect(diagnostics).toEqual([]);
+    expect(order.map((p) => p.id)).toEqual(['core-mini', 'core-mini-ru']);
+    const onlyRu = resolveDependencyOrder(new Map([[ru.id, ru]]), [ru.id]);
+    expect(onlyRu.diagnostics.map((d) => d.code)).toEqual(['deps.missing']);
+  });
 });

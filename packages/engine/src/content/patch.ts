@@ -22,8 +22,7 @@ function walk(root: unknown, segments: string[]): { parent: Json; key: string } 
     if (Array.isArray(cur)) {
       cur = cur[Number(segments[i])];
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      cur = (cur as Record<string, unknown>)[segments[i]!];
+      cur = cur[segments[i]!];
     }
   }
   if (!isContainer(cur)) return 'Parent is not an object or array';
