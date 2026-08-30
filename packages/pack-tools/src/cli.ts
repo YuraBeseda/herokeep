@@ -3,6 +3,7 @@ import { parseArgs } from 'node:util';
 import { runValidate } from './commands/validate.ts';
 import { runBuild } from './commands/build.ts';
 import { runDiff } from './commands/diff.ts';
+import { runI18nExtract } from './commands/i18n-extract.ts';
 import type { CommandResult } from './result.ts';
 
 const USAGE = [
@@ -45,6 +46,20 @@ export function main(argv: string[]): CommandResult {
       const b = positionals[1];
       if (!a || !b) return { exitCode: 2, lines: [USAGE] };
       return runDiff({ a, b });
+    }
+    if (command === 'i18n') {
+      const subcommand = rest[0];
+      if (subcommand === 'extract') {
+        const { values, positionals } = parseArgs({
+          args: rest.slice(1),
+          options: { locale: { type: 'string' }, out: { type: 'string' } },
+          allowPositionals: true,
+        });
+        const path = positionals[0];
+        if (!path || !values.locale) return { exitCode: 2, lines: [USAGE] };
+        return runI18nExtract({ path, locale: values.locale, ...(values.out !== undefined && { out: values.out }) });
+      }
+      return { exitCode: 2, lines: [USAGE] };
     }
     return { exitCode: 2, lines: [USAGE] };
   } catch (e) {
