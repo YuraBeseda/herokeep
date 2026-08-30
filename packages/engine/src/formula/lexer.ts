@@ -5,13 +5,13 @@ export const FORMULA_MAX_DEPTH = 16;
 export type FormulaErrorCode = 'length' | 'syntax' | 'depth' | 'identifier' | 'arity';
 
 export class FormulaError extends Error {
-  constructor(
-    public readonly code: FormulaErrorCode,
-    message: string,
-    public readonly pos: number,
-  ) {
+  readonly code: FormulaErrorCode;
+  readonly pos: number;
+  constructor(code: FormulaErrorCode, message: string, pos: number) {
     super(message);
     this.name = 'FormulaError';
+    this.code = code;
+    this.pos = pos;
   }
 }
 
