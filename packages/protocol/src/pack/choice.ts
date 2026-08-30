@@ -71,5 +71,5 @@ export const ChoiceSchema = z.strictObject({
 });
 export type Choice = z.infer<typeof ChoiceSchema>;
 export type ChoiceAt = z.infer<typeof ChoiceAtSchema>;
-export type Pick = z.infer<typeof PickSchema>;
+export type ChoicePick = z.infer<typeof PickSchema>;
 export type EntityQuery = z.infer<typeof EntityQuerySchema>;
