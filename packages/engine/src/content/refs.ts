@@ -47,6 +47,9 @@ export function collectEntityRefs(e: Entity): EntityRef[] {
       case 'condition.immunity':
         ef.conditions.forEach((id, j) => refs.push({ path: `${path}.conditions.${j}`, id }));
         break;
+      case 'spellcasting.define':
+        if (Array.isArray(ef.list)) ef.list.forEach((id, j) => refs.push({ path: `${path}.list.${j}`, id }));
+        break;
       case 'item.grant':
         refs.push({ path: `${path}.item`, id: ef.item });
         break;
@@ -70,6 +73,7 @@ export function collectEntityRefs(e: Entity): EntityRef[] {
       });
       break;
     case 'class':
+      if (e.multiclass) refs.push(...predicateRefs(e.multiclass.prerequisites, 'multiclass.prerequisites'));
       e.levels.forEach((row, i) => {
         row.grants.forEach((g, j) => refs.push({ path: `levels.${i}.grants.${j}.feature`, id: g.feature }));
         row.choices.forEach((c, j) => refs.push(...choiceRefs(c, `levels.${i}.choices.${j}`)));
@@ -77,6 +81,9 @@ export function collectEntityRefs(e: Entity): EntityRef[] {
       break;
     case 'system':
       e.conditions.forEach((id, i) => refs.push({ path: `conditions.${i}`, id }));
+      for (const [ref, p] of Object.entries(e.multiclass?.prerequisites ?? {})) {
+        refs.push(...predicateRefs(p, `multiclass.prerequisites.${ref}`));
+      }
       break;
     default:
       break;

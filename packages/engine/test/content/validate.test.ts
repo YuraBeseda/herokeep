@@ -54,4 +54,47 @@ describe('validatePack', () => {
     icon.entities[1]!.icon = 'sha256:' + 'a'.repeat(64);
     expect(codes(validatePack(icon, []))).toEqual(['asset.missing']);
   });
+
+  it('reports missing multiclass prerequisite refs', () => {
+    const bad = structuredClone(core);
+    const fighter = bad.entities.find((e) => e.id === 'core-mini:class/fighter');
+    if (fighter?.type !== 'class') throw new Error();
+    fighter.multiclass = {
+      prerequisites: { hasFeat: 'core-mini:feat/nope' },
+      gains: { armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 },
+    };
+    const d = validatePack(bad, []);
+    expect(codes(d)).toEqual(['ref.missing']);
+    const i = bad.entities.indexOf(fighter);
+    expect(d[0]?.path).toBe(`entities.${i}.multiclass.prerequisites.hasFeat`);
+  });
+
+  it('reports missing spellcasting.define list refs', () => {
+    const bad = structuredClone(core);
+    const feature = bad.entities.find((e) => e.id === 'core-mini:feature/darkvision');
+    if (feature?.type !== 'feature') throw new Error();
+    feature.effects.push({
+      type: 'spellcasting.define',
+      class: 'wizard',
+      ability: 'int',
+      list: ['core-mini:spell/nope'],
+      preparation: 'spellbook',
+      slots: 'full',
+      ritual: false,
+      focus: false,
+    });
+    const d = validatePack(bad, []);
+    expect(codes(d)).toEqual(['ref.missing']);
+    const i = bad.entities.indexOf(feature);
+    const j = feature.effects.length - 1;
+    expect(d[0]?.path).toBe(`entities.${i}.effects.${j}.list.0`);
+  });
+
+  it('checks choice-shaped translation keys against the referenced choice, not just the owning entity', () => {
+    const tr = structuredClone(ru);
+    tr.strings!['class/fighter@1/bogus'] = { prompt: 'x' };
+    const d = validatePack(tr, [core]);
+    expect(codes(d)).toEqual(['i18n.unknownKey']);
+    expect(d[0]?.path).toBe('strings.class/fighter@1/bogus');
+  });
 });

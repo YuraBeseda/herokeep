@@ -1,6 +1,7 @@
 import { type Choice, type Entity, PACK_LIMITS, type Pack, parseChoiceId, parseEntityId } from '@hk/protocol';
 import { type Diagnostic, error, warning } from '../diagnostics.ts';
 import { validateEffects } from '../effects/validate.ts';
+import { findChoice } from './choices.ts';
 import { createContentIndex } from './index.ts';
 import { collectEntityRefs } from './refs.ts';
 
@@ -100,9 +101,10 @@ export function validatePack(pack: Pack, available: Pack[]): Diagnostic[] {
 
   const checkStrings = (strings: Record<string, unknown>, targetPackId: string, path: string) => {
     for (const key of Object.keys(strings)) {
-      const choice = parseChoiceId(`${targetPackId}:${key}`);
-      const entityKey = choice ? choice.entityId : `${targetPackId}:${key}`;
-      if (parseEntityId(entityKey) === null || !index.has(entityKey))
+      const fullId = `${targetPackId}:${key}`;
+      const choice = parseChoiceId(fullId);
+      const unknown = choice ? !findChoice(index, fullId) : parseEntityId(fullId) === null || !index.has(fullId);
+      if (unknown)
         out.push(
           warning('i18n.unknownKey', `Translation key "${key}" does not match an entity in ${targetPackId}`, {
             path: `${path}.${key}`,
