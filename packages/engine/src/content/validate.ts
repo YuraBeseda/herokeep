@@ -1,8 +1,10 @@
 import { type Choice, type Entity, PACK_LIMITS, type Pack, parseChoiceId, parseEntityId } from '@hk/protocol';
 import { type Diagnostic, error, warning } from '../diagnostics.ts';
 import { validateEffects } from '../effects/validate.ts';
+import { validateFormula } from '../formula/validate.ts';
 import { findChoice } from './choices.ts';
 import { createContentIndex } from './index.ts';
+import { collectEntityFormulas } from './entity-formulas.ts';
 import { collectEntityRefs } from './refs.ts';
 
 const utf8Bytes = (s: string) => new TextEncoder().encode(s).length;
@@ -88,6 +90,11 @@ export function validatePack(pack: Pack, available: Pack[]): Diagnostic[] {
         );
     }
     out.push(...validateEffects(e.effects, `${base}.effects`, e.id));
+    for (const s of collectEntityFormulas(e)) {
+      out.push(
+        ...validateFormula(s.src, { allowComparison: s.allowComparison, path: `${base}.${s.path}`, entityId: e.id }),
+      );
+    }
     const resolveClass = (r: string) => index.resolveClassRef(r);
     e.choices.forEach((c, j) => out.push(...choiceDiagnostics(c, e, `${base}.choices.${j}`, undefined, resolveClass)));
     if (e.type === 'class' || e.type === 'subclass') {

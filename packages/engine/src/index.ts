@@ -13,6 +13,7 @@ export * from './content/deps.ts';
 export * from './content/index.ts';
 export * from './content/choices.ts';
 export * from './content/refs.ts';
+export * from './content/entity-formulas.ts';
 export * from './content/validate.ts';
 export * from './i18n/localizer.ts';
 export * from './i18n/normalize.ts';
