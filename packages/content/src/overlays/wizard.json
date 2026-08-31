@@ -1,0 +1,77 @@
+[
+  {
+    "id": "srd-5e-2024:class/wizard",
+    "cite": "SRD 5.2.1, Wizard Core Traits; Wizard Subclass; Ability Score Improvement",
+    "note": "Core Traits table: \"Armor Training: None\"; \"Weapon Proficiencies: Simple weapons\"; \"Skill Proficiencies: Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion\". @4/feat matches the Ability Score Improvement feature's text (identical wording to Fighter's). R20: the SRD's Prepared Spells column (4/5/6/7/9 for levels 1-5) is not duplicated here as rows[].extra.preparedSpells — transformClasses() already carries the same values verbatim under the upstream row extra key extra['wizard-prepared-spells'] (ClassLevelRowSchema.extra keys are slug-only by design; a second camelCase copy would be redundant).",
+    "set": {
+      "armorTraining": [],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": {
+        "from": ["arcana", "history", "insight", "investigation", "medicine", "nature", "religion"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/wizard@3/subclass",
+            "prompt": "Wizard Subclass",
+            "at": { "kind": "classLevel", "class": "wizard", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["wizard"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/wizard@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "wizard", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-spellcasting",
+    "cite": "SRD 5.2.1, Spellcasting (Wizard)",
+    "note": "SRD text: \"You know three Wizard cantrips of your choice ... When you reach Wizard levels 4 and 10, you learn another Wizard cantrip.\" cantripsKnown: '3 + floor(classLevel(wizard) / 4)' matches the vendored Cantrips column exactly through this task's level 1-5 scope (3 at levels 1-3, 4 at levels 4-5); at higher, out-of-scope levels it diverges from the table (e.g. predicts 5 at levels 8-9 where the table holds at 4) because the true progression is a stepped table, not a linear function of level — flagged for 1b. preparedCount is intentionally omitted — no formula: the 2024 Prepared Spells column is a table (4/5/6/7/9 for levels 1-5), not linear in level. That table already lives on the wizard class entity, at each level row's extra['wizard-prepared-spells'] (upstream-derived by transformClasses(), R12); 1b's derive should read the prepared-spells count from there rather than from this effect.",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "wizard",
+          "ability": "int",
+          "list": "wizard",
+          "preparation": "spellbook",
+          "slots": "full",
+          "ritual": true,
+          "focus": true,
+          "cantripsKnown": "3 + floor(classLevel(wizard) / 4)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-evoker-evocation-savant",
+    "cite": "SRD 5.2.1, Evoker — Evocation Savant",
+    "note": "SRD text grants two free Evocation spells (level 2 or lower) added to the spellbook at level 3, plus one more whenever a new spell-slot level is reached. Recorded as a tag for 1a's text-level scope; the free-spellbook-addition mechanic is Phase-4/1b vocabulary.",
+    "merge": {
+      "effects": [{ "type": "tag.grant", "tag": "evocation-savant" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-evoker-potent-cantrip",
+    "cite": "SRD 5.2.1, Evoker — Potent Cantrip",
+    "note": "SRD text: a damaging cantrip that misses its attack roll or is saved against still deals half damage (and no additional effect). Recorded as a tag for 1a's text-level scope.",
+    "merge": {
+      "effects": [{ "type": "tag.grant", "tag": "potent-cantrip" }]
+    }
+  }
+]
