@@ -35,6 +35,8 @@ describe('vendored upstream snapshot', () => {
       for (const r of readFixture(name)) {
         expect(typeof r.model).toBe('string');
         expect(r.fields).toBeTypeOf('object');
+        expect(typeof r.pk === 'string' || typeof r.pk === 'number').toBe(true);
+        if (typeof r.pk === 'string') expect(r.pk.startsWith('srd-2024_')).toBe(true);
       }
     }
   });
