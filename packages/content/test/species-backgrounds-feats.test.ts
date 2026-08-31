@@ -55,4 +55,20 @@ describe('feats', () => {
     expect(feats.map((f) => f.id)).toContain('srd-5e-2024:feat/alert');
     expect(feats.filter((f) => (f as { category?: string }).category === 'fightingStyle')).toHaveLength(4);
   });
+
+  it('R23: repeatable is derived from a "Repeatable" FeatBenefit, not hard-coded false', () => {
+    const byId = new Map(feats.map((f) => [f.id, f]));
+    const repeatableIds = [
+      'srd-5e-2024:feat/magic-initiate',
+      'srd-5e-2024:feat/skilled',
+      'srd-5e-2024:feat/ability-score-improvement',
+    ];
+    for (const id of repeatableIds) {
+      expect((byId.get(id) as { repeatable?: boolean })?.repeatable, id).toBe(true);
+    }
+    expect((byId.get('srd-5e-2024:feat/alert') as { repeatable?: boolean })?.repeatable).toBe(false);
+    // Verified over all 35 FeatBenefit records: exactly these 3 feats carry a "Repeatable" benefit.
+    const actuallyRepeatable = feats.filter((f) => (f as { repeatable?: boolean }).repeatable).map((f) => f.id);
+    expect(actuallyRepeatable.sort()).toEqual([...repeatableIds].sort());
+  });
 });

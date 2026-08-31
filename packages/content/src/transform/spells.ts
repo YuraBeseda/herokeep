@@ -167,6 +167,28 @@ function mapClasses(fields: Record<string, unknown>, pk: FixtureRecord['pk']): s
   return fieldStrArray(fields, 'classes', pk).map((classPk) => pkSlug(classPk));
 }
 
+const MELEE_SPELL_ATTACK_RE = /melee spell attack/i;
+const RANGED_SPELL_ATTACK_RE = /ranged spell attack/i;
+
+/**
+ * Per controller ruling R22: upstream `attack_roll` means "text interacts with attack rolls" (42
+ * records), not "caster makes a spell attack" — only 13 of those 42 say "ranged spell attack" and
+ * 8 say "melee spell attack" (verified over all 339 records); the other 24 (Bless, Bane, Hex,
+ * Invisibility, ...) make no spell attack at all. So `attack` is derived from the spell's own SRD
+ * `desc` text instead of `attack_roll`, which is otherwise ignored.
+ */
+function mapAttack(fields: Record<string, unknown>, pk: FixtureRecord['pk']): 'melee' | 'ranged' | undefined {
+  const desc = fieldStr(fields, 'desc', pk);
+  const isMelee = MELEE_SPELL_ATTACK_RE.test(desc);
+  const isRanged = RANGED_SPELL_ATTACK_RE.test(desc);
+  if (isMelee && isRanged) {
+    throw new Error(`spells: fixture "${String(pk)}" desc matches both melee and ranged spell attack phrasing`);
+  }
+  if (isMelee) return 'melee';
+  if (isRanged) return 'ranged';
+  return undefined;
+}
+
 function mapMaterialText(fields: Record<string, unknown>, pk: FixtureRecord['pk']): string | undefined {
   const materialText = fieldOptionalStr(fields, 'material_specified', pk);
   if (materialText && materialText.length > 500) {
@@ -188,6 +210,7 @@ export function transformSpells(): Entity[] {
     const materialText = mapMaterialText(fields, pk);
     const damage = mapDamage(fields, pk);
     const save = mapSave(fields, pk);
+    const attack = mapAttack(fields, pk);
     const higherLevels = fieldOptionalStr(fields, 'higher_level', pk);
     return {
       type: 'spell',
@@ -208,7 +231,7 @@ export function transformSpells(): Entity[] {
       classes: mapClasses(fields, pk),
       ...(damage ? { damage } : {}),
       ...(save ? { save } : {}),
-      ...(fieldBool(fields, 'attack_roll', pk) ? { attack: 'ranged' as const } : {}),
+      ...(attack ? { attack } : {}),
       ...(higherLevels ? { higherLevels } : {}),
     };
   });

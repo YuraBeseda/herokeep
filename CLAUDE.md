@@ -18,4 +18,4 @@ Read `docs/README.md` first; decisions live in `docs/01-decisions/` (ADRs are ne
 
 ## Commands
 
-`pnpm install` · `pnpm check` · `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` · `pnpm --filter @hk/protocol build:schema` (after any schema change; CI fails on drift) · `node packages/pack-tools/dist/cli.js validate <pack> --packs <dir>` · `pnpm --filter @hk/content build:pack — regenerate the SRD pack (never edit dist output by hand; fix transforms/overlays instead)`
+`pnpm install` · `pnpm check` · `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` · `pnpm --filter @hk/protocol build:schema` (after any schema change; CI fails on drift) · `node packages/pack-tools/dist/cli.js validate <pack> --packs <dir>` · `pnpm --filter @hk/content build:pack` (regenerate the SRD pack; never edit dist output by hand — fix transforms/overlays instead)

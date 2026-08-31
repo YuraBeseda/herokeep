@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyOverlays } from '../src/overlays/merge.ts';
 import { loadOverlays } from '../src/overlays/load.ts'; // { corrections, systemChoices, species, fightingStyles, fighter, wizard }
 import { transformClasses } from '../src/transform/classes.ts';
+import { transformFeats } from '../src/transform/feats.ts';
 
 describe('rows merging', () => {
   it('merges grants/choices/extra into the matching level row without clobbering', () => {
@@ -92,12 +93,30 @@ describe('fighter and wizard 1–5 mechanics', () => {
     expect(w.levels.find((r) => r.level === 5)?.extra?.['wizard-prepared-spells']).toBe(9);
   });
 
-  it('subclass overlays land on champion and the wizard subclass', () => {
-    const patchedSubs = applyOverlays(
-      subclasses,
-      [...o.fighter, ...o.wizard].filter((x) => subclasses.some((s) => s.id === x.id)),
+  it('applyRows inserts a new row at the correct ascending position (champion has rows at 3 and 7, not 5)', () => {
+    const champion = subclasses.find((s) => s.id.includes('champion')) as { id: string; levels: { level: number }[] };
+    const before = champion.levels.map((r) => r.level);
+    expect(before).toContain(3);
+    expect(before).toContain(7);
+    expect(before).not.toContain(5);
+
+    const [patched] = applyOverlays(
+      [champion as never],
+      [
+        {
+          id: champion.id,
+          rows: [{ level: 5, extra: { 'test-inserted-row': 1 } }],
+        },
+      ],
     );
-    const champion = patchedSubs.find((s) => s.id.includes('champion')) as { levels: { level: number }[] };
-    expect(champion.levels.some((r) => r.level === 3)).toBe(true);
+    const levels = (patched as { levels: { level: number; extra?: Record<string, unknown> }[] }).levels;
+    expect(levels.map((r) => r.level)).toEqual([3, 5, 7, 10, 15, 18]);
+    expect(levels.find((r) => r.level === 5)?.extra).toEqual({ 'test-inserted-row': 1 });
+  });
+
+  it('applyRows throws when a "rows" overlay targets a non-class/subclass entity', () => {
+    const feats = transformFeats();
+    const alert = feats.find((f) => f.id === 'srd-5e-2024:feat/alert')!;
+    expect(() => applyOverlays([alert], [{ id: alert.id, rows: [{ level: 1 }] }])).toThrow(/rows require levels\[\]/);
   });
 });

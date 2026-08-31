@@ -52,7 +52,10 @@ function composeDescription(featRec: FixtureRecord, benefits: FixtureRecord[]): 
 
 /**
  * The 17 `Feat.json` records as `feat` entities. `category` comes from `CATEGORY_MAP`; the
- * description is composed per `composeDescription` above. Structured predicates for feat
+ * description is composed per `composeDescription` above. Per controller ruling R23, `repeatable`
+ * is true iff the feat has a `FeatBenefit` whose `name` is exactly (after trim) `"Repeatable"` —
+ * verified over all 35 FeatBenefit records, that's exactly Magic Initiate, Skilled, and Ability
+ * Score Improvement; every other feat is `repeatable: false`. Structured predicates for feat
  * prerequisites/effects are Phase 4 (out of scope here — the prerequisite text is kept verbatim in
  * the description tail).
  */
@@ -73,11 +76,13 @@ export function transformFeats(): Entity[] {
       throw new Error(`feats: "${pk}" has no FeatBenefit records`);
     }
 
+    const repeatable = benefits.some((b) => fieldStr(b.fields, 'name', b.pk).trim() === 'Repeatable');
+
     return {
       type: 'feat',
       ...baseEntity(featId(slug), name, composeDescription(rec, benefits)),
       category,
-      repeatable: false,
+      repeatable,
     };
   });
 }

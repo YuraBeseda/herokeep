@@ -16,4 +16,4 @@ Content: `pnpm --filter @hk/content build:pack` generates the SRD 5.2.1 core pac
 
 ## Plans
 
-Implementation plans live in `docs/superpowers/plans/`; the current one is `2026-08-30-phase-1a-foundation-protocol-engine.md`.
+Implementation plans live in `docs/superpowers/plans/`; the current one is `2026-08-30-phase-1a-srd-content-import.md`.

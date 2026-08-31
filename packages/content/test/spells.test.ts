@@ -44,4 +44,27 @@ describe('spell transform', () => {
     expect(specialRange, 'range special-cases').toBeLessThanOrEqual(30);
     expect(specialDuration, 'duration special-cases').toBeLessThanOrEqual(40);
   });
+
+  describe('attack (R22: derived from desc text, not attack_roll)', () => {
+    it('Bless makes no spell attack: attack is omitted even though upstream attack_roll is true', () => {
+      const bless = byId.get('srd-5e-2024:spell/bless') as { attack?: string };
+      expect(bless?.attack).toBeUndefined();
+    });
+
+    it('Fire Bolt ("ranged spell attack" in its desc) is attack: ranged', () => {
+      expect(byId.get('srd-5e-2024:spell/fire-bolt')).toMatchObject({ attack: 'ranged' });
+    });
+
+    it('Shocking Grasp ("melee spell attack" in its desc) is attack: melee', () => {
+      expect(byId.get('srd-5e-2024:spell/shocking-grasp')).toMatchObject({ attack: 'melee' });
+    });
+
+    it('exactly 13 spells are attack: ranged and 8 are attack: melee (desc-regex sweep of all 339)', () => {
+      const withAttack = spells.filter((s) => (s as { attack?: string }).attack !== undefined) as {
+        attack: string;
+      }[];
+      expect(withAttack.filter((s) => s.attack === 'ranged')).toHaveLength(13);
+      expect(withAttack.filter((s) => s.attack === 'melee')).toHaveLength(8);
+    });
+  });
 });

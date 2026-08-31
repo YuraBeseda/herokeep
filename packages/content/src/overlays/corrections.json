@@ -10,35 +10,5 @@
     "cite": "SRD 5.2.1, Monk Core Traits",
     "note": "Upstream CharacterClass.saving_throws for monk is [\"dex\",\"wis\"]; the SRD Core Traits table's Saving Throw Proficiencies row reads \"Strength and Dexterity\".",
     "set": { "saves": ["str", "dex"] }
-  },
-  {
-    "id": "srd-5e-2024:spell/arcane-sword",
-    "cite": "SRD 5.2.1, Arcane Sword",
-    "note": "transformSpells() defaults every attack_roll spell to attack: 'ranged'; Arcane Sword's SRD text opens \"make a melee spell attack\".",
-    "set": { "attack": "melee" }
-  },
-  {
-    "id": "srd-5e-2024:spell/chill-touch",
-    "cite": "SRD 5.2.1, Chill Touch",
-    "note": "transformSpells() defaults every attack_roll spell to attack: 'ranged'; Chill Touch's SRD text opens \"make a melee spell attack\".",
-    "set": { "attack": "melee" }
-  },
-  {
-    "id": "srd-5e-2024:spell/flame-blade",
-    "cite": "SRD 5.2.1, Flame Blade",
-    "note": "transformSpells() defaults every attack_roll spell to attack: 'ranged'; Flame Blade's SRD text calls for \"a melee spell attack\".",
-    "set": { "attack": "melee" }
-  },
-  {
-    "id": "srd-5e-2024:spell/shocking-grasp",
-    "cite": "SRD 5.2.1, Shocking Grasp",
-    "note": "transformSpells() defaults every attack_roll spell to attack: 'ranged'; Shocking Grasp's SRD text calls for \"a melee spell attack\".",
-    "set": { "attack": "melee" }
-  },
-  {
-    "id": "srd-5e-2024:spell/vampiric-touch",
-    "cite": "SRD 5.2.1, Vampiric Touch",
-    "note": "transformSpells() defaults every attack_roll spell to attack: 'ranged'; Vampiric Touch's SRD text calls for \"a melee spell attack\".",
-    "set": { "attack": "melee" }
   }
 ]
