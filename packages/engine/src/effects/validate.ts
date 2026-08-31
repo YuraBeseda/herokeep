@@ -1,6 +1,7 @@
 import { type Effect, EffectSchema } from '@hk/protocol';
 import { type Diagnostic, error, warning } from '../diagnostics.ts';
 import { validateFormula } from '../formula/validate.ts';
+import { checkPredicateShape } from '../predicate/depth.ts';
 import { collectPredicateFormulas } from '../predicate/evaluate.ts';
 import { isKnownEffectType } from './registry.ts';
 
@@ -63,9 +64,12 @@ export function validateEffect(effect: unknown, path: string, entityId: string):
       error('effect.invalid', i.message, { path: joinPath(path, i.path), entityId }),
     );
   }
-  return collectEffectFormulas(parsed.data, path).flatMap((s) =>
-    validateFormula(s.src, { allowComparison: s.allowComparison, path: s.path, entityId }),
-  );
+  return [
+    ...(parsed.data.when ? checkPredicateShape(parsed.data.when, `${path}.when`, entityId) : []),
+    ...collectEffectFormulas(parsed.data, path).flatMap((s) =>
+      validateFormula(s.src, { allowComparison: s.allowComparison, path: s.path, entityId }),
+    ),
+  ];
 }
 
 export function validateEffects(effects: unknown[], path: string, entityId: string): Diagnostic[] {

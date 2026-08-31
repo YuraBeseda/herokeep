@@ -2,9 +2,10 @@ import { type Choice, type Entity, PACK_LIMITS, type Pack, parseChoiceId, parseE
 import { type Diagnostic, error, warning } from '../diagnostics.ts';
 import { validateEffects } from '../effects/validate.ts';
 import { validateFormula } from '../formula/validate.ts';
+import { checkPredicateShape } from '../predicate/depth.ts';
 import { findChoice } from './choices.ts';
 import { createContentIndex } from './index.ts';
-import { collectEntityFormulas } from './entity-formulas.ts';
+import { collectEntityFormulas, collectEntityPredicates } from './entity-formulas.ts';
 import { collectEntityRefs } from './refs.ts';
 
 const utf8Bytes = (s: string) => new TextEncoder().encode(s).length;
@@ -95,6 +96,7 @@ export function validatePack(pack: Pack, available: Pack[]): Diagnostic[] {
         ...validateFormula(s.src, { allowComparison: s.allowComparison, path: `${base}.${s.path}`, entityId: e.id }),
       );
     }
+    for (const s of collectEntityPredicates(e)) out.push(...checkPredicateShape(s.p, `${base}.${s.path}`, e.id));
     const resolveClass = (r: string) => index.resolveClassRef(r);
     e.choices.forEach((c, j) => out.push(...choiceDiagnostics(c, e, `${base}.choices.${j}`, undefined, resolveClass)));
     if (e.type === 'class' || e.type === 'subclass') {
