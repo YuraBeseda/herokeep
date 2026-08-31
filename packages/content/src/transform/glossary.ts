@@ -1,8 +1,8 @@
 import type { Entity } from '@hk/protocol';
 import { abilityId, conditionId, ruleId, skillId } from '../ids.ts';
 import { systemEntity } from '../static/system.ts';
-import { type FixtureRecord, pkSlug, readFixture } from '../upstream.ts';
-import { baseEntity } from './common.ts';
+import { pkSlug, readFixture } from '../upstream.ts';
+import { baseEntity, fieldNum, fieldStr, pkStr } from './common.ts';
 
 /** Splits a slug on `-` and capitalizes each word, e.g. `blinded` -> `Blinded`. */
 function titleCase(slug: string): string {
@@ -10,30 +10,6 @@ function titleCase(slug: string): string {
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-}
-
-/** All five glossary fixtures use string pks; this narrows the shared `string | number` pk type. */
-function pkStr(pk: FixtureRecord['pk']): string {
-  if (typeof pk !== 'string') {
-    throw new Error(`glossary: expected a string pk, got ${typeof pk} (${String(pk)})`);
-  }
-  return pk;
-}
-
-function fieldStr(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): string {
-  const value = fields[key];
-  if (typeof value !== 'string') {
-    throw new Error(`glossary: fixture "${String(pk)}" is missing a string field "${key}"`);
-  }
-  return value;
-}
-
-function fieldNum(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): number {
-  const value = fields[key];
-  if (typeof value !== 'number') {
-    throw new Error(`glossary: fixture "${String(pk)}" is missing a numeric field "${key}"`);
-  }
-  return value;
 }
 
 /**

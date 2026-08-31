@@ -1,7 +1,7 @@
 import { DiceSchema, type Entity } from '@hk/protocol';
 import { spellId } from '../ids.ts';
 import { type FixtureRecord, pkSlug, readFixture } from '../upstream.ts';
-import { baseEntity } from './common.ts';
+import { baseEntity, fieldBool, fieldNum, fieldOptionalStr, fieldStr, fieldStrArray, pkStr } from './common.ts';
 
 type CastingTimeUnit = 'action' | 'bonus' | 'reaction' | 'minute' | 'hour';
 type RangeKind = 'self' | 'touch' | 'feet' | 'miles' | 'sight' | 'unlimited' | 'special';
@@ -81,61 +81,6 @@ const UNTIL_DISPELLED_DURATIONS = new Set(['until dispelled', 'until dispelled o
 
 /** Matches upstream durations like `1 round`, `10 minutes`, `1 hour`, `30 days`. */
 const DURATION_TIME_RE = /^(\d+) (round|minute|hour|day)s?$/;
-
-function pkStr(pk: FixtureRecord['pk']): string {
-  if (typeof pk !== 'string') {
-    throw new Error(`spells: expected a string pk, got ${typeof pk} (${String(pk)})`);
-  }
-  return pk;
-}
-
-function fieldStr(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): string {
-  const value = fields[key];
-  if (typeof value !== 'string') {
-    throw new Error(`spells: fixture "${String(pk)}" is missing a string field "${key}"`);
-  }
-  return value;
-}
-
-function fieldNum(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): number {
-  const value = fields[key];
-  if (typeof value !== 'number') {
-    throw new Error(`spells: fixture "${String(pk)}" is missing a numeric field "${key}"`);
-  }
-  return value;
-}
-
-function fieldBool(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): boolean {
-  const value = fields[key];
-  if (typeof value !== 'boolean') {
-    throw new Error(`spells: fixture "${String(pk)}" is missing a boolean field "${key}"`);
-  }
-  return value;
-}
-
-function fieldStrArray(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): string[] {
-  const value = fields[key];
-  if (!Array.isArray(value)) {
-    throw new Error(`spells: fixture "${String(pk)}" is missing an array field "${key}"`);
-  }
-  return value.map((entry) => {
-    if (typeof entry !== 'string') {
-      throw new Error(`spells: fixture "${String(pk)}" has a non-string entry in "${key}"`);
-    }
-    return entry;
-  });
-}
-
-/** `null` becomes `undefined`; a present string is trimmed and blank strings become `undefined`. */
-function fieldOptionalStr(fields: Record<string, unknown>, key: string, pk: FixtureRecord['pk']): string | undefined {
-  const value = fields[key];
-  if (value === null) return undefined;
-  if (typeof value !== 'string') {
-    throw new Error(`spells: fixture "${String(pk)}" has a non-string, non-null field "${key}"`);
-  }
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
 
 function mapSchool(fields: Record<string, unknown>, pk: FixtureRecord['pk']): string {
   const school = fieldStr(fields, 'school', pk);
