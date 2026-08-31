@@ -12,6 +12,8 @@ Licenses: code MIT (`LICENSE`), project content packs CC-BY-4.0 (`LICENSE-CONTEN
 
 `pnpm build && node packages/pack-tools/dist/cli.js <command>` — `validate`, `build`, `diff`, `i18n extract` (see `docs/02-architecture/04-content-packs.md`).
 
+Content: `pnpm --filter @hk/content build:pack` generates the SRD 5.2.1 core pack from the vendored open5e snapshot (see `packages/content/upstream/open5e-srd-2024/SOURCE.md`).
+
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current one is `2026-08-30-phase-1a-foundation-protocol-engine.md`.

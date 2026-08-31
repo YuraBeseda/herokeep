@@ -1,0 +1,54 @@
+{
+  "format": 1,
+  "id": "srd-5e-2024-ru-sample",
+  "version": "0.1.0",
+  "kind": "translation",
+  "system": "5e-2024",
+  "name": "SRD 5.2.1 — русский (образец)",
+  "description": "A small sample of Russian translations for the srd-5e-2024 core pack, demonstrating the i18n pipeline (plan 3 demo data).",
+  "authors": ["Herokeep contributors"],
+  "locale": "ru",
+  "translates": { "id": "srd-5e-2024", "range": "^0" },
+  "strings": {
+    "class/fighter": { "name": "Воин" },
+    "class/wizard": { "name": "Волшебник" },
+    "class/bard": { "name": "Бард" },
+    "class/barbarian": { "name": "Варвар" },
+    "class/cleric": { "name": "Жрец" },
+    "class/druid": { "name": "Друид" },
+    "class/monk": { "name": "Монах" },
+    "class/paladin": { "name": "Паладин" },
+    "class/ranger": { "name": "Следопыт" },
+    "class/rogue": { "name": "Плут" },
+    "class/sorcerer": { "name": "Чародей" },
+    "class/warlock": { "name": "Колдун" },
+    "species/dragonborn": { "name": "Драконорождённый" },
+    "species/dwarf": { "name": "Дварф" },
+    "species/elf": { "name": "Эльф" },
+    "species/gnome": { "name": "Гном" },
+    "species/goliath": { "name": "Голиаф" },
+    "species/halfling": { "name": "Полурослик" },
+    "species/human": { "name": "Человек" },
+    "species/orc": { "name": "Орк" },
+    "species/tiefling": { "name": "Тифлинг" },
+    "background/acolyte": { "name": "Послушник" },
+    "background/criminal": { "name": "Преступник" },
+    "background/sage": { "name": "Мудрец" },
+    "background/soldier": { "name": "Солдат" },
+    "spell/fireball": {
+      "name": "Огненный шар",
+      "description": "Яркая полоса света срывается с ваших пальцев к выбранной точке в пределах дистанции и с негромким рокотом расцветает огненным взрывом. Каждое существо в сфере радиусом 20 футов с центром в этой точке совершает спасбросок Ловкости, получая 8к6 урона от огня при провале или половину этого урона при успехе. Горючие предметы в этой области, которые никто не носит и не держит, воспламеняются."
+    },
+    "spell/magic-missile": {
+      "name": "Волшебная стрела",
+      "description": "Вы создаёте три светящихся снаряда магической силы. Каждый снаряд поражает выбранное вами существо, которое вы видите в пределах дистанции. Снаряд наносит цели 1к4 + 1 урона силовым полем. Все снаряды поражают цели одновременно, и вы можете направить их в одно существо или в нескольких."
+    },
+    "spell/mage-armor": {
+      "name": "Доспехи мага",
+      "description": "Вы касаетесь согласного на это существа, которое не носит доспехов. Пока заклинание действует, базовый КД цели становится равен 13 плюс модификатор Ловкости. Заклинание завершается раньше срока, если цель наденет доспехи."
+    },
+    "condition/prone": { "name": "Сбит с ног" },
+    "condition/poisoned": { "name": "Отравлен" },
+    "system/5e-2024@0/ability-scores": { "prompt": "Значения характеристик" }
+  }
+}
