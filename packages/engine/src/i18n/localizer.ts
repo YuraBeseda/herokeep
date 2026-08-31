@@ -29,12 +29,15 @@ function stripPack(id: string): string {
 export function createLocalizer(index: ContentIndex, locale: string): Localizer {
   const base = baseLanguage(locale);
   const packsById = new Map<string, Pack>(index.packs().map((p) => [p.id, p]));
-  /** targetPackId → locale → strings, from translation packs (later packs win) */
+  /** targetPackId → locale → strings, from translation packs (later packs win per field) */
   const translations = new Map<string, Map<string, Strings>>();
   for (const t of index.translationPacks()) {
     if (!t.translates || !t.strings) continue;
     const byLocale = translations.get(t.translates.id) ?? new Map<string, Strings>();
-    byLocale.set(t.locale, { ...(byLocale.get(t.locale) ?? {}), ...t.strings });
+    const existing = byLocale.get(t.locale) ?? {};
+    const merged: Strings = { ...existing };
+    for (const [key, fields] of Object.entries(t.strings)) merged[key] = { ...(existing[key] ?? {}), ...fields };
+    byLocale.set(t.locale, merged);
     translations.set(t.translates.id, byLocale);
   }
 
