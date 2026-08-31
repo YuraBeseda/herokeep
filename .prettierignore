@@ -2,3 +2,4 @@ docs/
 .superpowers/
 pnpm-lock.yaml
 packages/*/schema/
+packages/content/upstream/
