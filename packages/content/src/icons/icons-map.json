@@ -1,0 +1,43 @@
+{
+  "categories": {
+    "spell-school:abjuration": "gi:magic-shield",
+    "spell-school:conjuration": "gi:magic-portal",
+    "spell-school:divination": "gi:crystal-ball",
+    "spell-school:enchantment": "gi:charm",
+    "spell-school:evocation": "gi:fire-ray",
+    "spell-school:illusion": "gi:invisible",
+    "spell-school:necromancy": "gi:raise-skeleton",
+    "spell-school:transmutation": "gi:transform",
+    "item:weapon-melee": "gi:broadsword",
+    "item:weapon-ranged": "gi:crossbow",
+    "item:armor": "gi:breastplate",
+    "item:shield": "gi:shield",
+    "item:gear": "gi:backpack",
+    "item:magic": "gi:gem-pendant",
+    "condition": "gi:aura",
+    "rule": "gi:open-book"
+  },
+  "entities": {
+    "srd-5e-2024:class/barbarian": "gi:barbarian",
+    "srd-5e-2024:class/bard": "gi:lyre",
+    "srd-5e-2024:class/cleric": "gi:holy-symbol",
+    "srd-5e-2024:class/druid": "gi:oak-leaf",
+    "srd-5e-2024:class/fighter": "gi:crossed-swords",
+    "srd-5e-2024:class/monk": "gi:fist",
+    "srd-5e-2024:class/paladin": "gi:templar-shield",
+    "srd-5e-2024:class/ranger": "gi:bowman",
+    "srd-5e-2024:class/rogue": "gi:hood",
+    "srd-5e-2024:class/sorcerer": "gi:fire-spell-cast",
+    "srd-5e-2024:class/warlock": "gi:pentacle",
+    "srd-5e-2024:class/wizard": "gi:wizard-staff",
+    "srd-5e-2024:species/dragonborn": "gi:dragon-head",
+    "srd-5e-2024:species/dwarf": "gi:dwarf-face",
+    "srd-5e-2024:species/elf": "gi:elf-ear",
+    "srd-5e-2024:species/gnome": "gi:gnome",
+    "srd-5e-2024:species/goliath": "gi:giant",
+    "srd-5e-2024:species/halfling": "gi:bare-feet",
+    "srd-5e-2024:species/human": "gi:person",
+    "srd-5e-2024:species/orc": "gi:orc-head",
+    "srd-5e-2024:species/tiefling": "gi:devil-mask"
+  }
+}
