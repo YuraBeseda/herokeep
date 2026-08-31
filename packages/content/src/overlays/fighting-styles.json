@@ -1,0 +1,44 @@
+[
+  {
+    "id": "srd-5e-2024:feat/archery",
+    "cite": "SRD 5.2.1, Archery (Fighting Style feat)",
+    "note": "FeatBenefit text: \"You gain a +2 bonus to attack rolls you make with Ranged weapons.\"",
+    "merge": {
+      "tags": ["fighting-style"],
+      "effects": [{ "type": "attack.bonus", "value": 2, "filter": { "weapon": "ranged" } }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/defense",
+    "cite": "SRD 5.2.1, Defense (Fighting Style feat)",
+    "note": "FeatBenefit text: \"While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.\" The brief's Defense entry names a `key: 'defense'` value; per controller ruling R19-adjacent guidance, `key` is dropped here (it is only the common optional effect-stacking key, not a semantic identifier, and this overlay does not need effect-stacking behavior). `when` is expressed with the armor-category predicate (light/medium/heavy) rather than a not-none predicate — both are logically equivalent since armorCategory() always returns exactly one category.",
+    "merge": {
+      "tags": ["fighting-style"],
+      "effects": [{ "type": "ac.bonus", "value": 1, "when": { "armor": { "category": ["light", "medium", "heavy"] } } }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/great-weapon-fighting",
+    "cite": "SRD 5.2.1, Great Weapon Fighting (Fighting Style feat)",
+    "note": "FeatBenefit text: \"When you roll damage for an attack you make with a Melee weapon that you are holding with two hands, you can treat any 1 or 2 on a damage die as a 3. The weapon must have the Two-Handed or Versatile property to gain this benefit.\" Our vocabulary's only mechanism is damage.rerollBelow (reroll, not treat-as-3) with value: 2, the closest declarative fit. AttackFilterSchema.property is a single slug and cannot express \"Two-Handed OR Versatile\", so no filter is emitted; both the weapon-class restriction and the exact treat-as-3 semantics need Phase-4 vocabulary.",
+    "merge": {
+      "tags": ["fighting-style"],
+      "effects": [{ "type": "damage.rerollBelow", "value": 2 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/two-weapon-fighting",
+    "cite": "SRD 5.2.1, Two-Weapon Fighting (Fighting Style feat)",
+    "note": "FeatBenefit text: \"When you make an extra attack as a result of using a weapon that has the Light property, you can add your ability modifier to the damage of that attack if you aren't already adding it to the damage.\" This needs off-hand/extra-attack context we don't model yet, so it is recorded as a feature.text stub only (no mechanical effect).",
+    "merge": {
+      "tags": ["fighting-style"],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Two-Weapon Fighting",
+          "description": "When you make an extra attack as a result of using a weapon that has the Light property, you can add your ability modifier to the damage of that attack if you aren't already adding it to the damage."
+        }
+      ]
+    }
+  }
+]

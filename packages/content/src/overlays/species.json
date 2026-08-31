@@ -1,0 +1,92 @@
+[
+  {
+    "id": "srd-5e-2024:species/dragonborn",
+    "cite": "SRD 5.2.1, Dragonborn Traits (Darkvision)",
+    "note": "2024 species get Common plus two languages of choice; the choice is Phase-4 vocabulary (choices), so every species overlay in this file grants Common only. Noted once here.",
+    "merge": {
+      "effects": [
+        { "type": "sense.grant", "sense": "darkvision", "range": 60 },
+        { "type": "language.grant", "language": "srd-5e-2024:language/common" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/dwarf",
+    "cite": "SRD 5.2.1, Dwarf Traits (Darkvision)",
+    "merge": {
+      "effects": [
+        { "type": "sense.grant", "sense": "darkvision", "range": 120 },
+        { "type": "language.grant", "language": "srd-5e-2024:language/common" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/elf",
+    "cite": "SRD 5.2.1, Elf Traits (Darkvision)",
+    "merge": {
+      "effects": [
+        { "type": "sense.grant", "sense": "darkvision", "range": 60 },
+        { "type": "language.grant", "language": "srd-5e-2024:language/common" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/gnome",
+    "cite": "SRD 5.2.1, Gnome Traits (Size, Darkvision)",
+    "note": "transformSpecies() defaults size to medium; the SRD Size trait reads \"Small (about 3-4 feet tall)\".",
+    "set": { "size": "small" },
+    "merge": {
+      "effects": [
+        { "type": "sense.grant", "sense": "darkvision", "range": 60 },
+        { "type": "language.grant", "language": "srd-5e-2024:language/common" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/goliath",
+    "cite": "SRD 5.2.1, Goliath Traits (Speed)",
+    "note": "transformSpecies() defaults speed to 30ft; the SRD Speed trait reads \"35 feet\". Goliaths have no Darkvision trait in the SRD.",
+    "set": { "speed": 35 },
+    "merge": {
+      "effects": [{ "type": "language.grant", "language": "srd-5e-2024:language/common" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/halfling",
+    "cite": "SRD 5.2.1, Halfling Traits (Size)",
+    "note": "transformSpecies() defaults size to medium; the SRD Size trait reads \"Small (about 2-3 feet tall)\". Halflings have no Darkvision trait in the SRD.",
+    "set": { "size": "small" },
+    "merge": {
+      "effects": [{ "type": "language.grant", "language": "srd-5e-2024:language/common" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/human",
+    "cite": "SRD 5.2.1, Human Traits (Size)",
+    "note": "The SRD Size trait reads \"Medium (about 4-7 feet tall) or Small (about 2-4 feet tall), chosen when you select this species\" — modeling that choice needs Phase-4 choice vocabulary, so size stays at the transform's medium default. Humans have no Darkvision trait in the SRD.",
+    "merge": {
+      "effects": [{ "type": "language.grant", "language": "srd-5e-2024:language/common" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/orc",
+    "cite": "SRD 5.2.1, Orc Traits (Darkvision)",
+    "merge": {
+      "effects": [
+        { "type": "sense.grant", "sense": "darkvision", "range": 120 },
+        { "type": "language.grant", "language": "srd-5e-2024:language/common" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:species/tiefling",
+    "cite": "SRD 5.2.1, Tiefling Traits (Size, Darkvision)",
+    "note": "The SRD Size trait reads \"Medium (about 4-7 feet tall) or Small (about 3-4 feet tall), chosen when you select this species\" — modeling that choice needs Phase-4 choice vocabulary, so size stays at the transform's medium default.",
+    "merge": {
+      "effects": [
+        { "type": "sense.grant", "sense": "darkvision", "range": 60 },
+        { "type": "language.grant", "language": "srd-5e-2024:language/common" }
+      ]
+    }
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "srd-5e-2024:system/5e-2024",
+    "note": "The four SRD 5.2.1 character-creation choices: species, background, class, and ability scores. systemEntity() carries no choices of its own; this overlay is the only source of them.",
+    "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:system/5e-2024@0/species",
+          "prompt": "Species",
+          "at": { "kind": "creation" },
+          "pick": { "query": { "type": "species" } },
+          "count": 1
+        },
+        {
+          "id": "srd-5e-2024:system/5e-2024@0/background",
+          "prompt": "Background",
+          "at": { "kind": "creation" },
+          "pick": { "query": { "type": "background" } },
+          "count": 1
+        },
+        {
+          "id": "srd-5e-2024:system/5e-2024@0/class",
+          "prompt": "Class",
+          "at": { "kind": "creation" },
+          "pick": { "query": { "type": "class" } },
+          "count": 1
+        },
+        {
+          "id": "srd-5e-2024:system/5e-2024@0/ability-scores",
+          "prompt": "Ability scores",
+          "at": { "kind": "creation" },
+          "pick": { "abilityGeneration": true },
+          "count": 1
+        }
+      ]
+    }
+  }
+]
