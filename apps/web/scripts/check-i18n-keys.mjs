@@ -57,6 +57,12 @@ function runFind(translationsPath) {
   return result.status ?? 1;
 }
 
+// `process.exit()` does not run pending `finally` blocks in Node.js, so the exit code is only
+// captured here — the actual `process.exit()` call happens after the `try`/`finally` below has
+// run to completion, so the scratch directory is always removed regardless of which path exits
+// non-zero.
+let exitCode = 0;
+
 const scratchRoot = mkdtempSync(join(tmpdir(), 'hk-i18n-check-'));
 try {
   const enMirror = join(scratchRoot, 'en');
@@ -64,19 +70,23 @@ try {
   mirrorLangFiles(i18nRoot, enMirror, ['en.json']);
   const enStatus = runFind(enMirror);
   if (enStatus !== 0) {
-    console.error('\n[i18n:check] Missing English (en) translation keys — failing.\n');
-    process.exit(enStatus);
-  }
-
-  const warnMirror = join(scratchRoot, 'warn');
-  mkdirSync(warnMirror, { recursive: true });
-  mirrorLangFiles(i18nRoot, warnMirror, ['ru.json', 'uk.json']);
-  const warnStatus = runFind(warnMirror);
-  if (warnStatus !== 0) {
-    console.warn(
-      '\n[i18n:check] Missing ru/uk translation keys detected (non-blocking warning — see table above).\n',
+    console.error(
+      '\n[i18n:check] keys-manager reported a failure for English (en) — missing keys or a CLI error; see output above.\n',
     );
+    exitCode = enStatus;
+  } else {
+    const warnMirror = join(scratchRoot, 'warn');
+    mkdirSync(warnMirror, { recursive: true });
+    mirrorLangFiles(i18nRoot, warnMirror, ['ru.json', 'uk.json']);
+    const warnStatus = runFind(warnMirror);
+    if (warnStatus !== 0) {
+      console.warn(
+        '\n[i18n:check] Missing ru/uk translation keys detected (non-blocking warning — see table above).\n',
+      );
+    }
   }
 } finally {
   rmSync(scratchRoot, { recursive: true, force: true });
 }
+
+process.exit(exitCode);
