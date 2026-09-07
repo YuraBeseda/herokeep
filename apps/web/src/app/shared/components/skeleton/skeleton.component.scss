@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+.hk-skeleton__bar {
+  display: block;
+  height: 1em;
+  border-radius: var(--radius-s);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: hk-skeleton-shimmer calc(var(--duration-m) * 6) ease-in-out infinite;
+}
+
+.hk-skeleton__bar + .hk-skeleton__bar {
+  margin-block-start: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-skeleton__bar {
+    animation: none;
+  }
+}
+
+@keyframes hk-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}

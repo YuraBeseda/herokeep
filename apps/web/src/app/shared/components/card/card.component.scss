@@ -1,0 +1,19 @@
+:host {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-l);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-1);
+}
+
+.hk-card__header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-1);
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.hk-card__body {
+  padding: var(--space-4);
+}

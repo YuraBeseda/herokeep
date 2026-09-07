@@ -32,11 +32,13 @@ module.exports = defineConfig([
       ],
       '@angular-eslint/component-selector': [
         'error',
-        {
-          type: 'element',
-          prefix: 'app',
-          style: 'kebab-case',
-        },
+        [
+          // Views/shell: `app-*` elements. Design-system components: `hk-*` elements
+          // (`hk-card`, `hk-chip`, …) or `hk-*` attribute selectors on a native element
+          // (`button[hk-button]`) so consumers get native semantics for free.
+          { type: 'element', prefix: ['app', 'hk'], style: 'kebab-case' },
+          { type: 'attribute', prefix: 'hk', style: 'kebab-case' },
+        ],
       ],
     },
   },

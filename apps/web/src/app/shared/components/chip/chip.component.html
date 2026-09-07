@@ -1,0 +1,6 @@
+<ng-content />
+@if (removable()) {
+  <button type="button" class="hk-chip__remove" (click)="onRemoveClick($event)">
+    <ng-content select="[hk-chip-remove]" />
+  </button>
+}

@@ -1,0 +1,28 @@
+@use 'utilities' as u;
+
+:host {
+  @include u.touch-target;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  cursor: pointer;
+  transition: background var(--duration-s);
+}
+
+:host(.hk-icon-button--ghost) {
+  border-color: var(--border-1);
+  background: transparent;
+  color: var(--text-1);
+}
+
+:host(.hk-icon-button--danger) {
+  background: var(--danger);
+  color: var(--accent-contrast);
+}
