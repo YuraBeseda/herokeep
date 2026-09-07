@@ -45,6 +45,34 @@ describe('DialogService', () => {
     handle.close();
   });
 
+  it('moves focus into the dialog panel on open (cdkTrapFocusAutoCapture)', () => {
+    // `@angular/cdk/a11y`'s `InteractivityChecker.isVisible` requires `hasGeometry()` (real
+    // `offsetWidth`/`offsetHeight`/`getClientRects()`), which jsdom never reports as non-zero —
+    // so every element looks invisible/unfocusable to the focus trap unless geometry is
+    // stubbed, regardless of how many ticks run. This mirrors what a real browser reports for
+    // any rendered, visible element.
+    const getClientRects = vi
+      .spyOn(HTMLElement.prototype, 'getClientRects')
+      .mockReturnValue([{}] as unknown as DOMRectList);
+    try {
+      const handle = service.open(TestDialogContentComponent);
+      // `cdkTrapFocusAutoCapture`'s initial-focus capture is registered via `afterNextRender`
+      // from inside `ngAfterContentInit` during the first tick — it only runs on a
+      // *subsequent* tick, not synchronously within the same one that attaches the component.
+      TestBed.tick();
+      TestBed.tick();
+
+      const surface = document.querySelector('.hk-dialog__surface')!;
+      expect(surface).not.toBeNull();
+      expect(document.activeElement).not.toBe(trigger);
+      expect(surface.contains(document.activeElement)).toBe(true);
+
+      handle.close();
+    } finally {
+      getClientRects.mockRestore();
+    }
+  });
+
   it('closes on Escape, resolves the closed promise, and restores focus', async () => {
     const handle = service.open(TestDialogContentComponent);
     TestBed.tick();

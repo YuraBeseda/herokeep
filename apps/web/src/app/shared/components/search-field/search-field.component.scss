@@ -28,9 +28,9 @@
     color: var(--text-3);
   }
 
-  &:focus-visible {
-    outline: none;
-  }
+  /* Intentionally no `:focus-visible` override here — the global `:focus-visible { outline:
+     var(--focus-ring); }` rule (src/styles/base.scss) applies as-is, so keyboard users still
+     get the app-wide focus indicator on this input. */
 }
 
 /* A CSS-only × glyph (two crossed bars) — no text node, so there is nothing here for the

@@ -34,6 +34,11 @@ returns `{ closed: Promise<unknown>; close(result?: unknown): void }`.
 - The opened component can close itself via `inject(DialogRef).close(result)`; the caller
   can also close it externally via the returned handle's `close()`.
 - ESC and a backdrop click both close with `result === undefined`.
+- On open, focus moves into the dialog automatically (`cdkTrapFocusAutoCapture` on the
+  `hk-dialog__surface` wrapper — the first tabbable element inside the opened component, or
+  the surface itself if none). Don't drop `cdkTrapFocusAutoCapture` from the template; without
+  it the trap still blocks Tab from leaving the dialog, but nothing ever moves focus in on
+  open, leaving keyboard focus stuck on whatever triggered `open()`.
 - Closing (any path) restores focus to whatever element had focus when `open()` was called.
 
 ## Do / Don't

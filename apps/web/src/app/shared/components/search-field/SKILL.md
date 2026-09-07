@@ -40,8 +40,17 @@ full key straight through resolves correctly — this component never needs to k
 declare a scope itself. This is also why the key inputs must be the full dotted path, not a
 scope-relative suffix.
 
+## Focus indicator
+
+The input carries no `:focus-visible` override of its own, so the app-wide
+`:focus-visible { outline: var(--focus-ring); }` rule (`src/styles/base.scss`) applies
+unchanged — keyboard focus is always visible here without this component doing anything
+special for it.
+
 ## Do / Don't
 
 Do treat `value` as "committed search text", not "live keystrokes" — there is no output for
 raw input. Don't pass a scope-relative key (e.g. `'search.placeholder'`) expecting this
 component to resolve it against some implicit scope; it has none, so pass the full key.
+Don't add a `:focus-visible` override on `.hk-search-field__input` — it would silently
+undo the app-wide focus ring for this one field.
