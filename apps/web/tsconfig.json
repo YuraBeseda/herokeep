@@ -9,6 +9,14 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    // The `@hk/*` path aliases below point at packages/* TS *source* (no build step for the
+    // app), and that source imports its own siblings with explicit `.ts` extensions
+    // (repo convention, see CLAUDE.md) — the esbuild-based Angular builder needs this to
+    // follow those imports. `rewriteRelativeImportExtensions` is required alongside it (same
+    // pairing as the root tsconfig.base.json) even though this app's own bundler is esbuild,
+    // not `tsc` emit.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
@@ -19,6 +27,16 @@
       "@hk/protocol": ["../../packages/protocol/src/index.ts"],
       "@hk/engine": ["../../packages/engine/src/index.ts"],
       "@hk/content": ["../../packages/content/src/index.ts"],
+      // `@hk/content`'s barrel (above) re-exports `buildPack`/`writePack` from `build.ts`, which
+      // is a Node-only, build-time module graph (`node:fs`, and `upstream.ts`'s
+      // `import.meta.url` + `fileURLToPath` for reading vendored fixtures — see task-9-report.md).
+      // Importing the barrel here breaks both the Vitest runner and (silent, tree-shaking-
+      // dependent) the browser bundle. The two leaf modules below are pure/browser-safe and are
+      // what this app actually needs; prefer them over the barrel for any future `@hk/content`
+      // import from apps/web (e.g. Task 13's `ATTRIBUTION` — add it to `version.ts` and alias it
+      // here rather than importing the barrel).
+      "@hk/content/version": ["../../packages/content/src/version.ts"],
+      "@hk/content/icons": ["../../packages/content/src/icons/icons-map.json"],
       "@hk/ui-tokens": ["../../packages/ui-tokens/src/index.ts"]
     }
   },

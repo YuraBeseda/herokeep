@@ -2,17 +2,18 @@
   "name": "web",
   "version": "0.0.0",
   "scripts": {
-    "prestart": "pnpm --filter @hk/ui-tokens build:tokens",
+    "prestart": "pnpm --filter @hk/ui-tokens build:tokens && pnpm --filter @hk/content build:pack && node tools/copy-packs.ts",
     "start": "ng serve",
-    "prebuild": "pnpm --filter @hk/ui-tokens build:tokens",
+    "prebuild": "pnpm --filter @hk/ui-tokens build:tokens && pnpm --filter @hk/content build:pack && node tools/copy-packs.ts",
     "build": "ng build",
-    "pretest": "pnpm --filter @hk/ui-tokens build:tokens",
+    "pretest": "pnpm --filter @hk/ui-tokens build:tokens && pnpm --filter @hk/content build:pack && node tools/copy-packs.ts",
     "test": "ng test",
     "lint": "ng lint && node scripts/check-i18n-keys.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "i18n:extract": "transloco-keys-manager extract",
     "i18n:check": "node scripts/check-i18n-keys.mjs",
-    "build:sprite": "node tools/build-sprite.ts"
+    "build:sprite": "node tools/build-sprite.ts",
+    "build:packs": "node tools/copy-packs.ts"
   },
   "private": true,
   "packageManager": "pnpm@11.24.0",
@@ -26,8 +27,11 @@
     "@angular/router": "^22.1.0",
     "@jsverse/transloco": "~8.4.0",
     "@jsverse/transloco-messageformat": "~8.4.0",
+    "dexie": "~4.4.5",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "semver": "catalog:",
+    "tslib": "^2.3.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@angular-eslint/builder": "22.4.0",
@@ -35,9 +39,11 @@
     "@angular/cli": "^22.1.7",
     "@angular/compiler-cli": "^22.1.0",
     "@eslint/js": "^10.0.1",
+    "@types/semver": "catalog:",
     "@jsverse/transloco-keys-manager": "~8.1.1",
     "angular-eslint": "22.4.0",
     "eslint": "^10.9.1",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "stylelint": "~17.15.0",

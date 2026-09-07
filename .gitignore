@@ -1,6 +1,10 @@
 node_modules/
 dist/
 coverage/
+# Copied by apps/web/tools/copy-packs.ts (prebuild/pretest/prestart) from packages/content's
+# build output, so the "public" angular.json asset glob can serve it under /packs — see that
+# script's doc comment for why it isn't a direct angular.json asset entry instead.
+apps/web/public/packs/
 *.tsbuildinfo
 .angular/
 .DS_Store

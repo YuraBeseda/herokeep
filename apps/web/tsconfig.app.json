@@ -3,7 +3,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": []
+    "types": [],
+    // Needed to import the icons map JSON (`@hk/content/icons`, an `@hk/content` tsconfig
+    // path pointing at packages/content/src/icons/icons-map.json) as a plain module — see
+    // engine.facade.ts.
+    "resolveJsonModule": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts"]
