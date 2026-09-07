@@ -1,6 +1,7 @@
 {
   "app": {
     "offline": "Offline",
+    "theme-toggle": "Toggle theme",
     "title": "Herokeep"
   },
   "home": {
@@ -9,6 +10,7 @@
   "nav": {
     "about": "About",
     "home": "Home",
+    "landmark": "Primary navigation",
     "library": "Library",
     "settings": "Settings"
   }

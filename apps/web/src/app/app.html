@@ -1,1 +1,50 @@
-<router-outlet />
+<ng-container *transloco="let t; read: 'shell'">
+  <header class="app-shell__header">
+    <p class="app-shell__title">{{ t('app.title') }}</p>
+    @if (!isOnline()) {
+      <p class="app-shell__offline" role="status">{{ t('app.offline') }}</p>
+    }
+    <button
+      type="button"
+      class="app-shell__theme-toggle"
+      [attr.aria-label]="t('app.theme-toggle')"
+      (click)="themeService.toggle()"
+    >
+      <span class="app-shell__theme-icon" aria-hidden="true"></span>
+    </button>
+  </header>
+  <nav class="app-shell__nav" [attr.aria-label]="t('nav.landmark')">
+    <a
+      routerLink="/"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="app-shell__link"
+      >{{ t('nav.home') }}</a
+    >
+    <a
+      routerLink="/library"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      class="app-shell__link"
+      >{{ t('nav.library') }}</a
+    >
+    <a
+      routerLink="/settings"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      class="app-shell__link"
+      >{{ t('nav.settings') }}</a
+    >
+    <a
+      routerLink="/about"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      class="app-shell__link"
+      >{{ t('nav.about') }}</a
+    >
+  </nav>
+  <main class="app-shell__main">
+    <router-outlet />
+  </main>
+</ng-container>

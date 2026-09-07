@@ -1,0 +1,73 @@
+@use 'utilities';
+
+.app-shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  border-block-end: 1px solid var(--border-1);
+}
+
+.app-shell__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.app-shell__offline {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--warning);
+  color: var(--surface-0);
+  font-size: 0.875rem;
+}
+
+.app-shell__theme-toggle {
+  @include utilities.touch-target;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-m);
+  background: transparent;
+  cursor: pointer;
+}
+
+.app-shell__theme-icon {
+  width: var(--space-4);
+  height: var(--space-4);
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.app-shell__nav {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-0);
+  border-block-end: 1px solid var(--border-1);
+}
+
+.app-shell__link {
+  @include utilities.touch-target;
+
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-s);
+  color: var(--text-2);
+  text-decoration: none;
+
+  &.is-active {
+    background: var(--surface-2);
+    color: var(--text-1);
+  }
+}
+
+.app-shell__main {
+  padding: var(--space-4);
+}

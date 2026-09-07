@@ -1,6 +1,7 @@
 {
   "app": {
     "offline": "Офлайн",
+    "theme-toggle": "Переключить тему",
     "title": "Herokeep"
   },
   "home": {
@@ -9,6 +10,7 @@
   "nav": {
     "about": "О приложении",
     "home": "Главная",
+    "landmark": "Основная навигация",
     "library": "Библиотека",
     "settings": "Настройки"
   }
