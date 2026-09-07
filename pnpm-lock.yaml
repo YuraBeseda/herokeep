@@ -106,6 +106,8 @@ importers:
         specifier: 'catalog:'
         version: 4.5.4
 
+  packages/ui-tokens: {}
+
 packages:
 
   '@eslint-community/eslint-utils@4.10.1':

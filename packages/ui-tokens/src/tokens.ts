@@ -1,0 +1,63 @@
+export interface ThemeTokens {
+  shared: Record<string, string>;
+  light: Record<string, string>;
+  dark: Record<string, string>;
+}
+
+export const TOKENS: ThemeTokens = {
+  shared: {
+    'font-body': "'Inter', system-ui, sans-serif",
+    'font-display': "'Philosopher', 'Inter', serif",
+    'font-scale': '1',
+    'radius-s': '6px',
+    'radius-m': '10px',
+    'radius-l': '16px',
+    'space-1': '4px',
+    'space-2': '8px',
+    'space-3': '12px',
+    'space-4': '16px',
+    'space-5': '24px',
+    'space-6': '32px',
+    'touch-target': '44px',
+    'shadow-1': '0 1px 3px rgb(0 0 0 / 0.25)',
+    'shadow-2': '0 4px 12px rgb(0 0 0 / 0.35)',
+    'accent-h': '268',
+    'accent-s': '60%',
+    motion: '1',
+    'duration-s': '120ms',
+    'duration-m': '240ms',
+    'focus-ring': '2px solid hsl(var(--accent-h) var(--accent-s) 62%)',
+  },
+  light: {
+    'surface-0': 'hsl(40 30% 97%)',
+    'surface-1': 'hsl(40 25% 93%)',
+    'surface-2': 'hsl(40 20% 88%)',
+    'surface-3': 'hsl(40 16% 82%)',
+    'text-1': 'hsl(240 10% 12%)',
+    'text-2': 'hsl(240 6% 32%)',
+    'text-3': 'hsl(240 5% 48%)',
+    accent: 'hsl(var(--accent-h) var(--accent-s) 42%)',
+    'accent-contrast': 'hsl(40 30% 97%)',
+    'border-1': 'hsl(40 12% 74%)',
+    danger: 'hsl(0 62% 44%)',
+    success: 'hsl(140 45% 34%)',
+    warning: 'hsl(38 85% 38%)',
+    overlay: 'rgb(20 20 24 / 0.4)',
+  },
+  dark: {
+    'surface-0': 'hsl(240 6% 7%)',
+    'surface-1': 'hsl(240 6% 11%)',
+    'surface-2': 'hsl(240 6% 15%)',
+    'surface-3': 'hsl(240 6% 20%)',
+    'text-1': 'hsl(40 20% 96%)',
+    'text-2': 'hsl(40 8% 72%)',
+    'text-3': 'hsl(40 6% 52%)',
+    accent: 'hsl(var(--accent-h) var(--accent-s) 62%)',
+    'accent-contrast': 'hsl(240 6% 7%)',
+    'border-1': 'hsl(240 6% 26%)',
+    danger: 'hsl(0 62% 58%)',
+    success: 'hsl(140 42% 48%)',
+    warning: 'hsl(40 80% 55%)',
+    overlay: 'rgb(0 0 0 / 0.55)',
+  },
+} as const satisfies ThemeTokens;
