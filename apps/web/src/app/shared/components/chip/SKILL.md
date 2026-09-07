@@ -8,7 +8,12 @@ handling are built in.
 ## Usage
 
 ```html
-<hk-chip [selected]="isActive(type)" [removable]="true" (click)="toggle(type)" (remove)="onRemove(type)">
+<hk-chip
+  [selected]="isActive(type)"
+  [removable]="true"
+  (click)="toggle(type)"
+  (remove)="onRemove(type)"
+>
   {{ t('library.type.' + type) }}
   <span hk-chip-remove class="visually-hidden">{{ t('actions.remove') }}</span>
 </hk-chip>
@@ -24,10 +29,10 @@ handling are built in.
 
 ## Inputs / Outputs
 
-| Name        | Kind   | Type      | Default | Notes                                                        |
-| ----------- | ------ | --------- | ------- | ---------------------------------------------------------------- |
-| `selected`  | input  | `boolean` | `false` | Reflected as `hk-chip--selected` host class and `aria-pressed`. |
-| `removable` | input  | `boolean` | `false` | Shows/hides the remove affordance.                              |
+| Name        | Kind   | Type      | Default | Notes                                                                                |
+| ----------- | ------ | --------- | ------- | ------------------------------------------------------------------------------------ |
+| `selected`  | input  | `boolean` | `false` | Reflected as `hk-chip--selected` host class and `aria-pressed`.                      |
+| `removable` | input  | `boolean` | `false` | Shows/hides the remove affordance.                                                   |
 | `remove`    | output | `void`    | —       | Emits when the remove affordance is activated; never fires the chip's own `(click)`. |
 
 ## Why an element selector

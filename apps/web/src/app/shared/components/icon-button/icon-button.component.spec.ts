@@ -38,6 +38,14 @@ describe('IconButtonComponent', () => {
     expect(button.getAttribute('data-icon')).toBe('gi:crossed-swords');
   });
 
+  it('renders an hk-icon pointing at the sprite symbol for the icon input', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const use = compiled.querySelector('button hk-icon use')!;
+    expect(use.getAttribute('href')).toBe('assets/icons/sprite.svg#gi-crossed-swords');
+  });
+
   it('updates aria-label and data-icon when the inputs change', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.label.set('Defend');
@@ -47,6 +55,8 @@ describe('IconButtonComponent', () => {
     const button = compiled.querySelector('button')!;
     expect(button.getAttribute('aria-label')).toBe('Defend');
     expect(button.getAttribute('data-icon')).toBe('gi:shield');
+    const use = compiled.querySelector('button hk-icon use')!;
+    expect(use.getAttribute('href')).toBe('assets/icons/sprite.svg#gi-shield');
   });
 
   it('reflects variant as a host class, defaulting to primary', async () => {

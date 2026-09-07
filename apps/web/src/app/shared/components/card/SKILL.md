@@ -20,8 +20,8 @@ Element selector `hk-card`. A surface with an optional header row and a projecte
 
 ## Inputs
 
-| Input    | Type                  | Default     | Notes                                                     |
-| -------- | ---------------------- | ----------- | ------------------------------------------------------------ |
+| Input    | Type                  | Default     | Notes                                                                        |
+| -------- | --------------------- | ----------- | ---------------------------------------------------------------------------- |
 | `header` | `string \| undefined` | `undefined` | Rendered in `.hk-card__header` ONLY when provided (already-translated text). |
 
 No outputs.

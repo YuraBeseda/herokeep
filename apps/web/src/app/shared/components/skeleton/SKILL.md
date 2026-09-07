@@ -7,17 +7,15 @@ always `aria-hidden="true"` and disables its animation under `prefers-reduced-mo
 
 ```html
 @if (isLoading()) {
-  <hk-skeleton [lines]="3" width="80%" />
-} @else {
-  ...
-}
+<hk-skeleton [lines]="3" width="80%" />
+} @else { ... }
 ```
 
 ## Inputs
 
-| Input   | Type                  | Default | Notes                                  |
-| ------- | ---------------------- | ------- | ----------------------------------------- |
-| `lines` | `number`               | `1`     | Number of shimmer bars rendered.          |
+| Input   | Type                  | Default | Notes                                                     |
+| ------- | --------------------- | ------- | --------------------------------------------------------- |
+| `lines` | `number`              | `1`     | Number of shimmer bars rendered.                          |
 | `width` | `string \| undefined` | —       | CSS width applied to every bar (e.g. `'60%'`, `'12rem'`). |
 
 No outputs.

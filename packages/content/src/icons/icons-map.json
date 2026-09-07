@@ -15,7 +15,8 @@
     "item:gear": "gi:backpack",
     "item:magic": "gi:gem-pendant",
     "condition": "gi:aura",
-    "rule": "gi:open-book"
+    "rule": "gi:open-book",
+    "fallback": "gi:perspective-dice-six-faces-random"
   },
   "entities": {
     "srd-5e-2024:class/barbarian": "gi:barbarian",
@@ -33,9 +34,9 @@
     "srd-5e-2024:species/dragonborn": "gi:dragon-head",
     "srd-5e-2024:species/dwarf": "gi:dwarf-face",
     "srd-5e-2024:species/elf": "gi:elf-ear",
-    "srd-5e-2024:species/gnome": "gi:gnome",
+    "srd-5e-2024:species/gnome": "gi:bad-gnome",
     "srd-5e-2024:species/goliath": "gi:giant",
-    "srd-5e-2024:species/halfling": "gi:bare-feet",
+    "srd-5e-2024:species/halfling": "gi:barefoot",
     "srd-5e-2024:species/human": "gi:person",
     "srd-5e-2024:species/orc": "gi:orc-head",
     "srd-5e-2024:species/tiefling": "gi:devil-mask"

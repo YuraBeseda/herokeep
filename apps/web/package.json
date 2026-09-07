@@ -11,7 +11,8 @@
     "lint": "ng lint && node scripts/check-i18n-keys.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "i18n:extract": "transloco-keys-manager extract",
-    "i18n:check": "node scripts/check-i18n-keys.mjs"
+    "i18n:check": "node scripts/check-i18n-keys.mjs",
+    "build:sprite": "node tools/build-sprite.ts"
   },
   "private": true,
   "packageManager": "pnpm@11.24.0",

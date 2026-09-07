@@ -7,20 +7,26 @@ visible text.
 ## Usage
 
 ```html
-<button hk-icon-button icon="gi:crossed-swords" [label]="t('actions.attack')" variant="ghost" (click)="onAttack()"></button>
+<button
+  hk-icon-button
+  icon="gi:crossed-swords"
+  [label]="t('actions.attack')"
+  variant="ghost"
+  (click)="onAttack()"
+></button>
 ```
 
-Until Task 7's `hk-icon` exists, nothing renders inside the button — `icon` is stored
-and exposed as a `data-icon` attribute so the icon component can pick it up later
-without a contract change.
+Renders an `hk-icon` (see `apps/web/src/app/shared/icons/SKILL.md`) sized from `icon`.
+`icon` is also exposed as a `[attr.data-icon]` host attribute, unchanged from before
+`hk-icon` existed — nothing in the button's external contract moved.
 
 ## Inputs
 
-| Input      | Type                                | Default     | Notes                                            |
-| ---------- | ------------------------------------ | ----------- | -------------------------------------------------- |
-| `icon`     | `string` (required)                  | —           | A `gi:<slug>` id; exposed as `[attr.data-icon]`. |
-| `label`    | `string` (required)                  | —           | Bound to `aria-label`; MUST be a translated string, never a literal. |
-| `variant`  | `'primary' \| 'ghost' \| 'danger'`  | `'primary'` | Reflected as a `hk-icon-button--<variant>` host class. |
+| Input     | Type                               | Default     | Notes                                                                            |
+| --------- | ---------------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `icon`    | `string` (required)                | —           | A `gi:<slug>` id; rendered via `hk-icon` and also exposed as `[attr.data-icon]`. |
+| `label`   | `string` (required)                | —           | Bound to `aria-label`; MUST be a translated string, never a literal.             |
+| `variant` | `'primary' \| 'ghost' \| 'danger'` | `'primary'` | Reflected as a `hk-icon-button--<variant>` host class.                           |
 
 No outputs — bind the native `(click)` event directly.
 

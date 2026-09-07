@@ -13,10 +13,10 @@ semantics (focus, keyboard activation, form behavior) for free.
 
 ## Inputs
 
-| Input      | Type                                | Default     | Notes                                   |
-| ---------- | ------------------------------------ | ----------- | ---------------------------------------- |
-| `variant`  | `'primary' \| 'ghost' \| 'danger'`  | `'primary'` | Reflected as a `hk-button--<variant>` host class. |
-| `disabled` | `boolean`                            | `false`     | Sets `[disabled]` (blocks native click) and `aria-disabled`. |
+| Input      | Type                               | Default     | Notes                                                        |
+| ---------- | ---------------------------------- | ----------- | ------------------------------------------------------------ |
+| `variant`  | `'primary' \| 'ghost' \| 'danger'` | `'primary'` | Reflected as a `hk-button--<variant>` host class.            |
+| `disabled` | `boolean`                          | `false`     | Sets `[disabled]` (blocks native click) and `aria-disabled`. |
 
 No outputs — bind the native `(click)` event directly.
 

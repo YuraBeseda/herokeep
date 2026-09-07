@@ -4,3 +4,5 @@ pnpm-lock.yaml
 packages/*/schema/
 packages/content/upstream/
 apps/web/.angular/
+apps/web/src/assets/icons/
+apps/web/vendor/game-icons/

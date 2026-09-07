@@ -1,7 +1,9 @@
 import { Component, input } from '@angular/core';
+import { IconComponent } from '../../icons/icon.component';
 
 @Component({
   selector: 'button[hk-icon-button]',
+  imports: [IconComponent],
   templateUrl: './icon-button.component.html',
   styleUrl: './icon-button.component.scss',
   host: {
