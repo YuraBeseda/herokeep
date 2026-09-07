@@ -3,3 +3,4 @@ docs/
 pnpm-lock.yaml
 packages/*/schema/
 packages/content/upstream/
+apps/web/.angular/

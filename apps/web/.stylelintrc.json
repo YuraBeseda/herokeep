@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "color-no-hex": true,
+    "declaration-property-value-disallowed-list": { "/.*/": ["/^rgb/", "/^hsl/", "/^oklch/"] },
+    "selector-pseudo-element-no-unknown": true
+  }
+}
