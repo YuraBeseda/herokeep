@@ -1,0 +1,15 @@
+{
+  "app": {
+    "offline": "Offline",
+    "title": "Herokeep"
+  },
+  "home": {
+    "tagline": "Your D&D companion — the Library is ready; builder comes next."
+  },
+  "nav": {
+    "about": "About",
+    "home": "Home",
+    "library": "Library",
+    "settings": "Settings"
+  }
+}
