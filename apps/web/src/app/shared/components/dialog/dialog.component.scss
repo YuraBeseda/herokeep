@@ -1,0 +1,19 @@
+:host {
+  display: block;
+  max-width: min(90vw, 480px);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: var(--radius-l);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-2);
+}
+
+:host(.hk-dialog--sheet) {
+  max-width: 100%;
+  width: 100%;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+}
+
+.hk-dialog__surface {
+  padding: var(--space-4);
+}

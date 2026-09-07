@@ -1,0 +1,6 @@
+// `@angular/cdk/overlay` creates its container and backdrop elements directly via
+// `document.createElement`, appended to <body> — outside any Angular component's view
+// encapsulation boundary. They can only ever be styled here, never from a component's `:host`.
+.hk-overlay-backdrop {
+  background: var(--overlay);
+}

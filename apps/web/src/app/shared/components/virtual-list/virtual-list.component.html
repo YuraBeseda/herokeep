@@ -1,0 +1,8 @@
+<cdk-virtual-scroll-viewport [itemSize]="itemSize()" class="hk-virtual-list__viewport">
+  <ng-container *cdkVirtualFor="let item of items()">
+    <ng-container
+      [ngTemplateOutlet]="rowTemplate()"
+      [ngTemplateOutletContext]="{ $implicit: item }"
+    />
+  </ng-container>
+</cdk-virtual-scroll-viewport>

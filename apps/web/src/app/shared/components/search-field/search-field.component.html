@@ -1,0 +1,18 @@
+<ng-container *transloco="let t">
+  <div class="hk-search-field">
+    <input
+      #input
+      type="search"
+      class="hk-search-field__input"
+      [value]="draft()"
+      [attr.placeholder]="t(placeholderKey())"
+      (input)="onInput(input.value)"
+    />
+    <button
+      type="button"
+      class="hk-search-field__clear"
+      [attr.aria-label]="t(clearLabelKey())"
+      (click)="onClear()"
+    ></button>
+  </div>
+</ng-container>

@@ -1,0 +1,16 @@
+<div role="tablist">
+  @for (tab of tabs(); track tab.id; let i = $index) {
+    <button
+      type="button"
+      role="tab"
+      appTabFocusable
+      class="hk-tabs__tab"
+      [id]="'hk-tab-' + tab.id"
+      [attr.aria-selected]="tab.id === selected()"
+      [tabIndex]="isRovingTabStop(tab, i) ? 0 : -1"
+      (click)="onTabClick(tab, i)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>

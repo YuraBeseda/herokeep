@@ -1,0 +1,5 @@
+<ng-container *transloco="let t">
+  @for (message of visible(); track message.id) {
+    <div class="hk-toast">{{ t(message.key, message.params) }}</div>
+  }
+</ng-container>
