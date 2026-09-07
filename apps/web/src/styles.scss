@@ -1,1 +1,7 @@
-/* You can add global styles to this file, and also import other style files */
+// Global styles. Design tokens (packages/ui-tokens) are wired in ahead of this
+// file via the `styles` array in angular.json, so every custom property used
+// below is already defined by the time this loads.
+@use './styles/layers';
+@use './styles/base';
+@use './styles/typography';
+@use './styles/utilities';

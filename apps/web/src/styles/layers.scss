@@ -1,0 +1,9 @@
+// Cascade layer order (low → high priority when two rules tie on specificity).
+// Declaring the order up front — before any `@layer name { ... }` block below
+// populates a layer — means later additions to any of these layers still lose
+// to a higher layer, regardless of selector specificity or source order.
+//
+// Anything written without `@layer` (e.g. component styles, which Angular
+// scopes per-component) is implicitly the highest-priority "unlayered" layer
+// and always wins over these globals.
+@layer base, typography, utilities;

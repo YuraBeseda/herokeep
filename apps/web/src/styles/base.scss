@@ -1,0 +1,24 @@
+@layer base {
+  :where(html) {
+    box-sizing: border-box;
+  }
+
+  :where(*, *::before, *::after) {
+    box-sizing: inherit;
+  }
+
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--text-1);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  // Visible keyboard-focus indicator everywhere; mouse/touch interaction never
+  // triggers `:focus-visible`, so this does not add a ring on every click.
+  :focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+}

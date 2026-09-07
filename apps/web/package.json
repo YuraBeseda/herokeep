@@ -2,8 +2,11 @@
   "name": "web",
   "version": "0.0.0",
   "scripts": {
+    "prestart": "pnpm --filter @hk/ui-tokens build:tokens",
     "start": "ng serve",
+    "prebuild": "pnpm --filter @hk/ui-tokens build:tokens",
     "build": "ng build",
+    "pretest": "pnpm --filter @hk/ui-tokens build:tokens",
     "test": "ng test",
     "lint": "ng lint",
     "typecheck": "tsc -p tsconfig.app.json --noEmit"

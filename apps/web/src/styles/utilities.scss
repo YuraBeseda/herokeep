@@ -1,0 +1,22 @@
+@layer utilities {
+  // Keep content in the accessibility tree / available to screen readers
+  // while removing it from the visual layout entirely.
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    padding: 0;
+  }
+}
+
+// Not layered: a mixin has no CSS of its own until `@include`d, so its output
+// takes on whatever layer (or lack of one) the including stylesheet is in.
+@mixin touch-target {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+}
