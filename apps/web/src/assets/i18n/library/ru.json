@@ -5,7 +5,8 @@
   },
   "search": {
     "clear": "Очистить поиск",
-    "placeholder": "Поиск по библиотеке"
+    "placeholder": "Поиск по библиотеке",
+    "results": "{count, plural, one {# результат} few {# результата} many {# результатов} other {# результата}}"
   },
   "type": {
     "background": "Предыстории",

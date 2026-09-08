@@ -18,6 +18,12 @@
   margin-block-start: var(--space-3);
 }
 
+.library-browse__summary {
+  margin: var(--space-3) 0 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
 .library-browse__list {
   /* `hk-virtual-list` requires the consumer to size its host (see its SKILL.md) — a viewport-
      relative height keeps the list usable regardless of how tall the surrounding page is. */
@@ -56,7 +62,8 @@
   white-space: nowrap;
 }
 
-.library-browse__row-tag {
+.library-browse__row-tag,
+.library-browse__row-type {
   flex-shrink: 0;
   padding: 0 var(--space-2);
   border: 1px solid var(--border-1);

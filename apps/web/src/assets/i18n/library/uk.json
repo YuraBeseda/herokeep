@@ -5,7 +5,8 @@
   },
   "search": {
     "clear": "Очистити пошук",
-    "placeholder": "Пошук у бібліотеці"
+    "placeholder": "Пошук у бібліотеці",
+    "results": "{count, plural, one {# результат} few {# результати} many {# результатів} other {# результату}}"
   },
   "type": {
     "background": "Передісторії",

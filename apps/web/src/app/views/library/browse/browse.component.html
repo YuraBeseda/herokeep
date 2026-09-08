@@ -20,6 +20,9 @@
       }
     </div>
   } @else {
+    @if (searching()) {
+      <p class="library-browse__summary">{{ t('search.results', { count: rows().length }) }}</p>
+    }
     <hk-virtual-list
       class="library-browse__list"
       [items]="rows()"
@@ -30,7 +33,9 @@
         <button type="button" class="library-browse__row" (click)="onRowClick(row.id)">
           <hk-icon [icon]="row.icon" class="library-browse__row-icon" />
           <span class="library-browse__row-name">{{ row.name }}</span>
-          @if (row.fallback) {
+          @if (searching()) {
+            <span class="library-browse__row-type">{{ t('type.' + row.type) }}</span>
+          } @else if (row.fallback) {
             <span class="library-browse__row-tag">{{ t('en-tag') }}</span>
           }
         </button>
