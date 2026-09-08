@@ -1,0 +1,29 @@
+:host {
+  display: block;
+}
+
+.about__title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+}
+
+.about__app-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.about__version {
+  margin: 0 0 var(--space-4);
+  color: var(--text-2);
+}
+
+.about__section {
+  margin-block-end: var(--space-4);
+}
+
+.about__legal {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}

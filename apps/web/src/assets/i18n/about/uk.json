@@ -1,0 +1,15 @@
+{
+  "title": "Про застосунок",
+  "version-label": "Версія {version}",
+  "srd": {
+    "title": "Текст SRD"
+  },
+  "icons": {
+    "title": "Іконки",
+    "credit": "Icons made by {authors}. Available on https://game-icons.net (CC BY 3.0)."
+  },
+  "open5e": {
+    "title": "Структуровані дані правил",
+    "credit": "Structured SRD data derived from the Open5e project (https://open5e.com)."
+  }
+}

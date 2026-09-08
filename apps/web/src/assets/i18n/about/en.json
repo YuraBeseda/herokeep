@@ -1,0 +1,15 @@
+{
+  "title": "About",
+  "version-label": "Version {version}",
+  "srd": {
+    "title": "System Reference Document"
+  },
+  "icons": {
+    "title": "Icons",
+    "credit": "Icons made by {authors}. Available on https://game-icons.net (CC BY 3.0)."
+  },
+  "open5e": {
+    "title": "Structured rules data",
+    "credit": "Structured SRD data derived from the Open5e project (https://open5e.com)."
+  }
+}

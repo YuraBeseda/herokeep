@@ -1,0 +1,28 @@
+{
+  "title": "Settings",
+  "language": {
+    "title": "Language",
+    "en": "English",
+    "ru": "Русский",
+    "uk": "Українська"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "theme-dark": "Dark",
+    "theme-light": "Light"
+  },
+  "storage": {
+    "title": "Storage",
+    "used": "{used} MB used of {quota} MB available",
+    "persist": "Keep data on this device",
+    "persisted": "Storage is protected"
+  },
+  "packs": {
+    "title": "Content packs",
+    "core-label": "Core rules pack",
+    "import-demo": "Import the Russian sample pack",
+    "import-success": "Pack imported",
+    "import-invalid": "This pack could not be imported",
+    "remove": "Remove pack"
+  }
+}

@@ -1,0 +1,76 @@
+<section class="settings" *transloco="let t; read: 'settings'">
+  <h1 class="settings__title">{{ t('title') }}</h1>
+
+  <hk-card class="settings__section" [header]="t('language.title')">
+    <div class="settings__options">
+      @for (loc of locales; track loc) {
+        <hk-chip
+          class="settings__language-chip"
+          [attr.data-locale]="loc"
+          [selected]="locale() === loc"
+          (click)="selectLocale(loc)"
+        >
+          {{ t('language.' + loc) }}
+        </hk-chip>
+      }
+    </div>
+  </hk-card>
+
+  <hk-card class="settings__section" [header]="t('appearance.title')">
+    <div class="settings__options">
+      @for (th of themes; track th) {
+        <hk-chip
+          class="settings__theme-chip"
+          [attr.data-theme-option]="th"
+          [selected]="theme() === th"
+          (click)="selectTheme(th)"
+        >
+          {{ t('appearance.theme-' + th) }}
+        </hk-chip>
+      }
+    </div>
+  </hk-card>
+
+  <hk-card class="settings__section" [header]="t('storage.title')">
+    @if (storageSupported()) {
+      @if (usedMb(); as used) {
+        <p class="settings__storage-usage">{{ t('storage.used', { used, quota: quotaMb() }) }}</p>
+      }
+      @if (persisted()) {
+        <p class="settings__storage-state">{{ t('storage.persisted') }}</p>
+      } @else {
+        <button hk-button class="settings__persist-button" (click)="requestPersist()">
+          {{ t('storage.persist') }}
+        </button>
+      }
+    }
+  </hk-card>
+
+  <hk-card class="settings__section" [header]="t('packs.title')">
+    <div class="settings__pack-row">
+      <span>{{ t('packs.core-label') }}</span>
+      <span class="settings__pack-id">{{ corePackLabel }}</span>
+    </div>
+    <div class="settings__options">
+      @for (pack of translationPacks(); track pack.id + '@' + pack.version) {
+        <hk-chip
+          class="settings__pack-chip"
+          [attr.data-pack-key]="pack.id + '@' + pack.version"
+          [removable]="true"
+          (remove)="removePack(pack)"
+        >
+          {{ pack.id }}&#64;{{ pack.version }}
+          <span hk-chip-remove class="visually-hidden">{{ t('packs.remove') }}</span>
+        </hk-chip>
+      }
+    </div>
+    <button
+      hk-button
+      class="settings__import-button"
+      [disabled]="importing()"
+      (click)="importDemo()"
+    >
+      {{ t('packs.import-demo') }}
+    </button>
+  </hk-card>
+</section>

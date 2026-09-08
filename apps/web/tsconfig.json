@@ -31,12 +31,18 @@
       // is a Node-only, build-time module graph (`node:fs`, and `upstream.ts`'s
       // `import.meta.url` + `fileURLToPath` for reading vendored fixtures — see task-9-report.md).
       // Importing the barrel here breaks both the Vitest runner and (silent, tree-shaking-
-      // dependent) the browser bundle. The two leaf modules below are pure/browser-safe and are
-      // what this app actually needs; prefer them over the barrel for any future `@hk/content`
-      // import from apps/web (e.g. Task 13's `ATTRIBUTION` — add it to `version.ts` and alias it
-      // here rather than importing the barrel).
+      // dependent) the browser bundle. The leaf modules below are pure/browser-safe and are what
+      // this app actually needs; prefer them over the barrel for any future `@hk/content` import
+      // from apps/web.
       "@hk/content/version": ["../../packages/content/src/version.ts"],
       "@hk/content/icons": ["../../packages/content/src/icons/icons-map.json"],
+      // Task 13: `ATTRIBUTION`/`packManifest`, from `packages/content/src/static/attribution.ts`
+      // — a pure leaf module (its only imports are `version.ts`, above, and a type-only import
+      // from `@hk/protocol`, erased at compile time) with no Node-only dependency, so it is safe
+      // to import directly rather than through the barrel. The barrel re-exports it too (Node
+      // consumers, e.g. `pack-tools`, keep using it via `@hk/content`), but the browser build
+      // must use this alias instead, for the same reason as `@hk/content/version` above.
+      "@hk/content/attribution": ["../../packages/content/src/static/attribution.ts"],
       "@hk/ui-tokens": ["../../packages/ui-tokens/src/index.ts"]
     }
   },

@@ -1,0 +1,22 @@
+<section class="about" *transloco="let t; read: 'about'">
+  <h1 class="about__title">{{ t('title') }}</h1>
+
+  <ng-container *transloco="let ts; read: 'shell'">
+    <p class="about__app-name">{{ ts('app.title') }}</p>
+  </ng-container>
+  <p class="about__version">{{ t('version-label', { version: appVersion }) }}</p>
+
+  <hk-card class="about__section" [header]="t('srd.title')">
+    <p class="about__legal about__srd-attribution">{{ attribution }}</p>
+  </hk-card>
+
+  <hk-card class="about__section" [header]="t('icons.title')">
+    <p class="about__legal about__icons-credit">
+      {{ t('icons.credit', { authors: authorsList }) }}
+    </p>
+  </hk-card>
+
+  <hk-card class="about__section" [header]="t('open5e.title')">
+    <p class="about__legal about__open5e-credit">{{ t('open5e.credit') }}</p>
+  </hk-card>
+</section>
