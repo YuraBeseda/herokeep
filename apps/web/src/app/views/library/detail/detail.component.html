@@ -1,0 +1,41 @@
+<section class="library-detail" *transloco="let t; read: 'library'">
+  @if (!ready()) {
+    <div class="library-detail__skeletons">
+      <hk-skeleton width="60%" />
+      <hk-skeleton [lines]="4" />
+    </div>
+  } @else if (entity(); as currentEntity) {
+    <header class="library-detail__header">
+      <hk-icon [icon]="icon()!" class="library-detail__icon" />
+      <div class="library-detail__heading">
+        <h1 class="library-detail__name">
+          {{ name() }}
+          @if (nameIsFallback()) {
+            <span class="library-detail__tag">{{ t('en-tag') }}</span>
+          }
+        </h1>
+        <span class="library-detail__type">{{ t('type.' + currentEntity.type) }}</span>
+      </div>
+    </header>
+
+    <app-entity-facts [entity]="currentEntity" />
+
+    <section class="library-detail__description">
+      @if (descriptionIsFallback()) {
+        <span class="library-detail__tag">{{ t('en-tag') }}</span>
+      }
+      @if (descriptionHtml.isLoading()) {
+        <hk-skeleton [lines]="4" />
+      } @else if (descriptionHtml.value(); as html) {
+        <div
+          #descriptionContainer
+          class="library-detail__description-body"
+          [innerHTML]="html"
+        ></div>
+      }
+    </section>
+  } @else {
+    <p class="library-detail__not-found">{{ t('detail.not-found') }}</p>
+    <button hk-button [variant]="'ghost'" (click)="back()">{{ t('detail.back') }}</button>
+  }
+</section>

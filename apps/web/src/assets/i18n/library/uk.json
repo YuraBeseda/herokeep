@@ -21,5 +21,52 @@
     "species": "Види",
     "spell": "Заклинання",
     "subclass": "Підкласи"
+  },
+  "detail": {
+    "back": "Назад до бібліотеки",
+    "not-found": "Цей запис не знайдено."
+  },
+  "fact": {
+    "level": "Рівень",
+    "school": "Школа",
+    "castingTime": "Час накладання",
+    "range": "Дистанція",
+    "duration": "Тривалість",
+    "components": "Компоненти",
+    "category": "Категорія",
+    "cost": "Вартість",
+    "weight": "Вага",
+    "rarity": "Рідкість",
+    "damage": "Шкода",
+    "armorClass": "Клас обладунку",
+    "hitDie": "Кістка Хітів",
+    "saves": "Рятівні кидки",
+    "primaryAbility": "Основна характеристика",
+    "size": "Розмір",
+    "speed": "Швидкість",
+    "unit": {
+      "action": "{value, plural, one {# дія} few {# дії} many {# дій} other {# дії}}",
+      "bonus": "{value, plural, one {# бонусна дія} few {# бонусні дії} many {# бонусних дій} other {# бонусної дії}}",
+      "reaction": "{value, plural, one {# реакція} few {# реакції} many {# реакцій} other {# реакції}}",
+      "minute": "{value, plural, one {# хвилина} few {# хвилини} many {# хвилин} other {# хвилини}}",
+      "hour": "{value, plural, one {# година} few {# години} many {# годин} other {# години}}",
+      "round": "{value, plural, one {# раунд} few {# раунди} many {# раундів} other {# раунду}}",
+      "day": "{value, plural, one {# день} few {# дні} many {# днів} other {# дня}}",
+      "feet": "{value, plural, one {# фут} few {# фути} many {# футів} other {# фута}}",
+      "mile": "{value, plural, one {# миля} few {# милі} many {# миль} other {# милі}}",
+      "lb": "{value, plural, one {# фунт} few {# фунти} many {# фунтів} other {# фунта}}"
+    },
+    "rangeKind": {
+      "self": "На себе",
+      "touch": "Дотик",
+      "sight": "Видимість",
+      "unlimited": "Необмежена",
+      "special": "Особлива"
+    },
+    "durationKind": {
+      "instantaneous": "Миттєва",
+      "untilDispelled": "До розсіювання",
+      "special": "Особлива"
+    }
   }
 }

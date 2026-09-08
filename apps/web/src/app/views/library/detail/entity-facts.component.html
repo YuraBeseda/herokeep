@@ -1,0 +1,19 @@
+@if (rows().length > 0) {
+  <dl class="entity-facts" *transloco="let t; read: 'library'">
+    @for (row of rows(); track row.labelKey) {
+      <div class="entity-facts__row">
+        <dt class="entity-facts__label">{{ t(row.labelKey) }}</dt>
+        <dd class="entity-facts__value">
+          @switch (row.value.kind) {
+            @case ('key') {
+              {{ t(row.value.key, row.value.params) }}
+            }
+            @case ('text') {
+              {{ row.value.text }}
+            }
+          }
+        </dd>
+      </div>
+    }
+  </dl>
+}

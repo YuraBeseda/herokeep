@@ -21,5 +21,52 @@
     "species": "Species",
     "spell": "Spells",
     "subclass": "Subclasses"
+  },
+  "detail": {
+    "back": "Back to library",
+    "not-found": "This entry could not be found."
+  },
+  "fact": {
+    "level": "Level",
+    "school": "School",
+    "castingTime": "Casting Time",
+    "range": "Range",
+    "duration": "Duration",
+    "components": "Components",
+    "category": "Category",
+    "cost": "Cost",
+    "weight": "Weight",
+    "rarity": "Rarity",
+    "damage": "Damage",
+    "armorClass": "Armor Class",
+    "hitDie": "Hit Die",
+    "saves": "Saving Throws",
+    "primaryAbility": "Primary Ability",
+    "size": "Size",
+    "speed": "Speed",
+    "unit": {
+      "action": "{value, plural, one {# action} other {# actions}}",
+      "bonus": "{value, plural, one {# bonus action} other {# bonus actions}}",
+      "reaction": "{value, plural, one {# reaction} other {# reactions}}",
+      "minute": "{value, plural, one {# minute} other {# minutes}}",
+      "hour": "{value, plural, one {# hour} other {# hours}}",
+      "round": "{value, plural, one {# round} other {# rounds}}",
+      "day": "{value, plural, one {# day} other {# days}}",
+      "feet": "{value, plural, one {# foot} other {# feet}}",
+      "mile": "{value, plural, one {# mile} other {# miles}}",
+      "lb": "{value, plural, one {# lb} other {# lb}}"
+    },
+    "rangeKind": {
+      "self": "Self",
+      "touch": "Touch",
+      "sight": "Sight",
+      "unlimited": "Unlimited",
+      "special": "Special"
+    },
+    "durationKind": {
+      "instantaneous": "Instantaneous",
+      "untilDispelled": "Until dispelled",
+      "special": "Special"
+    }
   }
 }

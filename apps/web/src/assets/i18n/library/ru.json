@@ -21,5 +21,52 @@
     "species": "Виды",
     "spell": "Заклинания",
     "subclass": "Подклассы"
+  },
+  "detail": {
+    "back": "Назад к библиотеке",
+    "not-found": "Эта запись не найдена."
+  },
+  "fact": {
+    "level": "Уровень",
+    "school": "Школа",
+    "castingTime": "Время накладывания",
+    "range": "Дистанция",
+    "duration": "Длительность",
+    "components": "Компоненты",
+    "category": "Категория",
+    "cost": "Стоимость",
+    "weight": "Вес",
+    "rarity": "Редкость",
+    "damage": "Урон",
+    "armorClass": "Класс доспеха",
+    "hitDie": "Кость хитов",
+    "saves": "Испытания",
+    "primaryAbility": "Основная характеристика",
+    "size": "Размер",
+    "speed": "Скорость",
+    "unit": {
+      "action": "{value, plural, one {# действие} few {# действия} many {# действий} other {# действия}}",
+      "bonus": "{value, plural, one {# бонусное действие} few {# бонусных действия} many {# бонусных действий} other {# бонусных действия}}",
+      "reaction": "{value, plural, one {# реакция} few {# реакции} many {# реакций} other {# реакции}}",
+      "minute": "{value, plural, one {# минута} few {# минуты} many {# минут} other {# минуты}}",
+      "hour": "{value, plural, one {# час} few {# часа} many {# часов} other {# часа}}",
+      "round": "{value, plural, one {# раунд} few {# раунда} many {# раундов} other {# раунда}}",
+      "day": "{value, plural, one {# день} few {# дня} many {# дней} other {# дня}}",
+      "feet": "{value, plural, one {# фут} few {# фута} many {# футов} other {# фута}}",
+      "mile": "{value, plural, one {# миля} few {# мили} many {# миль} other {# мили}}",
+      "lb": "{value, plural, one {# фунт} few {# фунта} many {# фунтов} other {# фунта}}"
+    },
+    "rangeKind": {
+      "self": "На себя",
+      "touch": "Касание",
+      "sight": "Видимость",
+      "unlimited": "Неограниченная",
+      "special": "Особая"
+    },
+    "durationKind": {
+      "instantaneous": "Мгновенная",
+      "untilDispelled": "До рассеивания",
+      "special": "Особая"
+    }
   }
 }
