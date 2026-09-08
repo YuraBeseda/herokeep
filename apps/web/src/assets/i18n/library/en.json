@@ -1,0 +1,24 @@
+{
+  "en-tag": "EN",
+  "list": {
+    "label": "Library list"
+  },
+  "search": {
+    "clear": "Clear search",
+    "placeholder": "Search the library"
+  },
+  "type": {
+    "background": "Backgrounds",
+    "class": "Classes",
+    "condition": "Conditions",
+    "feat": "Feats",
+    "feature": "Features",
+    "item": "Items",
+    "language": "Languages",
+    "rule": "Rules",
+    "skill": "Skills",
+    "species": "Species",
+    "spell": "Spells",
+    "subclass": "Subclasses"
+  }
+}

@@ -1,0 +1,68 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.library-browse__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.library-browse__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+.library-browse__list {
+  /* `hk-virtual-list` requires the consumer to size its host (see its SKILL.md) — a viewport-
+     relative height keeps the list usable regardless of how tall the surrounding page is. */
+  display: block;
+  margin-block-start: var(--space-3);
+  height: 60vh;
+}
+
+.library-browse__row {
+  @include u.touch-target;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-block-end: 1px solid var(--border-1);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.library-browse__row-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+}
+
+.library-browse__row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-browse__row-tag {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}

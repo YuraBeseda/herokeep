@@ -1,0 +1,40 @@
+<section class="library-browse" *transloco="let t; read: 'library'">
+  <div class="library-browse__filters">
+    @for (type of types; track type) {
+      <hk-chip [selected]="selectedType() === type" (click)="selectType(type)">
+        {{ t('type.' + type) }}
+      </hk-chip>
+    }
+  </div>
+
+  <hk-search-field
+    [(value)]="query"
+    [placeholderKey]="'library.search.placeholder'"
+    [clearLabelKey]="'library.search.clear'"
+  />
+
+  @if (!ready()) {
+    <div class="library-browse__skeletons">
+      @for (row of skeletonRows; track row) {
+        <hk-skeleton width="100%" />
+      }
+    </div>
+  } @else {
+    <hk-virtual-list
+      class="library-browse__list"
+      [items]="rows()"
+      [itemSize]="56"
+      [attr.aria-label]="t('list.label')"
+    >
+      <ng-template let-row>
+        <button type="button" class="library-browse__row" (click)="onRowClick(row.id)">
+          <hk-icon [icon]="row.icon" class="library-browse__row-icon" />
+          <span class="library-browse__row-name">{{ row.name }}</span>
+          @if (row.fallback) {
+            <span class="library-browse__row-tag">{{ t('en-tag') }}</span>
+          }
+        </button>
+      </ng-template>
+    </hk-virtual-list>
+  }
+</section>
