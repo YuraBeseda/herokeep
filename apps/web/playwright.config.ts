@@ -32,7 +32,10 @@ export default defineConfig({
   // download and cache every prefetched asset (app shell, fonts, icon sprite, i18n JSON, the
   // ~2 MB core pack) before it activates, which this bounds along with the rest of that test.
   timeout: 90_000,
-  reporter: process.env['CI'] ? [['github'], ['list']] : 'list',
+  // The CI job uploads `playwright-report/` on failure (see `.github/workflows/ci.yml`), so it
+  // needs the `html` reporter actually writing there, alongside `github` (PR annotations) and
+  // `list` (readable job-log output).
+  reporter: process.env['CI'] ? [['github'], ['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
     trace: 'retain-on-failure',

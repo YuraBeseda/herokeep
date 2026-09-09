@@ -34,3 +34,11 @@ jobs:
       # separate build step here. The icon sprite is a committed asset, not a build output.
       - run: pnpm --filter web exec playwright install chromium --with-deps
       - run: pnpm --filter web e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
