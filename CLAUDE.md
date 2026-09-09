@@ -13,9 +13,10 @@ Read `docs/README.md` first; decisions live in `docs/01-decisions/` (ADRs are ne
 ## Layout
 
 - `packages/protocol` — Zod schemas + types (the contract). `packages/engine` — pure functions. `packages/pack-tools` — CLI.
+- `apps/web` — the Library PWA (Angular 22 zoneless). `packages/ui-tokens` — design tokens (`tokens.css`/`tokens.scss`) built from one typed source, consumed by `apps/web`.
 - Inside a package import with `.ts` extensions (`./x.ts`); across packages import `@hk/<name>`.
 - Tests in `test/`, fixtures in `test/fixtures/`. Run one package: `pnpm vitest run --project protocol`.
 
 ## Commands
 
-`pnpm install` · `pnpm check` · `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` · `pnpm --filter @hk/protocol build:schema` (after any schema change; CI fails on drift) · `node packages/pack-tools/dist/cli.js validate <pack> --packs <dir>` · `pnpm --filter @hk/content build:pack` (regenerate the SRD pack; never edit dist output by hand — fix transforms/overlays instead)
+`pnpm install` · `pnpm check` · `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` · `pnpm --filter @hk/protocol build:schema` (after any schema change; CI fails on drift) · `node packages/pack-tools/dist/cli.js validate <pack> --packs <dir>` · `pnpm --filter @hk/content build:pack` (regenerate the SRD pack; never edit dist output by hand — fix transforms/overlays instead) · `pnpm --filter web test|build|e2e` (Angular unit tests — add `--watch=false` for a single non-interactive run; production build with the gzip bundle-budget gate; Playwright e2e against the built app)
