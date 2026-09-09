@@ -25,6 +25,20 @@
   font-size: 0.875rem;
 }
 
+.app-shell__update {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--accent);
+  color: var(--surface-0);
+}
+
+.app-shell__update-text {
+  font-size: 0.875rem;
+}
+
 .app-shell__theme-toggle {
   @include utilities.touch-target;
 

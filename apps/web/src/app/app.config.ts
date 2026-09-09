@@ -8,6 +8,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { routes } from './app.routes';
@@ -39,5 +40,13 @@ export const appConfig: ApplicationConfig = {
     // app-shell loading moment is simpler to reason about than guarding every read of the
     // facade's computeds with `packStore.ready()`.
     provideAppInitializer(() => inject(PackStore).init()),
+    // Registered in every build (including dev serve) but only *enabled* outside dev mode — `ng
+    // serve` has no `ngsw-worker.js` to fetch, and a stale cached dev bundle would be actively
+    // confusing. `registerWhenStable:30000` defers registration until the app is stable (or 30s
+    // pass, whichever first) so it never competes with first-paint/first-interaction work.
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };

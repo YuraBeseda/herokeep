@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/icons/*.png",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/assets/fonts/**", "/assets/icons/sprite.svg", "/assets/i18n/**"]
+      }
+    },
+    {
+      "name": "assets-lazy",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/assets/**"]
+      }
+    },
+    {
+      "name": "core-pack",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/packs/srd-5e-2024/**"]
+      }
+    },
+    {
+      "name": "demo-packs",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/packs/demo/**"]
+      }
+    }
+  ]
+}

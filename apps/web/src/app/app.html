@@ -4,6 +4,19 @@
     @if (!isOnline()) {
       <p class="app-shell__offline" role="status">{{ t('app.offline') }}</p>
     }
+    @if (updateService.updateAvailable()) {
+      <div class="app-shell__update" role="status">
+        <span class="app-shell__update-text">{{ t('app.update-available') }}</span>
+        <button
+          hk-button
+          [variant]="'ghost'"
+          class="app-shell__update-button"
+          (click)="updateService.activate()"
+        >
+          {{ t('app.update-reload') }}
+        </button>
+      </div>
+    }
     <button
       type="button"
       class="app-shell__theme-toggle"

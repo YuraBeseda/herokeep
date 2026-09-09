@@ -2,7 +2,9 @@
   "app": {
     "offline": "Офлайн",
     "theme-toggle": "Переключить тему",
-    "title": "Herokeep"
+    "title": "Herokeep",
+    "update-available": "Доступна новая версия.",
+    "update-reload": "Обновить"
   },
   "home": {
     "tagline": "Ваш спутник по D&D — Библиотека готова; конструктор персонажей впереди."

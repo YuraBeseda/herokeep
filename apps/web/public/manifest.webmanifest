@@ -1,0 +1,27 @@
+{
+  "name": "Herokeep",
+  "short_name": "Herokeep",
+  "description": "Offline-first D&D 5e SRD library and character companion.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#111113",
+  "theme_color": "#111113",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

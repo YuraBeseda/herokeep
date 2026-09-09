@@ -1,14 +1,22 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { TranslocoTestingModule } from '@jsverse/transloco';
+import { UpdateService } from '@shared/services/pwa/update.service';
 import { App } from './app';
 import { routes } from './app.routes';
 import shellEn from '../assets/i18n/shell/en.json';
 
 function configureTestBed(): void {
   TestBed.configureTestingModule({
-    providers: [provideRouter(routes)],
+    providers: [
+      provideRouter(routes),
+      // Same rationale as app.spec.ts: `UpdateService` needs `SwUpdate`, which needs a real
+      // service-worker registration this route test doesn't set up. `UpdateService` itself is
+      // covered by its own spec.
+      { provide: UpdateService, useValue: { updateAvailable: signal(false), activate: vi.fn() } },
+    ],
     imports: [
       TranslocoTestingModule.forRoot({
         langs: { en: {}, 'shell/en': shellEn },

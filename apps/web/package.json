@@ -6,6 +6,7 @@
     "start": "ng serve",
     "prebuild": "pnpm --filter @hk/ui-tokens build:tokens && pnpm --filter @hk/content build:pack && node tools/copy-packs.ts",
     "build": "ng build",
+    "postbuild": "node tools/check-bundle-budget.ts",
     "pretest": "pnpm --filter @hk/ui-tokens build:tokens && pnpm --filter @hk/content build:pack && node tools/copy-packs.ts",
     "test": "ng test",
     "lint": "ng lint && node scripts/check-i18n-keys.mjs",
@@ -13,7 +14,8 @@
     "i18n:extract": "transloco-keys-manager extract",
     "i18n:check": "node scripts/check-i18n-keys.mjs",
     "build:sprite": "node tools/build-sprite.ts",
-    "build:packs": "node tools/copy-packs.ts"
+    "build:packs": "node tools/copy-packs.ts",
+    "check:bundle-budget": "node tools/check-bundle-budget.ts"
   },
   "private": true,
   "packageManager": "pnpm@11.24.0",
@@ -25,6 +27,7 @@
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "@angular/service-worker": "^22.1.0",
     "@jsverse/transloco": "~8.4.0",
     "@jsverse/transloco-messageformat": "~8.4.0",
     "dexie": "~4.4.5",

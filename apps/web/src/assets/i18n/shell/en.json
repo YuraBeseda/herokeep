@@ -2,7 +2,9 @@
   "app": {
     "offline": "Offline",
     "theme-toggle": "Toggle theme",
-    "title": "Herokeep"
+    "title": "Herokeep",
+    "update-available": "A new version is ready.",
+    "update-reload": "Reload"
   },
   "home": {
     "tagline": "Your D&D companion — the Library is ready; builder comes next."
