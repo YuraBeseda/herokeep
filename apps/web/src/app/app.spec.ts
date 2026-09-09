@@ -3,7 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
-import { UpdateService } from '@shared/services/pwa/update.service';
+import { UpdateService, WINDOW_RELOAD } from '@shared/services/pwa/update.service';
+import { PackStore } from '@shared/stores/pack.store';
 import { App } from './app';
 
 class StubLoader implements TranslocoLoader {
@@ -15,10 +16,14 @@ class StubLoader implements TranslocoLoader {
 describe('App', () => {
   let updateAvailable: ReturnType<typeof signal<boolean>>;
   let activate: ReturnType<typeof vi.fn>;
+  let coreLoadFailed: ReturnType<typeof signal<boolean>>;
+  let reload: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     updateAvailable = signal(false);
     activate = vi.fn();
+    coreLoadFailed = signal(false);
+    reload = vi.fn();
 
     await TestBed.configureTestingModule({
       imports: [App],
@@ -39,6 +44,10 @@ describe('App', () => {
         // dedicated spec against a stubbed `SwUpdate` (update.service.spec.ts), so here the shell
         // only needs a lightweight double for the banner's presentational contract.
         { provide: UpdateService, useValue: { updateAvailable, activate } },
+        // Likewise, the real `PackStore` needs `PackLoader`/`PacksRepository`/`ToastService` this
+        // shell test doesn't set up — a signal double is enough for the retry-state contract.
+        { provide: PackStore, useValue: { coreLoadFailed } },
+        { provide: WINDOW_RELOAD, useValue: reload },
       ],
     }).compileComponents();
   });
@@ -76,5 +85,26 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(activate).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the router outlet with a retry state when the core pack failed to load', async () => {
+    coreLoadFailed.set(true);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('router-outlet')).toBeNull();
+    expect(compiled.querySelector('.app-shell__error')).toBeTruthy();
+  });
+
+  it('clicking the retry button calls the injected reload function', async () => {
+    coreLoadFailed.set(true);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.app-shell__error button')?.click();
+
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

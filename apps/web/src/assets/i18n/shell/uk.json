@@ -1,5 +1,7 @@
 {
   "app": {
+    "core-error": "Не вдалося завантажити бібліотеку контенту.",
+    "core-error-retry": "Повторити",
     "offline": "Офлайн",
     "theme-toggle": "Перемкнути тему",
     "title": "Herokeep",

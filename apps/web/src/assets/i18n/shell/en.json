@@ -1,5 +1,7 @@
 {
   "app": {
+    "core-error": "The content library could not be loaded.",
+    "core-error-retry": "Try again",
     "offline": "Offline",
     "theme-toggle": "Toggle theme",
     "title": "Herokeep",

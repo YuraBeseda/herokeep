@@ -58,6 +58,15 @@
     >
   </nav>
   <main class="app-shell__main">
-    <router-outlet />
+    @if (packStore.coreLoadFailed()) {
+      <div class="app-shell__error" role="alert">
+        <p>{{ t('app.core-error') }}</p>
+        <button hk-button [variant]="'primary'" (click)="retryInit()">
+          {{ t('app.core-error-retry') }}
+        </button>
+      </div>
+    } @else {
+      <router-outlet />
+    }
   </main>
 </ng-container>

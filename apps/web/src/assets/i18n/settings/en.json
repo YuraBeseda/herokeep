@@ -23,6 +23,7 @@
     "import-demo": "Import the Russian sample pack",
     "import-success": "Pack imported",
     "import-invalid": "This pack could not be imported",
-    "remove": "Remove pack"
+    "remove": "Remove pack",
+    "translations-load-failed": "Saved packs could not be loaded — continuing without them"
   }
 }

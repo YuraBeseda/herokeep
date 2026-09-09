@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
 import { validatePack, type Diagnostic } from '@hk/engine';
 import type { Pack } from '@hk/protocol';
+import { ToastService } from '../components/toast/toast.service';
 import { PackLoader } from '../services/engine/pack-loader';
 import { PacksRepository } from '../services/storage/packs.repository';
 
@@ -18,28 +19,53 @@ function packKey(pack: Pack): string {
 export class PackStore {
   private readonly packLoader = inject(PackLoader);
   private readonly packsRepository = inject(PacksRepository);
+  private readonly toastService = inject(ToastService);
 
   // Properties
   private readonly coreState = signal<Pack | undefined>(undefined);
   private readonly translationsState = signal<Pack[]>([]);
   private readonly readyState = signal(false);
+  private readonly coreLoadFailedState = signal(false);
 
   readonly corePack: Signal<Pack | undefined> = this.coreState.asReadonly();
   readonly translationPacks: Signal<Pack[]> = this.translationsState.asReadonly();
   readonly ready: Signal<boolean> = this.readyState.asReadonly();
+  readonly coreLoadFailed: Signal<boolean> = this.coreLoadFailedState.asReadonly();
   readonly packs = computed<Pack[]>(() => {
     const core = this.coreState();
     return core ? [core, ...this.translationsState()] : [];
   });
 
   // I/O boundary: fetches the core pack asset and reads persisted translation packs from Dexie.
+  // Never rejects, so `provideAppInitializer` always resolves and the shell always renders:
+  // a core-pack failure (bad network, first-visit fetch miss) flags `coreLoadFailed` instead —
+  // the shell shows a retry state rather than hanging blank forever — while a Dexie read
+  // failure (restrictive privacy modes) degrades to an empty translation list with a toast,
+  // since translations are optional and the core pack is not. Persisted translations are
+  // re-validated against the freshly loaded core pack (a service-worker update may have shipped
+  // one a stored translation no longer matches) and dropped, silently, on failure — the same bar
+  // `importTranslation` already holds them to, just re-checked on every load instead of trusted
+  // forever from import time.
   async init(): Promise<void> {
-    const [core, stored] = await Promise.all([
-      this.packLoader.loadCore(),
-      this.packsRepository.getAll(),
-    ]);
+    let core: Pack;
+    try {
+      core = await this.packLoader.loadCore();
+    } catch {
+      this.coreLoadFailedState.set(true);
+      return;
+    }
     this.coreState.set(core);
-    this.translationsState.set(stored.filter((pack) => pack.kind === 'translation'));
+
+    let stored: Pack[] = [];
+    try {
+      stored = await this.packsRepository.getAll();
+    } catch {
+      this.toastService.show('settings.packs.translations-load-failed');
+    }
+    const translations = stored.filter((pack) => pack.kind === 'translation');
+    this.translationsState.set(
+      translations.filter((pack) => validatePack(pack, [core]).length === 0),
+    );
     this.readyState.set(true);
   }
 
