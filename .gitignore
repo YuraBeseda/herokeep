@@ -5,6 +5,10 @@ coverage/
 # build output, so the "public" angular.json asset glob can serve it under /packs — see that
 # script's doc comment for why it isn't a direct angular.json asset entry instead.
 apps/web/public/packs/
+# Playwright e2e run artifacts (apps/web/playwright.config.ts).
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
 *.tsbuildinfo
 .angular/
 .DS_Store

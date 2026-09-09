@@ -6,3 +6,6 @@ packages/content/upstream/
 apps/web/.angular/
 apps/web/src/assets/icons/
 apps/web/vendor/game-icons/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
