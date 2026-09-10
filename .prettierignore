@@ -1,5 +1,6 @@
 docs/
 .superpowers/
+.claude/
 pnpm-lock.yaml
 packages/*/schema/
 packages/content/upstream/
