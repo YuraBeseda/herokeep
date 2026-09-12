@@ -233,6 +233,39 @@
       "armor": { "category": "medium", "ac": 15, "dexCap": 2 }
     },
     {
+      "id": "core-mini:item/rapier",
+      "type": "item",
+      "name": "Rapier",
+      "category": "weapon",
+      "cost": { "amount": 25, "currency": "gp" },
+      "weight": 2,
+      "weapon": {
+        "kind": "melee",
+        "category": "martial",
+        "damage": "1d8",
+        "damageType": "piercing",
+        "properties": ["finesse"],
+        "mastery": "vex"
+      }
+    },
+    {
+      "id": "core-mini:item/shortbow",
+      "type": "item",
+      "name": "Shortbow",
+      "category": "weapon",
+      "cost": { "amount": 25, "currency": "gp" },
+      "weight": 2,
+      "weapon": {
+        "kind": "ranged",
+        "category": "simple",
+        "damage": "1d6",
+        "damageType": "piercing",
+        "properties": ["ammunition"],
+        "range": { "normal": 80, "long": 320 },
+        "mastery": "vex"
+      }
+    },
+    {
       "id": "core-mini:spell/fireball",
       "type": "spell",
       "name": "Fireball",
@@ -260,6 +293,7 @@
       "weaponProficiencies": ["simple", "martial"],
       "skillChoice": { "from": ["athletics", "perception", "stealth"], "count": 2 },
       "subclassLevel": 3,
+      "effects": [{ "type": "mastery.grant", "count": "2" }],
       "levels": [
         {
           "level": 1,
@@ -284,6 +318,12 @@
                   ]
                 ]
               }
+            },
+            {
+              "id": "core-mini:class/fighter@1/weapon-masteries",
+              "prompt": "Weapon Masteries",
+              "at": { "kind": "classLevel", "class": "fighter", "level": 1 },
+              "pick": { "literal": "text" }
             }
           ]
         },
