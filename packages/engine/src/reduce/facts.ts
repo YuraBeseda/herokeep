@@ -58,8 +58,16 @@ export interface Facts {
    * `propose.heal` / `propose.damage` compute already-clamped deltas so a well-formed app never
    * asks the reducer to overshoot in the first place. Determinism therefore holds either way:
    * the reducer only ever adds the deltas it is given.
+   *
+   * `current` may also be the literal `'max'` — the long-rest `hpToMax` sentinel written by
+   * `rest.taken`'s handler (full contract documented in `handlers/casting.ts`'s header comment).
+   * It means "full": `derive` resolves it to the computed max, and `propose.damage` /
+   * `propose.heal` resolve it to a number before computing their deltas — a well-formed app
+   * never hands the reducer a raw `hp.changed` while `current` is still `'max'`. A hand-written
+   * `hp.changed` that does arrive in that state skips with reason `'hp-unresolved'` instead of
+   * doing arithmetic on the sentinel.
    */
-  hp: { current: number; temp: number; maxOverride?: number };
+  hp: { current: number | 'max'; temp: number; maxOverride?: number };
   hitDiceSpent: Record<string, number>; // classId → spent
   deathSaves: { successes: number; failures: number };
   slotsUsed: Record<number, number>; // spell level → used

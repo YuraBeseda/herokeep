@@ -1,6 +1,7 @@
 import { type Event, type EventReverted } from '@hk/protocol';
 import { ENGINE_VERSION } from '../version.ts';
 import { type Facts, type Snapshot, type SystemRules, emptyFacts } from './facts.ts';
+import { HANDLERS as CASTING_HANDLERS } from './handlers/casting.ts';
 import { HANDLERS as IDENTITY_HANDLERS } from './handlers/identity.ts';
 import { HANDLERS as LEVELING_HANDLERS } from './handlers/leveling.ts';
 import { HANDLERS as VITALS_HANDLERS } from './handlers/vitals.ts';
@@ -13,7 +14,12 @@ export type Handler = (facts: Facts, event: Event, ctx?: { rules?: SystemRules }
  * own `HANDLERS` map. Add new modules here as later tasks introduce them (leveling, hp, etc.);
  * `reduce-core.test.ts` asserts none of these maps collide on a key.
  */
-const HANDLER_MODULES: Record<string, Handler>[] = [IDENTITY_HANDLERS, LEVELING_HANDLERS, VITALS_HANDLERS];
+const HANDLER_MODULES: Record<string, Handler>[] = [
+  IDENTITY_HANDLERS,
+  LEVELING_HANDLERS,
+  VITALS_HANDLERS,
+  CASTING_HANDLERS,
+];
 
 export const HANDLERS: Record<string, Handler> = HANDLER_MODULES.reduce<Record<string, Handler>>(
   (acc, mod) => ({ ...acc, ...mod }),

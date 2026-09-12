@@ -14,12 +14,14 @@ import type { Handler } from '../reducer.ts';
 /**
  * Shared by `hp.changed {kind: 'heal'}`, `hit_dice.spent {healed}` and `hit_dice.regained
  * {healed}`: healing only ever touches `current` (never `temp`), and healing while `current`
- * was exactly 0 also resets the death-save counters.
+ * was exactly 0 also resets the death-save counters. `current` may already be the long-rest
+ * `'max'` sentinel (see `facts.ts`) — healing "full" is a no-op, and can't have been at 0.
  */
 function healHp(f: Facts, magnitude: number): Pick<Facts, 'hp' | 'deathSaves'> {
-  const wasZero = f.hp.current === 0;
+  const current = f.hp.current;
+  const wasZero = current === 0;
   return {
-    hp: { ...f.hp, current: f.hp.current + magnitude },
+    hp: { ...f.hp, current: current === 'max' ? 'max' : current + magnitude },
     deathSaves: wasZero ? { successes: 0, failures: 0 } : f.deathSaves,
   };
 }
@@ -29,14 +31,24 @@ export const HANDLERS: Record<string, Handler> = {
     const p = e.payload as HpChanged;
     const skip = requireCreated(f);
     if (skip) return skip;
+    const current = f.hp.current;
     const magnitude = Math.abs(p.delta);
     switch (p.kind) {
+      // `damage` and `heal` do arithmetic against the PRIOR `current` — there's no rules-free
+      // way to do that math against the long-rest `'max'` sentinel (see `facts.ts`), so a raw
+      // event of either kind skips instead. This only ever happens from a hand-written event:
+      // `propose.damage` / `propose.heal` (T14) always resolve the sentinel to a number first,
+      // typically via a leading `kind: 'set'` event in the same transaction (see below — `set`
+      // and `temp` don't read the prior `current`, so they aren't blocked by this guard, and
+      // `set` is exactly how the sentinel gets resolved back to a concrete number).
       case 'damage': {
+        if (current === 'max') return 'hp-unresolved';
         const fromTemp = Math.min(f.hp.temp, magnitude);
         const fromCurrent = magnitude - fromTemp;
-        return { ...f, hp: { ...f.hp, temp: f.hp.temp - fromTemp, current: Math.max(0, f.hp.current - fromCurrent) } };
+        return { ...f, hp: { ...f.hp, temp: f.hp.temp - fromTemp, current: Math.max(0, current - fromCurrent) } };
       }
       case 'heal':
+        if (current === 'max') return 'hp-unresolved';
         return { ...f, ...healHp(f, magnitude) };
       case 'temp':
         return { ...f, hp: { ...f.hp, temp: Math.max(f.hp.temp, magnitude) } };

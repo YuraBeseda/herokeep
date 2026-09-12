@@ -1,6 +1,8 @@
 import type { Event } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
+import { emptyFacts } from '../src/reduce/facts.ts';
 import { reduce } from '../src/reduce/reducer.ts';
+import { ENGINE_VERSION } from '../src/version.ts';
 
 const stream = 'char:2b7a1f22-1111-4c9d-a8f2-0a1b2c3d4e5f';
 const id = (n: number) => `018f6d2e-7b1a-7c3d-9e4f-${String(n).padStart(12, '0')}`;
@@ -109,6 +111,29 @@ describe('hp.changed', () => {
     const setup = [ev(2, 'hp.changed', { delta: 10, kind: 'set' }), ev(3, 'hp.changed', { delta: 6, kind: 'set' })];
     const f = reduce([created, ...setup]);
     expect(f.hp.current).toBe(6);
+  });
+});
+
+describe('hp.changed: hp-unresolved guard (facts.ts / handlers/casting.ts rest.taken contract)', () => {
+  it("skips with reason hp-unresolved when current is the long-rest 'max' sentinel, leaving hp untouched", () => {
+    const from = {
+      seq: 1,
+      facts: { ...emptyFacts(stream), created: true, hp: { current: 'max' as const, temp: 0 } },
+      engineVersion: ENGINE_VERSION,
+    };
+    const f = reduce([ev(2, 'hp.changed', { delta: -5, kind: 'damage' })], from);
+    expect(f.hp).toEqual({ current: 'max', temp: 0 });
+    expect(f.skipped).toEqual([{ eventId: id(2), reason: 'hp-unresolved' }]);
+  });
+
+  it('applies normally once again once current is resolved back to a number', () => {
+    const from = {
+      seq: 1,
+      facts: { ...emptyFacts(stream), created: true, hp: { current: 'max' as const, temp: 0 } },
+      engineVersion: ENGINE_VERSION,
+    };
+    const resolved = reduce([ev(2, 'hp.changed', { delta: 12, kind: 'set' })], from);
+    expect(resolved.hp.current).toBe(12);
   });
 });
 
