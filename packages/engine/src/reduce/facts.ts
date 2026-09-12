@@ -50,6 +50,7 @@ export interface Facts {
   decisionContexts: Record<string, Record<string, unknown>>; // decision.made context, for the timeline
   classes: ClassEntry[]; // order = order gained
   xp: number;
+  hpRolls: Record<string, (number | 'average')[]>; // classId -> one entry per gained level >= 2, for derive to price
   /**
    * Stored RAW by the reducer: `current` may transiently exceed the derived max, because the
    * reducer has no access to the DERIVE side's computed max HP (that depends on content-pack
@@ -92,6 +93,7 @@ export function emptyFacts(streamId: string): Facts {
     decisionContexts: {},
     classes: [],
     xp: 0,
+    hpRolls: {},
     hp: { current: 0, temp: 0 },
     hitDiceSpent: {},
     deathSaves: { successes: 0, failures: 0 },

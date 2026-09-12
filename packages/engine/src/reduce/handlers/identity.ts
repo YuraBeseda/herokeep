@@ -4,7 +4,6 @@ import {
   type CharacterGenderSet,
   type CharacterRenamed,
   type DecisionCleared,
-  type DecisionMade,
   type NoteAdded,
   type NoteRemoved,
   type NoteUpdated,
@@ -37,19 +36,8 @@ export const HANDLERS: Record<string, Handler> = {
     return { ...f, pins: { ...f.pins, [p.packId]: p.version } };
   },
 
-  // Stays here for Task 3 (least churn); Task 4 relocates it to handlers/leveling.ts.
-  'decision.made@1': (f, e) => {
-    const p = e.payload as DecisionMade;
-    const skip = requireCreated(f);
-    if (skip) return skip;
-    return {
-      ...f,
-      decisions: { ...f.decisions, [p.choiceId]: [...p.selection] },
-      decisionContexts:
-        p.context !== undefined ? { ...f.decisionContexts, [p.choiceId]: p.context } : f.decisionContexts,
-    };
-  },
-
+  // `decision.made@1` lives in handlers/leveling.ts (next to level.gained); decision.cleared
+  // stays here since it deletes from both `decisions` and `decisionContexts`.
   'decision.cleared@1': (f, e) => {
     const p = e.payload as DecisionCleared;
     const skip = requireCreated(f);
