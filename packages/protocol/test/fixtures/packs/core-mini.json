@@ -140,7 +140,15 @@
       "name": "Acolyte",
       "abilityScores": ["int", "wis", "cha"],
       "originFeat": "core-mini:feat/alert",
-      "skillProficiencies": ["perception"]
+      "skillProficiencies": ["perception"],
+      "choices": [
+        {
+          "id": "core-mini:background/acolyte@0/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "creation" },
+          "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        }
+      ]
     },
     {
       "id": "core-mini:feature/second-wind",
@@ -330,6 +338,20 @@
       "effects": [{ "type": "damage.resistance", "types": ["cold"] }]
     },
     {
+      "id": "core-mini:feature/skill-expert",
+      "type": "feature",
+      "name": "Skill Expert",
+      "description": "Test-only: grants expertise in Stealth.",
+      "effects": [{ "type": "proficiency.grant", "kind": "skill", "target": "stealth", "level": "expertise" }]
+    },
+    {
+      "id": "core-mini:feature/fleet-footed",
+      "type": "feature",
+      "name": "Fleet Footed",
+      "description": "Test-only: +10 walk speed.",
+      "effects": [{ "type": "speed.bonus", "mode": "walk", "value": 10 }]
+    },
+    {
       "id": "core-mini:feat/iron-resolve",
       "type": "feat",
       "name": "Iron Resolve",
@@ -341,7 +363,13 @@
           "key": "heavy-armor-test",
           "when": { "armor": { "category": ["heavy"] } }
         },
-        { "type": "ac.bonus", "value": 1, "key": "shield-test", "when": { "shield": true } }
+        { "type": "ac.bonus", "value": 1, "key": "shield-test", "when": { "shield": true } },
+        {
+          "type": "ac.bonus",
+          "value": 1,
+          "key": "heavy-armor-str-test",
+          "when": { "all": [{ "armor": { "category": ["heavy"] } }, { "ability": { "str": { "gte": 15 } } }] }
+        }
       ],
       "grants": [
         {

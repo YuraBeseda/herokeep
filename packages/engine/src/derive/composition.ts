@@ -57,6 +57,28 @@ const unresolvedEntity = (id: string): Diagnostic =>
   warning('derive.unresolvedEntity', `Unresolved entity "${id}"`, { entityId: id });
 
 /**
+ * Armor category / shield presence come from currently-EQUIPPED inventory items (not merely
+ * attuned ones — attunement alone doesn't mean the item is worn). If more than one armor piece
+ * is (invalidly) equipped at once, the first one found wins.
+ *
+ * Exported (not just `compose`-internal) so later derive steps that need to rebuild a
+ * `PredicateContext` of their own (e.g. `derive/abilities.ts`'s deferred-predicate re-evaluation)
+ * reuse this logic instead of forking it.
+ */
+export function equippedArmor(facts: Facts, index: ContentIndex): { category: ArmorCategory; hasShield: boolean } {
+  let category: ArmorCategory = 'none';
+  let hasShield = false;
+  for (const item of facts.inventory) {
+    if (!item.equipped || item.itemId === undefined) continue;
+    const entity = index.get(item.itemId);
+    if (entity?.type !== 'item') continue;
+    if (entity.armor && category === 'none') category = entity.armor.category;
+    if (entity.category === 'shield') hasShield = true;
+  }
+  return { category, hasShield };
+}
+
+/**
  * Computes which entities are ACTIVE for a character and which of their effects apply.
  *
  * Roots (see task-8-brief.md's "Composition algorithm"): the system's creation-slot decisions
@@ -77,18 +99,7 @@ export function compose(facts: Facts, index: ContentIndex): Composition {
     totalLevel += c.level;
   }
 
-  // Armor category / shield presence come from currently-EQUIPPED inventory items (not merely
-  // attuned ones — attunement alone doesn't mean the item is worn). If more than one armor piece
-  // is (invalidly) equipped at once, the first one found wins.
-  let equippedArmorCategory: ArmorCategory = 'none';
-  let equippedHasShield = false;
-  for (const item of facts.inventory) {
-    if (!item.equipped || item.itemId === undefined) continue;
-    const entity = index.get(item.itemId);
-    if (entity?.type !== 'item') continue;
-    if (entity.armor && equippedArmorCategory === 'none') equippedArmorCategory = entity.armor.category;
-    if (entity.category === 'shield') equippedHasShield = true;
-  }
+  const { category: equippedArmorCategory, hasShield: equippedHasShield } = equippedArmor(facts, index);
 
   const activeIds = new Set<string>();
   const activeTags = new Set<string>();
