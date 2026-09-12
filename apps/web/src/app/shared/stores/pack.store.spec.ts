@@ -123,4 +123,18 @@ describe('PackStore.init', () => {
 
     expect(store.translationPacks()).toEqual([valid]);
   });
+
+  it('drops a structurally corrupted persisted row instead of failing init', async () => {
+    // A row whose json is not Pack-shaped at all — validatePack would throw on it.
+    const brokenRow = { kind: 'translation' };
+    const validRuTranslation = translationPack();
+    const { store } = configure({
+      getAll: () => Promise.resolve([brokenRow as unknown as Pack, validRuTranslation]),
+    });
+
+    await store.init();
+
+    expect(store.ready()).toBe(true);
+    expect(store.translationPacks().map((p) => p.id)).toEqual([validRuTranslation.id]);
+  });
 });

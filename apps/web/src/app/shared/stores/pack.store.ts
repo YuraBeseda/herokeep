@@ -63,9 +63,14 @@ export class PackStore {
       this.toastService.show('settings.packs.translations-load-failed');
     }
     const translations = stored.filter((pack) => pack.kind === 'translation');
-    this.translationsState.set(
-      translations.filter((pack) => validatePack(pack, [core]).length === 0),
-    );
+    const survivesValidation = (pack: Pack): boolean => {
+      try {
+        return validatePack(pack, [core]).length === 0;
+      } catch {
+        return false; // structurally corrupted row — same outcome as failed validation: drop it
+      }
+    };
+    this.translationsState.set(translations.filter(survivesValidation));
     this.readyState.set(true);
   }
 
