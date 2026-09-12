@@ -273,6 +273,12 @@
         { "level": 2, "grants": [{ "feature": "core-mini:feature/action-surge" }] },
         {
           "level": 3,
+          "grants": [
+            {
+              "feature": "core-mini:feature/weapon-master",
+              "when": { "classLevel": { "fighter": { "gte": 10 } } }
+            }
+          ],
           "choices": [
             {
               "id": "core-mini:class/fighter@3/subclass",
@@ -291,6 +297,37 @@
       "name": "Champion",
       "class": "core-mini:class/fighter",
       "levels": [{ "level": 3, "grants": [{ "feature": "core-mini:feature/improved-critical" }] }]
+    },
+    {
+      "id": "core-mini:feature/weapon-master",
+      "type": "feature",
+      "name": "Weapon Master",
+      "description": "Bonus damage with mastered weapons.",
+      "effects": [{ "type": "damage.bonus", "value": 1 }]
+    },
+    {
+      "id": "core-mini:item/cloak-of-protection",
+      "type": "item",
+      "name": "Cloak of Protection",
+      "category": "magic",
+      "weight": 1,
+      "effects": [
+        { "type": "ac.bonus", "value": 1, "key": "cloak" },
+        {
+          "type": "ac.bonus",
+          "value": 0,
+          "key": "str-gated",
+          "when": { "ability": { "str": { "gte": 13 } } }
+        }
+      ]
+    },
+    {
+      "id": "core-mini:item/ring-of-warmth",
+      "type": "item",
+      "name": "Ring of Warmth",
+      "category": "magic",
+      "weight": 0,
+      "effects": [{ "type": "damage.resistance", "types": ["cold"] }]
     }
   ]
 }
