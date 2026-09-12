@@ -1,0 +1,510 @@
+{
+  "name": "wizard-5-play",
+  "packs": ["dist:srd-5e-2024"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000000001",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 37,
+      "ts": "2026-09-09T12:00:37.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Ines",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000002",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 38,
+      "ts": "2026-09-09T12:00:38.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["srd-5e-2024:species/human"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000003",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 39,
+      "ts": "2026-09-09T12:00:39.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/sage"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000004",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 40,
+      "ts": "2026-09-09T12:00:40.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/sage@0/ability-scores",
+        "selection": ["int:+2", "con:+1"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000005",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 41,
+      "ts": "2026-09-09T12:00:41.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["int:15", "dex:13", "con:14", "str:10", "wis:12", "cha:8"],
+        "context": {
+          "method": "standardArray"
+        }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000006",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 42,
+      "ts": "2026-09-09T12:00:42.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/wizard",
+        "level": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000007",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 43,
+      "ts": "2026-09-09T12:00:43.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/wizard@1/skills",
+        "selection": ["arcana", "investigation"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000008",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 44,
+      "ts": "2026-09-09T12:00:44.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 300
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000009",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 45,
+      "ts": "2026-09-09T12:00:45.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/wizard",
+        "level": 2,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000a",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 46,
+      "ts": "2026-09-09T12:00:46.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 600
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000b",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 47,
+      "ts": "2026-09-09T12:00:47.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/wizard",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/evoker"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000c",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 48,
+      "ts": "2026-09-09T12:00:48.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 1800
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000d",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 49,
+      "ts": "2026-09-09T12:00:49.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/wizard",
+        "level": 4,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000e",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 50,
+      "ts": "2026-09-09T12:00:50.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 3800
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000f",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 51,
+      "ts": "2026-09-09T12:00:51.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/wizard",
+        "level": 5,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000010",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 52,
+      "ts": "2026-09-09T12:00:52.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/burning-hands",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000011",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 53,
+      "ts": "2026-09-09T12:00:53.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/charm-person",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000012",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 54,
+      "ts": "2026-09-09T12:00:54.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/detect-magic",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000013",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 55,
+      "ts": "2026-09-09T12:00:55.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/mage-armor",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000014",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 56,
+      "ts": "2026-09-09T12:00:56.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/acid-arrow",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000015",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 57,
+      "ts": "2026-09-09T12:00:57.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/misty-step",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000016",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 58,
+      "ts": "2026-09-09T12:00:58.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/mirror-image",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000017",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 59,
+      "ts": "2026-09-09T12:00:59.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/fireball",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000018",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 60,
+      "ts": "2026-09-09T12:01:00.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.prepared",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/counterspell",
+        "classId": "srd-5e-2024:class/wizard"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000019",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 61,
+      "ts": "2026-09-09T12:01:01.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "spell.cast",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/fireball",
+        "level": 3,
+        "slotUsed": true,
+        "concentration": false
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001a",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 62,
+      "ts": "2026-09-09T12:01:02.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "concentration.started",
+      "v": 1,
+      "payload": {
+        "spellId": "srd-5e-2024:spell/detect-magic"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001b",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 63,
+      "ts": "2026-09-09T12:01:03.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "concentration.ended",
+      "v": 1,
+      "payload": {}
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001c",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 64,
+      "ts": "2026-09-09T12:01:04.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "rest.taken",
+      "v": 1,
+      "payload": {
+        "kind": "long"
+      }
+    }
+  ],
+  "expect": {
+    "sheet.hp.current": 32,
+    "sheet.spellcasting[0].slots": [
+      {
+        "level": 1,
+        "max": 4,
+        "used": 0
+      },
+      {
+        "level": 2,
+        "max": 3,
+        "used": 0
+      },
+      {
+        "level": 3,
+        "max": 2,
+        "used": 0
+      }
+    ],
+    "sheet.spellcasting[0].prepared.length": 9
+  }
+}

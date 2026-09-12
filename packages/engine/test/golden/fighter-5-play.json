@@ -1,0 +1,629 @@
+{
+  "name": "fighter-5-play",
+  "packs": ["dist:srd-5e-2024"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000000001",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 1,
+      "ts": "2026-09-09T12:00:01.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Aldric",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "masculine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000002",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 2,
+      "ts": "2026-09-09T12:00:02.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["srd-5e-2024:species/human"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000003",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 3,
+      "ts": "2026-09-09T12:00:03.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000004",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 4,
+      "ts": "2026-09-09T12:00:04.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/soldier@0/ability-scores",
+        "selection": ["str:+2", "con:+1"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000005",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 5,
+      "ts": "2026-09-09T12:00:05.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["str:15", "dex:13", "con:14", "int:10", "wis:12", "cha:8"],
+        "context": {
+          "method": "standardArray"
+        }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000006",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 6,
+      "ts": "2026-09-09T12:00:06.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000007",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 7,
+      "ts": "2026-09-09T12:00:07.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/skills",
+        "selection": ["athletics", "perception"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000008",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 8,
+      "ts": "2026-09-09T12:00:08.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/fighting-style",
+        "selection": ["srd-5e-2024:feat/defense"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000009",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 9,
+      "ts": "2026-09-09T12:00:09.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "22222222-2222-7222-8222-222222222221",
+        "itemId": "srd-5e-2024:item/chain-mail",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000a",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 10,
+      "ts": "2026-09-09T12:00:10.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "22222222-2222-7222-8222-222222222222",
+        "itemId": "srd-5e-2024:item/longsword",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000b",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 11,
+      "ts": "2026-09-09T12:00:11.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "22222222-2222-7222-8222-222222222223",
+        "itemId": "srd-5e-2024:item/shield",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000c",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 12,
+      "ts": "2026-09-09T12:00:12.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": {
+        "instanceId": "22222222-2222-7222-8222-222222222221"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000d",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 13,
+      "ts": "2026-09-09T12:00:13.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": {
+        "instanceId": "22222222-2222-7222-8222-222222222222"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000e",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 14,
+      "ts": "2026-09-09T12:00:14.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": {
+        "instanceId": "22222222-2222-7222-8222-222222222223"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000f",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 15,
+      "ts": "2026-09-09T12:00:15.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 300
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000010",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 16,
+      "ts": "2026-09-09T12:00:16.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 2,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000011",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 17,
+      "ts": "2026-09-09T12:00:17.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 600
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000012",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 18,
+      "ts": "2026-09-09T12:00:18.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/champion"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000013",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 19,
+      "ts": "2026-09-09T12:00:19.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 1800
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000014",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 20,
+      "ts": "2026-09-09T12:00:20.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 4,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000015",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 21,
+      "ts": "2026-09-09T12:00:21.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@4/feat",
+        "selection": ["srd-5e-2024:feat/ability-score-improvement"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000016",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 22,
+      "ts": "2026-09-09T12:00:22.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores",
+        "selection": ["str:+2"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000017",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 23,
+      "ts": "2026-09-09T12:00:23.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "xp.awarded",
+      "v": 1,
+      "payload": {
+        "amount": 3800
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000018",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 24,
+      "ts": "2026-09-09T12:00:24.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 5,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000019",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 25,
+      "ts": "2026-09-09T12:00:25.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "hp.changed",
+      "v": 1,
+      "payload": {
+        "delta": 5,
+        "kind": "temp"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001a",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 26,
+      "ts": "2026-09-09T12:00:26.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "hp.changed",
+      "v": 1,
+      "payload": {
+        "delta": -30,
+        "kind": "damage"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001b",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 27,
+      "ts": "2026-09-09T12:00:27.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "hp.changed",
+      "v": 1,
+      "payload": {
+        "delta": 6,
+        "kind": "heal"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001c",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 28,
+      "ts": "2026-09-09T12:00:28.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "resource.spent",
+      "v": 1,
+      "payload": {
+        "resourceId": "second-wind",
+        "count": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001d",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 29,
+      "ts": "2026-09-09T12:00:29.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "rest.taken",
+      "v": 1,
+      "payload": {
+        "kind": "short"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001e",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 30,
+      "ts": "2026-09-09T12:00:30.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "resource.restored",
+      "v": 1,
+      "payload": {
+        "resourceId": "second-wind"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001f",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 31,
+      "ts": "2026-09-09T12:00:31.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "resource.spent",
+      "v": 1,
+      "payload": {
+        "resourceId": "second-wind",
+        "count": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000020",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 32,
+      "ts": "2026-09-09T12:00:32.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "hp.changed",
+      "v": 1,
+      "payload": {
+        "delta": -25,
+        "kind": "damage"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000021",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 33,
+      "ts": "2026-09-09T12:00:33.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "death_save.recorded",
+      "v": 1,
+      "payload": {
+        "result": "failure"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000022",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 34,
+      "ts": "2026-09-09T12:00:34.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "death_save.recorded",
+      "v": 1,
+      "payload": {
+        "result": "success"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000023",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 35,
+      "ts": "2026-09-09T12:00:35.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "death_save.recorded",
+      "v": 1,
+      "payload": {
+        "result": "failure"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000024",
+      "stream": "char:11111111-1111-7111-8111-111111111111",
+      "seq": 36,
+      "ts": "2026-09-09T12:00:36.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "event.reverted",
+      "v": 1,
+      "payload": {
+        "targetId": "018f7000-0000-7000-8000-000000000022"
+      }
+    }
+  ],
+  "expect": {
+    "sheet.hp.current": 0,
+    "sheet.hp.temp": 0,
+    "sheet.hp.deathSaves.successes": 0,
+    "sheet.hp.deathSaves.failures": 2,
+    "sheet.resources[0].used": 1
+  }
+}
