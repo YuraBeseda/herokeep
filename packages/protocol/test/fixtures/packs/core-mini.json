@@ -426,6 +426,72 @@
           "when": { "ability": { "str": { "gte": 15 } } }
         }
       ]
+    },
+    {
+      "id": "core-mini:feature/druid-spellcasting",
+      "type": "feature",
+      "name": "Spellcasting",
+      "description": "Cast druid spells.",
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "druid",
+          "ability": "wis",
+          "list": "druid",
+          "preparation": "prepared",
+          "slots": "full",
+          "ritual": true,
+          "focus": true,
+          "cantripsKnown": "2 + floor(classLevel(druid) / 4)",
+          "preparedCount": "classLevel(druid) + 2"
+        }
+      ]
+    },
+    {
+      "id": "core-mini:feature/wild-shape",
+      "type": "feature",
+      "name": "Wild Shape",
+      "description": "Transform into a beast.",
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "wild-shape",
+          "name": "Wild Shape",
+          "max": "1 + floor(classLevel(druid) / 4)",
+          "reset": "shortRest"
+        },
+        {
+          "type": "action.define",
+          "id": "wild-shape",
+          "name": "Wild Shape",
+          "kind": "action",
+          "description": "Transform into a beast.",
+          "resource": "wild-shape"
+        }
+      ]
+    },
+    {
+      "id": "core-mini:class/druid",
+      "type": "class",
+      "name": "Druid",
+      "hitDie": 8,
+      "primaryAbility": ["wis"],
+      "saves": ["int", "wis"],
+      "armorTraining": ["light"],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": { "from": ["perception", "stealth"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [
+        {
+          "level": 1,
+          "grants": [
+            { "feature": "core-mini:feature/druid-spellcasting" },
+            { "feature": "core-mini:feature/wild-shape" }
+          ],
+          "extra": { "druid-prepared-spells": 4 }
+        },
+        { "level": 5, "extra": { "druid-prepared-spells": 9 } }
+      ]
     }
   ]
 }
