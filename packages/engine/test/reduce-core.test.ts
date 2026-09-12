@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyFacts, type SystemRules } from '../src/reduce/facts.ts';
 import { HANDLERS as CASTING_HANDLERS } from '../src/reduce/handlers/casting.ts';
 import { HANDLERS as IDENTITY_HANDLERS } from '../src/reduce/handlers/identity.ts';
+import { HANDLERS as INVENTORY_HANDLERS } from '../src/reduce/handlers/inventory.ts';
 import { HANDLERS as LEVELING_HANDLERS } from '../src/reduce/handlers/leveling.ts';
 import { HANDLERS as VITALS_HANDLERS } from '../src/reduce/handlers/vitals.ts';
 import { effectiveRules, reduce } from '../src/reduce/reducer.ts';
@@ -85,6 +86,7 @@ describe('reduce: handler registry', () => {
       LEVELING_HANDLERS,
       VITALS_HANDLERS,
       CASTING_HANDLERS,
+      INVENTORY_HANDLERS,
     ];
     const totalKeys = modules.reduce((n, mod) => n + Object.keys(mod).length, 0);
     const union = new Set(modules.flatMap((mod) => Object.keys(mod)));

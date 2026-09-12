@@ -3,6 +3,7 @@ import { ENGINE_VERSION } from '../version.ts';
 import { type Facts, type Snapshot, type SystemRules, emptyFacts } from './facts.ts';
 import { HANDLERS as CASTING_HANDLERS } from './handlers/casting.ts';
 import { HANDLERS as IDENTITY_HANDLERS } from './handlers/identity.ts';
+import { HANDLERS as INVENTORY_HANDLERS } from './handlers/inventory.ts';
 import { HANDLERS as LEVELING_HANDLERS } from './handlers/leveling.ts';
 import { HANDLERS as VITALS_HANDLERS } from './handlers/vitals.ts';
 
@@ -19,6 +20,7 @@ const HANDLER_MODULES: Record<string, Handler>[] = [
   LEVELING_HANDLERS,
   VITALS_HANDLERS,
   CASTING_HANDLERS,
+  INVENTORY_HANDLERS,
 ];
 
 export const HANDLERS: Record<string, Handler> = HANDLER_MODULES.reduce<Record<string, Handler>>(
