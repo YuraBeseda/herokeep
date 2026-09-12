@@ -224,6 +224,15 @@
       "shield": { "ac": 2 }
     },
     {
+      "id": "core-mini:item/half-plate",
+      "type": "item",
+      "name": "Half Plate",
+      "category": "armor",
+      "cost": { "amount": 750, "currency": "gp" },
+      "weight": 40,
+      "armor": { "category": "medium", "ac": 15, "dexCap": 2 }
+    },
+    {
       "id": "core-mini:spell/fireball",
       "type": "spell",
       "name": "Fireball",
