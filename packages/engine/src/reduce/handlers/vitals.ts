@@ -86,7 +86,8 @@ export const HANDLERS: Record<string, Handler> = {
   },
 
   // Replace-by-conditionId: re-adding e.g. exhaustion with a new `level` replaces the entry
-  // rather than stacking a second one.
+  // rather than stacking a second one. The payload's `until` is intentionally not stored —
+  // `ConditionEntry` has no such field; expiry is derive/UI's concern, not the reducer's.
   'condition.added@1': (f, e) => {
     const p = e.payload as ConditionAdded;
     const skip = requireCreated(f);

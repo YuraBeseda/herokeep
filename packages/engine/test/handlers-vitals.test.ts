@@ -271,6 +271,12 @@ describe('concentration.started / concentration.ended', () => {
     const f = reduce([created, ...setup]);
     expect(f.concentration).toBeUndefined();
   });
+
+  it('started with no spellId skips with reason concentration-spell-required and leaves facts untouched', () => {
+    const f = reduce([created, ev(2, 'concentration.started', {})]);
+    expect(f.concentration).toBeUndefined();
+    expect(f.skipped).toEqual([{ eventId: id(2), reason: 'concentration-spell-required' }]);
+  });
 });
 
 describe('inspiration.changed', () => {
