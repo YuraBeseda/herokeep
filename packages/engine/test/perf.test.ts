@@ -1,40 +1,49 @@
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { type Event, parseEvent, parsePack } from '@hk/protocol';
+import { type Event, parseEvent } from '@hk/protocol';
 import { createContentIndex } from '../src/content/index.ts';
 import { derive } from '../src/derive/index.ts';
 import type { SystemRules } from '../src/reduce/facts.ts';
 import { reduce } from '../src/reduce/reducer.ts';
-import { loadGoldens } from './support/golden.ts';
+import { loadDistPack, loadGoldens } from './support/golden.ts';
 
 /**
  * Perf budget (task-15-brief.md Step 3): fighter-5-play's real event log (creation through level 5
  * plus its ~15-event play sequence) extended with 500 synthetic in-play events (cycled
- * damage/heal/slot spends), reduced and derived 5 times; the median wall time must stay under
+ * damage/heal/slot events), reduced and derived 5 times; the median wall time must stay under
  * 150ms — generous CI headroom over the ~30ms real-device target (plan 6's checklist measures
  * that on an actual device; this is a regression tripwire, not the device measurement).
  */
-
-const PACK_URL = new URL('../../content/dist/packs/srd-5e-2024/0.1.0/pack.json', import.meta.url);
 
 function hex(n: number): string {
   return n.toString(16).padStart(12, '0');
 }
 
-/** 500 synthetic events continuing the fixture's stream/seq, alternating damage/heal and spend/restore. */
+/**
+ * 500 synthetic events continuing the fixture's stream/seq, cycling through all three kinds the
+ * brief calls for — damage, heal, and spell-slot spend/restore — so the perf tripwire exercises
+ * `reduce`'s slot-handling path under load too, not just `hp.changed`. Net effect is a no-op by
+ * design (each foursome's damage/heal and spend/restore cancel out): this measures steady-state
+ * per-event reduce/derive cost, not a specific end state.
+ */
 function syntheticEvents(stream: string, startSeq: number, count: number): Event[] {
   const events: Event[] = [];
+  const KIND: { type: string; payload: unknown }[] = [
+    { type: 'hp.changed', payload: { delta: -1, kind: 'damage' } },
+    { type: 'hp.changed', payload: { delta: 1, kind: 'heal' } },
+    { type: 'slot.spent', payload: { level: 1 } },
+    { type: 'slot.restored', payload: { level: 1 } },
+  ];
   for (let i = 0; i < count; i++) {
     const seq = startSeq + i + 1;
-    const even = i % 2 === 0;
-    const payload = even ? { delta: -1, kind: 'damage' } : { delta: 1, kind: 'heal' };
+    const { type, payload } = KIND[i % KIND.length]!;
     const e = {
       id: `018f7f00-0000-7000-9000-${hex(i + 1)}`,
       stream,
       seq,
       ts: `2026-09-10T00:${String(Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}.000Z`,
       actor: { userId: 'u1', deviceId: 'd1', role: 'owner' as const },
-      type: 'hp.changed',
+      type,
       v: 1,
       payload,
     };
@@ -59,10 +68,11 @@ describe('perf budget', () => {
     const stream = events[0]!.stream;
     const allEvents = [...events, ...syntheticEvents(stream, lastSeq, 500)];
 
-    const rawPack: unknown = JSON.parse(readFileSync(PACK_URL, 'utf8'));
-    const parsedPack = parsePack(rawPack);
-    if (!parsedPack.ok) throw new Error(`invalid dist pack: ${JSON.stringify(parsedPack.issues)}`);
-    const index = createContentIndex([parsedPack.pack]);
+    // Reuse the harness's own dist-pack loader (version-scanning, clear build-first message) —
+    // never hardcode the pack path/version here, so a pack version bump can't silently break
+    // this file with a raw ENOENT instead of golden.ts's actionable error.
+    const pack = loadDistPack('srd-5e-2024');
+    const index = createContentIndex([pack]);
     if (index.diagnostics.length > 0) throw new Error(JSON.stringify(index.diagnostics));
     const rules: SystemRules = { restRules: index.system().restRules, hpRules: index.system().hpRules };
 
@@ -80,6 +90,8 @@ describe('perf budget', () => {
       `[perf] fighter-5-play + 500 synthetic events (${allEvents.length} total): samples=${samples.map((s) => s.toFixed(2)).join(', ')}ms median=${median.toFixed(2)}ms`,
     );
 
+    // NOTE: this appends one line per test run — PERF.md is a running log, not a single snapshot;
+    // trim old entries by hand if it grows unwieldy (kept simple deliberately: no rotation logic).
     const perfMdPath = new URL('golden/PERF.md', import.meta.url);
     const line = `- ${new Date().toISOString()}: ${allEvents.length} events, samples [${samples.map((s) => s.toFixed(2)).join(', ')}] ms, median ${median.toFixed(2)} ms (budget 150 ms)\n`;
     if (!existsSync(perfMdPath)) {
@@ -88,9 +100,11 @@ describe('perf budget', () => {
         '# Engine perf budget\n\n' +
           "Median of 5 `reduce` + `derive` runs over `fighter-5-play`'s real event log (creation " +
           'through level 5, plus its ~15-event play sequence) extended with 500 synthetic in-play ' +
-          'events (cycled damage/heal). Budget: 150ms (generous CI headroom over the ~30ms real-' +
-          'device target measured separately in plan 6). See `test/perf.test.ts`.\n\n' +
-          '## Measurements\n\n',
+          'events (cycled damage/heal/slot spend+restore). Budget: 150ms (generous CI headroom ' +
+          'over the ~30ms real-device target measured separately in plan 6). See `test/perf.test.ts`.\n\n' +
+          '## Measurements\n\n' +
+          '(Appended one line per test run — this file is a running log; trim old entries by hand ' +
+          'if it grows too long. No automatic rotation.)\n\n',
       );
     }
     appendFileSync(perfMdPath, line);

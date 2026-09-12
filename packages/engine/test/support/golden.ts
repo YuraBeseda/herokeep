@@ -17,14 +17,17 @@ const goldenDir = new URL('../golden/', import.meta.url);
 
 /** `packages/content/dist/packs/`, relative to this file (`packages/engine/test/support/`). */
 const contentDistPacksDir = new URL('../../../content/dist/packs/', import.meta.url);
-const DIST_PREFIX = 'dist:';
+export const DIST_PREFIX = 'dist:';
 
 /**
  * Loads a built content pack for `packs: ["dist:<packId>"]` entries. CI builds the content pack
  * before running tests (root pipeline); locally it must be built first — fail with a clear,
- * actionable message rather than a raw ENOENT when it hasn't been.
+ * actionable message rather than a raw ENOENT when it hasn't been. Exported so other callers that
+ * need the real pack directly (e.g. `perf.test.ts`, which needs a `ContentIndex` outside any
+ * `GoldenFixture`) reuse this same version-scanning, build-first-message logic instead of
+ * duplicating a hardcoded path that a version bump would silently break.
  */
-function loadDistPack(packId: string): Pack {
+export function loadDistPack(packId: string): Pack {
   const packDir = new URL(`${packId}/`, contentDistPacksDir);
   const notBuilt = (): never => {
     throw new Error(

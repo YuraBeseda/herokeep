@@ -428,6 +428,7 @@
     "sheet.ac.value": 19,
     "sheet.attacksPerAction": 2,
     "sheet.attacks[0].toHit.value": 7,
-    "sheet.abilities[\"str\"].save.value": 7
+    "sheet.abilities[\"str\"].save.value": 7,
+    "facts.xp": 6500
   }
 }
