@@ -161,4 +161,78 @@ describe('deriveDefense', () => {
 
     expect(r.issues.some((i) => i.code === 'derive.stealthDisadvantage')).toBe(false);
   });
+
+  it('lets an ac.formula effect win the max-of-formulas competition over the base candidate', () => {
+    const facts = withDex(16); // mod +3, base candidate 10+3=13
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const abilitiesWithFormula = {
+      ...abilities,
+      effects: [
+        ...abilities.effects,
+        { effect: { type: 'ac.formula' as const, formula: '15 + mod(dex)' }, source: 'test:feature/unarmored-defense' },
+      ],
+    };
+    const r = deriveDefense(abilitiesWithFormula, comp, facts, index);
+
+    // 15 + mod(dex)=3 = 18, beats the base candidate (13) — proves the formula evaluator is wired
+    // (mod(dex) resolves through FormulaContext), not just a static number comparison.
+    expect(r.ac.value).toBe(18);
+  });
+
+  it('lets the equipped-armor candidate beat a lower ac.formula candidate', () => {
+    const facts = withDex(12); // mod +1
+    facts.inventory = [
+      { instanceId: 'i1', itemId: 'core-mini:item/chain-mail', qty: 1, equipped: true, attuned: false },
+    ];
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const abilitiesWithFormula = {
+      ...abilities,
+      effects: [
+        ...abilities.effects,
+        { effect: { type: 'ac.formula' as const, formula: '12' }, source: 'test:feature/weak-formula' },
+      ],
+    };
+    const r = deriveDefense(abilitiesWithFormula, comp, facts, index);
+
+    // armor candidate: chain-mail ac 16 + mod(dex)=1 (uncapped) = 17, beats the flat formula (12).
+    expect(r.ac.value).toBe(17);
+  });
+
+  it('adds a generic ac.bonus effect on top of the winning AC candidate', () => {
+    const facts = withDex(14); // mod +2, base candidate 12
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const abilitiesWithBonus = {
+      ...abilities,
+      effects: [
+        ...abilities.effects,
+        { effect: { type: 'ac.bonus' as const, value: 1, key: 'ring-of-protection' }, source: 'test:item/ring' },
+      ],
+    };
+    const r = deriveDefense(abilitiesWithBonus, comp, facts, index);
+
+    expect(r.ac.value).toBe(13); // 12 + 1
+    expect(r.ac.contributions).toContainEqual(
+      expect.objectContaining({ source: 'test:item/ring', key: 'ring-of-protection', amount: 1 }),
+    );
+  });
+
+  it('does not stack two ac.bonus effects sharing the same key (keeps the higher, not the sum)', () => {
+    const facts = withDex(14); // mod +2, base candidate 12
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const abilitiesWithBonuses = {
+      ...abilities,
+      effects: [
+        ...abilities.effects,
+        { effect: { type: 'ac.bonus' as const, value: 1, key: 'ring-of-protection' }, source: 'test:item/ring-a' },
+        { effect: { type: 'ac.bonus' as const, value: 1, key: 'ring-of-protection' }, source: 'test:item/ring-b' },
+      ],
+    };
+    const r = deriveDefense(abilitiesWithBonuses, comp, facts, index);
+
+    expect(r.ac.value).toBe(13); // still +1, not +2 — same key keeps the max, never sums
+  });
 });

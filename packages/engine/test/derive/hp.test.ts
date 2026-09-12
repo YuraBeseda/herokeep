@@ -174,4 +174,27 @@ describe('deriveHp', () => {
     expect(r.max.value).toBe((6 + 2) * 3);
     expect(r.issues).toContainEqual(expect.objectContaining({ severity: 'warning', code: 'derive.noSystemRules' }));
   });
+
+  it('clamps a rolled level at the low end (0 rolls up to 1)', () => {
+    const facts = baseFacts();
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 2 }];
+    facts.hpRolls = { 'core-mini:class/fighter': [0] };
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const r = deriveHp(abilities, comp, facts, index, systemRules());
+
+    // level1 (firstLevelMaxHitDie) = hitDie(10) + conMod(0); level2 roll 0 clamps up to 1 + conMod(0)
+    expect(r.max.value).toBe(10 + 1);
+  });
+
+  it('clamps a rolled level at the high end (a roll above hitDie clamps down to hitDie)', () => {
+    const facts = baseFacts();
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 2 }];
+    facts.hpRolls = { 'core-mini:class/fighter': [15] }; // hitDie(10) + 5
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const r = deriveHp(abilities, comp, facts, index, systemRules());
+
+    expect(r.max.value).toBe(10 + 10);
+  });
 });

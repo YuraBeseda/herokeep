@@ -52,6 +52,11 @@ export function deriveDefense(
     const entity = index.get(item.itemId);
     if (entity?.type !== 'item') continue;
     if (entity.armor && !equippedArmor) equippedArmor = entity;
+    // A `category: 'shield'` item missing its `shield` field is malformed pack data (the schema
+    // allows it since `shield` is optional); it intentionally contributes no AC bonus rather than
+    // throwing — derivation must never fail (docs/02-architecture/05-rules-engine.md) — and isn't
+    // otherwise diagnosed here since content-pack validation (pack-tools) is the layer responsible
+    // for catching that kind of authoring error before it ever reaches a character sheet.
     if (entity.category === 'shield' && entity.shield) {
       table.add('ac', {
         source: entity.id,
