@@ -113,10 +113,7 @@ const NEW_EVENT_CASES: { type: string; accept: Record<string, unknown> }[] = [
     type: 'portrait.set',
     accept: { hash: `sha256:${'0'.repeat(64)}`, thumbHash: 'abc123', mime: 'image/png', w: 256, h: 256 },
   },
-  {
-    type: 'portrait.cleared',
-    accept: { hash: `sha256:${'0'.repeat(64)}`, thumbHash: 'abc123', mime: 'image/png', w: 256, h: 256 },
-  },
+  { type: 'portrait.cleared', accept: {} },
   { type: 'override.applied', accept: { path: 'ac', value: 17, reason: 'DM ruling' } },
   { type: 'event.reverted', accept: { targetId: UUID_A, reason: 'undo' } },
   { type: 'history.compacted', accept: { throughSeq: 10, facts: {} } },

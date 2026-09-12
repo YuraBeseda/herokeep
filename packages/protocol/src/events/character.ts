@@ -197,13 +197,7 @@ export const PortraitSetV1 = z.strictObject({
   w: z.int().min(1),
   h: z.int().min(1),
 });
-export const PortraitClearedV1 = z.strictObject({
-  hash: BlobHashSchema,
-  thumbHash: z.string().min(1).max(256),
-  mime: z.string().min(1).max(64),
-  w: z.int().min(1),
-  h: z.int().min(1),
-});
+export const PortraitClearedV1 = z.strictObject({});
 
 // --- Overrides & history ----------------------------------------------------------------
 
