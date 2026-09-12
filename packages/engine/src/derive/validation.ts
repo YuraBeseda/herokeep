@@ -155,6 +155,7 @@ function validateSubclassLevel(
 
 function validateAbilitiesPick(
   pick: { count: number; max: number; improve: '+1' | '+2' | '+2/+1' | '+1/+1/+1' },
+  owner: Entity,
   sheet: Sheet,
   index: ContentIndex,
   choiceId: string,
@@ -178,6 +179,23 @@ function validateAbilitiesPick(
     parsed.push({ ability: m[1]!, delta: Number(m[2]) });
   }
   if (issues.length > 0) return issues;
+
+  // Some owners (backgrounds) restrict which abilities their choice may improve to their own
+  // `abilityScores` list (SRD e.g. Soldier: str/dex/con only). Owners without such a list (the
+  // ASI feat) stay unrestricted.
+  if ('abilityScores' in owner) {
+    const allowed = new Set<string>(owner.abilityScores);
+    for (const p of parsed) {
+      if (!allowed.has(p.ability)) {
+        issues.push(
+          error('selection.abilityNotAllowed', `"${p.ability}" is not an allowed ability for ${owner.id}`, {
+            path: choiceId,
+          }),
+        );
+      }
+    }
+    if (issues.length > 0) return issues;
+  }
 
   const abilitiesUsed = new Set(parsed.map((p) => p.ability));
   if (abilitiesUsed.size !== parsed.length) {
@@ -393,7 +411,7 @@ export function validateSelection(
 
   const found = findChoice(index, choiceId);
   if (!found) return [error('selection.unknownChoice', `Unknown choice "${choiceId}"`, { path: choiceId })];
-  const { choice } = found;
+  const { choice, owner } = found;
 
   const comp = compose(facts, index);
   const ctx = buildPredicateContext(sheet, comp, facts, index);
@@ -416,7 +434,7 @@ export function validateSelection(
     }
     issues.push(...checkUnique(choice, choiceId, facts, selection));
   } else if ('abilities' in choice.pick) {
-    issues.push(...validateAbilitiesPick(choice.pick.abilities, sheet, index, choiceId, selection));
+    issues.push(...validateAbilitiesPick(choice.pick.abilities, owner, sheet, index, choiceId, selection));
   } else if ('abilityGeneration' in choice.pick) {
     issues.push(...validateAbilityGeneration(index, facts, choiceId, selection));
   } else if ('literal' in choice.pick) {

@@ -52,6 +52,15 @@ function orderEvents(events: Event[]): Event[] {
  * target that comes earlier OR later in seq order than the revert itself; the pre-scan makes
  * both work identically, independent of fold order. Reverting by `txId` skips every event that
  * shares that transaction (the events' own envelope `txId`, not the revert's own).
+ *
+ * Snapshot seam: this pre-scan only ever sees the `events` array it is CALLED with. When
+ * `reduce` resumes from a snapshot, that array holds only events AFTER the snapshot's seq — so a
+ * revert appended after the snapshot cannot un-apply a target that was folded into the snapshot
+ * itself, and (per the revert-of-unknown-id no-op rule above) it fails silently rather than
+ * erroring. Callers that persist snapshots (e.g. the web app's CharacterStore) MUST delete or
+ * invalidate a stream's snapshot — forcing a full replay from seq 0 — whenever an
+ * `event.reverted` is appended to that stream. See `SnapshotsRepository`'s class doc for the
+ * storage-side half of this contract.
  */
 function preScanReverted(events: Event[]): { ids: Set<string>; txIds: Set<string> } {
   const ids = new Set<string>();

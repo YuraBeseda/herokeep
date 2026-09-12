@@ -105,6 +105,38 @@ const valMiniRaw = {
       class: 'val-mini:class/tester2',
       levels: [{ level: 1 }],
     },
+    {
+      // A background whose `abilityScores` list restricts its ability-choice, unlike the ASI
+      // feat below — SRD backgrounds (e.g. Soldier: str/dex/con) never offer every ability.
+      id: 'val-mini:background/soldier',
+      type: 'background',
+      name: 'Soldier',
+      abilityScores: ['str', 'dex', 'con'],
+      originFeat: 'val-mini:feat/mighty',
+      choices: [
+        {
+          id: 'val-mini:background/soldier@0/ability-scores',
+          prompt: 'Ability score improvement',
+          at: { kind: 'creation' },
+          pick: { abilities: { count: 2, improve: '+2/+1' } },
+        },
+      ],
+    },
+    {
+      // An ASI-style owner with no `abilityScores` list — its ability choice stays unrestricted.
+      id: 'val-mini:feat/asi',
+      type: 'feat',
+      name: 'Ability Score Improvement',
+      category: 'general',
+      choices: [
+        {
+          id: 'val-mini:feat/asi@1/abilities',
+          prompt: 'Ability score improvement',
+          at: { kind: 'level', level: 1 },
+          pick: { abilities: { count: 2, improve: '+2/+1' } },
+        },
+      ],
+    },
   ],
 };
 
@@ -127,6 +159,8 @@ const featChoice = 'val-mini:class/tester@1/feat';
 const abilityScoresChoice = 'core-mini:system/mini@0/ability-scores';
 const acolyteBonusChoice = 'core-mini:background/acolyte@0/ability-scores';
 const subclassMismatchChoice = 'val-mini:class/tester2@3/subclass';
+const soldierBonusChoice = 'val-mini:background/soldier@0/ability-scores';
+const asiBonusChoice = 'val-mini:feat/asi@1/abilities';
 
 const codes = (issues: { code: string }[]) => issues.map((i) => i.code);
 
@@ -252,6 +286,31 @@ describe('validateSelection', () => {
       const sheet = sheetFor(facts);
       const issues = validateSelection(sheet, facts, index, acolyteBonusChoice, ['int:+1', 'wis:+1']);
       expect(codes(issues)).toContain('selection.abilityImproveShape');
+    });
+
+    describe("owner's abilityScores list (background)", () => {
+      it("rejects a selection with an ability outside the owning background's abilityScores list", () => {
+        const facts = baseFacts();
+        const sheet = sheetFor(facts);
+        // Soldier only offers str/dex/con — int and cha are not on its list.
+        const issues = validateSelection(sheet, facts, index, soldierBonusChoice, ['int:+2', 'cha:+1']);
+        expect(codes(issues)).toContain('selection.abilityNotAllowed');
+      });
+
+      it("accepts a legal pick drawn from the owning background's abilityScores list", () => {
+        const facts = baseFacts();
+        const sheet = sheetFor(facts);
+        const issues = validateSelection(sheet, facts, index, soldierBonusChoice, ['str:+2', 'dex:+1']);
+        expect(issues).toEqual([]);
+      });
+
+      it('leaves an owner with no abilityScores list (the ASI feat) unrestricted', () => {
+        const facts = baseFacts();
+        const sheet = sheetFor(facts);
+        const issues = validateSelection(sheet, facts, index, asiBonusChoice, ['int:+2', 'cha:+1']);
+        expect(codes(issues)).not.toContain('selection.abilityNotAllowed');
+        expect(issues).toEqual([]);
+      });
     });
   });
 
