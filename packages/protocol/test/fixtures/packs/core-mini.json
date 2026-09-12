@@ -328,6 +328,27 @@
       "category": "magic",
       "weight": 0,
       "effects": [{ "type": "damage.resistance", "types": ["cold"] }]
+    },
+    {
+      "id": "core-mini:feat/iron-resolve",
+      "type": "feat",
+      "name": "Iron Resolve",
+      "category": "general",
+      "effects": [
+        {
+          "type": "ac.bonus",
+          "value": 1,
+          "key": "heavy-armor-test",
+          "when": { "armor": { "category": ["heavy"] } }
+        },
+        { "type": "ac.bonus", "value": 1, "key": "shield-test", "when": { "shield": true } }
+      ],
+      "grants": [
+        {
+          "feature": "core-mini:feature/weapon-master",
+          "when": { "ability": { "str": { "gte": 15 } } }
+        }
+      ]
     }
   ]
 }

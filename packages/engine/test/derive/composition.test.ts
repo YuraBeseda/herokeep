@@ -1,3 +1,4 @@
+import { parsePack } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { createContentIndex } from '../../src/content/index.ts';
 import { compose } from '../../src/derive/composition.ts';
@@ -89,5 +90,96 @@ describe('compose', () => {
 
     const gated = c.effects.find((e) => e.effect.type === 'ac.bonus' && e.effect.key === 'str-gated');
     expect(gated).toMatchObject({ source: 'core-mini:item/cloak-of-protection', deferred: true });
+  });
+
+  it('activates an attuned-but-not-equipped item too', () => {
+    const facts = baseFacts();
+    facts.inventory = [
+      { instanceId: 'i1', itemId: 'core-mini:item/cloak-of-protection', qty: 1, equipped: false, attuned: true },
+    ];
+    const c = compose(facts, index);
+
+    expect(c.entities).toEqual(['core-mini:item/cloak-of-protection']);
+    expect(c.effects.some((e) => e.effect.type === 'ac.bonus' && e.effect.key === 'cloak')).toBe(true);
+  });
+
+  it("activates a background's originFeat through the normal grant walk", () => {
+    const facts = baseFacts();
+    facts.decisions['core-mini:system/mini@0/background'] = ['core-mini:background/acolyte'];
+    const c = compose(facts, index);
+
+    expect(c.entities).toEqual(['core-mini:background/acolyte', 'core-mini:feat/alert'].sort());
+    expect(c.issues).toEqual([]);
+
+    const init = c.effects.find((e) => e.effect.type === 'initiative.bonus');
+    expect(init).toMatchObject({ source: 'core-mini:background/acolyte', feature: 'core-mini:feat/alert' });
+  });
+
+  it('derives armor category and shield presence from equipped items for armor/shield-gated effects', () => {
+    const facts = baseFacts();
+    facts.decisions['test:pick@0/feat'] = ['core-mini:feat/iron-resolve'];
+    facts.inventory = [
+      { instanceId: 'i1', itemId: 'core-mini:item/chain-mail', qty: 1, equipped: true, attuned: false },
+      { instanceId: 'i2', itemId: 'core-mini:item/shield', qty: 1, equipped: true, attuned: false },
+    ];
+    const c = compose(facts, index);
+
+    expect(c.effects.some((e) => e.effect.type === 'ac.bonus' && e.effect.key === 'heavy-armor-test')).toBe(true);
+    expect(c.effects.some((e) => e.effect.type === 'ac.bonus' && e.effect.key === 'shield-test')).toBe(true);
+  });
+
+  it('does not activate armor/shield-gated effects without the matching equipment', () => {
+    const facts = baseFacts();
+    facts.decisions['test:pick@0/feat'] = ['core-mini:feat/iron-resolve'];
+    const c = compose(facts, index);
+
+    expect(c.effects.some((e) => e.effect.type === 'ac.bonus' && e.effect.key === 'heavy-armor-test')).toBe(false);
+    expect(c.effects.some((e) => e.effect.type === 'ac.bonus' && e.effect.key === 'shield-test')).toBe(false);
+  });
+
+  it("warns when a grant's own predicate needs ability scores, and leaves it inactive", () => {
+    const facts = baseFacts();
+    facts.decisions['test:pick@0/feat'] = ['core-mini:feat/iron-resolve'];
+    const c = compose(facts, index);
+
+    expect(c.entities).not.toContain('core-mini:feature/weapon-master');
+    expect(c.issues).toContainEqual(
+      expect.objectContaining({
+        severity: 'warning',
+        code: 'derive.grantDeferred',
+        entityId: 'core-mini:feature/weapon-master',
+      }),
+    );
+  });
+
+  it('caps grant recursion depth with a warning, leaving the entity beyond the cap inactive', () => {
+    const chainLength = 10; // g0 (root) .. g9: g9 is reached at depth 9, past MAX_GRANT_DEPTH (8)
+    const entities = Array.from({ length: chainLength }, (_, i) => ({
+      id: `depth-test:feature/g${i}`,
+      type: 'feature',
+      name: `G${i}`,
+      grants: i + 1 < chainLength ? [{ feature: `depth-test:feature/g${i + 1}` }] : [],
+    }));
+    const parsed = parsePack({
+      format: 1,
+      id: 'depth-test',
+      version: '1.0.0',
+      kind: 'content',
+      system: 'mini',
+      name: 'Depth test',
+      entities,
+    });
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues));
+    const depthIndex = createContentIndex([loadFixturePack('core-mini'), parsed.pack]);
+
+    const facts = baseFacts();
+    facts.decisions['test:pick@0/feature'] = ['depth-test:feature/g0'];
+    const c = compose(facts, depthIndex);
+
+    expect(c.entities).toContain('depth-test:feature/g8');
+    expect(c.entities).not.toContain('depth-test:feature/g9');
+    expect(c.issues).toContainEqual(
+      expect.objectContaining({ severity: 'warning', code: 'derive.grantDepth', entityId: 'depth-test:feature/g9' }),
+    );
   });
 });
