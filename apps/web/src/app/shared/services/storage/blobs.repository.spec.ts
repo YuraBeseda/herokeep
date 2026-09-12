@@ -21,6 +21,14 @@ describe('BlobsRepository', () => {
     ]);
   });
 
+  // Defensive: TestBed doesn't close `HkDb`'s IndexedDB connection when it tears down the
+  // injector between tests, so without this a connection could still be open when another spec
+  // file's `beforeEach`/`Dexie.delete` next runs against the same `hk-db` name (see
+  // `dexie.db.spec.ts` for the inter-file reasoning).
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
   it('round-trips a blob through put/get, deriving size from the bytes', async () => {
     const repo = TestBed.inject(BlobsRepository);
     const bytes = new Uint8Array([1, 2, 3, 4]);

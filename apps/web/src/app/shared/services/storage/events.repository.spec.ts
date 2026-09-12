@@ -41,6 +41,14 @@ describe('EventsRepository', () => {
     ]);
   });
 
+  // Defensive: TestBed doesn't close `HkDb`'s IndexedDB connection when it tears down the
+  // injector between tests, so without this a connection could still be open when another spec
+  // file's `beforeEach`/`Dexie.delete` next runs against the same `hk-db` name (see
+  // `dexie.db.spec.ts` for the inter-file reasoning).
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
   it('append assigns contiguous per-stream seqs across two interleaved streams in one call', async () => {
     const repo = TestBed.inject(EventsRepository);
     await repo.append([
