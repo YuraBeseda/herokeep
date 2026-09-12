@@ -254,14 +254,28 @@ function deriveArmorCategory(addDex: boolean, capDex: number | undefined, pk: Fi
   throw new Error(`items: armor "${String(pk)}" doesn't match the light/medium/heavy derivation rule`);
 }
 
+/**
+ * Effective `dexCap` by category, principled (not a one-off): heavy armor adds no Dex bonus at
+ * all, so it must emit an explicit `dexCap: 0` — the engine's own tested contract
+ * (`derive/defense.ts`, `derive/defense.test.ts`) treats an ABSENT `dexCap` as "uncapped", not
+ * "no Dex", so leaving it off heavy armor silently over-counts the wearer's Dex mod into AC.
+ * Medium armor keeps upstream's numeric `ac_cap_dexmod` (always `2` in the SRD) verbatim. Light
+ * armor (and shields) stay uncapped — `dexCap` is omitted entirely, matching "full Dex applies".
+ */
+function effectiveDexCap(category: ArmorCategory, upstreamDexCap: number | undefined): number | undefined {
+  return category === 'heavy' ? 0 : upstreamDexCap;
+}
+
 function buildArmorShape(armorRec: FixtureRecord): ArmorShape {
   const pk = pkStr(armorRec.pk);
   const addDex = fieldBool(armorRec.fields, 'ac_add_dexmod', pk);
-  const dexCap = fieldOptionalNum(armorRec.fields, 'ac_cap_dexmod', pk);
+  const upstreamDexCap = fieldOptionalNum(armorRec.fields, 'ac_cap_dexmod', pk);
   const strength = fieldOptionalNum(armorRec.fields, 'strength_score_required', pk);
+  const category = deriveArmorCategory(addDex, upstreamDexCap, pk);
+  const dexCap = effectiveDexCap(category, upstreamDexCap);
 
   return {
-    category: deriveArmorCategory(addDex, dexCap, pk),
+    category,
     ac: fieldNum(armorRec.fields, 'ac_base', pk),
     ...(dexCap !== undefined ? { dexCap } : {}),
     ...(strength !== undefined ? { strength } : {}),

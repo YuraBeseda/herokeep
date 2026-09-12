@@ -1,0 +1,17 @@
+[
+  {
+    "id": "srd-5e-2024:feat/ability-score-improvement",
+    "cite": "SRD 5.2.1, Ability Score Improvement",
+    "note": "Feat desc: \"Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20.\" PickSchema's `abilities` variant can express only ONE `improve` grammar per choice (no either/or), and its enum has no '+1 to two abilities' shape at all (only '+1', '+2', '+2/+1', '+1/+1/+1') — so this picks the '+2' form, an exact match for the feat's first RAW option (\"increase one ability score by 2\"); the second RAW option (\"+1 to two abilities\") isn't expressible by any single choice under this schema and is dropped, per the same limitation noted on the background ability-score overlays. `at: {kind:'level', level:4}` records the earliest level either Fighter or Wizard can take this feat (both classes' `@4/feat` choice); 1b's choice-offering helpers (`derive/choices.ts`) don't yet walk a chosen feat's own `choices[]` the way they walk class/subclass level rows, so this sub-choice is reachable today only by `findChoice` resolving a decision recorded directly against its id — surfacing it as a requested/pending choice is Phase-4 scope. Since `repeatable: true` (R23), a character who takes this feat again at a later ASI level records a decision against this same choice id again; a per-instance choice id is also Phase-4 scope.",
+    "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "level", "level": 4 },
+          "pick": { "abilities": { "count": 1, "improve": "+2" } }
+        }
+      ]
+    }
+  }
+]

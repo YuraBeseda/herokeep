@@ -32,10 +32,31 @@ describe('item transform', () => {
   it('spot golden: Chain Mail and Shield (SRD 5.2.1)', () => {
     expect(byId.get('srd-5e-2024:item/chain-mail')).toMatchObject({
       category: 'armor',
-      armor: { category: 'heavy', ac: 16, strength: 13, stealthDisadvantage: true },
+      // Heavy armor adds no Dex bonus at all (SRD 5.2.1) — dexCap must be explicit 0, not absent:
+      // derive/defense.ts's tested contract treats an absent dexCap as "uncapped", not "no Dex".
+      armor: { category: 'heavy', ac: 16, dexCap: 0, strength: 13, stealthDisadvantage: true },
       cost: { amount: 75, currency: 'gp' },
     });
     expect(byId.get('srd-5e-2024:item/shield')).toMatchObject({ category: 'shield', shield: { ac: 2 } });
+  });
+
+  it('armor dexCap is principled by category: every heavy armor is 0, medium keeps its upstream cap, light is uncapped', () => {
+    const armors = items.filter(
+      (i): i is typeof i & { armor: { category: string; dexCap?: number } } =>
+        (i as { category?: string }).category === 'armor',
+    );
+    expect(armors.length).toBeGreaterThanOrEqual(10);
+
+    const heavy = armors.filter((a) => a.armor.category === 'heavy');
+    expect(heavy.length).toBeGreaterThanOrEqual(4);
+    for (const a of heavy) expect(a.armor.dexCap, a.id).toBe(0);
+
+    // Spot golden: Breastplate is medium armor, capped at +2 Dex (SRD 5.2.1).
+    expect(byId.get('srd-5e-2024:item/breastplate')).toMatchObject({ armor: { category: 'medium', dexCap: 2 } });
+
+    const light = armors.filter((a) => a.armor.category === 'light');
+    expect(light.length).toBeGreaterThanOrEqual(3);
+    for (const a of light) expect(a.armor.dexCap, a.id).toBeUndefined();
   });
 
   it('every weapon has exactly one mastery and a valid dice string', () => {

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "srd-5e-2024:background/acolyte",
+    "cite": "SRD 5.2.1, Acolyte — Ability Scores",
+    "note": "BackgroundBenefit desc: \"Intelligence, Wisdom, Charisma\" — matches transformBackgrounds()'s BACKGROUND_TABLE.acolyte.abilityScores. 2024 rule: +2 to one of the three and +1 to a different one, OR +1 to each of the three. PickSchema's `abilities` variant can express only ONE `improve` grammar per choice (no either/or) and has no `from` list to restrict which abilities qualify, so this picks the dominant '+2/+1' form (the '+1/+1/+1' alternative isn't offered by this specific choice) and does not restrict the selection to {int, wis, cha} specifically — both are schema limitations, not modeling choices.",
+    "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:background/acolyte@0/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "creation" },
+          "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:background/criminal",
+    "cite": "SRD 5.2.1, Criminal — Ability Scores",
+    "note": "BackgroundBenefit desc: \"Dexterity, Constitution, Intelligence\" — matches BACKGROUND_TABLE.criminal.abilityScores. Same '+2/+1' dominant-form encoding and same schema limitations as the acolyte overlay above.",
+    "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:background/criminal@0/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "creation" },
+          "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:background/sage",
+    "cite": "SRD 5.2.1, Sage — Ability Scores",
+    "note": "BackgroundBenefit desc: \"Constitution, Intelligence, Wisdom\" — matches BACKGROUND_TABLE.sage.abilityScores. Same '+2/+1' dominant-form encoding and same schema limitations as the acolyte overlay above.",
+    "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:background/sage@0/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "creation" },
+          "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:background/soldier",
+    "cite": "SRD 5.2.1, Soldier — Ability Scores",
+    "note": "BackgroundBenefit desc: \"Strength, Dexterity, Constitution\" — matches BACKGROUND_TABLE.soldier.abilityScores. Same '+2/+1' dominant-form encoding and same schema limitations as the acolyte overlay above.",
+    "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:background/soldier@0/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "creation" },
+          "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        }
+      ]
+    }
+  }
+]

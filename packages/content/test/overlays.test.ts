@@ -3,7 +3,10 @@ import { applyOverlays } from '../src/overlays/merge.ts';
 import corrections from '../src/overlays/corrections.json' with { type: 'json' };
 import systemChoices from '../src/overlays/system-choices.json' with { type: 'json' };
 import speciesOverlay from '../src/overlays/species.json' with { type: 'json' };
+import backgroundsOverlay from '../src/overlays/backgrounds.json' with { type: 'json' };
 import fightingStyles from '../src/overlays/fighting-styles.json' with { type: 'json' };
+import featsOverlay from '../src/overlays/feats.json' with { type: 'json' };
+import { transformBackgrounds } from '../src/transform/backgrounds.ts';
 import { transformClasses } from '../src/transform/classes.ts';
 import { transformFeats } from '../src/transform/feats.ts';
 import { transformSpecies } from '../src/transform/species.ts';
@@ -69,5 +72,35 @@ describe('applyOverlays', () => {
     expect(tagged).toHaveLength(4);
     const archery = tagged.find((f) => f.id === 'srd-5e-2024:feat/archery') as { effects?: { type: string }[] };
     expect(archery?.effects?.some((e) => e.type === 'attack.bonus')).toBe(true);
+  });
+
+  it('every background gains exactly one abilities-pick creation choice, +2/+1 across two abilities', () => {
+    const backgrounds = transformBackgrounds();
+    const patched = applyOverlays(backgrounds, backgroundsOverlay);
+    expect(patched).toHaveLength(4);
+    for (const bg of patched) {
+      const choices = (bg as { choices: { id: string; at: { kind: string }; pick: unknown; count: number }[] }).choices;
+      expect(choices, bg.id).toHaveLength(1);
+      const [choice] = choices;
+      expect(choice!.id, bg.id).toBe(`${bg.id}@0/ability-scores`);
+      expect(choice!.at, bg.id).toEqual({ kind: 'creation' });
+      expect(choice!.pick, bg.id).toMatchObject({ abilities: { count: 2, improve: '+2/+1' } });
+    }
+  });
+
+  it('the Ability Score Improvement feat gains its own abilities-pick choice, +2 to one ability', () => {
+    const feats = transformFeats();
+    const patched = applyOverlays(feats, featsOverlay);
+    const asi = patched.find((f) => f.id === 'srd-5e-2024:feat/ability-score-improvement') as {
+      choices: { id: string; at: unknown; pick: unknown; count: number }[];
+    };
+    expect(asi.choices).toHaveLength(1);
+    const [choice] = asi.choices;
+    expect(choice!.id).toBe('srd-5e-2024:feat/ability-score-improvement@4/ability-scores');
+    expect(choice!.at).toEqual({ kind: 'level', level: 4 });
+    expect(choice!.pick).toMatchObject({ abilities: { count: 1, improve: '+2' } });
+    // Every other feat is untouched by this overlay.
+    const untouched = patched.filter((f) => f.id !== 'srd-5e-2024:feat/ability-score-improvement');
+    for (const f of untouched) expect((f as { choices: unknown[] }).choices, f.id).toHaveLength(0);
   });
 });

@@ -55,4 +55,37 @@ describe('the srd-5e-2024 pack', () => {
     const ids = pack.entities.map((e) => e.id);
     expect(ids).toEqual([...ids].sort());
   });
+
+  it('the built pack can raise an ability score: every background and the ASI feat carry an abilities-pick choice', () => {
+    const abilitiesChoiceCount = (e: { choices: { pick: unknown }[] }) =>
+      e.choices.filter((c) => c.pick !== null && typeof c.pick === 'object' && 'abilities' in c.pick).length;
+
+    const backgrounds = pack.entities.filter((e) => e.type === 'background');
+    expect(backgrounds).toHaveLength(4);
+    for (const bg of backgrounds) expect(abilitiesChoiceCount(bg), bg.id).toBe(1);
+
+    const asi = pack.entities.find((e) => e.id === 'srd-5e-2024:feat/ability-score-improvement')!;
+    expect(abilitiesChoiceCount(asi)).toBe(1);
+
+    // No other entity in the built pack carries an abilities-pick choice (yet) — these five are it.
+    const total = pack.entities.reduce((sum, e) => sum + abilitiesChoiceCount(e), 0);
+    expect(total).toBe(5);
+  });
+
+  it('every heavy armor item sets dexCap: 0 explicitly; medium/light armor is unaffected', () => {
+    const armors = pack.entities.filter(
+      (e): e is typeof e & { armor: { category: string; dexCap?: number } } =>
+        (e as { category?: string }).category === 'armor',
+    );
+    const heavy = armors.filter((a) => a.armor.category === 'heavy');
+    expect(heavy.length).toBeGreaterThanOrEqual(4);
+    for (const a of heavy) expect(a.armor.dexCap, a.id).toBe(0);
+
+    const medium = armors.filter((a) => a.armor.category === 'medium');
+    expect(medium.length).toBeGreaterThanOrEqual(4);
+    for (const a of medium) expect(a.armor.dexCap, a.id).toBe(2);
+
+    const light = armors.filter((a) => a.armor.category === 'light');
+    for (const a of light) expect(a.armor.dexCap, a.id).toBeUndefined();
+  });
 });
