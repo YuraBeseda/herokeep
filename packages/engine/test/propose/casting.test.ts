@@ -45,26 +45,26 @@ describe('propose.spendSlot', () => {
 });
 
 describe('propose.cast', () => {
-  it('defaults to consuming a slot at the cast level, omitting slotUsed/concentration when not given', () => {
-    expect(propose.cast(casterSheet(), fireball, { level: 1 })).toEqual([
+  it('concentration: false defaults to consuming a slot at the cast level, omitting slotUsed/concentration from the payload', () => {
+    expect(propose.cast(casterSheet(), fireball, { level: 1, concentration: false })).toEqual([
       { type: 'spell.cast', v: 1, payload: { spellId: fireball, level: 1 } },
     ]);
   });
 
   it('useSlot: false skips the slot check entirely (a cantrip) and forwards slotUsed: false', () => {
-    expect(propose.cast(casterSheet(), fireball, { level: 0, useSlot: false })).toEqual([
+    expect(propose.cast(casterSheet(), fireball, { level: 0, useSlot: false, concentration: false })).toEqual([
       { type: 'spell.cast', v: 1, payload: { spellId: fireball, level: 0, slotUsed: false } },
     ]);
   });
 
-  it('forwards an explicit concentration flag (the documented opts.concentration deviation)', () => {
+  it('concentration: true forwards concentration: true on the payload', () => {
     expect(propose.cast(casterSheet(), fireball, { level: 3, useSlot: true, concentration: true })).toEqual([
       { type: 'spell.cast', v: 1, payload: { spellId: fireball, level: 3, slotUsed: true, concentration: true } },
     ]);
   });
 
   it('refuses with "slot.none-left" when the cast would consume a slot that has none left', () => {
-    const err = captureProposeError(() => propose.cast(casterSheet(), fireball, { level: 2 }));
+    const err = captureProposeError(() => propose.cast(casterSheet(), fireball, { level: 2, concentration: false }));
     expect(err.diagnostics[0]?.code).toBe('slot.none-left');
   });
 });

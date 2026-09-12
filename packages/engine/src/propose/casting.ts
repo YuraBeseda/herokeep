@@ -31,11 +31,17 @@ export function spendSlot(sheet: Sheet, level: number): ProposedEvent[] {
  * brief's own `cast` signature takes no `ContentIndex` either. Reading the spell entity is
  * therefore impossible from inside this function as literally specified. Resolution (same spirit
  * as the controller ruling's `attunementMax`/`currentWasMax` additions, but here a per-CALL value
- * can't be a `Sheet` field): `opts` gains one additive optional field, `concentration?: boolean`,
- * which the caller (the only layer that has BOTH the `Sheet` and the `ContentIndex`) supplies by
- * reading `spellEntity.concentration` itself. Omitting it behaves exactly as before: the reducer's
- * `spell.cast` handler already treats a missing `concentration` as "leave any existing
- * concentration untouched" (handlers/casting.ts).
+ * can't be a `Sheet` field): `opts` gains one additive field, `concentration: boolean` — the
+ * caller (the only layer that has BOTH the `Sheet` and the `ContentIndex`) supplies it by reading
+ * `spellEntity.concentration` itself.
+ *
+ * Made REQUIRED (not optional) per code review: an omitted flag would silently leave prior
+ * concentration untouched with no diagnostic — a caller that forgets to check the spell entity
+ * gets a quiet behavioral gap, not a signal anything's missing. Requiring it turns that into a
+ * compile error instead. `true` sets `concentration: true` on the payload; `false` omits the key
+ * entirely (the reducer's `spell.cast` handler already treats a missing `concentration` exactly
+ * like an explicit `false` — "leave any existing concentration untouched", handlers/casting.ts —
+ * so the two are wire-equivalent and there's no reason to pad the payload with a redundant `false`).
  *
  * Slot consumption: consumes a slot at `opts.level` unless `opts.useSlot === false` (mirrors the
  * reducer's own default), refusing with `'slot.none-left'` under the same rule as `spendSlot`. A
@@ -45,7 +51,7 @@ export function spendSlot(sheet: Sheet, level: number): ProposedEvent[] {
 export function cast(
   sheet: Sheet,
   spellId: string,
-  opts: { level: number; useSlot?: boolean; concentration?: boolean },
+  opts: { level: number; useSlot?: boolean; concentration: boolean },
 ): ProposedEvent[] {
   const consumesSlot = opts.useSlot !== false;
   if (consumesSlot) {
@@ -58,7 +64,7 @@ export function cast(
     spellId,
     level: opts.level,
     ...(opts.useSlot !== undefined ? { slotUsed: opts.useSlot } : {}),
-    ...(opts.concentration !== undefined ? { concentration: opts.concentration } : {}),
+    ...(opts.concentration ? { concentration: true } : {}),
   };
   return [mk('spell.cast', payload)];
 }
