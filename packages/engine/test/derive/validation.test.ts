@@ -48,6 +48,28 @@ const valMiniRaw = {
               pick: { query: { type: 'feat' } },
               count: 1,
             },
+            {
+              id: 'val-mini:class/tester@1/repeatable-gear',
+              prompt: 'Repeatable Gear',
+              at: { kind: 'classLevel', class: 'tester', level: 1 },
+              pick: { static: ['core-mini:item/longsword', 'core-mini:item/rapier', 'core-mini:item/shortbow'] },
+              count: 2,
+              unique: false,
+            },
+          ],
+        },
+        {
+          level: 5,
+          choices: [
+            {
+              // Same slug ("gear") as `@1/gear`, different declared level — a `repeatableAt`-style
+              // re-ask of the same conceptual choice, as a separate Choice entity/id.
+              id: 'val-mini:class/tester@5/gear',
+              prompt: 'More Gear',
+              at: { kind: 'classLevel', class: 'tester', level: 5 },
+              pick: { static: ['core-mini:item/longsword', 'core-mini:item/rapier', 'core-mini:item/shortbow'] },
+              count: 1,
+            },
           ],
         },
       ],
@@ -99,6 +121,8 @@ const equipmentChoice = `${fighter}@1/equipment`;
 const masteryChoice = `${fighter}@1/weapon-masteries`;
 const skillsChoice = `${fighter}@1/skills`;
 const gearChoice = 'val-mini:class/tester@1/gear';
+const repeatableGearChoice = 'val-mini:class/tester@1/repeatable-gear';
+const gearChoiceLevel5 = 'val-mini:class/tester@5/gear';
 const featChoice = 'val-mini:class/tester@1/feat';
 const abilityScoresChoice = 'core-mini:system/mini@0/ability-scores';
 const acolyteBonusChoice = 'core-mini:background/acolyte@0/ability-scores';
@@ -143,6 +167,26 @@ describe('validateSelection', () => {
         'core-mini:item/longsword',
         'core-mini:item/longsword',
       ]);
+      expect(codes(issues)).toContain('selection.duplicate');
+    });
+  });
+
+  describe('unique (Choice.unique)', () => {
+    it('accepts a duplicate selection when the choice declares unique: false', () => {
+      const facts = baseFacts();
+      const sheet = sheetFor(facts);
+      const issues = validateSelection(sheet, facts, index, repeatableGearChoice, [
+        'core-mini:item/longsword',
+        'core-mini:item/longsword',
+      ]);
+      expect(codes(issues)).not.toContain('selection.duplicate');
+    });
+
+    it('fails a selection that repeats a value already recorded by another decision sharing the same (owner, slug)', () => {
+      const facts = baseFacts();
+      facts.decisions[gearChoice] = ['core-mini:item/longsword', 'core-mini:item/rapier']; // prior decision @1/gear
+      const sheet = sheetFor(facts);
+      const issues = validateSelection(sheet, facts, index, gearChoiceLevel5, ['core-mini:item/longsword']);
       expect(codes(issues)).toContain('selection.duplicate');
     });
   });

@@ -39,8 +39,10 @@ function checkPrerequisites(
 }
 
 /** `Choice.unique` (default true): the selected value(s) may not repeat within this call, nor repeat a
- * value already recorded by another decision for the SAME (owner, slug) — e.g. a `repeatableAt` re-ask. */
-function checkUnique(choiceId: string, facts: Facts, selection: string[]): Diagnostic[] {
+ * value already recorded by another decision for the SAME (owner, slug) — e.g. a `repeatableAt` re-ask.
+ * `unique: false` (e.g. a genuinely repeatable pick) skips this check entirely. */
+function checkUnique(choice: Choice, choiceId: string, facts: Facts, selection: string[]): Diagnostic[] {
+  if (!choice.unique) return [];
   const issues: Diagnostic[] = [];
   const parsed = parseChoiceId(choiceId);
   const prior = new Set<string>();
@@ -404,7 +406,7 @@ export function validateSelection(
       const e = index.get(s);
       if (e) issues.push(...checkPrerequisites(e.prerequisites, ctx, choiceId, s));
     }
-    issues.push(...checkUnique(choiceId, facts, selection));
+    issues.push(...checkUnique(choice, choiceId, facts, selection));
   } else if ('query' in choice.pick) {
     issues.push(...validateQuery(choice.pick.query, index, choice, choiceId, selection));
     issues.push(...validateSubclassLevel(choice, index, choiceId, selection));
@@ -412,7 +414,7 @@ export function validateSelection(
       const e = index.get(s);
       if (e) issues.push(...checkPrerequisites(e.prerequisites, ctx, choiceId, s));
     }
-    issues.push(...checkUnique(choiceId, facts, selection));
+    issues.push(...checkUnique(choice, choiceId, facts, selection));
   } else if ('abilities' in choice.pick) {
     issues.push(...validateAbilitiesPick(choice.pick.abilities, sheet, index, choiceId, selection));
   } else if ('abilityGeneration' in choice.pick) {
@@ -423,7 +425,7 @@ export function validateSelection(
         error('selection.count', `Expected ${choice.count} selection(s), got ${selection.length}`, { path: choiceId }),
       );
     }
-    issues.push(...checkUnique(choiceId, facts, selection));
+    issues.push(...checkUnique(choice, choiceId, facts, selection));
   } else if ('equipmentOption' in choice.pick) {
     // Accept any (task-13-brief.md): the 1b UI is the only validator of which bundle was chosen.
     if (selection.length !== choice.count) {
