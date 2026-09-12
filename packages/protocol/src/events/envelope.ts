@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ActorRoleSchema = z.enum(['owner', 'dm', 'system']);
 export type ActorRole = z.infer<typeof ActorRoleSchema>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const StreamIdSchema = z.string().regex(new RegExp(`^(char|camp):${UUID.source.slice(1, -1)}$`, 'i'));
 
 export const EventEnvelopeSchema = z.strictObject({
@@ -16,7 +16,9 @@ export const EventEnvelopeSchema = z.strictObject({
     deviceId: z.string().min(1).max(64),
     role: ActorRoleSchema,
   }),
-  type: z.string().regex(/^[a-z]+(\.[a-z_]+)+$/),
+  // dot-separated lowercase segments, each optionally underscore_joined (e.g. `hp.changed`,
+  // `hit_dice.spent`, `death_save.recorded`); a bare single segment is allowed (`stabilized`).
+  type: z.string().regex(/^[a-z]+(_[a-z]+)*(\.[a-z]+(_[a-z]+)*)*$/),
   v: z.int().min(1),
   txId: z.string().regex(UUID).optional(),
   payload: z.unknown(),
