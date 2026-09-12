@@ -34,7 +34,9 @@ describe('derive (1a skeleton)', () => {
       'core-mini:system/mini@0/background',
       'core-mini:system/mini@0/species',
     ]);
-    expect(sheet.issues).toEqual([]);
+    // derive() is called without `rules` here (R-pf2): HP still derives (as an average-based
+    // approximation) but pushes a warning saying so.
+    expect(sheet.issues).toEqual([expect.objectContaining({ severity: 'warning', code: 'derive.noSystemRules' })]);
   });
 
   it("drops decided choices and adds the chosen entity's own creation choices", () => {
@@ -64,11 +66,14 @@ describe('derive (1a skeleton)', () => {
       choiceId: 'core-mini:system/mini@0/nope',
       selection: ['x'],
     });
-    expect(derive(reduce([created, bogus]), index).issues.map((i) => i.code)).toEqual(['decision.unknownChoice']);
+    expect(derive(reduce([created, bogus]), index).issues.map((i) => i.code)).toEqual([
+      'decision.unknownChoice',
+      'derive.noSystemRules',
+    ]);
     const core = loadFixturePack('core-mini');
     const sys = core.entities.find((e) => e.type === 'system')!;
     sys.choices = sys.choices.filter((c) => !c.id.endsWith('/background'));
     const sheet = derive(reduce([created]), createContentIndex([core]));
-    expect(sheet.issues.map((i) => i.code)).toEqual(['system.slotChoiceMissing']);
+    expect(sheet.issues.map((i) => i.code)).toEqual(['system.slotChoiceMissing', 'derive.noSystemRules']);
   });
 });

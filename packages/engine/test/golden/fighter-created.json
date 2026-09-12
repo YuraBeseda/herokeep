@@ -40,6 +40,12 @@
       { "choiceId": "core-mini:system/mini@0/background", "ownerId": "core-mini:system/mini", "count": 1 },
       { "choiceId": "core-mini:system/mini@0/species", "ownerId": "core-mini:system/mini", "count": 1 }
     ],
-    "sheet.issues": []
+    "sheet.issues": [
+      {
+        "severity": "warning",
+        "code": "derive.noSystemRules",
+        "message": "No system rules available; HP max uses average hit-die values for every level"
+      }
+    ]
   }
 }
