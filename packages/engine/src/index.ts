@@ -23,3 +23,6 @@ export * from './version.ts';
 export * from './reduce/facts.ts';
 export * from './reduce/reducer.ts';
 export * from './derive/index.ts';
+export * from './dice/parse.ts';
+export * from './dice/roll.ts';
+export * from './propose/index.ts';

@@ -21,6 +21,16 @@ export interface HpResult {
    * `issues`, so this mirrors that rather than inventing a second, inconsistent channel.
    */
   issues: Diagnostic[];
+  /**
+   * Task 14 controller ruling: `current` above is always a resolved NUMBER (this file resolves
+   * the long-rest `'max'` sentinel — see `facts.ts` — to `max.value` for display). T14's
+   * `propose.damage`/`propose.heal` need to know whether the UNDERLYING `facts.hp.current` was
+   * still that sentinel (so they can emit a resolving `hp.changed {kind:'set'}` event first,
+   * ahead of the damage/heal event — see `reduce/handlers/vitals.ts`'s header comment), but
+   * proposers only ever see a `Sheet`, never raw `Facts`. This one additive boolean is that
+   * signal; everything else about `current`'s meaning/shape is unchanged.
+   */
+  currentWasMax: boolean;
 }
 
 type HpRules = SystemRules['hpRules'];
@@ -183,5 +193,6 @@ export function deriveHp(
     deathSaves: { ...facts.deathSaves },
     conditions,
     issues,
+    currentWasMax: facts.hp.current === 'max',
   };
 }

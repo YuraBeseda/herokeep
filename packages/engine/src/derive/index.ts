@@ -195,6 +195,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
     actions: actions.actions,
     proficiencies,
     inventory,
+    attunementMax: index.system().attunementMax,
     currency: { ...facts.currency },
     inspiration: facts.inspiration,
     conditions: hp.conditions,

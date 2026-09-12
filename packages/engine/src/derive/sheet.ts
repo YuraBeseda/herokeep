@@ -45,6 +45,14 @@ export interface Sheet {
   proficiencies: { kind: string; target: string; level: string; sources: string[] }[];
   /** `resolved: false` for an entry whose `itemId` no longer resolves in the content index — an unknown-id chip. */
   inventory: (InventoryEntry & { resolved: boolean })[];
+  /**
+   * Task 14 controller ruling: `system.attunementMax` (the pack-declared attunement cap; the
+   * reducer stays permissive per doc-02, so this is a UI/proposer-side limit, not a reducer
+   * invariant) — `propose.attune` refuses past it. Read verbatim from `index.system()` in
+   * derive/index.ts; not on `task-13-brief.md`'s literal Sheet snippet, added additively here so
+   * `propose.attune` (which only ever sees a `Sheet`) has somewhere to read it from.
+   */
+  attunementMax: number;
   currency: Facts['currency'];
   inspiration: boolean;
   conditions: HpResult['conditions'];

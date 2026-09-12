@@ -201,6 +201,7 @@ describe('derive: Sheet assembly', () => {
         'actions',
         'proficiencies',
         'inventory',
+        'attunementMax',
         'currency',
         'inspiration',
         'conditions',
@@ -213,6 +214,7 @@ describe('derive: Sheet assembly', () => {
     expect(JSON.parse(JSON.stringify(sheet))).toEqual(sheet);
 
     expect(sheet.level).toBe(2);
+    expect(sheet.attunementMax).toBe(3); // core-mini:system/mini's attunementMax
     expect(sheet.classes).toEqual([{ classId: fighter, level: 2 }]);
     expect(sheet.ac.value).toBe(21); // 16 (chain mail) + 2 (dex, uncapped) + 2 (shield) + 1 (defense, armor worn)
     expect(sheet.attacks).toHaveLength(1);
