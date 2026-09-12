@@ -3,6 +3,7 @@ import { ENGINE_VERSION } from '../version.ts';
 import { type Facts, type Snapshot, type SystemRules, emptyFacts } from './facts.ts';
 import { HANDLERS as IDENTITY_HANDLERS } from './handlers/identity.ts';
 import { HANDLERS as LEVELING_HANDLERS } from './handlers/leveling.ts';
+import { HANDLERS as VITALS_HANDLERS } from './handlers/vitals.ts';
 
 /** Returns the next facts, or a string reason to skip the event. Must be pure. */
 export type Handler = (facts: Facts, event: Event, ctx?: { rules?: SystemRules }) => Facts | string;
@@ -12,7 +13,7 @@ export type Handler = (facts: Facts, event: Event, ctx?: { rules?: SystemRules }
  * own `HANDLERS` map. Add new modules here as later tasks introduce them (leveling, hp, etc.);
  * `reduce-core.test.ts` asserts none of these maps collide on a key.
  */
-const HANDLER_MODULES: Record<string, Handler>[] = [IDENTITY_HANDLERS, LEVELING_HANDLERS];
+const HANDLER_MODULES: Record<string, Handler>[] = [IDENTITY_HANDLERS, LEVELING_HANDLERS, VITALS_HANDLERS];
 
 export const HANDLERS: Record<string, Handler> = HANDLER_MODULES.reduce<Record<string, Handler>>(
   (acc, mod) => ({ ...acc, ...mod }),

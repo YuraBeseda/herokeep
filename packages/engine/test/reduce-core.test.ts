@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyFacts, type SystemRules } from '../src/reduce/facts.ts';
 import { HANDLERS as IDENTITY_HANDLERS } from '../src/reduce/handlers/identity.ts';
 import { HANDLERS as LEVELING_HANDLERS } from '../src/reduce/handlers/leveling.ts';
+import { HANDLERS as VITALS_HANDLERS } from '../src/reduce/handlers/vitals.ts';
 import { effectiveRules, reduce } from '../src/reduce/reducer.ts';
 import { ENGINE_VERSION } from '../src/version.ts';
 
@@ -78,7 +79,7 @@ describe('reduce: revert pre-scan (design ruling 2)', () => {
 describe('reduce: handler registry', () => {
   it('(d) handler modules never collide on a key', () => {
     // Add each new handlers/*.ts module here as later tasks introduce it.
-    const modules: Record<string, unknown>[] = [IDENTITY_HANDLERS, LEVELING_HANDLERS];
+    const modules: Record<string, unknown>[] = [IDENTITY_HANDLERS, LEVELING_HANDLERS, VITALS_HANDLERS];
     const totalKeys = modules.reduce((n, mod) => n + Object.keys(mod).length, 0);
     const union = new Set(modules.flatMap((mod) => Object.keys(mod)));
     expect(union.size).toBe(totalKeys);
