@@ -6,6 +6,7 @@ import { LongTextSchema, ShortTextSchema } from '../pack/enums.ts';
 import { type ActorRole, UUID } from './envelope.ts';
 
 export const GrammaticalGenderSchema = z.enum(['masculine', 'feminine', 'neuter']);
+export type GrammaticalGender = z.infer<typeof GrammaticalGenderSchema>;
 
 // --- Identity & lifecycle ---------------------------------------------------
 

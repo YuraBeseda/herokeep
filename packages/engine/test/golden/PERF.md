@@ -13,3 +13,5 @@ Median of 5 `reduce` + `derive` runs over `fighter-5-play`'s real event log (cre
 - 2026-09-13T02:57:02.728Z: 536 events, samples [3.28, 3.34, 4.66, 7.55, 19.27] ms, median 4.66 ms (budget 150 ms)
 - 2026-09-13T02:57:12.116Z: 536 events, samples [4.28, 4.64, 5.44, 5.84, 17.52] ms, median 5.44 ms (budget 150 ms)
 - 2026-09-13T02:59:06.256Z: 536 events, samples [2.92, 3.21, 3.30, 3.69, 14.41] ms, median 3.30 ms (budget 150 ms)
+- 2026-09-13T03:20:54.165Z: 536 events, samples [3.01, 3.38, 3.91, 3.91, 12.18] ms, median 3.91 ms (budget 150 ms)
+- 2026-09-13T03:23:00.487Z: 536 events, samples [2.83, 2.93, 3.83, 6.93, 12.39] ms, median 3.83 ms (budget 150 ms)
