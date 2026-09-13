@@ -44,6 +44,18 @@ function getWakeLock(): NavigatorWakeLock | undefined {
  * `visibilitychange` listener when the service itself is destroyed (app teardown — a root service
  * is never destroyed mid-session in the real app, but IS destroyed between specs via
  * `TestBed.resetTestingModule`/environment injector teardown).
+ *
+ * Fix round 1 (concurrent enable()/disable() races) — `acquire()` guards against two failure
+ * modes a bare "await `request()`, then commit" is exposed to:
+ * 1. Two `enable()` calls before the first `request()` resolves must issue exactly ONE request —
+ *    `acquiring` (the in-flight promise) and an already-held `sentinel` both short-circuit a
+ *    redundant `request()` call, so a second overlapping call joins the first instead of
+ *    orphaning it (the first sentinel would otherwise be silently overwritten — never released,
+ *    its `'release'` listener never firing).
+ * 2. `disable()` racing an in-flight `request()` must not let the resolved sentinel "win" — after
+ *    the `await`, `acquire()` re-checks `wanted`; if `disable()` already ran while the request was
+ *    pending, the just-acquired sentinel is released immediately instead of being committed to
+ *    `this.sentinel`/`active`.
  */
 @Injectable({ providedIn: 'root' })
 export class WakeLockService {
@@ -58,6 +70,11 @@ export class WakeLockService {
    * whether a sentinel is held RIGHT NOW). Drives re-acquisition on visibilitychange. */
   private wanted = false;
   private sentinel: WakeLockSentinelLike | undefined;
+  /** The in-flight `acquire()` promise, if any — lets a second overlapping `enable()`/
+   * `onVisibilityChange` call join the SAME request instead of issuing its own (fix round 1,
+   * finding 1). Cleared unconditionally (success, rejection, or short-circuit) once that
+   * acquisition settles. */
+  private acquiring: Promise<void> | undefined;
 
   private readonly onVisibilityChange = (): void => {
     if (document.visibilityState === 'visible' && this.wanted && !this.sentinel) {
@@ -85,11 +102,37 @@ export class WakeLockService {
     await this.releaseSentinel();
   }
 
-  private async acquire(): Promise<void> {
+  // Idempotent: a sentinel already held, or a request already in flight, both short-circuit to
+  // that SAME outcome rather than issuing a redundant `request()` call (fix round 1, finding 1).
+  private acquire(): Promise<void> {
+    if (this.sentinel) return Promise.resolve();
+    if (this.acquiring) return this.acquiring;
     const wakeLock = getWakeLock();
-    if (!wakeLock) return;
+    if (!wakeLock) return Promise.resolve();
+
+    const promise = this.doAcquire(wakeLock).finally(() => {
+      this.acquiring = undefined;
+    });
+    this.acquiring = promise;
+    return promise;
+  }
+
+  private async doAcquire(wakeLock: NavigatorWakeLock): Promise<void> {
     try {
       const sentinel = await wakeLock.request('screen');
+
+      // Fix round 1, finding 2: `disable()` may have run WHILE this request was in flight — commit
+      // nothing in that case, release the just-acquired sentinel immediately instead of leaving it
+      // held (and `active` truthy) against the caller's own most recent wishes.
+      if (!this.wanted) {
+        try {
+          await sentinel.release();
+        } catch {
+          /* already released, or the platform rejects a redundant release — nothing to do */
+        }
+        return;
+      }
+
       this.sentinel = sentinel;
       this.activeState.set(true);
       sentinel.addEventListener('release', () => {
@@ -101,7 +144,9 @@ export class WakeLockService {
       });
     } catch {
       // Rejected (no user activation, battery saver, etc.) — `active` stays false; `wanted` stays
-      // true so a later visibilitychange can retry.
+      // true so a later visibilitychange can retry. `acquiring` is cleared by `acquire()`'s own
+      // `finally` regardless of this catch, so a subsequent `enable()` issues a real retry rather
+      // than joining a permanently-stuck in-flight promise (fix round 1, finding 3).
     }
   }
 

@@ -17,6 +17,24 @@ class FakeSentinel extends EventTarget {
   });
 }
 
+/** A promise plus its externally-callable resolve/reject — used below to hold `wakeLock.request()`
+ * open mid-flight (fix-round 1's three races all hinge on "another call happens WHILE the first
+ * `request()` is still pending"), something `stubWakeLock()`'s immediately-resolving mock can't
+ * represent. */
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('WakeLockService', () => {
   let originalWakeLock: PropertyDescriptor | undefined;
   let originalVisibilityState: PropertyDescriptor | undefined;
@@ -161,5 +179,76 @@ describe('WakeLockService', () => {
     await Promise.resolve();
 
     expect(sentinels[0].release).toHaveBeenCalledTimes(1);
+  });
+
+  // --- Fix round 1: concurrent enable()/disable() races -------------------------------------
+
+  it('two enable() calls before the first request() resolves issue only ONE request (no leaked/orphaned sentinel)', async () => {
+    const gate = deferred<FakeSentinel>();
+    const request = vi.fn(() => gate.promise);
+    Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request } });
+    const service = TestBed.inject(WakeLockService);
+
+    const first = service.enable();
+    const second = service.enable();
+    // Still pending — asserted BEFORE resolving the gate, so this can only pass if the second
+    // enable() actually joined the first's still-in-flight request instead of issuing its own.
+    expect(request).toHaveBeenCalledTimes(1);
+
+    const sentinel = new FakeSentinel();
+    gate.resolve(sentinel);
+    await first;
+    await second;
+
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(service.active()).toBe(true);
+    // No leaked/orphaned sentinel: the only sentinel ever created is the one actually held — never
+    // silently released behind the scenes by a second, redundant acquisition.
+    expect(sentinel.release).not.toHaveBeenCalled();
+  });
+
+  it('disable() while a request is still in flight releases the just-acquired sentinel and never commits it', async () => {
+    const gate = deferred<FakeSentinel>();
+    const request = vi.fn(() => gate.promise);
+    Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request } });
+    const service = TestBed.inject(WakeLockService);
+
+    const enabling = service.enable();
+    // `disable()` runs while `request()` is still pending — no sentinel is held yet, so this is a
+    // harmless no-op release UNTIL the gated request resolves below.
+    await service.disable();
+
+    const sentinel = new FakeSentinel();
+    gate.resolve(sentinel);
+    await enabling;
+
+    // The fix: `acquire()` re-checks `wanted` after the await and finds it false (disable() already
+    // ran), so it releases the just-resolved sentinel immediately instead of committing it.
+    expect(service.active()).toBe(false);
+    expect(sentinel.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('a rejected request() (permission denied / battery saver) leaves active() false without throwing, and a later enable() can retry', async () => {
+    const sentinels: FakeSentinel[] = [];
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('NotAllowedError'))
+      .mockImplementationOnce(() => {
+        const sentinel = new FakeSentinel();
+        sentinels.push(sentinel);
+        return Promise.resolve(sentinel);
+      });
+    Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request } });
+    const service = TestBed.inject(WakeLockService);
+
+    await expect(service.enable()).resolves.toBeUndefined();
+    expect(service.active()).toBe(false);
+
+    // The in-flight guard must have cleared on rejection — otherwise this second call would join a
+    // "stuck" in-flight promise instead of issuing a real retry.
+    await service.enable();
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(service.active()).toBe(true);
   });
 });
