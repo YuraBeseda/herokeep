@@ -13,7 +13,7 @@ Read `docs/README.md` first; decisions live in `docs/01-decisions/` (ADRs are ne
 ## Layout
 
 - `packages/protocol` — Zod schemas + types (the contract). `packages/engine` — pure functions. `packages/pack-tools` — CLI.
-- `apps/web` — the Library PWA (Angular 22 zoneless). `packages/ui-tokens` — design tokens (`tokens.css`/`tokens.scss`) built from one typed source, consumed by `apps/web`.
+- `apps/web` — the Library + character builder PWA (Angular 22 zoneless); the character builder/sheet views live under `apps/web/src/app/views/characters`. `packages/ui-tokens` — design tokens (`tokens.css`/`tokens.scss`) built from one typed source, consumed by `apps/web`.
 - Inside a package import with `.ts` extensions (`./x.ts`); across packages import `@hk/<name>`.
 - Tests in `test/`, fixtures in `test/fixtures/`. Run one package: `pnpm vitest run --project protocol`.
 
