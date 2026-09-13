@@ -151,7 +151,19 @@ export class ChoiceStepComponent {
 
   protected onToggle(id: string): void {
     const current = this.selection();
-    const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
+    const v = this.view();
+    // A count:1 query/static pick (species/background/class in the SRD system's own creation
+    // choices) is single-select: tapping a different card REPLACES the current selection rather
+    // than appending to it (task-6 fix round — previously every pick form toggled/appended
+    // unconditionally, letting a count:1 choice accumulate an unbounded multi-selection that only
+    // surfaced as an after-the-fact diagnostic). Tapping the already-selected card still clears
+    // it. Scoped to `query`/`static` only — the synthetic skills chips and literal entries keep
+    // the general toggle/append behavior even when their own `count` happens to be 1.
+    if ((v.kind === 'query' || v.kind === 'static') && v.count === 1) {
+      this.commit(current.length === 1 && current[0] === id ? [] : [id]);
+      return;
+    }
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
     this.commit(next);
   }
 

@@ -40,5 +40,10 @@
         </li>
       }
     </ul>
+    @if (hiddenCount() > 0) {
+      <p class="entity-picker__more">
+        {{ t('wizard.picker.more', { count: hiddenCount() }) }}
+      </p>
+    }
   }
 </div>

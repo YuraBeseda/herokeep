@@ -65,7 +65,8 @@
       "loading": "Загрузка…",
       "valueLabel": "Значение",
       "addValue": "Добавить",
-      "skillsTitle": "Выберите {count} навыка(ов) для класса {class}"
+      "skillsTitle": "Выберите {count} навыка(ов) для класса {class}",
+      "more": "Ещё {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}} — уточните поиск"
     }
   },
   "validation": {

@@ -97,6 +97,35 @@ describe('ChoiceStepComponent', () => {
     expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('a count=1 query pick REPLACES the selection when a second card is tapped, rather than adding to it', async () => {
+    const state = createState();
+    state.name.set('Aldric');
+
+    const fixture = TestBed.createComponent(ChoiceStepComponent);
+    fixture.componentRef.setInput('choiceId', SPECIES_CHOICE);
+    await fixture.whenStable();
+
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '.entity-picker__select',
+      ),
+    );
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+
+    buttons[0].click();
+    await fixture.whenStable();
+    const firstPick = state.decisions().get(SPECIES_CHOICE)?.[0];
+
+    buttons[1].click();
+    await fixture.whenStable();
+
+    const secondPick = state.decisions().get(SPECIES_CHOICE);
+    expect(secondPick).toHaveLength(1);
+    expect(secondPick?.[0]).not.toBe(firstPick);
+    expect(buttons[0].getAttribute('aria-pressed')).toBe('false');
+    expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('a literal-pick choice (weapon masteries) renders typed values as chips and records the decision', async () => {
     const state = createState();
     state.name.set('Aldric');

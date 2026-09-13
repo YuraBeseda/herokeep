@@ -65,7 +65,8 @@
       "loading": "Завантаження…",
       "valueLabel": "Значення",
       "addValue": "Додати",
-      "skillsTitle": "Оберіть {count} навички(ок) для класу {class}"
+      "skillsTitle": "Оберіть {count} навички(ок) для класу {class}",
+      "more": "Ще {count, plural, one {# варіант} few {# варіанти} many {# варіантів} other {# варіанта}} — уточніть пошук"
     }
   },
   "validation": {
