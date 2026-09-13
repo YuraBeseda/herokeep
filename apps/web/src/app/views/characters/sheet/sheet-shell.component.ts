@@ -83,7 +83,10 @@ export class SheetShellComponent {
     ),
   );
 
-  protected readonly monogramBackground = computed(() => `hsl(${this.monogram().hue} 45% 40%)`);
+  // Fix-round 1, finding 4: the `hsl(...)` string is now computed ONCE, centrally, by
+  // `PlaceholderService.monogram` itself (`Monogram.background`) — this just re-exposes it under
+  // the name the template already binds, rather than re-deriving the formula here.
+  protected readonly monogramBackground = computed(() => this.monogram().background);
 
   /** `undefined` until `portrait.set` has been appended (design ruling 4: the reducer only ever
    * stores `{hash, thumbHash}` in `facts.portrait` — no token field lives on the event stream at

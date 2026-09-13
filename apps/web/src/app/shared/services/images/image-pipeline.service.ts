@@ -24,9 +24,10 @@ import type { BlobRow } from '@shared/services/storage/dexie.db';
  *    Angular/DI machinery.
  *
  * `ImagePipelineService.processPortrait` is the glue: it asks the injected `ImageCodec` to decode
- * once, then drives `encodeWithinCap` three times (portrait/thumb/token boxes) against an
- * `EncodeFn` closure over that one decode, hashes each result, and writes three
- * `BlobsRepository.put()` rows tagged by `kind`.
+ * once, then drives `encodeWithinCap` TWICE (the portrait box, then the thumb box) against an
+ * `EncodeFn` closure over that one decode, hashes each result, and writes two tagged
+ * `BlobsRepository.put()` rows — `tokenHash` is derived from the thumb's own hash rather than a
+ * third encode/store (fix-round 1 finding 2; see `processPortrait`'s own class doc for why).
  */
 
 // --- Caps & ladder (doc-07 "Caps (ADR-010)" + Global Constraints — binding, verbatim) ----------
@@ -354,11 +355,23 @@ export interface PortraitPipelineResult {
 /**
  * doc-07's full upload pipeline for exactly one consumer: a character's portrait
  * (`processPortrait`). Decodes once (`ImageCodec.decode`), picks a mime once
- * (`chooseMime`/`detectHasAlpha`), then runs `encodeWithinCap` three times — the 1024-long-edge
- * portrait box, and the 256x256 thumb/token boxes (design ruling 4: a `token` blob IS generated
- * and stored here, even though `portrait.set`'s event payload has no token field at all — see
- * `PortraitSetV1`/this task's callers, which deliberately drop `tokenHash` before appending).
- * Hashes each encoded result (`sha256Hex`) and writes three tagged `BlobsRepository.put()` rows.
+ * (`chooseMime`/`detectHasAlpha`), then runs `encodeWithinCap` TWICE — the 1024-long-edge portrait
+ * box, and the 256x256 thumb box. Hashes each encoded result (`sha256Hex`) and writes two tagged
+ * `BlobsRepository.put()` rows.
+ *
+ * TOKEN, fix-round 1 finding 2: doc-07's token box (256x256 cover) and byte cap (64 KB) are
+ * IDENTICAL to the thumb's, and both encode the SAME decoded source at the SAME quality ladder —
+ * so a token would always hash byte-for-byte identical to the thumb. `BlobsRepository` is
+ * content-addressed (keyed purely by `hash`), so storing a genuinely-identical-content "token"
+ * blob under its own `put()` call would just silently overwrite the thumb row's `kind` field
+ * (from `'thumb'` to `'token'`, whichever call lands last) for zero benefit, on top of repeating a
+ * full 12-attempt encode ladder for bytes already in hand. So: `tokenHash` is simply
+ * `thumbHash` — no second box, no second encode, no second blob row. Design ruling 4's "a token
+ * blob IS generated and stored" and doc-07's own "Prefetch policy" table both already treat tokens
+ * as re-derivable/interchangeable with the thumb crop at this fidelity; if token art ever needs to
+ * DIVERGE from the thumb (a circular mask, a different crop), this is exactly the seam to split
+ * back into its own `encodeWithinCap('token', ...)` call + its own `putBlob` — the exported
+ * `PortraitBlobKind`/`CAP_BYTES` groundwork for that already exists, untouched, above.
  */
 @Injectable({ providedIn: 'root' })
 export class ImagePipelineService {
@@ -382,24 +395,21 @@ export class ImagePipelineService {
       encode,
     );
     const thumb = await encodeWithinCap('thumb', mime, THUMB_TOKEN_SIZE, THUMB_TOKEN_SIZE, encode);
-    const token = await encodeWithinCap('token', mime, THUMB_TOKEN_SIZE, THUMB_TOKEN_SIZE, encode);
 
-    const [hash, thumbHash, tokenHash] = await Promise.all([
+    const [hash, thumbHash] = await Promise.all([
       sha256Hex(portrait.bytes),
       sha256Hex(thumb.bytes),
-      sha256Hex(token.bytes),
     ]);
 
     await Promise.all([
       this.putBlob(hash, portrait, 'portrait'),
       this.putBlob(thumbHash, thumb, 'thumb'),
-      this.putBlob(tokenHash, token, 'token'),
     ]);
 
     return {
       hash,
       thumbHash,
-      tokenHash,
+      tokenHash: thumbHash, // see class doc's TOKEN note
       mime: portrait.mime,
       w: portrait.width,
       h: portrait.height,

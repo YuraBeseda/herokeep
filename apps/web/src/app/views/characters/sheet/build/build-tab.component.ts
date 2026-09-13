@@ -213,6 +213,14 @@ export class BuildTabComponent {
   protected readonly portraitAccept = PORTRAIT_ACCEPT;
   protected readonly portraitInput = viewChild<ElementRef<HTMLInputElement>>('portraitInput');
 
+  /** Fix-round 1, finding 3: guards `onPortraitFileSelected` against a SECOND file pick racing an
+   * already-in-flight one (the async `processPortrait` → `appendTx` chain has no other
+   * synchronization of its own) — disables the upload control in the template
+   * (`[disabled]="portraitUploading()"`) AND short-circuits a concurrent call at the handler
+   * level (defense in depth: the control's `disabled` attribute only stops REAL user interaction,
+   * not a synthetic/queued event that slips through). */
+  protected readonly portraitUploading = signal(false);
+
   protected readonly portraitThumbHash = computed(
     () => this.characterStore.facts()?.portrait?.thumbHash,
   );
@@ -224,7 +232,9 @@ export class BuildTabComponent {
     ),
   );
 
-  protected readonly monogramBackground = computed(() => `hsl(${this.monogram().hue} 45% 40%)`);
+  // Fix-round 1, finding 4: see `sheet-shell.component.ts`'s identical comment —
+  // `PlaceholderService.monogram` now computes the `hsl(...)` string itself.
+  protected readonly monogramBackground = computed(() => this.monogram().background);
 
   protected onPortraitUploadClick(): void {
     this.portraitInput()?.nativeElement.click();
@@ -233,11 +243,18 @@ export class BuildTabComponent {
   protected async onPortraitFileSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    // Reset immediately so re-selecting the SAME file path still fires a fresh `change` event —
-    // the browser only fires `change` when the input's value actually differs from before.
+    // Reset immediately (regardless of what happens below) so re-selecting the SAME file path
+    // still fires a fresh `change` event — the browser only fires `change` when the input's value
+    // actually differs from before.
     input.value = '';
     if (!file) return;
+    // Re-entrancy guard (fix-round 1, finding 3): a pick that arrives while a previous one is
+    // still uploading is ignored outright — the FIRST pick's own in-flight `processPortrait` →
+    // `appendTx` chain runs to completion on its own; a second, concurrent chain over a stale
+    // `sheet()`/`facts()` snapshot has no synchronization with it otherwise.
+    if (this.portraitUploading()) return;
 
+    this.portraitUploading.set(true);
     try {
       const result = await this.imagePipelineService.processPortrait(file);
       await this.characterStore.appendTx([
@@ -266,6 +283,8 @@ export class BuildTabComponent {
           ? (PORTRAIT_ERROR_KEYS[code] ?? GENERIC_PORTRAIT_ERROR_KEY)
           : GENERIC_PORTRAIT_ERROR_KEY,
       );
+    } finally {
+      this.portraitUploading.set(false);
     }
   }
 

@@ -41,4 +41,11 @@ describe('PlaceholderService.monogram', () => {
     expect(hue).toBeGreaterThanOrEqual(0);
     expect(hue).toBeLessThan(360);
   });
+
+  // --- Fix round 1, finding 4: ONE centralized background formula, not one per caller -----------
+
+  it('background is the exact `hsl(<hue> 45% 40%)` string derived from the SAME hue', () => {
+    const result = service().monogram('Ivan', 'char:some-character-id');
+    expect(result.background).toBe(`hsl(${result.hue} 45% 40%)`);
+  });
 });

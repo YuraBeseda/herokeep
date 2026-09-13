@@ -65,7 +65,14 @@
             </div>
           }
           <div class="build-tab__portrait-actions">
-            <button hk-button type="button" [variant]="'ghost'" (click)="onPortraitUploadClick()">
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              class="build-tab__portrait-upload"
+              [disabled]="portraitUploading()"
+              (click)="onPortraitUploadClick()"
+            >
               {{ portraitThumbHash() ? t('sheet.portrait.change') : t('sheet.portrait.upload') }}
             </button>
             @if (portraitThumbHash()) {
@@ -74,6 +81,7 @@
                 type="button"
                 [variant]="'ghost'"
                 class="build-tab__portrait-remove"
+                [disabled]="portraitUploading()"
                 (click)="onPortraitRemove()"
               >
                 {{ t('sheet.portrait.remove') }}
@@ -85,6 +93,7 @@
             type="file"
             class="build-tab__portrait-input"
             hidden
+            [disabled]="portraitUploading()"
             [attr.accept]="portraitAccept"
             (change)="onPortraitFileSelected($event)"
           />

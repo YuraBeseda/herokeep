@@ -158,7 +158,12 @@ describe('ImagePipelineService', () => {
     return { put };
   }
 
-  it('stores exactly three blobs, each tagged with its own kind and dimensions', async () => {
+  it('stores exactly TWO blobs (portrait + thumb) and derives tokenHash from the thumb — no separate token encode', async () => {
+    // Fix-round 1, finding 2: thumb and token always share the SAME mime, the SAME 256x256 box,
+    // the SAME decoded source, and the SAME byte cap — so a token would always hash byte-for-byte
+    // identical to the thumb. Re-encoding (and re-`put()`-ing under that same resulting hash a
+    // SECOND time, which would just silently overwrite the row's `kind` from 'thumb' to 'token')
+    // is pure waste; `tokenHash` is derived directly from the already-computed thumb result.
     const codec = makeFakeCodec();
     const { put } = configure(codec);
     const service = TestBed.inject(ImagePipelineService);
@@ -166,9 +171,9 @@ describe('ImagePipelineService', () => {
     const file = new File([new Uint8Array([1, 2, 3])], 'portrait.png', { type: 'image/png' });
     const result = await service.processPortrait(file);
 
-    expect(put).toHaveBeenCalledTimes(3);
+    expect(put).toHaveBeenCalledTimes(2);
     const kinds = put.mock.calls.map((call) => call[3]?.kind);
-    expect([...kinds].sort()).toEqual(['portrait', 'thumb', 'token']);
+    expect([...kinds].sort()).toEqual(['portrait', 'thumb']);
 
     const thumbCall = put.mock.calls.find((call) => call[3]?.kind === 'thumb');
     expect(thumbCall?.[3]).toEqual({
@@ -179,10 +184,13 @@ describe('ImagePipelineService', () => {
 
     expect(result.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(result.thumbHash).toMatch(/^sha256:[0-9a-f]{64}$/);
-    expect(result.tokenHash).toMatch(/^sha256:[0-9a-f]{64}$/);
-    // Portrait/thumb/token are encoded at different dimensions, so their synthetic byte content
-    // (and therefore their hash) differs — a real assertion, not a coincidence of the fake.
-    expect(new Set([result.hash, result.thumbHash, result.tokenHash]).size).toBe(3);
+    // Token is IDENTICAL to thumb (same encode inputs) — no separate blob, no separate hash.
+    expect(result.tokenHash).toBe(result.thumbHash);
+    expect(result.hash).not.toBe(result.thumbHash); // portrait genuinely differs (different box)
+
+    // Exactly TWO `encode()` calls (portrait + thumb) — NOT three: token is derived, never
+    // re-encoded (previously up to 12 wasted retry-ladder attempts for byte-identical output).
+    expect(codec.encode).toHaveBeenCalledTimes(2);
   });
 
   it("the resolved promise's w/h/mime describe the PORTRAIT blob (not the thumb/token)", async () => {

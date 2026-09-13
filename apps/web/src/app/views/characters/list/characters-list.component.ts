@@ -116,8 +116,12 @@ export class CharactersListComponent {
     return this.placeholderService.monogram(row.name, row.id).initials;
   }
 
+  // Fix-round 1, finding 4: `PlaceholderService.monogram` now computes the `hsl(...)` string
+  // itself (`Monogram.background`) — this just re-exposes it under the name the template binds,
+  // rather than re-deriving the formula here (previously duplicated, verbatim, across THREE
+  // components, and already once out of sync with this service's own doc comment).
   protected monogramBackground(row: CharacterRow): string {
-    return `hsl(${this.placeholderService.monogram(row.name, row.id).hue} 45% 40%)`;
+    return this.placeholderService.monogram(row.name, row.id).background;
   }
 
   // Methods

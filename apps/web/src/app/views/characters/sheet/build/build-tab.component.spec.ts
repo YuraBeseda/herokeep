@@ -153,6 +153,11 @@ describe('BuildTabComponent', () => {
   });
 
   afterEach(() => {
+    // `ToastService.show` (the error-toast tests below) lazily creates a CDK `Overlay` host that
+    // otherwise outlives this file's own TestBed teardown between tests — same cleanup
+    // `characters-list.component.spec.ts`'s own `afterEach` already established for its dialog
+    // overlay, needed here now that this file also drives `ToastService`.
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
     TestBed.inject(HkDb).close();
   });
 
@@ -348,5 +353,93 @@ describe('BuildTabComponent', () => {
     await pollUntil(fixture, () => showSpy.mock.calls.length > 0);
 
     expect(showSpy).toHaveBeenCalledWith('characters.sheet.portrait.error.invalidType');
+  });
+
+  // --- Busy-state / re-entrancy guard (fix-round 1, finding 3) ------------------------------
+
+  it('disables the upload control while a pick is in flight, and re-enables it once settled', async () => {
+    await seedFighter('Ivan');
+    let resolveFirst!: (r: PortraitPipelineResult) => void;
+    processPortrait.mockReturnValueOnce(
+      new Promise<PortraitPipelineResult>((resolve) => {
+        resolveFirst = resolve;
+      }),
+    );
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('.build-tab__portrait-input')!;
+    const uploadButton = compiled.querySelector<HTMLButtonElement>('.build-tab__portrait-upload')!;
+    expect(uploadButton.disabled).toBe(false);
+
+    setInputFiles(input, [new File([new Uint8Array([1])], 'a.png', { type: 'image/png' })]);
+    await fixture.whenStable();
+    expect(uploadButton.disabled).toBe(true);
+
+    resolveFirst(STUBBED_PIPELINE_RESULT);
+    await pollUntil(fixture, () => uploadButton.disabled === false);
+  });
+
+  it('a second file pick while the first upload is still in flight is ignored — no race, exactly one appendTx', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    let resolveFirst!: (r: PortraitPipelineResult) => void;
+    processPortrait.mockReturnValueOnce(
+      new Promise<PortraitPipelineResult>((resolve) => {
+        resolveFirst = resolve;
+      }),
+    );
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('.build-tab__portrait-input')!;
+
+    const fileA = new File([new Uint8Array([1])], 'a.png', { type: 'image/png' });
+    const fileB = new File([new Uint8Array([2])], 'b.png', { type: 'image/png' });
+
+    setInputFiles(input, [fileA]); // starts uploading fileA; still pending
+    await fixture.whenStable();
+    setInputFiles(input, [fileB]); // a second pick while busy — must be ignored, not queued/raced
+    await fixture.whenStable();
+
+    resolveFirst(STUBBED_PIPELINE_RESULT);
+    await pollUntil(fixture, () => characterStore.facts()?.portrait !== undefined);
+
+    expect(processPortrait).toHaveBeenCalledTimes(1);
+    expect(processPortrait).toHaveBeenCalledWith(fileA);
+  });
+
+  it('after an upload settles, re-picking a file (even the same one) works — the input is reset', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('.build-tab__portrait-input')!;
+    const uploadButton = compiled.querySelector<HTMLButtonElement>('.build-tab__portrait-upload')!;
+    const file = new File([new Uint8Array([1])], 'a.png', { type: 'image/png' });
+
+    setInputFiles(input, [file]);
+    await pollUntil(fixture, () => characterStore.facts()?.portrait !== undefined);
+    expect(processPortrait).toHaveBeenCalledTimes(1);
+    // `characterStore.facts()` updates PARTWAY through `appendTx`'s own promise (its
+    // `CharactersRepository.upsertFromFacts` write still runs after) — wait for the upload
+    // control to actually re-enable (i.e. `portraitUploading` genuinely cleared, not just
+    // `facts()` having updated) before re-picking, or this next pick can race the busy guard
+    // and be silently ignored.
+    await pollUntil(fixture, () => uploadButton.disabled === false);
+
+    setInputFiles(input, [file]); // re-pick the SAME file after settling — must run again
+    await pollUntil(fixture, () => processPortrait.mock.calls.length === 2);
+
+    expect(processPortrait).toHaveBeenCalledTimes(2);
+    await pollUntil(fixture, () => uploadButton.disabled === false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(showSpy).not.toHaveBeenCalled();
   });
 });

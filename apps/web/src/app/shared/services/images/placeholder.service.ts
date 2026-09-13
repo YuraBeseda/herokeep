@@ -3,20 +3,32 @@ import { Injectable } from '@angular/core';
 export interface Monogram {
   readonly initials: string;
   readonly hue: number;
+  /** The exact `hsl(...)` string every caller binds via `[style.background]` — see this file's
+   * class doc's "CENTRALIZED FORMULA" note (fix-round 1, finding 4). */
+  readonly background: string;
+}
+
+/** `45% 40%` (saturation/lightness) — the ONE place this formula is written. Fix-round 1, finding
+ * 4: three callers (`sheet-shell`/`build-tab`/`characters-list` components) had each hand-rolled
+ * `` `hsl(${hue} 45% 40%)` `` themselves, and this file's own doc comment disagreed with them
+ * (`45% 45%`) — a duplication that had already drifted once and could silently drift again.
+ * `monogram()` now computes `background` itself so no caller ever touches this string. */
+function backgroundOf(hue: number): string {
+  return `hsl(${hue} 45% 40%)`;
 }
 
 /**
  * doc-07 "Placeholders": "portraits fall back to a monogram token with a deterministic hue from
  * the character id." SVG-free by design (doc-07's own "Safety": SVG uploads are rejected as a
  * script-injection risk, and this service never accepts user content at all) — a caller renders
- * the returned `{initials, hue}` as a plain styled `<div>` (e.g.
- * `[style.background]="'hsl(' + monogram.hue + ' 45% 45%)'"`), never through `[innerHTML]` or an
- * `<svg>`.
+ * the returned `{initials, background}` as a plain styled `<div>` (e.g.
+ * `[style.background]="monogram.background"`), never through `[innerHTML]` or an `<svg>`.
  */
 @Injectable({ providedIn: 'root' })
 export class PlaceholderService {
   monogram(name: string, characterId: string): Monogram {
-    return { initials: initialsOf(name), hue: hueOf(characterId) };
+    const hue = hueOf(characterId);
+    return { initials: initialsOf(name), hue, background: backgroundOf(hue) };
   }
 }
 
