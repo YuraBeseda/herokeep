@@ -253,6 +253,22 @@ export class PlayTabComponent {
     return index.has(id) ? this.engineFacade.localizer().name(id) : id;
   }
 
+  // task-1-brief.md carry fix (plan-5 owner-flag "ActionView/ResourceView English names"):
+  // `ResourceView.name`/`ActionView.name` (`derive/resources.ts`/`derive/actions.ts`) are baked at
+  // build time straight off the granting feature's `resource.define`/`action.define` effect — a
+  // fixed ENGLISH string, never routed through the Localizer. `.source` (`ae.feature ?? ae.source`)
+  // is the entity id that effect came from, and IS resolvable through `Localizer.name` — prefer it,
+  // same "resolve through the index, fall back to the raw/baked value" convention as `resolveName`.
+  protected resourceLabel(view: ResourceView): string {
+    const index = this.engineFacade.index();
+    return index.has(view.source) ? this.engineFacade.localizer().name(view.source) : view.name;
+  }
+
+  protected actionLabel(view: ActionView): string {
+    const index = this.engineFacade.index();
+    return index.has(view.source) ? this.engineFacade.localizer().name(view.source) : view.name;
+  }
+
   // Scope-RELATIVE key (no 'characters.' prefix) — the template resolves it through its own
   // scoped `t()` (`*transloco="let t; read: 'characters'"`), which already prepends the scope
   // itself; a full key here would double-prefix and silently miss (the scoped-`t()` bug

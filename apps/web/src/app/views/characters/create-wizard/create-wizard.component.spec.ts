@@ -607,4 +607,67 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     const persisted = await TestBed.inject(EventsRepository).byStream(deletedId);
     expect(persisted).toEqual([]);
   });
+
+  // task-1-brief.md carry fix (plan-5 ruling R12): `create()`+`appendTx` BOTH succeeding, followed
+  // by `router.navigate` itself rejecting (a routing error, an unrelated guard throwing, …), must
+  // NOT be treated the same as an `appendTx` failure — the character is already fully valid and
+  // persisted; deleting it here would destroy real, committed work over a purely navigational
+  // failure. The catch must still surface the failure toast (the user needs to know `/c/<id>/play`
+  // didn't load), but never call `deleteCharacter`, and the stream's events must still be there.
+  it('router.navigate rejecting after create()+appendTx both succeeded keeps the character and still shows the failure toast', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi
+      .spyOn(router, 'navigate')
+      .mockRejectedValueOnce(new Error('nav rejected'));
+    const toastService = TestBed.inject(ToastService);
+    const toastShowSpy = vi.spyOn(toastService, 'show');
+    const characterStore = TestBed.inject(CharacterStore);
+    const deleteSpy = vi.spyOn(characterStore, 'deleteCharacter');
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Ivan');
+    state.gender.set('masculine');
+    state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      `${SYSTEM_ID}@0/ability-scores`,
+      ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'standardArray' },
+    );
+    state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
+    state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
+    state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    await fixture.whenStable();
+
+    expect(state.outstanding()).toEqual([]);
+    await advanceToReview(fixture);
+    const createButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '.create-wizard__create',
+    );
+    expect(createButton?.disabled).toBe(false);
+    createButton!.click();
+
+    // Same "real fake-indexeddb promise chain, poll real macrotask turns" reasoning as the specs
+    // above — wait for the catch block to fully finish (its last action is the toast).
+    for (let i = 0; i < 50 && toastShowSpy.mock.calls.length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(toastShowSpy).toHaveBeenCalledTimes(1);
+
+    // The character `create()` minted is still there — a rejected navigate is not a reason to wipe
+    // a fully-committed stream.
+    const navArgs = navigateSpy.mock.calls[0]?.[0] as [string, string, string];
+    const streamId = navArgs[1];
+    const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+    expect(persisted.length).toBeGreaterThan(0);
+    expect(persisted.some((e) => e.type === 'character.created')).toBe(true);
+  });
 });

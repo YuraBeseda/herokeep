@@ -372,11 +372,16 @@ export class CreateWizardComponent {
     // Tracks whether `create()` itself succeeded, so the catch block below knows whether a
     // name-only stub character stream actually exists to clean up.
     let createdId: string | undefined;
+    // Plan-5 ruling R12: set true the instant the transaction itself has landed — a LATER failure
+    // (only `router.navigate` remains after this point) means the character is fully valid and
+    // committed, not a stub; the catch below must never delete it just because navigation failed.
+    let appendTxSucceeded = false;
     try {
       const id = await this.characterStore.create(this.state.name().trim(), this.state.gender());
       createdId = id;
       const [, ...rest] = this.state.buildTransaction();
       if (rest.length > 0) await this.characterStore.appendTx(rest);
+      appendTxSucceeded = true;
       await this.router.navigate(['/c', id, 'play']);
     } catch (error) {
       // Whole-branch review finding 2: if `appendTx` fails after `create()` already succeeded
@@ -384,8 +389,11 @@ export class CreateWizardComponent {
       // would otherwise persist as a name-only stub with no decisions — and a retry mints a SECOND
       // stream on top of it. Best-effort delete it before surfacing the failure so no stub
       // survives; this is itself allowed to fail silently (e.g. leadership already lost) since the
-      // toast below is the only outcome the user needs to see either way.
-      if (createdId !== undefined) {
+      // toast below is the only outcome the user needs to see either way. Ruling R12: once
+      // `appendTxSucceeded` is true, the failure can only be `router.navigate` rejecting — the
+      // character itself is fully committed, so it must NOT be deleted; the toast below still
+      // fires either way, since the user needs to know navigation didn't happen.
+      if (createdId !== undefined && !appendTxSucceeded) {
         await this.characterStore.deleteCharacter(createdId).catch(() => undefined);
       }
       const key =

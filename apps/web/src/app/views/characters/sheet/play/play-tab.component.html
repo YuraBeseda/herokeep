@@ -258,7 +258,7 @@
       @if (resources().length > 0) {
         <div class="play-tab__resources">
           @for (resourceRow of resources(); track resourceRow.id) {
-            <hk-card [header]="resourceRow.name" class="play-tab__resource">
+            <hk-card [header]="resourceLabel(resourceRow)" class="play-tab__resource">
               <span
                 class="play-tab__resource-count"
                 hkDerived
@@ -295,7 +295,7 @@
                 [attr.aria-expanded]="isActionExpanded(action.id)"
                 (click)="toggleAction(action.id)"
               >
-                {{ action.name }}
+                {{ actionLabel(action) }}
                 @if (action.resource) {
                   <span class="play-tab__action-resource">
                     {{
