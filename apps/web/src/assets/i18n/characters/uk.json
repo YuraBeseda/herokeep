@@ -208,7 +208,7 @@
       "title": "Характеристики",
       "score": "Значення",
       "mod": "Модифікатор",
-      "save": "Випробування"
+      "save": "Рятівний кидок"
     },
     "skills": {
       "title": "Навички",
@@ -225,7 +225,7 @@
       "temp": "Тимчасові",
       "hitDice": "Кістки хітів",
       "hitDiceEntry": "{class}: к{die} × {remaining} / {total}",
-      "deathSaves": "Випробування від смерті",
+      "deathSaves": "Рятівні кидки від смерті",
       "successes": "Успіхи",
       "failures": "Провали",
       "countOf": "{count} / {max}"
@@ -240,7 +240,7 @@
     },
     "spellcasting": {
       "title": "Заклинання",
-      "dc": "Складність випробування",
+      "dc": "Складність рятівного кидка",
       "attack": "Бонус атаки заклинанням",
       "cantripsKnown": "Відомо заговорів",
       "slotsLevel": "Комірки {level} рівня",
@@ -327,7 +327,7 @@
     "hp-changed": "{kind, select, damage {Отримано {delta} шкоди.} heal {Відновлено {delta} хітів.} temp {Отримано {delta} тимчасових хітів.} set {Хіти встановлено на {delta}.} other {Хіти змінено на {delta}.}}",
     "hit-dice-spent": "Витрачено {count} {count, plural, one {кістку} few {кістки} many {кісток} other {кістки}} хітів ({classId}).",
     "hit-dice-regained": "Відновлено {count} {count, plural, one {кістку} few {кістки} many {кісток} other {кістки}} хітів ({classId}).",
-    "death-save-recorded": "{result, select, success {Випробування від смерті: успіх.} failure {Випробування від смерті: провал.} critSuccess {Випробування від смерті: критичний успіх.} critFailure {Випробування від смерті: критичний провал.} other {Записано випробування від смерті.}}",
+    "death-save-recorded": "{result, select, success {Рятівний кидок від смерті: успіх.} failure {Рятівний кидок від смерті: провал.} critSuccess {Рятівний кидок від смерті: критичний успіх.} critFailure {Рятівний кидок від смерті: критичний провал.} other {Записано рятівний кидок від смерті.}}",
     "stabilized": "Стабілізовано.",
     "slot-spent": "Витрачено комірку заклинань {level} рівня.",
     "slot-restored": "Відновлено комірку заклинань {level} рівня.",

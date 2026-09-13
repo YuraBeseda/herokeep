@@ -225,7 +225,7 @@
       "temp": "Временные",
       "hitDice": "Кости хитов",
       "hitDiceEntry": "{class}: к{die} × {remaining} / {total}",
-      "deathSaves": "Испытания от смерти",
+      "deathSaves": "Спасброски от смерти",
       "successes": "Успехи",
       "failures": "Провалы",
       "countOf": "{count} / {max}"
@@ -327,7 +327,7 @@
     "hp-changed": "{kind, select, damage {Получено {delta} урона.} heal {Восстановлено {delta} хитов.} temp {Получено {delta} временных хитов.} set {Хиты установлены на {delta}.} other {Хиты изменены на {delta}.}}",
     "hit-dice-spent": "Потрачено {count} {count, plural, one {кость} few {кости} many {костей} other {кости}} хитов ({classId}).",
     "hit-dice-regained": "Восстановлено {count} {count, plural, one {кость} few {кости} many {костей} other {кости}} хитов ({classId}).",
-    "death-save-recorded": "{result, select, success {Испытание от смерти: успех.} failure {Испытание от смерти: провал.} critSuccess {Испытание от смерти: критический успех.} critFailure {Испытание от смерти: критический провал.} other {Записано испытание от смерти.}}",
+    "death-save-recorded": "{result, select, success {Спасбросок от смерти: успех.} failure {Спасбросок от смерти: провал.} critSuccess {Спасбросок от смерти: критический успех.} critFailure {Спасбросок от смерти: критический провал.} other {Записан спасбросок от смерти.}}",
     "stabilized": "{grammaticalGender, select, masculine {Стабилизирован.} feminine {Стабилизирована.} neuter {Стабилизировано.} other {Стабилизирован.}}",
     "slot-spent": "Потрачена ячейка заклинаний {level} уровня.",
     "slot-restored": "Восстановлена ячейка заклинаний {level} уровня.",

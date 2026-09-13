@@ -71,7 +71,7 @@
       "loading": "Loading…",
       "valueLabel": "Value",
       "addValue": "Add",
-      "skillsTitle": "Choose {count} skills for {class}",
+      "skillsTitle": "Choose {count, plural, one {# skill} other {# skills}} for {class}",
       "more": "{count, plural, one {# more option} other {# more options}} — refine your search"
     },
     "abilityScores": {
