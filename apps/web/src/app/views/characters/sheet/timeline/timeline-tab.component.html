@@ -1,0 +1,86 @@
+<div class="timeline-tab" *transloco="let t; read: 'characters'">
+  <h2 class="timeline-tab__title">{{ t('timeline.title') }}</h2>
+
+  <div class="timeline-tab__filters">
+    @for (family of families; track family) {
+      <hk-chip [selected]="isFamilyActive(family)" (click)="toggleFamily(family)">
+        {{ t(familyLabelKey(family)) }}
+      </hk-chip>
+    }
+  </div>
+
+  @if (visibleRows().length === 0) {
+    <p class="timeline-tab__empty">{{ t('timeline.empty') }}</p>
+  } @else {
+    <ul class="timeline-tab__list">
+      @for (row of visibleRows(); track row.key) {
+        <li
+          class="timeline-tab__row"
+          [class.timeline-tab__row--reverted]="isReverted(row)"
+          [attr.data-family]="familyOf(row)"
+        >
+          <hk-card class="timeline-tab__card">
+            <div class="timeline-tab__row-main">
+              <p class="timeline-tab__sentence">
+                {{ row.events[0] | eventSentence: index() : localizer() : row.events.length }}
+              </p>
+              @if (isReverted(row)) {
+                <span class="timeline-tab__badge">{{ t('timeline.revertedBadge') }}</span>
+              }
+              <div class="timeline-tab__row-actions">
+                @if (row.events.length > 1) {
+                  <button
+                    type="button"
+                    class="timeline-tab__expand"
+                    [attr.aria-expanded]="isExpanded(row)"
+                    (click)="toggleExpand(row)"
+                  >
+                    {{ isExpanded(row) ? '−' : '+' }}
+                  </button>
+                }
+                @if (canRevert(row)) {
+                  <button
+                    hk-button
+                    [variant]="'ghost'"
+                    type="button"
+                    class="timeline-tab__revert"
+                    (click)="onRevert(row)"
+                  >
+                    {{ t('timeline.revert') }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            @if (rollsFor(row); as rolls) {
+              <div class="timeline-tab__rolls">
+                @for (result of rolls; track $index) {
+                  <span class="timeline-tab__roll-group">
+                    @for (die of result.dice; track $index) {
+                      <span
+                        class="timeline-tab__die"
+                        [class.timeline-tab__die--dropped]="!die.kept"
+                      >
+                        {{ die.value }}
+                      </span>
+                    }
+                  </span>
+                }
+              </div>
+            }
+
+            @if (row.events.length > 1 && isExpanded(row)) {
+              <ul class="timeline-tab__members">
+                @for (event of row.events; track event.id) {
+                  <li class="timeline-tab__member">
+                    {{ event | eventSentence: index() : localizer() }}
+                  </li>
+                }
+              </ul>
+            }
+          </hk-card>
+        </li>
+      }
+    </ul>
+  }
+</div>

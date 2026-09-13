@@ -262,6 +262,23 @@ describe('CharacterStore', () => {
     expect(persisted.at(-1)?.type).toBe('event.reverted');
   });
 
+  it('skippedIds reflects facts().skipped for a reverted event, and only that event', async () => {
+    const store = TestBed.inject(CharacterStore);
+    await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Interim' } }]);
+    const targetId = store.events().at(-1)!.id;
+    expect(store.skippedIds().has(targetId)).toBe(false);
+
+    await store.revert({ eventId: targetId }, 'test revert');
+
+    expect(store.skippedIds()).toEqual(new Set([targetId]));
+    expect(store.facts()?.skipped).toEqual([{ eventId: targetId, reason: 'reverted' }]);
+    // The `event.reverted` event itself is never skipped (reducer.ts: "always applies as a
+    // no-op") — it must not show up in `skippedIds` alongside its target.
+    const revertEventId = store.events().at(-1)!.id;
+    expect(store.skippedIds().has(revertEventId)).toBe(false);
+  });
+
   it('rejects create/appendTx/revert when this tab is not the leader', async () => {
     installStubLocks();
     // Another tab grabs the writer lock first and never releases it, so this test's own

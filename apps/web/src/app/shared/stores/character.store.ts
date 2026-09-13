@@ -141,6 +141,17 @@ export class CharacterStore {
     return pendingAdvancements(sheet, facts, this.engineFacade.index());
   });
 
+  /** Event ids the reducer skipped while folding `events` into `facts` (`facts.skipped`,
+   * `reduce/facts.ts`'s `SkippedEvent[]`) — a target event reverted via `revert()` lands here
+   * with reason `'reverted'`, which is what `TimelineTabComponent` (plan-5 task-12-brief.md)
+   * strikes through. Not filtered by reason: any skip reason (a duplicate id, an unresolvable
+   * `hp.changed`, …) means the event contributed nothing to `facts`, which is exactly what a
+   * struck-through row communicates regardless of WHY. */
+  readonly skippedIds: Signal<ReadonlySet<string>> = computed(() => {
+    const facts = this.factsState();
+    return new Set(facts?.skipped.map((s) => s.eventId) ?? []);
+  });
+
   constructor() {
     // Fire-and-forget (R-pf1): this store is the app's only writer, so nothing else on this tab
     // waits on leadership — appending methods just check `isLeader()` once they're called.

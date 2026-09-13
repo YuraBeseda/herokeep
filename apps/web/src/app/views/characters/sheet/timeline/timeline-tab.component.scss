@@ -1,0 +1,115 @@
+:host {
+  display: block;
+}
+
+.timeline-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.timeline-tab__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.timeline-tab__empty {
+  color: var(--text-2);
+  margin: 0;
+}
+
+.timeline-tab__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline-tab__card {
+  display: block;
+}
+
+.timeline-tab__row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.timeline-tab__sentence {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.timeline-tab__row--reverted .timeline-tab__sentence {
+  text-decoration: line-through;
+  color: var(--text-2);
+}
+
+.timeline-tab__badge {
+  flex: 0 0 auto;
+  color: var(--text-2);
+  font-size: 0.85em;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  padding: 0 var(--space-1);
+}
+
+.timeline-tab__row-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.timeline-tab__expand {
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text-1);
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+}
+
+.timeline-tab__rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.timeline-tab__roll-group {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.timeline-tab__die {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  padding: 0 var(--space-1);
+}
+
+.timeline-tab__die--dropped {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.timeline-tab__members {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1) 0 0 var(--space-2);
+  border-top: 1px solid var(--border-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.timeline-tab__member {
+  color: var(--text-2);
+}
