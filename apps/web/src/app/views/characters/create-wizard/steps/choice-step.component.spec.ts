@@ -185,4 +185,28 @@ describe('ChoiceStepComponent', () => {
     ]);
     expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBeGreaterThan(0);
   });
+
+  it("routes the system's 'abilityGeneration' pick to hk-ability-scores-step and a background's 'abilities' pick to hk-abilities-improve-step (task-7)", async () => {
+    const state = createState();
+    state.name.set('Aldric');
+
+    const abilityScoresFixture = TestBed.createComponent(ChoiceStepComponent);
+    abilityScoresFixture.componentRef.setInput('choiceId', `${SYSTEM_ID}@0/ability-scores`);
+    await abilityScoresFixture.whenStable();
+    const abilityScoresCompiled = abilityScoresFixture.nativeElement as HTMLElement;
+    expect(abilityScoresCompiled.querySelector('hk-ability-scores-step')).not.toBeNull();
+    // The method tab bar (standard array/point buy/manual/roll) is this component's own content —
+    // its presence confirms `hk-choice-step` actually delegated rendering, not just routed a case.
+    expect(abilityScoresCompiled.querySelector('.ability-scores-step__tabs')).not.toBeNull();
+
+    const improveFixture = TestBed.createComponent(ChoiceStepComponent);
+    improveFixture.componentRef.setInput(
+      'choiceId',
+      'srd-5e-2024:background/soldier@0/ability-scores',
+    );
+    await improveFixture.whenStable();
+    const improveCompiled = improveFixture.nativeElement as HTMLElement;
+    expect(improveCompiled.querySelector('hk-abilities-improve-step')).not.toBeNull();
+    expect(improveCompiled.querySelectorAll('hk-chip').length).toBeGreaterThan(0);
+  });
 });

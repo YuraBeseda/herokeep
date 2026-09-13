@@ -178,12 +178,33 @@ export class CreateWizardState {
     return outstandingChoices(facts, this.engineFacade.index());
   });
 
-  /** ORDER: 'name' → one step per outstanding creation choice in a stable curated order
-   * (species, background, background-abilities, class, ability-scores, class-skills, then
-   * remaining outstanding sorted) → 'spells' (only when `draftSheet` has a spellcasting block) →
-   * 'equipment' → 'review'. The whole middle section (every step but 'name'/'review') only
-   * appears once `draftSheet` is defined — before a name is set there is nothing to decide,
-   * equip, or review yet. */
+  /** Decided choices whose CURRENT selection fails `validate` with at least one error (a
+   * decision.made is committed unconditionally — see `setDecision` — so an over-budget point-buy,
+   * an incomplete standard array, or an out-of-range manual entry all land here rather than being
+   * silently accepted). `outstandingChoices` only tracks PRESENCE of a decision, never its
+   * validity (`facts.decisions[id] === undefined`), so a choice never appears in both `outstanding`
+   * and here at once — this is the other half of "has this choice actually been resolved". Only
+   * error-severity diagnostics count; a decision with warnings only is not "invalid" for gating
+   * purposes. */
+  readonly invalidDecisions: Signal<ReadonlyMap<string, Diagnostic[]>> = computed(() => {
+    const result = new Map<string, Diagnostic[]>();
+    for (const [choiceId, selection] of this.decisions()) {
+      const errors = this.validate(choiceId, selection).filter((d) => d.severity === 'error');
+      if (errors.length > 0) result.set(choiceId, errors);
+    }
+    return result;
+  });
+
+  /** ORDER: 'name' → one step per outstanding-or-invalidly-decided creation choice in a stable
+   * curated order (species, background, background-abilities, class, ability-scores,
+   * class-skills, then remaining sorted) → 'spells' (only when `draftSheet` has a spellcasting
+   * block) → 'equipment' → 'review'. The whole middle section (every step but 'name'/'review')
+   * only appears once `draftSheet` is defined — before a name is set there is nothing to decide,
+   * equip, or review yet.
+   *
+   * A choice's step disappears once it has a VALID decision, but stays (see `curatedChoiceSteps`)
+   * as long as it is either outstanding or decided-but-invalid — `CreateWizardComponent` renders
+   * the latter as a clickable 'blocked' stepper step, so the user can revisit and fix it. */
   readonly steps: Signal<WizardStep[]> = computed(() => {
     const steps: WizardStep[] = [
       { id: 'name', labelKey: 'characters.wizard.steps.name', kind: 'name' },
@@ -205,12 +226,15 @@ export class CreateWizardState {
   });
 
   private curatedChoiceSteps(): WizardStep[] {
-    const outstanding = this.outstanding();
-    if (outstanding.length === 0) return [];
+    // A choiceId is either outstanding (no decision yet) or decided (`outstandingChoices` gates on
+    // `facts.decisions[id] === undefined`) — never both — so concatenating these two id lists
+    // never double-counts the same choice under two different `byKnownId` buckets.
+    const ids = [...this.outstanding().map((r) => r.choiceId), ...this.invalidDecisions().keys()];
+    if (ids.length === 0) return [];
     const systemId = this.systemId();
 
-    const knownKind = (req: ChoiceRequest): KnownStepId | undefined => {
-      const parsed = parseChoiceId(req.choiceId);
+    const knownKind = (choiceId: string): KnownStepId | undefined => {
+      const parsed = parseChoiceId(choiceId);
       if (!parsed) return undefined;
       if (parsed.entityId === systemId) {
         if (parsed.slug === 'species') return 'species';
@@ -224,32 +248,22 @@ export class CreateWizardState {
       return undefined;
     };
 
-    const byKnownId = new Map<KnownStepId, ChoiceRequest>();
-    const rest: ChoiceRequest[] = [];
-    for (const req of outstanding) {
-      const kind = knownKind(req);
-      if (kind && !byKnownId.has(kind)) byKnownId.set(kind, req);
-      else rest.push(req);
+    const byKnownId = new Map<KnownStepId, string>();
+    const rest: string[] = [];
+    for (const choiceId of ids) {
+      const kind = knownKind(choiceId);
+      if (kind && !byKnownId.has(kind)) byKnownId.set(kind, choiceId);
+      else rest.push(choiceId);
     }
 
     const steps: WizardStep[] = [];
     for (const knownId of KNOWN_STEP_ORDER) {
-      const req = byKnownId.get(knownId);
-      if (req)
-        steps.push({
-          id: knownId,
-          labelKey: labelKeyFor(knownId),
-          choiceId: req.choiceId,
-          kind: 'choice',
-        });
+      const choiceId = byKnownId.get(knownId);
+      if (choiceId)
+        steps.push({ id: knownId, labelKey: labelKeyFor(knownId), choiceId, kind: 'choice' });
     }
-    for (const req of rest) {
-      steps.push({
-        id: req.choiceId,
-        labelKey: labelKeyFor('choice'),
-        choiceId: req.choiceId,
-        kind: 'choice',
-      });
+    for (const choiceId of rest) {
+      steps.push({ id: choiceId, labelKey: labelKeyFor('choice'), choiceId, kind: 'choice' });
     }
     return steps;
   }

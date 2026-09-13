@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
@@ -58,6 +59,7 @@ function configure(): void {
         },
         loader: StubLoader,
       }),
+      provideTranslocoMessageformat(),
       {
         provide: PackStore,
         useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },

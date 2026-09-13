@@ -82,7 +82,7 @@ describe('StepperComponent', () => {
     expect(compiled.querySelector('[hk-stepper-footer] button')?.textContent).toContain('Next');
   });
 
-  it('disables todo and blocked steps, and keeps done/current clickable', async () => {
+  it('disables only todo steps, keeping done/current/blocked clickable', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -91,22 +91,27 @@ describe('StepperComponent', () => {
     expect(steps[0].disabled).toBe(false); // done
     expect(steps[1].disabled).toBe(false); // current
     expect(steps[2].disabled).toBe(true); // todo
-    expect(steps[3].disabled).toBe(true); // blocked
+    // 'blocked' means "decided but currently invalid" — clickable so the user can revisit and
+    // fix it, NOT "unreachable" (see the class doc's click-gating comment).
+    expect(steps[3].disabled).toBe(false); // blocked
   });
 
-  it('emits stepSelected only for clickable (done/current) steps', async () => {
+  it('emits stepSelected for clickable (done/current/blocked) steps, never todo', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     const steps = compiled.querySelectorAll<HTMLButtonElement>('ol button');
 
-    steps[3].click(); // blocked — must not emit
     steps[2].click(); // todo — must not emit
     await fixture.whenStable();
     expect(fixture.componentInstance.selectedIds).toEqual([]);
 
+    steps[3].click(); // blocked — emits
+    await fixture.whenStable();
+    expect(fixture.componentInstance.selectedIds).toEqual(['review']);
+
     steps[0].click(); // done — emits
     await fixture.whenStable();
-    expect(fixture.componentInstance.selectedIds).toEqual(['name']);
+    expect(fixture.componentInstance.selectedIds).toEqual(['review', 'name']);
   });
 });

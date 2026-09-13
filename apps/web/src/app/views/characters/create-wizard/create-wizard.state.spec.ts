@@ -197,6 +197,55 @@ describe('CreateWizardState', () => {
     });
   });
 
+  it('invalidDecisions is empty until a decision fails validation with an error', () => {
+    const state = createState();
+    state.name.set('Aldric');
+    expect(state.invalidDecisions().size).toBe(0);
+
+    // A wrong-multiset standard-array selection: same range/count as a real one, but a
+    // duplicate value instead of the actual {15,14,13,12,10,8} set.
+    state.setDecision(
+      ABILITY_SCORES_CHOICE,
+      ['str:15', 'dex:15', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'standardArray' },
+    );
+
+    const invalid = state.invalidDecisions();
+    expect(invalid.has(ABILITY_SCORES_CHOICE)).toBe(true);
+    expect(invalid.get(ABILITY_SCORES_CHOICE)?.every((d) => d.severity === 'error')).toBe(true);
+    expect(
+      invalid.get(ABILITY_SCORES_CHOICE)?.some((d) => d.code === 'selection.standardArrayMismatch'),
+    ).toBe(true);
+  });
+
+  it('a decided-but-invalid choice (over-budget point buy) is no longer outstanding but its step stays; fixing it clears invalidDecisions and drops the step', () => {
+    const state = createState();
+    state.name.set('Aldric');
+
+    // costs: 15 -> 9 (x5) + 8 -> 0 = 45, against a 27-point budget.
+    state.setDecision(
+      ABILITY_SCORES_CHOICE,
+      ['str:15', 'dex:15', 'con:15', 'int:15', 'wis:15', 'cha:8'],
+      { method: 'pointBuy' },
+    );
+
+    expect(state.outstanding().map((c) => c.choiceId)).not.toContain(ABILITY_SCORES_CHOICE);
+    expect(state.invalidDecisions().has(ABILITY_SCORES_CHOICE)).toBe(true);
+    // Unlike a VALIDLY-decided choice (species/background above vanish once decided), an invalid
+    // one keeps its curated step so the wizard can surface it as 'blocked' and let the user fix it.
+    expect(state.steps().map((s) => s.id)).toContain('ability-scores');
+
+    state.setDecision(
+      ABILITY_SCORES_CHOICE,
+      ['str:15', 'dex:14', 'con:13', 'int:12', 'wis:10', 'cha:8'],
+      { method: 'standardArray' },
+    );
+
+    expect(state.invalidDecisions().size).toBe(0);
+    // Now validly decided: same as species/background, the step drops out of the curated list.
+    expect(state.steps().map((s) => s.id)).not.toContain('ability-scores');
+  });
+
   it('buildTransaction appends extraDrafts last', () => {
     const state = createState();
     state.name.set('Aldric');

@@ -8,9 +8,11 @@ export interface HkStepperStep {
 }
 
 // The wizard owns `activeId` and each step's `state`; this component never derives either
-// itself. Clicking is gated purely on `state` — 'done' (revisit a completed step) and
-// 'current' (re-click the active step, a no-op the wizard can still react to) are
-// clickable; 'todo' and 'blocked' are not, regardless of `activeId`.
+// itself. Clicking is gated purely on `state` — 'done' (revisit a completed step), 'current'
+// (re-click the active step, a no-op the wizard can still react to), and 'blocked' (revisit a
+// step whose recorded decision is currently invalid, so the user can fix it — plan-5
+// task-7-fix-report.md) are all clickable; only 'todo' (not yet reached) is not, regardless of
+// `activeId`.
 @Component({
   selector: 'hk-stepper',
   imports: [TranslocoDirective],
@@ -26,7 +28,7 @@ export class StepperComponent {
   // Methods
 
   protected isClickable(step: HkStepperStep): boolean {
-    return step.state === 'done' || step.state === 'current';
+    return step.state === 'done' || step.state === 'current' || step.state === 'blocked';
   }
 
   protected onStepClick(step: HkStepperStep): void {

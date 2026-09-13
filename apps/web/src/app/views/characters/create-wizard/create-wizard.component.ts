@@ -70,30 +70,39 @@ export class CreateWizardComponent {
     return steps[idx]?.kind !== 'name' || this.nameValid();
   });
 
-  // A step is 'done' once the draft actually records it: the name once non-empty, a choice step
-  // once its choiceId has a recorded decision. Every other step is 'todo' until it becomes
-  // current — this task never emits 'blocked' (nothing here gates a step on another one yet).
+  // A step is 'current' while active (highest priority — even an invalid decision's step is
+  // still just 'current' while you're actively fixing it, not also 'blocked'); otherwise
+  // 'blocked' when it's a choice step whose decision is currently invalid
+  // (`state.invalidDecisions`) — clickable, so the user can revisit and fix it (see
+  // `StepperComponent.isClickable`); otherwise 'done' once the draft actually records it: the
+  // name once non-empty, a choice step once its choiceId has a recorded (valid) decision;
+  // otherwise 'todo'.
   protected readonly stepperSteps = computed<HkStepperStep[]>(() => {
     const active = this.activeStepId();
     const decisions = this.state.decisions();
+    const invalidDecisions = this.state.invalidDecisions();
     const nameDone = this.state.name().trim().length > 0;
-    return this.state.steps().map((step) => ({
-      id: step.id,
-      labelKey: step.labelKey,
-      state:
-        step.id === active
-          ? 'current'
-          : (step.kind === 'name' && nameDone) ||
-              (step.kind === 'choice' &&
-                step.choiceId !== undefined &&
-                decisions.has(step.choiceId))
-            ? 'done'
-            : 'todo',
-    }));
+    return this.state.steps().map((step): HkStepperStep => {
+      if (step.id === active) return { id: step.id, labelKey: step.labelKey, state: 'current' };
+      if (
+        step.kind === 'choice' &&
+        step.choiceId !== undefined &&
+        invalidDecisions.has(step.choiceId)
+      ) {
+        return { id: step.id, labelKey: step.labelKey, state: 'blocked' };
+      }
+      const done =
+        (step.kind === 'name' && nameDone) ||
+        (step.kind === 'choice' && step.choiceId !== undefined && decisions.has(step.choiceId));
+      return { id: step.id, labelKey: step.labelKey, state: done ? 'done' : 'todo' };
+    });
   });
 
   protected readonly complete = computed(
-    () => this.state.outstanding().length === 0 && this.state.name().trim().length > 0,
+    () =>
+      this.state.outstanding().length === 0 &&
+      this.state.name().trim().length > 0 &&
+      this.state.invalidDecisions().size === 0,
   );
 
   protected readonly genderLabelKey = computed(() => {

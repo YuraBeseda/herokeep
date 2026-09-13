@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -202,12 +203,41 @@ describe('AbilityScoresStepComponent', () => {
     expect(inputs[0].min).toBe('3');
     expect(inputs[0].max).toBe('18');
 
+    // Only one ability entered so far — committed alone, not padded with defaults.
     inputs[0].value = '16';
     inputs[0].dispatchEvent(new Event('input'));
     await fixture.whenStable();
 
     expect(state.decisions().get(ABILITY_SCORES_CHOICE)).toEqual(['str:16']);
     expect(state.decisionContexts().get(ABILITY_SCORES_CHOICE)?.['method']).toBe('manual');
+
+    // Filling in the rest, with one (wis) OUTSIDE the pack's 3-18 manual range, must surface the
+    // engine's `manualRange` diagnostic — the RED gap the reviewer flagged: this test's own name
+    // claims that coverage, so it must actually enter an out-of-range value and check for it,
+    // not just assert the min/max HTML attributes above.
+    const rest: [number, string][] = [
+      [1, '14'],
+      [2, '13'],
+      [3, '12'],
+      [4, '25'], // wis: out of range (manual.max is 18)
+      [5, '8'],
+    ];
+    for (const [index, value] of rest) {
+      inputs[index].value = value;
+      inputs[index].dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+    }
+
+    const fullSelection = state.decisions().get(ABILITY_SCORES_CHOICE);
+    expect(fullSelection).toEqual(['str:16', 'dex:14', 'con:13', 'int:12', 'wis:25', 'cha:8']);
+
+    const diagnostics = state.validate(ABILITY_SCORES_CHOICE, fullSelection!);
+    expect(diagnostics.some((d) => d.code === 'selection.manualRange')).toBe(true);
+
+    const diagnosticTexts = Array.from(
+      compiled.querySelectorAll('.ability-scores-step__diagnostic'),
+    ).map((el) => el.textContent?.trim());
+    expect(diagnosticTexts).toContain(charactersEn.validation.selection.manualRange);
   });
 
   it('roll: rolling all six produces six 4d6kh3 results whose context lands in the decision, scores match the kept sums, and re-roll is no longer offered', async () => {
@@ -217,6 +247,8 @@ describe('AbilityScoresStepComponent', () => {
     const fixture = TestBed.createComponent(AbilityScoresStepComponent);
     fixture.componentRef.setInput('choiceId', ABILITY_SCORES_CHOICE);
     await fixture.whenStable();
+
+    const announceSpy = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
 
     const compiled = fixture.nativeElement as HTMLElement;
     findTabButton(compiled, 'Roll').click();
@@ -252,5 +284,11 @@ describe('AbilityScoresStepComponent', () => {
 
     // Re-roll not offered once rolled (rolls are recorded — honesty by design).
     expect(rollButton.disabled).toBe(true);
+
+    // Announces the roll via CDK LiveAnnouncer (a11y) with the ICU-interpolated message,
+    // resolved through the scoped `t()` so the totals actually land in the announced text.
+    expect(announceSpy).toHaveBeenCalledTimes(1);
+    const announced = announceSpy.mock.calls[0]?.[0] as string;
+    expect(announced).toContain(rolls.map((r) => r.total).join(', '));
   });
 });

@@ -50,9 +50,10 @@ No model — `activeId` is one-way; the wizard updates it in response to `stepSe
 
 ## Click-gating and ARIA
 
-- `state: 'done' | 'current'` steps are clickable; `'todo' | 'blocked'` render
-  `[disabled]` and never emit `stepSelected`, even if a caller invokes the click handler
-  directly.
+- `state: 'done' | 'current' | 'blocked'` steps are clickable; `'todo'` renders `[disabled]`
+  and never emits `stepSelected`, even if a caller invokes the click handler directly.
+  `'blocked'` means "has a decision, but it's currently invalid" (not "unreachable") — it's
+  clickable specifically so the consumer can let the user revisit and fix it.
 - The button whose `id` equals `activeId` gets `aria-current="step"`; no other step does.
 
 ## Do / Don't

@@ -239,4 +239,64 @@ describe('CreateWizardComponent', () => {
       'play',
     ]);
   });
+
+  it('a decided-but-invalid choice (over-budget point buy) keeps its step visible and blocked, disables the create button, and is fixable by revisiting it', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const root = () => fixture.nativeElement as HTMLElement;
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Aldric');
+    state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
+    state.setDecision('srd-5e-2024:system/5e-2024@0/background', [
+      'srd-5e-2024:background/soldier',
+    ]);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    // costs: 15 -> 9 (x5) + 8 -> 0 = 45, against a 27-point budget — over budget.
+    state.setDecision(
+      'srd-5e-2024:system/5e-2024@0/ability-scores',
+      ['str:15', 'dex:15', 'con:15', 'int:15', 'wis:15', 'cha:8'],
+      { method: 'pointBuy' },
+    );
+    state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/fighter']);
+    state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
+    state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    await fixture.whenStable();
+
+    // Unlike species/background (validly decided, vanished from the stepper), the invalid
+    // ability-scores decision keeps its step and renders it 'blocked' — visible and clickable.
+    expect(stepLabels(fixture)).toContain('Ability scores');
+    const findStepButton = (label: string): HTMLButtonElement =>
+      Array.from(root().querySelectorAll<HTMLButtonElement>('.hk-stepper__step')).find(
+        (b) => b.textContent?.trim() === label,
+      )!;
+    const abilityStepButton = findStepButton('Ability scores');
+    expect(abilityStepButton.classList.contains('hk-stepper__step--blocked')).toBe(true);
+    expect(abilityStepButton.disabled).toBe(false);
+
+    await advanceToReview(fixture);
+    const createButton = root().querySelector<HTMLButtonElement>('.create-wizard__create');
+    expect(createButton).not.toBeNull();
+    expect(createButton?.disabled).toBe(true);
+
+    // Revisit the blocked step directly from the stepper.
+    findStepButton('Ability scores').click();
+    await fixture.whenStable();
+    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe(
+      'Ability scores',
+    );
+
+    // Fix it: a valid standard-array selection.
+    state.setDecision(
+      'srd-5e-2024:system/5e-2024@0/ability-scores',
+      ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'standardArray' },
+    );
+    await fixture.whenStable();
+
+    expect(stepLabels(fixture)).not.toContain('Ability scores');
+    await advanceToReview(fixture);
+    expect(root().querySelector<HTMLButtonElement>('.create-wizard__create')?.disabled).toBe(false);
+  });
 });
