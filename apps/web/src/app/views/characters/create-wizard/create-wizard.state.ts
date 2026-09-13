@@ -473,10 +473,20 @@ export class CreateWizardState {
   }
 
   /** `character.created` + `decision.made` (with contexts) per decision + `level.gained
-   * {classId, level:1}` (once a class is decided) + `extraDrafts` — in that order. The caller
-   * (the review step) commits this by calling `CharacterStore.create(name, gender)` first (which
-   * mints the REAL `character.created`) and then `appendTx` on everything from index 1 onward,
-   * sharing one txId. */
+   * {classId, level:1}` (once a class is decided) + `hp.changed {delta: <derived max>, kind:
+   * 'set'}` (controller ruling R11: `facts.hp.current` defaults to the literal `0` —
+   * `reduce/facts.ts`'s `initialFacts` — which is correct ENGINE behavior (nothing rules-free can
+   * assume a starting HP), but the tabletop expectation is that a freshly created character starts
+   * at full HP, so the WIZARD tops it up explicitly, the same way `propose.heal`/`propose.damage`
+   * (T14) resolve the long-rest `'max'` sentinel back to a concrete number via a leading `kind:
+   * 'set'` event — see `reduce/handlers/vitals.ts`'s own comment on that pattern. `'set'` writes
+   * `delta` straight to `facts.hp.current` (an ABSOLUTE value, not a signed offset — the one `kind`
+   * that isn't), so this reads current `draftSheet()`'s DERIVED max, not a duplicated formula) +
+   * `extraDrafts` — in that order. The caller (the review step) commits this by calling
+   * `CharacterStore.create(name, gender)` first (which mints the REAL `character.created`) and
+   * then `appendTx` on everything from index 1 onward, sharing one txId. Level-up (`LevelUpState.
+   * buildTransaction`) deliberately does NOT do this — leveling grows max HP but never heals — so
+   * only creation ever tops up. */
   buildTransaction(): DraftEvent[] {
     const core = this.packStore.corePack();
     const drafts: DraftEvent[] = [
@@ -507,6 +517,10 @@ export class CreateWizardState {
     const classSelection = this.classDecisionSelection(decisions);
     if (classSelection !== undefined) {
       drafts.push({ type: 'level.gained', v: 1, payload: { classId: classSelection, level: 1 } });
+      const maxHp = this.draftSheet()?.hp.max.value;
+      if (maxHp !== undefined) {
+        drafts.push({ type: 'hp.changed', v: 1, payload: { delta: maxHp, kind: 'set' } });
+      }
     }
 
     drafts.push(...this.extraDrafts());

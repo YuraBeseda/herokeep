@@ -532,6 +532,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     const sheet = derive(facts, index, rules);
 
     expect(sheet.hp.max.value).toBe(12);
+    // Controller ruling R11: `buildTransaction()` now appends `hp.changed {delta: 12, kind:
+    // 'set'}` right after `level.gained`, so the PERSISTED stream (unlike `draftSheet()`'s own
+    // live preview above, which never includes that event — see `CreateWizardState.
+    // buildTransaction`'s own doc) tops current HP up to max on creation.
+    expect(sheet.hp.current).toBe(12);
     expect(sheet.ac.value).toBe(19);
     expect(sheet.prof).toBe(2);
 

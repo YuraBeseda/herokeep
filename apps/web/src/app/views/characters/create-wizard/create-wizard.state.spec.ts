@@ -172,7 +172,7 @@ describe('CreateWizardState', () => {
     expect(state.validate(ABILITY_SCORES_CHOICE, ['str:15'])).toEqual([]);
   });
 
-  it('buildTransaction orders events as character.created, decision.made*, level.gained, extraDrafts', () => {
+  it('buildTransaction orders events as character.created, decision.made*, level.gained, hp.changed, extraDrafts', () => {
     const state = createState();
     state.name.set('Aldric');
     state.gender.set('masculine');
@@ -195,6 +195,15 @@ describe('CreateWizardState', () => {
       v: 1,
       payload: { classId: 'srd-5e-2024:class/fighter', level: 1 },
     });
+    // Controller ruling R11: the wizard tops HP up to the derived max right after level.gained —
+    // `'set'` writes `delta` straight to `facts.hp.current` as an ABSOLUTE value (the one `kind`
+    // that isn't a signed offset — see `reduce/handlers/vitals.ts`).
+    expect(tx[levelGainedIndex + 1]).toMatchObject({
+      type: 'hp.changed',
+      v: 1,
+      payload: { kind: 'set' },
+    });
+    expect(typeof (tx[levelGainedIndex + 1].payload as { delta: number }).delta).toBe('number');
   });
 
   it('invalidDecisions is empty until a decision fails validation with an error', () => {

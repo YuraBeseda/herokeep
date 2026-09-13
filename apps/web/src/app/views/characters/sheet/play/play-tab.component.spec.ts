@@ -103,10 +103,12 @@ describe('PlayTabComponent', () => {
     expect(coreStats[2]).toBe('+2'); // proficiency bonus
 
     const hpStats = statValues(compiled, '.play-tab__hp-stats');
-    // A freshly created character's `facts.hp.current` defaults to the literal `0`, not the
-    // `'max'` sentinel (`reduce/facts.ts`'s `initialFacts`) — only an explicit heal/long-rest
-    // event moves it, neither of which this fixture ever proposes.
-    expect(hpStats[0]).toBe('0'); // current
+    // Controller ruling R11: `CreateWizardState.buildTransaction()` tops current HP up to the
+    // derived max via an explicit `hp.changed {delta, kind: 'set'}` right after `level.gained` —
+    // `facts.hp.current` itself still defaults to the literal `0`, not the `'max'` sentinel
+    // (`reduce/facts.ts`'s `initialFacts`), but this fixture (like every real creation) goes
+    // through that same wizard path, not a hand-written event list.
+    expect(hpStats[0]).toBe('12'); // current
     expect(hpStats[1]).toBe('12'); // max
   });
 

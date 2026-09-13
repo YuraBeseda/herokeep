@@ -18,10 +18,10 @@ test.describe('character creation — golden path', () => {
   // The binding creation path (task-15-brief.md's Global Constraints): drives the real UI
   // through fighter-1's exact decisions (mirrors `packages/engine/test/golden/fighter-1.json`)
   // and checks the resulting character sheet matches that same golden fixture's expectations —
-  // AC 19, HP max 12, proficiency +2 (see the play-tab test.step below for why current HP is 0,
-  // not 12). One continuous test (library.spec.ts's own pattern): each step's wizard state is
-  // exactly the precondition the next step needs.
-  test('drives species/background/class/abilities/skills/fighting-style/weapon-masteries/equipment to a complete review, creates the character, and the play tab shows AC 19, HP max 12, prof +2', async ({
+  // AC 19, HP 12/12, proficiency +2 (controller ruling R11 — see the play-tab test.step below).
+  // One continuous test (library.spec.ts's own pattern): each step's wizard state is exactly the
+  // precondition the next step needs.
+  test('drives species/background/class/abilities/skills/fighting-style/weapon-masteries/equipment to a complete review, creates the character, and the play tab shows AC 19, HP 12/12, prof +2', async ({
     page,
   }) => {
     await test.step('name the character and pick a grammatical gender', async () => {
@@ -75,7 +75,7 @@ test.describe('character creation — golden path', () => {
       characterId = await finishReviewAndCreate(page);
     });
 
-    await test.step('play tab shows AC 19, HP max 12, and proficiency bonus +2', async () => {
+    await test.step('play tab shows AC 19, HP 12/12, and proficiency bonus +2', async () => {
       expect(characterId).not.toBe('');
 
       const statsSection = page.locator('.play-tab__stats');
@@ -90,18 +90,16 @@ test.describe('character creation — golden path', () => {
           .locator('.hk-stat-tile__value'),
       ).toHaveText('+2');
 
-      // `facts.hp.current` defaults to the literal `0`, not the `'max'` sentinel
-      // (`reduce/facts.ts`'s `initialFacts`) — no creation-path handler
-      // (`character.created`/`decision.made`/`level.gained`) ever sets it, so a freshly created
-      // character legitimately shows current HP 0 until an explicit heal/rest/damage event. This
-      // is documented, intentional behavior (`packages/engine/test/derive/hp.test.ts` covers the
-      // clamp explicitly): task-10-report.md hit this exact "12/12" assumption in a unit test —
-      // "renders fighter-1's hp max / AC / proficiency bonus straight off the store's sheet
-      // (12/19/+2)" — and fixed the ASSERTION, not the component; same correction applied here.
+      // Controller ruling R11: `facts.hp.current` defaults to the literal `0`, not the `'max'`
+      // sentinel (`reduce/facts.ts`'s `initialFacts`) — correct ENGINE behavior, since nothing
+      // rules-free can assume a starting HP — but the tabletop expectation is a freshly created
+      // character starts at full HP, so `CreateWizardState.buildTransaction()` now tops it up
+      // itself with an explicit `hp.changed {delta: <derived max>, kind: 'set'}` right after
+      // `level.gained`. Current and max are therefore both 12 here.
       const hpSection = page.locator('.play-tab__hp-stats');
       await expect(
         hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('0');
+      ).toHaveText('12');
       await expect(
         hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
       ).toHaveText('12');
