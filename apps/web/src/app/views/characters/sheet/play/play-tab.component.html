@@ -1,5 +1,10 @@
 @if (sheet(); as s) {
   <div class="play-tab" *transloco="let t; read: 'characters'">
+    <!-- Dice roller + roll log (task-7-brief.md): advantage/disadvantage toggle, manual entry,
+         and the session-local log itself. Placed first so the toggle is visible before any
+         tap-to-roll affordance below it is used. -->
+    <app-roll-log-panel [(advantageMode)]="advantageMode" class="play-tab__section" />
+
     <!-- Ability grid: six cards, each score + mod + save (task-10-brief.md). Ability names are
          pack-localized text, not app translation keys — `hk-card`'s `header` accepts an
          already-translated string, unlike `hk-stat-tile`'s key-only `labelKey`. -->
@@ -34,6 +39,24 @@
                 </dd>
               </div>
             </dl>
+            <div class="play-tab__ability-rolls">
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                (click)="onRollAbilityCheck(row, t)"
+              >
+                {{ t('sheet.roll.check') }}
+              </button>
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                (click)="onRollAbilitySave(row, t)"
+              >
+                {{ t('sheet.roll.save') }}
+              </button>
+            </div>
           </hk-card>
         }
       </div>
@@ -53,6 +76,9 @@
             <span class="play-tab__skill-total" hkDerived [hkDerivedBreakdown]="skill.total">
               {{ signed(skill.total.value) }}
             </span>
+            <button hk-button type="button" [variant]="'ghost'" (click)="onRollSkill(skill, t)">
+              {{ t('sheet.roll.skill') }}
+            </button>
           </li>
         }
       </ul>
@@ -240,11 +266,27 @@
                   <span hkDerived [hkDerivedBreakdown]="attack.toHit">
                     {{ signed(attack.toHit.value) }}
                   </span>
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'ghost'"
+                    (click)="onRollAttackToHit(attack, t)"
+                  >
+                    {{ t('sheet.roll.attackToHit') }}
+                  </button>
                 </td>
                 <td>
                   <span hkDerived [hkDerivedBreakdown]="attack.damage.bonus">
                     {{ attack.damage.dice }} {{ signed(attack.damage.bonus.value) }}
                   </span>
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'ghost'"
+                    (click)="onRollAttackDamage(attack, t)"
+                  >
+                    {{ t('sheet.roll.attackDamage') }}
+                  </button>
                 </td>
                 <td>{{ attack.mastery }}</td>
               </tr>
@@ -274,6 +316,14 @@
                 hkDerived
                 [hkDerivedBreakdown]="block.attack"
               />
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                (click)="onRollSpellAttack(block, t)"
+              >
+                {{ t('sheet.roll.spellAttack') }}
+              </button>
               @if (block.cantripsKnown !== undefined) {
                 <hk-stat-tile
                   [labelKey]="'characters.sheet.spellcasting.cantripsKnown'"

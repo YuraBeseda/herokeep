@@ -250,7 +250,7 @@
         "roll": "Кинути к{die}",
         "remaining": "Залишилось {remaining} {remaining, plural, one {кістку} few {кістки} many {кісток} other {кістки}} хітів",
         "noHitDice": "Кісток хітів не залишилось.",
-        "rolled": "{className}: випало {rolled} на к{die}, відновлено {healed} ОЗ.",
+        "healedEntry": "{className}: відновлено {healed} ОЗ.",
         "longBody": "Взяти тривалий відпочинок? ОЗ відновляться повністю, витрачені комірки заклинань та ресурси з відновленням на відпочинку скинуться, виснаження зменшиться.",
         "cancel": "Скасувати",
         "confirmShort": "Взяти короткий відпочинок",
@@ -261,6 +261,53 @@
       "title": "Натхнення",
       "on": "Є натхнення",
       "off": "Немає натхнення"
+    },
+    "roll": {
+      "title": "Кидок костей",
+      "check": "Кинути перевірку",
+      "save": "Кинути рятівний кидок",
+      "skill": "Кинути",
+      "attackToHit": "Кинути атаку",
+      "attackDamage": "Кинути шкоду",
+      "spellAttack": "Кинути атаку заклинанням",
+      "advantageGroup": "Перевага для наступного кидка",
+      "advantage": {
+        "normal": "Звичайно",
+        "advantage": "Перевага",
+        "disadvantage": "Завада"
+      },
+      "clear": "Очистити журнал",
+      "empty": "Ще немає кидків.",
+      "manualTag": "Вручну",
+      "manual": {
+        "amountLabel": "Підсумок",
+        "labelLabel": "Тип кидка",
+        "add": "Записати кидок",
+        "labels": {
+          "check": "Перевірка вручну",
+          "save": "Рятівний кидок вручну",
+          "attack": "Атака вручну",
+          "damage": "Шкода вручну",
+          "other": "Кидок вручну"
+        }
+      },
+      "entries": {
+        "check": "Перевірка: {name}",
+        "save": "Рятівний кидок: {name}",
+        "skill": "{name}",
+        "attackToHit": "{name} — атака",
+        "attackDamage": "{name} — шкода",
+        "spellAttack": "{name}: атака заклинанням"
+      },
+      "announce": {
+        "check": "Перевірка {name}: {total}.",
+        "save": "Рятівний кидок {name}: {total}.",
+        "skill": "{name}: {total}.",
+        "attackToHit": "Атака {name}: {total}.",
+        "attackDamage": "Шкода {name}: {total}.",
+        "spellAttack": "Атака заклинанням {name}: {total}.",
+        "manual": "Записано {total}."
+      }
     },
     "attacks": {
       "title": "Атаки",

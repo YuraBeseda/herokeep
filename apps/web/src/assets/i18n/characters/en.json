@@ -250,7 +250,7 @@
         "roll": "Roll d{die}",
         "remaining": "{remaining} hit {remaining, plural, one {die} other {dice}} remaining",
         "noHitDice": "No hit dice remaining.",
-        "rolled": "{className}: rolled {rolled} on d{die}, healed {healed} HP.",
+        "healedEntry": "{className}: healed {healed} HP.",
         "longBody": "Take a long rest? HP is restored to full, spent spell slots and short/long-rest resources reset, and exhaustion is reduced.",
         "cancel": "Cancel",
         "confirmShort": "Take short rest",
@@ -261,6 +261,53 @@
       "title": "Inspiration",
       "on": "Inspired",
       "off": "Not inspired"
+    },
+    "roll": {
+      "title": "Dice roller",
+      "check": "Roll check",
+      "save": "Roll save",
+      "skill": "Roll",
+      "attackToHit": "Roll to hit",
+      "attackDamage": "Roll damage",
+      "spellAttack": "Roll spell attack",
+      "advantageGroup": "Advantage for the next roll",
+      "advantage": {
+        "normal": "Normal",
+        "advantage": "Advantage",
+        "disadvantage": "Disadvantage"
+      },
+      "clear": "Clear log",
+      "empty": "No rolls yet.",
+      "manualTag": "Manual",
+      "manual": {
+        "amountLabel": "Total",
+        "labelLabel": "Roll type",
+        "add": "Log roll",
+        "labels": {
+          "check": "Manual check",
+          "save": "Manual save",
+          "attack": "Manual attack roll",
+          "damage": "Manual damage roll",
+          "other": "Manual roll"
+        }
+      },
+      "entries": {
+        "check": "{name} check",
+        "save": "{name} save",
+        "skill": "{name}",
+        "attackToHit": "{name} — to hit",
+        "attackDamage": "{name} — damage",
+        "spellAttack": "{name} spell attack"
+      },
+      "announce": {
+        "check": "{name} check: {total}.",
+        "save": "{name} save: {total}.",
+        "skill": "{name}: {total}.",
+        "attackToHit": "{name} to hit: {total}.",
+        "attackDamage": "{name} damage: {total}.",
+        "spellAttack": "{name} spell attack: {total}.",
+        "manual": "Logged {total}."
+      }
     },
     "attacks": {
       "title": "Attacks",

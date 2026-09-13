@@ -250,7 +250,7 @@
         "roll": "Бросить к{die}",
         "remaining": "Осталось {remaining} {remaining, plural, one {кость} few {кости} many {костей} other {кости}} хитов",
         "noHitDice": "Костей хитов не осталось.",
-        "rolled": "{className}: выпало {rolled} на к{die}, восстановлено {healed} ОЗ.",
+        "healedEntry": "{className}: восстановлено {healed} ОЗ.",
         "longBody": "Взять продолжительный отдых? ОЗ восстановятся полностью, потраченные ячейки заклинаний и ресурсы с восстановлением на отдыхе сбросятся, истощение уменьшится.",
         "cancel": "Отмена",
         "confirmShort": "Взять короткий отдых",
@@ -261,6 +261,53 @@
       "title": "Вдохновение",
       "on": "Есть вдохновение",
       "off": "Нет вдохновения"
+    },
+    "roll": {
+      "title": "Бросок костей",
+      "check": "Бросить проверку",
+      "save": "Бросить испытание",
+      "skill": "Бросить",
+      "attackToHit": "Бросить атаку",
+      "attackDamage": "Бросить урон",
+      "spellAttack": "Бросить атаку заклинанием",
+      "advantageGroup": "Преимущество для следующего броска",
+      "advantage": {
+        "normal": "Обычно",
+        "advantage": "Преимущество",
+        "disadvantage": "Помеха"
+      },
+      "clear": "Очистить журнал",
+      "empty": "Пока нет бросков.",
+      "manualTag": "Вручную",
+      "manual": {
+        "amountLabel": "Итог",
+        "labelLabel": "Тип броска",
+        "add": "Записать бросок",
+        "labels": {
+          "check": "Проверка вручную",
+          "save": "Испытание вручную",
+          "attack": "Атака вручную",
+          "damage": "Урон вручную",
+          "other": "Бросок вручную"
+        }
+      },
+      "entries": {
+        "check": "Проверка: {name}",
+        "save": "Испытание: {name}",
+        "skill": "{name}",
+        "attackToHit": "{name} — атака",
+        "attackDamage": "{name} — урон",
+        "spellAttack": "{name}: атака заклинанием"
+      },
+      "announce": {
+        "check": "Проверка {name}: {total}.",
+        "save": "Испытание {name}: {total}.",
+        "skill": "{name}: {total}.",
+        "attackToHit": "Атака {name}: {total}.",
+        "attackDamage": "Урон {name}: {total}.",
+        "spellAttack": "Атака заклинанием {name}: {total}.",
+        "manual": "Записано {total}."
+      }
     },
     "attacks": {
       "title": "Атаки",

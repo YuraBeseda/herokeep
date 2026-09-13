@@ -1,0 +1,13 @@
+<span class="hk-dice-result">
+  @for (die of dice(); track $index) {
+    <span class="hk-dice-result__die" [class.hk-dice-result__die--dropped]="!die.kept">{{
+      die.value
+    }}</span>
+  }
+  @if (modifier() !== 0) {
+    <span class="hk-dice-result__modifier">{{ signedModifier() }}</span>
+  }
+  @if (total() !== undefined) {
+    <span class="hk-dice-result__total">= {{ total() }}</span>
+  }
+</span>

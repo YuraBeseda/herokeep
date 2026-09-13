@@ -3,6 +3,7 @@ import { parseRollSpec, propose, roll, type ProposedEvent, type Sheet } from '@h
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DiceResultComponent } from '@shared/components/dice-result/dice-result.component';
 import { cryptoRng } from '@shared/services/engine/rng';
 
 /** One class's hit-die row, PRE-RESOLVED by the caller (`PlayTabComponent`) — same "resolve names
@@ -80,7 +81,7 @@ export type RestDialogResult =
  */
 @Component({
   selector: 'app-rest-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, ButtonComponent, DiceResultComponent],
   templateUrl: './rest-dialog.component.html',
 })
 export class RestDialogComponent {
@@ -91,8 +92,10 @@ export class RestDialogComponent {
   // `PlayTabComponent` on confirm (never appended by this dialog itself; see class doc).
   private readonly collectedDrafts: ProposedEvent[] = [];
 
-  // Kept-style display rows, one per roll, in roll order (a shared dice-result component arrives
-  // in a later task — task-6-brief.md — this stays minimal/semantic until then).
+  // Kept-style display rows, one per roll, in roll order — rendered via the shared
+  // `hk-dice-result` component (controller ruling R-pf2, task-7-brief.md: "your extraction of the
+  // shared dice-result component refactors that markup into the component too — 'used in 3
+  // places' includes the rest dialog").
   protected readonly rolls = signal<RestDialogRolledDie[]>([]);
 
   protected readonly remainingByClass = signal<Record<string, number>>(

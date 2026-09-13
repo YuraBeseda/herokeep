@@ -1,0 +1,34 @@
+:host {
+  display: inline-flex;
+}
+
+.hk-dice-result {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.hk-dice-result__die {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  font-size: 0.75rem;
+}
+
+.hk-dice-result__die--dropped {
+  color: var(--text-2);
+  text-decoration: line-through;
+}
+
+.hk-dice-result__modifier {
+  font-size: 0.75rem;
+  color: var(--text-2);
+}
+
+.hk-dice-result__total {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-1);
+}

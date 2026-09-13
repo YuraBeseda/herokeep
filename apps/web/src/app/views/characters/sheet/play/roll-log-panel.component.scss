@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.roll-log-panel__advantage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.roll-log-panel__manual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.roll-log-panel__manual-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  select {
+    padding: var(--space-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-s);
+    background: var(--surface-1);
+    color: var(--text-1);
+    font: inherit;
+  }
+}
+
+.roll-log-panel__clear {
+  margin-bottom: var(--space-2);
+}
+
+.roll-log-panel__entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roll-log-panel__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+}
+
+.roll-log-panel__entry-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.roll-log-panel__entry-tag {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.roll-log-panel__empty {
+  color: var(--text-2);
+}

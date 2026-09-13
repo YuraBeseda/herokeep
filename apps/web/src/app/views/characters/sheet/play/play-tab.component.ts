@@ -1,10 +1,13 @@
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { SafeHtml } from '@angular/platform-browser';
 import {
   DEATH_SAVE_MAX,
+  parseRollSpec,
   propose,
   ProposeError,
+  roll,
   type ContentIndex,
   type Localizer,
   type NoteEntry,
@@ -42,7 +45,9 @@ import {
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { cryptoRng } from '@shared/services/engine/rng';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { RollLogService } from '@shared/services/roll-log/roll-log.service';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
 import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
@@ -67,6 +72,7 @@ import {
   type RestDialogHitDieOption,
   type RestDialogResult,
 } from './rest-dialog.component';
+import { RollLogPanelComponent, type AdvantageMode } from './roll-log-panel.component';
 
 type DeathSaveResult = 'success' | 'failure' | 'critSuccess' | 'critFailure';
 
@@ -209,6 +215,21 @@ const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
 const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
 
+// A dice-notation modifier TERM (task-7-brief.md's roll specs, `parseRollSpec`,
+// `packages/engine/src/dice/parse.ts`): `0` omits the term entirely (`'1d20'` alone is valid dice
+// notation — a redundant `+0` isn't needed and `parseRollSpec` would reject a bare `-0`-shaped
+// oddity anyway), a positive value needs an explicit `+` (dice notation, unlike `signed` above,
+// has no default sign to omit), and a negative value already carries its own `-`.
+const modifierTerm = (n: number): string => (n === 0 ? '' : n > 0 ? `+${n}` : `${n}`);
+
+type D20RollKind = 'check' | 'save' | 'skill' | 'attackToHit' | 'spellAttack';
+
+// The scoped `t()` shape every roll handler below accepts (same "caller passes its own template-
+// scoped `t()`" convention `AbilityScoresStepComponent.onRollAll` documents — `LiveAnnouncer`
+// needs the resolved STRING right now, which only a scoped `t()` call, not a raw key, both
+// resolves correctly and stays visible to the i18n key checker).
+type ScopedT = (key: string, params?: Record<string, unknown>) => string;
+
 /**
  * `/c/:id/play` — the read-only Play tab (plan-5 task-10-brief.md). Every number comes straight off
  * `CharacterStore.sheet()`; nothing here recomputes anything the engine already derived. Inputs
@@ -236,6 +257,7 @@ const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
     SheetSectionComponent,
     StatTileComponent,
     DerivedPopoverDirective,
+    RollLogPanelComponent,
   ],
   // `AddItemDialogComponent`/`CustomItemDialogComponent`/`ItemRemoveConfirmComponent` (task-5-
   // brief.md) never appear in `imports` above — same "opened only via `DialogService.open()`,
@@ -252,9 +274,18 @@ export class PlayTabComponent {
   private readonly markdownService = inject(MarkdownService);
   private readonly toastService = inject(ToastService);
   private readonly dialogService = inject(DialogService);
+  private readonly rollLogService = inject(RollLogService);
+  private readonly liveAnnouncer = inject(LiveAnnouncer);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;
+
+  // The roll-log panel's advantage/disadvantage toggle (task-7-brief.md) — a two-way `model()`
+  // bound to `RollLogPanelComponent`'s own `advantageMode` (`[(advantageMode)]` in the template):
+  // the panel owns the toggle UI, this component owns reading the CURRENT mode when a d20 roll
+  // fires and resetting it back to `'normal'` right after (see `performD20Roll`) — "applies to the
+  // NEXT roll" is a one-shot consumption, not a sticky setting.
+  protected readonly advantageMode = signal<AdvantageMode>('normal');
 
   // `HpResult.deathSaves` (`derive/hp.ts`) carries only the two running counts, no "max" — but
   // the cap itself IS engine data (`reduce/facts.ts`'s `DEATH_SAVE_MAX`, a doc-02
@@ -1018,5 +1049,88 @@ export class PlayTabComponent {
       level: spell?.level ?? 0,
       concentration: spell?.concentration ?? false,
     };
+  }
+
+  // --- Dice roller (task-7-brief.md) ------------------------------------------------------------
+
+  // Every tap-to-roll affordance below uses the ROW'S ALREADY-DERIVED total as the roll's
+  // modifier — never recomputed here (task-7-brief.md: "your tap-to-roll uses the row's already-
+  // derived total ... NEVER recomputing"). `1d20` (or, under advantage/disadvantage,
+  // `2d20kh1`/`2d20kl1` — the engine's own keep semantics, `packages/engine/src/dice/parse.ts`)
+  // plus that modifier is the ENTIRE spec; `roll()`/`cryptoRng` do the actual rolling.
+  private performD20Roll(
+    kind: D20RollKind,
+    params: Record<string, unknown>,
+    modifier: number,
+    t: ScopedT,
+  ): void {
+    const mode = this.advantageMode();
+    const diceTerm = mode === 'adv' ? '2d20kh1' : mode === 'dis' ? '2d20kl1' : '1d20';
+    const spec = parseRollSpec(`${diceTerm}${modifierTerm(modifier)}`);
+    const result = roll(spec, cryptoRng);
+
+    this.rollLogService.add({
+      labelKey: `sheet.roll.entries.${kind}`,
+      params,
+      dice: result.dice,
+      modifier,
+      total: result.total,
+      ...(mode !== 'normal' ? { advantage: mode } : {}),
+    });
+    // One-shot: advantage/disadvantage applies to exactly the roll that just consumed it (task-7-
+    // brief.md: "applies to the NEXT d20 roll"), then the panel's toggle group reflects Normal
+    // again via this same two-way-bound signal.
+    this.advantageMode.set('normal');
+    void this.liveAnnouncer.announce(
+      t(`sheet.roll.announce.${kind}`, { ...params, total: result.total }),
+    );
+  }
+
+  protected onRollAbilityCheck(row: AbilityRow, t: ScopedT): void {
+    this.performD20Roll('check', { name: row.label }, row.mod, t);
+  }
+
+  protected onRollAbilitySave(row: AbilityRow, t: ScopedT): void {
+    this.performD20Roll('save', { name: row.label }, row.save.value, t);
+  }
+
+  protected onRollSkill(skillRow: SkillRow, t: ScopedT): void {
+    this.performD20Roll('skill', { name: skillRow.label }, skillRow.total.value, t);
+  }
+
+  protected onRollAttackToHit(attack: AttackRow & { name: string }, t: ScopedT): void {
+    this.performD20Roll('attackToHit', { name: attack.name }, attack.toHit.value, t);
+  }
+
+  protected onRollSpellAttack(block: SpellcastingBlock, t: ScopedT): void {
+    this.performD20Roll(
+      'spellAttack',
+      { name: this.resolveName(block.classId) },
+      block.attack.value,
+      t,
+    );
+  }
+
+  // Damage never takes advantage/disadvantage (a d20-only mechanic) and its dice come straight
+  // from the row's OWN dice string (task-7-brief.md: "attack damage rolls parse the row's dice
+  // string via parseRollSpec + bonus") — `attack.damage.dice` is pure dice notation (no baked-in
+  // modifier), so the bonus is added programmatically to the parsed roll's own total rather than
+  // string-concatenated into the spec.
+  protected onRollAttackDamage(attack: AttackRow & { name: string }, t: ScopedT): void {
+    const spec = parseRollSpec(attack.damage.dice);
+    const result = roll(spec, cryptoRng);
+    const bonus = attack.damage.bonus.value;
+    const total = result.total + bonus;
+
+    this.rollLogService.add({
+      labelKey: 'sheet.roll.entries.attackDamage',
+      params: { name: attack.name },
+      dice: result.dice,
+      modifier: bonus,
+      total,
+    });
+    void this.liveAnnouncer.announce(
+      t('sheet.roll.announce.attackDamage', { name: attack.name, total }),
+    );
   }
 }

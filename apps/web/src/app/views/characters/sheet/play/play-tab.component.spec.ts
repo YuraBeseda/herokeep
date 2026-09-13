@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { propose, type Sheet } from '@hk/engine';
@@ -12,6 +13,7 @@ import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { RollLogService } from '@shared/services/roll-log/roll-log.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
@@ -1680,5 +1682,254 @@ describe('PlayTabComponent — rest controls', () => {
     await fixture.whenStable();
 
     expect(characterStore.events().length).toBe(eventsBefore);
+  });
+});
+
+// task-7-brief.md: tap-to-roll affordances on ability/save/skill/attack/spell-attack rows, all
+// using the ROW'S already-derived total as the modifier (never recomputed here), an advantage/
+// disadvantage toggle in the roll-log panel's header that applies to exactly the next d20 roll,
+// and every roll both logged (`RollLogService`) and announced (CDK `LiveAnnouncer`).
+describe('PlayTabComponent — dice roller and roll log', () => {
+  beforeEach(async () => {
+    // Same locale-leak guard every other describe block in this file documents.
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+    vi.restoreAllMocks();
+  });
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  function abilityCardFor(compiled: HTMLElement, label: string): HTMLElement {
+    const cards = Array.from(compiled.querySelectorAll<HTMLElement>('.play-tab__ability'));
+    const card = cards.find(
+      (c) => c.querySelector('.hk-card__header')?.textContent?.trim() === label,
+    );
+    if (!card) throw new Error(`no ability card matching "${label}"`);
+    return card;
+  }
+
+  function skillRowFor(compiled: HTMLElement, label: string): HTMLElement {
+    const rows = Array.from(compiled.querySelectorAll<HTMLElement>('.play-tab__skill'));
+    const row = rows.find(
+      (r) => r.querySelector('.play-tab__skill-name')?.textContent?.trim() === label,
+    );
+    if (!row) throw new Error(`no skill row matching "${label}"`);
+    return row;
+  }
+
+  /** Same scripting technique `rest-dialog.component.spec.ts` documents in full — narrowed to the
+   * EXACT `Uint32Array` length-1 shape `cryptoRng` passes, so `uuidv7()`'s own entropy draw falls
+   * through to the real `crypto.getRandomValues` untouched. Consumed in call order. */
+  function scriptRolls(targets: { value: number; sides: number }[]): void {
+    let i = 0;
+    const real = crypto.getRandomValues.bind(crypto) as (array: unknown) => unknown;
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation(((array: unknown) => {
+      if (array instanceof Uint32Array && array.length === 1) {
+        const t = targets[i++];
+        const frac = t ? (t.value - 0.5) / t.sides : 0;
+        array[0] = Math.floor(frac * 2 ** 32);
+        return array;
+      }
+      return real(array);
+    }) as typeof crypto.getRandomValues);
+  }
+
+  it('a skill roll uses 1d20 + the derived total exactly, logs it, and announces it', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const athleticsTotal = characterStore.sheet()!.skills['athletics'].total.value;
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const announceSpy = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
+
+    scriptRolls([{ value: 14, sides: 20 }]);
+    const athleticsRow = skillRowFor(compiled, 'Athletics');
+    buttonNamed(athleticsRow, charactersEn.sheet.roll.skill).click();
+    TestBed.tick();
+
+    const rollLogService = TestBed.inject(RollLogService);
+    expect(rollLogService.entries()).toHaveLength(1);
+    const [entry] = rollLogService.entries();
+    expect(entry).toMatchObject({
+      labelKey: 'sheet.roll.entries.skill',
+      params: { name: 'Athletics' },
+      dice: [{ sides: 20, value: 14, kept: true }],
+      modifier: athleticsTotal,
+      total: 14 + athleticsTotal,
+    });
+    expect(entry?.advantage).toBeUndefined();
+    expect(entry?.manual).toBeUndefined();
+
+    expect(announceSpy).toHaveBeenCalledTimes(1);
+    expect(announceSpy.mock.calls[0]?.[0] as string).toContain(String(14 + athleticsTotal));
+  });
+
+  it('an ability check uses the plain mod, and a save uses the derived save total', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const strMod = characterStore.sheet()!.abilities['str'].mod;
+    const strSave = characterStore.sheet()!.abilities['str'].save.value;
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const rollLogService = TestBed.inject(RollLogService);
+
+    // ONE `scriptRolls` call covering both rolls in consumption order (`getRandomValues` is only
+    // ever spied ONCE per test here — re-spying an already-spied `crypto.getRandomValues` would
+    // capture the mock itself as "real", not the native implementation, and recurse).
+    scriptRolls([
+      { value: 9, sides: 20 },
+      { value: 3, sides: 20 },
+    ]);
+
+    buttonNamed(abilityCardFor(compiled, 'Strength'), charactersEn.sheet.roll.check).click();
+    TestBed.tick();
+    expect(rollLogService.entries()[0]).toMatchObject({
+      labelKey: 'sheet.roll.entries.check',
+      modifier: strMod,
+      total: 9 + strMod,
+    });
+
+    buttonNamed(abilityCardFor(compiled, 'Strength'), charactersEn.sheet.roll.save).click();
+    TestBed.tick();
+    expect(rollLogService.entries()[0]).toMatchObject({
+      labelKey: 'sheet.roll.entries.save',
+      modifier: strSave,
+      total: 3 + strSave,
+    });
+  });
+
+  it('advantage rolls 2d20 keep-highest for the next d20 roll only, then resets to Normal; disadvantage keeps lowest', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const strMod = characterStore.sheet()!.abilities['str'].mod;
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const rollLogService = TestBed.inject(RollLogService);
+
+    // ONE `scriptRolls` call covering both 2-die rolls in consumption order (see the previous
+    // describe block's own comment: re-spying an already-spied `crypto.getRandomValues` within
+    // the same test captures the MOCK itself as "real", not the native implementation).
+    scriptRolls([
+      { value: 5, sides: 20 },
+      { value: 17, sides: 20 },
+      { value: 16, sides: 20 },
+      { value: 2, sides: 20 },
+    ]);
+
+    buttonNamed(compiled, charactersEn.sheet.roll.advantage.advantage).click();
+    TestBed.tick();
+
+    buttonNamed(abilityCardFor(compiled, 'Strength'), charactersEn.sheet.roll.check).click();
+    TestBed.tick();
+
+    expect(rollLogService.entries()[0]).toMatchObject({
+      dice: [
+        { sides: 20, value: 5, kept: false },
+        { sides: 20, value: 17, kept: true },
+      ],
+      advantage: 'adv',
+      total: 17 + strMod,
+    });
+    // One-shot: back to Normal after consuming the toggle.
+    expect(
+      buttonNamed(compiled, charactersEn.sheet.roll.advantage.normal).getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    buttonNamed(compiled, charactersEn.sheet.roll.advantage.disadvantage).click();
+    TestBed.tick();
+
+    buttonNamed(abilityCardFor(compiled, 'Strength'), charactersEn.sheet.roll.check).click();
+    TestBed.tick();
+
+    expect(rollLogService.entries()[0]).toMatchObject({
+      dice: [
+        { sides: 20, value: 16, kept: false },
+        { sides: 20, value: 2, kept: true },
+      ],
+      advantage: 'dis',
+      total: 2 + strMod,
+    });
+  });
+
+  it("an attack damage roll parses the row's own dice string and adds the derived bonus, with no advantage applied", async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const longsword = characterStore.sheet()!.attacks[0];
+    expect(longsword.damage.dice).toBe('1d8'); // fixture assumption — longsword, one-handed
+    const bonus = longsword.damage.bonus.value;
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const rollLogService = TestBed.inject(RollLogService);
+
+    // Advantage set beforehand must NOT affect a damage roll (d20-only mechanic).
+    buttonNamed(compiled, charactersEn.sheet.roll.advantage.advantage).click();
+    TestBed.tick();
+
+    scriptRolls([{ value: 6, sides: 8 }]);
+    const attackRow = compiled.querySelector<HTMLElement>('.play-tab__attacks tbody tr')!;
+    buttonNamed(attackRow, charactersEn.sheet.roll.attackDamage).click();
+    TestBed.tick();
+
+    const [entry] = rollLogService.entries();
+    expect(entry).toMatchObject({
+      labelKey: 'sheet.roll.entries.attackDamage',
+      dice: [{ sides: 8, value: 6, kept: true }],
+      modifier: bonus,
+      total: 6 + bonus,
+    });
+    expect(entry?.advantage).toBeUndefined();
+    // The advantage toggle is untouched by a damage roll (never consumed).
+    expect(
+      buttonNamed(compiled, charactersEn.sheet.roll.advantage.advantage).getAttribute(
+        'aria-pressed',
+      ),
+    ).toBe('true');
+  });
+
+  it('a manual log entry appended through the panel is flagged manual and carries the typed total', async () => {
+    await seedFighter('Ivan');
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const amountInput = compiled.querySelector<HTMLInputElement>(
+      '.roll-log-panel__manual input[type="number"]',
+    )!;
+    amountInput.value = '11';
+    amountInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+
+    buttonNamed(compiled, charactersEn.sheet.roll.manual.add).click();
+    TestBed.tick();
+
+    const rollLogService = TestBed.inject(RollLogService);
+    expect(rollLogService.entries()[0]).toMatchObject({ total: 11, manual: true });
   });
 });

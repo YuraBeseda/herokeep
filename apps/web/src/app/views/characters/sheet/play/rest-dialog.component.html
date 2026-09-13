@@ -37,14 +37,15 @@
       <ul class="rest-dialog__rolls">
         @for (r of rolls(); track $index) {
           <li class="rest-dialog__die rest-dialog__die--kept">
-            {{
-              t('characters.sheet.rest.dialog.rolled', {
-                className: r.className,
-                rolled: r.rolled,
-                die: r.die,
-                healed: r.healed,
-              })
-            }}
+            <hk-dice-result [dice]="[{ sides: r.die, value: r.rolled, kept: true }]" />
+            <span class="rest-dialog__healed">
+              {{
+                t('characters.sheet.rest.dialog.healedEntry', {
+                  className: r.className,
+                  healed: r.healed,
+                })
+              }}
+            </span>
           </li>
         }
       </ul>

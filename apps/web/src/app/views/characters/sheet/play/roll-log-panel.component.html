@@ -1,0 +1,104 @@
+<hk-sheet-section
+  [titleKey]="'characters.sheet.roll.title'"
+  [collapsible]="true"
+  class="roll-log-panel"
+>
+  <ng-container *transloco="let t; read: 'characters'">
+    <div
+      class="roll-log-panel__advantage"
+      role="group"
+      [attr.aria-label]="t('sheet.roll.advantageGroup')"
+    >
+      <button
+        hk-button
+        type="button"
+        [variant]="advantageMode() === 'normal' ? 'primary' : 'ghost'"
+        [attr.aria-pressed]="advantageMode() === 'normal'"
+        (click)="setAdvantageMode('normal')"
+      >
+        {{ t('sheet.roll.advantage.normal') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        [variant]="advantageMode() === 'adv' ? 'primary' : 'ghost'"
+        [attr.aria-pressed]="advantageMode() === 'adv'"
+        (click)="setAdvantageMode('adv')"
+      >
+        {{ t('sheet.roll.advantage.advantage') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        [variant]="advantageMode() === 'dis' ? 'primary' : 'ghost'"
+        [attr.aria-pressed]="advantageMode() === 'dis'"
+        (click)="setAdvantageMode('dis')"
+      >
+        {{ t('sheet.roll.advantage.disadvantage') }}
+      </button>
+    </div>
+
+    <div class="roll-log-panel__manual">
+      <hk-number-field
+        [labelKey]="'characters.sheet.roll.manual.amountLabel'"
+        [step]="1"
+        [ngModel]="manualAmount()"
+        (ngModelChange)="onManualAmountChange($event)"
+      />
+      <label class="roll-log-panel__manual-label">
+        <span class="visually-hidden">{{ t('sheet.roll.manual.labelLabel') }}</span>
+        <select (change)="onManualLabelChange($any($event.target).value)">
+          @for (option of manualLabelOptions; track option.id) {
+            <option [value]="option.id" [selected]="option.id === manualLabelId()">
+              {{ t(option.labelKey) }}
+            </option>
+          }
+        </select>
+      </label>
+      <button
+        hk-button
+        type="button"
+        [variant]="'ghost'"
+        [disabled]="manualAmount() === null"
+        (click)="onAddManual(t)"
+      >
+        {{ t('sheet.roll.manual.add') }}
+      </button>
+    </div>
+
+    @if (entries().length > 0) {
+      <button
+        hk-button
+        type="button"
+        [variant]="'ghost'"
+        class="roll-log-panel__clear"
+        (click)="onClear()"
+      >
+        {{ t('sheet.roll.clear') }}
+      </button>
+      <ul class="roll-log-panel__entries">
+        @for (entry of entries(); track entry.id) {
+          <li class="roll-log-panel__entry">
+            <span class="roll-log-panel__entry-label">
+              {{ t(entry.labelKey, entry.params) }}
+              @if (entry.advantage === 'adv') {
+                <span class="roll-log-panel__entry-tag">{{
+                  t('sheet.roll.advantage.advantage')
+                }}</span>
+              } @else if (entry.advantage === 'dis') {
+                <span class="roll-log-panel__entry-tag">{{
+                  t('sheet.roll.advantage.disadvantage')
+                }}</span>
+              } @else if (entry.manual) {
+                <span class="roll-log-panel__entry-tag">{{ t('sheet.roll.manualTag') }}</span>
+              }
+            </span>
+            <hk-dice-result [dice]="entry.dice" [modifier]="entry.modifier" [total]="entry.total" />
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="roll-log-panel__empty">{{ t('sheet.roll.empty') }}</p>
+    }
+  </ng-container>
+</hk-sheet-section>
