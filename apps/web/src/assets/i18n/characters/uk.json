@@ -118,6 +118,111 @@
       "continue": "Далі"
     }
   },
+  "sheet": {
+    "tabs": {
+      "play": "Гра",
+      "build": "Білд",
+      "timeline": "Хроніка"
+    },
+    "notFound": {
+      "title": "Персонажа не знайдено",
+      "body": "Цей персонаж не існує або не вдалося завантажити його на цьому пристрої."
+    },
+    "header": {
+      "classLevel": "{class} {level}",
+      "levelOnly": "Рівень {level}"
+    },
+    "stats": {
+      "ac": "Клас броні",
+      "initiative": "Ініціатива",
+      "prof": "Бонус майстерності",
+      "passivePerception": "Пасивна уважність",
+      "speed": "Швидкість"
+    },
+    "abilities": {
+      "title": "Характеристики",
+      "score": "Значення",
+      "mod": "Модифікатор",
+      "save": "Рятівний кидок"
+    },
+    "skills": {
+      "title": "Навички",
+      "proficiencyLevel": {
+        "proficient": "Володіння",
+        "expertise": "Експертиза",
+        "half": "Половина бонуса майстерності"
+      }
+    },
+    "hp": {
+      "title": "Очки здоров'я",
+      "current": "Поточні",
+      "max": "Максимум",
+      "temp": "Тимчасові",
+      "hitDice": "Кістки хітів",
+      "hitDiceEntry": "{class}: к{die} × {remaining} / {total}",
+      "deathSaves": "Рятівні кидки від смерті",
+      "successes": "Успіхи",
+      "failures": "Провали",
+      "countOf": "{count} / {max}"
+    },
+    "attacks": {
+      "title": "Атаки",
+      "name": "Назва",
+      "toHit": "Бонус атаки",
+      "damage": "Шкода",
+      "mastery": "Майстерність",
+      "empty": "Зброю не споряджено."
+    },
+    "spellcasting": {
+      "title": "Заклинання",
+      "dc": "Складність рятівного кидка",
+      "attack": "Бонус атаки заклинанням",
+      "cantripsKnown": "Відомо заговорів",
+      "slotsLevel": "Комірки {level} рівня",
+      "prepared": "Підготовлені заклинання",
+      "known": "Відомі заклинання",
+      "preparedOf": "{prepared} / {max} підготовлено",
+      "empty": "Немає заклинань."
+    },
+    "resources": {
+      "title": "Ресурси",
+      "usedOf": "{used} / {max}",
+      "empty": "Немає ресурсів."
+    },
+    "actions": {
+      "title": "Дії",
+      "resourceHint": "({resource})",
+      "empty": "Немає дій."
+    },
+    "conditions": {
+      "title": "Стани",
+      "empty": "Немає станів."
+    },
+    "proficiencies": {
+      "title": "Володіння",
+      "entry": "{target} ({level})",
+      "empty": "Немає."
+    },
+    "senses": {
+      "title": "Чуття",
+      "entry": "{sense}: {range}",
+      "empty": "Немає."
+    },
+    "languages": {
+      "title": "Мови",
+      "empty": "Немає."
+    },
+    "inventory": {
+      "title": "Інвентар",
+      "entry": "{name} × {qty}",
+      "empty": "Нічого не взято."
+    },
+    "derivedPopover": {
+      "title": "Розрахунок",
+      "empty": "Немає модифікаторів.",
+      "close": "Закрити"
+    }
+  },
   "validation": {
     "generic": "Цей вибір ще недійсний.",
     "selection": {

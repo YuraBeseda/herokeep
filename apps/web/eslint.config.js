@@ -26,7 +26,11 @@ module.exports = defineConfig([
         'error',
         {
           type: 'attribute',
-          prefix: 'app',
+          // `app-*`: view/app-internal attribute directives (e.g. `appTabFocusable`). `hk-*`:
+          // design-system attribute directives meant to attach to any `hk-*` component's host
+          // (e.g. `hkDerived` — `stat-tile`'s own SKILL.md documents this exact name, mirroring
+          // `component-selector`'s existing `app`/`hk` dual-prefix allowance below).
+          prefix: ['app', 'hk'],
           style: 'camelCase',
         },
       ],

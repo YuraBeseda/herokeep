@@ -1,0 +1,246 @@
+@use 'utilities' as u;
+
+/* Phone-first single column (doc-09); a wider host gets a two-column grid of sections via a
+   container query — `container-type: inline-size` on `:host` makes the query measure this
+   component's own rendered width rather than the viewport, so it also grids correctly inside a
+   narrower split-view/desktop layout. */
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.play-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.play-tab__section {
+  display: block;
+}
+
+@container (min-width: 720px) {
+  .play-tab {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  /* Full-width sections regardless of the two-column grid. */
+  .play-tab__stats {
+    grid-column: 1 / -1;
+  }
+}
+
+.play-tab__ability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: var(--space-2);
+}
+
+.play-tab__ability-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.play-tab__ability-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.play-tab__ability-stat dt {
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.play-tab__ability-value {
+  @include u.touch-target;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.play-tab__ability-value--proficient {
+  color: var(--accent);
+}
+
+.play-tab__skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-1) var(--space-2);
+}
+
+.play-tab__skill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.play-tab__skill-total {
+  @include u.touch-target;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.play-tab__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: var(--space-2);
+}
+
+.play-tab__hp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.play-tab__subtitle {
+  color: var(--text-2);
+  font-size: 0.875rem;
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.play-tab__hit-dice-list,
+.play-tab__proficiencies,
+.play-tab__senses,
+.play-tab__languages,
+.play-tab__inventory,
+.play-tab__actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.play-tab__death-saves-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.play-tab__death-saves-list dt {
+  color: var(--text-2);
+}
+
+.play-tab__attacks {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.play-tab__attacks th,
+.play-tab__attacks td {
+  text-align: start;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-1);
+}
+
+.play-tab__spellblock + .play-tab__spellblock {
+  margin-top: var(--space-3);
+}
+
+.play-tab__spell-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: var(--space-2);
+}
+
+.play-tab__slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.play-tab__slot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.play-tab__slot-dots {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.play-tab__dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-1);
+  background: transparent;
+  display: inline-block;
+}
+
+.play-tab__dot--filled {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.play-tab__spell-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.play-tab__spell-lists ul {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.play-tab__resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2);
+}
+
+.play-tab__action-toggle {
+  @include u.touch-target;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  padding: var(--space-1) 0;
+}
+
+.play-tab__action-resource {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.play-tab__action-description {
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.play-tab__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.play-tab__empty {
+  color: var(--text-2);
+  margin: 0;
+}

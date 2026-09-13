@@ -118,6 +118,111 @@
       "continue": "Далее"
     }
   },
+  "sheet": {
+    "tabs": {
+      "play": "Игра",
+      "build": "Билд",
+      "timeline": "Хроника"
+    },
+    "notFound": {
+      "title": "Персонаж не найден",
+      "body": "Этот персонаж не существует или не удалось загрузить его на этом устройстве."
+    },
+    "header": {
+      "classLevel": "{class} {level}",
+      "levelOnly": "Уровень {level}"
+    },
+    "stats": {
+      "ac": "Класс доспеха",
+      "initiative": "Инициатива",
+      "prof": "Бонус мастерства",
+      "passivePerception": "Пассивная внимательность",
+      "speed": "Скорость"
+    },
+    "abilities": {
+      "title": "Характеристики",
+      "score": "Значение",
+      "mod": "Модификатор",
+      "save": "Спасбросок"
+    },
+    "skills": {
+      "title": "Навыки",
+      "proficiencyLevel": {
+        "proficient": "Владение",
+        "expertise": "Эксперт",
+        "half": "Половина бонуса мастерства"
+      }
+    },
+    "hp": {
+      "title": "Очки здоровья",
+      "current": "Текущие",
+      "max": "Максимум",
+      "temp": "Временные",
+      "hitDice": "Кости хитов",
+      "hitDiceEntry": "{class}: к{die} × {remaining} / {total}",
+      "deathSaves": "Спасброски от смерти",
+      "successes": "Успехи",
+      "failures": "Провалы",
+      "countOf": "{count} / {max}"
+    },
+    "attacks": {
+      "title": "Атаки",
+      "name": "Название",
+      "toHit": "Бонус атаки",
+      "damage": "Урон",
+      "mastery": "Мастерство",
+      "empty": "Оружие не экипировано."
+    },
+    "spellcasting": {
+      "title": "Заклинания",
+      "dc": "Сложность спасброска",
+      "attack": "Бонус атаки заклинанием",
+      "cantripsKnown": "Известно заговоров",
+      "slotsLevel": "Ячейки {level} уровня",
+      "prepared": "Подготовленные заклинания",
+      "known": "Известные заклинания",
+      "preparedOf": "{prepared} / {max} подготовлено",
+      "empty": "Нет заклинаний."
+    },
+    "resources": {
+      "title": "Ресурсы",
+      "usedOf": "{used} / {max}",
+      "empty": "Нет ресурсов."
+    },
+    "actions": {
+      "title": "Действия",
+      "resourceHint": "({resource})",
+      "empty": "Нет действий."
+    },
+    "conditions": {
+      "title": "Состояния",
+      "empty": "Нет состояний."
+    },
+    "proficiencies": {
+      "title": "Владения",
+      "entry": "{target} ({level})",
+      "empty": "Нет."
+    },
+    "senses": {
+      "title": "Чувства",
+      "entry": "{sense}: {range}",
+      "empty": "Нет."
+    },
+    "languages": {
+      "title": "Языки",
+      "empty": "Нет."
+    },
+    "inventory": {
+      "title": "Инвентарь",
+      "entry": "{name} × {qty}",
+      "empty": "Ничего не взято."
+    },
+    "derivedPopover": {
+      "title": "Расчёт",
+      "empty": "Нет модификаторов.",
+      "close": "Закрыть"
+    }
+  },
   "validation": {
     "generic": "Этот выбор пока недействителен.",
     "selection": {

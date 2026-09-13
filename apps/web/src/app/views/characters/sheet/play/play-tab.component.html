@@ -1,0 +1,387 @@
+@if (sheet(); as s) {
+  <div class="play-tab" *transloco="let t; read: 'characters'">
+    <!-- Ability grid: six cards, each score + mod + save (task-10-brief.md). Ability names are
+         pack-localized text, not app translation keys — `hk-card`'s `header` accepts an
+         already-translated string, unlike `hk-stat-tile`'s key-only `labelKey`. -->
+    <hk-sheet-section [titleKey]="'characters.sheet.abilities.title'" class="play-tab__section">
+      <div class="play-tab__ability-grid">
+        @for (row of abilityRows(); track row.id) {
+          <hk-card [header]="row.label" class="play-tab__ability">
+            <dl class="play-tab__ability-stats">
+              <div class="play-tab__ability-stat">
+                <dt>{{ t('sheet.abilities.score') }}</dt>
+                <dd class="play-tab__ability-value" hkDerived [hkDerivedBreakdown]="row.score">
+                  {{ row.score.value }}
+                </dd>
+              </div>
+              <div class="play-tab__ability-stat">
+                <dt>{{ t('sheet.abilities.mod') }}</dt>
+                <dd class="play-tab__ability-value">{{ signed(row.mod) }}</dd>
+              </div>
+              <div class="play-tab__ability-stat">
+                <dt>{{ t('sheet.abilities.save') }}</dt>
+                <dd
+                  class="play-tab__ability-value"
+                  [class.play-tab__ability-value--proficient]="row.saveProficient"
+                  hkDerived
+                  [hkDerivedBreakdown]="row.save"
+                >
+                  {{ signed(row.save.value) }}
+                </dd>
+              </div>
+            </dl>
+          </hk-card>
+        }
+      </div>
+    </hk-sheet-section>
+
+    <!-- Skills -->
+    <hk-sheet-section [titleKey]="'characters.sheet.skills.title'" class="play-tab__section">
+      <ul class="play-tab__skills">
+        @for (skill of skillRows(); track skill.id) {
+          <li class="play-tab__skill">
+            <span class="play-tab__skill-name">{{ skill.label }}</span>
+            @if (skill.proficiency !== 'none') {
+              <hk-chip [selected]="true">{{
+                t(skillProficiencyLabelKey(skill.proficiency))
+              }}</hk-chip>
+            }
+            <span class="play-tab__skill-total" hkDerived [hkDerivedBreakdown]="skill.total">
+              {{ signed(skill.total.value) }}
+            </span>
+          </li>
+        }
+      </ul>
+    </hk-sheet-section>
+
+    <!-- Core combat stats -->
+    <div class="play-tab__stats">
+      <hk-stat-tile
+        [labelKey]="'characters.sheet.stats.ac'"
+        [value]="s.ac.value"
+        [emphasized]="true"
+        hkDerived
+        [hkDerivedBreakdown]="s.ac"
+      />
+      <hk-stat-tile
+        [labelKey]="'characters.sheet.stats.initiative'"
+        [value]="signed(s.initiative.value)"
+        hkDerived
+        [hkDerivedBreakdown]="s.initiative"
+      />
+      <hk-stat-tile [labelKey]="'characters.sheet.stats.prof'" [value]="signed(s.prof)" />
+      <hk-stat-tile
+        [labelKey]="'characters.sheet.stats.passivePerception'"
+        [value]="s.passivePerception"
+      />
+      @for (speed of speedRows(); track speed.mode) {
+        <hk-stat-tile
+          [labelKey]="'characters.sheet.stats.speed'"
+          [value]="speed.value.value"
+          [sub]="speed.mode"
+          hkDerived
+          [hkDerivedBreakdown]="speed.value"
+        />
+      }
+    </div>
+
+    <!-- HP, hit dice, death saves -->
+    <hk-sheet-section [titleKey]="'characters.sheet.hp.title'" class="play-tab__section">
+      <div class="play-tab__hp-stats">
+        <hk-stat-tile [labelKey]="'characters.sheet.hp.current'" [value]="s.hp.current" />
+        <hk-stat-tile
+          [labelKey]="'characters.sheet.hp.max'"
+          [value]="s.hp.max.value"
+          hkDerived
+          [hkDerivedBreakdown]="s.hp.max"
+        />
+        <hk-stat-tile [labelKey]="'characters.sheet.hp.temp'" [value]="s.hp.temp" />
+      </div>
+      <div class="play-tab__hit-dice">
+        <h3 class="play-tab__subtitle">{{ t('sheet.hp.hitDice') }}</h3>
+        <ul class="play-tab__hit-dice-list">
+          @for (entry of hitDiceRows(); track entry.classId) {
+            <li>
+              {{
+                t('sheet.hp.hitDiceEntry', {
+                  class: entry.className,
+                  die: entry.die,
+                  remaining: entry.total - entry.spent,
+                  total: entry.total,
+                })
+              }}
+            </li>
+          }
+        </ul>
+      </div>
+      <div class="play-tab__death-saves">
+        <h3 class="play-tab__subtitle">{{ t('sheet.hp.deathSaves') }}</h3>
+        <dl class="play-tab__death-saves-list">
+          <div>
+            <dt>{{ t('sheet.hp.successes') }}</dt>
+            <dd>
+              {{ t('sheet.hp.countOf', { count: s.hp.deathSaves.successes, max: maxDeathSaves }) }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ t('sheet.hp.failures') }}</dt>
+            <dd>
+              {{ t('sheet.hp.countOf', { count: s.hp.deathSaves.failures, max: maxDeathSaves }) }}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </hk-sheet-section>
+
+    <!-- Attacks -->
+    <hk-sheet-section [titleKey]="'characters.sheet.attacks.title'" class="play-tab__section">
+      @if (attacks().length > 0) {
+        <table class="play-tab__attacks">
+          <thead>
+            <tr>
+              <th>{{ t('sheet.attacks.name') }}</th>
+              <th>{{ t('sheet.attacks.toHit') }}</th>
+              <th>{{ t('sheet.attacks.damage') }}</th>
+              <th>{{ t('sheet.attacks.mastery') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (attack of attacks(); track attack.instanceId) {
+              <tr>
+                <td>{{ attack.name }}</td>
+                <td hkDerived [hkDerivedBreakdown]="attack.toHit">
+                  {{ signed(attack.toHit.value) }}
+                </td>
+                <td hkDerived [hkDerivedBreakdown]="attack.damage.bonus">
+                  {{ attack.damage.dice }} {{ signed(attack.damage.bonus.value) }}
+                </td>
+                <td>{{ attack.mastery }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.attacks.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Spellcasting -->
+    <hk-sheet-section [titleKey]="'characters.sheet.spellcasting.title'" class="play-tab__section">
+      @if (spellBlocks().length > 0) {
+        @for (block of spellBlocks(); track block.classId) {
+          <div class="play-tab__spellblock">
+            <div class="play-tab__spell-stats">
+              <hk-stat-tile
+                [labelKey]="'characters.sheet.spellcasting.dc'"
+                [value]="block.dc.value"
+                hkDerived
+                [hkDerivedBreakdown]="block.dc"
+              />
+              <hk-stat-tile
+                [labelKey]="'characters.sheet.spellcasting.attack'"
+                [value]="signed(block.attack.value)"
+                hkDerived
+                [hkDerivedBreakdown]="block.attack"
+              />
+              @if (block.cantripsKnown !== undefined) {
+                <hk-stat-tile
+                  [labelKey]="'characters.sheet.spellcasting.cantripsKnown'"
+                  [value]="block.cantripsKnown"
+                />
+              }
+            </div>
+            <div class="play-tab__slots">
+              @for (slot of block.slotRows; track slot.level) {
+                <div class="play-tab__slot-row">
+                  <span class="play-tab__slot-label">{{
+                    t('sheet.spellcasting.slotsLevel', { level: slot.level })
+                  }}</span>
+                  <span class="play-tab__slot-dots">
+                    @for (filled of slot.dots; track $index) {
+                      <span
+                        class="play-tab__dot"
+                        [class.play-tab__dot--filled]="filled"
+                        aria-hidden="true"
+                      ></span>
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+            @if (block.preparedMax !== undefined) {
+              <p class="play-tab__prepared-count">
+                {{
+                  t('sheet.spellcasting.preparedOf', {
+                    prepared: block.preparedNames.length,
+                    max: block.preparedMax,
+                  })
+                }}
+              </p>
+            }
+            <div class="play-tab__spell-lists">
+              <div>
+                <h3 class="play-tab__subtitle">{{ t('sheet.spellcasting.known') }}</h3>
+                <ul>
+                  @for (name of block.knownNames; track $index) {
+                    <li>{{ name }}</li>
+                  }
+                </ul>
+              </div>
+              @if (block.preparedNames.length > 0) {
+                <div>
+                  <h3 class="play-tab__subtitle">{{ t('sheet.spellcasting.prepared') }}</h3>
+                  <ul>
+                    @for (name of block.preparedNames; track $index) {
+                      <li>{{ name }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.spellcasting.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Resources -->
+    <hk-sheet-section [titleKey]="'characters.sheet.resources.title'" class="play-tab__section">
+      @if (resources().length > 0) {
+        <div class="play-tab__resources">
+          @for (resourceRow of resources(); track resourceRow.id) {
+            <hk-card [header]="resourceRow.name" class="play-tab__resource">
+              <span
+                class="play-tab__resource-count"
+                hkDerived
+                [hkDerivedBreakdown]="resourceRow.max"
+              >
+                {{
+                  t('sheet.resources.usedOf', {
+                    used: resourceRow.used,
+                    max: resourceRow.max.value,
+                  })
+                }}
+              </span>
+            </hk-card>
+          }
+        </div>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.resources.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Actions -->
+    <hk-sheet-section
+      [titleKey]="'characters.sheet.actions.title'"
+      [collapsible]="true"
+      class="play-tab__section"
+    >
+      @if (actions().length > 0) {
+        <ul class="play-tab__actions">
+          @for (action of actions(); track action.id) {
+            <li class="play-tab__action">
+              <button
+                type="button"
+                class="play-tab__action-toggle"
+                [attr.aria-expanded]="isActionExpanded(action.id)"
+                (click)="toggleAction(action.id)"
+              >
+                {{ action.name }}
+                @if (action.resource) {
+                  <span class="play-tab__action-resource">
+                    {{
+                      t('sheet.actions.resourceHint', { resource: resolveName(action.resource) })
+                    }}
+                  </span>
+                }
+              </button>
+              @if (isActionExpanded(action.id)) {
+                <div
+                  class="play-tab__action-description"
+                  [innerHTML]="actionDescriptionHtml.value()"
+                ></div>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.actions.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Conditions -->
+    <hk-sheet-section [titleKey]="'characters.sheet.conditions.title'" class="play-tab__section">
+      @if (conditions().length > 0) {
+        <div class="play-tab__conditions">
+          @for (condition of conditions(); track condition.id) {
+            <hk-chip [selected]="true">{{ condition.name }}</hk-chip>
+          }
+        </div>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.conditions.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Proficiencies / senses / languages -->
+    <hk-sheet-section
+      [titleKey]="'characters.sheet.proficiencies.title'"
+      [collapsible]="true"
+      class="play-tab__section"
+    >
+      @if (proficiencyRows().length > 0) {
+        <ul class="play-tab__proficiencies">
+          @for (p of proficiencyRows(); track p.kind + '|' + p.target) {
+            <li>{{ t('sheet.proficiencies.entry', { target: p.target, level: p.level }) }}</li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.proficiencies.empty') }}</p>
+      }
+
+      <h3 class="play-tab__subtitle">{{ t('sheet.senses.title') }}</h3>
+      @if (senseRows().length > 0) {
+        <ul class="play-tab__senses">
+          @for (sense of senseRows(); track sense.sense) {
+            <li>{{ t('sheet.senses.entry', { sense: sense.sense, range: sense.range }) }}</li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.senses.empty') }}</p>
+      }
+
+      <h3 class="play-tab__subtitle">{{ t('sheet.languages.title') }}</h3>
+      @if (languageRows().length > 0) {
+        <ul class="play-tab__languages">
+          @for (language of languageRows(); track language) {
+            <li>{{ language }}</li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.languages.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Inventory -->
+    <hk-sheet-section
+      [titleKey]="'characters.sheet.inventory.title'"
+      [collapsible]="true"
+      class="play-tab__section"
+    >
+      @if (inventoryRows().length > 0) {
+        <ul class="play-tab__inventory">
+          @for (entry of inventoryRows(); track entry.row.instanceId) {
+            <li>
+              {{ t('sheet.inventory.entry', { name: entry.name, qty: entry.row.qty }) }}
+              @if (entry.row.equipped) {
+                <hk-chip [selected]="true">{{ t('wizard.equipment.equipped') }}</hk-chip>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.inventory.empty') }}</p>
+      }
+    </hk-sheet-section>
+  </div>
+}

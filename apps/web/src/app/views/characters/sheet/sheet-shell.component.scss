@@ -1,0 +1,59 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.sheet-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sheet-shell__not-found {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--text-2);
+}
+
+.sheet-shell__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sheet-shell__portrait {
+  @include u.touch-target;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sheet-shell__identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sheet-shell__name {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.sheet-shell__class-line {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.sheet-shell__tabs {
+  display: block;
+}

@@ -118,6 +118,111 @@
       "continue": "Continue"
     }
   },
+  "sheet": {
+    "tabs": {
+      "play": "Play",
+      "build": "Build",
+      "timeline": "Timeline"
+    },
+    "notFound": {
+      "title": "Character not found",
+      "body": "This character doesn't exist, or couldn't be loaded on this device."
+    },
+    "header": {
+      "classLevel": "{class} {level}",
+      "levelOnly": "Level {level}"
+    },
+    "stats": {
+      "ac": "Armor Class",
+      "initiative": "Initiative",
+      "prof": "Proficiency bonus",
+      "passivePerception": "Passive Perception",
+      "speed": "Speed"
+    },
+    "abilities": {
+      "title": "Ability scores",
+      "score": "Score",
+      "mod": "Modifier",
+      "save": "Save"
+    },
+    "skills": {
+      "title": "Skills",
+      "proficiencyLevel": {
+        "proficient": "Proficient",
+        "expertise": "Expertise",
+        "half": "Half proficiency"
+      }
+    },
+    "hp": {
+      "title": "Hit points",
+      "current": "Current",
+      "max": "Max",
+      "temp": "Temporary",
+      "hitDice": "Hit dice",
+      "hitDiceEntry": "{class}: d{die} × {remaining} / {total}",
+      "deathSaves": "Death saves",
+      "successes": "Successes",
+      "failures": "Failures",
+      "countOf": "{count} / {max}"
+    },
+    "attacks": {
+      "title": "Attacks",
+      "name": "Name",
+      "toHit": "To hit",
+      "damage": "Damage",
+      "mastery": "Mastery",
+      "empty": "No weapons equipped."
+    },
+    "spellcasting": {
+      "title": "Spellcasting",
+      "dc": "Save DC",
+      "attack": "Attack bonus",
+      "cantripsKnown": "Cantrips known",
+      "slotsLevel": "Level {level} slots",
+      "prepared": "Prepared spells",
+      "known": "Known spells",
+      "preparedOf": "{prepared} / {max} prepared",
+      "empty": "No spellcasting."
+    },
+    "resources": {
+      "title": "Resources",
+      "usedOf": "{used} / {max}",
+      "empty": "No resources."
+    },
+    "actions": {
+      "title": "Actions",
+      "resourceHint": "({resource})",
+      "empty": "No actions."
+    },
+    "conditions": {
+      "title": "Conditions",
+      "empty": "No conditions."
+    },
+    "proficiencies": {
+      "title": "Proficiencies",
+      "entry": "{target} ({level})",
+      "empty": "None."
+    },
+    "senses": {
+      "title": "Senses",
+      "entry": "{sense}: {range}",
+      "empty": "None."
+    },
+    "languages": {
+      "title": "Languages",
+      "empty": "None."
+    },
+    "inventory": {
+      "title": "Inventory",
+      "entry": "{name} × {qty}",
+      "empty": "Nothing carried."
+    },
+    "derivedPopover": {
+      "title": "Breakdown",
+      "empty": "No modifiers.",
+      "close": "Close"
+    }
+  },
   "validation": {
     "generic": "This selection isn't valid yet.",
     "selection": {

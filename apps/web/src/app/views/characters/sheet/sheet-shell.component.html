@@ -1,0 +1,27 @@
+<div class="sheet-shell" *transloco="let t; read: 'characters'">
+  @if (!found) {
+    <div class="sheet-shell__not-found">
+      <h1>{{ t('sheet.notFound.title') }}</h1>
+      <p>{{ t('sheet.notFound.body') }}</p>
+    </div>
+  } @else if (sheet(); as s) {
+    <header class="sheet-shell__header">
+      <div class="sheet-shell__portrait" aria-hidden="true">{{ initials() }}</div>
+      <div class="sheet-shell__identity">
+        <h1 class="sheet-shell__name">{{ s.name }}</h1>
+        <p class="sheet-shell__class-line">{{ classLine(t) }}</p>
+      </div>
+    </header>
+
+    <hk-tabs
+      class="sheet-shell__tabs"
+      [tabs]="tabsFor(t)"
+      [selected]="activeTabId()"
+      (selectedChange)="onTabSelected($event)"
+    />
+
+    <router-outlet />
+  } @else {
+    <hk-skeleton [lines]="6" />
+  }
+</div>
