@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { ENGINE_VERSION, reduce } from '@hk/engine';
-import { parseHeroManifest, type HeroBundleImage } from '@hk/protocol';
+import { HeroBundleImageSchema, parseHeroManifest, type HeroBundleImage } from '@hk/protocol';
 import { APP_VERSION } from '@app/version';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
@@ -133,8 +133,17 @@ export class HeroWriterService {
     const resolved: ResolvedImage[] = [];
     for (const row of rows) {
       if (!row) continue;
+      // Fix-wave review, Important/merge-blocker finding 1: `BlobRow.mime` is stored as a plain
+      // `string` (`BlobsRepository`/`dexie.db.ts`), but `HeroBundleImage.mime` is now narrowed to
+      // the exact set doc-07 ever stores (`@hk/protocol`'s `HeroBundleImageSchema`) — re-validated
+      // here, reusing that same schema field rather than a second copy of the allowed list. A row
+      // whose mime somehow isn't one of those (corrupted/legacy local data — nothing on today's
+      // write path can actually produce this) is SKIPPED, same tolerance this method already
+      // documents for a hash with no local row at all, rather than failing the whole export.
+      const mime = HeroBundleImageSchema.shape.mime.safeParse(row.mime);
+      if (!mime.success) continue;
       const kind = row.kind ?? kindByHash.get(row.hash) ?? 'portrait';
-      resolved.push({ hash: row.hash, mime: row.mime, size: row.size, kind, bytes: row.bytes });
+      resolved.push({ hash: row.hash, mime: mime.data, size: row.size, kind, bytes: row.bytes });
     }
     return resolved;
   }

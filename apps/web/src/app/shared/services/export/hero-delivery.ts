@@ -38,16 +38,23 @@ function isUserAbort(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError';
 }
 
+/** `description` (fix-wave review, minor finding 5): the save-picker's file-type label — shown by
+ * the browser/OS chrome itself, so it must be LOCALIZED text, never a bare English literal. This
+ * plain, DI-free function has no Transloco access of its own (see this file's class doc — no
+ * TestBed at all), so the caller resolves the string first (`SheetShellComponent.onExport`, via
+ * the injected `TranslocoService`) and passes it in; the English default here only covers a
+ * caller that doesn't (there is exactly one real caller today, and it always passes one). */
 export async function deliverHeroBundle(
   blob: Blob,
   fileName: string,
+  description = 'Herokeep character',
 ): Promise<HeroDeliveryOutcome> {
   const showSaveFilePicker = (window as unknown as WindowWithSaveFilePicker).showSaveFilePicker;
   if (typeof showSaveFilePicker === 'function') {
     try {
       const handle = await showSaveFilePicker({
         suggestedName: fileName,
-        types: [{ description: 'Herokeep character', accept: { 'application/zip': ['.hero'] } }],
+        types: [{ description, accept: { 'application/zip': ['.hero'] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(blob);

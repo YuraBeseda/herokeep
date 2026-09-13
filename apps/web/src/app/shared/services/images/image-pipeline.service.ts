@@ -41,7 +41,13 @@ export type PortraitBlobKind = 'portrait' | 'thumb' | 'token';
 export const PORTRAIT_LONG_EDGE = 1024;
 export const THUMB_TOKEN_SIZE = 256;
 
-const CAP_BYTES: Record<PortraitBlobKind, number> = {
+/** Exported (fix-wave review, minor finding 2): `HeroReaderService.readAndVerifyImages`
+ * (`apps/web/.../export/hero-reader.service.ts`) enforces these SAME caps on an imported bundle's
+ * image bytes — imports never go through `encodeWithinCap` above (a `.hero` bundle ships
+ * already-encoded bytes, not a raw upload to re-pipeline), so nothing on that path would otherwise
+ * stop an oversized image from being written to storage. One export, so the two enforcement sites
+ * can never drift apart. */
+export const IMAGE_BYTE_CAPS: Record<PortraitBlobKind, number> = {
   portrait: 400 * 1024,
   thumb: 64 * 1024,
   token: 64 * 1024,
@@ -167,7 +173,7 @@ export async function encodeWithinCap(
   height: number,
   encode: EncodeFn,
 ): Promise<EncodedImage & { width: number; height: number }> {
-  const cap = CAP_BYTES[kind];
+  const cap = IMAGE_BYTE_CAPS[kind];
   let w = width;
   let h = height;
   for (let round = 0; round <= MAX_DIMENSION_RETRIES; round++) {

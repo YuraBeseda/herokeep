@@ -9,7 +9,7 @@ import { parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 import { of } from 'rxjs';
-import { sha256Hex } from '@shared/services/images/image-pipeline.service';
+import { IMAGE_BYTE_CAPS, sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
@@ -17,7 +17,7 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
-import { HeroWriterService } from './hero-writer.service';
+import { extensionForMime, hexOfHash, HeroWriterService } from './hero-writer.service';
 import {
   HeroImportBadEventError,
   HeroImportBadManifestError,
@@ -91,6 +91,26 @@ function bundleFile(blob: Blob, name = 'bundle.hero'): File {
 
 function buildZip(files: Record<string, Uint8Array>): File {
   return new File([zipSync(files)], 'bundle.hero', { type: 'application/zip' });
+}
+
+/** A minimal, schema-valid `manifest.json` payload (fix-wave review specs below): every field
+ * `HeroBundleManifestSchema` requires, at an innocuous default — each new test overrides only the
+ * one or two fields it's actually exercising, same "hand-rolled zip" shape the existing "invalid
+ * events.json entry"/"schema validation" specs above already build inline. */
+function minimalManifest(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    format: 1,
+    kind: 'hero',
+    characterId: streamId,
+    name: 'X',
+    exportedAt: new Date().toISOString(),
+    engineVersion: '0.1.0',
+    appVersion: '0.1.0',
+    pins: {},
+    eventCount: 0,
+    images: [],
+    ...overrides,
+  };
 }
 
 async function clearDb(db: HkDb): Promise<void> {
@@ -361,6 +381,63 @@ describe('HeroReaderService', () => {
     const tampered = new File([zipSync(zip)], 'tampered.hero', { type: 'application/zip' });
 
     await expect(reader.import(tampered)).rejects.toBeInstanceOf(HeroImportHashMismatchError);
+  });
+
+  // --- Fix-wave review, Important/merge-blocker finding 1 -------------------------------------
+
+  it(
+    'rejects a bundle whose manifest smuggles an unsupported image mime (e.g. SVG — a stored-XSS ' +
+      'vector), and never stores the blob',
+    async () => {
+      const blobsRepository = TestBed.inject(BlobsRepository);
+      const reader = TestBed.inject(HeroReaderService);
+
+      const svgBytes = strToU8('<svg onload="alert(1)"></svg>');
+      const hash = await sha256Hex(svgBytes);
+      const manifest = minimalManifest({
+        images: [{ hash, mime: 'image/svg+xml', size: svgBytes.byteLength, kind: 'portrait' }],
+      });
+      const file = buildZip({
+        'manifest.json': strToU8(JSON.stringify(manifest)),
+        'events.json': strToU8('[]'),
+        [`images/${hexOfHash(hash)}.${extensionForMime('image/svg+xml')}`]: svgBytes,
+      });
+
+      await expect(reader.import(file)).rejects.toBeInstanceOf(HeroImportBadManifestError);
+      expect(await blobsRepository.get(hash)).toBeUndefined();
+    },
+  );
+
+  // --- Fix-wave review, minor finding 2 --------------------------------------------------------
+
+  it("rejects a bundle whose image bytes exceed its kind's byte cap", async () => {
+    const reader = TestBed.inject(HeroReaderService);
+
+    const oversizedBytes = new Uint8Array(IMAGE_BYTE_CAPS.thumb + 1).fill(7);
+    const hash = await sha256Hex(oversizedBytes);
+    const manifest = minimalManifest({
+      images: [{ hash, mime: 'image/webp', size: oversizedBytes.byteLength, kind: 'thumb' }],
+    });
+    const file = buildZip({
+      'manifest.json': strToU8(JSON.stringify(manifest)),
+      'events.json': strToU8('[]'),
+      [`images/${hexOfHash(hash)}.webp`]: oversizedBytes,
+    });
+
+    await expect(reader.import(file)).rejects.toBeInstanceOf(HeroImportBadManifestError);
+  });
+
+  it('rejects a bundle whose manifest.eventCount does not match the actual events.json length', async () => {
+    const reader = TestBed.inject(HeroReaderService);
+
+    const manifest = minimalManifest({ eventCount: 5 });
+    const goodEvent = mkEvent(uuid(41), 'character.created', createdPayload('Mismatch'));
+    const file = buildZip({
+      'manifest.json': strToU8(JSON.stringify(manifest)),
+      'events.json': strToU8(JSON.stringify([goodEvent])),
+    });
+
+    await expect(reader.import(file)).rejects.toBeInstanceOf(HeroImportBadManifestError);
   });
 
   it('imports the same bundle twice without growing the blobs table (deduped by hash)', async () => {

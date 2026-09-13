@@ -27,9 +27,20 @@ const ISO_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
  * the portrait's full-size and thumb blobs; `token` is listed for forward-compatibility — see
  * `doc-07`/design ruling 4 — but the writer never emits one today, since the token hash is always
  * identical to the thumb's, per `ImagePipelineService`'s own class doc). */
+// Fix-wave review, Important/merge-blocker finding 1 (BINDING): narrowed from a free-form
+// `z.string()` to the EXACT set doc-07's "Safety" note allows to ever be stored
+// (`ImagePipelineService`'s own `REJECTED_MIME_TYPES`/output-mime note,
+// `apps/web/.../images/image-pipeline.service.ts`) — the writer (`HeroWriterService.export`)
+// never emits anything else, so this is a pure narrowing, not a behavior change for any
+// legitimate bundle. Without it, a hand-rolled `.hero` zip could declare e.g. `image/svg+xml` for
+// an `images/` entry; `HeroReaderService` would hash-verify and store it as-is, and
+// `BlobUrlPipe`'s same-origin `blob:` URL would then serve attacker HTML/script — a stored-XSS
+// primitive. `HeroReaderService.readAndVerifyImages` re-checks this mime set independently
+// (defense in depth, in case a manifest object ever reaches it without going through
+// `parseHeroManifest`) rather than relying on this schema alone.
 export const HeroBundleImageSchema = z.strictObject({
   hash: BlobHashSchema,
-  mime: z.string().min(1).max(64),
+  mime: z.enum(['image/webp', 'image/jpeg', 'image/png']),
   size: z.int().min(0),
   kind: z.enum(['portrait', 'thumb', 'token']),
 });

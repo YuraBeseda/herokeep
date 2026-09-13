@@ -4,7 +4,10 @@ import { HkDb, type BlobRow } from './dexie.db';
 /**
  * Content-addressed blob store (portraits, etc.); `hash` is the primary key, so `put` is
  * naturally idempotent — writing the same hash twice just overwrites with (byte-identical)
- * content. Deleting a blob no longer referenced by any character is deferred to plan 6 (images).
+ * content. Nothing here ever deletes a row: plan 6 (images) shipped no reference-counting or
+ * sweep, so a blob no longer referenced by any character (a replaced/removed portrait, a deleted
+ * character) simply accumulates rather than being reclaimed. Refcount/sweep cleanup is backlogged
+ * post-1b.
  */
 @Injectable({ providedIn: 'root' })
 export class BlobsRepository {

@@ -73,4 +73,22 @@ describe('parseHeroManifest', () => {
     expect(parseHeroManifest({ ...validManifest, eventCount: -1 }).ok).toBe(false);
     expect(parseHeroManifest({ ...validManifest, pins: { 'srd-5e-2024': 'not-semver' } }).ok).toBe(false);
   });
+
+  // Fix-wave review, Important/merge-blocker finding 1 (BINDING): doc-07 only ever stores
+  // webp/jpeg/png (`ImagePipelineService`'s "Safety" note) — an SVG mime slipping through here
+  // would be a stored-XSS primitive once `HeroReaderService` writes it to `BlobsRepository` and
+  // `BlobUrlPipe` serves it back out as a same-origin `blob:` URL.
+  it('rejects an image entry whose mime is not webp/jpeg/png (e.g. a smuggled SVG — a stored-XSS vector)', () => {
+    const svgMime = parseHeroManifest({
+      ...validManifest,
+      images: [{ hash: `sha256:${'0'.repeat(64)}`, mime: 'image/svg+xml', size: 1, kind: 'portrait' }],
+    });
+    expect(svgMime.ok).toBe(false);
+
+    const gifMime = parseHeroManifest({
+      ...validManifest,
+      images: [{ hash: `sha256:${'0'.repeat(64)}`, mime: 'image/gif', size: 1, kind: 'portrait' }],
+    });
+    expect(gifMime.ok).toBe(false);
+  });
 });

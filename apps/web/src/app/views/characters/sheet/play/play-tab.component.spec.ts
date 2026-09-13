@@ -16,7 +16,7 @@ import { StoragePersistService } from '@shared/services/pwa/storage-persist.serv
 import { WakeLockService } from '@shared/services/pwa/wake-lock.service';
 import { RollLogService } from '@shared/services/roll-log/roll-log.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
-import { CharacterStore } from '@shared/stores/character.store';
+import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
@@ -394,6 +394,83 @@ describe('PlayTabComponent — HP, death saves, inspiration controls', () => {
     expect(characterStore.sheet()?.inspiration).toBe(false);
     await fixture.whenStable();
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+// Fix-wave review, minor finding 4 (BINDING): `tryPropose`/`appendDraft`'s shared `appendTx`
+// funnel is deliberately fire-and-forget (leadership/storage failures aren't this task's concern,
+// per those methods' own doc), but a `CharacterStoreNotLeaderError` rejection must still surface
+// as the existing `characters.not-leader` toast rather than an unhandled promise rejection —
+// `submitAppendTx`'s own `.catch` in `play-tab.component.ts`. `CharacterStore.appendTx` is
+// stubbed to reject directly (`vi.spyOn` on the REAL, TestBed-injected store) rather than driven
+// through an actual non-leader `LeaderService`, so each scenario below exercises exactly one
+// funnel (`tryPropose` via a propose-backed control, `appendDraft` via a hand-assembled-draft
+// control) in isolation.
+describe('PlayTabComponent — a not-leader appendTx rejection toasts instead of going unhandled', () => {
+  beforeEach(async () => {
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  it('the tryPropose funnel (inspiration toggle) shows the not-leader toast on a rejected appendTx', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const notLeaderError = new CharacterStoreNotLeaderError();
+    vi.spyOn(characterStore, 'appendTx').mockRejectedValue(notLeaderError);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    compiled.querySelector<HTMLButtonElement>('.play-tab__inspiration-toggle')!.click();
+    await pollUntil(fixture, () => showSpy.mock.calls.length > 0);
+
+    expect(showSpy).toHaveBeenCalledWith(notLeaderError.code);
+  });
+
+  it('the appendDraft funnel (ending concentration) shows the not-leader toast on a rejected appendTx', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    const notLeaderError = new CharacterStoreNotLeaderError();
+    vi.spyOn(characterStore, 'appendTx').mockRejectedValue(notLeaderError);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    // `onEndConcentration` is `protected` — called directly (same "cast to the protected surface"
+    // convention the "resourceLabel/actionLabel fall back" spec below already uses) so this
+    // scenario doesn't depend on any DOM/sheet state beyond the component existing.
+    const component = fixture.componentInstance as unknown as { onEndConcentration(): void };
+    component.onEndConcentration();
+    await pollUntil(fixture, () => showSpy.mock.calls.length > 0);
+
+    expect(showSpy).toHaveBeenCalledWith(notLeaderError.code);
   });
 });
 

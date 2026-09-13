@@ -180,15 +180,25 @@ export class SheetShellComponent {
    * save picker or share sheet — is a normal no-op, not a failure: no toast either way. Any other
    * outcome (`'saved'`/`'shared'`/`'downloaded'`) toasts success; a thrown error (a storage read
    * failure, an invalid manifest — shouldn't happen, but `HeroWriterService.export` can throw)
-   * toasts the generic failure key instead. */
-  protected async onExport(): Promise<void> {
+   * toasts the generic failure key instead.
+   *
+   * `t` (fix-wave review, minor finding 5): `deliverHeroBundle`'s save-picker file-type label is
+   * native browser/OS chrome, not this component's own template, so it needs a resolved STRING —
+   * the template passes its own scoped `t` (`*transloco="let t; read: 'characters'"`) in at click
+   * time, same "caller passes its own template-scoped `t()`" convention `play-tab.component.ts`'s
+   * `ScopedT` handlers use, rather than resolving via the injected (global, unscoped)
+   * `TranslocoService` directly. */
+  protected async onExport(
+    t: (key: string, params?: Record<string, unknown>) => string,
+  ): Promise<void> {
     const characterId = this.characterStore.streamId();
     if (!characterId || this.exporting()) return;
 
     this.exporting.set(true);
     try {
       const { blob, fileName } = await this.heroWriterService.export(characterId);
-      const outcome = await deliverHeroBundle(blob, fileName);
+      const description = t('sheet.export.pickerDescription');
+      const outcome = await deliverHeroBundle(blob, fileName, description);
       if (outcome !== 'cancelled') {
         this.toastService.show('characters.sheet.export.success');
       }

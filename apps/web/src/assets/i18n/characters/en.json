@@ -224,7 +224,8 @@
     },
     "export": {
       "success": "Character exported.",
-      "failure": "Couldn't export the character. Try again."
+      "failure": "Couldn't export the character. Try again.",
+      "pickerDescription": "Herokeep character"
     },
     "portrait": {
       "alt": "{name}'s portrait",

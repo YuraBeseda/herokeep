@@ -49,7 +49,11 @@ import { cryptoRng } from '@shared/services/engine/rng';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { WakeLockService } from '@shared/services/pwa/wake-lock.service';
 import { RollLogService } from '@shared/services/roll-log/roll-log.service';
-import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
+import {
+  CharacterStore,
+  CharacterStoreNotLeaderError,
+  type DraftEvent,
+} from '@shared/stores/character.store';
 import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
 import {
@@ -622,11 +626,14 @@ export class PlayTabComponent {
   // create-wizard's `choice-step.component.ts` uses for its own inline diagnostics — prefixed with
   // this app's `'characters.'` Transloco scope, since `ToastService.show` resolves global keys.
   // `appendTx` itself is fire-and-forget (mirrors `sheet-shell.component.ts`'s own `xpAward`
-  // submit — leadership/storage failures aren't this task's concern). Returns whether the
-  // proposal was accepted, so callers that need to reset UI state only do so on success.
+  // submit — leadership/storage failures aren't this task's concern), but its returned promise is
+  // still handed to `submitAppendTx` (fix-wave review, minor finding 4) so a `CharacterStoreNot-
+  // LeaderError` rejection surfaces as a toast instead of an unhandled promise rejection. Returns
+  // whether the proposal was accepted, so callers that need to reset UI state only do so on
+  // success.
   private tryPropose(build: () => ProposedEvent[]): boolean {
     try {
-      void this.characterStore.appendTx(build());
+      this.submitAppendTx(this.characterStore.appendTx(build()));
       return true;
     } catch (error) {
       if (!(error instanceof ProposeError)) throw error;
@@ -638,6 +645,25 @@ export class PlayTabComponent {
       this.toastService.show(`characters.${key}`);
       return false;
     }
+  }
+
+  // Fix-wave review, minor finding 4 (BINDING): `tryPropose`/`appendDraft`'s `appendTx` call is
+  // deliberately fire-and-forget (see `tryPropose`'s own doc — leadership/storage failures aren't
+  // this task's concern), but "fire-and-forget" must still mean "the rejection is observed
+  // somewhere", not "nobody ever calls `.catch`" — an un-awaited rejected promise with no handler
+  // is a genuine unhandled-rejection bug, not a deliberate no-op. The ONE rejection this component
+  // can meaningfully react to is `CharacterStoreNotLeaderError` (another tab holds the write
+  // lock) — its own `code` is already the exact i18n key `ToastService.show` expects (same
+  // `error.code` convention `characters-list.component.ts` uses), so this surfaces it as that
+  // existing toast. Any other rejection (a storage failure) is swallowed here, same "not this
+  // task's concern" scope `tryPropose`'s doc already documents — the point of this method is only
+  // to guarantee every `appendTx` promise this component starts has SOME handler attached.
+  private submitAppendTx(pending: Promise<void>): void {
+    pending.catch((error: unknown) => {
+      if (error instanceof CharacterStoreNotLeaderError) {
+        this.toastService.show(error.code);
+      }
+    });
   }
 
   // Falls back to the raw id/slug for anything the content index doesn't resolve (a proficiency
@@ -747,9 +773,11 @@ export class PlayTabComponent {
   // Every hand-assembled event this task appends goes through here — `DraftEvent`s never throw
   // (unlike `propose.*`, there's no engine-side refusal to catch), so this is a plain fire-and-
   // forget `appendTx`, same "leadership/storage failures aren't this task's concern" convention
-  // `tryPropose` documents for the propose side.
+  // `tryPropose` documents for the propose side — including routing the returned promise through
+  // the SAME `submitAppendTx` helper (fix-wave review, minor finding 4), so a not-leader rejection
+  // toasts here exactly like it does from the propose side.
   private appendDraft(drafts: DraftEvent[]): void {
-    void this.characterStore.appendTx(drafts);
+    this.submitAppendTx(this.characterStore.appendTx(drafts));
   }
 
   protected onSpendSlot(level: number): void {

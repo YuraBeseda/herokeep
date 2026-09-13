@@ -31,6 +31,22 @@ describe('deliverHeroBundle', () => {
     expect(close).toHaveBeenCalled();
   });
 
+  it('passes a caller-supplied description through to showSaveFilePicker (fix-wave review, minor finding 5: localized, never a bare English literal)', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    const close = vi.fn().mockResolvedValue(undefined);
+    const createWritable = vi.fn().mockResolvedValue({ write, close });
+    const showSaveFilePicker = vi.fn().mockResolvedValue({ createWritable });
+    Object.assign(window, { showSaveFilePicker });
+
+    await deliverHeroBundle(blob, fileName, 'Персонаж Herokeep');
+
+    expect(showSaveFilePicker).toHaveBeenCalledWith(
+      expect.objectContaining({
+        types: [expect.objectContaining({ description: 'Персонаж Herokeep' })],
+      }),
+    );
+  });
+
   it('the user cancelling the save picker (AbortError) returns "cancelled" without falling through', async () => {
     const showSaveFilePicker = vi
       .fn()

@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { reduce } from '@hk/engine';
 import {
+  HeroBundleImageSchema,
   parseEvent,
   parseHeroManifest,
   type Event,
@@ -8,7 +9,7 @@ import {
   type HeroBundleManifest,
   type PackIssue,
 } from '@hk/protocol';
-import { sha256Hex } from '@shared/services/images/image-pipeline.service';
+import { IMAGE_BYTE_CAPS, sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
@@ -167,6 +168,19 @@ export class HeroReaderService {
 
     const manifest = this.parseManifest(strFromU8(manifestBytes));
     const incomingEvents = this.parseEvents(strFromU8(eventsBytes));
+    // Fix-wave review, minor finding 2: `manifest.eventCount` is the bundle's own claim about how
+    // many events `events.json` holds — a mismatch means the bundle was hand-edited or truncated
+    // (a genuine `HeroWriterService.export` output always satisfies this trivially, since it sets
+    // `eventCount: events.length` itself), so this is a bundle-INTEGRITY check, same family as the
+    // "not valid JSON"/"not an array" checks `parseEvents` already throws for.
+    if (manifest.eventCount !== incomingEvents.length) {
+      throw new HeroImportBadManifestError([
+        {
+          path: 'manifest.eventCount',
+          message: `manifest declares eventCount ${manifest.eventCount} but events.json has ${incomingEvents.length} entries`,
+        },
+      ]);
+    }
 
     const warnings: string[] = [...this.pinWarnings(manifest)];
     const images = await this.readAndVerifyImages(zip, manifest, warnings);
@@ -286,11 +300,37 @@ export class HeroReaderService {
   ): Promise<ResolvedIncomingImage[]> {
     const resolved: ResolvedIncomingImage[] = [];
     for (const image of manifest.images) {
+      // Fix-wave review, Important/merge-blocker finding 1: defense in depth alongside the
+      // narrowed `HeroBundleImageSchema.mime` (`@hk/protocol`) — `parseHeroManifest` already
+      // rejects a non-webp/jpeg/png mime before `manifest` ever reaches here, so this only ever
+      // fires if a `HeroBundleManifest` reaches this method some other way (a future refactor, a
+      // manifest object hand-built rather than parsed). Reuses the schema's own field validator
+      // rather than a second copy of the allowed-mime list.
+      if (!HeroBundleImageSchema.shape.mime.safeParse(image.mime).success) {
+        throw new HeroImportBadManifestError([
+          { path: 'images.mime', message: `Unsupported stored image mime: ${image.mime}` },
+        ]);
+      }
       const path = `images/${hexOfHash(image.hash)}.${extensionForMime(image.mime)}`;
       const bytes = zip[path];
       if (!bytes) {
         warnings.push(`missing image data for ${image.hash} (expected ${path})`);
         continue;
+      }
+      // Fix-wave review, minor finding 2: checked BEFORE hashing — an over-cap image is rejected
+      // on its cheap byte-length alone, so a hostile bundle can't force this method to SHA-256 an
+      // arbitrarily large blob just to get rejected a moment later. `IMAGE_BYTE_CAPS`
+      // (`@shared/services/images/image-pipeline.service`) is the SAME cap the upload pipeline
+      // enforces — an import bypasses that pipeline entirely (a `.hero` bundle ships
+      // already-encoded bytes), so nothing else on this path stops an oversized image otherwise.
+      const cap = IMAGE_BYTE_CAPS[image.kind];
+      if (bytes.byteLength > cap) {
+        throw new HeroImportBadManifestError([
+          {
+            path: `images[${image.hash}].bytes`,
+            message: `Image bytes for ${image.hash} (${bytes.byteLength} bytes) exceed the ${image.kind} cap of ${cap} bytes`,
+          },
+        ]);
       }
       const actualHash = await sha256Hex(bytes);
       if (actualHash !== image.hash) throw new HeroImportHashMismatchError(image.hash);
