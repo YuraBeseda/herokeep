@@ -447,4 +447,85 @@ describe('CharacterStore', () => {
     expect(freshStore.sheet()).toBeDefined();
     expect(freshStore.sheet()?.name).toBe('Aria');
   });
+
+  // --- runExclusive / reloadIfCurrent (fix-round 1, Critical finding: serialize `.hero` import
+  // against this store's own mutation queue) --------------------------------------------------
+
+  it('runExclusive chains onto the SAME queue as create/appendTx/revert/load — its callback cannot start until an already-in-flight mutation has fully settled', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const eventsRepository = TestBed.inject(EventsRepository);
+
+    let releaseGate: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    let gateHit = false;
+    const originalAppend = eventsRepository.append.bind(eventsRepository);
+    vi.spyOn(eventsRepository, 'append').mockImplementationOnce(async (events) => {
+      gateHit = true;
+      await gate;
+      return originalAppend(events);
+    });
+
+    const createPromise = store.create('Parked', 'masculine');
+    // `create()` reaches the gated `append` call only after a real fake-indexeddb round trip
+    // (`buildAndValidate`'s own `nextSeq` read) — that needs actual macrotask ticks, not just
+    // flushed microtasks, hence `setTimeout` rather than `Promise.resolve()` here.
+    for (let i = 0; i < 50 && !gateHit; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(gateHit).toBe(true); // create() is now parked mid-flight, inside the queue
+
+    let exclusiveRan = false;
+    const exclusivePromise = store.runExclusive(() => {
+      exclusiveRan = true;
+      return Promise.resolve();
+    });
+
+    // create()'s gated `append` call hasn't resolved yet — no matter how many turns we give it,
+    // runExclusive's callback must NOT have run, because it is queued strictly behind create()'s
+    // own still-in-flight operation.
+    for (let i = 0; i < 10; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(exclusiveRan).toBe(false);
+
+    releaseGate();
+    await createPromise;
+    await exclusivePromise;
+
+    expect(exclusiveRan).toBe(true);
+  });
+
+  it('reloadIfCurrent re-runs a full replay when the id matches the currently loaded stream, and no-ops otherwise', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const streamId = await store.create('Aria', 'feminine');
+    expect(store.events()).toHaveLength(1);
+
+    // Appended directly via the repository, bypassing the store — its in-memory state goes stale
+    // (still shows just the 1 event above) until `reloadIfCurrent` forces a fresh replay.
+    await eventsRepository.append([
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        stream: streamId,
+        ts: new Date().toISOString(),
+        actor: { userId: 'u', deviceId: 'd', role: 'owner' },
+        type: 'character.renamed',
+        v: 1,
+        payload: { name: 'Renamed Directly' },
+      },
+    ]);
+    expect(store.events()).toHaveLength(1); // still stale
+
+    await store.reloadIfCurrent(streamId);
+
+    expect(store.events()).toHaveLength(2);
+    expect(store.facts()?.name).toBe('Renamed Directly');
+
+    // A non-matching id is a pure no-op — same facts object, not even re-derived.
+    const before = store.facts();
+    await store.reloadIfCurrent('char:00000000-0000-4000-8000-000000000000');
+    expect(store.facts()).toBe(before);
+  });
 });

@@ -462,4 +462,39 @@ describe('CharactersListComponent', () => {
     resolveFirst(mkImportResult());
     await flushDeleteFlow(fixture);
   });
+
+  it('fix-round 1: per-row delete buttons are disabled while an import is in flight, re-enabled once it settles', async () => {
+    const db = TestBed.inject(HkDb);
+    await db.characters.put(mkRow());
+    let resolveImport: (value: ImportResult) => void = () => undefined;
+    const pending = new Promise<ImportResult>((resolve) => {
+      resolveImport = resolve;
+    });
+    importFn.mockReturnValueOnce(pending);
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('.characters-list__import-input')!;
+
+    const deleteButtonBefore = compiled.querySelector<HTMLButtonElement>(
+      '.characters-list__delete',
+    )!;
+    expect(deleteButtonBefore.disabled).toBe(false);
+
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await fixture.whenStable();
+
+    const deleteButtonDuring = compiled.querySelector<HTMLButtonElement>(
+      '.characters-list__delete',
+    )!;
+    expect(deleteButtonDuring.disabled).toBe(true);
+
+    resolveImport(mkImportResult());
+    await flushDeleteFlow(fixture);
+
+    const deleteButtonAfter = compiled.querySelector<HTMLButtonElement>(
+      '.characters-list__delete',
+    )!;
+    expect(deleteButtonAfter.disabled).toBe(false);
+  });
 });

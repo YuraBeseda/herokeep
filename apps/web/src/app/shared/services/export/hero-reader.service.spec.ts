@@ -472,6 +472,69 @@ describe('HeroReaderService', () => {
     expect(characterStore.streamId()).toBe(otherStreamId);
     expect(characterStore.facts()?.name).toBe('Other');
   });
+
+  // --- Serialization against CharacterStore (fix-round 1, Critical finding) ------------------
+
+  it(
+    'serializes against CharacterStore.deleteCharacter: a delete issued while import is parked ' +
+      'inside its exclusive section runs strictly AFTER it (queue FIFO ordering) — the character ' +
+      'ends up deleted, not left half-imported or resurrected',
+    async () => {
+      const eventsRepository = TestBed.inject(EventsRepository);
+      const charactersRepository = TestBed.inject(CharactersRepository);
+      const writer = TestBed.inject(HeroWriterService);
+      const reader = TestBed.inject(HeroReaderService);
+      const characterStore = TestBed.inject(CharacterStore);
+
+      await eventsRepository.append([
+        mkEvent(uuid(95), 'character.created', createdPayload('Racer')),
+      ]);
+      const { blob } = await writer.export(streamId);
+      // characterId unknown locally at import time (empty db) — the 'created' path, same as the
+      // real "someone imports a fresh file, then immediately deletes the row" race the finding
+      // describes; the exact create-vs-merge mode doesn't matter to what's being proven here.
+      await eventsRepository.removeStream(streamId);
+
+      // Gate the import's exclusive section at its VERY FIRST db call (the create-vs-merge
+      // existence check) so it is definitely still "parked" (already enqueued, not yet finished)
+      // when deleteCharacter is issued below.
+      let releaseGate: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        releaseGate = resolve;
+      });
+      let gateHit = false;
+      const originalGet = charactersRepository.get.bind(charactersRepository);
+      vi.spyOn(charactersRepository, 'get').mockImplementationOnce(async (id: string) => {
+        gateHit = true;
+        await gate;
+        return originalGet(id);
+      });
+
+      const importPromise = reader.import(bundleFile(blob));
+      for (let i = 0; i < 50 && !gateHit; i++) {
+        await Promise.resolve();
+      }
+      expect(gateHit).toBe(true); // import is now parked INSIDE runExclusive, mid-flight
+
+      // Issued while import is parked — per `CharacterStore.runExclusive`'s FIFO queue, this can
+      // only run once import's own `runExclusive` callback has fully settled: it is enqueued
+      // strictly behind an operation that is already in the queue.
+      const deletePromise = characterStore.deleteCharacter(streamId);
+
+      releaseGate();
+      const result = await importPromise;
+      await deletePromise;
+
+      // The import itself completed successfully and unaffected (proving no interleaved
+      // corruption happened DURING its own db phase) ...
+      expect(result).toMatchObject({ mode: 'created', imported: 1, skippedDuplicates: 0 });
+      // ... but the delete, queued to run strictly after, is what the final state reflects — this
+      // is the deterministic outcome THIS queue ordering produces (delete-after-import), not an
+      // interleaved/corrupted state.
+      expect(await charactersRepository.get(streamId)).toBeUndefined();
+      expect(await eventsRepository.byStream(streamId)).toEqual([]);
+    },
+  );
 });
 
 describe('HeroReaderService when this tab is not the leader', () => {

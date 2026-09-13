@@ -170,41 +170,55 @@ export class HeroReaderService {
 
     const warnings: string[] = [...this.pinWarnings(manifest)];
     const images = await this.readAndVerifyImages(zip, manifest, warnings);
-
     const characterId = manifest.characterId;
-    const existingRow = await this.charactersRepository.get(characterId);
-    const mode: ImportResult['mode'] = existingRow ? 'merged' : 'created';
 
-    await this.storeImages(images);
+    // Everything above is pure CPU/validation work — unzip, schema checks, SHA-256 hashing — and
+    // touches no storage, so it deliberately runs OUTSIDE the exclusive section below (no reason
+    // to hold the character mutation queue for it). Everything below IS the actual storage
+    // read-modify-write, and runs as ONE atomic unit against `CharacterStore`'s own serialized
+    // mutation queue (fix-round 1, Critical finding): without this, the create-vs-merge decision
+    // (`charactersRepository.get`) and the `byStream` read a merge does could each go stale if a
+    // concurrent `CharacterStore.deleteCharacter`/`appendTx`/`revert` for the SAME stream ran in
+    // between — e.g. a delete landing between this read and `replaceStream` could resurrect a
+    // deleted row, or a concurrent append's events could be silently dropped by `replaceStream`
+    // overwriting the whole stream. `runExclusive` guarantees this callback never overlaps any
+    // other queued mutation, in either direction.
+    return this.characterStore.runExclusive(async () => {
+      const existingRow = await this.charactersRepository.get(characterId);
+      const mode: ImportResult['mode'] = existingRow ? 'merged' : 'created';
 
-    let finalEvents: Event[];
-    let imported: number;
-    let skippedDuplicates: number;
-    if (mode === 'created') {
-      finalEvents = incomingEvents;
-      imported = incomingEvents.length;
-      skippedDuplicates = 0;
-    } else {
-      const existingEvents = await this.eventsRepository.byStream(characterId);
-      const existingIds = new Set(existingEvents.map((e) => e.id));
-      const newIncoming = incomingEvents.filter((e) => !existingIds.has(e.id));
-      imported = newIncoming.length;
-      skippedDuplicates = incomingEvents.length - newIncoming.length;
-      finalEvents = mergeEventsBySeq(existingEvents, newIncoming);
-    }
+      await this.storeImages(images);
 
-    await this.eventsRepository.replaceStream(characterId, finalEvents);
-    await this.snapshotsRepository.remove(characterId);
+      let finalEvents: Event[];
+      let imported: number;
+      let skippedDuplicates: number;
+      if (mode === 'created') {
+        finalEvents = incomingEvents;
+        imported = incomingEvents.length;
+        skippedDuplicates = 0;
+      } else {
+        const existingEvents = await this.eventsRepository.byStream(characterId);
+        const existingIds = new Set(existingEvents.map((e) => e.id));
+        const newIncoming = incomingEvents.filter((e) => !existingIds.has(e.id));
+        imported = newIncoming.length;
+        skippedDuplicates = incomingEvents.length - newIncoming.length;
+        finalEvents = mergeEventsBySeq(existingEvents, newIncoming);
+      }
 
-    const replayed = await this.eventsRepository.byStream(characterId);
-    const facts = reduce(replayed);
-    await this.charactersRepository.upsertFromFacts(characterId, facts);
+      await this.eventsRepository.replaceStream(characterId, finalEvents);
+      await this.snapshotsRepository.remove(characterId);
 
-    if (this.characterStore.streamId() === characterId) {
-      await this.characterStore.load(characterId);
-    }
+      const replayed = await this.eventsRepository.byStream(characterId);
+      const facts = reduce(replayed);
+      await this.charactersRepository.upsertFromFacts(characterId, facts);
 
-    return { characterId, name: facts.name, mode, imported, skippedDuplicates, warnings };
+      // `reloadIfCurrent`, NOT `load` — calling the public `load()` here (which itself calls
+      // `enqueue`) would deadlock: we are already running INSIDE this store's queue (see
+      // `reloadIfCurrent`'s own doc on `CharacterStore`).
+      await this.characterStore.reloadIfCurrent(characterId);
+
+      return { characterId, name: facts.name, mode, imported, skippedDuplicates, warnings };
+    });
   }
 
   // --- validation ------------------------------------------------------------------------------

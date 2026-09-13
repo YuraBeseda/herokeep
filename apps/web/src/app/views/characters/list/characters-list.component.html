@@ -69,6 +69,7 @@
             [variant]="'danger'"
             type="button"
             class="characters-list__delete"
+            [disabled]="importing()"
             (click)="delete(row)"
           >
             {{ t('list.delete') }}

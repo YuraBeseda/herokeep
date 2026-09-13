@@ -164,20 +164,36 @@ export class CharacterStore {
    * and replays every committed event on top (`reduce` skips whatever the snapshot already folded
    * in). */
   async load(characterId: string): Promise<void> {
-    return this.enqueue(async () => {
-      await this.whenPacksReady();
-      const [events, snapshot] = await Promise.all([
-        this.eventsRepository.byStream(characterId),
-        this.snapshotsRepository.get(characterId),
-      ]);
-      const facts = reduce(events, snapshot, this.systemRules());
+    return this.enqueue(() => this.loadNow(characterId));
+  }
 
-      this.streamIdState.set(characterId);
-      this.eventsState.set(events);
-      this.factsState.set(facts);
-      this.lastSnapshotSeq = snapshot?.seq ?? 0;
-      this.loadedState.set(true);
-    });
+  /** Runs `fn` exclusively against this store's OWN mutation queue — the SAME serialized chain
+   * `load`/`create`/`appendTx`/`revert` themselves funnel through (see `enqueue`'s own doc). Lets
+   * an external, non-`CharacterStore` read-modify-write (fix-round 1, Critical finding:
+   * `HeroReaderService.import`'s storage phase — read `CharactersRepository.get` to decide
+   * create-vs-merge, write events/blobs/snapshot, upsert the index row) strictly interleave with
+   * every store mutation instead of racing it: while `fn` is running, no `load`/`create`/
+   * `appendTx`/`revert`/another `runExclusive` call can start, and `fn` itself never starts until
+   * every mutation already queued ahead of it has fully settled. Nothing here validates
+   * leadership — `fn` decides for itself whether it needs `assertLeader()` (a pure read-only `fn`
+   * wouldn't). */
+  async runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    return this.enqueue(fn);
+  }
+
+  /**
+   * For a caller ALREADY running inside `runExclusive` (never call this any other time — calling
+   * the PUBLIC `load()` from inside a `runExclusive`/`enqueue`d operation would deadlock: `load`
+   * re-enters `enqueue`, which chains onto `this.queue` AFTER the very operation it would be
+   * called from, so that operation's own `await` could never be satisfied until itself finishes —
+   * a genuine circular wait, not just a lint nitpick). If this store currently has `characterId`
+   * loaded, re-runs the SAME full replay `load()` itself does (`loadNow`), directly, with no extra
+   * queue hop — so an open sheet reflects storage a `runExclusive`d write just committed. A no-op
+   * for any other currently-loaded character, or none loaded at all.
+   */
+  async reloadIfCurrent(characterId: string): Promise<void> {
+    if (this.streamIdState() !== characterId) return;
+    await this.loadNow(characterId);
   }
 
   /** Starts a brand-new character stream with ONE `character.created` event. Returns the new
@@ -330,6 +346,25 @@ export class CharacterStore {
       () => undefined,
     );
     return settled;
+  }
+
+  /** The actual body of `load()` — factored out so `reloadIfCurrent` (called from INSIDE another
+   * caller's already-`enqueue`d/`runExclusive`d operation) can run the exact same replay without
+   * itself calling back into `enqueue` (see `reloadIfCurrent`'s own doc for why that would
+   * deadlock). Public `load()` is just `enqueue(() => this.loadNow(characterId))`. */
+  private async loadNow(characterId: string): Promise<void> {
+    await this.whenPacksReady();
+    const [events, snapshot] = await Promise.all([
+      this.eventsRepository.byStream(characterId),
+      this.snapshotsRepository.get(characterId),
+    ]);
+    const facts = reduce(events, snapshot, this.systemRules());
+
+    this.streamIdState.set(characterId);
+    this.eventsState.set(events);
+    this.factsState.set(facts);
+    this.lastSnapshotSeq = snapshot?.seq ?? 0;
+    this.loadedState.set(true);
   }
 
   /**
