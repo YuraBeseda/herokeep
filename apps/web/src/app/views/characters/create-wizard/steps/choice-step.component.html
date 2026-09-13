@@ -15,6 +15,12 @@
       @case ('static') {
         <hk-entity-picker [ids]="v.ids" [selectedIds]="selection()" (toggled)="onToggle($event)" />
       }
+      @case ('abilityGeneration') {
+        <hk-ability-scores-step [choiceId]="choiceId()" />
+      }
+      @case ('abilities') {
+        <hk-abilities-improve-step [choiceId]="choiceId()" />
+      }
       @case ('skills') {
         <div class="choice-step__chips">
           @for (opt of v.options; track opt.id) {

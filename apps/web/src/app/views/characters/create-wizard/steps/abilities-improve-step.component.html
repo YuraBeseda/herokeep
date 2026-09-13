@@ -1,0 +1,33 @@
+<div class="abilities-improve-step" *transloco="let t; read: 'characters'">
+  @if (info(); as info) {
+    <ul class="abilities-improve-step__slots">
+      @for (delta of info.deltas; track $index; let slot = $index) {
+        <li class="abilities-improve-step__slot">
+          <span class="abilities-improve-step__slot-label">
+            {{ t('wizard.abilitiesImprove.deltaLabel', { delta: delta }) }}
+          </span>
+          <div class="abilities-improve-step__chips">
+            @for (a of optionsForSlot(slot); track a.id) {
+              <hk-chip [selected]="isAssigned(slot, a.id)" (click)="onSelectSlot(slot, a.id)">
+                {{ abilityName(a.id) }}
+              </hk-chip>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (diagnostics().length > 0) {
+    <ul class="abilities-improve-step__diagnostics">
+      @for (d of diagnostics(); track $index) {
+        <li
+          class="abilities-improve-step__diagnostic"
+          [class.abilities-improve-step__diagnostic--error]="d.severity === 'error'"
+        >
+          {{ t(diagnosticKey(d.code)) }}
+        </li>
+      }
+    </ul>
+  }
+</div>

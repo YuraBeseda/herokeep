@@ -1,0 +1,144 @@
+<div class="ability-scores-step" *transloco="let t; read: 'characters'">
+  <hk-tabs class="ability-scores-step__tabs" [tabs]="methodTabs(t)" [(selected)]="method" />
+
+  @switch (activeMethod()) {
+    @case ('standardArray') {
+      <ul class="ability-scores-step__rows">
+        @for (a of abilities(); track a.id) {
+          <li class="ability-scores-step__row">
+            <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
+            <label class="ability-scores-step__select-label">
+              <span class="visually-hidden">{{ t('wizard.picker.valueLabel') }}</span>
+              <select
+                class="ability-scores-step__select"
+                (change)="onAssignStandardArray(a.id, $any($event.target).value)"
+              >
+                <option value="" [selected]="standardArrayAssignment()[a.id] === undefined">
+                  {{ t('wizard.abilityScores.unassigned') }}
+                </option>
+                @for (opt of standardArrayOptionsFor(a.id); track opt.index) {
+                  <option
+                    [value]="opt.index"
+                    [selected]="standardArrayAssignment()[a.id] === opt.index"
+                  >
+                    {{ opt.value }}
+                  </option>
+                }
+              </select>
+            </label>
+          </li>
+        }
+      </ul>
+    }
+    @case ('pointBuy') {
+      <p
+        class="ability-scores-step__meter"
+        [class.ability-scores-step__meter--over]="pointBuyOverBudget()"
+      >
+        {{
+          t('wizard.abilityScores.budgetMeter', {
+            total: pointBuyTotal(),
+            budget: gen().pointBuy.budget,
+          })
+        }}
+      </p>
+      <ul class="ability-scores-step__rows">
+        @for (a of abilities(); track a.id) {
+          <li class="ability-scores-step__row">
+            <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
+            <hk-number-field
+              [labelKey]="'characters.wizard.picker.valueLabel'"
+              [min]="gen().pointBuy.min"
+              [max]="gen().pointBuy.max"
+              [step]="1"
+              [ngModel]="pointBuyValue(a.id)"
+              (ngModelChange)="onPointBuyChange(a.id, $event)"
+            />
+            <span class="ability-scores-step__cost">
+              {{ t('wizard.abilityScores.cost', { cost: pointBuyCost(pointBuyValue(a.id)) }) }}
+            </span>
+          </li>
+        }
+      </ul>
+    }
+    @case ('manual') {
+      <ul class="ability-scores-step__rows">
+        @for (a of abilities(); track a.id) {
+          <li class="ability-scores-step__row">
+            <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
+            <hk-number-field
+              [labelKey]="'characters.wizard.picker.valueLabel'"
+              [min]="gen().manual.min"
+              [max]="gen().manual.max"
+              [step]="1"
+              [ngModel]="manualValue(a.id)"
+              (ngModelChange)="onManualChange(a.id, $event)"
+            />
+          </li>
+        }
+      </ul>
+    }
+    @case ('roll') {
+      <button
+        hk-button
+        type="button"
+        class="ability-scores-step__roll-all"
+        [variant]="'ghost'"
+        [disabled]="!!rollResults()"
+        (click)="onRollAll(t)"
+      >
+        {{ t('wizard.abilityScores.rollAll') }}
+      </button>
+      @if (rollResults()) {
+        <ul class="ability-scores-step__rows">
+          @for (a of abilities(); track a.id) {
+            <li class="ability-scores-step__row">
+              <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
+              <label class="ability-scores-step__select-label">
+                <span class="visually-hidden">{{ t('wizard.picker.valueLabel') }}</span>
+                <select
+                  class="ability-scores-step__select"
+                  (change)="onAssignRoll(a.id, $any($event.target).value)"
+                >
+                  <option value="" [selected]="rollAssignment()[a.id] === undefined">
+                    {{ t('wizard.abilityScores.unassigned') }}
+                  </option>
+                  @for (opt of rollOptionsFor(a.id); track opt.index) {
+                    <option [value]="opt.index" [selected]="rollAssignment()[a.id] === opt.index">
+                      {{ opt.total }}
+                    </option>
+                  }
+                </select>
+              </label>
+              @if (rollDiceFor(a.id); as dice) {
+                <span class="ability-scores-step__dice">
+                  @for (die of dice; track $index) {
+                    <span
+                      class="ability-scores-step__die"
+                      [class.ability-scores-step__die--dropped]="!die.kept"
+                    >
+                      {{ die.value }}
+                    </span>
+                  }
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+
+  @if (diagnostics().length > 0) {
+    <ul class="ability-scores-step__diagnostics">
+      @for (d of diagnostics(); track $index) {
+        <li
+          class="ability-scores-step__diagnostic"
+          [class.ability-scores-step__diagnostic--error]="d.severity === 'error'"
+        >
+          {{ t(diagnosticKey(d.code)) }}
+        </li>
+      }
+    </ul>
+  }
+</div>

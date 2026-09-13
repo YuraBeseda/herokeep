@@ -6,6 +6,8 @@ import { ButtonComponent } from '@shared/components/button/button.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CreateWizardState } from '../create-wizard.state';
+import { AbilitiesImproveStepComponent } from './abilities-improve-step.component';
+import { AbilityScoresStepComponent } from './ability-scores-step.component';
 import { EntityPickerComponent } from './entity-picker.component';
 
 interface SkillOption {
@@ -17,9 +19,13 @@ type ChoiceView =
   | { kind: 'query' | 'static'; ids: string[]; count: number }
   | { kind: 'literal'; count: number }
   | { kind: 'skills'; classId: string; options: SkillOption[]; count: number }
-  // 'abilities'/'abilityGeneration' picks delegate to T7's components; 'equipmentOption' is the
-  // equipment step's own concern — this generic step renders nothing for any of them (by design,
-  // per task-6-brief.md's resolution note).
+  // 'abilities' (background +2/+1, ASI +2) and 'abilityGeneration' (the system's own ability-score
+  // decision) each delegate to their own T7 component (`hk-abilities-improve-step` /
+  // `hk-ability-scores-step`) — this generic step's job for them is only to route, not render.
+  | { kind: 'abilities' }
+  | { kind: 'abilityGeneration' }
+  // 'equipmentOption' is the equipment step's own concern — this generic step renders nothing for
+  // it (by design, per task-6-brief.md's resolution note).
   | { kind: 'unsupported' };
 
 // The R5 synthetic class-skills decision id has no backing `Choice` entity at all — it's
@@ -49,18 +55,28 @@ function diagnosticKey(code: string): string {
  * Generic engine-driven choice step (task-6-brief.md): resolves `choiceId` to its `Choice` (or,
  * for the synthetic `<classId>@1/skills` id, to the owning class's `skillChoice`) and renders the
  * right pick-form widget — `hk-entity-picker` for `query`/`static`, chips for the synthetic
- * skills pick, and a freeform chip-entry for `literal` (the engine's `literal` pick carries no
- * option list of its own — see the class doc on `ChoiceView` — so "chip multi-select" here means
- * each entered value becomes its own chip, not a pick among engine-supplied options).
+ * skills pick, a freeform chip-entry for `literal` (the engine's `literal` pick carries no option
+ * list of its own — see the class doc on `ChoiceView` — so "chip multi-select" here means each
+ * entered value becomes its own chip, not a pick among engine-supplied options), and — for
+ * `abilities`/`abilityGeneration` — delegates entirely to T7's own `hk-abilities-improve-step` /
+ * `hk-ability-scores-step`, which own their pick-form AND their own validate/setDecision/
+ * diagnostics loop (this step only renders the shared prompt heading above them).
  *
- * Every change to the working selection routes through `CreateWizardState.validate` (rendered
- * inline as localized diagnostics) and then `setDecision` — unconditionally, even when invalid:
- * this mirrors a live form rather than a gate, so the draft always reflects exactly what's on
- * screen and the diagnostics are the only signal that something still needs fixing.
+ * Every change to the working selection THIS step owns routes through `CreateWizardState.validate`
+ * (rendered inline as localized diagnostics) and then `setDecision` — unconditionally, even when
+ * invalid: this mirrors a live form rather than a gate, so the draft always reflects exactly what's
+ * on screen and the diagnostics are the only signal that something still needs fixing.
  */
 @Component({
   selector: 'hk-choice-step',
-  imports: [TranslocoDirective, ChipComponent, ButtonComponent, EntityPickerComponent],
+  imports: [
+    TranslocoDirective,
+    ChipComponent,
+    ButtonComponent,
+    EntityPickerComponent,
+    AbilityScoresStepComponent,
+    AbilitiesImproveStepComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './choice-step.component.html',
   styleUrl: './choice-step.component.scss',
@@ -117,6 +133,12 @@ export class ChoiceStepComponent {
     }
     if ('literal' in choice.pick) {
       return { kind: 'literal', count: choice.count };
+    }
+    if ('abilities' in choice.pick) {
+      return { kind: 'abilities' };
+    }
+    if ('abilityGeneration' in choice.pick) {
+      return { kind: 'abilityGeneration' };
     }
     return { kind: 'unsupported' };
   });

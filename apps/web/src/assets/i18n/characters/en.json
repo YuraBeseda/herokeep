@@ -67,6 +67,22 @@
       "addValue": "Add",
       "skillsTitle": "Choose {count} skills for {class}",
       "more": "{count, plural, one {# more option} other {# more options}} — refine your search"
+    },
+    "abilityScores": {
+      "method": {
+        "standardArray": "Standard array",
+        "pointBuy": "Point buy",
+        "manual": "Manual",
+        "roll": "Roll"
+      },
+      "unassigned": "Not assigned",
+      "budgetMeter": "{total} / {budget} points",
+      "cost": "Cost: {cost}",
+      "rollAll": "Roll all six",
+      "rollsAnnounced": "Rolled six ability scores: {scores}."
+    },
+    "abilitiesImprove": {
+      "deltaLabel": "+{delta}"
     }
   },
   "validation": {
@@ -78,7 +94,18 @@
       "duplicate": "You can't select the same option twice.",
       "prerequisiteFailed": "The prerequisites for this selection aren't met.",
       "subclassLevel": "This subclass isn't available at this choice's level.",
-      "unknownChoice": "This choice couldn't be resolved."
+      "unknownChoice": "This choice couldn't be resolved.",
+      "invalidEntry": "One of your entries isn't valid.",
+      "abilityNotAllowed": "That ability can't be improved by this choice.",
+      "duplicateAbility": "Each ability can only be improved once.",
+      "abilityImproveShape": "Your picks don't match the required improvement pattern.",
+      "abilityMax": "That would raise the ability above its maximum.",
+      "standardArrayMismatch": "Your scores don't match the standard array.",
+      "pointBuyRange": "Each score must stay within the point-buy range.",
+      "pointBuyBudget": "Your scores cost more than the point-buy budget allows.",
+      "manualRange": "Each score must stay within the allowed range.",
+      "rollRange": "Rolled scores must each be within 3-18.",
+      "abilityGenerationInvalid": "These scores don't match any ability-generation method."
     }
   }
 }
