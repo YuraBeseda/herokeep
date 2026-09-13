@@ -1,0 +1,67 @@
+<div class="choice-step" *transloco="let t; read: 'characters'">
+  @if (view(); as v) {
+    <h2 class="choice-step__title">
+      @if (v.kind === 'skills') {
+        {{ t('wizard.picker.skillsTitle', { count: v.count, class: skillsClassName() }) }}
+      } @else {
+        {{ promptText() }}
+      }
+    </h2>
+
+    @switch (v.kind) {
+      @case ('query') {
+        <hk-entity-picker [ids]="v.ids" [selectedIds]="selection()" (toggled)="onToggle($event)" />
+      }
+      @case ('static') {
+        <hk-entity-picker [ids]="v.ids" [selectedIds]="selection()" (toggled)="onToggle($event)" />
+      }
+      @case ('skills') {
+        <div class="choice-step__chips">
+          @for (opt of v.options; track opt.id) {
+            <hk-chip [selected]="isSelected(opt.id)" (click)="onToggle(opt.id)">
+              {{ opt.name }}
+            </hk-chip>
+          }
+        </div>
+      }
+      @case ('literal') {
+        <div class="choice-step__literal">
+          @if (selection().length > 0) {
+            <div class="choice-step__chips">
+              @for (value of selection(); track value) {
+                <hk-chip [removable]="true" (remove)="onRemoveLiteral(value)">{{ value }}</hk-chip>
+              }
+            </div>
+          }
+          <form class="choice-step__literal-form" (submit)="onAddLiteral($event)">
+            <label class="choice-step__literal-label">
+              <span class="visually-hidden">{{ t('wizard.picker.valueLabel') }}</span>
+              <input
+                type="text"
+                class="choice-step__literal-input"
+                [value]="literalDraft()"
+                (input)="literalDraft.set($any($event.target).value)"
+              />
+            </label>
+            <button type="submit" hk-button [variant]="'ghost'">
+              {{ t('wizard.picker.addValue') }}
+            </button>
+          </form>
+        </div>
+      }
+    }
+
+    @if (diagnostics().length > 0) {
+      <ul class="choice-step__diagnostics">
+        @for (d of diagnostics(); track $index) {
+          <li
+            class="choice-step__diagnostic"
+            [class.choice-step__diagnostic--error]="d.severity === 'error'"
+          >
+            {{ t(diagnosticKey(d.code)) }}
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

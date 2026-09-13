@@ -42,6 +42,13 @@
           </fieldset>
         </div>
       }
+      @case ('choice') {
+        <div class="create-wizard__step">
+          @if (currentStep()?.choiceId; as choiceId) {
+            <hk-choice-step [choiceId]="choiceId" />
+          }
+        </div>
+      }
       @case ('review') {
         <div class="create-wizard__step create-wizard__review">
           <h2>{{ t('wizard.review.title') }}</h2>

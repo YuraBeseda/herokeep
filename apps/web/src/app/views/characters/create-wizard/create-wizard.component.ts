@@ -7,6 +7,7 @@ import { StepperComponent, type HkStepperStep } from '@shared/components/stepper
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { CreateWizardState, type WizardStep } from './create-wizard.state';
+import { ChoiceStepComponent } from './steps/choice-step.component';
 
 // Relative to the 'characters' scope (this component's own template reads `t()` scoped via
 // `*transloco="let t; read: 'characters'"` — unlike `WizardStep.labelKey`, which is read by
@@ -27,7 +28,7 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
  */
 @Component({
   selector: 'app-create-wizard',
-  imports: [TranslocoDirective, StepperComponent, ButtonComponent],
+  imports: [TranslocoDirective, StepperComponent, ButtonComponent, ChoiceStepComponent],
   providers: [CreateWizardState, provideTranslocoScope('characters')],
   templateUrl: './create-wizard.component.html',
   styleUrl: './create-wizard.component.scss',

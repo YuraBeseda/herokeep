@@ -55,6 +55,29 @@
       "ac": "Armor class",
       "create": "Create character",
       "incomplete": "Finish every step before creating your character."
+    },
+    "picker": {
+      "searchPlaceholder": "Search…",
+      "searchClear": "Clear search",
+      "empty": "No matching options.",
+      "expand": "Show description",
+      "collapse": "Hide description",
+      "loading": "Loading…",
+      "valueLabel": "Value",
+      "addValue": "Add",
+      "skillsTitle": "Choose {count} skills for {class}"
+    }
+  },
+  "validation": {
+    "generic": "This selection isn't valid yet.",
+    "selection": {
+      "count": "Select the required number of options.",
+      "unresolved": "One of your selections is no longer available.",
+      "notOffered": "One of your selections isn't offered by this choice.",
+      "duplicate": "You can't select the same option twice.",
+      "prerequisiteFailed": "The prerequisites for this selection aren't met.",
+      "subclassLevel": "This subclass isn't available at this choice's level.",
+      "unknownChoice": "This choice couldn't be resolved."
     }
   }
 }

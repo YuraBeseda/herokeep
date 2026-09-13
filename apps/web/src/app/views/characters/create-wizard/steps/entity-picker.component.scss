@@ -1,0 +1,70 @@
+:host {
+  display: block;
+}
+
+.entity-picker__empty {
+  margin: var(--space-3) 0 0;
+  color: var(--text-2);
+}
+
+.entity-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.entity-picker__card {
+  height: 100%;
+}
+
+.entity-picker__card--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.entity-picker__select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.entity-picker__icon {
+  font-size: 1.5rem;
+}
+
+.entity-picker__name {
+  overflow-wrap: anywhere;
+}
+
+.entity-picker__expand {
+  display: block;
+  width: 100%;
+  margin-block-start: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.entity-picker__description,
+.entity-picker__description-loading {
+  margin-block-start: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--text-2);
+}

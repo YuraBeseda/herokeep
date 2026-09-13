@@ -1,0 +1,44 @@
+<div class="entity-picker" *transloco="let t; read: 'characters'">
+  <hk-search-field
+    [(value)]="query"
+    [placeholderKey]="'characters.wizard.picker.searchPlaceholder'"
+    [clearLabelKey]="'characters.wizard.picker.searchClear'"
+  />
+
+  @if (rows().length === 0) {
+    <p class="entity-picker__empty">{{ t('wizard.picker.empty') }}</p>
+  } @else {
+    <ul class="entity-picker__grid">
+      @for (row of rows(); track row.id) {
+        <li>
+          <hk-card
+            class="entity-picker__card"
+            [class.entity-picker__card--selected]="isSelected(row.id)"
+          >
+            <button
+              type="button"
+              class="entity-picker__select"
+              [attr.aria-pressed]="isSelected(row.id)"
+              (click)="onToggle(row.id)"
+            >
+              <hk-icon [icon]="row.icon" class="entity-picker__icon" />
+              <span class="entity-picker__name">{{ row.name }}</span>
+            </button>
+            <button type="button" class="entity-picker__expand" (click)="onExpand(row.id, $event)">
+              {{
+                expandedId() === row.id ? t('wizard.picker.collapse') : t('wizard.picker.expand')
+              }}
+            </button>
+            @if (expandedId() === row.id) {
+              @if (descriptionHtml.isLoading()) {
+                <p class="entity-picker__description-loading">{{ t('wizard.picker.loading') }}</p>
+              } @else if (descriptionHtml.value(); as html) {
+                <div class="entity-picker__description" [innerHTML]="html"></div>
+              }
+            }
+          </hk-card>
+        </li>
+      }
+    </ul>
+  }
+</div>
