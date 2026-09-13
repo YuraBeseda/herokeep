@@ -440,6 +440,7 @@ export class PlayTabComponent {
       weight?: number;
       unresolved: boolean;
       equipEligible: boolean;
+      attuneEligible: boolean;
     }[]
   >(() => {
     const sheet = this.sheet();
@@ -454,6 +455,13 @@ export class PlayTabComponent {
         weight: item?.weight !== undefined ? item.weight * row.qty : undefined,
         unresolved: !row.itemId || !row.resolved,
         equipEligible: item !== undefined && EQUIPPABLE_CATEGORIES.has(item.category),
+        // Gated by the resolved item ENTITY's own `attunement.required` (`ItemEntitySchema`,
+        // `packages/protocol/src/pack/entities-content.ts`) — never inferred any other way. A
+        // custom row (no `itemId`, no entity to read) is never attune-eligible, matching
+        // `CustomItemDialogComponent`'s own docstring (ruling 2: name+qty+notes only, no
+        // mechanics). `attunement.required === false` (an item WITH attunement data that simply
+        // doesn't need it) is also ineligible — only `true` opts a row in.
+        attuneEligible: item?.attunement?.required === true,
       };
     });
   });

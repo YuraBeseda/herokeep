@@ -596,16 +596,20 @@
                     }}
                   </button>
                 }
-                <button
-                  hk-button
-                  type="button"
-                  [variant]="'ghost'"
-                  (click)="onToggleAttune(entry.row)"
-                >
-                  {{
-                    entry.row.attuned ? t('sheet.inventory.unattune') : t('sheet.inventory.attune')
-                  }}
-                </button>
+                @if (entry.attuneEligible) {
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'ghost'"
+                    (click)="onToggleAttune(entry.row)"
+                  >
+                    {{
+                      entry.row.attuned
+                        ? t('sheet.inventory.unattune')
+                        : t('sheet.inventory.attune')
+                    }}
+                  </button>
+                }
                 <button
                   hk-button
                   type="button"

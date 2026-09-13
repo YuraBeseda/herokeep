@@ -1087,6 +1087,11 @@ describe('PlayTabComponent — inventory and currency controls', () => {
   const DAGGER_ID = 'srd-5e-2024:item/dagger';
   const LONGSWORD_ID = 'srd-5e-2024:item/longsword';
   const SHIELD_ID = 'srd-5e-2024:item/shield';
+  // `attunement: { required: true }` (packages/protocol/src/pack/entities-content.ts's
+  // `ItemEntitySchema`) — the one fixture used everywhere below that needs a REAL
+  // attunement-eligible pack item; chain mail/longsword/shield (seedFighter's starting gear)
+  // carry no `attunement` data at all, so they're the negative fixture for the same tests.
+  const AMULET_ID = 'srd-5e-2024:item/amulet-of-health';
 
   beforeEach(async () => {
     // Same locale-leak guard every other describe block in this file documents (`hk.locale`
@@ -1211,6 +1216,11 @@ describe('PlayTabComponent — inventory and currency controls', () => {
     compiled = fixture.nativeElement as HTMLElement;
     const row = inventoryRowFor(compiled, 'Lucky Coin');
     expect(row.classList.contains('play-tab__inventory-item--unresolved')).toBe(true);
+    // No itemId -> no resolved item entity -> nothing to gate an Attune toggle on.
+    const attuneButton = Array.from(row.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === charactersEn.sheet.inventory.attune,
+    );
+    expect(attuneButton).toBeUndefined();
   });
 
   it('a custom item with notes appends item.added then a second item.updated{notes} sharing the same instanceId and txId (one appendTx call)', async () => {
@@ -1273,10 +1283,13 @@ describe('PlayTabComponent — inventory and currency controls', () => {
       await characterStore.appendTx(propose.attune(characterStore.sheet()!, row.instanceId, true));
     }
     expect(characterStore.sheet()!.inventory.filter((i) => i.attuned)).toHaveLength(3);
+    // The 4th item is clicked THROUGH THE UI below (unlike the 3 above, attuned directly via
+    // `propose.attune` — the engine itself has no item-type gate, only the count) — it must be a
+    // REAL attunement-eligible pack item, or the (now gated) Attune button wouldn't even render.
     await characterStore.appendTx(
       propose.addItem(
         characterStore.sheet()!,
-        { name: 'Ring of Protection', qty: 1, custom: {} },
+        { itemId: AMULET_ID, qty: 1 },
         () => '01930000-0000-7000-8000-000000000099',
       ),
     );
@@ -1288,12 +1301,46 @@ describe('PlayTabComponent — inventory and currency controls', () => {
     const showSpy = vi.spyOn(toastService, 'show');
     const eventsBefore = characterStore.events().length;
 
-    const row = inventoryRowFor(compiled, 'Ring of Protection');
+    const row = inventoryRowFor(compiled, 'Amulet of Health');
     buttonNamed(row, charactersEn.sheet.inventory.attune).click();
     await fixture.whenStable();
 
     expect(characterStore.events().length).toBe(eventsBefore);
     expect(showSpy).toHaveBeenCalledWith('characters.validation.attune.max');
+  });
+
+  it('the attune toggle does NOT render for a pack item with no attunement data (chain mail, longsword)', async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    for (const name of ['Chain Mail', 'Longsword', 'Shield']) {
+      const row = inventoryRowFor(compiled, name);
+      const attuneButton = Array.from(row.querySelectorAll<HTMLButtonElement>('button')).find(
+        (b) => b.textContent?.trim() === charactersEn.sheet.inventory.attune,
+      );
+      expect(attuneButton, `expected no Attune button on the "${name}" row`).toBeUndefined();
+    }
+  });
+
+  it('the attune toggle DOES render for an attunement-required pack item (Amulet of Health)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(
+      propose.addItem(
+        characterStore.sheet()!,
+        { itemId: AMULET_ID, qty: 1 },
+        () => '01930000-0000-7000-8000-000000000098',
+      ),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const row = inventoryRowFor(compiled, 'Amulet of Health');
+    expect(() => buttonNamed(row, charactersEn.sheet.inventory.attune)).not.toThrow();
   });
 
   it('the qty stepper increments/decrements via item.updated{qty}, decrement disabled at qty 1', async () => {
