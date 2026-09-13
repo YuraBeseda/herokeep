@@ -121,9 +121,18 @@ function buildParams(
   for (const [key, value] of Object.entries(payload)) {
     if (value === undefined || value === null) continue;
     // Free-form maps (`decision.made`'s `context`, `item.added`'s `custom`) are excluded — a
-    // plain object has no sensible ICU rendering — but a string ARRAY (`decision.made`'s
-    // `selection`) is deliberately NOT: `resolveValue` below joins it into one display string.
-    if (typeof value === 'object' && !Array.isArray(value)) continue;
+    // plain object has no sensible ICU rendering. A string ARRAY (`decision.made`'s `selection`)
+    // is deliberately NOT excluded — `resolveValue` below joins it into one display string — but
+    // an array of anything ELSE (`rest.taken`'s `hitDiceSpent: {classId, count}[]`) gets the same
+    // treatment as a plain object: excluded, not passed through raw (consistency fix — this used
+    // to slip past the object check purely because `Array.isArray` is true, landing an unresolved
+    // array-of-objects straight in `params` with no ICU rendering for it either).
+    if (
+      typeof value === 'object' &&
+      !(Array.isArray(value) && value.every((entry) => typeof entry === 'string'))
+    ) {
+      continue;
+    }
     params[key] = resolveValue(value, index, localizer);
   }
 

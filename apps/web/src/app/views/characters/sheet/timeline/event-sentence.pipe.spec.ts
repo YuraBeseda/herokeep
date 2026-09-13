@@ -9,6 +9,7 @@ import { provideTransloco, TranslocoService, type TranslocoLoader } from '@jsver
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { firstValueFrom, of } from 'rxjs';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import charactersRu from '../../../../../assets/i18n/characters/ru.json';
 import { eventFamily, EventSentencePipe, sentenceOf } from './event-sentence.pipe';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — same fixture-loading
@@ -34,6 +35,7 @@ const corePack = readPack(
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'characters/ru') return of(charactersRu);
     return of({});
   }
 }
@@ -118,6 +120,22 @@ describe('EventSentencePipe', () => {
     const event = makeEvent('some.future_type', { anything: 'goes' });
     expect(() => pipe.transform(event, index, localizer)).not.toThrow();
     expect(pipe.transform(event, index, localizer)).toContain('some.future_type');
+  });
+
+  // Localization regression coverage: `hp.changed`'s `kind` is a payload ENUM
+  // (damage/heal/temp/set), not a name or number — every locale must ICU-`select` it into a real
+  // word rather than interpolating the raw English literal (the defect a task-12 review caught in
+  // ru/uk's `hp-changed`/`rest-taken`/`death-save-recorded`). Rendered through ru specifically
+  // (not just en) so a future edit that reintroduces raw-token interpolation in a NON-en locale
+  // fails here too.
+  it('renders a "hp.changed" sentence in ru via ICU select, not the raw English "heal" token', async () => {
+    await firstValueFrom(translocoService.load('characters/ru'));
+    translocoService.setActiveLang('ru');
+    const event = makeEvent('hp.changed', { delta: 5, kind: 'heal' });
+    const sentence = pipe.transform(event, index, localizer);
+    expect(sentence).toContain('5');
+    expect(sentence).toContain('Восстановлено');
+    expect(sentence).not.toContain('heal');
   });
 
   it('appends a "(+N more events)" suffix when groupSize > 1, reusing the lead event sentence', () => {
