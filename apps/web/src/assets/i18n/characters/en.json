@@ -23,6 +23,21 @@
       "import-failed-bad-event": "That .hero bundle has an invalid event (#{index}).",
       "import-failed-hash-mismatch": "That .hero bundle's image data doesn't match its manifest.",
       "import-failed-generic": "Couldn't import that file. Try again."
+    },
+    "installBanner": {
+      "text": "Install Herokeep for quick access and offline play.",
+      "install": "Install",
+      "howToInstall": "How to install",
+      "dismiss": "Dismiss",
+      "iosSheet": {
+        "title": "Add Herokeep to your Home Screen",
+        "intro": "Installing keeps your characters safe and lets you play offline.",
+        "step1": "Tap the Share button in Safari's toolbar.",
+        "step2": "Scroll down and tap \"Add to Home Screen\".",
+        "step3": "Tap \"Add\" to confirm.",
+        "storageWarning": "Safari removes a web app's saved data after 7 days without opening it. Installing to your Home Screen keeps your characters from being deleted.",
+        "close": "Got it"
+      }
     }
   },
   "wizard": {
@@ -285,6 +300,10 @@
       "title": "Inspiration",
       "on": "Inspired",
       "off": "Not inspired"
+    },
+    "wakeLock": {
+      "on": "Screen staying awake",
+      "off": "Keep screen awake"
     },
     "roll": {
       "title": "Dice roller",

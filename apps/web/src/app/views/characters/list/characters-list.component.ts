@@ -26,6 +26,7 @@ import { PlaceholderService } from '@shared/services/images/placeholder.service'
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
+import { InstallBannerComponent } from './install-banner.component';
 
 const SKELETON_ROW_COUNT = 4;
 const GENERIC_DELETE_FAILURE_KEY = 'characters.list.toast.delete-failed';
@@ -99,7 +100,14 @@ export class CharactersDeleteConfirmComponent {
  */
 @Component({
   selector: 'app-characters-list',
-  imports: [TranslocoDirective, CardComponent, ButtonComponent, SkeletonComponent, BlobUrlPipe],
+  imports: [
+    TranslocoDirective,
+    CardComponent,
+    ButtonComponent,
+    SkeletonComponent,
+    BlobUrlPipe,
+    InstallBannerComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './characters-list.component.html',
   styleUrl: './characters-list.component.scss',

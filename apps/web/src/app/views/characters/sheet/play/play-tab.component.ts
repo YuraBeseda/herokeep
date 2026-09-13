@@ -47,6 +47,7 @@ import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { cryptoRng } from '@shared/services/engine/rng';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { WakeLockService } from '@shared/services/pwa/wake-lock.service';
 import { RollLogService } from '@shared/services/roll-log/roll-log.service';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
 import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
@@ -276,6 +277,7 @@ export class PlayTabComponent {
   private readonly dialogService = inject(DialogService);
   private readonly rollLogService = inject(RollLogService);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
+  protected readonly wakeLockService = inject(WakeLockService);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;
@@ -553,6 +555,21 @@ export class PlayTabComponent {
 
   protected isActionExpanded(id: string): boolean {
     return this.expandedActionId() === id;
+  }
+
+  // --- Wake lock (task-11-brief.md) -------------------------------------------------------------
+
+  // The template only ever renders this toggle when `wakeLockService.supported` is true (Global
+  // Constraints: "absent API -> toggle hidden"), so this is a plain flip off the service's own
+  // `active` signal — no local state to keep in sync, `WakeLockService` is the single source of
+  // truth (including re-acquiring on visibilitychange while enabled, and going false on its own if
+  // the UA releases the sentinel out from under this tab).
+  protected onToggleWakeLock(): void {
+    if (this.wakeLockService.active()) {
+      void this.wakeLockService.disable();
+    } else {
+      void this.wakeLockService.enable();
+    }
   }
 
   // --- HP, death saves, inspiration (task-2-brief.md) -----------------------------------------

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { signal } from '@angular/core';
+import { signal, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { propose, type Sheet } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -13,6 +13,7 @@ import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { WakeLockService } from '@shared/services/pwa/wake-lock.service';
 import { RollLogService } from '@shared/services/roll-log/roll-log.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
@@ -84,7 +85,11 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
-function configureReal(extraPacks: Pack[] = []): void {
+// `extraProviders` (task-11-brief.md's wake-lock toggle spec) lets a caller override a provider
+// like `WakeLockService` BEFORE the module is ever instantiated — `TestBed.overrideProvider`
+// can't run after this function's own `TestBed.inject` calls elsewhere have already forced
+// instantiation, so a per-test override has to arrive here, in the initial provider list, instead.
+function configureReal(extraPacks: Pack[] = [], extraProviders: Provider[] = []): void {
   TestBed.configureTestingModule({
     providers: [
       provideTransloco({
@@ -110,6 +115,7 @@ function configureReal(extraPacks: Pack[] = []): void {
         provide: StoragePersistService,
         useValue: { requestPersist: vi.fn().mockResolvedValue(true) },
       },
+      ...extraProviders,
     ],
   });
 }
@@ -1931,5 +1937,95 @@ describe('PlayTabComponent — dice roller and roll log', () => {
 
     const rollLogService = TestBed.inject(RollLogService);
     expect(rollLogService.entries()[0]).toMatchObject({ total: 11, manual: true });
+  });
+});
+
+// --- Wake lock toggle (task-11-brief.md) --------------------------------------------------
+//
+// `WakeLockService` itself (request/re-acquire-on-visibilitychange/release semantics against
+// the real Screen Wake Lock API) is fully covered by its own spec (`wake-lock.service.spec.ts`)
+// — these specs only assert `PlayTabComponent`'s WIRING: the toggle is hidden entirely when
+// `supported` is false (Global Constraints: "absent API -> toggle hidden"), and visible +
+// clickable (calling `enable()`/`disable()`, reflecting `active()`) when it's true. A stub
+// provider stands in for the real service so no real `navigator.wakeLock`/`visibilitychange`
+// plumbing is needed here.
+describe('PlayTabComponent — wake lock toggle', () => {
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  /** Configures the TestBed with the shared real setup PLUS a `WakeLockService` stub, via
+   * `configureReal`'s own `extraProviders` — has to happen before ANY `TestBed.inject` in this
+   * test (an `overrideProvider` call after that point throws, since the module is by then already
+   * instantiated), so each `it` below calls this itself rather than sharing a `beforeEach`. */
+  async function setup(overrides: { supported?: boolean; active?: boolean } = {}): Promise<{
+    enable: ReturnType<typeof vi.fn>;
+    disable: ReturnType<typeof vi.fn>;
+  }> {
+    const activeState = signal(overrides.active ?? false);
+    const enable = vi.fn(() => {
+      activeState.set(true);
+      return Promise.resolve();
+    });
+    const disable = vi.fn(() => {
+      activeState.set(false);
+      return Promise.resolve();
+    });
+    configureReal(
+      [],
+      [
+        {
+          provide: WakeLockService,
+          useValue: {
+            supported: overrides.supported ?? true,
+            active: activeState.asReadonly(),
+            enable,
+            disable,
+          },
+        },
+      ],
+    );
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+    return { enable, disable };
+  }
+
+  it('the toggle is hidden entirely when the Wake Lock API is unsupported', async () => {
+    await setup({ supported: false });
+    await seedFighter('Ivan');
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.play-tab__wake-lock-toggle')).toBeNull();
+  });
+
+  it('the toggle is visible when supported, calls enable()/disable() on click, and reflects active()', async () => {
+    const { enable, disable } = await setup({ supported: true, active: false });
+    await seedFighter('Ivan');
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const toggle = compiled.querySelector<HTMLButtonElement>('.play-tab__wake-lock-toggle')!;
+    expect(toggle).not.toBeNull();
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    toggle.click();
+    await fixture.whenStable();
+    expect(enable).toHaveBeenCalledTimes(1);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    toggle.click();
+    await fixture.whenStable();
+    expect(disable).toHaveBeenCalledTimes(1);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
   });
 });

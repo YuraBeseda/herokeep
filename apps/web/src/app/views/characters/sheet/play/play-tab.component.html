@@ -5,6 +5,23 @@
          tap-to-roll affordance below it is used. -->
     <app-roll-log-panel [(advantageMode)]="advantageMode" class="play-tab__section" />
 
+    <!-- Wake lock toggle (task-11-brief.md): hidden entirely when the Screen Wake Lock API isn't
+         supported (Global Constraints). -->
+    @if (wakeLockService.supported) {
+      <div class="play-tab__wake-lock">
+        <button
+          hk-button
+          type="button"
+          class="play-tab__wake-lock-toggle"
+          [variant]="wakeLockService.active() ? 'primary' : 'ghost'"
+          [attr.aria-pressed]="wakeLockService.active()"
+          (click)="onToggleWakeLock()"
+        >
+          {{ wakeLockService.active() ? t('sheet.wakeLock.on') : t('sheet.wakeLock.off') }}
+        </button>
+      </div>
+    }
+
     <!-- Ability grid: six cards, each score + mod + save (task-10-brief.md). Ability names are
          pack-localized text, not app translation keys — `hk-card`'s `header` accepts an
          already-translated string, unlike `hk-stat-tile`'s key-only `labelKey`. -->

@@ -1,0 +1,39 @@
+@if (visible()) {
+  <hk-card class="install-banner" *transloco="let t; read: 'characters'">
+    <div class="install-banner__content">
+      <p class="install-banner__text">{{ t('list.installBanner.text') }}</p>
+      <div class="install-banner__actions">
+        @if (canInstall()) {
+          <button
+            hk-button
+            type="button"
+            class="install-banner__install"
+            (click)="onInstallClick()"
+          >
+            {{ t('list.installBanner.install') }}
+          </button>
+        } @else if (showIosHint()) {
+          <button
+            hk-button
+            type="button"
+            [variant]="'ghost'"
+            class="install-banner__ios"
+            (click)="onShowIosInstructions()"
+          >
+            {{ t('list.installBanner.howToInstall') }}
+          </button>
+        }
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          class="install-banner__dismiss"
+          [attr.aria-label]="t('list.installBanner.dismiss')"
+          (click)="onDismiss()"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  </hk-card>
+}
