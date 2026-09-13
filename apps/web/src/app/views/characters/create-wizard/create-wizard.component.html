@@ -1,0 +1,118 @@
+<section class="create-wizard" *transloco="let t; read: 'characters'">
+  <hk-stepper
+    class="create-wizard__stepper"
+    [steps]="stepperSteps()"
+    [activeId]="activeStepId()"
+    (stepSelected)="onStepSelected($event)"
+  >
+    @switch (currentStep()?.kind) {
+      @case ('name') {
+        <div class="create-wizard__step">
+          <h2>{{ t('wizard.name.title') }}</h2>
+
+          <label class="create-wizard__field">
+            <span>{{ t('wizard.name.nameLabel') }}</span>
+            <input
+              type="text"
+              class="create-wizard__name-input"
+              [value]="state.name()"
+              (input)="onNameInput($any($event.target).value)"
+              (blur)="onNameBlur()"
+              [attr.maxlength]="nameMaxLength"
+            />
+          </label>
+          @if (nameTouched() && !nameValid()) {
+            <p class="create-wizard__error">{{ t('wizard.name.nameError') }}</p>
+          }
+
+          <fieldset class="create-wizard__field">
+            <legend>{{ t('wizard.name.genderLabel') }}</legend>
+            @for (option of genderOptions; track option.value) {
+              <label class="create-wizard__radio">
+                <input
+                  type="radio"
+                  name="create-wizard-gender"
+                  [value]="option.value"
+                  [checked]="state.gender() === option.value"
+                  (change)="onGenderChange(option.value)"
+                />
+                {{ t(option.labelKey) }}
+              </label>
+            }
+          </fieldset>
+        </div>
+      }
+      @case ('review') {
+        <div class="create-wizard__step create-wizard__review">
+          <h2>{{ t('wizard.review.title') }}</h2>
+          <dl class="create-wizard__summary">
+            <dt>{{ t('wizard.review.nameLabel') }}</dt>
+            <dd>{{ state.name() }}</dd>
+          </dl>
+
+          @if (state.draftSheet(); as sheet) {
+            @if (chosenEntityNames().length > 0) {
+              <div>
+                <h3>{{ t('wizard.review.chosenLabel') }}</h3>
+                <ul class="create-wizard__chosen">
+                  @for (name of chosenEntityNames(); track name) {
+                    <li>{{ name }}</li>
+                  }
+                </ul>
+              </div>
+            }
+            <dl class="create-wizard__summary">
+              <dt>{{ t('wizard.review.abilitiesLabel') }}</dt>
+              <dd>{{ abilityLine() }}</dd>
+              <dt>{{ t('wizard.review.hp') }}</dt>
+              <dd>{{ sheet.hp.max.value }}</dd>
+              <dt>{{ t('wizard.review.ac') }}</dt>
+              <dd>{{ sheet.ac.value }}</dd>
+            </dl>
+          }
+
+          @if (!complete()) {
+            <p class="create-wizard__incomplete">{{ t('wizard.review.incomplete') }}</p>
+          }
+          <button
+            hk-button
+            type="button"
+            class="create-wizard__create"
+            [variant]="'primary'"
+            [disabled]="!complete() || creating()"
+            (click)="onCreate()"
+          >
+            {{ t('wizard.review.create') }}
+          </button>
+        </div>
+      }
+      @default {
+        <p class="create-wizard__pending">{{ t('wizard.pendingStep') }}</p>
+      }
+    }
+
+    <div hk-stepper-footer class="create-wizard__footer">
+      <button
+        hk-button
+        type="button"
+        class="create-wizard__back"
+        [variant]="'ghost'"
+        [disabled]="!canGoBack()"
+        (click)="back()"
+      >
+        {{ t('wizard.actions.back') }}
+      </button>
+      @if (currentStep()?.kind !== 'review') {
+        <button
+          hk-button
+          type="button"
+          class="create-wizard__next"
+          [disabled]="!canGoNext()"
+          (click)="next()"
+        >
+          {{ t('wizard.actions.next') }}
+        </button>
+      }
+    </div>
+  </hk-stepper>
+</section>

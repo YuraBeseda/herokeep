@@ -6,6 +6,13 @@ export const routes: Routes = [
     loadComponent: () => import('./views/home/home.component').then((m) => m.HomeComponent),
   },
   {
+    path: 'characters/new',
+    loadComponent: () =>
+      import('./views/characters/create-wizard/create-wizard.component').then(
+        (m) => m.CreateWizardComponent,
+      ),
+  },
+  {
     path: 'characters',
     loadComponent: () =>
       import('./views/characters/list/characters-list.component').then(

@@ -16,5 +16,45 @@
       "deleted": "{name} видалено",
       "delete-failed": "Не вдалося видалити персонажа. Спробуйте ще раз."
     }
+  },
+  "wizard": {
+    "steps": {
+      "name": "Ім'я",
+      "species": "Раса",
+      "background": "Передісторія",
+      "backgroundAbilities": "Бонуси передісторії",
+      "class": "Клас",
+      "abilityScores": "Характеристики",
+      "classSkills": "Навички",
+      "choice": "Вибір",
+      "spells": "Заклинання",
+      "equipment": "Спорядження",
+      "review": "Огляд"
+    },
+    "actions": {
+      "back": "Назад",
+      "next": "Далі"
+    },
+    "pendingStep": "Цей крок ще не доступний.",
+    "name": {
+      "title": "Назвіть персонажа",
+      "nameLabel": "Ім'я",
+      "nameError": "Введіть ім'я довжиною до 200 символів.",
+      "genderLabel": "Граматичний рід",
+      "genderMasculine": "Чоловічий",
+      "genderFeminine": "Жіночий",
+      "genderNeuter": "Середній"
+    },
+    "review": {
+      "title": "Огляд",
+      "nameLabel": "Ім'я",
+      "genderLabel": "Рід",
+      "chosenLabel": "Зроблені вибори",
+      "abilitiesLabel": "Характеристики",
+      "hp": "Очки здоров'я",
+      "ac": "Клас броні",
+      "create": "Створити персонажа",
+      "incomplete": "Завершіть усі кроки, щоб створити персонажа."
+    }
   }
 }

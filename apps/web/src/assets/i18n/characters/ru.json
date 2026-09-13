@@ -16,5 +16,45 @@
       "deleted": "{name} удалён",
       "delete-failed": "Не удалось удалить персонажа. Попробуйте снова."
     }
+  },
+  "wizard": {
+    "steps": {
+      "name": "Имя",
+      "species": "Раса",
+      "background": "Предыстория",
+      "backgroundAbilities": "Бонусы предыстории",
+      "class": "Класс",
+      "abilityScores": "Характеристики",
+      "classSkills": "Навыки",
+      "choice": "Выбор",
+      "spells": "Заклинания",
+      "equipment": "Снаряжение",
+      "review": "Обзор"
+    },
+    "actions": {
+      "back": "Назад",
+      "next": "Далее"
+    },
+    "pendingStep": "Этот шаг пока недоступен.",
+    "name": {
+      "title": "Назовите персонажа",
+      "nameLabel": "Имя",
+      "nameError": "Введите имя длиной до 200 символов.",
+      "genderLabel": "Грамматический род",
+      "genderMasculine": "Мужской",
+      "genderFeminine": "Женский",
+      "genderNeuter": "Средний"
+    },
+    "review": {
+      "title": "Обзор",
+      "nameLabel": "Имя",
+      "genderLabel": "Род",
+      "chosenLabel": "Сделанные выборы",
+      "abilitiesLabel": "Характеристики",
+      "hp": "Очки здоровья",
+      "ac": "Класс доспеха",
+      "create": "Создать персонажа",
+      "incomplete": "Завершите все шаги, чтобы создать персонажа."
+    }
   }
 }

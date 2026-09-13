@@ -16,5 +16,45 @@
       "deleted": "{name} deleted",
       "delete-failed": "Couldn't delete the character. Try again."
     }
+  },
+  "wizard": {
+    "steps": {
+      "name": "Name",
+      "species": "Species",
+      "background": "Background",
+      "backgroundAbilities": "Background abilities",
+      "class": "Class",
+      "abilityScores": "Ability scores",
+      "classSkills": "Skills",
+      "choice": "Choice",
+      "spells": "Spells",
+      "equipment": "Equipment",
+      "review": "Review"
+    },
+    "actions": {
+      "back": "Back",
+      "next": "Next"
+    },
+    "pendingStep": "This step isn't available yet.",
+    "name": {
+      "title": "Name your character",
+      "nameLabel": "Name",
+      "nameError": "Enter a name, up to 200 characters.",
+      "genderLabel": "Grammatical gender",
+      "genderMasculine": "Masculine",
+      "genderFeminine": "Feminine",
+      "genderNeuter": "Neuter"
+    },
+    "review": {
+      "title": "Review",
+      "nameLabel": "Name",
+      "genderLabel": "Gender",
+      "chosenLabel": "Choices so far",
+      "abilitiesLabel": "Abilities",
+      "hp": "Hit points",
+      "ac": "Armor class",
+      "create": "Create character",
+      "incomplete": "Finish every step before creating your character."
+    }
   }
 }

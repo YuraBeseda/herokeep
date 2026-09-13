@@ -1,0 +1,72 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.create-wizard__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.create-wizard__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.create-wizard__name-input {
+  @include u.touch-target;
+
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  color: var(--text-1);
+  padding: var(--space-2);
+  font: inherit;
+}
+
+.create-wizard__radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.create-wizard__error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.create-wizard__summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.create-wizard__summary dt {
+  color: var(--text-2);
+}
+
+.create-wizard__chosen {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.create-wizard__incomplete {
+  color: var(--text-2);
+}
+
+.create-wizard__pending {
+  color: var(--text-2);
+}
+
+.create-wizard__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
