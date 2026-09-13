@@ -40,6 +40,15 @@
                 }
               </p>
             }
+            @if (state.hpRollDice(); as dice) {
+              <span class="level-up__hp-dice">
+                @for (die of dice; track $index) {
+                  <span class="level-up__hp-die" [class.level-up__hp-die--dropped]="!die.kept">
+                    {{ die.value }}
+                  </span>
+                }
+              </span>
+            }
           </div>
         }
         @case ('choice') {
@@ -63,6 +72,7 @@
               [prepare]="prepareSpell"
               [unprepare]="unprepareSpell"
               [finish]="finishSpells"
+              [recommendedCount]="levelUpSpellbookRecommended"
             />
           </div>
         }

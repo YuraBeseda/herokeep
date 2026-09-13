@@ -161,6 +161,34 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     expect(lastEvent.payload).toEqual({ amount: 300 });
   });
 
+  it('a negative XP entry is accepted as a delta and clamps facts.xp at 0 (reducer floor)', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+    expect(characterStore.facts()?.xp).toBe(300);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('.sheet-shell__xp-current')?.textContent).toContain('300');
+
+    const input = root.querySelector<HTMLInputElement>(
+      '.sheet-shell__xp-field .hk-number-field__input',
+    )!;
+    input.value = '-350';
+    input.dispatchEvent(new Event('input'));
+    await harness.fixture.whenStable();
+    root.querySelector<HTMLButtonElement>('.sheet-shell__xp-submit')!.click();
+
+    await pollUntil(harness.fixture, () => characterStore.facts()?.xp === 0);
+
+    const lastEvent = characterStore.events().at(-1)!;
+    expect(lastEvent.type).toBe('xp.awarded');
+    // The DELTA sent is the raw negative amount — clamping to 0 is the reducer's own job
+    // (`Math.max(0, f.xp + p.amount)`), not something the sheet shell pre-clamps.
+    expect(lastEvent.payload).toEqual({ amount: -350 });
+    expect(root.querySelector('.sheet-shell__xp-current')?.textContent).toContain('0');
+  });
+
   it('"Undo level-up" is visible while the last tx is level.gained-led, and reverting removes both the button and the level', async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);

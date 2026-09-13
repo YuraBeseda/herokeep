@@ -2,11 +2,13 @@ import { computed, inject, Injectable, signal, type Signal } from '@angular/core
 import {
   derive,
   ENGINE_VERSION,
+  findChoice,
   outstandingChoices,
   reduce,
   validateSelection,
   type ChoiceRequest,
   type Diagnostic,
+  type Facts,
   type Sheet,
   type SystemRules,
 } from '@hk/engine';
@@ -109,8 +111,18 @@ export class CreateWizardState {
    * then `extraDrafts`) wrapped in synthetic, parseEvent-valid envelopes — empty until `name` is
    * non-empty and a core pack is loaded (there is nothing to reduce before then: `character.
    * created`'s payload itself requires a non-empty name to parse). Seq is assigned sequentially,
-   * 1..n, in exactly the order pushed. */
-  private readonly draftEvents = computed<Event[]>(() => {
+   * 1..n, in exactly the order pushed.
+   *
+   * `excludeChoiceId`, when given, omits that ONE `decision.made` draft from the built sequence —
+   * used by `validate()` (see its own doc) to re-check an already-recorded decision's selection
+   * without double-counting that SAME decision's already-applied effect: an `abilities` pick
+   * (a background's own +2/+1, task-13-fix-report.md) reads the draft SHEET's current score, so
+   * re-validating it while its own prior contribution is still baked into that sheet would
+   * otherwise see e.g. `17 (manual) + 2 (already applied) + 2 (proposed) > 20` instead of the
+   * correct `17 + 2 (proposed) ≤ 20`. Mirrors `LevelUpState.buildDraftEnvelopes`'s own
+   * `excludeChoiceId` exactly — same bug shape, reachable here too (manual/roll ability entry
+   * allows up to 18-20, and every background `abilities` choice defaults its own pick to `max:20`). */
+  private buildDraftEvents(excludeChoiceId?: string): Event[] {
     const name = this.name().trim();
     const core = this.packStore.corePack();
     if (!name || !core) return [];
@@ -145,6 +157,7 @@ export class CreateWizardState {
     const decisions = this.decisions();
     const contexts = this.decisionContexts();
     for (const [choiceId, selection] of decisions) {
+      if (choiceId === excludeChoiceId) continue;
       const context = contexts.get(choiceId);
       push('decision.made', 1, { choiceId, selection, ...(context ? { context } : {}) });
     }
@@ -159,20 +172,23 @@ export class CreateWizardState {
     for (const draft of this.extraDrafts()) push(draft.type, draft.v, draft.payload);
 
     return events;
-  });
+  }
 
   private classDecisionSelection(decisions: ReadonlyMap<string, string[]>): string | undefined {
     const classChoiceId = this.classChoiceId();
     return classChoiceId ? decisions.get(classChoiceId)?.[0] : undefined;
   }
 
-  private readonly draftFacts = computed(() => {
-    const events = this.draftEvents();
+  /** See `buildDraftEvents`'s `excludeChoiceId` doc. */
+  private reduceDraft(excludeChoiceId?: string): Facts | undefined {
+    const events = this.buildDraftEvents(excludeChoiceId);
     if (events.length === 0) return undefined;
     return reduce(events, undefined, this.systemRules());
-  });
+  }
 
-  /** `undefined` until `name` is set (see `draftEvents`'s doc). */
+  private readonly draftFacts = computed(() => this.reduceDraft());
+
+  /** `undefined` until `name` is set (see `buildDraftEvents`'s doc). */
   readonly draftSheet: Signal<Sheet | undefined> = computed(() => {
     const facts = this.draftFacts();
     if (!facts || !this.packStore.ready()) return undefined;
@@ -305,13 +321,36 @@ export class CreateWizardState {
     }
   }
 
-  /** `validateSelection` over the CURRENT `draftSheet`/draft facts — `[]` (nothing to validate
-   * against yet) before a name has been set. */
+  /** `validateSelection` over the draft sheet/facts, with `choiceId`'s OWN already-recorded
+   * decision excluded from that draft first WHEN `choiceId` resolves to an `abilities` pick (see
+   * `isAbilitiesPick`'s doc for why only that pick kind needs this) — this is what lets
+   * `invalidDecisions` re-check an already-decided `abilities` pick (a background's own +2/+1)
+   * without its own prior contribution double-counting against itself. A choiceId with no recorded
+   * decision yet (the common interactive-selection case), or one that isn't an `abilities` pick, is
+   * unaffected — there is nothing to exclude, or nothing that needs to be. `[]` (nothing to
+   * validate against yet) before a name has been set. */
   validate(choiceId: string, selection: string[]): Diagnostic[] {
-    const sheet = this.draftSheet();
-    const facts = this.draftFacts();
-    if (!sheet || !facts) return [];
+    const excludeChoiceId = this.isAbilitiesPick(choiceId) ? choiceId : undefined;
+    const facts = this.reduceDraft(excludeChoiceId);
+    if (!facts || !this.packStore.ready()) return [];
+    const sheet = derive(facts, this.engineFacade.index(), this.systemRules());
     return validateSelection(sheet, facts, this.engineFacade.index(), choiceId, selection);
+  }
+
+  /** Only an `abilities` pick (a background's own +2/+1, or — mirrored in `LevelUpState` — the ASI
+   * feat's own ability-scores choice) reads a DERIVED sheet value its own already-recorded decision
+   * already contributes to (`validateAbilitiesPick`'s `sheet.abilities[ability].score.value`), so
+   * only that pick kind needs `buildDraftEvents`'s `excludeChoiceId` exclusion. Every other kind is
+   * validated against the FULL draft, unmodified — notably `abilityGeneration` (the system's own
+   * ability-scores choice): `validateAbilityGeneration` reads `facts.decisionContexts[choiceId]`
+   * for the recorded generation METHOD, which excluding the choice's own `decision.made` would
+   * blank out (silently falling back to "accept any method"), breaking method-aware validation
+   * entirely — confirmed by a regression across `validate rejects a wrong-multiset standard-array
+   * selection…`/`invalidDecisions is empty until…`/`a decided-but-invalid choice…` when this was
+   * first tried unconditionally (task-13-fix-report.md). */
+  private isAbilitiesPick(choiceId: string): boolean {
+    const found = findChoice(this.engineFacade.index(), choiceId);
+    return found !== undefined && 'abilities' in found.choice.pick;
   }
 
   /** Marks a free-form step (`spells`/`equipment`) as user-confirmed-done — called by that step's

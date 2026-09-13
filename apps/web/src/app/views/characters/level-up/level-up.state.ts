@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal, type Signal } from '@angular/core
 import {
   derive,
   ENGINE_VERSION,
+  findChoice,
   outstandingChoices,
   parseRollSpec,
   reduce,
@@ -260,17 +261,26 @@ export class LevelUpState {
   }
 
   /** `validateSelection` over the draft sheet/facts, with `choiceId`'s OWN already-recorded
-   * decision (if any) excluded from that draft first — see `buildDraftEnvelopes`'s
-   * `excludeChoiceId` doc for why: this is what lets `invalidDecisions` re-check an already-decided
-   * `abilities` pick (the ASI feat) without its own prior contribution double-counting against
-   * itself. A choiceId with no recorded decision yet (the common interactive-selection case) is
-   * unaffected — there is nothing to exclude. `[]` before an advancement/draft exists (mirrors
-   * `CreateWizardState.validate`'s own doc). */
+   * decision excluded from that draft first WHEN `choiceId` resolves to an `abilities` pick (see
+   * `isAbilitiesPick`'s doc — mirrors `CreateWizardState.validate`'s own fix exactly, including the
+   * same narrowing: 1b's level-up flow never re-offers `abilityGeneration` — that pick is
+   * creation-only — but the guard is kept here too so this stays correct if that ever changes).
+   * This is what lets `invalidDecisions` re-check an already-decided `abilities` pick (the ASI
+   * feat) without its own prior contribution double-counting against itself. A choiceId with no
+   * recorded decision yet, or one that isn't an `abilities` pick, is unaffected. `[]` before an
+   * advancement/draft exists. */
   validate(choiceId: string, selection: string[]): Diagnostic[] {
-    const facts = this.reduceDraft(choiceId);
+    const excludeChoiceId = this.isAbilitiesPick(choiceId) ? choiceId : undefined;
+    const facts = this.reduceDraft(excludeChoiceId);
     if (!facts || !this.packStore.ready()) return [];
     const sheet = derive(facts, this.engineFacade.index(), this.systemRules());
     return validateSelection(sheet, facts, this.engineFacade.index(), choiceId, selection);
+  }
+
+  /** See `CreateWizardState.isAbilitiesPick`'s doc — identical reasoning. */
+  private isAbilitiesPick(choiceId: string): boolean {
+    const found = findChoice(this.engineFacade.index(), choiceId);
+    return found !== undefined && 'abilities' in found.choice.pick;
   }
 
   /** Rolls `1d<hitDie>` via the injected `rng` (defaults to the app's `cryptoRng`) — overridable so

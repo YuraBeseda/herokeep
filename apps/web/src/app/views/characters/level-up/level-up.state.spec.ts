@@ -291,4 +291,44 @@ describe('LevelUpState', () => {
     expect(after).toEqual(before);
     expect(characterStore.sheet()?.level).toBe(2);
   });
+
+  it('undo also restores a deep-equal sheet for a 3-event ASI transaction (level.gained + feat decision + ability sub-choice)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await awardXp(characterStore, 300);
+    const level2 = createState();
+    level2.chooseAverageHp();
+    await characterStore.appendTx(level2.buildTransaction());
+
+    await awardXp(characterStore, 600);
+    const level3 = createState();
+    level3.setDecision(SUBCLASS_CHOICE, [CHAMPION]);
+    level3.chooseAverageHp();
+    await characterStore.appendTx(level3.buildTransaction());
+
+    await awardXp(characterStore, 1800);
+    const before = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
+
+    const state = createState();
+    state.setDecision(FEAT_CHOICE, [ASI_FEAT]);
+    state.setDecision(ASI_CHOICE, ['str:+2']);
+    state.chooseAverageHp();
+    expect(state.complete()).toBe(true);
+    const drafts = state.buildTransaction();
+    expect(drafts).toHaveLength(3);
+    await characterStore.appendTx(drafts);
+    expect(characterStore.sheet()?.level).toBe(4);
+    expect(characterStore.sheet()?.abilities['str']?.score.value).toBe(19);
+
+    const lastEvent = characterStore.events().at(-1)!;
+    expect(lastEvent.txId).toBeDefined();
+    const last3 = characterStore.events().slice(-3);
+    expect(new Set(last3.map((e) => e.txId)).size).toBe(1);
+    await characterStore.revert({ txId: lastEvent.txId });
+
+    const after = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
+    expect(after).toEqual(before);
+    expect(characterStore.sheet()?.level).toBe(3);
+    expect(characterStore.sheet()?.abilities['str']?.score.value).toBe(17);
+  });
 });

@@ -16,7 +16,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
-import { seedFighter } from '../sheet/testing/character-fixtures';
+import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling), same fixture-loading
 // approach as `sheet-shell.component.spec.ts`.
@@ -142,5 +142,61 @@ describe('LevelUpComponent', () => {
 
     expect(characterStore.events().at(-1)?.type).toBe('level.gained');
     expect(characterStore.sheet()?.hp.max.value).toBe(20); // 12 + 6 (average d10) + 2 (con mod)
+  });
+
+  it('the HP step renders the rolled die (T7 kept-die styling) once "Roll" is clicked, and clears it on "Take average"', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('.level-up__hp-dice')).toBeNull();
+
+    root.querySelector<HTMLButtonElement>('.level-up__hp-roll')!.click();
+    await harness.fixture.whenStable();
+
+    const dice = root.querySelectorAll<HTMLElement>('.level-up__hp-die');
+    expect(dice).toHaveLength(1);
+    expect(dice[0].classList.contains('level-up__hp-die--dropped')).toBe(false);
+    const shown = Number(dice[0].textContent?.trim());
+    expect(shown).toBeGreaterThanOrEqual(1);
+    expect(shown).toBeLessThanOrEqual(10); // fighter's hit die
+
+    // The rendered die must equal what actually landed as the draft's hpRoll.
+    const resultText = root.querySelector('.level-up__hp-result')?.textContent ?? '';
+    expect(resultText).toContain(String(shown));
+
+    root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+    await harness.fixture.whenStable();
+    expect(root.querySelector('.level-up__hp-dice')).toBeNull();
+  });
+
+  it("the spells step recommends 2 spells (not the creation wizard's 6)", async () => {
+    const id = await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: {
+          choiceId: 'srd-5e-2024:class/wizard@1/skills',
+          selection: ['arcana', 'investigation'],
+        },
+      },
+    ]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+
+    root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+    await harness.fixture.whenStable();
+    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
+    await harness.fixture.whenStable();
+
+    const helper = root.querySelector('.spells-step__spellbook .spells-step__helper');
+    expect(helper?.textContent).toContain('2');
+    expect(helper?.textContent).not.toContain('6');
   });
 });

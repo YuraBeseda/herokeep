@@ -23,7 +23,7 @@
     <section class="spells-step__section spells-step__spellbook">
       <h3 class="spells-step__title">{{ t('wizard.spells.spellbookTitle') }}</h3>
       <p class="spells-step__helper">
-        {{ t('wizard.spells.spellbookHelper', { recommended: spellbookRecommended }) }}
+        {{ t('wizard.spells.spellbookHelper', { recommended: recommendedCount() }) }}
       </p>
       <hk-entity-picker
         [ids]="spellbookIds()"

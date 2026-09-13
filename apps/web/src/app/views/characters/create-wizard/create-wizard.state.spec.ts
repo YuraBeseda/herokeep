@@ -218,6 +218,47 @@ describe('CreateWizardState', () => {
     ).toBe(true);
   });
 
+  it('a background ability bump on a manually-set 17 does NOT spuriously trip abilityMax (self-reference exclusion), while a genuine over-cap still does', () => {
+    const state = createState();
+    state.name.set('Aldric');
+    state.setDecision(SPECIES_CHOICE, ['srd-5e-2024:species/human']);
+    state.setDecision(BACKGROUND_CHOICE, ['srd-5e-2024:background/soldier']);
+    // Manual generation at 17 — soldier's own +2/+1 bump (str/con) pushes str to 19. Re-validating
+    // THIS SAME choice's own already-recorded selection against a draft sheet that already includes
+    // its own +2 would, without the exclusion fix, double-count it (19 + 2 (proposed again) > 20)
+    // and spuriously flag `selection.abilityMax` — reachable in real play (manual/roll both allow
+    // up to 18, and every background `abilities` choice defaults `max` to 20).
+    state.setDecision(
+      ABILITY_SCORES_CHOICE,
+      ['str:17', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'manual' },
+    );
+    state.setDecision(BACKGROUND_ABILITIES_CHOICE, ['str:+2', 'con:+1']);
+
+    expect(state.draftSheet()?.abilities['str']?.score.value).toBe(19);
+    expect(state.invalidDecisions().has(BACKGROUND_ABILITIES_CHOICE)).toBe(false);
+    expect(
+      state
+        .validate(BACKGROUND_ABILITIES_CHOICE, ['str:+2', 'con:+1'])
+        .some((d) => d.code === 'selection.abilityMax'),
+    ).toBe(false);
+
+    // Genuine over-cap is still reported: bumping the manual str straight to 19 (engine-legal —
+    // `setDecision` commits unconditionally, same as a real out-of-range manual entry would) makes
+    // the SAME +2 bump land at 19 + 2 = 21 > 20 — the exclusion only removes the choice's OWN
+    // double-counted contribution, it never masks a real over-cap.
+    state.setDecision(
+      ABILITY_SCORES_CHOICE,
+      ['str:19', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'manual' },
+    );
+    const invalid = state.invalidDecisions();
+    expect(invalid.has(BACKGROUND_ABILITIES_CHOICE)).toBe(true);
+    expect(
+      invalid.get(BACKGROUND_ABILITIES_CHOICE)?.some((d) => d.code === 'selection.abilityMax'),
+    ).toBe(true);
+  });
+
   it('a decided-but-invalid choice (over-budget point buy) is no longer outstanding but its step stays; fixing it clears invalidDecisions and drops the step', () => {
     const state = createState();
     state.name.set('Aldric');

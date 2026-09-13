@@ -162,6 +162,18 @@ describe('SpellsStepComponent', () => {
     expect(compiled.querySelector('.spells-step__spellbook .spells-step__cap-message')).toBeNull();
   });
 
+  it('recommendedCount is overridable — the level-up wizard passes 2 instead of the creation-only default of 6', async () => {
+    createWizardDraft();
+    const fixture = TestBed.createComponent(SpellsStepComponent);
+    fixture.componentRef.setInput('recommendedCount', 2);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const helper = compiled.querySelector('.spells-step__spellbook .spells-step__helper');
+    expect(helper?.textContent).toContain('2');
+    expect(helper?.textContent).not.toContain('6');
+  });
+
   it('caps prepared spells at preparedMax (4 at wizard L1): a 5th toggle is refused with a cap message', async () => {
     const state = createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);

@@ -15,6 +15,11 @@ import { LevelUpState, type LevelUpStep } from './level-up.state';
 
 const GENERIC_FAILURE_KEY = 'characters.levelUp.review.toast.failed';
 
+// A level-up spellbook addition is one or two new spells, not a from-scratch spellbook (the
+// creation wizard's own `SPELLBOOK_RECOMMENDED` of 6 — task-13-fix-report.md) — passed to
+// `hk-spells-step`'s `recommendedCount` override below.
+const LEVEL_UP_SPELLBOOK_RECOMMENDED = 2;
+
 /**
  * `/c/:id/level-up` — the per-level level-up wizard (plan-5 task-13-brief.md). Hosts `LevelUpState`
  * as a component provider (a fresh session per visit, mirrors `CreateWizardComponent`'s own
@@ -117,6 +122,8 @@ export class LevelUpComponent {
     const classId = this.state.advancement()?.classId;
     return this.state.draftSheet()?.spellcasting.find((b) => b.classId === classId);
   });
+
+  protected readonly levelUpSpellbookRecommended = LEVEL_UP_SPELLBOOK_RECOMMENDED;
 
   protected readonly learnSpell = (spellId: string, classId: string): void => {
     this.state.addSpellLearned(spellId, classId);

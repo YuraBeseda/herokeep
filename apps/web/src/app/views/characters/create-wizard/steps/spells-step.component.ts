@@ -65,21 +65,24 @@ export class SpellsStepComponent {
   private readonly engineFacade = inject(EngineFacade);
 
   protected readonly spellPickerLimit = SPELL_PICKER_LIMIT;
-  protected readonly spellbookRecommended = SPELLBOOK_RECOMMENDED;
 
-  // Override trio + one more (task-13-brief.md): `spellcasting` overrides which block this step
+  // Override trio + two more (task-13-brief.md): `spellcasting` overrides which block this step
   // reads (`CreateWizardState.draftSheet()?.spellcasting[0]` otherwise); `learn`/`unlearn`/
   // `prepare`/`unprepare` override the four draft mutators; `finish` overrides the "Continue"
-  // button's action (`CreateWizardState.markStepDone('spells')` otherwise). Every one of these
-  // falls back to `state` when omitted — the wizard's own usage never passes them, so nothing
-  // changes for it. Not aliased (`@angular-eslint/no-input-rename`) — the property name IS the
-  // binding name.
+  // button's action (`CreateWizardState.markStepDone('spells')` otherwise); `recommendedCount`
+  // overrides the spellbook helper's soft-cap number (defaults to `SPELLBOOK_RECOMMENDED`, the
+  // creation wizard's own 6 — the level-up wizard passes 2, task-13-fix-report.md: this was
+  // previously hardcoded, so a level-up spellbook step showed the creation-sized recommendation).
+  // Every one of these falls back to `state`/its own default when omitted — the wizard's own usage
+  // never passes them, so nothing changes for it. Not aliased (`@angular-eslint/no-input-rename`)
+  // — the property name IS the binding name.
   readonly spellcasting = input<SpellcastingBlock | undefined>(undefined);
   readonly learn = input<SpellMutatorFn | undefined>(undefined);
   readonly unlearn = input<SpellMutatorFn | undefined>(undefined);
   readonly prepare = input<SpellMutatorFn | undefined>(undefined);
   readonly unprepare = input<SpellMutatorFn | undefined>(undefined);
   readonly finish = input<(() => void) | undefined>(undefined);
+  readonly recommendedCount = input<number>(SPELLBOOK_RECOMMENDED);
 
   protected readonly block = computed(
     () => this.spellcasting() ?? this.state?.draftSheet()?.spellcasting[0],
