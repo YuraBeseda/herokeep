@@ -236,7 +236,9 @@
       "deathSaveSuccess": "Success",
       "deathSaveFailure": "Failure",
       "deathSaveCritSuccess": "Critical success",
-      "deathSaveCritFailure": "Critical failure"
+      "deathSaveCritFailure": "Critical failure",
+      "concentratingOn": "Concentrating on {name}",
+      "endConcentration": "End concentration"
     },
     "inspiration": {
       "title": "Inspiration",
@@ -257,14 +259,29 @@
       "attack": "Attack bonus",
       "cantripsKnown": "Cantrips known",
       "slotsLevel": "Level {level} slots",
+      "slotPipLabel": "Level {level} slot {index} of {max}",
       "prepared": "Prepared spells",
       "known": "Known spells",
       "preparedOf": "{prepared} / {max} prepared",
+      "preparedMaxReached": "You can only prepare {max} spells at once.",
+      "cast": "Cast",
+      "prepare": "Prepare",
+      "unprepare": "Unprepare",
+      "castDialog": {
+        "title": "Cast {name}",
+        "slotLabel": "Spell slot",
+        "slotOption": "Level {level} ({remaining} left)",
+        "noSlots": "No spell slots available.",
+        "replacesConcentration": "Casting this will end your current concentration.",
+        "cancel": "Cancel",
+        "confirm": "Cast"
+      },
       "empty": "No spellcasting."
     },
     "resources": {
       "title": "Resources",
       "usedOf": "{used} / {max}",
+      "pipLabel": "{name} use {index} of {max}",
       "empty": "No resources."
     },
     "actions": {
@@ -376,6 +393,9 @@
   },
   "validation": {
     "generic": "This selection isn't valid yet.",
+    "slot": {
+      "none-left": "No spell slots of that level remain."
+    },
     "selection": {
       "count": "Select the required number of options.",
       "unresolved": "One of your selections is no longer available.",

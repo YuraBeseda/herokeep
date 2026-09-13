@@ -236,7 +236,9 @@
       "deathSaveSuccess": "Успех",
       "deathSaveFailure": "Провал",
       "deathSaveCritSuccess": "Критический успех",
-      "deathSaveCritFailure": "Критический провал"
+      "deathSaveCritFailure": "Критический провал",
+      "concentratingOn": "Концентрация: {name}",
+      "endConcentration": "Прекратить концентрацию"
     },
     "inspiration": {
       "title": "Вдохновение",
@@ -257,14 +259,29 @@
       "attack": "Бонус атаки заклинанием",
       "cantripsKnown": "Известно заговоров",
       "slotsLevel": "Ячейки {level} уровня",
+      "slotPipLabel": "Ячейка {level} уровня {index} из {max}",
       "prepared": "Подготовленные заклинания",
       "known": "Известные заклинания",
       "preparedOf": "{prepared} / {max} подготовлено",
+      "preparedMaxReached": "Можно подготовить не более {max} заклинаний одновременно.",
+      "cast": "Наложить",
+      "prepare": "Подготовить",
+      "unprepare": "Отменить подготовку",
+      "castDialog": {
+        "title": "Наложить: {name}",
+        "slotLabel": "Ячейка заклинания",
+        "slotOption": "{level} уровень (осталось {remaining})",
+        "noSlots": "Нет доступных ячеек заклинаний.",
+        "replacesConcentration": "Это прекратит текущую концентрацию.",
+        "cancel": "Отмена",
+        "confirm": "Наложить"
+      },
       "empty": "Нет заклинаний."
     },
     "resources": {
       "title": "Ресурсы",
       "usedOf": "{used} / {max}",
+      "pipLabel": "{name}, использование {index} из {max}",
       "empty": "Нет ресурсов."
     },
     "actions": {
@@ -376,6 +393,9 @@
   },
   "validation": {
     "generic": "Этот выбор пока недействителен.",
+    "slot": {
+      "none-left": "Ячеек заклинаний этого уровня не осталось."
+    },
     "selection": {
       "count": "Выберите нужное количество вариантов.",
       "unresolved": "Один из выбранных вариантов больше недоступен.",

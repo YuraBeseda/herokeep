@@ -9,6 +9,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
@@ -175,7 +176,7 @@ describe('PlayTabComponent', () => {
     expect(text).toContain('Defense');
   });
 
-  it("renders a wizard stream's level-1 spell slots as dot rows matching spellcasting (2 slots, none used)", async () => {
+  it("renders a wizard stream's level-1 spell slots as an hk-pips row matching spellcasting (2 slots, none used)", async () => {
     await seedWizard('Elowen');
 
     const fixture = TestBed.createComponent(PlayTabComponent);
@@ -184,9 +185,9 @@ describe('PlayTabComponent', () => {
 
     const slotRow = compiled.querySelector('.play-tab__slot-row')!;
     expect(slotRow).not.toBeNull();
-    const dots = slotRow.querySelectorAll('.play-tab__dot');
-    expect(dots).toHaveLength(2);
-    expect(slotRow.querySelectorAll('.play-tab__dot--filled')).toHaveLength(0);
+    const pips = slotRow.querySelectorAll('.hk-pips__pip');
+    expect(pips).toHaveLength(2);
+    expect(slotRow.querySelectorAll('.hk-pips__pip--filled')).toHaveLength(0);
   });
 });
 
@@ -479,5 +480,359 @@ describe('PlayTabComponent — resource/action name localization', () => {
       source: 'srd-5e-2024:feature/does-not-exist',
     };
     expect(component.actionLabel(fakeAction)).toBe('Ghost Action');
+  });
+});
+
+// task-3-brief.md: slot/resource pips, prepare/unprepare (capped), cast (cantrip direct per
+// R-pf3, leveled via `CastDialogComponent`), and the concentration chip/End button. Every
+// scenario hand-appends the exact `slot.spent`/`spell.learned`/`spell.prepared`/`spell.cast`
+// events a real play session would produce, then drives the rendered DOM — same "exercise the
+// real propose->appendTx wiring, not the component in isolation" convention as the HP describe
+// block above.
+describe('PlayTabComponent — slots, resources, casting, concentration controls', () => {
+  const WIZARD_CLASS_ID = 'srd-5e-2024:class/wizard';
+  const BURNING_HANDS = 'srd-5e-2024:spell/burning-hands';
+  const MAGE_ARMOR = 'srd-5e-2024:spell/mage-armor';
+  const MAGIC_MISSILE = 'srd-5e-2024:spell/magic-missile';
+  const SHIELD_SPELL = 'srd-5e-2024:spell/shield';
+  const THUNDERWAVE = 'srd-5e-2024:spell/thunderwave';
+  const ACID_SPLASH = 'srd-5e-2024:spell/acid-splash'; // cantrip, concentration: false
+  const DANCING_LIGHTS = 'srd-5e-2024:spell/dancing-lights'; // cantrip, concentration: true
+  const DETECT_MAGIC = 'srd-5e-2024:spell/detect-magic'; // level 1, concentration: true
+  const BANE = 'srd-5e-2024:spell/bane'; // level 1, concentration: true (off-list; reducer doesn't validate class eligibility)
+
+  function learned(spellId: string, classId = WIZARD_CLASS_ID) {
+    return { type: 'spell.learned', v: 1, payload: { spellId, classId, source: 'levelUp' } };
+  }
+
+  function prepared(spellId: string, classId = WIZARD_CLASS_ID) {
+    return { type: 'spell.prepared', v: 1, payload: { spellId, classId } };
+  }
+
+  beforeEach(async () => {
+    // Guards against locale leakage from the (file-order-earlier) "resource/action name
+    // localization" describe block above: `LocaleService.setLocale('ru')` there persists to REAL
+    // `localStorage` (`shared/services/i18n/locale.service.ts`'s `STORAGE_KEY`), which Angular's
+    // `TestBed` teardown never clears between tests/describe blocks — a later describe block's
+    // fresh `TranslocoService` would otherwise read that stale 'ru' back on construction and
+    // silently render every button/label in this block's assertions in Russian.
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  function spellRow(compiled: HTMLElement, name: string): HTMLElement {
+    const rows = Array.from(compiled.querySelectorAll<HTMLElement>('.play-tab__spell-lists li'));
+    const row = rows.find(
+      (r) => r.querySelector('.play-tab__spell-name')?.textContent?.trim() === name,
+    );
+    if (!row) throw new Error(`no spell row for "${name}"`);
+    return row;
+  }
+
+  // The Known and Prepared lists can both render a row for the SAME spell (a prepared spell is
+  // also known) — the Known row gets a Prepare/Unprepare toggle, only the Prepared row gets a
+  // Cast button, so a test that needs the CAST affordance must scope to the Prepared `<div>`
+  // specifically (identified by its own `<h3>` subtitle), not just "a `<li>` matching this name".
+  function preparedListSection(compiled: HTMLElement): HTMLElement {
+    const headers = Array.from(compiled.querySelectorAll<HTMLElement>('.play-tab__spell-lists h3'));
+    const header = headers.find(
+      (h) => h.textContent?.trim() === charactersEn.sheet.spellcasting.prepared,
+    );
+    if (!header) throw new Error('no "Prepared spells" section rendered');
+    return header.parentElement!;
+  }
+
+  it('spending a level-1 slot pip appends slot.spent{level:1} and increments used; restoring via a filled pip appends slot.restored{level:1} (no count) and decrements by exactly one', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const slotRow = compiled.querySelector('.play-tab__slot-row')!;
+
+    slotRow.querySelectorAll<HTMLButtonElement>('.hk-pips__pip')[0].click();
+    await pollUntil(fixture, () => characterStore.sheet()?.spellcasting[0].slots[0].used === 1);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'slot.spent',
+      payload: { level: 1 },
+    });
+
+    slotRow.querySelectorAll<HTMLButtonElement>('.hk-pips__pip')[1].click();
+    await pollUntil(fixture, () => characterStore.sheet()?.spellcasting[0].slots[0].used === 2);
+
+    // Both pips are now filled — restoring via the FIRST one must drop `used` by exactly one
+    // (1), never reset it to 0 (the full-reset form `resource.restored` uses by default, and
+    // which `slot.restored` deliberately does NOT — see `play-tab.component.ts`'s own comment).
+    slotRow.querySelectorAll<HTMLButtonElement>('.hk-pips__pip')[0].click();
+    await pollUntil(fixture, () => characterStore.sheet()?.spellcasting[0].slots[0].used === 1);
+    const restoreEvent = characterStore.events().at(-1)!;
+    expect(restoreEvent.type).toBe('slot.restored');
+    expect(restoreEvent.payload).toEqual({ level: 1 });
+  });
+
+  it('spending a resource pip appends resource.spent{resourceId} (default +1); restoring via a filled pip appends resource.restored{resourceId,count:1} and decrements by exactly one, not a full reset', async () => {
+    await seedFighter('Ivan'); // fighter-1's second-wind resource: max 2, display 'pips'
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const resourceCard = compiled.querySelector('.play-tab__resource')!;
+
+    resourceCard.querySelectorAll<HTMLButtonElement>('.hk-pips__pip')[0].click();
+    await pollUntil(fixture, () => characterStore.sheet()?.resources[0]?.used === 1);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'resource.spent',
+      payload: { resourceId: 'second-wind' },
+    });
+
+    resourceCard.querySelectorAll<HTMLButtonElement>('.hk-pips__pip')[1].click();
+    await pollUntil(fixture, () => characterStore.sheet()?.resources[0]?.used === 2);
+
+    resourceCard.querySelectorAll<HTMLButtonElement>('.hk-pips__pip')[0].click();
+    await pollUntil(fixture, () => characterStore.sheet()?.resources[0]?.used === 1);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'resource.restored',
+      payload: { resourceId: 'second-wind', count: 1 },
+    });
+  });
+
+  it('prepared cap blocks preparing a 5th spell with a toast, and appends no spell.prepared event', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([
+      learned(BURNING_HANDS),
+      learned(MAGE_ARMOR),
+      learned(MAGIC_MISSILE),
+      learned(SHIELD_SPELL),
+      learned(THUNDERWAVE), // learned but left unprepared — the one this test attempts to prepare
+      prepared(BURNING_HANDS),
+      prepared(MAGE_ARMOR),
+      prepared(MAGIC_MISSILE),
+      prepared(SHIELD_SPELL), // 4 == wizard-1's preparedMax
+    ]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    const eventsBefore = characterStore.events().length;
+
+    const row = spellRow(compiled, 'Thunderwave');
+    buttonNamed(row, charactersEn.sheet.spellcasting.prepare).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBefore);
+    expect(showSpy).toHaveBeenCalledWith('characters.sheet.spellcasting.preparedMaxReached', {
+      max: 4,
+    });
+  });
+
+  it('unpreparing a prepared spell appends spell.unprepared and its known-list row flips back to a Prepare button', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(BURNING_HANDS), prepared(BURNING_HANDS)]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    const row = spellRow(compiled, 'Burning Hands');
+    buttonNamed(row, charactersEn.sheet.spellcasting.unprepare).click();
+    await pollUntil(
+      fixture,
+      () => !characterStore.sheet()!.spellcasting[0].prepared.includes(BURNING_HANDS),
+    );
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'spell.unprepared',
+      payload: { spellId: BURNING_HANDS, classId: WIZARD_CLASS_ID },
+    });
+
+    compiled = fixture.nativeElement as HTMLElement;
+    const refreshedRow = spellRow(compiled, 'Burning Hands');
+    expect(() => buttonNamed(refreshedRow, charactersEn.sheet.spellcasting.prepare)).not.toThrow();
+  });
+
+  it('R-pf3: casting a known cantrip appends spell.cast{spellId,level:0,slotUsed:false} directly, with no dialog and no concentration key', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(ACID_SPLASH)]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const row = spellRow(compiled, 'Acid Splash');
+    buttonNamed(row, charactersEn.sheet.spellcasting.cast).click();
+    await pollUntil(fixture, () => characterStore.events().at(-1)?.type === 'spell.cast');
+
+    expect(characterStore.events().at(-1)!.payload).toEqual({
+      spellId: ACID_SPLASH,
+      level: 0,
+      slotUsed: false,
+    });
+    expect(document.querySelector('.cdk-overlay-container hk-dialog')).toBeNull();
+  });
+
+  it('casting a concentration cantrip while already concentrating shows the inline replaces-note next to its own Cast button', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(DANCING_LIGHTS)]);
+    // Establishes concentration on a DIFFERENT spell first (the reducer doesn't validate class
+    // spell-list eligibility, so any real concentration spell id works as the precondition).
+    await characterStore.appendTx(
+      propose.cast(characterStore.sheet()!, BANE, { level: 1, concentration: true }),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const row = spellRow(compiled, 'Dancing Lights');
+    expect(row.querySelector('.play-tab__concentration-note')?.textContent?.trim()).toBe(
+      charactersEn.sheet.spellcasting.castDialog.replacesConcentration,
+    );
+  });
+
+  it('leveled cast via the dialog spends the chosen slot and sets concentration when the spell has it', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(DETECT_MAGIC), prepared(DETECT_MAGIC)]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(preparedListSection(compiled), charactersEn.sheet.spellcasting.cast).click();
+    TestBed.tick();
+
+    // The dialog's own Cast/confirm button carries the SAME translated label as the row's own
+    // Cast button — located by its dialog-scoped text (`document`, not `compiled`: the CDK
+    // overlay attaches to `document.body`, outside the fixture's root).
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    buttonNamed(overlay as HTMLElement, charactersEn.sheet.spellcasting.castDialog.confirm).click();
+    TestBed.tick();
+
+    await pollUntil(fixture, () => characterStore.sheet()?.spellcasting[0].slots[0].used === 1);
+
+    expect(characterStore.events().at(-1)!.type).toBe('spell.cast');
+    expect(characterStore.events().at(-1)!.payload).toEqual({
+      spellId: DETECT_MAGIC,
+      level: 1,
+      concentration: true,
+    });
+    expect(characterStore.sheet()?.concentration?.spellId).toBe(DETECT_MAGIC);
+  });
+
+  it('the cast dialog shows the "replaces current concentration" note when already concentrating on something else', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(DETECT_MAGIC), prepared(DETECT_MAGIC)]);
+    await characterStore.appendTx(
+      propose.cast(characterStore.sheet()!, BANE, { level: 1, concentration: true }),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(preparedListSection(compiled), charactersEn.sheet.spellcasting.cast).click();
+    TestBed.tick();
+
+    expect(document.body.textContent).toContain(
+      charactersEn.sheet.spellcasting.castDialog.replacesConcentration,
+    );
+  });
+
+  it('a slot spent by another action while the cast dialog is still open surfaces a genuine slot.none-left ProposeError, mapped to its own toast (not the generic fallback)', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(BURNING_HANDS), prepared(BURNING_HANDS)]);
+    // Leaves exactly ONE level-1 slot free (wizard-1 has 2) — the dialog opens with that single
+    // option selected by default.
+    await characterStore.appendTx(propose.spendSlot(characterStore.sheet()!, 1));
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    buttonNamed(preparedListSection(compiled), charactersEn.sheet.spellcasting.cast).click();
+    TestBed.tick();
+
+    // The RACE: while the dialog is open (still holding its stale "1 slot available" snapshot),
+    // spend that very last slot out from under it via a concurrent action (another tab, another
+    // quick pip click elsewhere).
+    await characterStore.appendTx(propose.spendSlot(characterStore.sheet()!, 1));
+    const eventsBeforeConfirm = characterStore.events().length;
+
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    buttonNamed(overlay as HTMLElement, charactersEn.sheet.spellcasting.castDialog.confirm).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBeforeConfirm); // no spell.cast appended
+    expect(showSpy).toHaveBeenCalledWith('characters.validation.slot.none-left');
+  });
+
+  it('End concentration appends concentration.ended{} and clears the chip', async () => {
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(
+      propose.cast(characterStore.sheet()!, BANE, { level: 1, concentration: true }),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    const chip = compiled.querySelector('.play-tab__concentration')!;
+    expect(chip.textContent).toContain('Bane');
+
+    buttonNamed(chip as HTMLElement, charactersEn.sheet.hp.endConcentration).click();
+    await pollUntil(fixture, () => characterStore.sheet()?.concentration === undefined);
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'concentration.ended',
+      payload: {},
+    });
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.play-tab__concentration')).toBeNull();
   });
 });

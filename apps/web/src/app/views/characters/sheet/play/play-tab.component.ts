@@ -10,13 +10,24 @@ import {
   type ProposedEvent,
   type Sheet,
 } from '@hk/engine';
-import { makeEntityId, parseEntityId } from '@hk/protocol';
+import {
+  makeEntityId,
+  parseEntityId,
+  type ConcentrationEnded,
+  type ResourceRestored,
+  type ResourceSpent,
+  type SlotRestored,
+  type SpellPrepared,
+  type SpellUnprepared,
+} from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
+import { DialogService } from '@shared/components/dialog/dialog.service';
 import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
+import { PipsComponent } from '@shared/components/pips/pips.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { StatTileComponent } from '@shared/components/stat-tile/stat-tile.component';
 import { ToastService } from '@shared/components/toast/toast.service';
@@ -27,17 +38,17 @@ import {
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
-import { CharacterStore } from '@shared/stores/character.store';
+import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
+import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
 
 type DeathSaveResult = 'success' | 'failure' | 'critSuccess' | 'critFailure';
 
-// None of `propose.damage`/`heal`/`tempHp`/`deathSave`/`inspiration` (`packages/engine/src/
-// propose/vitals.ts`) currently throw `ProposeError` at all (only `propose.spendHitDie` does,
-// with `'hitdice.none-left'` — out of this task's scope) — so this play tab recognizes no
-// diagnostic codes of its own yet; every refusal (should a future engine change ever add one)
-// falls back to `validation.generic` via `diagnosticKey`. A later task adding a proposer that DOES
-// throw for a play-tab action (T3's `spendSlot`/`cast`, say) extends this set with its own codes.
-const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set();
+// task-3-brief.md extends this set: `propose.spendSlot`/`propose.cast` (`packages/engine/src/
+// propose/casting.ts`) are the first play-tab proposers that DO throw — both refuse with
+// `'slot.none-left'` when the target level has no slots left. Every other refusal (should a
+// future engine change ever add one this play tab doesn't yet know about) still falls back to
+// `validation.generic` via `diagnosticKey`.
+const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set(['slot.none-left']);
 
 // `@hk/engine`'s barrel doesn't re-export `derive/*.ts`'s per-field row types directly (only
 // `Sheet` itself — see `derive/index.ts`) — recovered as indexed-access aliases off `Sheet`, same
@@ -69,11 +80,15 @@ interface SkillRow {
   readonly proficiency: SkillProficiency;
 }
 
-interface SlotRow {
+// A known/prepared spellId resolved against the content index (task-3-brief.md): `level`/
+// `concentration` come straight off the spell ENTITY (never inferred in UI logic beyond reading
+// it — R9) — `0`/`false` when the id doesn't resolve to a `spell` entity (a stale/unknown id;
+// `name` still falls back through `resolveName`, same defensive convention as everywhere else).
+interface SpellRow {
+  readonly id: string;
+  readonly name: string;
   readonly level: number;
-  readonly max: number;
-  readonly used: number;
-  readonly dots: readonly boolean[]; // true = filled/used
+  readonly concentration: boolean;
 }
 
 const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -103,6 +118,7 @@ const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
     ChipComponent,
     HpBarComponent,
     NumberFieldComponent,
+    PipsComponent,
     SheetSectionComponent,
     StatTileComponent,
     DerivedPopoverDirective,
@@ -116,6 +132,7 @@ export class PlayTabComponent {
   private readonly engineFacade = inject(EngineFacade);
   private readonly markdownService = inject(MarkdownService);
   private readonly toastService = inject(ToastService);
+  private readonly dialogService = inject(DialogService);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;
@@ -181,21 +198,26 @@ export class PlayTabComponent {
     return sheet.attacks.map((row) => ({ ...row, name: this.resolveName(row.name) }));
   });
 
+  // task-3-brief.md: `block.slots` (`{level, max, used}[]`) already has exactly what `hk-pips`
+  // needs, rendered directly in the template — no per-block row-mapping needed for slots anymore
+  // (the old `slotRows`/`dots` decorative-only shape is gone along with the plain dot markup it
+  // fed). `known`/`prepared` become resolved `SpellRow[]` instead of bare name strings, so the
+  // template can gate cantrip-vs-leveled Cast/Prepare affordances off each spell's own level.
   protected readonly spellBlocks = computed<
-    (SpellcastingBlock & { slotRows: SlotRow[]; knownNames: string[]; preparedNames: string[] })[]
+    (SpellcastingBlock & { knownSpells: SpellRow[]; preparedSpells: SpellRow[] })[]
   >(() => {
     const sheet = this.sheet();
     if (!sheet) return [];
     return sheet.spellcasting.map((block) => ({
       ...block,
-      slotRows: block.slots.map((slot) => ({
-        ...slot,
-        dots: Array.from({ length: slot.max }, (_, i) => i < slot.used),
-      })),
-      knownNames: block.known.map((id) => this.resolveName(id)),
-      preparedNames: block.prepared.map((id) => this.resolveName(id)),
+      knownSpells: block.known.map((id) => this.spellRow(id)),
+      preparedSpells: block.prepared.map((id) => this.spellRow(id)),
     }));
   });
+
+  // task-3-brief.md: `Sheet.concentration` (added this task, `derive/sheet.ts`) is present only
+  // while actually concentrating — `undefined` otherwise. Drives the HP-section chip/End button.
+  protected readonly concentration = computed(() => this.sheet()?.concentration);
 
   protected readonly hitDiceRows = computed<
     {
@@ -403,5 +425,142 @@ export class PlayTabComponent {
 
   private itemName(entry: InventoryRow): string {
     return entry.itemId ? this.resolveName(entry.itemId) : (entry.name ?? entry.instanceId);
+  }
+
+  // --- Slots, resources, prepare/cast, concentration (task-3-brief.md) ------------------------
+
+  // Every hand-assembled event this task appends goes through here — `DraftEvent`s never throw
+  // (unlike `propose.*`, there's no engine-side refusal to catch), so this is a plain fire-and-
+  // forget `appendTx`, same "leadership/storage failures aren't this task's concern" convention
+  // `tryPropose` documents for the propose side.
+  private appendDraft(drafts: DraftEvent[]): void {
+    void this.characterStore.appendTx(drafts);
+  }
+
+  protected onSpendSlot(level: number): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.spendSlot(sheet, level));
+  }
+
+  // `slot.restored` with no `count` defaults to a SINGLE-slot decrement (`handlers/casting.ts`) —
+  // exactly one pip's worth, matching `hk-pips`' own "one click, one unit" contract.
+  protected onRestoreSlot(level: number): void {
+    this.appendDraft([{ type: 'slot.restored', v: 1, payload: { level } satisfies SlotRestored }]);
+  }
+
+  protected onSpendResource(resourceId: string): void {
+    this.appendDraft([
+      { type: 'resource.spent', v: 1, payload: { resourceId } satisfies ResourceSpent },
+    ]);
+  }
+
+  // Deliberate divergence from `resource.restored`'s own OMITTED-count default: that form is a
+  // FULL reset to 0 used (`handlers/casting.ts`'s own comment — it's `propose.rest`'s shape, one
+  // `resource.restored{resourceId}` per reset resource on a rest), not "subtract one". A single
+  // pip click restoring the WHOLE resource regardless of how many uses remain would be a
+  // surprising, data-lossy default for a "one click, one unit" control, so this passes an
+  // explicit `count: 1` — symmetric with `slot.restored`'s own default (which DOES already mean a
+  // single-unit decrement) and with what clicking exactly one pip visually promises.
+  protected onRestoreResource(resourceId: string): void {
+    this.appendDraft([
+      {
+        type: 'resource.restored',
+        v: 1,
+        payload: { resourceId, count: 1 } satisfies ResourceRestored,
+      },
+    ]);
+  }
+
+  protected isSpellPrepared(block: SpellcastingBlock, spellId: string): boolean {
+    return block.prepared.includes(spellId);
+  }
+
+  // Prepared-cap enforcement: the ENGINE applies no cap on `spell.prepared` at all — its handler
+  // (`handlers/casting.ts`) just appends to the list unconditionally. `preparedMax`
+  // (`derive/spellcasting.ts`) is READ-MODEL only, so this UI is the only place the cap can ever
+  // be enforced; a blocked attempt gets a toast, never a silently-dropped/ignored click.
+  protected onTogglePrepared(block: SpellcastingBlock, spellId: string): void {
+    if (this.isSpellPrepared(block, spellId)) {
+      this.appendDraft([
+        {
+          type: 'spell.unprepared',
+          v: 1,
+          payload: { spellId, classId: block.classId } satisfies SpellUnprepared,
+        },
+      ]);
+      return;
+    }
+    if (block.preparedMax !== undefined && block.prepared.length >= block.preparedMax) {
+      this.toastService.show('characters.sheet.spellcasting.preparedMaxReached', {
+        max: block.preparedMax,
+      });
+      return;
+    }
+    this.appendDraft([
+      {
+        type: 'spell.prepared',
+        v: 1,
+        payload: { spellId, classId: block.classId } satisfies SpellPrepared,
+      },
+    ]);
+  }
+
+  // R-pf3 (controller ruling, binding): a cantrip casts DIRECTLY from its own button, no dialog —
+  // `level: 0, useSlot: false` (cantrips have no slot-table entry at all), `concentration` read
+  // straight off the spell entity (`SpellRow.concentration`, resolved via `spellRow` below).
+  protected onCastCantrip(spellId: string, concentration: boolean): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() =>
+      propose.cast(sheet, spellId, { level: 0, useSlot: false, concentration }),
+    );
+  }
+
+  // Opens `CastDialogComponent` for a slot-level pick (task-3-brief.md): `availableSlots` is
+  // filtered here (never inside the dialog) to slots at/above the spell's own level with room
+  // left. Re-reads `this.sheet()` AFTER the dialog closes (never the `sheet` captured before
+  // `await`) — the store may have advanced meanwhile (another action, another tab), and
+  // `propose.cast` must validate against the CURRENT sheet, not a stale snapshot; a slot spent
+  // out from under a still-open dialog surfaces as a genuine `'slot.none-left'` `ProposeError`,
+  // caught by `tryPropose` exactly like any other refusal.
+  protected async onCastLeveled(block: SpellcastingBlock, row: SpellRow): Promise<void> {
+    const availableSlots = block.slots.filter((s) => s.level >= row.level && s.used < s.max);
+    const handle = this.dialogService.open(CastDialogComponent, {
+      data: {
+        spellName: row.name,
+        spellLevel: row.level,
+        spellConcentration: row.concentration,
+        availableSlots,
+        alreadyConcentrating: this.concentration() !== undefined,
+      } satisfies CastDialogData,
+    });
+    const chosenLevel = await handle.closed;
+    if (typeof chosenLevel !== 'number') return;
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() =>
+      propose.cast(sheet, row.id, { level: chosenLevel, concentration: row.concentration }),
+    );
+  }
+
+  protected onEndConcentration(): void {
+    this.appendDraft([
+      { type: 'concentration.ended', v: 1, payload: {} satisfies ConcentrationEnded },
+    ]);
+  }
+
+  // Resolves a known/prepared spellId (task-3-brief.md): `level`/`concentration` read straight off
+  // the spell ENTITY via the content index (R9 — never inferred any other way); falls back to
+  // `0`/`false` for a stale/unresolved id, same defensive convention as `resolveName`.
+  private spellRow(id: string): SpellRow {
+    const entity = this.engineFacade.index().get(id);
+    const spell = entity?.type === 'spell' ? entity : undefined;
+    return {
+      id,
+      name: this.resolveName(id),
+      level: spell?.level ?? 0,
+      concentration: spell?.concentration ?? false,
+    };
   }
 }

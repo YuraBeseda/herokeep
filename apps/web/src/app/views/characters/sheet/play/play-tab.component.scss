@@ -193,25 +193,6 @@
   gap: var(--space-2);
 }
 
-.play-tab__slot-dots {
-  display: inline-flex;
-  gap: var(--space-1);
-}
-
-.play-tab__dot {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 50%;
-  border: 1px solid var(--border-1);
-  background: transparent;
-  display: inline-block;
-}
-
-.play-tab__dot--filled {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
 .play-tab__spell-lists {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
@@ -222,6 +203,31 @@
 .play-tab__spell-lists ul {
   margin: 0;
   padding-inline-start: var(--space-4);
+  list-style: none;
+}
+
+.play-tab__spell-lists li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.play-tab__spell-name {
+  flex: 1 1 auto;
+}
+
+.play-tab__concentration-note {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.play-tab__concentration {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .play-tab__resources {

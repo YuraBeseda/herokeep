@@ -196,6 +196,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
     attacks: attacks.attacks,
     attacksPerAction: attacks.attacksPerAction,
     spellcasting: spellcasting.blocks,
+    ...(spellcasting.concentration ? { concentration: spellcasting.concentration } : {}),
     resources: resources.resources,
     actions: actions.actions,
     proficiencies,

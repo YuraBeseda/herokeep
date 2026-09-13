@@ -39,6 +39,17 @@ export interface Sheet {
   attacks: AttackRow[];
   attacksPerAction: number;
   spellcasting: SpellcastingBlock[];
+  /**
+   * task-3-brief.md (play UI, phase-1b plan 6): `deriveSpellcasting` (`derive/spellcasting.ts`)
+   * already computes this — `facts.concentration` stripped to just the spell id — but it was never
+   * wired into `Sheet` itself (only `spellcasting.blocks` was; `spellcasting.concentration` was
+   * silently dropped in `derive/index.ts`). Added here, additively, so the play tab's concentration
+   * chip/End-button has somewhere to read it from without reaching past the read model into
+   * `Facts` directly. Present only while actually concentrating (never an explicit `undefined` key
+   * — see `derive/index.ts`'s conditional spread), so every existing exact-key-list Sheet test
+   * (`sheet.test.ts`) and golden fixture stays green unchanged for every non-concentrating fixture.
+   */
+  concentration?: { spellId: string };
   resources: ResourceView[];
   actions: ActionView[];
   /** Union (by kind+target) of armor/weapon/tool/language proficiency, assembled in derive/index.ts. */

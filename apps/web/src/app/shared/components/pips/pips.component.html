@@ -1,0 +1,13 @@
+<div class="hk-pips" role="group" *transloco="let t">
+  @for (i of indexes(); track i) {
+    <button
+      type="button"
+      class="hk-pips__pip"
+      [class.hk-pips__pip--filled]="filled(i)"
+      [attr.aria-pressed]="filled(i)"
+      [attr.aria-label]="t(labelKey(), pipParams(i))"
+      [disabled]="disabled(i)"
+      (click)="onPipClick(i)"
+    ></button>
+  }
+</div>

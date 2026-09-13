@@ -1,0 +1,40 @@
+<ng-container *transloco="let t">
+  <h2 class="cast-dialog__title">
+    {{ t('characters.sheet.spellcasting.castDialog.title', { name: data.spellName }) }}
+  </h2>
+
+  @if (showsReplaceNote()) {
+    <p class="cast-dialog__note">
+      {{ t('characters.sheet.spellcasting.castDialog.replacesConcentration') }}
+    </p>
+  }
+
+  @if (data.availableSlots.length > 0) {
+    <label class="cast-dialog__slot-label">
+      <span>{{ t('characters.sheet.spellcasting.castDialog.slotLabel') }}</span>
+      <select class="cast-dialog__slot-select" (change)="onSlotChange($any($event.target).value)">
+        @for (slot of data.availableSlots; track slot.level) {
+          <option [value]="slot.level" [selected]="slot.level === selectedLevel()">
+            {{
+              t('characters.sheet.spellcasting.castDialog.slotOption', {
+                level: slot.level,
+                remaining: slot.max - slot.used,
+              })
+            }}
+          </option>
+        }
+      </select>
+    </label>
+  } @else {
+    <p class="cast-dialog__empty">{{ t('characters.sheet.spellcasting.castDialog.noSlots') }}</p>
+  }
+
+  <div class="cast-dialog__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+      {{ t('characters.sheet.spellcasting.castDialog.cancel') }}
+    </button>
+    <button hk-button type="button" [disabled]="selectedLevel() === undefined" (click)="confirm()">
+      {{ t('characters.sheet.spellcasting.castDialog.confirm') }}
+    </button>
+  </div>
+</ng-container>

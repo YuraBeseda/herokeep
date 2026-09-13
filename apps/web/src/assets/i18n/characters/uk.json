@@ -236,7 +236,9 @@
       "deathSaveSuccess": "Успіх",
       "deathSaveFailure": "Провал",
       "deathSaveCritSuccess": "Критичний успіх",
-      "deathSaveCritFailure": "Критичний провал"
+      "deathSaveCritFailure": "Критичний провал",
+      "concentratingOn": "Концентрація: {name}",
+      "endConcentration": "Припинити концентрацію"
     },
     "inspiration": {
       "title": "Натхнення",
@@ -257,14 +259,29 @@
       "attack": "Бонус атаки заклинанням",
       "cantripsKnown": "Відомо заговорів",
       "slotsLevel": "Комірки {level} рівня",
+      "slotPipLabel": "Комірка {level} рівня {index} з {max}",
       "prepared": "Підготовлені заклинання",
       "known": "Відомі заклинання",
       "preparedOf": "{prepared} / {max} підготовлено",
+      "preparedMaxReached": "Можна підготувати не більше {max} заклинань одночасно.",
+      "cast": "Накласти",
+      "prepare": "Підготувати",
+      "unprepare": "Скасувати підготовку",
+      "castDialog": {
+        "title": "Накласти: {name}",
+        "slotLabel": "Комірка заклинання",
+        "slotOption": "{level} рівень (залишилось {remaining})",
+        "noSlots": "Немає доступних комірок заклинань.",
+        "replacesConcentration": "Це припинить поточну концентрацію.",
+        "cancel": "Скасувати",
+        "confirm": "Накласти"
+      },
       "empty": "Немає заклинань."
     },
     "resources": {
       "title": "Ресурси",
       "usedOf": "{used} / {max}",
+      "pipLabel": "{name}, використання {index} з {max}",
       "empty": "Немає ресурсів."
     },
     "actions": {
@@ -376,6 +393,9 @@
   },
   "validation": {
     "generic": "Цей вибір ще недійсний.",
+    "slot": {
+      "none-left": "Комірок заклинань цього рівня не залишилось."
+    },
     "selection": {
       "count": "Оберіть потрібну кількість варіантів.",
       "unresolved": "Один із обраних варіантів більше недоступний.",

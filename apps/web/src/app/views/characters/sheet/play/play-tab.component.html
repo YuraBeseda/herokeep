@@ -97,6 +97,16 @@
         [max]="s.hp.max.value"
         [temp]="s.hp.temp"
       />
+      @if (concentration(); as conc) {
+        <div class="play-tab__concentration">
+          <hk-chip [selected]="true">
+            {{ t('sheet.hp.concentratingOn', { name: resolveName(conc.spellId) }) }}
+          </hk-chip>
+          <button hk-button type="button" [variant]="'ghost'" (click)="onEndConcentration()">
+            {{ t('sheet.hp.endConcentration') }}
+          </button>
+        </div>
+      }
       <div class="play-tab__hp-stats">
         <hk-stat-tile [labelKey]="'characters.sheet.hp.current'" [value]="s.hp.current" />
         <hk-stat-tile
@@ -258,20 +268,19 @@
               }
             </div>
             <div class="play-tab__slots">
-              @for (slot of block.slotRows; track slot.level) {
+              @for (slot of block.slots; track slot.level) {
                 <div class="play-tab__slot-row">
                   <span class="play-tab__slot-label">{{
                     t('sheet.spellcasting.slotsLevel', { level: slot.level })
                   }}</span>
-                  <span class="play-tab__slot-dots">
-                    @for (filled of slot.dots; track $index) {
-                      <span
-                        class="play-tab__dot"
-                        [class.play-tab__dot--filled]="filled"
-                        aria-hidden="true"
-                      ></span>
-                    }
-                  </span>
+                  <hk-pips
+                    [max]="slot.max"
+                    [used]="slot.used"
+                    [labelKey]="'characters.sheet.spellcasting.slotPipLabel'"
+                    [labelParams]="{ level: slot.level }"
+                    (spend)="onSpendSlot(slot.level)"
+                    (restore)="onRestoreSlot(slot.level)"
+                  />
                 </div>
               }
             </div>
@@ -279,7 +288,7 @@
               <p class="play-tab__prepared-count">
                 {{
                   t('sheet.spellcasting.preparedOf', {
-                    prepared: block.preparedNames.length,
+                    prepared: block.preparedSpells.length,
                     max: block.preparedMax,
                   })
                 }}
@@ -289,17 +298,67 @@
               <div>
                 <h3 class="play-tab__subtitle">{{ t('sheet.spellcasting.known') }}</h3>
                 <ul>
-                  @for (name of block.knownNames; track $index) {
-                    <li>{{ name }}</li>
+                  @for (spell of block.knownSpells; track spell.id) {
+                    <li>
+                      <span class="play-tab__spell-name">{{ spell.name }}</span>
+                      @if (spell.level === 0) {
+                        <button
+                          hk-button
+                          type="button"
+                          [variant]="'ghost'"
+                          (click)="onCastCantrip(spell.id, spell.concentration)"
+                        >
+                          {{ t('sheet.spellcasting.cast') }}
+                        </button>
+                        @if (spell.concentration && concentration()) {
+                          <span class="play-tab__concentration-note">{{
+                            t('sheet.spellcasting.castDialog.replacesConcentration')
+                          }}</span>
+                        }
+                      } @else if (block.preparedMax !== undefined) {
+                        <button
+                          hk-button
+                          type="button"
+                          [variant]="isSpellPrepared(block, spell.id) ? 'primary' : 'ghost'"
+                          [attr.aria-pressed]="isSpellPrepared(block, spell.id)"
+                          (click)="onTogglePrepared(block, spell.id)"
+                        >
+                          {{
+                            isSpellPrepared(block, spell.id)
+                              ? t('sheet.spellcasting.unprepare')
+                              : t('sheet.spellcasting.prepare')
+                          }}
+                        </button>
+                      } @else {
+                        <button
+                          hk-button
+                          type="button"
+                          [variant]="'ghost'"
+                          (click)="onCastLeveled(block, spell)"
+                        >
+                          {{ t('sheet.spellcasting.cast') }}
+                        </button>
+                      }
+                    </li>
                   }
                 </ul>
               </div>
-              @if (block.preparedNames.length > 0) {
+              @if (block.preparedSpells.length > 0) {
                 <div>
                   <h3 class="play-tab__subtitle">{{ t('sheet.spellcasting.prepared') }}</h3>
                   <ul>
-                    @for (name of block.preparedNames; track $index) {
-                      <li>{{ name }}</li>
+                    @for (spell of block.preparedSpells; track spell.id) {
+                      <li>
+                        <span class="play-tab__spell-name">{{ spell.name }}</span>
+                        <button
+                          hk-button
+                          type="button"
+                          [variant]="'ghost'"
+                          (click)="onCastLeveled(block, spell)"
+                        >
+                          {{ t('sheet.spellcasting.cast') }}
+                        </button>
+                      </li>
                     }
                   </ul>
                 </div>
@@ -330,6 +389,14 @@
                   })
                 }}
               </span>
+              <hk-pips
+                [max]="resourceRow.max.value"
+                [used]="resourceRow.used"
+                [labelKey]="'characters.sheet.resources.pipLabel'"
+                [labelParams]="{ name: resourceLabel(resourceRow) }"
+                (spend)="onSpendResource(resourceRow.id)"
+                (restore)="onRestoreResource(resourceRow.id)"
+              />
             </hk-card>
           }
         </div>
