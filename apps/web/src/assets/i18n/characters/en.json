@@ -53,8 +53,14 @@
       "abilitiesLabel": "Abilities",
       "hp": "Hit points",
       "ac": "Armor class",
+      "prof": "Proficiency bonus",
+      "itemsLabel": "Equipment",
+      "spellsLabel": "Spells known",
       "create": "Create character",
-      "incomplete": "Finish every step before creating your character."
+      "incomplete": "Finish every step before creating your character.",
+      "toast": {
+        "createFailed": "Couldn't create the character. Try again."
+      }
     },
     "picker": {
       "searchPlaceholder": "Search…",

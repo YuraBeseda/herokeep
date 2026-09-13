@@ -52,9 +52,19 @@
   color: var(--text-2);
 }
 
-.create-wizard__chosen {
+.create-wizard__items,
+.create-wizard__spells,
+.create-wizard__outstanding {
   margin: 0;
   padding-inline-start: var(--space-4);
+}
+
+.create-wizard__decisions dd {
+  margin: 0;
+}
+
+.create-wizard__equipped {
+  color: var(--text-2);
 }
 
 .create-wizard__incomplete {

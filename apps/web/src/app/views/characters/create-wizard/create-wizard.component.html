@@ -69,29 +69,89 @@
             <dd>{{ t(genderLabelKey()) }}</dd>
           </dl>
 
-          @if (state.draftSheet(); as sheet) {
-            @if (chosenEntityNames().length > 0) {
+          @if (state.draftSheet()) {
+            @if (decisionSummaries().length > 0) {
               <div>
                 <h3>{{ t('wizard.review.chosenLabel') }}</h3>
-                <ul class="create-wizard__chosen">
-                  @for (name of chosenEntityNames(); track name) {
-                    <li>{{ name }}</li>
+                <dl class="create-wizard__summary create-wizard__decisions">
+                  @for (d of decisionSummaries(); track d.choiceId) {
+                    <dt>{{ d.promptText || t(d.promptKey!) }}</dt>
+                    <dd>
+                      @for (part of d.parts; track $index; let last = $last) {
+                        @switch (part.kind) {
+                          @case ('abilityDelta') {
+                            {{ part.ability }}
+                            {{ t('wizard.abilitiesImprove.deltaLabel', { delta: part.delta }) }}
+                          }
+                          @case ('abilityScore') {
+                            {{ part.ability }} {{ part.value }}
+                          }
+                          @default {
+                            {{ part.text }}
+                          }
+                        }
+                        @if (!last) {
+                          <span>, </span>
+                        }
+                      }
+                    </dd>
+                  }
+                </dl>
+              </div>
+            }
+
+            @if (inventorySummary().length > 0) {
+              <div>
+                <h3>{{ t('wizard.review.itemsLabel') }}</h3>
+                <ul class="create-wizard__items">
+                  @for (entry of inventorySummary(); track entry.instanceId) {
+                    <li>
+                      {{ itemName(entry) }} × {{ entry.qty }}
+                      @if (entry.equipped) {
+                        <span class="create-wizard__equipped">
+                          ({{ t('wizard.equipment.equipped') }})
+                        </span>
+                      }
+                    </li>
                   }
                 </ul>
               </div>
             }
-            <dl class="create-wizard__summary">
-              <dt>{{ t('wizard.review.abilitiesLabel') }}</dt>
-              <dd>{{ abilityLine() }}</dd>
-              <dt>{{ t('wizard.review.hp') }}</dt>
-              <dd>{{ sheet.hp.max.value }}</dd>
-              <dt>{{ t('wizard.review.ac') }}</dt>
-              <dd>{{ sheet.ac.value }}</dd>
-            </dl>
+
+            @if (knownSpellIds().length > 0) {
+              <div>
+                <h3>{{ t('wizard.review.spellsLabel') }}</h3>
+                <ul class="create-wizard__spells">
+                  @for (id of knownSpellIds(); track id) {
+                    <li>{{ spellName(id) }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (state.draftSheet(); as sheet) {
+              <dl class="create-wizard__summary">
+                <dt>{{ t('wizard.review.abilitiesLabel') }}</dt>
+                <dd>{{ abilityLine() }}</dd>
+                <dt>{{ t('wizard.review.hp') }}</dt>
+                <dd>{{ sheet.hp.max.value }}</dd>
+                <dt>{{ t('wizard.review.ac') }}</dt>
+                <dd>{{ sheet.ac.value }}</dd>
+                <dt>{{ t('wizard.review.prof') }}</dt>
+                <dd>{{ sheet.prof }}</dd>
+              </dl>
+            }
           }
 
           @if (!complete()) {
-            <p class="create-wizard__incomplete">{{ t('wizard.review.incomplete') }}</p>
+            <div class="create-wizard__incomplete">
+              <p>{{ t('wizard.review.incomplete') }}</p>
+              <ul class="create-wizard__outstanding">
+                @for (b of blockedStepLabels(); track b.id) {
+                  <li>{{ b.promptText || t(b.promptKey!) }}</li>
+                }
+              </ul>
+            </div>
           }
           <button
             hk-button
