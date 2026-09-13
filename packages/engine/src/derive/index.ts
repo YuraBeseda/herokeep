@@ -8,7 +8,7 @@ import { deriveAbilities } from './abilities.ts';
 import type { AbilitiesResult } from './abilities.ts';
 import { deriveActions } from './actions.ts';
 import { deriveAttacks } from './attacks.ts';
-import { byChoiceId, creationChoices, levelScopedChoices } from './choices.ts';
+import { byChoiceId, creationChoices, levelScopedChoices, selectedEntityChoices } from './choices.ts';
 import { type Composition, compose } from './composition.ts';
 import { deriveDefense } from './defense.ts';
 import { deriveHp } from './hp.ts';
@@ -36,7 +36,9 @@ function isSyntheticDecision(choiceId: string, index: ContentIndex): boolean {
 export function outstandingChoices(facts: Facts, index: ContentIndex): ChoiceRequest[] {
   const creation = creationChoices(facts, index);
   const leveled = levelScopedChoices(facts, index);
-  return [...creation.requests, ...leveled.requests].sort(byChoiceId);
+  const asked = new Set([...creation.requests, ...leveled.requests].map((r) => r.choiceId));
+  const selected = selectedEntityChoices(facts, index, asked);
+  return [...creation.requests, ...leveled.requests, ...selected.requests].sort(byChoiceId);
 }
 
 function deriveInitiative(
@@ -134,6 +136,9 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
   const creation = creationChoices(facts, index);
   const leveled = levelScopedChoices(facts, index);
   issues.push(...creation.issues, ...leveled.issues);
+  const askedChoiceIds = new Set([...creation.requests, ...leveled.requests].map((r) => r.choiceId));
+  const selected = selectedEntityChoices(facts, index, askedChoiceIds);
+  issues.push(...selected.issues);
 
   const comp = compose(facts, index);
   issues.push(...comp.issues);
@@ -201,7 +206,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
     conditions: hp.conditions,
     xp: facts.xp,
     grammaticalGender: facts.grammaticalGender,
-    outstandingChoices: [...creation.requests, ...leveled.requests].sort(byChoiceId),
+    outstandingChoices: [...creation.requests, ...leveled.requests, ...selected.requests].sort(byChoiceId),
     issues,
   };
 }

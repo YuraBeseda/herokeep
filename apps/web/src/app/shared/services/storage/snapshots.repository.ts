@@ -37,4 +37,9 @@ export class SnapshotsRepository {
     }
     return row.json;
   }
+
+  /** Drops a stream's cached snapshot row (e.g. after an `event.reverted` — see the class doc). */
+  async remove(stream: string): Promise<void> {
+    await this.db.snapshots.delete(stream);
+  }
 }

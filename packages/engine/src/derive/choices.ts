@@ -1,4 +1,4 @@
-import type { Choice, Entity } from '@hk/protocol';
+import type { Choice, ChoiceAt, Entity } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import type { Facts } from '../reduce/facts.ts';
@@ -91,4 +91,59 @@ export function levelScopedChoices(
   }
 
   return { requests: requests.sort(byChoiceId), issues };
+}
+
+/** True when `at`'s gate is satisfied by the character's current state (task 1, plan-5 ledger). */
+function atIsSurfaced(at: ChoiceAt, facts: Facts, index: ContentIndex): boolean {
+  switch (at.kind) {
+    case 'creation':
+      return facts.created;
+    case 'level':
+      return facts.classes.some((entry) => entry.level >= at.level);
+    case 'classLevel': {
+      const wanted = index.resolveClassRef(at.class) ?? at.class;
+      return facts.classes.some(
+        (entry) => (index.resolveClassRef(entry.classId) ?? entry.classId) === wanted && entry.level >= at.level,
+      );
+    }
+  }
+}
+
+/**
+ * Third `outstandingChoices` source (task-1-brief.md, phase 1b plan 5 ledger): every entity
+ * selected in ANY decision (`facts.decisions`' selection arrays), when that entity resolves to a
+ * `feat` or `feature` (the only entity types 1b's content scope selects this way whose OWN
+ * `choices` are worth surfacing — a species/background's choices are already covered by
+ * `creationChoices`, which walks composition-slot selections directly), has its own undecided
+ * `choices` surfaced once their `at` gate matches the character's current state.
+ *
+ * Recursion depth 1 BY DESIGN: this only reads `facts.decisions` — a flat, already-recorded
+ * history — and surfaces the DIRECTLY selected entity's OWN choices; it does not simulate what a
+ * further, not-yet-made decision on one of those surfaced choices might itself go on to select. If
+ * a surfaced choice is later decided and its selection is itself a feat/feature, THAT entity's own
+ * choices become visible the next time `outstandingChoices`/`derive` runs (once the decision
+ * actually lands in `facts.decisions`) — there is no unbounded recursion inside a single call.
+ */
+export function selectedEntityChoices(
+  facts: Facts,
+  index: ContentIndex,
+  alreadyAsked: ReadonlySet<string>,
+): { requests: ChoiceRequest[]; issues: Diagnostic[] } {
+  const requests: ChoiceRequest[] = [];
+  const seen = new Set<string>();
+
+  for (const selection of Object.values(facts.decisions)) {
+    for (const selectedId of selection) {
+      const chosen = index.get(selectedId);
+      if (!chosen || (chosen.type !== 'feat' && chosen.type !== 'feature')) continue;
+      for (const c of chosen.choices) {
+        if (alreadyAsked.has(c.id) || seen.has(c.id) || facts.decisions[c.id] !== undefined) continue;
+        if (!atIsSurfaced(c.at, facts, index)) continue;
+        seen.add(c.id);
+        requests.push({ choiceId: c.id, ownerId: chosen.id, count: c.count });
+      }
+    }
+  }
+
+  return { requests: requests.sort(byChoiceId), issues: [] };
 }

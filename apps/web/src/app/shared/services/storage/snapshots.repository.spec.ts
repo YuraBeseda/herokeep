@@ -62,4 +62,14 @@ describe('SnapshotsRepository', () => {
     const repo = TestBed.inject(SnapshotsRepository);
     expect(await repo.get(stream)).toBeUndefined();
   });
+
+  it("remove deletes a stream's snapshot row so get falls back to undefined", async () => {
+    const repo = TestBed.inject(SnapshotsRepository);
+    const snapshot = mkSnapshot();
+    await repo.put(stream, snapshot);
+
+    await repo.remove(stream);
+
+    expect(await repo.get(stream)).toBeUndefined();
+  });
 });

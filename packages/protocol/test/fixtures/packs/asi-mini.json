@@ -1,0 +1,48 @@
+{
+  "format": 1,
+  "id": "asi-mini",
+  "version": "1.0.0",
+  "kind": "content",
+  "system": "mini",
+  "name": "ASI mini (test)",
+  "dependencies": [{ "id": "core-mini", "range": "^1" }],
+  "entities": [
+    {
+      "id": "asi-mini:feat/ability-score-improvement",
+      "type": "feat",
+      "name": "Ability Score Improvement (test)",
+      "category": "general",
+      "choices": [
+        {
+          "id": "asi-mini:feat/ability-score-improvement@4/ability-scores",
+          "prompt": "Ability score improvement",
+          "at": { "kind": "level", "level": 4 },
+          "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        }
+      ]
+    }
+  ],
+  "overrides": [
+    {
+      "target": "core-mini:class/fighter",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/levels/3",
+          "value": {
+            "level": 4,
+            "choices": [
+              {
+                "id": "core-mini:class/fighter@4/feat",
+                "prompt": "Feat",
+                "at": { "kind": "classLevel", "class": "fighter", "level": 4 },
+                "pick": { "query": { "type": "feat" } }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "i18n": {}
+}
