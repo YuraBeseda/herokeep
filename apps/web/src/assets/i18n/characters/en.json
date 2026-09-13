@@ -240,6 +240,23 @@
       "concentratingOn": "Concentrating on {name}",
       "endConcentration": "End concentration"
     },
+    "rest": {
+      "title": "Rest",
+      "short": "Short rest",
+      "long": "Long rest",
+      "dialog": {
+        "shortTitle": "Short rest",
+        "longTitle": "Long rest",
+        "roll": "Roll d{die}",
+        "remaining": "{remaining} hit {remaining, plural, one {die} other {dice}} remaining",
+        "noHitDice": "No hit dice remaining.",
+        "rolled": "{className}: rolled {rolled} on d{die}, healed {healed} HP.",
+        "longBody": "Take a long rest? HP is restored to full, spent spell slots and short/long-rest resources reset, and exhaustion is reduced.",
+        "cancel": "Cancel",
+        "confirmShort": "Take short rest",
+        "confirmLong": "Take long rest"
+      }
+    },
     "inspiration": {
       "title": "Inspiration",
       "on": "Inspired",

@@ -1,0 +1,68 @@
+<ng-container *transloco="let t">
+  <h2 class="rest-dialog__title">
+    {{
+      data.kind === 'short'
+        ? t('characters.sheet.rest.dialog.shortTitle')
+        : t('characters.sheet.rest.dialog.longTitle')
+    }}
+  </h2>
+
+  @if (data.kind === 'short') {
+    @if (hasAnyHitDice()) {
+      <ul class="rest-dialog__hit-dice">
+        @for (row of hitDiceRows(); track row.classId) {
+          <li class="rest-dialog__hit-die-row">
+            <span class="rest-dialog__class-name">{{ row.className }}</span>
+            <span class="rest-dialog__remaining">
+              {{ t('characters.sheet.rest.dialog.remaining', { remaining: row.remaining }) }}
+            </span>
+            <button
+              hk-button
+              type="button"
+              class="rest-dialog__roll"
+              [variant]="'ghost'"
+              [disabled]="row.remaining <= 0"
+              (click)="rollDie(row)"
+            >
+              {{ t('characters.sheet.rest.dialog.roll', { die: row.die }) }}
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="rest-dialog__no-hit-dice">{{ t('characters.sheet.rest.dialog.noHitDice') }}</p>
+    }
+
+    @if (rolls().length > 0) {
+      <ul class="rest-dialog__rolls">
+        @for (r of rolls(); track $index) {
+          <li class="rest-dialog__die rest-dialog__die--kept">
+            {{
+              t('characters.sheet.rest.dialog.rolled', {
+                className: r.className,
+                rolled: r.rolled,
+                die: r.die,
+                healed: r.healed,
+              })
+            }}
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    <p class="rest-dialog__body">{{ t('characters.sheet.rest.dialog.longBody') }}</p>
+  }
+
+  <div class="rest-dialog__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+      {{ t('characters.sheet.rest.dialog.cancel') }}
+    </button>
+    <button hk-button type="button" (click)="confirm()">
+      {{
+        data.kind === 'short'
+          ? t('characters.sheet.rest.dialog.confirmShort')
+          : t('characters.sheet.rest.dialog.confirmLong')
+      }}
+    </button>
+  </div>
+</ng-container>

@@ -17,7 +17,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
-import { seedFighter, seedWizard } from '../testing/character-fixtures';
+import { levelUpToTwo, seedFighter, seedWizard } from '../testing/character-fixtures';
 import { PlayTabComponent } from './play-tab.component';
 
 // `Sheet['resources'][number]`/`Sheet['actions'][number]` recovered as indexed-access aliases,
@@ -1462,5 +1462,223 @@ describe('PlayTabComponent — inventory and currency controls', () => {
       '.play-tab__inventory-item-weight',
     )!;
     expect(chainMailWeight.textContent).toContain('55');
+  });
+});
+
+// task-6-brief.md: short/long rest buttons + `RestDialogComponent`. `levelUpToTwo` (both fixtures'
+// level-2 row has no outstanding choices) is what gives the fighter 2 hit dice to roll and the
+// wizard 3 first-level slots to spend/restore — reused from `level-up.state.spec.ts`'s own binding
+// spec per this task's own carried note ("leveling a seeded fighter to 2 gives 2 hit dice").
+describe('PlayTabComponent — rest controls', () => {
+  const FIGHTER = 'srd-5e-2024:class/fighter';
+  const EXHAUSTION = 'srd-5e-2024:condition/exhaustion';
+  const SECOND_WIND = 'second-wind';
+
+  beforeEach(async () => {
+    // Same locale-leak guard every other describe block in this file documents (`hk.locale`
+    // persists to REAL localStorage; `TestBed` teardown never clears it between blocks).
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+    vi.restoreAllMocks();
+  });
+
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  function overlay(): HTMLElement {
+    return document.querySelector<HTMLElement>('.cdk-overlay-container')!;
+  }
+
+  /** Same scripting technique `rest-dialog.component.spec.ts` documents in full — mocks the
+   * `crypto.getRandomValues` entropy `cryptoRng` draws from so each successive roll lands on an
+   * exact face, consumed in call order. Narrowed to the EXACT `Uint32Array` length-1 shape
+   * `cryptoRng` (`shared/services/engine/rng.ts`) passes — every other shape (notably `uuidv7`'s
+   * own `Uint8Array(10)` draw, `shared/helpers/uuid.ts`) falls through to the REAL
+   * `crypto.getRandomValues`. Scripting unconditionally, with no shape check, was tried first and
+   * broke `uuidv7()`'s own entropy too — it zeroed everything past index 0 of whatever array it
+   * was given, producing duplicate event ids (a real `BulkError`/`ConstraintError` from
+   * `EventsRepository.append`'s `&id` primary key) the moment more than one id was minted in the
+   * same millisecond, which a 4-draft short-rest `appendTx` always does. */
+  function scriptRolls(targets: { value: number; sides: number }[]): void {
+    let i = 0;
+    const real = crypto.getRandomValues.bind(crypto) as (array: unknown) => unknown;
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation(((array: unknown) => {
+      if (array instanceof Uint32Array && array.length === 1) {
+        const t = targets[i++];
+        const frac = t ? (t.value - 0.5) / t.sides : 0;
+        array[0] = Math.floor(frac * 2 ** 32);
+        return array;
+      }
+      return real(array);
+    }) as typeof crypto.getRandomValues);
+  }
+
+  it('short rest: rolling 2 hit dice heals by roll+con each (kept-style display), restores a shortRest-reset resource, and shares ONE txId across every appended event', async () => {
+    await seedFighter('Ivan');
+    await levelUpToTwo();
+    const characterStore = TestBed.inject(CharacterStore);
+    expect(characterStore.sheet()!.hp.hitDice[FIGHTER]).toMatchObject({
+      die: 10,
+      total: 2,
+      remaining: 2,
+    });
+    const conMod = characterStore.sheet()!.abilities['con'].mod;
+
+    // Damage down from full so the heal arithmetic below is unambiguous (no max clamp).
+    await characterStore.appendTx(propose.damage(characterStore.sheet()!, 10));
+    const hpBeforeRest = characterStore.sheet()!.hp.current;
+
+    // Spend Second Wind (fighter-1's `shortRest`-reset resource) so its restore is observable.
+    await characterStore.appendTx([
+      { type: 'resource.spent', v: 1, payload: { resourceId: SECOND_WIND } },
+    ]);
+    expect(characterStore.sheet()!.resources.find((r) => r.id === SECOND_WIND)?.used).toBe(1);
+
+    const eventsBefore = characterStore.events().length;
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    scriptRolls([
+      { value: 3, sides: 10 },
+      { value: 2, sides: 10 },
+    ]);
+
+    buttonNamed(compiled, charactersEn.sheet.rest.short).click();
+    TestBed.tick();
+
+    const rollButton = (): HTMLButtonElement =>
+      overlay().querySelector<HTMLButtonElement>('.rest-dialog__roll')!;
+
+    rollButton().click();
+    TestBed.tick();
+    expect(overlay().querySelectorAll('.rest-dialog__die--kept')).toHaveLength(1);
+
+    rollButton().click();
+    TestBed.tick();
+    expect(overlay().querySelectorAll('.rest-dialog__die--kept')).toHaveLength(2);
+    expect(rollButton().disabled).toBe(true);
+
+    buttonNamed(overlay(), charactersEn.sheet.rest.dialog.confirmShort).click();
+
+    await pollUntil(fixture, () => characterStore.events().length > eventsBefore);
+
+    const newEvents = characterStore.events().slice(eventsBefore);
+    expect(newEvents.map((e) => e.type)).toEqual([
+      'hit_dice.spent',
+      'hit_dice.spent',
+      'rest.taken',
+      'resource.restored',
+    ]);
+    // ONE shared txId across every event this short rest appended (Global Constraints: "CONCAT
+    // related proposals into ONE `appendTx` call").
+    const txId = newEvents[0]?.txId;
+    expect(txId).toBeDefined();
+    expect(newEvents.every((e) => e.txId === txId)).toBe(true);
+
+    expect(newEvents[0]).toMatchObject({
+      type: 'hit_dice.spent',
+      payload: { classId: FIGHTER, count: 1, healed: 3 + conMod },
+    });
+    expect(newEvents[1]).toMatchObject({
+      type: 'hit_dice.spent',
+      payload: { classId: FIGHTER, count: 1, healed: 2 + conMod },
+    });
+
+    // Heals by exactly rolls+con each: (3+conMod) + (2+conMod) added on top of the pre-rest HP.
+    expect(characterStore.sheet()!.hp.current).toBe(hpBeforeRest + (3 + conMod) + (2 + conMod));
+    expect(characterStore.sheet()!.hp.hitDice[FIGHTER]?.spent).toBe(2);
+    expect(characterStore.sheet()!.hp.hitDice[FIGHTER]?.remaining).toBe(0);
+    expect(characterStore.sheet()!.resources.find((r) => r.id === SECOND_WIND)?.used).toBe(0);
+  });
+
+  it('long rest: hp.current resolves to hp.max numerically, a spent spell slot restores, and exhaustion reduces from 2 to 1', async () => {
+    // No `levelUpToTwo()` here (unlike the short-rest test above) — a level-1 wizard already has
+    // slots to spend/restore (SRD level-1 wizard: 2 first-level slots), and exhaustion is a
+    // condition level entirely independent of character class level. `seedWizard` deliberately
+    // leaves its own level-1 skill/cantrip choices undecided (`character-fixtures.ts`'s own doc),
+    // which would make `levelUpToTwo`'s `LevelUpState.complete()` unreachable for this fixture —
+    // fine to skip since nothing here needs level 2.
+    await seedWizard('Elowen');
+    const characterStore = TestBed.inject(CharacterStore);
+    const maxHp = characterStore.sheet()!.hp.max.value;
+
+    await characterStore.appendTx(propose.damage(characterStore.sheet()!, 5));
+    await characterStore.appendTx(propose.spendSlot(characterStore.sheet()!, 1));
+    await characterStore.appendTx(propose.condition(characterStore.sheet()!, EXHAUSTION, true, 2));
+
+    expect(characterStore.sheet()!.hp.current).toBe(maxHp - 5);
+    expect(characterStore.sheet()!.spellcasting[0]?.slots.find((s) => s.level === 1)?.used).toBe(1);
+    expect(
+      characterStore.sheet()!.conditions.find((c) => c.conditionId === EXHAUSTION)?.level,
+    ).toBe(2);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.rest.long).click();
+    TestBed.tick();
+
+    // No hit-dice picker on a long rest — it's a confirm-only dialog.
+    expect(overlay().querySelector('.rest-dialog__hit-dice')).toBeNull();
+
+    buttonNamed(overlay(), charactersEn.sheet.rest.dialog.confirmLong).click();
+
+    await pollUntil(fixture, () => characterStore.sheet()?.hp.current === maxHp);
+
+    expect(characterStore.sheet()!.hp.current).toBe(maxHp);
+    expect(characterStore.sheet()!.spellcasting[0]?.slots.find((s) => s.level === 1)?.used).toBe(0);
+    expect(
+      characterStore.sheet()!.conditions.find((c) => c.conditionId === EXHAUSTION)?.level,
+    ).toBe(1);
+  });
+
+  it('cancelling the short-rest dialog appends nothing', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const eventsBefore = characterStore.events().length;
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.rest.short).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.rest.dialog.cancel).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBefore);
   });
 });

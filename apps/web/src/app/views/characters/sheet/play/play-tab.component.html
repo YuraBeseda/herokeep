@@ -192,6 +192,20 @@
       </div>
     </hk-sheet-section>
 
+    <!-- Rest (task-6-brief.md): opens `RestDialogComponent` — short rest lets the player roll hit
+         dice one at a time (kept-style display); long rest is a confirm-only dialog. Remaining
+         hit-dice counters already render in the HP section above. -->
+    <hk-sheet-section [titleKey]="'characters.sheet.rest.title'" class="play-tab__section">
+      <div class="play-tab__rest-actions">
+        <button hk-button type="button" [variant]="'ghost'" (click)="onShortRest()">
+          {{ t('sheet.rest.short') }}
+        </button>
+        <button hk-button type="button" (click)="onLongRest()">
+          {{ t('sheet.rest.long') }}
+        </button>
+      </div>
+    </hk-sheet-section>
+
     <!-- Inspiration -->
     <hk-sheet-section [titleKey]="'characters.sheet.inspiration.title'" class="play-tab__section">
       <button

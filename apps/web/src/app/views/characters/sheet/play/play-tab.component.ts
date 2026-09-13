@@ -61,6 +61,12 @@ import {
   type NoteDialogData,
   type NoteDialogResult,
 } from './note-dialog.component';
+import {
+  RestDialogComponent,
+  type RestDialogData,
+  type RestDialogHitDieOption,
+  type RestDialogResult,
+} from './rest-dialog.component';
 
 type DeathSaveResult = 'success' | 'failure' | 'critSuccess' | 'critFailure';
 
@@ -351,6 +357,17 @@ export class PlayTabComponent {
     }));
   });
 
+  // task-6-brief.md: `RestDialogComponent`'s hit-dice picker only ever offers a class that still
+  // has dice left to roll — a class already fully spent has nothing to offer the "roll one at a
+  // time" flow. Pre-resolved (`classId`/`className` only, same "resolve before opening" convention
+  // `conditionOptions` documents) — `RestDialogComponent` reads `die`/`remaining` itself straight
+  // off the `sheet` it's given, never duplicated here.
+  protected readonly hitDiceRollOptions = computed<RestDialogHitDieOption[]>(() =>
+    this.hitDiceRows()
+      .filter((row) => row.remaining > 0)
+      .map((row) => ({ classId: row.classId, className: row.className })),
+  );
+
   protected readonly resources = computed<ResourceView[]>(() => this.sheet()?.resources ?? []);
 
   protected readonly actions = computed<ActionView[]>(() => this.sheet()?.actions ?? []);
@@ -629,6 +646,52 @@ export class PlayTabComponent {
 
   private itemName(entry: InventoryRow): string {
     return entry.itemId ? this.resolveName(entry.itemId) : (entry.name ?? entry.instanceId);
+  }
+
+  // --- Rest (task-6-brief.md) -------------------------------------------------------------------
+
+  // CANONICAL REST FLOW (binding, Global Constraints — plan-4 carry, `CharacterStore`'s own class
+  // doc, `propose/rest.ts`'s header comment, `RestDialogComponent`'s own class doc): hit-dice
+  // healing is collected INSIDE `RestDialogComponent` itself, one `propose.spendHitDie` draft per
+  // die the player rolls (that dialog is the one play-tab dialog allowed to call a `propose.*`
+  // function directly — see its class doc for why). This handler's only job is to concatenate
+  // those collected drafts with `propose.rest(sheet, 'short')` into ONE `appendTx` call, so the
+  // whole rest — every hit die spent plus the rest itself — shares a single `txId` in the
+  // timeline. Re-reads `this.sheet()` AFTER the dialog closes for the FINAL `propose.rest` call
+  // (same "never a stale pre-dialog snapshot" convention `onCastLeveled` documents) — the already-
+  // collected hit-die drafts stay valid regardless, since each is already a fully-formed, self-
+  // contained payload that doesn't depend on when it's appended.
+  protected async onShortRest(): Promise<void> {
+    const openSheet = this.sheet();
+    if (!openSheet) return;
+    const handle = this.dialogService.open(RestDialogComponent, {
+      data: {
+        kind: 'short',
+        sheet: openSheet,
+        hitDiceOptions: this.hitDiceRollOptions(),
+      } satisfies RestDialogData,
+    });
+    const result = (await handle.closed) as RestDialogResult | undefined;
+    if (result?.kind !== 'short') return;
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => [...result.drafts, ...propose.rest(sheet, 'short')]);
+  }
+
+  // A long rest never spends hit dice one at a time (5e regains them automatically — the
+  // reducer's own `rest.taken@1` handler, `handlers/casting.ts`), so this is just a confirm dialog
+  // followed by a single `propose.rest(sheet, 'long')` call — no drafts to concatenate.
+  protected async onLongRest(): Promise<void> {
+    const openSheet = this.sheet();
+    if (!openSheet) return;
+    const handle = this.dialogService.open(RestDialogComponent, {
+      data: { kind: 'long', sheet: openSheet, hitDiceOptions: [] } satisfies RestDialogData,
+    });
+    const result = (await handle.closed) as RestDialogResult | undefined;
+    if (result?.kind !== 'long') return;
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.rest(sheet, 'long'));
   }
 
   // --- Slots, resources, prepare/cast, concentration (task-3-brief.md) ------------------------

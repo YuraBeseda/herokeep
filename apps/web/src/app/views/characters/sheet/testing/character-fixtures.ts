@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { CharacterStore } from '@shared/stores/character.store';
 import { CreateWizardState } from '../../create-wizard/create-wizard.state';
+import { LevelUpState } from '../../level-up/level-up.state';
 
 // Test-only helper (not a spec file itself): persists a real character through the exact same
 // `CharacterStore.create()` + `appendTx(buildTransaction())` path `CreateWizardComponent.onCreate()`
@@ -86,4 +87,37 @@ export async function seedWizard(name = 'Elowen'): Promise<string> {
   state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/wizard']);
 
   return persist(state);
+}
+
+/**
+ * Levels the character CURRENTLY LOADED in `CharacterStore` (via `seedFighter`/`seedWizard` above
+ * — must already be persisted and loaded) from 1 to 2, through a real `LevelUpState` session:
+ * `xp.awarded` → `LevelUpState` → scripted `rollHp` → `buildTransaction()` → `appendTx`, the exact
+ * same `awardXp`/`createState`/`rollHp`/`buildTransaction` flow `level-up.state.spec.ts`'s own
+ * binding spec drives (task-6-brief.md: "leveling a seeded fighter to 2 gives 2 hit dice — reuse
+ * Task 1's specs"). `hpRoll` (default 5, matching that spec's own fixture — `floor(0.45 * 10) + 1
+ * === 5` on a 1d10) is scripted via the same midpoint-fraction technique, generalized to whatever
+ * hit die the pending class actually has (`(hpRoll - 0.5) / hitDie`) rather than hardcoding a d10
+ * fraction, so this also works for `seedWizard`'s d6.
+ *
+ * Requires the loaded character's level-2 row to have NO outstanding choices — true for both
+ * `seedFighter`'s fighter (level 3/4 are its only choice rows) and `seedWizard`'s wizard (same:
+ * level 3 subclass, level 4 feat) — so `LevelUpState.complete()` is reachable off `rollHp` alone,
+ * with no `setDecision` calls needed here.
+ */
+export async function levelUpToTwo(hpRoll = 5): Promise<void> {
+  const characterStore = TestBed.inject(CharacterStore);
+  await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+
+  const state = TestBed.runInInjectionContext(() => new LevelUpState());
+  const hitDie = state.hitDie();
+  if (hitDie === undefined) {
+    throw new Error('levelUpToTwo: no pending advancement with a resolvable hit die');
+  }
+  state.rollHp(() => (hpRoll - 0.5) / hitDie);
+  if (!state.complete()) {
+    throw new Error('levelUpToTwo: level-up session not complete after rolling HP');
+  }
+
+  await characterStore.appendTx(state.buildTransaction());
 }
