@@ -51,7 +51,11 @@ export const TOKENS: ThemeTokens = {
     'surface-3': 'hsl(240 6% 20%)',
     'text-1': 'hsl(40 20% 96%)',
     'text-2': 'hsl(40 8% 72%)',
-    'text-3': 'hsl(40 6% 52%)',
+    // 52% lightness measured 4.32:1 against `surface-2` (hsl(240 6% 15%)) — under WCAG AA's
+    // 4.5:1 minimum for normal text (axe `color-contrast`, caught on `.hk-stat-tile__sub` by
+    // task-15-brief.md's new sheet-play-tab a11y check, the first axe scan to ever cover a
+    // character screen). 54% clears it at ~4.61:1 while staying the same muted hue/saturation.
+    'text-3': 'hsl(40 6% 54%)',
     accent: 'hsl(var(--accent-h) var(--accent-s) 62%)',
     'accent-contrast': 'hsl(240 6% 7%)',
     'border-1': 'hsl(240 6% 26%)',

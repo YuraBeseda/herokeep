@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { createFighter } from './helpers/create-fighter';
 
 // Matches an un-interpolated Transloco key shape (e.g. `settings.packs.import-demo`) — the
 // telltale sign of a missing translation falling through to the raw key instead of text. Two
@@ -18,14 +19,46 @@ type Locale = 'en' | 'ru' | 'uk';
 interface NavLabels {
   readonly home: string;
   readonly library: string;
+  readonly characters: string;
   readonly settings: string;
   readonly about: string;
 }
 
 const NAV: Record<Locale, NavLabels> = {
-  en: { home: 'Home', library: 'Library', settings: 'Settings', about: 'About' },
-  ru: { home: 'Главная', library: 'Библиотека', settings: 'Настройки', about: 'О приложении' },
-  uk: { home: 'Головна', library: 'Бібліотека', settings: 'Налаштування', about: 'Про застосунок' },
+  en: {
+    home: 'Home',
+    library: 'Library',
+    characters: 'Characters',
+    settings: 'Settings',
+    about: 'About',
+  },
+  ru: {
+    home: 'Главная',
+    library: 'Библиотека',
+    characters: 'Персонажи',
+    settings: 'Настройки',
+    about: 'О приложении',
+  },
+  uk: {
+    home: 'Головна',
+    library: 'Бібліотека',
+    characters: 'Персонажі',
+    settings: 'Налаштування',
+    about: 'Про застосунок',
+  },
+};
+
+interface SheetTabLabels {
+  readonly build: string;
+  readonly timeline: string;
+}
+
+// 'play' isn't needed separately — `/c/:id` redirects straight to it, so opening a character
+// from the list already lands on that tab.
+const SHEET_TABS: Record<Locale, SheetTabLabels> = {
+  en: { build: 'Build', timeline: 'Timeline' },
+  ru: { build: 'Билд', timeline: 'Хроника' },
+  uk: { build: 'Білд', timeline: 'Хроніка' },
 };
 
 /** Asserts none of the page's currently visible text looks like a raw, un-interpolated i18n key. */
@@ -35,13 +68,19 @@ async function assertNoRawKeys(page: Page, screen: string): Promise<void> {
 }
 
 /**
- * Visits all five screens (task-15-brief.md's a11y list: home/library/detail/settings/about — the
- * plan's binding criterion is "no visible key names *anywhere*") in the given locale, ending on
- * settings so the caller can switch language and continue. Assumes the app is already on some
- * screen in this locale (a live Transloco switch, not a navigation).
+ * Visits home/library/a library detail/the characters list/a character sheet's play+build+
+ * timeline tabs/about/settings (task-15-brief.md extends the original five-screen a11y list with
+ * `/characters` and the sheet tabs — the plan's binding criterion is "no visible key names
+ * *anywhere*") in the given locale, ending on settings so the caller can switch language and
+ * continue. Assumes the app is already on some screen in this locale (a live Transloco switch,
+ * not a navigation) and that `characterId` already exists (seeded once, in English, before the
+ * very first call — see this file's own test for why: creating a character is itself several
+ * client-side-only navigations, so seeding it inside the locale loop would work too, but doing it
+ * once up front means the same character is reused, rather than re-created, on every pass).
  */
-async function visitFiveScreens(page: Page, locale: Locale): Promise<void> {
+async function visitScreens(page: Page, locale: Locale, characterId: string): Promise<void> {
   const nav = NAV[locale];
+  const tabs = SHEET_TABS[locale];
 
   await page.getByRole('link', { name: nav.home, exact: true }).click();
   await assertNoRawKeys(page, `home (${locale})`);
@@ -52,6 +91,23 @@ async function visitFiveScreens(page: Page, locale: Locale): Promise<void> {
   await page.locator('.library-browse__row').first().click();
   await expect(page.locator('.library-detail__name')).toBeVisible();
   await assertNoRawKeys(page, `library detail (${locale})`);
+
+  await page.getByRole('link', { name: nav.characters, exact: true }).click();
+  await expect(page.locator('.characters-list__open')).toBeVisible();
+  await assertNoRawKeys(page, `characters list (${locale})`);
+
+  await page.locator('.characters-list__open').first().click();
+  await expect(page).toHaveURL(new RegExp(`/c/${characterId}/play$`));
+  await expect(page.locator('.play-tab')).toBeVisible();
+  await assertNoRawKeys(page, `character sheet — play (${locale})`);
+
+  await page.getByRole('tab', { name: tabs.build, exact: true }).click();
+  await expect(page.locator('.build-tab')).toBeVisible();
+  await assertNoRawKeys(page, `character sheet — build (${locale})`);
+
+  await page.getByRole('tab', { name: tabs.timeline, exact: true }).click();
+  await expect(page.locator('.timeline-tab')).toBeVisible();
+  await assertNoRawKeys(page, `character sheet — timeline (${locale})`);
 
   await page.getByRole('link', { name: nav.about, exact: true }).click();
   await assertNoRawKeys(page, `about (${locale})`);
@@ -71,8 +127,15 @@ test.describe('locale', () => {
 
     await page.goto('/');
 
-    await test.step('English: home, library, a detail, about, settings', async () => {
-      await visitFiveScreens(page, 'en');
+    // Seeded once, in English, via client-side-only navigation (`via: 'nav'` — see
+    // `openCreateWizard`'s doc): the creation wizard never calls `page.goto` itself, so this adds
+    // zero `load` events, and the same character is then reused (never re-created) for every
+    // locale pass below.
+    const characterId = await test.step('seed a character for the sheet screens below', () =>
+      createFighter(page, 'Aldric Locale', 'nav'));
+
+    await test.step('English: home, library, a detail, characters + sheet tabs, about, settings', async () => {
+      await visitScreens(page, 'en', characterId);
     });
 
     await test.step('switch to Russian from Settings — a live switch, not a navigation', async () => {
@@ -81,8 +144,8 @@ test.describe('locale', () => {
       await assertNoRawKeys(page, 'settings (ru, immediately after switch)');
     });
 
-    await test.step('Russian: home, library, a detail, about, settings', async () => {
-      await visitFiveScreens(page, 'ru');
+    await test.step('Russian: home, library, a detail, characters + sheet tabs, about, settings', async () => {
+      await visitScreens(page, 'ru', characterId);
     });
 
     await test.step('switch to Ukrainian from Settings — a live switch, not a navigation', async () => {
@@ -91,13 +154,15 @@ test.describe('locale', () => {
       await assertNoRawKeys(page, 'settings (uk, immediately after switch)');
     });
 
-    await test.step('Ukrainian: home, library, a detail, about, settings', async () => {
-      await visitFiveScreens(page, 'uk');
+    await test.step('Ukrainian: home, library, a detail, characters + sheet tabs, about, settings', async () => {
+      await visitScreens(page, 'uk', characterId);
     });
 
-    // The whole traversal above — three languages across five screens each, two language
-    // switches — is all client-side (Angular Router navigations + live Transloco lang switches);
-    // only the very first `page.goto('/')` should ever have fired the browser's `load` event.
+    // The whole traversal above — three languages across nine screens each (the original five
+    // plus task-15-brief.md's /characters + the sheet's play/build/timeline tabs), two language
+    // switches, plus seeding the character itself — is all client-side (Angular Router
+    // navigations + live Transloco lang switches); only the very first `page.goto('/')` should
+    // ever have fired the browser's `load` event.
     expect(loadCount).toBe(1);
   });
 
