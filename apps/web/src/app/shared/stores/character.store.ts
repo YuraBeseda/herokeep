@@ -77,7 +77,12 @@ const SNAPSHOT_EVERY = 100;
  * always deletes the stream's cached snapshot before recomputing, then does a FULL replay from
  * `EventsRepository.byStream` — never an incremental reduce on top of the (now invalid) snapshot
  * — because a snapshot taken before the revert could otherwise hide a target that was folded into
- * it. `appendTx`'s incremental reduce is only ever safe because it never itself appends a revert.
+ * it. `appendTx`'s incremental reduce is only ever safe because it never itself appends a revert
+ * — enforced at runtime: `appendTx` refuses any draft of type `event.reverted`.
+ *
+ * Concurrency: `load`/`create`/`appendTx`/`revert` all funnel their actual work through one
+ * `enqueue`d promise chain, so two calls fired without awaiting the first (a double-fired UI
+ * action) can never interleave their `nextSeq` reads and signal writes — see `enqueue`'s doc.
  *
  * Canonical hit-dice flow (carried for plan 6's play UI — do NOT let a future task double-spend
  * dice): a short rest's healing loop calls `propose.spendHitDie` once per die the player actually
@@ -107,6 +112,9 @@ export class CharacterStore {
   private lastSnapshotSeq = 0;
   private deviceIdPromise: Promise<string> | undefined;
   private persistRequested = false;
+
+  // Serializes every mutating call's actual read/reduce/write work (see `enqueue`'s doc).
+  private queue: Promise<void> = Promise.resolve();
 
   readonly streamId: Signal<string | undefined> = this.streamIdState.asReadonly();
   readonly loaded: Signal<boolean> = this.loadedState.asReadonly();
@@ -139,21 +147,26 @@ export class CharacterStore {
     void this.leaderService.acquire();
   }
 
-  /** Loads `characterId` (the full `char:<uuid>` stream id) — resumes from its cached snapshot,
-   * if any, then replays every committed event on top (`reduce` skips whatever the snapshot
-   * already folded in). */
+  /** Loads `characterId` (the full `char:<uuid>` stream id) — awaits `PackStore.ready()` first
+   * (a route can otherwise call this before app bootstrap's pack fetch finishes, leaving `sheet`
+   * stuck undefined with `loaded()` already true), then resumes from its cached snapshot, if any,
+   * and replays every committed event on top (`reduce` skips whatever the snapshot already folded
+   * in). */
   async load(characterId: string): Promise<void> {
-    const [events, snapshot] = await Promise.all([
-      this.eventsRepository.byStream(characterId),
-      this.snapshotsRepository.get(characterId),
-    ]);
-    const facts = reduce(events, snapshot, this.systemRules());
+    return this.enqueue(async () => {
+      await this.whenPacksReady();
+      const [events, snapshot] = await Promise.all([
+        this.eventsRepository.byStream(characterId),
+        this.snapshotsRepository.get(characterId),
+      ]);
+      const facts = reduce(events, snapshot, this.systemRules());
 
-    this.streamIdState.set(characterId);
-    this.eventsState.set(events);
-    this.factsState.set(facts);
-    this.lastSnapshotSeq = snapshot?.seq ?? 0;
-    this.loadedState.set(true);
+      this.streamIdState.set(characterId);
+      this.eventsState.set(events);
+      this.factsState.set(facts);
+      this.lastSnapshotSeq = snapshot?.seq ?? 0;
+      this.loadedState.set(true);
+    });
   }
 
   /** Starts a brand-new character stream with ONE `character.created` event. Returns the new
@@ -164,54 +177,66 @@ export class CharacterStore {
     const core = this.packStore.corePack();
     if (!core) throw new Error('CharacterStore.create: no core pack loaded');
 
-    const streamId = `char:${uuidv7()}`;
-    const payload: CharacterCreated = {
-      name,
-      system: core.id,
-      corePack: { id: core.id, version: core.version },
-      engineVersion: ENGINE_VERSION,
-      grammaticalGender: gender,
-    };
-    const event = await this.buildAndValidate(streamId, 'character.created', 1, payload);
+    return this.enqueue(async () => {
+      const streamId = `char:${uuidv7()}`;
+      const payload: CharacterCreated = {
+        name,
+        system: core.id,
+        corePack: { id: core.id, version: core.version },
+        engineVersion: ENGINE_VERSION,
+        grammaticalGender: gender,
+      };
+      const event = await this.buildAndValidate(streamId, 'character.created', 1, payload);
 
-    await this.eventsRepository.append([event]);
-    const facts = reduce([event], undefined, this.systemRules());
-    await this.charactersRepository.upsertFromFacts(streamId, facts);
+      await this.eventsRepository.append([event]);
+      const facts = reduce([event], undefined, this.systemRules());
+      await this.charactersRepository.upsertFromFacts(streamId, facts);
 
-    this.streamIdState.set(streamId);
-    this.eventsState.set([event]);
-    this.factsState.set(facts);
-    this.lastSnapshotSeq = 0;
-    this.loadedState.set(true);
+      this.streamIdState.set(streamId);
+      this.eventsState.set([event]);
+      this.factsState.set(facts);
+      this.lastSnapshotSeq = 0;
+      this.loadedState.set(true);
 
-    if (!this.persistRequested) {
-      this.persistRequested = true;
-      this.storagePersistService.requestPersist().catch(() => undefined);
-    }
+      if (!this.persistRequested) {
+        this.persistRequested = true;
+        this.storagePersistService.requestPersist().catch(() => undefined);
+      }
 
-    return streamId;
+      return streamId;
+    });
   }
 
   /** Envelopes and appends `drafts` (a `propose.*` result, or a hand-assembled `DraftEvent[]`)
    * against the currently loaded stream, sharing one `txId` when there is more than one — then
-   * incrementally re-derives facts, upserts the library index row, and snapshots per policy. */
+   * incrementally re-derives facts, upserts the library index row, and snapshots per policy.
+   * `event.reverted` drafts are refused here — they must go through `revert()`, the only method
+   * that also invalidates the stream's cached snapshot. */
   async appendTx(drafts: ProposedEvent[] | DraftEvent[]): Promise<void> {
     this.assertLeader();
     if (drafts.length === 0) return;
-    const streamId = this.requireStream('appendTx');
-
-    const txId = drafts.length > 1 ? uuidv7() : undefined;
-    const actor = await this.actor();
-    let seq = await this.eventsRepository.nextSeq(streamId);
-
-    const events: Event[] = [];
-    for (const draft of drafts) {
-      const raw = this.envelope(streamId, seq++, actor, draft.type, draft.v, draft.payload, txId);
-      events.push(this.validate(raw, draft.type, draft.v));
+    if (drafts.some((d) => d.type === 'event.reverted')) {
+      throw new Error(
+        'CharacterStore.appendTx: an "event.reverted" draft must go through revert(), not appendTx()',
+      );
     }
 
-    await this.eventsRepository.append(events);
-    await this.applyAppended(streamId, events);
+    return this.enqueue(async () => {
+      const streamId = this.requireStream('appendTx');
+
+      const txId = drafts.length > 1 ? uuidv7() : undefined;
+      const actor = await this.actor();
+      let seq = await this.eventsRepository.nextSeq(streamId);
+
+      const events: Event[] = [];
+      for (const draft of drafts) {
+        const raw = this.envelope(streamId, seq++, actor, draft.type, draft.v, draft.payload, txId);
+        events.push(this.validate(raw, draft.type, draft.v));
+      }
+
+      await this.eventsRepository.append(events);
+      await this.applyAppended(streamId, events);
+    });
   }
 
   /** Appends an `event.reverted` targeting `target.eventId` or every event sharing `target.txId`,
@@ -220,30 +245,72 @@ export class CharacterStore {
    * had the reverted event(s) never happened. */
   async revert(target: { eventId?: string; txId?: string }, reason?: string): Promise<void> {
     this.assertLeader();
-    const streamId = this.requireStream('revert');
-    const actor = await this.actor();
-    const seq = await this.eventsRepository.nextSeq(streamId);
-    const payload: EventReverted = {
-      ...(target.eventId !== undefined ? { targetId: target.eventId } : {}),
-      ...(target.txId !== undefined ? { txId: target.txId } : {}),
-      ...(reason !== undefined ? { reason } : {}),
-    };
-    const raw = this.envelope(streamId, seq, actor, 'event.reverted', 1, payload);
-    const event = this.validate(raw, 'event.reverted', 1);
 
-    await this.eventsRepository.append([event]);
-    await this.snapshotsRepository.remove(streamId);
-    this.lastSnapshotSeq = 0;
+    return this.enqueue(async () => {
+      const streamId = this.requireStream('revert');
+      const actor = await this.actor();
+      const seq = await this.eventsRepository.nextSeq(streamId);
+      const payload: EventReverted = {
+        ...(target.eventId !== undefined ? { targetId: target.eventId } : {}),
+        ...(target.txId !== undefined ? { txId: target.txId } : {}),
+        ...(reason !== undefined ? { reason } : {}),
+      };
+      const raw = this.envelope(streamId, seq, actor, 'event.reverted', 1, payload);
+      const event = this.validate(raw, 'event.reverted', 1);
 
-    const events = await this.eventsRepository.byStream(streamId);
-    const facts = reduce(events, undefined, this.systemRules());
+      await this.eventsRepository.append([event]);
+      await this.snapshotsRepository.remove(streamId);
+      this.lastSnapshotSeq = 0;
 
-    this.eventsState.set(events);
-    this.factsState.set(facts);
-    await this.charactersRepository.upsertFromFacts(streamId, facts);
+      const events = await this.eventsRepository.byStream(streamId);
+      const facts = reduce(events, undefined, this.systemRules());
+
+      this.eventsState.set(events);
+      this.factsState.set(facts);
+      await this.charactersRepository.upsertFromFacts(streamId, facts);
+    });
   }
 
   // --- internals -----------------------------------------------------------------------------
+
+  /**
+   * Serializes every mutating method's actual work (`load`/`create`/`appendTx`/`revert`) through
+   * one promise chain, so two calls fired without awaiting the first (a double-fired UI action,
+   * or a wizard step racing a background rest-timer tick) can never interleave their
+   * `EventsRepository.nextSeq` reads and `facts`/`events` signal writes — each queued operation's
+   * `nextSeq` call now only ever runs after the previous one's `append` has fully committed.
+   * Persisted data was already safe either way (`EventsRepository.append` assigns seqs
+   * transactionally), but without this the in-memory signals could drift from what actually
+   * landed. `this.queue` itself always settles (never rejects): a failed operation's rejection is
+   * still returned to ITS OWN caller (`settled`, below), but is swallowed before being folded back
+   * into `this.queue`, so one rejected call can never poison every operation queued after it.
+   */
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const settled = this.queue.then(operation, operation);
+    this.queue = settled.then(
+      () => undefined,
+      () => undefined,
+    );
+    return settled;
+  }
+
+  /**
+   * Resolves once `PackStore.ready()` is true. Implemented as a poll rather than `effect()`:
+   * this runs inside a plain async method with no guaranteed Angular change-detection tick to
+   * flush an effect against, so a framework-agnostic wait is the more reliable primitive here.
+   * The common case (packs already ready) resolves immediately with no timer at all; otherwise
+   * it only spins for app bootstrap's brief pack-fetch window.
+   */
+  private whenPacksReady(): Promise<void> {
+    if (this.packStore.ready()) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const check = (): void => {
+        if (this.packStore.ready()) resolve();
+        else setTimeout(check, 10);
+      };
+      setTimeout(check, 10);
+    });
+  }
 
   private assertLeader(): void {
     if (!this.leaderService.isLeader()) throw new CharacterStoreNotLeaderError();

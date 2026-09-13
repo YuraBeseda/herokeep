@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal } from '@angular/core';
+import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
@@ -92,11 +92,17 @@ function removeLocks(): void {
   delete (navigator as unknown as { locks?: StubLockManager }).locks;
 }
 
-/** Configures the TestBed with the real core pack (ready) and a stubbed `StoragePersistService`.
- * MUST run before any `TestBed.inject` call (including `beforeEach`'s `HkDb` inject) — Angular
- * refuses to reconfigure a TestBed module once it has been instantiated. */
-function configure(): { requestPersist: ReturnType<typeof vi.fn> } {
+/** Configures the TestBed with the real core pack and a stubbed `StoragePersistService`. `ready`
+ * is a real `WritableSignal` (default `true`) tests can flip to exercise `load()`'s readiness
+ * gate — mutating it doesn't require reconfiguring the TestBed module, which MUST NOT happen
+ * after any `TestBed.inject` call (including `beforeEach`'s `HkDb` inject) — Angular refuses to
+ * reconfigure a TestBed module once it has been instantiated. */
+function configure(): {
+  requestPersist: ReturnType<typeof vi.fn>;
+  readyState: WritableSignal<boolean>;
+} {
   const requestPersist = vi.fn().mockResolvedValue(true);
+  const readyState = signal(true);
   TestBed.configureTestingModule({
     providers: [
       provideTransloco({
@@ -111,19 +117,20 @@ function configure(): { requestPersist: ReturnType<typeof vi.fn> } {
       }),
       {
         provide: PackStore,
-        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        useValue: { packs: signal([corePack]), ready: readyState, corePack: signal(corePack) },
       },
       { provide: StoragePersistService, useValue: { requestPersist } },
     ],
   });
-  return { requestPersist };
+  return { requestPersist, readyState };
 }
 
 describe('CharacterStore', () => {
   let requestPersist: ReturnType<typeof vi.fn>;
+  let readyState: WritableSignal<boolean>;
 
   beforeEach(async () => {
-    ({ requestPersist } = configure());
+    ({ requestPersist, readyState } = configure());
     const db = TestBed.inject(HkDb);
     await Promise.all([
       db.packs.clear(),
@@ -289,5 +296,83 @@ describe('CharacterStore', () => {
     const [putStreamId, snapshot] = putSpy.mock.calls[0];
     expect(putStreamId).toBe(streamId);
     expect(snapshot.seq).toBe(102); // 1 (created) + 101 renames
+  });
+
+  it('serializes two overlapping appendTx calls: contiguous seqs, signals match a fresh replay', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine');
+
+    // Neither call is awaited before the other fires — this is exactly the double-fired-UI-action
+    // race the in-store queue (`enqueue`) exists to serialize.
+    const first = store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'First' } }]);
+    const second = store.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Second' } },
+    ]);
+    await Promise.all([first, second]);
+
+    const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+    expect(persisted.map((e) => e.seq)).toEqual([1, 2, 3]);
+    expect(new Set(persisted.map((e) => e.seq)).size).toBe(3); // no clobbered/duplicate seq
+
+    // Call order is preserved (synchronous `enqueue` in call order): "First" lands at seq 2,
+    // "Second" at seq 3, so the final name is "Second".
+    expect(store.facts()?.name).toBe('Second');
+
+    const freshStore = TestBed.runInInjectionContext(() => new CharacterStore());
+    await freshStore.load(streamId);
+    expect(store.facts()).toEqual(freshStore.facts());
+    expect(store.events().map((e) => e.id)).toEqual(freshStore.events().map((e) => e.id));
+  });
+
+  it('a rejected queued call does not poison the queue for the next one', async () => {
+    const store = TestBed.inject(CharacterStore);
+    await store.create('Aria', 'feminine');
+
+    await expect(
+      store.appendTx([{ type: 'not.a.real.event', v: 1, payload: {} }]),
+    ).rejects.toThrow();
+
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Recovered' } }]);
+    expect(store.facts()?.name).toBe('Recovered');
+  });
+
+  it('appendTx rejects an "event.reverted" draft — it must go through revert()', async () => {
+    const store = TestBed.inject(CharacterStore);
+    await store.create('Aria', 'feminine');
+
+    await expect(
+      store.appendTx([
+        {
+          type: 'event.reverted',
+          v: 1,
+          payload: { targetId: '00000000-0000-4000-8000-000000000000' },
+        },
+      ]),
+    ).rejects.toThrow(/revert/);
+  });
+
+  it('load awaits PackStore readiness before resolving; the sheet is defined once it does', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine'); // packs are ready for this part
+
+    readyState.set(false);
+    const freshStore = TestBed.runInInjectionContext(() => new CharacterStore());
+    let resolved = false;
+    const loadPromise = freshStore.load(streamId).then(() => {
+      resolved = true;
+    });
+
+    // Real (unfaked) timers: give the readiness poll a few turns while still not ready.
+    await new Promise((r) => setTimeout(r, 30));
+    expect(resolved).toBe(false);
+    expect(freshStore.loaded()).toBe(false);
+
+    readyState.set(true);
+    await loadPromise;
+
+    expect(resolved).toBe(true);
+    expect(freshStore.loaded()).toBe(true);
+    expect(freshStore.sheet()).toBeDefined();
+    expect(freshStore.sheet()?.name).toBe('Aria');
   });
 });
