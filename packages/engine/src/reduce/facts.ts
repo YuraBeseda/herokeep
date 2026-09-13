@@ -1,5 +1,17 @@
 import type { SystemEntity } from '@hk/protocol';
 
+/**
+ * Death-save cap (3 successes = stable, 3 failures = dead) — a doc-02 ENGINE-CONTRACT rule
+ * (`docs/02-architecture/02-domain-model-and-events.md`'s "Rules the reducer applies" paragraph),
+ * not pack data: unlike the rules that paragraph explicitly sources "from the pinned core pack's
+ * `system` entity", this one is a fixed constant of the reducer itself — `handlers/vitals.ts`'s
+ * `death_save.recorded` handler already hardcoded `3` before this constant existed. Single-sourced
+ * here (not in `vitals.ts`) so any consumer outside the reducer — the Play tab's death-save
+ * display (plan-5 task-10) — can import the SAME number off `@hk/engine`'s public barrel instead
+ * of re-declaring its own copy.
+ */
+export const DEATH_SAVE_MAX = 3;
+
 export interface SkippedEvent {
   eventId: string;
   reason: string;

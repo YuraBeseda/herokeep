@@ -8,7 +8,7 @@ import {
   type HpChanged,
   type InspirationChanged,
 } from '@hk/protocol';
-import { type ConditionEntry, type Facts, requireCreated } from '../facts.ts';
+import { DEATH_SAVE_MAX, type ConditionEntry, type Facts, requireCreated } from '../facts.ts';
 import type { Handler } from '../reducer.ts';
 
 /**
@@ -63,18 +63,24 @@ export const HANDLERS: Record<string, Handler> = {
     if (skip) return skip;
     switch (p.result) {
       case 'success': {
-        const successes = Math.min(f.deathSaves.successes + 1, 3);
-        // 3 successes marks the character stable: reset both counters.
-        return successes === 3
+        const successes = Math.min(f.deathSaves.successes + 1, DEATH_SAVE_MAX);
+        // DEATH_SAVE_MAX successes marks the character stable: reset both counters.
+        return successes === DEATH_SAVE_MAX
           ? { ...f, deathSaves: { successes: 0, failures: 0 } }
           : { ...f, deathSaves: { ...f.deathSaves, successes } };
       }
       case 'failure':
-        return { ...f, deathSaves: { ...f.deathSaves, failures: Math.min(f.deathSaves.failures + 1, 3) } };
+        return {
+          ...f,
+          deathSaves: { ...f.deathSaves, failures: Math.min(f.deathSaves.failures + 1, DEATH_SAVE_MAX) },
+        };
       case 'critSuccess':
         return { ...f, deathSaves: { successes: 0, failures: 0 }, hp: { ...f.hp, current: 1 } };
       case 'critFailure':
-        return { ...f, deathSaves: { ...f.deathSaves, failures: Math.min(f.deathSaves.failures + 2, 3) } };
+        return {
+          ...f,
+          deathSaves: { ...f.deathSaves, failures: Math.min(f.deathSaves.failures + 2, DEATH_SAVE_MAX) },
+        };
     }
   },
 

@@ -1,6 +1,6 @@
 import type { Event } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
-import { emptyFacts } from '../src/reduce/facts.ts';
+import { DEATH_SAVE_MAX, emptyFacts } from '../src/reduce/facts.ts';
 import { reduce } from '../src/reduce/reducer.ts';
 import { ENGINE_VERSION } from '../src/version.ts';
 
@@ -158,7 +158,7 @@ describe('death_save.recorded', () => {
     expect(f.deathSaves).toEqual({ successes: 0, failures: 0 });
   });
 
-  it('failures cap at 3', () => {
+  it('failures cap at DEATH_SAVE_MAX', () => {
     const setup = [
       ev(2, 'death_save.recorded', { result: 'failure' }),
       ev(3, 'death_save.recorded', { result: 'failure' }),
@@ -166,7 +166,7 @@ describe('death_save.recorded', () => {
       ev(5, 'death_save.recorded', { result: 'failure' }),
     ];
     const f = reduce([created, ...setup]);
-    expect(f.deathSaves.failures).toBe(3);
+    expect(f.deathSaves.failures).toBe(DEATH_SAVE_MAX);
   });
 
   it('critSuccess resets saves and sets current to 1', () => {

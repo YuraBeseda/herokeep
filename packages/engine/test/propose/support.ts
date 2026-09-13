@@ -45,7 +45,7 @@ export function baseSheet(overrides: Partial<Sheet> = {}): Sheet {
       current: 20,
       currentWasMax: false,
       temp: 0,
-      hitDice: { 'core-mini:class/fighter': { die: 10, total: 1, spent: 0 } },
+      hitDice: { 'core-mini:class/fighter': { die: 10, total: 1, spent: 0, remaining: 1 } },
       deathSaves: { successes: 0, failures: 0 },
       conditions: [],
       issues: [],

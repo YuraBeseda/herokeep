@@ -35,7 +35,7 @@ describe('deriveHp', () => {
     expect(r.max.value).toBe(29);
   });
 
-  it('reports per-class hit dice totals and spent count', () => {
+  it('reports per-class hit dice totals, spent count, and remaining (total - spent)', () => {
     const facts = baseFacts();
     facts.classes = [{ classId: 'core-mini:class/fighter', level: 3 }];
     facts.hitDiceSpent = { 'core-mini:class/fighter': 1 };
@@ -44,7 +44,27 @@ describe('deriveHp', () => {
     const abilities = deriveAbilities(facts, comp, index);
     const r = deriveHp(abilities, comp, facts, index, systemRules());
 
-    expect(r.hitDice).toEqual({ 'core-mini:class/fighter': { die: 10, total: 3, spent: 1 } });
+    expect(r.hitDice).toEqual({
+      'core-mini:class/fighter': { die: 10, total: 3, spent: 1, remaining: 2 },
+    });
+  });
+
+  it('floors remaining at 0 rather than going negative when spent exceeds total', () => {
+    const facts = baseFacts();
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 3 }];
+    // The reducer stays permissive (doc-02) — an over-spend past `total` is possible in raw
+    // facts; derivation must still surface a display-safe, non-negative `remaining`.
+    facts.hitDiceSpent = { 'core-mini:class/fighter': 5 };
+    const comp = compose(facts, index);
+    const abilities = deriveAbilities(facts, comp, index);
+    const r = deriveHp(abilities, comp, facts, index, systemRules());
+
+    expect(r.hitDice['core-mini:class/fighter']).toEqual({
+      die: 10,
+      total: 3,
+      spent: 5,
+      remaining: 0,
+    });
   });
 
   it('lets facts.hp.maxOverride win outright, recording an override contribution', () => {

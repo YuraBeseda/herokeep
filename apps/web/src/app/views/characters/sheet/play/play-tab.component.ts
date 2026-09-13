@@ -1,6 +1,6 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import type { SafeHtml } from '@angular/platform-browser';
-import type { ContentIndex, Localizer, Sheet } from '@hk/engine';
+import { DEATH_SAVE_MAX, type ContentIndex, type Localizer, type Sheet } from '@hk/engine';
 import { makeEntityId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { CardComponent } from '@shared/components/card/card.component';
@@ -91,11 +91,11 @@ export class PlayTabComponent {
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;
 
-  // `HpResult.deathSaves` (`derive/hp.ts`) carries only the two running counts, no "max" — 5e's
-  // "3 successes/3 failures" is a fixed rule of the SRD 2024 system this pack encodes, not
-  // something the engine models as data anywhere in `Sheet`. Display-only; never fed into any
-  // derivation.
-  protected readonly maxDeathSaves = 3;
+  // `HpResult.deathSaves` (`derive/hp.ts`) carries only the two running counts, no "max" — but
+  // the cap itself IS engine data (`reduce/facts.ts`'s `DEATH_SAVE_MAX`, a doc-02
+  // ENGINE-CONTRACT rule the reducer already enforces in `handlers/vitals.ts`), so it's imported
+  // here rather than re-declared — single-sourced, never a second copy of the same rule.
+  protected readonly maxDeathSaves = DEATH_SAVE_MAX;
 
   protected readonly expandedActionId = signal<string | undefined>(undefined);
 
@@ -162,7 +162,14 @@ export class PlayTabComponent {
   });
 
   protected readonly hitDiceRows = computed<
-    { classId: string; className: string; die: number; total: number; spent: number }[]
+    {
+      classId: string;
+      className: string;
+      die: number;
+      total: number;
+      spent: number;
+      remaining: number;
+    }[]
   >(() => {
     const sheet = this.sheet();
     if (!sheet) return [];

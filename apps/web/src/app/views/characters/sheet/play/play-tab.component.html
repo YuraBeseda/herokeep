@@ -10,8 +10,10 @@
             <dl class="play-tab__ability-stats">
               <div class="play-tab__ability-stat">
                 <dt>{{ t('sheet.abilities.score') }}</dt>
-                <dd class="play-tab__ability-value" hkDerived [hkDerivedBreakdown]="row.score">
-                  {{ row.score.value }}
+                <dd>
+                  <span class="play-tab__ability-value" hkDerived [hkDerivedBreakdown]="row.score">
+                    {{ row.score.value }}
+                  </span>
                 </dd>
               </div>
               <div class="play-tab__ability-stat">
@@ -20,13 +22,15 @@
               </div>
               <div class="play-tab__ability-stat">
                 <dt>{{ t('sheet.abilities.save') }}</dt>
-                <dd
-                  class="play-tab__ability-value"
-                  [class.play-tab__ability-value--proficient]="row.saveProficient"
-                  hkDerived
-                  [hkDerivedBreakdown]="row.save"
-                >
-                  {{ signed(row.save.value) }}
+                <dd>
+                  <span
+                    class="play-tab__ability-value"
+                    [class.play-tab__ability-value--proficient]="row.saveProficient"
+                    hkDerived
+                    [hkDerivedBreakdown]="row.save"
+                  >
+                    {{ signed(row.save.value) }}
+                  </span>
                 </dd>
               </div>
             </dl>
@@ -106,7 +110,7 @@
                 t('sheet.hp.hitDiceEntry', {
                   class: entry.className,
                   die: entry.die,
-                  remaining: entry.total - entry.spent,
+                  remaining: entry.remaining,
                   total: entry.total,
                 })
               }}
@@ -149,11 +153,15 @@
             @for (attack of attacks(); track attack.instanceId) {
               <tr>
                 <td>{{ attack.name }}</td>
-                <td hkDerived [hkDerivedBreakdown]="attack.toHit">
-                  {{ signed(attack.toHit.value) }}
+                <td>
+                  <span hkDerived [hkDerivedBreakdown]="attack.toHit">
+                    {{ signed(attack.toHit.value) }}
+                  </span>
                 </td>
-                <td hkDerived [hkDerivedBreakdown]="attack.damage.bonus">
-                  {{ attack.damage.dice }} {{ signed(attack.damage.bonus.value) }}
+                <td>
+                  <span hkDerived [hkDerivedBreakdown]="attack.damage.bonus">
+                    {{ attack.damage.dice }} {{ signed(attack.damage.bonus.value) }}
+                  </span>
                 </td>
                 <td>{{ attack.mastery }}</td>
               </tr>

@@ -85,7 +85,10 @@ describe('propose.spendHitDie', () => {
           saveProficient: false,
         },
       },
-      hp: { ...baseSheet().hp, hitDice: { [fighter]: { die: 10, total: 2, spent: 0 } } },
+      hp: {
+        ...baseSheet().hp,
+        hitDice: { [fighter]: { die: 10, total: 2, spent: 0, remaining: 2 } },
+      },
     });
     expect(propose.spendHitDie(sheet, fighter, 6)).toEqual([
       { type: 'hit_dice.spent', v: 1, payload: { classId: fighter, count: 1, healed: 8 } },
@@ -102,7 +105,10 @@ describe('propose.spendHitDie', () => {
           saveProficient: false,
         },
       },
-      hp: { ...baseSheet().hp, hitDice: { [fighter]: { die: 10, total: 2, spent: 0 } } },
+      hp: {
+        ...baseSheet().hp,
+        hitDice: { [fighter]: { die: 10, total: 2, spent: 0, remaining: 2 } },
+      },
     });
     expect(propose.spendHitDie(sheet, fighter, 2)).toEqual([
       { type: 'hit_dice.spent', v: 1, payload: { classId: fighter, count: 1, healed: 0 } },
@@ -110,7 +116,12 @@ describe('propose.spendHitDie', () => {
   });
 
   it('refuses with "hitdice.none-left" once every hit die is spent', () => {
-    const sheet = baseSheet({ hp: { ...baseSheet().hp, hitDice: { [fighter]: { die: 10, total: 2, spent: 2 } } } });
+    const sheet = baseSheet({
+      hp: {
+        ...baseSheet().hp,
+        hitDice: { [fighter]: { die: 10, total: 2, spent: 2, remaining: 0 } },
+      },
+    });
     const err = captureProposeError(() => propose.spendHitDie(sheet, fighter, 6));
     expect(err.diagnostics[0]?.code).toBe('hitdice.none-left');
   });

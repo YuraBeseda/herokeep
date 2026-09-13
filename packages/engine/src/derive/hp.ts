@@ -10,7 +10,8 @@ export interface HpResult {
   max: Derived<number>;
   current: number;
   temp: number;
-  hitDice: Record<string, { die: number; total: number; spent: number }>;
+  /** `remaining` = `total - spent`, computed here (derivation's job, not a UI consumer's). */
+  hitDice: Record<string, { die: number; total: number; spent: number; remaining: number }>;
   deathSaves: { successes: number; failures: number };
   conditions: { conditionId: string; level?: number; source?: string }[];
   /**
@@ -123,7 +124,11 @@ export function deriveHp(
       });
     }
 
-    hitDice[classId] = { die: hitDie, total: levels, spent: facts.hitDiceSpent[classId] ?? 0 };
+    const spent = facts.hitDiceSpent[classId] ?? 0;
+    // Clamped like `current` below (never negative) — the reducer stays permissive (an
+    // over-spend past `total` is a proposer/validation concern, not a reducer invariant), so
+    // derivation is where a display-safe `remaining` gets floored.
+    hitDice[classId] = { die: hitDie, total: levels, spent, remaining: Math.max(0, levels - spent) };
   }
 
   // ---- `hp.perLevel` (x totalLevel) and `hp.bonus` effects (fully resolved, deferred-filtered) ----
