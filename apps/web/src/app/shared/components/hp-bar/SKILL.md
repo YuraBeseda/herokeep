@@ -1,7 +1,12 @@
 # hk-hp-bar
 
 Element selector `hk-hp-bar`. A pure-presentational HP bar: a track filled to
-`current / max`, with a `temp` overlay segment picking up where that fill ends.
+`current / max`, with a `temp` overlay segment picking up where that fill ends. The
+percentage base widens to `current + temp` whenever that exceeds `max` — at full HP
+(`current === max`), a naive `max`-only base would clamp the fill to 100% and clip the
+temp segment off the track entirely (`overflow: hidden`), hiding temp HP exactly when a
+full-HP character gains it (False Life, Aid, …). Widening the base instead shrinks both
+segments proportionally so fill+temp always share the track.
 
 ## Usage
 
