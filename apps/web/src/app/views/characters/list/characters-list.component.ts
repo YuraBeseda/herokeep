@@ -6,6 +6,8 @@ import { CardComponent } from '@shared/components/card/card.component';
 import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
+import { PlaceholderService } from '@shared/services/images/placeholder.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
@@ -79,7 +81,7 @@ export class CharactersDeleteConfirmComponent {
  */
 @Component({
   selector: 'app-characters-list',
-  imports: [TranslocoDirective, CardComponent, ButtonComponent, SkeletonComponent],
+  imports: [TranslocoDirective, CardComponent, ButtonComponent, SkeletonComponent, BlobUrlPipe],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './characters-list.component.html',
   styleUrl: './characters-list.component.scss',
@@ -90,6 +92,7 @@ export class CharactersListComponent {
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly placeholderService = inject(PlaceholderService);
 
   // Template-facing state
   protected readonly skeletonRows: readonly number[] = Array.from(
@@ -105,6 +108,17 @@ export class CharactersListComponent {
 
   protected readonly rows = computed(() => this.charactersResource.value() ?? []);
   protected readonly loading = this.charactersResource.isLoading;
+
+  /** `PlaceholderService.monogram` for a row that has no `portraitThumbHash` (or whose thumb blob
+   * hasn't resolved yet) — deterministic per character id, matching `sheet-shell.component.ts`'s
+   * own header placeholder for the SAME character. */
+  protected monogramInitials(row: CharacterRow): string {
+    return this.placeholderService.monogram(row.name, row.id).initials;
+  }
+
+  protected monogramBackground(row: CharacterRow): string {
+    return `hsl(${this.placeholderService.monogram(row.name, row.id).hue} 45% 40%)`;
+  }
 
   // Methods
   protected create(): void {

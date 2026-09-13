@@ -4,6 +4,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
@@ -97,6 +98,10 @@ describe('CharactersListComponent', () => {
       db.characters.clear(),
       db.blobs.clear(),
     ]);
+    // jsdom does not reliably implement Blob-URL support — stub it (same as the other Task 8
+    // specs) rather than depend on jsdom's own support.
+    URL.createObjectURL = vi.fn(() => 'blob:fake-thumb-url');
+    URL.revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
@@ -220,5 +225,57 @@ describe('CharactersListComponent', () => {
 
     expect(showSpy).toHaveBeenCalledWith('characters.not-leader');
     expect(itemNames(fixture)).toEqual(['Aria']);
+  });
+
+  // --- Portrait thumbs (plan-6 Task 8) -----------------------------------------------------
+
+  it('a row with portraitThumbHash renders its thumb as an <img>, not the monogram placeholder', async () => {
+    const db = TestBed.inject(HkDb);
+    const thumbHash = `sha256:${'a'.repeat(64)}`;
+    const blobsRepository = TestBed.inject(BlobsRepository);
+    await blobsRepository.put(thumbHash, 'image/webp', new Uint8Array([1, 2, 3]), {
+      kind: 'thumb',
+      width: 256,
+      height: 256,
+    });
+    await db.characters.put(mkRow({ portraitThumbHash: thumbHash }));
+
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+
+    let compiled = fixture.nativeElement as HTMLElement;
+    // `charactersResource`'s own load resolves, THEN `BlobUrlPipe`'s async `blobsRepository.get`
+    // fetch resolves — neither is a `resource()`/Angular-tracked async primitive `whenStable()`
+    // alone is guaranteed to wait out, same reasoning as this file's own `flushDeleteFlow`.
+    for (
+      let i = 0;
+      i < 20 && compiled.querySelector('img.characters-list__portrait') === null;
+      i++
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+      compiled = fixture.nativeElement as HTMLElement;
+    }
+
+    const img = compiled.querySelector<HTMLImageElement>('img.characters-list__portrait');
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute('src')).toBe('blob:fake-thumb-url');
+    expect(compiled.querySelector('.characters-list__portrait--placeholder')).toBeNull();
+  });
+
+  it('a row with NO portraitThumbHash renders the deterministic monogram placeholder instead', async () => {
+    const db = TestBed.inject(HkDb);
+    await db.characters.put(
+      mkRow({ id: 'char:00000000-0000-4000-8000-000000000009', name: 'Beren Erchamion' }),
+    );
+
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('img.characters-list__portrait')).toBeNull();
+    const placeholder = compiled.querySelector('.characters-list__portrait--placeholder');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder!.textContent?.trim()).toBe('BE');
   });
 });

@@ -61,12 +61,24 @@ export interface CharacterRow {
   portraitThumbHash?: string;
 }
 
-/** Content-addressed binary blob (portraits, etc.); `hash` is the primary key. */
+/** Content-addressed binary blob (portraits, etc.); `hash` is the primary key.
+ *
+ * `kind`/`width`/`height` (plan-6 Task 8, design ruling 3) are TYPE-ONLY additions — they are
+ * plain (non-indexed) fields Dexie just stores/returns as part of the row's structured-clone
+ * payload, not schema-declared index keys, so adding them needs NO `version()` bump/migration
+ * (Dexie only indexes fields listed in a `stores()` schema string — see `HkDb`'s own class doc).
+ * Written by `ImagePipelineService.processPortrait`'s three `BlobsRepository.put()` calls
+ * (portrait/thumb/token) and read back by `BlobUrlPipe`. If a future task needs to QUERY blobs by
+ * kind, that requires an actual indexed `version()` bump — a real finding, not something this
+ * comment silently does for you. */
 export interface BlobRow {
   hash: string;
   mime: string;
   bytes: Uint8Array;
   size: number;
+  kind?: 'portrait' | 'thumb' | 'token';
+  width?: number;
+  height?: number;
 }
 
 /**

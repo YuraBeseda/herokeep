@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, type Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -7,7 +7,9 @@ import { ButtonComponent } from '@shared/components/button/button.component';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
+import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { filter, map } from 'rxjs';
 
@@ -35,6 +37,7 @@ type TabId = (typeof TAB_IDS)[number];
     FormsModule,
     NumberFieldComponent,
     ButtonComponent,
+    BlobUrlPipe,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './sheet-shell.component.html',
@@ -44,6 +47,7 @@ export class SheetShellComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly engineFacade = inject(EngineFacade);
+  private readonly placeholderService = inject(PlaceholderService);
   protected readonly characterStore = inject(CharacterStore);
 
   // `characterResolver` only ever runs again (and this component only ever gets re-created) when
@@ -67,16 +71,28 @@ export class SheetShellComponent {
     return TAB_IDS.find((id) => url.endsWith(`/${id}`)) ?? 'play';
   });
 
-  protected readonly initials = computed(() => {
-    const name = this.sheet()?.name ?? '';
-    const letters = name
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '');
-    return letters.join('');
-  });
+  // --- Portrait (plan-6 Task 8) ---------------------------------------------------------------
+
+  /** The monogram placeholder shown until (or after) a portrait is set — deterministic per
+   * character id (`PlaceholderService`'s own class doc), not per name, so it never flickers to a
+   * different hue on a rename. */
+  protected readonly monogram: Signal<Monogram> = computed(() =>
+    this.placeholderService.monogram(
+      this.sheet()?.name ?? '',
+      this.characterStore.streamId() ?? '',
+    ),
+  );
+
+  protected readonly monogramBackground = computed(() => `hsl(${this.monogram().hue} 45% 40%)`);
+
+  /** `undefined` until `portrait.set` has been appended (design ruling 4: the reducer only ever
+   * stores `{hash, thumbHash}` in `facts.portrait` — no token field lives on the event stream at
+   * all). Feeds `BlobUrlPipe` in the template (`(portraitThumbHash() | blobUrl)()`); a `thumb`
+   * blob missing from `BlobsRepository` (shouldn't happen — `ImagePipelineService` always writes
+   * it before `appendTx`) just resolves to `undefined`, falling back to the monogram again. */
+  protected readonly portraitThumbHash = computed(
+    () => this.characterStore.facts()?.portrait?.thumbHash,
+  );
 
   // --- XP entry + "level up available" badge (plan-5 task-13-brief.md) -----------------------
 

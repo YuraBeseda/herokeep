@@ -25,6 +25,21 @@
       @for (row of rows(); track row.id) {
         <hk-card class="characters-list__item">
           <button type="button" class="characters-list__open" (click)="open(row.id)">
+            @if ((row.portraitThumbHash | blobUrl)(); as thumbUrl) {
+              <img
+                class="characters-list__portrait"
+                [src]="thumbUrl"
+                [alt]="t('sheet.portrait.alt', { name: row.name })"
+              />
+            } @else {
+              <div
+                class="characters-list__portrait characters-list__portrait--placeholder"
+                [style.background]="monogramBackground(row)"
+                aria-hidden="true"
+              >
+                {{ monogramInitials(row) }}
+              </div>
+            }
             <span class="characters-list__name">{{ row.name }}</span>
             <span class="characters-list__meta">{{ row.system }}</span>
           </button>

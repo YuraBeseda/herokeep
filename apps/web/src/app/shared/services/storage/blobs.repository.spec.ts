@@ -61,4 +61,26 @@ describe('BlobsRepository', () => {
     expect(await db.blobs.count()).toBe(1);
     expect(Array.from((await repo.get(hash))?.bytes ?? [])).toEqual(Array.from(bytes));
   });
+
+  it('round-trips the optional kind/width/height meta (plan-6 Task 8, design ruling 3)', async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    const bytes = new Uint8Array([1, 2, 3]);
+
+    await repo.put(hash, 'image/webp', bytes, { kind: 'thumb', width: 256, height: 256 });
+
+    const row = await repo.get(hash);
+    expect(row?.kind).toBe('thumb');
+    expect(row?.width).toBe(256);
+    expect(row?.height).toBe(256);
+  });
+
+  it('omitting meta leaves kind/width/height undefined (pre-Task-8 call shape still works)', async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    await repo.put(hash, 'image/png', new Uint8Array([1]));
+
+    const row = await repo.get(hash);
+    expect(row?.kind).toBeUndefined();
+    expect(row?.width).toBeUndefined();
+    expect(row?.height).toBeUndefined();
+  });
 });

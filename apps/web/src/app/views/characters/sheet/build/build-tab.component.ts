@@ -1,17 +1,42 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild, type ElementRef } from '@angular/core';
 import { validateSelection } from '@hk/engine';
 import { LongTextSchema, ShortTextSchema, type GrammaticalGender } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
+import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import {
+  ImageInvalidTypeError,
+  ImagePipelineService,
+  ImageTooLargeError,
+} from '@shared/services/images/image-pipeline.service';
+import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CharacterStore } from '@shared/stores/character.store';
+import { ToastService } from '@shared/components/toast/toast.service';
 import type {
   ChoiceCommitFn,
   ChoiceValidateFn,
 } from '../../create-wizard/steps/choice-step-overrides';
 import { ChoiceStepComponent } from '../../create-wizard/steps/choice-step.component';
+
+/** doc-07 step 1: `accept="image/*"` WITHOUT a literal `image/heic` entry, so iOS's own picker
+ * transcodes HEIC photos to JPEG before this app ever sees the file — a defense-in-depth check
+ * still runs inside `ImagePipelineService.processPortrait` (`assertAcceptableFile`) for anything
+ * that slips past this attribute (a non-iOS browser, a manually renamed file, or SVG — which DOES
+ * match the `image/*` glob and needs the JS-level rejection). */
+const PORTRAIT_ACCEPT = 'image/*';
+
+const PORTRAIT_ERROR_KEYS: Record<string, string> = {
+  'image.too-large': 'characters.sheet.portrait.error.tooLarge',
+  'image.invalid-type': 'characters.sheet.portrait.error.invalidType',
+};
+// Reuses the app-wide generic validation fallback key (`diagnostic-toast.ts`'s own
+// `validation.generic`) rather than minting a portrait-specific one — an error this map doesn't
+// recognize is by definition not one of the two typed pipeline errors, so no more specific
+// message is available.
+const GENERIC_PORTRAIT_ERROR_KEY = 'characters.validation.generic';
 
 type AppearanceField = 'age' | 'height' | 'weight' | 'eyes' | 'hair' | 'skin' | 'description';
 
@@ -66,6 +91,7 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
     CardComponent,
     SheetSectionComponent,
     ChoiceStepComponent,
+    BlobUrlPipe,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './build-tab.component.html',
@@ -74,6 +100,9 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
 export class BuildTabComponent {
   private readonly characterStore = inject(CharacterStore);
   private readonly engineFacade = inject(EngineFacade);
+  private readonly imagePipelineService = inject(ImagePipelineService);
+  private readonly placeholderService = inject(PlaceholderService);
+  private readonly toastService = inject(ToastService);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly outstanding = this.characterStore.outstanding;
@@ -174,5 +203,73 @@ export class BuildTabComponent {
     void this.characterStore.appendTx([
       { type: 'character.gender_set', v: 1, payload: { grammaticalGender: value } },
     ]);
+  }
+
+  // --- Portrait (plan-6 Task 8) -----------------------------------------------------------------
+  // The upload affordance lives HERE, on Build/appearance (task-8-brief.md's own "PLACEMENT" note)
+  // — the sheet SHELL header only ever DISPLAYS the current thumb/monogram
+  // (`sheet-shell.component.ts`), it has no upload control of its own.
+
+  protected readonly portraitAccept = PORTRAIT_ACCEPT;
+  protected readonly portraitInput = viewChild<ElementRef<HTMLInputElement>>('portraitInput');
+
+  protected readonly portraitThumbHash = computed(
+    () => this.characterStore.facts()?.portrait?.thumbHash,
+  );
+
+  protected readonly monogram = computed<Monogram>(() =>
+    this.placeholderService.monogram(
+      this.sheet()?.name ?? '',
+      this.characterStore.streamId() ?? '',
+    ),
+  );
+
+  protected readonly monogramBackground = computed(() => `hsl(${this.monogram().hue} 45% 40%)`);
+
+  protected onPortraitUploadClick(): void {
+    this.portraitInput()?.nativeElement.click();
+  }
+
+  protected async onPortraitFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    // Reset immediately so re-selecting the SAME file path still fires a fresh `change` event —
+    // the browser only fires `change` when the input's value actually differs from before.
+    input.value = '';
+    if (!file) return;
+
+    try {
+      const result = await this.imagePipelineService.processPortrait(file);
+      await this.characterStore.appendTx([
+        {
+          type: 'portrait.set',
+          v: 1,
+          // EXACT `PortraitSetV1` shape (@hk/protocol/events/character.ts) — deliberately no
+          // `tokenHash` (design ruling 4: the token blob is generated/stored by the pipeline but
+          // never appears on the event stream; only `hash`/`thumbHash` do).
+          payload: {
+            hash: result.hash,
+            thumbHash: result.thumbHash,
+            mime: result.mime,
+            w: result.w,
+            h: result.h,
+          },
+        },
+      ]);
+    } catch (error) {
+      const code =
+        error instanceof ImageTooLargeError || error instanceof ImageInvalidTypeError
+          ? error.code
+          : undefined;
+      this.toastService.show(
+        code
+          ? (PORTRAIT_ERROR_KEYS[code] ?? GENERIC_PORTRAIT_ERROR_KEY)
+          : GENERIC_PORTRAIT_ERROR_KEY,
+      );
+    }
+  }
+
+  protected onPortraitRemove(): void {
+    void this.characterStore.appendTx([{ type: 'portrait.cleared', v: 1, payload: {} }]);
   }
 }

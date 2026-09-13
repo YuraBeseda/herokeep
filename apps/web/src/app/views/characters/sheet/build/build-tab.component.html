@@ -46,6 +46,51 @@
       [titleKey]="'characters.sheet.build.appearance.title'"
       class="build-tab__section"
     >
+      <div class="build-tab__portrait">
+        <h3 class="build-tab__portrait-heading">{{ t('sheet.build.appearance.portraitTitle') }}</h3>
+        <div class="build-tab__portrait-row">
+          @if ((portraitThumbHash() | blobUrl)(); as portraitUrl) {
+            <img
+              class="build-tab__portrait-preview"
+              [src]="portraitUrl"
+              [alt]="t('sheet.portrait.alt', { name: s.name })"
+            />
+          } @else {
+            <div
+              class="build-tab__portrait-preview build-tab__portrait-preview--placeholder"
+              [style.background]="monogramBackground()"
+              aria-hidden="true"
+            >
+              {{ monogram().initials }}
+            </div>
+          }
+          <div class="build-tab__portrait-actions">
+            <button hk-button type="button" [variant]="'ghost'" (click)="onPortraitUploadClick()">
+              {{ portraitThumbHash() ? t('sheet.portrait.change') : t('sheet.portrait.upload') }}
+            </button>
+            @if (portraitThumbHash()) {
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                class="build-tab__portrait-remove"
+                (click)="onPortraitRemove()"
+              >
+                {{ t('sheet.portrait.remove') }}
+              </button>
+            }
+          </div>
+          <input
+            #portraitInput
+            type="file"
+            class="build-tab__portrait-input"
+            hidden
+            [attr.accept]="portraitAccept"
+            (change)="onPortraitFileSelected($event)"
+          />
+        </div>
+      </div>
+
       <form
         class="build-tab__form build-tab__appearance-form"
         (submit)="onAppearanceSubmit($event)"

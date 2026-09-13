@@ -11,6 +11,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
@@ -95,7 +96,13 @@ describe('SheetShellComponent (route resolver + shell)', () => {
       db.settings.clear(),
       db.snapshots.clear(),
       db.characters.clear(),
+      db.blobs.clear(),
     ]);
+    // jsdom (this app's unit-test environment) does not reliably implement Blob-URL support —
+    // stub it directly, same as `blob-url.pipe.spec.ts`, rather than depend on jsdom's actual
+    // support (or lack of it).
+    URL.createObjectURL = vi.fn(() => 'blob:fake-portrait-url');
+    URL.revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
@@ -214,5 +221,51 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 1);
 
     expect(root.querySelector('.sheet-shell__undo-level-up')).toBeNull();
+  });
+
+  it("shows a monogram placeholder (no portrait) with a deterministic hue and the name's initials", async () => {
+    const id = await seedFighter('Ivan Petrov');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+
+    expect(root.querySelector('.sheet-shell__portrait--placeholder')).not.toBeNull();
+    expect(root.querySelector('img.sheet-shell__portrait')).toBeNull();
+    const placeholder = root.querySelector('.sheet-shell__portrait--placeholder')!;
+    expect(placeholder.textContent?.trim()).toBe('IP');
+    expect(placeholder.getAttribute('style')).toContain('background');
+  });
+
+  it('once facts.portrait.thumbHash is set, the header renders an <img> from BlobUrlPipe instead of the monogram', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const blobsRepository = TestBed.inject(BlobsRepository);
+    const thumbHash = `sha256:${'a'.repeat(64)}`;
+    const fullHash = `sha256:${'b'.repeat(64)}`;
+    await blobsRepository.put(thumbHash, 'image/webp', new Uint8Array([1, 2, 3]), {
+      kind: 'thumb',
+      width: 256,
+      height: 256,
+    });
+    await characterStore.appendTx([
+      {
+        type: 'portrait.set',
+        v: 1,
+        payload: { hash: fullHash, thumbHash, mime: 'image/webp', w: 1024, h: 1024 },
+      },
+    ]);
+    expect(characterStore.facts()?.portrait?.thumbHash).toBe(thumbHash);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    await pollUntil(
+      harness.fixture,
+      () => root.querySelector('img.sheet-shell__portrait') !== null,
+    );
+
+    expect(root.querySelector('.sheet-shell__portrait--placeholder')).toBeNull();
+    const img = root.querySelector<HTMLImageElement>('img.sheet-shell__portrait')!;
+    expect(img.getAttribute('src')).toBe('blob:fake-portrait-url');
+    expect(img.getAttribute('alt')).toContain('Ivan');
   });
 });

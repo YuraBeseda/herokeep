@@ -178,6 +178,7 @@
         "hair": "Hair",
         "skin": "Skin",
         "description": "Description",
+        "portraitTitle": "Portrait",
         "save": "Save"
       },
       "gender": {
@@ -196,6 +197,16 @@
       "xpAward": "Award",
       "levelUpAvailable": "Level up available",
       "undoLevelUp": "Undo level up"
+    },
+    "portrait": {
+      "alt": "{name}'s portrait",
+      "upload": "Upload portrait",
+      "change": "Change portrait",
+      "remove": "Remove portrait",
+      "error": {
+        "tooLarge": "This image is too large. Try a smaller photo.",
+        "invalidType": "That file type isn't supported. Use a JPEG, PNG, WebP, or GIF image."
+      }
     },
     "stats": {
       "ac": "Armor Class",

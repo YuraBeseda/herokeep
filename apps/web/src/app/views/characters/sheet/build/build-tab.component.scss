@@ -70,3 +70,45 @@
   color: var(--text-2);
   margin: 0;
 }
+
+.build-tab__portrait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.build-tab__portrait-heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.build-tab__portrait-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.build-tab__portrait-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  color: var(--text-1);
+  font-weight: 600;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.build-tab__portrait-preview--placeholder {
+  background: var(--surface-2);
+}
+
+.build-tab__portrait-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}

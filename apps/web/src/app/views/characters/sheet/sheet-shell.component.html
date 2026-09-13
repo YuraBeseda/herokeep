@@ -6,7 +6,21 @@
     </div>
   } @else if (sheet(); as s) {
     <header class="sheet-shell__header">
-      <div class="sheet-shell__portrait" aria-hidden="true">{{ initials() }}</div>
+      @if ((portraitThumbHash() | blobUrl)(); as portraitUrl) {
+        <img
+          class="sheet-shell__portrait"
+          [src]="portraitUrl"
+          [alt]="t('sheet.portrait.alt', { name: s.name })"
+        />
+      } @else {
+        <div
+          class="sheet-shell__portrait sheet-shell__portrait--placeholder"
+          [style.background]="monogramBackground()"
+          aria-hidden="true"
+        >
+          {{ monogram().initials }}
+        </div>
+      }
       <div class="sheet-shell__identity">
         <h1 class="sheet-shell__name">{{ s.name }}</h1>
         <p class="sheet-shell__class-line">{{ classLine(t) }}</p>
