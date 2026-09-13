@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { By } from '@angular/platform-browser';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { NumberFieldComponent } from './number-field.component';
@@ -91,5 +92,25 @@ describe('NumberFieldComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const input = compiled.querySelector<HTMLInputElement>('input[type="number"]')!;
     expect(input.disabled).toBe(true);
+  });
+
+  it('registerOnTouched: the registered callback fires on blur, and not before', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+
+    const numberField = fixture.debugElement.query(By.directive(NumberFieldComponent))
+      .componentInstance as NumberFieldComponent;
+    const touched = vi.fn();
+    numberField.registerOnTouched(touched);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('input[type="number"]')!;
+
+    expect(touched).not.toHaveBeenCalled();
+
+    input.dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+
+    expect(touched).toHaveBeenCalledTimes(1);
   });
 });

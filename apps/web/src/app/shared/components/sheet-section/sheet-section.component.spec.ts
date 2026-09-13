@@ -59,6 +59,8 @@ describe('SheetSectionComponent', () => {
 
     const body = compiled.querySelector<HTMLElement>('.hk-sheet-section__body')!;
     expect(body.hidden).toBe(false);
+    expect(toggle.getAttribute('aria-controls')).toBe(body.id);
+    expect(body.id).toBeTruthy();
   });
 
   it('toggles the body hidden state and aria-expanded on click', async () => {

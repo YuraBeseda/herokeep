@@ -1,8 +1,10 @@
 # hk-sheet-section
 
 Element selector `hk-sheet-section`. A titled card section for the character sheet, with
-an optional collapse toggle (`collapsible`) — meant primarily for narrow/phone layouts
-where several sections need to fit above the fold, but the toggle works at any width.
+an optional collapse toggle (`collapsible`). `collapsible` is a plain per-section flag —
+sections marked `collapsible` are simply always-collapsible (at any viewport width); the
+consumer decides which sections opt in. There is no built-in breakpoint/media-query
+wiring, and none is required.
 
 ## Usage
 
@@ -11,8 +13,8 @@ where several sections need to fit above the fold, but the toggle works at any w
   <app-equipment-list [items]="sheet().equipment" />
 </hk-sheet-section>
 
-<!-- Collapsible: bind from a breakpoint signal so it only collapses on phone -->
-<hk-sheet-section [titleKey]="'sheet.sections.features'" [collapsible]="isPhone()">
+<!-- Always-collapsible section: the consumer opts this one in outright -->
+<hk-sheet-section [titleKey]="'sheet.sections.features'" [collapsible]="true">
   <app-feature-list [items]="sheet().features" />
 </hk-sheet-section>
 ```
@@ -31,14 +33,15 @@ No outputs — collapse state is internal (starts expanded) and has no external 
 When `collapsible` is `true`, the entire header renders as a single `<button>` whose
 visible text is the translated title itself — there's no separate "expand"/"collapse"
 label, so this component never needs a second string beyond `titleKey`. `aria-expanded`
-on that button (and a CSS-only rotating chevron keyed off it) conveys the state; the body
-is hidden via the native `hidden` attribute (removed from the accessibility tree and
-layout, not just visually) when collapsed.
+and `aria-controls` (pointing at the body region's generated id) on that button — plus a
+CSS-only rotating chevron keyed off `aria-expanded` — convey the state; the body is
+hidden via the native `hidden` attribute (removed from the accessibility tree and layout,
+not just visually) when collapsed.
 
 ## Do / Don't
 
-Do bind `collapsible` from a viewport/breakpoint signal if you only want the collapse
-behavior on phone — the component itself applies no media query, it just renders (or
-doesn't render) the toggle based on the input. Don't expect `collapsible` to change
-whether content is projected — the body is always projected; only its `hidden` state
-changes.
+Do treat `collapsible` as a static per-section choice the consumer makes (e.g. "this
+section is always collapsible, that one never is") — don't build a breakpoint/viewport
+service just to drive it; nothing in this component expects one. Don't expect
+`collapsible` to change whether content is projected — the body is always projected;
+only its `hidden` state (and the header's button-vs-span rendering) changes.
