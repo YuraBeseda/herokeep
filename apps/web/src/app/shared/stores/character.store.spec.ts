@@ -448,6 +448,23 @@ describe('CharacterStore', () => {
     expect(freshStore.sheet()?.name).toBe('Aria');
   });
 
+  // --- dev-mode perf log (plan-6 Task 13, Global Constraints' perf-acceptance bullet) ----------
+
+  it('load logs a dev-mode [perf] reduce+derive line with a numeric ms argument', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine');
+
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const freshStore = TestBed.runInInjectionContext(() => new CharacterStore());
+    await freshStore.load(streamId);
+
+    const perfCall = infoSpy.mock.calls.find(([label]) => label === '[perf] reduce+derive');
+    expect(perfCall).toBeDefined();
+    expect(typeof perfCall?.[1]).toBe('number');
+
+    infoSpy.mockRestore();
+  });
+
   // --- runExclusive / reloadIfCurrent (fix-round 1, Critical finding: serialize `.hero` import
   // against this store's own mutation queue) --------------------------------------------------
 

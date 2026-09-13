@@ -13,6 +13,11 @@ import { loadDistPack, loadGoldens } from './support/golden.ts';
  * damage/heal/slot events), reduced and derived 5 times; the median wall time must stay under
  * 150ms — generous CI headroom over the ~30ms real-device target (plan 6's checklist measures
  * that on an actual device; this is a regression tripwire, not the device measurement).
+ *
+ * PERF.md recording is opt-in via `HK_RECORD_PERF=1` (plan-6 Task 13 hygiene fix) — a plain
+ * `pnpm test`/`pnpm check` run must never dirty the tree, so by default this test only logs to
+ * stdout and asserts the budget; run `HK_RECORD_PERF=1 pnpm --filter @hk/engine test perf` to
+ * deliberately append a new measurement line to `golden/PERF.md`.
  */
 
 function hex(n: number): string {
@@ -90,24 +95,30 @@ describe('perf budget', () => {
       `[perf] fighter-5-play + 500 synthetic events (${allEvents.length} total): samples=${samples.map((s) => s.toFixed(2)).join(', ')}ms median=${median.toFixed(2)}ms`,
     );
 
-    // NOTE: this appends one line per test run — PERF.md is a running log, not a single snapshot;
-    // trim old entries by hand if it grows unwieldy (kept simple deliberately: no rotation logic).
-    const perfMdPath = new URL('golden/PERF.md', import.meta.url);
-    const line = `- ${new Date().toISOString()}: ${allEvents.length} events, samples [${samples.map((s) => s.toFixed(2)).join(', ')}] ms, median ${median.toFixed(2)} ms (budget 150 ms)\n`;
-    if (!existsSync(perfMdPath)) {
-      writeFileSync(
-        perfMdPath,
-        '# Engine perf budget\n\n' +
-          "Median of 5 `reduce` + `derive` runs over `fighter-5-play`'s real event log (creation " +
-          'through level 5, plus its ~15-event play sequence) extended with 500 synthetic in-play ' +
-          'events (cycled damage/heal/slot spend+restore). Budget: 150ms (generous CI headroom ' +
-          'over the ~30ms real-device target measured separately in plan 6). See `test/perf.test.ts`.\n\n' +
-          '## Measurements\n\n' +
-          '(Appended one line per test run — this file is a running log; trim old entries by hand ' +
-          'if it grows too long. No automatic rotation.)\n\n',
-      );
+    // Recording to PERF.md is opt-in (HK_RECORD_PERF=1): a plain `pnpm test`/`pnpm check` run
+    // must leave the working tree clean, so an ordinary run only asserts the budget below and
+    // logs to stdout via console.info above — it does NOT touch PERF.md. Set HK_RECORD_PERF=1
+    // when you deliberately want to append a new measurement line (PERF.md is a running log, not
+    // a single snapshot; trim old entries by hand if it grows unwieldy — kept simple
+    // deliberately, no rotation logic).
+    if (process.env['HK_RECORD_PERF'] === '1') {
+      const perfMdPath = new URL('golden/PERF.md', import.meta.url);
+      const line = `- ${new Date().toISOString()}: ${allEvents.length} events, samples [${samples.map((s) => s.toFixed(2)).join(', ')}] ms, median ${median.toFixed(2)} ms (budget 150 ms)\n`;
+      if (!existsSync(perfMdPath)) {
+        writeFileSync(
+          perfMdPath,
+          '# Engine perf budget\n\n' +
+            "Median of 5 `reduce` + `derive` runs over `fighter-5-play`'s real event log (creation " +
+            'through level 5, plus its ~15-event play sequence) extended with 500 synthetic in-play ' +
+            'events (cycled damage/heal/slot spend+restore). Budget: 150ms (generous CI headroom ' +
+            'over the ~30ms real-device target measured separately in plan 6). See `test/perf.test.ts`.\n\n' +
+            '## Measurements\n\n' +
+            '(Appended one line per test run — this file is a running log; trim old entries by hand ' +
+            'if it grows too long. No automatic rotation.)\n\n',
+        );
+      }
+      appendFileSync(perfMdPath, line);
     }
-    appendFileSync(perfMdPath, line);
 
     expect(median).toBeLessThan(150);
   });

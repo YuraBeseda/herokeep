@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
+import { computed, inject, Injectable, isDevMode, signal, type Signal } from '@angular/core';
 import {
   derive,
   ENGINE_VERSION,
@@ -351,20 +351,34 @@ export class CharacterStore {
   /** The actual body of `load()` — factored out so `reloadIfCurrent` (called from INSIDE another
    * caller's already-`enqueue`d/`runExclusive`d operation) can run the exact same replay without
    * itself calling back into `enqueue` (see `reloadIfCurrent`'s own doc for why that would
-   * deadlock). Public `load()` is just `enqueue(() => this.loadNow(characterId))`. */
+   * deadlock). Public `load()` is just `enqueue(() => this.loadNow(characterId))`.
+   *
+   * Dev-only perf log (plan-6 Task 13, Global Constraints' perf-acceptance bullet): in
+   * `isDevMode()` builds only (stripped from production — never runs there), times the replay
+   * (`reduce`) plus one explicit `derive` call — the same work `sheet`'s computed would otherwise
+   * lazily do on first read — and logs `[perf] reduce+derive <ms>` so the manual device checklist
+   * (`docs/manual-device-checklist.md`) has an on-device number source. Both `load()` and
+   * `reloadIfCurrent()` funnel through this one method, so every load path reports. */
   private async loadNow(characterId: string): Promise<void> {
     await this.whenPacksReady();
     const [events, snapshot] = await Promise.all([
       this.eventsRepository.byStream(characterId),
       this.snapshotsRepository.get(characterId),
     ]);
-    const facts = reduce(events, snapshot, this.systemRules());
+
+    const devMode = isDevMode();
+    const rules = this.systemRules();
+    const start = devMode ? performance.now() : 0;
+    const facts = reduce(events, snapshot, rules);
+    if (devMode) derive(facts, this.engineFacade.index(), rules);
 
     this.streamIdState.set(characterId);
     this.eventsState.set(events);
     this.factsState.set(facts);
     this.lastSnapshotSeq = snapshot?.seq ?? 0;
     this.loadedState.set(true);
+
+    if (devMode) console.info('[perf] reduce+derive', performance.now() - start);
   }
 
   /**
