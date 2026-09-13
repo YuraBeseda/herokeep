@@ -1,16 +1,9 @@
 import { inject, Injectable } from '@angular/core';
 import { ENGINE_VERSION, reduce } from '@hk/engine';
 import { parseHeroManifest, type HeroBundleImage } from '@hk/protocol';
+import { APP_VERSION } from '@app/version';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
-
-/**
- * Mirrors `about.component.ts`'s own `APP_VERSION` constant/rationale: `apps/web/package.json`'s
- * `version` field is still the Angular CLI scaffold default ("0.0.0") and isn't wired to any
- * release process, so it isn't a reliable source — this is the one to bump alongside that
- * component's copy when a real release process lands.
- */
-const APP_VERSION = '0.1.0';
 
 const MIME_EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',

@@ -1,17 +1,12 @@
 import { Component } from '@angular/core';
 import { ATTRIBUTION } from '@hk/content/attribution';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { APP_VERSION } from '@app/version';
 import { CardComponent } from '@shared/components/card/card.component';
 // Static asset (also served at `/assets/icons/authors.json`), imported directly as a TS module —
 // same `resolveJsonModule` pattern as `@hk/content/icons` in engine.facade.ts — because the
 // author list is small, non-localized, and needed synchronously for the composed credit line.
 import authorsJson from '../../../assets/icons/authors.json';
-
-// Mirrors the app's own release version (see MEMORY.md / the `v0.1.0-plan1` tag and the content
-// pack's own `PACK_VERSION`) — `apps/web/package.json`'s `version` field is still the Angular CLI
-// scaffold default ("0.0.0") and is not (yet) wired to any release process, so it is not a
-// reliable source for this; this constant is the one to bump when that changes.
-const APP_VERSION = '0.1.0';
 
 function humanizeAuthor(slug: string): string {
   return slug

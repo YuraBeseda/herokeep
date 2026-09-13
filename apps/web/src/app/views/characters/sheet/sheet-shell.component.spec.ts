@@ -11,6 +11,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
@@ -286,5 +287,27 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 0);
 
     expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.success');
+  });
+
+  it('a HeroWriterService.export failure toasts characters.sheet.export.failure and re-enables the Export button', async () => {
+    const id = await seedFighter('Ivan');
+    const heroWriterService = TestBed.inject(HeroWriterService);
+    vi.spyOn(heroWriterService, 'export').mockRejectedValue(new Error('boom'));
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    const exportButton = root.querySelector<HTMLButtonElement>('.sheet-shell__export')!;
+    expect(exportButton).not.toBeNull();
+
+    exportButton.click();
+    await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 0);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.failure');
+    // The `finally` block clears `exporting()` regardless of outcome — the button must not be
+    // left stuck disabled after a failed export.
+    await harness.fixture.whenStable();
+    expect(exportButton.disabled).toBe(false);
   });
 });
