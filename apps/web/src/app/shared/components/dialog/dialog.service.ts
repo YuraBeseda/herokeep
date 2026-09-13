@@ -18,6 +18,11 @@ export class DialogRef<R = unknown> {
 export interface DialogOptions {
   readonly data?: unknown;
   readonly sheet?: boolean;
+  /** Fallback accessible name for a dialog whose content has no `[data-dialog-title]` element —
+   * see `DialogComponent`'s own class doc. Every current consumer has a title element, so no
+   * caller passes this today; it exists so a future title-less dialog still has a way to be
+   * accessibly named instead of silently shipping without one. */
+  readonly ariaLabel?: string;
 }
 
 export interface DialogHandle {
@@ -77,6 +82,7 @@ export class DialogService {
     const shellRef = overlayRef.attach(new ComponentPortal(DialogComponent));
     shellRef.setInput('contentPortal', contentPortal);
     shellRef.setInput('sheet', !!opts?.sheet);
+    shellRef.setInput('ariaLabel', opts?.ariaLabel);
 
     overlayRef.backdropClick().subscribe(() => close(undefined));
     overlayRef.keydownEvents().subscribe((event) => {

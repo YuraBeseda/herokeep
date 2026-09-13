@@ -27,7 +27,7 @@ export type DerivedContribution = DerivedValue['contributions'][number];
   providers: [provideTranslocoScope('characters')],
   template: `
     <ng-container *transloco="let t; read: 'characters.sheet.derivedPopover'">
-      <h2 class="derived-popover__title">{{ t('title') }}</h2>
+      <h2 class="derived-popover__title" data-dialog-title>{{ t('title') }}</h2>
       @if (contributions.length > 0) {
         <ul class="derived-popover__list">
           @for (

@@ -11,6 +11,27 @@ class TestDialogContentComponent {
   protected readonly dialogRef = inject(DialogRef);
 }
 
+/** The exact accessible-name text this fixture's title resolves to — asserted against directly in
+ * the specs below, and interpolated (never a literal text node, same convention
+ * `TestDialogContentComponent` above already uses) so `@angular-eslint/template/i18n` has nothing
+ * to flag in a component that only ever exists for this spec. */
+const TEST_TITLE_TEXT = 'Delete this thing?';
+
+// task-12 fix round (axe `aria-dialog-name`, serious): every dialog content component's own title
+// heading carries `[data-dialog-title]` — `DialogComponent` looks for it after the portal attaches
+// and wires the shell's `aria-labelledby` to it. This fixture mirrors that real-consumer shape
+// (a titled `<h2 data-dialog-title>`), unlike `TestDialogContentComponent` above (deliberately
+// title-less, for the fallback/no-name-at-all cases already covered).
+@Component({
+  selector: 'app-test-titled-dialog-content',
+  template: `<h2 data-dialog-title>{{ titleText }}</h2>
+    <button type="button" class="content-button">{{ confirmText }}</button>`,
+})
+class TestTitledDialogContentComponent {
+  protected readonly titleText = TEST_TITLE_TEXT;
+  protected readonly confirmText = 'confirm';
+}
+
 function escapeKeydown(): KeyboardEvent {
   return new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true });
 }
@@ -133,5 +154,48 @@ describe('DialogService', () => {
     handle.close('confirmed');
 
     expect(await handle.closed).toBe('confirmed');
+  });
+
+  // task-12 fix round (axe `aria-dialog-name`, serious — every dialog previously had
+  // `role="dialog" aria-modal="true"` and NO accessible name at all; never caught because no
+  // e2e test had opened a dialog before task 12's own scenario (d)).
+
+  it('gives the role="dialog" panel an accessible name via aria-labelledby, wired to the content\'s own [data-dialog-title] element', () => {
+    const handle = service.open(TestTitledDialogContentComponent);
+    TestBed.tick();
+
+    const panel = document.querySelector('[role="dialog"]')!;
+    expect(panel).not.toBeNull();
+
+    const labelledBy = panel.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    const titleEl = document.getElementById(labelledBy!);
+    expect(titleEl?.textContent).toBe(TEST_TITLE_TEXT);
+    // The accessible-name computation axe performs: aria-labelledby wins, and it resolves.
+    expect(panel.hasAttribute('aria-label')).toBe(false);
+
+    handle.close();
+  });
+
+  it('falls back to the given ariaLabel when the content has no [data-dialog-title] element', () => {
+    const handle = service.open(TestDialogContentComponent, { ariaLabel: 'Fallback dialog name' });
+    TestBed.tick();
+
+    const panel = document.querySelector('[role="dialog"]')!;
+    expect(panel.getAttribute('aria-label')).toBe('Fallback dialog name');
+    expect(panel.hasAttribute('aria-labelledby')).toBe(false);
+
+    handle.close();
+  });
+
+  it('has neither aria-labelledby nor aria-label when the content has no title and no ariaLabel was given (the un-fixed, still-broken shape)', () => {
+    const handle = service.open(TestDialogContentComponent);
+    TestBed.tick();
+
+    const panel = document.querySelector('[role="dialog"]')!;
+    expect(panel.hasAttribute('aria-labelledby')).toBe(false);
+    expect(panel.hasAttribute('aria-label')).toBe(false);
+
+    handle.close();
   });
 });

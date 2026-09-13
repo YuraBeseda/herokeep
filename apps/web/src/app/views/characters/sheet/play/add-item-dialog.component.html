@@ -1,5 +1,7 @@
 <ng-container *transloco="let t">
-  <h2 class="add-item-dialog__title">{{ t('characters.sheet.inventory.addDialog.title') }}</h2>
+  <h2 class="add-item-dialog__title" data-dialog-title>
+    {{ t('characters.sheet.inventory.addDialog.title') }}
+  </h2>
 
   <hk-number-field
     [labelKey]="'characters.sheet.inventory.addDialog.qtyLabel'"

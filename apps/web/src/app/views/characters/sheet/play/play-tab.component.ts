@@ -87,7 +87,7 @@ type DeathSaveResult = 'success' | 'failure' | 'critSuccess' | 'critFailure';
   imports: [TranslocoDirective, ButtonComponent],
   template: `
     <ng-container *transloco="let t">
-      <h2 class="note-delete-confirm__title">
+      <h2 class="note-delete-confirm__title" data-dialog-title>
         {{ t('characters.sheet.notes.deleteConfirm.title') }}
       </h2>
       <p class="note-delete-confirm__body">{{ t('characters.sheet.notes.deleteConfirm.body') }}</p>
@@ -121,7 +121,7 @@ export class NoteDeleteConfirmComponent {
   imports: [TranslocoDirective, ButtonComponent],
   template: `
     <ng-container *transloco="let t">
-      <h2 class="item-remove-confirm__title">
+      <h2 class="item-remove-confirm__title" data-dialog-title>
         {{ t('characters.sheet.inventory.deleteConfirm.title') }}
       </h2>
       <p class="item-remove-confirm__body">

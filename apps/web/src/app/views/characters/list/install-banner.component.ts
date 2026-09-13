@@ -29,7 +29,7 @@ const DISMISSED_KEY = 'install-banner-dismissed';
   imports: [TranslocoDirective, ButtonComponent],
   template: `
     <ng-container *transloco="let t">
-      <h2 class="ios-install-sheet__title">
+      <h2 class="ios-install-sheet__title" data-dialog-title>
         {{ t('characters.list.installBanner.iosSheet.title') }}
       </h2>
       <p class="ios-install-sheet__intro">

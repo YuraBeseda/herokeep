@@ -37,7 +37,7 @@ interface TimelineRow {
   imports: [TranslocoDirective, ButtonComponent],
   template: `
     <ng-container *transloco="let t">
-      <h2 class="timeline-revert-confirm__title">
+      <h2 class="timeline-revert-confirm__title" data-dialog-title>
         {{ t('characters.timeline.revertConfirm.title') }}
       </h2>
       <p class="timeline-revert-confirm__body">{{ t('characters.timeline.revertConfirm.body') }}</p>

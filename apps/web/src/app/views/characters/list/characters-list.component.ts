@@ -49,7 +49,7 @@ const IMPORT_ACCEPT = '.hero';
   imports: [TranslocoDirective, ButtonComponent],
   template: `
     <ng-container *transloco="let t">
-      <h2 class="characters-delete-confirm__title">
+      <h2 class="characters-delete-confirm__title" data-dialog-title>
         {{ t('characters.list.deleteConfirm.title', { name: data.name }) }}
       </h2>
       <p class="characters-delete-confirm__body">{{ t('characters.list.deleteConfirm.body') }}</p>

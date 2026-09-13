@@ -153,6 +153,33 @@ describe('RestDialogComponent', () => {
     expect(await handle.closed).toBeUndefined();
   });
 
+  // task-12 fix round (axe `aria-dialog-name`, serious — see `dialog.service.spec.ts`'s own new
+  // suite for the shell's generic behavior): a REAL consumer, opened through the REAL
+  // `DialogService`, ends up with an accessible name — not just the shell's synthetic test fixture.
+  it('opening through the real DialogService gives the dialog panel an accessible name (its own title)', async () => {
+    await seedFighter('Ivan');
+    const sheet = TestBed.inject(CharacterStore).sheet()!;
+
+    const handle = open({ kind: 'short', sheet, hitDiceOptions: [] });
+    TestBed.tick();
+    // The `[data-dialog-title]` `<h2>` sits behind this content's OWN `*transloco` structural
+    // directive, which doesn't necessarily stamp within the SAME synchronous tick as the portal's
+    // own `(attached)` event — `DialogComponent`'s `MutationObserver` fallback catches it once it
+    // does, but that fallback's callback is itself a microtask, and applying the resulting signal
+    // write back to the host's `aria-labelledby` attribute needs one more render pass.
+    await Promise.resolve();
+    TestBed.tick();
+
+    const panel = document.querySelector('[role="dialog"]')!;
+    const labelledBy = panel.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    expect(document.getElementById(labelledBy!)?.textContent?.trim()).toBe(
+      charactersEn.sheet.rest.dialog.shortTitle,
+    );
+
+    handle.close();
+  });
+
   it('long-rest shows the confirm body and confirm closes with {kind: "long"}', async () => {
     await seedFighter('Ivan');
     const sheet = TestBed.inject(CharacterStore).sheet()!;

@@ -8,13 +8,21 @@ export interface Monogram {
   readonly background: string;
 }
 
-/** `45% 40%` (saturation/lightness) — the ONE place this formula is written. Fix-round 1, finding
+/** `45% 30%` (saturation/lightness) — the ONE place this formula is written. Fix-round 1, finding
  * 4: three callers (`sheet-shell`/`build-tab`/`characters-list` components) had each hand-rolled
  * `` `hsl(${hue} 45% 40%)` `` themselves, and this file's own doc comment disagreed with them
  * (`45% 45%`) — a duplication that had already drifted once and could silently drift again.
- * `monogram()` now computes `background` itself so no caller ever touches this string. */
+ * `monogram()` now computes `background` itself so no caller ever touches this string.
+ *
+ * task-12 fix round (axe `color-contrast`, serious): lightness was `40%` — against the
+ * placeholder's fixed near-white text (`#f7f5f3`), that fails WCAG AA's 4.5:1 for 167 of 360 hues
+ * (46.4%, the contiguous ~32°-198° band spanning orange through teal/blue), some as low as
+ * ~2.95:1, since every hue shares this ONE lightness regardless of how light or dark it already
+ * reads. `30%` was verified by brute-force checking EVERY hue at `s=45%` against `#f7f5f3`: the
+ * worst case across the full 360° range is 4.85:1, safely above 4.5:1 for every possible
+ * character id, not just the ones this file's own tests happen to cover. */
 function backgroundOf(hue: number): string {
-  return `hsl(${hue} 45% 40%)`;
+  return `hsl(${hue} 45% 30%)`;
 }
 
 /**
