@@ -519,26 +519,128 @@
       }
     </hk-sheet-section>
 
-    <!-- Inventory -->
+    <!-- Inventory (task-5-brief.md: add-from-library/custom, equip/attune, qty, remove, weight,
+         currency) -->
     <hk-sheet-section
       [titleKey]="'characters.sheet.inventory.title'"
       [collapsible]="true"
       class="play-tab__section"
     >
+      <div class="play-tab__inventory-actions">
+        <button hk-button type="button" (click)="onAddFromLibrary()">
+          {{ t('sheet.inventory.addFromLibrary') }}
+        </button>
+        <button hk-button type="button" [variant]="'ghost'" (click)="onAddCustomItem()">
+          {{ t('sheet.inventory.addCustom') }}
+        </button>
+      </div>
+
       @if (inventoryRows().length > 0) {
+        <p class="play-tab__inventory-total-weight">
+          {{ t('sheet.inventory.totalWeight', { value: totalWeight() }) }}
+        </p>
         <ul class="play-tab__inventory">
           @for (entry of inventoryRows(); track entry.row.instanceId) {
-            <li>
-              {{ t('sheet.inventory.entry', { name: entry.name, qty: entry.row.qty }) }}
-              @if (entry.row.equipped) {
-                <hk-chip [selected]="true">{{ t('wizard.equipment.equipped') }}</hk-chip>
-              }
+            <li
+              class="play-tab__inventory-item"
+              [class.play-tab__inventory-item--unresolved]="entry.unresolved"
+            >
+              <div class="play-tab__inventory-item-main">
+                <span class="play-tab__inventory-item-name">
+                  {{ t('sheet.inventory.entry', { name: entry.name, qty: entry.row.qty }) }}
+                </span>
+                @if (entry.weight !== undefined) {
+                  <span class="play-tab__inventory-item-weight">
+                    {{ t('sheet.inventory.weight', { value: entry.weight }) }}
+                  </span>
+                }
+                @if (entry.row.equipped) {
+                  <hk-chip [selected]="true">{{ t('wizard.equipment.equipped') }}</hk-chip>
+                }
+                @if (entry.row.attuned) {
+                  <hk-chip [selected]="true">{{ t('sheet.inventory.attuned') }}</hk-chip>
+                }
+              </div>
+              <div class="play-tab__inventory-item-controls">
+                <div class="play-tab__inventory-qty">
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'ghost'"
+                    [disabled]="entry.row.qty <= 1"
+                    [attr.aria-label]="t('sheet.inventory.qtyDecrease')"
+                    (click)="onDecreaseQty(entry.row)"
+                  >
+                    −
+                  </button>
+                  <span class="play-tab__inventory-qty-value">{{ entry.row.qty }}</span>
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'ghost'"
+                    [attr.aria-label]="t('sheet.inventory.qtyIncrease')"
+                    (click)="onIncreaseQty(entry.row)"
+                  >
+                    +
+                  </button>
+                </div>
+                @if (entry.equipEligible) {
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'ghost'"
+                    (click)="onToggleEquip(entry.row)"
+                  >
+                    {{
+                      entry.row.equipped ? t('sheet.inventory.unequip') : t('sheet.inventory.equip')
+                    }}
+                  </button>
+                }
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'ghost'"
+                  (click)="onToggleAttune(entry.row)"
+                >
+                  {{
+                    entry.row.attuned ? t('sheet.inventory.unattune') : t('sheet.inventory.attune')
+                  }}
+                </button>
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'danger'"
+                  (click)="onRemoveItem(entry.row)"
+                >
+                  {{ t('sheet.inventory.remove') }}
+                </button>
+              </div>
             </li>
           }
         </ul>
       } @else {
         <p class="play-tab__empty">{{ t('sheet.inventory.empty') }}</p>
       }
+
+      <div class="play-tab__inventory-currency">
+        <h3 class="play-tab__subtitle">{{ t('sheet.inventory.currencyTitle') }}</h3>
+        <ul class="play-tab__inventory-currency-fields">
+          @for (denom of denominations; track denom) {
+            <li>
+              <hk-number-field
+                [labelKey]="'characters.wizard.equipment.currency.' + denom"
+                [min]="0"
+                [step]="1"
+                [ngModel]="effectiveCurrency()[denom]"
+                (ngModelChange)="onCurrencyFieldChange(denom, $event)"
+              />
+            </li>
+          }
+        </ul>
+        <button hk-button type="button" [variant]="'ghost'" (click)="onApplyCurrency()">
+          {{ t('sheet.inventory.currencyApply') }}
+        </button>
+      </div>
     </hk-sheet-section>
 
     <!-- Notes (freeform, session-local per-character; task-4-brief.md — Facts.notes, no Sheet

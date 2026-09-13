@@ -1,0 +1,41 @@
+<ng-container *transloco="let t">
+  <h2 class="custom-item-dialog__title">
+    {{ t('characters.sheet.inventory.customDialog.title') }}
+  </h2>
+
+  <label class="custom-item-dialog__field">
+    <span>{{ t('characters.sheet.inventory.customDialog.nameLabel') }}</span>
+    <input
+      type="text"
+      class="custom-item-dialog__name-input"
+      [value]="name()"
+      (input)="onNameChange($any($event.target).value)"
+    />
+  </label>
+
+  <hk-number-field
+    [labelKey]="'characters.sheet.inventory.customDialog.qtyLabel'"
+    [min]="1"
+    [step]="1"
+    [ngModel]="qty()"
+    (ngModelChange)="onQtyChange($event)"
+  />
+
+  <label class="custom-item-dialog__field">
+    <span>{{ t('characters.sheet.inventory.customDialog.notesLabel') }}</span>
+    <textarea
+      class="custom-item-dialog__notes-input"
+      [value]="notes()"
+      (input)="onNotesChange($any($event.target).value)"
+    ></textarea>
+  </label>
+
+  <div class="custom-item-dialog__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+      {{ t('characters.sheet.inventory.customDialog.cancel') }}
+    </button>
+    <button hk-button type="button" [disabled]="!name().trim()" (click)="confirm()">
+      {{ t('characters.sheet.inventory.customDialog.confirm') }}
+    </button>
+  </div>
+</ng-container>

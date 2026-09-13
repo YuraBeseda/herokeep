@@ -16,6 +16,8 @@ import {
   NoteAddedV1,
   parseEntityId,
   type ConcentrationEnded,
+  type ItemRemoved,
+  type ItemUpdated,
   type ResourceRestored,
   type ResourceSpent,
   type SlotRestored,
@@ -42,6 +44,7 @@ import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
+import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
 import {
   ConditionDialogComponent,
@@ -49,6 +52,10 @@ import {
   type ConditionDialogOption,
   type ConditionDialogResult,
 } from './condition-dialog.component';
+import {
+  CustomItemDialogComponent,
+  type CustomItemDialogResult,
+} from './custom-item-dialog.component';
 import {
   NoteDialogComponent,
   type NoteDialogData,
@@ -94,12 +101,62 @@ export class NoteDeleteConfirmComponent {
   }
 }
 
+/** Same "own root injector, own `DialogService.open()` call, `true`/`false` close result"
+ * pattern as `NoteDeleteConfirmComponent` above — task-5-brief.md's inventory remove confirm. */
+@Component({
+  selector: 'app-item-remove-confirm',
+  imports: [TranslocoDirective, ButtonComponent],
+  template: `
+    <ng-container *transloco="let t">
+      <h2 class="item-remove-confirm__title">
+        {{ t('characters.sheet.inventory.deleteConfirm.title') }}
+      </h2>
+      <p class="item-remove-confirm__body">
+        {{ t('characters.sheet.inventory.deleteConfirm.body') }}
+      </p>
+      <div class="item-remove-confirm__actions">
+        <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+          {{ t('characters.sheet.inventory.deleteConfirm.cancel') }}
+        </button>
+        <button hk-button type="button" [variant]="'danger'" (click)="confirm()">
+          {{ t('characters.sheet.inventory.deleteConfirm.confirm') }}
+        </button>
+      </div>
+    </ng-container>
+  `,
+})
+export class ItemRemoveConfirmComponent {
+  private readonly dialogRef = inject(DialogRef);
+
+  protected confirm(): void {
+    this.dialogRef.close(true);
+  }
+
+  protected cancel(): void {
+    this.dialogRef.close(false);
+  }
+}
+
 // task-3-brief.md extends this set: `propose.spendSlot`/`propose.cast` (`packages/engine/src/
 // propose/casting.ts`) are the first play-tab proposers that DO throw — both refuse with
-// `'slot.none-left'` when the target level has no slots left. Every other refusal (should a
-// future engine change ever add one this play tab doesn't yet know about) still falls back to
-// `validation.generic` via `diagnosticKey`.
-const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set(['slot.none-left']);
+// `'slot.none-left'` when the target level has no slots left. task-5-brief.md adds `'attune.max'`
+// — `propose.attune`'s own refusal once `sheet.attunementMax` attuned items are already attuned.
+// Every other refusal (should a future engine change ever add one this play tab doesn't yet know
+// about) still falls back to `validation.generic` via `diagnosticKey`.
+const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
+  'slot.none-left',
+  'attune.max',
+]);
+
+// task-5-brief.md: only these item categories ever get an equip toggle in the inventory section —
+// same `EQUIPPABLE_CATEGORIES` set `EquipmentStepComponent` (plan 5, task-8-brief.md) uses for its
+// own inventory rows, duplicated locally rather than shared (neither file imports the other's
+// internals — same "small, per-consumer constant" precedent as this file's own
+// `KNOWN_PROPOSE_DIAGNOSTIC_CODES`).
+const EQUIPPABLE_CATEGORIES: ReadonlySet<string> = new Set(['weapon', 'armor', 'shield']);
+
+type Denomination = 'cp' | 'sp' | 'ep' | 'gp' | 'pp';
+const DENOMINATIONS: readonly Denomination[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
 
 // `@hk/engine`'s barrel doesn't re-export `derive/*.ts`'s per-field row types directly (only
 // `Sheet` itself — see `derive/index.ts`) — recovered as indexed-access aliases off `Sheet`, same
@@ -174,6 +231,11 @@ const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
     StatTileComponent,
     DerivedPopoverDirective,
   ],
+  // `AddItemDialogComponent`/`CustomItemDialogComponent`/`ItemRemoveConfirmComponent` (task-5-
+  // brief.md) never appear in `imports` above — same "opened only via `DialogService.open()`,
+  // never placed in this template" convention every other play-tab dialog already follows
+  // (`CastDialogComponent`, `ConditionDialogComponent`, `NoteDialogComponent`,
+  // `NoteDeleteConfirmComponent`).
   providers: [provideTranslocoScope('characters')],
   templateUrl: './play-tab.component.html',
   styleUrl: './play-tab.component.scss',
@@ -358,11 +420,63 @@ export class PlayTabComponent {
     return sheet.languages.map((l) => this.resolveName(l.id));
   });
 
-  protected readonly inventoryRows = computed<{ row: InventoryRow; name: string }[]>(() => {
+  // task-5-brief.md: `row.resolved` (`derive/sheet.ts`) is `false` only for a STALE itemId (one
+  // that no longer resolves in the content index) — a custom item's `itemId` is undefined, which
+  // `derive/index.ts` deliberately treats as trivially "resolved" (nothing to look up). The
+  // inventory section's own "renders by name, unresolved styling" treatment is for BOTH cases —
+  // a player-facing custom line and a genuinely broken pack reference look the same (plain name,
+  // no pack-backed facts) — so `unresolved` here is the UI's own broader flag, true whenever
+  // there's no live pack entity behind the row at all (`!row.itemId || !row.resolved`), not a
+  // re-export of the engine's narrower `resolved` field.
+  //
+  // `weight` (the plan's WEIGHT self-review note, binding for this task): display-only, straight
+  // off the resolved item ENTITY's own `weight` (lb, per pack entry) × this row's `qty` — never a
+  // per-row encumbrance judgment, just the stack's total weight for the row/section-total display.
+  // `undefined` for a custom row or an item entity with no declared weight (nothing rendered).
+  protected readonly inventoryRows = computed<
+    {
+      row: InventoryRow;
+      name: string;
+      weight?: number;
+      unresolved: boolean;
+      equipEligible: boolean;
+    }[]
+  >(() => {
     const sheet = this.sheet();
     if (!sheet) return [];
-    return sheet.inventory.map((row) => ({ row, name: this.itemName(row) }));
+    const index = this.engineFacade.index();
+    return sheet.inventory.map((row) => {
+      const entity = row.itemId ? index.get(row.itemId) : undefined;
+      const item = entity?.type === 'item' ? entity : undefined;
+      return {
+        row,
+        name: this.itemName(row),
+        weight: item?.weight !== undefined ? item.weight * row.qty : undefined,
+        unresolved: !row.itemId || !row.resolved,
+        equipEligible: item !== undefined && EQUIPPABLE_CATEGORIES.has(item.category),
+      };
+    });
   });
+
+  // The section header's "simple sum" (WEIGHT self-review note) — no encumbrance thresholds, just
+  // the total of every row's own (already qty-multiplied) `weight`.
+  protected readonly totalWeight = computed<number>(() =>
+    this.inventoryRows().reduce((sum, entry) => sum + (entry.weight ?? 0), 0),
+  );
+
+  // Currency editor draft (task-5-brief.md): `null` until the player edits a field, matching the
+  // `hpAmount` convention above — `effectiveCurrency` falls back to the live `sheet().currency`
+  // whenever there's no in-progress edit, so the five fields always start pre-filled with the
+  // CURRENT totals, never zeros. Reset back to `null` only once `onApplyCurrency` reports the
+  // proposal was actually accepted (same "a refusal leaves what the player typed on screen"
+  // convention `applyHpChange` documents).
+  protected readonly currencyDraft = signal<Sheet['currency'] | null>(null);
+
+  protected readonly effectiveCurrency = computed<Sheet['currency']>(
+    () => this.currencyDraft() ?? this.sheet()?.currency ?? { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+  );
+
+  protected readonly denominations = DENOMINATIONS;
 
   // Re-renders the currently-expanded action's markdown `description`, reusing `MarkdownService`
   // exactly like `entity-picker.component.ts`'s own `descriptionHtml` resource (task-6-brief.md:
@@ -693,6 +807,132 @@ export class PlayTabComponent {
     const confirmed = await handle.closed;
     if (confirmed !== true) return;
     this.appendDraft(propose.note('removed', { id: note.id }));
+  }
+
+  // --- Inventory and currency (task-5-brief.md) -------------------------------------------------
+
+  protected async onAddFromLibrary(): Promise<void> {
+    const handle = this.dialogService.open(AddItemDialogComponent, { sheet: true });
+    const result = (await handle.closed) as AddItemDialogResult | undefined;
+    if (!result) return;
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() =>
+      propose.addItem(sheet, { itemId: result.itemId, qty: result.qty }, uuidv7),
+    );
+  }
+
+  // Ruling 2 (binding): a custom item's `item.added` draft carries `custom: {}` and NO `itemId`
+  // — the marker the reducer/derive side already treat as "fully custom, nothing to resolve"
+  // (`derive/index.ts`'s own `resolved = item.itemId === undefined || index.has(item.itemId)`).
+  // `notes` isn't part of `ItemAdded` at all (only `ItemUpdatedV1` has it), so a non-blank notes
+  // field becomes a SECOND, hand-assembled `item.updated {instanceId, notes}` draft sharing the
+  // SAME freshly-minted `instanceId` — both concatenated into one `tryPropose` call so
+  // `CharacterStore.appendTx` gives them one shared `txId` (Global Constraints: "CONCAT related
+  // proposals into ONE appendTx call").
+  protected async onAddCustomItem(): Promise<void> {
+    const handle = this.dialogService.open(CustomItemDialogComponent);
+    const result = (await handle.closed) as CustomItemDialogResult | undefined;
+    if (!result) return;
+    const sheet = this.sheet();
+    if (!sheet) return;
+    const instanceId = uuidv7();
+    this.tryPropose(() => {
+      const drafts = propose.addItem(
+        sheet,
+        { name: result.name, qty: result.qty, custom: {} },
+        () => instanceId,
+      );
+      if (result.notes) {
+        drafts.push({
+          type: 'item.updated',
+          v: 1,
+          payload: { instanceId, notes: result.notes } satisfies ItemUpdated,
+        });
+      }
+      return drafts;
+    });
+  }
+
+  protected onToggleEquip(row: InventoryRow): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.equip(sheet, row.instanceId, !row.equipped));
+  }
+
+  // `propose.attune` is the first `propose.*` in this component whose refusal (`'attune.max'`,
+  // once `sheet.attunementMax` items are already attuned) this task adds to
+  // `KNOWN_PROPOSE_DIAGNOSTIC_CODES` — it funnels through the same `tryPropose` -> toast wiring as
+  // every other proposer, no special handling needed here.
+  protected onToggleAttune(row: InventoryRow): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.attune(sheet, row.instanceId, !row.attuned));
+  }
+
+  // `item.updated{qty}` REPLACES the stored qty (never a delta — `handlers/inventory.ts`'s own
+  // merge-only-provided-fields idiom), so both directions send the already-computed new total.
+  // The decrement button is disabled in the template once `qty` hits `ItemAddedV1.qty`'s own
+  // floor of 1 (removing a stack down to 0 is the Remove button's job, not the stepper's).
+  protected onIncreaseQty(row: InventoryRow): void {
+    this.appendDraft([
+      {
+        type: 'item.updated',
+        v: 1,
+        payload: { instanceId: row.instanceId, qty: row.qty + 1 } satisfies ItemUpdated,
+      },
+    ]);
+  }
+
+  protected onDecreaseQty(row: InventoryRow): void {
+    if (row.qty <= 1) return;
+    this.appendDraft([
+      {
+        type: 'item.updated',
+        v: 1,
+        payload: { instanceId: row.instanceId, qty: row.qty - 1 } satisfies ItemUpdated,
+      },
+    ]);
+  }
+
+  // Behind its own confirm dialog (`ItemRemoveConfirmComponent`, above) — same "revert-confirm"
+  // pattern `onRemoveNote` uses. No `qty` in the draft: `handlers/inventory.ts`'s `item.removed@1`
+  // treats a missing `qty` as "remove the whole entry", never a partial decrement.
+  protected async onRemoveItem(row: InventoryRow): Promise<void> {
+    const handle = this.dialogService.open(ItemRemoveConfirmComponent);
+    const confirmed = await handle.closed;
+    if (confirmed !== true) return;
+    this.appendDraft([
+      { type: 'item.removed', v: 1, payload: { instanceId: row.instanceId } satisfies ItemRemoved },
+    ]);
+  }
+
+  protected onCurrencyFieldChange(denom: Denomination, value: number | null): void {
+    this.currencyDraft.set({ ...this.effectiveCurrency(), [denom]: value ?? 0 });
+  }
+
+  // `propose.currency` takes DELTAS, not totals (task-5-brief.md) — computed here as `draft -
+  // current` per denomination, straight off the live `sheet().currency` at apply time (never a
+  // snapshot taken when the field was first edited, in case another action changed the currency
+  // meanwhile). A denomination the player never touched (or typed back to its original value)
+  // nets to a zero delta and is left OUT of the payload entirely — `CurrencyChangedV1`'s fields
+  // are all optional, and an explicit `0` would be indistinguishable from "no change" to the
+  // reducer anyway, so omitting it keeps the emitted event minimal. Negative deltas are allowed
+  // through as-is; the reducer floors each denomination at 0 independently
+  // (`handlers/inventory.ts`).
+  protected onApplyCurrency(): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    const draft = this.effectiveCurrency();
+    const deltas: Partial<Sheet['currency']> = {};
+    for (const denom of DENOMINATIONS) {
+      const delta = draft[denom] - sheet.currency[denom];
+      if (delta !== 0) deltas[denom] = delta;
+    }
+    if (Object.keys(deltas).length === 0) return;
+    if (this.tryPropose(() => propose.currency(sheet, deltas))) {
+      this.currencyDraft.set(null);
+    }
   }
 
   // Resolves a known/prepared spellId (task-3-brief.md): `level`/`concentration` read straight off

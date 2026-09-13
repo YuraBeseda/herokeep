@@ -320,7 +320,40 @@
     "inventory": {
       "title": "Inventory",
       "entry": "{name} × {qty}",
-      "empty": "Nothing carried."
+      "empty": "Nothing carried.",
+      "addFromLibrary": "Add from library",
+      "addCustom": "Add custom item",
+      "equip": "Equip",
+      "unequip": "Unequip",
+      "attune": "Attune",
+      "unattune": "End attunement",
+      "attuned": "Attuned",
+      "qtyIncrease": "Increase quantity",
+      "qtyDecrease": "Decrease quantity",
+      "remove": "Remove item",
+      "weight": "{value, plural, one {# lb} other {# lb}}",
+      "totalWeight": "Total weight: {value, plural, one {# lb} other {# lb}}",
+      "currencyTitle": "Currency",
+      "currencyApply": "Apply",
+      "addDialog": {
+        "title": "Add from library",
+        "qtyLabel": "Quantity",
+        "cancel": "Cancel"
+      },
+      "customDialog": {
+        "title": "Add custom item",
+        "nameLabel": "Name",
+        "qtyLabel": "Quantity",
+        "notesLabel": "Notes",
+        "cancel": "Cancel",
+        "confirm": "Add"
+      },
+      "deleteConfirm": {
+        "title": "Remove item?",
+        "body": "This item will be permanently removed from your inventory.",
+        "cancel": "Cancel",
+        "confirm": "Remove"
+      }
     },
     "notes": {
       "title": "Notes",
@@ -428,6 +461,9 @@
     "generic": "This selection isn't valid yet.",
     "slot": {
       "none-left": "No spell slots of that level remain."
+    },
+    "attune": {
+      "max": "You've reached your attunement limit."
     },
     "selection": {
       "count": "Select the required number of options.",

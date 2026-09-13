@@ -147,6 +147,79 @@
   gap: var(--space-1);
 }
 
+.play-tab__inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.play-tab__inventory-total-weight {
+  color: var(--text-2);
+  font-size: 0.875rem;
+  margin: 0 0 var(--space-2);
+}
+
+.play-tab__inventory-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-1);
+}
+
+/* WEIGHT/custom-item note (task-5-brief.md): a custom line or a stale pack reference — anything
+   with no live pack entity behind it — renders visually distinct from a resolved, pack-backed
+   row (muted + italic name), same "fallback text looks different from real text" idea
+   `.play-tab__empty` already applies elsewhere in this component. */
+.play-tab__inventory-item--unresolved .play-tab__inventory-item-name {
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.play-tab__inventory-item-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.play-tab__inventory-item-weight {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.play-tab__inventory-item-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.play-tab__inventory-qty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.play-tab__inventory-qty-value {
+  min-width: 1.5em;
+  text-align: center;
+}
+
+.play-tab__inventory-currency {
+  margin-top: var(--space-3);
+}
+
+.play-tab__inventory-currency-fields {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: var(--space-2);
+}
+
 .play-tab__death-saves-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

@@ -1075,3 +1075,345 @@ describe('PlayTabComponent — conditions and notes controls', () => {
     expect(characterStore.events().length).toBe(eventsBefore);
   });
 });
+
+// task-5-brief.md: inventory add-from-library/custom, equip/attune toggles, the qty stepper,
+// remove (behind its own confirm dialog), the weight display + section total (Self-Review's
+// WEIGHT note), and the currency editor. Every scenario seeds the REAL `seedFighter` fixture
+// (chain mail + longsword + shield, all equipped — plan-5 golden) and drives the real
+// `AddItemDialogComponent`/`CustomItemDialogComponent`/`ItemRemoveConfirmComponent` overlays this
+// component opens via `DialogService`, same `pollUntil` conventions every describe block above
+// establishes.
+describe('PlayTabComponent — inventory and currency controls', () => {
+  const DAGGER_ID = 'srd-5e-2024:item/dagger';
+  const LONGSWORD_ID = 'srd-5e-2024:item/longsword';
+  const SHIELD_ID = 'srd-5e-2024:item/shield';
+
+  beforeEach(async () => {
+    // Same locale-leak guard every other describe block in this file documents (`hk.locale`
+    // persists to REAL localStorage; `TestBed` teardown never clears it between blocks).
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  function overlay(): HTMLElement {
+    return document.querySelector<HTMLElement>('.cdk-overlay-container')!;
+  }
+
+  function inventoryRowFor(compiled: HTMLElement, nameSubstring: string): HTMLElement {
+    const rows = Array.from(compiled.querySelectorAll<HTMLElement>('.play-tab__inventory-item'));
+    const row = rows.find((r) => r.textContent?.includes(nameSubstring));
+    if (!row) throw new Error(`no inventory row containing "${nameSubstring}"`);
+    return row;
+  }
+
+  it('add-from-library appends item.added with a fresh uuid instanceId and renders the new row', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const instanceIdsBefore = new Set(characterStore.sheet()!.inventory.map((i) => i.instanceId));
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.inventory.addFromLibrary).click();
+    TestBed.tick();
+
+    vi.useFakeTimers();
+    const searchInput = overlay().querySelector<HTMLInputElement>('input[type="search"]')!;
+    searchInput.value = 'Dagger';
+    searchInput.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(150);
+    TestBed.tick();
+    vi.useRealTimers();
+
+    const card = Array.from(overlay().querySelectorAll('.entity-picker__card')).find(
+      (c) => c.querySelector('.entity-picker__name')?.textContent?.trim() === 'Dagger',
+    )!;
+    card.querySelector<HTMLButtonElement>('.entity-picker__select')!.click();
+
+    await pollUntil(
+      fixture,
+      () => (characterStore.sheet()?.inventory.length ?? 0) > instanceIdsBefore.size,
+    );
+
+    const added = characterStore.events().at(-1)!;
+    expect(added).toMatchObject({ type: 'item.added', payload: { itemId: DAGGER_ID, qty: 1 } });
+    const instanceId = (added.payload as { instanceId: string }).instanceId;
+    // A fresh UUIDv7 — sortable/time-ordered, RFC 9562 version-7 nibble + RFC 4122 variant bits
+    // (`shared/helpers/uuid.ts`).
+    expect(instanceId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(instanceIdsBefore.has(instanceId)).toBe(false);
+
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(inventoryRowFor(compiled, 'Dagger')).not.toBeNull();
+  });
+
+  it('a custom item renders by its name with the unresolved styling, and item.added carries custom:{} with no itemId', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.inventory.addCustom).click();
+    TestBed.tick();
+    const nameInput = overlay().querySelector<HTMLInputElement>('input[type="text"]')!;
+    nameInput.value = 'Lucky Coin';
+    nameInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.inventory.customDialog.confirm).click();
+
+    await pollUntil(fixture, () => characterStore.events().at(-1)?.type === 'item.added');
+    const added = characterStore.events().at(-1)!;
+    expect(added.payload).toEqual({
+      instanceId: (added.payload as { instanceId: string }).instanceId,
+      name: 'Lucky Coin',
+      qty: 1,
+      custom: {},
+    });
+
+    compiled = fixture.nativeElement as HTMLElement;
+    const row = inventoryRowFor(compiled, 'Lucky Coin');
+    expect(row.classList.contains('play-tab__inventory-item--unresolved')).toBe(true);
+  });
+
+  it('a custom item with notes appends item.added then a second item.updated{notes} sharing the same instanceId and txId (one appendTx call)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.inventory.addCustom).click();
+    TestBed.tick();
+    const nameInput = overlay().querySelector<HTMLInputElement>('input[type="text"]')!;
+    nameInput.value = 'Strange Key';
+    nameInput.dispatchEvent(new Event('input'));
+    const notesInput = overlay().querySelector<HTMLTextAreaElement>('textarea')!;
+    notesInput.value = 'Opens something.';
+    notesInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.inventory.customDialog.confirm).click();
+
+    await pollUntil(fixture, () => characterStore.events().at(-1)?.type === 'item.updated');
+    const events = characterStore.events();
+    const added = events.at(-2)!;
+    const updated = events.at(-1)!;
+    expect(added).toMatchObject({ type: 'item.added', payload: { name: 'Strange Key' } });
+    expect(updated).toMatchObject({
+      type: 'item.updated',
+      payload: {
+        notes: 'Opens something.',
+        instanceId: (added.payload as { instanceId: string }).instanceId,
+      },
+    });
+    expect(updated.txId).toBeDefined();
+    expect(updated.txId).toBe(added.txId);
+  });
+
+  it('unequipping chain mail via its inventory row toggle drops sheet.ac (real pack armor no longer contributes)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const acBefore = characterStore.sheet()!.ac.value;
+    expect(acBefore).toBe(19);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const row = inventoryRowFor(compiled, 'Chain Mail');
+    buttonNamed(row, charactersEn.sheet.inventory.unequip).click();
+
+    await pollUntil(fixture, () => characterStore.sheet()!.ac.value !== acBefore);
+    expect(characterStore.sheet()!.ac.value).toBeLessThan(acBefore);
+    expect(characterStore.events().at(-1)?.type).toBe('item.unequipped');
+  });
+
+  it('attune blocks once attunementMax (3) items are already attuned, with a toast mapped to its own key (not the generic fallback)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    for (const row of characterStore.sheet()!.inventory) {
+      await characterStore.appendTx(propose.attune(characterStore.sheet()!, row.instanceId, true));
+    }
+    expect(characterStore.sheet()!.inventory.filter((i) => i.attuned)).toHaveLength(3);
+    await characterStore.appendTx(
+      propose.addItem(
+        characterStore.sheet()!,
+        { name: 'Ring of Protection', qty: 1, custom: {} },
+        () => '01930000-0000-7000-8000-000000000099',
+      ),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    const eventsBefore = characterStore.events().length;
+
+    const row = inventoryRowFor(compiled, 'Ring of Protection');
+    buttonNamed(row, charactersEn.sheet.inventory.attune).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBefore);
+    expect(showSpy).toHaveBeenCalledWith('characters.validation.attune.max');
+  });
+
+  it('the qty stepper increments/decrements via item.updated{qty}, decrement disabled at qty 1', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    const row = inventoryRowFor(compiled, 'Longsword');
+    const decreaseButton = row.querySelector<HTMLButtonElement>(
+      `[aria-label="${charactersEn.sheet.inventory.qtyDecrease}"]`,
+    )!;
+    expect(decreaseButton.disabled).toBe(true); // qty starts at 1
+
+    const increaseButton = row.querySelector<HTMLButtonElement>(
+      `[aria-label="${charactersEn.sheet.inventory.qtyIncrease}"]`,
+    )!;
+    increaseButton.click();
+    await pollUntil(
+      fixture,
+      () => characterStore.sheet()?.inventory.find((i) => i.itemId === LONGSWORD_ID)?.qty === 2,
+    );
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'item.updated',
+      payload: { qty: 2 },
+    });
+
+    compiled = fixture.nativeElement as HTMLElement;
+    const refreshedDecrease = inventoryRowFor(
+      compiled,
+      'Longsword',
+    ).querySelector<HTMLButtonElement>(
+      `[aria-label="${charactersEn.sheet.inventory.qtyDecrease}"]`,
+    )!;
+    expect(refreshedDecrease.disabled).toBe(false);
+    refreshedDecrease.click();
+    await pollUntil(
+      fixture,
+      () => characterStore.sheet()?.inventory.find((i) => i.itemId === LONGSWORD_ID)?.qty === 1,
+    );
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'item.updated',
+      payload: { qty: 1 },
+    });
+  });
+
+  it('remove appends item.removed only after the confirm dialog is accepted; cancel appends nothing', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+    const eventsBefore = characterStore.events().length;
+
+    buttonNamed(inventoryRowFor(compiled, 'Shield'), charactersEn.sheet.inventory.remove).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.inventory.deleteConfirm.cancel).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBefore);
+    expect(characterStore.sheet()!.inventory.some((i) => i.itemId === SHIELD_ID)).toBe(true);
+
+    compiled = fixture.nativeElement as HTMLElement;
+    buttonNamed(inventoryRowFor(compiled, 'Shield'), charactersEn.sheet.inventory.remove).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.inventory.deleteConfirm.confirm).click();
+
+    await pollUntil(
+      fixture,
+      () => !characterStore.sheet()?.inventory.some((i) => i.itemId === SHIELD_ID),
+    );
+    expect(characterStore.events().at(-1)?.type).toBe('item.removed');
+  });
+
+  it('currency: entering gp 15 from a non-zero gp start computes the delta correctly and leaves other denominations unchanged', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(propose.currency(characterStore.sheet()!, { gp: 5, sp: 2 }));
+    expect(characterStore.sheet()!.currency).toEqual({ cp: 0, sp: 2, ep: 0, gp: 5, pp: 0 });
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // Denomination field order matches `denominations` (cp, sp, ep, gp, pp) — index 3 is gp.
+    const gpInput = Array.from(
+      compiled.querySelectorAll<HTMLInputElement>(
+        '.play-tab__inventory-currency-fields input[type="number"]',
+      ),
+    )[3];
+    gpInput.value = '15';
+    gpInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+
+    buttonNamed(compiled, charactersEn.sheet.inventory.currencyApply).click();
+
+    await pollUntil(fixture, () => characterStore.sheet()?.currency.gp === 15);
+    const changed = characterStore.events().at(-1)!;
+    expect(changed).toMatchObject({ type: 'currency.changed', payload: { gp: 10 } });
+    // Only `gp` actually changed — no other denomination key rode along in the event.
+    expect(Object.keys(changed.payload as object)).toEqual(['gp']);
+    expect(characterStore.sheet()!.currency).toEqual({ cp: 0, sp: 2, ep: 0, gp: 15, pp: 0 });
+  });
+
+  it('inventory rows show the resolved item entity weight (qty-multiplied); the section header shows a simple total', async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // Real SRD pack weights: chain mail 55 lb + longsword 3 lb + shield 6 lb = 64 lb (each qty 1).
+    const totalWeightEl = compiled.querySelector('.play-tab__inventory-total-weight')!;
+    expect(totalWeightEl.textContent).toContain('64');
+
+    const chainMailWeight = inventoryRowFor(compiled, 'Chain Mail').querySelector(
+      '.play-tab__inventory-item-weight',
+    )!;
+    expect(chainMailWeight.textContent).toContain('55');
+  });
+});

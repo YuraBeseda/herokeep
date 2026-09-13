@@ -1,0 +1,19 @@
+<ng-container *transloco="let t">
+  <h2 class="add-item-dialog__title">{{ t('characters.sheet.inventory.addDialog.title') }}</h2>
+
+  <hk-number-field
+    [labelKey]="'characters.sheet.inventory.addDialog.qtyLabel'"
+    [min]="1"
+    [step]="1"
+    [ngModel]="qty()"
+    (ngModelChange)="onQtyChange($event)"
+  />
+
+  <hk-entity-picker [ids]="itemIds()" [limit]="itemPickerLimit" (toggled)="onPick($event)" />
+
+  <div class="add-item-dialog__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+      {{ t('characters.sheet.inventory.addDialog.cancel') }}
+    </button>
+  </div>
+</ng-container>
