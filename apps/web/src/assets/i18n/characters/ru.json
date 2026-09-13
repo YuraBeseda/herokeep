@@ -228,7 +228,20 @@
       "deathSaves": "Спасброски от смерти",
       "successes": "Успехи",
       "failures": "Провалы",
-      "countOf": "{count} / {max}"
+      "countOf": "{count} / {max}",
+      "amountLabel": "Количество",
+      "damage": "Урон",
+      "heal": "Лечение",
+      "addTemp": "Добавить временные ОЗ",
+      "deathSaveSuccess": "Успех",
+      "deathSaveFailure": "Провал",
+      "deathSaveCritSuccess": "Критический успех",
+      "deathSaveCritFailure": "Критический провал"
+    },
+    "inspiration": {
+      "title": "Вдохновение",
+      "on": "Есть вдохновение",
+      "off": "Нет вдохновения"
     },
     "attacks": {
       "title": "Атаки",

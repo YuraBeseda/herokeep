@@ -91,6 +91,12 @@
 
     <!-- HP, hit dice, death saves -->
     <hk-sheet-section [titleKey]="'characters.sheet.hp.title'" class="play-tab__section">
+      <hk-hp-bar
+        class="play-tab__hp-bar"
+        [current]="s.hp.current"
+        [max]="s.hp.max.value"
+        [temp]="s.hp.temp"
+      />
       <div class="play-tab__hp-stats">
         <hk-stat-tile [labelKey]="'characters.sheet.hp.current'" [value]="s.hp.current" />
         <hk-stat-tile
@@ -100,6 +106,24 @@
           [hkDerivedBreakdown]="s.hp.max"
         />
         <hk-stat-tile [labelKey]="'characters.sheet.hp.temp'" [value]="s.hp.temp" />
+      </div>
+      <div class="play-tab__hp-controls">
+        <hk-number-field
+          [labelKey]="'characters.sheet.hp.amountLabel'"
+          [min]="0"
+          [step]="1"
+          [ngModel]="hpAmount()"
+          (ngModelChange)="onHpAmountChange($event)"
+        />
+        <button hk-button type="button" [variant]="'danger'" (click)="onDamage()">
+          {{ t('sheet.hp.damage') }}
+        </button>
+        <button hk-button type="button" [variant]="'ghost'" (click)="onHeal()">
+          {{ t('sheet.hp.heal') }}
+        </button>
+        <button hk-button type="button" [variant]="'ghost'" (click)="onAddTemp()">
+          {{ t('sheet.hp.addTemp') }}
+        </button>
       </div>
       <div class="play-tab__hit-dice">
         <h3 class="play-tab__subtitle">{{ t('sheet.hp.hitDice') }}</h3>
@@ -134,7 +158,42 @@
             </dd>
           </div>
         </dl>
+        @if (s.hp.current === 0) {
+          <div class="play-tab__death-save-actions">
+            <button hk-button type="button" [variant]="'ghost'" (click)="onDeathSave('success')">
+              {{ t('sheet.hp.deathSaveSuccess') }}
+            </button>
+            <button hk-button type="button" [variant]="'ghost'" (click)="onDeathSave('failure')">
+              {{ t('sheet.hp.deathSaveFailure') }}
+            </button>
+            <button hk-button type="button" (click)="onDeathSave('critSuccess')">
+              {{ t('sheet.hp.deathSaveCritSuccess') }}
+            </button>
+            <button
+              hk-button
+              type="button"
+              [variant]="'danger'"
+              (click)="onDeathSave('critFailure')"
+            >
+              {{ t('sheet.hp.deathSaveCritFailure') }}
+            </button>
+          </div>
+        }
       </div>
+    </hk-sheet-section>
+
+    <!-- Inspiration -->
+    <hk-sheet-section [titleKey]="'characters.sheet.inspiration.title'" class="play-tab__section">
+      <button
+        hk-button
+        type="button"
+        class="play-tab__inspiration-toggle"
+        [variant]="s.inspiration ? 'primary' : 'ghost'"
+        [attr.aria-pressed]="s.inspiration"
+        (click)="onToggleInspiration()"
+      >
+        {{ s.inspiration ? t('sheet.inspiration.on') : t('sheet.inspiration.off') }}
+      </button>
     </hk-sheet-section>
 
     <!-- Attacks -->

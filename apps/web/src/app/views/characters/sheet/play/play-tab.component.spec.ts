@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { Sheet } from '@hk/engine';
+import { propose, type Sheet } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -187,6 +187,204 @@ describe('PlayTabComponent', () => {
     const dots = slotRow.querySelectorAll('.play-tab__dot');
     expect(dots).toHaveLength(2);
     expect(slotRow.querySelectorAll('.play-tab__dot--filled')).toHaveLength(0);
+  });
+});
+
+// task-2-brief.md: the HP bar/damage/heal/temp-HP inputs, death-save buttons and the inspiration
+// toggle — the play tab's first controls that actually mutate the character (everything above is
+// still read-only). Every scenario seeds a REAL fighter-1 stream (`seedFighter`, hp.max 12,
+// hp.current topped up to 12 — see the first describe block's own R11 comment) and drives the
+// rendered DOM, so each assertion exercises the exact `propose.*` -> `CharacterStore.appendTx`
+// wiring a player's click would.
+describe('PlayTabComponent — HP, death saves, inspiration controls', () => {
+  beforeEach(async () => {
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  function amountInput(compiled: HTMLElement): HTMLInputElement {
+    return compiled.querySelector<HTMLInputElement>('.play-tab__hp-controls input[type="number"]')!;
+  }
+
+  function buttonNamed(compiled: HTMLElement, selector: string, text: string): HTMLButtonElement {
+    const button = Array.from(compiled.querySelectorAll<HTMLButtonElement>(selector)).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}" under ${selector}`);
+    return button;
+  }
+
+  async function typeAmount(
+    fixture: { whenStable(): Promise<unknown> },
+    input: HTMLInputElement,
+    value: number,
+  ): Promise<void> {
+    input.value = String(value);
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  }
+
+  /** `play-tab.component.ts`'s propose->appendTx wiring is fire-and-forget (mirrors `sheet-shell.
+   * component.ts`'s own `xpAward` submit — see `tryPropose`'s doc), so a single `whenStable()`
+   * right after a click doesn't reliably wait for `CharacterStore.appendTx`'s own (real,
+   * unmocked fake-indexeddb) async chain to settle. Mirrors `level-up.component.spec.ts`'s /
+   * `build-tab.component.spec.ts`'s own `pollUntil`. */
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  it("renders fighter-1's hk-hp-bar with widths matching current/max/temp off the store's sheet", async () => {
+    await seedFighter('Ivan');
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const fill = compiled.querySelector<HTMLElement>('.play-tab__hp-bar .hk-hp-bar__fill')!;
+    // fighter-1: hp.current 12 / hp.max 12 -> a full bar.
+    expect(fill.style.width).toBe('100%');
+  });
+
+  it("damage 5 via the amount input + Damage button appends the proposer's exact hp.changed event and drops current from 12 to 7", async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await typeAmount(fixture, amountInput(compiled), 5);
+    buttonNamed(compiled, '.play-tab__hp-controls button', charactersEn.sheet.hp.damage).click();
+    await pollUntil(fixture, () => characterStore.sheet()?.hp.current === 7);
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'hp.changed',
+      payload: { delta: -5, kind: 'damage' },
+    });
+    expect(characterStore.sheet()?.hp.current).toBe(7);
+  });
+
+  it('heal past max clamps to the derived max (propose.heal clamping behavior)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    // Fighter-1 starts full (12/12) — damage it down first so a large heal has room to clamp.
+    await characterStore.appendTx(propose.damage(characterStore.sheet()!, 5)); // -> current 7
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await typeAmount(fixture, amountInput(compiled), 100);
+    buttonNamed(compiled, '.play-tab__hp-controls button', charactersEn.sheet.hp.heal).click();
+    await pollUntil(fixture, () => characterStore.sheet()?.hp.current === 12);
+
+    expect(characterStore.sheet()?.hp.current).toBe(12);
+  });
+
+  it('adding temp HP via the input + button appends hp.changed{kind:"temp"} and sets sheet.hp.temp', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await typeAmount(fixture, amountInput(compiled), 4);
+    buttonNamed(compiled, '.play-tab__hp-controls button', charactersEn.sheet.hp.addTemp).click();
+    await pollUntil(fixture, () => characterStore.sheet()?.hp.temp === 4);
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'hp.changed',
+      payload: { delta: 4, kind: 'temp' },
+    });
+    expect(characterStore.sheet()?.hp.temp).toBe(4);
+  });
+
+  it('death-save buttons are hidden while current HP is above 0, and appear once it drops to 0', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.play-tab__death-save-actions')).toBeNull();
+
+    // 20 clamps to the reachable 12 (current + temp) -> current lands exactly on 0.
+    await characterStore.appendTx(propose.damage(characterStore.sheet()!, 20));
+    await fixture.whenStable();
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(characterStore.sheet()?.hp.current).toBe(0);
+    expect(compiled.querySelector('.play-tab__death-save-actions')).not.toBeNull();
+  });
+
+  it('clicking the death-save Success button round-trips into sheet.hp.deathSaves.successes', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(propose.damage(characterStore.sheet()!, 20)); // -> current 0
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(
+      compiled,
+      '.play-tab__death-save-actions button',
+      charactersEn.sheet.hp.deathSaveSuccess,
+    ).click();
+    await pollUntil(fixture, () => characterStore.sheet()?.hp.deathSaves.successes === 1);
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'death_save.recorded',
+      payload: { result: 'success' },
+    });
+    expect(characterStore.sheet()?.hp.deathSaves.successes).toBe(1);
+  });
+
+  it('the inspiration toggle appends inspiration.changed and flips sheet.inspiration both ways', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(characterStore.sheet()?.inspiration).toBe(false);
+
+    const toggle = compiled.querySelector<HTMLButtonElement>('.play-tab__inspiration-toggle')!;
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    toggle.click();
+    await pollUntil(fixture, () => characterStore.sheet()?.inspiration === true);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'inspiration.changed',
+      payload: { value: true },
+    });
+    expect(characterStore.sheet()?.inspiration).toBe(true);
+    await fixture.whenStable();
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    toggle.click();
+    await pollUntil(fixture, () => characterStore.sheet()?.inspiration === false);
+    expect(characterStore.sheet()?.inspiration).toBe(false);
+    await fixture.whenStable();
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
   });
 });
 

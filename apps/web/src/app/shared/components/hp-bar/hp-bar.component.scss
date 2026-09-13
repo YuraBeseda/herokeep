@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.hk-hp-bar__track {
+  position: relative;
+  height: var(--space-3);
+  border-radius: var(--radius-s);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.hk-hp-bar__fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  background: var(--success);
+  transition: width var(--duration-m);
+}
+
+.hk-hp-bar__temp {
+  position: absolute;
+  inset-block: 0;
+  background: var(--accent);
+  transition:
+    left var(--duration-m),
+    width var(--duration-m);
+}

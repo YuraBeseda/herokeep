@@ -101,10 +101,30 @@
   gap: var(--space-2);
 }
 
+.play-tab__hp-bar {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
 .play-tab__hp-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
+}
+
+.play-tab__hp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.play-tab__death-save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .play-tab__subtitle {

@@ -1,19 +1,43 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import type { SafeHtml } from '@angular/platform-browser';
-import { DEATH_SAVE_MAX, type ContentIndex, type Localizer, type Sheet } from '@hk/engine';
+import {
+  DEATH_SAVE_MAX,
+  propose,
+  ProposeError,
+  type ContentIndex,
+  type Localizer,
+  type ProposedEvent,
+  type Sheet,
+} from '@hk/engine';
 import { makeEntityId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
+import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
+import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { StatTileComponent } from '@shared/components/stat-tile/stat-tile.component';
+import { ToastService } from '@shared/components/toast/toast.service';
 import {
   DerivedPopoverDirective,
   type DerivedValue,
 } from '@shared/directives/derived-popover.directive';
+import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharacterStore } from '@shared/stores/character.store';
+
+type DeathSaveResult = 'success' | 'failure' | 'critSuccess' | 'critFailure';
+
+// None of `propose.damage`/`heal`/`tempHp`/`deathSave`/`inspiration` (`packages/engine/src/
+// propose/vitals.ts`) currently throw `ProposeError` at all (only `propose.spendHitDie` does,
+// with `'hitdice.none-left'` — out of this task's scope) — so this play tab recognizes no
+// diagnostic codes of its own yet; every refusal (should a future engine change ever add one)
+// falls back to `validation.generic` via `diagnosticKey`. A later task adding a proposer that DOES
+// throw for a play-tab action (T3's `spendSlot`/`cast`, say) extends this set with its own codes.
+const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set();
 
 // `@hk/engine`'s barrel doesn't re-export `derive/*.ts`'s per-field row types directly (only
 // `Sheet` itself — see `derive/index.ts`) — recovered as indexed-access aliases off `Sheet`, same
@@ -73,8 +97,12 @@ const signed = (n: number): string => (n > 0 ? `+${n}` : `${n}`);
   selector: 'app-play-tab',
   imports: [
     TranslocoDirective,
+    FormsModule,
+    ButtonComponent,
     CardComponent,
     ChipComponent,
+    HpBarComponent,
+    NumberFieldComponent,
     SheetSectionComponent,
     StatTileComponent,
     DerivedPopoverDirective,
@@ -87,6 +115,7 @@ export class PlayTabComponent {
   private readonly characterStore = inject(CharacterStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly markdownService = inject(MarkdownService);
+  private readonly toastService = inject(ToastService);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;
@@ -98,6 +127,13 @@ export class PlayTabComponent {
   protected readonly maxDeathSaves = DEATH_SAVE_MAX;
 
   protected readonly expandedActionId = signal<string | undefined>(undefined);
+
+  // Shared draft amount for the HP damage/heal/temp-HP input group (task-2-brief.md): `null`
+  // between submits, same "no ReactiveFormsModule, a plain signal + [ngModel]/(ngModelChange)"
+  // convention `sheet-shell.component.ts`'s own `xpAward` uses. One field feeds all three buttons
+  // — each reads it at click time and clears it back to `null` only once its own proposal is
+  // actually accepted (a refusal leaves whatever the player typed on screen to fix).
+  protected readonly hpAmount = signal<number | null>(null);
 
   protected readonly abilityRows = computed<AbilityRow[]>(() => {
     const sheet = this.sheet();
@@ -243,6 +279,74 @@ export class PlayTabComponent {
 
   protected isActionExpanded(id: string): boolean {
     return this.expandedActionId() === id;
+  }
+
+  // --- HP, death saves, inspiration (task-2-brief.md) -----------------------------------------
+
+  protected onHpAmountChange(value: number | null): void {
+    this.hpAmount.set(value);
+  }
+
+  protected onDamage(): void {
+    this.applyHpChange((sheet, amount) => propose.damage(sheet, amount));
+  }
+
+  protected onHeal(): void {
+    this.applyHpChange((sheet, amount) => propose.heal(sheet, amount));
+  }
+
+  protected onAddTemp(): void {
+    this.applyHpChange((sheet, amount) => propose.tempHp(sheet, amount));
+  }
+
+  protected onDeathSave(result: DeathSaveResult): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.deathSave(sheet, result));
+  }
+
+  protected onToggleInspiration(): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.inspiration(sheet, !sheet.inspiration));
+  }
+
+  // Damage/heal/temp-HP share one draft amount field and one "no-op below 1" guard (typing 0 or
+  // leaving it empty just does nothing — no error, nothing to refuse); the amount is cleared back
+  // to `null` only when `tryPropose` reports the proposal was actually accepted, so a refused one
+  // leaves the typed amount on screen to fix and resubmit.
+  private applyHpChange(build: (sheet: Sheet, amount: number) => ProposedEvent[]): void {
+    const sheet = this.sheet();
+    const amount = this.hpAmount();
+    if (!sheet || amount === null || amount < 1) return;
+    if (this.tryPropose(() => build(sheet, amount))) {
+      this.hpAmount.set(null);
+    }
+  }
+
+  // Every `propose.*` call in this component funnels through here (task-2-brief.md's "ProposeError
+  // -> toast" contract): building the drafts is synchronous, so a `ProposeError` a proposer throws
+  // is caught right here, never inside `appendTx`'s own (async, unrelated — leadership/storage)
+  // error path. The toast key reuses `diagnosticKey` — the same scope-relative mapping the
+  // create-wizard's `choice-step.component.ts` uses for its own inline diagnostics — prefixed with
+  // this app's `'characters.'` Transloco scope, since `ToastService.show` resolves global keys.
+  // `appendTx` itself is fire-and-forget (mirrors `sheet-shell.component.ts`'s own `xpAward`
+  // submit — leadership/storage failures aren't this task's concern). Returns whether the
+  // proposal was accepted, so callers that need to reset UI state only do so on success.
+  private tryPropose(build: () => ProposedEvent[]): boolean {
+    try {
+      void this.characterStore.appendTx(build());
+      return true;
+    } catch (error) {
+      if (!(error instanceof ProposeError)) throw error;
+      const code = error.diagnostics[0]?.code;
+      const key =
+        code !== undefined
+          ? diagnosticKey(code, KNOWN_PROPOSE_DIAGNOSTIC_CODES)
+          : 'validation.generic';
+      this.toastService.show(`characters.${key}`);
+      return false;
+    }
   }
 
   // Falls back to the raw id/slug for anything the content index doesn't resolve (a proficiency

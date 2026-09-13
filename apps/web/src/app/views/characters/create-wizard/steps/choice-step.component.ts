@@ -4,6 +4,7 @@ import { makeEntityId, parseChoiceId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
+import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CreateWizardState } from '../create-wizard.state';
 import { AbilitiesImproveStepComponent } from './abilities-improve-step.component';
@@ -47,10 +48,6 @@ const KNOWN_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
   'selection.subclassLevel',
   'selection.unknownChoice',
 ]);
-
-function diagnosticKey(code: string): string {
-  return KNOWN_DIAGNOSTIC_CODES.has(code) ? `validation.${code}` : 'validation.generic';
-}
 
 /**
  * Generic engine-driven choice step (task-6-brief.md): resolves `choiceId` to its `Choice` (or,
@@ -212,7 +209,7 @@ export class ChoiceStepComponent {
   }
 
   protected diagnosticKey(code: string): string {
-    return diagnosticKey(code);
+    return diagnosticKey(code, KNOWN_DIAGNOSTIC_CODES);
   }
 
   private applySelection(next: string[]): void {

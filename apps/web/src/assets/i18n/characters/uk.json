@@ -228,7 +228,20 @@
       "deathSaves": "Рятівні кидки від смерті",
       "successes": "Успіхи",
       "failures": "Провали",
-      "countOf": "{count} / {max}"
+      "countOf": "{count} / {max}",
+      "amountLabel": "Кількість",
+      "damage": "Шкода",
+      "heal": "Лікування",
+      "addTemp": "Додати тимчасові ОЗ",
+      "deathSaveSuccess": "Успіх",
+      "deathSaveFailure": "Провал",
+      "deathSaveCritSuccess": "Критичний успіх",
+      "deathSaveCritFailure": "Критичний провал"
+    },
+    "inspiration": {
+      "title": "Натхнення",
+      "on": "Є натхнення",
+      "off": "Немає натхнення"
     },
     "attacks": {
       "title": "Атаки",

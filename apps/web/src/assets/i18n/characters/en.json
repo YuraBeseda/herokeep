@@ -228,7 +228,20 @@
       "deathSaves": "Death saves",
       "successes": "Successes",
       "failures": "Failures",
-      "countOf": "{count} / {max}"
+      "countOf": "{count} / {max}",
+      "amountLabel": "Amount",
+      "damage": "Damage",
+      "heal": "Heal",
+      "addTemp": "Add temp HP",
+      "deathSaveSuccess": "Success",
+      "deathSaveFailure": "Failure",
+      "deathSaveCritSuccess": "Critical success",
+      "deathSaveCritFailure": "Critical failure"
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "on": "Inspired",
+      "off": "Not inspired"
     },
     "attacks": {
       "title": "Attacks",
