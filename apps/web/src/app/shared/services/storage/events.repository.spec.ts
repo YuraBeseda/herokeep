@@ -102,6 +102,22 @@ describe('EventsRepository', () => {
     expect(await repo.nextSeq(streamA)).toBe(2);
   });
 
+  it('removeStream deletes every row of one stream, leaving other streams untouched', async () => {
+    const repo = TestBed.inject(EventsRepository);
+    await repo.append([
+      mkEvent(uuid(60), streamA, 'note.added'),
+      mkEvent(uuid(61), streamA, 'note.updated'),
+      mkEvent(uuid(62), streamB, 'note.added'),
+    ]);
+
+    await repo.removeStream(streamA);
+
+    expect(await repo.byStream(streamA)).toEqual([]);
+    const remaining = await repo.byStream(streamB);
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]?.id).toBe(uuid(62));
+  });
+
   it('assignSeqs assigns startSeq.. to pending rows from fromId onward, in pendingOrder', async () => {
     const repo = TestBed.inject(EventsRepository);
     const db = TestBed.inject(HkDb);

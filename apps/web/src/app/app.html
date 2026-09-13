@@ -36,6 +36,13 @@
       >{{ t('nav.home') }}</a
     >
     <a
+      routerLink="/characters"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      class="app-shell__link"
+      >{{ t('nav.characters') }}</a
+    >
+    <a
       routerLink="/library"
       routerLinkActive="is-active"
       [ariaCurrentWhenActive]="'page'"

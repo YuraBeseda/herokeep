@@ -36,7 +36,7 @@ function configureTestBed(): void {
 describe('app routes', () => {
   beforeEach(() => configureTestBed());
 
-  it.each(['/', '/library', '/library/goblin', '/settings', '/about'])(
+  it.each(['/', '/characters', '/library', '/library/goblin', '/settings', '/about'])(
     'resolves %s without error',
     async (url) => {
       const harness = await RouterTestingHarness.create(url);
@@ -44,18 +44,19 @@ describe('app routes', () => {
     },
   );
 
-  it('renders the shell nav with 4 routerLink anchors using the real translations', async () => {
+  it('renders the shell nav with 5 routerLink anchors using the real translations', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     const links = compiled.querySelectorAll<HTMLAnchorElement>('a[routerLink]');
-    expect(links.length).toBe(4);
+    expect(links.length).toBe(5);
     // Compare against the imported JSON, not re-typed literals, so this cannot drift from the
     // real translation file — a typo'd key or an unresolved scope would render the raw key
     // string instead and fail this assertion.
     const actual = Array.from(links).map((link) => link.textContent?.trim());
     expect(actual).toEqual([
       shellEn.nav.home,
+      shellEn.nav.characters,
       shellEn.nav.library,
       shellEn.nav.settings,
       shellEn.nav.about,

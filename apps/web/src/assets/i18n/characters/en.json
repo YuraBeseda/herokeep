@@ -1,0 +1,20 @@
+{
+  "not-leader": "Another tab is currently the active character-data writer. Try again from that tab.",
+  "list": {
+    "title": "Characters",
+    "landmark": "Characters",
+    "create": "New character",
+    "empty": "You haven't created any characters yet.",
+    "delete": "Delete",
+    "deleteConfirm": {
+      "title": "Delete {name}?",
+      "body": "This can't be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "deleted": "{name} deleted",
+      "delete-failed": "Couldn't delete the character. Try again."
+    }
+  }
+}

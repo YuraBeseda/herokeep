@@ -271,6 +271,33 @@ export class CharacterStore {
     });
   }
 
+  /** Permanently deletes `characterId`'s (the full `char:<uuid>` stream id — the same id
+   * `CharactersRepository` rows key on, per `upsertFromFacts`) library-index row, cached
+   * snapshot, and every event row of its stream (`EventsRepository.removeStream`) — the
+   * character-list delete flow (plan-5 Task 3). Leader-guarded and enqueued like every other
+   * mutating method (see class doc). If `characterId` happens to be this store's currently
+   * loaded stream, also resets `streamId`/`loaded`/`facts`/`events` back to their unloaded
+   * state so a deleted character's data can't linger in `sheet`/`facts`. */
+  async deleteCharacter(characterId: string): Promise<void> {
+    this.assertLeader();
+
+    return this.enqueue(async () => {
+      await Promise.all([
+        this.charactersRepository.remove(characterId),
+        this.snapshotsRepository.remove(characterId),
+        this.eventsRepository.removeStream(characterId),
+      ]);
+
+      if (this.streamIdState() === characterId) {
+        this.streamIdState.set(undefined);
+        this.loadedState.set(false);
+        this.factsState.set(undefined);
+        this.eventsState.set([]);
+        this.lastSnapshotSeq = 0;
+      }
+    });
+  }
+
   // --- internals -----------------------------------------------------------------------------
 
   /**

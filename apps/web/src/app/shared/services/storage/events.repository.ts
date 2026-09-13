@@ -56,6 +56,12 @@ export class EventsRepository {
     return (last?.seq ?? 0) + 1;
   }
 
+  /** Deletes every row of `stream` — the character-list delete flow (plan-5 Task 3,
+   * `CharacterStore.deleteCharacter`). Other streams' rows are untouched. */
+  async removeStream(stream: string): Promise<void> {
+    await this.db.events.where('stream').equals(stream).delete();
+  }
+
   /**
    * Future sync hook: once a server has ordered this stream's pending (seq-less) events, it
    * assigns their authoritative seqs starting at `startSeq` from `fromId` (inclusive) onward, in

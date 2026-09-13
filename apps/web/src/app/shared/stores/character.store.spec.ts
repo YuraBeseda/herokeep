@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ENGINE_VERSION } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -349,6 +350,60 @@ describe('CharacterStore', () => {
         },
       ]),
     ).rejects.toThrow(/revert/);
+  });
+
+  it('deleteCharacter removes the character row, its snapshot, and every event row for the stream', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine');
+    const snapshotsRepository = TestBed.inject(SnapshotsRepository);
+    await snapshotsRepository.put(streamId, {
+      seq: 1,
+      facts: store.facts()!,
+      engineVersion: ENGINE_VERSION,
+    });
+
+    await store.deleteCharacter(streamId);
+
+    expect(await TestBed.inject(CharactersRepository).get(streamId)).toBeUndefined();
+    expect(await snapshotsRepository.get(streamId)).toBeUndefined();
+    expect(await TestBed.inject(EventsRepository).byStream(streamId)).toEqual([]);
+  });
+
+  it('deleteCharacter of the currently loaded stream clears this store back to unloaded', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine');
+
+    await store.deleteCharacter(streamId);
+
+    expect(store.streamId()).toBeUndefined();
+    expect(store.loaded()).toBe(false);
+    expect(store.facts()).toBeUndefined();
+    expect(store.events()).toEqual([]);
+  });
+
+  it('deleteCharacter leaves another loaded stream untouched', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const keptStreamId = await store.create('Kept', 'feminine');
+    const otherStore = TestBed.runInInjectionContext(() => new CharacterStore());
+    const deletedStreamId = await otherStore.create('Gone', 'masculine');
+
+    await store.deleteCharacter(deletedStreamId);
+
+    expect(store.streamId()).toBe(keptStreamId);
+    expect(store.loaded()).toBe(true);
+    expect(store.facts()?.name).toBe('Kept');
+  });
+
+  it('rejects deleteCharacter when this tab is not the leader', async () => {
+    installStubLocks();
+    const otherTab = TestBed.runInInjectionContext(() => new LeaderService());
+    await otherTab.acquire();
+
+    const store = TestBed.inject(CharacterStore);
+
+    await expect(
+      store.deleteCharacter('char:00000000-0000-4000-8000-000000000099'),
+    ).rejects.toThrow(CharacterStoreNotLeaderError);
   });
 
   it('load awaits PackStore readiness before resolving; the sheet is defined once it does', async () => {

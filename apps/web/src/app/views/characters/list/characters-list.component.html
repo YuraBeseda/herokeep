@@ -1,0 +1,44 @@
+<section class="characters-list" *transloco="let t; read: 'characters'">
+  <div class="characters-list__header">
+    <h1 class="characters-list__title">{{ t('list.title') }}</h1>
+    <button
+      hk-button
+      [variant]="'primary'"
+      type="button"
+      class="characters-list__create"
+      (click)="create()"
+    >
+      {{ t('list.create') }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="characters-list__skeletons">
+      @for (row of skeletonRows; track row) {
+        <hk-skeleton width="100%" />
+      }
+    </div>
+  } @else if (rows().length === 0) {
+    <p class="characters-list__empty">{{ t('list.empty') }}</p>
+  } @else {
+    <div class="characters-list__grid" [attr.aria-label]="t('list.landmark')">
+      @for (row of rows(); track row.id) {
+        <hk-card class="characters-list__item">
+          <button type="button" class="characters-list__open" (click)="open(row.id)">
+            <span class="characters-list__name">{{ row.name }}</span>
+            <span class="characters-list__meta">{{ row.system }}</span>
+          </button>
+          <button
+            hk-button
+            [variant]="'danger'"
+            type="button"
+            class="characters-list__delete"
+            (click)="delete(row)"
+          >
+            {{ t('list.delete') }}
+          </button>
+        </hk-card>
+      }
+    </div>
+  }
+</section>
