@@ -1,0 +1,59 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-l);
+  background: var(--surface-1);
+}
+
+.hk-sheet-section__header {
+  display: flex;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--surface-2);
+}
+
+.hk-sheet-section__title {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+}
+
+.hk-sheet-section__toggle {
+  @include u.touch-target;
+
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* A CSS-only chevron — no text node, so it carries no i18n concern; it merely reflects
+   the button's own `aria-expanded` state (rotates when expanded). */
+.hk-sheet-section__toggle::after {
+  content: '';
+  flex-shrink: 0;
+  width: 0.5em;
+  height: 0.5em;
+  margin-inline-start: var(--space-2);
+  border-inline-end: 2px solid currentcolor;
+  border-block-end: 2px solid currentcolor;
+  transform: rotate(45deg);
+  transition: transform var(--duration-s);
+}
+
+.hk-sheet-section__toggle[aria-expanded='false']::after {
+  transform: rotate(-45deg);
+}
+
+.hk-sheet-section__body {
+  padding: var(--space-4);
+}

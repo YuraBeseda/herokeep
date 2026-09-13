@@ -1,0 +1,19 @@
+<ng-container *transloco="let t">
+  <div class="hk-sheet-section__header">
+    @if (collapsible()) {
+      <button
+        type="button"
+        class="hk-sheet-section__toggle"
+        [attr.aria-expanded]="!collapsed()"
+        (click)="toggle()"
+      >
+        {{ t(titleKey()) }}
+      </button>
+    } @else {
+      <span class="hk-sheet-section__title">{{ t(titleKey()) }}</span>
+    }
+  </div>
+  <div class="hk-sheet-section__body" [hidden]="isBodyHidden()">
+    <ng-content />
+  </div>
+</ng-container>

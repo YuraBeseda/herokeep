@@ -1,0 +1,7 @@
+<ng-container *transloco="let t">
+  <span class="hk-stat-tile__label">{{ t(labelKey()) }}</span>
+  <span class="hk-stat-tile__value">{{ value() }}</span>
+  @if (sub(); as subText) {
+    <span class="hk-stat-tile__sub">{{ subText }}</span>
+  }
+</ng-container>

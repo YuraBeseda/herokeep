@@ -1,0 +1,17 @@
+<ng-container *transloco="let t">
+  <label class="hk-number-field">
+    <span class="hk-number-field__label">{{ t(labelKey()) }}</span>
+    <input
+      #input
+      type="number"
+      class="hk-number-field__input"
+      [value]="value() ?? ''"
+      [attr.min]="min() ?? null"
+      [attr.max]="max() ?? null"
+      [attr.step]="step() ?? null"
+      [disabled]="disabled()"
+      (input)="onInput(input.value)"
+      (blur)="onBlur()"
+    />
+  </label>
+</ng-container>

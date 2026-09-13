@@ -1,0 +1,26 @@
+<ng-container *transloco="let t">
+  <ol class="hk-stepper__list">
+    @for (step of steps(); track step.id) {
+      <li class="hk-stepper__item">
+        <button
+          type="button"
+          class="hk-stepper__step"
+          [class.hk-stepper__step--done]="step.state === 'done'"
+          [class.hk-stepper__step--current]="step.state === 'current'"
+          [class.hk-stepper__step--blocked]="step.state === 'blocked'"
+          [attr.aria-current]="step.id === activeId() ? 'step' : null"
+          [disabled]="!isClickable(step)"
+          (click)="onStepClick(step)"
+        >
+          {{ t(step.labelKey) }}
+        </button>
+      </li>
+    }
+  </ol>
+  <div class="hk-stepper__body">
+    <ng-content />
+  </div>
+  <div class="hk-stepper__footer">
+    <ng-content select="[hk-stepper-footer]" />
+  </div>
+</ng-container>
