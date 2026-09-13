@@ -7,8 +7,11 @@ import { ButtonComponent } from '@shared/components/button/button.component';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
+import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { filter, map } from 'rxjs';
@@ -48,6 +51,8 @@ export class SheetShellComponent {
   private readonly router = inject(Router);
   private readonly engineFacade = inject(EngineFacade);
   private readonly placeholderService = inject(PlaceholderService);
+  private readonly heroWriterService = inject(HeroWriterService);
+  private readonly toastService = inject(ToastService);
   protected readonly characterStore = inject(CharacterStore);
 
   // `characterResolver` only ever runs again (and this component only ever gets re-created) when
@@ -163,5 +168,34 @@ export class SheetShellComponent {
   protected onTabSelected(id: string | undefined): void {
     if (!id || id === this.activeTabId()) return;
     void this.router.navigate([id], { relativeTo: this.route });
+  }
+
+  // --- `.hero` export (plan-6 Task 9) -----------------------------------------------------------
+
+  /** Guards the Export button against a double-click firing two concurrent exports/deliveries. */
+  protected readonly exporting = signal(false);
+
+  /** Builds the bundle (`HeroWriterService.export`, pure) then hands it to the delivery ladder
+   * (`deliverHeroBundle`, design ruling 5). A `'cancelled'` outcome — the user backed out of the
+   * save picker or share sheet — is a normal no-op, not a failure: no toast either way. Any other
+   * outcome (`'saved'`/`'shared'`/`'downloaded'`) toasts success; a thrown error (a storage read
+   * failure, an invalid manifest — shouldn't happen, but `HeroWriterService.export` can throw)
+   * toasts the generic failure key instead. */
+  protected async onExport(): Promise<void> {
+    const characterId = this.characterStore.streamId();
+    if (!characterId || this.exporting()) return;
+
+    this.exporting.set(true);
+    try {
+      const { blob, fileName } = await this.heroWriterService.export(characterId);
+      const outcome = await deliverHeroBundle(blob, fileName);
+      if (outcome !== 'cancelled') {
+        this.toastService.show('characters.sheet.export.success');
+      }
+    } catch {
+      this.toastService.show('characters.sheet.export.failure');
+    } finally {
+      this.exporting.set(false);
+    }
   }
 }

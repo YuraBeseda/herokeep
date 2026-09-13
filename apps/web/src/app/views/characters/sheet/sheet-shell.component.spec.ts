@@ -10,6 +10,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
@@ -267,5 +268,23 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const img = root.querySelector<HTMLImageElement>('img.sheet-shell__portrait')!;
     expect(img.getAttribute('src')).toBe('blob:fake-portrait-url');
     expect(img.getAttribute('alt')).toContain('Ivan');
+  });
+
+  // --- `.hero` export (plan-6 Task 9) ---------------------------------------------------------
+
+  it('the Export button builds a .hero bundle, delivers it (jsdom has neither showSaveFilePicker nor navigator.share, so the ladder falls through to the <a download> fallback), and toasts success', async () => {
+    const id = await seedFighter('Ivan');
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    const exportButton = root.querySelector<HTMLButtonElement>('.sheet-shell__export')!;
+    expect(exportButton).not.toBeNull();
+
+    exportButton.click();
+    await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 0);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.success');
   });
 });

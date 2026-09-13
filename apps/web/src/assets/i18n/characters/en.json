@@ -196,7 +196,12 @@
       "xpAwardLabel": "Award XP",
       "xpAward": "Award",
       "levelUpAvailable": "Level up available",
-      "undoLevelUp": "Undo level up"
+      "undoLevelUp": "Undo level up",
+      "export": "Export"
+    },
+    "export": {
+      "success": "Character exported.",
+      "failure": "Couldn't export the character. Try again."
     },
     "portrait": {
       "alt": "{name}'s portrait",
