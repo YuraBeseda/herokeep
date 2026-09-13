@@ -4,6 +4,7 @@
     "title": "Characters",
     "landmark": "Characters",
     "create": "New character",
+    "import": "Import",
     "empty": "You haven't created any characters yet.",
     "delete": "Delete",
     "deleteConfirm": {
@@ -14,7 +15,14 @@
     },
     "toast": {
       "deleted": "{name} deleted",
-      "delete-failed": "Couldn't delete the character. Try again."
+      "delete-failed": "Couldn't delete the character. Try again.",
+      "import-created": "{name} imported ({imported, plural, one {# event} other {# events}}).",
+      "import-merged": "{name} updated: {imported, plural, one {# new event} other {# new events}} added, {skippedDuplicates, plural, one {# duplicate} other {# duplicates}} skipped.",
+      "import-failed-bad-zip": "That file isn't a valid .hero bundle.",
+      "import-failed-bad-manifest": "That .hero bundle's manifest is invalid.",
+      "import-failed-bad-event": "That .hero bundle has an invalid event (#{index}).",
+      "import-failed-hash-mismatch": "That .hero bundle's image data doesn't match its manifest.",
+      "import-failed-generic": "Couldn't import that file. Try again."
     }
   },
   "wizard": {

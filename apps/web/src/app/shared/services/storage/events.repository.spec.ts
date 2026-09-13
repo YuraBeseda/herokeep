@@ -140,4 +140,74 @@ describe('EventsRepository', () => {
     expect(rowC?.seq).toBe(6);
     expect(rowC?.json.seq).toBe(6);
   });
+
+  // --- replaceStream (plan-6 Task 10 — `.hero` import merge-by-id) -------------------------
+
+  describe('replaceStream', () => {
+    it('writes events verbatim (ids kept) with fresh seqs 1..n, in the given array order', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const idA = uuid(70);
+      const idB = uuid(71);
+
+      await repo.replaceStream(streamA, [
+        mkEvent(idA, streamA, 'note.added'),
+        mkEvent(idB, streamA, 'note.updated'),
+      ]);
+
+      const events = await repo.byStream(streamA);
+      expect(events.map((e) => e.id)).toEqual([idA, idB]);
+      expect(events.map((e) => e.seq)).toEqual([1, 2]);
+    });
+
+    it('atomically deletes every existing row of the stream before writing the replacement set', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const staleId = uuid(72);
+      const keptId = uuid(73);
+      await repo.append([mkEvent(staleId, streamA, 'note.added')]);
+
+      await repo.replaceStream(streamA, [mkEvent(keptId, streamA, 'note.updated')]);
+
+      const events = await repo.byStream(streamA);
+      expect(events.map((e) => e.id)).toEqual([keptId]);
+      expect(events[0]?.seq).toBe(1);
+    });
+
+    it('rewrites seq from array position even when a given event already carries a different one', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const idA = uuid(74);
+      const idB = uuid(75);
+      // Simulates `.hero` import input: events keep their ORIGINAL source seq (here 9 and 40) —
+      // replaceStream must discard both in favor of 1..n by array position.
+      await repo.replaceStream(streamA, [
+        mkEvent(idA, streamA, 'note.added', { seq: 9 }),
+        mkEvent(idB, streamA, 'note.updated', { seq: 40 }),
+      ]);
+
+      const events = await repo.byStream(streamA);
+      expect(events.map((e) => ({ id: e.id, seq: e.seq }))).toEqual([
+        { id: idA, seq: 1 },
+        { id: idB, seq: 2 },
+      ]);
+    });
+
+    it('leaves other streams entirely untouched', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      await repo.append([mkEvent(uuid(76), streamB, 'note.added')]);
+
+      await repo.replaceStream(streamA, [mkEvent(uuid(77), streamA, 'note.added')]);
+
+      const b = await repo.byStream(streamB);
+      expect(b).toHaveLength(1);
+      expect(b[0]?.id).toBe(uuid(76));
+    });
+
+    it('an empty replacement array clears the stream', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      await repo.append([mkEvent(uuid(78), streamA, 'note.added')]);
+
+      await repo.replaceStream(streamA, []);
+
+      expect(await repo.byStream(streamA)).toEqual([]);
+    });
+  });
 });

@@ -4,6 +4,7 @@
     "title": "Персонажи",
     "landmark": "Персонажи",
     "create": "Новый персонаж",
+    "import": "Импорт",
     "empty": "У вас пока нет ни одного персонажа.",
     "delete": "Удалить",
     "deleteConfirm": {
@@ -14,7 +15,14 @@
     },
     "toast": {
       "deleted": "{name} удалён",
-      "delete-failed": "Не удалось удалить персонажа. Попробуйте снова."
+      "delete-failed": "Не удалось удалить персонажа. Попробуйте снова.",
+      "import-created": "{name} импортирован(а) ({imported, plural, one {# событие} few {# события} many {# событий} other {# события}}).",
+      "import-merged": "{name} обновлён(а): добавлено {imported, plural, one {# новое событие} few {# новых события} many {# новых событий} other {# нового события}}, пропущено {skippedDuplicates, plural, one {# дубликат} few {# дубликата} many {# дубликатов} other {# дубликата}}.",
+      "import-failed-bad-zip": "Этот файл не является допустимым набором .hero.",
+      "import-failed-bad-manifest": "Манифест этого набора .hero недействителен.",
+      "import-failed-bad-event": "В этом наборе .hero обнаружено недопустимое событие (№{index}).",
+      "import-failed-hash-mismatch": "Данные изображения в этом наборе .hero не совпадают с манифестом.",
+      "import-failed-generic": "Не удалось импортировать файл. Попробуйте снова."
     }
   },
   "wizard": {

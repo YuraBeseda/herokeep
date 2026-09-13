@@ -1,15 +1,36 @@
 <section class="characters-list" *transloco="let t; read: 'characters'">
   <div class="characters-list__header">
     <h1 class="characters-list__title">{{ t('list.title') }}</h1>
-    <button
-      hk-button
-      [variant]="'primary'"
-      type="button"
-      class="characters-list__create"
-      (click)="create()"
-    >
-      {{ t('list.create') }}
-    </button>
+    <div class="characters-list__actions">
+      <button
+        hk-button
+        [variant]="'ghost'"
+        type="button"
+        class="characters-list__import"
+        [disabled]="importing()"
+        (click)="onImportClick()"
+      >
+        {{ t('list.import') }}
+      </button>
+      <input
+        #importInput
+        type="file"
+        class="characters-list__import-input"
+        hidden
+        [disabled]="importing()"
+        [attr.accept]="importAccept"
+        (change)="onImportFileSelected($event)"
+      />
+      <button
+        hk-button
+        [variant]="'primary'"
+        type="button"
+        class="characters-list__create"
+        (click)="create()"
+      >
+        {{ t('list.create') }}
+      </button>
+    </div>
   </div>
 
   @if (loading()) {

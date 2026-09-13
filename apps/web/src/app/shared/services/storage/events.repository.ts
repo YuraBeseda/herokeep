@@ -63,6 +63,30 @@ export class EventsRepository {
   }
 
   /**
+   * Atomically replaces every row of `stream` with `events`, IN THE GIVEN ORDER — one Dexie `'rw'`
+   * transaction, so a reader never observes a half-deleted/half-written stream. Each event's `seq`
+   * is rewritten to a fresh, gap-free `1..n` from its position in `events` (the caller — Task 10's
+   * `HeroReaderService` — has already decided that order: verbatim source order for a brand-new
+   * stream, or a merge-by-id re-sort for an existing one); any `seq` the event itself already
+   * carried (e.g. `.hero` import events, which keep their ORIGINAL source seq until this call) is
+   * discarded in favor of the position-based one. Event `id`s are preserved untouched. An empty
+   * `events` array still deletes the stream's existing rows, leaving it empty (never called with
+   * an empty array today, but a correct no-op either way).
+   */
+  async replaceStream(stream: string, events: readonly Event[]): Promise<void> {
+    await this.db.transaction('rw', this.db.events, async () => {
+      await this.db.events.where('stream').equals(stream).delete();
+      const rows: EventRow[] = events.map((event, index) => {
+        const seq = index + 1;
+        return { id: event.id, stream, seq, json: { ...event, stream, seq } };
+      });
+      if (rows.length > 0) {
+        await this.db.events.bulkAdd(rows);
+      }
+    });
+  }
+
+  /**
    * Future sync hook: once a server has ordered this stream's pending (seq-less) events, it
    * assigns their authoritative seqs starting at `startSeq` from `fromId` (inclusive) onward, in
    * `pendingOrder`. Not exercised by this device's own solo-phase `append`; a `fromId` not found

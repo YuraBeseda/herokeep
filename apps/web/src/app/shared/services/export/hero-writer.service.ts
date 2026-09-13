@@ -12,12 +12,16 @@ const MIME_EXTENSIONS: Record<string, string> = {
 };
 
 /** doc-07 only ever stores webp/jpeg/png (`ImagePipelineService`'s "Safety" note) — the fallback
- * below only matters for a hand-edited/future blob row this writer doesn't otherwise expect. */
-function extensionForMime(mime: string): string {
+ * below only matters for a hand-edited/future blob row this writer doesn't otherwise expect.
+ * Exported: `HeroReaderService` (Task 10) needs the SAME `images/<hash-hex>.<ext>` naming scheme
+ * to locate an entry it must read back out of an imported zip — one mapping, not two copies that
+ * could drift apart. */
+export function extensionForMime(mime: string): string {
   return MIME_EXTENSIONS[mime] ?? mime.split('/')[1]?.replace(/[^a-z0-9]/gi, '') ?? 'bin';
 }
 
-function hexOfHash(hash: string): string {
+/** Exported for the same reason as `extensionForMime` — see its own doc comment. */
+export function hexOfHash(hash: string): string {
   return hash.startsWith('sha256:') ? hash.slice('sha256:'.length) : hash;
 }
 

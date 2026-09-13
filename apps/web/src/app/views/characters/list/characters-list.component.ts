@@ -1,4 +1,12 @@
-import { Component, computed, inject, resource } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+  viewChild,
+  type ElementRef,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -7,6 +15,13 @@ import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
+import {
+  HeroImportBadEventError,
+  HeroImportBadManifestError,
+  HeroImportBadZipError,
+  HeroImportHashMismatchError,
+  HeroReaderService,
+} from '@shared/services/export/hero-reader.service';
 import { PlaceholderService } from '@shared/services/images/placeholder.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
@@ -14,6 +29,9 @@ import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/cha
 
 const SKELETON_ROW_COUNT = 4;
 const GENERIC_DELETE_FAILURE_KEY = 'characters.list.toast.delete-failed';
+const GENERIC_IMPORT_FAILURE_KEY = 'characters.list.toast.import-failed-generic';
+/** `.hero` files only — the extension `HeroWriterService.export` names its downloads with. */
+const IMPORT_ACCEPT = '.hero';
 
 /**
  * One-off content component for the delete confirmation dialog (per `hk-dialog`'s "wrap it in a
@@ -93,6 +111,7 @@ export class CharactersListComponent {
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
   private readonly placeholderService = inject(PlaceholderService);
+  private readonly heroReaderService = inject(HeroReaderService);
 
   // Template-facing state
   protected readonly skeletonRows: readonly number[] = Array.from(
@@ -131,6 +150,70 @@ export class CharactersListComponent {
 
   protected open(id: string): void {
     void this.router.navigate(['/c', id]);
+  }
+
+  // --- `.hero` import (plan-6 Task 10) -----------------------------------------------------
+
+  protected readonly importAccept = IMPORT_ACCEPT;
+  protected readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
+
+  /** Guards against a second file pick racing an already-in-flight import — same re-entrancy
+   * reasoning as `BuildTabComponent`'s `portraitUploading` (task-8-brief.md's own pattern): the
+   * control is disabled in the template (`[disabled]="importing()"`) AND the handler
+   * short-circuits a synthetic/queued event that slips through anyway. */
+  protected readonly importing = signal(false);
+
+  protected onImportClick(): void {
+    this.importInput()?.nativeElement.click();
+  }
+
+  protected async onImportFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    // Reset immediately so re-selecting the SAME file path still fires a fresh `change` event —
+    // the browser only fires `change` when the input's value actually differs from before.
+    input.value = '';
+    if (!file) return;
+    if (this.importing()) return;
+
+    this.importing.set(true);
+    try {
+      const result = await this.heroReaderService.import(file);
+      this.charactersResource.reload();
+      const key =
+        result.mode === 'created'
+          ? 'characters.list.toast.import-created'
+          : 'characters.list.toast.import-merged';
+      this.toastService.show(key, {
+        name: result.name,
+        imported: result.imported,
+        skippedDuplicates: result.skippedDuplicates,
+      });
+    } catch (error) {
+      this.toastService.show(...this.importFailureToastArgs(error));
+    } finally {
+      this.importing.set(false);
+    }
+  }
+
+  /** Maps every `HeroReaderService.import` failure mode to its toast `show(key, params?)` args —
+   * each typed error already carries its own full, global i18n key as `code` (same pattern as
+   * `CharacterStoreNotLeaderError`, checked here too: a non-leader tab can't import either).
+   * `HeroImportBadEventError`'s 0-based `index` is shown 1-based — friendlier for a user who has
+   * no reason to think in array positions. */
+  private importFailureToastArgs(error: unknown): [string, Record<string, unknown>?] {
+    if (error instanceof HeroImportBadEventError) {
+      return [error.code, { index: error.index + 1 }];
+    }
+    if (
+      error instanceof HeroImportBadZipError ||
+      error instanceof HeroImportBadManifestError ||
+      error instanceof HeroImportHashMismatchError ||
+      error instanceof CharacterStoreNotLeaderError
+    ) {
+      return [error.code];
+    }
+    return [GENERIC_IMPORT_FAILURE_KEY];
   }
 
   protected async delete(row: CharacterRow): Promise<void> {

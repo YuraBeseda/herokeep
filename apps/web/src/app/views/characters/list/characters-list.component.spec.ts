@@ -4,7 +4,14 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import {
+  HeroImportBadEventError,
+  HeroImportBadZipError,
+  HeroReaderService,
+  type ImportResult,
+} from '@shared/services/export/hero-reader.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
+import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
@@ -39,8 +46,12 @@ function mkRow(overrides: Partial<CharacterRow> = {}): CharacterRow {
  * table, mirroring what the real `CharacterStore.deleteCharacter` does — the component's
  * post-delete `resource.reload()` re-reads through `CharactersRepository.list()`, so without this
  * the row would never actually disappear from view in the "row disappears" assertion below. */
-function configure(): { deleteCharacter: ReturnType<typeof vi.fn> } {
+function configure(): {
+  deleteCharacter: ReturnType<typeof vi.fn>;
+  importFn: ReturnType<typeof vi.fn>;
+} {
   const deleteCharacter = vi.fn();
+  const importFn = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -56,13 +67,38 @@ function configure(): { deleteCharacter: ReturnType<typeof vi.fn> } {
       }),
       provideTranslocoMessageformat(),
       { provide: CharacterStore, useValue: { deleteCharacter } },
+      // `HeroReaderService` (plan-6 Task 10) is stubbed here — its OWN real behavior (validation,
+      // merge-by-id, storage writes) is already thoroughly covered by
+      // `hero-reader.service.spec.ts`; this spec only asserts the component calls it and reacts
+      // to its resolved `ImportResult`/rejected typed error, same division of concerns as the
+      // `deleteCharacter` stub above.
+      { provide: HeroReaderService, useValue: { import: importFn } },
     ],
   });
   const db = TestBed.inject(HkDb);
   deleteCharacter.mockImplementation(async (id: string) => {
     await db.characters.delete(id);
   });
-  return { deleteCharacter };
+  return { deleteCharacter, importFn };
+}
+
+/** Mirrors `build-tab.component.spec.ts`'s own helper exactly — `HTMLInputElement.files` has no
+ * public setter, so a real file pick is simulated by redefining the property directly. */
+function setInputFiles(input: HTMLInputElement, files: File[]): void {
+  Object.defineProperty(input, 'files', { value: files, configurable: true });
+  input.dispatchEvent(new Event('change'));
+}
+
+function mkImportResult(overrides: Partial<ImportResult> = {}): ImportResult {
+  return {
+    characterId: 'char:00000000-0000-4000-8000-000000000099',
+    name: 'Ivan',
+    mode: 'created',
+    imported: 2,
+    skippedDuplicates: 0,
+    warnings: [],
+    ...overrides,
+  };
 }
 
 /** Lets a chain of real (unmocked) fake-indexeddb operations — `db.characters.delete` inside the
@@ -86,9 +122,10 @@ function itemNames(fixture: { nativeElement: unknown }): string[] {
 
 describe('CharactersListComponent', () => {
   let deleteCharacter: ReturnType<typeof vi.fn>;
+  let importFn: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    ({ deleteCharacter } = configure());
+    ({ deleteCharacter, importFn } = configure());
     const db = TestBed.inject(HkDb);
     await Promise.all([
       db.packs.clear(),
@@ -277,5 +314,152 @@ describe('CharactersListComponent', () => {
     const placeholder = compiled.querySelector('.characters-list__portrait--placeholder');
     expect(placeholder).not.toBeNull();
     expect(placeholder!.textContent?.trim()).toBe('BE');
+  });
+
+  // --- `.hero` import (plan-6 Task 10) -------------------------------------------------------
+
+  it('the import button opens the hidden file input', async () => {
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('.characters-list__import-input')!;
+    const clickSpy = vi.spyOn(input, 'click');
+
+    compiled.querySelector<HTMLButtonElement>('.characters-list__import')?.click();
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('selecting a file imports it, reloads the list, and toasts the "created" result with its counts', async () => {
+    importFn.mockResolvedValueOnce(
+      mkImportResult({ name: 'Ivan Petrov', mode: 'created', imported: 3 }),
+    );
+    const charactersRepository = TestBed.inject(CharactersRepository);
+    const listSpy = vi.spyOn(charactersRepository, 'list');
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    await fixture.whenStable();
+    const callsBeforeImport = listSpy.mock.calls.length;
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    const file = new File([new Uint8Array([1, 2, 3])], 'Ivan Petrov.hero');
+    setInputFiles(input, [file]);
+    await flushDeleteFlow(fixture); // same "settle real async work" helper — not delete-specific
+
+    expect(importFn).toHaveBeenCalledWith(file);
+    expect(listSpy.mock.calls.length).toBeGreaterThan(callsBeforeImport); // the list was reloaded
+    expect(showSpy).toHaveBeenCalledWith('characters.list.toast.import-created', {
+      name: 'Ivan Petrov',
+      imported: 3,
+      skippedDuplicates: 0,
+    });
+  });
+
+  it('selecting a file that merges toasts the "merged" result with its counts', async () => {
+    importFn.mockResolvedValueOnce(
+      mkImportResult({ name: 'Zara', mode: 'merged', imported: 2, skippedDuplicates: 5 }),
+    );
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    await fixture.whenStable();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await flushDeleteFlow(fixture);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.list.toast.import-merged', {
+      name: 'Zara',
+      imported: 2,
+      skippedDuplicates: 5,
+    });
+  });
+
+  it("a typed import failure toasts that error's own code", async () => {
+    importFn.mockRejectedValueOnce(new HeroImportBadZipError());
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    await fixture.whenStable();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await flushDeleteFlow(fixture);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.list.toast.import-failed-bad-zip');
+  });
+
+  it('a bad-event failure toasts with a 1-based index (friendlier than the 0-based array position)', async () => {
+    importFn.mockRejectedValueOnce(new HeroImportBadEventError(2, []));
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    await fixture.whenStable();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await flushDeleteFlow(fixture);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.list.toast.import-failed-bad-event', {
+      index: 3,
+    });
+  });
+
+  it('an unrecognized import failure falls back to the generic failure toast', async () => {
+    importFn.mockRejectedValueOnce(new Error('boom'));
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    await fixture.whenStable();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await flushDeleteFlow(fixture);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.list.toast.import-failed-generic');
+  });
+
+  it('a cancelled file dialog (no file chosen) never calls HeroReaderService.import', async () => {
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    setInputFiles(input, []);
+    await flushDeleteFlow(fixture);
+
+    expect(importFn).not.toHaveBeenCalled();
+  });
+
+  it('a second file pick while one is still in flight is ignored (re-entrancy guard)', async () => {
+    let resolveFirst: (value: ImportResult) => void = () => undefined;
+    const pending = new Promise<ImportResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+    importFn.mockReturnValueOnce(pending);
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+
+    setInputFiles(input, [new File([new Uint8Array([1])], 'first.hero')]);
+    setInputFiles(input, [new File([new Uint8Array([2])], 'second.hero')]);
+
+    expect(importFn).toHaveBeenCalledTimes(1);
+    resolveFirst(mkImportResult());
+    await flushDeleteFlow(fixture);
   });
 });
