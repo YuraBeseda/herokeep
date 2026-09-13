@@ -13,6 +13,42 @@
       </div>
     </header>
 
+    <div class="sheet-shell__xp">
+      <span class="sheet-shell__xp-current">{{ t('sheet.header.xp', { xp: xp() }) }}</span>
+      <hk-number-field
+        class="sheet-shell__xp-field"
+        [labelKey]="'characters.sheet.header.xpAwardLabel'"
+        [step]="1"
+        [ngModel]="xpAward()"
+        (ngModelChange)="onXpAwardChange($event)"
+      />
+      <button
+        hk-button
+        type="button"
+        class="sheet-shell__xp-submit"
+        [variant]="'ghost'"
+        (click)="onXpAwardSubmit()"
+      >
+        {{ t('sheet.header.xpAward') }}
+      </button>
+      @if (levelUpAvailable()) {
+        <a class="sheet-shell__level-up-badge" [routerLink]="['level-up']">
+          {{ t('sheet.header.levelUpAvailable') }}
+        </a>
+      }
+      @if (undoableLevelUpTarget(); as target) {
+        <button
+          hk-button
+          type="button"
+          class="sheet-shell__undo-level-up"
+          [variant]="'ghost'"
+          (click)="onUndoLevelUp(target)"
+        >
+          {{ t('sheet.header.undoLevelUp') }}
+        </button>
+      }
+    </div>
+
     <hk-tabs
       class="sheet-shell__tabs"
       [tabs]="tabsFor(t)"

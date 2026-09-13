@@ -1,9 +1,18 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CreateWizardState } from '../create-wizard.state';
 import { EntityPickerComponent } from './entity-picker.component';
+
+// Not exported from `@hk/engine`'s own barrel (only the `deriveSpellcasting` FUNCTION is, via
+// `derive/index.ts`) — recovered from the already-exported `Sheet` shape instead of widening the
+// engine package's public surface just for this one type.
+type SpellcastingBlock = Sheet['spellcasting'][number];
+
+/** A single spell-mutator override — see this file's class doc's "override trio" note. */
+type SpellMutatorFn = (spellId: string, classId: string) => void;
 
 // `hk-entity-picker`'s R3 render cap (task-6 fix round) — the real SRD pack carries 339 spells;
 // even a single class's cantrip/level-1 slice is small (15/30 in the SRD pack), but the cap is
@@ -47,13 +56,34 @@ const SPELLBOOK_RECOMMENDED = 6;
   styleUrl: './spells-step.component.scss',
 })
 export class SpellsStepComponent {
-  private readonly state = inject(CreateWizardState);
+  // Optional (task-13-brief.md): only the creation wizard mounts this with no overrides, relying
+  // entirely on its own injected `CreateWizardState`; the level-up wizard (`LevelUpComponent`)
+  // supplies every override below instead, driving the SAME cantrip/spellbook/prepared UI against
+  // `LevelUpState` — mirrors `hk-choice-step`'s own override-or-injected-state convention
+  // (`choice-step-overrides.ts`'s class doc) rather than duplicating this component.
+  private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
 
   protected readonly spellPickerLimit = SPELL_PICKER_LIMIT;
   protected readonly spellbookRecommended = SPELLBOOK_RECOMMENDED;
 
-  protected readonly block = computed(() => this.state.draftSheet()?.spellcasting[0]);
+  // Override trio + one more (task-13-brief.md): `spellcasting` overrides which block this step
+  // reads (`CreateWizardState.draftSheet()?.spellcasting[0]` otherwise); `learn`/`unlearn`/
+  // `prepare`/`unprepare` override the four draft mutators; `finish` overrides the "Continue"
+  // button's action (`CreateWizardState.markStepDone('spells')` otherwise). Every one of these
+  // falls back to `state` when omitted — the wizard's own usage never passes them, so nothing
+  // changes for it. Not aliased (`@angular-eslint/no-input-rename`) — the property name IS the
+  // binding name.
+  readonly spellcasting = input<SpellcastingBlock | undefined>(undefined);
+  readonly learn = input<SpellMutatorFn | undefined>(undefined);
+  readonly unlearn = input<SpellMutatorFn | undefined>(undefined);
+  readonly prepare = input<SpellMutatorFn | undefined>(undefined);
+  readonly unprepare = input<SpellMutatorFn | undefined>(undefined);
+  readonly finish = input<(() => void) | undefined>(undefined);
+
+  protected readonly block = computed(
+    () => this.spellcasting() ?? this.state?.draftSheet()?.spellcasting[0],
+  );
   protected readonly classId = computed(() => this.block()?.classId ?? '');
 
   protected readonly cantripIds = computed<string[]>(() => {
@@ -109,20 +139,20 @@ export class SpellsStepComponent {
     const classId = this.classId();
     if (!classId) return;
     if (this.cantripsKnownIds().includes(id)) {
-      this.state.removeSpellLearned(id, classId);
+      this.runUnlearn(id, classId);
       return;
     }
     if (this.cantripCapReached()) return; // hard cap — silently refused, see class doc
-    this.state.addSpellLearned(id, classId);
+    this.runLearn(id, classId);
   }
 
   protected onToggleSpellbook(id: string): void {
     const classId = this.classId();
     if (!classId) return;
     if (this.spellbookKnownIds().includes(id)) {
-      this.state.removeSpellLearned(id, classId);
+      this.runUnlearn(id, classId);
     } else {
-      this.state.addSpellLearned(id, classId); // soft cap — always allowed
+      this.runLearn(id, classId); // soft cap — always allowed
     }
   }
 
@@ -130,14 +160,57 @@ export class SpellsStepComponent {
     const classId = this.classId();
     if (!classId) return;
     if (this.isPrepared(id)) {
-      this.state.removeSpellPrepared(id, classId);
+      this.runUnprepare(id, classId);
       return;
     }
     if (this.preparedCapReached()) return; // hard cap — silently refused, see class doc
-    this.state.addSpellPrepared(id, classId);
+    this.runPrepare(id, classId);
   }
 
   protected onContinue(): void {
-    this.state.markStepDone('spells');
+    const override = this.finish();
+    if (override) {
+      override();
+      return;
+    }
+    this.state?.markStepDone('spells');
+  }
+
+  // Mirrors `ChoiceStepComponent`'s own override-or-injected-state fallback (see
+  // `choice-step-overrides.ts`'s class doc) for each of the four draft mutators.
+  private runLearn(spellId: string, classId: string): void {
+    const override = this.learn();
+    if (override) {
+      override(spellId, classId);
+      return;
+    }
+    this.state?.addSpellLearned(spellId, classId);
+  }
+
+  private runUnlearn(spellId: string, classId: string): void {
+    const override = this.unlearn();
+    if (override) {
+      override(spellId, classId);
+      return;
+    }
+    this.state?.removeSpellLearned(spellId, classId);
+  }
+
+  private runPrepare(spellId: string, classId: string): void {
+    const override = this.prepare();
+    if (override) {
+      override(spellId, classId);
+      return;
+    }
+    this.state?.addSpellPrepared(spellId, classId);
+  }
+
+  private runUnprepare(spellId: string, classId: string): void {
+    const override = this.unprepare();
+    if (override) {
+      override(spellId, classId);
+      return;
+    }
+    this.state?.removeSpellPrepared(spellId, classId);
   }
 }

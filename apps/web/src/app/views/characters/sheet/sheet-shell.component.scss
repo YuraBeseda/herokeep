@@ -57,3 +57,23 @@
 .sheet-shell__tabs {
   display: block;
 }
+
+.sheet-shell__xp {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sheet-shell__xp-current {
+  color: var(--text-2);
+}
+
+.sheet-shell__level-up-badge {
+  border-radius: var(--radius-m);
+  background: var(--accent, var(--surface-2));
+  color: var(--text-1);
+  padding: var(--space-1) var(--space-2);
+  text-decoration: none;
+  font-weight: 600;
+}

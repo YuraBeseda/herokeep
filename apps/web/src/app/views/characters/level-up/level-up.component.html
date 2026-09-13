@@ -1,0 +1,122 @@
+<section class="level-up" *transloco="let t; read: 'characters'">
+  @if (state.advancement(); as advancement) {
+    <h1 class="level-up__title">
+      {{ t('levelUp.title', { level: advancement.toLevel }) }}
+    </h1>
+
+    <hk-stepper
+      class="level-up__stepper"
+      [steps]="stepperSteps()"
+      [activeId]="activeStepId()"
+      (stepSelected)="onStepSelected($event)"
+    >
+      @switch (currentStep()?.kind) {
+        @case ('hp') {
+          <div class="level-up__step">
+            <h2>{{ t('levelUp.hp.title') }}</h2>
+            <p class="level-up__hp-hint">
+              {{ t('levelUp.hp.hint', { hitDie: state.hitDie() ?? 0 }) }}
+            </p>
+            <div class="level-up__hp-actions">
+              <button hk-button type="button" class="level-up__hp-roll" (click)="onRollHp()">
+                {{ t('levelUp.hp.roll') }}
+              </button>
+              <button
+                hk-button
+                type="button"
+                class="level-up__hp-average"
+                [variant]="'ghost'"
+                (click)="state.chooseAverageHp()"
+              >
+                {{ t('levelUp.hp.average') }}
+              </button>
+            </div>
+            @if (state.hpRoll(); as hpRoll) {
+              <p class="level-up__hp-result">
+                @if (hpRoll === 'average') {
+                  {{ t('levelUp.hp.averageResult') }}
+                } @else {
+                  {{ t('levelUp.hp.rollResult', { value: hpRoll }) }}
+                }
+              </p>
+            }
+          </div>
+        }
+        @case ('choice') {
+          <div class="level-up__step">
+            @if (currentStep()?.choiceId; as choiceId) {
+              <hk-choice-step
+                [choiceId]="choiceId"
+                [sheet]="state.draftSheet()"
+                [validate]="validateChoice"
+                [commit]="commitChoice"
+              />
+            }
+          </div>
+        }
+        @case ('spells') {
+          <div class="level-up__step">
+            <hk-spells-step
+              [spellcasting]="spellcastingBlock()"
+              [learn]="learnSpell"
+              [unlearn]="unlearnSpell"
+              [prepare]="prepareSpell"
+              [unprepare]="unprepareSpell"
+              [finish]="finishSpells"
+            />
+          </div>
+        }
+        @case ('review') {
+          <div class="level-up__step level-up__review">
+            <h2>{{ t('levelUp.review.title') }}</h2>
+            @if (state.draftSheet(); as sheet) {
+              <dl class="level-up__summary">
+                <dt>{{ t('levelUp.review.level') }}</dt>
+                <dd>{{ advancement.toLevel }}</dd>
+                <dt>{{ t('levelUp.review.hp') }}</dt>
+                <dd>{{ sheet.hp.max.value }}</dd>
+              </dl>
+            }
+            @if (!state.complete()) {
+              <p class="level-up__incomplete">{{ t('levelUp.review.incomplete') }}</p>
+            }
+            <button
+              hk-button
+              type="button"
+              class="level-up__finish"
+              [variant]="'primary'"
+              [disabled]="!state.complete() || committing()"
+              (click)="onFinish()"
+            >
+              {{ t('levelUp.review.finish') }}
+            </button>
+          </div>
+        }
+      }
+
+      <div hk-stepper-footer class="level-up__footer">
+        <button
+          hk-button
+          type="button"
+          class="level-up__back"
+          [variant]="'ghost'"
+          [disabled]="!canGoBack()"
+          (click)="back()"
+        >
+          {{ t('levelUp.actions.back') }}
+        </button>
+        @if (currentStep()?.kind !== 'review') {
+          <button
+            hk-button
+            type="button"
+            class="level-up__next"
+            [disabled]="!canGoNext()"
+            (click)="next()"
+          >
+            {{ t('levelUp.actions.next') }}
+          </button>
+        }
+      </div>
+    </hk-stepper>
+  }
+</section>

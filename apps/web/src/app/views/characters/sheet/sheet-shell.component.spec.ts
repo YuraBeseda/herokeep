@@ -12,6 +12,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
@@ -42,6 +43,20 @@ class StubLoader implements TranslocoLoader {
     if (langPath === 'characters/en') return of(charactersEn);
     return of({});
   }
+}
+
+/** Lets `CharacterStore.appendTx`/`revert`'s real (unmocked) fake-indexeddb promise chain settle
+ * before asserting — mirrors `build-tab.component.spec.ts`'s own `pollUntil`. */
+async function pollUntil(
+  fixture: { whenStable(): Promise<unknown> },
+  predicate: () => boolean,
+  maxIterations = 50,
+): Promise<void> {
+  for (let i = 0; i < maxIterations && !predicate(); i++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+  }
+  expect(predicate()).toBe(true);
 }
 
 function configureReal(): void {
@@ -118,5 +133,58 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const root = harness.routeNativeElement!;
 
     expect(root.querySelector('.play-tab')).not.toBeNull();
+  });
+
+  it('awarding XP up to the level-2 threshold shows the "level up available" badge', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('.sheet-shell__level-up-badge')).toBeNull();
+
+    const input = root.querySelector<HTMLInputElement>(
+      '.sheet-shell__xp-field .hk-number-field__input',
+    )!;
+    input.value = '300';
+    input.dispatchEvent(new Event('input'));
+    await harness.fixture.whenStable();
+
+    const submit = root.querySelector<HTMLButtonElement>('.sheet-shell__xp-submit')!;
+    submit.click();
+
+    await pollUntil(harness.fixture, () => characterStore.advancements().length > 0);
+
+    expect(root.querySelector('.sheet-shell__level-up-badge')).not.toBeNull();
+    const lastEvent = characterStore.events().at(-1)!;
+    expect(lastEvent.type).toBe('xp.awarded');
+    expect(lastEvent.payload).toEqual({ amount: 300 });
+  });
+
+  it('"Undo level-up" is visible while the last tx is level.gained-led, and reverting removes both the button and the level', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+    // Fighter's level-2 row has no choices (packages/content dist pack) — a real level-up here is
+    // a single-event, txId-less `level.gained` (task-13-brief.md's "Undo level-up" doc covers
+    // exactly this case).
+    await characterStore.appendTx([
+      {
+        type: 'level.gained',
+        v: 1,
+        payload: { classId: 'srd-5e-2024:class/fighter', level: 2, hpRoll: 'average' },
+      },
+    ]);
+    expect(characterStore.sheet()?.level).toBe(2);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    const undoButton = root.querySelector<HTMLButtonElement>('.sheet-shell__undo-level-up');
+    expect(undoButton).not.toBeNull();
+
+    undoButton!.click();
+    await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 1);
+
+    expect(root.querySelector('.sheet-shell__undo-level-up')).toBeNull();
   });
 });

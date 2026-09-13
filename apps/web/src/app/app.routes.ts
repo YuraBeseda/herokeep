@@ -1,5 +1,7 @@
 import { inject } from '@angular/core';
-import type { ResolveFn, Routes } from '@angular/router';
+import type { CanActivateFn, ResolveFn, Routes } from '@angular/router';
+import { Router } from '@angular/router';
+import { ToastService } from './shared/components/toast/toast.service';
 import { CharactersRepository } from './shared/services/storage/characters.repository';
 import { CharacterStore } from './shared/stores/character.store';
 
@@ -30,6 +32,25 @@ export const characterResolver: ResolveFn<boolean> = async (route) => {
   } catch {
     return false;
   }
+};
+
+/**
+ * `/c/:id/level-up`'s guard (plan-5 task-13-brief.md): refuses to activate the level-up wizard
+ * while `CharacterStore.advancements()` is empty — reads it straight off the store rather than
+ * re-parsing `:id` off the route (the parent `c/:id` route's own `characterResolver` has always
+ * already run by the time a child route's guard does, so `characterStore`'s signals are already
+ * pointed at this character) — redirecting back to the sheet's `play` tab with a toast instead.
+ */
+export const levelUpGuard: CanActivateFn = () => {
+  const characterStore = inject(CharacterStore);
+  const toastService = inject(ToastService);
+  const router = inject(Router);
+
+  if (characterStore.advancements().length > 0) return true;
+
+  toastService.show('characters.levelUp.toast.noneAvailable');
+  const id = characterStore.streamId();
+  return router.createUrlTree(id ? ['/c', id, 'play'] : ['/characters']);
 };
 
 export const routes: Routes = [
@@ -78,6 +99,12 @@ export const routes: Routes = [
           import('./views/characters/sheet/timeline/timeline-tab.component').then(
             (m) => m.TimelineTabComponent,
           ),
+      },
+      {
+        path: 'level-up',
+        canActivate: [levelUpGuard],
+        loadComponent: () =>
+          import('./views/characters/level-up/level-up.component').then((m) => m.LevelUpComponent),
       },
     ],
   },

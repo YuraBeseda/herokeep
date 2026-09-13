@@ -1,7 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
@@ -23,7 +26,16 @@ type TabId = (typeof TAB_IDS)[number];
  */
 @Component({
   selector: 'app-sheet-shell',
-  imports: [TranslocoDirective, RouterOutlet, TabsComponent, SkeletonComponent],
+  imports: [
+    TranslocoDirective,
+    RouterOutlet,
+    RouterLink,
+    TabsComponent,
+    SkeletonComponent,
+    FormsModule,
+    NumberFieldComponent,
+    ButtonComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './sheet-shell.component.html',
   styleUrl: './sheet-shell.component.scss',
@@ -65,6 +77,53 @@ export class SheetShellComponent {
       .map((part) => part[0]?.toUpperCase() ?? '');
     return letters.join('');
   });
+
+  // --- XP entry + "level up available" badge (plan-5 task-13-brief.md) -----------------------
+
+  protected readonly xp = computed(() => this.characterStore.facts()?.xp ?? 0);
+  protected readonly advancements = this.characterStore.advancements;
+  protected readonly levelUpAvailable = computed(() => this.advancements().length > 0);
+
+  // `null` between submits — `hk-number-field`'s own CVA contract (its `writeValue`/`onInput` both
+  // traffic in `number | null`, never `undefined`); a plain draft signal, same "no Angular
+  // ReactiveFormsModule" convention every other builder/sheet form in this codebase follows.
+  protected readonly xpAward = signal<number | null>(null);
+
+  protected onXpAwardChange(value: number | null): void {
+    this.xpAward.set(value);
+  }
+
+  protected onXpAwardSubmit(): void {
+    const amount = this.xpAward();
+    if (amount === null || amount === 0) return;
+    void this.characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount } }]);
+    this.xpAward.set(null);
+  }
+
+  // --- "Undo level-up" (plan-5 task-13-brief.md) ------------------------------------------------
+
+  /** The target `revert()` needs, visible only while the LAST tx group in `characterStore.events()`
+   * is LED by a `level.gained` event — a "tx group" is every event sharing the last event's `txId`
+   * (contiguous by construction: `CharacterStore.appendTx` assigns one txId per call and events are
+   * always appended in seq order), or, when the last event carries no txId at all (a single-event
+   * level-up with no further decisions/spells — e.g. fighter 1→2, which is JUST `level.gained`),
+   * that one event by itself. `undefined` (no undo offered) for any other last event/tx. */
+  protected readonly undoableLevelUpTarget = computed<
+    { txId?: string; eventId?: string } | undefined
+  >(() => {
+    const events = this.characterStore.events();
+    const last = events.at(-1);
+    if (!last) return undefined;
+    if (last.txId === undefined) {
+      return last.type === 'level.gained' ? { eventId: last.id } : undefined;
+    }
+    const group = events.filter((e) => e.txId === last.txId);
+    return group[0]?.type === 'level.gained' ? { txId: last.txId } : undefined;
+  });
+
+  protected onUndoLevelUp(target: { txId?: string; eventId?: string }): void {
+    void this.characterStore.revert(target);
+  }
 
   protected tabsFor(t: (key: string) => string): HkTab[] {
     return TAB_IDS.map((id) => ({ id, label: t(`sheet.tabs.${id}`) }));

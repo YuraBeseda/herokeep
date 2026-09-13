@@ -118,6 +118,40 @@
       "continue": "Continue"
     }
   },
+  "levelUp": {
+    "title": "Level up to {level}",
+    "steps": {
+      "hp": "Hit points",
+      "choice": "Choice",
+      "spells": "Spells",
+      "review": "Review"
+    },
+    "actions": {
+      "back": "Back",
+      "next": "Next"
+    },
+    "hp": {
+      "title": "Hit points",
+      "hint": "Roll 1d{hitDie}, or take the average.",
+      "roll": "Roll",
+      "average": "Take average",
+      "rollResult": "Rolled {value}.",
+      "averageResult": "Taking the average."
+    },
+    "review": {
+      "title": "Review",
+      "level": "New level",
+      "hp": "Hit points",
+      "incomplete": "Finish every step before leveling up.",
+      "finish": "Finish level up",
+      "toast": {
+        "failed": "Couldn't level up. Try again."
+      }
+    },
+    "toast": {
+      "noneAvailable": "No level up is available yet."
+    }
+  },
   "sheet": {
     "tabs": {
       "play": "Play",
@@ -156,7 +190,12 @@
     },
     "header": {
       "classLevel": "{class} {level}",
-      "levelOnly": "Level {level}"
+      "levelOnly": "Level {level}",
+      "xp": "XP: {xp}",
+      "xpAwardLabel": "Award XP",
+      "xpAward": "Award",
+      "levelUpAvailable": "Level up available",
+      "undoLevelUp": "Undo level up"
     },
     "stats": {
       "ac": "Armor Class",
