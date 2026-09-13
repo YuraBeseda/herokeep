@@ -126,6 +126,14 @@ export class TimelineTabComponent {
   protected readonly skippedIds = this.characterStore.skippedIds;
   protected readonly families = TIMELINE_FAMILIES;
 
+  // task-14: the character's CURRENT grammatical gender, threaded into `EventSentencePipe` so a
+  // sentence with no gender field of its own (`level.gained`, `stabilized`, …) can still ICU
+  // `select` on it — see `event-sentence.pipe.ts`'s `sentenceOf` doc for why an event's OWN
+  // payload gender (when it has one) always wins over this.
+  protected readonly grammaticalGender = computed(
+    () => this.characterStore.facts()?.grammaticalGender,
+  );
+
   protected readonly rows = computed<TimelineRow[]>(() =>
     groupEvents(this.characterStore.events()).reverse(),
   );

@@ -1,6 +1,6 @@
 import { inject, Pipe, type PipeTransform } from '@angular/core';
 import type { ContentIndex, Localizer } from '@hk/engine';
-import { EVENT_PAYLOADS, type Event } from '@hk/protocol';
+import { EVENT_PAYLOADS, type Event, type GrammaticalGender } from '@hk/protocol';
 import { TranslocoService } from '@jsverse/transloco';
 
 /** Timeline filter-chip families (task-12-brief.md: "filter chips by family
@@ -159,11 +159,29 @@ export interface EventSentence {
 }
 
 /** `type` → the key/params pair for one event's sentence — the pure half of `EventSentencePipe`,
- * factored out so it's directly unit-testable with no Angular DI/Transloco setup at all. */
-export function sentenceOf(event: Event, index: ContentIndex, localizer: Localizer): EventSentence {
+ * factored out so it's directly unit-testable with no Angular DI/Transloco setup at all.
+ *
+ * `grammaticalGender` (task-14, additive) is the CHARACTER's current gender — threaded in from
+ * outside since most payloads have no gender field of their own (`level.gained`, `stabilized`,
+ * …). Only fills `params.grammaticalGender` when the payload didn't already supply one:
+ * `character.created`/`character.gender_set` carry their OWN `grammaticalGender` (the value at
+ * that historical moment, per `buildParams`'s normal payload copy above), and that always wins
+ * over the character's current facts — a sentence about a past event should agree with the
+ * gender it recorded then, not whatever the character is set to now. Every ru/uk sentence that
+ * doesn't reference `{grammaticalGender}` in its ICU template simply ignores the extra param. */
+export function sentenceOf(
+  event: Event,
+  index: ContentIndex,
+  localizer: Localizer,
+  grammaticalGender?: GrammaticalGender,
+): EventSentence {
+  const params = buildParams(event.type, event.payload, index, localizer);
+  if (grammaticalGender !== undefined && params['grammaticalGender'] === undefined) {
+    params['grammaticalGender'] = grammaticalGender;
+  }
   return {
     key: eventKey(event.type),
-    params: buildParams(event.type, event.payload, index, localizer),
+    params,
   };
 }
 
@@ -186,17 +204,29 @@ export function sentenceOf(event: Event, index: ContentIndex, localizer: Localiz
  * go through the service directly.
  *
  * `pure: false` (impure), matching `@jsverse/transloco`'s own `TranslocoPipe`: the arguments
- * (`event`/`index`/`localizer`/`groupSize`) don't change on a language switch, so a PURE pipe
- * would keep returning its memoized, now-stale-language string — this must re-run every
- * change-detection pass to pick up `reRenderOnLangChange`, the same reason transloco's own pipe
- * is impure.
+ * (`event`/`index`/`localizer`/`groupSize`/`grammaticalGender`) don't change on a language
+ * switch, so a PURE pipe would keep returning its memoized, now-stale-language string — this must
+ * re-run every change-detection pass to pick up `reRenderOnLangChange`, the same reason
+ * transloco's own pipe is impure.
+ *
+ * `grammaticalGender` (task-14) is an ADDITIVE 5th argument — every existing call site (and every
+ * `transform()` call already in this file's own spec) keeps compiling and behaving unchanged
+ * without it; only a caller that wants a gendered ICU `select` to actually render needs to pass
+ * the character's `facts.grammaticalGender` (see `sentenceOf`'s doc for the payload-wins-over-it
+ * precedence).
  */
 @Pipe({ name: 'eventSentence', pure: false })
 export class EventSentencePipe implements PipeTransform {
   private readonly translocoService = inject(TranslocoService);
 
-  transform(event: Event, index: ContentIndex, localizer: Localizer, groupSize = 1): string {
-    const sentence = sentenceOf(event, index, localizer);
+  transform(
+    event: Event,
+    index: ContentIndex,
+    localizer: Localizer,
+    groupSize = 1,
+    grammaticalGender?: GrammaticalGender,
+  ): string {
+    const sentence = sentenceOf(event, index, localizer, grammaticalGender);
     const key = sentence.key;
     const params = sentence.params;
     const base = this.translocoService.translate(key, params);

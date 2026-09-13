@@ -163,4 +163,62 @@ describe('EventSentencePipe', () => {
     expect(eventFamily('note.added')).toBe('other');
     expect(eventFamily('event.reverted')).toBe('other');
   });
+
+  // task-14: ICU gender coverage — `level.gained` has no `grammaticalGender` field of its own
+  // (LevelGainedV1's payload is classId/level/hpRoll/subclassId only), so this is the case that
+  // exercises the pipe's OWN new 5th `grammaticalGender` argument (threaded from the character's
+  // CURRENT facts, not the event payload) rather than a value `buildParams` already copied off the
+  // payload. Same event/params, only the gender argument differs — ru's «Достиг»/«Достигла» is the
+  // acceptance criterion's literal example.
+  it('renders a "level.gained" sentence gendered via the pipe\'s grammaticalGender argument in ru (masculine "Достиг" vs feminine "Достигла")', async () => {
+    await firstValueFrom(translocoService.load('characters/ru'));
+    translocoService.setActiveLang('ru');
+    const event = makeEvent('level.gained', { classId: 'srd-5e-2024:class/fighter', level: 2 });
+    const masculine = pipe.transform(event, index, localizer, 1, 'masculine');
+    const feminine = pipe.transform(event, index, localizer, 1, 'feminine');
+    const neuter = pipe.transform(event, index, localizer, 1, 'neuter');
+    expect(masculine).toContain('Достиг 2 уровня');
+    expect(masculine).not.toContain('Достигла');
+    expect(feminine).toContain('Достигла 2 уровня');
+    expect(neuter).toContain('Достигло 2 уровня');
+  });
+
+  // Same coverage in uk, and via `sentenceOf` (the pure half) directly — confirms the gender
+  // argument lands in `params.grammaticalGender` rather than only working by accident through the
+  // pipe's own translate call.
+  it('sentenceOf threads an explicit grammaticalGender argument into params without a payload field to source it from', () => {
+    const event = makeEvent('level.gained', { classId: 'srd-5e-2024:class/fighter', level: 2 });
+    const sentence = sentenceOf(event, index, localizer, 'feminine');
+    expect(sentence.params['grammaticalGender']).toBe('feminine');
+  });
+
+  // A payload that DOES carry its own `grammaticalGender` (`character.created`) must win over the
+  // pipe-level argument — the event's historical value, not whatever the character's CURRENT facts
+  // happen to be, is what that sentence should agree with.
+  it("sentenceOf keeps the payload's own grammaticalGender over a conflicting pipe-level argument", () => {
+    const event = makeEvent('character.created', {
+      name: 'Ivanka',
+      system: 'srd-5e-2024',
+      corePack: { id: corePack.id, version: corePack.version },
+      engineVersion: '1.0.0',
+      grammaticalGender: 'feminine',
+    });
+    const sentence = sentenceOf(event, index, localizer, 'masculine');
+    expect(sentence.params['grammaticalGender']).toBe('feminine');
+  });
+
+  // task-14: ICU plural coverage — `hit_dice.spent` already carries full ru CLDR one/few/many
+  // forms («кость»/«кости»/«костей»); this locks that in with a real spec instead of relying on
+  // eyeballing the JSON.
+  it('renders a "hit_dice.spent" sentence with the full ru CLDR plural forms across one/few/many', async () => {
+    await firstValueFrom(translocoService.load('characters/ru'));
+    translocoService.setActiveLang('ru');
+    const payload = (count: number) => ({ classId: 'srd-5e-2024:class/fighter', count });
+    const one = pipe.transform(makeEvent('hit_dice.spent', payload(1)), index, localizer);
+    const few = pipe.transform(makeEvent('hit_dice.spent', payload(2)), index, localizer);
+    const many = pipe.transform(makeEvent('hit_dice.spent', payload(5)), index, localizer);
+    expect(one).toContain('1 кость');
+    expect(few).toContain('2 кости');
+    expect(many).toContain('5 костей');
+  });
 });

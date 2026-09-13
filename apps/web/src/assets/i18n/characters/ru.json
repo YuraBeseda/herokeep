@@ -71,7 +71,7 @@
       "loading": "Загрузка…",
       "valueLabel": "Значение",
       "addValue": "Добавить",
-      "skillsTitle": "Выберите {count} навыка(ов) для класса {class}",
+      "skillsTitle": "Выберите {count, plural, one {# навык} few {# навыка} many {# навыков} other {# навыка}} для класса {class}",
       "more": "Ещё {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}} — уточните поиск"
     },
     "abilityScores": {
@@ -208,7 +208,7 @@
       "title": "Характеристики",
       "score": "Значение",
       "mod": "Модификатор",
-      "save": "Спасбросок"
+      "save": "Испытание"
     },
     "skills": {
       "title": "Навыки",
@@ -225,7 +225,7 @@
       "temp": "Временные",
       "hitDice": "Кости хитов",
       "hitDiceEntry": "{class}: к{die} × {remaining} / {total}",
-      "deathSaves": "Спасброски от смерти",
+      "deathSaves": "Испытания от смерти",
       "successes": "Успехи",
       "failures": "Провалы",
       "countOf": "{count} / {max}"
@@ -240,7 +240,7 @@
     },
     "spellcasting": {
       "title": "Заклинания",
-      "dc": "Сложность спасброска",
+      "dc": "Сложность испытания",
       "attack": "Бонус атаки заклинанием",
       "cantripsKnown": "Известно заговоров",
       "slotsLevel": "Ячейки {level} уровня",
@@ -309,7 +309,7 @@
       "cancel": "Отмена",
       "confirm": "Отменить"
     },
-    "character-created": "Персонаж {name} создан.",
+    "character-created": "{name} {grammaticalGender, select, masculine {создан} feminine {создана} neuter {создано} other {создан}}.",
     "character-renamed": "Переименован в {name}.",
     "character-appearance-set": "Внешность обновлена.",
     "character-gender-set": "{grammaticalGender, select, masculine {Грамматический род установлен: мужской.} feminine {Грамматический род установлен: женский.} neuter {Грамматический род установлен: средний.} other {Грамматический род обновлён.}}",
@@ -321,14 +321,14 @@
     "pack-pinned": "Закреплён {packId} v{version}.",
     "decision-made": "Выбрано: {selection}.",
     "decision-cleared": "Выбор очищен.",
-    "level-gained": "Достигнут {level} уровень в {classId}.",
+    "level-gained": "{grammaticalGender, select, masculine {Достиг} feminine {Достигла} neuter {Достигло} other {Достиг}} {level} уровня в {classId}.",
     "level-granted": "Получен уровень.",
     "xp-awarded": "Начислено {amount} опыта.",
     "hp-changed": "{kind, select, damage {Получено {delta} урона.} heal {Восстановлено {delta} хитов.} temp {Получено {delta} временных хитов.} set {Хиты установлены на {delta}.} other {Хиты изменены на {delta}.}}",
     "hit-dice-spent": "Потрачено {count} {count, plural, one {кость} few {кости} many {костей} other {кости}} хитов ({classId}).",
     "hit-dice-regained": "Восстановлено {count} {count, plural, one {кость} few {кости} many {костей} other {кости}} хитов ({classId}).",
-    "death-save-recorded": "{result, select, success {Спасбросок от смерти: успех.} failure {Спасбросок от смерти: провал.} critSuccess {Спасбросок от смерти: критический успех.} critFailure {Спасбросок от смерти: критический провал.} other {Записан спасбросок от смерти.}}",
-    "stabilized": "Стабилизирован.",
+    "death-save-recorded": "{result, select, success {Испытание от смерти: успех.} failure {Испытание от смерти: провал.} critSuccess {Испытание от смерти: критический успех.} critFailure {Испытание от смерти: критический провал.} other {Записано испытание от смерти.}}",
+    "stabilized": "{grammaticalGender, select, masculine {Стабилизирован.} feminine {Стабилизирована.} neuter {Стабилизировано.} other {Стабилизирован.}}",
     "slot-spent": "Потрачена ячейка заклинаний {level} уровня.",
     "slot-restored": "Восстановлена ячейка заклинаний {level} уровня.",
     "resource-spent": "Потрачено: {resourceId}.",
@@ -337,7 +337,7 @@
     "spell-unprepared": "Отменена подготовка: {spellId}.",
     "spell-learned": "Выучено: {spellId}.",
     "spell-forgotten": "Забыто: {spellId}.",
-    "spell-cast": "Использовано: {spellId}.",
+    "spell-cast": "Наложено: {spellId}.",
     "concentration-started": "Начата концентрация.",
     "concentration-ended": "Концентрация прекращена.",
     "condition-added": "Получено состояние {conditionId}.",

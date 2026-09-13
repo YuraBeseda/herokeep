@@ -22,7 +22,10 @@
           <hk-card class="timeline-tab__card">
             <div class="timeline-tab__row-main">
               <p class="timeline-tab__sentence">
-                {{ row.events[0] | eventSentence: index() : localizer() : row.events.length }}
+                {{
+                  row.events[0]
+                    | eventSentence: index() : localizer() : row.events.length : grammaticalGender()
+                }}
               </p>
               @if (isReverted(row)) {
                 <span class="timeline-tab__badge">{{ t('timeline.revertedBadge') }}</span>
@@ -73,7 +76,7 @@
               <ul class="timeline-tab__members">
                 @for (event of row.events; track event.id) {
                   <li class="timeline-tab__member">
-                    {{ event | eventSentence: index() : localizer() }}
+                    {{ event | eventSentence: index() : localizer() : 1 : grammaticalGender() }}
                   </li>
                 }
               </ul>
