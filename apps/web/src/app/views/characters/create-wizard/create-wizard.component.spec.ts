@@ -550,4 +550,61 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     expect(txIds.size).toBe(1);
     expect([...txIds][0]).toBeDefined();
   });
+
+  // Whole-branch review finding 2: `create()` succeeding followed by `appendTx` failing (leadership
+  // lost between the two calls, a storage error, …) must not leave a name-only stub character
+  // behind — `onCreate()`'s catch now best-effort `deleteCharacter`s the id `create()` returned
+  // before showing the failure toast. Spies `deleteCharacter` (still calls through, so the delete
+  // is real) AND asserts the stream's events are actually gone from the repository afterward.
+  it('appendTx rejecting after create() succeeded deletes the stub character and still shows the failure toast', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const toastService = TestBed.inject(ToastService);
+    const toastShowSpy = vi.spyOn(toastService, 'show');
+    const characterStore = TestBed.inject(CharacterStore);
+    const deleteSpy = vi.spyOn(characterStore, 'deleteCharacter');
+    vi.spyOn(characterStore, 'appendTx').mockRejectedValueOnce(new Error('boom'));
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Ivan');
+    state.gender.set('masculine');
+    state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      `${SYSTEM_ID}@0/ability-scores`,
+      ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'standardArray' },
+    );
+    state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
+    state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
+    state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    await fixture.whenStable();
+
+    expect(state.outstanding()).toEqual([]);
+    await advanceToReview(fixture);
+    const createButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '.create-wizard__create',
+    );
+    expect(createButton?.disabled).toBe(false);
+    createButton!.click();
+
+    // Same "real fake-indexeddb promise chain, poll real macrotask turns" reasoning as the test
+    // above — wait for the catch block to fully finish (its LAST action is the toast, after the
+    // awaited `deleteCharacter` — polling on the toast avoids a race where `deleteSpy` already
+    // recorded the call but its promise hasn't resolved yet).
+    for (let i = 0; i < 50 && toastShowSpy.mock.calls.length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+
+    expect(deleteSpy).toHaveBeenCalledTimes(1);
+    const deletedId = deleteSpy.mock.calls[0]?.[0];
+    expect(toastShowSpy).toHaveBeenCalledTimes(1);
+
+    // No stub character stream survives the failed creation.
+    const persisted = await TestBed.inject(EventsRepository).byStream(deletedId);
+    expect(persisted).toEqual([]);
+  });
 });

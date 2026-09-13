@@ -200,8 +200,20 @@ export class TimelineTabComponent {
   // `event.reverted` row renders its own sentence like any other event but must NEVER itself
   // offer a revert affordance. An already-reverted row offers none either — there is nothing left
   // to undo a second time.
+  //
+  // FIX (whole-branch review, finding 1): the standalone `character.created` row must ALSO never
+  // offer a revert affordance. It is never grouped into a tx (`CharacterStore.create` writes it
+  // alone, no `txId`), so `leadType` reliably identifies it. Every OTHER handler's very first line
+  // is `requireCreated(f)` (`packages/engine/src/reduce/facts.ts`) — it skips the event as
+  // 'not-created' whenever `f.created` is falsy. Reverting `character.created` clears `f.created`,
+  // so replay would skip EVERY subsequent event (facts collapse, name goes empty) — and
+  // revert-of-revert is prohibited above, so there is no UI path back. Never let it be reverted.
   protected canRevert(row: TimelineRow): boolean {
-    return row.leadType !== 'event.reverted' && !this.isReverted(row);
+    return (
+      row.leadType !== 'event.reverted' &&
+      row.leadType !== 'character.created' &&
+      !this.isReverted(row)
+    );
   }
 
   // `decision.made`'s `context.rolls` (T7's ability-roll flow — `context: {method, scores,

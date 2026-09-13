@@ -369,12 +369,25 @@ export class CreateWizardComponent {
   protected async onCreate(): Promise<void> {
     if (!this.complete() || this.creating()) return;
     this.creating.set(true);
+    // Tracks whether `create()` itself succeeded, so the catch block below knows whether a
+    // name-only stub character stream actually exists to clean up.
+    let createdId: string | undefined;
     try {
       const id = await this.characterStore.create(this.state.name().trim(), this.state.gender());
+      createdId = id;
       const [, ...rest] = this.state.buildTransaction();
       if (rest.length > 0) await this.characterStore.appendTx(rest);
       await this.router.navigate(['/c', id, 'play']);
     } catch (error) {
+      // Whole-branch review finding 2: if `appendTx` fails after `create()` already succeeded
+      // (leadership lost between the two calls, a storage error, …), the stream `create()` wrote
+      // would otherwise persist as a name-only stub with no decisions — and a retry mints a SECOND
+      // stream on top of it. Best-effort delete it before surfacing the failure so no stub
+      // survives; this is itself allowed to fail silently (e.g. leadership already lost) since the
+      // toast below is the only outcome the user needs to see either way.
+      if (createdId !== undefined) {
+        await this.characterStore.deleteCharacter(createdId).catch(() => undefined);
+      }
       const key =
         error instanceof CharacterStoreNotLeaderError ? error.code : GENERIC_CREATE_FAILURE_KEY;
       this.toastService.show(key);

@@ -247,6 +247,33 @@ describe('TimelineTabComponent', () => {
     expect(characterStore.facts()?.name).toBe('Aria');
   });
 
+  // Whole-branch review finding 1: the standalone `character.created` row must never offer a
+  // revert affordance — reverting it clears `facts.created`, and every other handler's
+  // `requireCreated` guard then skips ALL subsequent events on replay ('not-created'), collapsing
+  // facts with no UI path back (revert-of-revert is prohibited). A normal decision row is the
+  // control: it still offers revert.
+  it('the character.created row renders without a revert affordance, while a decision row still offers one', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: { choiceId: FIGHTING_STYLE_CHOICE, selection: [DEFENSE_FEAT] },
+      },
+    ]);
+
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+
+    // Newest-first: the decision row, then the standalone character.created row.
+    const rows = rowEls(fixture);
+    const decisionRow = rows[0];
+    const createdRow = rows[1];
+    expect(decisionRow.querySelector('.timeline-tab__revert')).not.toBeNull();
+    expect(createdRow.querySelector('.timeline-tab__revert')).toBeNull();
+  });
+
   it('an event.reverted row renders its own sentence but offers no revert affordance', async () => {
     const characterStore = TestBed.inject(CharacterStore);
     await characterStore.create('Aria', 'feminine');
