@@ -16,10 +16,20 @@
         <hk-entity-picker [ids]="v.ids" [selectedIds]="selection()" (toggled)="onToggle($event)" />
       }
       @case ('abilityGeneration') {
-        <hk-ability-scores-step [choiceId]="choiceId()" />
+        <hk-ability-scores-step
+          [choiceId]="choiceId()"
+          [sheet]="sheet()"
+          [validate]="validate()"
+          [commit]="commit()"
+        />
       }
       @case ('abilities') {
-        <hk-abilities-improve-step [choiceId]="choiceId()" />
+        <hk-abilities-improve-step
+          [choiceId]="choiceId()"
+          [sheet]="sheet()"
+          [validate]="validate()"
+          [commit]="commit()"
+        />
       }
       @case ('skills') {
         <div class="choice-step__chips">

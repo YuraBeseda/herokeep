@@ -1,7 +1,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { parseRollSpec, roll, type Diagnostic, type RollResult } from '@hk/engine';
+import { parseRollSpec, roll, type Diagnostic, type RollResult, type Sheet } from '@hk/engine';
 import type { Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -10,6 +10,7 @@ import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.componen
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { cryptoRng } from '@shared/services/engine/rng';
 import { CreateWizardState } from '../create-wizard.state';
+import type { ChoiceCommitFn, ChoiceValidateFn } from './choice-step-overrides';
 
 type GenerationMethod = 'standardArray' | 'pointBuy' | 'manual' | 'roll';
 
@@ -55,12 +56,23 @@ function diagnosticKey(code: string): string {
   styleUrl: './ability-scores-step.component.scss',
 })
 export class AbilityScoresStepComponent {
-  private readonly state = inject(CreateWizardState);
+  // Optional (task-11-brief.md): only set when the creation wizard mounts this directly beneath
+  // `CreateWizardState`; `hk-choice-step` renders it with none in context whenever a build-tab/
+  // level-up caller supplied the overrides below instead.
+  private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
 
   // Inputs
   readonly choiceId = input.required<string>();
+  // Optional overrides — see `choice-step-overrides.ts`'s class doc. Not yet consumed by this
+  // component's own logic (ability GENERATION is a creation-only pick, never re-offered on a live
+  // character), but accepted and threaded through by `hk-choice-step` for consistency with
+  // `hk-abilities-improve-step`, which does need them.
+  // Not aliased (`@angular-eslint/no-input-rename`) — the property name IS the binding name.
+  readonly sheet = input<Sheet | undefined>(undefined);
+  readonly validate = input<ChoiceValidateFn | undefined>(undefined);
+  readonly commit = input<ChoiceCommitFn | undefined>(undefined);
 
   protected readonly system = computed(() => this.engineFacade.index().system());
   protected readonly abilities = computed(() => this.system().abilities);
@@ -163,7 +175,7 @@ export class AbilityScoresStepComponent {
       const idx = assignment[a.id];
       if (idx !== undefined) scores[a.id] = values[idx];
     }
-    this.commit('standardArray', scores);
+    this.applyScores('standardArray', scores);
   }
 
   // Point buy
@@ -199,7 +211,7 @@ export class AbilityScoresStepComponent {
     const pointBuy = this.gen().pointBuy;
     const scores: Record<string, number> = {};
     for (const a of this.abilities()) scores[a.id] = this.pointBuyScores()[a.id] ?? pointBuy.min;
-    this.commit('pointBuy', scores);
+    this.applyScores('pointBuy', scores);
   }
 
   // Manual
@@ -225,7 +237,7 @@ export class AbilityScoresStepComponent {
       const v = manualScores[a.id];
       if (v !== undefined) scores[a.id] = v;
     }
-    this.commit('manual', scores);
+    this.applyScores('manual', scores);
   }
 
   // Roll
@@ -287,7 +299,7 @@ export class AbilityScoresStepComponent {
       const idx = assignment[a.id];
       if (idx !== undefined) scores[a.id] = results[idx].total;
     }
-    this.commit('roll', scores, results);
+    this.applyScores('roll', scores, results);
   }
 
   // Shared slot-assignment helpers (standard array + roll both assign an exclusive SLOT INDEX per
@@ -313,17 +325,35 @@ export class AbilityScoresStepComponent {
     return next;
   }
 
-  private commit(
+  private applyScores(
     method: GenerationMethod,
     scores: Record<string, number>,
     rolls?: RollResult[],
   ): void {
     const selection = Object.entries(scores).map(([a, v]) => `${a}:${v}`);
-    this.diagnostics.set(this.state.validate(this.choiceId(), selection));
-    this.state.setDecision(this.choiceId(), selection, {
-      method,
-      scores,
-      ...(rolls ? { rolls } : {}),
-    });
+    const context = { method, scores, ...(rolls ? { rolls } : {}) };
+    this.diagnostics.set(this.runValidate(this.choiceId(), selection));
+    this.runCommit(this.choiceId(), selection, context);
+  }
+
+  // Mirrors `ChoiceStepComponent`'s own override-or-injected-state fallback (see
+  // `choice-step-overrides.ts`'s class doc).
+  private runValidate(choiceId: string, selection: string[]): Diagnostic[] {
+    const override = this.validate();
+    if (override) return override(choiceId, selection);
+    return this.state?.validate(choiceId, selection) ?? [];
+  }
+
+  private runCommit(
+    choiceId: string,
+    selection: string[],
+    context?: Record<string, unknown>,
+  ): void {
+    const override = this.commit();
+    if (override) {
+      override(choiceId, selection, context);
+      return;
+    }
+    this.state?.setDecision(choiceId, selection, context);
   }
 }

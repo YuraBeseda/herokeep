@@ -1,0 +1,97 @@
+@if (sheet(); as s) {
+  <div class="build-tab" *transloco="let t; read: 'characters'">
+    <hk-sheet-section
+      [titleKey]="'characters.sheet.build.outstanding.title'"
+      class="build-tab__section"
+    >
+      @if (outstanding().length > 0) {
+        <div class="build-tab__outstanding-list">
+          @for (req of outstanding(); track req.choiceId) {
+            <hk-card class="build-tab__outstanding-item">
+              <hk-choice-step
+                [choiceId]="req.choiceId"
+                [sheet]="s"
+                [validate]="validateChoice"
+                [commit]="commitChoice"
+              />
+            </hk-card>
+          }
+        </div>
+      } @else {
+        <p class="build-tab__empty">{{ t('sheet.build.outstanding.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <hk-sheet-section [titleKey]="'characters.sheet.build.rename.title'" class="build-tab__section">
+      <form class="build-tab__form build-tab__rename-form" (submit)="onRenameSubmit($event)">
+        <label class="build-tab__field">
+          <span>{{ t('sheet.build.rename.label') }}</span>
+          <input
+            type="text"
+            class="build-tab__input build-tab__rename-input"
+            [value]="nameValue()"
+            (input)="onNameInput($any($event.target).value)"
+          />
+        </label>
+        @if (!nameValid()) {
+          <p class="build-tab__error">{{ t('sheet.build.rename.error') }}</p>
+        }
+        <button hk-button type="submit" [disabled]="!nameValid()">
+          {{ t('sheet.build.rename.save') }}
+        </button>
+      </form>
+    </hk-sheet-section>
+
+    <hk-sheet-section
+      [titleKey]="'characters.sheet.build.appearance.title'"
+      class="build-tab__section"
+    >
+      <form
+        class="build-tab__form build-tab__appearance-form"
+        (submit)="onAppearanceSubmit($event)"
+      >
+        @for (cfg of appearanceFields; track cfg.field) {
+          <div class="build-tab__field">
+            <label [attr.for]="'build-tab-appearance-' + cfg.field">{{ t(cfg.labelKey) }}</label>
+            @if (cfg.multiline) {
+              <textarea
+                [id]="'build-tab-appearance-' + cfg.field"
+                class="build-tab__textarea"
+                [attr.data-field]="cfg.field"
+                [value]="appearanceValue(cfg.field)"
+                (input)="onAppearanceInput(cfg.field, $any($event.target).value)"
+              ></textarea>
+            } @else {
+              <input
+                type="text"
+                [id]="'build-tab-appearance-' + cfg.field"
+                class="build-tab__input"
+                [attr.data-field]="cfg.field"
+                [value]="appearanceValue(cfg.field)"
+                (input)="onAppearanceInput(cfg.field, $any($event.target).value)"
+              />
+            }
+          </div>
+        }
+        <button hk-button type="submit">{{ t('sheet.build.appearance.save') }}</button>
+      </form>
+    </hk-sheet-section>
+
+    <hk-sheet-section [titleKey]="'characters.sheet.build.gender.title'" class="build-tab__section">
+      <fieldset class="build-tab__field">
+        @for (option of genderOptions; track option.value) {
+          <label class="build-tab__radio">
+            <input
+              type="radio"
+              name="build-tab-gender"
+              [value]="option.value"
+              [checked]="s.grammaticalGender === option.value"
+              (change)="onGenderChange(option.value)"
+            />
+            {{ t(option.labelKey) }}
+          </label>
+        }
+      </fieldset>
+    </hk-sheet-section>
+  </div>
+}

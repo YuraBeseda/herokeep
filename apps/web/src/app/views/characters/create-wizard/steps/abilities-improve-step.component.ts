@@ -1,9 +1,10 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { findChoice, type Diagnostic } from '@hk/engine';
+import { findChoice, type Diagnostic, type Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ChipComponent } from '@shared/components/chip/chip.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CreateWizardState } from '../create-wizard.state';
+import type { ChoiceCommitFn, ChoiceValidateFn } from './choice-step-overrides';
 
 interface AbilityInfo {
   readonly id: string;
@@ -51,11 +52,22 @@ function diagnosticKey(code: string): string {
   styleUrl: './abilities-improve-step.component.scss',
 })
 export class AbilitiesImproveStepComponent {
-  private readonly state = inject(CreateWizardState);
+  // Optional (task-11-brief.md): only set when the creation wizard mounts this directly beneath
+  // `CreateWizardState`; `hk-choice-step` renders it with none in context whenever a build-tab/
+  // level-up caller supplied the overrides below instead — the ASI-at-level-up case (task-13) is
+  // exactly why this component (unlike its `hk-ability-scores-step` sibling) will actually need
+  // its own `sheet` input once that task lands: this `abilities` pick reappears on a LIVE character (an
+  // ASI feat), not just at creation.
+  private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
 
   // Inputs
   readonly choiceId = input.required<string>();
+  // Optional overrides — see `choice-step-overrides.ts`'s class doc.
+  // Not aliased (`@angular-eslint/no-input-rename`) — the property name IS the binding name.
+  readonly sheet = input<Sheet | undefined>(undefined);
+  readonly validate = input<ChoiceValidateFn | undefined>(undefined);
+  readonly commit = input<ChoiceCommitFn | undefined>(undefined);
 
   protected readonly info = computed<ImproveInfo | undefined>(() => {
     const index = this.engineFacade.index();
@@ -129,10 +141,10 @@ export class AbilitiesImproveStepComponent {
       else next[slot] = abilityId;
       return next;
     });
-    this.commit();
+    this.applyAssignment();
   }
 
-  private commit(): void {
+  private applyAssignment(): void {
     const info = this.info();
     if (!info) return;
     const assignment = this.assignment();
@@ -141,7 +153,28 @@ export class AbilitiesImproveStepComponent {
       const abilityId = assignment[slot];
       if (abilityId) selection.push(`${abilityId}:+${delta}`);
     });
-    this.diagnostics.set(this.state.validate(this.choiceId(), selection));
-    this.state.setDecision(this.choiceId(), selection);
+    this.diagnostics.set(this.runValidate(this.choiceId(), selection));
+    this.runCommit(this.choiceId(), selection);
+  }
+
+  // Mirrors `ChoiceStepComponent`'s own override-or-injected-state fallback (see
+  // `choice-step-overrides.ts`'s class doc).
+  private runValidate(choiceId: string, selection: string[]): Diagnostic[] {
+    const override = this.validate();
+    if (override) return override(choiceId, selection);
+    return this.state?.validate(choiceId, selection) ?? [];
+  }
+
+  private runCommit(
+    choiceId: string,
+    selection: string[],
+    context?: Record<string, unknown>,
+  ): void {
+    const override = this.commit();
+    if (override) {
+      override(choiceId, selection, context);
+      return;
+    }
+    this.state?.setDecision(choiceId, selection, context);
   }
 }

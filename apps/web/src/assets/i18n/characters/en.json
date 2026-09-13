@@ -124,6 +124,32 @@
       "build": "Build",
       "timeline": "Timeline"
     },
+    "build": {
+      "outstanding": {
+        "title": "Outstanding choices",
+        "empty": "All caught up — nothing left to decide."
+      },
+      "rename": {
+        "title": "Name",
+        "label": "Name",
+        "error": "Enter a name, up to 200 characters.",
+        "save": "Save"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "age": "Age",
+        "height": "Height",
+        "weight": "Weight",
+        "eyes": "Eyes",
+        "hair": "Hair",
+        "skin": "Skin",
+        "description": "Description",
+        "save": "Save"
+      },
+      "gender": {
+        "title": "Grammatical gender"
+      }
+    },
     "notFound": {
       "title": "Character not found",
       "body": "This character doesn't exist, or couldn't be loaded on this device."

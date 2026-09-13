@@ -1,0 +1,72 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.build-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.build-tab__section {
+  display: block;
+}
+
+.build-tab__outstanding-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.build-tab__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.build-tab__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.build-tab__input,
+.build-tab__textarea {
+  @include u.touch-target;
+
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  color: var(--text-1);
+  padding: var(--space-2);
+  font: inherit;
+  width: 100%;
+}
+
+.build-tab__textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.build-tab__radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.build-tab__error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.build-tab__empty {
+  color: var(--text-2);
+  margin: 0;
+}

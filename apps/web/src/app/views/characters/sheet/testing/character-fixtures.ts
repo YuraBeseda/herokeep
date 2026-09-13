@@ -26,8 +26,17 @@ async function persist(state: CreateWizardState): Promise<string> {
  * fighting style, a longsword mastery pick, and chain mail + longsword + shield all equipped —
  * `hp.max` 12 / `ac` 19 / `prof` 2, with the AC total backed by exactly 3 contributions (chain mail,
  * shield, Defense). Returns the persisted `char:<uuid>` stream id.
+ *
+ * `options.fightingStyle` (default `true`, task-11-brief.md Step 1): pass `false` to omit the
+ * `fighting-style` decision, leaving `srd-5e-2024:class/fighter@1/fighting-style` as the ONLY
+ * entry `CharacterStore.outstanding()` reports for the resulting stream — everything else about
+ * the fixture (species/background/abilities/class/skills/weapon-masteries/equipment) is unchanged.
  */
-export async function seedFighter(name = 'Ivan'): Promise<string> {
+export async function seedFighter(
+  name = 'Ivan',
+  options: { fightingStyle?: boolean } = {},
+): Promise<string> {
+  const { fightingStyle = true } = options;
   const state = TestBed.runInInjectionContext(() => new CreateWizardState());
   state.name.set(name);
   state.gender.set('masculine');
@@ -41,7 +50,9 @@ export async function seedFighter(name = 'Ivan'): Promise<string> {
   );
   state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
   state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
-  state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
+  if (fightingStyle) {
+    state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
+  }
   state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
 
   const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);

@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { findChoice, type Diagnostic } from '@hk/engine';
+import { findChoice, type Diagnostic, type Sheet } from '@hk/engine';
 import { makeEntityId, parseChoiceId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -8,6 +8,7 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CreateWizardState } from '../create-wizard.state';
 import { AbilitiesImproveStepComponent } from './abilities-improve-step.component';
 import { AbilityScoresStepComponent } from './ability-scores-step.component';
+import type { ChoiceCommitFn, ChoiceValidateFn } from './choice-step-overrides';
 import { EntityPickerComponent } from './entity-picker.component';
 
 interface SkillOption {
@@ -82,11 +83,20 @@ function diagnosticKey(code: string): string {
   styleUrl: './choice-step.component.scss',
 })
 export class ChoiceStepComponent {
-  private readonly state = inject(CreateWizardState);
+  // Optional (task-11-brief.md): only the creation wizard provides `CreateWizardState`; the build
+  // tab renders this component with none in context, always passing the overrides below instead.
+  private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
 
   // Inputs
   readonly choiceId = input.required<string>();
+  // Optional overrides — see `choice-step-overrides.ts`'s class doc. Threaded straight through to
+  // the `abilityGeneration`/`abilities` children below (their own template bindings, further
+  // down) so a future level-up flow never has to re-plumb this.
+  // Not aliased (`@angular-eslint/no-input-rename`) — the property name IS the binding name.
+  readonly sheet = input<Sheet | undefined>(undefined);
+  readonly validate = input<ChoiceValidateFn | undefined>(undefined);
+  readonly commit = input<ChoiceCommitFn | undefined>(undefined);
 
   // Working (uncommitted-until-`commit`) UI state — always reset when `choiceId` changes (a
   // fresh mount for a different choice never inherits a stale selection/diagnostics/draft; see
@@ -182,11 +192,11 @@ export class ChoiceStepComponent {
     // it. Scoped to `query`/`static` only — the synthetic skills chips and literal entries keep
     // the general toggle/append behavior even when their own `count` happens to be 1.
     if ((v.kind === 'query' || v.kind === 'static') && v.count === 1) {
-      this.commit(current.length === 1 && current[0] === id ? [] : [id]);
+      this.applySelection(current.length === 1 && current[0] === id ? [] : [id]);
       return;
     }
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    this.commit(next);
+    this.applySelection(next);
   }
 
   protected onAddLiteral(event: Event): void {
@@ -194,20 +204,44 @@ export class ChoiceStepComponent {
     const value = this.literalDraft().trim();
     if (!value) return;
     this.literalDraft.set('');
-    this.commit([...this.selection(), value]);
+    this.applySelection([...this.selection(), value]);
   }
 
   protected onRemoveLiteral(value: string): void {
-    this.commit(this.selection().filter((v) => v !== value));
+    this.applySelection(this.selection().filter((v) => v !== value));
   }
 
   protected diagnosticKey(code: string): string {
     return diagnosticKey(code);
   }
 
-  private commit(next: string[]): void {
+  private applySelection(next: string[]): void {
     this.selection.set(next);
-    this.diagnostics.set(this.state.validate(this.choiceId(), next));
-    this.state.setDecision(this.choiceId(), next);
+    this.diagnostics.set(this.runValidate(this.choiceId(), next));
+    this.runCommit(this.choiceId(), next);
+  }
+
+  // Runs the `validate`/`commit` override when the consumer supplied one (the build tab, a future
+  // level-up flow), falling back to the injected `CreateWizardState` otherwise (the creation
+  // wizard, which never sets these inputs) — see `ChoiceValidateFn`/`ChoiceCommitFn`'s class doc.
+  // Never actually reached with neither available in practice (every real consumer supplies one or
+  // the other), but no-ops/returns `[]` rather than throwing mid-render if it ever were.
+  private runValidate(choiceId: string, selection: string[]): Diagnostic[] {
+    const override = this.validate();
+    if (override) return override(choiceId, selection);
+    return this.state?.validate(choiceId, selection) ?? [];
+  }
+
+  private runCommit(
+    choiceId: string,
+    selection: string[],
+    context?: Record<string, unknown>,
+  ): void {
+    const override = this.commit();
+    if (override) {
+      override(choiceId, selection, context);
+      return;
+    }
+    this.state?.setDecision(choiceId, selection, context);
   }
 }
