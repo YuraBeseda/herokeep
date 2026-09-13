@@ -8,6 +8,7 @@ import {
   pickClass,
   pickSpecies,
 } from './helpers/create-fighter';
+import { createWizard, prepareSpell } from './helpers/create-wizard';
 
 const SERIOUS_IMPACTS = new Set(['serious', 'critical']);
 
@@ -81,5 +82,40 @@ test.describe('accessibility (axe)', () => {
     await page.getByRole('tab', { name: 'Timeline', exact: true }).click();
     await expect(page.locator('.timeline-tab')).toBeVisible();
     await assertNoSeriousViolations(page, 'sheet — timeline tab');
+  });
+
+  // task-12-brief.md scenario (d): the new dialog states plan 6 adds (rest dialog open, cast
+  // dialog open) plus the roll log with an actual entry logged (its default-expanded state, per
+  // `SheetSectionComponent`'s own `collapsed = signal(false)` default — but empty/untouched
+  // already goes unaudited by the play-tab check above, so this exercises it populated instead).
+
+  test('the short-rest dialog (open) has no serious/critical violations', async ({ page }) => {
+    await createFighter(page, 'Aldric A11y Rest');
+    await page.getByRole('button', { name: 'Short rest', exact: true }).click();
+    await expect(page.locator('.rest-dialog__title')).toBeVisible();
+    await assertNoSeriousViolations(page, 'play tab — short-rest dialog open');
+  });
+
+  test('the cast dialog (open) has no serious/critical violations', async ({ page }) => {
+    await createWizard(page, 'Aldric A11y Cast');
+    await prepareSpell(page, 'Magic Missile');
+    const preparedRow = page
+      .locator('.play-tab__spellblock')
+      .locator('li', { hasText: 'Magic Missile' })
+      .filter({ has: page.getByRole('button', { name: 'Cast', exact: true }) });
+    await preparedRow.getByRole('button', { name: 'Cast', exact: true }).click();
+    await expect(page.locator('.cast-dialog__title')).toBeVisible();
+    await assertNoSeriousViolations(page, 'play tab — cast dialog open');
+  });
+
+  test('the roll log with a logged entry has no serious/critical violations', async ({ page }) => {
+    await createFighter(page, 'Aldric A11y Roll Log');
+    await page
+      .locator('.play-tab__ability')
+      .first()
+      .getByRole('button', { name: 'Roll check', exact: true })
+      .click();
+    await expect(page.locator('.roll-log-panel__entries .roll-log-panel__entry')).toHaveCount(1);
+    await assertNoSeriousViolations(page, 'play tab — roll log with an entry');
   });
 });
