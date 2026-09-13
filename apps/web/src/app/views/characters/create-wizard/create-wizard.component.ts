@@ -8,6 +8,8 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { CreateWizardState, type WizardStep } from './create-wizard.state';
 import { ChoiceStepComponent } from './steps/choice-step.component';
+import { EquipmentStepComponent } from './steps/equipment-step.component';
+import { SpellsStepComponent } from './steps/spells-step.component';
 
 // Relative to the 'characters' scope (this component's own template reads `t()` scoped via
 // `*transloco="let t; read: 'characters'"` — unlike `WizardStep.labelKey`, which is read by
@@ -28,7 +30,14 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
  */
 @Component({
   selector: 'app-create-wizard',
-  imports: [TranslocoDirective, StepperComponent, ButtonComponent, ChoiceStepComponent],
+  imports: [
+    TranslocoDirective,
+    StepperComponent,
+    ButtonComponent,
+    ChoiceStepComponent,
+    SpellsStepComponent,
+    EquipmentStepComponent,
+  ],
   providers: [CreateWizardState, provideTranslocoScope('characters')],
   templateUrl: './create-wizard.component.html',
   styleUrl: './create-wizard.component.scss',
@@ -75,13 +84,17 @@ export class CreateWizardComponent {
   // 'blocked' when it's a choice step whose decision is currently invalid
   // (`state.invalidDecisions`) — clickable, so the user can revisit and fix it (see
   // `StepperComponent.isClickable`); otherwise 'done' once the draft actually records it: the
-  // name once non-empty, a choice step once its choiceId has a recorded (valid) decision;
-  // otherwise 'todo'.
+  // name once non-empty, a choice step once its choiceId has a recorded (valid) decision, the
+  // free-form 'spells' step once `state.spellsAutoDone()` (>=1 cantrip learned) OR the user
+  // explicitly continued past it (`state.doneSteps()`), and 'equipment' likewise but marked-only
+  // (task-8-brief.md: no auto-done rule for it); otherwise 'todo'.
   protected readonly stepperSteps = computed<HkStepperStep[]>(() => {
     const active = this.activeStepId();
     const decisions = this.state.decisions();
     const invalidDecisions = this.state.invalidDecisions();
     const nameDone = this.state.name().trim().length > 0;
+    const spellsDone = this.state.spellsAutoDone() || this.state.doneSteps().has('spells');
+    const equipmentDone = this.state.doneSteps().has('equipment');
     return this.state.steps().map((step): HkStepperStep => {
       if (step.id === active) return { id: step.id, labelKey: step.labelKey, state: 'current' };
       if (
@@ -93,7 +106,9 @@ export class CreateWizardComponent {
       }
       const done =
         (step.kind === 'name' && nameDone) ||
-        (step.kind === 'choice' && step.choiceId !== undefined && decisions.has(step.choiceId));
+        (step.kind === 'choice' && step.choiceId !== undefined && decisions.has(step.choiceId)) ||
+        (step.kind === 'spells' && spellsDone) ||
+        (step.kind === 'equipment' && equipmentDone);
       return { id: step.id, labelKey: step.labelKey, state: done ? 'done' : 'todo' };
     });
   });

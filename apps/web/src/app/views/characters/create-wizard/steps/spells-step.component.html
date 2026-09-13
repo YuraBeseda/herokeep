@@ -1,0 +1,79 @@
+<div class="spells-step" *transloco="let t; read: 'characters'">
+  @if (block()) {
+    <section class="spells-step__section spells-step__cantrips">
+      <h3 class="spells-step__title">{{ t('wizard.spells.cantripsTitle') }}</h3>
+      <p class="spells-step__helper">
+        {{
+          t('wizard.spells.cantripsHelper', { known: cantripsKnownIds().length, cap: cantripCap() })
+        }}
+      </p>
+      <hk-entity-picker
+        [ids]="cantripIds()"
+        [selectedIds]="cantripsKnownIds()"
+        [limit]="spellPickerLimit"
+        (toggled)="onToggleCantrip($event)"
+      />
+      @if (cantripCapReached()) {
+        <p class="spells-step__cap-message">
+          {{ t('wizard.spells.cantripCapReached', { cap: cantripCap() }) }}
+        </p>
+      }
+    </section>
+
+    <section class="spells-step__section spells-step__spellbook">
+      <h3 class="spells-step__title">{{ t('wizard.spells.spellbookTitle') }}</h3>
+      <p class="spells-step__helper">
+        {{ t('wizard.spells.spellbookHelper', { recommended: spellbookRecommended }) }}
+      </p>
+      <hk-entity-picker
+        [ids]="spellbookIds()"
+        [selectedIds]="spellbookKnownIds()"
+        [limit]="spellPickerLimit"
+        (toggled)="onToggleSpellbook($event)"
+      />
+    </section>
+
+    @if (spellbookKnownIds().length > 0) {
+      <section class="spells-step__section spells-step__prepared">
+        <h3 class="spells-step__title">{{ t('wizard.spells.preparedTitle') }}</h3>
+        <p class="spells-step__helper">
+          {{
+            t('wizard.spells.preparedHelper', {
+              prepared: preparedIds().length,
+              cap: preparedMax(),
+            })
+          }}
+        </p>
+        <ul class="spells-step__prepared-list">
+          @for (id of spellbookKnownIds(); track id) {
+            <li>
+              <button
+                type="button"
+                class="spells-step__prepared-toggle"
+                [attr.aria-pressed]="isPrepared(id)"
+                (click)="onTogglePrepared(id)"
+              >
+                {{ spellName(id) }}
+              </button>
+            </li>
+          }
+        </ul>
+        @if (preparedCapReached()) {
+          <p class="spells-step__cap-message">
+            {{ t('wizard.spells.preparedCapReached', { cap: preparedMax() }) }}
+          </p>
+        }
+      </section>
+    }
+
+    <button
+      hk-button
+      type="button"
+      class="spells-step__continue"
+      [variant]="'ghost'"
+      (click)="onContinue()"
+    >
+      {{ t('wizard.spells.continue') }}
+    </button>
+  }
+</div>

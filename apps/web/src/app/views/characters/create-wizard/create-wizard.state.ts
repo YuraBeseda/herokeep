@@ -11,6 +11,7 @@ import {
   type SystemRules,
 } from '@hk/engine';
 import { parseChoiceId, parseEvent, type Event, type GrammaticalGender } from '@hk/protocol';
+import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { type DraftEvent } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
@@ -81,6 +82,12 @@ export class CreateWizardState {
   readonly decisions = signal<ReadonlyMap<string, string[]>>(new Map());
   readonly decisionContexts = signal<ReadonlyMap<string, Record<string, unknown>>>(new Map());
   readonly extraDrafts = signal<readonly DraftEvent[]>([]);
+
+  /** User-confirmed "done" markers for the two free-form steps (task-8-brief.md) — 'spells' and
+   * 'equipment' have no engine decision to gate on, so `markStepDone` (called by each step's own
+   * "Continue" button) is the only way 'equipment' ever shows 'done', and one of two ways
+   * 'spells' does (see `spellsAutoDone`, below, for the other). */
+  readonly doneSteps = signal<ReadonlySet<string>>(new Set());
 
   private readonly systemId = computed<string | undefined>(() => {
     if (!this.packStore.ready()) return undefined;
@@ -176,6 +183,21 @@ export class CreateWizardState {
     const facts = this.draftFacts();
     if (!facts || !this.packStore.ready()) return [];
     return outstandingChoices(facts, this.engineFacade.index());
+  });
+
+  /** Auto-done rule for the 'spells' step (task-8-brief.md): `true` once at least one CANTRIP
+   * (spell level 0) has been learned for the draft's (single, 1b-scope) spellcasting class —
+   * `CreateWizardComponent.stepperSteps` ORs this with `doneSteps.has('spells')` so an explicit
+   * "Continue" skip also counts. `false` (never "auto-done") whenever there's no spellcasting
+   * block at all — the step wouldn't even be rendered then (see `steps()`, below). */
+  readonly spellsAutoDone: Signal<boolean> = computed(() => {
+    const block = this.draftSheet()?.spellcasting[0];
+    if (!block) return false;
+    const index = this.engineFacade.index();
+    return block.known.some((id) => {
+      const entity = index.get(id);
+      return entity?.type === 'spell' && entity.level === 0;
+    });
   });
 
   /** Decided choices whose CURRENT selection fails `validate` with at least one error (a
@@ -290,6 +312,125 @@ export class CreateWizardState {
     const facts = this.draftFacts();
     if (!sheet || !facts) return [];
     return validateSelection(sheet, facts, this.engineFacade.index(), choiceId, selection);
+  }
+
+  /** Marks a free-form step (`spells`/`equipment`) as user-confirmed-done — called by that step's
+   * own "Continue" button. Idempotent; `doneSteps` is otherwise never cleared (there is no path
+   * back to "not done" once the user has moved past a wizard step). */
+  markStepDone(stepId: string): void {
+    if (this.doneSteps().has(stepId)) return;
+    this.doneSteps.update((prev) => new Set(prev).add(stepId));
+  }
+
+  // --- spells/equipment step mutators (task-8-brief.md) ---------------------------------------
+  //
+  // `extraDrafts` is a DRAFT transaction, not a committed event log — nothing here has been
+  // persisted (see the class doc), so "un-selecting" a still-draft spell/prepared-slot is
+  // implemented by dropping its OWN queued draft outright, never by appending an opposite event
+  // (`spell.forgotten`/`spell.unprepared`) the way a real, already-committed `CharacterStore`
+  // mutation would have to. Equip/unequip and currency, by contrast, keep appending (an
+  // `item.equipped`/`item.unequipped` pair, or a replaced `currency.changed` — see `setCurrency`)
+  // because their effect is a flag/total the reducer folds, not a membership list to prune from.
+  //
+  // Every cap (`cantripsKnown`, `preparedMax`) is enforced by the CALLING step component, not
+  // here: the engine has no draft-validation for `extraDrafts` (unlike `decision.made`, which
+  // flows through `validateSelection`), so these mutators apply unconditionally whatever they're
+  // asked to.
+
+  private matchesSpellDraft(
+    draft: DraftEvent,
+    type: string,
+    spellId: string,
+    classId: string,
+  ): boolean {
+    if (draft.type !== type) return false;
+    const p = draft.payload as { spellId?: unknown; classId?: unknown };
+    return p.spellId === spellId && p.classId === classId;
+  }
+
+  /** Queues `spell.learned {spellId, classId, source:'levelUp'}` — a no-op if already queued. */
+  addSpellLearned(spellId: string, classId: string): void {
+    if (
+      this.extraDrafts().some((d) => this.matchesSpellDraft(d, 'spell.learned', spellId, classId))
+    ) {
+      return;
+    }
+    this.extraDrafts.update((prev) => [
+      ...prev,
+      { type: 'spell.learned', v: 1, payload: { spellId, classId, source: 'levelUp' } },
+    ]);
+  }
+
+  /** Drops a still-draft spell's `spell.learned` (and, since a spell can't stay prepared once
+   * it's not known, any matching `spell.prepared`) — see this section's header doc. */
+  removeSpellLearned(spellId: string, classId: string): void {
+    this.extraDrafts.update((prev) =>
+      prev.filter(
+        (d) =>
+          !this.matchesSpellDraft(d, 'spell.learned', spellId, classId) &&
+          !this.matchesSpellDraft(d, 'spell.prepared', spellId, classId),
+      ),
+    );
+  }
+
+  /** Queues `spell.prepared {spellId, classId}` — a no-op if already queued. */
+  addSpellPrepared(spellId: string, classId: string): void {
+    if (
+      this.extraDrafts().some((d) => this.matchesSpellDraft(d, 'spell.prepared', spellId, classId))
+    ) {
+      return;
+    }
+    this.extraDrafts.update((prev) => [
+      ...prev,
+      { type: 'spell.prepared', v: 1, payload: { spellId, classId } },
+    ]);
+  }
+
+  /** Drops a still-draft spell's `spell.prepared` — see this section's header doc. */
+  removeSpellPrepared(spellId: string, classId: string): void {
+    this.extraDrafts.update((prev) =>
+      prev.filter((d) => !this.matchesSpellDraft(d, 'spell.prepared', spellId, classId)),
+    );
+  }
+
+  /** Queues `item.added {instanceId, itemId, qty}` with a freshly minted `instanceId`, returning
+   * it so the caller can immediately follow up with `equipItem` for an equip-eligible category. */
+  addItem(itemId: string, qty: number): string {
+    const instanceId = uuidv7();
+    this.extraDrafts.update((prev) => [
+      ...prev,
+      { type: 'item.added', v: 1, payload: { instanceId, itemId, qty } },
+    ]);
+    return instanceId;
+  }
+
+  /** Queues `item.equipped {instanceId}`. */
+  equipItem(instanceId: string): void {
+    this.extraDrafts.update((prev) => [
+      ...prev,
+      { type: 'item.equipped', v: 1, payload: { instanceId } },
+    ]);
+  }
+
+  /** Queues `item.unequipped {instanceId}`. */
+  unequipItem(instanceId: string): void {
+    this.extraDrafts.update((prev) => [
+      ...prev,
+      { type: 'item.unequipped', v: 1, payload: { instanceId } },
+    ]);
+  }
+
+  /** Replaces any already-queued `currency.changed` with one carrying the newly entered totals,
+   * so the wizard's currency fields ever queue exactly ONE such draft, never accumulate a delta
+   * per keystroke. This is safe specifically because a fresh draft character's starting
+   * `facts.currency` is always `{0,0,0,0,0}` (see `packages/engine/src/reduce/facts.ts`) and only
+   * ONE `currency.changed` is ever queued at a time — so a from-zero delta and an entered total
+   * are the same number. */
+  setCurrency(totals: { cp?: number; sp?: number; ep?: number; gp?: number; pp?: number }): void {
+    this.extraDrafts.update((prev) => [
+      ...prev.filter((d) => d.type !== 'currency.changed'),
+      { type: 'currency.changed', v: 1, payload: totals },
+    ]);
   }
 
   /** `character.created` + `decision.made` (with contexts) per decision + `level.gained

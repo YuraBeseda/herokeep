@@ -1,0 +1,71 @@
+<div class="equipment-step" *transloco="let t; read: 'characters'">
+  <section class="equipment-step__section">
+    <h3 class="equipment-step__title">{{ t('wizard.equipment.addTitle') }}</h3>
+    <hk-number-field
+      class="equipment-step__qty"
+      [labelKey]="'characters.wizard.equipment.qtyLabel'"
+      [min]="1"
+      [step]="1"
+      [ngModel]="qty()"
+      (ngModelChange)="onQtyChange($event)"
+    />
+    <hk-entity-picker
+      [ids]="itemIds()"
+      [selectedIds]="addedItemIds()"
+      [limit]="itemPickerLimit"
+      (toggled)="onAddItem($event)"
+    />
+  </section>
+
+  @if (inventory().length > 0) {
+    <section class="equipment-step__section">
+      <h3 class="equipment-step__title">{{ t('wizard.equipment.inventoryTitle') }}</h3>
+      <ul class="equipment-step__inventory">
+        @for (entry of inventory(); track entry.instanceId) {
+          <li class="equipment-step__entry">
+            <span class="equipment-step__entry-name">
+              {{ entry.itemId ? itemName(entry.itemId) : entry.name }} × {{ entry.qty }}
+            </span>
+            @if (isEquipEligible(entry.itemId)) {
+              <button
+                type="button"
+                class="equipment-step__equip-toggle"
+                [attr.aria-pressed]="entry.equipped"
+                (click)="onToggleEquip(entry)"
+              >
+                {{ entry.equipped ? t('wizard.equipment.equipped') : t('wizard.equipment.equip') }}
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="equipment-step__section">
+    <h3 class="equipment-step__title">{{ t('wizard.equipment.currencyTitle') }}</h3>
+    <ul class="equipment-step__currency">
+      @for (denom of denominations; track denom) {
+        <li>
+          <hk-number-field
+            [labelKey]="'characters.wizard.equipment.currency.' + denom"
+            [min]="0"
+            [step]="1"
+            [ngModel]="currencyDraft()[denom]"
+            (ngModelChange)="onCurrencyChange(denom, $event)"
+          />
+        </li>
+      }
+    </ul>
+  </section>
+
+  <button
+    hk-button
+    type="button"
+    class="equipment-step__continue"
+    [variant]="'ghost'"
+    (click)="onContinue()"
+  >
+    {{ t('wizard.equipment.continue') }}
+  </button>
+</div>

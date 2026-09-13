@@ -83,6 +83,33 @@
     },
     "abilitiesImprove": {
       "deltaLabel": "+{delta}"
+    },
+    "spells": {
+      "cantripsTitle": "Заговори",
+      "cantripsHelper": "{known} / {cap} заговорів вивчено.",
+      "cantripCapReached": "Ви вивчили всі доступні на цьому рівні заговори ({cap}).",
+      "spellbookTitle": "Книга заклинань",
+      "spellbookHelper": "Рекомендуємо близько {recommended} заклинань для початкової книги — можна обрати більше.",
+      "preparedTitle": "Підготовлені заклинання",
+      "preparedHelper": "{prepared} / {cap} заклинань підготовлено.",
+      "preparedCapReached": "Ви підготували всі доступні на цьому рівні заклинання ({cap}).",
+      "continue": "Далі"
+    },
+    "equipment": {
+      "addTitle": "Додати спорядження",
+      "qtyLabel": "Кількість",
+      "inventoryTitle": "Інвентар",
+      "equip": "Спорядити",
+      "equipped": "Споряджено",
+      "currencyTitle": "Валюта",
+      "currency": {
+        "cp": "Мідь",
+        "sp": "Срібло",
+        "ep": "Електрум",
+        "gp": "Золото",
+        "pp": "Платина"
+      },
+      "continue": "Далі"
     }
   },
   "validation": {

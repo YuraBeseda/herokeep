@@ -83,6 +83,33 @@
     },
     "abilitiesImprove": {
       "deltaLabel": "+{delta}"
+    },
+    "spells": {
+      "cantripsTitle": "Cantrips",
+      "cantripsHelper": "{known} / {cap} cantrips known.",
+      "cantripCapReached": "You've learned every cantrip you can know at this level ({cap}).",
+      "spellbookTitle": "Spellbook",
+      "spellbookHelper": "We recommend around {recommended} spells for your starting spellbook — you may learn more.",
+      "preparedTitle": "Prepared spells",
+      "preparedHelper": "{prepared} / {cap} spells prepared.",
+      "preparedCapReached": "You've prepared every spell you can at this level ({cap}).",
+      "continue": "Continue"
+    },
+    "equipment": {
+      "addTitle": "Add equipment",
+      "qtyLabel": "Quantity",
+      "inventoryTitle": "Inventory",
+      "equip": "Equip",
+      "equipped": "Equipped",
+      "currencyTitle": "Currency",
+      "currency": {
+        "cp": "Copper",
+        "sp": "Silver",
+        "ep": "Electrum",
+        "gp": "Gold",
+        "pp": "Platinum"
+      },
+      "continue": "Continue"
     }
   },
   "validation": {

@@ -83,6 +83,33 @@
     },
     "abilitiesImprove": {
       "deltaLabel": "+{delta}"
+    },
+    "spells": {
+      "cantripsTitle": "Заговоры",
+      "cantripsHelper": "{known} / {cap} заговоров изучено.",
+      "cantripCapReached": "Вы изучили все доступные на этом уровне заговоры ({cap}).",
+      "spellbookTitle": "Книга заклинаний",
+      "spellbookHelper": "Рекомендуем около {recommended} заклинаний для начальной книги — можно выбрать больше.",
+      "preparedTitle": "Подготовленные заклинания",
+      "preparedHelper": "{prepared} / {cap} заклинаний подготовлено.",
+      "preparedCapReached": "Вы подготовили все доступные на этом уровне заклинания ({cap}).",
+      "continue": "Далее"
+    },
+    "equipment": {
+      "addTitle": "Добавить снаряжение",
+      "qtyLabel": "Количество",
+      "inventoryTitle": "Инвентарь",
+      "equip": "Экипировать",
+      "equipped": "Экипировано",
+      "currencyTitle": "Валюта",
+      "currency": {
+        "cp": "Медь",
+        "sp": "Серебро",
+        "ep": "Электрум",
+        "gp": "Золото",
+        "pp": "Платина"
+      },
+      "continue": "Далее"
     }
   },
   "validation": {
