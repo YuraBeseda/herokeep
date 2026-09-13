@@ -291,7 +291,17 @@
     },
     "conditions": {
       "title": "Стани",
-      "empty": "Немає станів."
+      "empty": "Немає станів.",
+      "add": "Додати стан",
+      "remove": "Прибрати стан",
+      "chipLabel": "{name} ({level})",
+      "addDialog": {
+        "title": "Додати стан",
+        "conditionLabel": "Стан",
+        "levelLabel": "Рівень",
+        "cancel": "Скасувати",
+        "confirm": "Додати"
+      }
     },
     "proficiencies": {
       "title": "Володіння",
@@ -311,6 +321,29 @@
       "title": "Інвентар",
       "entry": "{name} × {qty}",
       "empty": "Нічого не взято."
+    },
+    "notes": {
+      "title": "Нотатки",
+      "empty": "Поки що немає нотаток.",
+      "add": "Додати нотатку",
+      "edit": "Редагувати",
+      "remove": "Видалити",
+      "untitled": "Без назви",
+      "dialog": {
+        "addTitle": "Додати нотатку",
+        "editTitle": "Редагувати нотатку",
+        "titleLabel": "Заголовок",
+        "bodyLabel": "Текст",
+        "bodyTooLong": "Нотатка занадто довга ({length} / {max} символів).",
+        "cancel": "Скасувати",
+        "save": "Зберегти"
+      },
+      "deleteConfirm": {
+        "title": "Видалити нотатку?",
+        "body": "Цю нотатку буде видалено без можливості відновлення.",
+        "cancel": "Скасувати",
+        "confirm": "Видалити"
+      }
     },
     "derivedPopover": {
       "title": "Розрахунок",

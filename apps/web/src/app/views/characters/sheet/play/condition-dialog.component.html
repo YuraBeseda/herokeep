@@ -1,0 +1,36 @@
+<ng-container *transloco="let t">
+  <h2 class="condition-dialog__title">{{ t('characters.sheet.conditions.addDialog.title') }}</h2>
+
+  <label class="condition-dialog__field">
+    <span>{{ t('characters.sheet.conditions.addDialog.conditionLabel') }}</span>
+    <select
+      class="condition-dialog__select"
+      (change)="onConditionChange($any($event.target).value)"
+    >
+      @for (option of data.options; track option.id) {
+        <option [value]="option.id" [selected]="option.id === selectedId()">
+          {{ option.name }}
+        </option>
+      }
+    </select>
+  </label>
+
+  @if (showsLevel()) {
+    <hk-number-field
+      [labelKey]="'characters.sheet.conditions.addDialog.levelLabel'"
+      [min]="1"
+      [step]="1"
+      [ngModel]="level()"
+      (ngModelChange)="onLevelChange($event)"
+    />
+  }
+
+  <div class="condition-dialog__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+      {{ t('characters.sheet.conditions.addDialog.cancel') }}
+    </button>
+    <button hk-button type="button" [disabled]="!selectedId()" (click)="confirm()">
+      {{ t('characters.sheet.conditions.addDialog.confirm') }}
+    </button>
+  </div>
+</ng-container>

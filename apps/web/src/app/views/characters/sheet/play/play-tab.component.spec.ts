@@ -836,3 +836,242 @@ describe('PlayTabComponent — slots, resources, casting, concentration controls
     expect(compiled.querySelector('.play-tab__concentration')).toBeNull();
   });
 });
+
+// task-4-brief.md: the condition-add dialog (localized picker + data-driven level stepper),
+// per-chip remove, and the new Notes section's add/edit/remove dialogs. Every scenario drives the
+// real `ConditionDialogComponent`/`NoteDialogComponent`/`NoteDeleteConfirmComponent` overlays this
+// component opens via `DialogService`, same "exercise the real propose->appendTx wiring" and
+// `pollUntil` conventions the slots/resources describe block above establishes.
+describe('PlayTabComponent — conditions and notes controls', () => {
+  const EXHAUSTION_ID = 'srd-5e-2024:condition/exhaustion';
+  const BLINDED_ID = 'srd-5e-2024:condition/blinded';
+
+  beforeEach(async () => {
+    // Same locale-leak guard as the slots/resources describe block above (`hk.locale` persists to
+    // REAL localStorage and TestBed teardown never clears it between describe blocks).
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  function overlay(): HTMLElement {
+    return document.querySelector<HTMLElement>('.cdk-overlay-container')!;
+  }
+
+  it('adding a non-level condition round-trips into sheet.conditions and renders a localized chip', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.conditions.add).click();
+    TestBed.tick();
+
+    const select = overlay().querySelector<HTMLSelectElement>('select')!;
+    select.value = BLINDED_ID;
+    select.dispatchEvent(new Event('change'));
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.conditions.addDialog.confirm).click();
+
+    await pollUntil(fixture, () => (characterStore.sheet()?.conditions.length ?? 0) === 1);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'condition.added',
+      payload: { conditionId: BLINDED_ID },
+    });
+
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.play-tab__conditions')!.textContent).toContain('Blinded');
+  });
+
+  it('exhaustion added at level 3, then re-added at level 2, replaces the entry (reducer replace-by-conditionId)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    async function addExhaustion(level: number): Promise<void> {
+      buttonNamed(compiled, charactersEn.sheet.conditions.add).click();
+      TestBed.tick();
+      const select = overlay().querySelector<HTMLSelectElement>('select')!;
+      select.value = EXHAUSTION_ID;
+      select.dispatchEvent(new Event('change'));
+      TestBed.tick();
+      const levelInput = overlay().querySelector<HTMLInputElement>('input[type="number"]')!;
+      levelInput.value = String(level);
+      levelInput.dispatchEvent(new Event('input'));
+      TestBed.tick();
+      buttonNamed(overlay(), charactersEn.sheet.conditions.addDialog.confirm).click();
+      await pollUntil(
+        fixture,
+        () =>
+          characterStore.sheet()?.conditions.find((c) => c.conditionId === EXHAUSTION_ID)?.level ===
+          level,
+      );
+    }
+
+    await addExhaustion(3);
+    expect(characterStore.sheet()!.conditions).toHaveLength(1);
+
+    await addExhaustion(2);
+    expect(characterStore.sheet()!.conditions).toHaveLength(1);
+    expect(characterStore.sheet()!.conditions[0]).toMatchObject({
+      conditionId: EXHAUSTION_ID,
+      level: 2,
+    });
+  });
+
+  it('removing a condition via the chip clears it from sheet.conditions', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(propose.condition(characterStore.sheet()!, BLINDED_ID, true));
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const removeButton = compiled.querySelector<HTMLButtonElement>(
+      '.play-tab__conditions .hk-chip__remove',
+    )!;
+    removeButton.click();
+
+    await pollUntil(fixture, () => (characterStore.sheet()?.conditions.length ?? 0) === 0);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'condition.removed',
+      payload: { conditionId: BLINDED_ID },
+    });
+  });
+
+  it('note add/edit/remove round-trips through propose.note (each via its own dialog)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    let compiled = fixture.nativeElement as HTMLElement;
+
+    // Add
+    buttonNamed(compiled, charactersEn.sheet.notes.add).click();
+    TestBed.tick();
+    const addTitleInput = overlay().querySelector<HTMLInputElement>('input[type="text"]')!;
+    addTitleInput.value = 'Loot';
+    addTitleInput.dispatchEvent(new Event('input'));
+    const addBodyInput = overlay().querySelector<HTMLTextAreaElement>('textarea')!;
+    addBodyInput.value = 'A sword.';
+    addBodyInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.notes.dialog.save).click();
+
+    await pollUntil(fixture, () => (characterStore.facts()?.notes.length ?? 0) === 1);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'note.added',
+      payload: { title: 'Loot', body: 'A sword.' },
+    });
+
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.play-tab__notes')!.textContent).toContain('Loot');
+
+    // Edit
+    buttonNamed(compiled, charactersEn.sheet.notes.edit).click();
+    TestBed.tick();
+    const editBodyInput = overlay().querySelector<HTMLTextAreaElement>('textarea')!;
+    expect(editBodyInput.value).toBe('A sword.');
+    editBodyInput.value = 'A +1 sword.';
+    editBodyInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.notes.dialog.save).click();
+
+    await pollUntil(fixture, () => characterStore.facts()?.notes[0]?.body === 'A +1 sword.');
+    expect(characterStore.events().at(-1)).toMatchObject({ type: 'note.updated' });
+
+    // Remove (behind its own confirm dialog)
+    compiled = fixture.nativeElement as HTMLElement;
+    buttonNamed(compiled, charactersEn.sheet.notes.remove).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.notes.deleteConfirm.confirm).click();
+
+    await pollUntil(fixture, () => (characterStore.facts()?.notes.length ?? 0) === 0);
+    expect(characterStore.events().at(-1)).toMatchObject({ type: 'note.removed' });
+  });
+
+  it('cancelling the remove-note confirm dialog appends nothing and keeps the note', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(
+      propose.note('added', { id: '01930000-0000-7000-8000-000000000001', title: 'Loot' }),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const eventsBefore = characterStore.events().length;
+
+    buttonNamed(compiled, charactersEn.sheet.notes.remove).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.notes.deleteConfirm.cancel).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBefore);
+    expect(characterStore.facts()?.notes).toHaveLength(1);
+  });
+
+  it('a note body over the protocol byte limit is blocked in the dialog with a localized message, and appends nothing', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const eventsBefore = characterStore.events().length;
+
+    buttonNamed(compiled, charactersEn.sheet.notes.add).click();
+    TestBed.tick();
+    const bodyInput = overlay().querySelector<HTMLTextAreaElement>('textarea')!;
+    bodyInput.value = 'x'.repeat(8193); // 1 over NoteAddedV1.shape.body's Zod .max(8192)
+    bodyInput.dispatchEvent(new Event('input'));
+    TestBed.tick();
+
+    expect(overlay().querySelector('.note-dialog__error')).not.toBeNull();
+    const saveButton = buttonNamed(overlay(), charactersEn.sheet.notes.dialog.save);
+    expect(saveButton.disabled).toBe(true);
+    saveButton.click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBefore);
+  });
+});

@@ -291,7 +291,17 @@
     },
     "conditions": {
       "title": "Состояния",
-      "empty": "Нет состояний."
+      "empty": "Нет состояний.",
+      "add": "Добавить состояние",
+      "remove": "Убрать состояние",
+      "chipLabel": "{name} ({level})",
+      "addDialog": {
+        "title": "Добавить состояние",
+        "conditionLabel": "Состояние",
+        "levelLabel": "Уровень",
+        "cancel": "Отмена",
+        "confirm": "Добавить"
+      }
     },
     "proficiencies": {
       "title": "Владения",
@@ -311,6 +321,29 @@
       "title": "Инвентарь",
       "entry": "{name} × {qty}",
       "empty": "Ничего не взято."
+    },
+    "notes": {
+      "title": "Заметки",
+      "empty": "Пока нет заметок.",
+      "add": "Добавить заметку",
+      "edit": "Изменить",
+      "remove": "Удалить",
+      "untitled": "Без названия",
+      "dialog": {
+        "addTitle": "Добавить заметку",
+        "editTitle": "Изменить заметку",
+        "titleLabel": "Заголовок",
+        "bodyLabel": "Текст",
+        "bodyTooLong": "Заметка слишком длинная ({length} / {max} символов).",
+        "cancel": "Отмена",
+        "save": "Сохранить"
+      },
+      "deleteConfirm": {
+        "title": "Удалить заметку?",
+        "body": "Эта заметка будет удалена без возможности восстановления.",
+        "cancel": "Отмена",
+        "confirm": "Удалить"
+      }
     },
     "derivedPopover": {
       "title": "Расчёт",

@@ -1,0 +1,49 @@
+<ng-container *transloco="let t">
+  <h2 class="note-dialog__title">
+    {{
+      data.mode === 'add'
+        ? t('characters.sheet.notes.dialog.addTitle')
+        : t('characters.sheet.notes.dialog.editTitle')
+    }}
+  </h2>
+
+  <label class="note-dialog__field">
+    <span>{{ t('characters.sheet.notes.dialog.titleLabel') }}</span>
+    <input
+      type="text"
+      class="note-dialog__title-input"
+      [value]="title()"
+      (input)="onTitleChange($any($event.target).value)"
+    />
+  </label>
+
+  <label class="note-dialog__field">
+    <span>{{ t('characters.sheet.notes.dialog.bodyLabel') }}</span>
+    <textarea
+      class="note-dialog__body-input"
+      [attr.maxlength]="data.maxBodyLength"
+      [value]="body()"
+      (input)="onBodyChange($any($event.target).value)"
+    ></textarea>
+  </label>
+
+  @if (bodyTooLong()) {
+    <p class="note-dialog__error">
+      {{
+        t('characters.sheet.notes.dialog.bodyTooLong', {
+          length: bodyLength(),
+          max: data.maxBodyLength,
+        })
+      }}
+    </p>
+  }
+
+  <div class="note-dialog__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+      {{ t('characters.sheet.notes.dialog.cancel') }}
+    </button>
+    <button hk-button type="button" [disabled]="bodyTooLong()" (click)="confirm()">
+      {{ t('characters.sheet.notes.dialog.save') }}
+    </button>
+  </div>
+</ng-container>

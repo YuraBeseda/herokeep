@@ -446,10 +446,33 @@
 
     <!-- Conditions -->
     <hk-sheet-section [titleKey]="'characters.sheet.conditions.title'" class="play-tab__section">
+      <button
+        hk-button
+        type="button"
+        class="play-tab__conditions-add"
+        [variant]="'ghost'"
+        (click)="onAddCondition()"
+      >
+        {{ t('sheet.conditions.add') }}
+      </button>
       @if (conditions().length > 0) {
         <div class="play-tab__conditions">
           @for (condition of conditions(); track condition.id) {
-            <hk-chip [selected]="true">{{ condition.name }}</hk-chip>
+            <hk-chip
+              [selected]="true"
+              [removable]="true"
+              (remove)="onRemoveCondition(condition.id)"
+            >
+              {{
+                condition.level !== undefined
+                  ? t('sheet.conditions.chipLabel', {
+                      name: condition.name,
+                      level: condition.level,
+                    })
+                  : condition.name
+              }}
+              <span hk-chip-remove class="visually-hidden">{{ t('sheet.conditions.remove') }}</span>
+            </hk-chip>
           }
         </div>
       } @else {
@@ -515,6 +538,40 @@
         </ul>
       } @else {
         <p class="play-tab__empty">{{ t('sheet.inventory.empty') }}</p>
+      }
+    </hk-sheet-section>
+
+    <!-- Notes (freeform, session-local per-character; task-4-brief.md — Facts.notes, no Sheet
+         projection) -->
+    <hk-sheet-section
+      [titleKey]="'characters.sheet.notes.title'"
+      [collapsible]="true"
+      class="play-tab__section"
+    >
+      <button hk-button type="button" class="play-tab__notes-add" (click)="onAddNote()">
+        {{ t('sheet.notes.add') }}
+      </button>
+      @if (notes().length > 0) {
+        <ul class="play-tab__notes">
+          @for (note of notes(); track note.id) {
+            <li class="play-tab__note">
+              <h3 class="play-tab__note-title">{{ note.title || t('sheet.notes.untitled') }}</h3>
+              @if (note.body) {
+                <p class="play-tab__note-body">{{ note.body }}</p>
+              }
+              <div class="play-tab__note-actions">
+                <button hk-button type="button" [variant]="'ghost'" (click)="onEditNote(note)">
+                  {{ t('sheet.notes.edit') }}
+                </button>
+                <button hk-button type="button" [variant]="'ghost'" (click)="onRemoveNote(note)">
+                  {{ t('sheet.notes.remove') }}
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.notes.empty') }}</p>
       }
     </hk-sheet-section>
   </div>

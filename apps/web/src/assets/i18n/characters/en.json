@@ -291,7 +291,17 @@
     },
     "conditions": {
       "title": "Conditions",
-      "empty": "No conditions."
+      "empty": "No conditions.",
+      "add": "Add condition",
+      "remove": "Remove condition",
+      "chipLabel": "{name} ({level})",
+      "addDialog": {
+        "title": "Add condition",
+        "conditionLabel": "Condition",
+        "levelLabel": "Level",
+        "cancel": "Cancel",
+        "confirm": "Add"
+      }
     },
     "proficiencies": {
       "title": "Proficiencies",
@@ -311,6 +321,29 @@
       "title": "Inventory",
       "entry": "{name} × {qty}",
       "empty": "Nothing carried."
+    },
+    "notes": {
+      "title": "Notes",
+      "empty": "No notes yet.",
+      "add": "Add note",
+      "edit": "Edit",
+      "remove": "Remove",
+      "untitled": "Untitled",
+      "dialog": {
+        "addTitle": "Add note",
+        "editTitle": "Edit note",
+        "titleLabel": "Title",
+        "bodyLabel": "Note",
+        "bodyTooLong": "This note is too long ({length} / {max} characters).",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "deleteConfirm": {
+        "title": "Remove note?",
+        "body": "This note will be permanently removed.",
+        "cancel": "Cancel",
+        "confirm": "Remove"
+      }
     },
     "derivedPopover": {
       "title": "Breakdown",

@@ -7,11 +7,13 @@ import {
   ProposeError,
   type ContentIndex,
   type Localizer,
+  type NoteEntry,
   type ProposedEvent,
   type Sheet,
 } from '@hk/engine';
 import {
   makeEntityId,
+  NoteAddedV1,
   parseEntityId,
   type ConcentrationEnded,
   type ResourceRestored,
@@ -24,7 +26,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
 import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { PipsComponent } from '@shared/components/pips/pips.component';
@@ -36,12 +38,61 @@ import {
   type DerivedValue,
 } from '@shared/directives/derived-popover.directive';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
+import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
+import {
+  ConditionDialogComponent,
+  type ConditionDialogData,
+  type ConditionDialogOption,
+  type ConditionDialogResult,
+} from './condition-dialog.component';
+import {
+  NoteDialogComponent,
+  type NoteDialogData,
+  type NoteDialogResult,
+} from './note-dialog.component';
 
 type DeathSaveResult = 'success' | 'failure' | 'critSuccess' | 'critFailure';
+
+/** Same-content-provider pattern as `TimelineRevertConfirmComponent`
+ * (`timeline-tab.component.ts`): `DialogService.open()` attaches this under a NEW injector rooted
+ * at the app's root, not `PlayTabComponent`'s own `provideTranslocoScope('characters')` — it reads
+ * the global (unscoped) `*transloco` lookup instead, safe because the `characters` scope is
+ * already loaded by the time this dialog can open (its only caller loaded it first). */
+@Component({
+  selector: 'app-note-delete-confirm',
+  imports: [TranslocoDirective, ButtonComponent],
+  template: `
+    <ng-container *transloco="let t">
+      <h2 class="note-delete-confirm__title">
+        {{ t('characters.sheet.notes.deleteConfirm.title') }}
+      </h2>
+      <p class="note-delete-confirm__body">{{ t('characters.sheet.notes.deleteConfirm.body') }}</p>
+      <div class="note-delete-confirm__actions">
+        <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+          {{ t('characters.sheet.notes.deleteConfirm.cancel') }}
+        </button>
+        <button hk-button type="button" [variant]="'danger'" (click)="confirm()">
+          {{ t('characters.sheet.notes.deleteConfirm.confirm') }}
+        </button>
+      </div>
+    </ng-container>
+  `,
+})
+export class NoteDeleteConfirmComponent {
+  private readonly dialogRef = inject(DialogRef);
+
+  protected confirm(): void {
+    this.dialogRef.close(true);
+  }
+
+  protected cancel(): void {
+    this.dialogRef.close(false);
+  }
+}
 
 // task-3-brief.md extends this set: `propose.spendSlot`/`propose.cast` (`packages/engine/src/
 // propose/casting.ts`) are the first play-tab proposers that DO throw — both refuse with
@@ -251,6 +302,37 @@ export class PlayTabComponent {
       level: c.level,
     }));
   });
+
+  // task-4-brief.md: the condition-add dialog's options — `index.system().conditions` (the
+  // pack's own entity-id list, never a hardcoded set) resolved to a localized name and a
+  // data-driven `levelBearing` flag. `levelBearing` reads `ConditionEntitySchema.levels`
+  // (`@hk/protocol`) — present ONLY on the pack's exhaustion entity today, but never assumed to
+  // be exhaustion specifically; any future level-bearing condition the pack adds picks this up
+  // automatically. Sorted alphabetically by localized name, same convention as `skillRows`.
+  protected readonly conditionOptions = computed<ConditionDialogOption[]>(() => {
+    const index = this.engineFacade.index();
+    return index
+      .system()
+      .conditions.map((id) => {
+        const entity = index.get(id);
+        const levelBearing =
+          (entity?.type === 'condition' ? entity.levels : undefined) !== undefined;
+        return { id, name: this.resolveName(id), levelBearing };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  // `Facts.notes` (`reduce/facts.ts`) — notes are freeform stream state with no derived-`Sheet`
+  // projection of their own (`propose.note`'s own header comment: "no `Sheet` input, unlike every
+  // other proposer"), so this reads `CharacterStore.facts()` directly rather than `sheet()`.
+  protected readonly notes = computed<NoteEntry[]>(() => this.characterStore.facts()?.notes ?? []);
+
+  // The protocol schema's own `NoteAdded.body` cap (`NoteAddedV1.shape.body`'s Zod `.max(8192)`)
+  // — resolved via `.unwrap().maxLength` (mirrors `create-wizard.component.ts`'s own
+  // `ShortTextSchema.maxLength` convention) so the note dialog's over-limit guard is never a
+  // duplicated magic number.
+  protected readonly noteBodyMaxLength =
+    NoteAddedV1.shape.body.unwrap().maxLength ?? Number.MAX_SAFE_INTEGER;
 
   protected readonly proficiencyRows = computed<{ kind: string; target: string; level: string }[]>(
     () => {
@@ -548,6 +630,69 @@ export class PlayTabComponent {
     this.appendDraft([
       { type: 'concentration.ended', v: 1, payload: {} satisfies ConcentrationEnded },
     ]);
+  }
+
+  // --- Conditions, exhaustion, notes (task-4-brief.md) ------------------------------------------
+
+  // Opens `ConditionDialogComponent` with the pre-resolved option list (never built inside the
+  // dialog — same "resolve before opening" convention `onCastLeveled` uses for `availableSlots`).
+  // `propose.condition` never throws (it has no refusal path — `packages/engine/src/propose/
+  // vitals.ts`), so this still funnels through `tryPropose` only for its shared appendTx wiring,
+  // not because a `ProposeError` is expected here.
+  protected async onAddCondition(): Promise<void> {
+    const options = this.conditionOptions();
+    if (options.length === 0) return;
+    const handle = this.dialogService.open(ConditionDialogComponent, {
+      data: { options } satisfies ConditionDialogData,
+    });
+    const result = (await handle.closed) as ConditionDialogResult | undefined;
+    if (!result) return;
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.condition(sheet, result.conditionId, true, result.level));
+  }
+
+  protected onRemoveCondition(conditionId: string): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.condition(sheet, conditionId, false));
+  }
+
+  // `propose.note` takes no `Sheet` (its own header comment) — every note action below fires
+  // straight through `appendDraft`, same fire-and-forget convention as every other hand-assembled
+  // draft in this component (no `ProposeError` this proposer could ever throw).
+  protected async onAddNote(): Promise<void> {
+    const handle = this.dialogService.open(NoteDialogComponent, {
+      data: { mode: 'add', maxBodyLength: this.noteBodyMaxLength } satisfies NoteDialogData,
+    });
+    const result = (await handle.closed) as NoteDialogResult | undefined;
+    if (!result) return;
+    this.appendDraft(
+      propose.note('added', { id: uuidv7(), title: result.title, body: result.body }),
+    );
+  }
+
+  protected async onEditNote(note: NoteEntry): Promise<void> {
+    const handle = this.dialogService.open(NoteDialogComponent, {
+      data: {
+        mode: 'edit',
+        title: note.title || undefined,
+        body: note.body || undefined,
+        maxBodyLength: this.noteBodyMaxLength,
+      } satisfies NoteDialogData,
+    });
+    const result = (await handle.closed) as NoteDialogResult | undefined;
+    if (!result) return;
+    this.appendDraft(
+      propose.note('updated', { id: note.id, title: result.title, body: result.body }),
+    );
+  }
+
+  protected async onRemoveNote(note: NoteEntry): Promise<void> {
+    const handle = this.dialogService.open(NoteDeleteConfirmComponent);
+    const confirmed = await handle.closed;
+    if (confirmed !== true) return;
+    this.appendDraft(propose.note('removed', { id: note.id }));
   }
 
   // Resolves a known/prepared spellId (task-3-brief.md): `level`/`concentration` read straight off
