@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { ShortTextSchema, type GrammaticalGender } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -8,10 +8,13 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { CreateWizardState, type WizardStep } from './create-wizard.state';
 
+// Relative to the 'characters' scope (this component's own template reads `t()` scoped via
+// `*transloco="let t; read: 'characters'"` — unlike `WizardStep.labelKey`, which is read by
+// `hk-stepper`'s own UNSCOPED template and therefore needs the full `characters.` prefix).
 const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
-  { value: 'masculine', labelKey: 'characters.wizard.name.genderMasculine' },
-  { value: 'feminine', labelKey: 'characters.wizard.name.genderFeminine' },
-  { value: 'neuter', labelKey: 'characters.wizard.name.genderNeuter' },
+  { value: 'masculine', labelKey: 'wizard.name.genderMasculine' },
+  { value: 'feminine', labelKey: 'wizard.name.genderFeminine' },
+  { value: 'neuter', labelKey: 'wizard.name.genderNeuter' },
 ];
 
 /**
@@ -91,6 +94,38 @@ export class CreateWizardComponent {
   protected readonly complete = computed(
     () => this.state.outstanding().length === 0 && this.state.name().trim().length > 0,
   );
+
+  protected readonly genderLabelKey = computed(() => {
+    const option = this.genderOptions.find((o) => o.value === this.state.gender());
+    return option?.labelKey ?? this.genderOptions[0].labelKey;
+  });
+
+  // Steps are removed the moment their decision is recorded (`CreateWizardState.steps` is
+  // re-derived from `outstandingChoices`, not appended-to — see its class doc). A future
+  // species/background/etc. step component (T6-9) can legitimately call `setDecision` on the
+  // CURRENTLY ACTIVE step without navigating away first, which would otherwise strand
+  // `activeStepId` on a vanished id: `currentIndex` becomes -1, and `canGoBack`/`canGoNext` both
+  // read false, dead-ending the footer (only a stepper-nav click on a 'done' step could recover).
+  // This effect re-homes `activeStepId` whenever it stops appearing in `state.steps()`: it lands
+  // on whatever now sits at the vanished step's OWN former ordinal position (i.e. the next
+  // undecided step that took its place), clamped to the new (shorter) list, falling back to the
+  // last step ('review') if that former position can't be recovered. `steps()` is the only
+  // tracked dependency (recomputes only when the derived list itself changes, not on every
+  // deliberate `activeStepId` navigation); prior state is read via `untracked` so this effect
+  // never re-triggers itself off its own write.
+  private previousSteps: WizardStep[] = [];
+  private readonly reHomeActiveStep = effect(() => {
+    const steps = this.state.steps();
+    const activeId = untracked(() => this.activeStepId());
+    if (!steps.some((s) => s.id === activeId)) {
+      const formerIndex = this.previousSteps.findIndex((s) => s.id === activeId);
+      const targetIndex =
+        formerIndex === -1 ? steps.length - 1 : Math.min(formerIndex, steps.length - 1);
+      const target = steps[targetIndex] ?? steps.at(-1);
+      if (target) this.activeStepId.set(target.id);
+    }
+    this.previousSteps = steps;
+  });
 
   // Ability line + chosen entity names for the review skeleton (task-5-brief.md: "renders the
   // draft summary skeleton"). Full presentation (icons, grouping, spell/equipment lists) is

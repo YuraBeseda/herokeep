@@ -149,6 +149,42 @@ describe('CreateWizardComponent', () => {
     ]);
   });
 
+  it('re-homes the active step when its own decision is set without navigating away first', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const root = () => fixture.nativeElement as HTMLElement;
+
+    const input = root().querySelector<HTMLInputElement>('.create-wizard__name-input');
+    input!.value = 'Aldric';
+    input!.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    // Navigate to 'species' via the public Next button (name -> species).
+    root().querySelector<HTMLButtonElement>('.create-wizard__next')!.click();
+    await fixture.whenStable();
+    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe('Species');
+
+    // A future species-step component (T6) would call `setDecision` here without itself calling
+    // `next()` first — species is now decided while it is still the ACTIVE step, so it vanishes
+    // from `state.steps()` out from under `activeStepId`.
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
+    await fixture.whenStable();
+
+    // Re-homed to whatever now sits at species' own former ordinal position — 'background', which
+    // shifted left into that slot — not stranded, and the footer works in both directions again.
+    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe(
+      'Background',
+    );
+    expect(root().querySelector<HTMLButtonElement>('.create-wizard__back')?.disabled).toBe(false);
+    expect(root().querySelector<HTMLButtonElement>('.create-wizard__next')?.disabled).toBe(false);
+
+    // Back/Next both still actually navigate (not just enabled-but-inert).
+    root().querySelector<HTMLButtonElement>('.create-wizard__back')!.click();
+    await fixture.whenStable();
+    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe('Name');
+  });
+
   it('the create button becomes enabled once every outstanding choice is decided, and creating navigates to /c/<id>/play', async () => {
     const fixture = TestBed.createComponent(CreateWizardComponent);
     await fixture.whenStable();
@@ -185,6 +221,9 @@ describe('CreateWizardComponent', () => {
     );
     expect(button).not.toBeNull();
     expect(button?.disabled).toBe(false);
+    // The review skeleton's gender row resolves the SCOPED gender label key correctly (no
+    // double-prefixed 'characters.characters....' lookup miss).
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Masculine');
 
     button!.click();
     await fixture.whenStable();

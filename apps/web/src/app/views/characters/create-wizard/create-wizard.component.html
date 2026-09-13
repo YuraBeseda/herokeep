@@ -48,6 +48,8 @@
           <dl class="create-wizard__summary">
             <dt>{{ t('wizard.review.nameLabel') }}</dt>
             <dd>{{ state.name() }}</dd>
+            <dt>{{ t('wizard.review.genderLabel') }}</dt>
+            <dd>{{ t(genderLabelKey()) }}</dd>
           </dl>
 
           @if (state.draftSheet(); as sheet) {
