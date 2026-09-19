@@ -1,0 +1,27 @@
+# Caddy reverse-proxy config for the herokeep self-host recipe (ADR-014 Adapter B;
+# docs/self-hosting-windows.md's "Caddy reverse proxy" step). Copy this file to Caddyfile (no
+# extension) next to caddy.exe, replace YOUR-SUBDOMAIN.duckdns.org below with your real dynamic-DNS
+# hostname, and point herokeep-server's HK_PORT (default 8787) at the same port used here.
+#
+# Verified against Caddy's own Caddyfile reverse_proxy syntax (caddyserver.com/docs/caddyfile/
+# directives/reverse_proxy, caddyserver.com/docs/quick-starts/reverse-proxy) 2026-09-19: a site
+# block whose address is a real hostname (not a bare IP) gets AUTOMATIC HTTPS via Let's Encrypt for
+# free, with zero extra config, as long as DNS already points at this machine's public IP and ports
+# 80/443 are reachable from the internet (docs/self-hosting-windows.md's router/firewall steps).
+#
+# Optional: a global options block (email for Let's Encrypt expiry/problem notifications) MUST be
+# the very first block in the file if you use one -- Caddy only accepts it there. Uncomment and set
+# a real address if you want the notifications; Caddy works fine without this too.
+# {
+# 	email you@example.com
+# }
+
+# YOUR-SUBDOMAIN.duckdns.org -- replace with your actual DuckDNS/FreeDNS hostname (ADR-014's open
+# point on which free dynamic-DNS provider is still operating -- both were verified operational on
+# 2026-09-19, see docs/self-hosting-windows.md's "Dynamic DNS" section for the check and citations).
+YOUR-SUBDOMAIN.duckdns.org {
+	# Everything (the Angular app's static assets AND /api/* AND the /api/characters/:id/ws
+	# WebSocket upgrade) is served by the SAME herokeep-server process on one port -- there is
+	# only one backend to proxy to, no path-based routing needed here.
+	reverse_proxy 127.0.0.1:8787
+}

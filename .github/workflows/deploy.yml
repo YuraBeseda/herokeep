@@ -58,9 +58,19 @@ jobs:
   # bundle + `apps/web/dist` + scripts) so a self-host update is 'download, stop service, unzip,
   # start service'." Independent of `deploy-cloudflare` above (no `needs:`, no secret required) --
   # this always runs on a push to main, Cloudflare-token or not, since it deploys nothing itself.
-  # `docs/self-hosting-windows.md` (a later task, ADR-014's own recipe) is the install/upgrade
-  # runbook for what an operator actually does with this artifact on the target machine; this job
-  # only builds and publishes it.
+  # `docs/self-hosting-windows.md` (ADR-014's own recipe) is the install/upgrade runbook for what an
+  # operator actually does with this artifact on the target machine; this job only builds and
+  # publishes it.
+  #
+  # apps/api's package.json depends on `@hk/protocol: workspace:*` -- a plain `pnpm install` inside
+  # just apps/api's own copied source, with no workspace around it, fails outright ("Cannot resolve
+  # package from workspace because workspace packages were not loaded into the resolver"; verified
+  # by task-12's own zip-layout install test, docs/self-hosting-windows.md "Install"). The bundle
+  # therefore also carries a pre-built, dist-only copy of packages/protocol (no src -- it's a
+  # published-shape consumer, never rebuilt on the target machine) plus a minimal
+  # pnpm-workspace.yaml naming both packages and the one catalog entry (`zod`) protocol's own
+  # package.json still references, so `workspace:*` resolves to that local copy and `pnpm install`
+  # succeeds against the bundle exactly as shipped.
   build-server-artifact:
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +103,28 @@ jobs:
           # machine, exactly as local dev does (docs/02-architecture/10-backend-architecture.md
           # §Local development).
           cp apps/api/.env.example "$STAGE/apps/api/.env.example"
+
+          # Vendored, pre-built @hk/protocol (dist + package.json only, per this job's own header
+          # comment above) so apps/api's `workspace:*` dependency resolves without the full
+          # monorepo present.
+          mkdir -p "$STAGE/packages/protocol"
+          cp -r packages/protocol/dist "$STAGE/packages/protocol/dist"
+          cp packages/protocol/package.json "$STAGE/packages/protocol/package.json"
+
+          # Minimal workspace file: just enough for `pnpm install` (run from the bundle's
+          # apps/api directory -- docs/self-hosting-windows.md "Install") to see the vendored
+          # @hk/protocol above as a workspace member and resolve the one catalog: entry it uses.
+          {
+            echo "packages:"
+            echo "  - 'apps/*'"
+            echo "  - 'packages/*'"
+            echo ""
+            echo "allowBuilds:"
+            echo "  better-sqlite3: true"
+            echo ""
+            echo "catalog:"
+            echo "  zod: ^4.5.4"
+          } > "$STAGE/pnpm-workspace.yaml"
 
           # The built Angular app the Node adapter serves as static assets
           # (`src/adapters/node/static.ts`, `HK_WEB_DIST_DIR`).

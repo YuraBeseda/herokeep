@@ -34,6 +34,18 @@ Fighter (Champion) and Wizard (Evoker), levels 1–5 (`docs/03-roadmap/phase-1-s
 - `/c/:id/level-up` — XP entry and a level-up wizard (HP roll or average, subclass at 3, feat/ASI at 4, spells), undo as one transaction.
 - Scope notes: equipment is added from the library rather than chosen from class starting-equipment packages (design ruling); weapon mastery is entered freeform rather than through a constrained picker (current schema limitation, Phase 4); custom inventory items are name+qty+notes lines only, no custom weapon/armor mechanics (Phase 4); encumbrance isn't modeled (a campaign house-rule, Phase 3); token art is identical to the portrait thumbnail today (see `docs/manual-device-checklist.md`'s backlog notes). Not yet shipped: accounts and cross-device sync (Phase 2) — characters live only in this device's own storage until then.
 
+### Backend (accounts + cross-device sync)
+
+`apps/api` is the sync backend (docs/02-architecture/10-backend-architecture.md; ADR-014): accounts, login/recovery, quotas, and a per-character append-only event stream over HTTP + WebSocket, built against runtime ports with **two interchangeable adapters** — Cloudflare (Workers, Durable Objects, D1; the primary, always-on target) and a Node adapter (`@hono/node-server`, `ws`, SQLite via `better-sqlite3`; for local dev and for self-hosting on your own PC). A conformance suite (`apps/api/test/conformance/`) runs identical scenarios against both in CI, so a change that breaks one blocks the merge. The client half (browser-side sync UI, upload-on-first-login, cross-device restore) is a separate follow-up plan; this phase ships the server everything above depends on.
+
+- `pnpm dev` (repo root) — the Node adapter + `ng serve`, proxied together, for fast local dev with no `wrangler` needed. `pnpm --filter api dev:node` / `pnpm --filter api dev:cf` run just the Node or Cloudflare adapter (via `wrangler dev`) on their own.
+- `pnpm --filter api seed` — creates a test user + a sample character against the Node adapter's on-disk storage (prints the dev/test credentials on every run).
+- `pnpm --filter api admin -- <command>` (`herokeep-admin`) — export/import accounts + streams as NDJSON between targets, and burn+reissue a user's recovery codes; never invokes `wrangler` itself.
+- `pnpm --filter api test:cloudflare` — the Cloudflare-adapter test suite (Workers runtime via `@cloudflare/vitest-pool-workers`), separate from `apps/api`'s default `vitest run` (Node adapter + core).
+- Self-hosting the Node adapter on your own Windows PC (NSSM service, Caddy TLS, dynamic DNS, backups): [`docs/self-hosting-windows.md`](docs/self-hosting-windows.md).
+
 ## Plans
 
-Implementation plans live in `docs/superpowers/plans/`; the current one is `2026-09-13-phase-1b-play-and-polish.md`.
+Implementation plans live in `docs/superpowers/plans/`; the current ones are
+`2026-09-13-phase-1b-play-and-polish.md` (client) and `2026-09-13-phase-2-accounts-sync-backend.md`
+(backend).
