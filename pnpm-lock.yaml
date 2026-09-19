@@ -66,6 +66,12 @@ importers:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(jsdom@28.1.0(supports-color@10.2.2))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(sass@1.101.0)(yaml@2.9.0))
 
+  apps/api:
+    dependencies:
+      '@hk/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+
   apps/web:
     dependencies:
       '@angular/cdk':

@@ -1,0 +1,77 @@
+import type { Actor, Event } from '@hk/protocol';
+
+/**
+ * Runtime ports for addressing a stream and persisting its events (ADR-014's ports table;
+ * docs/02-architecture/10-backend-architecture.md §Runtime ports). `StreamHost` finds/creates
+ * the single-writer handler for a stream id; `StreamHandle` is that handler's append/read
+ * surface; `StreamStore` is the durable storage a handle is backed by. Signatures are
+ * intentionally the plan's verbatim table — see task-2-brief.md.
+ */
+
+/** Result of committing a batch of events to a stream in one transaction. */
+export interface AppendResult {
+  readonly firstSeq: number;
+  readonly lastSeq: number;
+}
+
+/**
+ * The single-writer handler for one stream (a `CharacterActor`/`CampaignActor` instance behind
+ * a Durable Object on Cloudflare, or a `Map`-held actor guarded by a per-actor mutex on Node —
+ * see ADR-014's `StreamHost` row). Core code (`StreamActor` and its subclasses) is the only
+ * caller; adapters supply the concrete implementation.
+ */
+export interface StreamHandle {
+  /** Runs the append pipeline (validate → permission → dedupe → seq → store-tx → fan-out). */
+  append(events: Event[], actor: Actor): Promise<AppendResult>;
+  /** Reads committed events starting at `fromSeq` (inclusive), at most `limit` events. */
+  read(fromSeq: number, limit: number): Promise<Event[]>;
+  /** The highest committed `seq` for this stream (0 if empty). */
+  head(): Promise<number>;
+  /**
+   * Delivers events that were committed on another stream's handle to this one's connections
+   * (e.g. a character stream's commit notifying the campaign stream it belongs to). `fromStream`
+   * names the originating stream id. Phase 2: called by `Rpc`'s Node/Cloudflare implementation,
+   * unused by CharacterActor directly since campaign streams are Phase 3.
+   */
+  notify(fromStream: string, events: Event[]): Promise<void>;
+}
+
+/** Addresses a stream by id, returning (creating, on first access) its single-writer handle. */
+export interface StreamHost {
+  get(streamId: string): StreamHandle;
+}
+
+/** A single event as committed to durable storage — same shape a `StreamHandle.read` returns. */
+export type StoredEvent = Event;
+
+/** A previously stored content pack pin, as returned by `StreamStore.getPack`/`listPacks`. */
+export interface StoredPack {
+  readonly id: string;
+  readonly version: string;
+  readonly json: unknown;
+}
+
+/**
+ * Durable storage behind one `StreamHandle` (DO SQLite on Cloudflare, a `better-sqlite3` file
+ * keyed by `(stream_id, seq)` on Node — ADR-014's `StreamStore` row). One `StreamStore` instance
+ * is scoped to a single stream; `StreamHandle` implementations own one and run the pipeline's
+ * store-transaction step against it.
+ */
+export interface StreamStore {
+  /** Assigns contiguous `seq` values to `events` and commits them in one transaction. */
+  append(events: Event[]): Promise<AppendResult>;
+  /** Reads committed events starting at `fromSeq` (inclusive), at most `limit` events. */
+  read(fromSeq: number, limit: number): Promise<Event[]>;
+  /** The highest committed `seq` for this stream (0 if empty). */
+  head(): Promise<number>;
+  /** Reads a small piece of stream metadata (e.g. `bytes_used`, `event_count`) by key. */
+  getMeta(key: string): Promise<string | undefined>;
+  /** Writes a small piece of stream metadata by key. */
+  setMeta(key: string, value: string): Promise<void>;
+  /** Caches a content pack's pinned JSON alongside the stream (offline/local read path). */
+  putPack(id: string, version: string, json: unknown): Promise<void>;
+  /** Reads a previously cached pack pin, if any. */
+  getPack(id: string): Promise<StoredPack | undefined>;
+  /** Lists every pack pinned to this stream. */
+  listPacks(): Promise<StoredPack[]>;
+}
