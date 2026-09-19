@@ -117,6 +117,12 @@ export async function runDailyMaintenance(deps: MaintenanceDeps): Promise<Mainte
     characters: charactersBeforeSync.length,
     totalBytes: charactersBeforeSync.reduce((sum, c) => sum + c.bytesUsed, 0),
   };
+  // `addUsage` is ADDITIVE (accumulates `delta` onto any existing `(day, metric)` row) — a
+  // same-UTC-day double fire of this job (e.g. a manual re-trigger) double-counts these
+  // telemetry numbers. Accepted: `usage_daily` is an informational counter series, not an
+  // enforcement path — the actual enforcement number, `users.quota_bytes_used` (step 3 below),
+  // is written via an absolute `setUserQuotaBytes`, so it stays correct (idempotent) regardless
+  // of how many times this job runs in one day.
   await addUsage(db, day, 'activeSessions', usage.activeSessions);
   await addUsage(db, day, 'users', usage.users);
   await addUsage(db, day, 'characters', usage.characters);
