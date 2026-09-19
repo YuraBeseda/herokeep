@@ -6,16 +6,20 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "dev:node": "node src/adapters/node/server.ts"
   },
   "dependencies": {
     "@hk/protocol": "workspace:*",
+    "@hono/node-server": "2.1.1",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.2",
-    "hono": "4.13.8"
+    "hono": "4.13.8",
+    "ws": "8.21.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0",
+    "@types/ws": "8.18.1",
     "drizzle-kit": "0.31.10"
   }
 }

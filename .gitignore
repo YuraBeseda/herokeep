@@ -16,3 +16,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+# apps/api Node adapter's local SQLite data dir (src/adapters/node/server.ts's default `HK_DATA_DIR`).
+apps/api/data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
