@@ -66,10 +66,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { getRequestListener } from '@hono/node-server';
 import { WebSocketServer, type RawData } from 'ws';
 import { createApp } from '../../core/app.ts';
+import { runDailyMaintenance } from '../../core/maintenance.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
 import type { WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
 import { assertConfigured, EnvConfig, loadEnvFile } from './config.env.ts';
+import { NodeMaintenanceStreams } from './maintenance-streams.ts';
 import { MemoryRateLimit } from './rate-limit.memory.ts';
 import { IntervalScheduler } from './scheduler.interval.ts';
 import { NodeStaticAssets } from './static.ts';
@@ -248,6 +250,19 @@ export async function startNodeServer(options: NodeServerOptions = {}): Promise<
   const accounts: AccountsDbHandle = openAccountsDb(join(dataDir, 'accounts.sqlite'));
   const streamsSqlite = openStreamsDb(join(dataDir, 'streams.sqlite'));
   const streamHost = new NodeStreamHost(streamsSqlite);
+
+  // Daily maintenance (doc-10 §Daily maintenance; `core/maintenance.ts`) — wired to
+  // `IntervalScheduler.daily` per that class's own doc comment ("Task 10 has something to call
+  // `.daily(runMaintenance)` against"). `NodeMaintenanceStreams` reads the SAME shared
+  // `streams.sqlite` handle `streamHost` uses, directly (see that class's header comment for why
+  // it bypasses the per-stream actor path).
+  const maintenanceStreams = new NodeMaintenanceStreams(streamsSqlite);
+  scheduler.daily(async () => {
+    const report = await runDailyMaintenance({ db: accounts.db, streams: maintenanceStreams });
+    // Security of logs (Global Constraints): no request bodies, no usernames — `MaintenanceReport`
+    // is exactly "counters and error classes only", safe to log in full.
+    console.log('herokeep daily maintenance', JSON.stringify(report));
+  });
 
   const pending = new Map<string, PendingUpgrade>();
   const wss = new WebSocketServer({ noServer: true });

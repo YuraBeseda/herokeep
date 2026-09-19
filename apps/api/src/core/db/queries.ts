@@ -59,6 +59,14 @@ export async function updateUserCredentials(db: Db, userId: string, salt: string
  * `undefined`: this is a comparison input (`bytesUsed >= USER_QUOTA_BYTES_MAX`), and the schema's
  * own `quotaBytesUsed` column default is already `0` (`schema.ts`), so a missing row and a
  * present-but-fresh row read identically here. */
+/** Every user row, unordered — the admin export CLI's `users.ndjson` dump (Task 10: "accounts
+ * minus sessions"; sessions are excluded by never being exported at all, not by stripping
+ * fields) and the daily maintenance job's `users` usage counter. Never exposed over HTTP; only
+ * adapter-internal (CLI, maintenance) code calls this. */
+export async function listAllUsers(db: Db): Promise<User[]> {
+  return db.select().from(users);
+}
+
 export async function getUserQuotaBytes(db: Db, userId: string): Promise<number> {
   const [row] = await db
     .select({ quotaBytesUsed: users.quotaBytesUsed })
@@ -81,6 +89,23 @@ export async function adjustUserQuotaBytes(db: Db, userId: string, delta: number
     .update(users)
     .set({ quotaBytesUsed: sql`max(0, ${users.quotaBytesUsed} + ${delta})` })
     .where(eq(users.id, userId));
+}
+
+/** Sets (not adjusts) a user's `quota_bytes_used` to an ABSOLUTE value — the daily maintenance
+ * job's recompute step (Task 10, `core/maintenance.ts`; the controller ruling quoted in full in
+ * `core/quotas.ts`'s `USER_QUOTA_BYTES_MAX` doc comment: "recompute `users.quota_bytes_used` per
+ * owner"). Contrast `adjustUserQuotaBytes`'s relative `delta`, used by the hard-delete route's
+ * best-effort immediate decrement — this one replaces the value outright, since the maintenance
+ * job always computes it from scratch as the sum of the owner's characters' freshly-synced
+ * `bytesUsed`. */
+export async function setUserQuotaBytes(db: Db, userId: string, value: number): Promise<void> {
+  await db.update(users).set({ quotaBytesUsed: value }).where(eq(users.id, userId));
+}
+
+/** Count of every account — one of the daily maintenance job's `usage_daily` metrics (Task 10). */
+export async function countUsers(db: Db): Promise<number> {
+  const [row] = await db.select({ count: sql<number>`count(*)` }).from(users);
+  return row?.count ?? 0;
 }
 
 // --- sessions ----------------------------------------------------------------------------------
@@ -116,6 +141,27 @@ export async function deleteSession(db: Db, tokenHash: string): Promise<void> {
  * reset, ADR-012). */
 export async function deleteSessionsForUser(db: Db, userId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
+/** Count of sessions not yet expired as of `now` — the daily maintenance job's `activeSessions`
+ * `usage_daily` metric (Task 10). */
+export async function countActiveSessions(db: Db, now: number): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(sessions)
+    .where(sql`${sessions.expiresAt} > ${now}`);
+  return row?.count ?? 0;
+}
+
+/** Deletes every session whose `expiresAt` has already passed as of `now` — the daily
+ * maintenance job's expired-session purge (Task 10, doc-10 §Daily maintenance). Returns the
+ * number of rows actually removed, for `MaintenanceReport.expiredSessionsPurged`. */
+export async function deleteExpiredSessions(db: Db, now: number): Promise<number> {
+  const result = await db
+    .delete(sessions)
+    .where(sql`${sessions.expiresAt} <= ${now}`)
+    .returning({ tokenHash: sessions.tokenHash });
+  return result.length;
 }
 
 /** Lists every session row for a user (the devices list, Task 4), newest-seen first. Includes
@@ -154,6 +200,20 @@ export async function insertRecoveryCodes(db: Db, codes: NewRecoveryCode[]): Pro
   await db.insert(recoveryCodes).values(codes);
 }
 
+/** Every recovery-code row (hashes and `usedAt` only — never a raw code, which is never stored
+ * at all) — the admin export CLI's `recovery-codes.ndjson` dump (Task 10 brief: "needed for a
+ * faithful move" between targets). */
+export async function listAllRecoveryCodes(db: Db): Promise<RecoveryCode[]> {
+  return db.select().from(recoveryCodes);
+}
+
+/** Deletes every recovery-code row for a user — `herokeep-admin reset-recovery`'s "burns old"
+ * step (Task 10), run immediately before inserting 6 freshly generated codes via
+ * `insertRecoveryCodes`. */
+export async function deleteRecoveryCodesForUser(db: Db, userId: string): Promise<void> {
+  await db.delete(recoveryCodes).where(eq(recoveryCodes.userId, userId));
+}
+
 /** Finds a still-usable (`usedAt IS NULL`) recovery code for a user by its hash. */
 export async function findUnusedRecoveryCode(
   db: Db,
@@ -185,6 +245,14 @@ export async function burnRecoveryCode(db: Db, userId: string, codeHash: string,
 /** Index rows for every character a user owns (`GET /api/characters`, Task 6). */
 export async function listCharactersForOwner(db: Db, ownerId: string): Promise<Character[]> {
   return db.select().from(characters).where(eq(characters.ownerId, ownerId));
+}
+
+/** Every character index row across every owner — the daily maintenance job's quota-sync source
+ * (Task 10, `core/maintenance.ts`: "a `listAllCharacters(db)` query + StreamHost/StreamStore
+ * access per stream") and the admin export CLI's `characters.ndjson` dump. Unlike
+ * `listCharactersForOwner`, not scoped to one user. */
+export async function listAllCharacters(db: Db): Promise<Character[]> {
+  return db.select().from(characters);
 }
 
 /** Looks up one character's index row by id (Task 6: ownership checks for the archive/delete/WS-
@@ -228,6 +296,17 @@ export async function upsertCharacterIndexRow(db: Db, character: NewCharacter): 
  * the stream's own storage; callers drop that separately via `StreamStore`. */
 export async function deleteCharacterIndexRow(db: Db, id: string): Promise<void> {
   await db.delete(characters).where(eq(characters.id, id));
+}
+
+/** Writes a character index row's `bytesUsed`/`eventCount` directly from its stream's own meta —
+ * the ONLY call site that should ever do this outside a test (the daily maintenance job, Task
+ * 10; see `upsertCharacterIndexRow`'s doc comment: "The ONLY writer that ever moves
+ * bytesUsed/eventCount away from 0 is the daily maintenance job"). Deliberately narrower than
+ * `upsertCharacterIndexRow`: it touches only these two columns, never `updatedAt`/`name`/
+ * `archivedAt`/etc, so a nightly sync never perturbs a character's "last touched" ordering in a
+ * list view. */
+export async function updateCharacterUsage(db: Db, id: string, bytesUsed: number, eventCount: number): Promise<void> {
+  await db.update(characters).set({ bytesUsed, eventCount }).where(eq(characters.id, id));
 }
 
 /** Count of a user's character index rows, for the 50-characters/user quota (ADR-012). Counts

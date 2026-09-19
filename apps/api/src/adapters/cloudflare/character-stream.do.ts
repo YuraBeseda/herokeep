@@ -237,6 +237,21 @@ export class CharacterStreamDO extends DurableObject<Env> {
     const actor = await this.ensureActor(streamId);
     await actor.deleteAll();
   }
+
+  /**
+   * `MaintenanceStreams.getStreamUsage` (`ports/stream.ts`), Cloudflare's half — task-10-brief's
+   * "a minimal internal endpoint/RPC method to `CharacterStreamDO`" for the daily maintenance
+   * job's quota-sync step. Plain RPC, same trust-boundary reasoning as `append`/`read`/`head`/
+   * `notify`/`deleteAll` above (this file's header comment): only `worker.ts`, which alone holds
+   * the `CHARACTER_STREAM` binding, can ever obtain a stub to call this — there is no separate
+   * header/token to check here for the same reason there isn't one on those methods either.
+   */
+  async getUsage(streamId: string): Promise<{ bytesUsed: number; eventCount: number }> {
+    await this.ensureActor(streamId);
+    const store = this.lazyStore(streamId);
+    const [bytesRaw, countRaw] = await Promise.all([store.getMeta('bytes_used'), store.getMeta('event_count')]);
+    return { bytesUsed: bytesRaw ? Number(bytesRaw) : 0, eventCount: countRaw ? Number(countRaw) : 0 };
+  }
 }
 
 function safeJsonParse(text: string): unknown {

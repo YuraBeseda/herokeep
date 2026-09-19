@@ -116,3 +116,48 @@ export interface StreamStore {
    */
   deleteAll(): Promise<void>;
 }
+
+/** A stream's `bytes_used`/`event_count` meta, as reported to the daily maintenance job. Same
+ * shape as `core/quotas.ts`'s `StreamMetaSnapshot`, named separately here since `ports/**` must
+ * not import `core/quotas.ts` (ports are consumed BY core, never the reverse). */
+export interface StreamUsage {
+  readonly bytesUsed: number;
+  readonly eventCount: number;
+}
+
+/**
+ * Per-stream USAGE lookup for the daily maintenance job (Task 10; `core/maintenance.ts`) — a
+ * separate, narrower port from `StreamHost`/`StreamStore` (those are per-request, actor-owned,
+ * one instance per stream) because maintenance runs OUTSIDE any actor's single-writer lock,
+ * batch-reading meta for potentially every stream in one pass. Each adapter picks its own
+ * efficient path:
+ *   - Node (`adapters/node/maintenance-streams.ts`): queries the SAME shared `streams.sqlite`
+ *     file's `meta`/`events` tables directly — no actor/mutex needed since this is read-only and
+ *     `meta` writes are last-write-wins anyway (doc-10 §StreamActor: `meta.bytes_used` is only
+ *     ever advanced by `StreamActor.append`, which this job never races against for anything
+ *     stronger than "read a value that might be a few writes stale", which is fine for a ≤24h
+ *     sync).
+ *   - Cloudflare (`adapters/cloudflare/worker.ts`'s `CloudflareMaintenanceStreams`): one internal
+ *     RPC call per `CharacterStreamDO` instance (`character-stream.do.ts`'s `getUsage` method) —
+ *     a DO's own SQLite is private to that DO and unreachable except through the Worker's
+ *     `CHARACTER_STREAM` binding, the same trust-boundary argument that file's header comment
+ *     already makes for `append`/`read`/`head`/`notify`/`deleteAll`.
+ */
+export interface MaintenanceStreams {
+  /** Reads one stream's current `bytes_used`/`event_count` meta. `{bytesUsed: 0, eventCount: 0}`
+   * for a stream with no meta ever written (matches `StreamActor.readMeta`'s own default) —
+   * never rejects/throws just because a character was registered in D1 but its stream has not
+   * received its first `character.created` event yet. */
+  getStreamUsage(streamId: string): Promise<StreamUsage>;
+  /**
+   * Best-effort listing of every stream id this storage currently holds ANY row for — used only
+   * by the maintenance job's orphan check (`core/maintenance.ts`) to find "a stream exists with
+   * no character index row". Node can answer this cheaply (`SELECT DISTINCT stream_id`); Cloudflare
+   * has no API to enumerate Durable Object instances at all (a DO's only address is
+   * `idFromName(name)`, which requires already knowing the name) — `CloudflareMaintenanceStreams`
+   * therefore does not implement this method at all, and `runDailyMaintenance` treats a missing
+   * `listStreamIds` as "this half of the orphan check is not checkable on this adapter" (reports
+   * `null`, never a false zero).
+   */
+  listStreamIds?(): Promise<string[]>;
+}

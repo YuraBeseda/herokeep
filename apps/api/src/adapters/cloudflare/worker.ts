@@ -19,9 +19,10 @@
 import type { Actor, Event } from '@hk/protocol';
 import { createApp } from '../../core/app.ts';
 import type { AppPorts } from '../../core/app.ts';
+import { runDailyMaintenance } from '../../core/maintenance.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
 import type { RateLimit, RateLimitResult, StaticAssets, WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
-import type { AppendResult, StreamHandle, StreamHost } from '../../ports/stream.ts';
+import type { AppendResult, MaintenanceStreams, StreamHandle, StreamHost, StreamUsage } from '../../ports/stream.ts';
 import { BindingsConfig, assertConfigured } from './config.bindings.ts';
 import { openAccountsDb } from './db.d1.ts';
 import {
@@ -52,6 +53,7 @@ interface CharacterStreamStub {
   head(streamId: string): Promise<number>;
   notify(streamId: string, fromStream: string, events: Event[]): Promise<void>;
   deleteAll(streamId: string): Promise<void>;
+  getUsage(streamId: string): Promise<StreamUsage>;
 }
 
 interface RateLimiterStub {
@@ -134,6 +136,25 @@ class CloudflareRateLimit implements RateLimit {
   }
 }
 
+/** `MaintenanceStreams` port (`ports/stream.ts`), Cloudflare's half: one internal RPC call
+ * (`getUsage`) per `CharacterStreamDO` instance — see that method's doc comment on
+ * `character-stream.do.ts` for the trust-boundary argument. Deliberately does NOT implement
+ * `listStreamIds` (`ports/stream.ts`'s doc comment on that method: no API exists to enumerate
+ * Durable Object instances) — `runDailyMaintenance` treats the missing method as "orphan check's
+ * stream-side half is not checkable on this adapter" rather than a false zero. */
+class CloudflareMaintenanceStreams implements MaintenanceStreams {
+  private readonly namespace: Env['CHARACTER_STREAM'];
+
+  constructor(namespace: Env['CHARACTER_STREAM']) {
+    this.namespace = namespace;
+  }
+
+  getStreamUsage(streamId: string): Promise<StreamUsage> {
+    const stub = this.namespace.get(this.namespace.idFromName(streamId)) as unknown as CharacterStreamStub;
+    return stub.getUsage(streamId);
+  }
+}
+
 /** `StaticAssets` port over the Workers assets binding (ADR-014's Cloudflare `StaticAssets` row).
  * `env.ASSETS.fetch` answers a plain 404 `Response` on a miss (not `null`) — translated to `null`
  * here so `core/app.ts`'s shared fallback logic (`ports/infra.ts`'s `StaticAssets.fetch` doc
@@ -177,20 +198,22 @@ export default {
 
   /**
    * Daily maintenance (doc-10 §Daily maintenance: "Cloudflare: Cron Trigger `0 3 * * *`" —
-   * `wrangler.jsonc`'s `triggers.crons`). `core/maintenance.ts` (usage counters, expired-session
-   * purge, orphan check) is Task 10's scope and does not exist yet as of this task — per
-   * task-8-brief's explicit instruction ("if `core/maintenance.ts` doesn't exist yet, leave a
-   * documented hook calling a no-op"), this is that hook: a real, wired `scheduled()` export
-   * (so `wrangler.jsonc`'s cron trigger has somewhere to fire) that currently does nothing.
-   * Task 10 replaces `runDailyMaintenanceNoop`'s body with `import { runDailyMaintenance } from
-   * '../../core/maintenance.ts'` and a real `openAccountsDb`/`Db`-backed call — no other change
-   * to this export's shape should be needed.
+   * `wrangler.jsonc`'s `triggers.crons`). Task 8 left this as a documented no-op hook pending
+   * `core/maintenance.ts`; Task 10 fills it in: `assertConfigured` (fail fast, mirroring
+   * `fetch()` above), then `openAccountsDb(env.DB)` + `CloudflareMaintenanceStreams` wired
+   * through `runDailyMaintenance` exactly like `fetch()` wires `buildPorts(env)`.
    */
-  scheduled(_event: ScheduledController, _env: Env, ctx: ExecutionContext): void {
-    ctx.waitUntil(runDailyMaintenanceNoop());
+  scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): void {
+    ctx.waitUntil(runScheduledMaintenance(env));
   },
 };
 
-async function runDailyMaintenanceNoop(): Promise<void> {
-  // Intentional no-op — see `scheduled()`'s doc comment above.
+async function runScheduledMaintenance(env: Env): Promise<void> {
+  assertConfigured(new BindingsConfig(env));
+  const db = openAccountsDb(env.DB);
+  const streams = new CloudflareMaintenanceStreams(env.CHARACTER_STREAM);
+  const report = await runDailyMaintenance({ db, streams });
+  // Security of logs (Global Constraints): no request bodies, no usernames — `MaintenanceReport`
+  // is exactly "counters and error classes only", safe to log in full.
+  console.log('herokeep daily maintenance', JSON.stringify(report));
 }
