@@ -15,3 +15,4 @@ export * from './pack/pack.ts';
 export * from './pack/json-schema.ts';
 export * from './events/index.ts';
 export * from './bundle/manifest.ts';
+export * from './sync/index.ts';
