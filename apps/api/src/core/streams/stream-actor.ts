@@ -260,12 +260,22 @@ export class StreamActor {
     // Stage 4: quota — project the events STILL 'new' after stages 1-3 against this stream's
     // current meta; a reject fails every remaining 'new' event with code `quota` (nothing
     // touches 'existing'/already-'rejected' events).
+    //
+    // Measured WITH a provisional `seq` stamped on, not the bare stamped-but-unstored event:
+    // the number actually persisted later (Stage 5's `committed`, `meta.bytes_used`) includes a
+    // `seq` field, and JSON-measuring an event without one systematically UNDERSTATES its stored
+    // size by the `"seq":<n>,` field's bytes — enough, across many events, to let an append
+    // through that the post-commit meta then reports as already over the line. `head + 1 + i` is
+    // exactly the `seq` `store.append` will assign moments later: this actor holds the stream's
+    // single-writer guarantee (ports/stream.ts's `StreamHost`/`StreamStore` docs), `stillNew`
+    // becomes `toStore` unchanged whenever the verdict isn't `reject` (Stage 4 below only ever
+    // turns 'new' into 'rejected', never reorders or drops for any other reason), so the
+    // provisional and the real `seq` are identical whenever this projection's answer matters.
     const meta = await this.readMeta();
+    const head = await this.store.head();
     const stillNew = stage3.filter((o): o is Extract<PipelineOutcome, { kind: 'new' }> => o.kind === 'new');
-    const quotaCheck = this.quotas.checkAppend(
-      meta,
-      stillNew.map((o) => o.event),
-    );
+    const provisionallyStamped = stillNew.map((o, i) => ({ ...o.event, seq: head + 1 + i }));
+    const quotaCheck = this.quotas.checkAppend(meta, provisionallyStamped);
 
     const stage4 =
       quotaCheck.verdict === 'reject' && stillNew.length > 0
@@ -299,6 +309,9 @@ export class StreamActor {
       const committed: Event[] = toStore.map((event, i) => ({ ...event, seq: result.firstSeq + i }));
       for (const event of committed) acked.push({ id: event.id, seq: event.seq ?? 0 });
 
+      // Ground-truth measurement of what's actually stored (`committed`, WITH `seq`) — the same
+      // shape Stage 4's `provisionallyStamped` projected above, so the meta this append leaves
+      // behind and the quota verdict that was just decided from agree exactly, not by estimate.
       const addedBytes = committed.reduce((sum, event) => sum + measureEventBytes(event), 0);
       await this.writeMeta({ bytesUsed: meta.bytesUsed + addedBytes, eventCount: meta.eventCount + committed.length });
 

@@ -47,7 +47,10 @@ describe('parseEvent', () => {
 
   it('declares allowed actors per type', () => {
     expect(EVENT_ACTORS['character.created']).toEqual(['owner']);
-    expect(EVENT_ACTORS['pack.pinned']).toEqual(['owner', 'dm']);
+    // doc-08 §Authorization matrix: "Append owner events (... pack.pinned)" is Owner-only; a
+    // DM's pin on an owner's character goes through `override.applied` instead (gated by
+    // `houseRules.allowOverrides`), never by appending `pack.pinned` directly.
+    expect(EVENT_ACTORS['pack.pinned']).toEqual(['owner']);
   });
 });
 

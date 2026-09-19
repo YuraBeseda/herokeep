@@ -145,6 +145,38 @@ describe('append', () => {
     expect(system.store.length).toBe(0);
   });
 
+  it('acks a txId group that is fully already committed as a whole-group retry, storing nothing new', async () => {
+    const txId = uuidv7();
+    const events = [makeEvent({ txId }), makeEvent({ txId })];
+    const first = await system.actor.append(events, makeActor());
+    expect(first.rejected).toEqual([]);
+    expect(system.store.length).toBe(2);
+
+    const retry = await system.actor.append(events, makeActor());
+
+    expect(retry.rejected).toEqual([]);
+    expect(retry.acked).toHaveLength(2);
+    const firstSeqById = new Map(first.acked.map((a) => [a.id, a.seq]));
+    for (const a of retry.acked) expect(a.seq).toBe(firstSeqById.get(a.id));
+    expect(system.store.length).toBe(2); // nothing stored twice
+  });
+
+  it('rejects an entire txId group as invalid when only some members are already committed', async () => {
+    const txId = uuidv7();
+    const alreadyCommitted = makeEvent({ txId });
+    await system.actor.append([alreadyCommitted], makeActor());
+    expect(system.store.length).toBe(1);
+
+    const stillNew = makeEvent({ txId });
+    const outcome = await system.actor.append([alreadyCommitted, stillNew], makeActor());
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected).toHaveLength(2);
+    expect(outcome.rejected.map((r) => r.id).sort()).toEqual([alreadyCommitted.id, stillNew.id].sort());
+    for (const r of outcome.rejected) expect(r.code).toBe('invalid');
+    expect(system.store.length).toBe(1); // still just the one event the first append committed
+  });
+
   it('rejects with quota when the append would exceed the per-stream byte cap', async () => {
     await system.store.setMeta('bytes_used', String(STREAM_BYTES_MAX)); // already at the cap
     const event = makeEvent();

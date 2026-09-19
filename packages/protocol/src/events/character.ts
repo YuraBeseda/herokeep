@@ -272,6 +272,17 @@ export const EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'history.compacted@1': HistoryCompactedV1,
 };
 
+// A few entries below grant 'dm' on top of 'owner' for events that read, on first glance, like
+// owner-only bookkeeping (character.renamed, death_save.recorded, stabilized,
+// resource.spent/restored, concentration.started/ended). This may be intentional — a DM
+// narrating combat on behalf of an unavailable player — and every one of them is UNREACHABLE
+// in Phase 2 (no DM sockets exist; ADR-012 §Authorization's DM column only ever activates once
+// a campaign exists, which is Phase 3). Bulk-changing this catalog on inference alone risks
+// breaking Phase-3 design intent that predates this task, so these are left as-is and flagged
+// here for an owner/product review before Phase 3 wires DM sockets — pack.pinned above was the
+// one entry with a *documented* contradiction (doc-08 §Authorization matrix: "Append owner
+// events (... pack.pinned)" lists it under Owner only, with a DM's own pin going through
+// override.applied instead) and was corrected; the rest are a judgment call, not a bug.
 export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   'character.created': ['owner'],
   'character.renamed': ['owner', 'dm'],
@@ -282,7 +293,10 @@ export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   'character.owner_transferred': ['dm', 'owner'],
   'character.campaign_joined': ['owner', 'dm'],
   'character.campaign_left': ['owner', 'dm'],
-  'pack.pinned': ['owner', 'dm'],
+  // Owner-only (doc-08 §Authorization matrix: "Append owner events (... pack.pinned)"); a DM
+  // effects a pin on an owner's character via `override.applied` (gated by
+  // `houseRules.allowOverrides`), not by appending `pack.pinned` directly.
+  'pack.pinned': ['owner'],
   'decision.made': ['owner'],
   'decision.cleared': ['owner'],
   'level.gained': ['owner'],
