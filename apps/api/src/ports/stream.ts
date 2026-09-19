@@ -68,6 +68,24 @@ export interface StreamStore {
   getMeta(key: string): Promise<string | undefined>;
   /** Writes a small piece of stream metadata by key. */
   setMeta(key: string, value: string): Promise<void>;
+  /**
+   * Looks up already-committed events by id (Task 5's port-extension design decision — see
+   * task-5-report.md for the full write-up). Two shapes were considered for letting
+   * `StreamActor.append` implement doc-03's idempotent-retry rule ("duplicates (same id) are
+   * acked with the existing seq"): (a) have `append` itself report per-event dedupe outcomes,
+   * or (b) a separate lookup the actor calls BEFORE deciding what to store. (b) — this method —
+   * was chosen: it keeps `append`'s contract simple ("assign seq to exactly what you're given,
+   * once, in one transaction") instead of teaching it two different response shapes for "stored"
+   * vs "already existed", and it maps directly onto the doc-02 schema's `events` table, which
+   * has `id TEXT UNIQUE` — a plain `SELECT * FROM events WHERE id IN (...)` on both Node's
+   * better-sqlite3 file and Cloudflare's DO SQLite (Tasks 7/8 implement it against real storage;
+   * `test/helpers/fake-stream-store.ts` implements the same contract in memory). `StreamActor`
+   * uses it for two things: cross-request dedupe (an id seen in a PRIOR append) and, later,
+   * resolving `event.reverted`'s target event to check the "own events only" rule
+   * (`core/permissions.ts`'s `canRevertOwn` hook). Returns only the events that exist; order is
+   * unspecified — callers index by `.id`.
+   */
+  findByIds(ids: string[]): Promise<StoredEvent[]>;
   /** Caches a content pack's pinned JSON alongside the stream (offline/local read path). */
   putPack(id: string, version: string, json: unknown): Promise<void>;
   /** Reads a previously cached pack pin, if any. */

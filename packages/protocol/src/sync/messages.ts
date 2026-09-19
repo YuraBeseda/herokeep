@@ -206,6 +206,8 @@ export const NoticeMsgSchema = z.strictObject({
   t: z.literal('notice'),
   level: z.enum(['info', 'warning', 'error']),
   key: z.string().min(1),
+  // Optional: some notices are plain (e.g. `pack.updated` with no variables), so the client
+  // Localizer must accept a message with nothing to interpolate rather than an empty object.
   params: z.record(z.string(), z.unknown()).optional(),
 });
 export type NoticeMsg = z.infer<typeof NoticeMsgSchema>;
