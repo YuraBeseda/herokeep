@@ -17,7 +17,14 @@
     "../../../src/ports/**/*.ts",
     "../../../src/core/**/*.ts",
     "../../../../../packages/protocol/src/**/*.ts",
-    "../../../wrangler.jsonc"
+    "../../../wrangler.jsonc",
+    // Task 9's conformance suite: `cloudflare.conformance.test.ts` imports `cloudflare:test`, so it
+    // belongs to THIS program (and is excluded from the plain-Node `apps/api/tsconfig.json` — see
+    // that file's own comment); `scenarios.ts`/`frame-buffer.ts` are its adapter-agnostic
+    // dependencies, dual-included here and in the main program, same pattern as `src/core/**` above.
+    "../../conformance/cloudflare.conformance.test.ts",
+    "../../conformance/scenarios.ts",
+    "../../conformance/frame-buffer.ts"
   ],
   // `vitest.config.ts` runs under plain Node (loading the pool plugin), not inside workerd — it
   // belongs to neither this program (workers-types' global `URL`/`Response`/etc. conflict with

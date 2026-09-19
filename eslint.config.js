@@ -92,6 +92,24 @@ export default defineConfig([
     extends: [js.configs.recommended, tseslint.configs.disableTypeChecked],
   },
   {
+    // `test/conformance/cloudflare.conformance.test.ts` (task 9) is covered by
+    // `test/adapters/cloudflare/tsconfig.json`'s `include` (a parent-relative glob — see that
+    // file's own comment), but typescript-eslint's default `projectService: true` (the top-level
+    // config above) discovers a file's program by walking UP from the file's own directory, which
+    // never reaches a SIBLING directory's tsconfig — `apps/api/test/conformance` is not a
+    // descendant of `apps/api/test/adapters/cloudflare`. An explicit `project` array (rather than
+    // `projectService`) has no such ancestry requirement: it just loads the named tsconfig and
+    // matches the file against its `include`, which already lists this file by its actual path.
+    files: ['apps/api/test/conformance/cloudflare.conformance.test.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ['apps/api/test/adapters/cloudflare/tsconfig.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     // `test/adapters/cloudflare/tsconfig.json` deliberately excludes this ONE file (its own doc
     // comment: workers-types' global `URL`/`Response`/etc. conflict with `node:url`'s own types
     // the moment it imports `fileURLToPath` — it runs under plain Node, not workerd) and neither

@@ -64,7 +64,12 @@ export default defineConfig({
   },
   test: {
     name: 'api-cloudflare',
-    include: ['**/*.test.ts'],
+    // Task 9's `test/conformance/cloudflare.conformance.test.ts` lives OUTSIDE this directory (the
+    // brief's required path — shared with the Node runner's sibling file and the adapter-agnostic
+    // `scenarios.ts` table) but must run under THIS pool-workers project, not the plain-Node one
+    // (it imports `cloudflare:test`) — included via a parent-relative glob alongside the normal
+    // in-directory one.
+    include: ['**/*.test.ts', '../../conformance/cloudflare.conformance.test.ts'],
     setupFiles: ['./apply-migrations.ts'],
   },
 });
