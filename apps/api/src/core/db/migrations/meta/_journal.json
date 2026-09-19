@@ -8,6 +8,13 @@
       "when": 1789830818264,
       "tag": "0000_loud_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789831891170,
+      "tag": "0001_sweet_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }

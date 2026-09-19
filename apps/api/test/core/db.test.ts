@@ -6,10 +6,7 @@
  * it's exempt from the core-boundary ESLint rule and may import the concrete driver directly —
  * per task-3-brief.md: "The TEST file may construct a real driver."
  */
-import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import type Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   addUsage,
@@ -24,10 +21,8 @@ import {
   listCharactersForOwner,
   upsertCharacterIndexRow,
 } from '../../src/core/db/queries.ts';
-import { schema } from '../../src/core/db/schema.ts';
 import { foldUsername } from '../../src/core/db/fold.ts';
-
-const migrationsFolder = fileURLToPath(new URL('../../src/core/db/migrations', import.meta.url));
+import { openTestDb, type TestDb } from '../helpers/test-db.ts';
 
 let sqlite: InstanceType<typeof Database>;
 // Kept as the concrete `BetterSQLite3Database` type here (not the driver-agnostic `Db` from
@@ -35,13 +30,12 @@ let sqlite: InstanceType<typeof Database>;
 // exact sync driver type; every query function below still accepts this `db` value fine since a
 // concrete driver is structurally assignable to the broader `Db` type (see `core/db/index.ts`'s
 // header comment), just not the reverse.
-let db: ReturnType<typeof drizzle<typeof schema>>;
+let db: TestDb;
 
 beforeEach(() => {
-  sqlite = new Database(':memory:');
-  sqlite.pragma('foreign_keys = ON');
-  db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder });
+  const handle = openTestDb();
+  sqlite = handle.sqlite;
+  db = handle.db;
 });
 
 afterEach(() => {

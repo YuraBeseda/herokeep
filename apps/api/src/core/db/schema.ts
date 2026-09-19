@@ -18,6 +18,7 @@
  * File Structure: "campaigns/memberships NOT created (Phase 3)").
  */
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { uuidv7 } from '../ids.ts';
 
 /** Accounts. `username` is the display spelling; `username_folded` (NFKC + lowercase, see
  * `./fold.ts`) is what uniqueness is enforced on (ADR-012). */
@@ -33,11 +34,25 @@ export const users = sqliteTable('users', {
 });
 
 /** Sessions. `tokenHash` is `sha256(token)` (ADR-012) — the raw token is never stored. Sliding
- * expiry: `lastSeenAt`/`expiresAt` are touched (throttled) on use. */
+ * expiry: `lastSeenAt`/`expiresAt` are touched (throttled) on use.
+ *
+ * `id` (Task 4, additive migration `0001`): a server-generated uuidv7, public/opaque, safe to
+ * hand to the client for the single-session-revoke route (`DELETE /api/me/sessions/:id`).
+ * `tokenHash` is the PK and is NEVER exposed over HTTP — leaking it would let a client
+ * reconstruct which token hashes to fish for, so devices-list/revoke address sessions by this
+ * `id` column instead. Nullable at the SQL level (no `NOT NULL`/`DEFAULT` clause) purely so the
+ * additive `ALTER TABLE ... ADD COLUMN` stays trivially safe in SQLite (which requires a
+ * constant `DEFAULT` for a `NOT NULL` column added after the fact); `$defaultFn` guarantees
+ * every application-level insert always supplies a real id regardless, so the column is
+ * non-null in practice from the moment this migration exists (there is no pre-Task-4
+ * production data to backfill — Phase 2 hasn't shipped yet). */
 export const sessions = sqliteTable(
   'sessions',
   {
     tokenHash: text('token_hash').primaryKey(),
+    id: text('id')
+      .unique()
+      .$defaultFn(() => uuidv7()),
     userId: text('user_id')
       .notNull()
       .references(() => users.id),

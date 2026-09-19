@@ -33,6 +33,13 @@ export async function findUserByFoldedName(db: Db, usernameFolded: string): Prom
   return row;
 }
 
+/** Looks up a user by primary key — used by session-authenticated routes (`GET /api/me`, Task 4)
+ * that already know the user id from the session and need the display username. */
+export async function findUserById(db: Db, id: string): Promise<User | undefined> {
+  const [row] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return row;
+}
+
 /** Inserts a new account. Throws (constraint violation) if `usernameFolded` already exists. */
 export async function insertUser(db: Db, user: NewUser): Promise<User> {
   const [row] = await db.insert(users).values(user).returning();
@@ -89,6 +96,24 @@ export async function listSessions(db: Db, userId: string): Promise<Session[]> {
     .from(sessions)
     .where(eq(sessions.userId, userId))
     .orderBy(sql`${sessions.lastSeenAt} DESC`);
+}
+
+/** Looks up a session by its public `id` (Task 4's additive column — never `tokenHash`, which
+ * stays internal). Used by the single-session-revoke route to confirm ownership before deleting. */
+export async function findSessionById(db: Db, id: string): Promise<Session | undefined> {
+  const [row] = await db.select().from(sessions).where(eq(sessions.id, id)).limit(1);
+  return row;
+}
+
+/** Deletes one session by its public `id`, scoped to `userId` so one account can never revoke
+ * another's session. Returns whether a row was actually deleted (`false` — the route maps this
+ * to 404 — when `id` doesn't exist or belongs to someone else). */
+export async function deleteSessionById(db: Db, userId: string, id: string): Promise<boolean> {
+  const result = await db
+    .delete(sessions)
+    .where(and(eq(sessions.id, id), eq(sessions.userId, userId)))
+    .returning({ tokenHash: sessions.tokenHash });
+  return result.length > 0;
 }
 
 // --- recovery codes ------------------------------------------------------------------------
