@@ -211,14 +211,20 @@ function parseCliArgs(argv: string[]): SeedOptions {
     args: argv,
     options: {
       'data-dir': { type: 'string' },
-      'env-file': { type: 'string' },
+      // NOT `--env-file`: pnpm itself reserves `--env-file <path>` as a GLOBAL option on every
+      // `pnpm <command>` invocation (fix round 1, reviewer-reproduced) -- `pnpm --filter api seed
+      // --env-file <path>` is parsed by pnpm itself, not forwarded to this script's `parseArgs`
+      // call at all, and pnpm fails outright when that path doesn't already exist. `--dotenv`
+      // names the same thing (a `.env`-shaped file to load) without colliding with pnpm's own
+      // flag surface.
+      dotenv: { type: 'string' },
       username: { type: 'string' },
       password: { type: 'string' },
     },
   });
   return {
     dataDir: resolve(values['data-dir'] ?? './data'),
-    envFile: resolve(values['env-file'] ?? join(apiRoot, '.env')),
+    envFile: resolve(values.dotenv ?? join(apiRoot, '.env')),
     username: values.username ?? DEFAULT_USERNAME,
     password: values.password ?? DEFAULT_PASSWORD,
   };

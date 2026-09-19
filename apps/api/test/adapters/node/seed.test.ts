@@ -10,8 +10,10 @@
  * `SESSION_PEPPER`/`SALT_HMAC_KEY`/`APP_ORIGIN` are fixed TEST-ONLY values set directly on
  * `process.env`, mirroring `server.test.ts`'s own pattern (the one other file in this suite that
  * exercises real `EnvConfig`/`startNodeServer` boot rather than `fake-ports.ts`'s in-memory
- * double) — both files point their `seed`/`startNodeServer` calls at a non-existent `--env-file`
- * so `loadEnvFile` is a no-op and these `process.env` values are what `EnvConfig` actually reads.
+ * double) — both files point their `seed`/`startNodeServer` calls at a non-existent `envFile`
+ * (seed's own CLI flag for this is `--dotenv`, not `--env-file` — see `seed-api.ts`'s
+ * `parseCliArgs` for why) so `loadEnvFile` is a no-op and these `process.env` values are what
+ * `EnvConfig` actually reads.
  */
 process.env['SESSION_PEPPER'] = 'test-only-seed-script-session-pepper';
 process.env['SALT_HMAC_KEY'] = 'test-only-seed-script-salt-hmac-key';
