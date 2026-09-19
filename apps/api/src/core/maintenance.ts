@@ -32,6 +32,7 @@ import {
   countUsers,
   deleteExpiredSessions,
   listAllCharacters,
+  listAllUsers,
   setUserQuotaBytes,
   updateCharacterUsage,
 } from './db/queries.ts';
@@ -147,6 +148,22 @@ export async function runDailyMaintenance(deps: MaintenanceDeps): Promise<Mainte
   for (const [ownerId, total] of ownerTotals) {
     await setUserQuotaBytes(db, ownerId, total);
   }
+  let ownersQuotaZeroed = 0;
+  // Whole-branch review finding 4: an owner with ZERO characters left (the hard-delete route
+  // removed their last one since the previous run) never appears in `ownerTotals` above at all —
+  // the pre-fix loop only ever WROTE a total for an owner who owns at least one character today,
+  // so that owner's `users.quota_bytes_used` kept whatever stale non-zero value the LAST run (when
+  // they still had characters) left behind, forever, blocking `POST /api/characters`'s quota gate
+  // for an account that is actually empty. Every user whose current `quota_bytes_used` is nonzero
+  // and who owns no characters as of `charactersBeforeSync` is swept to 0 here, the same absolute-
+  // set write `setUserQuotaBytes` already uses above (never a negative-delta adjustment, which
+  // `adjustUserQuotaBytes` already floors at 0 anyway but is the WRONG tool here regardless: this
+  // is a full recompute-from-scratch, matching every other owner's treatment in the loop above).
+  for (const user of await listAllUsers(db)) {
+    if (ownerTotals.has(user.id) || user.quotaBytesUsed === 0) continue;
+    await setUserQuotaBytes(db, user.id, 0);
+    ownersQuotaZeroed += 1;
+  }
 
   // --- 4. Orphan check (LOG ONLY — see `OrphanCounts`' doc comment). --------------------------
   const charactersWithNoStreamEvents = syncResults.filter((r) => r.usage.eventCount === 0).length;
@@ -162,7 +179,7 @@ export async function runDailyMaintenance(deps: MaintenanceDeps): Promise<Mainte
     usage,
     expiredSessionsPurged,
     charactersSynced: syncResults.length,
-    ownersQuotaRecomputed: ownerTotals.size,
+    ownersQuotaRecomputed: ownerTotals.size + ownersQuotaZeroed,
     orphans: { charactersWithNoStreamEvents, streamsWithoutIndexRow },
   };
 }

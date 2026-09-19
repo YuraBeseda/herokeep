@@ -52,6 +52,7 @@ import type { AppendResult } from '../../ports/stream.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import * as permissions from '../../core/permissions.ts';
 import * as quotas from '../../core/quotas.ts';
+import { WS_MESSAGE_BYTES_MAX } from '../../core/validate.ts';
 import { DoSqlStreamStore } from './store.sqlite-do.ts';
 import { HibernatingConnections, type HibernationHost } from './connections.do.ts';
 import type { Env } from './env.ts';
@@ -173,6 +174,17 @@ export class CharacterStreamDO extends DurableObject<Env> {
    * `actor.handleMessage`. A binary frame is ignored (Phase 2 has no blob relay — matches Node's
    * `if (isBinary) return`, `server.ts`'s doc comment on that same no-op). */
   override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    // Whole-branch review finding 1: the Hibernation API has no `ws`-style `maxPayload` option of
+    // its own (Node's `server.ts` enforces `core/validate.ts`'s `WS_MESSAGE_BYTES_MAX` at the
+    // library layer instead) — this is the Cloudflare-side equivalent, a manual length guard
+    // BEFORE any JSON parse/actor dispatch runs, so an oversized frame never reaches the actor at
+    // all. Closed 1009 ("message too big"), matching Node's `ws` behavior for the same condition
+    // exactly (`server.ts`'s doc comment on `maxPayload`).
+    const byteLength = typeof message === 'string' ? new TextEncoder().encode(message).length : message.byteLength;
+    if (byteLength > WS_MESSAGE_BYTES_MAX) {
+      ws.close(1009, 'message too large');
+      return;
+    }
     if (typeof message !== 'string') return;
     const actor = await this.ensureActor();
     await actor.handleMessage(ws, safeJsonParse(message));

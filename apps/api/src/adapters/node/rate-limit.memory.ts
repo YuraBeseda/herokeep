@@ -41,7 +41,7 @@
  * curve deterministically without real 24-hour waits or `vi.useFakeTimers()` interacting with
  * `setTimeout`-based test infrastructure elsewhere.
  */
-import type { RateLimit, RateLimitResult } from '../../ports/infra.ts';
+import type { RateLimit, RateLimitPeek, RateLimitResult } from '../../ports/infra.ts';
 
 const BASE_LOCKOUT_MS = 60_000; // 1 minute
 const MAX_LOCKOUT_MS = 60 * 60_000; // 1 hour
@@ -103,6 +103,23 @@ export class MemoryRateLimit implements RateLimit {
     state.hits = []; // the window itself resets — see class doc comment's "Escalation curve" §.
     this.scopes.set(scope, state);
     return Promise.resolve({ ok: false, retryAfterMs: lockoutMs });
+  }
+
+  /** `RateLimit.peek` (`ports/infra.ts`'s doc comment on that method — read in full for the full
+   * "why" this exists): reports whether `scope` is CURRENTLY inside an already-decided lockout
+   * window (`state.lockedUntil`, set by a PRIOR `check()` trip), without touching `hits`,
+   * `lockLevel`, or `lastTrippedAt` at all — this method never calls `this.decay` or mutates the
+   * map. `lockedUntil` is the one field that already carries the exact end-of-lockout instant a
+   * trip decided; decay only ever affects the ESCALATION LEVEL used for a FUTURE trip's duration,
+   * never retroactively shortens/extends a lockout already in effect, so skipping the decay step
+   * here changes nothing about whether `scope` reads as locked right now. A scope never seen
+   * before (no entry in `this.scopes` at all) is never locked, by construction. */
+  peek(scope: string): Promise<RateLimitPeek> {
+    const now = this.now();
+    const state = this.scopes.get(scope);
+    if (!state) return Promise.resolve({ locked: false, retryAfterMs: 0 });
+    const locked = now < state.lockedUntil;
+    return Promise.resolve({ locked, retryAfterMs: locked ? state.lockedUntil - now : 0 });
   }
 
   /** Mutates `state` in place, decaying `lockLevel` by one per full `DECAY_PERIOD_MS` elapsed

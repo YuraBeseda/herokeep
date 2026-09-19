@@ -1,7 +1,7 @@
 /** In-memory `Config`/`RateLimit` port doubles for Task 4's auth tests — fixed test-only secret
  * values (never real secrets), and a REAL (not mocked) sliding-window rate limiter so the
  * lockout tests exercise actual scope/limit/window arithmetic rather than a canned response. */
-import type { Config, ConfigName, RateLimit, RateLimitResult } from '../../src/ports/index.ts';
+import type { Config, ConfigName, RateLimit, RateLimitPeek, RateLimitResult } from '../../src/ports/index.ts';
 
 const TEST_SECRETS: Record<ConfigName, string> = {
   SESSION_PEPPER: 'test-only-session-pepper-not-a-real-secret',
@@ -35,5 +35,16 @@ export class InMemoryRateLimit implements RateLimit {
     const oldest = existing[0] ?? now;
     const retryAfterMs = ok ? 0 : Math.max(0, oldest + windowMs - now);
     return Promise.resolve({ ok, retryAfterMs });
+  }
+
+  /** `RateLimit.peek` — this double is a plain sliding window (no separate persisted "locked
+   * until" state the way `MemoryRateLimit`/`RateLimiterDO` model a real escalating lockout, per
+   * this class's own doc comment), so it never reports a scope as locked; tests asserting the
+   * finding-2 peek-then-block behavior use the real `MemoryRateLimit` adapter instead (see
+   * `test/core/auth.test.ts`), which actually has lockout state for `peek` to read. Kept here only
+   * so every OTHER test in the suite that constructs this double still satisfies the `RateLimit`
+   * port's full interface. */
+  peek(_scope: string): Promise<RateLimitPeek> {
+    return Promise.resolve({ locked: false, retryAfterMs: 0 });
   }
 }

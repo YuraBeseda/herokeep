@@ -69,6 +69,7 @@ import { createApp } from '../../core/app.ts';
 import { runDailyMaintenance } from '../../core/maintenance.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
+import { WS_MESSAGE_BYTES_MAX } from '../../core/validate.ts';
 import type { WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
 import { assertConfigured, EnvConfig, loadEnvFile } from './config.env.ts';
 import { NodeMaintenanceStreams } from './maintenance-streams.ts';
@@ -265,7 +266,14 @@ export async function startNodeServer(options: NodeServerOptions = {}): Promise<
   });
 
   const pending = new Map<string, PendingUpgrade>();
-  const wss = new WebSocketServer({ noServer: true });
+  // `maxPayload` (whole-branch review finding 1): `ws` defaults to ~100 MiB, far above doc-08's
+  // 128 KB WS-message cap (`core/validate.ts`'s `WS_MESSAGE_BYTES_MAX`) — without this, a client
+  // could send an oversized frame that `ws` happily buffers/delivers instead of ever reaching
+  // `validateEvent`'s own per-event check. `ws` enforces this itself at the frame-decode layer:
+  // an oversized frame closes the connection with code 1009 before `'message'` ever fires, no
+  // server crash, nothing appended (verified in `receiver.js`'s own `WS_ERR_UNSUPPORTED_MESSAGE_LENGTH`
+  // handling).
+  const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MESSAGE_BYTES_MAX });
   const wsUpgrade = new NodeWsUpgrade(pending, wss, streamHost);
 
   const app = createApp({ db: accounts.db, config, rateLimit, streamHost, wsUpgrade, staticAssets });

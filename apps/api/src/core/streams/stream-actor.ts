@@ -113,6 +113,10 @@ export class StreamActor {
   protected readonly quotas: QuotasPort;
   protected readonly permissions: PermissionsPort;
   protected readonly streamId: string;
+  /** Whole-branch review finding 3: flips `true` the moment `deleteAll()` runs and never resets
+   * — see that method's doc comment for the full race this guards and why it's IN-MEMORY actor
+   * state rather than a durable meta key (durable storage is exactly what `deleteAll` wipes). */
+  protected closed = false;
 
   constructor(deps: StreamActorDeps) {
     this.store = deps.store;
@@ -208,6 +212,23 @@ export class StreamActor {
    */
   async append(events: Event[], actor: Actor, sourceConn?: Conn): Promise<AppendOutcome> {
     if (events.length === 0) return { acked: [], rejected: [] };
+
+    // Whole-branch review finding 3: once `deleteAll()` has run on THIS actor instance, every
+    // event is refused `stream_closed` rather than committed — see `deleteAll`'s doc comment for
+    // the resurrection race this closes (an append already queued behind the same single-writer
+    // lock `deleteAll` itself went through, which would otherwise commit against a freshly-wiped-
+    // empty store and silently re-create seq 1, resurrecting a "deleted" stream outside every
+    // quota). Checked first, before any of stages 1-5 below ever run.
+    if (this.closed) {
+      return {
+        acked: [],
+        rejected: events.map((event) => ({
+          id: event.id,
+          code: 'stream_closed' as const,
+          message: 'event.streamClosed: this stream has been deleted',
+        })),
+      };
+    }
 
     // Stage 1: per-event schema/size/permission, plus same-frame duplicate-id detection.
     const idCounts = new Map<string, number>();
@@ -378,6 +399,41 @@ export class StreamActor {
       if (outcome.rejected.length > 0)
         this.connections.send(conn, { t: 'reject', rid: msg.rid, results: outcome.rejected });
     }
+  }
+
+  /**
+   * Wipes ALL durable data for this stream (`StreamHandle.deleteAll`'s port contract,
+   * `ports/stream.ts`) — whole-branch review finding 3 fix. Two things happen here that did NOT
+   * happen before, both BEFORE/AS the actual store wipe:
+   *
+   *   1. Every connection currently on this stream is closed with WS code 1001 ("going away") and
+   *      reason `'stream_closed'` — a connected owner socket otherwise stays open across the
+   *      delete and can still send an `append` afterward, which would commit against a
+   *      freshly-empty store and silently RESURRECT the "deleted" stream (new seq-1 events, no
+   *      owning D1 row, unbounded storage outside every quota — exactly what hard delete exists
+   *      to prevent). `Connections.all()`/`.close()` (`ports/connections.ts`) already give every
+   *      adapter this surface; nothing adapter-specific is needed here.
+   *   2. `this.closed` flips to `true` — `append()`'s own doc comment above explains the race
+   *      this covers that closing sockets alone does NOT: an append call already past
+   *      `Connections.close()`'s reach (queued behind this SAME actor instance's single-writer
+   *      lock, e.g. `NodeStreamHost`'s per-actor `Mutex` or Cloudflare's own per-DO-instance
+   *      message ordering) would otherwise still run to completion against the now-empty store.
+   *      `closed` is scoped to THIS ACTOR INSTANCE (in-memory, not a durable meta key — durable
+   *      storage is exactly what the wipe below erases) rather than surviving eviction/process
+   *      restart: that's fine, because a NEW connection reaching a re-hydrated actor for this
+   *      streamId after a real delete can never get this far in the first place — `DELETE
+   *      /api/characters/:id` also removes the D1 index row (`core/routes/characters.ts`), and
+   *      every WS-upgrade route re-checks D1 ownership before ever calling `StreamHost.get` again
+   *      (`GET /:id/ws`'s `existing?.ownerId !== user.userId` check) — so the ONLY reachable case
+   *      this instance-scoped flag needs to cover is the in-flight race against THIS SAME live
+   *      actor, which it does.
+   */
+  async deleteAll(): Promise<void> {
+    for (const conn of this.connections.all()) {
+      this.connections.close(conn, 1001, 'stream_closed');
+    }
+    this.closed = true;
+    await this.store.deleteAll();
   }
 
   /**

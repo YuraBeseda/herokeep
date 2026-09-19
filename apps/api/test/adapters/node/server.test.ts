@@ -194,6 +194,163 @@ describe('Node adapter — real end-to-end WS smoke (obligation (d))', () => {
   });
 });
 
+describe('Node adapter — 128 KB WS message cap (whole-branch review finding 1)', () => {
+  it('closes an oversized frame with code 1009, crashes nothing, and appends nothing', async () => {
+    const username = `WsOversize${Date.now()}`;
+    const verifier = verifierHex('ab1');
+
+    await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username, verifier, salt: saltHex('ab2') }),
+    });
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username, verifier, deviceLabel: 'oversize-test' }),
+    });
+    const cookie = firstCookiePair(loginRes.headers.get('set-cookie'));
+
+    const characterId = '01950000-0000-7000-8000-000000000003';
+    await fetch(`${baseUrl}/api/characters`, {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id: characterId, name: 'Bram', system: 'srd-5e-2024' }),
+    });
+
+    const closeCode = await new Promise<number>((resolvePromise, reject) => {
+      const ws = new WsClient(`ws://127.0.0.1:${handle.port}/api/characters/${characterId}/ws`, {
+        headers: { cookie, Origin: baseUrl },
+      });
+      const timeout = setTimeout(() => reject(new Error('timed out waiting for close')), 5000);
+      ws.on('open', () => {
+        // RED-first against the pre-fix `new WebSocketServer({ noServer: true })` (no
+        // `maxPayload`, ~100 MiB default): a 200 KB frame — well over doc-08's 128 KB cap
+        // (`core/validate.ts`'s `WS_MESSAGE_BYTES_MAX`) — is sent RAW (never valid JSON; doesn't
+        // matter, `ws` must reject it at the frame-decode layer before `'message'` ever fires).
+        ws.send('x'.repeat(200_000));
+      });
+      ws.on('message', () => {
+        clearTimeout(timeout);
+        reject(new Error('server processed an oversized frame instead of rejecting it'));
+      });
+      ws.on('close', (code) => {
+        clearTimeout(timeout);
+        resolvePromise(code);
+      });
+      ws.on('error', () => {
+        /* `ws` also emits a client-side error for the same condition; 'close' is what this test
+         * asserts on — swallow so it doesn't reject the promise as an unhandled test failure. */
+      });
+    });
+
+    expect(closeCode).toBe(1009);
+
+    // No server crash: the process is still answering ordinary requests fine afterward.
+    const health = await fetch(`${baseUrl}/api/health`);
+    expect(health.status).toBe(200);
+
+    // Nothing appended: a fresh connection's `hello` -> `welcome` still reports an empty stream.
+    const welcome = await new Promise<{ streams: { headSeq: number }[] }>((resolvePromise, reject) => {
+      const ws = new WsClient(`ws://127.0.0.1:${handle.port}/api/characters/${characterId}/ws`, {
+        headers: { cookie, Origin: baseUrl },
+      });
+      const timeout = setTimeout(() => reject(new Error('timed out waiting for welcome')), 5000);
+      ws.on('open', () => {
+        ws.send(
+          JSON.stringify({
+            t: 'hello',
+            rid: 'check-1',
+            proto: 1,
+            app: 'oversize-test',
+            streams: [],
+            have: [],
+            pending: [],
+          }),
+        );
+      });
+      ws.on('message', (data) => {
+        clearTimeout(timeout);
+        ws.close();
+        resolvePromise(JSON.parse((data as Buffer).toString('utf8')) as { streams: { headSeq: number }[] });
+      });
+      ws.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+    expect(welcome.streams[0]?.headSeq).toBe(0);
+  });
+});
+
+describe('Node adapter — hard delete closes a live socket (whole-branch review finding 3)', () => {
+  it('closes an open WS with code 1001, and a reconnect afterward is refused 403 at upgrade', async () => {
+    const username = `WsDelete${Date.now()}`;
+    const verifier = verifierHex('de1');
+
+    await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username, verifier, salt: saltHex('d1') }),
+    });
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username, verifier, deviceLabel: 'delete-test' }),
+    });
+    const cookie = firstCookiePair(loginRes.headers.get('set-cookie'));
+
+    const characterId = '01950000-0000-7000-8000-000000000004';
+    await fetch(`${baseUrl}/api/characters`, {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id: characterId, name: 'Cato', system: 'srd-5e-2024' }),
+    });
+
+    const ws = new WsClient(`ws://127.0.0.1:${handle.port}/api/characters/${characterId}/ws`, {
+      headers: { cookie, Origin: baseUrl },
+    });
+    await new Promise<void>((resolvePromise, reject) => {
+      const timeout = setTimeout(() => reject(new Error('timed out waiting for ws open')), 5000);
+      ws.on('open', () => {
+        clearTimeout(timeout);
+        resolvePromise();
+      });
+      ws.on('error', reject);
+    });
+
+    const closePromise = new Promise<{ code: number; reason: string }>((resolvePromise, reject) => {
+      const timeout = setTimeout(() => reject(new Error('timed out waiting for close after delete')), 5000);
+      ws.on('close', (code, reasonBuf) => {
+        clearTimeout(timeout);
+        resolvePromise({ code, reason: reasonBuf.toString('utf8') });
+      });
+    });
+
+    const deleteRes = await fetch(`${baseUrl}/api/characters/${characterId}`, {
+      method: 'DELETE',
+      headers: { ...XRW, cookie },
+    });
+    expect(deleteRes.status).toBe(204);
+
+    const closeInfo = await closePromise;
+    expect(closeInfo.code).toBe(1001);
+    expect(closeInfo.reason).toBe('stream_closed');
+
+    // Outer guard: a fresh reconnect attempt is refused at the upgrade itself (403) since the D1
+    // ownership row is gone — never reaches the (now permanently closed) actor at all.
+    const reconnectStatus = await new Promise<number | 'error'>((resolvePromise) => {
+      const ws2 = new WsClient(`ws://127.0.0.1:${handle.port}/api/characters/${characterId}/ws`, {
+        headers: { cookie, Origin: baseUrl },
+      });
+      ws2.on('open', () => resolvePromise(-1));
+      ws2.on('unexpected-response', (_req, res) => resolvePromise(res.statusCode ?? -1));
+      ws2.on('error', () => resolvePromise('error'));
+    });
+    expect(reconnectStatus).toBe(403);
+  });
+});
+
 describe('Node adapter — fails fast at boot on missing secrets (fix round 1)', () => {
   // `beforeEach`/`afterEach` above still run around every test in this file (they boot/close a
   // SEPARATE, correctly-configured server — unrelated to the deliberately-misconfigured boot

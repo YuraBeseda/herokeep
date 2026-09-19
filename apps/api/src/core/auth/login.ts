@@ -56,6 +56,22 @@ export async function loginUser(
   const deviceLabel = normalizeDeviceLabel(input.deviceLabel);
 
   const folded = foldUsername(username);
+  const scope = `user:${folded}:login-fail`;
+
+  // Whole-branch review finding 2 fix: peek the lockout BEFORE the verifier compare, not only
+  // after a failed one. The pre-fix shape consulted `rateLimit.check` exclusively inside the
+  // `!matches` branch below — during an ACTIVE lockout, a CORRECT verifier still fell through to
+  // the success path (a locked-out scope never re-entered `!matches` to get blocked), so 429-vs-
+  // 200 became a working existence/correctness oracle for exactly the attempts an attacker cares
+  // about, and an escalated lockout never actually throttled a distributed (cross-IP) guesser who
+  // kept sending the right guess mixed with wrong ones. `peek` never consumes a hit
+  // (`ports/infra.ts`'s `RateLimit.peek` doc comment) — calling it here, for EVERY submitted
+  // username, known or not, adds no new existence oracle: it's the same "always do identical work
+  // regardless of whether the account exists" rule `hashVerifier` below already follows for the
+  // exact same reason.
+  const lock = await rateLimit.peek(scope);
+  if (lock.locked) throw tooManyRequests('Too many failed attempts');
+
   const user = await findUserByFoldedName(db, folded);
 
   // Always hash+compare, even for an unknown user (against a fixed dummy), so control flow and
@@ -65,7 +81,6 @@ export async function loginUser(
   const matches = user !== undefined && constantTimeEqual(candidateHash, storedHash);
 
   if (!matches) {
-    const scope = `user:${folded}:login-fail`;
     const limit = await rateLimit.check(scope, LOGIN_FAIL_LIMIT, LOGIN_FAIL_WINDOW_MS);
     if (!limit.ok) throw tooManyRequests('Too many failed attempts');
     throw unauthorized('Invalid username or password');

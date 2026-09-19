@@ -38,6 +38,18 @@ export class WsConnections<Attachment extends Taggable> implements Connections<A
       this.sockets.delete(socket);
       this.attachments.delete(socket);
     });
+    // Whole-branch review finding 1: `ws`'s own `maxPayload` enforcement (`server.ts`'s
+    // `WebSocketServer({ maxPayload: WS_MESSAGE_BYTES_MAX })`) emits an `'error'` event on the
+    // socket the moment an oversized frame arrives, immediately before it closes the connection
+    // itself with code 1009 — Node's `EventEmitter` throws an UNCAUGHT exception for any `'error'`
+    // event with no registered listener, which would crash the WHOLE process (every other live
+    // connection along with it), exactly the "no server crash" requirement this finding exists to
+    // guarantee. `'close'` above already does every bit of cleanup this class needs; this listener
+    // exists purely to make the built-in "an 'error' event throws if unhandled" behavior a no-op.
+    socket.on('error', () => {
+      /* swallow — ws already closes the socket itself for every case that fires this (oversized
+       * frame, protocol violation, abrupt network failure); nothing further to do here. */
+    });
     return socket;
   }
 

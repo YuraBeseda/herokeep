@@ -28,6 +28,7 @@ export class FakeConnections implements Connections<TestAttachment> {
   private readonly attachments = new Map<Conn, TestAttachment>();
   private readonly frames = new Map<Conn, ServerMessage[]>();
   private readonly closed = new Set<Conn>();
+  private readonly closeArgs = new Map<Conn, { code: number; reason: string }>();
 
   accept(_ws: unknown, attachment: TestAttachment): Conn {
     const conn = new FakeConn(attachment.userId);
@@ -49,9 +50,10 @@ export class FakeConnections implements Connections<TestAttachment> {
     this.frames.get(conn)?.push(frame);
   }
 
-  close(conn: Conn, _code: number, _reason: string): void {
+  close(conn: Conn, code: number, reason: string): void {
     this.registered.delete(conn);
     this.closed.add(conn);
+    this.closeArgs.set(conn, { code, reason });
   }
 
   getAttachment(conn: Conn): TestAttachment {
@@ -72,5 +74,11 @@ export class FakeConnections implements Connections<TestAttachment> {
   /** Test-only inspection: whether `close()` was called for `conn`. */
   wasClosed(conn: Conn): boolean {
     return this.closed.has(conn);
+  }
+
+  /** Test-only inspection: the `(code, reason)` a `close()` call for `conn` was made with (the
+   * LAST call, if made more than once) — `undefined` if `close()` was never called for it. */
+  closeArgsFor(conn: Conn): { code: number; reason: string } | undefined {
+    return this.closeArgs.get(conn);
   }
 }

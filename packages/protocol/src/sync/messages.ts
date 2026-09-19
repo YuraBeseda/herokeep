@@ -77,7 +77,12 @@ export const HelloMsgSchema = z.strictObject({
   app: z.string().min(1).max(64),
   streams: z.array(StreamRefSchema),
   have: z.array(BlobHashSchema),
-  pending: z.array(FrameEventSchema),
+  // Capped at 50, same as append.events immediately below — `hello.pending` is flushed through
+  // that exact same `StreamActor.append` path once catch-up finishes (stream-actor.ts's `hello`
+  // doc comment), so an unbounded `pending` array would let a client bypass append's own 50-event
+  // batch ceiling simply by queuing everything as offline pending instead of live `append`
+  // frames. Finding 5 fix (whole-branch review): symmetric with `AppendMsgSchema.events` below.
+  pending: z.array(FrameEventSchema).max(50),
 });
 export type HelloMsg = z.infer<typeof HelloMsgSchema>;
 

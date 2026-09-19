@@ -33,7 +33,7 @@
  */
 import { DurableObject } from 'cloudflare:workers';
 import type { Env } from './env.ts';
-import type { RateLimitResult } from '../../ports/infra.ts';
+import type { RateLimitPeek, RateLimitResult } from '../../ports/infra.ts';
 
 const BASE_LOCKOUT_MS = 60_000; // 1 minute — same constant as MemoryRateLimit.
 const MAX_LOCKOUT_MS = 60 * 60_000; // 1 hour.
@@ -102,5 +102,19 @@ export class RateLimiterDO extends DurableObject<Env> {
     state.hits = [];
     await this.ctx.storage.put(STORAGE_KEY, state);
     return { ok: false, retryAfterMs: lockoutMs };
+  }
+
+  /** `RateLimit.peek` (`ports/infra.ts`'s doc comment) — Cloudflare's half of the whole-branch
+   * review finding 2 fix, same non-consuming contract as `MemoryRateLimit.peek`
+   * (`adapters/node/rate-limit.memory.ts`, read in full for the "why no decay step, why no
+   * mutation" rationale, reproduced verbatim here): reads `lockedUntil` off the persisted
+   * `ScopeState` WITHOUT calling `decay` and WITHOUT any `storage.put` — a read-only RPC call, not
+   * a state transition. A scope with no persisted state yet is never locked, by construction. */
+  async peek(): Promise<RateLimitPeek> {
+    const now = this.now();
+    const state = await this.ctx.storage.get<ScopeState>(STORAGE_KEY);
+    if (!state) return { locked: false, retryAfterMs: 0 };
+    const locked = now < state.lockedUntil;
+    return { locked, retryAfterMs: locked ? state.lockedUntil - now : 0 };
   }
 }

@@ -338,6 +338,16 @@ async function authLifecycleScenario(driver: ConformanceDriver): Promise<void> {
   expect(statuses, 'login-fail lockout curve: 5 failures pass as 401, the 6th is 429').toEqual([
     401, 401, 401, 401, 401, 429,
   ]);
+  // Whole-branch review finding 2 ("an active lockout also blocks the CORRECT verifier") is
+  // deliberately NOT re-asserted here with an extra HTTP call: this whole conformance FILE shares
+  // one fixed `ip:<ip>:auth` rate-limit budget (30 requests/min, `core/http/rate-limit.ts`) across
+  // EVERY scenario in the table below, with no reset between them — verified at execution time
+  // that one more `driver.fetch` call here tips a LATER scenario's own login over that shared
+  // budget (429 where it expected 200), a real cross-scenario coupling this finding's fix must not
+  // introduce. Finding 2 is covered end-to-end instead by: `test/core/auth.test.ts`'s dedicated
+  // describe block (Node, the real `MemoryRateLimit` adapter, HTTP-level) and
+  // `test/adapters/cloudflare/rate-limiter-do.test.ts` (Cloudflare, `RateLimiterDO.peek` directly,
+  // no shared IP budget).
 }
 
 /** append -> ack with contiguous seqs; a fresh `hello` reads them back in order (catch-up "events"
@@ -406,7 +416,16 @@ async function ownerOnlyScenario(driver: ConformanceDriver): Promise<void> {
  * large `note.added` events (8000-byte bodies, ~8.2 KB on the wire once the envelope is added —
  * comfortably under the 16 KB per-event cap) through the ordinary public append path: ~254 events
  * cross 2 MB, well within the 50-events-per-append/50 KB-ish frame limits, so this needs only a
- * handful of real appends rather than any direct-store seeding shortcut. */
+ * handful of real appends rather than any direct-store seeding shortcut.
+ *
+ * BATCH_SIZE is 12 (not the protocol's own 50-events-per-append ceiling) — whole-branch review
+ * finding 1: doc-08's OTHER cap, the 128 KB WS-message cap (`core/validate.ts`'s
+ * `WS_MESSAGE_BYTES_MAX`), is now actually enforced (Node's `ws` `maxPayload`, Cloudflare's
+ * `CharacterStreamDO.webSocketMessage` length guard) — 50 * ~8.2 KB ≈ 410 KB would have blown
+ * straight through that cap and gotten this scenario's OWN connection closed 1009 mid-run
+ * (verified RED against the pre-fix 50-per-batch shape: the append never acks/rejects, and
+ * `appendAndWait` times out waiting on a socket that no longer exists). 12 * ~8.2 KB ≈ 98 KB
+ * comfortably clears the frame under the cap with margin for JSON envelope overhead. */
 async function quotaScenario(driver: ConformanceDriver): Promise<void> {
   const owner = await registerAndLogin(driver, 'Quota');
   const characterId = crypto.randomUUID();
@@ -418,9 +437,10 @@ async function quotaScenario(driver: ConformanceDriver): Promise<void> {
   expect(created.rejected).toEqual([]);
 
   let sawQuotaReject = false;
-  const MAX_BATCHES = 10; // 10 * 50 * ~8.2KB =~ 4.1MB — more than enough headroom over the 2MB cap.
+  const BATCH_SIZE = 12; // ~98 KB/frame — see this function's doc comment on the 128 KB WS cap.
+  const MAX_BATCHES = 30; // 30 * 12 * ~8.2KB =~ 2.95MB — more than enough headroom over the 2MB cap.
   for (let batch = 0; batch < MAX_BATCHES && !sawQuotaReject; batch += 1) {
-    const events = Array.from({ length: 50 }, () => noteEvent(streamId, owner.userId, 8000));
+    const events = Array.from({ length: BATCH_SIZE }, () => noteEvent(streamId, owner.userId, 8000));
     const outcome = await appendAndWait(stream, events);
     if (outcome.rejected.some((r) => r.code === 'quota')) sawQuotaReject = true;
   }

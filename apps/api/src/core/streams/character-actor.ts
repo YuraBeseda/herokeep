@@ -95,16 +95,14 @@ export class CharacterActor extends StreamActor {
     };
   }
 
-  /**
-   * Wipes ALL durable data for this stream — `DELETE /api/characters/:id`'s hard-delete step
-   * (`core/routes/characters.ts`), reached via `StreamHost.get(id).deleteAll()` so the delete
-   * runs under the same single-writer guarantee as every `append` (see `ports/stream.ts`'s
-   * `StreamHandle.deleteAll` doc comment for the full rationale). Delegates to the store, which
-   * owns the actual storage-level wipe (`StreamStore.deleteAll`).
-   */
-  async deleteAll(): Promise<void> {
-    await this.store.deleteAll();
-  }
+  // `deleteAll` — `DELETE /api/characters/:id`'s hard-delete step (`core/routes/characters.ts`),
+  // reached via `StreamHost.get(id).deleteAll()` so the delete runs under the same single-writer
+  // guarantee as every `append` (see `ports/stream.ts`'s `StreamHandle.deleteAll` doc comment for
+  // the full rationale) — is inherited unchanged from `StreamActor` (whole-branch review finding
+  // 3: that base implementation now closes every live connection and flips the `closed` guard
+  // BEFORE wiping the store; see its doc comment there). No character-specific override is needed
+  // here: `CharacterActor`'s own meta (`owner_id`/`campaign_id`/`pins`/`archived`) lives in the
+  // SAME `StreamStore` `StreamActor.deleteAll` already wipes.
 
   /** Sets `ownerId`/`archived` from the events this append just committed (see this file's
    * header comment). `actor` is the SESSION-verified actor `append` was called with — never an

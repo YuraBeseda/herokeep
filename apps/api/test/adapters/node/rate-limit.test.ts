@@ -138,3 +138,55 @@ describe('MemoryRateLimit', () => {
     }
   });
 });
+
+/** `RateLimit.peek` (whole-branch review finding 2, `ports/infra.ts`'s doc comment on that
+ * method): a NON-CONSUMING lockout check `core/auth/login.ts` calls BEFORE the verifier compare. */
+describe('MemoryRateLimit.peek', () => {
+  it('reports a never-seen scope as not locked', async () => {
+    const rl = new MemoryRateLimit(() => 0);
+    expect(await rl.peek('user:nobody:login-fail')).toEqual({ locked: false, retryAfterMs: 0 });
+  });
+
+  it('reports not-locked for a scope with hits still under the limit', async () => {
+    let now = 0;
+    const rl = new MemoryRateLimit(() => now);
+    const scope = 'user:hank:login-fail';
+    for (let i = 0; i < LIMIT; i += 1) {
+      await rl.check(scope, LIMIT, WINDOW_MS);
+      now += 1;
+    }
+    expect(await rl.peek(scope)).toEqual({ locked: false, retryAfterMs: 0 });
+  });
+
+  it('reports locked with a decreasing retryAfterMs once a scope has tripped, WITHOUT consuming a hit or extending the lockout', async () => {
+    let now = 0;
+    const rl = new MemoryRateLimit(() => now);
+    const scope = 'user:ida:login-fail';
+    await tripOnce(rl, scope); // locks for 1 minute
+    expect(await rl.peek(scope)).toEqual({ locked: true, retryAfterMs: MINUTE });
+
+    now += 10_000;
+    expect(await rl.peek(scope)).toEqual({ locked: true, retryAfterMs: MINUTE - 10_000 });
+
+    // A flood of `peek` calls during the lockout must not consume a sliding-window slot (unlike
+    // `check`) or push `lockedUntil` further out — this is the whole point of it being
+    // NON-CONSUMING (ports/infra.ts's `RateLimit.peek` doc comment).
+    for (let i = 0; i < 50; i += 1) await rl.peek(scope);
+    expect(await rl.peek(scope)).toEqual({ locked: true, retryAfterMs: MINUTE - 10_000 });
+
+    now += 50_000; // past the 1-minute lockout entirely
+    expect(await rl.peek(scope)).toEqual({ locked: false, retryAfterMs: 0 });
+  });
+
+  it('unlocks once the lockout window has fully elapsed, and a subsequent check still passes through normally', async () => {
+    let now = 0;
+    const rl = new MemoryRateLimit(() => now);
+    const scope = 'user:jill:login-fail';
+    await tripOnce(rl, scope);
+    now = MINUTE; // exactly at the boundary
+    expect((await rl.peek(scope)).locked).toBe(false);
+    // The scope still works normally afterward — peek never poisoned `check`'s own state.
+    const result = await rl.check(scope, LIMIT, WINDOW_MS);
+    expect(result).toEqual({ ok: true, retryAfterMs: 0 });
+  });
+});

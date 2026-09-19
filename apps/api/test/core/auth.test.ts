@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestApp } from '../helpers/app.ts';
 import { createTestConfig, InMemoryRateLimit } from '../helpers/fake-ports.ts';
 import { openTestDb, type TestDbHandle } from '../helpers/test-db.ts';
+import { MemoryRateLimit } from '../../src/adapters/node/rate-limit.memory.ts';
 
 let handle: TestDbHandle;
 let app: Hono;
@@ -150,6 +151,64 @@ describe('POST /api/auth/login', () => {
     // 6th is blocked.
     expect(results.slice(0, 5)).toEqual([401, 401, 401, 401, 401]);
     expect(results[5]).toBe(429);
+  });
+
+  describe('whole-branch review finding 2: an active lockout also blocks the CORRECT verifier', () => {
+    // `InMemoryRateLimit` (fake-ports.ts) is a plain sliding window with no persisted "locked
+    // until" state, so `peek()` on it is a permanent no-op (its own doc comment) — this describe
+    // block uses the REAL `MemoryRateLimit` adapter instead (`adapters/node/rate-limit.memory.ts`),
+    // the one implementation that actually models a lockout `peek` can observe, matching what
+    // ships in production on Node (Cloudflare's equivalent, `RateLimiterDO.peek`, is covered by
+    // its own adapter-level test plus the shared conformance scenario, which exercises this exact
+    // behavior against BOTH real adapters end-to-end).
+    let lockoutApp: Hono;
+
+    beforeEach(() => {
+      lockoutApp = createTestApp({ db: handle.db, config: createTestConfig(), rateLimit: new MemoryRateLimit() });
+    });
+
+    async function loginAs(app: Hono, username: string, verifier: string) {
+      return app.request('/api/auth/login', {
+        method: 'POST',
+        headers: XRW,
+        body: JSON.stringify({ username, verifier, deviceLabel: 'lockout-test' }),
+      });
+    }
+
+    it('a correct-verifier login succeeds normally before any lockout has tripped', async () => {
+      const regRes = await lockoutApp.request('/api/auth/register', {
+        method: 'POST',
+        headers: XRW,
+        body: JSON.stringify({ username: 'Judy', verifier: verifierHex('f1'), salt: saltHex('f1') }),
+      });
+      expect(regRes.status).toBe(201);
+      const res = await loginAs(lockoutApp, 'Judy', verifierHex('f1'));
+      expect(res.status).toBe(200);
+    });
+
+    it('once a lockout has tripped from wrong-verifier failures, the CORRECT verifier also 429s until the window passes', async () => {
+      const username = 'Kevin';
+      const correctVerifier = verifierHex('a4');
+      const regRes = await lockoutApp.request('/api/auth/register', {
+        method: 'POST',
+        headers: XRW,
+        body: JSON.stringify({ username, verifier: correctVerifier, salt: saltHex('a4') }),
+      });
+      expect(regRes.status).toBe(201);
+
+      const wrongVerifier = verifierHex('a5');
+      const statuses: number[] = [];
+      for (let i = 0; i < 6; i += 1) {
+        statuses.push((await loginAs(lockoutApp, username, wrongVerifier)).status);
+      }
+      expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+
+      // RED-first: pre-fix, this would have been 200 (`hashVerifier`/`constantTimeEqual` matched,
+      // and only the `!matches` branch ever consulted the rate limiter) — post-fix, `login.ts`
+      // peeks the lockout BEFORE the compare and 429s regardless of the verifier's correctness.
+      const correctDuringLockout = await loginAs(lockoutApp, username, correctVerifier);
+      expect(correctDuringLockout.status).toBe(429);
+    });
   });
 });
 

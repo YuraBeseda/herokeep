@@ -166,6 +166,49 @@ describe('runDailyMaintenance — the quota chain (controller ruling, quotas.ts)
     expect(owner?.quotaBytesUsed).toBe(10000);
   });
 
+  it('zeroes a stale quota_bytes_used for an owner with no characters left (finding 4 fix)', async () => {
+    // Whole-branch review finding 4: `maintenance.ts:147-149`'s pre-fix loop only ever wrote a
+    // total for an owner appearing in `ownerTotals` — an owner who owned characters on a PRIOR
+    // run but owns NONE today (every one hard-deleted since) never appears there at all, so their
+    // stale `users.quota_bytes_used` from the last run they DID have characters survived forever,
+    // permanently blocking `POST /api/characters`'s quota gate for an account that is actually
+    // empty. RED-first: seed a user whose CURRENT `quota_bytes_used` is already stale-nonzero
+    // (simulating "characters existed once, all deleted since") with NO character rows at all.
+    const now = Date.now();
+    await seedUser('owner-stale', 'stale-quota-owner', now);
+    await handle.db.update(users).set({ quotaBytesUsed: 999_999 }).where(eq(users.id, 'owner-stale'));
+
+    // A DIFFERENT owner, with a real character, must still get its normal recompute (not swept
+    // to 0 too) — proves the fix is scoped to "no characters left", not "every user".
+    await seedUser('owner-active', 'active-quota-owner', now);
+    await seedCharacter('char-active', 'owner-active', now);
+    const streams = new FakeMaintenanceStreams();
+    streams.setUsage('char:char-active', { bytesUsed: 500, eventCount: 2 });
+
+    const report = await runDailyMaintenance({ db: handle.db, streams, now });
+
+    const [staleOwner] = await handle.db.select().from(users).where(eq(users.id, 'owner-stale'));
+    expect(staleOwner?.quotaBytesUsed).toBe(0);
+
+    const [activeOwner] = await handle.db.select().from(users).where(eq(users.id, 'owner-active'));
+    expect(activeOwner?.quotaBytesUsed).toBe(500);
+
+    // Both the real recompute (owner-active) and the zero-out (owner-stale) count as "recomputed".
+    expect(report.ownersQuotaRecomputed).toBe(2);
+  });
+
+  it('leaves a user whose quota_bytes_used is already 0 and has no characters untouched (no spurious write needed)', async () => {
+    const now = Date.now();
+    await seedUser('owner-empty', 'empty-quota-owner', now);
+    const streams = new FakeMaintenanceStreams();
+
+    const report = await runDailyMaintenance({ db: handle.db, streams, now });
+
+    const [owner] = await handle.db.select().from(users).where(eq(users.id, 'owner-empty'));
+    expect(owner?.quotaBytesUsed).toBe(0);
+    expect(report.ownersQuotaRecomputed).toBe(0);
+  });
+
   it('does not touch updatedAt/name/archivedAt on the synced character row', async () => {
     const now = Date.now();
     await seedUser('owner-2', 'quota-owner-2', now);

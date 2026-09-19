@@ -21,7 +21,14 @@ import { createApp } from '../../core/app.ts';
 import type { AppPorts } from '../../core/app.ts';
 import { runDailyMaintenance } from '../../core/maintenance.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
-import type { RateLimit, RateLimitResult, StaticAssets, WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
+import type {
+  RateLimit,
+  RateLimitPeek,
+  RateLimitResult,
+  StaticAssets,
+  WsUpgrade,
+  WsUpgradeContext,
+} from '../../ports/infra.ts';
 import type { AppendResult, MaintenanceStreams, StreamHandle, StreamHost, StreamUsage } from '../../ports/stream.ts';
 import { BindingsConfig, assertConfigured } from './config.bindings.ts';
 import { openAccountsDb } from './db.d1.ts';
@@ -58,6 +65,7 @@ interface CharacterStreamStub {
 
 interface RateLimiterStub {
   check(limit: number, windowMs: number): Promise<RateLimitResult>;
+  peek(): Promise<RateLimitPeek>;
 }
 
 /** `Cloudflare's edge sets this itself; a client-supplied one is overwritten at the edge, so it's
@@ -133,6 +141,13 @@ class CloudflareRateLimit implements RateLimit {
   check(scope: string, limit: number, windowMs: number): Promise<RateLimitResult> {
     const stub = this.namespace.get(this.namespace.idFromName(scope)) as unknown as RateLimiterStub;
     return stub.check(limit, windowMs);
+  }
+
+  /** `RateLimit.peek` — same one-DO-per-scope addressing as `check` above, forwarded to the DO's
+   * own `peek` RPC method (`rate-limiter.do.ts`). */
+  peek(scope: string): Promise<RateLimitPeek> {
+    const stub = this.namespace.get(this.namespace.idFromName(scope)) as unknown as RateLimiterStub;
+    return stub.peek();
   }
 }
 

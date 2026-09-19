@@ -80,6 +80,22 @@ describe('client -> server messages', () => {
     expect(HelloMsgSchema.safeParse({ ...hello, t: 'nope' }).success).toBe(false);
   });
 
+  it('hello.pending: 0-50 events accepted, 51 rejected (finding 5 fix — symmetric with append.events)', () => {
+    const base = {
+      t: 'hello',
+      rid: 'r1',
+      proto: 1,
+      app: '1.4.0',
+      streams: [] as unknown[],
+      have: [] as unknown[],
+    };
+    expect(HelloMsgSchema.safeParse({ ...base, pending: [] }).success).toBe(true);
+    const fifty = Array.from({ length: 50 }, () => event());
+    expect(HelloMsgSchema.safeParse({ ...base, pending: fifty }).success).toBe(true);
+    const fiftyOne = Array.from({ length: 51 }, () => event());
+    expect(HelloMsgSchema.safeParse({ ...base, pending: fiftyOne }).success).toBe(false);
+  });
+
   it('append: 1-50 events accepted, 0 or 51 rejected', () => {
     const base = { t: 'append', rid: 'r1' };
     expect(AppendMsgSchema.safeParse({ ...base, events: [event()] }).success).toBe(true);

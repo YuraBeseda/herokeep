@@ -6,6 +6,12 @@ export interface RateLimitResult {
   readonly retryAfterMs: number;
 }
 
+/** Result of a `RateLimit.peek` — `retryAfterMs` is 0 when `locked` is false. */
+export interface RateLimitPeek {
+  readonly locked: boolean;
+  readonly retryAfterMs: number;
+}
+
 /**
  * Sliding-window rate limiting per scope (ADR-012's exact limits — 5 auth failures/username
  * with exponential lockout, 30 auth requests/min/IP). Cloudflare backs this with a
@@ -14,6 +20,18 @@ export interface RateLimitResult {
 export interface RateLimit {
   /** Records one hit against `scope` and reports whether it stays within `limit` per `windowMs`. */
   check(scope: string, limit: number, windowMs: number): Promise<RateLimitResult>;
+  /**
+   * Whole-branch review finding 2: a NON-CONSUMING lockout check — reports whether `scope` is
+   * CURRENTLY under an active lockout (from a PRIOR `check()` trip), without recording a hit or
+   * otherwise mutating any state `check()` itself depends on (the sliding-window hit array, the
+   * escalation level, the decay clock). `core/auth/login.ts` calls this BEFORE the verifier
+   * compare, so an active per-username lockout also blocks a CORRECT verifier — not just wrong
+   * guesses — closing the "429 = wrong password, 200 = right password" oracle a check-only,
+   * failure-triggered gate would otherwise leave open during an active lockout window. Every
+   * adapter implementing `RateLimit` must implement this too (both concrete adapters plus every
+   * test double — see `adapters/node/rate-limit.memory.ts` and `adapters/cloudflare/rate-limiter.do.ts`).
+   */
+  peek(scope: string): Promise<RateLimitPeek>;
 }
 
 /**

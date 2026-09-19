@@ -39,21 +39,28 @@ const INTERNAL_ROLE_HEADER = 'X-Hk-Internal-Role';
  * (`connections.do.ts`) to accept/attach/send against it, and for this test to read back what was
  * sent. Not a real Hibernation-API socket — `acceptWebSocket`/`getWebSockets` are bypassed
  * entirely (this file's header comment explains why). */
-function makeFakeWebSocket(): { sent: ServerMessage[]; ws: WebSocket } {
+function makeFakeWebSocket(): {
+  sent: ServerMessage[];
+  closeCalls: { code: number; reason: string }[];
+  ws: WebSocket;
+} {
   const sent: ServerMessage[] = [];
+  const closeCalls: { code: number; reason: string }[] = [];
   let attachment: unknown;
   const ws = {
     readyState: 1,
     send: (data: string) => {
       sent.push(JSON.parse(data) as ServerMessage);
     },
-    close: () => undefined,
+    close: (code?: number, reason?: string) => {
+      closeCalls.push({ code: code ?? 0, reason: reason ?? '' });
+    },
     serializeAttachment: (value: unknown) => {
       attachment = value;
     },
     deserializeAttachment: () => attachment ?? null,
   };
-  return { sent, ws: ws as unknown as WebSocket };
+  return { sent, closeCalls, ws: ws as unknown as WebSocket };
 }
 
 describe('CharacterStreamDO — WS message handling (obligations (c) and (d))', () => {
@@ -126,6 +133,29 @@ describe('CharacterStreamDO — WS message handling (obligations (c) and (d))', 
         rid: 'hello-1',
         streams: [{ id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 2 * 1024 * 1024, eventCount: 0 } }],
       });
+    });
+  });
+
+  it('an oversized message (> 128 KB, whole-branch review finding 1) closes 1009 without ever reaching the actor', async () => {
+    const streamId = `char:${crypto.randomUUID()}`;
+    const id = env.CHARACTER_STREAM.idFromName(streamId);
+    const stub = env.CHARACTER_STREAM.get(id);
+
+    await runInDurableObject(stub, async (instance, state) => {
+      await state.storage.put('stream_id', streamId);
+
+      const { sent, closeCalls, ws } = makeFakeWebSocket();
+      ws.serializeAttachment({ userId: 'user-1', role: 'owner', subs: [streamId] });
+
+      // RED-first against the pre-fix `webSocketMessage`, which parsed unconditionally regardless
+      // of size: a 200 KB raw string, well over doc-08's 128 KB cap (`core/validate.ts`'s
+      // `WS_MESSAGE_BYTES_MAX`) — not even valid JSON, which must not matter, since the length
+      // guard has to run and close the connection BEFORE any `JSON.parse`/actor dispatch at all.
+      await instance.webSocketMessage!(ws, 'x'.repeat(200_000));
+
+      expect(closeCalls).toEqual([{ code: 1009, reason: 'message too large' }]);
+      // Never reached the actor: no `welcome`/`ack`/`reject`/anything was ever sent.
+      expect(sent).toEqual([]);
     });
   });
 });

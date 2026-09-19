@@ -319,3 +319,69 @@ describe('handleMessage', () => {
     expect(system.connections.framesFor(conn)).toEqual([]);
   });
 });
+
+/** Whole-branch review finding 3: hard delete must close every live connection on the stream
+ * (code 1001, reason 'stream_closed') and permanently refuse any FURTHER append on this same
+ * actor instance — otherwise a connected socket can append after its data is gone, silently
+ * resurrecting a "deleted" stream outside every quota. */
+describe('deleteAll (finding 3 fix)', () => {
+  it('closes every connection currently on the stream with code 1001, reason stream_closed', async () => {
+    const connA = system.connections.accept({}, { userId: 'user-1', role: 'owner', subs: [] });
+    const connB = system.connections.accept({}, { userId: 'user-2', role: 'owner', subs: [] });
+
+    await system.actor.deleteAll();
+
+    expect(system.connections.wasClosed(connA)).toBe(true);
+    expect(system.connections.wasClosed(connB)).toBe(true);
+    expect(system.connections.closeArgsFor(connA)).toEqual({ code: 1001, reason: 'stream_closed' });
+    expect(system.connections.closeArgsFor(connB)).toEqual({ code: 1001, reason: 'stream_closed' });
+  });
+
+  it('wipes the backing store', async () => {
+    await system.actor.append([makeEvent()], makeActor());
+    expect(system.store.length).toBe(1);
+
+    await system.actor.deleteAll();
+
+    expect(system.store.length).toBe(0);
+  });
+
+  it('RED-first: an append that arrives on this SAME actor instance after deleteAll is refused stream_closed, never re-committed', async () => {
+    await system.actor.append([makeEvent()], makeActor());
+    await system.actor.deleteAll();
+    expect(system.store.length).toBe(0);
+
+    // Models the queued-append race the finding calls out: a connection already past the
+    // WS-upgrade/ownership check appends on the SAME live actor instance right after delete.
+    const queuedEvent = makeEvent();
+    const outcome = await system.actor.append([queuedEvent], makeActor());
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected).toHaveLength(1);
+    expect(outcome.rejected[0]).toMatchObject({ id: queuedEvent.id, code: 'stream_closed' });
+    // The critical resurrection check: nothing was written to the store as seq 1 again.
+    expect(system.store.length).toBe(0);
+  });
+
+  it('a hello with pending events on the SAME actor instance after deleteAll rejects the pending events, not commit them', async () => {
+    await system.actor.deleteAll();
+
+    const conn = system.connections.accept({}, { userId: 'user-1', role: 'owner', subs: [] });
+    const pendingEvent = makeEvent();
+    const hello: HelloMsg = {
+      t: 'hello',
+      rid: 'r1',
+      proto: 1,
+      app: '1.0.0',
+      streams: [],
+      have: [],
+      pending: [pendingEvent],
+    };
+    await system.actor.hello(conn, hello);
+
+    const frames = system.connections.framesFor(conn);
+    const reject = frames.find((f) => f.t === 'reject');
+    expect(reject).toMatchObject({ t: 'reject', results: [{ id: pendingEvent.id, code: 'stream_closed' }] });
+    expect(system.store.length).toBe(0);
+  });
+});
