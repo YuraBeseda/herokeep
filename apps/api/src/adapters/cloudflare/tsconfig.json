@@ -1,0 +1,26 @@
+{
+  // A DELIBERATELY separate TypeScript program from `apps/api/tsconfig.json` (which the main
+  // `pnpm --filter api typecheck` step now excludes this directory from — see that file's
+  // "exclude"). Reason: `@cloudflare/workers-types` globally declares `Request`/`Response`/
+  // `WebSocket`/etc. differently from `@types/node`'s own global declarations (both packages ship
+  // ambient `declare global` blocks for the same identifiers, and TypeScript requires every
+  // `declare global` for one identifier within ONE program to agree) — mixing this directory's
+  // Workers-runtime code with the Node adapter's code in a single `tsc` program would produce
+  // spurious global-redeclaration errors having nothing to do with either adapter's actual
+  // correctness. Each adapter therefore gets its OWN `types` array/program, matching the same
+  // "two runtimes, two adapters" split ADR-014 already draws at the port/implementation level —
+  // this is that split's necessary TypeScript-tooling consequence, not a design choice of its own.
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"],
+    "paths": { "@hk/protocol": ["../../../../../packages/protocol/src/index.ts"] }
+  },
+  "include": [
+    "**/*.ts",
+    "../../ports/**/*.ts",
+    "../../core/**/*.ts",
+    "../../../../../packages/protocol/src/**/*.ts",
+    "../../../wrangler.jsonc"
+  ]
+}

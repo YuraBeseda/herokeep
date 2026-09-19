@@ -16,6 +16,12 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+# apps/api Cloudflare adapter local secrets (wrangler dev) — mirrors the .env rule above.
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+# wrangler's local dev state (D1/DO storage under `wrangler dev`, `.wrangler d1 execute --local`, …).
+.wrangler/
 # apps/api Node adapter's local SQLite data dir (src/adapters/node/server.ts's default `HK_DATA_DIR`).
 apps/api/data/
 *.sqlite

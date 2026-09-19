@@ -91,4 +91,15 @@ export default defineConfig([
     files: ['**/*.js', '**/*.mjs'],
     extends: [js.configs.recommended, tseslint.configs.disableTypeChecked],
   },
+  {
+    // `test/adapters/cloudflare/tsconfig.json` deliberately excludes this ONE file (its own doc
+    // comment: workers-types' global `URL`/`Response`/etc. conflict with `node:url`'s own types
+    // the moment it imports `fileURLToPath` — it runs under plain Node, not workerd) and neither
+    // does `apps/api/tsconfig.json` (which excludes the whole `test/adapters/cloudflare`
+    // directory) — so no project covers it for type-aware linting; disable that here rather than
+    // contort a tsconfig around one config file with no runtime-agnostic-core-style correctness
+    // obligation of its own.
+    files: ['apps/api/test/adapters/cloudflare/vitest.config.ts'],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
 ]);

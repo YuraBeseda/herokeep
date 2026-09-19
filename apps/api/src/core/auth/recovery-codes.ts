@@ -19,7 +19,7 @@ function randomBase32Char(): string {
   const buf = new Uint8Array(1);
   let value: number;
   do {
-    globalThis.crypto.getRandomValues(buf);
+    crypto.getRandomValues(buf);
     value = buf[0] ?? 0;
   } while (value >= 224);
   return BASE32_ALPHABET[value % 32] ?? 'A';

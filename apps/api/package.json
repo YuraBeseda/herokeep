@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/adapters/cloudflare/tsconfig.json --noEmit && tsc -p test/adapters/cloudflare/tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:cloudflare": "vitest run --config test/adapters/cloudflare/vitest.config.ts",
     "db:generate": "drizzle-kit generate",
-    "dev:node": "node src/adapters/node/server.ts"
+    "dev:node": "node src/adapters/node/server.ts",
+    "dev:cf": "wrangler dev"
   },
   "dependencies": {
     "@hk/protocol": "workspace:*",
@@ -18,8 +20,11 @@
     "ws": "8.21.3"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/workers-types": "5.20260919.1",
     "@types/better-sqlite3": "9.6.0",
     "@types/ws": "8.18.1",
-    "drizzle-kit": "0.31.10"
+    "drizzle-kit": "0.31.10",
+    "wrangler": "4.135.0"
   }
 }

@@ -8,6 +8,7 @@ allowBuilds:
   esbuild: true
   lmdb: true
   msgpackr-extract: true
+  workerd: true
 
 catalog:
   '@eslint/js': ^10.0.0
@@ -32,3 +33,4 @@ minimumReleaseAgeExclude:
   - '@angular-eslint/template-parser@22.4.0'
   - '@angular-eslint/utils@22.4.0'
   - angular-eslint@22.4.0
+  - '@cloudflare/workers-types@5.20260919.1'

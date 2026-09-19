@@ -13,7 +13,7 @@
     "lint:styles": "pnpm --filter web exec stylelint \"src/app/**/*.scss\" --allow-empty-input",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "vitest run && pnpm --filter web test --watch=false",
+    "test": "vitest run && pnpm --filter api test:cloudflare && pnpm --filter web test --watch=false",
     "test:watch": "vitest",
     "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test"
   },

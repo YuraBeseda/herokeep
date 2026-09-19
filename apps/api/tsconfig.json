@@ -5,5 +5,6 @@
     "rootDir": "../..",
     "paths": { "@hk/protocol": ["../../packages/protocol/src/index.ts"] }
   },
-  "include": ["src", "test", "vitest.config.ts", "drizzle.config.ts", "../../packages/protocol/src"]
+  "include": ["src", "test", "vitest.config.ts", "drizzle.config.ts", "../../packages/protocol/src"],
+  "exclude": ["src/adapters/cloudflare", "test/adapters/cloudflare"]
 }

@@ -6,14 +6,19 @@
  * Ported from apps/web/src/app/shared/helpers/uuid.ts rather than imported: `src/core/**` may
  * only depend on `./ports` types and `@hk/protocol` (the ESLint core-boundary rule; Global
  * Constraints in the phase-2 plan) and must not reach across the apps/api ↔ apps/web boundary,
- * so the algorithm is duplicated here. Uses WebCrypto's `globalThis.crypto` only — no `node:`
- * or `cloudflare:` import — so it runs unchanged on both the Node adapter (>= 20) and Cloudflare
- * Workers.
+ * so the algorithm is duplicated here. Uses WebCrypto's global `crypto` only — no `node:` or
+ * `cloudflare:` import — so it runs unchanged on both the Node adapter (>= 20) and Cloudflare
+ * Workers. Referenced as the bare identifier `crypto` (not `globalThis.crypto`): `@types/node`
+ * and `@cloudflare/workers-types` both declare a global `crypto`, but only Node's declares it as
+ * an actual property of `typeof globalThis` — `src/adapters/cloudflare/tsconfig.json`'s separate
+ * program (required for the Cloudflare adapter; see that file's header comment) fails to compile
+ * this file under the dotted form with "Property 'crypto' does not exist on type 'typeof
+ * globalThis'" otherwise, even though the plain global reference resolves identically under both.
  */
 export function uuidv7(): string {
   const ts = Date.now();
   const rand = new Uint8Array(10);
-  globalThis.crypto.getRandomValues(rand);
+  crypto.getRandomValues(rand);
   const byte = (i: number): number => rand[i] ?? 0;
 
   const bytes = new Uint8Array(16);

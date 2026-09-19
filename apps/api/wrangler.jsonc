@@ -1,0 +1,105 @@
+{
+  // Cloudflare adapter config (ADR-014 §Adapter A; docs/02-architecture/10-backend-architecture.md
+  // §Deployment/Cloudflare; task-8-brief). NO DEPLOY happens from this repo/session — this file is
+  // consumed locally by `wrangler dev`/`wrangler types` and by `@cloudflare/vitest-pool-workers`
+  // (`test/adapters/cloudflare/vitest.config.ts` points `wrangler.configPath` at this file) to build
+  // an identical local Workers runtime for tests. The owner runs `wrangler deploy`/`wrangler d1
+  // create`/`wrangler secret put` themselves when they actually deploy.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "herokeep-api",
+  "main": "src/adapters/cloudflare/worker.ts",
+  // Pinned to the newest date the installed `workerd` binary (pulled in by `wrangler@4.135.0` /
+  // `@cloudflare/vitest-pool-workers@0.22.0`, verified at execution time 2026-09-19) actually
+  // supports — a newer literal date (e.g. today's) makes the Workers runtime refuse to start
+  // ("This Worker requires compatibility date ..., but the newest date supported by this server
+  // binary is ...", hit and fixed during this task's own test run). Bump this together with the
+  // next `wrangler`/`workerd` upgrade, not casually — a compatibility_date pins Workers runtime
+  // behavior, including which Hibernation API semantics apply (obligation (d)).
+  "compatibility_date": "2026-08-22",
+
+  // Serves `apps/web/dist` (the Angular PWA build — ADR-014 §StaticAssets row). `run_worker_first:
+  // true` is required, not cosmetic: doc-10 §Request routing puts static-asset serving INSIDE
+  // `createApp`'s own routing (core/app.ts's `GET *` fallback calls `StaticAssets.fetch` twice —
+  // literal path, then `/index.html` for SPA fallback — the SAME logic the Node adapter's
+  // `NodeStaticAssets` drives). Without `run_worker_first`, Cloudflare's assets layer would serve
+  // matching files (and answer 404s) BEFORE the Worker script ever runs, bypassing `createApp`
+  // entirely and duplicating/diverging from that shared fallback logic — the opposite of doc-10's
+  // "both adapters get SPA fallback for free from implementing `fetch` once" design (core/app.ts's
+  // own comment). `binding: "ASSETS"` is what lets `worker.ts`'s `CloudflareStaticAssets` port
+  // implementation call `env.ASSETS.fetch(request)` from inside `createApp`'s fallback route.
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+
+  // Durable Object bindings (ADR-014's `StreamHost`/`RateLimit` rows). `CHARACTER_STREAM`: one DO
+  // instance per character stream, addressed by `idFromName(streamId)` (task-8-brief obligation
+  // (c)) — `character-stream.do.ts`. `RATE_LIMITER`: one DO instance per rate-limit SCOPE, also
+  // addressed by `idFromName(scope)` (obligation (b); see `rate-limiter.do.ts`'s header comment
+  // for why per-scope addressing was chosen over one global DO).
+  "durable_objects": {
+    "bindings": [
+      { "name": "CHARACTER_STREAM", "class_name": "CharacterStreamDO" },
+      { "name": "RATE_LIMITER", "class_name": "RateLimiterDO" },
+    ],
+  },
+  // Both classes are SQLite-backed (`new_sqlite_classes`, not the legacy KV-backed
+  // `new_classes`) — task-8-brief's explicit deliverable. `CharacterStreamDO` uses
+  // `state.storage.sql` directly (obligation (c)); `RateLimiterDO` uses the classic
+  // `state.storage.get/put` KV-style API, which SQLite-backed DOs still fully support (it is
+  // implemented on top of the same SQLite database) — see that file's header comment for why a
+  // raw KV shape was simpler than hand-written SQL for its one small `ScopeState` record.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CharacterStreamDO", "RateLimiterDO"] }],
+
+  // Accounts DB (ADR-014's `Db` row: D1 via `drizzle-orm/d1`, Task 3's schema/migrations shared
+  // verbatim with the Node adapter). `database_id` is a placeholder — real deploys need the
+  // owner's own `wrangler d1 create herokeep-accounts` id, which this repo never runs (NO DEPLOY).
+  // `migrations_dir` points at the SAME committed migrations the Node adapter applies at startup
+  // (`src/core/db/db.sqlite.ts`) — one migration history, two `wrangler d1 migrations
+  // apply`/`drizzle-orm/better-sqlite3` consumers (doc-10 §Accounts database). Flat, numbered
+  // `.sql` files (drizzle-kit's own output shape) satisfy wrangler's default `migrations_pattern`
+  // without needing to override it.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "herokeep-accounts",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "src/core/db/migrations",
+    },
+  ],
+
+  // Daily maintenance (ADR-014's `Scheduler` row; doc-10 §Daily maintenance: "Cloudflare: Cron
+  // Trigger 0 3 * * *"). `worker.ts`'s `scheduled()` handler is what actually runs on this trigger.
+  "triggers": { "crons": ["0 3 * * *"] },
+
+  // PR-preview / fidelity-check environment (doc-10 §Deployment: "`wrangler versions upload --env
+  // staging` for PR previews"; plan's File Structure: "staging env"). Same bindings shape as the
+  // top-level config, pointed at separate resources so staging traffic never touches production
+  // data — real ids are, again, the owner's to fill in at first deploy (NO DEPLOY here).
+  "env": {
+    "staging": {
+      "name": "herokeep-api-staging",
+      "assets": {
+        "directory": "../web/dist",
+        "binding": "ASSETS",
+        "run_worker_first": true,
+      },
+      "durable_objects": {
+        "bindings": [
+          { "name": "CHARACTER_STREAM", "class_name": "CharacterStreamDO" },
+          { "name": "RATE_LIMITER", "class_name": "RateLimiterDO" },
+        ],
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "herokeep-accounts-staging",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "src/core/db/migrations",
+        },
+      ],
+      "triggers": { "crons": ["0 3 * * *"] },
+    },
+  },
+}

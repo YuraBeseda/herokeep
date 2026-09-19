@@ -1,0 +1,8 @@
+# Cloudflare adapter LOCAL secrets (ADR-014 §Adapter A; docs/02-architecture/10-backend-
+# architecture.md §Cloudflare). Copy this file to `.dev.vars` (gitignored) for `wrangler dev`/
+# `pnpm --filter api dev:cf` — mirrors `.env.example`'s role for the Node adapter. Real deploys use
+# `wrangler secret put <NAME>` instead (never committed, never in this file).
+
+SESSION_PEPPER=test-only-cloudflare-session-pepper-not-a-real-secret
+SALT_HMAC_KEY=test-only-cloudflare-salt-hmac-key-not-a-real-secret
+APP_ORIGIN=http://localhost:8788
