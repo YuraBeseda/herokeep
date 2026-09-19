@@ -32,13 +32,10 @@ export const STREAM_EVENT_COUNT_MAX = 20_000;
 export const QUOTA_WARNING_RATIO = 0.8;
 
 /**
- * doc-08 "User total" row's character-COUNT half: "50 characters ... checked on create". The
- * other half of that row (10 MB across characters, tracked in `users.quota_bytes_used`) is NOT
- * enforced by Task 6 — nothing in the phase-2 plan names a task that updates
- * `users.quota_bytes_used` from per-stream `bytes_used` yet, and Task 6's brief only directs
- * "enforce the 50-char cap"; a later task can add the byte-total check against this same
- * constant's sibling without touching this one. Enforced by `POST /api/characters`
- * (`core/routes/characters.ts`) against `countCharactersForOwner`'s count.
+ * doc-08 "User total" row's character-COUNT half: "50 characters ... checked on create".
+ * Enforced by `POST /api/characters` (`core/routes/characters.ts`) against
+ * `countCharactersForOwner`'s count. The row's other half (10 MB across characters) is
+ * `USER_QUOTA_BYTES_MAX` below.
  *
  * Archived-counting finding (task-6-brief: "verify against doc-08 whether archived characters
  * count toward the 50 cap"): they DO. doc-08 itself: "Freeing space: archive → hard delete
@@ -52,6 +49,35 @@ export const QUOTA_WARNING_RATIO = 0.8;
  * archived rows too, with no special-casing.
  */
 export const USER_CHARACTER_COUNT_MAX = 50;
+
+/**
+ * doc-08 "User total" row's BYTE half: "10 MB across characters ... D1 `users.quota_bytes_used`,
+ * checked on create and reported at 80%". Enforced by `POST /api/characters`
+ * (`core/routes/characters.ts`) against `getUserQuotaBytes`'s read of `users.quota_bytes_used`.
+ *
+ * CONTROLLER RULING (fix round 1, recorded verbatim — this replaces an earlier version of this
+ * comment that incorrectly claimed "nothing in the phase-2 plan names a task that updates
+ * `users.quota_bytes_used`"; task-5-report.md's ledger already named Task 6 for this):
+ *
+ *   "the per-user 10 MB quota is enforced at CREATE time by reading `users.quota_bytes_used`;
+ *   that column (and characters.bytesUsed/eventCount) is MAINTAINED by the daily maintenance job
+ *   (Task 10 — doc-10's "Usage counters → usage_daily; orphan check" job will sync stream
+ *   meta.bytes_used → characters.bytesUsed/eventCount and recompute users.quota_bytes_used per
+ *   owner). Staleness ≤ 24 h is acceptable for a create-time anti-abuse gate because the realtime
+ *   per-stream 2 MB cap bounds any burst; hard delete additionally does a best-effort immediate
+ *   decrement so freed space is usable without waiting a day."
+ *
+ * Concretely, as of Task 6 (fix round 1): `POST /api/characters` reads `users.quota_bytes_used`
+ * via `getUserQuotaBytes` and rejects `quotaExceeded` at or over this constant; `DELETE
+ * /api/characters/:id` best-effort decrements it by the deleted row's `characters.bytesUsed` via
+ * `adjustUserQuotaBytes` (floored at 0) — see that route's doc comment. Nothing yet increments
+ * `users.quota_bytes_used` as a character's stream grows (that sync from stream `meta.bytes_used`
+ * → `characters.bytesUsed`/`eventCount` → `users.quota_bytes_used` is Task 10's daily job, per
+ * the ruling above) — a brand-new account's characters therefore read as 0 bytes against this
+ * quota until the first daily sync runs, which is the accepted staleness window the ruling
+ * names, not a bug.
+ */
+export const USER_QUOTA_BYTES_MAX = 10 * 1024 * 1024; // 10 MB
 
 /** The per-stream counters `StreamActor` reads from/writes to `StreamStore.getMeta`/`setMeta`. */
 export interface StreamMetaSnapshot {

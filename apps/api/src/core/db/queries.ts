@@ -53,6 +53,36 @@ export async function updateUserCredentials(db: Db, userId: string, salt: string
   await db.update(users).set({ salt, verifierHash }).where(eq(users.id, userId));
 }
 
+/** Reads a user's current `quota_bytes_used` (fix round 1, controller ruling — see
+ * `core/quotas.ts`'s `USER_QUOTA_BYTES_MAX` doc comment) — the per-user 10 MB gate `POST
+ * /api/characters` checks at create time. `0` for an unknown/never-set user rather than
+ * `undefined`: this is a comparison input (`bytesUsed >= USER_QUOTA_BYTES_MAX`), and the schema's
+ * own `quotaBytesUsed` column default is already `0` (`schema.ts`), so a missing row and a
+ * present-but-fresh row read identically here. */
+export async function getUserQuotaBytes(db: Db, userId: string): Promise<number> {
+  const [row] = await db
+    .select({ quotaBytesUsed: users.quotaBytesUsed })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row?.quotaBytesUsed ?? 0;
+}
+
+/** Adjusts a user's `quota_bytes_used` by `delta` (positive or negative), floored at 0 in the
+ * SAME statement (`MAX(0, ... )`, not a read-then-write) so concurrent adjustments never race
+ * each other into a negative intermediate value. Fix round 1's DELETE route uses this for the
+ * best-effort immediate decrement the controller ruling calls for (`core/quotas.ts`'s
+ * `USER_QUOTA_BYTES_MAX` doc comment: "hard delete additionally does a best-effort immediate
+ * decrement so freed space is usable without waiting a day") — "best-effort" because this number
+ * is inherently approximate between daily maintenance syncs (this module's `upsertCharacterIndexRow`
+ * doc comment), not because this particular write can silently fail. */
+export async function adjustUserQuotaBytes(db: Db, userId: string, delta: number): Promise<void> {
+  await db
+    .update(users)
+    .set({ quotaBytesUsed: sql`max(0, ${users.quotaBytesUsed} + ${delta})` })
+    .where(eq(users.id, userId));
+}
+
 // --- sessions ----------------------------------------------------------------------------------
 
 export async function insertSession(db: Db, session: NewSession): Promise<Session> {
@@ -164,9 +194,18 @@ export async function findCharacterById(db: Db, id: string): Promise<Character |
   return row;
 }
 
-/** Inserts a character's index row, or replaces it if the id already exists (StreamActor commits
- * update `bytesUsed`/`eventCount`/`updatedAt` on every append — this is the write path for
- * both "register a new character" and "sync its counters"). */
+/** Inserts a character's index row, or replaces it if the id already exists. The REAL write
+ * path (fix round 1, reviewer finding 2 — this replaces an earlier comment here that described
+ * a "StreamActor syncs counters on every append" flow that does not exist: `StreamActor` has no
+ * `Db` handle at all, core/quotas.ts's header comment): `core/routes/characters.ts`'s create
+ * route calls this once with `{bytesUsed: 0, eventCount: 0, ...}` at registration, and its
+ * archive route calls it again to flip only `archivedAt`/`updatedAt` (spreading the existing
+ * row, so `bytesUsed`/`eventCount` pass through unchanged). The ONLY writer that ever moves
+ * `bytesUsed`/`eventCount` away from 0 is the daily maintenance job (Task 10, doc-10 §Daily
+ * maintenance: "Usage counters → `usage_daily`"), which periodically reads each stream's own
+ * `meta.bytes_used`/`event_count` (the actual source of truth, doc-02: "D1 is an index ... truth
+ * for game data is the streams") and syncs them here — see `quotas.ts`'s `USER_QUOTA_BYTES_MAX`
+ * doc comment for the full controller ruling on why that sync's ≤24h staleness is acceptable. */
 export async function upsertCharacterIndexRow(db: Db, character: NewCharacter): Promise<void> {
   await db
     .insert(characters)

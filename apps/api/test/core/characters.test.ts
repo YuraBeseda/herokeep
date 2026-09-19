@@ -12,8 +12,13 @@ import { CharacterActor } from '../../src/core/streams/character-actor.ts';
 import { uuidv7 } from '../../src/core/ids.ts';
 import * as permissions from '../../src/core/permissions.ts';
 import * as quotas from '../../src/core/quotas.ts';
-import { USER_CHARACTER_COUNT_MAX } from '../../src/core/quotas.ts';
-import { countCharactersForOwner, upsertCharacterIndexRow } from '../../src/core/db/queries.ts';
+import { USER_CHARACTER_COUNT_MAX, USER_QUOTA_BYTES_MAX } from '../../src/core/quotas.ts';
+import {
+  adjustUserQuotaBytes,
+  countCharactersForOwner,
+  getUserQuotaBytes,
+  upsertCharacterIndexRow,
+} from '../../src/core/db/queries.ts';
 import type { StaticAssets } from '../../src/ports/infra.ts';
 import { FakeConnections } from '../helpers/fake-connections.ts';
 import { FakeStreamHost } from '../helpers/fake-stream-host.ts';
@@ -219,6 +224,40 @@ describe('character create/list/delete lifecycle', () => {
     expect(body.error).toBe('limit_exceeded');
   });
 
+  it('a create is refused with an honest quota error when users.quota_bytes_used is at/over 10 MB', async () => {
+    const cookie = await loginAndGetCookie('Bloated', verifierHex('5b'));
+    const userId = await meUserId(cookie);
+
+    // Seed the byte counter past the cap via the query layer (fix round 1: mirrors the 51st-
+    // character test's "seed via the query layer, not via appends" approach) — this column is
+    // normally maintained by the daily maintenance job (Task 10), so a direct DB write is the
+    // correct way to simulate "a day has passed and this user is over budget".
+    await adjustUserQuotaBytes(handle.db, userId, USER_QUOTA_BYTES_MAX);
+    expect(await getUserQuotaBytes(handle.db, userId)).toBe(USER_QUOTA_BYTES_MAX);
+
+    const res = await app.request('/api/characters', {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id: uuidv7(), name: 'Over Budget', system: 'srd-5e-2024' }),
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('quota_exceeded');
+  });
+
+  it('a create is allowed when users.quota_bytes_used is below the 10 MB cap', async () => {
+    const cookie = await loginAndGetCookie('WithinBudget', verifierHex('5c'));
+    const userId = await meUserId(cookie);
+    expect(await getUserQuotaBytes(handle.db, userId)).toBe(0);
+
+    const res = await app.request('/api/characters', {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id: uuidv7(), name: 'Frugal', system: 'srd-5e-2024' }),
+    });
+    expect(res.status).toBe(201);
+  });
+
   it('an archived character still counts toward the 50-character cap (doc-08 finding)', async () => {
     const cookie = await loginAndGetCookie('Hoarder', verifierHex('6'));
     const userId = await meUserId(cookie);
@@ -274,6 +313,69 @@ describe('character create/list/delete lifecycle', () => {
 
     const listRes = await app.request('/api/characters', { headers: { ...XRW, cookie } });
     expect(await listRes.json()).toEqual([]);
+  });
+
+  it('DELETE best-effort decrements users.quota_bytes_used by the deleted row bytesUsed, floored at 0', async () => {
+    const cookie = await loginAndGetCookie('Slimmer', verifierHex('7b'));
+    const userId = await meUserId(cookie);
+    const id = uuidv7();
+
+    await app.request('/api/characters', {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id, name: 'Chonky', system: 'srd-5e-2024' }),
+    });
+    // Simulate the daily maintenance job (Task 10) having already synced this character's
+    // bytesUsed and the user's overall quota_bytes_used from stream meta.
+    await upsertCharacterIndexRow(handle.db, {
+      id,
+      ownerId: userId,
+      name: 'Chonky',
+      system: 'srd-5e-2024',
+      campaignId: null,
+      archivedAt: null,
+      bytesUsed: 500_000,
+      eventCount: 10,
+      updatedAt: Date.now(),
+    });
+    await adjustUserQuotaBytes(handle.db, userId, 500_000);
+    expect(await getUserQuotaBytes(handle.db, userId)).toBe(500_000);
+
+    const delRes = await app.request(`/api/characters/${id}`, { method: 'DELETE', headers: { ...XRW, cookie } });
+    expect(delRes.status).toBe(204);
+
+    expect(await getUserQuotaBytes(handle.db, userId)).toBe(0);
+  });
+
+  it('DELETE never drives users.quota_bytes_used negative when the row bytesUsed exceeds it', async () => {
+    const cookie = await loginAndGetCookie('Underflow', verifierHex('7c'));
+    const userId = await meUserId(cookie);
+    const id = uuidv7();
+
+    await app.request('/api/characters', {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id, name: 'Stale', system: 'srd-5e-2024' }),
+    });
+    // The user's overall counter is BELOW this one character's own bytesUsed — a plausible
+    // staleness artifact between two daily syncs (quotas.ts's USER_QUOTA_BYTES_MAX doc comment).
+    await upsertCharacterIndexRow(handle.db, {
+      id,
+      ownerId: userId,
+      name: 'Stale',
+      system: 'srd-5e-2024',
+      campaignId: null,
+      archivedAt: null,
+      bytesUsed: 1_000_000,
+      eventCount: 5,
+      updatedAt: Date.now(),
+    });
+    await adjustUserQuotaBytes(handle.db, userId, 100_000);
+
+    const delRes = await app.request(`/api/characters/${id}`, { method: 'DELETE', headers: { ...XRW, cookie } });
+    expect(delRes.status).toBe(204);
+
+    expect(await getUserQuotaBytes(handle.db, userId)).toBe(0);
   });
 
   it('404s deleting a character that does not exist or belongs to someone else', async () => {

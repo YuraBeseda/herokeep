@@ -43,6 +43,15 @@ export function limitExceeded(message = 'Limit exceeded'): ApiError {
   return new ApiError(409, 'limit_exceeded', message);
 }
 
+/** A third distinct 409, alongside `conflict`/`limitExceeded`: the per-user BYTE quota (doc-08
+ * "User total" row's 10 MB half, `quotas.ts`'s `USER_QUOTA_BYTES_MAX`) is a different failure
+ * from the character-COUNT cap (`limitExceeded`) even though both are checked in the same
+ * `POST /api/characters` handler — a client should be able to tell "you're over your storage
+ * budget" apart from "you have too many characters" without parsing `message`. */
+export function quotaExceeded(message = 'Quota exceeded'): ApiError {
+  return new ApiError(409, 'quota_exceeded', message);
+}
+
 export function tooManyRequests(message = 'Too many requests'): ApiError {
   return new ApiError(429, 'too_many_requests', message);
 }

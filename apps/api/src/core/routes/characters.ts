@@ -14,12 +14,14 @@ import type { StreamHost } from '../../ports/stream.ts';
 import type { WsUpgrade } from '../../ports/infra.ts';
 import { requireXRequestedWith } from '../http/xrw-gate.ts';
 import { installErrorHandler } from '../http/error-handler.ts';
-import { badRequest, conflict, forbidden, limitExceeded, notFound } from '../errors.ts';
-import { USER_CHARACTER_COUNT_MAX } from '../quotas.ts';
+import { badRequest, conflict, forbidden, limitExceeded, notFound, quotaExceeded } from '../errors.ts';
+import { USER_CHARACTER_COUNT_MAX, USER_QUOTA_BYTES_MAX } from '../quotas.ts';
 import {
+  adjustUserQuotaBytes,
   countCharactersForOwner,
   deleteCharacterIndexRow,
   findCharacterById,
+  getUserQuotaBytes,
   listCharactersForOwner,
   upsertCharacterIndexRow,
 } from '../db/queries.ts';
@@ -110,13 +112,21 @@ export function createCharacterRoutes(deps: CharactersDeps) {
       return c.json(toCharacterDto(existing), 200);
     }
 
-    // Per-USER quota (doc-08 "User total" row's character-COUNT half; see quotas.ts's
-    // `USER_CHARACTER_COUNT_MAX` doc comment for the archived-counts-too finding). Checked here,
-    // on CREATE, per doc-08 ("checked on create") — never on append (StreamActor has no user id
-    // and no `Db`, quotas.ts's header comment).
+    // Per-USER quota, BOTH halves of doc-08's "User total" row, each checked here on CREATE
+    // (never on append — StreamActor has no user id and no `Db`, quotas.ts's header comment):
+    //   - character COUNT (see quotas.ts's `USER_CHARACTER_COUNT_MAX` doc comment for the
+    //     archived-counts-too finding).
     const count = await countCharactersForOwner(deps.db, user.userId);
     if (count >= USER_CHARACTER_COUNT_MAX) {
       throw limitExceeded(`Character limit reached: ${USER_CHARACTER_COUNT_MAX} characters per account`);
+    }
+    //   - total BYTES across characters (`users.quota_bytes_used`). Fix round 1, controller
+    //     ruling recorded in full in quotas.ts's `USER_QUOTA_BYTES_MAX` doc comment: this reads
+    //     a value the daily maintenance job (Task 10) keeps in sync, accepted stale by up to 24h
+    //     as an anti-abuse gate because the realtime per-stream 2 MB cap bounds any burst.
+    const quotaBytesUsed = await getUserQuotaBytes(deps.db, user.userId);
+    if (quotaBytesUsed >= USER_QUOTA_BYTES_MAX) {
+      throw quotaExceeded(`Storage quota reached: ${USER_QUOTA_BYTES_MAX} bytes across all characters`);
     }
 
     const now = Date.now();
@@ -181,6 +191,16 @@ export function createCharacterRoutes(deps: CharactersDeps) {
     const handle = deps.streamHost.get(`char:${id}`);
     await handle.deleteAll();
     await deleteCharacterIndexRow(deps.db, id);
+
+    // Best-effort IMMEDIATE decrement of the per-user byte quota (fix round 1, controller
+    // ruling — quotas.ts's `USER_QUOTA_BYTES_MAX` doc comment, quoted there in full: "hard
+    // delete additionally does a best-effort immediate decrement so freed space is usable
+    // without waiting a day"). "Best-effort"/approximate because `existing.bytesUsed` is itself
+    // only as fresh as the last daily sync (this file's create-route comment; `queries.ts`'s
+    // `upsertCharacterIndexRow` doc comment) — the daily maintenance job (Task 10) trues the
+    // real number up regardless, this just avoids a user having to wait up to 24h to reuse space
+    // they just freed. Floored at 0 by `adjustUserQuotaBytes` itself (never a negative quota).
+    await adjustUserQuotaBytes(deps.db, user.userId, -existing.bytesUsed);
     return c.body(null, 204);
   });
 
