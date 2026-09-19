@@ -88,8 +88,14 @@ export default defineConfig([
     },
   },
   {
+    // Root-level orchestration scripts (`scripts/dev.mjs`) run under plain Node, not a bundler
+    // with ambient globals baked in — `process`/`console` are real Node globals, just not ones
+    // `js.configs.recommended`'s `no-undef` knows about without them being named explicitly.
     files: ['**/*.js', '**/*.mjs'],
     extends: [js.configs.recommended, tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly' },
+    },
   },
   {
     // `test/conformance/cloudflare.conformance.test.ts` (task 9) is covered by

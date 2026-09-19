@@ -11,9 +11,13 @@
     "test": "vitest run",
     "test:cloudflare": "vitest run --config test/adapters/cloudflare/vitest.config.ts",
     "db:generate": "drizzle-kit generate",
+    "predev:node": "pnpm --filter @hk/protocol build",
     "dev:node": "node src/adapters/node/server.ts",
     "dev:cf": "wrangler dev",
-    "admin": "node src/cli/admin.ts"
+    "preadmin": "pnpm --filter @hk/protocol build",
+    "admin": "node src/cli/admin.ts",
+    "preseed": "pnpm --filter @hk/protocol build",
+    "seed": "node scripts/seed-api.ts"
   },
   "dependencies": {
     "@hk/protocol": "workspace:*",

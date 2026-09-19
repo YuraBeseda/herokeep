@@ -15,7 +15,9 @@
     "format:fix": "prettier --write .",
     "test": "vitest run && pnpm --filter api test:cloudflare && pnpm --filter web test --watch=false",
     "test:watch": "vitest",
-    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test",
+    "dev": "node scripts/dev.mjs",
+    "dev:cf": "pnpm --filter api dev:cf"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

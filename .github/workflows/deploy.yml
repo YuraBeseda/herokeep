@@ -1,0 +1,106 @@
+name: deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  # GitHub Actions cannot reference `secrets` directly in a JOB-level `if:` (only step-level `env:`
+  # can read a secret) — this is the documented workaround: a cheap first job whose one step reads
+  # the secret into `env`, then writes a plain (non-secret) `true`/`false` string to
+  # `$GITHUB_OUTPUT`, which a later job's `if:` CAN reference via `needs.*.outputs`. This lets
+  # `deploy-cloudflare` below skip gracefully (not fail) on a fork/clone that has never configured
+  # `CLOUDFLARE_API_TOKEN` — this repo's own case today (task-11-brief: "gated so it SKIPS
+  # gracefully when the secret is absent"; owner runs `wrangler deploy` themselves per
+  # wrangler.jsonc's header comment — "NO DEPLOY happens from this repo/session").
+  check-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      has-cf-token: ${{ steps.check.outputs.has-cf-token }}
+    steps:
+      - id: check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "has-cf-token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-cf-token=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # docs/02-architecture/10-backend-architecture.md §Deployment/Cloudflare: "GitHub Actions ->
+  # `wrangler deploy` on `main`". `apps/api/wrangler.jsonc`'s own header comment is explicit that
+  # this repo/session never runs a real deploy — this job exists so the OWNER'S repo (once they
+  # add `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` as Actions secrets) gets it for free; until
+  # then `check-secrets` above keeps it a no-op rather than a red X on every push to main.
+  deploy-cloudflare:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has-cf-token == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `wrangler.jsonc`'s `assets.directory` points at `../web/dist` (`run_worker_first: true` —
+      # see that file's own comment) -- the Angular build must exist before `wrangler deploy` runs.
+      - run: pnpm --filter web build
+      - name: wrangler deploy
+        working-directory: apps/api
+        run: pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # ADR-014 §Adapter B / docs/02-architecture/10-backend-architecture.md §Deployment/Windows PC:
+  # "The GitHub Actions workflow also produces a `herokeep-server-<version>.zip` artifact (server
+  # bundle + `apps/web/dist` + scripts) so a self-host update is 'download, stop service, unzip,
+  # start service'." Independent of `deploy-cloudflare` above (no `needs:`, no secret required) --
+  # this always runs on a push to main, Cloudflare-token or not, since it deploys nothing itself.
+  # `docs/self-hosting-windows.md` (a later task, ADR-014's own recipe) is the install/upgrade
+  # runbook for what an operator actually does with this artifact on the target machine; this job
+  # only builds and publishes it.
+  build-server-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web build
+      - name: Assemble the self-host server bundle
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./apps/api/package.json').version")
+          echo "SERVER_VERSION=$VERSION" >> "$GITHUB_ENV"
+          STAGE="herokeep-server-$VERSION"
+          rm -rf "$STAGE" "$STAGE.zip"
+          mkdir -p "$STAGE/apps/api" "$STAGE/apps/web"
+
+          # Server source (core + both adapters + ports + the admin CLI; migrations already live
+          # under src/core/db/migrations, so they travel with this copy, not as a separate step).
+          cp -r apps/api/src "$STAGE/apps/api/src"
+          # Node service/dev scripts dir (apps/api/scripts/seed-api.ts today; the Windows
+          # self-host recipe's own NSSM helper scripts, once written, land here too).
+          cp -r apps/api/scripts "$STAGE/apps/api/scripts"
+          cp apps/api/package.json "$STAGE/apps/api/package.json"
+          # The documented `.env` template (never a real secret -- see that file's own header
+          # comment); an operator copies this to `.env` and fills in real values on the target
+          # machine, exactly as local dev does (docs/02-architecture/10-backend-architecture.md
+          # §Local development).
+          cp apps/api/.env.example "$STAGE/apps/api/.env.example"
+
+          # The built Angular app the Node adapter serves as static assets
+          # (`src/adapters/node/static.ts`, `HK_WEB_DIST_DIR`).
+          cp -r apps/web/dist "$STAGE/apps/web/dist"
+
+          zip -rq "$STAGE.zip" "$STAGE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: herokeep-server-${{ env.SERVER_VERSION }}
+          path: herokeep-server-${{ env.SERVER_VERSION }}.zip
+          retention-days: 30

@@ -5,7 +5,7 @@
     "rootDir": "../..",
     "paths": { "@hk/protocol": ["../../packages/protocol/src/index.ts"] }
   },
-  "include": ["src", "test", "vitest.config.ts", "drizzle.config.ts", "../../packages/protocol/src"],
+  "include": ["src", "test", "scripts", "vitest.config.ts", "drizzle.config.ts", "../../packages/protocol/src"],
   // `test/conformance/cloudflare.conformance.test.ts` imports `cloudflare:test` (workerd-only) —
   // excluded here for the same reason as `test/adapters/cloudflare` below (global type conflicts
   // between `@types/node` and `@cloudflare/workers-types`); it's covered instead by
