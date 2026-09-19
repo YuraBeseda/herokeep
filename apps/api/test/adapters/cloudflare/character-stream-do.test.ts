@@ -63,6 +63,18 @@ function makeFakeWebSocket(): {
   return { sent, closeCalls, ws: ws as unknown as WebSocket };
 }
 
+/** `runInDurableObject`'s inferred `instance` type resolves to the base `DurableObject |
+ * Rpc.DurableObject` union (not the real `CharacterStreamDO` class) in this file — existing calls
+ * above only ever touch `fetch`/`webSocketMessage` (both exist ON that union, since they're the
+ * Hibernation-API surface every `DurableObject` implementor shares), so the gap was never visible
+ * until this helper started calling `deleteAll`, a genuinely `CharacterStreamDO`-only RPC method.
+ * A single explicit cast at the point of use (same "cast through a small local interface" pattern
+ * `rate-limiter-do.test.ts` uses for its own `tsc`-inference gap) rather than fighting the
+ * generic. */
+function callDeleteAll(instance: unknown, streamId: string): Promise<void> {
+  return (instance as { deleteAll(id: string): Promise<void> }).deleteAll(streamId);
+}
+
 describe('CharacterStreamDO — WS message handling (obligations (c) and (d))', () => {
   it('fetch() refuses an internal request missing the trust-boundary headers', async () => {
     const id = env.CHARACTER_STREAM.idFromName(`char:${crypto.randomUUID()}`);
@@ -156,6 +168,118 @@ describe('CharacterStreamDO — WS message handling (obligations (c) and (d))', 
       expect(closeCalls).toEqual([{ code: 1009, reason: 'message too large' }]);
       // Never reached the actor: no `welcome`/`ack`/`reject`/anything was ever sent.
       expect(sent).toEqual([]);
+    });
+  });
+});
+
+/** A syntactically-valid `character.created` event — same shape `test/core/stream-actor.test.ts`/
+ * `test/core/characters.test.ts` use for the same purpose. */
+function characterCreatedEvent(streamId: string): {
+  id: string;
+  stream: string;
+  ts: string;
+  actor: { userId: string; deviceId: string; role: 'owner' };
+  type: string;
+  v: number;
+  payload: Record<string, unknown>;
+} {
+  return {
+    id: crypto.randomUUID(),
+    stream: streamId,
+    ts: new Date().toISOString(),
+    actor: { userId: 'user-1', deviceId: 'device-1', role: 'owner' },
+    type: 'character.created',
+    v: 1,
+    payload: {
+      name: 'Aria',
+      system: 'srd-5e-2024',
+      corePack: { id: 'srd-5e-2024', version: '1.0.0' },
+      engineVersion: '1.0.0',
+      grammaticalGender: 'feminine',
+    },
+  };
+}
+
+/**
+ * Whole-branch RE-REVIEW round 2: fix 3 (closing live sockets on hard delete) introduced a NEW
+ * defect — `StreamActor.closed` never resets, and the pre-fix `CharacterStreamDO.deleteAll` left
+ * `this.actorPromise` memoized to that now-permanently-closed actor forever, so a character
+ * recreated with the SAME id (a real `POST /api/characters` succeeds once the D1 row is gone — no
+ * more id collision) reached this SAME DO instance (`idFromName(streamId)` is deterministic on the
+ * streamId string) and found every append refused `stream_closed`, permanently. Fixed by resetting
+ * `actorPromise`/`storeCache` in `deleteAll` (a fresh actor/store on the next access) PLUS a
+ * generation guard in `webSocketMessage` (see that method's own doc comment for why the reset
+ * alone isn't enough on THIS adapter: it resolves the actor freshly on EVERY message, unlike
+ * Node's accept-time-bound closure).
+ */
+describe('CharacterStreamDO — recreate after hard delete (whole-branch re-review round 2)', () => {
+  it('a fresh connection accepted under the CURRENT generation can hello and append after a hard delete', async () => {
+    const streamId = `char:${crypto.randomUUID()}`;
+    const id = env.CHARACTER_STREAM.idFromName(streamId);
+    const stub = env.CHARACTER_STREAM.get(id);
+
+    await runInDurableObject(stub, async (instance, state) => {
+      await state.storage.put('stream_id', streamId);
+
+      // The hard delete (`DELETE /api/characters/:id`'s real call path: `StreamHost.get(id)
+      // .deleteAll()`, which on Cloudflare is exactly this RPC method).
+      await callDeleteAll(instance, streamId);
+
+      // RECREATE with the SAME id: a real `POST /api/characters` after the D1 row is gone succeeds
+      // (no collision) and a subsequent `GET /:id/ws` upgrade's real `fetch()` would stamp the
+      // CURRENT generation (1, after exactly one prior delete) onto the accepted connection's
+      // attachment — reproduced by hand here since this file's mocked-pair approach bypasses the
+      // real `fetch()`/`WebSocketPair` accept dance (this file's header comment).
+      const { sent, closeCalls, ws } = makeFakeWebSocket();
+      ws.serializeAttachment({ userId: 'user-1', role: 'owner', subs: [streamId], gen: 1 });
+
+      await instance.webSocketMessage!(
+        ws,
+        JSON.stringify({ t: 'hello', rid: 'h1', proto: 1, app: 'recreate-test', streams: [], have: [], pending: [] }),
+      );
+      const welcome = sent.find((f) => f.t === 'welcome');
+      // RED-first against the pre-fix code: `welcome` never arrived at all (the connection was
+      // closed 1001/stream_closed by the STALE gen-less/pre-fix `closed`-flag check instead).
+      expect(welcome).toBeDefined();
+      expect(welcome).toMatchObject({ streams: [{ id: streamId, headSeq: 0 }] });
+
+      const event = characterCreatedEvent(streamId);
+      await instance.webSocketMessage!(ws, JSON.stringify({ t: 'append', rid: 'a1', events: [event] }));
+      const ack = sent.find((f) => f.t === 'ack');
+      const reject = sent.find((f) => f.t === 'reject');
+      // The critical assertion: a live append on the recreated stream is ACKED, never rejected
+      // `stream_closed` — the actual bug this round fixes.
+      expect(reject).toBeUndefined();
+      expect(ack).toMatchObject({ results: [{ id: event.id, seq: 1 }] });
+      expect(closeCalls).toEqual([]);
+    });
+  });
+
+  it('a STALE connection from BEFORE the delete (old generation) is refused, never resurrecting the stream (finding-3 protection preserved)', async () => {
+    const streamId = `char:${crypto.randomUUID()}`;
+    const id = env.CHARACTER_STREAM.idFromName(streamId);
+    const stub = env.CHARACTER_STREAM.get(id);
+
+    await runInDurableObject(stub, async (instance, state) => {
+      await state.storage.put('stream_id', streamId);
+
+      // A connection accepted BEFORE the delete — a real `fetch()` would have stamped generation 0
+      // (never deleted yet).
+      const { sent, closeCalls, ws: stale } = makeFakeWebSocket();
+      stale.serializeAttachment({ userId: 'user-1', role: 'owner', subs: [streamId], gen: 0 });
+
+      await callDeleteAll(instance, streamId); // bumps the generation to 1, resets the actor/store memo
+
+      // The STALE socket (modeling the narrow in-flight-message race `deleteAll`'s doc comment
+      // describes — `actor.deleteAll()` already closed it via `Connections.close`, but this models
+      // a message that was already past that point) tries to append anyway.
+      const event = characterCreatedEvent(streamId);
+      await instance.webSocketMessage!(stale, JSON.stringify({ t: 'append', rid: 'a1', events: [event] }));
+
+      // Refused outright — closed again (harmless double-close) — and CRITICALLY never acked/
+      // committed: no seq-1 resurrection.
+      expect(sent.some((f) => f.t === 'ack')).toBe(false);
+      expect(closeCalls.at(-1)).toEqual({ code: 1001, reason: 'stream_closed' });
     });
   });
 });

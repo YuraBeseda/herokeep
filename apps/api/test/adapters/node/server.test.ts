@@ -351,6 +351,127 @@ describe('Node adapter — hard delete closes a live socket (whole-branch review
   });
 });
 
+describe('Node adapter — recreate with the SAME id after hard delete (whole-branch re-review round 2)', () => {
+  it('create -> hard delete -> POST create with the SAME id -> the character is fully usable (WS upgrade, hello, append)', async () => {
+    // Whole-branch re-review round 2: finding 3's fix (closing live sockets + a `closed` flag on
+    // `StreamActor`) introduced a NEW defect — `closed` never resets, and `NodeStreamHost` kept the
+    // SAME `StreamRuntime`/actor cached forever under `streamId` (a plain `Map`, never evicted), so
+    // recreating a character with the SAME client-supplied id (`POST /api/characters` succeeds once
+    // the D1 row is gone — no more id collision, `core/routes/characters.ts`'s create route) reached
+    // the SAME cached, PERMANENTLY-closed actor: every append on it was refused `stream_closed`
+    // forever. RED-first: this test fails against the pre-round-2 `stream-host.ts` (captured
+    // separately — see `final-fix-wave-report.md`'s round-2 section for the exact RED evidence).
+    const username = `WsRecreate${Date.now()}`;
+    const verifier = verifierHex('ac1');
+
+    await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username, verifier, salt: saltHex('ac2') }),
+    });
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username, verifier, deviceLabel: 'recreate-test' }),
+    });
+    const cookie = firstCookiePair(loginRes.headers.get('set-cookie'));
+
+    const characterId = '01950000-0000-7000-8000-000000000005';
+    const createRes = await fetch(`${baseUrl}/api/characters`, {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id: characterId, name: 'Deko', system: 'srd-5e-2024' }),
+    });
+    expect(createRes.status).toBe(201);
+
+    const deleteRes = await fetch(`${baseUrl}/api/characters/${characterId}`, {
+      method: 'DELETE',
+      headers: { ...XRW, cookie },
+    });
+    expect(deleteRes.status).toBe(204);
+
+    // RECREATE with the SAME id — the D1 row is gone, so this is a brand-new insert, not a
+    // conflict (`core/routes/characters.ts`'s create route: `existing` is `undefined`).
+    const recreateRes = await fetch(`${baseUrl}/api/characters`, {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id: characterId, name: 'Deko II', system: 'srd-5e-2024' }),
+    });
+    expect(recreateRes.status).toBe(201);
+
+    // The critical assertions: a FRESH WS upgrade for the SAME id succeeds, `hello` gets a real
+    // `welcome`, and a live `append` is ACKED — not refused `stream_closed`.
+    const result = await new Promise<{ welcome: { t: string; streams: unknown[] }; ackOrReject: { t: string } }>(
+      (resolvePromise, reject) => {
+        const ws = new WsClient(`ws://127.0.0.1:${handle.port}/api/characters/${characterId}/ws`, {
+          headers: { cookie, Origin: baseUrl },
+        });
+        const timeout = setTimeout(() => reject(new Error('timed out waiting for welcome/ack')), 5000);
+        let welcome: { t: string; streams: unknown[] } | undefined;
+
+        ws.on('open', () => {
+          ws.send(
+            JSON.stringify({
+              t: 'hello',
+              rid: 'recreate-hello',
+              proto: 1,
+              app: 'recreate-test',
+              streams: [],
+              have: [],
+              pending: [],
+            }),
+          );
+        });
+        ws.on('message', (data) => {
+          const msg = JSON.parse((data as Buffer).toString('utf8')) as { t: string; streams?: unknown[] };
+          if (msg.t === 'welcome') {
+            welcome = msg as { t: string; streams: unknown[] };
+            ws.send(
+              JSON.stringify({
+                t: 'append',
+                rid: 'recreate-append',
+                events: [
+                  {
+                    id: '01950000-0000-7000-8000-00000000aaaa',
+                    stream: `char:${characterId}`,
+                    ts: new Date().toISOString(),
+                    actor: { userId: 'ignored-by-server', deviceId: 'device-1', role: 'owner' },
+                    type: 'character.created',
+                    v: 1,
+                    payload: {
+                      name: 'Deko II',
+                      system: 'srd-5e-2024',
+                      corePack: { id: 'srd-5e-2024', version: '1.0.0' },
+                      engineVersion: '1.0.0',
+                      grammaticalGender: 'feminine',
+                    },
+                  },
+                ],
+              }),
+            );
+            return;
+          }
+          if ((msg.t === 'ack' || msg.t === 'reject') && welcome) {
+            clearTimeout(timeout);
+            ws.close();
+            resolvePromise({ welcome, ackOrReject: msg });
+          }
+        });
+        ws.on('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+      },
+    );
+
+    expect(result.welcome.streams).toEqual([
+      { id: `char:${characterId}`, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 2 * 1024 * 1024, eventCount: 0 } },
+    ]);
+    // The actual bug this round fixes: pre-fix, this was `reject` with code `stream_closed`.
+    expect(result.ackOrReject.t).toBe('ack');
+  });
+});
+
 describe('Node adapter — fails fast at boot on missing secrets (fix round 1)', () => {
   // `beforeEach`/`afterEach` above still run around every test in this file (they boot/close a
   // SEPARATE, correctly-configured server — unrelated to the deliberately-misconfigured boot

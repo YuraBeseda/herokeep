@@ -94,7 +94,24 @@ export class NodeStreamHost implements StreamHost {
         }
         return Promise.resolve();
       },
-      deleteAll: (): Promise<void> => runtime.withLock(() => runtime.actor.deleteAll()),
+      deleteAll: (): Promise<void> =>
+        runtime.withLock(async () => {
+          await runtime.actor.deleteAll();
+          // Round-2 fix (whole-branch re-review): `StreamActor.deleteAll` sets `closed = true`
+          // PERMANENTLY on `runtime.actor` (that class's own doc comment — it never resets) so a
+          // recreate with the SAME character id (`POST /api/characters` after the D1 row is gone,
+          // which no longer collides — see `core/routes/characters.ts`'s create route) must get a
+          // BRAND NEW actor, not this now-permanently-closed one. Evicting the map entry here means
+          // the NEXT `.get(streamId)`/`.getRuntime(streamId)` call (a fresh HTTP route call, or a
+          // fresh WS upgrade) builds a fresh `StreamRuntime` via `runtimeFor` below (`closed`
+          // starts `false` again). This is SAFE for the original finding-3 protection: `server.ts`'s
+          // WS upgrade handler captures `runtime` ONCE via `getRuntime` at accept time and closes
+          // over that SAME reference for the connection's whole lifetime (`ws.on('message', ...)`
+          // never re-looks-up the host) — any socket that was already live when THIS delete ran
+          // keeps talking to THIS (still-closed-forever) `runtime`/`actor` object, never the fresh
+          // one a later recreate builds, regardless of what this map holds afterward.
+          this.runtimes.delete(streamId);
+        }),
     };
   }
 
