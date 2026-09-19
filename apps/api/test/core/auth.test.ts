@@ -3,7 +3,7 @@
  * applied (`test/helpers/test-db.ts`). Session/device/logout flows are in
  * `auth-sessions.test.ts`; XRW/body-limit middleware behavior is in `auth-middleware.test.ts`. */
 import type { Hono } from 'hono';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestApp } from '../helpers/app.ts';
 import { createTestConfig, InMemoryRateLimit } from '../helpers/fake-ports.ts';
 import { openTestDb, type TestDbHandle } from '../helpers/test-db.ts';
@@ -201,5 +201,45 @@ describe('POST /api/auth/reset', () => {
       }),
     });
     expect(res.status).toBe(401);
+  });
+
+  it('runs the same recovery-code lookup shape for an unknown username as for a known username with a wrong code (no timing-shaped existence oracle)', async () => {
+    // Fix-round-1 regression test: the reset flow must do equivalent DB work whether the
+    // username is unknown or just paired with a wrong code, matching login.ts's dummy-hash
+    // pattern. A raw status-code comparison can't tell "returned 401 without looking anything
+    // up" apart from "returned 401 after looking the code up and finding it invalid" — both are
+    // already 401 either way — so this asserts the actual `db.select` call count instead: under
+    // the pre-fix code, an unknown username short-circuited before the recovery-code lookup
+    // (1 `select` — just the username lookup), while a known username with a wrong code always
+    // ran the lookup too (2 `select`s). This assertion is RED against that shape (1 !== 2) and
+    // GREEN once both paths run the same two lookups.
+    await register('Xavier', verifierHex('e1'));
+
+    const selectSpy = vi.spyOn(handle.db, 'select');
+    const resetAttempt = (username: string) =>
+      app.request('/api/auth/reset', {
+        method: 'POST',
+        headers: XRW,
+        body: JSON.stringify({
+          username,
+          recoveryCode: 'WRONG1-CODE2',
+          newSalt: saltHex(),
+          newVerifier: verifierHex(),
+        }),
+      });
+
+    selectSpy.mockClear();
+    const knownUserWrongCode = await resetAttempt('Xavier');
+    expect(knownUserWrongCode.status).toBe(401);
+    const knownUserSelectCalls = selectSpy.mock.calls.length;
+
+    selectSpy.mockClear();
+    const unknownUser = await resetAttempt('nobody-registered-at-all');
+    expect(unknownUser.status).toBe(401);
+    const unknownUserSelectCalls = selectSpy.mock.calls.length;
+
+    selectSpy.mockRestore();
+
+    expect(unknownUserSelectCalls).toBe(knownUserSelectCalls);
   });
 });

@@ -28,6 +28,14 @@ export interface ResetResult {
 
 const GENERIC_INVALID_MESSAGE = 'Invalid username or recovery code';
 
+// Fixed, structurally-valid-but-never-real user id: when the username doesn't exist, the
+// recovery-code lookup below still runs against this id (guaranteed to match zero rows) so the
+// unknown-username path does the SAME query work as a known-username-wrong-code path, rather
+// than short-circuiting before it. Same reasoning as login.ts's DUMMY_VERIFIER_HASH — without
+// this, an unknown username skips a DB round trip that a known one always makes, which is
+// exactly the kind of timing/shape difference ADR-012's no-existence-oracle rule exists to close.
+const DUMMY_USER_ID = '00000000-0000-7000-8000-000000000000';
+
 export async function resetWithRecoveryCode(
   db: Db,
   config: Config,
@@ -42,13 +50,18 @@ export async function resetWithRecoveryCode(
 
   const folded = foldUsername(username);
   const user = await findUserByFoldedName(db, folded);
-  // Generic 401 whether the username or the code is wrong — never reveal which (ADR-012's
-  // no-existence-oracle rule extended to recovery, same reasoning as the salt endpoint).
-  if (!user) throw unauthorized(GENERIC_INVALID_MESSAGE);
 
+  // Always hash the code and run the recovery-code lookup — even for an unknown username,
+  // against the fixed nonexistent `DUMMY_USER_ID` — so control flow (and the DB work behind it)
+  // is identical whether or not the account exists, ahead of the generic 401 below. Mirrors
+  // login.ts's dummy-hash compare; extends the same no-existence-oracle rule to reset.
   const codeHash = await sha256Hex(normalizeRecoveryCode(recoveryCode));
-  const unused = await findUnusedRecoveryCode(db, user.id, codeHash);
-  if (!unused) throw unauthorized(GENERIC_INVALID_MESSAGE);
+  const lookupUserId = user?.id ?? DUMMY_USER_ID;
+  const unused = await findUnusedRecoveryCode(db, lookupUserId, codeHash);
+  // `unused` can only be defined when `user` is too (the lookup used a real id in that case) —
+  // the `!user` re-check exists purely so TypeScript narrows `user` below, same pattern as
+  // login.ts's post-`matches` re-check.
+  if (!user || !unused) throw unauthorized(GENERIC_INVALID_MESSAGE);
 
   const burned = await burnRecoveryCode(db, user.id, codeHash, now);
   if (!burned) throw unauthorized(GENERIC_INVALID_MESSAGE); // lost a race with a concurrent use
