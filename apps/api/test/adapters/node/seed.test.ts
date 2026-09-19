@@ -48,6 +48,21 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+describe('deriveVerifierHex — cross-pinned PBKDF2 vector (see apps/web auth-crypto.spec.ts)', () => {
+  // Shared with `apps/web/src/app/shared/services/auth/auth-crypto.spec.ts`'s own
+  // `deriveVerifierHex` (the REAL browser-client implementation this script's copy stands in
+  // for) — same password/salt/output triple asserted in both suites, so they break together if
+  // either implementation ever drifts from ADR-012 (PBKDF2-HMAC-SHA-256, 600,000 iterations,
+  // 32-byte output). Computed once via `node:crypto`'s `webcrypto.subtle` out-of-band.
+  it('matches the cross-pinned vector (600,000 iterations, 32-byte output)', async () => {
+    const verifier = await deriveVerifierHex(
+      'correct horse battery staple',
+      hexToBytes('000102030405060708090a0b0c0d0e0f'),
+    );
+    expect(verifier).toBe('ef177144eec9420cbc1093d2a8b344a92bc506d0d4ec9c028dd19f8324d8c1e6');
+  }, 15_000);
+});
+
 describe('scripts/seed-api.ts — creates a test user + sample character on the Node adapter', () => {
   it('seeds a user + character on disk, then a real Node adapter boot lets that user actually log in', async () => {
     const result = await seed({ dataDir, envFile, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD });
