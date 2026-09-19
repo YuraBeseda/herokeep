@@ -69,7 +69,7 @@ import { createApp } from '../../core/app.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
 import type { WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
-import { EnvConfig, loadEnvFile } from './config.env.ts';
+import { assertConfigured, EnvConfig, loadEnvFile } from './config.env.ts';
 import { MemoryRateLimit } from './rate-limit.memory.ts';
 import { IntervalScheduler } from './scheduler.interval.ts';
 import { NodeStaticAssets } from './static.ts';
@@ -226,6 +226,13 @@ export async function startNodeServer(options: NodeServerOptions = {}): Promise<
 
   loadEnvFile(options.envFile ?? join(apiRoot, '.env'));
 
+  // Fail fast (fix round 1): validate every secret `Config` port name BEFORE touching the
+  // filesystem/network at all — a missing `SESSION_PEPPER`/`SALT_HMAC_KEY`/`APP_ORIGIN` must
+  // abort the boot itself, not silently "succeed" and only 500 on the first real request. See
+  // `config.env.ts`'s `assertConfigured` doc comment for the full rationale.
+  const config = new EnvConfig();
+  assertConfigured(config);
+
   const host = options.host ?? process.env['HK_HOST'] ?? DEFAULT_HOST;
   const port = options.port ?? Number(process.env['HK_PORT'] ?? DEFAULT_PORT);
   const dataDir = resolve(options.dataDir ?? process.env['HK_DATA_DIR'] ?? join(apiRoot, 'data'));
@@ -234,7 +241,6 @@ export async function startNodeServer(options: NodeServerOptions = {}): Promise<
   );
   mkdirSync(dataDir, { recursive: true });
 
-  const config = new EnvConfig();
   const rateLimit = new MemoryRateLimit();
   const scheduler = new IntervalScheduler();
   const staticAssets = new NodeStaticAssets(webDistDir);

@@ -11,6 +11,12 @@
  */
 process.env['SESSION_PEPPER'] = 'test-only-node-adapter-session-pepper';
 process.env['SALT_HMAC_KEY'] = 'test-only-node-adapter-salt-hmac-key';
+// A real value isn't knowable yet (it names the origin, which includes the ephemeral port
+// `beforeEach` only learns AFTER `startNodeServer` resolves) — but `startNodeServer` now validates
+// `APP_ORIGIN` is PRESENT before it does anything else (fix round 1: `assertConfigured`), so a
+// placeholder is required here just to get past boot; `beforeEach` overwrites it with the real
+// `baseUrl` once the port is known, before any test that actually checks `Origin` runs.
+process.env['APP_ORIGIN'] = 'http://placeholder.invalid';
 
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -185,5 +191,70 @@ describe('Node adapter — real end-to-end WS smoke (obligation (d))', () => {
     });
 
     expect(closeCode).toBe(403);
+  });
+});
+
+describe('Node adapter — fails fast at boot on missing secrets (fix round 1)', () => {
+  // `beforeEach`/`afterEach` above still run around every test in this file (they boot/close a
+  // SEPARATE, correctly-configured server — unrelated to the deliberately-misconfigured boot
+  // attempts below, which each construct their own `startNodeServer` call and never touch
+  // `handle`/`baseUrl`). `afterEach` closing the `beforeEach` server is harmless housekeeping.
+
+  it('rejects, naming the missing variable, and never opens a listening socket, when SESSION_PEPPER is unset', async () => {
+    const saved = process.env['SESSION_PEPPER'];
+    delete process.env['SESSION_PEPPER'];
+    const failDir = mkdtempSync(join(tmpdir(), 'hk-node-server-missing-secret-'));
+    try {
+      await expect(
+        startNodeServer({
+          port: 0,
+          host: '127.0.0.1',
+          dataDir: join(failDir, 'data'),
+          webDistDir: join(failDir, 'web-dist'),
+          envFile: join(failDir, 'no-such.env'),
+        }),
+      ).rejects.toThrow(/SESSION_PEPPER/);
+    } finally {
+      if (saved !== undefined) process.env['SESSION_PEPPER'] = saved;
+      rmSync(failDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects, naming the missing variable, when APP_ORIGIN is unset', async () => {
+    const saved = process.env['APP_ORIGIN'];
+    delete process.env['APP_ORIGIN'];
+    const failDir = mkdtempSync(join(tmpdir(), 'hk-node-server-missing-origin-'));
+    try {
+      await expect(
+        startNodeServer({
+          port: 0,
+          host: '127.0.0.1',
+          dataDir: join(failDir, 'data'),
+          webDistDir: join(failDir, 'web-dist'),
+          envFile: join(failDir, 'no-such.env'),
+        }),
+      ).rejects.toThrow(/APP_ORIGIN/);
+    } finally {
+      if (saved !== undefined) process.env['APP_ORIGIN'] = saved;
+      rmSync(failDir, { recursive: true, force: true });
+    }
+  });
+
+  it('boots normally when every required secret IS set (existing tests already cover this; asserted again here for contrast)', async () => {
+    const okDir = mkdtempSync(join(tmpdir(), 'hk-node-server-all-set-'));
+    const okHandle = await startNodeServer({
+      port: 0,
+      host: '127.0.0.1',
+      dataDir: join(okDir, 'data'),
+      webDistDir: join(okDir, 'web-dist'),
+      envFile: join(okDir, 'no-such.env'),
+    });
+    try {
+      const res = await fetch(`http://127.0.0.1:${okHandle.port}/api/health`);
+      expect(res.status).toBe(200);
+    } finally {
+      await okHandle.close();
+      rmSync(okDir, { recursive: true, force: true });
+    }
   });
 });

@@ -48,13 +48,41 @@ export function loadEnvFile(path: string): void {
  * missing value at the point of use rather than returning `undefined`/`''`, since every one of
  * these three is required for the server to behave correctly (a missing pepper/HMAC key would
  * silently break every password hash/salt derivation, which must fail fast at startup-adjacent
- * code, not produce a wrong-but-successful auth flow). */
+ * code, not produce a wrong-but-successful auth flow). See `assertConfigured` below for why
+ * `server.ts` doesn't rely on THIS throw alone to catch a missing value. */
 export class EnvConfig implements Config {
   get(name: ConfigName): string {
     const value = process.env[name];
     if (value === undefined || value.length === 0) {
-      throw new Error(`Missing required config value: ${name} (set it in .env or the process environment)`);
+      throw new Error(
+        `Missing required config value: ${name}. Set it in apps/api/.env (see apps/api/.env.example` +
+          ' for the expected keys) or in the process/service environment.',
+      );
     }
     return value;
   }
+}
+
+/** Every `ConfigName` the backend core ever reads (`ports/infra.ts`) — kept here as a runtime
+ * array (the type itself, `ConfigName`, erases at compile time) purely so `assertConfigured`
+ * below has something to iterate. */
+const REQUIRED_CONFIG_NAMES: readonly ConfigName[] = ['SESSION_PEPPER', 'SALT_HMAC_KEY', 'APP_ORIGIN'];
+
+/**
+ * Fix round 1 finding: `EnvConfig.get`'s throw only ever fires the first time SOMETHING calls
+ * `config.get(name)` — with no eager check, a `.env`/environment missing a secret lets
+ * `startNodeServer` boot "successfully" (HTTP listening, health check green) and only fails on
+ * the FIRST real auth request (register/login/salt — the first code path that touches
+ * `Config.get('SESSION_PEPPER'|'SALT_HMAC_KEY')`), or worse, on the first WS upgrade for
+ * `APP_ORIGIN`. For an NSSM service operator with no request-level logs to correlate against,
+ * that is a confusing, delayed failure discovered by a USER, not by the boot log.
+ *
+ * `server.ts` calls this immediately after constructing `EnvConfig` — before `mkdirSync`, before
+ * either SQLite file is opened, before `httpServer.listen` — so a missing secret is instead an
+ * immediate, loud boot failure (the process never opens a socket or a data file at all) with a
+ * message naming the exact missing variable and pointing at `.env.example`, reusing
+ * `EnvConfig.get`'s own error text rather than duplicating it.
+ */
+export function assertConfigured(config: Config): void {
+  for (const name of REQUIRED_CONFIG_NAMES) config.get(name);
 }
