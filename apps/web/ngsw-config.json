@@ -46,5 +46,17 @@
         "files": ["/packs/demo/**"]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "api",
+      "urls": ["/api/**"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 1,
+        "maxAge": "0u",
+        "timeout": "3s"
+      }
+    }
   ]
 }

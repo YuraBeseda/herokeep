@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **STATUS: WRITTEN, NOT STARTED — owner directive 2026-09-13: do not execute until the owner says so.**
+> **STATUS: EXECUTED 2026-09-19, merged @ 57ed208.**
 
 **Goal:** Ship the Phase-2 server: `apps/api` — username/password/recovery-code accounts and character-stream sync over WebSocket, written once against runtime ports with BOTH adapters (Cloudflare Workers/DO/D1 and self-hosted Node/SQLite) passing one conformance suite, plus the `herokeep-admin` export/import CLI and the Windows self-host recipe. Client integration (auth UI, SyncService, upload-on-first-login) is the NEXT plan — this plan ends with a server a curl/ws test can drive end-to-end.
 
