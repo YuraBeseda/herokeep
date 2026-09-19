@@ -34,6 +34,18 @@ export interface StreamHandle {
    * unused by CharacterActor directly since campaign streams are Phase 3.
    */
   notify(fromStream: string, events: Event[]): Promise<void>;
+  /**
+   * Wipes ALL durable data for this stream — Task 6's hard-delete design (doc-08 §Quotas
+   * "Freeing space: archive → hard delete (`DELETE /api/characters/:id` ...) deletes the DO's
+   * storage and D1 row"; ADR-003: "hard delete ... is what frees quota"). `DELETE
+   * /api/characters/:id` (`core/routes/characters.ts`) calls this via `StreamHost.get(id)` —
+   * deliberately NOT a bare `StreamStore.deleteAll()` call from the route — so the delete goes
+   * through the same single-writer guarantee that serializes every `append` (ports/stream.ts's
+   * `StreamHost` doc comment), which matters because a delete racing a concurrent append must
+   * resolve one-after-the-other, never interleaved. Implementations delegate to
+   * `StreamStore.deleteAll` (see that method's doc comment for the storage-level contract).
+   */
+  deleteAll(): Promise<void>;
 }
 
 /** Addresses a stream by id, returning (creating, on first access) its single-writer handle. */
@@ -92,4 +104,15 @@ export interface StreamStore {
   getPack(id: string): Promise<StoredPack | undefined>;
   /** Lists every pack pinned to this stream. */
   listPacks(): Promise<StoredPack[]>;
+  /**
+   * Irrecoverably wipes every event, meta key, and cached pack for this stream — the storage-
+   * level half of Task 6's hard-delete design (see `StreamHandle.deleteAll`'s doc comment for
+   * why the route reaches this via `StreamHost.get(id)` rather than calling it directly). Tasks
+   * 7/8 implement this against real storage (`DELETE FROM events/meta/packs WHERE ...` on Node's
+   * better-sqlite3 file, or dropping the DO's own SQLite database on Cloudflare);
+   * `test/helpers/fake-stream-store.ts` implements it by clearing its in-memory maps/array.
+   * Named `deleteAll` (not `delete`/`clear`) so every call site reads unambiguously as "there is
+   * no partial form of this operation" — it is the whole stream or nothing.
+   */
+  deleteAll(): Promise<void>;
 }

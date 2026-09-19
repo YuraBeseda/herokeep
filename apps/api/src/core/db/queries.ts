@@ -157,6 +157,13 @@ export async function listCharactersForOwner(db: Db, ownerId: string): Promise<C
   return db.select().from(characters).where(eq(characters.ownerId, ownerId));
 }
 
+/** Looks up one character's index row by id (Task 6: ownership checks for the archive/delete/WS-
+ * handoff routes, and the create route's collision check). Returns `undefined` for no match. */
+export async function findCharacterById(db: Db, id: string): Promise<Character | undefined> {
+  const [row] = await db.select().from(characters).where(eq(characters.id, id)).limit(1);
+  return row;
+}
+
 /** Inserts a character's index row, or replaces it if the id already exists (StreamActor commits
  * update `bytesUsed`/`eventCount`/`updatedAt` on every append — this is the write path for
  * both "register a new character" and "sync its counters"). */

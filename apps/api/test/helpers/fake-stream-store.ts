@@ -58,6 +58,16 @@ export class FakeStreamStore implements StreamStore {
     return Promise.resolve([...this.packs.values()]);
   }
 
+  /** Task 6's hard-delete surface (`ports/stream.ts`'s `StreamStore.deleteAll` doc comment) —
+   * clears every in-memory collection this fake holds, matching the real contract: events, meta,
+   * AND packs, all gone, no partial form. */
+  deleteAll(): Promise<void> {
+    this.events.length = 0;
+    this.meta.clear();
+    this.packs.clear();
+    return Promise.resolve();
+  }
+
   /** Test-only inspection hook — the count of events actually committed so far. */
   get length(): number {
     return this.events.length;

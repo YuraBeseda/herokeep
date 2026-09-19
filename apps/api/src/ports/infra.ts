@@ -58,3 +58,42 @@ export interface Rpc {
   /** Forwards `events` committed on `fromStream` to `toStream`'s handle for fan-out/append. */
   notify(toStream: string, fromStream: string, events: Event[]): Promise<void>;
 }
+
+/** Context the WS-upgrade route (`GET /api/characters/:id/ws`, `core/routes/characters.ts`, Task
+ * 6) hands to the adapter — already fully verified by core (session, ownership, `Origin`) before
+ * this ever runs; Phase 2 has no DM/member role reachable on a direct character socket (doc-03
+ * §Permission enforcement: "Direct solo sockets only allow the owner role"), so `role` is always
+ * `'owner'` today — typed as a literal rather than `permissions.ts`'s `Role` so a future Phase-3
+ * campaign-socket handoff (which CAN reach `'dm'`/`'member'`) is a visibly different port, not a
+ * silent widening of this one. */
+export interface WsUpgradeContext {
+  readonly streamId: string;
+  readonly userId: string;
+  readonly role: 'owner';
+}
+
+/**
+ * The WS-upgrade handoff (doc-10 §Request routing: core verifies session + ownership + `Origin`,
+ * then "hands the upgrade to `StreamHost.get(id)`" — in practice, to whichever adapter mechanism
+ * actually performs a WebSocket upgrade). Hono has no portable WS-upgrade primitive across
+ * Cloudflare (Workers Hibernation API) and Node (the `ws` package), so core cannot perform the
+ * upgrade itself; of the task brief's two suggested shapes ("an injected upgrade callback" vs.
+ * "the route returns a sentinel the adapter intercepts"), this port takes the injected-callback
+ * form, because it composes directly with Hono's handler contract (a route handler must return a
+ * `Response`, which this port's return type already is) without needing either adapter to special-
+ * case/intercept a particular route before Hono's own routing runs.
+ *
+ *   - Cloudflare (Task 8): forwards `request` to the `CharacterStreamDO` (keyed by `streamId`)
+ *     via a binding `fetch`, carrying `ctx` (e.g. as headers or a sub-path the DO trusts because
+ *     it only ever receives requests from the Worker, never the public Internet); the DO calls
+ *     `acceptWebSocket` and returns the 101 `Response` directly back up this same call chain.
+ *   - Node (Task 7): the adapter's own `http.Server` `'upgrade'` event (registered once, outside
+ *     Hono, per `@hono/node-server`'s documented WS pattern) is what actually completes the
+ *     handshake; this port's implementation there matches the in-flight upgrade request to `ctx`,
+ *     registers the resulting socket with `streamId`'s `Connections`, and returns a `Response`
+ *     that is never observed by a real client (the raw socket already answered the handshake) —
+ *     satisfying Hono's handler contract without a second response being sent.
+ */
+export interface WsUpgrade {
+  upgrade(request: Request, ctx: WsUpgradeContext): Promise<Response>;
+}

@@ -36,6 +36,13 @@ export function conflict(message = 'Conflict'): ApiError {
   return new ApiError(409, 'conflict', message);
 }
 
+/** A distinct 409 from `conflict` — same status (doc-10/task-6-brief: "honest 409/limit error"),
+ * a different `code` so a client can tell "you hit a quota" apart from "that id/name is already
+ * taken" without parsing `message` (used by `POST /api/characters`'s 50-character cap, ADR-012). */
+export function limitExceeded(message = 'Limit exceeded'): ApiError {
+  return new ApiError(409, 'limit_exceeded', message);
+}
+
 export function tooManyRequests(message = 'Too many requests'): ApiError {
   return new ApiError(429, 'too_many_requests', message);
 }

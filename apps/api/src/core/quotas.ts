@@ -31,6 +31,28 @@ export const STREAM_EVENT_COUNT_MAX = 20_000;
 /** doc-03 §Quota signalling: "the DO sends `notice quota.warning` at 80%". */
 export const QUOTA_WARNING_RATIO = 0.8;
 
+/**
+ * doc-08 "User total" row's character-COUNT half: "50 characters ... checked on create". The
+ * other half of that row (10 MB across characters, tracked in `users.quota_bytes_used`) is NOT
+ * enforced by Task 6 — nothing in the phase-2 plan names a task that updates
+ * `users.quota_bytes_used` from per-stream `bytes_used` yet, and Task 6's brief only directs
+ * "enforce the 50-char cap"; a later task can add the byte-total check against this same
+ * constant's sibling without touching this one. Enforced by `POST /api/characters`
+ * (`core/routes/characters.ts`) against `countCharactersForOwner`'s count.
+ *
+ * Archived-counting finding (task-6-brief: "verify against doc-08 whether archived characters
+ * count toward the 50 cap"): they DO. doc-08 itself: "Freeing space: archive → hard delete
+ * (`DELETE /api/characters/:id` with the name typed) deletes the DO's storage and D1 row" —
+ * archiving is listed only as a STEP ON THE WAY to freeing space, not as freeing it itself; only
+ * hard delete does. ADR-003 is explicit: "Delete is soft: `character.archived` event + 30-day
+ * 'Trash' list; hard delete requires typing the name and **is what frees quota**." So an archived
+ * character's D1 row is untouched by archiving and must keep counting against the cap — exactly
+ * what `countCharactersForOwner`'s own doc comment already assumes ("Counts every row regardless
+ * of `archivedAt`"). This constant's enforcement point (`POST /api/characters`) therefore counts
+ * archived rows too, with no special-casing.
+ */
+export const USER_CHARACTER_COUNT_MAX = 50;
+
 /** The per-stream counters `StreamActor` reads from/writes to `StreamStore.getMeta`/`setMeta`. */
 export interface StreamMetaSnapshot {
   readonly bytesUsed: number;
