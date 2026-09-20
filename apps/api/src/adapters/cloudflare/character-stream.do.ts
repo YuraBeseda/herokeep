@@ -292,7 +292,13 @@ export class CharacterStreamDO extends DurableObject<Env> {
    * track removal itself. */
   override webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): void {
     if (!wasClean) ws.close(code, reason);
-    void this.ensureActor().then((actor) => actor.onConnectionClosed(ws));
+    // [fix round 1, plan-9 Task 10 review] Best-effort, matching `campaigns.ts`'s
+    // `closeConnectionsForUser`/rollback calls' existing `.catch(() => undefined)` stance: the
+    // socket is already gone by the time this runs, so a rejection (e.g. DO storage erroring
+    // mid-eviction) has nothing to report to and must never surface as an unhandled rejection.
+    void this.ensureActor()
+      .then((actor) => actor.onConnectionClosed(ws))
+      .catch(() => undefined);
   }
 
   // --- StreamHandle, as RPC methods (this file's header comment explains why these are RPC,

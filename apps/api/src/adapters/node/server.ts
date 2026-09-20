@@ -178,7 +178,12 @@ class NodeWsUpgrade implements WsUpgrade {
         // stream, a real presence broadcast + blob-relay cleanup on a campaign stream) — same
         // uniform-dispatch shape `handleBinaryMessage` above already uses.
         ws.on('close', () => {
-          void runtime.actor.onConnectionClosed(conn);
+          // [fix round 1, plan-9 Task 10 review] Best-effort: this fires after the socket is
+          // already gone, so a rejection here (a transient DB failure mid-presence-rebroadcast, a
+          // store already torn down during shutdown) has nothing useful to report to and must never
+          // surface as an unhandled promise rejection — same stance `campaigns.ts`'s
+          // `closeConnectionsForUser`/rollback calls already take.
+          void runtime.actor.onConnectionClosed(conn).catch(() => undefined);
         });
 
         // Response never observed by a real client (`ports/infra.ts`'s `WsUpgrade` doc comment):

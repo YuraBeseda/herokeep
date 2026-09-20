@@ -259,7 +259,15 @@ export class CampaignStreamDO extends DurableObject<Env> {
    * cleanup, `campaign-actor.ts`). */
   override webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): void {
     if (!wasClean) ws.close(code, reason);
-    void this.ensureActor().then((actor) => actor.onConnectionClosed(ws));
+    // [fix round 1, plan-9 Task 10 review] Best-effort, matching `campaigns.ts`'s
+    // `closeConnectionsForUser`/rollback calls' existing `.catch(() => undefined)` stance: the
+    // socket is already gone by the time this runs (this DO's presence rebroadcast is real work,
+    // unlike `character-stream.do.ts`'s symmetry-only call — see this method's own header comment
+    // — making a genuine failure here MORE likely, not less, so this is not merely defensive), so a
+    // rejection must never surface as an unhandled promise rejection.
+    void this.ensureActor()
+      .then((actor) => actor.onConnectionClosed(ws))
+      .catch(() => undefined);
   }
 
   // --- StreamHandle, as RPC methods — `worker.ts`'s `CloudflareStreamHost.get(streamId)` calls
