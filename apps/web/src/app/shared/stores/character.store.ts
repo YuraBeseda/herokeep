@@ -412,64 +412,116 @@ export class CharacterStore {
   /**
    * Applies events that already carry SERVER-assigned seqs (`StreamSyncSession`'s `events` frame,
    * T8) — the counterpart to `commitPending` for content this device never produced locally.
-   * Dedupes by id first (an echo of something this device already has, committed OR still
-   * pending, is silently skipped — never rewritten), THEN verifies the surviving fresh events are
-   * strictly contiguous starting at the local committed head + 1; any gap throws `SyncGapError`
-   * WITHOUT writing anything, so `StreamSyncSession` can re-`hello` instead of guessing. On
-   * success the fresh events are written at THEIR OWN seqs (`EventsRepository.appendCommittedAt`
-   * — unlike `append`, it never reassigns one) and folded in exactly like `appendTx`'s own
-   * committed path (`applyAppended`) when `streamId` is the currently loaded stream; a background
-   * stream (open in no tab right now) still gets its Library index row refreshed
-   * (`refreshFromStorage`), just no live signal update.
+   * Doc-03 permits only ONE frame ordering across a reconnect: catch-up BEFORE any pending-ack
+   * flush — so a catch-up frame routinely contains echoes of events THIS DEVICE itself still has
+   * PENDING (its earlier ack was lost, or just hasn't landed yet). Those are TRANSITIONED in place
+   * to committed at the frame's seq (`EventsRepository.assignSeqs`, a single-row count-1 call) —
+   * never dropped: dropping them would silently vacate the "next expected seq" slot they
+   * legitimately occupy, so the very next (genuinely new) event in the same frame would then
+   * mismatch the contiguity walk and throw `SyncGapError` — and since re-`hello`ing reproduces the
+   * identical frame, the stream would livelock forever (fix-round 1, Critical). An echo of an
+   * already-COMMITTED row is still tolerated as a benign duplicate (never rewritten) as long as
+   * its frame seq agrees with what is already on disk for that id — a disagreement there is a
+   * genuine desync, not a benign echo, and throws instead. Any OTHER gap among the still-fresh
+   * (never-before-seen-in-any-form) events throws `SyncGapError` WITHOUT writing anything, so
+   * `StreamSyncSession` can re-`hello` instead of guessing.
+   *
+   * On success: brand-new events are written at their own seqs (`EventsRepository.
+   * appendCommittedAt`) and, when `streamId` is the loaded stream AND nothing transitioned (the
+   * common case — a frame of purely new content), folded in incrementally like `appendTx`'s own
+   * committed path (`applyAppended`). If anything transitioned, OR `streamId` isn't the loaded
+   * stream, a full `refreshFromStorage` runs instead: a transitioned event was already folded into
+   * this stream's in-memory facts once, as pending, so re-applying it INCREMENTALLY would wrongly
+   * re-flag it as a `reduce`-level duplicate skip and never advance `facts.lastSeq` for it — a full
+   * replay's fresh `applied` set folds every event in exactly once, in its correct (unchanged)
+   * order, sidestepping that entirely.
    */
   async applyServerCommit(streamId: string, events: Event[]): Promise<void> {
     this.assertLeader();
     return this.runExclusive(async () => {
       if (events.length === 0) return;
 
-      const existing = await this.eventsRepository.byStream(streamId);
-      const existingIds = new Set(existing.map((e) => e.id));
-      const head = existing.reduce(
-        (max, e) => (e.seq !== undefined ? Math.max(max, e.seq) : max),
-        0,
-      );
+      const rows = await this.eventsRepository.byStream(streamId);
+      const byId = new Map(rows.map((e) => [e.id, e]));
+      const head = rows.reduce((max, e) => (e.seq !== undefined ? Math.max(max, e.seq) : max), 0);
 
-      const fresh = [...events]
-        .filter((e) => !existingIds.has(e.id))
-        .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
-
+      const sorted = [...events].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+      const toInsert: Event[] = [];
+      const toTransition: Event[] = [];
       let expected = head + 1;
-      for (const e of fresh) {
-        if (e.seq !== expected) throw new SyncGapError(streamId, expected, e.seq);
-        expected++;
+
+      for (const e of sorted) {
+        const existingRow = byId.get(e.id);
+
+        if (existingRow === undefined) {
+          // Genuinely new content — must land at the next expected committed seq.
+          if (e.seq !== expected) throw new SyncGapError(streamId, expected, e.seq);
+          toInsert.push(e);
+          expected++;
+          continue;
+        }
+
+        if (existingRow.seq === undefined) {
+          // A pending row THIS device already has, confirmed by the server — transitions in
+          // place, consuming the same "next expected seq" slot new content would.
+          if (e.seq !== expected) throw new SyncGapError(streamId, expected, e.seq);
+          toTransition.push(e);
+          expected++;
+          continue;
+        }
+
+        // An echo of an already-committed row — tolerated only if the frame agrees with what we
+        // already have; a disagreement is a genuine desync, not a benign echo.
+        if (existingRow.seq !== e.seq) throw new SyncGapError(streamId, existingRow.seq, e.seq);
       }
-      if (fresh.length === 0) return;
 
-      await this.eventsRepository.appendCommittedAt(fresh);
+      if (toInsert.length === 0 && toTransition.length === 0) return;
 
-      if (this.streamIdState() === streamId) {
-        await this.applyAppended(streamId, fresh);
-      } else {
+      if (toInsert.length > 0) await this.eventsRepository.appendCommittedAt(toInsert);
+      for (const e of toTransition) {
+        // `e.seq` is guaranteed defined here — every `toTransition` entry passed the
+        // `e.seq !== expected` (a `number`) check above without throwing.
+        await this.eventsRepository.assignSeqs(streamId, e.id, e.seq!, 1);
+      }
+
+      if (this.streamIdState() !== streamId) {
         await this.refreshFromStorage(streamId);
+        return;
+      }
+
+      if (toTransition.length > 0) {
+        await this.refreshFromStorage(streamId);
+      } else {
+        await this.applyAppended(streamId, toInsert);
       }
     });
   }
 
   /**
-   * Transitions the FIRST `ackResults.length` pending rows of `streamId` (in `pendingOrder`) to
-   * committed at their server-assigned seqs — `StreamSyncSession`'s `ack` frame, T8. A PARTIAL ack
-   * (the server has only processed a prefix of what this device sent) is the normal case, not an
-   * edge case: `ackResults` names exactly the prefix being committed now; any pending rows after
-   * it are left pending for a later ack. Verifies, before writing anything: (1) each
-   * `ackResults[i].id` matches the i-th pending row's id (the ack must name a genuine prefix, in
-   * order); (2) `ackResults[*].seq` are themselves contiguous; (3) the first assigned seq is
-   * exactly the local committed head + 1. Any violation throws `SyncGapError` and commits nothing,
-   * so `StreamSyncSession` can re-`hello` instead of trusting a desynced ack. Design ruling 2: a
-   * steady-state ack at the expected seq keeps the stream's cached snapshot (no `remove` call
-   * here, unlike `dropPending`/`resetStreamFromServer`) — `refreshFromStorage` resumes from it.
-   * The events' CONTENT and relative order are unchanged (only their `seq` field gains a value),
-   * so the domain facts they produce (name, hp, inventory, …) are unchanged too — only
-   * seq-tracking bookkeeping (`facts.lastSeq`) legitimately advances.
+   * Transitions a PREFIX of `streamId`'s still-pending rows (in `pendingOrder`) to committed at
+   * their server-assigned seqs — `StreamSyncSession`'s `ack` frame, T8. A PARTIAL ack (the server
+   * has only processed a prefix of what this device sent) is the normal case, not an edge case:
+   * `ackResults` names exactly the prefix being committed now; any pending rows after it are left
+   * pending for a later ack.
+   *
+   * Companion to `applyServerCommit`'s fix-round-1 fix: doc-03's catch-up-before-ack-flush
+   * ordering means a catch-up frame can transition a pending row to committed BEFORE its own ack
+   * arrives (the ack was lost across the reconnect, or is simply still in flight) — so an entry in
+   * `ackResults` whose id is no longer pending is NOT automatically a desync. It is tolerated as
+   * an IDEMPOTENT REPLAY as long as the id is already committed at EXACTLY the acked seq (a
+   * mismatch there is a genuine desync and still throws). Every other ack entry must be a genuine
+   * next pending row: verified, before writing anything, in the same order `ackResults` gives
+   * them — (1) the id matches the next still-pending row in `pendingOrder`; (2) its acked seq is
+   * exactly the next expected committed seq (contiguous with both the local committed head and
+   * every seq already accounted for by an earlier entry in this same call, replay or not). Any
+   * violation throws `SyncGapError` and commits nothing, so `StreamSyncSession` can re-`hello`
+   * instead of trusting a desynced ack.
+   *
+   * Design ruling 2: a steady-state ack at the expected seq keeps the stream's cached snapshot (no
+   * `remove` call here, unlike `dropPending`/`resetStreamFromServer`) — `refreshFromStorage`
+   * resumes from it. The events' CONTENT and relative order are unchanged (only their `seq` field
+   * gains a value), so the domain facts they produce (name, hp, inventory, …) are unchanged too —
+   * only seq-tracking bookkeeping (`facts.lastSeq`) legitimately advances.
    */
   async commitPending(streamId: string, ackResults: { id: string; seq: number }[]): Promise<void> {
     this.assertLeader();
@@ -477,24 +529,42 @@ export class CharacterStore {
       if (ackResults.length === 0) return;
 
       const rows = await this.eventsRepository.byStream(streamId);
+      const byId = new Map(rows.map((e) => [e.id, e]));
       const pending = rows.filter((e) => e.seq === undefined);
       const head = rows.reduce((max, e) => (e.seq !== undefined ? Math.max(max, e.seq) : max), 0);
 
-      for (const [i, ack] of ackResults.entries()) {
-        if (pending[i]?.id !== ack.id) throw new SyncGapError(streamId, head + 1 + i, ack.seq);
-      }
-      const startSeq = ackResults[0].seq;
-      for (const [i, ack] of ackResults.entries()) {
-        if (ack.seq !== startSeq + i) throw new SyncGapError(streamId, startSeq + i, ack.seq);
-      }
-      if (startSeq !== head + 1) throw new SyncGapError(streamId, head + 1, startSeq);
+      let pendingIndex = 0;
+      let expectedSeq = head + 1;
+      const toAssign: { id: string; seq: number }[] = [];
 
-      await this.eventsRepository.assignSeqs(
-        streamId,
-        ackResults[0].id,
-        startSeq,
-        ackResults.length,
-      );
+      for (const ack of ackResults) {
+        const existingRow = byId.get(ack.id);
+
+        if (existingRow?.seq !== undefined) {
+          // Idempotent replay: a prior applyServerCommit catch-up already transitioned this id.
+          if (existingRow.seq !== ack.seq)
+            throw new SyncGapError(streamId, existingRow.seq, ack.seq);
+          continue;
+        }
+
+        const nextPending = pending[pendingIndex];
+        if (nextPending?.id !== ack.id) {
+          throw new SyncGapError(streamId, expectedSeq, ack.seq);
+        }
+        if (ack.seq !== expectedSeq) throw new SyncGapError(streamId, expectedSeq, ack.seq);
+
+        toAssign.push(ack);
+        pendingIndex++;
+        expectedSeq++;
+      }
+
+      if (toAssign.length === 0) return; // every ack was an idempotent replay — nothing to commit
+
+      // `toAssign` is exactly `pending[0..toAssign.length-1]` (verified above, regardless of any
+      // idempotent-replay entries interspersed among them) with contiguous seqs — one `assignSeqs`
+      // call, from the first row's id, covers the whole prefix.
+      const first = toAssign[0];
+      await this.eventsRepository.assignSeqs(streamId, first.id, first.seq, toAssign.length);
       await this.refreshFromStorage(streamId);
     });
   }

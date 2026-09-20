@@ -795,6 +795,97 @@ describe('CharacterStore', () => {
       expect(store.facts()?.name).toBe('Aria');
     });
 
+    // --- fix-round 1 (Critical): catch-up frame with a pending echo BEFORE fresh content -------
+
+    it('applyServerCommit TRANSITIONS a pending echo in place instead of dropping it, so a following fresh event in the same frame does not falsely gap (fix-round 1, Critical)', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine'); // local head = 1
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'X Name' } }]);
+      const pendingX = store.events().at(-1)!;
+      expect(pendingX.seq).toBeUndefined();
+
+      // Doc-03's only permitted frame ordering: catch-up (which echoes our own still-pending X)
+      // BEFORE any pending-ack flush — this is what a reconnect after a lost ack looks like.
+      const serverEchoOfX = { ...pendingX, seq: 2 };
+      const otherEvent = {
+        id: '66666666-6666-4666-8666-666666666666',
+        stream: streamId,
+        seq: 3,
+        ts: new Date().toISOString(),
+        actor: pendingX.actor,
+        type: 'character.renamed',
+        v: 1,
+        payload: { name: 'Other Name' },
+      };
+
+      await expect(
+        store.applyServerCommit(streamId, [serverEchoOfX, otherEvent]),
+      ).resolves.toBeUndefined();
+
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === pendingX.id)?.seq).toBe(2);
+      expect(persisted.find((e) => e.id === otherEvent.id)?.seq).toBe(3);
+      expect(persisted.filter((e) => e.seq === undefined)).toHaveLength(0); // nothing left pending
+
+      expect(store.facts()?.name).toBe('Other Name'); // last rename, in seq order, wins
+      expect(store.events().find((e) => e.id === pendingX.id)?.seq).toBe(2);
+
+      // Deep-equal against a from-scratch replay — proves the incremental-vs-full-replay branch
+      // taken (a transition forces `refreshFromStorage`, per this method's own doc) landed on
+      // exactly the same facts a fresh load would compute.
+      const freshStore = TestBed.runInInjectionContext(() => new CharacterStore());
+      await freshStore.load(streamId);
+      expect(store.facts()).toEqual(freshStore.facts());
+    });
+
+    it('applyServerCommit throws when an echo of an already-COMMITTED row disagrees with its local seq', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      const created = store.events()[0];
+
+      await expect(store.applyServerCommit(streamId, [{ ...created, seq: 99 }])).rejects.toThrow(
+        SyncGapError,
+      );
+
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === created.id)?.seq).toBe(1); // untouched
+    });
+
+    it('commitPending tolerates an idempotent-replay ack for an id applyServerCommit already transitioned', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'X Name' } }]);
+      const pendingX = store.events().at(-1)!;
+
+      await store.applyServerCommit(streamId, [{ ...pendingX, seq: 2 }]);
+      expect(store.facts()?.name).toBe('X Name');
+
+      // The ack for X arrives late (its catch-up echo already transitioned it) — tolerated, not
+      // thrown, because the acked seq agrees with what's already committed.
+      await expect(
+        store.commitPending(streamId, [{ id: pendingX.id, seq: 2 }]),
+      ).resolves.toBeUndefined();
+
+      expect(store.facts()?.name).toBe('X Name');
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === pendingX.id)?.seq).toBe(2);
+    });
+
+    it('commitPending throws when an idempotent-replay ack disagrees with the already-committed seq', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'X Name' } }]);
+      const pendingX = store.events().at(-1)!;
+      await store.applyServerCommit(streamId, [{ ...pendingX, seq: 2 }]);
+
+      await expect(store.commitPending(streamId, [{ id: pendingX.id, seq: 99 }])).rejects.toThrow(
+        SyncGapError,
+      );
+    });
+
     it('resetStreamFromServer rebuilds the stream from a fresh server event array', async () => {
       const store = TestBed.inject(CharacterStore);
       const streamId = await store.create('Aria', 'feminine');
