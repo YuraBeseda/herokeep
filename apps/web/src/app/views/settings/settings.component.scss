@@ -63,7 +63,12 @@
 
 .settings__login-link,
 .settings__register-link {
-  color: var(--accent);
+  /* Not var(--accent), the auth screens login/register/recover link fix: those links sit on
+     surface-0, the page background. These sit inside the hk-card body, against surface-1 instead,
+     where the accent dark-theme lightness falls short of WCAG AA. See the accent-strong token in
+     packages/ui-tokens/src/tokens.ts for the contrast numbers and why this is a separate token
+     rather than a change to accent itself. */
+  color: var(--accent-strong);
   font-weight: 600;
   text-decoration: none;
 
