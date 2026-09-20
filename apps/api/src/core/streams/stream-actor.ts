@@ -442,9 +442,19 @@ export class StreamActor {
           message: `event.forbidden: ${validated.event.type} is not permitted for role ${actor.role}`,
         };
       }
-      // `actor.role` narrowed to 'owner' | 'dm' here: `permissions.allowed` only ever returns
-      // true for those two roles (permissions.ts's early `member` return), so `stampActor`
-      // never actually receives 'member' despite `Actor.role`'s wider static type.
+      // [final whole-branch review, Minor 3 — corrected] This comment used to claim `actor.role`
+      // is narrowed to 'owner' | 'dm' here, because `core/permissions.ts`'s `allowed()` early-
+      // returns `false` for role `'member'` — TRUE for a CHARACTER stream (`CharacterActor`'s own
+      // `permissions` dependency), so `stampActor` genuinely never sees `'member'` THERE. It is
+      // FALSE for a CAMPAIGN stream: `CampaignActor`'s `permissions` dependency
+      // (`campaign-permissions.ts`) deliberately has NO such early return — campaign-stream event
+      // types (`roll.logged`, `chat.message`, `member.renamed`, own
+      // `campaign.character_joined/left`, per doc-08's campaign rows) legitimately grant
+      // `'member'` — so `stampActor` DOES receive `actor.role === 'member'` on a campaign stream
+      // whenever a member-authored event passes this check. `stampActor` itself is already
+      // correct either way (it stamps whatever `actor.role` it is given, unconditionally); only
+      // this comment's claim was stale, left over from before `CampaignActor` (plan-9) made
+      // multi-role streams real.
       if (validated.event.type === 'event.reverted') {
         const target = this.resolveRevertTarget(validated.event.payload, revertTargetById);
         if (!this.permissions.canRevertOwn({ userId: actor.userId, role: actor.role }, target)) {

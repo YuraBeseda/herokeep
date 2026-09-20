@@ -79,6 +79,22 @@ still-a-member just before a concurrent removal commits, and whose connection on
 after that removal's bye snapshot was taken, survives un-bye'd — same "no mid-socket re-check"
 class as the two gaps above. See the doc comment for the exact window.
 
+`member.removed` unlinks the MEMBERSHIP only (`meta.members`) — it does NOT unlink that member's
+character(s) from the campaign roster (`meta.characters`). Unlinking a character is owner-driven,
+via `character.campaign_left` (the character's own stream) mirror-verified by `campaign.
+character_left` on the campaign stream — the same no-half-join two-step symmetry every other
+mirror-verified transition in this protocol uses, and not something a removal can shortcut. Until
+that happens, the DM's read/subscribe/gateway-write reach to the (now-former-member's) character
+persists exactly as before the removal: `mapGatewayActor`/`handleSubscribe`'s roster check
+(`meta.characters.has(characterId)`) has nothing to do with `meta.members`. The removed owner can
+still clear their OWN half of the link (`character.campaign_left` on their character's own stream
+has no campaign-membership dependency at all), but completing the CAMPAIGN-side half
+(`campaign.character_left`) needs either the DM (exempt from the membership check) or the owner to
+still be — or become again — a campaign member; a removed, non-rejoined owner cannot complete it
+alone. A future client task (plan 10) should surface this: a removed member's character does not
+silently disappear from the DM's tools, and finishing the unlink after a removal is a DM action,
+not an automatic one.
+
 ## Ordering and commit rules
 
 - The DO assigns `seq` strictly increasing per stream; `events` frames are always in
