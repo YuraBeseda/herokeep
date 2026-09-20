@@ -347,14 +347,33 @@ export class CampaignActor extends StreamActor {
    * [plan-9 Task 6] THE GATEWAY (doc-03 §Permission enforcement point / Global Constraints
    * "Gateway" bullet): forwards each `char:`-targeted group to its own stream via
    * `Rpc.forwardAppend`, with the actor mapped per design ruling 1 (`mapGatewayActor`). A group
-   * whose actor cannot be mapped (neither this campaign's own DM nor the target character's own
-   * established-member owner) is rejected `forbidden` for EVERY event in that group WITHOUT ever
-   * calling `Rpc.forwardAppend` — the campaign gateway is the FIRST enforcement point; nothing
-   * about an unmapped sender is forwarded for the target stream's own pipeline to re-check.
-   * Acks/rejects the target stream's own `append` pipeline returns are relayed back VERBATIM
-   * (doc-03: "acks/rejects relayed to the campaign socket") — merged into this campaign's own
-   * `AppendOutcome` by the caller, so they ride the SAME `rid`'s `ack`/`reject` frame as any
-   * locally-appended event in the same client `append` message.
+   * whose actor cannot be mapped (neither this campaign's own DM acting on a character JOINED to
+   * THIS campaign, nor the target character's own established-member owner) is rejected
+   * `forbidden` for EVERY event in that group WITHOUT ever calling `Rpc.forwardAppend` — the
+   * campaign gateway is the FIRST enforcement point; nothing about an unmapped sender is forwarded
+   * for the target stream's own pipeline to re-check. Acks/rejects the target stream's own
+   * `append` pipeline returns are relayed back VERBATIM (doc-03: "acks/rejects relayed to the
+   * campaign socket") — merged into this campaign's own `AppendOutcome` by the caller, so they
+   * ride the SAME `rid`'s `ack`/`reject` frame as any locally-appended event in the same client
+   * `append` message.
+   *
+   * [fix round 1, Important 3 — cross-tenant forged mirror] `character.campaign_joined`/
+   * `character.campaign_left` are the CHAR-side halves of the cross-stream mirror (doc-03) and,
+   * structurally, are just ordinary `char:`-targeted events like any other — nothing in
+   * `routeByTargetStream`/`mapGatewayActor` distinguishes them. That is a real forgery path: THIS
+   * campaign's own DM (a genuine, correctly-mapped `dm` actor for a character genuinely joined to
+   * THIS campaign — fix round 1's Critical 1 already narrowed `mapGatewayActor`'s `dm` branch to
+   * require exactly that) could otherwise forward a `character.campaign_joined`/`_left` event
+   * whose PAYLOAD names a COMPLETELY DIFFERENT campaign's id — silently re-pointing the character's
+   * `meta.campaignId` to a campaign this DM has no authority over, or forging a "left" record a
+   * foreign campaign's own later mirror-verify (`verifyCharacterMirror`'s `hasEvent` check) would
+   * then trust. `isValidForwardedMirrorPayload` closes this: for exactly these two types, the
+   * payload's OWN `campaignId` field must equal THIS campaign's own id — anything else is rejected
+   * `invalid` (a payload-shape problem, not a permission one — checked BEFORE `mapGatewayActor`,
+   * so it applies uniformly regardless of who is forwarding) and is never forwarded. This does not
+   * touch the ordinary, legitimate flow at all: `character.campaign_joined/_left` are normally
+   * appended DIRECTLY on the character's own socket (the owner's device), never via this gateway —
+   * this check only ever fires on the abuse path.
    */
   private async forwardGroupsToCharacterStreams(
     groups: ReadonlyMap<string, Event[]>,
@@ -365,49 +384,105 @@ export class CampaignActor extends StreamActor {
     const rejected: RejectResult[] = [];
     for (const [targetStream, groupEvents] of groups) {
       const characterId = targetStream.slice('char:'.length);
+
+      const forwardable: Event[] = [];
+      for (const event of groupEvents) {
+        if (this.isValidForwardedMirrorPayload(event)) {
+          forwardable.push(event);
+          continue;
+        }
+        rejected.push({
+          id: event.id,
+          code: 'invalid',
+          message: `event.invalid: ${event.type} forwarded through this campaign's gateway must carry THIS campaign's own id as payload.campaignId`,
+        });
+      }
+      if (forwardable.length === 0) continue;
+
       const forwardActor = this.mapGatewayActor(actor, characterId, meta);
       if (!forwardActor) {
-        for (const event of groupEvents) {
+        for (const event of forwardable) {
           rejected.push({
             id: event.id,
             code: 'forbidden',
-            message: `event.forbidden: ${actor.userId} may not append to ${targetStream} through this campaign (not this campaign's dm, and not that character's own established-member owner)`,
+            message: `event.forbidden: ${actor.userId} may not append to ${targetStream} through this campaign (not this campaign's dm acting on a character joined to this campaign, and not that character's own established-member owner)`,
           });
         }
         continue;
       }
-      const result = await this.rpc.forwardAppend(targetStream, groupEvents, forwardActor);
+      const result = await this.rpc.forwardAppend(targetStream, forwardable, forwardActor);
       acked.push(...result.acked);
       rejected.push(...result.rejected);
     }
     return { acked, rejected };
   }
 
+  /** [fix round 1, Important 3] See `forwardGroupsToCharacterStreams`'s doc comment. Non-mirror
+   * event types are untouched (always `true`) — this guard is scoped exactly to the two types
+   * whose payload names a campaign at all. `campaignId` is read defensively (`readStringField`):
+   * an unreadable one is treated as INVALID here (`false`) rather than falling through, since (a)
+   * `character.campaign_joined/_left`'s schema REQUIRES `campaignId` (unlike `characterId`
+   * elsewhere in this file, there is no legitimate reason a well-formed instance of exactly these
+   * two types would lack it), so an unreadable value already means "not this campaign's own id"
+   * either way, and (b) failing closed here is the correct default for a forgery-prevention check. */
+  private isValidForwardedMirrorPayload(event: Event): boolean {
+    if (event.type !== 'character.campaign_joined' && event.type !== 'character.campaign_left') return true;
+    const campaignId = readStringField(event.payload, 'campaignId');
+    return campaignId === this.streamId.slice('camp:'.length);
+  }
+
   /**
    * [plan-9 Task 6] Design ruling 1's role mapping (plan verbatim): "gateway-forwarded char-stream
    * actor role = `dm` when the sender is the campaign's DM, else `owner` IF the target character's
    * `meta.ownerId == sender userId` (a member acting on their OWN character through the campaign
-   * socket) else REJECT forbidden." The forwarded actor is NEVER the raw campaign-socket actor —
-   * `dm` requires genuinely being THIS campaign's OWN dm (`actor.userId === meta.dmId`, the same
-   * live-meta check `refineAppendPermission`'s `DM_ONLY_TYPES` guard uses — not merely
-   * `actor.role === 'dm'` from a stale/incorrect handoff); `owner` additionally requires the
-   * sender to be an ESTABLISHED member of THIS campaign (`meta.members.has`, defense in depth: a
-   * WS-handoff bug that stamped a non-member with `role: 'member'` still can't forward through a
-   * character it happens to guess the id of) AND that the TARGET character has actually joined
-   * THIS campaign with THAT sender as its owner (`meta.characters.get(characterId) ===
-   * actor.userId`). Returns `undefined` — never throws — for anything else, so the caller can
-   * reject `forbidden` WITHOUT calling `Rpc.forwardAppend` at all (doc-03: the campaign is the
-   * FIRST enforcement point; the target character stream's own pipeline re-checks independently
-   * regardless, via `CharacterActor.append`'s owner-role gate + `permissions.allowed` — defense in
-   * depth, not the only gate).
+   * socket) else REJECT forbidden." The forwarded actor is NEVER the raw campaign-socket actor.
+   *
+   * OWNERSHIP IS CHECKED FIRST (order matters — see PREGEN note below), then the `dm` mapping:
+   *   - `owner`: the sender is an ESTABLISHED member of THIS campaign (`meta.members.has`, defense
+   *     in depth: a WS-handoff bug that stamped a non-member with `role: 'member'` still can't
+   *     forward through a character it happens to guess the id of) AND the TARGET character has
+   *     actually joined THIS campaign with THAT sender as its owner
+   *     (`meta.characters.get(characterId) === actor.userId`).
+   *   - `dm`: genuinely being THIS campaign's OWN dm (`actor.userId === meta.dmId`, the same
+   *     live-meta check `refineAppendPermission`'s `DM_ONLY_TYPES` guard uses — not merely
+   *     `actor.role === 'dm'` from a stale/incorrect handoff) [fix round 1, Critical 1] AND the
+   *     target character has actually JOINED THIS campaign (`meta.characters.has(characterId)`).
+   *     Before this fix, the `dm` branch had NO character-scoping at all — this campaign's DM
+   *     could gateway-forward a `dm.*`-class event to ANY character in the entire system, joined
+   *     to this campaign or not (or joined to a completely different one). Red-first: a foreign
+   *     campaign's DM forwarding `hp.changed` to a character never joined to THEIR campaign is now
+   *     rejected `forbidden`, nothing forwarded (`campaign-gateway.test.ts`).
+   *
+   * PREGEN NOTE (fix round 1, spec'd per review): a DM-OWNED pregen — joined to this campaign with
+   * `meta.characters.get(characterId) === meta.dmId` (the DM is, structurally, also always an
+   * established member of their own campaign per Task 4's bootstrap `member.joined`) — matches the
+   * OWNERSHIP branch FIRST and maps to `owner`, NOT `dm`. This is deliberate, not incidental: doc-08's
+   * "Append DM events" row already grants `owner` role "solo/self" rights over `dm.*`-class events
+   * on their OWN character (`EVENT_ACTORS['hp.changed'] = ['owner','dm']`, etc.) — mapping the
+   * DM's own pregen to `owner` therefore grants it BOTH owner-class AND dm-class permissions
+   * (exactly like an ordinary player's character), whereas mapping it to `dm` would WRONGLY refuse
+   * every owner-class event on that same pregen (`EVENT_ACTORS` never grants `dm` those types —
+   * e.g. `character.archived` is owner-only). Checking ownership before the `dm` branch is what
+   * makes this fall out correctly without a separate pregen special-case.
+   *
+   * Returns `undefined` — never throws — for anything else, so the caller can reject `forbidden`
+   * WITHOUT calling `Rpc.forwardAppend` at all (doc-03: the campaign is the FIRST enforcement
+   * point; the target character stream's own pipeline re-checks independently regardless, via
+   * `CharacterActor.append`'s owner-role gate + `permissions.allowed` — defense in depth, not the
+   * only gate).
    */
   private mapGatewayActor(actor: Actor, characterId: string, meta: CampaignMeta): Actor | undefined {
-    if (actor.role === 'dm' && meta.dmId !== undefined && actor.userId === meta.dmId) {
-      return { userId: actor.userId, role: 'dm' };
-    }
     const ownerId = meta.characters.get(characterId);
     if (meta.members.has(actor.userId) && ownerId !== undefined && ownerId === actor.userId) {
       return { userId: actor.userId, role: 'owner' };
+    }
+    if (
+      actor.role === 'dm' &&
+      meta.dmId !== undefined &&
+      actor.userId === meta.dmId &&
+      meta.characters.has(characterId)
+    ) {
+      return { userId: actor.userId, role: 'dm' };
     }
     return undefined;
   }
@@ -424,14 +499,55 @@ export class CampaignActor extends StreamActor {
    * here (returns `true`) so the event falls through to `super.append`'s own schema validation,
    * which reports the real problem (`invalid`, "missing/malformed characterId") instead of this
    * method's own, misleading "mirror not found" message.
+   *
+   * [fix round 1, Critical 4 — mirror CURRENCY, not just historical existence] A plain
+   * `Rpc.hasEvent` check (still used below, for LEFT) only proves a matching event EXISTS
+   * SOMEWHERE in the character's history — events are immutable and never removed, so that stays
+   * true FOREVER once committed. That is stale for a JOIN check: `character.campaign_joined`
+   * followed later by a genuine `character.campaign_left` leaves the OLD join event sitting in
+   * history forever; a REPLAYED (or forged) `campaign.character_joined` after the real leave would
+   * still `hasEvent`-verify against that stale record and incorrectly re-add the character to this
+   * campaign's roster. `Rpc.currentCampaignOf` (new this fix round) reads the character's LIVE
+   * `meta.campaignId` instead — not a history scan — so JOIN verification now requires the
+   * character's CURRENT link to genuinely BE this campaign RIGHT NOW, which a stale/replayed join
+   * cannot satisfy once a real leave has cleared it. (This subsumes the old `hasEvent` check for
+   * JOIN — a current link to this campaign can only exist because a real matching join event
+   * committed — so `hasEvent` is no longer called for the JOIN branch at all.)
+   *
+   * LEFT semantics are NOT the mirror-image of JOIN's, and are spec'd here explicitly (fix round 1
+   * review: "think through and document the left semantics"): by the time a campaign-side
+   * `campaign.character_left` reaches this check, the char-side `character.campaign_left` has
+   * ALREADY committed (doc-03: the campaign verifies the character event EXISTS before accepting
+   * the mirror — i.e. char-side first) — which means `CharacterActor`'s own hook has ALREADY
+   * cleared `meta.campaignId` by the time this runs. Requiring `current === thisCampaign` for LEFT
+   * would therefore NEVER pass for a genuine, ordinary leave — that cannot be the check. The
+   * correct DUAL guarantee for LEFT is `current !== thisCampaign`: this still accepts the ordinary
+   * post-clear state (`current === undefined`) while rejecting a STALE `campaign.character_left`
+   * replayed AFTER the character has since REJOINED this SAME campaign (`current === thisCampaign`
+   * again) — a case that must not be allowed to spuriously de-list an actively-linked character.
+   * `hasEvent` is STILL required alongside it for LEFT (unlike JOIN): `current !== thisCampaign` is
+   * true for a character that never joined this campaign AT ALL just as much as for one that
+   * genuinely left it, so `hasEvent` is what confirms a real leave-from-THIS-campaign record
+   * actually exists before accepting the removal.
    */
   private async verifyCharacterMirror(event: Event): Promise<boolean> {
     const characterId = readStringField(event.payload, 'characterId');
     if (characterId === undefined) return true;
-    const campaignId = this.streamId.slice('camp:'.length);
-    const mirrorType =
-      event.type === 'campaign.character_joined' ? 'character.campaign_joined' : 'character.campaign_left';
-    return this.rpc.hasEvent(`char:${characterId}`, { type: mirrorType, campaignId });
+    const charStream = `char:${characterId}`;
+    const thisCampaignId = this.streamId.slice('camp:'.length);
+
+    if (event.type === 'campaign.character_joined') {
+      const current = await this.rpc.currentCampaignOf(charStream);
+      return current === thisCampaignId;
+    }
+
+    const historyOk = await this.rpc.hasEvent(charStream, {
+      type: 'character.campaign_left',
+      campaignId: thisCampaignId,
+    });
+    if (!historyOk) return false;
+    const current = await this.rpc.currentCampaignOf(charStream);
+    return current !== thisCampaignId;
   }
 
   /**
@@ -886,6 +1002,15 @@ export class CampaignActor extends StreamActor {
    * it — see that method's own doc comment for why gating live delivery on subscription would be
    * WRONG here (it would let a DM who forgets to subscribe miss events the authorization matrix
    * already promises them).
+   *
+   * [fix round 1, Critical 2] The `dm` branch of `authorized` is now scoped to a character JOINED
+   * to THIS campaign — `isJoinedToThisCampaign` (`ownerId !== undefined`, the same live
+   * `meta.characters` lookup the `member`-owner branch already used). Before this fix, ANY DM
+   * could subscribe to (and catch up on, via `sendSubscribeCatchUp`) ANY character stream in the
+   * entire system merely by knowing/guessing its id — the character never needed to have anything
+   * to do with that DM's campaign at all. This mirrors `mapGatewayActor`'s identical Critical-1 fix
+   * for the WRITE side (fix round 1) — a DM's authority is scoped to THIS campaign's own roster,
+   * never global.
    */
   private async handleSubscribe(conn: Conn, msg: SubscribeMsg): Promise<void> {
     if (!msg.stream.startsWith('char:')) return; // a campaign socket only ever subscribes to a char: stream
@@ -893,7 +1018,9 @@ export class CampaignActor extends StreamActor {
     const attachment = this.connections.getAttachment(conn);
     const meta = await this.getCampaignMeta();
     const ownerId = meta.characters.get(characterId);
-    const authorized = attachment.role === 'dm' || (ownerId !== undefined && ownerId === attachment.userId);
+    const isJoinedToThisCampaign = ownerId !== undefined;
+    const authorized =
+      (attachment.role === 'dm' && isJoinedToThisCampaign) || (isJoinedToThisCampaign && ownerId === attachment.userId);
     if (!authorized) return;
     if (!attachment.subs.includes(msg.stream)) {
       this.connections.setAttachment(conn, { ...attachment, subs: [...attachment.subs, msg.stream] });

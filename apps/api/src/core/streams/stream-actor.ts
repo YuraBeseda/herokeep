@@ -38,9 +38,13 @@ import { measureEventBytes, validateEvent } from '../validate.ts';
  * `adapters/cloudflare/character-stream.do.ts` — plus every existing test) keeps compiling and
  * behaving EXACTLY as before without passing an `rpc` at all: `CharacterActor`'s after-commit
  * notify hook and `CampaignActor`'s gateway/mirror/subscribe-catch-up calls all become silent
- * no-ops (`notify`/`forwardAppend`-with-nothing-registered/`hasEvent: false`/`readStream: []`)
- * rather than throwing, on a stream whose adapter hasn't wired a real `Rpc` yet (plan-9 Task 8).
- * A real two-actor test (or, later, a real adapter) passes its own `Rpc` implementation instead.
+ * no-ops (`notify`/`forwardAppend`-with-nothing-registered/`hasEvent: false`/`readStream: []`/
+ * `currentCampaignOf: undefined`) rather than throwing, on a stream whose adapter hasn't wired a
+ * real `Rpc` yet (plan-9 Task 8). A real two-actor test (or, later, a real adapter) passes its own
+ * `Rpc` implementation instead. Every read-shaped method here fails CLOSED (`false`/`[]`/
+ * `undefined`), never open — an unconfigured `Rpc` can only ever make a permission/verification
+ * check FAIL, never wrongly succeed (fix round 1's `currentCampaignOf` doc comment, `ports/infra.ts`,
+ * spells this out for that method specifically).
  */
 const NO_OP_RPC: Rpc = {
   notify: () => Promise.resolve(),
@@ -55,6 +59,7 @@ const NO_OP_RPC: Rpc = {
     }),
   hasEvent: () => Promise.resolve(false),
   readStream: () => Promise.resolve([]),
+  currentCampaignOf: () => Promise.resolve(undefined),
 };
 
 /** doc-03 §Catch-up performance: "the DO pages 200 events per frame". */

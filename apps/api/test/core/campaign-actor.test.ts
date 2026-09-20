@@ -98,12 +98,18 @@ beforeEach(() => {
 });
 
 /**
- * [plan-9 Task 6] Registers a `char:<characterId>` target on `system.rpc` whose only committed
- * event is the given mirror type carrying `{campaignId: campaignIdOf(STREAM_ID)}` — the minimum
- * `Rpc.hasEvent` needs to VERIFY a `campaign.character_joined`/`campaign.character_left` mirror
- * (this file's `verifyCharacterMirror` target). The registered target's own `append` is never
- * exercised by these mirror-verification tests (only `hasEvent`'s read path is), so it's a stub
- * that would fail loudly (a thrown rejection) if a test's own bug ever DID reach it.
+ * [plan-9 Task 6, extended fix round 1] Registers a `char:<characterId>` target on `system.rpc`
+ * whose only committed event is the given mirror type carrying `{campaignId:
+ * campaignIdOf(STREAM_ID)}` — what `Rpc.hasEvent` needs to verify a `campaign.character_left`
+ * mirror's HISTORY half — plus a `currentCampaignOf` matching that same mirror type's CURRENT-link
+ * semantics (fix round 1, Critical 4 — `verifyCharacterMirror`'s doc comment has the full
+ * join-vs-left reasoning): a `'character.campaign_joined'` registration reports the character as
+ * CURRENTLY linked to this campaign (`STREAM_ID`'s own id — a join mirror-verifies on CURRENCY,
+ * not history); a `'character.campaign_left'` registration reports it as CURRENTLY unlinked
+ * (`undefined` — matching what a real `character.campaign_left` commit actually leaves behind).
+ * The registered target's own `append` is never exercised by these mirror-verification tests
+ * (only the read paths are), so it's a stub that would fail loudly (a thrown rejection) if a
+ * test's own bug ever DID reach it.
  */
 async function registerCharacterMirror(
   characterId: string,
@@ -122,6 +128,8 @@ async function registerCharacterMirror(
       payload: { campaignId: STREAM_ID.slice('camp:'.length) },
     },
   ]);
+  const currentCampaignOf = () =>
+    Promise.resolve(eventType === 'character.campaign_joined' ? STREAM_ID.slice('camp:'.length) : undefined);
   system.rpc.register(
     `char:${characterId}`,
     actorTarget(
@@ -131,6 +139,8 @@ async function registerCharacterMirror(
         },
       },
       mirrorStore,
+      undefined,
+      currentCampaignOf,
     ),
   );
 }

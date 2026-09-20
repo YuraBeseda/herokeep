@@ -163,6 +163,22 @@ export interface Rpc {
    * `StreamHandle.read` (`ports/stream.ts`) by design, so a Node adapter's implementation is a
    * one-line delegation to `StreamHost.get(stream).read(fromSeq, limit)`. */
   readStream(stream: string, fromSeq: number, limit: number): Promise<Event[]>;
+
+  /**
+   * [fix round 1, Critical 4] The CURRENT (live) campaign link for a character stream — reads the
+   * target `CharacterActor`'s own `meta.campaignId` DIRECTLY, never a scan of its event history.
+   * Exists because `hasEvent` alone is a STALENESS hole for cross-stream mirror verification:
+   * `hasEvent` only proves a matching event exists SOMEWHERE in history, which — events being
+   * immutable — stays true forever once committed, even long after a character has since left (or
+   * re-joined a different campaign). `CampaignActor.verifyCharacterMirror` uses this to check the
+   * character's link RIGHT NOW, not merely "at some point in the past" (see that method's doc
+   * comment for the full join-vs-left semantics, which are NOT symmetric). Returns `undefined` for
+   * "not currently linked to any campaign" — including when no live target can be reached at all
+   * (`NO_OP_RPC`'s default): this is a deliberate FAIL-CLOSED default, since `undefined` can never
+   * equal a real campaign id, so an unconfigured/unreachable `Rpc` can never make a JOIN mirror
+   * verify SUCCEED — only ever fail — and for LEFT it correctly reports "not (re)linked to this
+   * campaign" (see `verifyCharacterMirror`), which is also the safe default there. */
+  currentCampaignOf(stream: string): Promise<string | undefined>;
 }
 
 /** Context the WS-upgrade route (`GET /api/characters/:id/ws`, `core/routes/characters.ts`, Task

@@ -23,6 +23,11 @@ export interface RpcTarget {
    * character stream's notify — only character-originated commits notify a CAMPAIGN stream) —
    * optional so a `char:` target registered via `registerActor` doesn't need to supply one. */
   handleNotify?(fromStream: string, events: Event[]): Promise<void>;
+  /** [fix round 1] Only a `char:` target (a `CharacterActor`) genuinely has this — backs
+   * `FakeRpc.currentCampaignOf`. Optional so a `camp:` target (never queried this way) doesn't
+   * need to supply one; `FakeRpc.currentCampaignOf` returns `undefined` (fail-closed, matching
+   * `NO_OP_RPC`) when a target has none. */
+  currentCampaignOf?(): Promise<string | undefined>;
 }
 
 export class FakeRpc implements Rpc {
@@ -82,18 +87,31 @@ export class FakeRpc implements Rpc {
     if (!target) return [];
     return target.read(fromSeq, limit);
   }
+
+  /** [fix round 1] Fail-closed like `NO_OP_RPC`: no registered target, or a registered target with
+   * no `currentCampaignOf` (a `camp:` target) → `undefined`, never a guessed/default campaign id. */
+  async currentCampaignOf(stream: string): Promise<string | undefined> {
+    const target = this.targets.get(stream);
+    if (!target?.currentCampaignOf) return undefined;
+    return target.currentCampaignOf();
+  }
 }
 
 /** Wraps a real actor + its backing `FakeStreamStore` (or any store implementing just `read`) as
- * an `RpcTarget` — the common case `FakeRpc.register` is built for. */
+ * an `RpcTarget` — the common case `FakeRpc.register` is built for. `currentCampaignOf` is
+ * optional (see `RpcTarget`'s own doc comment) — pass it for a `char:` target whose mirror
+ * verification needs to actually observe the character's live link (e.g.
+ * `() => actor.getCharacterMeta().then((m) => m.campaignId)`). */
 export function actorTarget(
   actor: { append(events: Event[], actorArg: Actor): Promise<RpcAppendOutcome> },
   store: { read(fromSeq: number, limit: number): Promise<Event[]> },
   handleNotify?: (fromStream: string, events: Event[]) => Promise<void>,
+  currentCampaignOf?: () => Promise<string | undefined>,
 ): RpcTarget {
   return {
     append: (events, actorArg) => actor.append(events, actorArg),
     read: (fromSeq, limit) => store.read(fromSeq, limit),
     handleNotify,
+    currentCampaignOf,
   };
 }
