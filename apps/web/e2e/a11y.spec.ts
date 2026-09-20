@@ -118,4 +118,29 @@ test.describe('accessibility (axe)', () => {
     await expect(page.locator('.roll-log-panel__entries .roll-log-panel__entry')).toHaveCount(1);
     await assertNoSeriousViolations(page, 'play tab — roll log with an entry');
   });
+
+  // task-11-brief.md / plan-8 design ruling R-pf3: the auth screens render fully OFFLINE (their
+  // forms mount with no server round trip — only *submitting* them needs a reachable API), so
+  // their axe coverage lives here, in the default (server-less) suite, alongside every other
+  // screen above. The FUNCTIONAL auth flows (an actual register/login/recover round trip) belong
+  // to the `sync` project instead (`e2e/sync/auth.spec.ts`), which is the one with a real API to
+  // submit against.
+
+  test('the login screen has no serious/critical violations', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('.login__form')).toBeVisible();
+    await assertNoSeriousViolations(page, 'login');
+  });
+
+  test('the register screen (form step) has no serious/critical violations', async ({ page }) => {
+    await page.goto('/register');
+    await expect(page.locator('.register__form')).toBeVisible();
+    await assertNoSeriousViolations(page, 'register — form step');
+  });
+
+  test('the recover screen has no serious/critical violations', async ({ page }) => {
+    await page.goto('/recover');
+    await expect(page.locator('.recover__form')).toBeVisible();
+    await assertNoSeriousViolations(page, 'recover');
+  });
 });

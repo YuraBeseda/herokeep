@@ -62,4 +62,17 @@
   display: flex;
   gap: var(--space-3);
   margin-top: var(--space-4);
+
+  // See `login.component.scss`'s matching rule's comment — same pre-existing contrast gap,
+  // same fix.
+  a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
 }

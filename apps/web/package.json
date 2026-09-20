@@ -17,7 +17,9 @@
     "build:packs": "node tools/copy-packs.ts",
     "check:bundle-budget": "node tools/check-bundle-budget.ts",
     "pree2e": "pnpm run build",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "pree2e:sync": "pnpm run build",
+    "e2e:sync": "playwright test --config=playwright.sync.config.ts"
   },
   "private": true,
   "packageManager": "pnpm@11.24.0",

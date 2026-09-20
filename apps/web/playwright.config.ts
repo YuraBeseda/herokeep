@@ -15,6 +15,13 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
+  // `e2e/sync/**` (task-11-brief.md) is its own project with its own config
+  // (`playwright.sync.config.ts`, real API + proxy webServers) — excluded here so this offline,
+  // no-server suite never picks those specs up and runs them against the plain static server this
+  // config starts below (which has no `/api/*` at all): every real-API assertion in there would
+  // just fail for the wrong reason. Ruling 7's "the default e2e project stays untouched and
+  // offline-pure" is enforced by this line, not just by convention.
+  testIgnore: '**/sync/**',
   // A single shared `webServer` (one `serve` process) backs every test below. offline.spec.ts's
   // service-worker install already has its own real, variable-length wait (Angular's driver
   // caches its prefetched assetGroups as a background idle task — see that spec's module doc);

@@ -41,4 +41,19 @@
   display: flex;
   gap: var(--space-3);
   margin-top: var(--space-4);
+
+  // task-11-brief.md's new /login axe check (R-pf3) caught a real, pre-existing gap: an unstyled
+  // `<a routerLink>` here fell back to the browser's default link blue (#0000EE), which fails WCAG
+  // AA contrast against this app's dark surface — same fix/token `settings.component.scss`'s own
+  // `.settings__login-link`/`.settings__register-link` already use.
+  a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
 }
