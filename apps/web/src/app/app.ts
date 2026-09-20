@@ -11,7 +11,12 @@ import { PackStore } from '@shared/stores/pack.store';
 
 @Component({
   imports: [RouterLink, RouterLinkActive, RouterOutlet, TranslocoDirective, ButtonComponent],
-  providers: [provideTranslocoScope('shell')],
+  // `provideTranslocoScope('sync')` lives HERE (the app-root, always-loaded shell) rather than on
+  // any single view: `SyncService`'s toasts (task-8-brief.md) can fire from a background session
+  // for a character no route currently has open, so the `sync` scope must already be loaded by
+  // the time ANY toast can — same reasoning `characters-delete-confirm`'s own doc comment
+  // (characters-list.component.ts) gives for relying on a scope loaded ahead of time.
+  providers: [provideTranslocoScope('shell'), provideTranslocoScope('sync')],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',

@@ -25,7 +25,8 @@ import {
 import { PlaceholderService } from '@shared/services/images/placeholder.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
-import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
+import { SyncService } from '@shared/services/sync/sync.service';
+import { CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { InstallBannerComponent } from './install-banner.component';
 
 const SKELETON_ROW_COUNT = 4;
@@ -93,8 +94,10 @@ export class CharactersDeleteConfirmComponent {
  * `/characters` — the character-list view (plan-5 Task 3): every `CharactersRepository` row,
  * newest-first (the repository's own `list()` order), a "create" action to `/characters/new`
  * (T5), each row opening `/c/<id>` (T10), and a delete flow (confirm dialog →
- * `CharacterStore.deleteCharacter`, which removes the row, its snapshot, and its whole event
- * stream). Reads straight from `CharactersRepository` rather than `CharacterStore` — the index
+ * `SyncService.deleteEverywhere`, task-8-brief.md — stops any live sync session for the row,
+ * removes it locally via `CharacterStore.deleteCharacter` (its snapshot and whole event stream),
+ * then a best-effort `DELETE /api/characters/:id` when authed; a no-op past the local delete when
+ * anon/offline). Reads straight from `CharactersRepository` rather than `CharacterStore` — the index
  * rows (`{id, name, system, archived, updatedAt, portraitThumbHash?}`) are all a list needs; no
  * reason to load/reduce any character's full event stream just to show its name.
  */
@@ -114,7 +117,7 @@ export class CharactersDeleteConfirmComponent {
 })
 export class CharactersListComponent {
   private readonly charactersRepository = inject(CharactersRepository);
-  private readonly characterStore = inject(CharacterStore);
+  private readonly syncService = inject(SyncService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
@@ -232,7 +235,7 @@ export class CharactersListComponent {
     if (confirmed !== true) return;
 
     try {
-      await this.characterStore.deleteCharacter(row.id);
+      await this.syncService.deleteEverywhere(row.id);
       this.charactersResource.reload();
       this.toastService.show('characters.list.toast.deleted', { name: row.name });
     } catch (error) {

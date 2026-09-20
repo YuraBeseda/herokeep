@@ -14,6 +14,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { routes } from './app.routes';
 import { AuthService } from './shared/services/auth/auth.service';
 import { TranslocoHttpLoader } from './shared/services/i18n/transloco.loader';
+import { SyncService } from './shared/services/sync/sync.service';
 import { PackStore } from './shared/stores/pack.store';
 
 export const appConfig: ApplicationConfig = {
@@ -49,6 +50,16 @@ export const appConfig: ApplicationConfig = {
     // renders in its `status() === 'unknown'` state until the request settles.
     provideAppInitializer(() => {
       inject(AuthService).init();
+    }),
+    // `SyncService` (task-8-brief.md) is `providedIn: 'root'` but otherwise never injected by
+    // anything on the normal render path — `inject()`ing it here, once, at boot is what actually
+    // instantiates it and runs its constructor's `effect()` (which is what watches
+    // `AuthService.status`/`LeaderService.isLeader` and starts/stops sync sessions). No network
+    // call happens merely by injecting it — same non-blocking contract as the `AuthService`
+    // initializer immediately above (the effect only ever does anything once `AuthService.init()`
+    // above resolves to `'authed'`).
+    provideAppInitializer(() => {
+      inject(SyncService);
     }),
     // Registered in every build (including dev serve) but only *enabled* outside dev mode — `ng
     // serve` has no `ngsw-worker.js` to fetch, and a stale cached dev bundle would be actively

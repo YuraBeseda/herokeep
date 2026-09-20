@@ -1,0 +1,23 @@
+{
+  "reject": {
+    "forbidden": "The server rejected that change: you don't have permission.",
+    "quota": "The server rejected that change: your storage quota is full.",
+    "invalid": "The server rejected that change: it wasn't valid.",
+    "duplicate": "The server rejected that change: it was already recorded.",
+    "stream_closed": "The server rejected that change: this character's stream is closed."
+  },
+  "quota": {
+    "warning": "This character is close to its storage limit."
+  },
+  "append": {
+    "poisoned-event": "One change was too large to sync and was discarded."
+  },
+  "upload": {
+    "failed": "Couldn't sync {name} to your account. It's still saved on this device.",
+    "limit-reached": "Couldn't sync: you've reached your account's character limit or storage quota.",
+    "poisoned-event": "One change was too large to sync and was discarded."
+  },
+  "restore": {
+    "failed": "Couldn't restore a character from your account. Try again later."
+  }
+}

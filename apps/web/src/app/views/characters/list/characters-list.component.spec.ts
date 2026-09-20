@@ -13,7 +13,8 @@ import {
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
-import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
+import { SyncService } from '@shared/services/sync/sync.service';
+import { CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../assets/i18n/characters/uk.json';
@@ -39,13 +40,14 @@ function mkRow(overrides: Partial<CharacterRow> = {}): CharacterRow {
   };
 }
 
-/** Configures the TestBed with a stubbed `CharacterStore.deleteCharacter` (the store's own
- * behavior — leader guard, snapshot/event cleanup — is covered by character.store.spec.ts; this
+/** Configures the TestBed with a stubbed `SyncService.deleteEverywhere` (the underlying local
+ * delete's own behavior — leader guard, snapshot/event cleanup — is covered by
+ * character.store.spec.ts; the server-DELETE fan-out is covered by sync.service.spec.ts; this
  * spec only asserts the component calls it and reacts to its outcome). The stub's default
  * implementation actually deletes the row from the real (fake-indexeddb-backed) `characters`
- * table, mirroring what the real `CharacterStore.deleteCharacter` does — the component's
- * post-delete `resource.reload()` re-reads through `CharactersRepository.list()`, so without this
- * the row would never actually disappear from view in the "row disappears" assertion below. */
+ * table, mirroring what the real `deleteEverywhere` does — the component's post-delete
+ * `resource.reload()` re-reads through `CharactersRepository.list()`, so without this the row
+ * would never actually disappear from view in the "row disappears" assertion below. */
 function configure(): {
   deleteCharacter: ReturnType<typeof vi.fn>;
   importFn: ReturnType<typeof vi.fn>;
@@ -66,7 +68,7 @@ function configure(): {
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
-      { provide: CharacterStore, useValue: { deleteCharacter } },
+      { provide: SyncService, useValue: { deleteEverywhere: deleteCharacter } },
       // `HeroReaderService` (plan-6 Task 10) is stubbed here — its OWN real behavior (validation,
       // merge-by-id, storage writes) is already thoroughly covered by
       // `hero-reader.service.spec.ts`; this spec only asserts the component calls it and reacts
