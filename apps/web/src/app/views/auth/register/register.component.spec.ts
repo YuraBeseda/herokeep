@@ -147,6 +147,13 @@ describe('RegisterComponent', () => {
       expect(codes).toEqual(SIX_CODES);
     });
 
+    it('moves focus to the codes-step heading (a11y cue that the page changed, not left on the removed submit button)', async () => {
+      const { compiled } = await registerToCodesStep();
+      const heading = compiled.querySelector('.register__title');
+      expect(heading).toBeTruthy();
+      expect(document.activeElement).toBe(heading);
+    });
+
     it('Continue is disabled until the "I saved my codes" checkbox is checked, then navigates to /characters', async () => {
       const { fixture, compiled } = await registerToCodesStep();
       const router = TestBed.inject(Router);

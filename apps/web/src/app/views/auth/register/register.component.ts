@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  type ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -44,6 +52,24 @@ export class RegisterComponent {
 
   // Step state
   protected readonly step = signal<'form' | 'codes'>('form');
+
+  // Fix-round finding (a11y): the codes step swaps in as a `@if`/`@else` branch replacing the
+  // whole form, including the submit button that had focus — nothing tells a screen-reader/
+  // keyboard user the page changed, and focus is left on a now-removed element. `tabindex="-1"`
+  // on the codes heading (template) makes it programmatically focusable without adding it to the
+  // normal tab order; `afterRenderEffect` (reactive to `step`) moves focus there once the view
+  // has actually rendered the codes-step branch, same "move focus to the new content's heading"
+  // pattern a step-based wizard should follow (no stronger precedent — e.g. `hk-dialog`'s
+  // `cdkTrapFocusAutoCapture` — fit this in-page, non-overlay step transition).
+  private readonly codesHeading = viewChild<ElementRef<HTMLElement>>('codesHeading');
+
+  constructor() {
+    afterRenderEffect(() => {
+      if (this.step() === 'codes') {
+        this.codesHeading()?.nativeElement.focus();
+      }
+    });
+  }
 
   // Form fields
   protected readonly username = signal('');

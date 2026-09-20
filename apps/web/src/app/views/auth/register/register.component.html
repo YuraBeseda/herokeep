@@ -68,7 +68,9 @@
       <a routerLink="/login">{{ t('register.loginLink') }}</a>
     </p>
   } @else {
-    <h1 class="register__title">{{ t('register.codesStep.title') }}</h1>
+    <h1 class="register__title" tabindex="-1" #codesHeading>
+      {{ t('register.codesStep.title') }}
+    </h1>
     <p class="register__codes-intro">{{ t('register.codesStep.intro') }}</p>
 
     <ol class="register__codes">
