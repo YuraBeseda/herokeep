@@ -301,6 +301,18 @@ export class StreamActor {
    * Both are real, honestly-named gaps (not claimed as covered), left for a future task that
    * would need to design that session->connection mapping deliberately, for both stream kinds at
    * once, rather than a campaign-only bolt-on here.
+   *
+   * A third, narrower gap in the ONE case this function does cover (member removal): there's a
+   * TOCTOU window between `campaigns.ts`'s `GET /:id/ws` reading `findMembership` and the WS
+   * handoff's `accept()` actually registering the connection here. If a `DELETE .../members/:id`
+   * removal commits and takes its `byTag(userId)` bye-snapshot in that exact window — after the
+   * new socket's `findMembership` read passed, before its `accept()` completes and the connection
+   * becomes visible to `byTag` — that socket finishes connecting to a campaign it's no longer a
+   * member of, and survives un-bye'd (the removal's snapshot couldn't have seen it). Same class of
+   * gap as the two above: no mid-socket re-check exists anywhere in this pipeline, so a race that
+   * lands inside a specific instant isn't caught. Documented, not fixed — closing it would mean
+   * re-verifying membership after `accept()` (or serializing the handoff behind the same lock
+   * `DELETE .../members/:id` uses), deliberately out of this plan's scope.
    */
   byeCloseUser(userId: string, reason: string): void {
     for (const conn of this.connections.byTag(userId)) {

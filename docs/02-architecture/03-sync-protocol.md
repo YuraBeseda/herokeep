@@ -74,6 +74,11 @@ revoked session finds out on its next reconnect attempt (a real 401 at the WS-up
 never via `bye` over the old socket. See `apps/api/src/core/streams/stream-actor.ts`'s
 `byeCloseUser` doc comment for the full write-up.
 
+Even the one wired trigger has a narrow TOCTOU: a WS handoff whose membership check reads as
+still-a-member just before a concurrent removal commits, and whose connection only registers
+after that removal's bye snapshot was taken, survives un-bye'd — same "no mid-socket re-check"
+class as the two gaps above. See the doc comment for the exact window.
+
 ## Ordering and commit rules
 
 - The DO assigns `seq` strictly increasing per stream; `events` frames are always in

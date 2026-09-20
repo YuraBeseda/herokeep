@@ -67,8 +67,41 @@ Accounts and cross-device sync are shipped. The app is still fully usable logged
 - `pnpm --filter web e2e:sync` — a second Playwright project against a real Node API adapter (register/login/recover, cross-device restore, live two-context sync, device revocation), separate from the default offline-only e2e suite.
 - Self-hosting the Node adapter on your own Windows PC (NSSM service, Caddy TLS, dynamic DNS, backups) — the route to reach it from another device over your own LAN/WAN: [`docs/self-hosting-windows.md`](docs/self-hosting-windows.md).
 
+### Campaigns (Phase 3 — server, first slice)
+
+The campaign backend is shipped in `apps/api`: campaigns with an 8-char join code (Crockford
+base32, no vowels, rotate-able), DM/member roles, and a per-campaign event stream on both
+adapters, gated by the same conformance suite as the character streams.
+
+- Routes: `POST /api/campaigns` (create, DM = creator), `GET /api/campaigns` (mine: DM-of +
+  member-of), `POST /api/campaigns/join` (by join code, only when the campaign has joining open),
+  `POST /api/campaigns/:id/rotate-code` (DM), `DELETE /api/campaigns/:id/members/:userId` (DM
+  removes a member — closes that member's campaign sockets with a `bye` frame), and
+  `GET /api/campaigns/:id/ws` (membership-verified socket, role stamped `dm`/`member`).
+- Read visibility is filtered per connection: DM notes never reach non-DM members; roll log
+  entries route by their own visibility field (public/DM-only/roller-only); everything is still
+  stored regardless of who can currently read it.
+- A campaign socket's `append` can target a member's own character stream — the campaign actor
+  forwards it through a gateway with a stamped actor (dm, or owner when a member acts on their own
+  character), and the character stream re-checks permissions independently. Character-side commits
+  mirror back to the campaign stream (e.g. `campaign.character_joined`) once the corresponding
+  character-stream event is confirmed, so joins can't half-complete.
+- Presence (`members` snapshots, throttled) and a server-side image/blob relay (holder priority,
+  16-byte chunk header, ≤64 KB chunks, 1 in-flight per requester, 2 concurrent serves per holder)
+  round out the socket surface; the relay only forwards bytes between connected members — no
+  client transfer UI yet (that's the next plan).
+- Quotas: 20 MB events / 12 members / 6 non-core packs per campaign, enforced at both the route
+  and the actor's append path. Nightly maintenance syncs each campaign stream's `bytes_used` into
+  D1 alongside the existing per-user totals (which campaign usage does not count against).
+- `apps/api/test/conformance/` runs campaign lifecycle, visibility-filtering, gateway/mirror, and
+  quota scenarios against BOTH adapters, same as the character-stream scenarios.
+
+The campaign CLIENT (host/join UI, party view, DM tools, blob transfer UI) is the next plan; this
+slice ends with a server the conformance suite (and any WS client) can drive end-to-end.
+
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current ones are
 `2026-09-13-phase-1b-play-and-polish.md` (client), `2026-09-13-phase-2-accounts-sync-backend.md`
-(backend), and `2026-09-19-phase-2-client-sync.md` (client auth + sync UI, completing Phase 2).
+(backend), `2026-09-19-phase-2-client-sync.md` (client auth + sync UI, completing Phase 2), and
+`2026-09-20-phase-3-campaign-server.md` (campaign backend, above — Phase 3 first slice).

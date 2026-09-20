@@ -3,7 +3,7 @@ import {
   EVENT_ACTORS as CHARACTER_EVENT_ACTORS,
   EVENT_PAYLOADS as CHARACTER_EVENT_PAYLOADS,
 } from '../src/events/character.ts';
-import { EVENT_ACTORS, parseEvent } from '../src/events/index.ts';
+import { EVENT_ACTORS, EVENT_PAYLOADS, EVENT_STREAM_KIND, parseEvent } from '../src/events/index.ts';
 
 const base = {
   id: '018f6d2e-7b1a-7c3d-9e4f-5a6b7c8d9e0f',
@@ -156,6 +156,28 @@ describe('the complete Phase-1 character event catalog', () => {
     for (const key of Object.keys(CHARACTER_EVENT_PAYLOADS)) {
       const type = key.slice(0, key.lastIndexOf('@'));
       expect(CHARACTER_EVENT_ACTORS[type], `missing EVENT_ACTORS entry for ${type}`).toBeDefined();
+    }
+  });
+});
+
+// Task 2's parked completeness check (final wave, plan-9 Task 11): `EVENT_STREAM_KIND`
+// (src/events/index.ts) is derived mechanically from the two source catalogs, so it cannot
+// itself drift from EVENT_PAYLOADS — but nothing previously asserted that every type the MERGED
+// registries (character + campaign, what apps/api's validate.ts/permissions.ts actually consume)
+// know about also has a stream-kind entry. This guards against a future registry edit that
+// bypasses the character.ts/campaign.ts partitioning (e.g. a type added directly to the merged
+// map in index.ts without going through either source file).
+describe('EVENT_STREAM_KIND completeness', () => {
+  it('has a stream-kind entry for every EVENT_PAYLOADS key', () => {
+    for (const key of Object.keys(EVENT_PAYLOADS)) {
+      const type = key.slice(0, key.lastIndexOf('@'));
+      expect(EVENT_STREAM_KIND[type], `missing EVENT_STREAM_KIND entry for ${type}`).toBeDefined();
+    }
+  });
+
+  it('has a stream-kind entry for every EVENT_ACTORS key', () => {
+    for (const type of Object.keys(EVENT_ACTORS)) {
+      expect(EVENT_STREAM_KIND[type], `missing EVENT_STREAM_KIND entry for ${type}`).toBeDefined();
     }
   });
 });

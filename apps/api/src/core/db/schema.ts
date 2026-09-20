@@ -17,8 +17,10 @@
  * additive migration `0002` — Phase 3 plan 9, Task 3. Booleans (`campaigns.joinOpen`) use
  * Drizzle's `integer(..., { mode: 'boolean' })`: the column is a plain SQLite `INTEGER` (0/1,
  * the sqlite norm — there is no native boolean type), Drizzle just maps it to/from a JS
- * `boolean` at the query-builder layer, matching how every other flag-shaped column here
- * (`users.flags`) stores as an INTEGER underneath.
+ * `boolean` at the query-builder layer. `users.flags` is a DIFFERENT shape, not the same
+ * pattern under another name: it's a plain `integer(...)` (no `{ mode: 'boolean' }`), reserved
+ * as a numeric bitfield for future per-user flags and currently unread/unwritten by any query —
+ * it shares the underlying SQLite `INTEGER` column type with `joinOpen`, nothing more.
  */
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { uuidv7 } from '../ids.ts';

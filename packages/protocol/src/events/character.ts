@@ -289,10 +289,10 @@ export const EVENT_PAYLOADS: Record<string, z.ZodType> = {
 //     directly — corrected from ['owner','dm'] to ['owner'] (pack.pinned above already got this
 //     same correction pre-plan-9).
 //   - SUPPORTED, no doc-08 row (doc-02 is the textual support): `character.campaign_joined` /
-//     `character.campaign_left` aren't named in any doc-08 row, but doc-02's dedicated line
-//     ("O, D | {campaignId} | mirrored on campaign stream") explicitly authorizes both — the
-//     same "lifecycle event with its own catalog line, no matrix row" pattern
-//     `character.owner_transferred` (which DOES have a doc-08 row) fits too.
+//     `character.campaign_left` aren't named in any doc-08 row, but doc-02's dedicated catalog
+//     line ("O, D | {campaignId} | mirrored on campaign stream") explicitly authorizes both
+//     actors directly — the campaign-membership mirror is a first-class catalog entry in its own
+//     right, not something borrowed from another event's justification.
 //   - OWNER-FLAGged (kept as-is, genuinely ambiguous): `death_save.recorded`, `stabilized`,
 //     `resource.spent`/`resource.restored`, `concentration.started`/`concentration.ended`.
 //     doc-08's row 2 ("Append owner events... in-play...") reads as though these "in-play"
