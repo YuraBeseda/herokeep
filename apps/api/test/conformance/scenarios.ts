@@ -166,19 +166,37 @@ interface AuthedSession extends Session {
   readonly recoveryCodes: readonly string[];
 }
 
-/** [plan-9 Task 10] A random simulated IP, one per call — the SAME technique/rationale
- * `ipRateLimitScenario` already documents in full: Node ignores this header entirely (harmless
- * no-op there); the Cloudflare Worker trusts it (`worker.ts`'s `stampClientIp`), and — unlike
- * Node's fresh-boot-per-test isolation — this pool's `RateLimiterDO` storage is shared across EVERY
- * `it()` block in this ONE test file with no reset between them, all otherwise landing in the SAME
- * `cf-connecting-ip`-less "unknown" bucket. Plan-9's campaign scenarios call `registerAndLogin` far
- * more times per run than the pre-plan-9 suite ever did (a 12-member-quota scenario alone registers
- * 12 accounts) — without this, that shared 30-requests/minute bucket empties into `429`s partway
- * through the file (observed directly: `register(...): expected 429 to be 201`, a pure harness
- * accounting artifact, not a real product rate-limit bug — every one of these accounts is a distinct
- * real user in the test's own story, never actually hammering the API from one IP). */
+/** [plan-9 Task 10] A DETERMINISTIC, collision-free simulated IP, one per call — same
+ * rationale/technique family `ipRateLimitScenario` already documents in full: Node ignores this
+ * header entirely (harmless no-op there); the Cloudflare Worker trusts it (`worker.ts`'s
+ * `stampClientIp`), and — unlike Node's fresh-boot-per-test isolation — this pool's `RateLimiterDO`
+ * storage is shared across EVERY `it()` block in this ONE test file with no reset between them, all
+ * otherwise landing in the SAME `cf-connecting-ip`-less "unknown" bucket. Plan-9's campaign
+ * scenarios call `registerAndLogin` far more times per run than the pre-plan-9 suite ever did (a
+ * 12-member-quota scenario alone registers 12 accounts) — without this, that shared
+ * 30-requests/minute bucket empties into `429`s partway through the file (observed directly:
+ * `register(...): expected 429 to be 201`, a pure harness accounting artifact, not a real product
+ * rate-limit bug — every one of these accounts is a distinct real user in the test's own story,
+ * never actually hammering the API from one IP).
+ *
+ * [fix round 1, Blocking] A RANDOM 1..254 last-octet (the original shape here) self-collides: this
+ * file makes on the order of dozens of `registerAndLogin` calls per run (the 12-member-quota
+ * scenario alone makes 13), and a 254-value space is a genuine birthday-paradox trap at that volume
+ * — the reviewer measured ~1-in-4 CF runs hitting a real collision (two calls sharing one bucket,
+ * tipping it past 30 and producing a REAL, if rare, `429`). A monotonic counter spread across THREE
+ * octets (16,777,216 distinct addresses, `10.0.0.0/8` — any private/test-net range works, `stampClientIp`
+ * never validates the value beyond using it as a bucket key verbatim) makes a same-run collision
+ * structurally impossible for any realistic call count, which a probabilistic scheme can only ever
+ * make unlikely. This pipeline merges unattended — the gate must be deterministic, not merely
+ * "usually green". */
+let simulatedIpCounter = 0;
 function simulatedIp(): string {
-  return `203.0.113.${Math.floor(Math.random() * 254) + 1}`;
+  simulatedIpCounter += 1;
+  const n = simulatedIpCounter;
+  const b = (n >>> 16) & 0xff;
+  const c = (n >>> 8) & 0xff;
+  const d = n & 0xff;
+  return `10.${b}.${c}.${d}`;
 }
 
 async function registerAndLogin(driver: ConformanceDriver, seed: string): Promise<AuthedSession> {
@@ -246,28 +264,6 @@ function noteEvent(streamId: string, userId: string, bodyBytes = 8): Event {
     v: 1,
     payload: { id: crypto.randomUUID(), body: 'x'.repeat(bodyBytes) },
   };
-}
-
-/** [plan-9 Task 10, test-only] A campaign-stream connection's server-side close fires
- * `CampaignActor.onConnectionClosed` -> a presence rebroadcast (`triggerPresence`/
- * `broadcastPresence`, a real DB read via `getCampaignMeta`) — Node's adapter wires this as
- * deliberate fire-and-forget (`void runtime.actor.onConnectionClosed(conn)`, `server.ts`'s own doc
- * comment: "the adapter is free to ignore" the returned promise). A scenario whose VERY LAST action
- * is closing such a connection, with nothing awaited afterward, can therefore return to the test
- * runner BEFORE that fire-and-forget chain settles — `afterEach`'s `handle.close()` then tears the
- * whole server (including its SQLite connection) down while the chain is still in flight, surfacing
- * as an unhandled `TypeError: The database connection is not open` (a harness-teardown race, not a
- * behavioral bug: every scenario's own ASSERTIONS had already passed by the time this fires — see
- * task-10-report.md for the full trace). None of the 8 pre-plan-9 scenarios ever hit this
- * (`CharacterActor` never overrides `onConnectionClosed`, so a `char:` close is always a no-op) —
- * this is a real, previously-unexercised interaction plan-9's own campaign sockets introduce, not a
- * pre-existing flake. The actual DB read itself is effectively instant (`store.sqlite-file.ts`'s
- * `getMeta`/`better-sqlite3` calls are synchronous, Promise-wrapped) — the real variable delay is
- * the WS close HANDSHAKE completing over the loopback socket, which is I/O, not a microtask; a
- * short real wait after the LAST close of any campaign-stream connection in a scenario is what
- * settles it, generous relative to a loopback round-trip. */
-function settleAfterClose(ms = 200): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // --- campaign fixtures (plan-9 Task 10) ---------------------------------------------------
@@ -874,7 +870,6 @@ async function campaignMemberWriteScenario(driver: ConformanceDriver): Promise<v
   expect(outcome.rejected, 'a genuinely member-role actor succeeds through the real adapter surface').toEqual([]);
   expect(outcome.acked).toHaveLength(1);
   memberStream.close();
-  await settleAfterClose();
 }
 
 /** doc-08's read-filtering rules, exercised through CATCH-UP (not live fan-out — `filterForConnection`
@@ -938,7 +933,6 @@ async function campaignVisibilityScenario(driver: ConformanceDriver): Promise<vo
   expect(memberSeen.has(rollDm.id), 'member does not see a dm-visibility roll they did not author').toBe(false);
   expect(memberSeen.has(rollPrivateDm.id), "member does not see the dm's private roll").toBe(false);
   expect(memberSeen.has(note.id), 'member never sees dm.note_added').toBe(false);
-  await settleAfterClose(); // see settleAfterClose's own doc comment — last op was a campaign-stream close.
 }
 
 /** [Global Constraints "gateway forward+re-check"/"mirror verification"] A campaign MEMBER (not the
@@ -1003,7 +997,6 @@ async function campaignGatewayMirrorScenario(driver: ConformanceDriver): Promise
     forwardedNote.id,
   );
   verifyReader.close();
-  await settleAfterClose();
 }
 
 /** [gap (d)] "Rpc.hasEvent/currentCampaignOf parity on a fresh/untouched stream (both adapters, same
@@ -1034,7 +1027,6 @@ async function campaignMirrorFreshStreamScenario(driver: ConformanceDriver): Pro
     'Rpc.currentCampaignOf on an untouched stream reads undefined identically on both adapters, so the mirror fails the same way',
   ).toBe('invalid');
   campStream.close();
-  await settleAfterClose();
 }
 
 /** [gap (b)] Owner-forgery at the gateway boundary, two shapes: (1) a campaign MEMBER attempts an
@@ -1057,6 +1049,28 @@ async function campaignForgeryScenario(driver: ConformanceDriver): Promise<void>
   const characterId = crypto.randomUUID();
   const charStreamId = `char:${characterId}`;
   await createCharacter(driver, memberA, characterId);
+
+  /** [fix round 1, Important 2] Storage-level re-read: opens a FRESH reader on `charStreamId` and
+   * confirms catch-up delivers exactly `expectedCount` events (the legitimate ones so far) and
+   * never `excludedId` (whichever forgery attempt this call follows) — proves the forgery didn't
+   * merely get REJECTED at the gateway but also never actually landed on the character stream's own
+   * storage, the same standard shape 1's own check already held itself to. */
+  async function verifyForgeryDidNotLand(expectedCount: number, excludedId: string, label: string): Promise<void> {
+    const reader = await driver.openStream({ streamId: charStreamId, session: memberA });
+    const { rid } = await sendHello(reader, charStreamId, 0);
+    const frames = await reader.collect((buf) => {
+      const gotWelcome = buf.some((f) => isWelcomeFor(f, rid));
+      const total = buf
+        .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
+        .reduce((s, f) => s + f.events.length, 0);
+      return gotWelcome && total >= expectedCount;
+    });
+    const ids = frames
+      .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
+      .flatMap((f) => f.events.map((e) => e.id));
+    expect(ids, `${label}: never reached the character stream at all`).not.toContain(excludedId);
+    reader.close();
+  }
 
   const charStream = await driver.openStream({ streamId: charStreamId, session: memberA });
   const charCreated = characterCreatedEvent(charStreamId, memberA.userId);
@@ -1098,20 +1112,8 @@ async function campaignForgeryScenario(driver: ConformanceDriver): Promise<void>
   ).toBe('forbidden');
   bCampStream.close();
 
-  const verifyReader = await driver.openStream({ streamId: charStreamId, session: memberA });
-  const { rid } = await sendHello(verifyReader, charStreamId, 0);
-  const frames = await verifyReader.collect((buf) => {
-    const gotWelcome = buf.some((f) => isWelcomeFor(f, rid));
-    const total = buf
-      .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
-      .reduce((s, f) => s + f.events.length, 0);
-    return gotWelcome && total >= 2; // created + campaign_joined only — the forgery must not land.
-  });
-  const ids = frames
-    .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
-    .flatMap((f) => f.events.map((e) => e.id));
-  expect(ids, 'the forged note never reached the character stream at all').not.toContain(forgedNote.id);
-  verifyReader.close();
+  // created + campaign_joined only — the forgery must not land on the character stream's own storage.
+  await verifyForgeryDidNotLand(2, forgedNote.id, 'the forged note');
 
   // (2) a DIFFERENT campaign's DM attempts to reach memberA's character (never joined to THAT dm's
   // own campaign) via a dm-class gateway forward — "foreign-campaign DM reach attempt".
@@ -1135,7 +1137,9 @@ async function campaignForgeryScenario(driver: ConformanceDriver): Promise<void>
   );
   expect(foreignOutcome.rejected[0]?.code).toBe('forbidden');
   foreignDmStream.close();
-  await settleAfterClose();
+
+  // still just created + campaign_joined — the foreign-campaign DM's forgery must not land either.
+  await verifyForgeryDidNotLand(2, dmClassEvent.id, "the foreign-campaign DM's resource.spent forgery");
 }
 
 /** The 12-member cap (doc-08/quotas.ts `CAMPAIGN_MEMBER_MAX`) — the ROUTE's own primary gate
@@ -1196,7 +1200,6 @@ async function campaignPresenceAndByeScenario(driver: ConformanceDriver): Promis
   const bye = byeFrames.find((f): f is ByeMsg => f.t === 'bye');
   expect(bye?.reason, 'bye on removal: the removed member is told why over their still-open socket').toBeTruthy();
   memberStream.close();
-  await settleAfterClose();
 }
 
 export const scenarios: readonly Scenario[] = [
