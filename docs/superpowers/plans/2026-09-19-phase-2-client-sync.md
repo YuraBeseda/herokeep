@@ -1,6 +1,8 @@
 # Phase 2 Plan 8 — Client Auth & Sync Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **STATUS: EXECUTED 2026-09-20 — all 12 tasks complete, Phase 2 done.**
 
 **Goal:** Complete Phase 2 in the app: register/login/recovery screens, cookie-session auth state, a WebSocket SyncService that keeps every character stream live against `apps/api` (pending→ack→committed per doc-03), upload-on-first-login, restore-on-new-device, devices list + quota UI — with the app remaining FULLY functional offline and logged-out (solo mode unchanged).
 

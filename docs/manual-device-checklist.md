@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -13,6 +13,10 @@ number. It supplements, and never replaces, the automated gates:
   runs over an extended fixture, budget 150 ms — generous CI headroom, not the real-device number).
   This is the "automated proxy" the plan's Global Constraints refer to; the device numbers below
   are the actual measurement it stands in for.
+- `pnpm --filter web e2e:sync` — a second Playwright project against a real Node API adapter
+  (register/login/recover, cross-device restore, live two-context sync, device revocation). It
+  proves the same protocol section 6 below walks through by hand, but as two browser contexts on
+  one machine — not two real devices on real Wi‑Fi, which is what section 6 is for.
 
 Run each pass on an actual phone, not a desktop responsive-mode simulation.
 
@@ -156,7 +160,71 @@ the **development** build, not the installed production PWA, to see it.
 
 ---
 
-## 6. Known Phase-4 / backlog items
+## 6. Cross-device sync (Phase 2)
+
+**What this proves:** accounts, restore-on-new-device, and *live* sync (not just upload-on-login)
+between two real devices on real Wi‑Fi — the thing `pnpm --filter web e2e:sync` proves with two
+browser contexts on one machine, but never with two actual phones.
+
+### Get a LAN-reachable dev server
+
+Root `pnpm dev` (`scripts/dev.mjs`) runs the Node API adapter and `ng serve` together, but it
+doesn't forward extra CLI args to either child — so it can't be told to bind `ng serve` to your
+LAN interface. For this pass, run the two halves **separately, in two terminals** instead:
+
+1. Terminal 1: `pnpm --filter api dev:node` — the Node adapter listens on `127.0.0.1:8787` (the
+   default; leave it there — see below).
+2. Terminal 2: `pnpm --filter web start -- --host 0.0.0.0` — same flag as the perf pass above.
+   Note the Network URL it prints (or your machine's LAN IP + port 4200).
+
+The API adapter staying on `127.0.0.1` is fine: `apps/web/proxy.conf.json` proxies `/api` and
+`/packs` from *inside* the `ng serve` process, which runs on your desktop and reaches
+`127.0.0.1:8787` locally regardless of what address a phone used to reach `ng serve` itself. You
+do **not** need to set `HK_HOST` for this pass.
+
+If you want a persistent LAN/WAN endpoint instead of a temporary dev pass (e.g. to leave sync
+running for longer than one sitting), use the self-host route instead:
+[`docs/self-hosting-windows.md`](docs/self-hosting-windows.md).
+
+### Procedure
+
+1. On phone A (same Wi‑Fi as your desktop), open the Network URL from above. Go to **Settings** →
+   **Account** → **Create an account**. Register with a username, password, and device label
+   (e.g. "Phone A"); on the recovery-codes screen, download or copy the codes, check "I saved my
+   recovery codes", and continue.
+2. Create a character on phone A (creation wizard, as in section 2).
+3. On phone B, open the same Network URL, go to **Settings** → **Account** → **Log in**, and sign
+   in with the same username/password (a different device label, e.g. "Phone B").
+4. **Restore**: confirm the character created in step 2 appears in phone B's character list
+   without any manual action — this is restore-on-new-device, driven by login alone.
+5. **Live sync**: with both phones' apps open, make a change on phone A (e.g. apply damage on the
+   Play tab) and, without touching phone B, watch phone B's sheet/character update on its own
+   within a few seconds — this is the live WebSocket path, not the one-time upload/restore from
+   steps 2–4. Repeat in the other direction (edit on B, watch A).
+6. **Devices list**: on either phone, go to **Settings** → **Devices**. Confirm both device
+   labels are listed, each with a last-active time, and the current device is tagged "This
+   device". Tap **Revoke** on the *other* device, confirm the dialog; on that other phone, the
+   next action against the server (e.g. any edit) should sign it back out to the login prompt.
+7. **Quota**: on either phone, **Settings** → **Storage quota** shows usage against the account's
+   limits once at least one character has synced (before any sync it reads "No synced characters
+   yet").
+8. **Recovery-code reset**: on a signed-out browser (or after logging out on one phone), go to
+   `/login` → **Forgot your password?** → enter the username, one of the saved recovery codes, and
+   a new password → **Reset password**. Confirm you can log back in with the new password
+   afterward, and that this signs out every *other* device with an active session (per the
+   recover screen's own "Resetting your password will sign you out of every other device."
+   notice) — check a still-open session on another phone gets signed out too.
+
+### Results
+
+| Devices (A / B) | Date | Restore | Live sync | Revoke | Recovery reset |
+| --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a / iPhone 13, Safari)_ | | | | | |
+| | | | | | |
+
+---
+
+## 7. Known Phase-4 / backlog items
 
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file
 again, but worth knowing about while doing manual passes:
