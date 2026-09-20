@@ -8,7 +8,7 @@
  * store state this module doesn't have, so they stay in `stream-actor.ts` — doc-10's pipeline
  * order is parse → size → permission → dedupe, and this file only ever covers the first two.
  */
-import { type Event, parseEvent } from '@hk/protocol';
+import { EVENT_STREAM_KIND, type Event, parseEvent } from '@hk/protocol';
 
 /** doc-08 §Quotas "Event payload" row: 16 KB per event. */
 export const EVENT_BYTES_MAX = 16 * 1024;
@@ -45,12 +45,30 @@ export type ValidateEventResult =
 
 /**
  * Full per-event structural validation: `@hk/protocol`'s `parseEvent` (envelope shape + the
- * type-specific payload schema keyed by `(type, v)`), then the 16 KB size cap. Both failure
- * modes map to reject code `invalid` at the call site (`stream-actor.ts`) — this module doesn't
- * know about `RejectCode` (that's a sync-protocol concept; keeping it out here means this file
- * has no reason to import `@hk/protocol`'s sync module at all, only the event one).
+ * type-specific payload schema keyed by `(type, v)`), then the 16 KB size cap, then the
+ * stream-binding guard below. All three failure modes map to reject code `invalid` at the call
+ * site (`stream-actor.ts`) — this module doesn't know about `RejectCode` (that's a sync-protocol
+ * concept; keeping it out here means this file has no reason to import `@hk/protocol`'s sync
+ * module at all, only the event one).
+ *
+ * `streamId` is the actor's OWN stream (`StreamActor.streamId`, `char:<uuid>` / `camp:<uuid>`) —
+ * not read from the event's own `stream` field, which is untrusted/redundant client input the
+ * caller already scopes the whole append call to.
+ *
+ * Stream-binding guard (plan-9 Task 2, T2 obligation (b) — "stream-prefix ↔ event-family binding
+ * check", doc-02's two disjoint catalogs, "Event catalog — character stream" vs "Event catalog —
+ * campaign stream", read together with doc-03 §Gateway: forwarded character events travel over a
+ * campaign SOCKET but land on a CHARACTER stream via `Rpc`, not the other way around — nothing in
+ * doc-02/doc-03 describes a campaign-only type ever being valid on a `char:` stream or vice
+ * versa): `@hk/protocol`'s `EVENT_STREAM_KIND` maps every registered type to the one stream kind
+ * it was cataloged for. Checked here — BEFORE `stream-actor.ts`'s `permissions.allowed` call —
+ * because `permissions.ts`'s role check alone cannot catch this: `EVENT_ACTORS` (what `allowed`
+ * consults) is the MERGED character+campaign table, so a campaign-only type like `roll.logged`
+ * has a real, non-empty actor list (`['dm','member']`) that a role check would happily pass for a
+ * `dm` actor even on a `char:` stream. An event whose type isn't in `EVENT_STREAM_KIND` at all
+ * cannot reach this branch — `parseEvent` above already rejected it as `event.unknownType`.
  */
-export function validateEvent(input: unknown): ValidateEventResult {
+export function validateEvent(input: unknown, streamId: string): ValidateEventResult {
   const parsed = parseEvent(input);
   if (!parsed.ok) {
     const detail = parsed.issues.map((issue) => `${issue.path}: ${issue.message}`).join('; ');
@@ -59,6 +77,14 @@ export function validateEvent(input: unknown): ValidateEventResult {
   const bytes = measureEventBytes(parsed.event);
   if (bytes > EVENT_BYTES_MAX) {
     return { ok: false, message: `event.tooLarge: ${bytes} bytes exceeds the ${EVENT_BYTES_MAX}-byte cap` };
+  }
+  const streamKind = streamId.startsWith('camp:') ? 'camp' : 'char';
+  const expectedKind = EVENT_STREAM_KIND[parsed.event.type];
+  if (expectedKind !== undefined && expectedKind !== streamKind) {
+    return {
+      ok: false,
+      message: `event.invalid: type ${parsed.event.type} is registered for ${expectedKind}: streams, not ${streamKind}: streams`,
+    };
   }
   return { ok: true, event: parsed.event };
 }

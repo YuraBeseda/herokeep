@@ -122,6 +122,26 @@ describe('append', () => {
     expect(system.store.length).toBe(0);
   });
 
+  it('rejects a campaign-only event type (roll.logged) appended to this char: stream as invalid (plan-9 Task 2 stream-binding guard)', async () => {
+    const event = makeEvent({
+      type: 'roll.logged',
+      payload: {
+        label: 'Attack roll',
+        formula: '1d20+5',
+        results: [{ die: 'd20', value: 15 }],
+        total: 20,
+        kind: 'attack',
+        visibility: 'everyone',
+      },
+    });
+    const outcome = await system.actor.append([event], makeActor('dm'));
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected).toHaveLength(1);
+    expect(outcome.rejected[0]).toMatchObject({ id: event.id, code: 'invalid' });
+    expect(system.store.length).toBe(0);
+  });
+
   it('rejects an event a member actor is not permitted to append as forbidden', async () => {
     const event = makeEvent(); // note.added: owner-only
     const outcome = await system.actor.append([event], makeActor('member'));

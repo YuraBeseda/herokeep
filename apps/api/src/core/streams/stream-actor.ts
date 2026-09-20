@@ -243,7 +243,7 @@ export class StreamActor {
           message: 'event.duplicateInFrame: id repeated within one append',
         };
       }
-      const validated = validateEvent(raw);
+      const validated = validateEvent(raw, this.streamId);
       if (!validated.ok) return { kind: 'rejected', id: raw.id, code: 'invalid', message: validated.message };
       if (!this.permissions.allowed(validated.event.type, actor.role)) {
         return {

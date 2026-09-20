@@ -11,9 +11,12 @@ import { BlobHashSchema, SemverSchema } from '../pack/common.ts';
 export const PROTO_VERSION = 1 as const;
 
 // Authorization role for a sync-protocol actor (ADR-012 §Authorization). Distinct from
-// events/envelope.ts's ActorRoleSchema (owner|dm|system, used to stamp committed events):
-// this is the *client-facing* actor identity, which never includes the internal 'system'
-// role and carries no deviceId.
+// events/envelope.ts's ActorRoleSchema (owner|dm|system|member, used to stamp committed
+// events — plan-9 Task 1 widened it to add 'member' for campaign-stream events): this is the
+// *client-facing* actor identity, which never includes the internal 'system' role and carries
+// no deviceId. The two schemas share the same three client-facing values now (owner|dm|member)
+// — the only remaining difference is ActorRoleSchema's 'system' value, which no sync-protocol
+// actor is ever stamped as.
 export const ActorSchema = z.strictObject({
   userId: z.string().min(1).max(64),
   role: z.enum(['owner', 'dm', 'member']),

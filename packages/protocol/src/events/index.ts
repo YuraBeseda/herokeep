@@ -29,6 +29,30 @@ export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   ...CAMPAIGN_EVENT_ACTORS,
 };
 
+/**
+ * Which stream KIND (`char:*` vs `camp:*`, `@hk/protocol`'s `StreamIdSchema` prefixes) an event
+ * `type` is registered for — plan-9 Task 2's T2 obligation (b), "stream-prefix ↔ event-family
+ * binding check". Derived directly from which registry (`character.ts`'s `EVENT_PAYLOADS` vs
+ * `campaign.ts`'s `CAMPAIGN_EVENT_PAYLOADS`) a type's key lives in, so it can never drift from
+ * the two source-of-truth catalogs the way a hand-maintained third list could. Keyed by the bare
+ * `type` (not `type@v`, matching `EVENT_ACTORS`'s own key shape) — every versioned payload
+ * schema for a given type name is registered from the same file, so the kind is stable across
+ * versions. Consumed by `apps/api`'s `core/validate.ts`, BEFORE permission evaluation, to reject
+ * a campaign-only type appended to a `char:` stream (or vice versa) with code `invalid` — this
+ * closes a gap `permissions.ts`'s `allowed()` cannot close on its own, because `EVENT_ACTORS` is
+ * the MERGED table above and a type like `roll.logged` (campaign-only) legitimately grants
+ * `'member'`, which is meaningless read in isolation on a character stream but not rejected by a
+ * role check alone.
+ */
+export const EVENT_STREAM_KIND: Record<string, 'char' | 'camp'> = {
+  ...Object.fromEntries(
+    Object.keys(CHARACTER_EVENT_PAYLOADS).map((key) => [key.slice(0, key.lastIndexOf('@')), 'char' as const]),
+  ),
+  ...Object.fromEntries(
+    Object.keys(CAMPAIGN_EVENT_PAYLOADS).map((key) => [key.slice(0, key.lastIndexOf('@')), 'camp' as const]),
+  ),
+};
+
 export type ParseEventResult = { ok: true; event: Event } | { ok: false; issues: PackIssue[] };
 
 export function parseEvent(input: unknown): ParseEventResult {
