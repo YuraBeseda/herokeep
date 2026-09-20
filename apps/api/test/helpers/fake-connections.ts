@@ -27,6 +27,7 @@ export class FakeConnections implements Connections<TestAttachment> {
   private readonly registered = new Set<Conn>();
   private readonly attachments = new Map<Conn, TestAttachment>();
   private readonly frames = new Map<Conn, ServerMessage[]>();
+  private readonly binaryFrames = new Map<Conn, Uint8Array[]>();
   private readonly closed = new Set<Conn>();
   private readonly closeArgs = new Map<Conn, { code: number; reason: string }>();
 
@@ -35,6 +36,7 @@ export class FakeConnections implements Connections<TestAttachment> {
     this.registered.add(conn);
     this.attachments.set(conn, attachment);
     this.frames.set(conn, []);
+    this.binaryFrames.set(conn, []);
     return conn;
   }
 
@@ -48,6 +50,13 @@ export class FakeConnections implements Connections<TestAttachment> {
 
   send(conn: Conn, frame: ServerMessage): void {
     this.frames.get(conn)?.push(frame);
+  }
+
+  /** [plan-9 Task 7] Records raw binary frames sent to `conn` (`blob.chunk` relaying), the same
+   * way `send` records JSON `ServerMessage` frames — `binaryFramesFor` below is its inspection
+   * counterpart. */
+  sendBinary(conn: Conn, bytes: Uint8Array): void {
+    this.binaryFrames.get(conn)?.push(bytes);
   }
 
   close(conn: Conn, code: number, reason: string): void {
@@ -69,6 +78,11 @@ export class FakeConnections implements Connections<TestAttachment> {
   /** Test-only inspection: every frame sent to `conn`, in send order. */
   framesFor(conn: Conn): ServerMessage[] {
     return this.frames.get(conn) ?? [];
+  }
+
+  /** Test-only inspection: every raw binary frame sent to `conn`, in send order. */
+  binaryFramesFor(conn: Conn): Uint8Array[] {
+    return this.binaryFrames.get(conn) ?? [];
   }
 
   /** Test-only inspection: whether `close()` was called for `conn`. */

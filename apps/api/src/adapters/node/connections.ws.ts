@@ -69,6 +69,17 @@ export class WsConnections<Attachment extends Taggable> implements Connections<A
     if (socket.readyState === 1) socket.send(JSON.stringify(frame));
   }
 
+  /** [plan-9 Task 7 — minimal port-compliance send, not the full binary-frame WIRING] `ws`'s
+   * `.send()` auto-detects binary vs. text by argument type (a `Uint8Array` sends a binary WS
+   * frame with no further options needed), so this is otherwise identical to `send` above. Reading
+   * incoming binary frames off the socket and routing them to `StreamActor.handleBinaryMessage`
+   * (`core/streams/stream-actor.ts`) is Task 8's job — this adapter has no `'message'` binary
+   * branch yet (`server.ts`'s own Phase-2-scope comment). */
+  sendBinary(conn: Conn, bytes: Uint8Array): void {
+    const socket = conn as WebSocket;
+    if (socket.readyState === 1) socket.send(bytes);
+  }
+
   close(conn: Conn, code: number, reason: string): void {
     (conn as WebSocket).close(code, reason);
   }

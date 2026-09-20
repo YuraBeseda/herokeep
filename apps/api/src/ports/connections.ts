@@ -23,6 +23,13 @@ export interface Connections<Attachment = unknown> {
   byTag(tag: string): Conn[];
   /** Sends one server→client protocol frame to `conn`. */
   send(conn: Conn, frame: ServerMessage): void;
+  /** Sends one raw BINARY frame to `conn` — doc-03's blob-transfer binary frames (`blob.chunk`:
+   * docs/02-architecture/03-sync-protocol.md, 07-images-and-blobs.md §Blob transfer protocol).
+   * Distinct from `send` (which only ever carries a schema-validated JSON `ServerMessage`) because
+   * a blob chunk is raw bytes the server relays byte-for-byte without any protocol-level shape —
+   * `apps/api/src/core/streams/blob-relay.ts` is the only core caller (plan-9 Task 7); the actual
+   * WebSocket binary-frame plumbing is an adapter concern (Task 8, not built yet). */
+  sendBinary(conn: Conn, bytes: Uint8Array): void;
   /** Closes `conn` with a WebSocket close code and a human-readable reason. */
   close(conn: Conn, code: number, reason: string): void;
   /** Reads the attachment previously set for `conn` (via `accept` or `setAttachment`). */

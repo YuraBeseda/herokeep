@@ -198,20 +198,44 @@ export class StreamActor {
         return;
       case 'subscribe':
       case 'unsubscribe':
-      case 'blob.have':
-      case 'blob.request':
-      case 'blob.cancel':
       case 'presence':
         // Phase 2 scope (plan's Global Constraints; doc-03): character streams only, owner-only
         // direct sockets. These message types are schema-defined for Phase 3 (a DM subscribing
-        // to a member's sheet, blob relay, presence indicators on a shared campaign) but have
-        // no meaning yet on a solo character stream. Ignored (no-op, no reply) rather than
-        // rejected/closed: a well-behaved client may send `presence` heartbeats unconditionally
-        // regardless of stream type, and disconnecting it over a harmless, schema-valid message
-        // would be hostile. Each Phase-3 type is documented individually here per the plan's
-        // "document each" instruction, rather than as one generic catch-all comment.
+        // to a member's sheet, presence indicators on a shared campaign) but have no meaning yet
+        // on a solo character stream. Ignored (no-op, no reply) rather than rejected/closed: a
+        // well-behaved client may send `presence` heartbeats unconditionally regardless of
+        // stream type, and disconnecting it over a harmless, schema-valid message would be
+        // hostile. Each Phase-3 type is documented individually here per the plan's "document
+        // each" instruction, rather than as one generic catch-all comment.
+        return;
+      case 'blob.have':
+      case 'blob.request':
+      case 'blob.cancel':
+        // [plan-9 Task 7] Campaign blob relay (doc-07 §Blob transfer protocol) is implemented by
+        // `CampaignActor`'s own `handleMessage` override, which intercepts these three types
+        // BEFORE they ever reach this base-class switch (mirroring how it already intercepts
+        // `subscribe`/`unsubscribe`). A solo character stream still has no relay for these —
+        // blob transfer between one owner's OWN multiple devices (doc-07: "own character's
+        // blobs") is a real, documented future need, but nothing in this plan's task list scopes
+        // it; deferred, same no-op stance as `subscribe`/`presence` above for a stream type that
+        // doesn't implement it (yet).
         return;
     }
+  }
+
+  /**
+   * [plan-9 Task 7] Entry point for a raw BINARY WebSocket frame — doc-03's `blob.chunk` binary
+   * frame, adapter-agnostically (the adapter decides text vs. binary from the raw WS frame type and
+   * routes accordingly; the actual WS-level binary/text branch is Task 8's job, not built yet on
+   * either adapter). No-op here: a plain `StreamActor`/character stream has no blob relay (see the
+   * `blob.*` case above in `handleMessage` for why) — `CampaignActor` overrides this to forward
+   * into its own `BlobRelay`. Kept as a virtual method (not a Phase-3-only addition bolted onto the
+   * adapters) so an adapter's binary-frame dispatch can call `streamActor.handleBinaryMessage(conn,
+   * bytes)` uniformly regardless of concrete actor type, exactly like `handleMessage`/
+   * `onConnectionClosed` already work.
+   */
+  handleBinaryMessage(_conn: Conn, _bytes: Uint8Array): void {
+    // no-op (character streams defer blob relay — see above)
   }
 
   private async handleAppend(conn: Conn, msg: AppendMsg, actor: Actor): Promise<void> {

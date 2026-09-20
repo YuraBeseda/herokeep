@@ -66,6 +66,16 @@ export class HibernatingConnections<Attachment extends Taggable> implements Conn
     if (socket.readyState === WS_READY_STATE_OPEN) socket.send(JSON.stringify(frame));
   }
 
+  /** [plan-9 Task 7 — minimal port-compliance send, not the full binary-frame WIRING] The
+   * Hibernation API's `WebSocket.send()` accepts an `ArrayBuffer`/`ArrayBufferView` and sends a
+   * binary WS frame automatically, same as `send` above for JSON text frames. The `webSocketMessage`
+   * DO handler routing an incoming binary frame to `StreamActor.handleBinaryMessage` (`core/streams/
+   * stream-actor.ts`) is Task 8's job — not built yet. */
+  sendBinary(conn: Conn, bytes: Uint8Array): void {
+    const socket = conn as WebSocket;
+    if (socket.readyState === WS_READY_STATE_OPEN) socket.send(bytes);
+  }
+
   close(conn: Conn, code: number, reason: string): void {
     (conn as WebSocket).close(code, reason);
   }

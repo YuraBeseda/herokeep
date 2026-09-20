@@ -44,6 +44,7 @@ import {
 import type { Conn } from '../../ports/connections.ts';
 import type { RpcAppendOutcome } from '../../ports/infra.ts';
 import * as quotasModule from '../quotas.ts';
+import { BlobRelay } from './blob-relay.ts';
 import {
   type AckResult,
   type AppendOutcome,
@@ -161,6 +162,11 @@ export class CampaignActor extends StreamActor {
   private readonly setTimer: (fn: () => void, ms: number) => unknown;
   private presenceLastSentAt = Number.NEGATIVE_INFINITY;
   private presenceTrailingTimer: unknown;
+  /** [plan-9 Task 7] doc-07 §Blob transfer protocol — see `blob-relay.ts`'s own header comment for
+   * the full design. One instance per `CampaignActor` (in-memory only, never durable — matches
+   * `closed`'s own instance-scoped precedent above), sharing THIS actor's own `Connections`
+   * instance so a relayed frame reaches the same sockets `fanOut`/`broadcastPresence` already do. */
+  private readonly blobRelay: BlobRelay;
 
   constructor(deps: CampaignActorDeps) {
     super(deps);
@@ -169,6 +175,7 @@ export class CampaignActor extends StreamActor {
     // `clearTimer` (accepted in `CampaignActorDeps` for symmetry with `setTimer`) is intentionally
     // never called: the throttle design below never needs to CANCEL a scheduled trailing send —
     // see `triggerPresence`'s doc comment — only to schedule at most one.
+    this.blobRelay = new BlobRelay({ connections: this.connections });
   }
 
   /**
@@ -814,6 +821,10 @@ export class CampaignActor extends StreamActor {
    */
   override async hello(conn: Conn, msg: HelloMsg): Promise<void> {
     await super.hello(conn, msg);
+    // [plan-9 Task 7] doc-07: "on connect ... `blob.have {hashes}`" — `hello.have` (doc-03) IS
+    // that announcement for this transport; see `BlobRelay.onHello`'s own doc comment for the
+    // hibernation-rebuild-ask this also performs.
+    this.blobRelay.onHello(conn, msg.have);
     await this.triggerPresence();
   }
 
@@ -833,7 +844,11 @@ export class CampaignActor extends StreamActor {
    * (`void actor.onConnectionClosed(conn)`, matching Cloudflare's synchronous `webSocketClose`
    * signature) or await it; tests await it for determinism.
    */
-  onConnectionClosed(_conn: Conn): Promise<void> {
+  onConnectionClosed(conn: Conn): Promise<void> {
+    // [plan-9 Task 7] Blob-relay cleanup (holder-set membership, in-flight bookkeeping, relay-local
+    // connection id) — see `BlobRelay.handleConnectionClosed`'s own doc comment. Synchronous, so it
+    // runs (and is fully done) before the presence broadcast below reads live connection state.
+    this.blobRelay.handleConnectionClosed(conn);
     return this.triggerPresence();
   }
 
@@ -972,7 +987,29 @@ export class CampaignActor extends StreamActor {
       this.handleUnsubscribe(conn, parsed.message);
       return;
     }
+    // [plan-9 Task 7] Campaign blob relay (doc-07 §Blob transfer protocol) — intercepted here the
+    // same way `subscribe`/`unsubscribe` are above, BEFORE `super.handleMessage`'s own switch
+    // (`stream-actor.ts`) would otherwise no-op them (that base-class no-op is still what a plain
+    // character stream gets — see its own updated case comment).
+    if (parsed.ok && parsed.message.t === 'blob.have') {
+      this.blobRelay.handleHave(conn, parsed.message.hashes);
+      return;
+    }
+    if (parsed.ok && parsed.message.t === 'blob.request') {
+      this.blobRelay.handleRequest(conn, parsed.message.hash);
+      return;
+    }
+    if (parsed.ok && parsed.message.t === 'blob.cancel') {
+      this.blobRelay.handleCancel(conn, parsed.message.hash);
+      return;
+    }
     await super.handleMessage(conn, raw);
+  }
+
+  /** [plan-9 Task 7] Binary `blob.chunk` frames (doc-03) — see `stream-actor.ts`'s base
+   * `handleBinaryMessage` for why this is a virtual method at all. */
+  override handleBinaryMessage(conn: Conn, bytes: Uint8Array): void {
+    this.blobRelay.handleChunk(conn, bytes);
   }
 
   /**
