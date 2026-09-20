@@ -507,6 +507,80 @@ describe('StreamSyncSession', () => {
     await flush();
     expect(released).toBe(true);
   });
+
+  it('fix-round 1, Critical 1: releases a lock granted AFTER stop() already ran, instead of holding it forever', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+
+    // A lock manager whose FIRST grant is held back until the test calls `grantFirst()` — models
+    // `stop()` racing a still-pending Web Lock grant. Any request queued BEHIND the first (a
+    // second waiter, e.g. another session for the same stream) only gets granted once the first
+    // request's callback-returned promise resolves — exactly the real Web Locks API's single-
+    // holder-per-name contract, which is what "a second session can acquire it" actually proves.
+    let held = false;
+    let firstRequested = false;
+    let pendingGrant: (() => void) | undefined;
+    const queue: (() => void)[] = [];
+    const grant = (
+      callback: () => Promise<void>,
+      resolve: () => void,
+      reject: (err: Error) => void,
+    ): void => {
+      callback().then(
+        () => {
+          held = false;
+          resolve();
+          queue.shift()?.();
+        },
+        (err: unknown) => {
+          held = false;
+          reject(err instanceof Error ? err : new Error(String(err)));
+          queue.shift()?.();
+        },
+      );
+    };
+    const locks = {
+      request: (
+        _name: string,
+        _opts: { mode?: string },
+        callback: () => Promise<void>,
+      ): Promise<void> =>
+        new Promise<void>((resolve, reject) => {
+          const attempt = (): void => {
+            if (held) {
+              queue.push(attempt);
+              return;
+            }
+            held = true;
+            if (!firstRequested) {
+              firstRequested = true;
+              pendingGrant = () => grant(callback, resolve, reject);
+              return; // gated — the test decides when this first grant actually fires
+            }
+            grant(callback, resolve, reject);
+          };
+          attempt();
+        }),
+    } as unknown as LockManager;
+
+    const { session } = newSession(streamId, { locks });
+    const startPromise = session.start(); // blocked on the gated first grant
+
+    session.stop(); // races the still-pending grant — the bug: this used to leak the lock forever
+
+    let secondGranted = false;
+    void locks.request(`hk:sync:${streamId}`, { mode: 'exclusive' }, () => {
+      secondGranted = true;
+      return new Promise<void>(() => undefined); // holds — nothing more to assert past "granted"
+    });
+    expect(secondGranted).toBe(false); // still queued behind the (as yet ungranted) first request
+
+    pendingGrant!(); // the lock manager now actually grants the first request
+    await startPromise;
+    await flush();
+
+    expect(secondGranted).toBe(true); // released, not held forever — the second waiter got in
+  });
 });
 
 describe('chunkEventsForAppend', () => {

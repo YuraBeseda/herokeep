@@ -219,7 +219,15 @@ export class StreamSyncSession {
    * is driven from here on by the socket's own callbacks and the reconnect loop. */
   async start(): Promise<void> {
     await this.acquireLock();
-    if (this.stopped) return;
+    if (this.stopped) {
+      // `stop()` ran while the lock grant was still pending — its own `releaseLock()` call was a
+      // no-op back then (`this.lockRelease` wasn't set yet, since the lock manager's callback
+      // above is what sets it), so the lock JUST granted to us here would otherwise be held
+      // forever (`hk:sync:<streamId>` never released, permanently blocking every future session
+      // for this stream). Release it now instead.
+      this.releaseLock();
+      return;
+    }
     await this.refreshPendingCount();
     this.connect();
   }

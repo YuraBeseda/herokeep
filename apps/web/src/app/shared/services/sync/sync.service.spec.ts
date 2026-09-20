@@ -505,4 +505,121 @@ describe('SyncService', () => {
     expect(await charactersRepository.get(streamId)).toBeUndefined();
     expect(fetchCalled).toBe(false);
   });
+
+  it('fix-round 1, Critical 2: a local edit made mid-upload becomes pending, never a committed-with-unsent-seq row', async () => {
+    leaderState.set(true);
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine');
+    const bareId = streamId.slice('char:'.length);
+    const committedEvent = store.events()[0];
+
+    globalThis.fetch = routedFetch({
+      '/api/characters': (init) => {
+        if (init?.method === 'POST') {
+          return jsonResponse(201, { id: bareId, name: 'Aria', system: 'srd-5e-2024' });
+        }
+        return jsonResponse(200, []); // GET — nothing on the server yet
+      },
+    });
+
+    TestBed.inject(SyncService);
+    statusState.set('authed');
+    TestBed.tick();
+    await flush();
+
+    // The POST has resolved by now (`upload()`'s `enterSyncMode` already ran, fix-round 1,
+    // Critical 2) — an edit made HERE, before `uploadEvents`'s ack round trip even starts, must be
+    // written as a PENDING row rather than a committed-with-a-local-seq row this upload will never
+    // send.
+    await store.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Mid-upload edit' } },
+    ]);
+    const midEvent = store.events().at(-1)!;
+    expect(midEvent.seq).toBeUndefined(); // PENDING, not committed — the crux of the fix
+
+    const uploadSocket = FakeWebSocket.instances[0];
+    uploadSocket.emitOpen();
+    await flush();
+    uploadSocket.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+    });
+    await flush();
+    uploadSocket.emitMessage({
+      t: 'ack',
+      rid: 'r2',
+      results: [{ id: committedEvent.id, seq: committedEvent.seq! }],
+    });
+    await flush();
+
+    // Verified (only the ORIGINAL committed event was uploaded — `midEvent` was never part of that
+    // batch) — an ongoing session now opens, and its own `hello` carries `midEvent` as pending,
+    // proving it flushes normally rather than sitting silently unsent forever.
+    const sessionSocket = FakeWebSocket.instances[1];
+    sessionSocket.emitOpen();
+    await flush();
+    const helloFrame = sessionSocket.parsedSent().find((m) => m.t === 'hello') as
+      { pending: { id: string }[] } | undefined;
+    expect(helloFrame?.pending.map((e) => e.id)).toContain(midEvent.id);
+
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.find((e) => e.id === midEvent.id)?.seq).toBeUndefined(); // still pending
+  });
+
+  it('fix-round 1, Important 3: a logout during an in-flight upload does not resurrect a session afterward', async () => {
+    leaderState.set(true);
+    const store = TestBed.inject(CharacterStore);
+    const streamId = await store.create('Aria', 'feminine');
+    const bareId = streamId.slice('char:'.length);
+    const committedEvent = store.events()[0];
+
+    globalThis.fetch = routedFetch({
+      '/api/characters': (init) => {
+        if (init?.method === 'POST') {
+          return jsonResponse(201, { id: bareId, name: 'Aria', system: 'srd-5e-2024' });
+        }
+        return jsonResponse(200, []);
+      },
+    });
+
+    const sync = TestBed.inject(SyncService);
+    statusState.set('authed');
+    TestBed.tick();
+    await flush();
+
+    const uploadSocket = FakeWebSocket.instances[0];
+    uploadSocket.emitOpen();
+    await flush();
+    uploadSocket.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+    });
+    await flush();
+
+    // Logout races the in-flight upload, BEFORE its ack (and therefore its verification) arrives.
+    statusState.set('anon');
+    TestBed.tick();
+    await flush();
+
+    uploadSocket.emitMessage({
+      t: 'ack',
+      rid: 'r2',
+      results: [{ id: committedEvent.id, seq: committedEvent.seq! }],
+    });
+    await flush();
+
+    // The now-verified upload's trailing `startSession()` must be suppressed — no session may be
+    // resurrected under the current ('anon'/idle) mode.
+    expect(sync.syncState(streamId)()).toBe('offline');
+    expect(FakeWebSocket.instances).toHaveLength(1); // only the one-shot upload socket ever opened
+  });
 });

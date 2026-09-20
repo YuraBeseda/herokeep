@@ -297,14 +297,14 @@ export class SyncService {
         this.startSession(row.id);
         continue;
       }
-      await this.upload(row);
+      await this.upload(row, generation);
     }
 
     for (const serverRow of serverRows) {
       if (!this.stillReconciling(generation)) return;
       const streamId = `char:${serverRow.id}`;
       if (localIds.has(streamId)) continue;
-      await this.restore(streamId);
+      await this.restore(streamId, generation);
     }
   }
 
@@ -312,7 +312,7 @@ export class SyncService {
     return generation === this.reconcileGeneration && this.mode === 'leader';
   }
 
-  private async upload(row: CharacterRow): Promise<void> {
+  private async upload(row: CharacterRow, generation: number): Promise<void> {
     const bareId = stripStreamPrefix(row.id);
     try {
       await apiJson('/api/characters', {
@@ -331,6 +331,17 @@ export class SyncService {
       return;
     }
 
+    // Fix-round 1, Critical 2: turn on the pending-write fork BEFORE snapshotting which events are
+    // "committed" for upload — `uploadEvents` below `await`s a full round trip to the server, and
+    // without this, a local edit landing during that window (`CharacterStore.appendTx`, still in
+    // local-committed mode) would be written as a COMMITTED row with a LOCAL seq that this upload
+    // never sends — permanent silent divergence (the server never learns of it, and nothing ever
+    // retransmits it, since `commitPending`/`applyServerCommit` only ever touch pending rows).
+    // Calling this now means any such concurrent edit instead becomes a PENDING row, which flushes
+    // normally once `startSession` below opens a real session (or, if reconciliation gets
+    // superseded before that happens, on the next `hello.pending` a future session sends).
+    this.characterStore.enterSyncMode(row.id);
+
     const localEvents = await this.eventsRepository.byStream(row.id);
     const committed = localEvents.filter((e) => e.seq !== undefined);
     if (committed.length > 0) {
@@ -339,11 +350,13 @@ export class SyncService {
         // Server wins — a full re-pull, task-8-brief.md's explicit resolution for the mismatch
         // case. `restore` is the exact same catch-up-then-`resetStreamFromServer` routine a
         // server-only stream uses.
-        await this.restore(row.id);
+        await this.restore(row.id, generation);
         return;
       }
     }
-    this.startSession(row.id);
+    // Fix-round 1, Important 3: re-check — a logout/leader-loss during the `await`s above must not
+    // let this stale continuation resurrect a session under idle/follower mode.
+    if (this.stillReconciling(generation)) this.startSession(row.id);
   }
 
   /** One-shot socket: `hello {lastSeq: 0}` (this stream is brand new server-side — the `POST`
@@ -416,8 +429,9 @@ export class SyncService {
 
   /** One-shot socket: `hello {lastSeq: 0}`, collect `events` catch-up frames until
    * `welcome.headSeq` is reached, then `CharacterStore.resetStreamFromServer` — restore-on-new-
-   * device AND the upload-mismatch fallback (see class doc). */
-  private async restore(streamId: string): Promise<void> {
+   * device AND the upload-mismatch fallback (see class doc). `generation` is re-checked before the
+   * trailing `startSession` (fix-round 1, Important 3) — same reasoning as `upload`'s own check. */
+  private async restore(streamId: string, generation: number): Promise<void> {
     const collected: Event[] = [];
     const ok = await new Promise<boolean>((resolve) => {
       let headSeq = 0;
@@ -470,7 +484,7 @@ export class SyncService {
 
     collected.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
     await this.characterStore.resetStreamFromServer(streamId, collected);
-    this.startSession(streamId);
+    if (this.stillReconciling(generation)) this.startSession(streamId);
   }
 
   // --- session bookkeeping -----------------------------------------------------------------------
@@ -520,6 +534,12 @@ export class SyncService {
     // doc-03: "bye { reason }" — "session expired" is the one reason worth an eager re-check;
     // anything else (e.g. a future "removed from campaign") has no bearing on this device's own
     // session state.
+    // FOLLOW-UP (fix-round 1, reviewer finding 4 — flagged, no behavior change here): the shipped
+    // server currently emits NO `bye` frames at all, and doc-03/@hk/protocol only constrain
+    // `reason` to a non-empty string — there is no enum of known reason codes to match against.
+    // This `/session/i` heuristic is a best-effort placeholder that will need re-verifying (exact
+    // wording, or a real code) once the server actually starts sending `bye` with a
+    // session-expiry reason.
     if (/session/i.test(reason)) {
       this.authService.init();
     }
