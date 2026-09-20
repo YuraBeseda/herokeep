@@ -174,6 +174,15 @@ export class SqliteFileStreamStore implements StreamStore {
     return Promise.resolve(rows.map(rowToEvent));
   }
 
+  /** `ports/stream.ts`'s revert-target `txId` resolution extension (final whole-branch review,
+   * second wave) — "ANY one" per that doc comment's own reasoning; `LIMIT 1` is all this needs. */
+  findAnyByTxId(txId: string): Promise<StoredEvent | undefined> {
+    const row = this.db
+      .prepare('SELECT * FROM events WHERE stream_id = ? AND tx_id = ? LIMIT 1')
+      .get(this.streamId, txId) as EventRow | undefined;
+    return Promise.resolve(row ? rowToEvent(row) : undefined);
+  }
+
   putPack(id: string, version: string, json: unknown): Promise<void> {
     this.db
       .prepare(

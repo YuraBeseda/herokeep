@@ -45,6 +45,12 @@ export class FakeStreamStore implements StreamStore {
     return Promise.resolve(this.events.filter((e) => wanted.has(e.id)));
   }
 
+  /** `ports/stream.ts`'s revert-target `txId` resolution extension (final whole-branch review,
+   * second wave) — "ANY one" matching event, mirroring both real stores' `LIMIT 1` shape. */
+  findAnyByTxId(txId: string): Promise<StoredEvent | undefined> {
+    return Promise.resolve(this.events.find((e) => e.txId === txId));
+  }
+
   putPack(id: string, version: string, json: unknown): Promise<void> {
     this.packs.set(id, { id, version, json });
     return Promise.resolve();

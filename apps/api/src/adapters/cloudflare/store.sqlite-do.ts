@@ -163,6 +163,13 @@ export class DoSqlStreamStore implements StreamStore {
     return Promise.resolve(rows.map((row) => rowToEvent(this.streamId, row)));
   }
 
+  /** `ports/stream.ts`'s revert-target `txId` resolution extension (final whole-branch review,
+   * second wave) — "ANY one" per that doc comment's own reasoning; `LIMIT 1` is all this needs. */
+  findAnyByTxId(txId: string): Promise<StoredEvent | undefined> {
+    const rows = [...this.storage.sql.exec<EventRow>('SELECT * FROM events WHERE tx_id = ? LIMIT 1', txId)];
+    return Promise.resolve(rows[0] ? rowToEvent(this.streamId, rows[0]) : undefined);
+  }
+
   putPack(id: string, version: string, json: unknown): Promise<void> {
     this.storage.sql.exec(
       `INSERT INTO packs (id, version, json) VALUES (?, ?, ?)

@@ -91,17 +91,35 @@ export function allowed(eventType: string, role: Role): boolean {
  * `Rpc.forwardAppend` — so an owner could otherwise `event.reverted` a DM-authored event and have
  * it commit, a live ADR-012 violation. `StreamActor.append` (`stream-actor.ts`) now wires this in
  * for real, resolving the target via its OWN `resolveRevertTarget` (the Stage-0 batched
- * `findByIds` lookup this doc comment originally anticipated) BEFORE calling here — see that
- * method's doc comment for the full resolution rules, including WHY a same-batch target needs no
- * special-casing (provably always the reverting actor's own, by construction) and the disclosed
- * `txId`-only cross-batch gap (`StreamStore` has no "find by `txId`" query; out of this fix's
- * scope, `targetId` — the common case and everything red-first-tested — is fully enforced).]
+ * `findByIds`/`findAnyByTxId` lookups this doc comment originally anticipated) BEFORE calling
+ * here — see that method's doc comment for the full resolution rules, including BOTH
+ * `targetId` (single event) AND `txId` (whole-transaction group revert, closed in the second
+ * wave — `StreamStore.findAnyByTxId`) shapes, and WHY a same-batch target needs no special-casing
+ * (provably always the reverting actor's own, by construction).]
  *
- * `target === undefined` (an unresolvable target — a genuinely nonexistent `targetId`, or the
- * disclosed cross-batch `txId` gap above) FAILS OPEN, matching `@hk/engine`'s own reducer
- * behavior for a revert target it can't find: "fails silently rather than erroring"
- * (`packages/engine/src/reduce/reducer.ts`'s `preScanReverted` doc comment) — reverting nothing
- * resolvable is harmless, not a privilege escalation, so there is nothing here to forbid.
+ * `target === undefined` — an UNRESOLVABLE target, meaning nothing was EVER committed anywhere
+ * matching the revert's `targetId`/`txId` — FAILS OPEN. [final whole-branch review, second wave,
+ * RATIONALE CORRECTION] The original version of this comment justified that by citing
+ * `@hk/engine`'s reducer "failing silently" for an unknown revert target — THIS WAS WRONG, and the
+ * review proved it wrong: `packages/engine/src/reduce/reducer.ts`'s `preScanReverted` pre-scans
+ * the WHOLE input array UP FRONT, order-independently, before folding starts — a revert committed
+ * BEFORE its target (a "pre-revert") is NOT a no-op; it WOULD still nullify that target the moment
+ * it lands, for every replica. Reducer inertness is not why fail-open is safe.
+ *
+ * The ACTUAL invariant this relies on: an unresolvable target can only ever be guessed, never
+ * observed, by anyone other than its own author — every event `id` (and `txId`) is a
+ * client-generated `uuidv7`, carrying roughly 74 bits of randomness generated ON THE AUTHOR'S OWN
+ * DEVICE, and there is NO channel (this port, this protocol, or any adjacent one) that exposes a
+ * not-yet-committed event's id/txId to anyone but its author before it commits — nothing to
+ * observe, nothing to relay, nothing to forge against. A forged `event.reverted` targeting an id
+ * the sender does not already legitimately know is, in practice, targeting nothing (a ~2^-74
+ * collision), which is exactly what makes an unresolvable target harmless to let through. THIS
+ * INVARIANT IS THE ONE TO WATCH: it breaks — and this fail-open default stops being safe — the
+ * moment either half changes: event ids become predictable/sequential, OR any channel starts
+ * exposing a pending/in-flight event's id or txId to a party other than its own author before
+ * commit (e.g. a future speculative-execution/preview feature, or a gateway echoing a forwarded
+ * batch's ids back to a THIRD party before the target stream acks it). A future change touching
+ * either should re-read this paragraph before assuming fail-open is still correct.
  */
 export function canRevertOwn(
   actor: { readonly userId: string; readonly role: Role },

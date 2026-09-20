@@ -721,9 +721,11 @@ describe('event.reverted: canRevertOwn enforcement', () => {
     expect(outcome.rejected).toEqual([]);
   });
 
-  // txId-only reverts have NO resolution path at all (`resolveRevertTarget` only ever handles
-  // `targetId`) — a same-batch group member doesn't change that; this pins it doesn't error.
-  it('a same-batch txId-group revert (no targetId) still succeeds, via the same unconditional fail-open txId path', async () => {
+  // `findAnyByTxId` (the second-wave fix) is a STORE query — a same-batch group member was never
+  // separately committed first, so it can't be found there either, exactly like `findByIds` can't
+  // resolve a same-batch `targetId`. Same reasoning as the same-batch `targetId` test above: this
+  // is provably harmless regardless (same `append()` call, same actor), not a gap.
+  it('a same-batch txId-group revert (no targetId) still succeeds, via the same fail-open path (findAnyByTxId only sees committed history)', async () => {
     const system = makeCharacterSystem();
     const owner: Actor = { userId: 'user-1', role: 'owner' };
     await system.actor.append([makeCharacterCreatedEvent()], owner);
@@ -737,12 +739,16 @@ describe('event.reverted: canRevertOwn enforcement', () => {
     expect(outcome.acked).toHaveLength(2);
   });
 
-  // DISCLOSED GAP (documented in `resolveRevertTarget`'s own doc comment, `stream-actor.ts`): a
-  // `txId`-only revert targeting a PAST (cross-batch) transaction has no existing `StreamStore`
-  // lookup to resolve against (`findByIds` is explicit-id only) — it currently falls open, same as
-  // a genuinely-unresolvable `targetId`. Pinned here so a future `findByTxId`-shaped fix has a
-  // failing-then-passing test to flip, not a silent behavior change.
-  it('[disclosed gap] a cross-batch txId-only revert is NOT currently ownership-checked — falls open', async () => {
+  // [final whole-branch review, second wave, MUST-FIX — CLOSES the txId bypass] Formerly
+  // `[disclosed gap] a cross-batch txId-only revert is NOT currently ownership-checked`, flipped:
+  // `StreamStore.findAnyByTxId` now resolves a cross-batch `txId` group's representative actor via
+  // a real store lookup (Stage 0, `stream-actor.ts`), so this now-real exploit is closed: a DM
+  // gateway-forwards a `txId`-grouped batch to the owner's own character stream; the owner's own
+  // socket legitimately observes the committed envelopes (including `txId`) via live fan-out; the
+  // owner sends `event.reverted {txId: <the dm's tx>}` hoping Stage 0 resolves nothing. It now
+  // resolves the DM's own committed group member, `canRevertOwn` sees a `dm`-authored target and a
+  // non-`dm` reverting actor, and rejects.
+  it('owner reverting a cross-batch, dm-authored txId GROUP is rejected forbidden — nothing new committed', async () => {
     const system = makeCharacterSystem();
     const owner: Actor = { userId: 'user-1', role: 'owner' };
     const dm: Actor = { userId: 'user-dm', role: 'dm' };
@@ -756,11 +762,33 @@ describe('event.reverted: canRevertOwn enforcement', () => {
       txId,
     });
     await system.actor.append([dmGroupMember], dm); // committed in a SEPARATE, earlier append call
+    const beforeLength = system.store.length;
 
     const revert = makeRevertEvent({ payload: { txId } });
     const outcome = await system.actor.append([revert], owner); // owner, reverting a dm-authored group
 
-    expect(outcome.rejected).toEqual([]); // currently falls open — see the doc comment above
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ id: revert.id, code: 'forbidden' });
+    expect(system.store.length).toBe(beforeLength); // the revert never committed; the dm's group survives untouched
+  });
+
+  // Protects the REAL feature this fix must not break: the web client's own group-revert/
+  // level-up-undo flow (`CharacterStore.revert({txId})`) always targets the OWNER'S OWN
+  // transaction, committed in an EARLIER append call than the revert itself (cross-batch is the
+  // NORMAL case for a real undo, not an edge case) — this must keep working.
+  it('owner reverting their OWN cross-batch txId group still succeeds (protects the real level-up-undo flow)', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const txId = uuidv7();
+    const groupMember = makeNoteEvent({ txId });
+    await system.actor.append([groupMember], owner); // committed in a SEPARATE, earlier append call
+
+    const revert = makeRevertEvent({ payload: { txId } });
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: revert.id, seq: 3 }]);
   });
 });
 

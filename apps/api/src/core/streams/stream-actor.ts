@@ -393,13 +393,14 @@ export class StreamActor {
       };
     }
 
-    // Stage 0 (new, final whole-branch review Important finding): resolve `event.reverted`
-    // targets BEFORE stage 1, since ADR-012's "Owner may revert only events they themselves
-    // authored" rule (`permissions.ts`'s `canRevertOwn`, wired in for real here — it had ZERO
-    // call sites before this fix, despite being declared in `PermissionsPort`) needs the TARGET
-    // event's original actor, and resolving it needs an async store lookup `Array#map`'s stage 1
-    // below can't do inline. Skipped entirely when this append has no `event.reverted` events at
-    // all (the overwhelming common case) — no extra store round-trip for ordinary appends.
+    // Stage 0 (new, final whole-branch review Important finding, extended in the second wave to
+    // close a MUST-FIX): resolve `event.reverted` targets BEFORE stage 1, since ADR-012's "Owner
+    // may revert only events they themselves authored" rule (`permissions.ts`'s `canRevertOwn`,
+    // wired in for real here — it had ZERO call sites before this fix, despite being declared in
+    // `PermissionsPort`) needs the TARGET event's original actor, and resolving it needs an async
+    // store lookup `Array#map`'s stage 1 below can't do inline. Skipped entirely when this append
+    // has no `event.reverted` events at all (the overwhelming common case) — no extra store
+    // round-trip for ordinary appends.
     //
     // SAME-BATCH note (the brief's own "mind batch semantics — revert target may be in the SAME
     // batch?" prompt, considered and resolved, not overlooked): a revert CANNOT observe a
@@ -409,15 +410,37 @@ export class StreamActor {
     // always the reverting actor's own. That is EXACTLY `canRevertOwn`'s fail-open default for an
     // unresolvable target (see its own doc comment, `permissions.ts`) — so no separate same-batch
     // resolution path is needed; it would be provably-dead code, always agreeing with the
-    // fall-through. `resolveRevertTarget` below therefore only ever needs the STORE-side lookup.
+    // fall-through. `resolveRevertTarget` below therefore only ever needs the STORE-side lookups.
+    //
+    // [second wave, MUST-FIX] `payload.txId`-shaped reverts (no `targetId` — the web client's own
+    // `CharacterStore.revert({txId})` shape for a whole-transaction/level-up undo) are now ALSO
+    // resolved here, via the new `StreamStore.findAnyByTxId` (`ports/stream.ts`'s own doc comment
+    // has the "any one member's actor IS the group's actor" reasoning — doc-03's single-append
+    // `txId` rule guarantees it). Without this, the txId shape was a live bypass: a DM
+    // gateway-forwards a `txId`-grouped batch to a character stream; the OWNER'S OWN socket
+    // receives those committed envelopes (including the `txId`) via live fan-out; the owner sends
+    // `event.reverted {txId: <the dm's tx>}`; Stage 0 (pre-fix) resolved NOTHING for a `txId`-only
+    // payload; `canRevertOwn` fell open; the revert committed; `@hk/engine`'s reducer (order-
+    // independent `preScanReverted`) nullifies the DM's whole transaction everywhere, for every
+    // replica — an ADR-012 violation requiring zero guessing, only a genuine `txId` the owner
+    // legitimately observed on their own socket.
     const revertTargetIds = new Set<string>();
+    const revertTxIds = new Set<string>();
     for (const raw of events) {
       if (raw.type !== 'event.reverted') continue;
       const targetId = readOptionalStringField(raw.payload, 'targetId');
       if (targetId !== undefined) revertTargetIds.add(targetId);
+      const txId = readOptionalStringField(raw.payload, 'txId');
+      if (txId !== undefined) revertTxIds.add(txId);
     }
-    const revertTargetsFromStore = revertTargetIds.size > 0 ? await this.store.findByIds([...revertTargetIds]) : [];
+    const [revertTargetsFromStore, revertTxTargets] = await Promise.all([
+      revertTargetIds.size > 0 ? this.store.findByIds([...revertTargetIds]) : Promise.resolve([]),
+      Promise.all([...revertTxIds].map(async (txId) => [txId, await this.store.findAnyByTxId(txId)] as const)),
+    ]);
     const revertTargetById = new Map(revertTargetsFromStore.map((e) => [e.id, e]));
+    const revertTargetByTxId = new Map(
+      revertTxTargets.filter((entry): entry is [string, Event] => entry[1] !== undefined),
+    );
 
     // Stage 1: per-event schema/size/permission, plus same-frame duplicate-id detection.
     const idCounts = new Map<string, number>();
@@ -456,7 +479,7 @@ export class StreamActor {
       // this comment's claim was stale, left over from before `CampaignActor` (plan-9) made
       // multi-role streams real.
       if (validated.event.type === 'event.reverted') {
-        const target = this.resolveRevertTarget(validated.event.payload, revertTargetById);
+        const target = this.resolveRevertTarget(validated.event.payload, revertTargetById, revertTargetByTxId);
         if (!this.permissions.canRevertOwn({ userId: actor.userId, role: actor.role }, target)) {
           return {
             kind: 'rejected',
@@ -716,41 +739,39 @@ export class StreamActor {
   }
 
   /**
-   * [final whole-branch review, Important] Resolves `event.reverted`'s TARGET event, for
-   * `canRevertOwn`'s ownership check — `permissions.ts`'s own doc comment already named the exact
-   * two shapes: "a store lookup by the revert payload's `targetId` (or, for a `txId`-grouped
-   * revert, any member of that original transaction)".
+   * [final whole-branch review, Important, CLOSED in the second wave] Resolves `event.reverted`'s
+   * TARGET event, for `canRevertOwn`'s ownership check — `permissions.ts`'s own doc comment
+   * already named the exact two shapes: "a store lookup by the revert payload's `targetId` (or,
+   * for a `txId`-grouped revert, any member of that original transaction)". BOTH are now resolved:
    *
-   * ONLY `targetId` is resolved here (via the pre-fetched `storeTargetById` map — Stage 0's ONE
-   * batched `findByIds` call, `append`'s own doc comment). Two cases return `undefined` —
-   * "unresolvable" — deliberately, not by oversight, and `canRevertOwn` FAILS OPEN for both (see
-   * its own doc comment, `permissions.ts`):
+   *   - `targetId` (single event): the pre-fetched `storeTargetById` map — Stage 0's ONE batched
+   *     `findByIds` call, `append`'s own doc comment.
+   *   - `txId` (group revert, no `targetId` — the web client's OWN `CharacterStore.revert({txId})`
+   *     shape, used by the timeline's group-revert/level-up-undo UI): the pre-fetched
+   *     `storeTargetByTxId` map — Stage 0's `StreamStore.findAnyByTxId` calls, one per distinct
+   *     `txId` in the batch. "Any member" suffices per that port method's own doc comment (doc-03
+   *     §Ordering: a `txId` group commits in ONE `append` under ONE `actor`, so every member
+   *     shares the identical stored actor — there is no per-member distinction to resolve).
    *
-   *   - A same-batch target (this SAME `append(events, actor)` call also carries the event being
-   *     reverted) is not looked up at all — it CANNOT produce a different verdict than fail-open
-   *     even if resolved: every event in one `append` call is stamped with the IDENTICAL `actor`
-   *     (`stampActor`, above), so a same-batch target's authorship is, BY CONSTRUCTION, always the
-   *     reverting actor's own — exactly `canRevertOwn`'s unresolvable-target default. A dedicated
-   *     same-batch resolution path was considered (the brief's own "mind batch semantics" prompt)
-   *     and dropped as provably-dead code once this was traced through, not left unconsidered.
-   *   - A `txId`-only revert (no `targetId` — the web client's OWN `CharacterStore.revert({txId})`
-   *     shape for "revert this whole transaction") has NO resolution path here at all:
-   *     `StreamStore`'s port surface only offers `findByIds` (explicit-id lookup), no "find
-   *     committed events by `txId`" query — adding one was judged OUT OF SCOPE for this fix (the
-   *     brief's own red-first list names only `targetId`-shaped scenarios). DISCLOSED GAP, not
-   *     silently accepted: an owner CAN currently revert a cross-batch, DM-authored GROUP
-   *     transaction without this check catching it (the `targetId` path — the common single-event
-   *     case, and everything the brief's red-first tests exercise — is fully enforced). This
-   *     matches `@hk/engine`'s own reducer, which already "fails silently rather than erroring"
-   *     for a revert target it can't find (`packages/engine/src/reduce/reducer.ts`'s
-   *     `preScanReverted` doc comment) — consistent with the existing product philosophy, not a
-   *     new risk this fix introduces. Closing it fully needs a new `StreamStore.findByTxId`-shaped
-   *     port method; flagged here for a follow-up, not built speculatively into this fix.
+   * `undefined` — "unresolvable" — is still possible, and `canRevertOwn` still FAILS OPEN for it
+   * (see that function's own doc comment, `permissions.ts`, for the corrected safety rationale —
+   * NOT reducer inertness, which this exact case disproves): a same-batch target (this SAME
+   * `append(events, actor)` call also carries the event being reverted) is not looked up at all —
+   * it CANNOT produce a different verdict than fail-open even if resolved, since every event in
+   * one `append` call is stamped with the IDENTICAL `actor` (`stampActor`, above), so a same-batch
+   * target's authorship is, BY CONSTRUCTION, always the reverting actor's own; a genuinely
+   * nonexistent `targetId`/`txId` (nothing ever committed with it, on ANY stream) is the other.
    */
-  private resolveRevertTarget(payload: unknown, storeTargetById: ReadonlyMap<string, Event>): Event | undefined {
+  private resolveRevertTarget(
+    payload: unknown,
+    storeTargetById: ReadonlyMap<string, Event>,
+    storeTargetByTxId: ReadonlyMap<string, Event>,
+  ): Event | undefined {
     const targetId = readOptionalStringField(payload, 'targetId');
-    if (targetId === undefined) return undefined;
-    return storeTargetById.get(targetId);
+    if (targetId !== undefined) return storeTargetById.get(targetId);
+    const txId = readOptionalStringField(payload, 'txId');
+    if (txId !== undefined) return storeTargetByTxId.get(txId);
+    return undefined;
   }
 
   /** Fan out newly committed `events` to every OTHER connection on this stream — the sender

@@ -111,6 +111,25 @@ export interface StreamStore {
    * unspecified — callers index by `.id`.
    */
   findByIds(ids: string[]): Promise<StoredEvent[]>;
+  /**
+   * [final whole-branch review, second wave — MUST-FIX, `txId`-shaped `event.reverted` targets]
+   * Finds ANY one committed event sharing `txId`, for `StreamActor.append`'s revert-target
+   * resolution (`resolveRevertTarget`, `stream-actor.ts`) when a revert names `payload.txId`
+   * instead of a single `payload.targetId` (the web client's OWN `CharacterStore.revert({txId})`
+   * shape — a whole-transaction/level-up undo). "ANY one" suffices, not "every member": doc-03
+   * §Ordering's single-append `txId` rule ("events sharing a `txId` are appended in one `append`
+   * ... the DO commits them contiguously or rejects all") means a `txId` group is authored by
+   * exactly ONE `actor` (one `append(events, actor)` call stamps every event in it identically),
+   * so any single member's stored `actor` already IS the whole group's actor — there is no
+   * "partially owner-authored, partially dm-authored" `txId` group to distinguish between members
+   * for. Returns `undefined` when no committed event carries this `txId` at all (a genuinely
+   * unresolvable revert — `canRevertOwn`'s documented fail-open default still applies, unchanged
+   * by this method's addition). Implemented as a bounded, indexable `tx_id = ?` scan on both real
+   * stores (SQLite/DO SQLite) — the same accepted query class `findByIds`'s own `IN (...)` scan
+   * and the Node `Rpc`'s `hasEvent` linear scan already are; no new index required for correctness
+   * (a stream's event count is quota-bounded), though an index is a reasonable future perf task.
+   */
+  findAnyByTxId(txId: string): Promise<StoredEvent | undefined>;
   /** Caches a content pack's pinned JSON alongside the stream (offline/local read path). */
   putPack(id: string, version: string, json: unknown): Promise<void>;
   /** Reads a previously cached pack pin, if any. */
