@@ -659,7 +659,16 @@ describe('CharacterActor — owner backstop (defense in depth vs. mapGatewayActo
     expect(outcome.acked).toEqual([{ id: hpChanged.id, seq: 2 }]);
   });
 
-  it('character.created is exempt from the backstop (it is what establishes meta.ownerId in the first place)', async () => {
+  it('[fix round 2] character.created is NOT exempt from the backstop — a mismatched-owner actor cannot hijack ownership by replaying it', async () => {
+    // [fix round 2, controller-ruled fix of a round-1 gap] Round 1 exempted `character.created`
+    // from the mismatched-owner rejection loop, reasoning it "can never legitimately arrive via
+    // the gateway forward path" — true, but the exemption fired on ANY branch entry, including a
+    // FORGED actor's replay. `applyMetaHooks` unconditionally overwrites `meta.ownerId` from
+    // `actor.userId` on every acked `character.created`, with no first-event guard anywhere — so
+    // the round-1 exemption let a mismatched-owner actor silently HIJACK ownership by replaying
+    // `character.created`, the one owner-class event that was still let through while every OTHER
+    // owner-class event correctly stayed refused. This test pins the fixed behavior: rejected like
+    // everything else, and the real owner's `meta.ownerId` is left untouched.
     const system = makeCharacterSystem();
     const firstOwner: Actor = { userId: 'user-first', role: 'owner' };
     await system.actor.append(
@@ -667,12 +676,47 @@ describe('CharacterActor — owner backstop (defense in depth vs. mapGatewayActo
       firstOwner,
     );
 
-    // A DIFFERENT actor.userId (still role owner) sending a character.created on an
-    // already-established stream — the BACKSTOP itself must never fire for this event TYPE
-    // (whatever the rest of the pipeline decides about a second character.created is out of this
-    // test's scope; the point is only that no backstop-shaped rejection appears).
-    const secondActor: Actor = { userId: 'user-second', role: 'owner' };
-    const outcome = await system.actor.append([makeCharacterCreatedEvent()], secondActor);
+    const hijacker: Actor = { userId: 'user-hijacker', role: 'owner' };
+    const replayedCreate = makeCharacterCreatedEvent();
+    const outcome = await system.actor.append([replayedCreate], hijacker);
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected).toEqual([
+      expect.objectContaining({
+        id: replayedCreate.id,
+        code: 'forbidden',
+        message: expect.stringContaining("is not this character's established owner") as string,
+      }),
+    ]);
+    expect((await system.actor.getCharacterMeta()).ownerId).toBe(firstOwner.userId);
+    expect(system.store.length).toBe(1); // still only the real owner's original character.created
+  });
+
+  it('[fix round 2] a fresh stream (no established owner yet) never enters the backstop branch — character.created still works normally', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-fresh', role: 'owner' };
+    const created = makeCharacterCreatedEvent({ actor: { userId: owner.userId, deviceId: 'd1', role: 'owner' } });
+
+    const outcome = await system.actor.append([created], owner);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: created.id, seq: 1 }]);
+    expect((await system.actor.getCharacterMeta()).ownerId).toBe(owner.userId);
+  });
+
+  it('[fix round 2] an owner re-sending character.created on their OWN already-owned stream never enters the backstop branch', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-resend', role: 'owner' };
+    await system.actor.append(
+      [makeCharacterCreatedEvent({ actor: { userId: owner.userId, deviceId: 'd1', role: 'owner' } })],
+      owner,
+    );
+
+    // metaBefore.ownerId === actor.userId here — the backstop's mismatch condition is false, so
+    // this must never be refused with the backstop's own "is not this character's established
+    // owner" message (whatever else the underlying pipeline does with a second character.created
+    // from its OWN real owner is out of this test's scope).
+    const outcome = await system.actor.append([makeCharacterCreatedEvent()], owner);
     const backstopRejection = outcome.rejected.find((r) =>
       r.message.includes("is not this character's established owner"),
     );

@@ -31,7 +31,7 @@
  */
 import type { Actor, CharacterCampaignJoined, Event } from '@hk/protocol';
 import type { Conn } from '../../ports/connections.ts';
-import { type AppendOutcome, type RejectResult, StreamActor } from './stream-actor.ts';
+import { type AppendOutcome, StreamActor } from './stream-actor.ts';
 
 const META_KEY_OWNER_ID = 'owner_id';
 const META_KEY_CAMPAIGN_ID = 'campaign_id';
@@ -81,9 +81,9 @@ export class CharacterActor extends StreamActor {
    * stream re-checks independently ("so a compromised campaign object can't forge owner events" —
    * `docs/02-architecture/03-sync-protocol.md`, one-line clarification added alongside this fix),
    * not merely re-validate schema/permission-table membership the way the pre-fix comment above
-   * already described for the `dm` half. `verifyOwnerBackstop` below closes this: when `actor.role
-   * === 'owner'` and this stream's OWN `meta.ownerId` is already established, `actor.userId` must
-   * equal it — refused `forbidden` otherwise, REGARDLESS of whether the actor arrived via a direct
+   * already described for the `dm` half. The guard inline in `append` below closes this: when
+   * `actor.role === 'owner'` and this stream's OWN `meta.ownerId` is already established,
+   * `actor.userId` must equal it — refused `forbidden` otherwise, REGARDLESS of whether the actor arrived via a direct
    * socket (which should never disagree with its own session-verified identity anyway — this is a
    * true belt-and-suspenders case there) or a gateway forward (where it closes the exact hole a
    * buggy/compromised `mapGatewayActor` could otherwise open).
@@ -96,11 +96,25 @@ export class CharacterActor extends StreamActor {
    * the target stream's existing `permissions.allowed(type, 'dm')` check (per `EVENT_ACTORS`) is
    * the dm-side's own defense in depth: WHICH event types a dm may append, not WHO the dm is.
    *
-   * `character.created` is exempt unconditionally: it is the event that ESTABLISHES
-   * `meta.ownerId` in the first place (doc-02: "first event") — an identity check against a value
-   * that does not exist yet is meaningless, and `character.created` can never legitimately arrive
-   * via the gateway forward path anyway (`mapGatewayActor` only ever forwards to an ALREADY-JOINED
-   * character, which by construction already has an owner).
+   * [fix round 2 — CRITICAL gap in the round-1 fix, controller-ruled] `character.created` is NOT
+   * exempt from this branch. Round 1's version special-cased `character.created` out of the
+   * mismatched-owner rejection loop below, reasoning that it "can never legitimately arrive via
+   * the gateway forward path" — true, but irrelevant: the branch's OWN condition
+   * (`metaBefore.ownerId !== undefined && metaBefore.ownerId !== actor.userId`) already means a
+   * REAL owner exists and does NOT match this actor, which is exactly the shape of a forged/
+   * mismatched actor produced by a future `mapGatewayActor` bug (the whole scenario this backstop
+   * exists for). Exempting `character.created` from rejection in that state let such an actor
+   * REPLAY `character.created` — `applyMetaHooks` below unconditionally overwrites
+   * `META_KEY_OWNER_ID` from `actor.userId` on every acked `character.created`, with no
+   * first-event/already-established guard anywhere in the pipeline — silently HIJACKING
+   * ownership, the single highest-value target this backstop was built to close off, while every
+   * OTHER owner-class event correctly stayed refused. `character.created` is now rejected exactly
+   * like every other event once this branch's condition is true; the ONLY way it still commits
+   * normally is by never entering the branch at all, which happens precisely in the two
+   * LEGITIMATE cases: a fresh stream (`metaBefore.ownerId === undefined` — the condition's first
+   * half fails) and an owner re-sending `character.created` on their OWN already-owned stream
+   * (`metaBefore.ownerId === actor.userId` — the condition's second half fails). Both are covered
+   * by tests (`characters.test.ts`).
    */
   override async append(events: Event[], actor: Actor, sourceConn?: Conn): Promise<AppendOutcome> {
     if (actor.role === 'member') {
@@ -123,31 +137,24 @@ export class CharacterActor extends StreamActor {
     const metaBefore = await this.getCharacterMeta();
     const beforeCampaignId = metaBefore.campaignId;
 
-    let toAppend = events;
-    const backstopRejected: RejectResult[] = [];
+    // [fix round 1, extended fix round 2] The owner backstop — see this method's doc comment for
+    // the full rationale and the round-2 fix (no `character.created` exemption). Every event in
+    // this call is refused uniformly; nothing reaches `super.append`/`applyMetaHooks` at all.
     if (actor.role === 'owner' && metaBefore.ownerId !== undefined && metaBefore.ownerId !== actor.userId) {
-      const passed: Event[] = [];
-      for (const event of events) {
-        if (event.type === 'character.created') {
-          passed.push(event);
-          continue;
-        }
-        backstopRejected.push({
+      return {
+        acked: [],
+        rejected: events.map((event) => ({
           id: event.id,
-          code: 'forbidden',
+          code: 'forbidden' as const,
           message: `event.forbidden: ${actor.userId} is not this character's established owner`,
-        });
-      }
-      toAppend = passed;
+        })),
+      };
     }
-    if (toAppend.length === 0) return { acked: [], rejected: backstopRejected };
 
-    const outcome = await super.append(toAppend, actor, sourceConn);
-    await this.applyMetaHooks(toAppend, outcome, actor);
+    const outcome = await super.append(events, actor, sourceConn);
+    await this.applyMetaHooks(events, outcome, actor);
     await this.notifyCampaignIfLinked(outcome, beforeCampaignId);
-    return backstopRejected.length > 0
-      ? { acked: outcome.acked, rejected: [...outcome.rejected, ...backstopRejected] }
-      : outcome;
+    return outcome;
   }
 
   /** Reads the full meta shape (doc comment above). Every field is read in one `Promise.all`
