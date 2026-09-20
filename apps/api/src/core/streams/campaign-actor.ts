@@ -42,8 +42,10 @@ import {
   type UnsubscribeMsg,
 } from '@hk/protocol';
 import type { Conn } from '../../ports/connections.ts';
+import type { RpcAppendOutcome } from '../../ports/infra.ts';
 import * as quotasModule from '../quotas.ts';
 import {
+  type AckResult,
   type AppendOutcome,
   type ConnAttachment,
   type QuotasPort,
@@ -60,6 +62,13 @@ const META_KEY_PACKS = 'packs';
 
 /** doc-10 §Presence: "`members` frame on connect/close, throttled to one per 5 s." */
 const PRESENCE_THROTTLE_MS = 5_000;
+
+/** [plan-9 Task 6] `subscribe`'s catch-up paging size — same number as `stream-actor.ts`'s own
+ * `CATCH_UP_PAGE_SIZE` (doc-03 §Catch-up performance: "the DO pages 200 events per frame"), kept
+ * as its own local constant rather than importing that file's `private`/module-scoped one, since
+ * `sendSubscribeCatchUp` pages a DIFFERENT stream's history (a `char:` target via `Rpc.readStream`,
+ * not this actor's own `StreamStore`) through a structurally similar but independent loop. */
+const SUBSCRIBE_CATCH_UP_PAGE_SIZE = 200;
 
 /**
  * `CampaignActor`'s own `QuotasPort` (task-5-brief item 3's "check how quotas.ts parameterizes;
@@ -164,13 +173,17 @@ export class CampaignActor extends StreamActor {
 
   /**
    * The append pipeline, wrapped exactly once around `StreamActor.append` (mirrors
-   * `CharacterActor.append`'s own shape) to add three things `StreamActor`'s generic pipeline
-   * cannot express on its own: (1) per-event permission REFINEMENT beyond the static
-   * `EVENT_ACTORS` table (`refineAppendPermission`) — checked BEFORE `super.append`, so a refused
-   * event never reaches schema validation/dedupe/quota at all; (2) the two per-append COUNT
-   * quotas (`member.joined` at 12, `pack.enabled` at 6) that `quotas.ts`'s generic byte/event-count
-   * machinery cannot express (see `quotas.ts`'s `CAMPAIGN_BYTES_MAX` doc comment); (3) meta
-   * maintenance from whatever `super.append` actually committed.
+   * `CharacterActor.append`'s own shape) to add everything `StreamActor`'s generic single-stream
+   * pipeline cannot express on its own: (0) [plan-9 Task 6] ROUTING every event by its OWN
+   * `.stream` field to either this campaign's own local pipeline or a `char:` GATEWAY forward
+   * (`routeByTargetStream` below — doc-03 §Gateway/§Ordering); (1) per-event permission REFINEMENT
+   * beyond the static `EVENT_ACTORS` table (`refineAppendPermission`) — checked BEFORE
+   * `super.append`, so a refused event never reaches schema validation/dedupe/quota at all; (1b)
+   * [plan-9 Task 6] cross-stream MIRROR VERIFICATION for `campaign.character_joined`/`_left`
+   * (`verifyCharacterMirror`); (2) the two per-append COUNT quotas (`member.joined` at 12,
+   * `pack.enabled` at 6) that `quotas.ts`'s generic byte/event-count machinery cannot express (see
+   * `quotas.ts`'s `CAMPAIGN_BYTES_MAX` doc comment); (3) meta maintenance from whatever
+   * `super.append` actually committed.
    *
    * IMPORTANT ordering note: steps (1)/(2) run against events whose `payload` has NOT yet been
    * schema-validated (that happens inside `super.append`'s stage 1) — `refineAppendPermission`
@@ -192,17 +205,33 @@ export class CampaignActor extends StreamActor {
       };
     }
 
+    const { localEvents, forwardGroups, routingRejected } = this.routeByTargetStream(events);
+
     const meta = await this.getCampaignMeta();
     const passed: Event[] = [];
-    const preRejected: RejectResult[] = [];
+    const preRejected: RejectResult[] = [...routingRejected];
     let membersCount = meta.members.size;
     let packsCount = meta.packs.length;
 
-    for (const event of events) {
+    for (const event of localEvents) {
       const refusal = this.refineAppendPermission(event, actor, meta);
       if (refusal) {
         preRejected.push({ id: event.id, code: refusal.code, message: refusal.message });
         continue;
+      }
+
+      if (event.type === 'campaign.character_joined' || event.type === 'campaign.character_left') {
+        const verified = await this.verifyCharacterMirror(event);
+        if (!verified) {
+          const mirrorType =
+            event.type === 'campaign.character_joined' ? 'character.campaign_joined' : 'character.campaign_left';
+          preRejected.push({
+            id: event.id,
+            code: 'invalid',
+            message: `event.invalid: ${event.type} requires the matching ${mirrorType} event on the character's own stream (RPC verify) — no half-join`,
+          });
+          continue;
+        }
       }
 
       if (event.type === 'member.joined') {
@@ -241,9 +270,168 @@ export class CampaignActor extends StreamActor {
     }
 
     const base = passed.length > 0 ? await super.append(passed, actor, sourceConn) : { acked: [], rejected: [] };
-    const outcome: AppendOutcome = { acked: base.acked, rejected: [...base.rejected, ...preRejected] };
+    const forwarded = await this.forwardGroupsToCharacterStreams(forwardGroups, actor, meta);
+    const outcome: AppendOutcome = {
+      acked: [...base.acked, ...forwarded.acked],
+      rejected: [...base.rejected, ...preRejected, ...forwarded.rejected],
+    };
     await this.applyMetaHooks(events, outcome, actor);
     return outcome;
+  }
+
+  /**
+   * [plan-9 Task 6] Splits `events` into this campaign's own LOCAL pipeline vs. `char:` GATEWAY
+   * forward groups, by each event's OWN `.stream` field — doc-03's `append` row: "each event names
+   * its stream". Also enforces doc-03 §Ordering's single-stream `txId` rule up front: "events
+   * sharing a `txId` are appended in one `append` ... single-stream only — a level-up never spans
+   * streams" — a `txId` whose members target MORE THAN ONE distinct stream (this campaign's own
+   * PLUS one-or-more `char:` targets, or two different `char:` targets) is rejected `invalid` in
+   * its entirety here, before either the local pipeline or any gateway forward ever sees it (a
+   * partial forward of half a transaction, with the other half committed locally, is exactly the
+   * "half-join"-shaped bug this rule exists to prevent).
+   *
+   * An event whose `.stream` is neither this campaign's own stream nor a `char:<uuid>` id (a
+   * different `camp:` id entirely, or a malformed value that still passed `StreamIdSchema`) is
+   * rejected `invalid` outright: this campaign's gateway only ever forwards to CHARACTER streams
+   * (doc-03 §Gateway: "campaign sockets may carry append frames whose events target char: streams")
+   * — nothing in doc-02/doc-03 describes one campaign's socket reaching a DIFFERENT campaign's
+   * stream, so that shape is simply not a supported target here, not silently accepted/dropped.
+   */
+  private routeByTargetStream(events: readonly Event[]): {
+    readonly localEvents: Event[];
+    readonly forwardGroups: Map<string, Event[]>;
+    readonly routingRejected: RejectResult[];
+  } {
+    const txTargets = new Map<string, Set<string>>();
+    for (const event of events) {
+      if (!event.txId) continue;
+      const set = txTargets.get(event.txId) ?? new Set<string>();
+      set.add(event.stream);
+      txTargets.set(event.txId, set);
+    }
+    const crossStreamTxIds = new Set(
+      [...txTargets.entries()].filter(([, targets]) => targets.size > 1).map(([txId]) => txId),
+    );
+
+    const localEvents: Event[] = [];
+    const forwardGroups = new Map<string, Event[]>();
+    const routingRejected: RejectResult[] = [];
+
+    for (const event of events) {
+      if (event.txId && crossStreamTxIds.has(event.txId)) {
+        routingRejected.push({
+          id: event.id,
+          code: 'invalid',
+          message: `event.txGroupInvalid: txId ${event.txId} spans more than one stream (doc-03 §Ordering: single-stream only)`,
+        });
+        continue;
+      }
+      if (event.stream === this.streamId) {
+        localEvents.push(event);
+      } else if (event.stream.startsWith('char:')) {
+        const group = forwardGroups.get(event.stream) ?? [];
+        group.push(event);
+        forwardGroups.set(event.stream, group);
+      } else {
+        routingRejected.push({
+          id: event.id,
+          code: 'invalid',
+          message: `event.invalid: a campaign socket may only append to this campaign's own stream or a char: stream, not ${event.stream}`,
+        });
+      }
+    }
+    return { localEvents, forwardGroups, routingRejected };
+  }
+
+  /**
+   * [plan-9 Task 6] THE GATEWAY (doc-03 §Permission enforcement point / Global Constraints
+   * "Gateway" bullet): forwards each `char:`-targeted group to its own stream via
+   * `Rpc.forwardAppend`, with the actor mapped per design ruling 1 (`mapGatewayActor`). A group
+   * whose actor cannot be mapped (neither this campaign's own DM nor the target character's own
+   * established-member owner) is rejected `forbidden` for EVERY event in that group WITHOUT ever
+   * calling `Rpc.forwardAppend` — the campaign gateway is the FIRST enforcement point; nothing
+   * about an unmapped sender is forwarded for the target stream's own pipeline to re-check.
+   * Acks/rejects the target stream's own `append` pipeline returns are relayed back VERBATIM
+   * (doc-03: "acks/rejects relayed to the campaign socket") — merged into this campaign's own
+   * `AppendOutcome` by the caller, so they ride the SAME `rid`'s `ack`/`reject` frame as any
+   * locally-appended event in the same client `append` message.
+   */
+  private async forwardGroupsToCharacterStreams(
+    groups: ReadonlyMap<string, Event[]>,
+    actor: Actor,
+    meta: CampaignMeta,
+  ): Promise<RpcAppendOutcome> {
+    const acked: AckResult[] = [];
+    const rejected: RejectResult[] = [];
+    for (const [targetStream, groupEvents] of groups) {
+      const characterId = targetStream.slice('char:'.length);
+      const forwardActor = this.mapGatewayActor(actor, characterId, meta);
+      if (!forwardActor) {
+        for (const event of groupEvents) {
+          rejected.push({
+            id: event.id,
+            code: 'forbidden',
+            message: `event.forbidden: ${actor.userId} may not append to ${targetStream} through this campaign (not this campaign's dm, and not that character's own established-member owner)`,
+          });
+        }
+        continue;
+      }
+      const result = await this.rpc.forwardAppend(targetStream, groupEvents, forwardActor);
+      acked.push(...result.acked);
+      rejected.push(...result.rejected);
+    }
+    return { acked, rejected };
+  }
+
+  /**
+   * [plan-9 Task 6] Design ruling 1's role mapping (plan verbatim): "gateway-forwarded char-stream
+   * actor role = `dm` when the sender is the campaign's DM, else `owner` IF the target character's
+   * `meta.ownerId == sender userId` (a member acting on their OWN character through the campaign
+   * socket) else REJECT forbidden." The forwarded actor is NEVER the raw campaign-socket actor —
+   * `dm` requires genuinely being THIS campaign's OWN dm (`actor.userId === meta.dmId`, the same
+   * live-meta check `refineAppendPermission`'s `DM_ONLY_TYPES` guard uses — not merely
+   * `actor.role === 'dm'` from a stale/incorrect handoff); `owner` additionally requires the
+   * sender to be an ESTABLISHED member of THIS campaign (`meta.members.has`, defense in depth: a
+   * WS-handoff bug that stamped a non-member with `role: 'member'` still can't forward through a
+   * character it happens to guess the id of) AND that the TARGET character has actually joined
+   * THIS campaign with THAT sender as its owner (`meta.characters.get(characterId) ===
+   * actor.userId`). Returns `undefined` — never throws — for anything else, so the caller can
+   * reject `forbidden` WITHOUT calling `Rpc.forwardAppend` at all (doc-03: the campaign is the
+   * FIRST enforcement point; the target character stream's own pipeline re-checks independently
+   * regardless, via `CharacterActor.append`'s owner-role gate + `permissions.allowed` — defense in
+   * depth, not the only gate).
+   */
+  private mapGatewayActor(actor: Actor, characterId: string, meta: CampaignMeta): Actor | undefined {
+    if (actor.role === 'dm' && meta.dmId !== undefined && actor.userId === meta.dmId) {
+      return { userId: actor.userId, role: 'dm' };
+    }
+    const ownerId = meta.characters.get(characterId);
+    if (meta.members.has(actor.userId) && ownerId !== undefined && ownerId === actor.userId) {
+      return { userId: actor.userId, role: 'owner' };
+    }
+    return undefined;
+  }
+
+  /**
+   * [plan-9 Task 6] Cross-stream MIRROR VERIFICATION (doc-03 §Ordering and commit rules, verbatim:
+   * "the DO for the campaign verifies the character event exists before accepting the mirror (RPC
+   * read), so a half-join is not possible") — called only for `campaign.character_joined`/
+   * `campaign.character_left`, and only AFTER `refineAppendPermission`'s ownership check already
+   * passed (so a non-owner/non-dm sender is still rejected `forbidden` first, never reaching an
+   * RPC call it has no business making — see the two existing ownership tests this preserves).
+   * `event.payload.characterId` is read DEFENSIVELY (`readStringField`, same stance as every other
+   * pre-`super.append` check in this file): an unreadable `characterId` is treated as VERIFIED
+   * here (returns `true`) so the event falls through to `super.append`'s own schema validation,
+   * which reports the real problem (`invalid`, "missing/malformed characterId") instead of this
+   * method's own, misleading "mirror not found" message.
+   */
+  private async verifyCharacterMirror(event: Event): Promise<boolean> {
+    const characterId = readStringField(event.payload, 'characterId');
+    if (characterId === undefined) return true;
+    const campaignId = this.streamId.slice('camp:'.length);
+    const mirrorType =
+      event.type === 'campaign.character_joined' ? 'character.campaign_joined' : 'character.campaign_left';
+    return this.rpc.hasEvent(`char:${characterId}`, { type: mirrorType, campaignId });
   }
 
   /**
@@ -673,13 +861,31 @@ export class CampaignActor extends StreamActor {
 
   /**
    * Validates the subscriber is this campaign's DM or the target character's own owner (per live
-   * `meta.characters`), then records `msg.stream` on the connection's `subs` list. Silently
-   * ignored (no reply, no close) when invalid: `subscribe` carries no `rid` (doc-03's client->server
-   * frame shapes have no subscribe-ack), so there is no reject frame to answer an unauthorized
-   * request with, and closing the socket over a well-formed-but-not-yet-authorized request (e.g. a
-   * member's own client eagerly subscribing to a character it turns out it doesn't own) would be
-   * needlessly hostile — matches `StreamActor.handleMessage`'s own stance on schema-valid-but-not-
-   * actionable Phase-3 message types.
+   * `meta.characters`), records `msg.stream` on the connection's `subs` list (idempotent — a
+   * repeat subscribe doesn't grow it), then [plan-9 Task 6] serves CATCH-UP for `msg.lastSeq` via
+   * `sendSubscribeCatchUp` — doc-03: `subscribe {stream, lastSeq?}`. Catch-up runs on EVERY
+   * authorized subscribe call, even a repeat one (not gated behind "first time only"): a client
+   * may deliberately resubscribe specifically to ask for anything committed since its own last-
+   * known `lastSeq`, the same way `hello`'s own `streams[].lastSeq` works.
+   *
+   * Silently ignored (no reply, no close, no catch-up) when UNAUTHORIZED: `subscribe` carries no
+   * `rid` (doc-03's client->server frame shapes have no subscribe-ack), so there is no reject frame
+   * to answer an unauthorized request with, and closing the socket over a well-formed-but-not-yet-
+   * authorized request (e.g. a member's own client eagerly subscribing to a character it turns out
+   * it doesn't own) would be needlessly hostile — matches `StreamActor.handleMessage`'s own stance
+   * on schema-valid-but-not-actionable Phase-3 message types.
+   *
+   * LIVE relay note (deliverable 4's other half): subscribing does NOT change who receives this
+   * character's events live — `handleNotify` below already delivers to every one of the DM's
+   * connections and every one of the owner's OWN connections UNCONDITIONALLY (doc-08's "Read
+   * character stream" row: Owner v, DM v, regardless of any subscription), and `subscribe` is
+   * DM-or-owner-only by the `authorized` check just above — so a DM/owner connection that
+   * subscribes was ALREADY receiving this character's live events before doing so, and continues
+   * to after. `subs` (this method's bookkeeping) exists for a FUTURE narrower use (doc-03 lists it
+   * as adapter-visible connection state) but `handleNotify`'s fan-out deliberately does not consult
+   * it — see that method's own doc comment for why gating live delivery on subscription would be
+   * WRONG here (it would let a DM who forgets to subscribe miss events the authorization matrix
+   * already promises them).
    */
   private async handleSubscribe(conn: Conn, msg: SubscribeMsg): Promise<void> {
     if (!msg.stream.startsWith('char:')) return; // a campaign socket only ever subscribes to a char: stream
@@ -689,12 +895,80 @@ export class CampaignActor extends StreamActor {
     const ownerId = meta.characters.get(characterId);
     const authorized = attachment.role === 'dm' || (ownerId !== undefined && ownerId === attachment.userId);
     if (!authorized) return;
-    if (attachment.subs.includes(msg.stream)) return;
-    this.connections.setAttachment(conn, { ...attachment, subs: [...attachment.subs, msg.stream] });
+    if (!attachment.subs.includes(msg.stream)) {
+      this.connections.setAttachment(conn, { ...attachment, subs: [...attachment.subs, msg.stream] });
+    }
+    await this.sendSubscribeCatchUp(conn, msg);
+  }
+
+  /**
+   * [plan-9 Task 6] Pages `msg.stream`'s (a `char:<uuid>`) own committed history, from
+   * `(msg.lastSeq ?? 0) + 1`, to `conn` as `events` frames — via `Rpc.readStream` (the SAME
+   * cross-DO/in-process read `verifyCharacterMirror` above uses `Rpc.hasEvent` for, generalized to
+   * the full page shape). Mirrors `StreamActor.hello`'s own catch-up loop (`stream-actor.ts`) in
+   * page size and "stop once a short/empty page comes back" termination, but does NOT run pages
+   * through `filterForConnection`: that hook filters CAMPAIGN-stream event types (`dm.note_*`,
+   * `roll.logged`/`chat.message` visibility) which a CHARACTER stream never carries — every
+   * connection authorized to reach this method (this method's own `authorized` check, just above
+   * its call site) is already either this campaign's DM or the target character's own owner, and
+   * doc-08's authorization matrix grants BOTH of those roles unfiltered read access to a character
+   * stream ("Read character stream | Owner v | DM v | ..."), so there is nothing left to filter.
+   */
+  private async sendSubscribeCatchUp(conn: Conn, msg: SubscribeMsg): Promise<void> {
+    let from = (msg.lastSeq ?? 0) + 1;
+    for (;;) {
+      const page = await this.rpc.readStream(msg.stream, from, SUBSCRIBE_CATCH_UP_PAGE_SIZE);
+      if (page.length === 0) break;
+      this.connections.send(conn, { t: 'events', stream: msg.stream, events: page });
+      from += page.length;
+      if (page.length < SUBSCRIBE_CATCH_UP_PAGE_SIZE) break; // last page
+    }
   }
 
   private handleUnsubscribe(conn: Conn, msg: UnsubscribeMsg): void {
     const attachment = this.connections.getAttachment(conn);
     this.connections.setAttachment(conn, { ...attachment, subs: attachment.subs.filter((s) => s !== msg.stream) });
+  }
+
+  /**
+   * [plan-9 Task 6, deliverable 3] The gateway's RECEIVING side — matches `ports/stream.ts`'s
+   * `StreamHandle.notify(fromStream, events)` signature exactly (doc comment there: "delivers
+   * events that were committed on another stream's handle to this one's connections"), so a real
+   * adapter's `StreamHandle.notify` for THIS campaign's stream can delegate here directly (Task 8).
+   * Called by `CharacterActor.notifyCampaignIfLinked` (via `Rpc.notify`) whenever a linked
+   * character stream commits.
+   *
+   * FAN-OUT RULING for this task (settling the brief's own ambiguity, citing doc-08's
+   * "Authorization matrix" table's "Read character stream" row verbatim: "Owner v | DM (of the
+   * character's campaign) v | Member per `visibility.partySheets` (`full` only) | Other x"):
+   *   - the DM: EVERY one of the DM's connections, always.
+   *   - the character's own OWNER (`meta.characters.get(characterId) === attachment.userId`):
+   *     EVERY one of the owner's own connections, always.
+   *   - every OTHER established member's connections: ONLY when
+   *     `meta.settings.visibility.partySheets === 'full'` — the doc-08 row's own qualifier.
+   *   - anyone else (a member with a narrower `partySheets` setting, or a connection that is
+   *     neither this campaign's DM nor an established member at all): nothing. They are expected
+   *     to consume `party.overview_updated` instead (a deliberately opaque, DM/owner-controlled
+   *     summary — design ruling 5), not this character's raw event stream.
+   *
+   * Not gated on `subs`/subscription state at all — see `handleSubscribe`'s own doc comment for
+   * why doing so would be wrong (it would let a DM/owner who hasn't subscribed miss events the
+   * authorization matrix unconditionally promises them).
+   */
+  async handleNotify(fromStream: string, events: readonly Event[]): Promise<void> {
+    if (events.length === 0 || !fromStream.startsWith('char:')) return;
+    const characterId = fromStream.slice('char:'.length);
+    const meta = await this.getCampaignMeta();
+    const ownerId = meta.characters.get(characterId);
+    const partySheetsFull = meta.settings?.visibility.partySheets === 'full';
+    const frame = { t: 'events' as const, stream: fromStream, events: [...events] };
+
+    for (const conn of this.connections.all()) {
+      const attachment = this.connections.getAttachment(conn);
+      const isDm = attachment.role === 'dm';
+      const isOwner = ownerId !== undefined && attachment.userId === ownerId;
+      const isVisibleMember = !isDm && !isOwner && partySheetsFull && meta.members.has(attachment.userId);
+      if (isDm || isOwner || isVisibleMember) this.connections.send(conn, frame);
+    }
   }
 }

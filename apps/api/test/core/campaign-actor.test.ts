@@ -15,6 +15,7 @@ import { uuidv7 } from '../../src/core/ids.ts';
 import { CAMPAIGN_MEMBER_MAX, CAMPAIGN_NON_CORE_PACK_MAX, CAMPAIGN_QUOTA_LIMITS } from '../../src/core/quotas.ts';
 import { campaignQuotas, CampaignActor, type CampaignActorDeps } from '../../src/core/streams/campaign-actor.ts';
 import { FakeConnections } from '../helpers/fake-connections.ts';
+import { actorTarget, FakeRpc } from '../helpers/fake-rpc.ts';
 import { FakeStreamStore } from '../helpers/fake-stream-store.ts';
 
 const STREAM_ID = `camp:${uuidv7()}`;
@@ -75,6 +76,9 @@ function makeMemberJoined(
 function makeSystem(deps: Partial<CampaignActorDeps> = {}) {
   const store = new FakeStreamStore();
   const connections = new FakeConnections();
+  // [plan-9 Task 6] a fresh `FakeRpc` per system by default — `deps.rpc` lets a test inject its
+  // own (e.g. a shared one across two actors), in which case `rpc` below IS that same instance.
+  const rpc = (deps.rpc as FakeRpc | undefined) ?? new FakeRpc();
   const actor = new CampaignActor({
     store,
     connections,
@@ -82,8 +86,9 @@ function makeSystem(deps: Partial<CampaignActorDeps> = {}) {
     permissions: campaignPermissions,
     streamId: STREAM_ID,
     ...deps,
+    rpc,
   });
-  return { store, connections, actor };
+  return { store, connections, rpc, actor };
 }
 
 let system: ReturnType<typeof makeSystem>;
@@ -92,13 +97,54 @@ beforeEach(() => {
   system = makeSystem();
 });
 
+/**
+ * [plan-9 Task 6] Registers a `char:<characterId>` target on `system.rpc` whose only committed
+ * event is the given mirror type carrying `{campaignId: campaignIdOf(STREAM_ID)}` — the minimum
+ * `Rpc.hasEvent` needs to VERIFY a `campaign.character_joined`/`campaign.character_left` mirror
+ * (this file's `verifyCharacterMirror` target). The registered target's own `append` is never
+ * exercised by these mirror-verification tests (only `hasEvent`'s read path is), so it's a stub
+ * that would fail loudly (a thrown rejection) if a test's own bug ever DID reach it.
+ */
+async function registerCharacterMirror(
+  characterId: string,
+  eventType: 'character.campaign_joined' | 'character.campaign_left',
+  ownerId = MEMBER_A,
+): Promise<void> {
+  const mirrorStore = new FakeStreamStore();
+  await mirrorStore.append([
+    {
+      id: uuidv7(),
+      stream: `char:${characterId}`,
+      ts: new Date().toISOString(),
+      actor: { userId: ownerId, deviceId: 'device-1', role: 'owner' },
+      type: eventType,
+      v: 1,
+      payload: { campaignId: STREAM_ID.slice('camp:'.length) },
+    },
+  ]);
+  system.rpc.register(
+    `char:${characterId}`,
+    actorTarget(
+      {
+        append: () => {
+          throw new Error('unexpected forwardAppend against a mirror-only fake char: target');
+        },
+      },
+      mirrorStore,
+    ),
+  );
+}
+
 /** Creates the campaign (dm = DM_ID) and joins `MEMBER_A`, returning the resulting `characterId`
  * once also joined to the campaign (owned by `MEMBER_A`) — the common fixture most permission/
- * meta tests build on. */
+ * meta tests build on. [plan-9 Task 6] Registers the matching `character.campaign_joined` mirror
+ * event first (`registerCharacterMirror`) so the `campaign.character_joined` append below passes
+ * mirror verification exactly like a real client's two-append join sequence would. */
 async function seedCampaignWithMemberAndCharacter(): Promise<{ characterId: string }> {
   await system.actor.append([makeCreated()], dmActor());
   await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
   const characterId = uuidv7();
+  await registerCharacterMirror(characterId, 'character.campaign_joined');
   await system.actor.append(
     [
       makeEvent(
@@ -192,6 +238,7 @@ describe('meta maintenance', () => {
     let meta = await system.actor.getCampaignMeta();
     expect(meta.characters.get(characterId)).toBe(MEMBER_A);
 
+    await registerCharacterMirror(characterId, 'character.campaign_left');
     await system.actor.append(
       [
         makeEvent(
@@ -395,6 +442,7 @@ describe('permission refinements beyond the static EVENT_ACTORS table', () => {
     await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
 
     const characterId = uuidv7();
+    await registerCharacterMirror(characterId, 'character.campaign_joined');
     const outcome = await system.actor.append(
       [makeEvent('campaign.character_joined', { characterId, ownerId: MEMBER_A, name: 'A pregen' }, dmActor())],
       dmActor(),

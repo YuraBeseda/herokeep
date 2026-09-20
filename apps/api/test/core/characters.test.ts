@@ -507,19 +507,36 @@ function makeNoteEvent(overrides: Partial<Event> = {}): Event {
 }
 
 describe('CharacterActor', () => {
-  it('rejects every event as forbidden when the actor role is not owner (direct-socket-only rule)', async () => {
+  it('rejects every event as forbidden when the actor role is member (never a legitimate character-stream actor)', async () => {
     const system = makeCharacterSystem();
-    const dmActor: Actor = { userId: 'user-2', role: 'dm' };
-    // hp.changed is DM-allowed in the general ADR-012 table, but CharacterActor refuses it
-    // outright on a direct socket regardless — this is the assertion that matters here.
+    const memberActor: Actor = { userId: 'user-2', role: 'member' };
     const hpChanged = makeNoteEvent({ type: 'hp.changed', v: 1, payload: { delta: -1, kind: 'damage' } });
 
-    const outcome = await system.actor.append([hpChanged], dmActor);
+    const outcome = await system.actor.append([hpChanged], memberActor);
 
     expect(outcome.acked).toEqual([]);
     expect(outcome.rejected).toHaveLength(1);
     expect(outcome.rejected[0]).toMatchObject({ id: hpChanged.id, code: 'forbidden' });
     expect(system.store.length).toBe(0);
+  });
+
+  // [plan-9 Task 6 — REVISION] A `'dm'` actor was refused outright here in Phase 2 (no
+  // `CampaignActor`/`Rpc` gateway existed yet to ever legitimately produce one). Task 6 wires the
+  // real gateway (`CampaignActor.append`'s forward path calls `CharacterActor.append` with a
+  // gateway-mapped `role: 'dm'` actor via `Rpc.forwardAppend` — doc-03 §Permission enforcement
+  // point) — so `'dm'` must now be let through to the SAME per-type `permissions.allowed` check an
+  // `'owner'` actor gets, per doc-08's matrix row ("Append DM events ... Owner v (solo/self), DM
+  // v"). This test (replacing the old "dm refused outright" one above) pins the NEW behavior.
+  it('allows a dm actor to append a dm-class event (the gateway-forward path CharacterActor.append now accepts)', async () => {
+    const system = makeCharacterSystem();
+    const dmActor: Actor = { userId: 'user-2', role: 'dm' };
+    const hpChanged = makeNoteEvent({ type: 'hp.changed', v: 1, payload: { delta: -1, kind: 'damage' } });
+
+    const outcome = await system.actor.append([hpChanged], dmActor);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: hpChanged.id, seq: 1 }]);
+    expect(system.store.length).toBe(1);
   });
 
   it('sets meta.ownerId from the session actor when character.created commits', async () => {

@@ -26,10 +26,36 @@ import {
   parseClientMessage,
 } from '@hk/protocol';
 import type { Conn, Connections } from '../../ports/connections.ts';
+import type { Rpc } from '../../ports/infra.ts';
 import type { StreamStore } from '../../ports/stream.ts';
 import type * as permissionsModule from '../permissions.ts';
 import * as quotasModule from '../quotas.ts';
 import { measureEventBytes, validateEvent } from '../validate.ts';
+
+/**
+ * A no-op `Rpc` (plan-9 Task 6): `StreamActorDeps.rpc` is OPTIONAL, defaulting to this, so every
+ * Phase-2 construction site (both real adapters — `adapters/node/stream-host.ts`,
+ * `adapters/cloudflare/character-stream.do.ts` — plus every existing test) keeps compiling and
+ * behaving EXACTLY as before without passing an `rpc` at all: `CharacterActor`'s after-commit
+ * notify hook and `CampaignActor`'s gateway/mirror/subscribe-catch-up calls all become silent
+ * no-ops (`notify`/`forwardAppend`-with-nothing-registered/`hasEvent: false`/`readStream: []`)
+ * rather than throwing, on a stream whose adapter hasn't wired a real `Rpc` yet (plan-9 Task 8).
+ * A real two-actor test (or, later, a real adapter) passes its own `Rpc` implementation instead.
+ */
+const NO_OP_RPC: Rpc = {
+  notify: () => Promise.resolve(),
+  forwardAppend: (_toStream, events) =>
+    Promise.resolve({
+      acked: [],
+      rejected: events.map((event) => ({
+        id: event.id,
+        code: 'invalid' as const,
+        message: 'rpc.unconfigured: no Rpc implementation wired for this stream yet',
+      })),
+    }),
+  hasEvent: () => Promise.resolve(false),
+  readStream: () => Promise.resolve([]),
+};
 
 /** doc-03 §Catch-up performance: "the DO pages 200 events per frame". */
 const CATCH_UP_PAGE_SIZE = 200;
@@ -109,6 +135,11 @@ export interface StreamActorDeps {
    * its own id (ports/stream.ts: the store is "scoped to a single stream" by construction, not
    * by a field on itself). */
   readonly streamId: string;
+  /** Cross-stream RPC (plan-9 Task 6 — see `NO_OP_RPC`'s doc comment above for why this is
+   * optional). `CharacterActor` uses it for the after-commit campaign-notify hook;
+   * `CampaignActor` uses it for gateway forwarding, mirror verification, and subscribe catch-up.
+   * Plain `StreamActor`/character-only Phase-2 code paths never reference `this.rpc` at all. */
+  readonly rpc?: Rpc;
 }
 
 export class StreamActor {
@@ -117,6 +148,7 @@ export class StreamActor {
   protected readonly quotas: QuotasPort;
   protected readonly permissions: PermissionsPort;
   protected readonly streamId: string;
+  protected readonly rpc: Rpc;
   /** Whole-branch review finding 3: flips `true` the moment `deleteAll()` runs and never resets
    * — see that method's doc comment for the full race this guards and why it's IN-MEMORY actor
    * state rather than a durable meta key (durable storage is exactly what `deleteAll` wipes). */
@@ -128,6 +160,7 @@ export class StreamActor {
     this.quotas = deps.quotas;
     this.permissions = deps.permissions;
     this.streamId = deps.streamId;
+    this.rpc = deps.rpc ?? NO_OP_RPC;
   }
 
   /**

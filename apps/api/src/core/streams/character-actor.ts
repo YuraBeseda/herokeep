@@ -29,7 +29,7 @@
  *     handling was in this task's scope. Wiring them is a Phase-3/pack-pinning-task change to
  *     `applyMetaHooks` below, not a shape change.
  */
-import type { Actor, Event } from '@hk/protocol';
+import type { Actor, CharacterCampaignJoined, Event } from '@hk/protocol';
 import type { Conn } from '../../ports/connections.ts';
 import { type AppendOutcome, StreamActor } from './stream-actor.ts';
 
@@ -50,31 +50,47 @@ export interface CharacterMeta {
 
 export class CharacterActor extends StreamActor {
   /**
-   * Phase-2 entry rule (doc-03 §Permission enforcement: "Direct solo sockets only allow the
-   * owner role") enforced HERE, one level stricter than `StreamActor.append`'s own per-event
-   * `permissions.allowed(type, role)` check: that table also lists `dm.*` events as allowed for
-   * role `'dm'`, because it's ADR-012's FULL table (owner AND DM columns) — correct for a DM
-   * acting through a campaign's `Rpc` forward (doc-10 §CharacterActor: "DM events only via the
-   * campaign's Rpc"), which is not how a request ever reaches THIS method in Phase 2 (no
-   * `CampaignActor`/`Rpc` exists yet — every call here comes from a direct socket, per the WS
-   * handoff in `core/routes/characters.ts` always stamping `role: 'owner'`). A `'dm'`/`'member'`
-   * actor reaching this method regardless (a test constructing one directly, or a future bug in
-   * the handoff) is therefore refused OUTRIGHT — before `permissions.ts` even runs — rather than
-   * being allowed through for the subset of event types the full table happens to permit a DM.
+   * Entry rule (doc-03 §Permission enforcement: "Direct solo sockets only allow the owner role";
+   * §Permission enforcement point: "for character-stream events [the CampaignStream] calls
+   * `CharacterStream.append(events, actor)` by RPC, which re-checks (owner/DM) against its own
+   * `meta`"). `'member'` is refused OUTRIGHT here, before `permissions.ts` even runs: no
+   * CHARACTER-stream `EVENT_ACTORS` row ever grants `'member'` (`core/permissions.ts`'s own
+   * doc comment), and `CampaignActor`'s gateway-forward role mapping (design ruling 1) NEVER
+   * forwards a raw `'member'` actor — a member acting through the gateway is always remapped to
+   * `'owner'` (on their own character) before `CharacterActor.append` is ever called, so a
+   * `'member'` actually reaching here can only be a bug upstream, never a legitimate call.
+   *
+   * [plan-9 Task 6 — REVISION of the Phase-2-only version of this comment] `'dm'` is now let
+   * THROUGH (Phase 2 rejected it too, back when no `CampaignActor`/`Rpc` existed to ever produce
+   * one): `StreamActor.append`'s own per-event `permissions.allowed(type, role)` check already
+   * decides, per `EVENT_ACTORS`, exactly which event TYPES a `'dm'` actor may append (the `dm.*`
+   * class — `hp.changed`, `condition.*`, etc., doc-08's matrix) — this method doesn't need to
+   * duplicate that table, only to stop blocking the role entirely. A direct character SOCKET can
+   * never itself stamp `role: 'dm'` (the WS handoff in `core/routes/characters.ts` always stamps
+   * `'owner'`), so a `'dm'` actor reaching this method can only ever have arrived via
+   * `CampaignActor`'s gateway forward (`Rpc.forwardAppend`) — exactly the doc-03 permission-
+   * enforcement-point call this method's own doc comment names, now real. The target stream's own
+   * pipeline re-checking `permissions.allowed` regardless (rather than trusting the gateway's own
+   * decision) is the "defense in depth" doc-03 promises.
    */
   override async append(events: Event[], actor: Actor, sourceConn?: Conn): Promise<AppendOutcome> {
-    if (actor.role !== 'owner') {
+    if (actor.role === 'member') {
       return {
         acked: [],
         rejected: events.map((event) => ({
           id: event.id,
           code: 'forbidden' as const,
-          message: 'event.forbidden: character streams accept only the owner role on a direct socket',
+          message: 'event.forbidden: character streams never accept a raw member-role actor (owner/dm only)',
         })),
       };
     }
+    // Read BEFORE this append's meta hooks run — plan-9 Task 6's notify-target formula (see
+    // `notifyCampaignIfLinked`'s doc comment) needs the PRE-batch `campaignId` to still notify the
+    // campaign a `character.campaign_left` in THIS SAME batch just unlinked from.
+    const beforeCampaignId = (await this.getCharacterMeta()).campaignId;
     const outcome = await super.append(events, actor, sourceConn);
     await this.applyMetaHooks(events, outcome, actor);
+    await this.notifyCampaignIfLinked(outcome, beforeCampaignId);
     return outcome;
   }
 
@@ -89,7 +105,13 @@ export class CharacterActor extends StreamActor {
     ]);
     return {
       ownerId,
-      campaignId,
+      // Plan-9 Task 6: `character.campaign_left`'s hook (`applyMetaHooks` below) clears this by
+      // writing `''` (`StreamStore.setMeta` has no "delete a key" verb — same constraint
+      // `archived`'s '0'/'1' flag pattern already works around) — normalized to `undefined` HERE,
+      // the single read site, so every OTHER caller of this method (`notifyCampaignIfLinked`'s
+      // `!== undefined` check, `CampaignActor`'s gateway ownership mapping, any future reader)
+      // never has to know the empty-string encoding exists.
+      campaignId: campaignId && campaignId.length > 0 ? campaignId : undefined,
       pins: pinsRaw ? (JSON.parse(pinsRaw) as Record<string, string>) : {},
       archived: archivedRaw === '1',
     };
@@ -120,7 +142,69 @@ export class CharacterActor extends StreamActor {
         await this.store.setMeta(META_KEY_ARCHIVED, '1');
       } else if (event.type === 'character.restored') {
         await this.store.setMeta(META_KEY_ARCHIVED, '0');
+      } else if (event.type === 'character.campaign_joined') {
+        // Plan-9 Task 6, deliverable 5: the SERVER meta hook `notifyCampaignIfLinked` keys off —
+        // the client-side `notApplicableSolo` reducer no-ops (doc-01/doc-05) are a separate,
+        // client-plan concern; this is what makes `meta.campaignId` live on the server. Payload is
+        // `{campaignId}` only (character.ts's `CharacterCampaignJoinedV1`) — the character itself
+        // is THIS stream (`this.streamId`), never a payload field.
+        const payload = event.payload as CharacterCampaignJoined;
+        await this.store.setMeta(META_KEY_CAMPAIGN_ID, payload.campaignId);
+      } else if (event.type === 'character.campaign_left') {
+        // No equality check against the payload's own `campaignId` before clearing (mirrors this
+        // method's other hooks' "trust the committed event, not a cross-field consistency check"
+        // stance — `character.campaign_left` only ever legitimately targets the campaign this
+        // character is CURRENTLY linked to; a client sending a stale/wrong `campaignId` here is a
+        // client bug this hook does not need to detect to stay correct for every real client).
+        await this.store.setMeta(META_KEY_CAMPAIGN_ID, '');
       }
     }
+  }
+
+  /**
+   * After-commit campaign notify (plan-9 Task 6, deliverable 3 — the Phase-2 no-op this method's
+   * doc comment on `ports/infra.ts`'s `Rpc.notify` names becomes real here): when this character
+   * is linked to a campaign, forward whatever THIS append call just acked (freshly committed OR
+   * idempotently re-acked — see the note below) to that campaign's stream so `CampaignActor.
+   * handleNotify` can fan them out to the DM/owner/full-visibility members (doc-08's "Read
+   * character stream" row — `CampaignActor`'s own filter, not this method's concern).
+   *
+   * TARGET formula: `afterCampaignId ?? beforeCampaignId`. `applyMetaHooks` above has ALREADY run
+   * by the time this is called, so `afterCampaignId` reflects any `character.campaign_joined`/
+   * `character.campaign_left` THIS SAME batch just committed:
+   *   - steady state (linked before and after, no join/leave this batch): before === after — the
+   *     one linked campaign is notified, as expected.
+   *   - a `character.campaign_joined` in this batch: before is `undefined`, after is the NEW
+   *     campaign id — the newly-joined campaign is notified (including the join event itself).
+   *   - a `character.campaign_left` in this batch: before is the OLD campaign id, after is
+   *     `undefined` — `afterCampaignId ?? beforeCampaignId` falls back to `beforeCampaignId`, so
+   *     the campaign being LEFT still gets notified of the leave event (and anything else in this
+   *     same batch), instead of the notify silently vanishing the instant the link is cleared.
+   *   - never linked at all: both `undefined` — nothing to notify, no-op.
+   *
+   * EVENT SELECTION: every id `outcome.acked` names, re-read from the store via `findByIds`
+   * (ports/stream.ts's dedupe-lookup extension — already exists for exactly this "resolve ids back
+   * to full committed events" need) rather than threading the stamped-with-seq events through the
+   * pipeline as a new return shape (`AppendOutcome`'s `{acked, rejected}` id/seq-only shape is
+   * shared with `StreamActor`'s and every adapter's own understanding of an append result — widening
+   * it is out of this task's scope). This DOES include idempotently-re-acked duplicates (a retried
+   * append of already-committed ids), not only newly-stored ones: distinguishing the two would need
+   * pipeline-shape changes this task doesn't make (see `stream-actor.ts`'s `append` doc comment —
+   * `AppendOutcome` doesn't carry that distinction either), and it is harmless here — the sync
+   * protocol already requires every consumer of an `events` frame to de-dupe by `id` (doc-03:
+   * "Duplicates (same `id`) are acked with the existing `seq`"), which a campaign socket receiving
+   * a notify-forwarded `events` frame is exactly such a consumer.
+   */
+  private async notifyCampaignIfLinked(outcome: AppendOutcome, beforeCampaignId: string | undefined): Promise<void> {
+    if (outcome.acked.length === 0) return;
+    const afterCampaignId = (await this.getCharacterMeta()).campaignId;
+    const targetCampaignId = afterCampaignId ?? beforeCampaignId;
+    if (targetCampaignId === undefined) return;
+
+    const ids = outcome.acked.map((a) => a.id);
+    const committed = await this.store.findByIds(ids);
+    if (committed.length === 0) return;
+    const ordered = [...committed].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+    await this.rpc.notify(`camp:${targetCampaignId}`, this.streamId, ordered);
   }
 }

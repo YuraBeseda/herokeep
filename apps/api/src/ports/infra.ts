@@ -1,4 +1,4 @@
-import type { Event } from '@hk/protocol';
+import type { Actor, Event, RejectCode } from '@hk/protocol';
 
 /** Result of a `RateLimit.check` — `retryAfterMs` is 0 when `ok` is true. */
 export interface RateLimitResult {
@@ -65,16 +65,104 @@ export interface StaticAssets {
   fetch(request: Request): Promise<Response | null>;
 }
 
+/** One event successfully committed (or idempotently re-acked) via `Rpc.forwardAppend` — same
+ * shape as `core/streams/stream-actor.ts`'s `AckResult`, duplicated here (not imported) because
+ * `ports/**` must not depend on `core/**` (Global Constraints: core imports ports, never the
+ * reverse) — the two are kept structurally identical by convention, not by a shared type. */
+export interface RpcAckResult {
+  readonly id: string;
+  readonly seq: number;
+}
+
+/** One event rejected via `Rpc.forwardAppend` — mirrors `core/streams/stream-actor.ts`'s
+ * `RejectResult`, same "duplicated, not imported" rationale as `RpcAckResult` above. */
+export interface RpcRejectResult {
+  readonly id: string;
+  readonly code: RejectCode;
+  readonly message: string;
+}
+
+/** The full result of one `Rpc.forwardAppend` call — same shape as `core/streams/stream-actor.ts`'s
+ * `AppendOutcome`, so `CampaignActor`'s gateway (plan-9 Task 6) can merge a forwarded group's
+ * outcome directly into its own `acked`/`rejected` arrays without translation. */
+export interface RpcAppendOutcome {
+  readonly acked: RpcAckResult[];
+  readonly rejected: RpcRejectResult[];
+}
+
+/** The narrow match `Rpc.hasEvent` checks a target stream's committed events against (plan-9 Task
+ * 6's mirror-verification design — see that method's doc comment for why this is deliberately
+ * narrower than a general query capability). `campaignId` is read off the CANDIDATE event's own
+ * payload (every mirror-event payload in doc-02's catalog carries one: `character.campaign_joined`/
+ * `character.campaign_left`'s `{campaignId}`) — the CHARACTER half of the match (which char:
+ * stream to even look at) is expressed by the `stream` argument `hasEvent` takes alongside this,
+ * not by a field in here, since doc-02's catalog never puts a redundant `characterId` inside a
+ * character-stream event's own payload (the stream id already names the character).
+ */
+export interface RpcEventMatch {
+  readonly type: string;
+  readonly campaignId: string;
+}
+
 /**
- * Stream↔stream notification (ADR-014's `Rpc` row): a campaign stream's DO calling a character
- * stream's DO on Cloudflare, or a direct in-process method call between actors on Node. Typed
- * now so `CampaignActor`'s gateway (Phase 3) has a stable signature to target, but nothing in
- * Phase 2 calls it — `CharacterActor` is the only actor this phase ships, and it has no
- * campaign to notify. See docs/02-architecture/10-backend-architecture.md §CampaignActor.
+ * Stream↔stream notification and cross-stream gateway calls (ADR-014's `Rpc` row): a campaign
+ * stream's DO calling a character stream's DO on Cloudflare, or a direct in-process method call
+ * between actors on Node. Typed now so `CampaignActor`'s gateway (Phase 3, plan-9 Task 6) has a
+ * stable signature to target; every method here has a REAL core caller as of Task 6
+ * (`CampaignActor.append`'s gateway-forward path, its mirror-verification path, and its
+ * subscribe catch-up path; `CharacterActor.append`'s after-commit campaign-notify hook) — only
+ * the ADAPTER implementations remain a later task (plan-9 Task 8: Node backs every method with a
+ * direct in-process call via `StreamHost`/`StreamStore`; Cloudflare backs it with a DO-to-DO
+ * binding `fetch`/RPC call — the trust-boundary patterns from the plan-7 `WsUpgrade`/`Rpc` doc
+ * comments apply identically). See docs/02-architecture/10-backend-architecture.md §CampaignActor
+ * and docs/02-architecture/03-sync-protocol.md §Gateway/§Permission enforcement point/§Ordering
+ * (cross-stream mirrors) for the BINDING semantics every method below implements.
  */
 export interface Rpc {
-  /** Forwards `events` committed on `fromStream` to `toStream`'s handle for fan-out/append. */
+  /** Forwards `events` committed on `fromStream` to `toStream`'s handle for fan-out/append —
+   * the AFTER-COMMIT notify path (doc-03 §Permission enforcement point / doc-10 §CharacterActor:
+   * "After each commit, if `campaignId` is set, calls `StreamHost.get(campaignId).notify(...)`
+   * so campaign sockets receive character events that originated on solo sockets"). The target
+   * stream's own actor (`CampaignActor.handleNotify`, matching `StreamHandle.notify`'s
+   * `(fromStream, events)` shape exactly so an adapter can delegate to it directly) decides
+   * fan-out visibility; this port call itself never inspects `events`. */
   notify(toStream: string, fromStream: string, events: Event[]): Promise<void>;
+
+  /**
+   * THE GATEWAY (doc-03 §Permission enforcement point, verbatim: "for character-stream events
+   * [the CampaignStream] calls `CharacterStream.append(events, actor)` by RPC, which re-checks
+   * (owner/DM) against its own `meta`"). `actor` here is ALREADY the gateway-mapped actor
+   * (`CampaignActor`'s design-ruling-1 role mapping — `dm` when the sender is this campaign's own
+   * DM, `owner` when the sender is an established member acting on their OWN character), never
+   * the raw campaign-socket actor — `forwardAppend` itself performs no further mapping, only the
+   * cross-DO/in-process call and relaying `toStream`'s own `append` pipeline's outcome back
+   * verbatim (that target pipeline re-checks permissions/schema/quota against ITS OWN meta
+   * regardless of what the gateway already decided — defense in depth, doc-03's own words).
+   * `toStream` is always a `char:<uuid>` id in this plan (nothing forwards to a `camp:` stream via
+   * this method). */
+  forwardAppend(toStream: string, events: Event[], actor: Actor): Promise<RpcAppendOutcome>;
+
+  /**
+   * Cross-stream MIRROR verification (doc-03 §Ordering and commit rules, verbatim: "the DO for
+   * the campaign verifies the character event exists before accepting the mirror (RPC read), so
+   * a half-join is not possible"). Reads `stream`'s (a `char:<uuid>` id) own committed events and
+   * reports whether any one of them matches `match` (`{type, campaignId}` — see `RpcEventMatch`'s
+   * doc comment for why `characterId` is expressed by `stream` itself, not a payload field here).
+   * Deliberately narrower than a general query capability (`readStream` below already exists for
+   * anything needing the raw events) — a mirror check only ever needs a yes/no answer to "does
+   * this one specific event exist", and keeping that intent explicit in the port's own shape is
+   * worth the second, more general method existing alongside it. */
+  hasEvent(stream: string, match: RpcEventMatch): Promise<boolean>;
+
+  /**
+   * Reads `stream`'s own committed events starting at `fromSeq` (inclusive), at most `limit` —
+   * the DM-subscribe CATCH-UP path (doc-03: `subscribe {stream, lastSeq?}`; `CampaignActor`'s
+   * `handleSubscribe` calls this to page a member/DM's character-stream history through the
+   * campaign socket the same way `StreamActor.hello`'s own catch-up pages a stream's OWN history —
+   * see that method's doc comment for the paging shape this mirrors). Same signature as
+   * `StreamHandle.read` (`ports/stream.ts`) by design, so a Node adapter's implementation is a
+   * one-line delegation to `StreamHost.get(stream).read(fromSeq, limit)`. */
+  readStream(stream: string, fromSeq: number, limit: number): Promise<Event[]>;
 }
 
 /** Context the WS-upgrade route (`GET /api/characters/:id/ws`, `core/routes/characters.ts`, Task
