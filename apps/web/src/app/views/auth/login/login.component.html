@@ -1,3 +1,60 @@
 <section class="login" *transloco="let t; read: 'auth'">
   <h1 class="login__title">{{ t('login.title') }}</h1>
+
+  <form class="login__form" novalidate (submit)="onSubmit($event)">
+    <label class="login__field">
+      <span>{{ t('login.usernameLabel') }}</span>
+      <input
+        type="text"
+        name="username"
+        autocomplete="username"
+        required
+        [value]="username()"
+        (input)="username.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="login__field">
+      <span>{{ t('login.passwordLabel') }}</span>
+      <input
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        required
+        [value]="password()"
+        (input)="password.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="login__field">
+      <span>{{ t('login.deviceLabelLabel') }}</span>
+      <input
+        type="text"
+        name="deviceLabel"
+        autocomplete="off"
+        [value]="deviceLabel()"
+        (input)="deviceLabel.set($any($event.target).value)"
+      />
+    </label>
+
+    @if (errorKey(); as key) {
+      <p class="login__error" role="alert">{{ t(key) }}</p>
+    }
+
+    <button
+      hk-button
+      type="submit"
+      class="login__submit"
+      [variant]="'primary'"
+      [disabled]="submitting()"
+      [attr.aria-busy]="submitting() ? 'true' : null"
+    >
+      {{ submitting() ? t('login.submitting') : t('login.submit') }}
+    </button>
+  </form>
+
+  <p class="login__links">
+    <a routerLink="/register">{{ t('login.registerLink') }}</a>
+    <a routerLink="/recover">{{ t('login.recoverLink') }}</a>
+  </p>
 </section>

@@ -1,4 +1,4 @@
-import { AuthClientError, authErrorKey, AuthService } from './auth.service';
+import { AuthClientError, authErrorKey, AuthService, isValidUsername } from './auth.service';
 import { ApiError } from '../api/api-fetch';
 
 /** No Angular DI dependencies live in `AuthService` (see its header comment) — every test below
@@ -170,6 +170,46 @@ describe('AuthService', () => {
       expect(authService.status()).not.toBe('authed');
       expect(authService.user()).toBeNull();
     });
+
+    // Task-4-review carried obligation: the server folds username case for lookups but the
+    // caller may have typed a different casing at the login prompt — `login()` re-canonicalizes
+    // via ONE extra `GET /api/me` call after the session is established.
+    it('canonicalizes the stored username via GET /api/me after a successful login (server folds case)', async () => {
+      const calledUrls: string[] = [];
+      globalThis.fetch = routedFetch({
+        '/api/auth/salt*': () => jsonResponse(200, { salt: VECTOR_SALT_HEX }),
+        '/api/auth/login': () => {
+          calledUrls.push('login');
+          return jsonResponse(200, { userId: 'u1' });
+        },
+        '/api/me': () => {
+          calledUrls.push('me');
+          return jsonResponse(200, { userId: 'u1', username: 'Alice' });
+        },
+      });
+
+      // Caller types lowercase "alice"; the server's canonical casing is "Alice".
+      await authService.login('alice', VECTOR_PASSWORD, 'Device');
+
+      expect(calledUrls).toEqual(['login', 'me']);
+      expect(authService.user()).toEqual({ userId: 'u1', username: 'Alice' });
+      expect(authService.status()).toBe('authed');
+    });
+
+    it('tolerates a failed canonicalization GET /api/me, keeping the caller-typed username and staying authed', async () => {
+      globalThis.fetch = routedFetch({
+        '/api/auth/salt*': () => jsonResponse(200, { salt: VECTOR_SALT_HEX }),
+        '/api/auth/login': () => jsonResponse(200, { userId: 'u1' }),
+        '/api/me': () => {
+          throw new TypeError('Failed to fetch');
+        },
+      });
+
+      await authService.login('alice', VECTOR_PASSWORD, 'Device');
+
+      expect(authService.user()).toEqual({ userId: 'u1', username: 'alice' });
+      expect(authService.status()).toBe('authed');
+    });
   });
 
   describe('register', () => {
@@ -295,6 +335,18 @@ describe('AuthService', () => {
       expect(authService.status()).toBe('anon');
       expect(authService.user()).toBeNull();
     });
+  });
+});
+
+describe('isValidUsername', () => {
+  it('accepts a username matching the mirrored server pattern (3-32 letters/digits/_/-)', () => {
+    expect(isValidUsername('alice')).toBe(true);
+    expect(isValidUsername('a_b-9')).toBe(true);
+  });
+
+  it('rejects a username outside the pattern (too short, or containing a disallowed character)', () => {
+    expect(isValidUsername('ab')).toBe(false);
+    expect(isValidUsername('a!')).toBe(false);
   });
 });
 

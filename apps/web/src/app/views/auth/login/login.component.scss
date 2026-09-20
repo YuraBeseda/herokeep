@@ -3,6 +3,42 @@
 }
 
 .login__title {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-3);
   font-family: var(--font-display);
+}
+
+.login__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 24rem;
+}
+
+.login__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  input {
+    padding: var(--space-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-s);
+    background: var(--surface-0);
+    color: var(--text-1);
+  }
+}
+
+.login__error {
+  margin: 0;
+  color: var(--danger);
+}
+
+.login__submit {
+  align-self: flex-start;
+}
+
+.login__links {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }

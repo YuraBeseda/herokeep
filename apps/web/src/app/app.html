@@ -17,6 +17,22 @@
         </button>
       </div>
     }
+    <div class="app-shell__account">
+      @if (authService.status() === 'authed') {
+        <span class="app-shell__account-name">{{ authService.user()?.username }}</span>
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          class="app-shell__logout"
+          (click)="onLogout()"
+        >
+          {{ t('account.logout') }}
+        </button>
+      } @else {
+        <a routerLink="/login" class="app-shell__login-link">{{ t('account.login') }}</a>
+      }
+    </div>
     <button
       type="button"
       class="app-shell__theme-toggle"

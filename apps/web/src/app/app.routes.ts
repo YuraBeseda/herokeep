@@ -1,10 +1,11 @@
 import { inject } from '@angular/core';
-import type { CanActivateFn, ResolveFn, Routes } from '@angular/router';
+import type { CanActivateFn, CanDeactivateFn, ResolveFn, Routes } from '@angular/router';
 import { Router } from '@angular/router';
 import { ToastService } from './shared/components/toast/toast.service';
 import { AuthService } from './shared/services/auth/auth.service';
 import { CharactersRepository } from './shared/services/storage/characters.repository';
 import { CharacterStore } from './shared/stores/character.store';
+import type { RegisterComponent } from './views/auth/register/register.component';
 
 /**
  * `/c/:id`'s route-level resolver (plan-5 task-10-brief.md): checks `CharactersRepository.get`
@@ -73,6 +74,17 @@ export const redirectAuthedGuard: CanActivateFn = () => {
   }
   return true;
 };
+
+/**
+ * `/register`'s deactivation guard (task-5-brief.md): protects the ADR-012 recovery-codes step
+ * from an accidental navigation away before the user has confirmed they saved the codes — they
+ * are shown exactly once and never persisted client-side (`RegisterComponent`'s own header
+ * comment). Purely a delegate to the component's own `canDeactivate()` (its doc comment has the
+ * actual decision logic) — kept as a thin function here so `app.routes.ts` stays the one place
+ * every route-level guard is wired, matching `redirectAuthedGuard`/`levelUpGuard` above.
+ */
+export const confirmRecoveryCodesGuard: CanDeactivateFn<RegisterComponent> = (component) =>
+  component.canDeactivate();
 
 export const routes: Routes = [
   {
@@ -156,6 +168,7 @@ export const routes: Routes = [
   {
     path: 'register',
     canActivate: [redirectAuthedGuard],
+    canDeactivate: [confirmRecoveryCodesGuard],
     loadComponent: () =>
       import('./views/auth/register/register.component').then((m) => m.RegisterComponent),
   },

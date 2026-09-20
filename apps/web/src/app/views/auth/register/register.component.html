@@ -1,3 +1,109 @@
 <section class="register" *transloco="let t; read: 'auth'">
-  <h1 class="register__title">{{ t('register.title') }}</h1>
+  @if (step() === 'form') {
+    <h1 class="register__title">{{ t('register.title') }}</h1>
+
+    <form class="register__form" novalidate (submit)="onSubmit($event)">
+      <label class="register__field">
+        <span>{{ t('register.usernameLabel') }}</span>
+        <input
+          type="text"
+          name="username"
+          autocomplete="username"
+          required
+          [value]="username()"
+          (input)="onUsernameInput($any($event.target).value)"
+        />
+      </label>
+      @if (username().length > 0 && !usernameValid()) {
+        <p class="register__hint register__hint--error">{{ t('validation.invalidUsername') }}</p>
+      }
+
+      <label class="register__field">
+        <span>{{ t('register.passwordLabel') }}</span>
+        <input
+          type="password"
+          name="password"
+          autocomplete="new-password"
+          required
+          [value]="password()"
+          (input)="onPasswordInput($any($event.target).value)"
+        />
+      </label>
+      @if (passwordVerdict() === 'pending') {
+        <p class="register__hint" role="status">{{ t('validation.checking') }}</p>
+      } @else if (passwordVerdictReasonKey(); as reasonKey) {
+        <p class="register__hint register__hint--error">{{ t(reasonKey) }}</p>
+      } @else if (passwordOk()) {
+        <p class="register__hint register__hint--ok">{{ t('validation.ok') }}</p>
+      }
+
+      <label class="register__field">
+        <span>{{ t('register.deviceLabelLabel') }}</span>
+        <input
+          type="text"
+          name="deviceLabel"
+          autocomplete="off"
+          [value]="deviceLabel()"
+          (input)="deviceLabel.set($any($event.target).value)"
+        />
+      </label>
+
+      @if (errorKey(); as key) {
+        <p class="register__error" role="alert">{{ t(key) }}</p>
+      }
+
+      <button
+        hk-button
+        type="submit"
+        class="register__submit"
+        [variant]="'primary'"
+        [disabled]="!canSubmit()"
+        [attr.aria-busy]="submitting() ? 'true' : null"
+      >
+        {{ submitting() ? t('register.submitting') : t('register.submit') }}
+      </button>
+    </form>
+
+    <p class="register__links">
+      <a routerLink="/login">{{ t('register.loginLink') }}</a>
+    </p>
+  } @else {
+    <h1 class="register__title">{{ t('register.codesStep.title') }}</h1>
+    <p class="register__codes-intro">{{ t('register.codesStep.intro') }}</p>
+
+    <ol class="register__codes">
+      @for (code of recoveryCodes(); track code) {
+        <li class="register__code">{{ code }}</li>
+      }
+    </ol>
+
+    <div class="register__codes-actions">
+      <button hk-button type="button" [variant]="'ghost'" (click)="onCopyCodes()">
+        {{ t('register.codesStep.copy') }}
+      </button>
+      <button hk-button type="button" [variant]="'ghost'" (click)="onDownloadCodes()">
+        {{ t('register.codesStep.download') }}
+      </button>
+    </div>
+
+    <label class="register__confirm-field">
+      <input
+        type="checkbox"
+        [checked]="codesConfirmed()"
+        (change)="codesConfirmed.set($any($event.target).checked)"
+      />
+      <span>{{ t('register.codesStep.confirmCheckbox') }}</span>
+    </label>
+
+    <button
+      hk-button
+      type="button"
+      class="register__continue"
+      [variant]="'primary'"
+      [disabled]="!codesConfirmed()"
+      (click)="onContinue()"
+    >
+      {{ t('register.codesStep.continue') }}
+    </button>
+  }
 </section>

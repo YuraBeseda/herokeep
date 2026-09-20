@@ -45,8 +45,15 @@ export class AuthClientError extends Error {
 // (this file has no access to `apps/api` code, so the pattern is copied, not imported).
 const USERNAME_PATTERN = /^[\p{L}\p{N}_-]{3,32}$/u;
 
+/** Exported for T5's register/recover screens: live, local "is this shaped like a username"
+ * feedback as the user types, using the EXACT same pattern `assertValidUsername` throws on below
+ * — one source of truth for the client-side format check. */
+export function isValidUsername(username: string): boolean {
+  return USERNAME_PATTERN.test(username);
+}
+
 function assertValidUsername(username: string): void {
-  if (!USERNAME_PATTERN.test(username)) {
+  if (!isValidUsername(username)) {
     throw new AuthClientError('invalid-username');
   }
 }
@@ -150,9 +157,24 @@ export class AuthService {
     });
 
     // The login response only echoes `userId` (apps/api/src/core/routes/auth.ts) — `username`
-    // in `AuthUser` comes from this call's own input, not a server echo.
+    // in `AuthUser` comes from this call's own input, not a server echo. Set optimistically here
+    // so a caller-typed casing is at least SOMETHING to show immediately, then canonicalized
+    // below.
     this.userState.set({ userId: result.userId, username });
     this.statusState.set('authed');
+
+    // Task-4-review carried obligation: the server folds username case (`foldUsername`) for
+    // lookups but stores/returns the ORIGINAL casing a user first registered with — the casing
+    // this caller just typed at the login prompt may drift from that (e.g. "Alice" vs "alice").
+    // One extra `GET /api/me` canonicalizes it. Best-effort: a network failure here must not
+    // undo the successful login above, so it's swallowed and the caller-typed username (already
+    // set) stands.
+    try {
+      const me = await apiJson<MeResponse>('/api/me');
+      this.userState.set({ userId: me.userId, username: me.username });
+    } catch {
+      // See comment above — tolerated silently, caller-typed casing remains authoritative.
+    }
   }
 
   /** Register a new account. `checkPassword` runs FIRST (task-4-brief.md), rejecting a weak
@@ -248,6 +270,18 @@ const CLIENT_ERROR_KEYS: Readonly<Record<AuthClientErrorReason, string>> = {
   common: 'validation.common',
   'contains-username': 'validation.containsUsername',
 };
+
+/** Same scope-relative key table `authErrorKey` uses for a THROWN `AuthClientError`, exposed
+ * directly for T5's register/recover screens' LIVE `checkPassword` verdicts — those never throw
+ * (`PasswordVerdict` is a plain return value, checked before `AuthService.register`/`reset` ever
+ * runs), so there is no `AuthClientError` to hand `authErrorKey`, just the verdict's own `reason`.
+ * One shared table either way keeps the validation copy identical between "you typed something
+ * invalid" (live, pre-submit) and "the server/local check rejected it" (post-submit) paths. */
+export function passwordVerdictKey(
+  reason: Exclude<PasswordVerdict, { ok: true }>['reason'],
+): string {
+  return CLIENT_ERROR_KEYS[reason];
+}
 
 /** Maps an error thrown by any `AuthService` method onto a key RELATIVE to the `auth` Transloco
  * scope (no `auth.` prefix — pass the result straight into the translate function bound under

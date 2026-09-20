@@ -1,19 +1,56 @@
 {
   "login": {
-    "title": "Log in"
+    "title": "Log in",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "deviceLabelLabel": "Device name",
+    "submit": "Log in",
+    "submitting": "Logging in…",
+    "registerLink": "Create an account",
+    "recoverLink": "Forgot your password?"
   },
   "register": {
-    "title": "Create account"
+    "title": "Create account",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "deviceLabelLabel": "Device name",
+    "submit": "Create account",
+    "submitting": "Creating account…",
+    "loginLink": "Already have an account? Log in",
+    "codesStep": {
+      "title": "Save your recovery codes",
+      "intro": "These six one-time codes are the only way back into your account if you forget your password. Save them somewhere safe now — they are shown only this once and Herokeep never stores them.",
+      "copy": "Copy codes",
+      "download": "Download as .txt",
+      "confirmCheckbox": "I saved my recovery codes",
+      "continue": "Continue",
+      "confirmLeave": {
+        "title": "Leave without saving your codes?",
+        "message": "These recovery codes will never be shown again. If you leave now without saving them, you could lose access to your account if you forget your password.",
+        "stay": "Stay and save them",
+        "leave": "Leave anyway"
+      }
+    }
   },
   "recover": {
-    "title": "Recover account"
+    "title": "Recover account",
+    "usernameLabel": "Username",
+    "codeLabel": "Recovery code",
+    "codeHint": "Enter one of the six recovery codes you saved when you registered.",
+    "newPasswordLabel": "New password",
+    "submit": "Reset password",
+    "submitting": "Resetting password…",
+    "signOutNotice": "Resetting your password will sign you out of every other device.",
+    "loginLink": "Back to log in"
   },
   "validation": {
     "invalidUsername": "Usernames are 3–32 letters, numbers, underscores, or hyphens.",
     "tooShort": "Password must be at least 10 characters.",
     "tooLong": "Password must be at most 128 characters.",
     "common": "That password is too common — please choose another.",
-    "containsUsername": "Password must not contain your username."
+    "containsUsername": "Password must not contain your username.",
+    "checking": "Checking password…",
+    "ok": "Looks good."
   },
   "errors": {
     "invalidCredentials": "Incorrect username or password.",

@@ -1,3 +1,69 @@
 <section class="recover" *transloco="let t; read: 'auth'">
   <h1 class="recover__title">{{ t('recover.title') }}</h1>
+  <p class="recover__notice">{{ t('recover.signOutNotice') }}</p>
+
+  <form class="recover__form" novalidate (submit)="onSubmit($event)">
+    <label class="recover__field">
+      <span>{{ t('recover.usernameLabel') }}</span>
+      <input
+        type="text"
+        name="username"
+        autocomplete="username"
+        required
+        [value]="username()"
+        (input)="onUsernameInput($any($event.target).value)"
+      />
+    </label>
+
+    <label class="recover__field">
+      <span>{{ t('recover.codeLabel') }}</span>
+      <input
+        type="text"
+        name="code"
+        autocomplete="off"
+        required
+        [value]="code()"
+        (input)="code.set($any($event.target).value)"
+      />
+      <span class="recover__hint">{{ t('recover.codeHint') }}</span>
+    </label>
+
+    <label class="recover__field">
+      <span>{{ t('recover.newPasswordLabel') }}</span>
+      <input
+        type="password"
+        name="newPassword"
+        autocomplete="new-password"
+        required
+        [value]="newPassword()"
+        (input)="onPasswordInput($any($event.target).value)"
+      />
+    </label>
+    @if (passwordVerdict() === 'pending') {
+      <p class="recover__hint" role="status">{{ t('validation.checking') }}</p>
+    } @else if (passwordVerdictReasonKey(); as reasonKey) {
+      <p class="recover__hint recover__hint--error">{{ t(reasonKey) }}</p>
+    } @else if (passwordOk()) {
+      <p class="recover__hint recover__hint--ok">{{ t('validation.ok') }}</p>
+    }
+
+    @if (errorKey(); as key) {
+      <p class="recover__error" role="alert">{{ t(key) }}</p>
+    }
+
+    <button
+      hk-button
+      type="submit"
+      class="recover__submit"
+      [variant]="'primary'"
+      [disabled]="!canSubmit()"
+      [attr.aria-busy]="submitting() ? 'true' : null"
+    >
+      {{ submitting() ? t('recover.submitting') : t('recover.submit') }}
+    </button>
+  </form>
+
+  <p class="recover__links">
+    <a routerLink="/login">{{ t('recover.loginLink') }}</a>
+  </p>
 </section>

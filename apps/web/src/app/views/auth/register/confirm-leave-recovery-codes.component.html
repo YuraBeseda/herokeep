@@ -1,0 +1,14 @@
+<ng-container *transloco="let t">
+  <h2 class="confirm-leave__title" data-dialog-title>
+    {{ t('auth.register.codesStep.confirmLeave.title') }}
+  </h2>
+  <p>{{ t('auth.register.codesStep.confirmLeave.message') }}</p>
+  <div class="confirm-leave__actions">
+    <button hk-button type="button" [variant]="'ghost'" (click)="stay()">
+      {{ t('auth.register.codesStep.confirmLeave.stay') }}
+    </button>
+    <button hk-button type="button" [variant]="'danger'" (click)="leave()">
+      {{ t('auth.register.codesStep.confirmLeave.leave') }}
+    </button>
+  </div>
+</ng-container>

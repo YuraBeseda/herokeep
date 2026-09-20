@@ -6,3 +6,60 @@
   margin: 0 0 var(--space-2);
   font-family: var(--font-display);
 }
+
+.recover__notice {
+  max-width: 32rem;
+  margin-bottom: var(--space-3);
+  color: var(--text-2);
+}
+
+.recover__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 24rem;
+}
+
+.recover__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+
+  input {
+    padding: var(--space-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-s);
+    background: var(--surface-0);
+    color: var(--text-1);
+  }
+}
+
+.recover__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-2);
+
+  &--error {
+    color: var(--danger);
+  }
+
+  &--ok {
+    color: var(--success);
+  }
+}
+
+.recover__error {
+  margin: 0;
+  color: var(--danger);
+}
+
+.recover__submit {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}
+
+.recover__links {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
