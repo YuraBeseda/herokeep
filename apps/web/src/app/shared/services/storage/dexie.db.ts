@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, InjectionToken } from '@angular/core';
 import Dexie, { type EntityTable } from 'dexie';
 import type { Event, Pack } from '@hk/protocol';
 import type { Snapshot } from '@hk/engine';
@@ -81,6 +81,18 @@ export interface BlobRow {
   height?: number;
 }
 
+/** The database name `HkDb` opens — an `InjectionToken` (not a plain constructor default) because
+ * a bare `name = 'hk-db'` constructor parameter gives Angular's DI compiler no injection token to
+ * resolve it from (`NG2003: No suitable injection token for parameter 'name'`) on a class the DI
+ * system itself instantiates. Defaults to the app's single real database name — every production
+ * call site (`inject(HkDb)`) gets exactly today's behavior, unaffected by this token's existence.
+ * The override exists solely so a test harness that needs TWO genuinely separate on-disk (well,
+ * fake-indexeddb) databases in the same process — simulating two independent devices sharing
+ * nothing — can provide a second `HkDb` under a different name (via `{ provide: HkDb, useFactory:
+ * () => new HkDb('other-name') }`, or `{ provide: HK_DB_NAME, useValue: 'other-name' }`) without
+ * duplicating this class's schema (`sync-integration.spec.ts`). */
+export const HK_DB_NAME = new InjectionToken<string>('HK_DB_NAME', { factory: () => 'hk-db' });
+
 /**
  * The app's single IndexedDB database. Schema version 1; future migrations are added as new
  * `this.version(n).stores(...)` calls in this constructor, never by editing an existing one
@@ -97,8 +109,17 @@ export class HkDb extends Dexie {
   characters!: EntityTable<CharacterRow, 'id'>;
   blobs!: EntityTable<BlobRow, 'hash'>;
 
-  constructor() {
-    super('hk-db');
+  // The default here (also `HK_DB_NAME`'s own factory default) is for `dexie.db.spec.ts`'s direct
+  // `new HkDb()` construction (bypassing Angular DI entirely) — a real DI-resolved construction
+  // always supplies the token's value explicitly and never falls through to this default.
+  //
+  // Constructor-parameter injection (`@Inject`), not the `inject()` function the lint rule below
+  // otherwise wants: `inject()` requires an active DI injection context, which `dexie.db.spec.ts`'s
+  // direct `new HkDb()` construction (see above) deliberately does NOT have — a `super(inject(...))`
+  // call would throw `NG0203` for that spec instead of falling through to this default.
+  // eslint-disable-next-line @angular-eslint/prefer-inject -- see comment above
+  constructor(@Inject(HK_DB_NAME) name = 'hk-db') {
+    super(name);
     this.version(1).stores({
       packs: '&key, id, version, kind',
       settings: '&key',
