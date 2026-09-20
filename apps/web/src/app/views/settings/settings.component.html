@@ -73,4 +73,113 @@
       {{ t('packs.import-demo') }}
     </button>
   </hk-card>
+
+  <hk-card class="settings__section" [header]="t('account.title')">
+    @if (authService.status() === 'authed') {
+      <p class="settings__account-username">{{ authService.user()?.username }}</p>
+      <div class="settings__account-actions">
+        <button
+          hk-button
+          [variant]="'ghost'"
+          type="button"
+          class="settings__logout"
+          (click)="logout()"
+        >
+          {{ t('account.logout') }}
+        </button>
+        <button
+          hk-button
+          [variant]="'danger'"
+          type="button"
+          class="settings__logout-all"
+          (click)="logoutAll()"
+        >
+          {{ t('account.logout-all') }}
+        </button>
+      </div>
+    } @else {
+      <p class="settings__account-prompt">{{ t('account.prompt') }}</p>
+      <div class="settings__account-actions">
+        <a routerLink="/login" class="settings__login-link">{{ t('account.login') }}</a>
+        <a routerLink="/register" class="settings__register-link">{{ t('account.register') }}</a>
+      </div>
+    }
+  </hk-card>
+
+  @if (authService.status() === 'authed') {
+    <hk-card class="settings__section" [header]="t('devices.title')">
+      @if (devicesLoading()) {
+        <p class="visually-hidden" role="status">{{ t('devices.loading') }}</p>
+        <hk-skeleton class="settings__devices-loading" [lines]="3" width="100%" />
+      } @else if (devicesError()) {
+        <p class="settings__devices-error" role="alert">{{ t('devices.error') }}</p>
+        <button
+          hk-button
+          [variant]="'ghost'"
+          type="button"
+          class="settings__devices-retry"
+          (click)="refreshDevices()"
+        >
+          {{ t('devices.retry') }}
+        </button>
+      } @else if (devices().length === 0) {
+        <p class="settings__devices-empty">{{ t('devices.empty') }}</p>
+      } @else {
+        <ul class="settings__devices-list">
+          @for (device of devices(); track device.id) {
+            <li class="settings__devices-row" [attr.data-current]="device.current">
+              <div class="settings__devices-info">
+                <span class="settings__devices-label">{{ device.deviceLabel }}</span>
+                @if (device.current) {
+                  <span class="settings__devices-current-tag">{{ t('devices.current') }}</span>
+                }
+                <span class="settings__devices-seen">
+                  {{ t('devices.lastSeen', { time: relativeTime(device.lastSeenAt) }) }}
+                </span>
+              </div>
+              @if (!device.current) {
+                <button
+                  hk-button
+                  [variant]="'danger'"
+                  type="button"
+                  class="settings__devices-revoke"
+                  (click)="revokeDevice(device)"
+                >
+                  {{ t('devices.revoke') }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </hk-card>
+
+    <hk-card class="settings__section" [header]="t('quota.title')">
+      @if (quotaRows().length === 0) {
+        <p class="settings__quota-empty">{{ t('quota.empty') }}</p>
+      } @else {
+        <ul class="settings__quota-list">
+          @for (row of quotaRows(); track row.id) {
+            <li class="settings__quota-row" [class.settings__quota-row--warning]="row.warning">
+              <span class="settings__quota-name">{{ row.name }}</span>
+              @if (row.known) {
+                <span class="settings__quota-usage">
+                  {{
+                    t('quota.row', {
+                      used: t('quota.unit.' + row.usedUnit, { amount: row.usedAmount }),
+                      max: t('quota.unit.' + row.maxUnit, { amount: row.maxAmount }),
+                    })
+                  }}
+                </span>
+              } @else {
+                <span class="settings__quota-usage settings__quota-usage--unknown">
+                  {{ t('quota.unknown') }}
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </hk-card>
+  }
 </section>

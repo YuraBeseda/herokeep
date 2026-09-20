@@ -25,5 +25,49 @@
     "import-invalid": "This pack could not be imported",
     "remove": "Remove pack",
     "translations-load-failed": "Saved packs could not be loaded — continuing without them"
+  },
+  "account": {
+    "title": "Account",
+    "prompt": "Sign in to sync your characters across devices.",
+    "login": "Log in",
+    "register": "Create an account",
+    "logout": "Log out",
+    "logout-all": "Log out everywhere",
+    "logoutAllConfirm": {
+      "title": "Log out everywhere?",
+      "body": "This ends every signed-in session for your account, including this one.",
+      "cancel": "Cancel",
+      "confirm": "Log out everywhere"
+    }
+  },
+  "devices": {
+    "title": "Devices",
+    "current": "This device",
+    "lastSeen": "Last active {time}",
+    "revoke": "Revoke",
+    "revokeConfirm": {
+      "title": "Revoke \"{deviceLabel}\"?",
+      "body": "That device will be signed out immediately.",
+      "cancel": "Cancel",
+      "confirm": "Revoke"
+    },
+    "toast": {
+      "revoke-failed": "Couldn't revoke that device. Try again."
+    },
+    "loading": "Loading devices…",
+    "error": "Couldn't load your devices.",
+    "retry": "Try again",
+    "empty": "No other devices yet."
+  },
+  "quota": {
+    "title": "Storage quota",
+    "empty": "No synced characters yet.",
+    "row": "{used} of {max}",
+    "unit": {
+      "b": "{amount} B",
+      "kb": "{amount} KB",
+      "mb": "{amount} MB"
+    },
+    "unknown": "—"
   }
 }

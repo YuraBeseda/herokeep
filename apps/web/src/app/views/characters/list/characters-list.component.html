@@ -65,6 +65,15 @@
             }
             <span class="characters-list__name">{{ row.name }}</span>
             <span class="characters-list__meta">{{ row.system }}</span>
+            @if (authService.status() === 'authed') {
+              <span
+                class="characters-list__sync-badge"
+                role="img"
+                [attr.data-sync-state]="syncStateBucket(row.id)"
+                [attr.aria-label]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
+                [title]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
+              ></span>
+            }
           </button>
           <button
             hk-button

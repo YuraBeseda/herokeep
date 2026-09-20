@@ -87,3 +87,44 @@
   color: var(--text-2);
   font-size: 0.875rem;
 }
+
+// Sync-status indicator (task-9-brief.md): a small, subtle dot — deliberately no visible text, so
+// it never competes with the name/system meta above it. State is conveyed by color plus the
+// `title`/`aria-label` (both bound in the template) for anyone hovering or using a screen reader.
+.characters-list__sync-badge {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-block-start: var(--space-1);
+  border-radius: 50%;
+  background: var(--text-2);
+
+  &[data-sync-state='synced'] {
+    background: var(--success);
+  }
+
+  &[data-sync-state='pending'] {
+    background: var(--warning);
+  }
+
+  &[data-sync-state='connecting'] {
+    background: var(--text-2);
+    animation: characters-list-sync-pulse 1.2s ease-in-out infinite;
+  }
+
+  &[data-sync-state='offline'] {
+    background: transparent;
+    border: 1px solid var(--text-2);
+  }
+}
+
+@keyframes characters-list-sync-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

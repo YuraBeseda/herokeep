@@ -22,6 +22,7 @@ import {
   HeroImportHashMismatchError,
   HeroReaderService,
 } from '@shared/services/export/hero-reader.service';
+import { AuthService } from '@shared/services/auth/auth.service';
 import { PlaceholderService } from '@shared/services/images/placeholder.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
@@ -123,6 +124,7 @@ export class CharactersListComponent {
   private readonly router = inject(Router);
   private readonly placeholderService = inject(PlaceholderService);
   private readonly heroReaderService = inject(HeroReaderService);
+  protected readonly authService = inject(AuthService);
 
   // Template-facing state
   protected readonly skeletonRows: readonly number[] = Array.from(
@@ -243,5 +245,37 @@ export class CharactersListComponent {
         error instanceof CharacterStoreNotLeaderError ? error.code : GENERIC_DELETE_FAILURE_KEY;
       this.toastService.show(key);
     }
+  }
+
+  // --- Sync-status indicator (task-9-brief.md) --------------------------------------------
+  //
+  // Placement: a small per-row badge here on the Library list rather than the sheet shell
+  // header. This is the one screen where every synced character is visible AT ONCE — a user
+  // with several characters can see which ones are still catching up (or offline) without
+  // opening each one individually, which the sheet header (one character at a time) can't offer.
+  // It also keeps the footprint to ONE component: `row.id` is already this exact streamId
+  // `SyncService.syncState` expects, no extra plumbing needed. Hidden entirely when anon (task
+  // brief: "solo mode looks exactly as today") — `SyncService` never opens a session for anyone
+  // logged out, so `syncState` would always read 'offline' anyway; gating on `authService.status()`
+  // avoids ever rendering a misleading "offline" dot for a user who was never trying to sync.
+
+  private static readonly PENDING_STATE = /^pending-(\d+)$/;
+
+  protected syncStateBucket(id: string): 'synced' | 'pending' | 'connecting' | 'offline' {
+    const state = this.syncService.syncState(id)();
+    if (state === 'synced' || state === 'connecting' || state === 'offline') return state;
+    return 'pending'; // the remaining `SyncStateValue` shape is the `pending-${number}` template literal
+  }
+
+  protected syncPendingCount(id: string): number {
+    const state = this.syncService.syncState(id)();
+    const match = CharactersListComponent.PENDING_STATE.exec(state);
+    return match ? Number(match[1]) : 0;
+  }
+
+  // Scope-relative key for the badge's tooltip/aria-label — same `t(key, params)` shape every
+  // other translated string in this template already uses.
+  protected syncTooltipKey(id: string): string {
+    return `list.sync.tooltip.${this.syncStateBucket(id)}`;
   }
 }

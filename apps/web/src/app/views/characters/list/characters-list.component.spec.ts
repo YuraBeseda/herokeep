@@ -1,9 +1,11 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { AuthService, type AuthStatus } from '@shared/services/auth/auth.service';
 import {
   HeroImportBadEventError,
   HeroImportBadZipError,
@@ -13,7 +15,7 @@ import {
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
-import { SyncService } from '@shared/services/sync/sync.service';
+import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.service';
 import { CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
@@ -48,12 +50,30 @@ function mkRow(overrides: Partial<CharacterRow> = {}): CharacterRow {
  * table, mirroring what the real `deleteEverywhere` does — the component's post-delete
  * `resource.reload()` re-reads through `CharactersRepository.list()`, so without this the row
  * would never actually disappear from view in the "row disappears" assertion below. */
-function configure(): {
+function configure(options: { authStatus?: AuthStatus } = {}): {
   deleteCharacter: ReturnType<typeof vi.fn>;
   importFn: ReturnType<typeof vi.fn>;
+  syncState: ReturnType<typeof vi.fn>;
+  syncStateSignals: Map<string, ReturnType<typeof signal<SyncStateValue>>>;
 } {
   const deleteCharacter = vi.fn();
   const importFn = vi.fn();
+  const authStatusState = signal<AuthStatus>(options.authStatus ?? 'authed');
+
+  // `SyncService.syncState(streamId)` is memoized per streamId (see its own doc comment) — this
+  // stub mirrors that so the SAME `Signal` instance comes back for repeated calls with the same
+  // id, letting a test grab it via `syncStateSignals.get(id)` and `.set()` a new value to drive
+  // the indicator reactively, exactly like the real cache would.
+  const syncStateSignals = new Map<string, ReturnType<typeof signal<SyncStateValue>>>();
+  const syncState = vi.fn((streamId: string) => {
+    let sig = syncStateSignals.get(streamId);
+    if (!sig) {
+      sig = signal<SyncStateValue>('synced');
+      syncStateSignals.set(streamId, sig);
+    }
+    return sig;
+  });
+
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -68,7 +88,8 @@ function configure(): {
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
-      { provide: SyncService, useValue: { deleteEverywhere: deleteCharacter } },
+      { provide: SyncService, useValue: { deleteEverywhere: deleteCharacter, syncState } },
+      { provide: AuthService, useValue: { status: authStatusState.asReadonly() } },
       // `HeroReaderService` (plan-6 Task 10) is stubbed here — its OWN real behavior (validation,
       // merge-by-id, storage writes) is already thoroughly covered by
       // `hero-reader.service.spec.ts`; this spec only asserts the component calls it and reacts
@@ -81,7 +102,7 @@ function configure(): {
   deleteCharacter.mockImplementation(async (id: string) => {
     await db.characters.delete(id);
   });
-  return { deleteCharacter, importFn };
+  return { deleteCharacter, importFn, syncState, syncStateSignals };
 }
 
 /** Mirrors `build-tab.component.spec.ts`'s own helper exactly — `HTMLInputElement.files` has no
@@ -498,5 +519,66 @@ describe('CharactersListComponent', () => {
       '.characters-list__delete',
     )!;
     expect(deleteButtonAfter.disabled).toBe(false);
+  });
+
+  // --- Sync-status indicator (task-9-brief.md) --------------------------------------------
+
+  describe('sync-status indicator', () => {
+    // Each test here needs its OWN `authStatus`/`syncState` stub (the outer `beforeEach` above
+    // already configured a DEFAULT 'authed' TestBed and — via its `db.characters.clear()` etc. —
+    // already created the environment injector), so re-configuring requires an explicit
+    // `resetTestingModule()` first; skipping it would throw ("already instantiated").
+    function reconfigure(options: { authStatus?: AuthStatus } = {}) {
+      TestBed.resetTestingModule();
+      return configure(options);
+    }
+
+    it('is absent entirely when logged out (solo mode looks exactly as today)', async () => {
+      reconfigure({ authStatus: 'anon' });
+      const db = TestBed.inject(HkDb);
+      await db.characters.put(mkRow());
+
+      const fixture = TestBed.createComponent(CharactersListComponent);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.characters-list__sync-badge')).toBeNull();
+    });
+
+    it.each<[SyncStateValue, string]>([
+      ['synced', 'synced'],
+      ['connecting', 'connecting'],
+      ['offline', 'offline'],
+      ['pending-3', 'pending'],
+    ])('renders the %s state as data-sync-state="%s"', async (state, bucket) => {
+      const { syncStateSignals } = reconfigure({ authStatus: 'authed' });
+      const db = TestBed.inject(HkDb);
+      const row = mkRow();
+      await db.characters.put(row);
+      syncStateSignals.set(row.id, signal(state));
+
+      const fixture = TestBed.createComponent(CharactersListComponent);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const badge = compiled.querySelector('.characters-list__sync-badge');
+      expect(badge).toBeTruthy();
+      expect(badge?.getAttribute('data-sync-state')).toBe(bucket);
+    });
+
+    it('the pending state exposes the pending count in its accessible label', async () => {
+      const { syncStateSignals } = reconfigure({ authStatus: 'authed' });
+      const db = TestBed.inject(HkDb);
+      const row = mkRow();
+      await db.characters.put(row);
+      syncStateSignals.set(row.id, signal<SyncStateValue>('pending-4'));
+
+      const fixture = TestBed.createComponent(CharactersListComponent);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const badge = compiled.querySelector('.characters-list__sync-badge');
+      expect(badge?.getAttribute('aria-label')).toContain('4');
+    });
   });
 });

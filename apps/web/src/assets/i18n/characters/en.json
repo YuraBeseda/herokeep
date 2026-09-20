@@ -38,6 +38,14 @@
         "storageWarning": "Safari removes a web app's saved data after 7 days without opening it. Installing to your Home Screen keeps your characters from being deleted.",
         "close": "Got it"
       }
+    },
+    "sync": {
+      "tooltip": {
+        "synced": "Synced",
+        "pending": "{count, plural, one {# change} other {# changes}} pending",
+        "connecting": "Connecting…",
+        "offline": "Not syncing"
+      }
     }
   },
   "wizard": {

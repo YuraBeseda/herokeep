@@ -43,3 +43,112 @@
 .settings__import-button {
   margin-block-start: var(--space-3);
 }
+
+.settings__account-username {
+  margin: 0 0 var(--space-3);
+  font-weight: 600;
+}
+
+.settings__account-prompt {
+  margin: 0 0 var(--space-3);
+  color: var(--text-2);
+}
+
+.settings__account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.settings__login-link,
+.settings__register-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
+.settings__devices-loading {
+  display: block;
+}
+
+.settings__devices-error {
+  margin: 0 0 var(--space-3);
+  color: var(--danger);
+}
+
+.settings__devices-empty,
+.settings__quota-empty {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.settings__devices-list,
+.settings__quota-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings__devices-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.settings__devices-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.settings__devices-label {
+  font-weight: 600;
+}
+
+.settings__devices-current-tag {
+  align-self: flex-start;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-l);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.settings__devices-seen {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.settings__quota-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.settings__quota-name {
+  font-weight: 600;
+}
+
+.settings__quota-usage {
+  color: var(--text-2);
+}
+
+.settings__quota-usage--unknown {
+  font-variant-numeric: tabular-nums;
+}
+
+.settings__quota-row--warning .settings__quota-usage {
+  color: var(--warning);
+  font-weight: 600;
+}
