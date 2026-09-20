@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { EVENT_ACTORS, EVENT_PAYLOADS, parseEvent } from '../src/events/index.ts';
+import {
+  EVENT_ACTORS as CHARACTER_EVENT_ACTORS,
+  EVENT_PAYLOADS as CHARACTER_EVENT_PAYLOADS,
+} from '../src/events/character.ts';
+import { EVENT_ACTORS, parseEvent } from '../src/events/index.ts';
 
 const base = {
   id: '018f6d2e-7b1a-7c3d-9e4f-5a6b7c8d9e0f',
@@ -134,21 +138,24 @@ describe.each(NEW_EVENT_CASES)('parseEvent $type', ({ type, accept }) => {
   });
 });
 
+// Scoped to character.ts's OWN registries (not the merged `EVENT_PAYLOADS`/`EVENT_ACTORS` from
+// index.ts, which additionally carries the campaign-stream catalog as of plan-9 Task 1) — this
+// describe block is specifically about the Phase-1 character-stream catalog staying complete.
 describe('the complete Phase-1 character event catalog', () => {
   const CHARACTER_EVENT_COUNT = 51; // 3 phase-1a events above + 48 NEW_EVENT_CASES
 
   it('registers a payload schema for every catalog event', () => {
-    expect(Object.keys(EVENT_PAYLOADS)).toHaveLength(CHARACTER_EVENT_COUNT);
+    expect(Object.keys(CHARACTER_EVENT_PAYLOADS)).toHaveLength(CHARACTER_EVENT_COUNT);
   });
 
   it('declares an actor list for every catalog event', () => {
-    expect(Object.keys(EVENT_ACTORS)).toHaveLength(CHARACTER_EVENT_COUNT);
+    expect(Object.keys(CHARACTER_EVENT_ACTORS)).toHaveLength(CHARACTER_EVENT_COUNT);
   });
 
   it('gives every EVENT_PAYLOADS key a matching EVENT_ACTORS entry', () => {
-    for (const key of Object.keys(EVENT_PAYLOADS)) {
+    for (const key of Object.keys(CHARACTER_EVENT_PAYLOADS)) {
       const type = key.slice(0, key.lastIndexOf('@'));
-      expect(EVENT_ACTORS[type], `missing EVENT_ACTORS entry for ${type}`).toBeDefined();
+      expect(CHARACTER_EVENT_ACTORS[type], `missing EVENT_ACTORS entry for ${type}`).toBeDefined();
     }
   });
 });

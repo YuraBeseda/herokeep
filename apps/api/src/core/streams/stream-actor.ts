@@ -254,8 +254,8 @@ export class StreamActor {
         };
       }
       // `actor.role` narrowed to 'owner' | 'dm' here: `permissions.allowed` only ever returns
-      // true for those two roles (permissions.ts's early `member` return), so `stampActor`'s
-      // cast below is safe.
+      // true for those two roles (permissions.ts's early `member` return), so `stampActor`
+      // never actually receives 'member' despite `Actor.role`'s wider static type.
       return { kind: 'new', event: this.stampActor(validated.event, actor) };
     });
 
@@ -481,9 +481,16 @@ export class StreamActor {
    * this actor, never accepted from a client (doc-03: "The DO assigns `seq` strictly
    * increasing"). */
   private stampActor(event: Event, actor: Actor): Event {
+    // `actor.role as 'owner' | 'dm'` used to be a needed narrowing cast: `Actor.role` (this
+    // package's sync-protocol Role, 'owner'|'dm'|'member') was wider than the protocol event
+    // envelope's own `ActorRoleSchema` ('owner'|'dm'|'system' at the time). Plan-9 Task 1 widened
+    // `ActorRoleSchema` to add 'member' (for campaign-stream events), so `Actor.role` is now
+    // ALREADY assignable to `Event['actor']['role']` without narrowing — the cast became a
+    // lint error (`no-unnecessary-type-assertion`) and is removed here. The call-site guarantee
+    // above (only 'owner'/'dm' ever reach here on a character stream) is unchanged.
     const stamped: Event = {
       ...event,
-      actor: { userId: actor.userId, deviceId: event.actor.deviceId, role: actor.role as 'owner' | 'dm' },
+      actor: { userId: actor.userId, deviceId: event.actor.deviceId, role: actor.role },
     };
     delete stamped.seq; // never accept a client-supplied seq (doc-03: the DO assigns it)
     return stamped;

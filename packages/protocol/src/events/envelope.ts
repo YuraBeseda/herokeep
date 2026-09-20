@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const ActorRoleSchema = z.enum(['owner', 'dm', 'system']);
+// 'member' added for campaign-stream events (plan-9 Task 1): a campaign member authors
+// roll.logged/chat.message/member.renamed/own campaign.character_joined-left directly (doc-08
+// §Authorization matrix), so the committed event's actor.role must be able to carry it. Never
+// appears on a character-stream event — character.ts's EVENT_ACTORS has no entry that grants
+// 'member' (apps/api's permissions.ts Role-narrowing early-returns false for it there).
+export const ActorRoleSchema = z.enum(['owner', 'dm', 'system', 'member']);
 export type ActorRole = z.infer<typeof ActorRoleSchema>;
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
