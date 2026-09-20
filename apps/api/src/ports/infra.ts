@@ -78,16 +78,29 @@ export interface Rpc {
 }
 
 /** Context the WS-upgrade route (`GET /api/characters/:id/ws`, `core/routes/characters.ts`, Task
- * 6) hands to the adapter — already fully verified by core (session, ownership, `Origin`) before
- * this ever runs; Phase 2 has no DM/member role reachable on a direct character socket (doc-03
- * §Permission enforcement: "Direct solo sockets only allow the owner role"), so `role` is always
- * `'owner'` today — typed as a literal rather than `permissions.ts`'s `Role` so a future Phase-3
- * campaign-socket handoff (which CAN reach `'dm'`/`'member'`) is a visibly different port, not a
- * silent widening of this one. */
+ * 6; `GET /api/campaigns/:id/ws`, `core/routes/campaigns.ts`, Task 4) hands to the adapter —
+ * already fully verified by core (session, ownership/membership, `Origin`) before this ever runs.
+ *
+ * Plan-9 Task 4 finding (this field used to be typed as the literal `'owner'`, with a doc comment
+ * arguing a future campaign-socket handoff should be "a visibly different port, not a silent
+ * widening of this one"): widened here instead of adding a second method, because BOTH real
+ * `WsUpgrade` implementations (`adapters/node/server.ts`'s `NodeWsUpgrade`,
+ * `adapters/cloudflare/worker.ts`'s `CloudflareWsUpgrade`) treat `role`/`streamId`/`userId`
+ * opaquely — they forward whatever they're given (as a header, or into `ConnAttachment`) without
+ * ever narrowing/switching on the literal `'owner'` type — so a second method would duplicate an
+ * identical shape for no behavioral difference, and would force Task 4 (routes only) to also
+ * implement Task 8's campaign-adapter-wiring just to keep those two adapter files compiling.
+ * `displayName` is new (design ruling 1 read together with task-5-report.md's presence finding:
+ * `CampaignActor` has no `Db` port, so a D1-resolved display name must arrive through this
+ * attachment, the same way `role`/`userId` already do) — optional so `characters.ts`'s existing
+ * WS route (which never sets it) is unaffected. Neither adapter reads `ctx.displayName` into its
+ * `ConnAttachment` yet (Task 8's job, once campaign-socket wiring actually lands on both
+ * adapters); flagged here rather than speculatively wired into files outside this task's scope. */
 export interface WsUpgradeContext {
   readonly streamId: string;
   readonly userId: string;
-  readonly role: 'owner';
+  readonly role: 'owner' | 'dm' | 'member';
+  readonly displayName?: string;
 }
 
 /**

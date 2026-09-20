@@ -64,6 +64,10 @@ export interface ConnAttachment {
   readonly userId: string;
   readonly role: permissionsModule.Role;
   readonly subs: string[];
+  /** A campaign member's display name (plan-9 Task 4; `ports/infra.ts`'s `WsUpgradeContext.
+   * displayName` doc comment has the full rationale). Optional and unused on a character stream —
+   * `CharacterActor`'s own WS handoff never sets it. */
+  readonly displayName?: string;
 }
 
 export interface AckResult {

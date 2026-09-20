@@ -17,6 +17,7 @@ import type { StaticAssets } from '../ports/infra.ts';
 import { createAuthRoutes } from './routes/auth.ts';
 import { createMeRoutes } from './routes/me.ts';
 import { createCharacterRoutes, type CharactersDeps } from './routes/characters.ts';
+import { createCampaignRoutes, type CampaignsDeps } from './routes/campaigns.ts';
 import { createHealthRoutes } from './routes/health.ts';
 import { securityHeaders } from './http/security-headers.ts';
 import { installErrorHandler } from './http/error-handler.ts';
@@ -26,8 +27,11 @@ import { installErrorHandler } from './http/error-handler.ts';
  * fall-through route). One flat interface (rather than nested `{auth: AuthDeps, characters:
  * CharactersDeps, ...}`) because every port is a singleton shared across every sub-app anyway
  * (one `Db`, one `Config`, ...) — nesting would just make every adapter's `createApp(...)` call
- * repeat the same values under multiple keys for no benefit. */
-export interface AppPorts extends CharactersDeps {
+ * repeat the same values under multiple keys for no benefit. `CampaignsDeps` (plan-9 Task 4)
+ * shares every field `CharactersDeps` already declares (`db`/`config`/`rateLimit`/`streamHost`/
+ * `wsUpgrade`) at the same types — extending both here just documents that `createCampaignRoutes`
+ * is satisfied by the one flat `ports` object every adapter already builds, nothing new to add. */
+export interface AppPorts extends CharactersDeps, CampaignsDeps {
   readonly staticAssets: StaticAssets;
 }
 
@@ -39,6 +43,7 @@ export function createApp(ports: AppPorts): Hono {
   app.route('/api/auth', createAuthRoutes(ports));
   app.route('/api/me', createMeRoutes(ports));
   app.route('/api/characters', createCharacterRoutes(ports));
+  app.route('/api/campaigns', createCampaignRoutes(ports));
   app.route('/api/health', createHealthRoutes());
 
   // Static assets + SPA fallback (task-6-brief: "GET /* → StaticAssets.fetch with SPA fallback
