@@ -4,12 +4,15 @@ import type { Event } from '@hk/protocol';
 import { HkDb, type EventRow } from './dexie.db';
 
 /**
- * Event log storage. Solo-phase contract (Task 16): this device is the only writer, so `append`
- * commits events locally by assigning each one's `seq` via `nextSeq` inside a single Dexie
- * transaction — no separate "pending, then confirm" round trip is needed until Phase 2 sync
- * exists. `assignSeqs` and the `pendingOrder` row field are that future sync hook's storage
- * shape, laid down now so `byStream`'s ordering contract (committed by `seq` asc, then any
- * seq-less row by `pendingOrder` asc) already holds for rows a sync layer writes directly.
+ * Event log storage. Solo/logged-out contract (Task 16): `append` commits events locally by
+ * assigning each one's `seq` via `nextSeq` inside a single Dexie transaction — no "pending, then
+ * confirm" round trip. Phase 2 Task 6 (`CharacterStore`'s sync seam) is the first real use of the
+ * pending lane this repository's shape was laid down for back then: `appendPending`/
+ * `nextPendingOrder`/`removePending` write and manage seq-less rows at a monotonic `pendingOrder`;
+ * `assignSeqs` (now with an optional partial-prefix `count`) and `appendCommittedAt` move
+ * (respectively: reassign in place, or write fresh already-server-seq'd rows) events into the
+ * committed lane. `byStream`'s ordering contract — committed by `seq` asc, then any seq-less row
+ * by `pendingOrder` asc — holds across every one of these writers.
  */
 @Injectable({ providedIn: 'root' })
 export class EventsRepository {
@@ -89,10 +92,19 @@ export class EventsRepository {
   /**
    * Future sync hook: once a server has ordered this stream's pending (seq-less) events, it
    * assigns their authoritative seqs starting at `startSeq` from `fromId` (inclusive) onward, in
-   * `pendingOrder`. Not exercised by this device's own solo-phase `append`; a `fromId` not found
-   * among the stream's pending rows is a no-op.
+   * `pendingOrder`. `count`, when given, limits the assignment to that many rows starting at
+   * `fromId` — a PARTIAL-prefix ack (`CharacterStore.commitPending`, Phase 2 Task 6: the server
+   * may only have processed a prefix of what this device sent, leaving the rest pending for a
+   * later ack); omitted, it assigns every pending row from `fromId` to the end, as before (Phase
+   * 2's own full-ack case, and every pre-Phase-2 caller/spec). A `fromId` not found among the
+   * stream's pending rows is a no-op.
    */
-  async assignSeqs(stream: string, fromId: string, startSeq: number): Promise<void> {
+  async assignSeqs(
+    stream: string,
+    fromId: string,
+    startSeq: number,
+    count?: number,
+  ): Promise<void> {
     await this.db.transaction('rw', this.db.events, async () => {
       const pending = await this.db.events
         .where('stream')
@@ -101,11 +113,79 @@ export class EventsRepository {
         .sortBy('pendingOrder');
       const fromIndex = pending.findIndex((row) => row.id === fromId);
       if (fromIndex === -1) return;
-      const updates = pending.slice(fromIndex).map((row, i) => {
+      const slice =
+        count === undefined
+          ? pending.slice(fromIndex)
+          : pending.slice(fromIndex, fromIndex + count);
+      const updates = slice.map((row, i) => {
         const seq = startSeq + i;
         return { ...row, seq, json: { ...row.json, seq } };
       });
       await this.db.events.bulkPut(updates);
+    });
+  }
+
+  /**
+   * Appends `events` as PENDING rows (no `seq`) at contiguous `pendingOrder` values starting at
+   * `startOrder` — the sync-mode counterpart to `append` (`CharacterStore.appendTx`'s pending
+   * branch, Phase 2 Task 6, task-6-brief.md). One `'rw'` transaction; rejects — and applies
+   * nothing, the whole transaction aborts — if any `id` already exists, exactly like `append`.
+   */
+  async appendPending(events: readonly Event[], startOrder: number): Promise<void> {
+    if (events.length === 0) return;
+    await this.db.transaction('rw', this.db.events, async () => {
+      const rows: EventRow[] = events.map((event, i) => ({
+        id: event.id,
+        stream: event.stream,
+        pendingOrder: startOrder + i,
+        json: event,
+      }));
+      await this.db.events.bulkAdd(rows);
+    });
+  }
+
+  /** Max `pendingOrder` among `stream`'s pending (seq-less) rows, plus 1 — 0 when there are none
+   * yet. The append-side counterpart to `nextSeq`, for the pending lane. */
+  async nextPendingOrder(stream: string): Promise<number> {
+    const pending = await this.db.events
+      .where('stream')
+      .equals(stream)
+      .filter((row) => row.seq === undefined)
+      .toArray();
+    return pending.reduce((max, row) => Math.max(max, (row.pendingOrder ?? -1) + 1), 0);
+  }
+
+  /**
+   * Deletes `ids` from `stream`'s PENDING rows only — a row sharing one of `ids` that already has
+   * a `seq` (e.g. raced by a concurrent `assignSeqs`/`commitPending`) is left untouched, never
+   * dropped. `CharacterStore.dropPending`'s reject-drop path (Phase 2 Task 6).
+   */
+  async removePending(stream: string, ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    await this.db.events
+      .where('stream')
+      .equals(stream)
+      .filter((row) => row.seq === undefined && idSet.has(row.id))
+      .delete();
+  }
+
+  /**
+   * Appends `events` as COMMITTED rows AT THEIR OWN `seq` — never reassigned via `nextSeq`, unlike
+   * `append` — for events that already carry a server-authoritative seq
+   * (`CharacterStore.applyServerCommit`, Phase 2 Task 6). One `'rw'` transaction; rejects — and
+   * applies nothing — if any `id` already exists (like `append`), or if any event lacks a `seq`.
+   */
+  async appendCommittedAt(events: readonly Event[]): Promise<void> {
+    if (events.length === 0) return;
+    await this.db.transaction('rw', this.db.events, async () => {
+      const rows: EventRow[] = events.map((event) => {
+        if (event.seq === undefined) {
+          throw new Error('EventsRepository.appendCommittedAt: event.seq is required');
+        }
+        return { id: event.id, stream: event.stream, seq: event.seq, json: event };
+      });
+      await this.db.events.bulkAdd(rows);
     });
   }
 }

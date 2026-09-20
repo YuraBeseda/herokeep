@@ -141,6 +141,154 @@ describe('EventsRepository', () => {
     expect(rowC?.json.seq).toBe(6);
   });
 
+  // --- pending-write helpers (Phase 2 Task 6 — CharacterStore sync seam) ---------------------
+
+  describe('appendPending', () => {
+    it('writes seq-less rows at contiguous pendingOrder from startOrder, ordered after committed by byStream', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const committedId = uuid(80);
+      const pendingIdA = uuid(81);
+      const pendingIdB = uuid(82);
+      await repo.append([mkEvent(committedId, streamA, 'note.added')]);
+
+      await repo.appendPending(
+        [
+          mkEvent(pendingIdA, streamA, 'note.updated'),
+          mkEvent(pendingIdB, streamA, 'note.updated'),
+        ],
+        0,
+      );
+
+      const events = await repo.byStream(streamA);
+      expect(events.map((e) => e.id)).toEqual([committedId, pendingIdA, pendingIdB]);
+      expect(events[1]?.seq).toBeUndefined();
+      expect(events[2]?.seq).toBeUndefined();
+
+      const db = TestBed.inject(HkDb);
+      expect((await db.events.get(pendingIdA))?.pendingOrder).toBe(0);
+      expect((await db.events.get(pendingIdB))?.pendingOrder).toBe(1);
+    });
+
+    it('rejects — and applies nothing — when an id already exists, like append', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const id = uuid(83);
+      await repo.appendPending([mkEvent(id, streamA, 'note.added')], 0);
+
+      await expect(repo.appendPending([mkEvent(id, streamA, 'note.added')], 5)).rejects.toThrow();
+
+      const events = await repo.byStream(streamA);
+      expect(events).toHaveLength(1);
+    });
+  });
+
+  describe('nextPendingOrder', () => {
+    it('is 0 for a stream with no pending rows, and max+1 otherwise', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      expect(await repo.nextPendingOrder(streamA)).toBe(0);
+
+      await repo.appendPending([mkEvent(uuid(84), streamA, 'note.added')], 0);
+      expect(await repo.nextPendingOrder(streamA)).toBe(1);
+
+      await repo.appendPending([mkEvent(uuid(85), streamA, 'note.updated')], 1);
+      expect(await repo.nextPendingOrder(streamA)).toBe(2);
+    });
+
+    it('ignores committed rows entirely', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      await repo.append([mkEvent(uuid(86), streamA, 'note.added')]);
+      expect(await repo.nextPendingOrder(streamA)).toBe(0);
+    });
+  });
+
+  describe('removePending', () => {
+    it('deletes only the named ids that are still pending, leaving committed rows and other ids untouched', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const committedId = uuid(87);
+      const keepId = uuid(88);
+      const dropId = uuid(89);
+      await repo.append([mkEvent(committedId, streamA, 'note.added')]);
+      await repo.appendPending(
+        [mkEvent(keepId, streamA, 'note.updated'), mkEvent(dropId, streamA, 'note.updated')],
+        0,
+      );
+
+      await repo.removePending(streamA, [dropId, committedId]); // committedId must be ignored — it has a seq
+
+      const events = await repo.byStream(streamA);
+      expect(events.map((e) => e.id)).toEqual([committedId, keepId]);
+    });
+
+    it('leaves other streams untouched', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const id = uuid(90);
+      await repo.appendPending([mkEvent(id, streamB, 'note.added')], 0);
+
+      await repo.removePending(streamA, [id]);
+
+      expect(await repo.byStream(streamB)).toHaveLength(1);
+    });
+  });
+
+  describe('appendCommittedAt', () => {
+    it('writes rows at their OWN given seq, never renumbering via nextSeq', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const idA = uuid(91);
+      const idB = uuid(92);
+
+      await repo.appendCommittedAt([
+        mkEvent(idA, streamA, 'note.added', { seq: 7 }),
+        mkEvent(idB, streamA, 'note.updated', { seq: 8 }),
+      ]);
+
+      const events = await repo.byStream(streamA);
+      expect(events.map((e) => ({ id: e.id, seq: e.seq }))).toEqual([
+        { id: idA, seq: 7 },
+        { id: idB, seq: 8 },
+      ]);
+    });
+
+    it('rejects — and applies nothing — when an id already exists', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const id = uuid(93);
+      await repo.append([mkEvent(id, streamA, 'note.added')]);
+
+      await expect(
+        repo.appendCommittedAt([mkEvent(id, streamA, 'note.added', { seq: 99 })]),
+      ).rejects.toThrow();
+    });
+
+    it('throws when an event lacks a seq', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      await expect(
+        repo.appendCommittedAt([mkEvent(uuid(94), streamA, 'note.added')]),
+      ).rejects.toThrow(/seq/);
+    });
+  });
+
+  describe('assignSeqs with a count (partial-prefix ack)', () => {
+    it('assigns only the first `count` pending rows from fromId, leaving the rest pending', async () => {
+      const repo = TestBed.inject(EventsRepository);
+      const db = TestBed.inject(HkDb);
+      const idA = uuid(95);
+      const idB = uuid(96);
+      const idC = uuid(97);
+      await repo.appendPending(
+        [
+          mkEvent(idA, streamA, 'note.added'),
+          mkEvent(idB, streamA, 'note.updated'),
+          mkEvent(idC, streamA, 'note.removed'),
+        ],
+        0,
+      );
+
+      await repo.assignSeqs(streamA, idA, 10, 2);
+
+      expect((await db.events.get(idA))?.seq).toBe(10);
+      expect((await db.events.get(idB))?.seq).toBe(11);
+      expect((await db.events.get(idC))?.seq).toBeUndefined();
+    });
+  });
+
   // --- replaceStream (plan-6 Task 10 — `.hero` import merge-by-id) -------------------------
 
   describe('replaceStream', () => {

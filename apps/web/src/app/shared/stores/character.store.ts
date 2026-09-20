@@ -55,6 +55,26 @@ export class CharacterStoreNotLeaderError extends Error {
   }
 }
 
+/**
+ * Thrown by `applyServerCommit` when the incoming server-seq'd events (after deduping echoes)
+ * don't start at exactly `expectedSeq` (the local committed head + 1), and by `commitPending` when
+ * an ack's ids/seqs don't match the pending prefix they claim to commit — in both cases NOTHING is
+ * written first. `StreamSyncSession` (T8) catches this and re-`hello`s the stream instead of
+ * guessing a repair.
+ */
+export class SyncGapError extends Error {
+  constructor(
+    readonly streamId: string,
+    readonly expectedSeq: number,
+    readonly receivedSeq: number | undefined,
+  ) {
+    super(
+      `SyncGapError: stream ${streamId} expected seq ${expectedSeq}, got ${receivedSeq ?? 'undefined'}`,
+    );
+    this.name = 'SyncGapError';
+  }
+}
+
 const SNAPSHOT_EVERY = 100;
 
 /**
@@ -91,6 +111,24 @@ const SNAPSHOT_EVERY = 100;
  * character, a DM adjustment) — it records dice as spent but never heals. Passing both for the
  * same dice during a normal rest double-spends them; plan 6's rest UI must use
  * `propose.spendHitDie` per die and leave `rest.taken.hitDiceSpent` unset for the ordinary case.
+ *
+ * Sync seam (Phase 2 Task 6, design ruling 1): sync STATE lives in `SyncService`, not here — this
+ * store only exposes a minimal per-stream MODE flag (`enterSyncMode`/`leaveSyncMode`, an in-memory
+ * `Set`) and a small apply surface. Logged-out / non-syncing streams are UNCHANGED: `appendTx`/
+ * `revert` still write straight to the committed lane via `EventsRepository.append`, exactly as
+ * before this task. Once `enterSyncMode(streamId)` is on for the CURRENTLY LOADED stream (this
+ * store only ever has one stream loaded — mode checks are inherently per-loaded-stream), the SAME
+ * two methods instead write seq-less PENDING rows (`EventsRepository.appendPending`, a monotonic
+ * `pendingOrder`) and fire `onLocalAppend` once the write has committed, so `SyncService` can ship
+ * them. `applyServerCommit`/`commitPending`/`dropPending`/`resetStreamFromServer` are the other
+ * half — server-driven applies for ANY stream (not necessarily the loaded one): they always
+ * persist to storage and keep `CharactersRepository`'s Library-index row current, but only touch
+ * this store's live `events`/`facts` signals when the target stream happens to be the loaded one
+ * (see `refreshFromStorage`'s own doc). R-pf2 finding: `@hk/engine`'s `reduce` ALREADY orders
+ * seq-less (pending) events after every seq'd (committed) one and never lets them advance
+ * `facts.lastSeq` (`reducer.ts`'s `orderEvents` + its main loop) — no transient/stamped seq is
+ * needed anywhere in this seam; the exact same `applyAppended` helper the committed path always
+ * used is reused verbatim for pending appends too.
  */
 @Injectable({ providedIn: 'root' })
 export class CharacterStore {
@@ -112,6 +150,12 @@ export class CharacterStore {
   private lastSnapshotSeq = 0;
   private deviceIdPromise: Promise<string> | undefined;
   private persistRequested = false;
+
+  // Sync seam (Phase 2 Task 6, class doc): streamIds `appendTx`/`revert` currently write as
+  // PENDING rather than committed. Deliberately just a flag set, per design ruling 1 — no sync
+  // state (sockets, backoff, quotas, …) lives here.
+  private readonly syncModeStreams = new Set<string>();
+  private readonly localAppendListeners = new Set<(streamId: string, events: Event[]) => void>();
 
   // Serializes every mutating call's actual read/reduce/write work (see `enqueue`'s doc).
   private queue: Promise<void> = Promise.resolve();
@@ -238,7 +282,15 @@ export class CharacterStore {
    * against the currently loaded stream, sharing one `txId` when there is more than one — then
    * incrementally re-derives facts, upserts the library index row, and snapshots per policy.
    * `event.reverted` drafts are refused here — they must go through `revert()`, the only method
-   * that also invalidates the stream's cached snapshot. */
+   * that also invalidates the stream's cached snapshot.
+   *
+   * Sync seam (Phase 2 Task 6, class doc): when `enterSyncMode(streamId)` is on for the loaded
+   * stream, this writes PENDING rows (`EventsRepository.appendPending`, no `seq`) instead and
+   * notifies `onLocalAppend` listeners once that write has committed — every other consequence
+   * (incremental `reduce`, the library-index upsert, the snapshot policy) is the SAME
+   * `applyAppended` call either way (R-pf2: `reduce` already treats seq-less events correctly, no
+   * special-casing needed). Not syncing (the default, and every pre-Task-6 caller/spec) is
+   * byte-identical to before this task. */
   async appendTx(drafts: ProposedEvent[] | DraftEvent[]): Promise<void> {
     this.assertLeader();
     if (drafts.length === 0) return;
@@ -250,14 +302,29 @@ export class CharacterStore {
 
     return this.enqueue(async () => {
       const streamId = this.requireStream('appendTx');
-
       const txId = drafts.length > 1 ? uuidv7() : undefined;
       const actor = await this.actor();
-      let seq = await this.eventsRepository.nextSeq(streamId);
 
+      if (this.syncModeStreams.has(streamId)) {
+        const startOrder = await this.eventsRepository.nextPendingOrder(streamId);
+        const events: Event[] = drafts.map((draft) => {
+          const raw = this.envelope(streamId, actor, draft.type, draft.v, draft.payload, { txId });
+          return this.validate(raw, draft.type, draft.v);
+        });
+
+        await this.eventsRepository.appendPending(events, startOrder);
+        await this.applyAppended(streamId, events);
+        this.notifyLocalAppend(streamId, events);
+        return;
+      }
+
+      let seq = await this.eventsRepository.nextSeq(streamId);
       const events: Event[] = [];
       for (const draft of drafts) {
-        const raw = this.envelope(streamId, seq++, actor, draft.type, draft.v, draft.payload, txId);
+        const raw = this.envelope(streamId, actor, draft.type, draft.v, draft.payload, {
+          seq: seq++,
+          txId,
+        });
         events.push(this.validate(raw, draft.type, draft.v));
       }
 
@@ -269,23 +336,38 @@ export class CharacterStore {
   /** Appends an `event.reverted` targeting `target.eventId` or every event sharing `target.txId`,
    * drops the stream's cached snapshot (it may hide the reverted target — see class doc), and
    * fully replays from `EventsRepository.byStream` so `facts`/`sheet` land back where they'd be
-   * had the reverted event(s) never happened. */
+   * had the reverted event(s) never happened.
+   *
+   * Sync seam (Phase 2 Task 6): the `event.reverted` event ITSELF goes through the same pending-
+   * vs-committed fork `appendTx` uses — when `enterSyncMode(streamId)` is on, it is written as a
+   * pending row and `onLocalAppend` fires for it (a revert is just an append on the wire, per
+   * design ruling 1); otherwise this is the exact same committed write as before this task. */
   async revert(target: { eventId?: string; txId?: string }, reason?: string): Promise<void> {
     this.assertLeader();
 
     return this.enqueue(async () => {
       const streamId = this.requireStream('revert');
       const actor = await this.actor();
-      const seq = await this.eventsRepository.nextSeq(streamId);
       const payload: EventReverted = {
         ...(target.eventId !== undefined ? { targetId: target.eventId } : {}),
         ...(target.txId !== undefined ? { txId: target.txId } : {}),
         ...(reason !== undefined ? { reason } : {}),
       };
-      const raw = this.envelope(streamId, seq, actor, 'event.reverted', 1, payload);
-      const event = this.validate(raw, 'event.reverted', 1);
 
-      await this.eventsRepository.append([event]);
+      const syncing = this.syncModeStreams.has(streamId);
+      let event: Event;
+      if (syncing) {
+        const order = await this.eventsRepository.nextPendingOrder(streamId);
+        const raw = this.envelope(streamId, actor, 'event.reverted', 1, payload);
+        event = this.validate(raw, 'event.reverted', 1);
+        await this.eventsRepository.appendPending([event], order);
+      } else {
+        const seq = await this.eventsRepository.nextSeq(streamId);
+        const raw = this.envelope(streamId, actor, 'event.reverted', 1, payload, { seq });
+        event = this.validate(raw, 'event.reverted', 1);
+        await this.eventsRepository.append([event]);
+      }
+
       await this.snapshotsRepository.remove(streamId);
       this.lastSnapshotSeq = 0;
 
@@ -295,6 +377,160 @@ export class CharacterStore {
       this.eventsState.set(events);
       this.factsState.set(facts);
       await this.charactersRepository.upsertFromFacts(streamId, facts);
+
+      if (syncing) this.notifyLocalAppend(streamId, [event]);
+    });
+  }
+
+  // --- sync seam (Phase 2 Task 6, class doc) --------------------------------------------------
+
+  /** Turns on the PENDING-write fork of `appendTx`/`revert` for `streamId` — a no-op if already
+   * on. Only takes effect once `streamId` is this store's currently loaded stream (it only ever
+   * appends to that one), so enabling it ahead of `load()` is harmless. */
+  enterSyncMode(streamId: string): void {
+    this.syncModeStreams.add(streamId);
+  }
+
+  /** Turns the PENDING-write fork back off for `streamId` — a subsequent `appendTx`/`revert`
+   * reverts to today's local-committed behavior, byte-identical to logged-out mode. Any pending
+   * rows already written for `streamId` are deliberately left exactly as they are (the plan's own
+   * logout semantics): they are not flushed, dropped, or otherwise touched here — they simply
+   * sync on next login via the same rows and `pendingOrder`. */
+  leaveSyncMode(streamId: string): void {
+    this.syncModeStreams.delete(streamId);
+  }
+
+  /** `SyncService` (T8) subscribes here to ship every pending batch a syncing stream's `appendTx`/
+   * `revert` produces. Fires once, AFTER those events are durably written and this store's own
+   * signals updated — never before, so a listener that turns around and reads storage on the same
+   * tick sees them. Returns an unsubscribe function. */
+  onLocalAppend(cb: (streamId: string, events: Event[]) => void): () => void {
+    this.localAppendListeners.add(cb);
+    return () => this.localAppendListeners.delete(cb);
+  }
+
+  /**
+   * Applies events that already carry SERVER-assigned seqs (`StreamSyncSession`'s `events` frame,
+   * T8) — the counterpart to `commitPending` for content this device never produced locally.
+   * Dedupes by id first (an echo of something this device already has, committed OR still
+   * pending, is silently skipped — never rewritten), THEN verifies the surviving fresh events are
+   * strictly contiguous starting at the local committed head + 1; any gap throws `SyncGapError`
+   * WITHOUT writing anything, so `StreamSyncSession` can re-`hello` instead of guessing. On
+   * success the fresh events are written at THEIR OWN seqs (`EventsRepository.appendCommittedAt`
+   * — unlike `append`, it never reassigns one) and folded in exactly like `appendTx`'s own
+   * committed path (`applyAppended`) when `streamId` is the currently loaded stream; a background
+   * stream (open in no tab right now) still gets its Library index row refreshed
+   * (`refreshFromStorage`), just no live signal update.
+   */
+  async applyServerCommit(streamId: string, events: Event[]): Promise<void> {
+    this.assertLeader();
+    return this.runExclusive(async () => {
+      if (events.length === 0) return;
+
+      const existing = await this.eventsRepository.byStream(streamId);
+      const existingIds = new Set(existing.map((e) => e.id));
+      const head = existing.reduce(
+        (max, e) => (e.seq !== undefined ? Math.max(max, e.seq) : max),
+        0,
+      );
+
+      const fresh = [...events]
+        .filter((e) => !existingIds.has(e.id))
+        .sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+
+      let expected = head + 1;
+      for (const e of fresh) {
+        if (e.seq !== expected) throw new SyncGapError(streamId, expected, e.seq);
+        expected++;
+      }
+      if (fresh.length === 0) return;
+
+      await this.eventsRepository.appendCommittedAt(fresh);
+
+      if (this.streamIdState() === streamId) {
+        await this.applyAppended(streamId, fresh);
+      } else {
+        await this.refreshFromStorage(streamId);
+      }
+    });
+  }
+
+  /**
+   * Transitions the FIRST `ackResults.length` pending rows of `streamId` (in `pendingOrder`) to
+   * committed at their server-assigned seqs — `StreamSyncSession`'s `ack` frame, T8. A PARTIAL ack
+   * (the server has only processed a prefix of what this device sent) is the normal case, not an
+   * edge case: `ackResults` names exactly the prefix being committed now; any pending rows after
+   * it are left pending for a later ack. Verifies, before writing anything: (1) each
+   * `ackResults[i].id` matches the i-th pending row's id (the ack must name a genuine prefix, in
+   * order); (2) `ackResults[*].seq` are themselves contiguous; (3) the first assigned seq is
+   * exactly the local committed head + 1. Any violation throws `SyncGapError` and commits nothing,
+   * so `StreamSyncSession` can re-`hello` instead of trusting a desynced ack. Design ruling 2: a
+   * steady-state ack at the expected seq keeps the stream's cached snapshot (no `remove` call
+   * here, unlike `dropPending`/`resetStreamFromServer`) — `refreshFromStorage` resumes from it.
+   * The events' CONTENT and relative order are unchanged (only their `seq` field gains a value),
+   * so the domain facts they produce (name, hp, inventory, …) are unchanged too — only
+   * seq-tracking bookkeeping (`facts.lastSeq`) legitimately advances.
+   */
+  async commitPending(streamId: string, ackResults: { id: string; seq: number }[]): Promise<void> {
+    this.assertLeader();
+    return this.runExclusive(async () => {
+      if (ackResults.length === 0) return;
+
+      const rows = await this.eventsRepository.byStream(streamId);
+      const pending = rows.filter((e) => e.seq === undefined);
+      const head = rows.reduce((max, e) => (e.seq !== undefined ? Math.max(max, e.seq) : max), 0);
+
+      for (const [i, ack] of ackResults.entries()) {
+        if (pending[i]?.id !== ack.id) throw new SyncGapError(streamId, head + 1 + i, ack.seq);
+      }
+      const startSeq = ackResults[0].seq;
+      for (const [i, ack] of ackResults.entries()) {
+        if (ack.seq !== startSeq + i) throw new SyncGapError(streamId, startSeq + i, ack.seq);
+      }
+      if (startSeq !== head + 1) throw new SyncGapError(streamId, head + 1, startSeq);
+
+      await this.eventsRepository.assignSeqs(
+        streamId,
+        ackResults[0].id,
+        startSeq,
+        ackResults.length,
+      );
+      await this.refreshFromStorage(streamId);
+    });
+  }
+
+  /**
+   * A `reject` frame (T8) names pending events the server refused (`forbidden`, a poisoned
+   * payload, quota, …). Deletes exactly those rows — only among rows STILL pending, so a row
+   * acked in the same race is left alone, never dropped (`EventsRepository.removePending`'s own
+   * guard) — then, design ruling 2, drops the stream's cached snapshot and fully replays from
+   * `EventsRepository.byStream` so `facts`/`sheet` land where they'd be had the dropped event(s)
+   * never happened, the same contract `revert()` already keeps.
+   */
+  async dropPending(streamId: string, ids: string[]): Promise<void> {
+    this.assertLeader();
+    return this.runExclusive(async () => {
+      if (ids.length === 0) return;
+      await this.eventsRepository.removePending(streamId, ids);
+      await this.snapshotsRepository.remove(streamId);
+      if (this.streamIdState() === streamId) this.lastSnapshotSeq = 0;
+      await this.refreshFromStorage(streamId);
+    });
+  }
+
+  /**
+   * Restore-on-new-device (T8): overwrites `streamId`'s ENTIRE local history with the server's,
+   * verbatim (`EventsRepository.replaceStream`), then — ruling 2, same contract as
+   * `dropPending`/`revert()` — drops the cached snapshot and fully replays. Also covers the
+   * (should-be-rare) seq-rewrite case the mode-transition upload flow's contract tolerates.
+   */
+  async resetStreamFromServer(streamId: string, events: Event[]): Promise<void> {
+    this.assertLeader();
+    return this.runExclusive(async () => {
+      await this.eventsRepository.replaceStream(streamId, events);
+      await this.snapshotsRepository.remove(streamId);
+      if (this.streamIdState() === streamId) this.lastSnapshotSeq = 0;
+      await this.refreshFromStorage(streamId);
     });
   }
 
@@ -309,6 +545,7 @@ export class CharacterStore {
     this.assertLeader();
 
     return this.enqueue(async () => {
+      this.syncModeStreams.delete(characterId);
       await Promise.all([
         this.charactersRepository.remove(characterId),
         this.snapshotsRepository.remove(characterId),
@@ -432,24 +669,27 @@ export class CharacterStore {
     return new Date().toISOString();
   }
 
+  /** `seq` omitted (or `undefined`) envelopes a PENDING event — the `EventEnvelopeSchema`'s `seq`
+   * is itself optional (`packages/protocol/src/events/envelope.ts`), so this is a valid `Event`
+   * either way; the caller decides which repository writer (`append`/`appendCommittedAt` vs
+   * `appendPending`) actually persists it. */
   private envelope(
     stream: string,
-    seq: number,
     actor: Event['actor'],
     type: string,
     v: number,
     payload: unknown,
-    txId?: string,
+    opts: { seq?: number; txId?: string } = {},
   ): unknown {
     return {
       id: uuidv7(),
       stream,
-      seq,
+      ...(opts.seq !== undefined ? { seq: opts.seq } : {}),
       ts: this.timestamp(),
       actor,
       type,
       v,
-      ...(txId !== undefined ? { txId } : {}),
+      ...(opts.txId !== undefined ? { txId: opts.txId } : {}),
       payload,
     };
   }
@@ -462,7 +702,7 @@ export class CharacterStore {
   ): Promise<Event> {
     const seq = await this.eventsRepository.nextSeq(stream);
     const actor = await this.actor();
-    const raw = this.envelope(stream, seq, actor, type, v, payload);
+    const raw = this.envelope(stream, actor, type, v, payload, { seq });
     return this.validate(raw, type, v);
   }
 
@@ -478,7 +718,11 @@ export class CharacterStore {
   /** Incrementally reduces newly-appended `events` on top of the current in-memory facts (safe
    * because `appendTx` never itself appends an `event.reverted` — see class doc), updates the
    * library index row, and writes a snapshot once more than `SNAPSHOT_EVERY` events have
-   * accumulated since the last one. */
+   * accumulated since the last one. Reused VERBATIM for both lanes of the sync seam (Phase 2 Task
+   * 6): `appendTx`'s pending branch (`events` seq-less) and `applyServerCommit`'s success path
+   * (`events` freshly committed at their own server seqs) — `reduce` already orders/handles
+   * seq-less events correctly (R-pf2, class doc), so this needs no special-casing either way.
+   * Callers own writing `events` to storage FIRST — this only updates in-memory state + indexes. */
   private async applyAppended(streamId: string, events: Event[]): Promise<void> {
     const rules = this.systemRules();
     const currentFacts = this.factsState();
@@ -490,6 +734,47 @@ export class CharacterStore {
     this.factsState.set(facts);
     this.eventsState.update((existing) => [...existing, ...events]);
     await this.charactersRepository.upsertFromFacts(streamId, facts);
+
+    if (facts.lastSeq - this.lastSnapshotSeq > SNAPSHOT_EVERY) {
+      await this.snapshotsRepository.put(streamId, {
+        seq: facts.lastSeq,
+        facts,
+        engineVersion: ENGINE_VERSION,
+        rules,
+      });
+      this.lastSnapshotSeq = facts.lastSeq;
+    }
+  }
+
+  private notifyLocalAppend(streamId: string, events: Event[]): void {
+    for (const cb of this.localAppendListeners) cb(streamId, events);
+  }
+
+  /**
+   * Recomputes `streamId`'s facts from storage (its cached snapshot, if any valid one remains,
+   * plus every committed-then-pending event on top — a FULL replay when no snapshot is cached,
+   * e.g. right after `dropPending`/`resetStreamFromServer` removed it) and ALWAYS refreshes its
+   * `CharactersRepository` Library-index row: that must stay current for every stream this device
+   * syncs, not just whichever one happens to be open in this tab. Only touches this store's LIVE
+   * signals (`events`/`facts`, `lastSnapshotSeq`, and the `SNAPSHOT_EVERY` policy) when `streamId`
+   * is the currently loaded stream — a background stream's storage is updated but this tab's UI
+   * (showing a different character, if any) is left alone, the same one-stream-at-a-time
+   * discipline `applyAppended`/`loadNow` already keep.
+   */
+  private async refreshFromStorage(streamId: string): Promise<void> {
+    const [events, snapshot] = await Promise.all([
+      this.eventsRepository.byStream(streamId),
+      this.snapshotsRepository.get(streamId),
+    ]);
+    const rules = this.systemRules();
+    const facts = reduce(events, snapshot, rules);
+    await this.charactersRepository.upsertFromFacts(streamId, facts);
+
+    if (this.streamIdState() !== streamId) return;
+
+    this.eventsState.set(events);
+    this.factsState.set(facts);
+    this.lastSnapshotSeq = snapshot?.seq ?? 0;
 
     if (facts.lastSeq - this.lastSnapshotSeq > SNAPSHOT_EVERY) {
       await this.snapshotsRepository.put(streamId, {

@@ -15,7 +15,7 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import { PackStore } from '@shared/stores/pack.store';
-import { CharacterStore, CharacterStoreNotLeaderError } from './character.store';
+import { CharacterStore, CharacterStoreNotLeaderError, SyncGapError } from './character.store';
 
 // The `pretest` script (apps/web/package.json) runs `pnpm --filter @hk/content build:pack` first,
 // so the real built pack is always on disk before this file runs — same fixture-loading approach
@@ -544,5 +544,306 @@ describe('CharacterStore', () => {
     const before = store.facts();
     await store.reloadIfCurrent('char:00000000-0000-4000-8000-000000000000');
     expect(store.facts()).toBe(before);
+  });
+
+  // --- Phase 2 Task 6: sync seam (pending rows + server-apply surface) -----------------------
+
+  describe('sync seam', () => {
+    it('appendTx writes seq-less pending rows once enterSyncMode is on, and the sheet reflects them immediately', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+
+      await store.appendTx([
+        { type: 'character.renamed', v: 1, payload: { name: 'Pending Name' } },
+      ]);
+
+      expect(store.facts()?.name).toBe('Pending Name');
+      expect(store.sheet()?.name).toBe('Pending Name');
+      const last = store.events().at(-1);
+      expect(last?.type).toBe('character.renamed');
+      expect(last?.seq).toBeUndefined();
+
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.at(-1)?.seq).toBeUndefined();
+    });
+
+    it('onLocalAppend fires with the pending events after the write has committed, and not for non-syncing streams', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+
+      const calls: { streamId: string; events: unknown[] }[] = [];
+      const unsubscribe = store.onLocalAppend((sid, events) =>
+        calls.push({ streamId: sid, events }),
+      );
+
+      // Not syncing yet — appendTx must NOT notify.
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Not synced' } }]);
+      expect(calls).toHaveLength(0);
+
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Synced' } }]);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.streamId).toBe(streamId);
+      expect(calls[0]?.events).toHaveLength(1);
+
+      // The row must already be durably written by the time the listener fires.
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.at(-1)?.seq).toBeUndefined();
+
+      unsubscribe();
+      await store.appendTx([
+        { type: 'character.renamed', v: 1, payload: { name: 'After unsubscribe' } },
+      ]);
+      expect(calls).toHaveLength(1); // still 1 — unsubscribed
+    });
+
+    it('leaveSyncMode returns appendTx to local-committed writes, byte-identical to logged-out mode', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Pending' } }]);
+      expect(store.events().at(-1)?.seq).toBeUndefined();
+
+      store.leaveSyncMode(streamId);
+      await store.appendTx([
+        { type: 'character.renamed', v: 1, payload: { name: 'Committed Again' } },
+      ]);
+
+      const last = store.events().at(-1);
+      expect(last?.type).toBe('character.renamed');
+      expect(last?.seq).toBeDefined();
+      expect(store.facts()?.name).toBe('Committed Again');
+
+      // The earlier "Pending" row is still pending (leaveSyncMode never touches it — see its own
+      // doc), so `byStream`'s committed-then-pending ordering puts it AFTER this newly-committed
+      // row; look it up by id rather than assuming array position.
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === last!.id)?.seq).toBeDefined();
+      expect(persisted.filter((e) => e.seq === undefined)).toHaveLength(1); // the earlier "Pending" row
+    });
+
+    it('revert() goes through the pending path when syncing: the reverted event itself is seq-less, and onLocalAppend fires for it', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      const nameBeforeRename = store.facts()?.name;
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Interim' } }]);
+      const targetId = store.events().at(-1)!.id;
+
+      const calls: unknown[] = [];
+      store.onLocalAppend((_sid, events) => calls.push(...events));
+
+      await store.revert({ eventId: targetId }, 'test revert while syncing');
+
+      expect(store.facts()?.name).toBe(nameBeforeRename);
+      const revertEvent = store.events().at(-1);
+      expect(revertEvent?.type).toBe('event.reverted');
+      expect(revertEvent?.seq).toBeUndefined();
+      expect(calls).toHaveLength(1);
+    });
+
+    it('commitPending: a full ack commits the pending rows at their server seqs; sheet/domain facts are unchanged', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Synced Name' } }]);
+      const pendingEvent = store.events().at(-1)!;
+      const sheetBefore = store.sheet();
+
+      await store.commitPending(streamId, [{ id: pendingEvent.id, seq: 2 }]);
+
+      expect(store.sheet()).toEqual(sheetBefore);
+      expect(store.facts()?.name).toBe('Synced Name');
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      const committed = persisted.find((e) => e.id === pendingEvent.id);
+      expect(committed?.seq).toBe(2);
+    });
+
+    it('commitPending: a PARTIAL prefix ack commits only the acked rows, leaving the rest pending', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+      await store.appendTx([
+        { type: 'character.renamed', v: 1, payload: { name: 'One' } },
+        { type: 'character.renamed', v: 1, payload: { name: 'Two' } },
+        { type: 'character.renamed', v: 1, payload: { name: 'Three' } },
+      ]);
+      const persistedBefore = await TestBed.inject(EventsRepository).byStream(streamId);
+      const pending = persistedBefore.filter((e) => e.seq === undefined);
+      expect(pending).toHaveLength(3);
+
+      await store.commitPending(streamId, [{ id: pending[0].id, seq: 2 }]);
+
+      const persistedAfter = await TestBed.inject(EventsRepository).byStream(streamId);
+      const stillPending = persistedAfter.filter((e) => e.seq === undefined);
+      expect(stillPending.map((e) => e.id)).toEqual([pending[1].id, pending[2].id]);
+      const nowCommitted = persistedAfter.find((e) => e.id === pending[0].id);
+      expect(nowCommitted?.seq).toBe(2);
+      // Facts still reflect ALL three renames (two of them still pending) — the ack didn't lose data.
+      expect(store.facts()?.name).toBe('Three');
+    });
+
+    it('commitPending throws SyncGapError on an ack-seq mismatch, and writes nothing', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Pending' } }]);
+      const pendingEvent = store.events().at(-1)!;
+
+      // Local committed head is 1 (character.created); expected next seq is 2 — 99 is wrong.
+      await expect(
+        store.commitPending(streamId, [{ id: pendingEvent.id, seq: 99 }]),
+      ).rejects.toThrow(SyncGapError);
+
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === pendingEvent.id)?.seq).toBeUndefined();
+    });
+
+    it('dropPending removes the named pending rows, drops the snapshot, and replays without them', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      const nameBeforePending = store.facts()?.name;
+      store.enterSyncMode(streamId);
+      await store.appendTx([
+        { type: 'character.renamed', v: 1, payload: { name: 'Rejected Name' } },
+      ]);
+      const rejectedId = store.events().at(-1)!.id;
+
+      const snapshotsRepository = TestBed.inject(SnapshotsRepository);
+      const removeSpy = vi.spyOn(snapshotsRepository, 'remove');
+
+      await store.dropPending(streamId, [rejectedId]);
+
+      expect(removeSpy).toHaveBeenCalledWith(streamId);
+      expect(store.facts()?.name).toBe(nameBeforePending);
+      expect(store.events().some((e) => e.id === rejectedId)).toBe(false);
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.some((e) => e.id === rejectedId)).toBe(false);
+    });
+
+    it('applyServerCommit appends events at their given server seqs and updates the sheet', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      const actor = store.events()[0].actor;
+
+      const serverEvent = {
+        id: '22222222-2222-4222-8222-222222222222',
+        stream: streamId,
+        seq: 2,
+        ts: new Date().toISOString(),
+        actor,
+        type: 'character.renamed',
+        v: 1,
+        payload: { name: 'From Server' },
+      };
+
+      await store.applyServerCommit(streamId, [serverEvent]);
+
+      expect(store.facts()?.name).toBe('From Server');
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === serverEvent.id)?.seq).toBe(2);
+    });
+
+    it('applyServerCommit dedupes an echo of an already-committed event silently', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      const actor = store.events()[0].actor;
+
+      const serverEvent = {
+        id: '33333333-3333-4333-8333-333333333333',
+        stream: streamId,
+        seq: 2,
+        ts: new Date().toISOString(),
+        actor,
+        type: 'character.renamed',
+        v: 1,
+        payload: { name: 'Echoed' },
+      };
+      await store.applyServerCommit(streamId, [serverEvent]);
+      expect(store.facts()?.name).toBe('Echoed');
+
+      // The exact same event arrives again (a genuine echo) — must be a silent no-op, no crash.
+      await expect(store.applyServerCommit(streamId, [serverEvent])).resolves.toBeUndefined();
+
+      expect(store.facts()?.name).toBe('Echoed');
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.filter((e) => e.id === serverEvent.id)).toHaveLength(1);
+    });
+
+    it('applyServerCommit throws SyncGapError without writing when the incoming seq skips ahead of the local head', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      const actor = store.events()[0].actor;
+
+      const gappy = {
+        id: '44444444-4444-4444-8444-444444444444',
+        stream: streamId,
+        seq: 5, // local head is 1 (character.created); expected next is 2
+        ts: new Date().toISOString(),
+        actor,
+        type: 'character.renamed',
+        v: 1,
+        payload: { name: 'Too Far' },
+      };
+
+      await expect(store.applyServerCommit(streamId, [gappy])).rejects.toThrow(SyncGapError);
+
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.some((e) => e.id === gappy.id)).toBe(false);
+      expect(store.facts()?.name).toBe('Aria');
+    });
+
+    it('resetStreamFromServer rebuilds the stream from a fresh server event array', async () => {
+      const store = TestBed.inject(CharacterStore);
+      const streamId = await store.create('Aria', 'feminine');
+      await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Local Only' } }]);
+      const actor = store.events()[0].actor;
+
+      const restored = [
+        {
+          id: '55555555-5555-4555-8555-555555555555',
+          stream: streamId,
+          seq: 1,
+          ts: new Date().toISOString(),
+          actor,
+          type: 'character.created',
+          v: 1,
+          payload: {
+            name: 'Restored',
+            system: store.facts()?.system,
+            corePack: { id: corePack.id, version: corePack.version },
+            engineVersion: ENGINE_VERSION,
+            grammaticalGender: 'feminine',
+          },
+        },
+      ];
+
+      await store.resetStreamFromServer(streamId, restored);
+
+      expect(store.facts()?.name).toBe('Restored');
+      expect(store.events()).toHaveLength(1);
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.map((e) => e.id)).toEqual([restored[0].id]);
+    });
+
+    it('rejects the four server-apply methods and enterSyncMode-gated appends when this tab is not the leader', async () => {
+      installStubLocks();
+      const otherTab = TestBed.runInInjectionContext(() => new LeaderService());
+      await otherTab.acquire();
+
+      const store = TestBed.inject(CharacterStore);
+      const streamId = 'char:00000000-0000-4000-8000-000000000099';
+
+      await expect(store.applyServerCommit(streamId, [])).rejects.toThrow(
+        CharacterStoreNotLeaderError,
+      );
+      await expect(store.commitPending(streamId, [])).rejects.toThrow(CharacterStoreNotLeaderError);
+      await expect(store.dropPending(streamId, [])).rejects.toThrow(CharacterStoreNotLeaderError);
+      await expect(store.resetStreamFromServer(streamId, [])).rejects.toThrow(
+        CharacterStoreNotLeaderError,
+      );
+    });
   });
 });
