@@ -12,16 +12,26 @@ import {
   addUsage,
   burnRecoveryCode,
   countCharactersForOwner,
+  countMembers,
+  createCampaign,
+  findCampaignByJoinCode,
+  findMembership,
   findSessionByTokenHash,
   findUnusedRecoveryCode,
   findUserByFoldedName,
+  insertMembership,
   insertRecoveryCodes,
   insertSession,
   insertUser,
+  listCampaignsForUser,
   listCharactersForOwner,
+  listMembers,
+  removeMembership,
+  rotateJoinCode,
   upsertCharacterIndexRow,
 } from '../../src/core/db/queries.ts';
 import { foldUsername } from '../../src/core/db/fold.ts';
+import { generateJoinCode } from '../../src/core/db/join-code.ts';
 import { openTestDb, type TestDb } from '../helpers/test-db.ts';
 
 let sqlite: InstanceType<typeof Database>;
@@ -54,8 +64,29 @@ function makeUser(overrides: Partial<Parameters<typeof insertUser>[1]> = {}) {
   });
 }
 
+function makeCampaign(overrides: Partial<Parameters<typeof createCampaign>[1]> = {}) {
+  return createCampaign(db, {
+    id: overrides.id ?? 'camp_1',
+    dmId: overrides.dmId ?? 'usr_1',
+    name: overrides.name ?? 'Curse of the Crimson Throne',
+    system: overrides.system ?? 'dnd5e-2024',
+    joinCode: overrides.joinCode ?? 'ABCD2345',
+    updatedAt: overrides.updatedAt ?? 1_000,
+    ...overrides,
+  });
+}
+
 describe('migrations', () => {
-  it('apply cleanly and create every expected table', () => {
+  // Phase 3, Task 3 (this task): the additive migration `0002` now creates `campaigns` and
+  // `memberships` — this test's expected-table list is updated in place (not skipped/reverted)
+  // to include them. The sandbox's revert-blocked RED-evidence workaround applies here: rather
+  // than literally reverting `schema.ts`/the migration to capture a failing run, the per-assertion
+  // reasoning is that BEFORE this task's schema/migration changes, `campaigns`/`memberships`
+  // simply did not exist (the OLD version of this very test — replaced by the one below —
+  // asserted exactly that: "do not create campaigns or memberships tables (Phase 3, deferred)",
+  // visible in this file's prior git history), so this assertion is known to fail against the
+  // pre-task migration set and pass only once `0002` is generated and applied.
+  it('apply cleanly and create every expected table, including the new campaigns/memberships pair', () => {
     const tables = sqlite
       .prepare<[], { name: string }>(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != '__drizzle_migrations'",
@@ -63,16 +94,15 @@ describe('migrations', () => {
       .all()
       .map((row) => row.name)
       .sort();
-    expect(tables).toEqual(['characters', 'recovery_codes', 'sessions', 'usage_daily', 'users']);
-  });
-
-  it('do not create campaigns or memberships tables (Phase 3, deferred)', () => {
-    const tables = sqlite
-      .prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type = 'table'")
-      .all()
-      .map((row) => row.name);
-    expect(tables).not.toContain('campaigns');
-    expect(tables).not.toContain('memberships');
+    expect(tables).toEqual([
+      'campaigns',
+      'characters',
+      'memberships',
+      'recovery_codes',
+      'sessions',
+      'usage_daily',
+      'users',
+    ]);
   });
 });
 
@@ -239,5 +269,223 @@ describe('usage_daily', () => {
       { metric: 'bytes_written', value: 10 },
       { metric: 'events_appended', value: 3 },
     ]);
+  });
+});
+
+describe('campaigns (join_code uniqueness, DB-enforced)', () => {
+  it('rejects a second campaign whose join_code collides with an existing one', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await expect(makeCampaign({ id: 'camp_2', dmId: 'usr_1', joinCode: 'ABCD2345' })).rejects.toThrow();
+  });
+
+  it('allows two campaigns with different join codes', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await expect(makeCampaign({ id: 'camp_2', dmId: 'usr_1', joinCode: 'WXYZ6789' })).resolves.toMatchObject({
+      id: 'camp_2',
+    });
+  });
+
+  it('findCampaignByJoinCode finds the matching campaign and nothing for an unknown code', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+
+    expect((await findCampaignByJoinCode(db, 'ABCD2345'))?.id).toBe('camp_1');
+    expect(await findCampaignByJoinCode(db, 'NOSUCH99')).toBeUndefined();
+  });
+
+  it('rotateJoinCode replaces the stored code and the old code no longer resolves', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+
+    await rotateJoinCode(db, 'camp_1', 'FRESH999');
+
+    expect(await findCampaignByJoinCode(db, 'ABCD2345')).toBeUndefined();
+    expect((await findCampaignByJoinCode(db, 'FRESH999'))?.id).toBe('camp_1');
+  });
+
+  it('joinOpen defaults to true (integer-boolean column, sqlite norm) and round-trips as a JS boolean', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    const campaign = await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    expect(campaign.joinOpen).toBe(true);
+  });
+});
+
+describe('memberships (composite-PK uniqueness, DB-enforced)', () => {
+  it('rejects a second membership row for the same (campaign, user) pair', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeUser({ id: 'usr_2', username: 'Player' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_2',
+      role: 'player',
+      displayName: 'Player One',
+      joinedAt: 1_000,
+    });
+
+    await expect(
+      insertMembership(db, {
+        campaignId: 'camp_1',
+        userId: 'usr_2',
+        role: 'player',
+        displayName: 'Player One (again)',
+        joinedAt: 2_000,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('allows the same user to be a member of two different campaigns', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeUser({ id: 'usr_2', username: 'Player' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await makeCampaign({ id: 'camp_2', dmId: 'usr_1', joinCode: 'WXYZ6789' });
+
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_2',
+      role: 'player',
+      displayName: 'Player One',
+      joinedAt: 1_000,
+    });
+    await expect(
+      insertMembership(db, {
+        campaignId: 'camp_2',
+        userId: 'usr_2',
+        role: 'player',
+        displayName: 'Player One',
+        joinedAt: 1_000,
+      }),
+    ).resolves.toMatchObject({ campaignId: 'camp_2', userId: 'usr_2' });
+  });
+
+  it('findMembership / removeMembership round-trip, and removeMembership reports whether a row existed', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeUser({ id: 'usr_2', username: 'Player' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_2',
+      role: 'player',
+      displayName: 'Player One',
+      joinedAt: 1_000,
+    });
+
+    expect(await findMembership(db, 'camp_1', 'usr_2')).toMatchObject({ role: 'player' });
+    expect(await removeMembership(db, 'camp_1', 'usr_2')).toBe(true);
+    expect(await findMembership(db, 'camp_1', 'usr_2')).toBeUndefined();
+    expect(await removeMembership(db, 'camp_1', 'usr_2')).toBe(false);
+  });
+
+  it('listMembers returns only the given campaign’s rows', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeUser({ id: 'usr_2', username: 'Player1' });
+    await makeUser({ id: 'usr_3', username: 'Player2' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await makeCampaign({ id: 'camp_2', dmId: 'usr_1', joinCode: 'WXYZ6789' });
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_2',
+      role: 'player',
+      displayName: 'Player1',
+      joinedAt: 1_000,
+    });
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_3',
+      role: 'player',
+      displayName: 'Player2',
+      joinedAt: 1_000,
+    });
+    await insertMembership(db, {
+      campaignId: 'camp_2',
+      userId: 'usr_2',
+      role: 'player',
+      displayName: 'Player1',
+      joinedAt: 1_000,
+    });
+
+    const members = await listMembers(db, 'camp_1');
+    expect(members.map((m) => m.userId).sort()).toEqual(['usr_2', 'usr_3']);
+  });
+
+  it('countMembers counts only the given campaign’s membership rows', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeUser({ id: 'usr_2', username: 'Player1' });
+    await makeUser({ id: 'usr_3', username: 'Player2' });
+    await makeCampaign({ id: 'camp_1', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    expect(await countMembers(db, 'camp_1')).toBe(0);
+
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_2',
+      role: 'player',
+      displayName: 'Player1',
+      joinedAt: 1_000,
+    });
+    await insertMembership(db, {
+      campaignId: 'camp_1',
+      userId: 'usr_3',
+      role: 'player',
+      displayName: 'Player2',
+      joinedAt: 1_000,
+    });
+
+    expect(await countMembers(db, 'camp_1')).toBe(2);
+  });
+});
+
+describe('listCampaignsForUser (dm-of UNION member-of, deduplicated)', () => {
+  it('returns campaigns the user DMs plus campaigns they are only a member of, without duplicates', async () => {
+    await makeUser({ id: 'usr_1', username: 'Dm' });
+    await makeUser({ id: 'usr_2', username: 'Player' });
+    await makeCampaign({ id: 'camp_dm', dmId: 'usr_1', joinCode: 'ABCD2345' });
+    await makeCampaign({ id: 'camp_other_dm', dmId: 'usr_2', joinCode: 'WXYZ6789' });
+    await makeCampaign({ id: 'camp_untouched', dmId: 'usr_2', joinCode: 'NOTOUCH1' });
+
+    // usr_1 is also a member (not DM) of camp_other_dm.
+    await insertMembership(db, {
+      campaignId: 'camp_other_dm',
+      userId: 'usr_1',
+      role: 'player',
+      displayName: 'Guest',
+      joinedAt: 1_000,
+    });
+    // The campaign's own DM also holds a membership row (ruling 1's kept-in-sync convention) —
+    // this must not produce a duplicate in usr_1's dm-of result for camp_dm.
+    await insertMembership(db, {
+      campaignId: 'camp_dm',
+      userId: 'usr_1',
+      role: 'dm',
+      displayName: 'Dm',
+      joinedAt: 1_000,
+    });
+
+    const result = await listCampaignsForUser(db, 'usr_1');
+    expect(result.map((c) => c.id).sort()).toEqual(['camp_dm', 'camp_other_dm']);
+    expect(result).toHaveLength(2);
+  });
+
+  it('is empty for a user with no campaigns', async () => {
+    await makeUser({ id: 'usr_1', username: 'Alice' });
+    expect(await listCampaignsForUser(db, 'usr_1')).toEqual([]);
+  });
+});
+
+describe('generateJoinCode (doc-02 §Identifiers shape)', () => {
+  it('produces an 8-character code', () => {
+    expect(generateJoinCode()).toHaveLength(8);
+  });
+
+  it('uses only characters from the Crockford-base32-no-vowels alphabet (digits + BCDFGHJKMNPQRSTVWXYZ) — never A, E, I, L, O or U', () => {
+    for (let i = 0; i < 50; i++) {
+      expect(generateJoinCode()).toMatch(/^[0-9BCDFGHJKMNPQRSTVWXYZ]{8}$/);
+    }
+  });
+
+  it('is uniform enough that 200 draws produce no repeats (sanity check on 30^8 odds, not a proof)', () => {
+    const codes = new Set(Array.from({ length: 200 }, () => generateJoinCode()));
+    expect(codes.size).toBe(200);
   });
 });

@@ -15,6 +15,13 @@
       "when": 1789831891170,
       "tag": "0001_sweet_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789905129358,
+      "tag": "0002_demonic_kat_farrell",
+      "breakpoints": true
     }
   ]
 }

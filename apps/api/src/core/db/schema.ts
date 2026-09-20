@@ -13,9 +13,12 @@
  * for the whole schema, chosen so every timestamp sorts and compares as a plain number on both
  * the better-sqlite3 and D1 drivers.
  *
- * `campaigns`/`memberships` (doc-02) are Phase 3 scope and are deliberately NOT created here —
- * they land as an additive migration when campaign streams ship (plan 7's Global Constraints /
- * File Structure: "campaigns/memberships NOT created (Phase 3)").
+ * `campaigns`/`memberships` (doc-02 §Entities, reproduced verbatim below) land here in the
+ * additive migration `0002` — Phase 3 plan 9, Task 3. Booleans (`campaigns.joinOpen`) use
+ * Drizzle's `integer(..., { mode: 'boolean' })`: the column is a plain SQLite `INTEGER` (0/1,
+ * the sqlite norm — there is no native boolean type), Drizzle just maps it to/from a JS
+ * `boolean` at the query-builder layer, matching how every other flag-shaped column here
+ * (`users.flags`) stores as an INTEGER underneath.
  */
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { uuidv7 } from '../ids.ts';
@@ -114,4 +117,51 @@ export const usageDaily = sqliteTable(
   (t) => [primaryKey({ columns: [t.day, t.metric] })],
 );
 
-export const schema = { users, sessions, recoveryCodes, characters, usageDaily };
+/** Campaigns (doc-02 §Entities, D1 "campaigns" row, reproduced verbatim: `campaigns(id PK,
+ * dm_id, name, system, join_code UNIQUE, join_open, bytes_used, updated_at)`) — one row per
+ * campaign stream (`camp:<id>`), the D1 index the host/list/join routes (Task 4) read and write.
+ * `joinCode` is the 8-char Crockford-base32-no-vowels code from doc-02 §Identifiers
+ * (`./join-code.ts` generates it); UNIQUE so `findCampaignByJoinCode` can never return more than
+ * one row. `joinOpen` gates whether `POST /api/campaigns/join` may create a membership
+ * (ADR-004/doc-08's permission matrix). `bytesUsed` mirrors the campaign stream's own
+ * `meta.bytes_used` on the same ≤24h-staleness contract as `characters.bytesUsed` above — synced
+ * by the daily maintenance job, never written per-event. */
+export const campaigns = sqliteTable('campaigns', {
+  id: text('id').primaryKey(),
+  dmId: text('dm_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name').notNull(),
+  system: text('system').notNull(),
+  joinCode: text('join_code').notNull().unique(),
+  joinOpen: integer('join_open', { mode: 'boolean' }).notNull().default(true),
+  bytesUsed: integer('bytes_used').notNull().default(0),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/** Memberships (doc-02 §Entities, D1 "memberships" row, reproduced verbatim: `memberships
+ * (campaign_id, user_id, role: 'dm'|'player', display_name, joined_at, PRIMARY KEY(campaign_id,
+ * user_id))`) — one row per `(campaign, user)` pair; the composite primary key enforces "a user
+ * joins a campaign at most once" at the DB level (a second `insertMembership` for the same pair
+ * rejects — Task 3's red-first coverage). `role` mirrors the D1-vs-stream role mapping from the
+ * phase-3 plan's design ruling 1 (`'dm'|'player'` here vs the campaign-stream actor's
+ * `'owner'|'dm'|'member'`); the DM's own row here is kept in sync with `campaigns.dmId` by
+ * whichever route writes both (Task 4), not derived from it by a trigger. `displayName` is the
+ * per-campaign display name a member picks on join — independent of `users.username`. */
+export const memberships = sqliteTable(
+  'memberships',
+  {
+    campaignId: text('campaign_id')
+      .notNull()
+      .references(() => campaigns.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    role: text('role', { enum: ['dm', 'player'] }).notNull(),
+    displayName: text('display_name').notNull(),
+    joinedAt: integer('joined_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.campaignId, t.userId] })],
+);
+
+export const schema = { users, sessions, recoveryCodes, characters, usageDaily, campaigns, memberships };
