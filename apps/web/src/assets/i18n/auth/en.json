@@ -1,0 +1,26 @@
+{
+  "login": {
+    "title": "Log in"
+  },
+  "register": {
+    "title": "Create account"
+  },
+  "recover": {
+    "title": "Recover account"
+  },
+  "validation": {
+    "invalidUsername": "Usernames are 3–32 letters, numbers, underscores, or hyphens.",
+    "tooShort": "Password must be at least 10 characters.",
+    "tooLong": "Password must be at most 128 characters.",
+    "common": "That password is too common — please choose another.",
+    "containsUsername": "Password must not contain your username."
+  },
+  "errors": {
+    "invalidCredentials": "Incorrect username or password.",
+    "lockout": "Too many attempts. Please try again later.",
+    "usernameTaken": "That username is already taken.",
+    "badRequest": "Something about that request wasn't valid.",
+    "network": "You're offline — check your connection and try again.",
+    "generic": "Something went wrong. Please try again."
+  }
+}

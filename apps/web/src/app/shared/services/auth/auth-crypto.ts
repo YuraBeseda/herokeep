@@ -23,6 +23,10 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 function hexToBytes(hex: string): Uint8Array {
+  // Carried obligation from the Task-2 review (task-4-brief.md): an odd-length hex string would
+  // otherwise silently truncate its last nibble (`hex.length / 2` floors), producing a
+  // byte-shorter-than-expected salt with no error — guard it explicitly instead.
+  if (hex.length % 2 !== 0) throw new Error('invalid hex');
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i++) {
     bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);

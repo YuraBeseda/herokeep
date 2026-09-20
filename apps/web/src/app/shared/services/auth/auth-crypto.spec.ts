@@ -52,6 +52,18 @@ describe('auth-crypto', () => {
     }, 15_000);
   });
 
+  describe('hexToBytes (odd-length guard)', () => {
+    // Carried obligation from the Task-2 review (task-4-brief.md): an odd-length hex string
+    // (e.g. a truncated/corrupted salt) must throw rather than silently floor-dividing away its
+    // last nibble. `hexToBytes` is internal, so this is exercised through `deriveVerifierHex`'s
+    // salt argument, the only public entry point that decodes hex.
+    it('rejects an odd-length salt hex string instead of silently truncating it', async () => {
+      await expect(deriveVerifierHex('correct horse battery staple', '0')).rejects.toThrow(
+        'invalid hex',
+      );
+    });
+  });
+
   describe('randomSaltHex', () => {
     it('returns a 32-char lowercase hex string (16 bytes)', () => {
       const salt = randomSaltHex();

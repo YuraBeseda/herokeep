@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import type { CanActivateFn, ResolveFn, Routes } from '@angular/router';
 import { Router } from '@angular/router';
 import { ToastService } from './shared/components/toast/toast.service';
+import { AuthService } from './shared/services/auth/auth.service';
 import { CharactersRepository } from './shared/services/storage/characters.repository';
 import { CharacterStore } from './shared/stores/character.store';
 
@@ -51,6 +52,26 @@ export const levelUpGuard: CanActivateFn = () => {
   toastService.show('characters.levelUp.toast.noneAvailable');
   const id = characterStore.streamId();
   return router.createUrlTree(id ? ['/c', id, 'play'] : ['/characters']);
+};
+
+/**
+ * `/login`, `/register`, `/recover`'s shared guard (task-4-brief.md): redirects an already-authed
+ * user AWAY from the account screens to `/characters` — there is nothing for a logged-in user to
+ * do there. `'anon'` and `'unknown'` both allow activation (the brief: "'anon'/'unknown' →
+ * allow") — `'unknown'` matters because `AuthService.init()`'s `GET /api/me` check is
+ * fire-and-forget (Global Constraints: "the app NEVER blocks on the network at boot"), so a user
+ * who navigates straight to `/login` before that check resolves must still see the form, not be
+ * stuck or bounced. This is intentionally the ONLY guard added by this task — no existing route
+ * gains one (asserted in app.routes.spec.ts).
+ */
+export const redirectAuthedGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.status() === 'authed') {
+    return router.createUrlTree(['/characters']);
+  }
+  return true;
 };
 
 export const routes: Routes = [
@@ -126,5 +147,22 @@ export const routes: Routes = [
   {
     path: 'about',
     loadComponent: () => import('./views/about/about.component').then((m) => m.AboutComponent),
+  },
+  {
+    path: 'login',
+    canActivate: [redirectAuthedGuard],
+    loadComponent: () => import('./views/auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'register',
+    canActivate: [redirectAuthedGuard],
+    loadComponent: () =>
+      import('./views/auth/register/register.component').then((m) => m.RegisterComponent),
+  },
+  {
+    path: 'recover',
+    canActivate: [redirectAuthedGuard],
+    loadComponent: () =>
+      import('./views/auth/recover/recover.component').then((m) => m.RecoverComponent),
   },
 ];
