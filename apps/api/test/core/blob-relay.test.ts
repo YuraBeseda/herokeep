@@ -17,6 +17,7 @@ import {
   BLOB_CHUNK_MAGIC,
   decodeBlobChunkHeader,
   MAX_BLOB_CHUNK_PAYLOAD_BYTES,
+  MAX_HASHES_PER_CONNECTION,
 } from '../../src/core/streams/blob-relay.ts';
 import { campaignQuotas, CampaignActor } from '../../src/core/streams/campaign-actor.ts';
 import { buildBlobChunkFrame, hashPrefixOf } from '../helpers/blob-frames.ts';
@@ -31,6 +32,12 @@ const MEMBER_C = 'usr_carol';
 
 const HASH_A = `sha256:${'a'.repeat(64)}`;
 const HASH_B = `sha256:${'b'.repeat(64)}`;
+
+/** A distinct, schema-valid (`sha256:[0-9a-f]{64}`) hash per `n` — used for the per-connection cap
+ * boundary test, which needs `MAX_HASHES_PER_CONNECTION + 1` genuinely different hashes. */
+function hashN(n: number): string {
+  return `sha256:${n.toString(16).padStart(64, '0')}`;
+}
 
 function makeSystem() {
   const store = new FakeStreamStore();
@@ -215,6 +222,62 @@ describe('blob.chunk forwarding', () => {
   });
 });
 
+describe('blob.chunk sender authorization (fix round 1, Critical C1)', () => {
+  it('drops a chunk whose sender is not the assigned holder — not forwarded to the target', async () => {
+    const holder = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+    const attacker = system.connections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+    const victim = system.connections.accept({}, { userId: MEMBER_C, role: 'member', subs: [] });
+
+    await system.actor.handleMessage(holder, { t: 'blob.have', hashes: [HASH_A] });
+    await system.actor.handleMessage(victim, { t: 'blob.request', rid: 'r1', hash: HASH_A });
+
+    const pull = onlyPull(system.connections.framesFor(holder));
+    // `attacker` is an ordinary admitted member — never announced HASH_A, never received a
+    // blob.pull for it — but crafts a well-formed chunk frame naming the victim's connId as `to`.
+    const forged = buildBlobChunkFrame({ index: 0, total: 1, to: Number(pull.to), payload: new Uint8Array([1, 2, 3]) });
+
+    system.actor.handleBinaryMessage(attacker, forged);
+
+    expect(system.connections.binaryFramesFor(victim)).toHaveLength(0);
+  });
+
+  it("a forged completion frame from a non-holder sender does not free the real holder's serving slot", async () => {
+    const holder = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+    const attacker = system.connections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+    const req1 = system.connections.accept({}, { userId: 'usr_req1', role: 'member', subs: [] });
+    const req2 = system.connections.accept({}, { userId: 'usr_req2', role: 'member', subs: [] });
+    const req3 = system.connections.accept({}, { userId: 'usr_req3', role: 'member', subs: [] });
+
+    await system.actor.handleMessage(holder, { t: 'blob.have', hashes: [HASH_A] });
+    await system.actor.handleMessage(req1, { t: 'blob.request', rid: 'r1', hash: HASH_A });
+    await system.actor.handleMessage(req2, { t: 'blob.request', rid: 'r2', hash: HASH_A });
+    // holder is now at its 2-serve cap.
+
+    const pull1 = pullsFor(system.connections.framesFor(holder))[0];
+    if (!pull1) throw new Error('expected a blob.pull frame for req1');
+
+    // Attacker forges a "completion" chunk (index === total - 1) claiming to be from the holder,
+    // targeting req1's connId — attempting to trick the relay into releasing the real holder's slot.
+    const forgedCompletion = buildBlobChunkFrame({ index: 0, total: 1, to: Number(pull1.to) });
+    system.actor.handleBinaryMessage(attacker, forgedCompletion);
+
+    // Not forwarded to req1, and the holder's slot was NOT released: a third request still finds
+    // the holder at capacity.
+    expect(system.connections.binaryFramesFor(req1)).toHaveLength(0);
+    await system.actor.handleMessage(req3, { t: 'blob.request', rid: 'r3', hash: HASH_A });
+    expect(system.connections.framesFor(req3)).toContainEqual({ t: 'blob.unavailable', hash: HASH_A });
+
+    // The REAL holder's own completion chunk for req1 still works normally afterward, freeing the
+    // slot for real.
+    const realCompletion = buildBlobChunkFrame({ index: 0, total: 1, to: Number(pull1.to) });
+    system.actor.handleBinaryMessage(holder, realCompletion);
+    expect(system.connections.binaryFramesFor(req1)).toHaveLength(1);
+
+    await system.actor.handleMessage(req3, { t: 'blob.request', rid: 'r4', hash: HASH_A });
+    expect(pullsFor(system.connections.framesFor(holder))).toHaveLength(3); // req1, req2, and now req3
+  });
+});
+
 describe('flow control: one in-flight transfer per requester', () => {
   it('silently drops a second blob.request from the same requester while one is in flight', async () => {
     const holderA = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
@@ -272,6 +335,51 @@ describe('connection close cleanup', () => {
     // is NOT silently dropped by the (now stale) one-in-flight guard.
     await system.actor.handleMessage(requester, { t: 'blob.request', rid: 'r2', hash: HASH_A });
     expect(system.connections.framesFor(requester)).toContainEqual({ t: 'blob.unavailable', hash: HASH_A });
+  });
+
+  it("[fix round 1, Important I1] releases the HOLDER's serving slot when a REQUESTER disconnects without cancelling", async () => {
+    const holder = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+    const req1 = system.connections.accept({}, { userId: 'usr_req1', role: 'member', subs: [] });
+    const req2 = system.connections.accept({}, { userId: 'usr_req2', role: 'member', subs: [] });
+    const req3 = system.connections.accept({}, { userId: 'usr_req3', role: 'member', subs: [] });
+
+    await system.actor.handleMessage(holder, { t: 'blob.have', hashes: [HASH_A] });
+    await system.actor.handleMessage(req1, { t: 'blob.request', rid: 'r1', hash: HASH_A });
+    await system.actor.handleMessage(req2, { t: 'blob.request', rid: 'r2', hash: HASH_A });
+
+    // holder is at its 2-serve cap — a third requester is refused.
+    await system.actor.handleMessage(req3, { t: 'blob.request', rid: 'r3', hash: HASH_A });
+    expect(system.connections.framesFor(req3)).toContainEqual({ t: 'blob.unavailable', hash: HASH_A });
+
+    // req1 disconnects WITHOUT sending blob.cancel first.
+    await system.actor.onConnectionClosed(req1);
+
+    // The holder's slot for req1 must be freed by the close handler itself (not only req1's own
+    // bookkeeping) — req3 retries and now succeeds.
+    await system.actor.handleMessage(req3, { t: 'blob.request', rid: 'r4', hash: HASH_A });
+    expect(pullsFor(system.connections.framesFor(holder))).toHaveLength(3); // req1, req2, req3
+  });
+});
+
+describe('per-connection hash cap (fix round 1, Important I3)', () => {
+  it(`drops announcements beyond MAX_HASHES_PER_CONNECTION (${MAX_HASHES_PER_CONNECTION}) for a single connection`, async () => {
+    const holder = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+    const requester = system.connections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+
+    const hashes = Array.from({ length: MAX_HASHES_PER_CONNECTION + 1 }, (_, i) => hashN(i));
+    await system.actor.handleMessage(holder, { t: 'blob.have', hashes });
+
+    // The (cap + 1)-th distinct hash from this SAME connection was never registered.
+    const overflowHash = hashes[MAX_HASHES_PER_CONNECTION];
+    if (!overflowHash) throw new Error('test setup error: no overflow hash');
+    await system.actor.handleMessage(requester, { t: 'blob.request', rid: 'r1', hash: overflowHash });
+    expect(system.connections.framesFor(requester)).toContainEqual({ t: 'blob.unavailable', hash: overflowHash });
+
+    // A hash well within the cap IS registered.
+    const withinCapHash = hashes[0];
+    if (!withinCapHash) throw new Error('test setup error: no within-cap hash');
+    await system.actor.handleMessage(requester, { t: 'blob.request', rid: 'r2', hash: withinCapHash });
+    expect(pullsFor(system.connections.framesFor(holder))).toHaveLength(1);
   });
 });
 
