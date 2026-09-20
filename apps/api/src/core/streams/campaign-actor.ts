@@ -255,15 +255,20 @@ export class CampaignActor extends StreamActor {
    *       already be in `meta.members` when they send it; excluding it is not a loophole, it is
    *       the only way this event could ever succeed).
    *   (a2) [fix round 1, Critical 2] `member.joined`/`member.left` require
-   *       `payload.userId === actor.userId`, with NO dm exemption. Without this, an established
-   *       member could admit an ARBITRARY userId via `member.joined` (bypassing the join-code
-   *       gate entirely) or evict another member via `member.left` (an eviction path that was
-   *       supposed to belong only to the DM-gated `member.removed` sibling — `member.left` is
-   *       "I am leaving", never "I am removing someone else"). No DM exemption because the DM
-   *       never legitimately emits `member.joined`/`member.left` for someone else either: a join
-   *       always originates from the joining user's own client via the join-code route (Task 4),
-   *       and DM-driven removal is `member.removed` (a separate, already dm-gated type in
-   *       `DM_ONLY_TYPES` below) — not `member.left`.
+   *       `payload.userId === actor.userId`, with NO exemption for ANY role. Without this, an
+   *       established member could admit an ARBITRARY userId via `member.joined` (bypassing the
+   *       join-code gate entirely) or evict another member via `member.left` (an eviction path
+   *       that was supposed to belong only to the DM-gated `member.removed` sibling —
+   *       `member.left` is "I am leaving", never "I am removing someone else"). No role exemption
+   *       because self-binding is what makes `member.joined` safe to grant BOTH `'member'` and
+   *       `'dm'` in the static table (plan-9 Task 4 fix round 1, `campaign.ts`'s
+   *       `CAMPAIGN_EVENT_ACTORS` — the DM's own client authors it, in the 'dm' capacity, to
+   *       bootstrap the DM's own membership row alongside `campaign.created`, `core/routes/
+   *       campaigns.ts`'s create route): this guard is what still prevents a DM (or anyone else)
+   *       admitting/evicting a DIFFERENT userId via either type — a join/leave always originates
+   *       from the acting user's own client, about themselves, whichever role authored it, and
+   *       DM-driven removal of someone ELSE is `member.removed` (a separate, already dm-gated type
+   *       in `DM_ONLY_TYPES` below) — never `member.left`.
    *   (b) `campaign.character_joined`/`campaign.character_left` and `party.overview_updated`
    *       require the actor to BE the character's owner (per the event's own `ownerId` payload
    *       field for the join/left pair, per `meta.characters` for the overview post) — DM exempt.

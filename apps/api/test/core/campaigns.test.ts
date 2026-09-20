@@ -9,13 +9,13 @@
  */
 import type { Actor, Event } from '@hk/protocol';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../src/core/app.ts';
 import { CampaignActor, campaignQuotas } from '../../src/core/streams/campaign-actor.ts';
 import * as campaignPermissions from '../../src/core/campaign-permissions.ts';
 import { uuidv7 } from '../../src/core/ids.ts';
 import { CAMPAIGN_MEMBER_MAX } from '../../src/core/quotas.ts';
-import { countMembers, findMembership, insertMembership, insertUser } from '../../src/core/db/queries.ts';
+import * as queries from '../../src/core/db/queries.ts';
 import { campaigns } from '../../src/core/db/schema.ts';
 import type { AppendResult, StreamHandle, StreamHost } from '../../src/ports/stream.ts';
 import type { StaticAssets, WsUpgradeContext } from '../../src/ports/infra.ts';
@@ -23,6 +23,16 @@ import { FakeConnections } from '../helpers/fake-connections.ts';
 import { FakeStreamStore } from '../helpers/fake-stream-store.ts';
 import { createTestConfig, InMemoryRateLimit } from '../helpers/fake-ports.ts';
 import { openTestDb, type TestDbHandle } from '../helpers/test-db.ts';
+
+const { countMembers, findMembership, insertMembership, insertUser } = queries;
+
+// Fix round 1, [Important] 3's red-first test mocks `createCampaign` for exactly one call to
+// simulate a raced id-PK collision -- every other call (the overwhelming majority of this file's
+// tests) delegates straight through to the real implementation via `importOriginal`.
+vi.mock('../../src/core/db/queries.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof queries>();
+  return { ...actual, createCampaign: vi.fn(actual.createCampaign) };
+});
 
 const XRW = { 'X-Requested-With': 'herokeep', 'Content-Type': 'application/json' };
 const APP_ORIGIN = 'https://app.test.local'; // matches fake-ports.ts's TEST_SECRETS.APP_ORIGIN
@@ -38,16 +48,23 @@ function saltHex(seed = 'b'): string {
 /** Wraps a REAL `CampaignActor` (per stream id) over `FakeStreamStore`/`FakeConnections` behind
  * the plain `StreamHost` port — mirrors `NodeStreamHost.get`'s own `AppendOutcome -> AppendResult`
  * seq-range mapping exactly (`min`/`max` over ACKED seqs, `{0, 0}` when nothing acked), which is
- * what makes this test double a faithful stand-in for the route's own `appendOne`
- * rejection-detection heuristic (`campaigns.ts`'s header comment). */
+ * what makes this test double a faithful stand-in for the route's own `appendEvents`
+ * rejection-detection heuristic (`campaigns.ts`'s header comment). Also supports
+ * `failNextAppendFor` (fix round 1, [Important] 2's red-first coverage): simulates a real
+ * adapter's `append` THROWING (a store-transaction fault) rather than merely rejecting, without
+ * ever reaching the actor at all. */
 class CampaignActorStreamHost implements StreamHost {
   private readonly actors = new Map<string, CampaignActor>();
   private readonly stores = new Map<string, FakeStreamStore>();
+  private readonly failNext = new Set<string>();
 
   get(streamId: string): StreamHandle {
     const actor = this.actorFor(streamId);
     return {
       append: async (events: Event[], appendActor: Actor): Promise<AppendResult> => {
+        if (this.failNext.delete(streamId)) {
+          throw new Error('simulated store fault (campaigns.test.ts failNextAppendFor)');
+        }
         const outcome = await actor.append(events, appendActor);
         const seqs = outcome.acked.map((a) => a.seq);
         return { firstSeq: seqs.length > 0 ? Math.min(...seqs) : 0, lastSeq: seqs.length > 0 ? Math.max(...seqs) : 0 };
@@ -64,6 +81,12 @@ class CampaignActorStreamHost implements StreamHost {
     const store = this.stores.get(streamId);
     if (!store) return [];
     return store.read(1, 1000);
+  }
+
+  /** Test-only fault injection: the VERY NEXT `.get(streamId).append(...)` call throws instead of
+   * reaching the actor/store — a one-shot flag, consumed on use. */
+  failNextAppendFor(streamId: string): void {
+    this.failNext.add(streamId);
   }
 
   private actorFor(streamId: string): CampaignActor {
@@ -205,7 +228,9 @@ describe('POST /api/campaigns (create)', () => {
     const membership = await findMembership(handle.db, id, dmId);
     expect(membership).toMatchObject({ campaignId: id, userId: dmId, role: 'dm', displayName: 'DungeonMaster' });
 
-    // Committed stream events.
+    // Committed stream events -- ONE atomic txId batch (fix round 1: campaign.created +
+    // member.joined, both stamped actor.role 'dm', sharing one txId -- see campaigns.ts's header
+    // comment, "Atomic campaign bootstrap").
     const events = await streamHost.eventsFor(`camp:${id}`);
     expect(events.map((e) => e.type)).toEqual(['campaign.created', 'member.joined']);
     expect(events[0]).toMatchObject({
@@ -215,9 +240,11 @@ describe('POST /api/campaigns (create)', () => {
     });
     expect(events[1]).toMatchObject({
       type: 'member.joined',
-      actor: { userId: dmId, role: 'member' },
+      actor: { userId: dmId, role: 'dm' },
       payload: { userId: dmId, displayName: 'DungeonMaster', role: 'dm' },
     });
+    expect(events[0]!.txId).toBeDefined();
+    expect(events[1]!.txId).toBe(events[0]!.txId);
   });
 
   it('defaults displayName to the account username when none is supplied', async () => {
@@ -257,6 +284,64 @@ describe('POST /api/campaigns (create)', () => {
     expect((await createCampaign(cookieA, { id })).res.status).toBe(201);
     const second = await createCampaign(cookieB, { id });
     expect(second.res.status).toBe(409);
+  });
+
+  it('fix round 1: a store fault during the atomic bootstrap commits NOTHING, and a retry of the same id then succeeds', async () => {
+    const cookie = await loginAndGetCookie('BrickTest', verifierHex('40'));
+    const dmId = await meUserId(cookie);
+    const id = uuidv7();
+    const streamId = `camp:${id}`;
+
+    streamHost.failNextAppendFor(streamId);
+    const failed = await createCampaign(cookie, { id });
+    expect(failed.res.status).toBe(500);
+
+    // Neither event committed (the txId batch is all-or-nothing) and D1 was rolled back -- no
+    // half-bootstrapped stream, no ghost campaign/membership row.
+    expect(await streamHost.eventsFor(streamId)).toEqual([]);
+    expect(await findMembership(handle.db, id, dmId)).toBeUndefined();
+
+    // The SAME id is no longer bricked: retrying now succeeds outright.
+    const retried = await createCampaign(cookie, { id });
+    expect(retried.res.status).toBe(201);
+    const events = await streamHost.eventsFor(streamId);
+    expect(events.map((e) => e.type)).toEqual(['campaign.created', 'member.joined']);
+  });
+
+  it('fix round 1: a raced id-PK collision during create recovers as a clean 409, not the exhausted-codes 500', async () => {
+    const cookieA = await loginAndGetCookie('RaceLoser', verifierHex('41'));
+    const cookieB = await loginAndGetCookie('RaceWinner', verifierHex('42'));
+    const winnerId = await meUserId(cookieB);
+    const id = uuidv7();
+
+    // Simulates the race described in campaigns.ts's header comment ("Join-code retry loop:
+    // id-collision vs join-code collision"): `createCampaign`'s OWN insert throws (indistinguishable
+    // in isolation from a join_code collision) -- but by the time the route's catch block re-checks
+    // `findCampaignById`, a CONCURRENT request has already committed the real row for a DIFFERENT
+    // owner. `mockImplementationOnce` fires for exactly this one call; every other call in this
+    // file uses the real implementation.
+    vi.mocked(queries.createCampaign).mockImplementationOnce(async (db, row) => {
+      await db.insert(campaigns).values({ ...row, dmId: winnerId, joinCode: 'RACEWINR' });
+      throw new Error('SQLITE_CONSTRAINT: UNIQUE constraint failed: campaigns.id');
+    });
+
+    const res = await createCampaign(cookieA, { id });
+    expect(res.res.status).toBe(409);
+  });
+
+  it('fix round 1: a raced id collision where the SAME user wins recovers as an idempotent 200', async () => {
+    const cookie = await loginAndGetCookie('SelfRace', verifierHex('43'));
+    const selfId = await meUserId(cookie);
+    const id = uuidv7();
+
+    vi.mocked(queries.createCampaign).mockImplementationOnce(async (db, row) => {
+      // The caller's OWN concurrent request (e.g. a double-submit) won the race.
+      await db.insert(campaigns).values({ ...row, dmId: selfId, joinCode: 'SELFRACE' });
+      throw new Error('SQLITE_CONSTRAINT: UNIQUE constraint failed: campaigns.id');
+    });
+
+    const res = await createCampaign(cookie, { id });
+    expect(res.res.status).toBe(200);
   });
 
   it('400s a missing corePack, with no D1 rows left behind', async () => {
@@ -462,6 +547,25 @@ describe('POST /api/campaigns/join', () => {
     expect(second.status).toBe(200);
     expect(await streamHost.eventsFor(`camp:${id}`)).toHaveLength(eventsAfterFirst.length);
   });
+
+  it('fix round 1: a thrown append gets the same best-effort D1 rollback as a clean rejection', async () => {
+    const dmCookie = await loginAndGetCookie('DMFault', verifierHex('44'));
+    const { id } = await createCampaign(dmCookie);
+    const [row] = (await (await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })).json()) as {
+      joinCode: string;
+    }[];
+    const memberCookie = await loginAndGetCookie('FaultJoiner', verifierHex('45'));
+    const memberId = await meUserId(memberCookie);
+
+    streamHost.failNextAppendFor(`camp:${id}`);
+    const res = await app.request('/api/campaigns/join', {
+      method: 'POST',
+      headers: { ...XRW, cookie: memberCookie },
+      body: JSON.stringify({ code: row!.joinCode }),
+    });
+    expect(res.status).toBe(500);
+    expect(await findMembership(handle.db, id, memberId)).toBeUndefined();
+  });
 });
 
 describe('POST /api/campaigns/:id/rotate-code', () => {
@@ -510,6 +614,28 @@ describe('POST /api/campaigns/:id/rotate-code', () => {
       headers: { ...XRW, cookie },
     });
     expect(res.status).toBe(404);
+  });
+
+  it('fix round 1: a thrown append restores the OLD join code, same as a clean rejection', async () => {
+    const dmCookie = await loginAndGetCookie('DMRotateFault', verifierHex('46'));
+    const { id } = await createCampaign(dmCookie);
+    const [before] = (await (
+      await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })
+    ).json()) as {
+      joinCode: string;
+    }[];
+
+    streamHost.failNextAppendFor(`camp:${id}`);
+    const res = await app.request(`/api/campaigns/${id}/rotate-code`, {
+      method: 'POST',
+      headers: { ...XRW, cookie: dmCookie },
+    });
+    expect(res.status).toBe(500);
+
+    const [after] = (await (await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })).json()) as {
+      joinCode: string;
+    }[];
+    expect(after!.joinCode).toBe(before!.joinCode);
   });
 });
 
@@ -583,6 +709,29 @@ describe('DELETE /api/campaigns/:id/members/:userId', () => {
       headers: { ...XRW, cookie: dmCookie },
     });
     expect(res.status).toBe(404);
+  });
+
+  it('fix round 1: a thrown append re-inserts the membership row, same as a clean rejection', async () => {
+    const dmCookie = await loginAndGetCookie('DMRemoveFault', verifierHex('47'));
+    const { id } = await createCampaign(dmCookie);
+    const [row] = (await (await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })).json()) as {
+      joinCode: string;
+    }[];
+    const memberCookie = await loginAndGetCookie('FaultVictim', verifierHex('48'));
+    const memberId = await meUserId(memberCookie);
+    await app.request('/api/campaigns/join', {
+      method: 'POST',
+      headers: { ...XRW, cookie: memberCookie },
+      body: JSON.stringify({ code: row!.joinCode }),
+    });
+
+    streamHost.failNextAppendFor(`camp:${id}`);
+    const res = await app.request(`/api/campaigns/${id}/members/${memberId}`, {
+      method: 'DELETE',
+      headers: { ...XRW, cookie: dmCookie },
+    });
+    expect(res.status).toBe(500);
+    expect(await findMembership(handle.db, id, memberId)).toMatchObject({ role: 'player', displayName: 'FaultVictim' });
   });
 });
 

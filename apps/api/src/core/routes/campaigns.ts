@@ -41,12 +41,64 @@
  * `ports/stream.ts`'s `StreamHandle.append` returns only `{firstSeq, lastSeq}` (`AppendResult`) —
  * not `StreamActor`'s own richer `AppendOutcome` (`{acked, rejected}`), which is adapter-internal
  * (`NodeStreamHost.getRuntime`, used by `scripts/seed-api.ts`'s own fail-loud append). Since every
- * append this file makes is EXACTLY ONE event, and a genuinely committed event is always assigned
- * `seq >= 1` (`ports/stream.ts`'s `StreamStore.head` doc comment: "0 if empty"; every store starts
- * numbering at 1), `lastSeq === 0` is an unambiguous "this one event was rejected" signal without
- * needing a `ports/stream.ts` change — see `appendOne` below. Every event this file constructs is
- * pre-validated by a `@hk/protocol` schema before ever reaching `append`, so this path is expected
- * to be defense-in-depth, not the normal case.
+ * append this file makes is either ONE event or a SINGLE-`txId` all-or-nothing batch (see the next
+ * section), and a genuinely committed event is always assigned `seq >= 1` (`ports/stream.ts`'s
+ * `StreamStore.head` doc comment: "0 if empty"; every store starts numbering at 1), `lastSeq === 0`
+ * is an unambiguous "nothing in this call was acked" signal without needing a `ports/stream.ts`
+ * change — see `appendEvents` below. Every event this file constructs is pre-validated by a
+ * `@hk/protocol` schema before ever reaching `append`, so a clean REJECTION is expected to be
+ * defense-in-depth, not the normal case.
+ *
+ * ## Atomic campaign bootstrap (fix round 1, [Important] 1 — a real, fixed brick)
+ *
+ * `POST /` originally appended `campaign.created` and the DM's own bootstrap `member.joined` as
+ * TWO separate `append()` calls, because the static per-type actor table
+ * (`CAMPAIGN_EVENT_ACTORS`) required a DIFFERENT `actor.role` for each ('dm' vs 'member') and one
+ * `append()` call takes exactly one `actor` for its whole batch. That shape had a real, fixed
+ * brick: if `campaign.created` committed but the second call then threw/rejected, the CAMPAIGN
+ * STREAM was left with `meta.dmId` permanently set (from the first, successfully committed event)
+ * while D1's rows were rolled back — and `campaign-actor.ts`'s `refineAppendPermission` rejects
+ * EVERY subsequent `campaign.created` once `meta.dmId` is set (Task 5's fix-round-1 "no
+ * re-creation" guard), so a retry of the SAME id could never succeed again. The id was permanently
+ * unrecoverable.
+ *
+ * Fix: the controller sanctioned widening `CAMPAIGN_EVENT_ACTORS['member.joined']` to
+ * `['member', 'dm']` (`packages/protocol/src/events/campaign.ts`) — the DM's client may now author
+ * `member.joined` about THEMSELVES directly (the actor-level self-binding guard,
+ * `campaign-actor.ts`'s `refineAppendPermission`: `payload.userId === actor.userId`, no role
+ * exemption, is what still prevents anyone admitting someone ELSE this way). This lets both events
+ * be appended in ONE `append()` call, stamped `{role: 'dm'}` throughout, sharing one freshly
+ * generated `txId` — `StreamActor.append`'s own txId-group semantics (doc-03 §Ordering: "txId
+ * groups commit contiguously or reject ALL", `stream-actor.ts`'s `resolveTxGroups`) make the pair
+ * atomic: either BOTH commit in the store's own single transaction, or NEITHER does. There is no
+ * longer a window where one half can commit without the other, so the brick above cannot recur;
+ * the best-effort D1 rollback below is now a genuine "undo the D1-only half" step, never a
+ * "half-bootstrapped stream" cleanup.
+ *
+ * ## Thrown appends (fix round 1, [Important] 2)
+ *
+ * `appendEvents` does not itself catch a THROWN store fault (a real adapter's `append` can reject
+ * its underlying transaction and throw, not just return an outcome with nothing acked) — every
+ * call site below wraps its own append+rollback in a `try/catch` so a THROW gets the exact same
+ * best-effort D1 rollback a clean "nothing acked" rejection gets, then rethrows (mapped to a 500
+ * by `installErrorHandler`, since it is never a client-caused `ApiError`).
+ *
+ * ## Join-code retry loop: id-collision vs join-code collision (fix round 1, [Important] 3)
+ *
+ * `POST /`'s create-row retry loop generates a fresh join code on every `createCampaign` failure,
+ * assuming the failure is always a `join_code` UNIQUE collision (`join-code.ts`'s documented
+ * caller contract). But `campaigns.id` is ALSO a unique/primary key — a genuine race (two
+ * concurrent creates for the SAME id, after this route's own top-of-handler `existing` check
+ * already missed each other) throws for a completely different reason a fresh join code can never
+ * fix, and blindly retrying would exhaust `MAX_JOIN_CODE_ATTEMPTS` and surface a misleading 500
+ * ("exhausted join code generation attempts") instead of the honest 409/200 the top-of-handler
+ * check would have given if it had run a moment later. Rather than parsing the underlying driver's
+ * constraint-error text (better-sqlite3 vs D1 phrase it differently, and doing so would couple this
+ * route to a specific driver's error shape), the catch block RE-CHECKS `findCampaignById` on every
+ * failure: if the row now exists, this is the id-collision case — handled with the exact same
+ * idempotent-200/conflict-409 logic the top-of-handler `existing` check already uses. Only when
+ * `findCampaignById` still finds nothing is the failure assumed to be a `join_code` collision and
+ * the loop retries with a freshly generated code.
  */
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -131,7 +183,7 @@ function normalizeDisplayName(requested: unknown, fallbackUsername: string | und
   return truncated.length > 0 ? truncated : userId.slice(0, MAX_DISPLAY_NAME_LENGTH);
 }
 
-function buildEvent(streamId: string, actor: Actor, type: string, v: number, payload: unknown): Event {
+function buildEvent(streamId: string, actor: Actor, type: string, v: number, payload: unknown, txId?: string): Event {
   return {
     id: uuidv7(),
     stream: streamId,
@@ -140,13 +192,16 @@ function buildEvent(streamId: string, actor: Actor, type: string, v: number, pay
     type,
     v,
     payload,
+    ...(txId !== undefined ? { txId } : {}),
   };
 }
 
-/** Appends exactly one event and reports whether it was acked — see this file's header comment
- * ("StreamHandle.append's AppendResult limitation") for why `lastSeq !== 0` is the signal used. */
-async function appendOne(streamHost: StreamHost, streamId: string, event: Event, actor: Actor): Promise<boolean> {
-  const result = await streamHost.get(streamId).append([event], actor);
+/** Appends one or more events (share ONE `txId` across `events` for an atomic all-or-nothing
+ * commit — see this file's header comment, "Atomic campaign bootstrap") and reports whether
+ * EVERY event in the call was acked. Does NOT catch a thrown store fault — see the header
+ * comment's "Thrown appends" section; every call site wraps its own append in a `try/catch`. */
+async function appendEvents(streamHost: StreamHost, streamId: string, events: Event[], actor: Actor): Promise<boolean> {
+  const result = await streamHost.get(streamId).append(events, actor);
   return result.lastSeq !== 0;
 }
 
@@ -198,7 +253,9 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
     const now = Date.now();
 
     // D1 first (design ruling 3): the campaign row + the DM's own membership row, retrying the
-    // join code on a UNIQUE collision (`join-code.ts`'s documented caller contract).
+    // join code on a UNIQUE collision — but see this file's header comment ("Join-code retry
+    // loop: id-collision vs join-code collision") for why a failure here is RE-CHECKED against
+    // `findCampaignById` before assuming it's a join-code collision worth retrying.
     let created: Campaign | undefined;
     let joinCode: string | undefined;
     for (let attempt = 0; attempt < MAX_JOIN_CODE_ATTEMPTS && !created; attempt += 1) {
@@ -216,7 +273,17 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
         });
         joinCode = candidate;
       } catch {
-        // join_code UNIQUE collision — retry with a freshly generated code.
+        const raced = await findCampaignById(deps.db, body.id);
+        if (raced) {
+          // A concurrent request won the race for this exact id between this handler's own
+          // top-of-route `existing` check and this insert — resolve it with the SAME
+          // idempotent-200/conflict-409 logic that check already applies, rather than burning
+          // through every remaining attempt on an error no join code can fix.
+          if (raced.dmId !== user.userId) throw conflict('Campaign id already in use');
+          return c.json(toCampaignDto(raced, user.userId), 200);
+        }
+        // No row exists for this id yet — the failure was a join_code UNIQUE collision instead;
+        // retry with a freshly generated code.
       }
     }
     if (!created || !joinCode) {
@@ -230,35 +297,37 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
       joinedAt: now,
     });
 
-    // Event append second (design ruling 3). `campaign.created` requires actor.role 'dm'
-    // (CAMPAIGN_EVENT_ACTORS); `member.joined` requires actor.role 'member' — the STATIC
-    // per-type actor table (`campaign-permissions.ts`) is checked per `append()` CALL against one
-    // shared `actor`, so these cannot be combined into a single append() batch with one actor.
-    // The DM bootstraps their OWN membership row on the campaign stream by authoring
-    // `member.joined` in the 'member' CAPACITY (self-binding: payload.userId === actor.userId,
-    // `campaign-actor.ts`'s `refineAppendPermission`) — the same self-service action any other
-    // joining user takes, just for the campaign's creator. This is what makes the DM show up in
-    // `CampaignActor`'s own `meta.members` (task-5-report.md's carried finding: without this,
-    // presence's DM entry has no real displayName source).
+    // Event append second (design ruling 3), as ONE atomic txId batch — see this file's header
+    // comment ("Atomic campaign bootstrap") for why `campaign.created` and the DM's own bootstrap
+    // `member.joined` are appended together, both stamped `{role: 'dm'}`, rather than as two
+    // separate append() calls. This is what makes the DM show up in `CampaignActor`'s own
+    // `meta.members` (task-5-report.md's carried finding: without it, presence's DM entry has no
+    // real displayName source).
     const streamId = `camp:${body.id}`;
     const dmActor: Actor = { userId: user.userId, role: 'dm' };
-    const memberActor: Actor = { userId: user.userId, role: 'member' };
-    const createdEvent = buildEvent(streamId, dmActor, 'campaign.created', 1, payloadCheck.data);
-    const createdAcked = await appendOne(deps.streamHost, streamId, createdEvent, dmActor);
-    const joinedEvent = buildEvent(streamId, memberActor, 'member.joined', 1, {
-      userId: user.userId,
-      displayName,
-      role: 'dm',
-    });
-    const joinedAcked = createdAcked ? await appendOne(deps.streamHost, streamId, joinedEvent, memberActor) : false;
+    const bootstrapTxId = uuidv7();
+    const createdEvent = buildEvent(streamId, dmActor, 'campaign.created', 1, payloadCheck.data, bootstrapTxId);
+    const joinedEvent = buildEvent(
+      streamId,
+      dmActor,
+      'member.joined',
+      1,
+      { userId: user.userId, displayName, role: 'dm' },
+      bootstrapTxId,
+    );
 
-    if (!createdAcked || !joinedAcked) {
+    try {
+      const acked = await appendEvents(deps.streamHost, streamId, [createdEvent, joinedEvent], dmActor);
+      if (!acked) throw new Error('campaign create: campaign.created/member.joined batch was rejected');
+    } catch (err) {
       // Best-effort D1 rollback (design ruling 3: "D1 first, event append second, best-effort D1
-      // rollback on append failure"): the D1 rows describe a campaign whose own stream never
-      // actually recorded it — undo them rather than leave a D1-only "ghost" campaign.
+      // rollback on append failure"), covering BOTH a clean rejection and a thrown store fault
+      // (fix round 1, [Important] 2) — the D1 rows describe a campaign whose own stream never
+      // actually recorded it (the txId batch is atomic, so this is always "neither committed",
+      // never a half-bootstrapped stream) — undo them rather than leave a D1-only "ghost" campaign.
       await removeMembership(deps.db, body.id, user.userId).catch(() => undefined);
       await deleteCampaignIndexRow(deps.db, body.id).catch(() => undefined);
-      throw new Error('campaign create: campaign.created/member.joined event(s) were rejected');
+      throw err instanceof Error ? err : new Error('campaign create: event batch append failed');
     }
 
     return c.json(toCampaignDto(created, user.userId), 201);
@@ -322,10 +391,14 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
     const streamId = `camp:${campaign.id}`;
     const actor: Actor = { userId: user.userId, role: 'member' };
     const event = buildEvent(streamId, actor, 'member.joined', 1, { userId: user.userId, displayName, role: 'player' });
-    const acked = await appendOne(deps.streamHost, streamId, event, actor);
-    if (!acked) {
+    try {
+      const acked = await appendEvents(deps.streamHost, streamId, [event], actor);
+      if (!acked) throw new Error('campaign join: member.joined event was rejected');
+    } catch (err) {
+      // Fix round 1, [Important] 2: a THROWN append (not just a clean rejection) gets the same
+      // best-effort D1 rollback.
       await removeMembership(deps.db, campaign.id, user.userId).catch(() => undefined);
-      throw new Error('campaign join: member.joined event was rejected');
+      throw err instanceof Error ? err : new Error('campaign join: member.joined append failed');
     }
 
     return c.json({ campaignId: campaign.id }, 200);
@@ -353,11 +426,14 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
     const streamId = `camp:${id}`;
     const actor: Actor = { userId: user.userId, role: 'dm' };
     const event = buildEvent(streamId, actor, 'campaign.join_code_rotated', 1, { joinCode: newCode });
-    const acked = await appendOne(deps.streamHost, streamId, event, actor);
-    if (!acked) {
-      // Best-effort D1 rollback: restore the OLD code so D1 and the stream stay consistent.
+    try {
+      const acked = await appendEvents(deps.streamHost, streamId, [event], actor);
+      if (!acked) throw new Error('rotate-code: campaign.join_code_rotated event was rejected');
+    } catch (err) {
+      // Fix round 1, [Important] 2: a THROWN append also restores the OLD code, same as a clean
+      // rejection, so D1 and the stream stay consistent.
       await rotateJoinCode(deps.db, id, campaign.joinCode).catch(() => undefined);
-      throw new Error('rotate-code: campaign.join_code_rotated event was rejected');
+      throw err instanceof Error ? err : new Error('rotate-code: campaign.join_code_rotated append failed');
     }
 
     return c.json({ joinCode: newCode }, 200);
@@ -387,10 +463,14 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
       displayName: membership.displayName,
       role: membership.role,
     });
-    const acked = await appendOne(deps.streamHost, streamId, event, actor);
-    if (!acked) {
+    try {
+      const acked = await appendEvents(deps.streamHost, streamId, [event], actor);
+      if (!acked) throw new Error('member removal: member.removed event was rejected');
+    } catch (err) {
+      // Fix round 1, [Important] 2: a THROWN append also re-inserts the membership row, same as
+      // a clean rejection.
       await insertMembership(deps.db, membership).catch(() => undefined);
-      throw new Error('member removal: member.removed event was rejected');
+      throw err instanceof Error ? err : new Error('member removal: member.removed append failed');
     }
 
     // T9 hook (bye emission, plan-9 Task 9): the removed member's LIVE campaign sockets should be

@@ -264,6 +264,18 @@ export const CAMPAIGN_EVENT_PAYLOADS: Record<string, z.ZodType> = {
  * removed = DM-only (D) — the ordinary reading of "a member joins/leaves themselves; only a DM
  * removes someone else."
  *
+ * `member.joined` ALSO grants `'dm'` (plan-9 Task 4 fix round 1, controller-sanctioned): a
+ * campaign's own DM legitimately records their OWN bootstrap membership row the same way any
+ * other joining user does — `campaign.created` establishes `dmId` but does not itself populate
+ * `CampaignActor`'s `meta.members` (design ruling 3), and doc-02's "M / D" slash for this row does
+ * not, on its own text, forbid the DM from being the `M` half for their OWN join. The actor-level
+ * self-binding guard (`campaign-actor.ts`'s `refineAppendPermission`: `payload.userId ===
+ * actor.userId`, no exemption either way) is what actually prevents a DM from admitting anyone
+ * ELSE via `member.joined` — this table entry only widens WHO may author a message that already
+ * has to be about themselves. `member.left` stays `['member']` only: a DM never has cause to
+ * "leave" their own campaign via the member-self-service type (see `campaigns.ts`'s DM-cannot-
+ * remove-themselves route rule) — only `member.joined`'s DM-bootstrap use case is real.
+ *
  * `dm.note_*` isn't in either quoted row either. It follows doc-02's own `D` actor column for
  * that family, which also matches the read-filtering rule stated two paragraphs later in doc-08:
  * "[reads] never [send] dm.note_* events to non-DM sockets" — a type no non-DM socket ever
@@ -285,7 +297,7 @@ export const CAMPAIGN_EVENT_ACTORS: Record<string, ActorRole[]> = {
   'campaign.archived': ['dm'],
   'pack.enabled': ['dm'],
   'pack.disabled': ['dm'],
-  'member.joined': ['member'],
+  'member.joined': ['member', 'dm'],
   'member.left': ['member'],
   'member.removed': ['dm'],
   'member.renamed': ['dm', 'member'],

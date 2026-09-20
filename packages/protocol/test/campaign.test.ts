@@ -267,7 +267,10 @@ describe('EVENT_ACTORS campaign rows (doc-08 §Authorization matrix)', () => {
   });
 
   it('doc-02 actor column "M / D" for member.joined/left/removed resolves to member self-service join/leave, DM-only removal', () => {
-    expect(CAMPAIGN_EVENT_ACTORS['member.joined']).toEqual(['member']);
+    // member.joined ALSO grants 'dm' (fix round 1, controller-sanctioned): the campaign's own DM
+    // legitimately records their own bootstrap membership row via this type too (self-binding at
+    // the actor level, `campaign-actor.ts`, is what still prevents a DM admitting anyone else).
+    expect(CAMPAIGN_EVENT_ACTORS['member.joined']).toEqual(['member', 'dm']);
     expect(CAMPAIGN_EVENT_ACTORS['member.left']).toEqual(['member']);
     expect(CAMPAIGN_EVENT_ACTORS['member.removed']).toEqual(['dm']);
   });
