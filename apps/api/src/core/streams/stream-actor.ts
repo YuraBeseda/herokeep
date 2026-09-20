@@ -479,14 +479,21 @@ export class StreamActor {
       // this comment's claim was stale, left over from before `CampaignActor` (plan-9) made
       // multi-role streams real.
       if (validated.event.type === 'event.reverted') {
-        const target = this.resolveRevertTarget(validated.event.payload, revertTargetById, revertTargetByTxId);
-        if (!this.permissions.canRevertOwn({ userId: actor.userId, role: actor.role }, target)) {
+        // [round 3 fix] EVERY handle the payload names that resolves must independently pass
+        // `canRevertOwn` — `resolveRevertTargets`' own doc comment has the full "combined-fields
+        // door" this closes (a resolvable, forbidden `targetId`/`txId` can no longer ride along
+        // unchecked behind an unresolvable or legitimate sibling in the same payload).
+        const targets = this.resolveRevertTargets(validated.event.payload, revertTargetById, revertTargetByTxId);
+        const forbiddenTarget = targets.some(
+          (target) => !this.permissions.canRevertOwn({ userId: actor.userId, role: actor.role }, target),
+        );
+        if (forbiddenTarget) {
           return {
             kind: 'rejected',
             id: raw.id,
             code: 'forbidden',
             message:
-              'event.forbidden: event.reverted may only target an event the acting owner themselves authored (dm may revert any)',
+              'event.forbidden: event.reverted may only name events the acting owner themselves authored (dm may revert any)',
           };
         }
       }
@@ -739,39 +746,61 @@ export class StreamActor {
   }
 
   /**
-   * [final whole-branch review, Important, CLOSED in the second wave] Resolves `event.reverted`'s
-   * TARGET event, for `canRevertOwn`'s ownership check — `permissions.ts`'s own doc comment
-   * already named the exact two shapes: "a store lookup by the revert payload's `targetId` (or,
-   * for a `txId`-grouped revert, any member of that original transaction)". BOTH are now resolved:
+   * [final whole-branch review, Important, CLOSED in the second wave, EXTENDED in the third round
+   * — MUST-FIX: the combined-fields door] Resolves EVERY NAMED HANDLE `event.reverted`'s payload
+   * carries — `permissions.ts`'s own doc comment already named the exact two shapes: "a store
+   * lookup by the revert payload's `targetId` (or, for a `txId`-grouped revert, any member of
+   * that original transaction)" — and `EventRevertedV1`'s schema allows BOTH `targetId` AND `txId`
+   * on the SAME payload at once (its `.refine` only requires "at least one", never "exactly one").
+   * `@hk/engine`'s own reducer (`preScanReverted`) honors both fields INDEPENDENTLY and
+   * unconditionally when both are present — it is not "targetId wins" there, so this resolution
+   * must not silently pick one field over the other either.
    *
-   *   - `targetId` (single event): the pre-fetched `storeTargetById` map — Stage 0's ONE batched
-   *     `findByIds` call, `append`'s own doc comment.
-   *   - `txId` (group revert, no `targetId` — the web client's OWN `CharacterStore.revert({txId})`
-   *     shape, used by the timeline's group-revert/level-up-undo UI): the pre-fetched
-   *     `storeTargetByTxId` map — Stage 0's `StreamStore.findAnyByTxId` calls, one per distinct
-   *     `txId` in the batch. "Any member" suffices per that port method's own doc comment (doc-03
-   *     §Ordering: a `txId` group commits in ONE `append` under ONE `actor`, so every member
-   *     shares the identical stored actor — there is no per-member distinction to resolve).
+   * [round 3 fix] The previous version SHORT-CIRCUITED: `targetId` present → return that lookup
+   * (found or not), NEVER EVEN READING `txId`. That was a bypass, not a simplification: a revert
+   * payload `{targetId: <bogus uuid>, txId: <a dm-authored tx the owner legitimately observed>}`
+   * resolved to `targetId`'s lookup (nothing — a made-up id), which is "unresolvable" and FAILS
+   * OPEN — the `txId` half, which WOULD have resolved to the dm's real committed group, was never
+   * even looked at, let alone checked. A `{targetId: <the owner's OWN event>, txId: <the dm's
+   * tx>}` variant is the same door dressed up to look legitimate: the resolvable, owner-authored
+   * `targetId` half passes, riding the unchecked `txId` half along with it. Both variants let the
+   * `txId` half do its full damage (the reducer nullifies that dm-authored group regardless of
+   * what `targetId` names) while `canRevertOwn` never sees it.
    *
-   * `undefined` — "unresolvable" — is still possible, and `canRevertOwn` still FAILS OPEN for it
-   * (see that function's own doc comment, `permissions.ts`, for the corrected safety rationale —
-   * NOT reducer inertness, which this exact case disproves): a same-batch target (this SAME
-   * `append(events, actor)` call also carries the event being reverted) is not looked up at all —
-   * it CANNOT produce a different verdict than fail-open even if resolved, since every event in
-   * one `append` call is stamped with the IDENTICAL `actor` (`stampActor`, above), so a same-batch
-   * target's authorship is, BY CONSTRUCTION, always the reverting actor's own; a genuinely
-   * nonexistent `targetId`/`txId` (nothing ever committed with it, on ANY stream) is the other.
+   * FIX: returns EVERY handle that resolves (0, 1, or 2 entries — `targetId` via the pre-fetched
+   * `storeTargetById` map, Stage 0's `findByIds` call; `txId` via `storeTargetByTxId`, Stage 0's
+   * `findAnyByTxId` calls — "any member" suffices per that port method's own doc comment: doc-03
+   * §Ordering's single-append `txId` rule means a whole group shares one actor). The caller
+   * (`append`'s Stage 1) requires `canRevertOwn` to pass for EVERY entry this returns — an
+   * individually unresolvable handle (nothing committed anywhere matches it) is simply ABSENT
+   * from the returned array, preserving the documented per-handle fail-open (see `canRevertOwn`'s
+   * own doc comment, `permissions.ts`, for the corrected safety rationale this rests on — NOT
+   * reducer inertness) WITHOUT letting an unresolvable handle hide a resolvable, forbidden one
+   * riding alongside it in the same payload.
+   *
+   * A same-batch target (this SAME `append(events, actor)` call also carries the event being
+   * reverted) is still not looked up at all for either field — it CANNOT produce a different
+   * verdict than "absent from the array" even if resolved, since every event in one `append` call
+   * is stamped with the IDENTICAL `actor` (`stampActor`, above), so a same-batch target's
+   * authorship is, BY CONSTRUCTION, always the reverting actor's own.
    */
-  private resolveRevertTarget(
+  private resolveRevertTargets(
     payload: unknown,
     storeTargetById: ReadonlyMap<string, Event>,
     storeTargetByTxId: ReadonlyMap<string, Event>,
-  ): Event | undefined {
+  ): Event[] {
+    const targets: Event[] = [];
     const targetId = readOptionalStringField(payload, 'targetId');
-    if (targetId !== undefined) return storeTargetById.get(targetId);
+    if (targetId !== undefined) {
+      const target = storeTargetById.get(targetId);
+      if (target !== undefined) targets.push(target);
+    }
     const txId = readOptionalStringField(payload, 'txId');
-    if (txId !== undefined) return storeTargetByTxId.get(txId);
-    return undefined;
+    if (txId !== undefined) {
+      const target = storeTargetByTxId.get(txId);
+      if (target !== undefined) targets.push(target);
+    }
+    return targets;
   }
 
   /** Fan out newly committed `events` to every OTHER connection on this stream — the sender

@@ -790,6 +790,81 @@ describe('event.reverted: canRevertOwn enforcement', () => {
     expect(outcome.rejected).toEqual([]);
     expect(outcome.acked).toEqual([{ id: revert.id, seq: 3 }]);
   });
+
+  // --- [round 3, MUST-FIX] the combined-fields door -------------------------------------------
+  // `EventRevertedV1`'s schema allows BOTH `targetId` AND `txId` on ONE payload (`.refine` only
+  // requires "at least one"), and the engine reducer honors both independently. The previous
+  // `resolveRevertTarget` (singular) SHORT-CIRCUITED on `targetId`, never even reading `txId` —
+  // so a payload naming a bogus/unresolvable `targetId` ALONGSIDE a genuine, resolvable,
+  // dm-authored `txId` fell open entirely: the `txId` half did its full damage (the reducer
+  // nullifies that group regardless of what `targetId` names) while `canRevertOwn` never saw it.
+
+  it('{targetId: bogus, txId: dm-authored} is rejected forbidden — the txId half is still checked even though targetId resolves nothing', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    const dm: Actor = { userId: 'user-dm', role: 'dm' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const dmTxId = uuidv7();
+    const dmGroupMember = makeNoteEvent({
+      type: 'hp.changed',
+      v: 1,
+      payload: { delta: -5, kind: 'damage' },
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+      txId: dmTxId,
+    });
+    await system.actor.append([dmGroupMember], dm);
+    const beforeLength = system.store.length;
+
+    const revert = makeRevertEvent({ payload: { targetId: uuidv7(), txId: dmTxId } }); // targetId is made up
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ id: revert.id, code: 'forbidden' });
+    expect(system.store.length).toBe(beforeLength);
+  });
+
+  it('{targetId: owner’s own event, txId: dm-authored} is rejected forbidden — a legitimate targetId cannot smuggle a forbidden txId along with it', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    const dm: Actor = { userId: 'user-dm', role: 'dm' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const ownNote = makeNoteEvent();
+    await system.actor.append([ownNote], owner);
+    const dmTxId = uuidv7();
+    const dmGroupMember = makeNoteEvent({
+      type: 'hp.changed',
+      v: 1,
+      payload: { delta: -5, kind: 'damage' },
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+      txId: dmTxId,
+    });
+    await system.actor.append([dmGroupMember], dm);
+    const beforeLength = system.store.length;
+
+    const revert = makeRevertEvent({ payload: { targetId: ownNote.id, txId: dmTxId } });
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ id: revert.id, code: 'forbidden' });
+    expect(system.store.length).toBe(beforeLength);
+  });
+
+  it('{targetId: owner’s own event, txId: owner’s own group} succeeds — a fully legitimate combined-fields revert is not blocked', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const ownNote = makeNoteEvent();
+    await system.actor.append([ownNote], owner);
+    const ownTxId = uuidv7();
+    const ownGroupMember = makeNoteEvent({ txId: ownTxId });
+    await system.actor.append([ownGroupMember], owner);
+
+    const revert = makeRevertEvent({ payload: { targetId: ownNote.id, txId: ownTxId } });
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: revert.id, seq: 4 }]);
+  });
 });
 
 // --- [fix round 1, Important] owner backstop -------------------------------------------------

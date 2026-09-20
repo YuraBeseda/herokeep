@@ -90,16 +90,30 @@ export function allowed(eventType: string, role: Role): boolean {
  * `dm`-role commits (`hp.changed`, `override.applied`, etc.) onto a character stream via
  * `Rpc.forwardAppend` — so an owner could otherwise `event.reverted` a DM-authored event and have
  * it commit, a live ADR-012 violation. `StreamActor.append` (`stream-actor.ts`) now wires this in
- * for real, resolving the target via its OWN `resolveRevertTarget` (the Stage-0 batched
- * `findByIds`/`findAnyByTxId` lookups this doc comment originally anticipated) BEFORE calling
- * here — see that method's doc comment for the full resolution rules, including BOTH
- * `targetId` (single event) AND `txId` (whole-transaction group revert, closed in the second
- * wave — `StreamStore.findAnyByTxId`) shapes, and WHY a same-batch target needs no special-casing
- * (provably always the reverting actor's own, by construction).]
+ * for real, resolving EVERY handle the revert payload names via its OWN `resolveRevertTargets`
+ * (plural — round 3 fix; the Stage-0 batched `findByIds`/`findAnyByTxId` lookups this doc comment
+ * originally anticipated) BEFORE calling here, ONCE PER RESOLVED HANDLE — see that method's doc
+ * comment for the full resolution rules, including BOTH `targetId` (single event) AND `txId`
+ * (whole-transaction group revert, closed in the second wave — `StreamStore.findAnyByTxId`)
+ * shapes, WHY a same-batch target needs no special-casing (provably always the reverting actor's
+ * own, by construction), and the COMBINED-FIELDS rule this function's own callers must honor:
+ * `EventRevertedV1`'s schema allows BOTH `targetId` AND `txId` on ONE payload, `@hk/engine`'s
+ * reducer (`preScanReverted`) honors both independently and unconditionally when both are
+ * present, and this function must be called for EVERY handle that resolves, not just the first —
+ * a revert naming one legitimate/unresolvable handle and one resolvable-but-forbidden handle in
+ * the SAME payload must still be rejected for the forbidden one.]
  *
- * `target === undefined` — an UNRESOLVABLE target, meaning nothing was EVER committed anywhere
- * matching the revert's `targetId`/`txId` — FAILS OPEN. [final whole-branch review, second wave,
- * RATIONALE CORRECTION] The original version of this comment justified that by citing
+ * `target === undefined` — an UNRESOLVABLE target — FAILS OPEN. [round 3] `StreamActor.append`
+ * (the only real caller) never actually invokes this with `target === undefined` anymore: its
+ * `resolveRevertTargets` returns ONLY handles that resolved, so an unresolvable handle is simply
+ * OMITTED from what gets checked at all — that omission IS the fail-open, implemented at the
+ * caller. The `target === undefined` branch below is kept as this function's own documented
+ * DEFAULT for the port's full contract (`PermissionsPort.canRevertOwn` still declares `target:
+ * Event | undefined`, and a unit test may call this directly with `undefined` to pin the
+ * contract in isolation) — not because the current pipeline relies on reaching it.
+ *
+ * [final whole-branch review, second wave, RATIONALE CORRECTION] The original version of this
+ * comment justified the fail-open default by citing
  * `@hk/engine`'s reducer "failing silently" for an unknown revert target — THIS WAS WRONG, and the
  * review proved it wrong: `packages/engine/src/reduce/reducer.ts`'s `preScanReverted` pre-scans
  * the WHOLE input array UP FRONT, order-independently, before folding starts — a revert committed
