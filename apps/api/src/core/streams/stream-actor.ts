@@ -71,6 +71,20 @@ export const NO_OP_RPC: Rpc = {
 
 /** doc-03 §Catch-up performance: "the DO pages 200 events per frame". */
 const CATCH_UP_PAGE_SIZE = 200;
+
+/** [final whole-branch review, Important — canRevertOwn wiring] Reads a `string` field off an
+ * event's (still schema-UNVALIDATED — `event.reverted`'s revert-target resolution runs BEFORE
+ * `validateEvent`, since it needs an async store lookup) payload, without throwing on a malformed
+ * shape — same defensive-read pattern `campaign-actor.ts`'s own `readStringField` already uses
+ * for the identical reason. A field this can't safely interpret falls through to `undefined`, and
+ * `validateEvent`'s OWN schema check (stage 1, below) is what reports a genuinely malformed
+ * `event.reverted` payload as `invalid` — this helper never needs to. */
+function readOptionalStringField(payload: unknown, field: string): string | undefined {
+  if (typeof payload !== 'object' || payload === null) return undefined;
+  const value = (payload as Record<string, unknown>)[field];
+  return typeof value === 'string' ? value : undefined;
+}
+
 /** Stream-meta key tracking whether the 80% notice has already fired for the CURRENT crossing
  * (doc-03 §Quota signalling: "at 80%" — read as "once per crossing", not "every append while
  * over 80%"; see `maybeNotifyQuotaWarning`'s comment). */
@@ -379,6 +393,32 @@ export class StreamActor {
       };
     }
 
+    // Stage 0 (new, final whole-branch review Important finding): resolve `event.reverted`
+    // targets BEFORE stage 1, since ADR-012's "Owner may revert only events they themselves
+    // authored" rule (`permissions.ts`'s `canRevertOwn`, wired in for real here — it had ZERO
+    // call sites before this fix, despite being declared in `PermissionsPort`) needs the TARGET
+    // event's original actor, and resolving it needs an async store lookup `Array#map`'s stage 1
+    // below can't do inline. Skipped entirely when this append has no `event.reverted` events at
+    // all (the overwhelming common case) — no extra store round-trip for ordinary appends.
+    //
+    // SAME-BATCH note (the brief's own "mind batch semantics — revert target may be in the SAME
+    // batch?" prompt, considered and resolved, not overlooked): a revert CANNOT observe a
+    // different outcome for a target in this SAME `append(events, actor)` call versus one this
+    // lookup fails to resolve at all — EVERY event in one call is stamped with the identical
+    // `actor` (`stampActor`, below), so a same-batch target's authorship is, BY CONSTRUCTION,
+    // always the reverting actor's own. That is EXACTLY `canRevertOwn`'s fail-open default for an
+    // unresolvable target (see its own doc comment, `permissions.ts`) — so no separate same-batch
+    // resolution path is needed; it would be provably-dead code, always agreeing with the
+    // fall-through. `resolveRevertTarget` below therefore only ever needs the STORE-side lookup.
+    const revertTargetIds = new Set<string>();
+    for (const raw of events) {
+      if (raw.type !== 'event.reverted') continue;
+      const targetId = readOptionalStringField(raw.payload, 'targetId');
+      if (targetId !== undefined) revertTargetIds.add(targetId);
+    }
+    const revertTargetsFromStore = revertTargetIds.size > 0 ? await this.store.findByIds([...revertTargetIds]) : [];
+    const revertTargetById = new Map(revertTargetsFromStore.map((e) => [e.id, e]));
+
     // Stage 1: per-event schema/size/permission, plus same-frame duplicate-id detection.
     const idCounts = new Map<string, number>();
     for (const raw of events) idCounts.set(raw.id, (idCounts.get(raw.id) ?? 0) + 1);
@@ -405,6 +445,18 @@ export class StreamActor {
       // `actor.role` narrowed to 'owner' | 'dm' here: `permissions.allowed` only ever returns
       // true for those two roles (permissions.ts's early `member` return), so `stampActor`
       // never actually receives 'member' despite `Actor.role`'s wider static type.
+      if (validated.event.type === 'event.reverted') {
+        const target = this.resolveRevertTarget(validated.event.payload, revertTargetById);
+        if (!this.permissions.canRevertOwn({ userId: actor.userId, role: actor.role }, target)) {
+          return {
+            kind: 'rejected',
+            id: raw.id,
+            code: 'forbidden',
+            message:
+              'event.forbidden: event.reverted may only target an event the acting owner themselves authored (dm may revert any)',
+          };
+        }
+      }
       return { kind: 'new', event: this.stampActor(validated.event, actor) };
     });
 
@@ -651,6 +703,44 @@ export class StreamActor {
     };
     delete stamped.seq; // never accept a client-supplied seq (doc-03: the DO assigns it)
     return stamped;
+  }
+
+  /**
+   * [final whole-branch review, Important] Resolves `event.reverted`'s TARGET event, for
+   * `canRevertOwn`'s ownership check — `permissions.ts`'s own doc comment already named the exact
+   * two shapes: "a store lookup by the revert payload's `targetId` (or, for a `txId`-grouped
+   * revert, any member of that original transaction)".
+   *
+   * ONLY `targetId` is resolved here (via the pre-fetched `storeTargetById` map — Stage 0's ONE
+   * batched `findByIds` call, `append`'s own doc comment). Two cases return `undefined` —
+   * "unresolvable" — deliberately, not by oversight, and `canRevertOwn` FAILS OPEN for both (see
+   * its own doc comment, `permissions.ts`):
+   *
+   *   - A same-batch target (this SAME `append(events, actor)` call also carries the event being
+   *     reverted) is not looked up at all — it CANNOT produce a different verdict than fail-open
+   *     even if resolved: every event in one `append` call is stamped with the IDENTICAL `actor`
+   *     (`stampActor`, above), so a same-batch target's authorship is, BY CONSTRUCTION, always the
+   *     reverting actor's own — exactly `canRevertOwn`'s unresolvable-target default. A dedicated
+   *     same-batch resolution path was considered (the brief's own "mind batch semantics" prompt)
+   *     and dropped as provably-dead code once this was traced through, not left unconsidered.
+   *   - A `txId`-only revert (no `targetId` — the web client's OWN `CharacterStore.revert({txId})`
+   *     shape for "revert this whole transaction") has NO resolution path here at all:
+   *     `StreamStore`'s port surface only offers `findByIds` (explicit-id lookup), no "find
+   *     committed events by `txId`" query — adding one was judged OUT OF SCOPE for this fix (the
+   *     brief's own red-first list names only `targetId`-shaped scenarios). DISCLOSED GAP, not
+   *     silently accepted: an owner CAN currently revert a cross-batch, DM-authored GROUP
+   *     transaction without this check catching it (the `targetId` path — the common single-event
+   *     case, and everything the brief's red-first tests exercise — is fully enforced). This
+   *     matches `@hk/engine`'s own reducer, which already "fails silently rather than erroring"
+   *     for a revert target it can't find (`packages/engine/src/reduce/reducer.ts`'s
+   *     `preScanReverted` doc comment) — consistent with the existing product philosophy, not a
+   *     new risk this fix introduces. Closing it fully needs a new `StreamStore.findByTxId`-shaped
+   *     port method; flagged here for a follow-up, not built speculatively into this fix.
+   */
+  private resolveRevertTarget(payload: unknown, storeTargetById: ReadonlyMap<string, Event>): Event | undefined {
+    const targetId = readOptionalStringField(payload, 'targetId');
+    if (targetId === undefined) return undefined;
+    return storeTargetById.get(targetId);
   }
 
   /** Fan out newly committed `events` to every OTHER connection on this stream — the sender

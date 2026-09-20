@@ -595,6 +595,175 @@ describe('CharacterActor', () => {
   });
 });
 
+// --- event.reverted: canRevertOwn enforcement (final whole-branch review, Important) ---------
+
+/** ADR-012 §Authorization: "Owner ... event.reverted (only events the owner authored)" / "DM of
+ * the character's campaign ... event.reverted (any)". `canRevertOwn` (permissions.ts) had ZERO
+ * call sites before this fix — this describes the real wiring in `StreamActor.append`'s new
+ * Stage 0 (`resolveRevertTarget`). */
+describe('event.reverted: canRevertOwn enforcement', () => {
+  function makeRevertEvent(overrides: Partial<Event> = {}): Event {
+    return {
+      id: uuidv7(),
+      stream: STREAM_ID,
+      ts: new Date().toISOString(),
+      actor: { userId: 'user-1', deviceId: 'device-1', role: 'owner' },
+      type: 'event.reverted',
+      v: 1,
+      payload: {},
+      ...overrides,
+    };
+  }
+
+  it('owner reverting a dm-authored event is rejected forbidden (ADR-012: owner may revert only events they authored)', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    const dm: Actor = { userId: 'user-dm', role: 'dm' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const hpChanged = makeNoteEvent({
+      type: 'hp.changed',
+      v: 1,
+      payload: { delta: -3, kind: 'damage' },
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+    });
+    await system.actor.append([hpChanged], dm);
+    const beforeLength = system.store.length;
+
+    const revert = makeRevertEvent({ payload: { targetId: hpChanged.id } });
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ id: revert.id, code: 'forbidden' });
+    expect(system.store.length).toBe(beforeLength); // nothing new committed — the target survives untouched
+  });
+
+  it('owner reverting their OWN event still works', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const note = makeNoteEvent();
+    await system.actor.append([note], owner);
+
+    const revert = makeRevertEvent({ payload: { targetId: note.id } });
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: revert.id, seq: 3 }]);
+  });
+
+  it('dm reverting an owner-authored event succeeds (ADR-012: dm may revert any)', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    const dm: Actor = { userId: 'user-dm', role: 'dm' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const note = makeNoteEvent();
+    await system.actor.append([note], owner);
+
+    const revert = makeRevertEvent({
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+      payload: { targetId: note.id },
+    });
+    const outcome = await system.actor.append([revert], dm);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: revert.id, seq: 3 }]);
+  });
+
+  it('dm reverting a dm-authored event also succeeds (trivially within "any")', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    const dm: Actor = { userId: 'user-dm', role: 'dm' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const hpChanged = makeNoteEvent({
+      type: 'hp.changed',
+      v: 1,
+      payload: { delta: -1, kind: 'damage' },
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+    });
+    await system.actor.append([hpChanged], dm);
+
+    const revert = makeRevertEvent({
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+      payload: { targetId: hpChanged.id },
+    });
+    const outcome = await system.actor.append([revert], dm);
+
+    expect(outcome.rejected).toEqual([]);
+  });
+
+  // A same-batch target (never separately committed first, so `findByIds` can't resolve it) is
+  // NOT specially resolved — `resolveRevertTarget`'s doc comment explains why that would be
+  // provably-dead code: one `append()` call stamps every event with the SAME actor, so a
+  // same-batch target's authorship is always the reverting actor's own, exactly what the
+  // fail-open "unresolvable" default already grants. This test pins that it doesn't error or
+  // behave oddly — it goes through the SAME fail-open path as a genuinely-nonexistent targetId.
+  it('reverting a target in the SAME append batch (never separately committed) still succeeds, via the fail-open path', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const note = makeNoteEvent();
+    const revert = makeRevertEvent({ payload: { targetId: note.id } });
+
+    const outcome = await system.actor.append([note, revert], owner);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toHaveLength(2);
+  });
+
+  it('a genuinely nonexistent targetId fails open (harmless — nothing resolvable to forbid, matches the engine reducer’s own silent no-op)', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+
+    const revert = makeRevertEvent({ payload: { targetId: uuidv7() } }); // no such event was ever committed
+    const outcome = await system.actor.append([revert], owner);
+
+    expect(outcome.rejected).toEqual([]);
+  });
+
+  // txId-only reverts have NO resolution path at all (`resolveRevertTarget` only ever handles
+  // `targetId`) — a same-batch group member doesn't change that; this pins it doesn't error.
+  it('a same-batch txId-group revert (no targetId) still succeeds, via the same unconditional fail-open txId path', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const txId = uuidv7();
+    const groupMember = makeNoteEvent({ txId });
+    const revert = makeRevertEvent({ payload: { txId } });
+
+    const outcome = await system.actor.append([groupMember, revert], owner);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toHaveLength(2);
+  });
+
+  // DISCLOSED GAP (documented in `resolveRevertTarget`'s own doc comment, `stream-actor.ts`): a
+  // `txId`-only revert targeting a PAST (cross-batch) transaction has no existing `StreamStore`
+  // lookup to resolve against (`findByIds` is explicit-id only) — it currently falls open, same as
+  // a genuinely-unresolvable `targetId`. Pinned here so a future `findByTxId`-shaped fix has a
+  // failing-then-passing test to flip, not a silent behavior change.
+  it('[disclosed gap] a cross-batch txId-only revert is NOT currently ownership-checked — falls open', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-1', role: 'owner' };
+    const dm: Actor = { userId: 'user-dm', role: 'dm' };
+    await system.actor.append([makeCharacterCreatedEvent()], owner);
+    const txId = uuidv7();
+    const dmGroupMember = makeNoteEvent({
+      type: 'hp.changed',
+      v: 1,
+      payload: { delta: -2, kind: 'damage' },
+      actor: { userId: 'user-dm', deviceId: 'device-1', role: 'dm' },
+      txId,
+    });
+    await system.actor.append([dmGroupMember], dm); // committed in a SEPARATE, earlier append call
+
+    const revert = makeRevertEvent({ payload: { txId } });
+    const outcome = await system.actor.append([revert], owner); // owner, reverting a dm-authored group
+
+    expect(outcome.rejected).toEqual([]); // currently falls open — see the doc comment above
+  });
+});
+
 // --- [fix round 1, Important] owner backstop -------------------------------------------------
 
 describe('CharacterActor — owner backstop (defense in depth vs. mapGatewayActor)', () => {

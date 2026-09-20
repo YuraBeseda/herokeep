@@ -77,26 +77,37 @@ export function allowed(eventType: string, role: Role): boolean {
 }
 
 /**
- * `event.reverted`'s "own events only" rule for Owner (ADR-012 §Authorization table: Owner may
- * revert only events they themselves authored; DM may revert any). Enforcing this precisely
- * needs the TARGET event's original actor — a store lookup by the revert payload's `targetId`
- * (or, for a `txId`-grouped revert, any member of that original transaction), which
- * `StreamStore.findByIds` (ports/stream.ts) exists to support.
+ * `event.reverted`'s "own events only" rule for Owner — ADR-012 §Authorization table, verbatim:
+ * "Owner | ... `event.reverted` (only events the owner authored) | ..." / "DM of the character's
+ * campaign | ... `event.reverted` (any) | ...". doc-08's matrix row states the same thing in the
+ * compact form `EVENT_ACTORS` mirrors: `event.reverted | own events | any | ✖ | ✖`.
  *
- * Phase 2 scope note (this is the documented hook the task brief asks for): Phase 2 ships ONLY
- * solo owner sockets on character streams — a DM role is unreachable here because a DM only
- * exists in the context of a campaign, and campaigns are Phase 3 (`CampaignActor`, not built
- * yet). That means every event ever committed to a Phase-2 character stream is, without
- * exception, owner-authored — "revert an event you authored" and "revert any event" describe
- * the exact same set of targets this phase. Doing the real store lookup today would add
- * complexity that cannot change today's observable behavior, so this hook is a documented
- * pass-through; `StreamActor` calls it (rather than skipping the check entirely) precisely so
- * that swapping in the real lookup, once Phase 3 introduces a stream with more than one
- * possible author, is a one-function change instead of a pipeline-shape change.
+ * [final whole-branch review, Important — THIS is the real implementation; Phase 2 shipped this
+ * as a documented pass-through stub with ZERO call sites, safe ONLY because Phase 2 had no DM
+ * role reachable on a character stream at all (every committed event was, without exception,
+ * owner-authored, so "revert your own" and "revert anything" were the same set of targets).
+ * Plan-9 made multi-author character streams REAL: `CampaignActor`'s gateway forwards genuine
+ * `dm`-role commits (`hp.changed`, `override.applied`, etc.) onto a character stream via
+ * `Rpc.forwardAppend` — so an owner could otherwise `event.reverted` a DM-authored event and have
+ * it commit, a live ADR-012 violation. `StreamActor.append` (`stream-actor.ts`) now wires this in
+ * for real, resolving the target via its OWN `resolveRevertTarget` (the Stage-0 batched
+ * `findByIds` lookup this doc comment originally anticipated) BEFORE calling here — see that
+ * method's doc comment for the full resolution rules, including WHY a same-batch target needs no
+ * special-casing (provably always the reverting actor's own, by construction) and the disclosed
+ * `txId`-only cross-batch gap (`StreamStore` has no "find by `txId`" query; out of this fix's
+ * scope, `targetId` — the common case and everything red-first-tested — is fully enforced).]
+ *
+ * `target === undefined` (an unresolvable target — a genuinely nonexistent `targetId`, or the
+ * disclosed cross-batch `txId` gap above) FAILS OPEN, matching `@hk/engine`'s own reducer
+ * behavior for a revert target it can't find: "fails silently rather than erroring"
+ * (`packages/engine/src/reduce/reducer.ts`'s `preScanReverted` doc comment) — reverting nothing
+ * resolvable is harmless, not a privilege escalation, so there is nothing here to forbid.
  */
 export function canRevertOwn(
-  _actor: { readonly userId: string; readonly role: Role },
-  _target: Event | undefined,
+  actor: { readonly userId: string; readonly role: Role },
+  target: Event | undefined,
 ): boolean {
-  return true;
+  if (actor.role === 'dm') return true; // ADR-012: DM may revert any event
+  if (target === undefined) return true; // unresolvable target — see doc comment above
+  return target.actor.userId === actor.userId; // ADR-012: Owner may revert only events they authored
 }
