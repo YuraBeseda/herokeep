@@ -389,7 +389,15 @@ export class StreamActor {
     while (from <= head) {
       const page = await this.store.read(from, CATCH_UP_PAGE_SIZE);
       if (page.length === 0) break; // defensive: store/head disagreement should not spin forever
-      this.connections.send(conn, { t: 'events', stream: this.streamId, events: page });
+      // Plan-9 Task 5 finding: catch-up MUST run through the same read-visibility filter as live
+      // fan-out (`fanOut` below) — a reconnecting member socket must never receive `dm.note_*`/
+      // private-roll history just because it arrived as backlog instead of a live event. Advance
+      // `from` by the RAW (unfiltered) page length regardless — pagination walks the stream's
+      // real seq space, not what one particular connection happened to be allowed to see; skipping
+      // the send entirely when a whole page filters down to nothing mirrors `fanOut`'s own
+      // "nothing visible, nothing sent" behavior instead of emitting an empty `events` frame.
+      const visible = this.filterForConnection(page, conn);
+      if (visible.length > 0) this.connections.send(conn, { t: 'events', stream: this.streamId, events: visible });
       from += page.length;
     }
 
@@ -514,8 +522,14 @@ export class StreamActor {
     }
   }
 
-  /** Read-visibility filtering hook — identity pass-through in Phase 2. See `fanOut`'s comment. */
-  private filterForConnection(events: Event[], _conn: Conn): Event[] {
+  /** Read-visibility filtering hook — identity pass-through here (character streams carry no
+   * DM-only/visibility-scoped event types; every connection on a character stream is the owner).
+   * `protected`, not `private` (plan-9 Task 5, design ruling R-pf3): `CampaignActor` overrides
+   * this to implement doc-08's real per-connection filtering (`dm.note_*` DM-only; `roll.logged`
+   * visibility routing) WITHOUT this base class's own identity behavior changing for character
+   * streams. Used by both `fanOut` (live delivery) and `hello`'s catch-up paging above — a
+   * subclass gets both read paths filtered identically for free by overriding this one method. */
+  protected filterForConnection(events: Event[], _conn: Conn): Event[] {
     return events;
   }
 

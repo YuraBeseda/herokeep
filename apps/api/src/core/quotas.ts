@@ -79,11 +79,63 @@ export const USER_CHARACTER_COUNT_MAX = 50;
  */
 export const USER_QUOTA_BYTES_MAX = 10 * 1024 * 1024; // 10 MB
 
+/**
+ * doc-08 "Campaign stream" row: "20 MB events; 12 members; 6 non-core packs × 5 MB". This module
+ * only ever covers the BYTES half of that row (mirroring the character-stream row's own scoping
+ * comment above) — the 12-member and 6-pack counts are per-append COUNT checks against
+ * `CampaignActor`'s own event-sourced `meta.members`/`meta.packs`, not a byte/event-count
+ * projection this generic module can express, so `CampaignActor` enforces those two itself
+ * (task-5-report.md's "quota-machinery extension design" write-up). Campaign streams have no
+ * stated per-stream EVENT-COUNT cap (unlike character streams' 20,000) — modeled as
+ * `Number.POSITIVE_INFINITY` in `CAMPAIGN_QUOTA_LIMITS` below so `checkAppend`'s event-count
+ * branch can never trip for a campaign stream, without needing a second code path.
+ */
+export const CAMPAIGN_BYTES_MAX = 20 * 1024 * 1024; // 20 MB
+
+/** doc-08 "Campaign stream" row's member-count half: 12 members max. Enforced by `CampaignActor`
+ * itself (this module has no notion of "members" — a campaign-specific meta concept) and, per the
+ * Global Constraints, ALSO at the join route (Task 4) as the primary gate; the actor's own check
+ * is defense-in-depth (cheap: one `meta.members.size` read already in hand for the append). */
+export const CAMPAIGN_MEMBER_MAX = 12;
+
+/** doc-08 "Campaign stream" row's non-core-pack half: 6 packs max (the core pack named by
+ * `campaign.created.corePack` is tracked in the settings document, never via `pack.enabled`, so
+ * every `pack.enabled` this module/`CampaignActor` ever counts is non-core by construction). */
+export const CAMPAIGN_NON_CORE_PACK_MAX = 6;
+
 /** The per-stream counters `StreamActor` reads from/writes to `StreamStore.getMeta`/`setMeta`. */
 export interface StreamMetaSnapshot {
   readonly bytesUsed: number;
   readonly eventCount: number;
 }
+
+/**
+ * Task 5's quota-machinery extension: `quotaFor`/`checkAppend` below were hardcoded to the
+ * CHARACTER-stream numbers (`STREAM_BYTES_MAX`/`STREAM_EVENT_COUNT_MAX`) — correct for
+ * `CharacterActor`, wrong for `CampaignActor` (20 MB, no stated event-count cap). Rather than a
+ * second copy of both functions (which WOULD drift — the warning-ratio/reject-vs-warning
+ * classification logic is identical for both stream kinds, only the two numbers differ),
+ * `quotaFor`/`checkAppend` take an optional `limits` parameter defaulting to the character-stream
+ * numbers (so every EXISTING call site — `StreamActor`'s own pipeline via the injected
+ * `QuotasPort`, `character-actor.ts`, every Phase-2 test — is unchanged, source and behavior,
+ * without touching a single call site). `campaign-actor.ts` builds its own `QuotasPort` value
+ * (see that file's `campaignQuotas`) that closes over `CAMPAIGN_QUOTA_LIMITS` instead — the
+ * `QuotasPort` interface itself (`stream-actor.ts`) never needed to change, since both shapes
+ * satisfy `(meta) => QuotaShape` / `(meta, events) => QuotaCheckResult` identically.
+ */
+export interface QuotaLimits {
+  readonly bytesMax: number;
+  readonly eventCountMax: number;
+}
+
+const CHARACTER_QUOTA_LIMITS: QuotaLimits = { bytesMax: STREAM_BYTES_MAX, eventCountMax: STREAM_EVENT_COUNT_MAX };
+
+/** `CampaignActor`'s limits — see `CAMPAIGN_BYTES_MAX`'s doc comment above for the member/pack
+ * counts this deliberately excludes. */
+export const CAMPAIGN_QUOTA_LIMITS: QuotaLimits = {
+  bytesMax: CAMPAIGN_BYTES_MAX,
+  eventCountMax: Number.POSITIVE_INFINITY,
+};
 
 /** `welcome.streams[].quota` (doc-03) — mirrors `@hk/protocol`'s `QuotaSchema` field names. */
 export interface QuotaShape {
@@ -103,9 +155,10 @@ export interface QuotaCheckResult {
   readonly eventCountAfter: number;
 }
 
-/** `welcome.streams[].quota` shape, computed from the stream's current (pre-append) meta. */
-export function quotaFor(meta: StreamMetaSnapshot): QuotaShape {
-  return { bytesUsed: meta.bytesUsed, bytesMax: STREAM_BYTES_MAX, eventCount: meta.eventCount };
+/** `welcome.streams[].quota` shape, computed from the stream's current (pre-append) meta.
+ * `limits` defaults to the character-stream numbers — see this file's `QuotaLimits` doc comment. */
+export function quotaFor(meta: StreamMetaSnapshot, limits: QuotaLimits = CHARACTER_QUOTA_LIMITS): QuotaShape {
+  return { bytesUsed: meta.bytesUsed, bytesMax: limits.bytesMax, eventCount: meta.eventCount };
 }
 
 /**
@@ -116,18 +169,23 @@ export function quotaFor(meta: StreamMetaSnapshot): QuotaShape {
  * casualties never reach the store either). `reject` at or over 100% of either the byte or the
  * event-count limit; `warning` at or over 80% of either (and not already rejecting); `ok`
  * otherwise. The 16 KB per-event cap is `validate.ts`'s job, not this one — this module only
- * ever looks at the STREAM-level totals.
+ * ever looks at the STREAM-level totals. `limits` defaults to the character-stream numbers — see
+ * this file's `QuotaLimits` doc comment.
  */
-export function checkAppend(meta: StreamMetaSnapshot, events: readonly Event[]): QuotaCheckResult {
+export function checkAppend(
+  meta: StreamMetaSnapshot,
+  events: readonly Event[],
+  limits: QuotaLimits = CHARACTER_QUOTA_LIMITS,
+): QuotaCheckResult {
   const addedBytes = events.reduce((sum, event) => sum + measureEventBytes(event), 0);
   const bytesAfter = meta.bytesUsed + addedBytes;
   const eventCountAfter = meta.eventCount + events.length;
 
-  if (bytesAfter > STREAM_BYTES_MAX || eventCountAfter > STREAM_EVENT_COUNT_MAX) {
+  if (bytesAfter > limits.bytesMax || eventCountAfter > limits.eventCountMax) {
     return { verdict: 'reject', bytesAfter, eventCountAfter };
   }
   const atWarning =
-    bytesAfter >= STREAM_BYTES_MAX * QUOTA_WARNING_RATIO ||
-    eventCountAfter >= STREAM_EVENT_COUNT_MAX * QUOTA_WARNING_RATIO;
+    bytesAfter >= limits.bytesMax * QUOTA_WARNING_RATIO ||
+    eventCountAfter >= limits.eventCountMax * QUOTA_WARNING_RATIO;
   return { verdict: atWarning ? 'warning' : 'ok', bytesAfter, eventCountAfter };
 }
