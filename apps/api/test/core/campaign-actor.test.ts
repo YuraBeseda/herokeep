@@ -247,6 +247,118 @@ describe('permission refinements beyond the static EVENT_ACTORS table', () => {
     expect(outcome.acked).toHaveLength(1);
   });
 
+  // [fix round 1, Critical 2] member.joined/member.left were not bound to the acting user's own
+  // id: an established member could admit an ARBITRARY userId (bypassing the join-code gate) or
+  // evict another member via member.left (an eviction path that was supposed to belong only to
+  // the dm-gated member.removed).
+  it('forbids member.joined admitting a userId other than the acting user (self-only)', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
+
+    const outcome = await system.actor.append(
+      [makeMemberJoined(MEMBER_B, 'Bob')], // payload.userId = MEMBER_B, but the actor is MEMBER_A
+      memberActor(MEMBER_A),
+    );
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ code: 'forbidden' });
+    const meta = await system.actor.getCampaignMeta();
+    expect(meta.members.has(MEMBER_B)).toBe(false);
+  });
+
+  it('forbids member.left evicting a userId other than the acting user (self-only, no dm exemption)', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
+    await system.actor.append([makeMemberJoined(MEMBER_B, 'Bob')], memberActor(MEMBER_B));
+
+    const outcome = await system.actor.append(
+      [makeEvent('member.left', { userId: MEMBER_B, displayName: 'Bob', role: 'player' }, memberActor(MEMBER_A))],
+      memberActor(MEMBER_A),
+    );
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ code: 'forbidden' });
+    const meta = await system.actor.getCampaignMeta();
+    expect(meta.members.has(MEMBER_B)).toBe(true); // untouched
+
+    // Not even the DM is exempt from this one — DM-driven removal is member.removed, not member.left.
+    const dmOutcome = await system.actor.append(
+      [makeEvent('member.left', { userId: MEMBER_B, displayName: 'Bob', role: 'player' }, dmActor())],
+      dmActor(),
+    );
+    expect(dmOutcome.rejected[0]).toMatchObject({ code: 'forbidden' });
+  });
+
+  it('allows self member.joined and self member.left (the legitimate self-service path)', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const joinOutcome = await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
+    expect(joinOutcome.rejected).toEqual([]);
+
+    const leaveOutcome = await system.actor.append(
+      [makeEvent('member.left', { userId: MEMBER_A, displayName: 'Alice', role: 'player' }, memberActor(MEMBER_A))],
+      memberActor(MEMBER_A),
+    );
+    expect(leaveOutcome.rejected).toEqual([]);
+  });
+
+  it('dm-driven member.removed (a distinct, dm-gated type) is unaffected by the member.joined/left self-binding check', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
+
+    const outcome = await system.actor.append(
+      [makeEvent('member.removed', { userId: MEMBER_A, displayName: 'Alice', role: 'player' }, dmActor())],
+      dmActor(),
+    );
+    expect(outcome.rejected).toEqual([]);
+    const meta = await system.actor.getCampaignMeta();
+    expect(meta.members.has(MEMBER_A)).toBe(false);
+  });
+
+  // [fix round 1, Critical 1] the original campaign.created exemption was keyed on event TYPE,
+  // not on whether meta.dmId was already set — a second campaign.created on an established
+  // campaign passed straight through and silently reassigned dmId / reset settings to defaults.
+  it('rejects a second campaign.created once the campaign is already established (same dm), leaving meta unchanged', async () => {
+    await system.actor.append([makeCreated(dmActor(DM_ID))], dmActor(DM_ID));
+    const customSettings = {
+      system: '5e-2024',
+      packs: [],
+      houseRules: {
+        strictValidation: false,
+        allowOverrides: true,
+        editOutsideSession: 'locked',
+        xpMode: 'milestone',
+        hpOnLevelUp: 'roll',
+        encumbrance: 'variant',
+        attunementMax: 5,
+        startingLevel: 3,
+      },
+      visibility: { partySheets: 'overview', rolls: 'dm', allowPrivateRolls: false },
+      join: { open: false, requireApproval: true },
+    };
+    await system.actor.append(
+      [makeEvent('campaign.settings_changed', { settings: customSettings }, dmActor(DM_ID))],
+      dmActor(DM_ID),
+    );
+
+    const outcome = await system.actor.append([makeCreated(dmActor(DM_ID))], dmActor(DM_ID));
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ code: 'forbidden' });
+
+    const meta = await system.actor.getCampaignMeta();
+    expect(meta.dmId).toBe(DM_ID);
+    expect(meta.settings).toEqual(customSettings); // NOT reset back to defaults
+  });
+
+  it('rejects a second campaign.created from a DIFFERENT dm-role actor on an established campaign', async () => {
+    await system.actor.append([makeCreated(dmActor(DM_ID))], dmActor(DM_ID));
+
+    const impostorDm = { userId: 'usr_impostor', role: 'dm' as const };
+    const outcome = await system.actor.append([makeCreated(impostorDm)], impostorDm);
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ code: 'forbidden' });
+
+    const meta = await system.actor.getCampaignMeta();
+    expect(meta.dmId).toBe(DM_ID); // NOT reassigned to the impostor
+  });
+
   it('allows an established member to author roll.logged/chat.message/member.renamed', async () => {
     await system.actor.append([makeCreated()], dmActor());
     await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
@@ -563,15 +675,50 @@ describe('read-visibility filtering (fan-out)', () => {
     expect(system.connections.framesFor(memberConn).filter((f) => f.t === 'events')).toHaveLength(1);
   });
 
-  it('chat.message is never filtered by its own visibility field (doc-08 only names roll.logged/dm.note_*)', async () => {
-    const { dmConn } = await seedTwoConnections();
+  // [fix round 1, Adjudicated 3] chat.message carries the SAME visibility enum roll.logged does
+  // and is now filtered identically — doc-08's filtering paragraph previously omitted it (a real
+  // gap, not intended pass-through); the controller/reviewer adjudicated it should be filtered,
+  // and docs/02-architecture/08-security-permissions-quotas.md's filtering paragraph now names it.
+  it("chat.message visibility 'dm' reaches DM connections and the sender's own connections only", async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
+    await system.actor.append([makeMemberJoined(MEMBER_B, 'Bob')], memberActor(MEMBER_B));
+    const dmConn = system.connections.accept({}, { userId: DM_ID, role: 'dm', subs: [] });
+    const memberConn = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+    const otherMemberConn = system.connections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+
+    await system.actor.append(
+      [makeEvent('chat.message', { text: 'DM, a word?', visibility: 'dm' }, memberActor(MEMBER_A))],
+      memberActor(MEMBER_A),
+    );
+
+    expect(system.connections.framesFor(dmConn).filter((f) => f.t === 'events')).toHaveLength(1);
+    expect(system.connections.framesFor(memberConn).filter((f) => f.t === 'events')).toHaveLength(1); // the sender
+    expect(system.connections.framesFor(otherMemberConn).filter((f) => f.t === 'events')).toEqual([]);
+  });
+
+  it("chat.message visibility 'private' reaches only the sender's own connections", async () => {
+    const { dmConn, memberConn } = await seedTwoConnections();
 
     await system.actor.append(
       [makeEvent('chat.message', { text: 'psst', visibility: 'private' }, memberActor(MEMBER_A))],
       memberActor(MEMBER_A),
     );
 
+    expect(system.connections.framesFor(dmConn).filter((f) => f.t === 'events')).toEqual([]);
+    expect(system.connections.framesFor(memberConn).filter((f) => f.t === 'events')).toHaveLength(1);
+  });
+
+  it("chat.message visibility 'everyone' reaches every connection", async () => {
+    const { dmConn, memberConn } = await seedTwoConnections();
+
+    await system.actor.append(
+      [makeEvent('chat.message', { text: 'hi party', visibility: 'everyone' }, memberActor(MEMBER_A))],
+      memberActor(MEMBER_A),
+    );
+
     expect(system.connections.framesFor(dmConn).filter((f) => f.t === 'events')).toHaveLength(1);
+    expect(system.connections.framesFor(memberConn).filter((f) => f.t === 'events')).toHaveLength(1);
   });
 });
 
@@ -613,6 +760,45 @@ describe('read-visibility filtering (catch-up paging)', () => {
       .filter((f) => f.t === 'events')
       .flatMap((f) => f.events.map((e) => e.type));
     expect(dmSeenTypes).toContain('dm.note_added');
+  });
+
+  // [fix round 1, Adjudicated 3] the same private-visibility filtering chat.message now gets on
+  // live fan-out must also apply to catch-up (this task's own catch-up-filtering fix already
+  // routes both through the same `filterForConnection` hook — this pins chat.message specifically).
+  it("filters a private chat.message out of catch-up for a non-sender socket, but includes it for the sender's own reconnect", async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    await system.actor.append([makeMemberJoined(MEMBER_A, 'Alice')], memberActor(MEMBER_A));
+    await system.actor.append([makeMemberJoined(MEMBER_B, 'Bob')], memberActor(MEMBER_B));
+    await system.actor.append(
+      [makeEvent('chat.message', { text: 'psst', visibility: 'private' }, memberActor(MEMBER_A))],
+      memberActor(MEMBER_A),
+    );
+
+    const hello: HelloMsg = {
+      t: 'hello',
+      rid: 'r1',
+      proto: 1,
+      app: '1.0.0',
+      streams: [{ id: STREAM_ID, lastSeq: 0 }],
+      have: [],
+      pending: [],
+    };
+
+    const otherMemberConn = system.connections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+    await system.actor.hello(otherMemberConn, hello);
+    const otherSeenTypes = system.connections
+      .framesFor(otherMemberConn)
+      .filter((f) => f.t === 'events')
+      .flatMap((f) => f.events.map((e) => e.type));
+    expect(otherSeenTypes).not.toContain('chat.message');
+
+    const senderReconnect = system.connections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+    await system.actor.hello(senderReconnect, { ...hello, rid: 'r2' });
+    const senderSeenTypes = system.connections
+      .framesFor(senderReconnect)
+      .filter((f) => f.t === 'events')
+      .flatMap((f) => f.events.map((e) => e.type));
+    expect(senderSeenTypes).toContain('chat.message');
   });
 });
 

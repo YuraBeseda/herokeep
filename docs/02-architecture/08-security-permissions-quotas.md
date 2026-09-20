@@ -68,8 +68,9 @@ hot paths.
 type with `actors: ['owner' | 'dm' | 'member']`, and the DO consults that table.
 
 Filtering on read: the CampaignStream never sends `dm.note_*` events to non-DM sockets;
-`roll.logged` with `visibility: dm` goes to the DM and the roller only; `private` to the
-roller only (still stored — the DM can audit if the campaign setting says so).
+`roll.logged` and `chat.message` (both carry the same `visibility` enum) with
+`visibility: dm` go to the DM and the sender only; `private` to the sender only (still
+stored — the DM can audit if the campaign setting says so).
 
 ## Quotas
 

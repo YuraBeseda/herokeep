@@ -254,6 +254,16 @@ export class CampaignActor extends StreamActor {
    *       `member.joined` itself, which is how membership is ESTABLISHED (the joiner cannot
    *       already be in `meta.members` when they send it; excluding it is not a loophole, it is
    *       the only way this event could ever succeed).
+   *   (a2) [fix round 1, Critical 2] `member.joined`/`member.left` require
+   *       `payload.userId === actor.userId`, with NO dm exemption. Without this, an established
+   *       member could admit an ARBITRARY userId via `member.joined` (bypassing the join-code
+   *       gate entirely) or evict another member via `member.left` (an eviction path that was
+   *       supposed to belong only to the DM-gated `member.removed` sibling — `member.left` is
+   *       "I am leaving", never "I am removing someone else"). No DM exemption because the DM
+   *       never legitimately emits `member.joined`/`member.left` for someone else either: a join
+   *       always originates from the joining user's own client via the join-code route (Task 4),
+   *       and DM-driven removal is `member.removed` (a separate, already dm-gated type in
+   *       `DM_ONLY_TYPES` below) — not `member.left`.
    *   (b) `campaign.character_joined`/`campaign.character_left` and `party.overview_updated`
    *       require the actor to BE the character's owner (per the event's own `ownerId` payload
    *       field for the join/left pair, per `meta.characters` for the overview post) — DM exempt.
@@ -264,7 +274,19 @@ export class CampaignActor extends StreamActor {
    *       `actor.role === 'dm'` (redundant with the static table — kept explicit per the brief)
    *       AND `actor.userId === meta.dmId`, i.e. THIS campaign's own DM, not merely a dm-role
    *       actor from a stale/incorrect handoff. `campaign.created` is exempted from the `dmId`
-   *       half: `meta.dmId` does not exist until THIS event establishes it.
+   *       half ONLY while `meta.dmId` is still unset — see (e).
+   *   (e) [fix round 1, Critical 1] `campaign.created` itself is rejected once `meta.dmId` is
+   *       ALREADY set — the original exemption was keyed on the event TYPE ("campaign.created is
+   *       always exempt from the dmId check"), not on whether a campaign had actually been
+   *       established yet. That let a SECOND `campaign.created` on an already-created stream
+   *       (from the real DM re-sending it, or from a different dm-role actor entirely) pass
+   *       straight through `DM_ONLY_TYPES`'s dmId check and reach `applyMetaHooks`, which
+   *       unconditionally reassigns `dmId` and RESETS `settings` back to the fresh-campaign
+   *       defaults — silently wiping every `campaign.settings_changed` the DM had made. Rejected
+   *       `forbidden` (not `invalid`): the payload itself is perfectly schema-valid: it is the
+   *       STATE — a campaign that already exists — that makes re-creating it impermissible,
+   *       matching how every other refinement in this method signals "not schema-invalid, just
+   *       not allowed" with `forbidden`.
    */
   private refineAppendPermission(
     event: Event,
@@ -273,6 +295,24 @@ export class CampaignActor extends StreamActor {
   ): { readonly code: 'forbidden'; readonly message: string } | undefined {
     if (actor.role === 'member' && event.type !== 'member.joined' && !meta.members.has(actor.userId)) {
       return { code: 'forbidden', message: `event.forbidden: ${actor.userId} is not a member of this campaign` };
+    }
+
+    if (event.type === 'member.joined' || event.type === 'member.left') {
+      const userId = readStringField(event.payload, 'userId');
+      if (userId !== undefined && userId !== actor.userId) {
+        return {
+          code: 'forbidden',
+          message: `event.forbidden: ${event.type} requires payload.userId to match the acting user (self-only)`,
+        };
+      }
+    }
+
+    if (event.type === 'campaign.created' && meta.dmId !== undefined) {
+      return {
+        code: 'forbidden',
+        message:
+          'event.forbidden: campaign.created requires a stream with no established dm (this campaign already exists)',
+      };
     }
 
     if (DM_ONLY_TYPES.has(event.type)) {
@@ -559,15 +599,22 @@ export class CampaignActor extends StreamActor {
   }
 
   /**
-   * Read-visibility filtering — doc-08 §Authorization matrix "Filtering on read" paragraph,
-   * verbatim: `dm.note_*` never reaches a non-DM connection; `roll.logged` with `visibility: 'dm'`
-   * reaches DM connections AND the roller's own connections (matched by `userId`, so a player
-   * sees their OWN dm-visibility rolls); `visibility: 'private'` reaches the roller only.
-   * "everything else passes" (task-5-brief item 4, verbatim) — notably `chat.message` ALSO carries
-   * a `visibility` field (`ChatMessageV1`, `campaign.ts`) but doc-08's filtering paragraph does not
-   * mention `chat.message` at all, only `roll.logged` — so that field is stored and relayed
-   * as-is, unfiltered, exactly as written here; this is a real finding (doc-08 defines the field
-   * without stating server-side filtering for it), recorded in task-5-report.md, not a shortcut.
+   * Read-visibility filtering — doc-08 §Authorization matrix "Filtering on read" paragraph:
+   * `dm.note_*` never reaches a non-DM connection; `roll.logged`/`chat.message` with
+   * `visibility: 'dm'` reach DM connections AND the sender's own connections (matched by
+   * `userId`, so a player sees their OWN dm-visibility rolls/messages); `visibility: 'private'`
+   * reaches the sender only. Everything else passes unfiltered.
+   *
+   * [fix round 1, Adjudicated 3] `chat.message` is now filtered by the SAME everyone/dm/private
+   * branch as `roll.logged` — task-5-report.md's original finding (doc-08's own prose named only
+   * `roll.logged`, even though `ChatMessageV1` carries the identical `visibility` enum) was
+   * reviewed and the controller/reviewer AGREED the omission was a doc-08 gap, not intended
+   * behavior: a `visibility: 'private'`/`'dm'` chat message is meaningless if the server still
+   * broadcasts it to every connection regardless. `docs/02-architecture/08-security-permissions-
+   * quotas.md`'s filtering paragraph is updated (one line) to name `chat.message` alongside
+   * `roll.logged` — doc-08 is an architecture doc, not an ADR (ADRs are never edited; this file
+   * is), so this is a spec clarification, not a violation of that rule; flagged in the fix-round
+   * commit body/report per the adjudication for the owner's visibility.
    *
    * Overridden here (design ruling R-pf3), not by editing `StreamActor`'s own identity default —
    * used by BOTH `fanOut` (live delivery) and `hello`'s catch-up paging, both inherited unchanged
@@ -583,7 +630,7 @@ export class CampaignActor extends StreamActor {
     if (event.type === 'dm.note_added' || event.type === 'dm.note_updated' || event.type === 'dm.note_removed') {
       return attachment.role === 'dm';
     }
-    if (event.type === 'roll.logged') {
+    if (event.type === 'roll.logged' || event.type === 'chat.message') {
       const visibility = readStringField(event.payload, 'visibility');
       if (visibility === 'dm') return attachment.role === 'dm' || attachment.userId === event.actor.userId;
       if (visibility === 'private') return attachment.userId === event.actor.userId;
