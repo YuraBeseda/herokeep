@@ -783,4 +783,99 @@ describe('two-device sync integration (doc-03, task-10-brief.md)', () => {
     deviceA.db.close();
     deviceB.db.close();
   });
+
+  it('T11b: an interrupted upload (partial or zero appends landed) self-heals via local-ahead resume on the next connect', async () => {
+    delete (navigator as unknown as { locks?: unknown }).locks;
+    const server = new FakeSyncServer();
+
+    // --- character 1: ZERO appends landed — the POST that durably registers a character
+    // succeeded, but the page tore down (crash/tab-close/navigation) before `uploadEvents`'s
+    // append round trip even started. The server genuinely has nothing for this stream.
+    const deviceZero = configureDevice('hk-db-t11b-zero');
+    const zeroId = await deviceZero.store.create('Zero', 'feminine');
+    await deviceZero.store.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Zero Renamed' } },
+    ]);
+    const zeroCommitted = await deviceZero.eventsRepository.byStream(zeroId);
+    expect(zeroCommitted.every((e) => e.seq !== undefined)).toBe(true);
+    expect(server.eventsFor(zeroId)).toHaveLength(0); // nothing ever uploaded
+
+    deviceZero.store.enterSyncMode(zeroId);
+    const sessionZero = new StreamSyncSession({
+      streamId: zeroId,
+      store: deviceZero.store,
+      eventsRepository: deviceZero.eventsRepository,
+      toast: deviceZero.toast,
+      webSocketFactory: socketFactory(server, 'Zero'),
+      wsUrlFn: () => 'ws://fake-sync-server/live',
+      rng: () => 0.5,
+      window: new FakeTarget(),
+      document: new FakeTarget(),
+    });
+    await sessionZero.start();
+    await waitFor(
+      () => server.eventsFor(zeroId).length === zeroCommitted.length,
+      'zero-appends case: the interrupted upload never self-healed via resume',
+    );
+    expect(server.eventsFor(zeroId).map((e) => e.id)).toEqual(zeroCommitted.map((e) => e.id));
+    expect(server.eventsFor(zeroId).map((e) => e.seq)).toEqual(zeroCommitted.map((e) => e.seq));
+    // Local storage was never rewritten — the resume converged with the ORIGINAL local seqs.
+    const zeroPersisted = await deviceZero.eventsRepository.byStream(zeroId);
+    expect(zeroPersisted.map((e) => e.seq)).toEqual(zeroCommitted.map((e) => e.seq));
+    expect(deviceZero.store.facts()).toEqual(
+      reduce(server.eventsFor(zeroId), undefined, systemRules),
+    );
+
+    // --- character 2: PARTIAL appends landed — a real (trimmed) `uploadCommitted` call sends only
+    // the FIRST TWO events before the simulated interruption; the rest of the local history (3
+    // more events) was committed locally but never reached the server at all.
+    const devicePartial = configureDevice('hk-db-t11b-partial');
+    const partialId = await devicePartial.store.create('Partial', 'feminine');
+    for (const name of ['Partial 2', 'Partial 3', 'Partial 4', 'Partial 5']) {
+      await devicePartial.store.appendTx([{ type: 'character.renamed', v: 1, payload: { name } }]);
+    }
+    const partialCommitted = await devicePartial.eventsRepository.byStream(partialId);
+    expect(partialCommitted).toHaveLength(5);
+
+    const landedBeforeInterruption = partialCommitted.slice(0, 2);
+    const uploaded = await uploadCommitted(
+      socketFactory(server, 'Partial'),
+      partialId,
+      landedBeforeInterruption,
+    );
+    expect(uploaded).toBe(true);
+    expect(server.eventsFor(partialId)).toHaveLength(2); // exactly the interrupted prefix
+
+    devicePartial.store.enterSyncMode(partialId);
+    const sessionPartial = new StreamSyncSession({
+      streamId: partialId,
+      store: devicePartial.store,
+      eventsRepository: devicePartial.eventsRepository,
+      toast: devicePartial.toast,
+      webSocketFactory: socketFactory(server, 'Partial'),
+      wsUrlFn: () => 'ws://fake-sync-server/live',
+      rng: () => 0.5,
+      window: new FakeTarget(),
+      document: new FakeTarget(),
+    });
+    await sessionPartial.start();
+    await waitFor(
+      () => server.eventsFor(partialId).length === partialCommitted.length,
+      'partial-appends case: the interrupted upload never self-healed via resume',
+    );
+    expect(server.eventsFor(partialId).map((e) => e.id)).toEqual(partialCommitted.map((e) => e.id));
+    expect(server.eventsFor(partialId).map((e) => e.seq)).toEqual(
+      partialCommitted.map((e) => e.seq),
+    );
+    const partialPersisted = await devicePartial.eventsRepository.byStream(partialId);
+    expect(partialPersisted.map((e) => e.seq)).toEqual(partialCommitted.map((e) => e.seq));
+    expect(devicePartial.store.facts()).toEqual(
+      reduce(server.eventsFor(partialId), undefined, systemRules),
+    );
+
+    sessionZero.stop();
+    sessionPartial.stop();
+    deviceZero.db.close();
+    devicePartial.db.close();
+  });
 });

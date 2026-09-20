@@ -71,6 +71,16 @@ import {
  *    of whether the stream happens to be loaded (see its class doc) — so restore needs no separate
  *    "create the index row" step; Task 6 already built that half.
  *
+ * `restore()` is ALSO `handleDivergence`'s repair path (T11b): if an ordinary `both`-branch
+ * session (or an interrupted upload's own later session) discovers on connect that the LOCAL
+ * committed head is ahead of the server's `headSeq` — an upload/append round that got interrupted
+ * mid-flight (a page teardown, crash, or tab close after the events were already committed locally
+ * but before the server received/acked some suffix of them) — `StreamSyncSession` itself first
+ * tries a targeted RESUME (resend just the missing tail over its own open socket, verify the acks);
+ * `restore()` only runs as the fallback when that resume's own verification fails. See
+ * `StreamSyncSession`'s class doc ("Local-ahead resume") for the full mechanics — this makes
+ * upload-interruption recovery generic (every connect, not just this service's own reconcile pass).
+ *
  * ## `syncState` (T9's indicator surface)
  *
  * `'offline'` (no session — not currently syncing this stream at all), `'connecting'` (session
@@ -505,6 +515,7 @@ export class SyncService {
       wsUrlFn: this.wsUrlFnOverride,
       onApplied: () => publisher.publish(),
       onBye: (reason) => this.handleBye(streamId, reason),
+      onDivergence: () => this.handleDivergence(streamId),
     });
 
     this.sessionsState.update((current) => {
@@ -543,6 +554,18 @@ export class SyncService {
     if (/session/i.test(reason)) {
       this.authService.init();
     }
+  }
+
+  /** `StreamSyncSession`'s local-ahead resume attempt (T11b, see that class's own doc) failed
+   * verification — a genuine divergence the session couldn't self-repair. The session has already
+   * torn itself down by the time this fires; sweep this device's own bookkeeping for it, then run
+   * the exact same server-wins `restore()` a server-only stream uses. `restore`'s own trailing
+   * `startSession` re-checks `stillReconciling` against the CURRENT generation (nothing newer has
+   * started since this is a live-session callback, not part of `reconcile()`'s own loop), so a
+   * logout/leader-loss racing this repair still can't resurrect a session under idle/follower mode. */
+  private handleDivergence(streamId: string): void {
+    this.removeSession(streamId);
+    void this.restore(streamId, this.reconcileGeneration);
   }
 
   private wsUrlFor(streamId: string): string {

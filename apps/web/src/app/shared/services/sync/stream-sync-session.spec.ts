@@ -581,6 +581,129 @@ describe('StreamSyncSession', () => {
 
     expect(secondGranted).toBe(true); // released, not held forever — the second waiter got in
   });
+
+  it('T11b: a local-ahead welcome (interrupted upload) resumes by resending just the missing committed tail', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Three' } }]);
+    const allCommitted = store.events(); // seq 1..3: create + two renames
+
+    const { session, Factory } = newSession(streamId);
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    // Server reports headSeq=1 — only the FIRST event ever landed (an interrupted prior upload:
+    // the POST that registers the character durably succeeded, but the append round trip for
+    // events 2/3 never completed before this device's page tore down).
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    const appendFrames = ws
+      .parsedSent()
+      .filter(
+        (m: unknown): m is { t: 'append'; events: { id: string; seq?: number }[] } =>
+          (m as { t: string }).t === 'append',
+      );
+    expect(appendFrames).toHaveLength(1);
+    // Only the MISSING tail (events 2/3, seq > headSeq) was resent — not the whole local history.
+    expect(appendFrames[0].events.map((e) => e.id)).toEqual([
+      allCommitted[1].id,
+      allCommitted[2].id,
+    ]);
+
+    // The server assigns the SAME seqs this device already has on disk (the honest, idempotent
+    // outcome for a genuine resume) — verification must succeed without rewriting anything.
+    ws.emitMessage({
+      t: 'ack',
+      rid: 'r2',
+      results: [
+        { id: allCommitted[1].id, seq: allCommitted[1].seq! },
+        { id: allCommitted[2].id, seq: allCommitted[2].seq! },
+      ],
+    });
+    await flush();
+
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.map((e) => e.seq)).toEqual([1, 2, 3]); // untouched — already correct
+    session.stop();
+  });
+
+  it('T11b: a resume ack seq mismatch is a genuine divergence — tears the session down and fires onDivergence', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const secondEvent = store.events().at(-1)!;
+
+    const onDivergence = vi.fn();
+    const { session, Factory } = newSession(streamId, { onDivergence });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    // The server assigns a DIFFERENT seq than what this device already has — a genuine
+    // divergence (e.g. another writer raced it), not idempotent dedupe.
+    ws.emitMessage({ t: 'ack', rid: 'r2', results: [{ id: secondEvent.id, seq: 99 }] });
+    await flush();
+
+    expect(onDivergence).toHaveBeenCalledTimes(1);
+    expect(session.connectionState()).toBe('closed'); // the session tore itself down
+  });
+
+  it('T11b: a reject during resume also fires onDivergence, never a silent no-op via dropPending', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const secondEvent = store.events().at(-1)!;
+
+    const onDivergence = vi.fn();
+    const { session, Factory } = newSession(streamId, { onDivergence });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    ws.emitMessage({
+      t: 'reject',
+      rid: 'r2',
+      results: [{ id: secondEvent.id, code: 'invalid', message: 'nope' }],
+    });
+    await flush();
+
+    expect(onDivergence).toHaveBeenCalledTimes(1);
+    const persisted = await eventsRepository.byStream(streamId);
+    // The committed row must still be on disk — a resume-time reject must NEVER silently drop
+    // committed history the way `dropPending` would for a genuinely pending row.
+    expect(persisted.find((e) => e.id === secondEvent.id)?.seq).toBe(2);
+  });
 });
 
 describe('chunkEventsForAppend', () => {

@@ -37,6 +37,26 @@ import {
  * handler would let a slow `welcome` handler's await be overtaken by a same-tick `events` frame's
  * handler finishing first, which doc-03's catch-up-before-ack-flush ordering guarantee depends on
  * never happening.
+ *
+ * ## Local-ahead resume (T11b)
+ *
+ * `handleWelcome` compares `welcome.streams[].headSeq` against this stream's LOCAL committed head
+ * on every single `welcome` — not just a first connect. When the local head is ahead (a prior
+ * upload/append round was interrupted — a page teardown, a crash, a tab close — after the events
+ * were already committed locally but before the server ever received/acked some suffix of them),
+ * the missing committed tail (local committed events whose `seq > headSeq`, in original order) is
+ * resent as chunked `append` frames over THIS session's own already-open socket, and every
+ * resulting `ack` is verified to name exactly the same `{id, seq}` pairs already on disk (identical
+ * semantics to `SyncService.uploadEvents()`'s fresh-upload verification — a genuinely fresh upload
+ * is just the degenerate case `headSeq === 0`). A full match lets the session proceed into normal
+ * steady state (any `hello.pending` overflow flushes right after); any mismatch — or a poisoned
+ * event this device can no longer resend — is treated as a genuine divergence: `onDivergence` fires
+ * (after this session tears itself down), and `SyncService` runs its existing server-wins
+ * `restore()` for the stream. Because this check runs on EVERY `welcome`, an interruption during
+ * the resume attempt ITSELF (another crash mid-resume) just gets retried, and correctly resends a
+ * SMALLER tail next time (the server's `headSeq` will have advanced by whatever landed before the
+ * interruption — doc-03's duplicate-id idempotency means even re-sending an already-landed event
+ * acks with its existing seq, which still matches, so nothing double-counts).
  */
 
 export interface QuotaInfo {
@@ -99,6 +119,11 @@ export interface StreamSyncSessionOptions {
    * `reason` passed through verbatim. `SyncService` decides whether it implies a session-expiry
    * re-check of `AuthService`. */
   onBye?: (reason: string) => void;
+  /** Fires once, after this session has fully torn itself down, when a local-ahead resume attempt
+   * (see class doc) fails verification — a genuine divergence between local and server history that
+   * this session cannot repair by itself. `SyncService` responds with its existing server-wins
+   * `restore()` for the stream. */
+  onDivergence?: () => void;
 }
 
 const LOCK_PREFIX = 'hk:sync:';
@@ -164,6 +189,7 @@ export class StreamSyncSession {
   private readonly wsUrlFn: (characterId: string) => string;
   private readonly onApplied: (() => void) | undefined;
   private readonly onBye: ((reason: string) => void) | undefined;
+  private readonly onDivergence: (() => void) | undefined;
   private readonly locksApi: LockManager | undefined;
 
   private socket: SyncSocket | undefined;
@@ -178,6 +204,11 @@ export class StreamSyncSession {
   // Overflow from a `hello.pending` capped at 50 (HelloMsgSchema's own max) — flushed as ordinary
   // `append` chunks once `welcome` confirms the connection.
   private leftoverPending: Event[] = [];
+  // Set while a local-ahead resume (class doc) is in flight — `expected` names the missing
+  // committed tail's `{id -> seq}`; `acked` accumulates matching `ack` results (possibly across
+  // more than one `ack` frame, symmetric with `SyncService.uploadEvents()`'s own accumulation).
+  // `undefined` the rest of the time, including the entire non-diverged common case.
+  private resumeState: { expected: Map<string, number>; acked: Map<string, number> } | undefined;
   private unsubscribeLocalAppend: (() => void) | undefined;
   private unsubscribeReconnect: (() => void) | undefined;
 
@@ -202,6 +233,7 @@ export class StreamSyncSession {
     this.wsUrlFn = options.wsUrlFn ?? ((id) => wsUrl(id));
     this.onApplied = options.onApplied;
     this.onBye = options.onBye;
+    this.onDivergence = options.onDivergence;
     this.locksApi = options.locks ?? navigator.locks;
     this.reconnectSignals = new ReconnectSignals({
       window: options.window,
@@ -366,11 +398,83 @@ export class StreamSyncSession {
     const streamWelcome = message.streams.find((s) => s.id === this.streamId);
     this.quotaState.set(streamWelcome?.quota ?? null);
 
+    const headSeq = streamWelcome?.headSeq ?? 0;
+    const rows = await this.eventsRepository.byStream(this.streamId);
+    const committed = rows.filter((e) => e.seq !== undefined);
+    const localHead = committed.length > 0 ? (committed[committed.length - 1].seq ?? 0) : 0;
+
+    if (localHead > headSeq) {
+      // Local-ahead divergence — see class doc's "Local-ahead resume" section. Deliberately does
+      // NOT flush `leftoverPending` here: that only happens once resume verification succeeds
+      // (`handleResumeAck`) — mixing the two would route a plain pending-flush ack into resume
+      // verification (or vice versa) and misclassify it either way.
+      const missingTail = committed.filter((e) => (e.seq ?? 0) > headSeq);
+      this.beginResume(missingTail);
+      return;
+    }
+
     if (this.leftoverPending.length > 0) {
       const leftover = this.leftoverPending;
       this.leftoverPending = [];
       await this.sendAppendChunks(leftover);
     }
+  }
+
+  /** Sends `missingTail` (local committed events the server doesn't have yet, in order) as chunked
+   * `append` frames over this session's own open socket, and arms `resumeState` so the resulting
+   * `ack`(s) are routed to `handleResumeAck` instead of the normal `commitPending` path — these
+   * ids are already locally COMMITTED, not pending rows, so `CharacterStore.commitPending` would
+   * reject them outright (no matching pending row). A send failure (including a poisoned single
+   * event this device can no longer resend — unlike a genuinely PENDING row, a committed one can't
+   * simply be dropped) is treated as an immediate divergence, same as a verification mismatch. */
+  private beginResume(missingTail: readonly Event[]): void {
+    this.resumeState = {
+      expected: new Map(missingTail.map((e) => [e.id, e.seq!])),
+      acked: new Map(),
+    };
+    for (const chunk of chunkEventsForAppend(missingTail)) {
+      try {
+        this.send({ t: 'append', rid: uuidv7(), events: chunk });
+      } catch {
+        // `SyncSocketOversizeError` (or anything else `send` can throw) — can't resend this
+        // chunk's committed history; let the divergence path (server wins) sort it out.
+        this.failDivergence();
+        return;
+      }
+    }
+  }
+
+  /** Accumulates `ack` results while a resume is in flight (possibly across more than one `ack`
+   * frame, symmetric with `SyncService.uploadEvents()`); once every expected id has been acked,
+   * verifies every `{id, seq}` matches what's already on disk. A full match proceeds into normal
+   * steady state (flushing any `hello.pending` overflow); any mismatch is a genuine divergence. */
+  private async handleResumeAck(results: { id: string; seq: number }[]): Promise<void> {
+    const state = this.resumeState;
+    if (!state) return;
+    for (const result of results) state.acked.set(result.id, result.seq);
+    if (state.acked.size < state.expected.size) return; // still waiting on more chunks' acks
+
+    const matches = [...state.expected].every(([id, seq]) => state.acked.get(id) === seq);
+    this.resumeState = undefined;
+    if (!matches) {
+      this.failDivergence();
+      return;
+    }
+
+    this.onApplied?.(); // the server's view of this stream just changed — wake follower tabs
+    if (this.leftoverPending.length > 0) {
+      const leftover = this.leftoverPending;
+      this.leftoverPending = [];
+      await this.sendAppendChunks(leftover);
+    }
+  }
+
+  /** A local-ahead resume attempt failed verification (or couldn't even send) — tears this session
+   * down completely and hands off to `onDivergence` (`SyncService`'s server-wins `restore()`). */
+  private failDivergence(): void {
+    this.resumeState = undefined;
+    this.stop();
+    this.onDivergence?.();
   }
 
   private async handleEvents(message: Extract<ServerMessage, { t: 'events' }>): Promise<void> {
@@ -389,6 +493,10 @@ export class StreamSyncSession {
   }
 
   private async handleAck(message: Extract<ServerMessage, { t: 'ack' }>): Promise<void> {
+    if (this.resumeState) {
+      await this.handleResumeAck(message.results);
+      return;
+    }
     try {
       await this.store.commitPending(this.streamId, message.results);
       await this.refreshPendingCount();
@@ -403,6 +511,17 @@ export class StreamSyncSession {
   }
 
   private async handleReject(message: Extract<ServerMessage, { t: 'reject' }>): Promise<void> {
+    if (this.resumeState) {
+      // A reject for a resume-tail id is a definitive "this can't succeed" signal, not something
+      // `dropPending` can act on (these ids are COMMITTED rows, not pending ones — it would
+      // silently no-op). Treat it exactly like a verification mismatch rather than leaving
+      // `resumeState` waiting forever for acks that will now never arrive.
+      for (const result of message.results) {
+        this.toast.show(REJECT_TOAST_KEYS[result.code]);
+      }
+      this.failDivergence();
+      return;
+    }
     const ids = message.results.map((r) => r.id);
     await this.store.dropPending(this.streamId, ids);
     await this.refreshPendingCount();
