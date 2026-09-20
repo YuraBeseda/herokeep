@@ -103,6 +103,73 @@ describe('NodeMaintenanceStreams — direct unit coverage over real storage', ()
   });
 });
 
+describe('NodeMaintenanceStreams — a camp: stream present does not break maintenance (plan-9 Task 8 obligation)', () => {
+  // [plan-9 Task 8] Scope note (ledgered, not a bug this task fixes): `getStreamUsage`/
+  // `listStreamIds` are prefix-AGNOSTIC (plain SQL over the shared `streams.sqlite` file, no
+  // `char:`/`camp:` branching at all) — they already handle a `camp:` stream mechanically. What
+  // this test actually proves is that `runDailyMaintenance` (`core/maintenance.ts`), which only
+  // ever iterates `char:` streams via `listAllCharacters`, does not CRASH or mis-sync a `char:`
+  // character's own numbers just because a `camp:` stream also exists in the same shared file —
+  // it does not. The one KNOWN, DOCUMENTED limitation this surfaces (not fixed here — the plan
+  // scopes the full campaign `bytes_used` sync to Task 9): a `camp:` stream has no matching D1
+  // `characters` row by construction (it isn't a character at all), so the orphan check's
+  // `streamsWithoutIndexRow` count currently includes it as a false-positive "orphan" — see this
+  // test's own assertion below and task-8-report.md for the full write-up.
+  it('a camp: stream alongside char: streams does not crash getStreamUsage/listStreamIds, and runDailyMaintenance still syncs the char: characters correctly', async () => {
+    const now = Date.now();
+    const ownerId = uuidv7();
+    await insertUser(accounts.db, {
+      id: ownerId,
+      username: 'CampCoexistOwner',
+      usernameFolded: 'campcoexistowner',
+      salt: 'a'.repeat(32),
+      verifierHash: 'b'.repeat(64),
+      createdAt: now,
+      quotaBytesUsed: 0,
+    });
+    const characterId = uuidv7();
+    await upsertCharacterIndexRow(accounts.db, {
+      id: characterId,
+      ownerId,
+      name: 'Toma',
+      system: 'srd-5e-2024',
+      campaignId: null,
+      archivedAt: null,
+      bytesUsed: 0,
+      eventCount: 0,
+      updatedAt: now,
+    });
+
+    const charStream = `char:${characterId}`;
+    const campStream = `camp:${uuidv7()}`;
+    const usage = await seedStreamWithRealMeta(streamsSqlite, charStream, 2);
+    await seedStreamWithRealMeta(streamsSqlite, campStream, 3);
+
+    const maintenanceStreams = new NodeMaintenanceStreams(streamsSqlite);
+
+    // Direct unit coverage: neither method throws, and both see the camp: stream mechanically
+    // (prefix-agnostic SQL — this file's header comment).
+    const campUsage = await maintenanceStreams.getStreamUsage(campStream);
+    expect(campUsage.eventCount).toBe(3);
+    const ids = await maintenanceStreams.listStreamIds();
+    expect([...ids].sort()).toEqual([campStream, charStream].sort());
+
+    // End-to-end: runDailyMaintenance does not crash, and the char: character's own numbers sync
+    // correctly regardless of the camp: stream's presence.
+    const report = await runDailyMaintenance({ db: accounts.db, streams: maintenanceStreams, now });
+    expect(report.charactersSynced).toBe(1);
+    const [synced] = await listAllCharacters(accounts.db);
+    expect(synced).toMatchObject(usage);
+
+    // Documented, ACCEPTED limitation (see this describe block's own comment + task-8-report.md):
+    // the camp: stream has no D1 characters row, so it counts as a false-positive "orphan" here —
+    // asserted explicitly (not just left unchecked) so this test also PROVES the limitation is
+    // real, not merely claimed, and will fail loudly if a future task's fix changes this count
+    // without this assertion being updated alongside it.
+    expect(report.orphans.streamsWithoutIndexRow).toBe(1);
+  });
+});
+
 describe('runDailyMaintenance — end-to-end over the real Node stack (no fakes)', () => {
   it('syncs characters.bytesUsed/eventCount from real stream meta and recomputes users.quota_bytes_used', async () => {
     const now = Date.now();

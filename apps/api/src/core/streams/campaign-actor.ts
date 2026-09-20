@@ -830,12 +830,13 @@ export class CampaignActor extends StreamActor {
 
   /**
    * The adapter-side surface for the OTHER half of "on connect/close" (doc-10 §Presence) —
-   * `hello` above covers connect; there is no base-class "a connection went away" hook (unlike
-   * `hello`, no client FRAME signals a close — it is a transport-level event: Cloudflare's
-   * `webSocketClose`, Node's `ws` `'close'` listener). Task 8 (adapters, not built yet) calls this
-   * AFTER removing `conn` from `Connections` (matching `FakeConnections.close`'s own "delete from
-   * `registered` before returning" ordering, which `test/helpers/fake-connections.ts` already
-   * does) — `buildPresenceMembers`'s `online` flag reads ONLY live connections via
+   * `hello` above covers connect; overrides the base `StreamActor.onConnectionClosed` virtual
+   * no-op (`stream-actor.ts`, added plan-9 Task 8 so an adapter can call it uniformly regardless
+   * of concrete actor type — unlike `hello`, no client FRAME signals a close, it is a transport-
+   * level event: Cloudflare's `webSocketClose`, Node's `ws` `'close'` listener). Task 8 (adapters)
+   * calls this AFTER removing `conn` from `Connections` (matching `FakeConnections.close`'s own
+   * "delete from `registered` before returning" ordering, which `test/helpers/fake-connections.ts`
+   * already does) — `buildPresenceMembers`'s `online` flag reads ONLY live connections via
    * `Connections.byTag`, so calling this before the adapter has actually removed the connection
    * would report a just-closed socket as still online for one broadcast.
    *
@@ -844,7 +845,7 @@ export class CampaignActor extends StreamActor {
    * (`void actor.onConnectionClosed(conn)`, matching Cloudflare's synchronous `webSocketClose`
    * signature) or await it; tests await it for determinism.
    */
-  onConnectionClosed(conn: Conn): Promise<void> {
+  override onConnectionClosed(conn: Conn): Promise<void> {
     // [plan-9 Task 7] Blob-relay cleanup (holder-set membership, in-flight bookkeeping, relay-local
     // connection id) — see `BlobRelay.handleConnectionClosed`'s own doc comment. Synchronous, so it
     // runs (and is fully done) before the presence broadcast below reads live connection state.

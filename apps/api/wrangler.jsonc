@@ -35,22 +35,31 @@
 
   // Durable Object bindings (ADR-014's `StreamHost`/`RateLimit` rows). `CHARACTER_STREAM`: one DO
   // instance per character stream, addressed by `idFromName(streamId)` (task-8-brief obligation
-  // (c)) — `character-stream.do.ts`. `RATE_LIMITER`: one DO instance per rate-limit SCOPE, also
-  // addressed by `idFromName(scope)` (obligation (b); see `rate-limiter.do.ts`'s header comment
-  // for why per-scope addressing was chosen over one global DO).
+  // (c)) — `character-stream.do.ts`. `CAMPAIGN_STREAM` (plan-9 Task 8): the campaign half of the
+  // same pattern, one DO instance per campaign stream — `campaign-stream.do.ts`. `RATE_LIMITER`:
+  // one DO instance per rate-limit SCOPE, also addressed by `idFromName(scope)` (obligation (b);
+  // see `rate-limiter.do.ts`'s header comment for why per-scope addressing was chosen over one
+  // global DO).
   "durable_objects": {
     "bindings": [
       { "name": "CHARACTER_STREAM", "class_name": "CharacterStreamDO" },
+      { "name": "CAMPAIGN_STREAM", "class_name": "CampaignStreamDO" },
       { "name": "RATE_LIMITER", "class_name": "RateLimiterDO" },
     ],
   },
-  // Both classes are SQLite-backed (`new_sqlite_classes`, not the legacy KV-backed
-  // `new_classes`) — task-8-brief's explicit deliverable. `CharacterStreamDO` uses
-  // `state.storage.sql` directly (obligation (c)); `RateLimiterDO` uses the classic
-  // `state.storage.get/put` KV-style API, which SQLite-backed DOs still fully support (it is
-  // implemented on top of the same SQLite database) — see that file's header comment for why a
-  // raw KV shape was simpler than hand-written SQL for its one small `ScopeState` record.
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CharacterStreamDO", "RateLimiterDO"] }],
+  // Every class is SQLite-backed (`new_sqlite_classes`, not the legacy KV-backed `new_classes`) —
+  // task-8-brief's explicit deliverable, carried forward for `CampaignStreamDO` (plan-9 Task 8).
+  // `CharacterStreamDO`/`CampaignStreamDO` use `state.storage.sql` directly (obligation (c));
+  // `RateLimiterDO` uses the classic `state.storage.get/put` KV-style API, which SQLite-backed
+  // DOs still fully support (it is implemented on top of the same SQLite database) — see that
+  // file's header comment for why a raw KV shape was simpler than hand-written SQL for its one
+  // small `ScopeState` record. `CampaignStreamDO` is a NEW class as of this migration tag — a
+  // brand-new tag (`v2`), not an addition to `v1`'s own list, per Cloudflare's documented
+  // migration-history rule (a tag's own `new_sqlite_classes` entry is immutable once shipped).
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["CharacterStreamDO", "RateLimiterDO"] },
+    { "tag": "v2", "new_sqlite_classes": ["CampaignStreamDO"] },
+  ],
 
   // Accounts DB (ADR-014's `Db` row: D1 via `drizzle-orm/d1`, Task 3's schema/migrations shared
   // verbatim with the Node adapter). `database_id` is a placeholder — real deploys need the
@@ -88,6 +97,7 @@
       "durable_objects": {
         "bindings": [
           { "name": "CHARACTER_STREAM", "class_name": "CharacterStreamDO" },
+          { "name": "CAMPAIGN_STREAM", "class_name": "CampaignStreamDO" },
           { "name": "RATE_LIMITER", "class_name": "RateLimiterDO" },
         ],
       },

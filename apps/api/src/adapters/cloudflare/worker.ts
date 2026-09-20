@@ -16,6 +16,7 @@
  * `wrangler.jsonc`'s `assets.run_worker_first: true` is what makes that routing decision actually
  * reach this file for every path, static or not — see that file's comment for why.
  */
+import type { DurableObjectId } from '@cloudflare/workers-types';
 import type { Actor, Event } from '@hk/protocol';
 import { createApp } from '../../core/app.ts';
 import type { AppPorts } from '../../core/app.ts';
@@ -32,26 +33,34 @@ import type {
 import type { AppendResult, MaintenanceStreams, StreamHandle, StreamHost, StreamUsage } from '../../ports/stream.ts';
 import { BindingsConfig, assertConfigured } from './config.bindings.ts';
 import { openAccountsDb } from './db.d1.ts';
+import { CampaignStreamDO } from './campaign-stream.do.ts';
+import { CharacterStreamDO } from './character-stream.do.ts';
 import {
-  CharacterStreamDO,
+  INTERNAL_DISPLAY_NAME_HEADER,
   INTERNAL_ROLE_HEADER,
   INTERNAL_STREAM_ID_HEADER,
   INTERNAL_USER_ID_HEADER,
-} from './character-stream.do.ts';
+} from './internal-headers.ts';
 import { RateLimiterDO } from './rate-limiter.do.ts';
 import type { Env } from './env.ts';
 
-// `wrangler.jsonc`'s `durable_objects.bindings[].class_name` (`CharacterStreamDO`/`RateLimiterDO`)
-// must be exported from THIS module — the one `main` points at — for the Workers runtime to bind
-// them; re-exported here rather than requiring a separate entrypoint file per class.
-export { CharacterStreamDO, RateLimiterDO };
+// `wrangler.jsonc`'s `durable_objects.bindings[].class_name`
+// (`CharacterStreamDO`/`CampaignStreamDO`/`RateLimiterDO`) must be exported from THIS module —
+// the one `main` points at — for the Workers runtime to bind them; re-exported here rather than
+// requiring a separate entrypoint file per class.
+export { CampaignStreamDO, CharacterStreamDO, RateLimiterDO };
 
 /**
- * Hand-written mirrors of `CharacterStreamDO`'s/`RateLimiterDO`'s RPC method surfaces, used to
- * type a `DurableObjectStub` obtained from the PLAIN `DurableObjectNamespace` (`env.ts`'s doc
- * comment explains why the namespace itself is untyped-generic — a real TS performance cliff,
- * not a style preference). Each stub call below is cast through these narrow interfaces rather
- * than through workers-types' own RPC-stub-mirroring generic.
+ * Hand-written mirror of `CharacterStreamDO`'s/`CampaignStreamDO`'s SHARED `StreamHandle`-shaped
+ * RPC method surface (append/read/head/notify/deleteAll/getUsage/fetch — both DO classes
+ * implement all seven with identical signatures, plan-9 Task 8), used to type a
+ * `DurableObjectStub` obtained from a PLAIN `DurableObjectNamespace` (`env.ts`'s doc comment
+ * explains why the namespace itself is untyped-generic — a real TS performance cliff, not a style
+ * preference). Each stub call below is cast through this narrow interface rather than through
+ * workers-types' own RPC-stub-mirroring generic. The two DO classes' OWN gateway-only methods
+ * (`appendForGateway`/`currentCampaignOf`) are never called from here — only DO-to-DO, from
+ * inside `campaign-stream.do.ts`/`character-stream.do.ts` themselves — so they have no place in
+ * this shared interface.
  */
 interface CharacterStreamStub {
   fetch(request: Request): Promise<Response>;
@@ -61,6 +70,22 @@ interface CharacterStreamStub {
   notify(streamId: string, fromStream: string, events: Event[]): Promise<void>;
   deleteAll(streamId: string): Promise<void>;
   getUsage(streamId: string): Promise<StreamUsage>;
+}
+
+/** The minimal `DurableObjectNamespace` surface `streamNamespaceFor` needs — both
+ * `Env['CHARACTER_STREAM']`/`Env['CAMPAIGN_STREAM']` (different generic instantiations,
+ * `DurableObjectNamespace<CharacterStreamDO>`/`<CampaignStreamDO>`) satisfy this structurally, so
+ * one cast-through-narrow-interface covers picking EITHER one generically. */
+interface StreamDoNamespace {
+  idFromName(name: string): DurableObjectId;
+  get(id: DurableObjectId): unknown;
+}
+
+/** [plan-9 Task 8] Picks `CHARACTER_STREAM` or `CAMPAIGN_STREAM` by the `streamId`'s own prefix
+ * (`@hk/protocol`'s `StreamIdSchema`: `char:<uuid>` / `camp:<uuid>`) — the routing decision
+ * `NodeStreamHost.runtimeFor` makes for the same reason on the other adapter. */
+function streamNamespaceFor(env: Env, streamId: string): StreamDoNamespace {
+  return streamId.startsWith('camp:') ? env.CAMPAIGN_STREAM : env.CHARACTER_STREAM;
 }
 
 interface RateLimiterStub {
@@ -89,18 +114,24 @@ function stampClientIp(request: Request): Request {
  * boundary argument (a client can never reach a DO's `fetch()` directly; only this Worker, which
  * holds the `CHARACTER_STREAM` binding, can). */
 class CloudflareWsUpgrade implements WsUpgrade {
-  private readonly namespace: Env['CHARACTER_STREAM'];
+  private readonly env: Env;
 
-  constructor(namespace: Env['CHARACTER_STREAM']) {
-    this.namespace = namespace;
+  constructor(env: Env) {
+    this.env = env;
   }
 
   upgrade(request: Request, ctx: WsUpgradeContext): Promise<Response> {
-    const stub = this.namespace.get(this.namespace.idFromName(ctx.streamId)) as unknown as CharacterStreamStub;
+    const namespace = streamNamespaceFor(this.env, ctx.streamId);
+    const stub = namespace.get(namespace.idFromName(ctx.streamId)) as CharacterStreamStub;
     const internalHeaders = new Headers(request.headers);
     internalHeaders.set(INTERNAL_STREAM_ID_HEADER, ctx.streamId);
     internalHeaders.set(INTERNAL_USER_ID_HEADER, ctx.userId);
     internalHeaders.set(INTERNAL_ROLE_HEADER, ctx.role);
+    // [plan-9 Task 8, obligation 2] `displayName` threading — only `core/routes/campaigns.ts`'s
+    // WS route ever supplies one (`internal-headers.ts`'s own doc comment); omitted entirely
+    // (never an empty-string header) when absent, matching `WsUpgradeContext.displayName`'s own
+    // optional-field contract.
+    if (ctx.displayName !== undefined) internalHeaders.set(INTERNAL_DISPLAY_NAME_HEADER, ctx.displayName);
     const internalRequest = new Request(request.url, { method: request.method, headers: internalHeaders });
     return stub.fetch(internalRequest);
   }
@@ -111,14 +142,15 @@ class CloudflareWsUpgrade implements WsUpgrade {
  * `streamId` is passed explicitly on every call rather than relying on the DO's own persisted
  * hint, matching that file's `append`/`read`/`head`/`notify`/`deleteAll` RPC method signatures. */
 class CloudflareStreamHost implements StreamHost {
-  private readonly namespace: Env['CHARACTER_STREAM'];
+  private readonly env: Env;
 
-  constructor(namespace: Env['CHARACTER_STREAM']) {
-    this.namespace = namespace;
+  constructor(env: Env) {
+    this.env = env;
   }
 
   get(streamId: string): StreamHandle {
-    const stub = this.namespace.get(this.namespace.idFromName(streamId)) as unknown as CharacterStreamStub;
+    const namespace = streamNamespaceFor(this.env, streamId);
+    const stub = namespace.get(namespace.idFromName(streamId)) as CharacterStreamStub;
     return {
       append: (events, actor): Promise<AppendResult> => stub.append(streamId, events, actor),
       read: (fromSeq, limit) => stub.read(streamId, fromSeq, limit),
@@ -193,8 +225,8 @@ function buildPorts(env: Env): AppPorts {
     db: openAccountsDb(env.DB),
     config: new BindingsConfig(env),
     rateLimit: new CloudflareRateLimit(env.RATE_LIMITER),
-    streamHost: new CloudflareStreamHost(env.CHARACTER_STREAM),
-    wsUpgrade: new CloudflareWsUpgrade(env.CHARACTER_STREAM),
+    streamHost: new CloudflareStreamHost(env),
+    wsUpgrade: new CloudflareWsUpgrade(env),
     staticAssets: new CloudflareStaticAssets(env.ASSETS),
   };
 }

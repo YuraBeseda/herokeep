@@ -172,6 +172,76 @@ describe('CharacterStreamDO — WS message handling (obligations (c) and (d))', 
   });
 });
 
+/**
+ * [plan-9 Task 8] Direct unit coverage for the two new RPC methods `campaign-stream.do.ts`'s own
+ * `Rpc` calls DO-to-DO (`campaign-gateway-do.test.ts` covers the REAL cross-DO call path; this
+ * describe block covers each method in isolation, called directly on a `CharacterStreamDO`
+ * instance, the same "call the class instance inside `runInDurableObject`" pattern this file
+ * already uses for `deleteAll`).
+ */
+describe('CharacterStreamDO — appendForGateway / currentCampaignOf (plan-9 Task 8 RPC methods)', () => {
+  it('currentCampaignOf reads back a live campaignId after character.campaign_joined, and undefined before it', async () => {
+    const streamId = `char:${crypto.randomUUID()}`;
+    const id = env.CHARACTER_STREAM.idFromName(streamId);
+    const stub = env.CHARACTER_STREAM.get(id);
+    const campaignId = crypto.randomUUID();
+
+    await runInDurableObject(stub, async (instance) => {
+      const currentCampaignOf = (i: unknown) =>
+        (i as { currentCampaignOf(id: string): Promise<string | undefined> }).currentCampaignOf(streamId);
+      const append = (i: unknown, events: unknown, actor: unknown) =>
+        (i as { append(id: string, e: unknown, a: unknown): Promise<{ lastSeq: number }> }).append(
+          streamId,
+          events,
+          actor,
+        );
+
+      expect(await currentCampaignOf(instance)).toBeUndefined();
+
+      await append(instance, [characterCreatedEvent(streamId)], { userId: 'user-1', role: 'owner' });
+      const joined = {
+        id: crypto.randomUUID(),
+        stream: streamId,
+        ts: new Date().toISOString(),
+        actor: { userId: 'user-1', deviceId: 'd1', role: 'owner' },
+        type: 'character.campaign_joined',
+        v: 1,
+        payload: { campaignId },
+      };
+      const joinResult = await append(instance, [joined], { userId: 'user-1', role: 'owner' });
+      expect(joinResult.lastSeq).toBeGreaterThan(0);
+
+      expect(await currentCampaignOf(instance)).toBe(campaignId);
+    });
+  });
+
+  it("appendForGateway returns the FULL {acked, rejected} outcome (not append's narrower {firstSeq, lastSeq})", async () => {
+    const streamId = `char:${crypto.randomUUID()}`;
+    const id = env.CHARACTER_STREAM.idFromName(streamId);
+    const stub = env.CHARACTER_STREAM.get(id);
+
+    await runInDurableObject(stub, async (instance) => {
+      const appendForGateway = (i: unknown, events: unknown, actor: unknown) =>
+        (
+          i as {
+            appendForGateway(
+              id: string,
+              e: unknown,
+              a: unknown,
+            ): Promise<{ acked: { id: string; seq: number }[]; rejected: { id: string; code: string }[] }>;
+          }
+        ).appendForGateway(streamId, events, actor);
+
+      const goodEvent = characterCreatedEvent(streamId);
+      const badEvent = { ...characterCreatedEvent(streamId), payload: { name: 'x' } }; // missing required fields -> invalid
+
+      const outcome = await appendForGateway(instance, [goodEvent, badEvent], { userId: 'user-1', role: 'owner' });
+      expect(outcome.acked).toEqual([{ id: goodEvent.id, seq: 1 }]);
+      expect(outcome.rejected).toEqual([expect.objectContaining({ id: badEvent.id, code: 'invalid' })]);
+    });
+  });
+});
+
 /** A syntactically-valid `character.created` event — same shape `test/core/stream-actor.test.ts`/
  * `test/core/characters.test.ts` use for the same purpose. */
 function characterCreatedEvent(streamId: string): {

@@ -472,6 +472,242 @@ describe('Node adapter — recreate with the SAME id after hard delete (whole-br
   });
 });
 
+/** [plan-9 Task 8] A tiny WS test harness for the campaign e2e below — collects every received
+ * frame and lets a test `await` either "a frame matching X has already arrived, or arrives
+ * shortly" (`waitForFrame`) or "no frame matching X arrives within a short window"
+ * (`expectNoFrameWithin`), rather than hand-rolling a one-off promise per assertion the way the
+ * simpler single-socket tests above do (this test needs THREE concurrent sockets). */
+interface WsHarness {
+  readonly frames: Record<string, unknown>[];
+  send(msg: Record<string, unknown>): void;
+  waitForFrame(
+    predicate: (f: Record<string, unknown>) => boolean,
+    timeoutMs?: number,
+  ): Promise<Record<string, unknown>>;
+  close(): void;
+}
+
+function openCampaignWs(url: string, cookie: string, origin: string): Promise<WsHarness> {
+  return new Promise((resolvePromise, reject) => {
+    const ws = new WsClient(url, { headers: { cookie, Origin: origin } });
+    const frames: Record<string, unknown>[] = [];
+    const waiters: {
+      predicate: (f: Record<string, unknown>) => boolean;
+      resolve: (f: Record<string, unknown>) => void;
+    }[] = [];
+    const openTimeout = setTimeout(() => reject(new Error('timed out waiting for ws open')), 5000);
+
+    ws.on('open', () => {
+      clearTimeout(openTimeout);
+      resolvePromise({
+        frames,
+        send: (msg) => ws.send(JSON.stringify(msg)),
+        waitForFrame: (predicate, timeoutMs = 5000) =>
+          new Promise((res, rej) => {
+            const existing = frames.find(predicate);
+            if (existing) {
+              res(existing);
+              return;
+            }
+            const timeout = setTimeout(() => rej(new Error('timed out waiting for a matching frame')), timeoutMs);
+            waiters.push({
+              predicate,
+              resolve: (f) => {
+                clearTimeout(timeout);
+                res(f);
+              },
+            });
+          }),
+        close: () => ws.close(),
+      });
+    });
+    ws.on('message', (data) => {
+      const msg = JSON.parse((data as Buffer).toString('utf8')) as Record<string, unknown>;
+      frames.push(msg);
+      for (let i = waiters.length - 1; i >= 0; i -= 1) {
+        const waiter = waiters[i];
+        if (waiter?.predicate(msg)) {
+          waiters.splice(i, 1);
+          waiter.resolve(msg);
+        }
+      }
+    });
+    ws.on('error', (err) => {
+      clearTimeout(openTimeout);
+      reject(err);
+    });
+  });
+}
+
+/** Asserts NO frame matching `predicate` arrives on `harness` within `timeoutMs` — used to prove
+ * a genuinely FILTERED delivery (not merely "nothing has arrived yet"), always paired in this
+ * test with a LATER frame the same connection DOES receive, so a dead/never-delivering connection
+ * can't pass this by accident. */
+async function expectNoFrameWithin(
+  harness: WsHarness,
+  predicate: (f: Record<string, unknown>) => boolean,
+  timeoutMs = 400,
+): Promise<void> {
+  await expect(harness.waitForFrame(predicate, timeoutMs)).rejects.toThrow(/timed out/);
+}
+
+async function registerAndLogin(baseUrl: string, username: string, verifierSeed: string): Promise<string> {
+  const verifier = verifierHex(verifierSeed);
+  const registerRes = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: XRW,
+    body: JSON.stringify({ username, verifier, salt: saltHex(verifierSeed) }),
+  });
+  if (registerRes.status !== 201) {
+    throw new Error(
+      `registerAndLogin: register failed for ${username}: ${registerRes.status} ${await registerRes.text()}`,
+    );
+  }
+  const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: XRW,
+    body: JSON.stringify({ username, verifier, deviceLabel: `${username}-device` }),
+  });
+  if (loginRes.status !== 200) {
+    throw new Error(`registerAndLogin: login failed for ${username}: ${loginRes.status} ${await loginRes.text()}`);
+  }
+  return firstCookiePair(loginRes.headers.get('set-cookie'));
+}
+
+describe('Node adapter — real end-to-end campaign WS (plan-9 Task 8)', () => {
+  it('register 2 users -> create -> join by code -> roll.logged fan-out with dm-visibility filtering (invisible to the member, visible to the DM)', async () => {
+    const dmCookie = await registerAndLogin(baseUrl, `CampDm${Date.now()}`, 'cad1');
+    const memberCookie = await registerAndLogin(baseUrl, `CampMember${Date.now()}`, 'cae2');
+
+    const campaignId = '01950000-0000-7000-9000-000000000001';
+    const createRes = await fetch(`${baseUrl}/api/campaigns`, {
+      method: 'POST',
+      headers: { ...XRW, cookie: dmCookie },
+      body: JSON.stringify({
+        id: campaignId,
+        name: 'The Sunless Citadel',
+        system: 'srd-5e-2024',
+        corePack: { id: 'srd-5e-2024', version: '1.0.0' },
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()) as { joinCode: string };
+    expect(created.joinCode).toBeTruthy();
+
+    const joinRes = await fetch(`${baseUrl}/api/campaigns/join`, {
+      method: 'POST',
+      headers: { ...XRW, cookie: memberCookie },
+      body: JSON.stringify({ code: created.joinCode }),
+    });
+    expect(joinRes.status).toBe(200);
+
+    const wsUrl = `ws://127.0.0.1:${handle.port}/api/campaigns/${campaignId}/ws`;
+    // Three sockets, two accounts: the DM's OWN sending device (dmSender), a SECOND DM device
+    // (dmObserver — proves "visible to the DM" via a genuine fan-out delivery, not the sender's
+    // own `ack`, which `StreamActor.fanOut`'s doc comment notes excludes the source connection
+    // regardless of visibility), and the member's device (memberObserver — proves "invisible to
+    // the member").
+    const [dmSender, dmObserver, memberObserver] = await Promise.all([
+      openCampaignWs(wsUrl, dmCookie, baseUrl),
+      openCampaignWs(wsUrl, dmCookie, baseUrl),
+      openCampaignWs(wsUrl, memberCookie, baseUrl),
+    ]);
+
+    for (const [harness, rid] of [
+      [dmSender, 'h-dm-sender'],
+      [dmObserver, 'h-dm-observer'],
+      [memberObserver, 'h-member-observer'],
+    ] as const) {
+      harness.send({ t: 'hello', rid, proto: 1, app: 'campaign-e2e-test', streams: [], have: [], pending: [] });
+      const welcome = await harness.waitForFrame((f) => f['t'] === 'welcome' && f['rid'] === rid);
+      expect((welcome['streams'] as unknown[])[0]).toMatchObject({ id: `camp:${campaignId}` });
+    }
+
+    const dmVisibleRollId = '01950000-0000-7000-9000-0000000000aa';
+    dmSender.send({
+      t: 'append',
+      rid: 'roll-dm-visibility',
+      events: [
+        {
+          id: dmVisibleRollId,
+          stream: `camp:${campaignId}`,
+          ts: new Date().toISOString(),
+          actor: { userId: 'ignored-by-server', deviceId: 'dm-device-1', role: 'dm' },
+          type: 'roll.logged',
+          v: 1,
+          payload: {
+            label: 'Secret monster initiative',
+            formula: '1d20+2',
+            results: [{ die: 'd20', value: 14 }],
+            total: 16,
+            kind: 'check',
+            visibility: 'dm',
+          },
+        },
+      ],
+    });
+
+    const ack = await dmSender.waitForFrame((f) => f['t'] === 'ack' && f['rid'] === 'roll-dm-visibility');
+    expect(ack['results']).toEqual([{ id: dmVisibleRollId, seq: expect.any(Number) as number }]);
+
+    // Visible to the DM: a SECOND dm-role connection (not the sender) receives the roll via
+    // ordinary fan-out.
+    const dmObserverFrame = await dmObserver.waitForFrame(
+      (f) =>
+        f['t'] === 'events' &&
+        (f['events'] as { id: string }[] | undefined)?.some((e) => e.id === dmVisibleRollId) === true,
+    );
+    expect((dmObserverFrame['events'] as { id: string; payload: { visibility: string } }[])[0]).toMatchObject({
+      id: dmVisibleRollId,
+      payload: { visibility: 'dm' },
+    });
+
+    // Invisible to the member: no `events` frame naming this roll arrives on the member's socket.
+    await expectNoFrameWithin(
+      memberObserver,
+      (f) =>
+        f['t'] === 'events' &&
+        (f['events'] as { id: string }[] | undefined)?.some((e) => e.id === dmVisibleRollId) === true,
+    );
+
+    // Proves the member's connection isn't simply dead/filtered-everything: an 'everyone'-
+    // visibility roll sent right after DOES reach it.
+    const publicRollId = '01950000-0000-7000-9000-0000000000bb';
+    dmSender.send({
+      t: 'append',
+      rid: 'roll-public',
+      events: [
+        {
+          id: publicRollId,
+          stream: `camp:${campaignId}`,
+          ts: new Date().toISOString(),
+          actor: { userId: 'ignored-by-server', deviceId: 'dm-device-1', role: 'dm' },
+          type: 'roll.logged',
+          v: 1,
+          payload: {
+            label: 'Public perception check',
+            formula: '1d20',
+            results: [{ die: 'd20', value: 11 }],
+            total: 11,
+            kind: 'check',
+            visibility: 'everyone',
+          },
+        },
+      ],
+    });
+    const memberSeesPublicRoll = await memberObserver.waitForFrame(
+      (f) =>
+        f['t'] === 'events' &&
+        (f['events'] as { id: string }[] | undefined)?.some((e) => e.id === publicRollId) === true,
+    );
+    expect(memberSeesPublicRoll).toBeTruthy();
+
+    dmSender.close();
+    dmObserver.close();
+    memberObserver.close();
+  });
+});
+
 describe('Node adapter — fails fast at boot on missing secrets (fix round 1)', () => {
   // `beforeEach`/`afterEach` above still run around every test in this file (they boot/close a
   // SEPARATE, correctly-configured server — unrelated to the deliberately-misconfigured boot

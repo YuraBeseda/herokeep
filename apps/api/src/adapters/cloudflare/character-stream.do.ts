@@ -48,24 +48,44 @@ import { DurableObject } from 'cloudflare:workers';
 import type { DurableObjectStorage } from '@cloudflare/workers-types';
 import type { Actor, Event } from '@hk/protocol';
 import { CharacterActor } from '../../core/streams/character-actor.ts';
+import { NO_OP_RPC } from '../../core/streams/stream-actor.ts';
 import type { AppendResult } from '../../ports/stream.ts';
+import type { Rpc, RpcAppendOutcome } from '../../ports/infra.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import * as permissions from '../../core/permissions.ts';
 import * as quotas from '../../core/quotas.ts';
 import { WS_MESSAGE_BYTES_MAX } from '../../core/validate.ts';
 import { DoSqlStreamStore } from './store.sqlite-do.ts';
 import { HibernatingConnections, type HibernationHost } from './connections.do.ts';
+import { INTERNAL_ROLE_HEADER, INTERNAL_STREAM_ID_HEADER, INTERNAL_USER_ID_HEADER } from './internal-headers.ts';
 import type { Env } from './env.ts';
 
-/** Internal-only headers `worker.ts` stamps onto the Request it hands to this DO's `fetch()` —
- * see this file's header comment for why they need no forgery defense here. Named distinctly
- * from `core/http/client-ip.ts`'s `X-Hk-Client-Ip` (a DIFFERENT trust boundary, defended
- * differently) so the two are never confused for the same mechanism. */
-export const INTERNAL_STREAM_ID_HEADER = 'X-Hk-Internal-Stream-Id';
-export const INTERNAL_USER_ID_HEADER = 'X-Hk-Internal-User-Id';
-export const INTERNAL_ROLE_HEADER = 'X-Hk-Internal-Role';
-
 const WS_UPGRADE_RESPONSE_STATUS = 101;
+
+/** [plan-9 Task 8] `CharacterStreamDO`'s own `Rpc` — the DO-to-DO half of ADR-014's `Rpc` row
+ * ("a campaign stream's DO calling a character stream's DO on Cloudflare"). `CharacterActor` only
+ * ever calls `this.rpc.notify` (its after-commit campaign-notify hook, `character-actor.ts`'s
+ * `notifyCampaignIfLinked`) — `forwardAppend`/`hasEvent`/`readStream`/`currentCampaignOf` are
+ * `CampaignActor`-only concerns a `CharacterActor` never reaches, so those four stay exactly
+ * `NO_OP_RPC`'s fail-closed shape (spread verbatim, not hand-copied — see that export's own doc
+ * comment). `notify` reaches the target `CampaignStreamDO` via `env.CAMPAIGN_STREAM`, a binding
+ * only THIS Worker's own script (and, by extension, its own DOs) holds — the SAME trust-boundary
+ * argument this file's header comment already makes for `worker.ts`'s calls into `fetch()`/the
+ * RPC methods below applies transitively here: a client cannot reach `CharacterStreamDO` at all,
+ * so it certainly cannot reach whatever internal bindings this DO chooses to call out with. */
+interface CampaignStreamNotifyStub {
+  notify(streamId: string, fromStream: string, events: Event[]): Promise<void>;
+}
+
+function buildRpc(env: Env): Rpc {
+  return {
+    ...NO_OP_RPC,
+    notify: async (toStream, fromStream, events) => {
+      const stub: CampaignStreamNotifyStub = env.CAMPAIGN_STREAM.get(env.CAMPAIGN_STREAM.idFromName(toStream));
+      await stub.notify(toStream, fromStream, events);
+    },
+  };
+}
 
 /** `meta` key backing the generation guard (round-2 fix, see `deleteAll`'s doc comment). */
 const GEN_META_KEY = 'gen';
@@ -94,8 +114,9 @@ function buildActor(
   store: DoSqlStreamStore,
   connections: HibernatingConnections<ConnAttachment>,
   streamId: string,
+  rpc: Rpc,
 ): CharacterActor {
-  return new CharacterActor({ store, connections, quotas, permissions, streamId });
+  return new CharacterActor({ store, connections, quotas, permissions, streamId, rpc });
 }
 
 export class CharacterStreamDO extends DurableObject<Env> {
@@ -158,7 +179,7 @@ export class CharacterStreamDO extends DurableObject<Env> {
         throw new Error('CharacterStreamDO: streamId unknown (no hint given and none persisted yet)');
       }
       if (streamIdHint) await this.ctx.storage.put('stream_id', streamIdHint);
-      return buildActor(this.lazyStore(streamId), this.lazyConnections(), streamId);
+      return buildActor(this.lazyStore(streamId), this.lazyConnections(), streamId, buildRpc(this.env));
     })();
     return this.actorPromise;
   }
@@ -202,21 +223,24 @@ export class CharacterStreamDO extends DurableObject<Env> {
 
   /** Hibernation API message handler (obligation (d)) — forwards to the actor exactly like
    * Node's `ws.on('message', ...)` wiring (`adapters/node/server.ts`) forwards to
-   * `actor.handleMessage`. A binary frame is ignored (Phase 2 has no blob relay — matches Node's
-   * `if (isBinary) return`, `server.ts`'s doc comment on that same no-op). */
+   * `actor.handleMessage`/`handleBinaryMessage`. [plan-9 Task 8] A binary frame now routes to
+   * `actor.handleBinaryMessage` (doc-07 §Blob transfer protocol RECEIVE side — Task 7 shipped only
+   * the SEND side, `Connections.sendBinary`) — a virtual no-op on a plain `CharacterActor`
+   * (`CampaignActor` overrides it for the real relay), same "call it uniformly, let the actor
+   * decide" shape Node's `server.ts` now uses too. */
   override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     // Whole-branch review finding 1: the Hibernation API has no `ws`-style `maxPayload` option of
     // its own (Node's `server.ts` enforces `core/validate.ts`'s `WS_MESSAGE_BYTES_MAX` at the
     // library layer instead) — this is the Cloudflare-side equivalent, a manual length guard
     // BEFORE any JSON parse/actor dispatch runs, so an oversized frame never reaches the actor at
     // all. Closed 1009 ("message too big"), matching Node's `ws` behavior for the same condition
-    // exactly (`server.ts`'s doc comment on `maxPayload`).
+    // exactly (`server.ts`'s doc comment on `maxPayload`) — enforced identically for a binary
+    // `blob.chunk` frame (doc-03's WS message size limit applies to both frame kinds).
     const byteLength = typeof message === 'string' ? new TextEncoder().encode(message).length : message.byteLength;
     if (byteLength > WS_MESSAGE_BYTES_MAX) {
       ws.close(1009, 'message too large');
       return;
     }
-    if (typeof message !== 'string') return;
 
     const actor = await this.ensureActor();
     // Round-2 fix (whole-branch re-review, finding-3 regression): unlike Node's `server.ts`, which
@@ -232,7 +256,11 @@ export class CharacterStreamDO extends DurableObject<Env> {
     // delivery ordering: every accept stamps the CURRENT generation onto its `StampedAttachment`
     // (`fetch()` above); `deleteAll` bumps the persisted generation the moment it wipes the store;
     // a message whose attachment generation doesn't match the CURRENT persisted one is refused
-    // outright, never reaching `actor.handleMessage`.
+    // outright, never reaching `actor.handleMessage`/`handleBinaryMessage`. [plan-9 Task 8] Moved
+    // ABOVE the text/binary branch below (was only ever checked on the text path before this task,
+    // since binary frames were dropped outright) — a binary `blob.chunk` on a stale generation
+    // must be refused exactly like a stale text frame, not silently forwarded to a resurrected
+    // actor.
     const attachment = ws.deserializeAttachment() as Partial<StampedAttachment> | null;
     const currentGen = await this.readGen();
     if ((attachment?.gen ?? 0) !== currentGen) {
@@ -240,6 +268,10 @@ export class CharacterStreamDO extends DurableObject<Env> {
       return;
     }
 
+    if (typeof message !== 'string') {
+      actor.handleBinaryMessage(ws, new Uint8Array(message));
+      return;
+    }
     await actor.handleMessage(ws, safeJsonParse(message));
   }
 
@@ -247,9 +279,20 @@ export class CharacterStreamDO extends DurableObject<Env> {
    * abrupt/non-clean close (`!wasClean`) — the Hibernation API's own bookkeeping (`getWebSockets`
    * excluding this socket going forward) needs no help from this class beyond that (see
    * `connections.do.ts`'s header comment: unlike Node's `WsConnections`, there is no separate
-   * `Map`/`Set` here to prune). */
+   * `Map`/`Set` here to prune).
+   *
+   * [plan-9 Task 8] Also calls the virtual `onConnectionClosed` hook (`stream-actor.ts`) — a
+   * no-op on a plain `CharacterActor`, a real presence broadcast + blob-relay cleanup on a
+   * `CampaignActor` (this DO never wraps one, but the call costs nothing and keeps both DOs'
+   * `webSocketClose` symmetric). Fire-and-forget (`void`): the Hibernation API's own
+   * `webSocketClose` signature is synchronous, matching the existing `!wasClean` branch above —
+   * `connections.do.ts`'s header comment already establishes that `ctx.getWebSockets()` excludes
+   * a closing socket automatically, satisfying the "call AFTER removal" ordering
+   * `CampaignActor.onConnectionClosed`'s own doc comment requires without this class needing to
+   * track removal itself. */
   override webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): void {
     if (!wasClean) ws.close(code, reason);
+    void this.ensureActor().then((actor) => actor.onConnectionClosed(ws));
   }
 
   // --- StreamHandle, as RPC methods (this file's header comment explains why these are RPC,
@@ -273,6 +316,34 @@ export class CharacterStreamDO extends DurableObject<Env> {
     const outcome = await characterActor.append(events as Event[], actor as Actor);
     const seqs = outcome.acked.map((a) => a.seq);
     return { firstSeq: seqs.length > 0 ? Math.min(...seqs) : 0, lastSeq: seqs.length > 0 ? Math.max(...seqs) : 0 };
+  }
+
+  /**
+   * [plan-9 Task 8] `Rpc.forwardAppend`'s Cloudflare target — THE GATEWAY's cross-DO call
+   * (`campaign-stream.do.ts`'s own `Rpc` calls this, never a client). Deliberately a SEPARATE RPC
+   * method from `append` above, not a reuse of it: `append`'s return shape is the narrower
+   * `StreamHandle`-port `AppendResult` (`{firstSeq, lastSeq}`, the min/max of whatever committed),
+   * which cannot express doc-03's "acks/rejects relayed to the campaign socket" requirement — the
+   * gateway needs the FULL per-event `{acked, rejected}` outcome (`RpcAppendOutcome`) to relay
+   * individual results back. `CharacterActor.append`'s own return shape is already structurally
+   * identical to `RpcAppendOutcome` (both files' doc comments note this intentional sharing), so
+   * no translation is needed beyond the `unknown`-typed signature this file's header comment
+   * explains (the same `tsc` performance concern as every other RPC method here).
+   */
+  async appendForGateway(streamId: string, events: unknown, actor: unknown): Promise<RpcAppendOutcome> {
+    const characterActor = await this.ensureActor(streamId);
+    return characterActor.append(events as Event[], actor as Actor);
+  }
+
+  /** [plan-9 Task 8] `Rpc.currentCampaignOf`'s Cloudflare target — reads this character's own LIVE
+   * `meta.campaignId` directly (never a history scan), same fail-closed-via-`undefined` contract
+   * `ports/infra.ts`'s `Rpc.currentCampaignOf` documents. Called only by a
+   * `CampaignStreamDO`'s own `Rpc` (`campaign-stream.do.ts`), via the same DO-to-DO binding
+   * argument this file's header comment makes for every other RPC method here. */
+  async currentCampaignOf(streamId: string): Promise<string | undefined> {
+    const characterActor = await this.ensureActor(streamId);
+    const meta = await characterActor.getCharacterMeta();
+    return meta.campaignId;
   }
 
   async read(streamId: string, fromSeq: number, limit: number): Promise<unknown> {

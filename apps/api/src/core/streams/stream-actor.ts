@@ -45,8 +45,15 @@ import { measureEventBytes, validateEvent } from '../validate.ts';
  * `undefined`), never open — an unconfigured `Rpc` can only ever make a permission/verification
  * check FAIL, never wrongly succeed (fix round 1's `currentCampaignOf` doc comment, `ports/infra.ts`,
  * spells this out for that method specifically).
+ *
+ * [plan-9 Task 8] Exported (not just module-local) so a real adapter can spread it as the
+ * fail-closed base for the HALF of the `Rpc` surface a given DO/actor never actually calls — e.g.
+ * Cloudflare's `CharacterStreamDO` only ever needs a REAL `notify` (the after-commit campaign-
+ * notify hook); `forwardAppend`/`hasEvent`/`readStream`/`currentCampaignOf` are never called on a
+ * `CharacterActor` at all, so those four stay exactly this same fail-closed shape there too,
+ * rather than a second hand-copied literal that could drift from this one.
  */
-const NO_OP_RPC: Rpc = {
+export const NO_OP_RPC: Rpc = {
   notify: () => Promise.resolve(),
   forwardAppend: (_toStream, events) =>
     Promise.resolve({
@@ -236,6 +243,21 @@ export class StreamActor {
    */
   handleBinaryMessage(_conn: Conn, _bytes: Uint8Array): void {
     // no-op (character streams defer blob relay — see above)
+  }
+
+  /**
+   * [plan-9 Task 8] Adapter-side "a connection went away" hook — there is no client FRAME for
+   * this (unlike `hello`/`handleBinaryMessage`, a close is a transport-level event: Cloudflare's
+   * `webSocketClose`, Node's `ws` `'close'` listener), so an adapter calls this directly, AFTER it
+   * has removed `conn` from `Connections` (`CampaignActor.onConnectionClosed`'s own doc comment
+   * spells out why the ordering matters: its presence snapshot reads ONLY live connections). Kept
+   * as a virtual method on the BASE class (mirroring `handleBinaryMessage` above) so an adapter's
+   * close handler can call `streamActor.onConnectionClosed(conn)` uniformly regardless of concrete
+   * actor type — a no-op here (character streams have no presence/blob-relay state to clean up);
+   * `CampaignActor` overrides it for real (`campaign-actor.ts`).
+   */
+  onConnectionClosed(_conn: Conn): Promise<void> {
+    return Promise.resolve();
   }
 
   private async handleAppend(conn: Conn, msg: AppendMsg, actor: Actor): Promise<void> {

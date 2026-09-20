@@ -14,6 +14,7 @@
  * `runInDurableObject` infer a real `instance: CharacterStreamDO` instead of an opaque stub.
  */
 import type { D1Database, DurableObjectNamespace, Fetcher } from '@cloudflare/workers-types';
+import type { CampaignStreamDO } from './campaign-stream.do.ts';
 import type { CharacterStreamDO } from './character-stream.do.ts';
 import type { RateLimiterDO } from './rate-limiter.do.ts';
 
@@ -21,6 +22,12 @@ export interface Env {
   readonly ASSETS: Fetcher;
   readonly DB: D1Database;
   readonly CHARACTER_STREAM: DurableObjectNamespace<CharacterStreamDO>;
+  /** [plan-9 Task 8] One DO instance per CAMPAIGN stream, addressed by `idFromName('camp:<uuid>')`
+   * — the campaign half of `CHARACTER_STREAM`'s pattern (`campaign-stream.do.ts`). A separate DO
+   * CLASS (not a shared one branching internally on the id prefix) because the two wrap different
+   * concrete actor types (`CharacterActor` vs `CampaignActor`) with genuinely different RPC
+   * surfaces (`appendForGateway`/`currentCampaignOf` are campaign-gateway-only concerns). */
+  readonly CAMPAIGN_STREAM: DurableObjectNamespace<CampaignStreamDO>;
   readonly RATE_LIMITER: DurableObjectNamespace<RateLimiterDO>;
   /** `Config` port secrets (ADR-012 §Auth exact values) — Worker secrets (`wrangler secret put`)
    * in production, `.dev.vars` locally (this file's sibling `.dev.vars.example`). */

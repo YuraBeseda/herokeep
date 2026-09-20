@@ -143,16 +143,42 @@ class NodeWsUpgrade implements WsUpgrade {
     return new Promise<Response>((resolveResponse) => {
       this.wss.handleUpgrade(entry.req, entry.socket, entry.head, (ws) => {
         const runtime = this.streamHost.getRuntime(ctx.streamId);
-        const attachment: ConnAttachment = { userId: ctx.userId, role: ctx.role, subs: [] };
+        const attachment: ConnAttachment = {
+          userId: ctx.userId,
+          role: ctx.role,
+          subs: [],
+          ...(ctx.displayName !== undefined ? { displayName: ctx.displayName } : {}),
+        };
         const conn = runtime.connections.accept(ws, attachment);
 
         ws.on('message', (data: RawData, isBinary: boolean) => {
-          // Phase 2 scope (Global Constraints): blob relay is Phase 3. A binary frame on a
-          // character stream has no meaning yet — ignored rather than closing the connection,
-          // matching `StreamActor.handleMessage`'s own "ignore, don't punish" stance on
-          // not-yet-wired Phase-3 message shapes.
-          if (isBinary) return;
+          // [plan-9 Task 8] Binary frame RECEIVE wiring (doc-07 §Blob transfer protocol; Task 7's
+          // `Connections.sendBinary` shipped the SEND side only). Routed to
+          // `StreamActor.handleBinaryMessage` — a virtual no-op on a plain character stream
+          // (`CampaignActor` overrides it for the real blob relay) — NOT through `withLock`: the
+          // relay is purely in-memory forwarding state (`BlobRelay`), never a store mutation, so
+          // it doesn't need the same single-writer serialization an `append`/`deleteAll` does.
+          // `ws`'s own `maxPayload: WS_MESSAGE_BYTES_MAX` (below) already bounds every frame,
+          // binary included, at the WS layer before this handler ever runs — doc-03's WS message
+          // size limit is enforced identically for both frame kinds.
+          if (isBinary) {
+            runtime.actor.handleBinaryMessage(conn, rawDataToBytes(data));
+            return;
+          }
           void runtime.withLock(() => runtime.actor.handleMessage(conn, safeJsonParse(rawDataToString(data))));
+        });
+
+        // [plan-9 Task 8] "a connection went away" (doc-10 §Presence; `StreamActor
+        // .onConnectionClosed`'s own doc comment) — registered AFTER `runtime.connections.accept`
+        // above, so `ws`'s own close-listener ordering guarantee (listeners fire in registration
+        // order) means `WsConnections.accept`'s internal cleanup listener (which removes this
+        // socket from `sockets`/`attachments`) has ALREADY run by the time this fires, satisfying
+        // the "call AFTER removal" contract `CampaignActor.onConnectionClosed` documents. Called
+        // unconditionally for every stream kind (virtual dispatch: a no-op on a plain character
+        // stream, a real presence broadcast + blob-relay cleanup on a campaign stream) — same
+        // uniform-dispatch shape `handleBinaryMessage` above already uses.
+        ws.on('close', () => {
+          void runtime.actor.onConnectionClosed(conn);
         });
 
         // Response never observed by a real client (`ports/infra.ts`'s `WsUpgrade` doc comment):
@@ -170,6 +196,16 @@ function rawDataToString(data: RawData): string {
   if (Buffer.isBuffer(data)) return data.toString('utf8');
   if (Array.isArray(data)) return Buffer.concat(data).toString('utf8');
   return Buffer.from(data).toString('utf8'); // ArrayBuffer
+}
+
+/** [plan-9 Task 8] Same three-shape handling as `rawDataToString` above (`ws`'s `RawData` union),
+ * for a BINARY frame instead of a text one — a plain `Uint8Array` view, never copying when `data`
+ * is already a single `Buffer` (a `Buffer` IS a `Uint8Array`; `new Uint8Array(buf.buffer, ...)`
+ * would double-wrap it, so this returns the buffer itself, which already satisfies `Uint8Array`). */
+function rawDataToBytes(data: RawData): Uint8Array {
+  if (Buffer.isBuffer(data)) return data;
+  if (Array.isArray(data)) return Buffer.concat(data);
+  return new Uint8Array(data); // ArrayBuffer
 }
 
 function safeJsonParse(text: string): unknown {
