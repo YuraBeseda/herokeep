@@ -25,7 +25,14 @@ import { NodeMaintenanceStreams } from '../../../src/adapters/node/maintenance-s
 import { runDailyMaintenance } from '../../../src/core/maintenance.ts';
 import { measureEventBytes } from '../../../src/core/validate.ts';
 import { uuidv7 } from '../../../src/core/ids.ts';
-import { insertUser, listAllCharacters, listAllUsers, upsertCharacterIndexRow } from '../../../src/core/db/queries.ts';
+import {
+  createCampaign,
+  insertUser,
+  listAllCampaigns,
+  listAllCharacters,
+  listAllUsers,
+  upsertCharacterIndexRow,
+} from '../../../src/core/db/queries.ts';
 
 function makeEvent(streamId: string, overrides: Partial<Event> = {}): Event {
   return {
@@ -103,19 +110,17 @@ describe('NodeMaintenanceStreams — direct unit coverage over real storage', ()
   });
 });
 
-describe('NodeMaintenanceStreams — a camp: stream present does not break maintenance (plan-9 Task 8 obligation)', () => {
+describe('NodeMaintenanceStreams — a camp: stream present does not break maintenance (plan-9 Task 8 obligation; Task 9 adds the real campaign sync + orphan-check fix)', () => {
   // [plan-9 Task 8] Scope note (ledgered, not a bug this task fixes): `getStreamUsage`/
   // `listStreamIds` are prefix-AGNOSTIC (plain SQL over the shared `streams.sqlite` file, no
   // `char:`/`camp:` branching at all) — they already handle a `camp:` stream mechanically. What
-  // this test actually proves is that `runDailyMaintenance` (`core/maintenance.ts`), which only
-  // ever iterates `char:` streams via `listAllCharacters`, does not CRASH or mis-sync a `char:`
-  // character's own numbers just because a `camp:` stream also exists in the same shared file —
-  // it does not. The one KNOWN, DOCUMENTED limitation this surfaces (not fixed here — the plan
-  // scopes the full campaign `bytes_used` sync to Task 9): a `camp:` stream has no matching D1
-  // `characters` row by construction (it isn't a character at all), so the orphan check's
-  // `streamsWithoutIndexRow` count currently includes it as a false-positive "orphan" — see this
-  // test's own assertion below and task-8-report.md for the full write-up.
-  it('a camp: stream alongside char: streams does not crash getStreamUsage/listStreamIds, and runDailyMaintenance still syncs the char: characters correctly', async () => {
+  // this test actually proves is that `runDailyMaintenance` (`core/maintenance.ts`) does not
+  // CRASH or mis-sync a `char:` character's own numbers just because a `camp:` stream also exists
+  // in the same shared file — it does not, AND (plan-9 Task 9) a `camp:` stream with a genuine D1
+  // `campaigns` index row now gets its OWN real sync too, and is correctly recognized as indexed
+  // by the orphan check rather than the false-positive Task 8 documented and accepted here (see
+  // task-8-report.md for that original write-up; this test's own assertion below is the fix).
+  it('a camp: stream alongside char: streams does not crash getStreamUsage/listStreamIds, runDailyMaintenance syncs BOTH the char: character and the camp: campaign, and the indexed camp: stream is no longer a false-positive orphan', async () => {
     const now = Date.now();
     const ownerId = uuidv7();
     await insertUser(accounts.db, {
@@ -139,11 +144,24 @@ describe('NodeMaintenanceStreams — a camp: stream present does not break maint
       eventCount: 0,
       updatedAt: now,
     });
+    const campaignId = uuidv7();
+    // [plan-9 Task 9] A REAL D1 campaigns row for this camp: stream (not just the bare stream —
+    // this is the difference between "genuinely indexed" and the T8-documented false positive).
+    await createCampaign(accounts.db, {
+      id: campaignId,
+      dmId: ownerId,
+      name: 'Coexist Campaign',
+      system: 'srd-5e-2024',
+      joinCode: 'COEXIST1',
+      joinOpen: true,
+      bytesUsed: 0,
+      updatedAt: now,
+    });
 
     const charStream = `char:${characterId}`;
-    const campStream = `camp:${uuidv7()}`;
+    const campStream = `camp:${campaignId}`;
     const usage = await seedStreamWithRealMeta(streamsSqlite, charStream, 2);
-    await seedStreamWithRealMeta(streamsSqlite, campStream, 3);
+    const campUsageSeeded = await seedStreamWithRealMeta(streamsSqlite, campStream, 3);
 
     const maintenanceStreams = new NodeMaintenanceStreams(streamsSqlite);
 
@@ -154,19 +172,20 @@ describe('NodeMaintenanceStreams — a camp: stream present does not break maint
     const ids = await maintenanceStreams.listStreamIds();
     expect([...ids].sort()).toEqual([campStream, charStream].sort());
 
-    // End-to-end: runDailyMaintenance does not crash, and the char: character's own numbers sync
-    // correctly regardless of the camp: stream's presence.
+    // End-to-end: runDailyMaintenance does not crash, the char: character's own numbers sync
+    // correctly regardless of the camp: stream's presence, AND (plan-9 Task 9) the campaign's own
+    // bytes_used is now synced too.
     const report = await runDailyMaintenance({ db: accounts.db, streams: maintenanceStreams, now });
     expect(report.charactersSynced).toBe(1);
+    expect(report.campaignsSynced).toBe(1);
     const [synced] = await listAllCharacters(accounts.db);
     expect(synced).toMatchObject(usage);
+    const [syncedCampaign] = await listAllCampaigns(accounts.db);
+    expect(syncedCampaign?.bytesUsed).toBe(campUsageSeeded.bytesUsed);
 
-    // Documented, ACCEPTED limitation (see this describe block's own comment + task-8-report.md):
-    // the camp: stream has no D1 characters row, so it counts as a false-positive "orphan" here —
-    // asserted explicitly (not just left unchecked) so this test also PROVES the limitation is
-    // real, not merely claimed, and will fail loudly if a future task's fix changes this count
-    // without this assertion being updated alongside it.
-    expect(report.orphans.streamsWithoutIndexRow).toBe(1);
+    // [plan-9 Task 9 fix, flipped from Task 8's documented false-positive] A `camp:` stream with a
+    // REAL D1 `campaigns` row is now correctly recognized as indexed — zero orphans, not one.
+    expect(report.orphans.streamsWithoutIndexRow).toBe(0);
   });
 });
 

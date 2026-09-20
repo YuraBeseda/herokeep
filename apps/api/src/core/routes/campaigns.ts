@@ -128,6 +128,14 @@ import {
   rotateJoinCode,
 } from '../db/queries.ts';
 
+/** [plan-9 Task 9] `StreamHandle.closeConnectionsForUser`'s `reason` for a DM-initiated removal —
+ * localizer-key style, matching `notice.key`'s existing convention (`quota.warning`,
+ * `blob.resend-have`). `ByeMsgSchema.reason` (`@hk/protocol`) is a free-form
+ * `z.string().min(1)`, not an enum, so this is a plain exported string constant rather than a
+ * schema addition — `stream-actor.ts`'s `byeCloseUser` doc comment has the full session-expiry-
+ * trigger survey this is the one real (member-removal) trigger for. */
+export const BYE_REASON_MEMBER_REMOVED = 'campaign.member_removed';
+
 const BODY_LIMIT_BYTES = 64 * 1024; // ADR-012 exact value (same cap every route in this app uses)
 /** Astronomically generous relative to the 30^8 (~6.6e11) join-code space (`join-code.ts`'s own
  * doc comment) — a real collision run this long would indicate a bug, not bad luck. */
@@ -473,11 +481,17 @@ export function createCampaignRoutes(deps: CampaignsDeps) {
       throw err instanceof Error ? err : new Error('member removal: member.removed append failed');
     }
 
-    // T9 hook (bye emission, plan-9 Task 9): the removed member's LIVE campaign sockets should be
-    // closed with a `bye` frame here — the actor-side close/socket surface
-    // (`CampaignActor.onConnectionClosed`) exists, but the "find this user's live connections on
-    // THIS campaign stream and bye-close them" wiring is Task 9's job (plan-9's Global
-    // Constraints: "removed from campaign closes that member's sockets with bye"), not built yet.
+    // [plan-9 Task 9] bye-close the removed member's LIVE campaign sockets (doc-03/Global
+    // Constraints: "removed from campaign closes that member's sockets with bye"). Best-effort,
+    // same stance as this route's other post-append cleanup calls above (`.catch(() => undefined)`
+    // — the removal itself already fully committed: D1 row gone, `member.removed` acked; a
+    // transport-level hiccup closing an ALREADY-logically-removed socket must not turn a
+    // successful removal into a 500). `closeConnectionsForUser` is a no-op if the removed user
+    // has no live connection on this stream right now (the ordinary case).
+    await deps.streamHost
+      .get(streamId)
+      .closeConnectionsForUser(targetUserId, BYE_REASON_MEMBER_REMOVED)
+      .catch(() => undefined);
 
     return c.body(null, 204);
   });

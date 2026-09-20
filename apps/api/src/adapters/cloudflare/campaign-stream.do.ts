@@ -323,6 +323,15 @@ export class CampaignStreamDO extends DurableObject<Env> {
     const [bytesRaw, countRaw] = await Promise.all([store.getMeta('bytes_used'), store.getMeta('event_count')]);
     return { bytesUsed: bytesRaw ? Number(bytesRaw) : 0, eventCount: countRaw ? Number(countRaw) : 0 };
   }
+
+  /** `StreamHandle.closeConnectionsForUser`'s Cloudflare target (plan-9 Task 9;
+   * `worker.ts`'s `CloudflareStreamHost.get(streamId)` calls this by name, exactly like every
+   * other RPC method here) — delegates to `CampaignActor.byeCloseUser` (`stream-actor.ts`), THE
+   * real caller for this plan (`core/routes/campaigns.ts`'s member-removal route). */
+  async closeConnectionsForUser(streamId: string, userId: string, reason: string): Promise<void> {
+    const actor = await this.ensureActor(streamId);
+    actor.byeCloseUser(userId, reason);
+  }
 }
 
 function safeJsonParse(text: string): unknown {

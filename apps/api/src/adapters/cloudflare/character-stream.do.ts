@@ -433,6 +433,16 @@ export class CharacterStreamDO extends DurableObject<Env> {
     const [bytesRaw, countRaw] = await Promise.all([store.getMeta('bytes_used'), store.getMeta('event_count')]);
     return { bytesUsed: bytesRaw ? Number(bytesRaw) : 0, eventCount: countRaw ? Number(countRaw) : 0 };
   }
+
+  /** `StreamHandle.closeConnectionsForUser` — contract completeness only (plan-9 Task 9's real
+   * caller is `campaign-stream.do.ts`'s own copy; nothing in this plan bye-closes a character-
+   * stream socket), same "implemented for port-shape completeness, unused in practice" stance as
+   * `notify` above. Delegates to `CharacterActor.byeCloseUser` (inherited from `StreamActor`,
+   * `stream-actor.ts`) — harmless if `userId` has no live connection on this stream. */
+  async closeConnectionsForUser(streamId: string, userId: string, reason: string): Promise<void> {
+    const actor = await this.ensureActor(streamId);
+    actor.byeCloseUser(userId, reason);
+  }
 }
 
 function safeJsonParse(text: string): unknown {

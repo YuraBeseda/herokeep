@@ -344,6 +344,28 @@ describe('handleMessage', () => {
  * (code 1001, reason 'stream_closed') and permanently refuse any FURTHER append on this same
  * actor instance — otherwise a connected socket can append after its data is gone, silently
  * resurrecting a "deleted" stream outside every quota. */
+describe('byeCloseUser (plan-9 Task 9 — doc-03 bye frame)', () => {
+  it('sends {t:bye, reason} then closes every live connection for that userId, leaving other users untouched', () => {
+    const connA = system.connections.accept({}, { userId: 'user-1', role: 'owner', subs: [] });
+    const connB = system.connections.accept({}, { userId: 'user-1', role: 'owner', subs: [] });
+    const otherConn = system.connections.accept({}, { userId: 'user-2', role: 'owner', subs: [] });
+
+    system.actor.byeCloseUser('user-1', 'campaign.member_removed');
+
+    for (const conn of [connA, connB]) {
+      expect(system.connections.framesFor(conn)).toEqual([{ t: 'bye', reason: 'campaign.member_removed' }]);
+      expect(system.connections.wasClosed(conn)).toBe(true);
+      expect(system.connections.closeArgsFor(conn)).toEqual({ code: 4000, reason: 'campaign.member_removed' });
+    }
+    expect(system.connections.framesFor(otherConn)).toEqual([]);
+    expect(system.connections.wasClosed(otherConn)).toBe(false);
+  });
+
+  it('is a no-op when the userId has no live connection on this stream (does not throw)', () => {
+    expect(() => system.actor.byeCloseUser('nobody-here', 'campaign.member_removed')).not.toThrow();
+  });
+});
+
 describe('deleteAll (finding 3 fix)', () => {
   it('closes every connection currently on the stream with code 1001, reason stream_closed', async () => {
     const connA = system.connections.accept({}, { userId: 'user-1', role: 'owner', subs: [] });

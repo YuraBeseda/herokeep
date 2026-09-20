@@ -57,6 +57,23 @@ tabs receive events via BroadcastChannel.
 | `notice` | `level, key, params` | localized by the client (`quota.warning`, `pack.updated`) |
 | `bye` | `reason` | server closes (session expired, removed from campaign) |
 
+## `bye` triggers (plan-9 Task 9)
+
+`bye {reason}` exists so a client can tell "you were removed" apart from an ordinary transient
+disconnect (which never sends anything — the socket just drops). Exactly one trigger is wired
+server-side today: a DM removing a member (`DELETE /api/campaigns/:id/members/:userId`) closes
+every live connection that removed user currently has on that campaign stream with a `bye` frame,
+then the WS close itself.
+
+Two other candidate triggers were surveyed and are deliberately NOT wired, for concrete reasons
+(not by omission): passive session expiry on an otherwise-idle open socket, and device revocation
+(`DELETE /api/me/sessions/:id`) — neither has a session-id-to-live-connection mapping anywhere in
+this codebase (on either adapter) to hang a `bye` off of, and character-stream sockets have the
+identical gap already (not a new, campaign-only shortfall). A client with an actually-expired or
+revoked session finds out on its next reconnect attempt (a real 401 at the WS-upgrade HTTP layer),
+never via `bye` over the old socket. See `apps/api/src/core/streams/stream-actor.ts`'s
+`byeCloseUser` doc comment for the full write-up.
+
 ## Ordering and commit rules
 
 - The DO assigns `seq` strictly increasing per stream; `events` frames are always in

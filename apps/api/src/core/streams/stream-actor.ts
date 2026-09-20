@@ -260,6 +260,55 @@ export class StreamActor {
     return Promise.resolve();
   }
 
+  /**
+   * [plan-9 Task 9] doc-03's `bye {reason}` frame (`ports/stream.ts`'s `StreamHandle
+   * .closeConnectionsForUser` doc comment — the port method this backs). Generic on the BASE
+   * class, not `CampaignActor`-only: `Connections.byTag`/`.send`/`.close` are already stream-
+   * type-agnostic, so nothing here is campaign-specific — only this plan's ONE caller
+   * (`core/routes/campaigns.ts`'s member-removal route) is campaign-only.
+   *
+   * Sends `{t:'bye', reason}` to every live connection `byTag(userId)` returns on THIS stream,
+   * then closes each one with WS code 4000 (RFC 6455 §7.4.2's 4000-4999 "private use" range —
+   * distinct from the plain `1001`/`stream_closed` `deleteAll` uses above: this closure carries
+   * an actionable REASON FRAME first, doc-03's own requirement that "the client must be able to
+   * distinguish 'you were removed' from a transient disconnect", not just a bare close code a
+   * reconnect-backoff loop would otherwise treat identically to a network blip). `reason` is a
+   * free-form `ByeMsgSchema`-valid string, localizer-key style (matching `notice.key`'s own
+   * convention — `quota.warning`/`blob.resend-have`); callers pass the specific key.
+   *
+   * ## Session-expiry bye — the survey this plan's Global Constraints asked for
+   *
+   * "member removal closes sockets with bye" (implemented here, the one real caller) is the ONLY
+   * genuinely detectable mid-socket trigger this codebase currently has. Two others were
+   * considered and are NOT wired to a bye, for concrete reasons rather than by omission:
+   *   - **Passive session expiry** (a connection's originating `hk_session` cookie's `Max-Age`
+   *     elapses while the socket stays open): nothing re-verifies a live WS's originating session
+   *     mid-connection — the cookie is checked exactly once, at the `GET /:id/ws` HTTP upgrade
+   *     (`core/routes/campaigns.ts`'s `requireAuth`). There is no periodic re-check loop anywhere
+   *     in this codebase to hang a bye off of. The nightly `deleteExpiredSessions`
+   *     (`core/maintenance.ts`) purges the D1 session ROW but has no notion of which live sockets,
+   *     if any, that session ever authorized — building that mapping (session id -> live `Conn`s,
+   *     across both adapters) purely to cover this case would be exactly the "speculative expiry
+   *     machinery" this task's brief says not to build. The honest limit: a client with a
+   *     genuinely expired session only finds out on its NEXT reconnect attempt (a real 401 at the
+   *     HTTP-upgrade layer), never via a `bye` over the (still technically open) old socket.
+   *   - **Device revocation** (`DELETE /api/me/sessions/:id`, `core/routes/me.ts`): deletes the
+   *     session row (`core/auth/sessions.ts`'s `revokeDevice`) but — same gap as above — nothing
+   *     maps that session id to a live connection on any stream, on EITHER adapter, today. This is
+   *     not new scope this task introduces: character-stream sockets have exactly the same gap
+   *     already (`character-stream.do.ts`/`server.ts` never close on a revoke either) — campaigns
+   *     are not being held to a stricter standard than the precedent Phase 2 already set.
+   * Both are real, honestly-named gaps (not claimed as covered), left for a future task that
+   * would need to design that session->connection mapping deliberately, for both stream kinds at
+   * once, rather than a campaign-only bolt-on here.
+   */
+  byeCloseUser(userId: string, reason: string): void {
+    for (const conn of this.connections.byTag(userId)) {
+      this.connections.send(conn, { t: 'bye', reason });
+      this.connections.close(conn, 4000, reason);
+    }
+  }
+
   private async handleAppend(conn: Conn, msg: AppendMsg, actor: Actor): Promise<void> {
     const outcome = await this.append(msg.events, actor, conn);
     if (outcome.acked.length > 0) this.connections.send(conn, { t: 'ack', rid: msg.rid, results: outcome.acked });

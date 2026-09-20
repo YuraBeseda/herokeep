@@ -24,6 +24,10 @@ export class FakeStreamHost implements StreamHost {
       head: (): Promise<number> => store.head(),
       notify: (): Promise<void> => Promise.resolve(),
       deleteAll: (): Promise<void> => store.deleteAll(),
+      // [plan-9 Task 9] Same "thin pass-through kept only to satisfy the real StreamHandle type"
+      // stance this file's header comment already documents for `append`/`read`/`head`/`notify` —
+      // no character-route test bye-closes anything through this fake.
+      closeConnectionsForUser: (): Promise<void> => Promise.resolve(),
     };
   }
 

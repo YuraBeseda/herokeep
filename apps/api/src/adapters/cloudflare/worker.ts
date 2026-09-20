@@ -70,6 +70,11 @@ interface CharacterStreamStub {
   notify(streamId: string, fromStream: string, events: Event[]): Promise<void>;
   deleteAll(streamId: string): Promise<void>;
   getUsage(streamId: string): Promise<StreamUsage>;
+  /** [plan-9 Task 9] `StreamHandle.closeConnectionsForUser`'s Cloudflare target — both DO classes
+   * implement this identically (`campaign-stream.do.ts`'s own copy is the one this plan's real
+   * caller reaches; `character-stream.do.ts`'s is contract-completion only, same stance as that
+   * file's own `notify` method). */
+  closeConnectionsForUser(streamId: string, userId: string, reason: string): Promise<void>;
 }
 
 /** The minimal `DurableObjectNamespace` surface `streamNamespaceFor` needs — both
@@ -157,6 +162,7 @@ class CloudflareStreamHost implements StreamHost {
       head: () => stub.head(streamId),
       notify: (fromStream, events) => stub.notify(streamId, fromStream, events),
       deleteAll: () => stub.deleteAll(streamId),
+      closeConnectionsForUser: (userId, reason) => stub.closeConnectionsForUser(streamId, userId, reason),
     };
   }
 }
@@ -184,20 +190,27 @@ class CloudflareRateLimit implements RateLimit {
 }
 
 /** `MaintenanceStreams` port (`ports/stream.ts`), Cloudflare's half: one internal RPC call
- * (`getUsage`) per `CharacterStreamDO` instance — see that method's doc comment on
- * `character-stream.do.ts` for the trust-boundary argument. Deliberately does NOT implement
+ * (`getUsage`) per DO instance — see that method's doc comment on `character-stream.do.ts` for
+ * the trust-boundary argument. [plan-9 Task 9] Takes the whole `Env` (not just
+ * `CHARACTER_STREAM`) and routes each `streamId` through `streamNamespaceFor` — the same
+ * `char:`/`camp:` prefix branch `CloudflareStreamHost`/`CloudflareWsUpgrade` already use — so
+ * `runDailyMaintenance`'s new campaign `bytes_used` sync (`core/maintenance.ts`) reaches
+ * `CampaignStreamDO.getUsage` for a `camp:` id exactly like it already reaches
+ * `CharacterStreamDO.getUsage` for a `char:` one; both DO classes implement `getUsage`
+ * identically (`CharacterStreamStub`'s shared shape above). Deliberately does NOT implement
  * `listStreamIds` (`ports/stream.ts`'s doc comment on that method: no API exists to enumerate
  * Durable Object instances) — `runDailyMaintenance` treats the missing method as "orphan check's
  * stream-side half is not checkable on this adapter" rather than a false zero. */
 class CloudflareMaintenanceStreams implements MaintenanceStreams {
-  private readonly namespace: Env['CHARACTER_STREAM'];
+  private readonly env: Env;
 
-  constructor(namespace: Env['CHARACTER_STREAM']) {
-    this.namespace = namespace;
+  constructor(env: Env) {
+    this.env = env;
   }
 
   getStreamUsage(streamId: string): Promise<StreamUsage> {
-    const stub = this.namespace.get(this.namespace.idFromName(streamId)) as unknown as CharacterStreamStub;
+    const namespace = streamNamespaceFor(this.env, streamId);
+    const stub = namespace.get(namespace.idFromName(streamId)) as CharacterStreamStub;
     return stub.getUsage(streamId);
   }
 }
@@ -258,7 +271,7 @@ export default {
 async function runScheduledMaintenance(env: Env): Promise<void> {
   assertConfigured(new BindingsConfig(env));
   const db = openAccountsDb(env.DB);
-  const streams = new CloudflareMaintenanceStreams(env.CHARACTER_STREAM);
+  const streams = new CloudflareMaintenanceStreams(env);
   const report = await runDailyMaintenance({ db, streams });
   // Security of logs (Global Constraints): no request bodies, no usernames — `MaintenanceReport`
   // is exactly "counters and error classes only", safe to log in full.

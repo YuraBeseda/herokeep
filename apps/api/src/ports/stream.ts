@@ -46,6 +46,19 @@ export interface StreamHandle {
    * `StreamStore.deleteAll` (see that method's doc comment for the storage-level contract).
    */
   deleteAll(): Promise<void>;
+  /**
+   * [plan-9 Task 9] doc-03's `bye {reason}` frame (Global Constraints: "member removal closes
+   * that member's sockets with bye" — the ONE detectable trigger this plan's own scan of the
+   * codebase turned up; see `core/streams/stream-actor.ts`'s `byeCloseUser` doc comment for the
+   * full session-expiry-trigger survey). Sends `{t:'bye', reason}` to every LIVE connection this
+   * stream currently has for `userId`, then closes each one — a no-op if `userId` has no live
+   * connection on this stream right now (the ordinary case: most removals happen while the
+   * removed user isn't even connected). `core/routes/campaigns.ts`'s member-removal route is the
+   * only caller in this plan; generic on the port (not campaign-specific) because the underlying
+   * `StreamActor.byeCloseUser` mechanism (`Connections.byTag`/`.send`/`.close`) is already
+   * stream-type-agnostic — a future character-stream caller would work identically.
+   */
+  closeConnectionsForUser(userId: string, reason: string): Promise<void>;
 }
 
 /** Addresses a stream by id, returning (creating, on first access) its single-writer handle. */

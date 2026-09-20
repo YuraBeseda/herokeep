@@ -10,7 +10,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { MaintenanceStreams, StreamUsage } from '../../src/ports/stream.ts';
 import { runDailyMaintenance } from '../../src/core/maintenance.ts';
-import { characters, sessions, usageDaily, users } from '../../src/core/db/schema.ts';
+import { campaigns, characters, sessions, usageDaily, users } from '../../src/core/db/schema.ts';
 import { openTestDb, type TestDbHandle } from '../helpers/test-db.ts';
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -93,6 +93,29 @@ async function seedCharacter(
   });
 }
 
+/** [plan-9 Task 9] Minimal, directly-inserted `campaigns` D1 row — mirrors `seedCharacter`'s
+ * shape/spirit for the campaign table (Task 3's schema: `id, dmId, name, system, joinCode UNIQUE,
+ * joinOpen, bytesUsed, updatedAt`). `joinCode` just needs to be unique per test, not a real
+ * `generateJoinCode()` output — nothing in `core/maintenance.ts` ever reads it. */
+async function seedCampaign(
+  id: string,
+  dmId: string,
+  joinCode: string,
+  now: number,
+  overrides: Partial<{ bytesUsed: number }> = {},
+): Promise<void> {
+  await handle.db.insert(campaigns).values({
+    id,
+    dmId,
+    name: 'The Sunless Citadel',
+    system: 'srd-5e-2024',
+    joinCode,
+    joinOpen: true,
+    bytesUsed: overrides.bytesUsed ?? 0,
+    updatedAt: now,
+  });
+}
+
 async function seedSession(tokenHash: string, userId: string, now: number, expiresAt: number): Promise<void> {
   await handle.db.insert(sessions).values({
     tokenHash,
@@ -121,24 +144,86 @@ describe('runDailyMaintenance — expired-session purge', () => {
 });
 
 describe('runDailyMaintenance — usage_daily counters', () => {
-  it('writes activeSessions/users/characters/totalBytes rows for the day', async () => {
+  it('writes activeSessions/users/characters/totalBytes/campaigns/campaignBytes rows for the day', async () => {
     const now = Date.UTC(2026, 8, 19, 3, 0, 0); // 2026-09-19T03:00:00Z
     await seedUser('user-1', 'counter-user', now);
     await seedCharacter('char-1', 'user-1', now, { bytesUsed: 1000, eventCount: 5 });
     await seedCharacter('char-2', 'user-1', now, { bytesUsed: 2000, eventCount: 7 });
+    // [plan-9 Task 9] A campaign, with a STALE (pre-sync) bytesUsed already on the D1 row — the
+    // usage snapshot must read this PRE-sync value (same "before this run's own write" convention
+    // `totalBytes` already uses), not whatever step 3b syncs it to a moment later.
+    await seedCampaign('camp-1', 'user-1', 'ABCDEFGH', now, { bytesUsed: 500 });
     await seedSession('active-token', 'user-1', now, now + DAY_MS);
 
     const streams = new FakeMaintenanceStreams();
     streams.setUsage('char:char-1', { bytesUsed: 1000, eventCount: 5 });
     streams.setUsage('char:char-2', { bytesUsed: 2000, eventCount: 7 });
+    streams.setUsage('camp:camp-1', { bytesUsed: 9000, eventCount: 12 });
 
     const report = await runDailyMaintenance({ db: handle.db, streams, now });
     expect(report.day).toBe('2026-09-19');
-    expect(report.usage).toEqual({ activeSessions: 1, users: 1, characters: 2, totalBytes: 3000 });
+    expect(report.usage).toEqual({
+      activeSessions: 1,
+      users: 1,
+      characters: 2,
+      totalBytes: 3000,
+      campaigns: 1,
+      campaignBytes: 500, // pre-sync D1 value, not the 9000 the stream's own meta reports.
+    });
 
     const rows = await handle.db.select().from(usageDaily).where(eq(usageDaily.day, '2026-09-19'));
     const byMetric = Object.fromEntries(rows.map((r) => [r.metric, r.value]));
-    expect(byMetric).toEqual({ activeSessions: 1, users: 1, characters: 2, totalBytes: 3000 });
+    expect(byMetric).toEqual({
+      activeSessions: 1,
+      users: 1,
+      characters: 2,
+      totalBytes: 3000,
+      campaigns: 1,
+      campaignBytes: 500,
+    });
+  });
+});
+
+describe('runDailyMaintenance — [plan-9 Task 9] campaign bytes_used sync', () => {
+  it('syncs campaigns.bytesUsed from stream meta, per campaign, WITHOUT touching users.quota_bytes_used', async () => {
+    const now = Date.now();
+    await seedUser('dm-1', 'campaign-dm', now);
+    // A character owned by the SAME user, small and unrelated to the (much larger) campaign byte
+    // counts below — the only thing that should ever reach `users.quota_bytes_used`.
+    await seedCharacter('char-owned-by-dm', 'dm-1', now, { bytesUsed: 0, eventCount: 0 });
+    await seedCampaign('camp-a', 'dm-1', 'CAMPCODEA', now, { bytesUsed: 0 });
+    await seedCampaign('camp-b', 'dm-1', 'CAMPCODEB', now, { bytesUsed: 0 });
+
+    const streams = new FakeMaintenanceStreams();
+    streams.setUsage('char:char-owned-by-dm', { bytesUsed: 42, eventCount: 1 });
+    streams.setUsage('camp:camp-a', { bytesUsed: 4_000_000, eventCount: 30 });
+    streams.setUsage('camp:camp-b', { bytesUsed: 6_000_000, eventCount: 50 });
+
+    const report = await runDailyMaintenance({ db: handle.db, streams, now });
+    expect(report.campaignsSynced).toBe(2);
+
+    const [campA] = await handle.db.select().from(campaigns).where(eq(campaigns.id, 'camp-a'));
+    const [campB] = await handle.db.select().from(campaigns).where(eq(campaigns.id, 'camp-b'));
+    expect(campA?.bytesUsed).toBe(4_000_000);
+    expect(campB?.bytesUsed).toBe(6_000_000);
+
+    // doc-08: campaign quota is per-stream, not per-user — this DM's `users.quota_bytes_used`
+    // must equal ONLY their character's synced bytes (42), never `42 + 4_000_000 + 6_000_000`.
+    const [dm] = await handle.db.select().from(users).where(eq(users.id, 'dm-1'));
+    expect(dm?.quotaBytesUsed).toBe(42);
+  });
+
+  it('does not touch updatedAt/name/joinCode on the synced campaign row', async () => {
+    const now = Date.now();
+    await seedUser('dm-2', 'campaign-dm-2', now);
+    await seedCampaign('camp-c', 'dm-2', 'CAMPCODEC', now);
+    const streams = new FakeMaintenanceStreams();
+    streams.setUsage('camp:camp-c', { bytesUsed: 777, eventCount: 3 });
+
+    await runDailyMaintenance({ db: handle.db, streams, now });
+
+    const [campC] = await handle.db.select().from(campaigns).where(eq(campaigns.id, 'camp-c'));
+    expect(campC).toMatchObject({ name: 'The Sunless Citadel', joinCode: 'CAMPCODEC', updatedAt: now });
   });
 });
 
@@ -265,5 +350,22 @@ describe('runDailyMaintenance — orphan check (report only, no destructive acti
 
     const report = await runDailyMaintenance({ db: handle.db, streams, now });
     expect(report.orphans.streamsWithoutIndexRow).toBeNull();
+  });
+
+  it('[plan-9 Task 9 fix] a camp: stream with a matching D1 campaigns row no longer counts as a false-positive orphan, but an UNindexed camp: stream still genuinely does', async () => {
+    const now = Date.now();
+    await seedUser('owner-6', 'orphan-owner-campaign', now);
+    await seedCharacter('char-indexed-2', 'owner-6', now);
+    await seedCampaign('camp-indexed', 'owner-6', 'ORPHANFIX', now);
+
+    const streams = new FakeMaintenanceStreams();
+    streams.setUsage('char:char-indexed-2', { bytesUsed: 10, eventCount: 1 });
+    streams.setUsage('camp:camp-indexed', { bytesUsed: 20, eventCount: 2 });
+    // `camp:orphaned-campaign-stream` has NO matching `campaigns` D1 row at all (e.g. manual DB
+    // surgery) — this one is a GENUINE orphan, before and after this task's fix.
+    streams.setListedStreamIds(['char:char-indexed-2', 'camp:camp-indexed', 'camp:orphaned-campaign-stream']);
+
+    const report = await runDailyMaintenance({ db: handle.db, streams, now });
+    expect(report.orphans.streamsWithoutIndexRow).toBe(1);
   });
 });

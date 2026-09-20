@@ -284,6 +284,47 @@ describe('CampaignStreamDO — campaign-permissions wiring (fix round 1, regress
   });
 });
 
+function callCloseConnectionsForUser(
+  instance: unknown,
+  streamId: string,
+  userId: string,
+  reason: string,
+): Promise<void> {
+  return (
+    instance as { closeConnectionsForUser(id: string, u: string, r: string): Promise<void> }
+  ).closeConnectionsForUser(streamId, userId, reason);
+}
+
+/**
+ * [plan-9 Task 9] `closeConnectionsForUser` RPC method — a SHALLOW smoke test only, not the full
+ * `byTag`/send/close proof: this file's own header comment (and every other test above) already
+ * deliberately bypasses the REAL `WebSocketPair`/Hibernation-API accept dance (`acceptWebSocket`/
+ * `getWebSockets`), which `Connections.byTag` depends on — a plain mocked-object "WebSocket" can't
+ * be registered through the genuine `ctx.acceptWebSocket()` this environment provides, so a
+ * multi-connection bye-fan-out can't be exercised at this DO layer the way it can with
+ * `FakeConnections` (Node/core level: `test/core/stream-actor.test.ts`'s `byeCloseUser` describe
+ * block, and this same route's real behavior end-to-end via `test/core/campaigns.test.ts`'s
+ * `CampaignActorStreamHost`, which wraps this SAME `CampaignActor`/`byeCloseUser` code path over
+ * `FakeConnections`). What this test proves instead: the RPC method exists on the real DO, is
+ * reachable, and completes without throwing when there is no live connection for the given userId
+ * — the actual wiring shape `worker.ts`'s `CloudflareStreamHost.get(streamId)
+ * .closeConnectionsForUser` calls.
+ */
+describe('CampaignStreamDO — closeConnectionsForUser (plan-9 Task 9)', () => {
+  it('completes without throwing when the userId has no live connection', async () => {
+    const streamId = `camp:${crypto.randomUUID()}`;
+    const id = env.CAMPAIGN_STREAM.idFromName(streamId);
+    const stub = env.CAMPAIGN_STREAM.get(id);
+
+    await runInDurableObject(stub, async (instance, state) => {
+      await state.storage.put('stream_id', streamId);
+      await expect(
+        callCloseConnectionsForUser(instance, streamId, 'nobody-here', 'campaign.member_removed'),
+      ).resolves.toBeUndefined();
+    });
+  });
+});
+
 describe('CampaignStreamDO — recreate after hard delete (generation guard, mirrors character-stream.do.ts)', () => {
   it('a fresh connection accepted under the CURRENT generation can hello after a hard delete', async () => {
     const streamId = `camp:${crypto.randomUUID()}`;

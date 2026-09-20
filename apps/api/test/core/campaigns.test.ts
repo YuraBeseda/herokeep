@@ -11,6 +11,7 @@ import type { Actor, Event } from '@hk/protocol';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../src/core/app.ts';
+import { BYE_REASON_MEMBER_REMOVED } from '../../src/core/routes/campaigns.ts';
 import { CampaignActor, campaignQuotas } from '../../src/core/streams/campaign-actor.ts';
 import * as campaignPermissions from '../../src/core/campaign-permissions.ts';
 import { uuidv7 } from '../../src/core/ids.ts';
@@ -56,6 +57,7 @@ function saltHex(seed = 'b'): string {
 class CampaignActorStreamHost implements StreamHost {
   private readonly actors = new Map<string, CampaignActor>();
   private readonly stores = new Map<string, FakeStreamStore>();
+  private readonly connectionsByStream = new Map<string, FakeConnections>();
   private readonly failNext = new Set<string>();
 
   get(streamId: string): StreamHandle {
@@ -73,6 +75,12 @@ class CampaignActorStreamHost implements StreamHost {
       head: () => this.storeFor(streamId).head(),
       notify: () => Promise.resolve(),
       deleteAll: () => this.storeFor(streamId).deleteAll(),
+      // [plan-9 Task 9] `StreamHandle.closeConnectionsForUser` — delegates to the SAME real
+      // `CampaignActor` instance's `byeCloseUser` (inherited from `StreamActor`), exactly like
+      // both real adapters do, so this double's bye-close behavior is the genuine production
+      // code path, not a hand-rolled test-only imitation of it.
+      closeConnectionsForUser: (userId: string, reason: string): Promise<void> =>
+        Promise.resolve(actor.byeCloseUser(userId, reason)),
     };
   }
 
@@ -89,6 +97,17 @@ class CampaignActorStreamHost implements StreamHost {
     this.failNext.add(streamId);
   }
 
+  /** [plan-9 Task 9] Test-only access to a stream's `FakeConnections`, so a test can register a
+   * fake live connection (`.accept(...)`) BEFORE hitting a route, then inspect it afterward
+   * (`.framesFor`/`.wasClosed`/`.closeArgsFor`) to prove the route's bye-close actually reached
+   * this exact connection. */
+  connectionsFor(streamId: string): FakeConnections {
+    this.actorFor(streamId); // ensure the paired connections instance exists too
+    const connections = this.connectionsByStream.get(streamId);
+    if (!connections) throw new Error(`campaign stream host: no connections for ${streamId}`);
+    return connections;
+  }
+
   private actorFor(streamId: string): CampaignActor {
     let actor = this.actors.get(streamId);
     if (actor) return actor;
@@ -102,6 +121,7 @@ class CampaignActorStreamHost implements StreamHost {
       streamId,
     });
     this.stores.set(streamId, store);
+    this.connectionsByStream.set(streamId, connections);
     this.actors.set(streamId, actor);
     return actor;
   }
@@ -711,6 +731,67 @@ describe('DELETE /api/campaigns/:id/members/:userId', () => {
     expect(res.status).toBe(404);
   });
 
+  it('[plan-9 Task 9] bye-closes every live campaign connection the removed member has (multiple connections all get bye), leaving other connections untouched', async () => {
+    const dmCookie = await loginAndGetCookie('DMByeClose', verifierHex('49'));
+    const dmId = await meUserId(dmCookie);
+    const { id } = await createCampaign(dmCookie);
+    const [row] = (await (await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })).json()) as {
+      joinCode: string;
+    }[];
+    const memberCookie = await loginAndGetCookie('ByeCloseVictim', verifierHex('50'));
+    const memberId = await meUserId(memberCookie);
+    await app.request('/api/campaigns/join', {
+      method: 'POST',
+      headers: { ...XRW, cookie: memberCookie },
+      body: JSON.stringify({ code: row!.joinCode }),
+    });
+
+    const streamId = `camp:${id}`;
+    const connections = streamHost.connectionsFor(streamId);
+    // Two live connections for the SAME removed member (e.g. two devices) — both must get bye.
+    const connA = connections.accept({}, { userId: memberId, role: 'member', subs: [streamId] });
+    const connB = connections.accept({}, { userId: memberId, role: 'member', subs: [streamId] });
+    // A DIFFERENT member's (the DM's) connection must be left completely untouched.
+    const dmConn = connections.accept({}, { userId: dmId, role: 'dm', subs: [streamId] });
+
+    const res = await app.request(`/api/campaigns/${id}/members/${memberId}`, {
+      method: 'DELETE',
+      headers: { ...XRW, cookie: dmCookie },
+    });
+    expect(res.status).toBe(204);
+
+    for (const conn of [connA, connB]) {
+      expect(connections.framesFor(conn)).toContainEqual({ t: 'bye', reason: BYE_REASON_MEMBER_REMOVED });
+      expect(connections.wasClosed(conn)).toBe(true);
+    }
+    // The DM's own connection is a real live connection on this stream, so it legitimately
+    // receives the ORDINARY `events` fan-out for the `member.removed` commit itself (unrelated to
+    // bye-close) — what must NOT happen to it is a `bye` frame or a close.
+    expect(connections.framesFor(dmConn).some((f) => f.t === 'bye')).toBe(false);
+    expect(connections.wasClosed(dmConn)).toBe(false);
+  });
+
+  it('[plan-9 Task 9] a removed member with no live connection is a no-op bye-close (does not throw, still 204s)', async () => {
+    const dmCookie = await loginAndGetCookie('DMByeCloseOffline', verifierHex('53'));
+    const { id } = await createCampaign(dmCookie);
+    const [row] = (await (await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })).json()) as {
+      joinCode: string;
+    }[];
+    const memberCookie = await loginAndGetCookie('OfflineVictim', verifierHex('54'));
+    const memberId = await meUserId(memberCookie);
+    await app.request('/api/campaigns/join', {
+      method: 'POST',
+      headers: { ...XRW, cookie: memberCookie },
+      body: JSON.stringify({ code: row!.joinCode }),
+    });
+
+    const res = await app.request(`/api/campaigns/${id}/members/${memberId}`, {
+      method: 'DELETE',
+      headers: { ...XRW, cookie: dmCookie },
+    });
+    expect(res.status).toBe(204);
+  });
+
   it('fix round 1: a thrown append re-inserts the membership row, same as a clean rejection', async () => {
     const dmCookie = await loginAndGetCookie('DMRemoveFault', verifierHex('47'));
     const { id } = await createCampaign(dmCookie);
@@ -792,6 +873,39 @@ describe('WS handoff (GET /api/campaigns/:id/ws)', () => {
       headers: { cookie: dmCookie, Origin: 'https://evil.example' },
     });
     expect(res.status).toBe(403);
+    expect(wsUpgradeCalls).toEqual([]);
+  });
+
+  it('[plan-9 Task 9] a removed member reconnect attempt is refused (membership row gone), same 403 as any non-member', async () => {
+    const dmCookie = await loginAndGetCookie('DMWsRemoved', verifierHex('55'));
+    const { id } = await createCampaign(dmCookie);
+    const [row] = (await (await app.request('/api/campaigns', { headers: { ...XRW, cookie: dmCookie } })).json()) as {
+      joinCode: string;
+    }[];
+    const memberCookie = await loginAndGetCookie('RemovedReconnect', verifierHex('56'));
+    const memberId = await meUserId(memberCookie);
+    await app.request('/api/campaigns/join', {
+      method: 'POST',
+      headers: { ...XRW, cookie: memberCookie },
+      body: JSON.stringify({ code: row!.joinCode }),
+    });
+
+    // Sanity: the member could reach the WS handoff BEFORE removal.
+    const beforeRemoval = await app.request(`/api/campaigns/${id}/ws`, {
+      headers: { cookie: memberCookie, Origin: APP_ORIGIN },
+    });
+    expect(beforeRemoval.status).toBe(200);
+    wsUpgradeCalls.length = 0;
+
+    await app.request(`/api/campaigns/${id}/members/${memberId}`, {
+      method: 'DELETE',
+      headers: { ...XRW, cookie: dmCookie },
+    });
+
+    const afterRemoval = await app.request(`/api/campaigns/${id}/ws`, {
+      headers: { cookie: memberCookie, Origin: APP_ORIGIN },
+    });
+    expect(afterRemoval.status).toBe(403);
     expect(wsUpgradeCalls).toEqual([]);
   });
 });

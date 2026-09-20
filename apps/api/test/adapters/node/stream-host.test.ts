@@ -360,6 +360,37 @@ describe('NodeStreamHost — [plan-9 Task 8, obligation 3] real Rpc wiring (in-p
   });
 });
 
+describe('NodeStreamHost — [plan-9 Task 9] StreamHandle.closeConnectionsForUser', () => {
+  it('bye-closes every live connection for that userId on the real WsConnections, via the real actor', async () => {
+    const host = new NodeStreamHost(db);
+    const campStreamId = `camp:${uuidv7()}`;
+    const runtime = host.getRuntime(campStreamId);
+
+    const sentFrames: { t: string; reason?: string }[] = [];
+    const closeCalls: { code: number; reason: string }[] = [];
+    const fakeSocket = {
+      on: () => fakeSocket,
+      send: (data: string) => sentFrames.push(JSON.parse(data) as { t: string; reason?: string }),
+      close: (code: number, reason: string) => closeCalls.push({ code, reason }),
+      readyState: 1,
+    };
+    runtime.connections.accept(fakeSocket, { userId: 'member-1', role: 'member', subs: [] });
+
+    await host.get(campStreamId).closeConnectionsForUser('member-1', 'campaign.member_removed');
+
+    expect(sentFrames).toEqual([{ t: 'bye', reason: 'campaign.member_removed' }]);
+    expect(closeCalls).toEqual([{ code: 4000, reason: 'campaign.member_removed' }]);
+  });
+
+  it('is a no-op (does not throw) when the userId has no live connection', async () => {
+    const host = new NodeStreamHost(db);
+    const campStreamId = `camp:${uuidv7()}`;
+    await expect(
+      host.get(campStreamId).closeConnectionsForUser('nobody-here', 'campaign.member_removed'),
+    ).resolves.toBeUndefined();
+  });
+});
+
 describe('Mutex', () => {
   it('runs queued tasks strictly in call order, one at a time', async () => {
     const mutex = new Mutex();

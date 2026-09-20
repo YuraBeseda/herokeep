@@ -164,6 +164,13 @@ export class NodeStreamHost implements StreamHost {
           // one a later recreate builds, regardless of what this map holds afterward.
           this.runtimes.delete(streamId);
         }),
+      // [plan-9 Task 9] `StreamHandle.closeConnectionsForUser` — a thin, unlocked delegation to
+      // the runtime's own `byeCloseUser` (`stream-actor.ts`): sending a `bye` frame and closing a
+      // socket touches ONLY `Connections`, never the store, so this needs no `withLock` the way
+      // `append`/`deleteAll` do (same "no lock needed" reasoning `read`/`head` above already
+      // apply).
+      closeConnectionsForUser: (userId: string, reason: string): Promise<void> =>
+        Promise.resolve(runtime.actor.byeCloseUser(userId, reason)),
     };
   }
 
