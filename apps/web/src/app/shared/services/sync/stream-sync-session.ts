@@ -57,6 +57,21 @@ import {
  * SMALLER tail next time (the server's `headSeq` will have advanced by whatever landed before the
  * interruption — doc-03's duplicate-id idempotency means even re-sending an already-landed event
  * acks with its existing seq, which still matches, so nothing double-counts).
+ *
+ * ### ID-scoped ack/reject routing during resume (T11b round 2)
+ *
+ * Doc-03's fixed emission order means a genuinely PENDING backlog's `hello.pending` ack (or a
+ * reject) can arrive in the SAME connect sequence as a resume's own acks — even in the SAME `ack`
+ * frame, mixed together (the server has no reason to separate them). `handleAck`/`handleReject`
+ * therefore partition `results` by membership in `resumeState.expected` whenever a resume is in
+ * flight: ids that belong to the resume go to verification; every other id goes through the
+ * ordinary `commitPending`/`dropPending` path, completely independent of how the resume itself
+ * resolves. Resume completion is judged by SET EQUALITY against `expected`'s keys (every expected
+ * id has a recorded ack), never a raw count — a `size`-based check is corruptible by exactly the
+ * foreign ids this partitioning now filters out before they'd ever reach it. `onLocalAppend` also
+ * checks `resumeState` and HOLDS (buffers) any new local edit made while a resume is in flight,
+ * flushing the buffer (in order) once the resume completes — sending it immediately instead would
+ * mix that append's own ack into the very frame resume verification is trying to interpret.
  */
 
 export interface QuotaInfo {
@@ -209,6 +224,10 @@ export class StreamSyncSession {
   // more than one `ack` frame, symmetric with `SyncService.uploadEvents()`'s own accumulation).
   // `undefined` the rest of the time, including the entire non-diverged common case.
   private resumeState: { expected: Map<string, number>; acked: Map<string, number> } | undefined;
+  // Local edits made WHILE a resume is in flight (T11b round 2) — held here instead of sent
+  // immediately (an immediate send's own ack could land mixed into the same frame resume
+  // verification is reading) and flushed, in order, once the resume completes.
+  private heldLocalAppends: Event[] = [];
   private unsubscribeLocalAppend: (() => void) | undefined;
   private unsubscribeReconnect: (() => void) | undefined;
 
@@ -444,15 +463,23 @@ export class StreamSyncSession {
     }
   }
 
-  /** Accumulates `ack` results while a resume is in flight (possibly across more than one `ack`
-   * frame, symmetric with `SyncService.uploadEvents()`); once every expected id has been acked,
-   * verifies every `{id, seq}` matches what's already on disk. A full match proceeds into normal
-   * steady state (flushing any `hello.pending` overflow); any mismatch is a genuine divergence. */
+  /** Accumulates `ack` results BELONGING TO THE RESUME (already partitioned by `handleAck` — see
+   * its own doc) while it's in flight, possibly across more than one `ack` frame, symmetric with
+   * `SyncService.uploadEvents()`. Completion is SET EQUALITY: every id in `expected` must have a
+   * recorded ack — never a raw count (`acked.size`), which a caller passing anything other than an
+   * already-id-scoped subset could corrupt (T11b round 2 finding: a mixed `hello.pending` ack in
+   * the same frame previously inflated a plain `size` check into firing early on incomplete data).
+   * A full match proceeds into normal steady state (flushing anything held while resuming — the
+   * local-append buffer first, then any `hello.pending` overflow); any mismatch is a genuine
+   * divergence. */
   private async handleResumeAck(results: { id: string; seq: number }[]): Promise<void> {
     const state = this.resumeState;
     if (!state) return;
-    for (const result of results) state.acked.set(result.id, result.seq);
-    if (state.acked.size < state.expected.size) return; // still waiting on more chunks' acks
+    for (const result of results) {
+      if (state.expected.has(result.id)) state.acked.set(result.id, result.seq);
+    }
+    const complete = [...state.expected.keys()].every((id) => state.acked.has(id));
+    if (!complete) return; // still waiting on more of the expected ids
 
     const matches = [...state.expected].every(([id, seq]) => state.acked.get(id) === seq);
     this.resumeState = undefined;
@@ -462,6 +489,11 @@ export class StreamSyncSession {
     }
 
     this.onApplied?.(); // the server's view of this stream just changed — wake follower tabs
+    if (this.heldLocalAppends.length > 0) {
+      const held = this.heldLocalAppends;
+      this.heldLocalAppends = [];
+      await this.sendAppendChunks(held);
+    }
     if (this.leftoverPending.length > 0) {
       const leftover = this.leftoverPending;
       this.leftoverPending = [];
@@ -470,9 +502,12 @@ export class StreamSyncSession {
   }
 
   /** A local-ahead resume attempt failed verification (or couldn't even send) — tears this session
-   * down completely and hands off to `onDivergence` (`SyncService`'s server-wins `restore()`). */
+   * down completely and hands off to `onDivergence` (`SyncService`'s server-wins `restore()`, which
+   * overwrites local storage — including anything still sitting in `heldLocalAppends` — with the
+   * server's own truth, so that buffer is simply dropped here rather than flushed). */
   private failDivergence(): void {
     this.resumeState = undefined;
+    this.heldLocalAppends = [];
     this.stop();
     this.onDivergence?.();
   }
@@ -492,13 +527,29 @@ export class StreamSyncSession {
     }
   }
 
+  /** T11b round 2: when a resume is in flight, `results` is partitioned by membership in
+   * `resumeState.expected` FIRST — an id can only ever mean one thing (a resume-tail id, or an
+   * ordinary pending row), never both, but a single `ack` frame can legitimately carry BOTH kinds
+   * mixed together (doc-03's fixed emission order puts a `hello.pending` ack in the same window a
+   * resume's own acks can arrive in). Matching ids go to resume verification; every other id goes
+   * through the ordinary `commitPending` path, unconditionally — that path never depended on the
+   * resume's own outcome (resume never writes storage on success; on failure the whole stream gets
+   * overwritten by `restore()` regardless of what else this frame committed). */
   private async handleAck(message: Extract<ServerMessage, { t: 'ack' }>): Promise<void> {
     if (this.resumeState) {
-      await this.handleResumeAck(message.results);
+      const state = this.resumeState;
+      const resumeResults = message.results.filter((r) => state.expected.has(r.id));
+      const otherResults = message.results.filter((r) => !state.expected.has(r.id));
+      if (resumeResults.length > 0) await this.handleResumeAck(resumeResults);
+      if (otherResults.length > 0) await this.commitPendingAck(otherResults);
       return;
     }
+    await this.commitPendingAck(message.results);
+  }
+
+  private async commitPendingAck(results: { id: string; seq: number }[]): Promise<void> {
     try {
-      await this.store.commitPending(this.streamId, message.results);
+      await this.store.commitPending(this.streamId, results);
       await this.refreshPendingCount();
       this.onApplied?.();
     } catch (err) {
@@ -510,24 +561,32 @@ export class StreamSyncSession {
     }
   }
 
+  /** T11b round 2: symmetric partitioning to `handleAck`'s own — a reject frame can equally mix a
+   * resume-tail id with an ordinary pending id. A reject touching ANY resume id is a definitive
+   * "this can't succeed" signal for the whole resume (not something `dropPending` could act on
+   * anyway — these ids are COMMITTED rows, not pending ones; it would silently no-op), so that
+   * triggers `failDivergence` outright; any OTHER (non-resume) rejected id still goes through the
+   * ordinary `dropPending` path regardless. */
   private async handleReject(message: Extract<ServerMessage, { t: 'reject' }>): Promise<void> {
-    if (this.resumeState) {
-      // A reject for a resume-tail id is a definitive "this can't succeed" signal, not something
-      // `dropPending` can act on (these ids are COMMITTED rows, not pending ones — it would
-      // silently no-op). Treat it exactly like a verification mismatch rather than leaving
-      // `resumeState` waiting forever for acks that will now never arrive.
-      for (const result of message.results) {
-        this.toast.show(REJECT_TOAST_KEYS[result.code]);
-      }
-      this.failDivergence();
-      return;
-    }
-    const ids = message.results.map((r) => r.id);
-    await this.store.dropPending(this.streamId, ids);
-    await this.refreshPendingCount();
     for (const result of message.results) {
       this.toast.show(REJECT_TOAST_KEYS[result.code]);
     }
+
+    if (this.resumeState) {
+      const state = this.resumeState;
+      const resumeRejected = message.results.some((r) => state.expected.has(r.id));
+      const otherIds = message.results.filter((r) => !state.expected.has(r.id)).map((r) => r.id);
+      if (resumeRejected) this.failDivergence();
+      if (otherIds.length > 0) {
+        await this.store.dropPending(this.streamId, otherIds);
+        await this.refreshPendingCount();
+      }
+      return;
+    }
+
+    const ids = message.results.map((r) => r.id);
+    await this.store.dropPending(this.streamId, ids);
+    await this.refreshPendingCount();
   }
 
   private handleNotice(message: Extract<ServerMessage, { t: 'notice' }>): void {
@@ -547,6 +606,14 @@ export class StreamSyncSession {
 
   private async onLocalAppend(events: Event[]): Promise<void> {
     await this.refreshPendingCount();
+    if (this.resumeState) {
+      // T11b round 2: hold — sending now would land this append's own ack mixed into the same
+      // frame resume verification is trying to interpret (see class doc's "ID-scoped ack/reject
+      // routing" section). Flushed, in order, from `handleResumeAck`'s success path once the
+      // resume completes.
+      this.heldLocalAppends.push(...events);
+      return;
+    }
     if (this.connectionStateState() !== 'open' || !this.socket) return; // flushed via next hello
     await this.sendAppendChunks(events);
   }

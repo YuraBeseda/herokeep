@@ -704,6 +704,163 @@ describe('StreamSyncSession', () => {
     // committed history the way `dropPending` would for a genuinely pending row.
     expect(persisted.find((e) => e.id === secondEvent.id)?.seq).toBe(2);
   });
+
+  it('T11b round 2: a hello.pending ack arriving BEFORE the resume completes routes correctly — no false-positive divergence', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const missingTailEvent = store.events().at(-1)!; // committed seq 2 — never uploaded (interrupted)
+
+    // An OLD unsynced backlog row, already pending before this connect even starts.
+    store.enterSyncMode(streamId);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Backlog' } }]);
+    const pendingEvent = store.events().at(-1)!;
+    expect(pendingEvent.seq).toBeUndefined();
+
+    const onDivergence = vi.fn();
+    const { session, Factory } = newSession(streamId, { onDivergence });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    // The hello.pending ack lands FIRST, in its OWN frame — before the resume's own ack.
+    ws.emitMessage({ t: 'ack', rid: 'r2', results: [{ id: pendingEvent.id, seq: 3 }] });
+    await flush();
+
+    expect(onDivergence).not.toHaveBeenCalled(); // must NOT have been swallowed into resume verification
+    const midway = await eventsRepository.byStream(streamId);
+    expect(midway.find((e) => e.id === pendingEvent.id)?.seq).toBe(3); // committed via the normal path
+    expect(midway.find((e) => e.id === missingTailEvent.id)?.seq).toBe(2); // resume still unresolved, untouched
+
+    // Now the resume's own ack arrives.
+    ws.emitMessage({
+      t: 'ack',
+      rid: 'r3',
+      results: [{ id: missingTailEvent.id, seq: missingTailEvent.seq! }],
+    });
+    await flush();
+
+    expect(onDivergence).not.toHaveBeenCalled();
+    const final = await eventsRepository.byStream(streamId);
+    expect(final.map((e) => e.seq).sort()).toEqual([1, 2, 3]);
+    session.stop();
+  });
+
+  it('T11b round 2: a local append made mid-resume is held and flushed (in order) once the resume completes', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const missingTailEvent = store.events().at(-1)!; // committed seq 2 — never uploaded
+
+    store.enterSyncMode(streamId);
+    const { session, Factory } = newSession(streamId);
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    const sentBeforeMidEdit = ws.sent.length;
+
+    // A real user edit lands WHILE the resume is still in flight (no ack yet).
+    await store.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Mid-resume edit' } },
+    ]);
+    const midEvent = store.events().at(-1)!;
+    await flush();
+
+    // Held — nothing new was sent for it yet.
+    expect(ws.sent.length).toBe(sentBeforeMidEdit);
+
+    // The resume completes.
+    ws.emitMessage({
+      t: 'ack',
+      rid: 'r2',
+      results: [{ id: missingTailEvent.id, seq: missingTailEvent.seq! }],
+    });
+    await flush();
+
+    // NOW the held append gets sent.
+    const appendFrames = ws
+      .parsedSent()
+      .slice(sentBeforeMidEdit)
+      .filter(
+        (m: unknown): m is { t: 'append'; events: { id: string }[] } =>
+          (m as { t: string }).t === 'append',
+      );
+    expect(appendFrames.some((f) => f.events.some((e) => e.id === midEvent.id))).toBe(true);
+
+    // The server acks it through the normal (non-resume) path.
+    ws.emitMessage({ t: 'ack', rid: 'r3', results: [{ id: midEvent.id, seq: 3 }] });
+    await flush();
+
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.map((e) => e.seq).sort()).toEqual([1, 2, 3]);
+    expect(store.facts()?.name).toBe('Mid-resume edit'); // final facts converge on the held edit
+    session.stop();
+  });
+
+  it('T11b round 2: one ack frame mixing a resume id and a pending id partitions both correctly', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const missingTailEvent = store.events().at(-1)!; // committed seq 2 — never uploaded
+
+    store.enterSyncMode(streamId);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Backlog' } }]);
+    const pendingEvent = store.events().at(-1)!;
+
+    const onDivergence = vi.fn();
+    const { session, Factory } = newSession(streamId, { onDivergence });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    // ONE frame, both ids together — the server has no reason to split them.
+    ws.emitMessage({
+      t: 'ack',
+      rid: 'r2',
+      results: [
+        { id: pendingEvent.id, seq: 3 },
+        { id: missingTailEvent.id, seq: missingTailEvent.seq! },
+      ],
+    });
+    await flush();
+
+    expect(onDivergence).not.toHaveBeenCalled();
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.find((e) => e.id === pendingEvent.id)?.seq).toBe(3);
+    expect(persisted.find((e) => e.id === missingTailEvent.id)?.seq).toBe(2);
+    session.stop();
+  });
 });
 
 describe('chunkEventsForAppend', () => {
