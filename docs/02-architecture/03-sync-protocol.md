@@ -79,6 +79,14 @@ character-stream events it calls `CharacterStream.append(events, actor)` by RPC,
 re-checks (owner/DM) against its own `meta` — so a compromised campaign object can't
 forge owner events beyond DM rights. Direct solo sockets only allow the owner role.
 
+Concretely, the CharacterStream's own re-check is split by role: for an `owner`-role
+forwarded actor, it compares `actor.userId` against its OWN established `meta.ownerId`
+directly (the CharacterStream has no visibility into which campaign forwarded the call, so
+this is the only identity it can verify); for a `dm`-role forwarded actor, it re-checks only
+that the event TYPE is dm-permitted (`EVENT_ACTORS`) — the forwarding campaign's own `dmId`
+match already happened campaign-side (`CampaignActor`'s gateway mapping), since the
+CharacterStream has no access to any campaign's `dmId` to re-verify it a second time.
+
 ## Catch-up performance
 
 A character's full history is typically < 1 MB; the DO pages 200 events per frame. A

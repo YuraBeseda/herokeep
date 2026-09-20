@@ -898,13 +898,18 @@ export class CampaignActor extends StreamActor {
    * (design ruling 3) only ever gains entries via `member.joined`/`member.renamed` — events the DM
    * never sends about themselves unless they also call `member.renamed` on their own account.
    *
-   * KNOWN LIMITATION (documented per this task's brief, not silently papered over): this actor has
-   * no `Db` port (doc-10's port table: `CampaignActor` gets `StreamStore` + `Connections` +
-   * `quotas` + `permissions` only), so there is no username lookup available for a DM who has
-   * never renamed themselves — the userId itself is used as a display-name fallback. A richer
-   * WS-handoff attachment (carrying a resolved display name from D1, the way `role`/`userId`
-   * already are) is the natural fix; it did not exist to build on as of this task (Task 4's WS
-   * route is not built yet) and is flagged here rather than invented speculatively. */
+   * [fix round 1, Important — displayName was dead plumbing] The WS-handoff attachment has carried
+   * a D1-resolved `displayName` (`ConnAttachment.displayName`, `core/routes/campaigns.ts`'s WS
+   * route) since plan-9 Task 8 threaded it into both adapters' `ConnAttachment` — but this method
+   * never actually READ it, so it was wired all the way to the connection and then ignored. Fixed
+   * by `liveDisplayNameFor` below: for a currently-ONLINE user, the LIVE attachment's `displayName`
+   * (the freshest, D1-current value the session actually carries right now) is preferred over the
+   * event-sourced `meta.members`/DM-fallback value below it — an offline user (or the rare case a
+   * live connection's attachment somehow lacks one) still falls back to the stored/synthesized
+   * value exactly as before. This closes the ORIGINAL "KNOWN LIMITATION" this comment used to
+   * document (a DM who never renamed themselves showed their raw userId) as a side effect: the
+   * DM's own live connection now always carries a real `displayName` from the WS handoff, whether
+   * or not `member.renamed` was ever sent. */
   private async buildPresenceMembers(): Promise<MembersMsg['members']> {
     const meta = await this.getCampaignMeta();
     const roster = new Map<string, { displayName: string; role: 'dm' | 'member' }>();
@@ -917,10 +922,25 @@ export class CampaignActor extends StreamActor {
     }
     return [...roster.entries()].map(([userId, entry]) => ({
       userId,
-      displayName: entry.displayName,
+      displayName: this.liveDisplayNameFor(userId) ?? entry.displayName,
       role: entry.role,
       online: this.connections.byTag(userId).length > 0,
     }));
+  }
+
+  /** [fix round 1] The freshest `displayName` available for `userId` RIGHT NOW: the first live
+   * connection's own WS-handoff attachment that actually carries a non-empty one, or `undefined`
+   * if this user has no live connection (or none of them carry one — a character-stream-only
+   * session type, or an older client that predates this field). `byTag` may return more than one
+   * connection for a multi-device user; any one of them carrying a real value is as good as any
+   * other (they all resolved from the SAME D1 `memberships.display_name` row at their own connect
+   * time), so the first hit wins rather than requiring agreement across every device. */
+  private liveDisplayNameFor(userId: string): string | undefined {
+    for (const conn of this.connections.byTag(userId)) {
+      const displayName = this.connections.getAttachment(conn).displayName;
+      if (displayName !== undefined && displayName.length > 0) return displayName;
+    }
+    return undefined;
   }
 
   /**

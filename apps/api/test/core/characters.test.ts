@@ -594,3 +594,88 @@ describe('CharacterActor', () => {
     expect(await system.store.getMeta('owner_id')).toBeUndefined();
   });
 });
+
+// --- [fix round 1, Important] owner backstop -------------------------------------------------
+
+describe('CharacterActor — owner backstop (defense in depth vs. mapGatewayActor)', () => {
+  it('refuses a forged owner-role actor whose userId does not match the established meta.ownerId, even when constructed directly (simulating a bypass past the gateway)', async () => {
+    const system = makeCharacterSystem();
+    const realOwner: Actor = { userId: 'user-real-owner', role: 'owner' };
+    await system.actor.append(
+      [makeCharacterCreatedEvent({ actor: { userId: realOwner.userId, deviceId: 'd1', role: 'owner' } })],
+      realOwner,
+    );
+    expect(system.store.length).toBe(1);
+
+    // Never actually reachable via a real gateway forward today (`mapGatewayActor` already maps
+    // correctly) — this constructs the FORGED actor directly, exactly the way a bug in
+    // `mapGatewayActor` (or any future caller of `CharacterActor.append`) could otherwise produce
+    // one, proving THIS side is a genuine, independent gate, not merely trusting the caller.
+    const forgedActor: Actor = { userId: 'user-attacker', role: 'owner' };
+    const hpChanged = makeNoteEvent({ type: 'hp.changed', v: 1, payload: { delta: -1, kind: 'damage' } });
+    const outcome = await system.actor.append([hpChanged], forgedActor);
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected).toEqual([
+      expect.objectContaining({
+        id: hpChanged.id,
+        code: 'forbidden',
+        message: expect.stringContaining("is not this character's established owner") as string,
+      }),
+    ]);
+    expect(system.store.length).toBe(1); // nothing from the forged actor landed in the store
+  });
+
+  it('the legitimate direct-socket owner (userId matches meta.ownerId) still appends successfully with the backstop in place', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-legit-direct', role: 'owner' };
+    await system.actor.append(
+      [makeCharacterCreatedEvent({ actor: { userId: owner.userId, deviceId: 'd1', role: 'owner' } })],
+      owner,
+    );
+
+    const noteOutcome = await system.actor.append([makeNoteEvent()], owner);
+    expect(noteOutcome.rejected).toEqual([]);
+    expect(noteOutcome.acked).toHaveLength(1);
+  });
+
+  it('a legitimately gateway-forwarded owner (mapGatewayActor mapped a member acting on their OWN character) still appends successfully', async () => {
+    const system = makeCharacterSystem();
+    const owner: Actor = { userId: 'user-legit-forwarded', role: 'owner' };
+    await system.actor.append(
+      [makeCharacterCreatedEvent({ actor: { userId: owner.userId, deviceId: 'd1', role: 'owner' } })],
+      owner,
+    );
+
+    // Simulates `CampaignActor.forwardGroupsToCharacterStreams`'s own call shape: an actor
+    // MAPPED to `{userId: <the character's real owner>, role: 'owner'}` by `mapGatewayActor`,
+    // with no `sourceConn` (matching `Rpc.forwardAppend`'s real call shape — a cross-actor call,
+    // never a direct socket).
+    const forwardedOwnerActor: Actor = { userId: owner.userId, role: 'owner' };
+    const hpChanged = makeNoteEvent({ type: 'hp.changed', v: 1, payload: { delta: -3, kind: 'damage' } });
+    const outcome = await system.actor.append([hpChanged], forwardedOwnerActor);
+
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toEqual([{ id: hpChanged.id, seq: 2 }]);
+  });
+
+  it('character.created is exempt from the backstop (it is what establishes meta.ownerId in the first place)', async () => {
+    const system = makeCharacterSystem();
+    const firstOwner: Actor = { userId: 'user-first', role: 'owner' };
+    await system.actor.append(
+      [makeCharacterCreatedEvent({ actor: { userId: firstOwner.userId, deviceId: 'd1', role: 'owner' } })],
+      firstOwner,
+    );
+
+    // A DIFFERENT actor.userId (still role owner) sending a character.created on an
+    // already-established stream — the BACKSTOP itself must never fire for this event TYPE
+    // (whatever the rest of the pipeline decides about a second character.created is out of this
+    // test's scope; the point is only that no backstop-shaped rejection appears).
+    const secondActor: Actor = { userId: 'user-second', role: 'owner' };
+    const outcome = await system.actor.append([makeCharacterCreatedEvent()], secondActor);
+    const backstopRejection = outcome.rejected.find((r) =>
+      r.message.includes("is not this character's established owner"),
+    );
+    expect(backstopRejection).toBeUndefined();
+  });
+});

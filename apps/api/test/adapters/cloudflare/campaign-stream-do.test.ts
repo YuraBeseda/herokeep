@@ -8,7 +8,7 @@
  */
 import { runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import type { ServerMessage } from '@hk/protocol';
+import type { Actor, Event, ServerMessage } from '@hk/protocol';
 import { env } from './typed-env.ts';
 
 const INTERNAL_STREAM_ID_HEADER = 'X-Hk-Internal-Stream-Id';
@@ -44,6 +44,19 @@ function makeFakeWebSocket(): {
 
 function callDeleteAll(instance: unknown, streamId: string): Promise<void> {
   return (instance as { deleteAll(id: string): Promise<void> }).deleteAll(streamId);
+}
+
+interface AppendResult {
+  readonly firstSeq: number;
+  readonly lastSeq: number;
+}
+
+function callAppend(instance: unknown, streamId: string, events: Event[], actor: Actor): Promise<AppendResult> {
+  return (instance as { append(id: string, e: Event[], a: Actor): Promise<AppendResult> }).append(
+    streamId,
+    events,
+    actor,
+  );
 }
 
 describe('CampaignStreamDO — WS message handling (plan-9 Task 8, obligation 5)', () => {
@@ -184,6 +197,89 @@ describe('CampaignStreamDO — WS message handling (plan-9 Task 8, obligation 5)
       );
       const unavailable = sent.find((f) => f.t === 'blob.unavailable');
       expect(unavailable).toBeDefined();
+    });
+  });
+});
+
+/**
+ * [fix round 1, Important test gap] Regression tripwire for the exact production bug plan-9 Task 8
+ * caught and fixed via its own Node e2e test: `CampaignActor` needs `campaign-permissions.ts` as
+ * its `PermissionsPort`, NOT `core/permissions.ts` (whose `role !== 'owner' && role !== 'dm' ->
+ * false` early return silently rejects every `'member'`-role actor). The Node adapter had its own
+ * e2e proof of this (a real member joining/rolling over a real WS); this describe block is the
+ * SAME proof for the Cloudflare adapter, driving a genuinely member-authored event through the
+ * REAL `CampaignStreamDO` RPC surface (not a fake `permissions` module) — before the fix, this
+ * would fail exactly the way `POST /api/campaigns/join` 500'd on Node.
+ */
+describe('CampaignStreamDO — campaign-permissions wiring (fix round 1, regression tripwire)', () => {
+  it('a genuinely member-role actor successfully appends a member-permitted event (chat.message) through the real DO', async () => {
+    const streamId = `camp:${crypto.randomUUID()}`;
+    const id = env.CAMPAIGN_STREAM.idFromName(streamId);
+    const stub = env.CAMPAIGN_STREAM.get(id);
+    const dmUserId = 'dm-permcheck-1';
+    const memberUserId = 'member-permcheck-1';
+    const dmActor: Actor = { userId: dmUserId, role: 'dm' };
+    const memberActor: Actor = { userId: memberUserId, role: 'member' };
+
+    await runInDurableObject(stub, async (instance) => {
+      const txId = crypto.randomUUID();
+      const createdEvent: Event = {
+        id: crypto.randomUUID(),
+        stream: streamId,
+        ts: new Date().toISOString(),
+        actor: { userId: dmUserId, deviceId: 'd1', role: 'dm' },
+        type: 'campaign.created',
+        v: 1,
+        payload: {
+          name: 'Perm Check Campaign',
+          system: 'srd-5e-2024',
+          corePack: { id: 'srd-5e-2024', version: '1.0.0' },
+        },
+        txId,
+      };
+      const dmJoinedEvent: Event = {
+        id: crypto.randomUUID(),
+        stream: streamId,
+        ts: new Date().toISOString(),
+        actor: { userId: dmUserId, deviceId: 'd1', role: 'dm' },
+        type: 'member.joined',
+        v: 1,
+        payload: { userId: dmUserId, displayName: 'DM', role: 'dm' },
+        txId,
+      };
+      const bootstrap = await callAppend(instance, streamId, [createdEvent, dmJoinedEvent], dmActor);
+      expect(bootstrap.lastSeq).toBeGreaterThan(0);
+
+      // A REAL member joins THEMSELVES — CAMPAIGN_EVENT_ACTORS['member.joined'] = ['member', 'dm']
+      // — authored with a genuine role:'member' actor, exactly like `POST /api/campaigns/join`'s
+      // real route call shape.
+      const memberJoinedEvent: Event = {
+        id: crypto.randomUUID(),
+        stream: streamId,
+        ts: new Date().toISOString(),
+        actor: { userId: memberUserId, deviceId: 'd2', role: 'member' },
+        type: 'member.joined',
+        v: 1,
+        payload: { userId: memberUserId, displayName: 'Member', role: 'player' },
+      };
+      const joinResult = await callAppend(instance, streamId, [memberJoinedEvent], memberActor);
+      // THE regression assertion: pre-fix (character permissions.ts wired in), this is rejected
+      // `forbidden` for every event regardless of type — `lastSeq` would stay 0.
+      expect(joinResult.lastSeq).toBeGreaterThan(bootstrap.lastSeq);
+
+      // A member-permitted event (`CAMPAIGN_EVENT_ACTORS['chat.message'] = ['dm', 'member']`),
+      // authored by that SAME real member actor.
+      const chatEvent: Event = {
+        id: crypto.randomUUID(),
+        stream: streamId,
+        ts: new Date().toISOString(),
+        actor: { userId: memberUserId, deviceId: 'd2', role: 'member' },
+        type: 'chat.message',
+        v: 1,
+        payload: { text: 'hello from a real member', visibility: 'everyone' },
+      };
+      const chatResult = await callAppend(instance, streamId, [chatEvent], memberActor);
+      expect(chatResult.lastSeq).toBeGreaterThan(joinResult.lastSeq);
     });
   });
 });

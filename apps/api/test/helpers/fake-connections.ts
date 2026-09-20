@@ -11,6 +11,10 @@ export interface TestAttachment {
   readonly userId: string;
   readonly role: 'owner' | 'dm' | 'member';
   readonly subs: string[];
+  /** [fix round 1] Mirrors `ConnAttachment.displayName` (`core/streams/stream-actor.ts`) — a test
+   * can construct one directly to exercise `CampaignActor.buildPresenceMembers`'s live-attachment
+   * preference without going through a real adapter's WS handoff. */
+  readonly displayName?: string;
 }
 
 /** A distinguishable, opaque connection handle — labeled for readable test failures only.

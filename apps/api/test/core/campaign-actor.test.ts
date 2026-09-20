@@ -912,6 +912,66 @@ describe('presence', () => {
     expect(dm).toMatchObject({ role: 'dm', online: false }); // DM has no live connection yet
   });
 
+  it('[fix round 1] the LIVE connection attachment’s displayName is preferred over the event-sourced meta.members value, end to end in the observable members frame', async () => {
+    // [fix round 1, Important — displayName was dead plumbing] `ConnAttachment.displayName`
+    // (plan-9 Task 8: a D1-resolved value threaded through the WS handoff) was never actually
+    // READ by `buildPresenceMembers` before this fix — it always used the event-sourced
+    // `meta.members` value instead. Proven here with a DELIBERATE divergence between the two
+    // sources (a real one: `member.renamed` updates `meta.members` but never touches D1, so a
+    // member's LIVE connection — freshly resolved from D1 at connect time — can legitimately
+    // disagree with `meta.members`' own stored value) — pre-fix, this assertion would see the
+    // event-sourced name; post-fix, the live attachment's name wins.
+    const clock = makeFakeClock();
+    const local = makeSystem({ now: clock.now, setTimer: clock.setTimer });
+    await local.actor.append([makeCreated()], dmActor());
+    await local.actor.append([makeMemberJoined(MEMBER_A, 'EventSourcedName')], memberActor(MEMBER_A));
+
+    const conn = local.connections.accept(
+      {},
+      { userId: MEMBER_A, role: 'member', subs: [], displayName: 'LiveAttachmentName' },
+    );
+    await local.actor.hello(conn, {
+      t: 'hello',
+      rid: 'r1',
+      proto: 1,
+      app: '1.0.0',
+      streams: [{ id: STREAM_ID, lastSeq: 0 }],
+      have: [],
+      pending: [],
+    });
+
+    const membersFrames = local.connections.framesFor(conn).filter((f) => f.t === 'members');
+    expect(membersFrames).toHaveLength(1);
+    const roster = membersFrames[0]?.t === 'members' ? membersFrames[0].members : [];
+    const alice = roster.find((m) => m.userId === MEMBER_A);
+    expect(alice).toMatchObject({ displayName: 'LiveAttachmentName', role: 'member', online: true });
+  });
+
+  it('[fix round 1] an OFFLINE member (no live connection) still falls back to the event-sourced meta.members displayName', async () => {
+    const clock = makeFakeClock();
+    const local = makeSystem({ now: clock.now, setTimer: clock.setTimer });
+    await local.actor.append([makeCreated()], dmActor());
+    await local.actor.append([makeMemberJoined(MEMBER_A, 'OfflineStoredName')], memberActor(MEMBER_A));
+    // A SECOND member connects (triggers presence) so the roster includes MEMBER_A while MEMBER_A
+    // itself has no live connection at all.
+    await local.actor.append([makeMemberJoined(MEMBER_B, 'Bob')], memberActor(MEMBER_B));
+    const connB = local.connections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+    await local.actor.hello(connB, {
+      t: 'hello',
+      rid: 'r1',
+      proto: 1,
+      app: '1.0.0',
+      streams: [{ id: STREAM_ID, lastSeq: 0 }],
+      have: [],
+      pending: [],
+    });
+
+    const membersFrames = local.connections.framesFor(connB).filter((f) => f.t === 'members');
+    const roster = membersFrames[0]?.t === 'members' ? membersFrames[0].members : [];
+    const alice = roster.find((m) => m.userId === MEMBER_A);
+    expect(alice).toMatchObject({ displayName: 'OfflineStoredName', role: 'member', online: false });
+  });
+
   it('throttles a burst of connects to at most one immediate send, with exactly one trailing send scheduled', async () => {
     const clock = makeFakeClock();
     const local = makeSystem({ now: clock.now, setTimer: clock.setTimer });

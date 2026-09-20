@@ -31,7 +31,7 @@
  */
 import type { Actor, CharacterCampaignJoined, Event } from '@hk/protocol';
 import type { Conn } from '../../ports/connections.ts';
-import { type AppendOutcome, StreamActor } from './stream-actor.ts';
+import { type AppendOutcome, type RejectResult, StreamActor } from './stream-actor.ts';
 
 const META_KEY_OWNER_ID = 'owner_id';
 const META_KEY_CAMPAIGN_ID = 'campaign_id';
@@ -72,6 +72,35 @@ export class CharacterActor extends StreamActor {
    * enforcement-point call this method's own doc comment names, now real. The target stream's own
    * pipeline re-checking `permissions.allowed` regardless (rather than trusting the gateway's own
    * decision) is the "defense in depth" doc-03 promises.
+   *
+   * [fix round 1, Important — character-side defense-in-depth OWNER backstop] Before this fix,
+   * `mapGatewayActor` (`campaign-actor.ts`) was the SOLE gate deciding whether a gateway-forwarded
+   * `owner`-role actor is genuinely THIS character's own owner — and that method has already had
+   * three Criticals fixed in it across this plan's own review history (character-scoping gaps,
+   * cross-tenant forgery). doc-03 §Permission enforcement point explicitly promises the TARGET
+   * stream re-checks independently ("so a compromised campaign object can't forge owner events" —
+   * `docs/02-architecture/03-sync-protocol.md`, one-line clarification added alongside this fix),
+   * not merely re-validate schema/permission-table membership the way the pre-fix comment above
+   * already described for the `dm` half. `verifyOwnerBackstop` below closes this: when `actor.role
+   * === 'owner'` and this stream's OWN `meta.ownerId` is already established, `actor.userId` must
+   * equal it — refused `forbidden` otherwise, REGARDLESS of whether the actor arrived via a direct
+   * socket (which should never disagree with its own session-verified identity anyway — this is a
+   * true belt-and-suspenders case there) or a gateway forward (where it closes the exact hole a
+   * buggy/compromised `mapGatewayActor` could otherwise open).
+   *
+   * SCOPING (controller ruling, fix round 1): owner-role actors ONLY. A `dm`-role forwarded actor
+   * is NOT re-checked here — this actor has no `Db`/campaign-meta access at all (this file's own
+   * header comment), so it has no way to independently verify a forwarding campaign's OWN `dmId`;
+   * that check already happens campaign-side (`mapGatewayActor`'s `dm` branch, fix round 1 Critical
+   * 1, requires `actor.userId === meta.dmId` — THIS campaign's own dm — before ever forwarding) and
+   * the target stream's existing `permissions.allowed(type, 'dm')` check (per `EVENT_ACTORS`) is
+   * the dm-side's own defense in depth: WHICH event types a dm may append, not WHO the dm is.
+   *
+   * `character.created` is exempt unconditionally: it is the event that ESTABLISHES
+   * `meta.ownerId` in the first place (doc-02: "first event") — an identity check against a value
+   * that does not exist yet is meaningless, and `character.created` can never legitimately arrive
+   * via the gateway forward path anyway (`mapGatewayActor` only ever forwards to an ALREADY-JOINED
+   * character, which by construction already has an owner).
    */
   override async append(events: Event[], actor: Actor, sourceConn?: Conn): Promise<AppendOutcome> {
     if (actor.role === 'member') {
@@ -84,14 +113,41 @@ export class CharacterActor extends StreamActor {
         })),
       };
     }
+
     // Read BEFORE this append's meta hooks run — plan-9 Task 6's notify-target formula (see
     // `notifyCampaignIfLinked`'s doc comment) needs the PRE-batch `campaignId` to still notify the
-    // campaign a `character.campaign_left` in THIS SAME batch just unlinked from.
-    const beforeCampaignId = (await this.getCharacterMeta()).campaignId;
-    const outcome = await super.append(events, actor, sourceConn);
-    await this.applyMetaHooks(events, outcome, actor);
+    // campaign a `character.campaign_left` in THIS SAME batch just unlinked from. [fix round 1]
+    // Also doubles as the owner-backstop's own `ownerId` read below — nothing mutates meta between
+    // this read and that check, so reusing it is safe and avoids a second `getCharacterMeta` round
+    // trip.
+    const metaBefore = await this.getCharacterMeta();
+    const beforeCampaignId = metaBefore.campaignId;
+
+    let toAppend = events;
+    const backstopRejected: RejectResult[] = [];
+    if (actor.role === 'owner' && metaBefore.ownerId !== undefined && metaBefore.ownerId !== actor.userId) {
+      const passed: Event[] = [];
+      for (const event of events) {
+        if (event.type === 'character.created') {
+          passed.push(event);
+          continue;
+        }
+        backstopRejected.push({
+          id: event.id,
+          code: 'forbidden',
+          message: `event.forbidden: ${actor.userId} is not this character's established owner`,
+        });
+      }
+      toAppend = passed;
+    }
+    if (toAppend.length === 0) return { acked: [], rejected: backstopRejected };
+
+    const outcome = await super.append(toAppend, actor, sourceConn);
+    await this.applyMetaHooks(toAppend, outcome, actor);
     await this.notifyCampaignIfLinked(outcome, beforeCampaignId);
-    return outcome;
+    return backstopRejected.length > 0
+      ? { acked: outcome.acked, rejected: [...outcome.rejected, ...backstopRejected] }
+      : outcome;
   }
 
   /** Reads the full meta shape (doc comment above). Every field is read in one `Promise.all`
