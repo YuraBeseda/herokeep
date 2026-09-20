@@ -31,6 +31,14 @@ import { scenarios, type ConformanceDriver, type Session, type StreamDriver } fr
 const BASE_URL = 'https://herokeep.test';
 
 type CharacterStreamStub = ReturnType<Env['CHARACTER_STREAM']['get']>;
+/** [plan-9 Task 10] The campaign half of `CharacterStreamStub` — `CampaignStreamDO` overrides
+ * `webSocketMessage` with the IDENTICAL signature `CharacterStreamDO` does (both extend
+ * `DurableObject<Env>`; verified directly against `campaign-stream.do.ts`), so `CloudflareStreamDriver`
+ * below treats the two interchangeably at the one call site that matters (`webSocketMessage`) — the
+ * `as CharacterStreamStub` cast at each `runInDurableObject` call is therefore a compile-time-only
+ * lie (matches this SAME suite's existing casting convention, e.g. `campaign-stream-do.test.ts`'s
+ * `callAppend(instance: unknown, ...)`), never a runtime one. */
+type CampaignStreamStub = ReturnType<Env['CAMPAIGN_STREAM']['get']>;
 
 /** A minimal fake `WebSocket` — the same shape `character-stream-do.test.ts`'s own
  * `makeFakeWebSocket` uses (see that file's header comment for the full rationale), except `send`
@@ -60,9 +68,9 @@ function makeFakeWebSocket(buffer: FrameBuffer<ServerMessage>): {
 class CloudflareStreamDriver implements StreamDriver {
   private readonly buffer: FrameBuffer<ServerMessage>;
   private readonly fakeWs: WebSocket;
-  private readonly stub: CharacterStreamStub;
+  private readonly stub: CharacterStreamStub | CampaignStreamStub;
 
-  constructor(stub: CharacterStreamStub, attachment: ConnAttachment) {
+  constructor(stub: CharacterStreamStub | CampaignStreamStub, attachment: ConnAttachment) {
     this.stub = stub;
     this.buffer = new FrameBuffer<ServerMessage>();
     const fake = makeFakeWebSocket(this.buffer);
@@ -72,10 +80,13 @@ class CloudflareStreamDriver implements StreamDriver {
 
   async send(msg: ClientMessage): Promise<void> {
     const ws = this.fakeWs;
-    await runInDurableObject(this.stub, async (instance) => {
+    // [plan-9 Task 10] `as CharacterStreamStub` — see this file's `CampaignStreamStub` doc comment:
+    // a compile-time-only cast, `webSocketMessage`'s real runtime shape is identical whichever DO
+    // class `this.stub` actually points at.
+    await runInDurableObject(this.stub as CharacterStreamStub, async (instance) => {
       // Non-null assertion: `DurableObject`'s base class types `webSocketMessage` as OPTIONAL, but
-      // `CharacterStreamDO` always overrides it (same rationale as `character-stream-do.test.ts`'s
-      // own `instance.fetch!`/`instance.webSocketMessage!` calls).
+      // both `CharacterStreamDO`/`CampaignStreamDO` always override it (same rationale as
+      // `character-stream-do.test.ts`'s own `instance.fetch!`/`instance.webSocketMessage!` calls).
       await instance.webSocketMessage!(ws, JSON.stringify(msg));
     });
   }
@@ -95,20 +106,39 @@ function makeDriver(): ConformanceDriver {
     fetch(path, init) {
       return SELF.fetch(new URL(path, BASE_URL).toString(), init);
     },
-    async openStream({ streamId, session }: { streamId: string; session: Session }) {
-      const id = env.CHARACTER_STREAM.idFromName(streamId);
-      const stub = env.CHARACTER_STREAM.get(id);
-      // Persist `stream_id` the same way a real `fetch()` upgrade would (`character-stream.do.ts`'s
-      // `ensureActor` doc comment) — this driver bypasses the real WebSocketPair/hibernation accept
-      // dance entirely (this file's header comment) but the DO still needs to know which stream it
-      // is once a bare `webSocketMessage()` call (no hint) reaches it.
-      await runInDurableObject(stub, async (_instance, state) => {
+    // [plan-9 Task 10] Branches on the stream-id prefix — the campaign half of the SAME `camp:`/
+    // `char:` routing `CloudflareStreamHost.get`/`streamNamespaceFor` do in the real Worker
+    // (`adapters/cloudflare/worker.ts`), except this driver picks the DO namespace directly rather
+    // than going through that real routing helper — the same pre-existing, documented bypass this
+    // file's header comment already describes for `char:` (no real `fetch()` upgrade at all).
+    async openStream({
+      streamId,
+      session,
+      role,
+    }: {
+      streamId: string;
+      session: Session;
+      role?: 'owner' | 'dm' | 'member';
+    }) {
+      const isCampaign = streamId.startsWith('camp:');
+      const stub: CharacterStreamStub | CampaignStreamStub = isCampaign
+        ? env.CAMPAIGN_STREAM.get(env.CAMPAIGN_STREAM.idFromName(streamId))
+        : env.CHARACTER_STREAM.get(env.CHARACTER_STREAM.idFromName(streamId));
+      // Persist `stream_id` the same way a real `fetch()` upgrade would (`character-stream.do.ts`'s/
+      // `campaign-stream.do.ts`'s own `ensureActor` doc comment) — this driver bypasses the real
+      // WebSocketPair/hibernation accept dance entirely (this file's header comment) but the DO
+      // still needs to know which stream it is once a bare `webSocketMessage()` call (no hint)
+      // reaches it.
+      await runInDurableObject(stub as CharacterStreamStub, async (_instance, state) => {
         await state.storage.put('stream_id', streamId);
       });
-      // Stamped with the SAME `{userId, role: 'owner'}` a real WS upgrade would have resolved from
-      // this exact session (see `Session`'s doc comment in `scenarios.ts` for the documented
-      // limitation this sidesteps: no real ownership re-check happens at THIS call).
-      const attachment: ConnAttachment = { userId: session.userId, role: 'owner', subs: [streamId] };
+      // `char:` keeps the pre-plan-9 default (`role: 'owner'`, no real ownership re-check at this
+      // call — `Session`'s doc comment in `scenarios.ts`). `camp:` has NO real WS-upgrade route to
+      // resolve `dm`/`member` FROM under this fallback (unlike Node, whose `openStream` drives the
+      // REAL `GET /api/campaigns/:id/ws` route) — a campaign scenario MUST pass the role its own
+      // HTTP setup actually established (`OpenStreamArgs.role`'s doc comment in `scenarios.ts`).
+      const resolvedRole = role ?? (isCampaign ? 'member' : 'owner');
+      const attachment: ConnAttachment = { userId: session.userId, role: resolvedRole, subs: [streamId] };
       return new CloudflareStreamDriver(stub, attachment);
     },
   };
@@ -116,7 +146,16 @@ function makeDriver(): ConformanceDriver {
 
 describe('cross-adapter conformance — Cloudflare', () => {
   for (const scenario of scenarios) {
-    it(scenario.name, async () => {
+    // [plan-9 Task 10] `Scenario.adapters` — see `scenarios.ts`'s header comment for exactly why a
+    // campaign scenario is restricted to Node only (a documented harness limitation: this runner's
+    // mocked WS pair is never registered through the real `ctx.acceptWebSocket()`/tag mechanism, so
+    // a scenario needing the actor to push to a DIFFERENT connection than the one that triggered it
+    // — live presence, bye — is unobservable here). This is an explicit, named skip, never a
+    // silently-failing assertion — the STOP rule is about a REAL cross-adapter divergence (the same
+    // scenario producing different OBSERVED outcomes on both), not a harness capability gap that is
+    // documented up front and never run at all on the adapter that cannot express it.
+    const runsHere = scenario.adapters === undefined || scenario.adapters.includes('cloudflare');
+    (runsHere ? it : it.skip)(scenario.name, async () => {
       await scenario.run(makeDriver());
     });
   }

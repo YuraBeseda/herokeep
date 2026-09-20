@@ -12,13 +12,39 @@
  * Every assertion for every scenario lives HERE. Both runner files contain zero assertions of their
  * own — only `ConformanceDriver`/`StreamDriver` wiring — by design: that split is what makes a
  * cross-adapter failure trustworthy (task-9-brief).
+ *
+ * [plan-9 Task 10] Campaign scenarios extend the SAME architecture, with one addition:
+ * `Scenario.adapters` (optional — every pre-existing scenario omits it and runs on both, unchanged)
+ * lets a scenario declare it only runs on a SUBSET of adapters. This is NOT an escape hatch for a
+ * real cross-adapter divergence (Global Constraints: "a scenario passing on one adapter and failing
+ * on the other is a merge blocker" — that rule is about a genuine behavior difference between the
+ * two PRODUCTION adapters, discovered by running the SAME scenario against both). It exists for
+ * exactly one documented, structural HARNESS limitation, carried from task-8-brief/task-9-report:
+ * the Cloudflare runner's `openStream` never performs a REAL WebSocket upgrade (pool-workers cannot
+ * complete one against a Durable Object under its default per-test storage isolation — see
+ * `cloudflare.conformance.test.ts`'s own header comment) — it calls `webSocketMessage()` directly
+ * against a mocked pair. That mocked pair is NEVER run through `HibernatingConnections.accept()`
+ * (`adapters/cloudflare/connections.do.ts`), which is the ONLY place a connection is registered with
+ * the platform's `ctx.acceptWebSocket()`/tag mechanism `Connections.all()`/`byTag()` depend on. A
+ * scenario needing the actor to push a frame to a DIFFERENT connection than the one that triggered
+ * it (a live `members` presence broadcast, a `bye` close) is therefore unobservable through THIS
+ * driver on Cloudflare — not because campaign presence/bye is broken there (Task 9's own CF DO test
+ * proves the RPC methods are wired and reachable; Task 9's own ledger already names "CF
+ * getWebSockets(tag) multi-socket fan-out" as an accepted gap), but because the test harness itself
+ * cannot express it without simulating platform Hibernation internals, which the brief explicitly
+ * says not to force. Every scenario whose assertions depend ONLY on the initiating connection's own
+ * synchronous replies (ack/reject/welcome/catch-up `events`) — which covers append/permission/
+ * visibility-filtering/gateway/mirror scenarios, since `filterForConnection` gates catch-up the same
+ * way it gates live fan-out — runs on BOTH adapters like every other scenario in this file.
  */
 import { expect } from 'vitest';
 import type {
   AckMsg,
+  ByeMsg,
   ClientMessage,
   Event,
   EventsMsg,
+  MembersMsg,
   RejectCode,
   RejectMsg,
   ServerMessage,
@@ -59,6 +85,23 @@ export interface StreamDriver {
   close(): void;
 }
 
+export interface OpenStreamArgs {
+  readonly streamId: string;
+  readonly session: Session;
+  /** [plan-9 Task 10] The campaign-socket role to stamp (`camp:` streams only — design ruling 1:
+   * `dm` if the session is this campaign's DM, else `member`). Node IGNORES this entirely: its
+   * `openStream` drives the REAL `GET /api/campaigns/:id/ws` route, which resolves the role from
+   * the session's own D1 membership row for real (design ruling 1's actual production code path,
+   * matching this file's existing `char:` behavior of never trusting a caller-supplied role). The
+   * Cloudflare runner's mocked-pair fallback has no real WS-upgrade route to resolve this FROM (see
+   * `Session`'s own doc comment on that documented limitation, already true for `char:`'s hardcoded
+   * `role: 'owner'`) — a campaign scenario MUST pass the role its own HTTP setup calls actually
+   * established (`POST /api/campaigns` for `dm`, `POST /api/campaigns/join` for `member`), or the
+   * mocked connection will be stamped with the wrong one. Ignored for `char:` streams (always
+   * `owner`, unchanged). */
+  readonly role?: 'owner' | 'dm' | 'member';
+}
+
 export interface ConformanceDriver {
   /** Black-box HTTP against the running adapter instance — Node: real `fetch` to an ephemeral-port
    * server; Cloudflare: `SELF.fetch` against the pool-workers-hosted Worker. `path` is an
@@ -68,12 +111,15 @@ export interface ConformanceDriver {
    * stream `session` actually owns (see `Session`'s doc comment on the Cloudflare runner's
    * documented limitation: it does not re-verify ownership at this call the way a real WS upgrade
    * would, because it cannot perform a real upgrade at all under pool-workers). */
-  openStream(args: { readonly streamId: string; readonly session: Session }): Promise<StreamDriver>;
+  openStream(args: OpenStreamArgs): Promise<StreamDriver>;
 }
 
 export interface Scenario {
   readonly name: string;
   readonly run: (driver: ConformanceDriver) => Promise<void>;
+  /** [plan-9 Task 10] Omitted (every pre-plan-9 scenario) — runs on both adapters, unchanged. See
+   * this file's header comment for exactly why a campaign scenario would ever need this. */
+  readonly adapters?: readonly ('node' | 'cloudflare')[];
 }
 
 // --- shared fixtures ------------------------------------------------------------------------
@@ -120,13 +166,29 @@ interface AuthedSession extends Session {
   readonly recoveryCodes: readonly string[];
 }
 
+/** [plan-9 Task 10] A random simulated IP, one per call — the SAME technique/rationale
+ * `ipRateLimitScenario` already documents in full: Node ignores this header entirely (harmless
+ * no-op there); the Cloudflare Worker trusts it (`worker.ts`'s `stampClientIp`), and — unlike
+ * Node's fresh-boot-per-test isolation — this pool's `RateLimiterDO` storage is shared across EVERY
+ * `it()` block in this ONE test file with no reset between them, all otherwise landing in the SAME
+ * `cf-connecting-ip`-less "unknown" bucket. Plan-9's campaign scenarios call `registerAndLogin` far
+ * more times per run than the pre-plan-9 suite ever did (a 12-member-quota scenario alone registers
+ * 12 accounts) — without this, that shared 30-requests/minute bucket empties into `429`s partway
+ * through the file (observed directly: `register(...): expected 429 to be 201`, a pure harness
+ * accounting artifact, not a real product rate-limit bug — every one of these accounts is a distinct
+ * real user in the test's own story, never actually hammering the API from one IP). */
+function simulatedIp(): string {
+  return `203.0.113.${Math.floor(Math.random() * 254) + 1}`;
+}
+
 async function registerAndLogin(driver: ConformanceDriver, seed: string): Promise<AuthedSession> {
   const username = uniqueUsername(seed);
   const verifier = verifierHex(seed);
+  const ip = simulatedIp();
 
   const registerRes = await driver.fetch('/api/auth/register', {
     method: 'POST',
-    headers: XRW,
+    headers: { ...XRW, 'cf-connecting-ip': ip },
     body: JSON.stringify({ username, verifier, salt: saltHex(seed) }),
   });
   expect(registerRes.status, `register(${seed})`).toBe(201);
@@ -134,7 +196,7 @@ async function registerAndLogin(driver: ConformanceDriver, seed: string): Promis
 
   const loginRes = await driver.fetch('/api/auth/login', {
     method: 'POST',
-    headers: XRW,
+    headers: { ...XRW, 'cf-connecting-ip': ip },
     body: JSON.stringify({ username, verifier, deviceLabel: seed }),
   });
   expect(loginRes.status, `login(${seed})`).toBe(200);
@@ -184,6 +246,138 @@ function noteEvent(streamId: string, userId: string, bodyBytes = 8): Event {
     v: 1,
     payload: { id: crypto.randomUUID(), body: 'x'.repeat(bodyBytes) },
   };
+}
+
+/** [plan-9 Task 10, test-only] A campaign-stream connection's server-side close fires
+ * `CampaignActor.onConnectionClosed` -> a presence rebroadcast (`triggerPresence`/
+ * `broadcastPresence`, a real DB read via `getCampaignMeta`) — Node's adapter wires this as
+ * deliberate fire-and-forget (`void runtime.actor.onConnectionClosed(conn)`, `server.ts`'s own doc
+ * comment: "the adapter is free to ignore" the returned promise). A scenario whose VERY LAST action
+ * is closing such a connection, with nothing awaited afterward, can therefore return to the test
+ * runner BEFORE that fire-and-forget chain settles — `afterEach`'s `handle.close()` then tears the
+ * whole server (including its SQLite connection) down while the chain is still in flight, surfacing
+ * as an unhandled `TypeError: The database connection is not open` (a harness-teardown race, not a
+ * behavioral bug: every scenario's own ASSERTIONS had already passed by the time this fires — see
+ * task-10-report.md for the full trace). None of the 8 pre-plan-9 scenarios ever hit this
+ * (`CharacterActor` never overrides `onConnectionClosed`, so a `char:` close is always a no-op) —
+ * this is a real, previously-unexercised interaction plan-9's own campaign sockets introduce, not a
+ * pre-existing flake. The actual DB read itself is effectively instant (`store.sqlite-file.ts`'s
+ * `getMeta`/`better-sqlite3` calls are synchronous, Promise-wrapped) — the real variable delay is
+ * the WS close HANDSHAKE completing over the loopback socket, which is I/O, not a microtask; a
+ * short real wait after the LAST close of any campaign-stream connection in a scenario is what
+ * settles it, generous relative to a loopback round-trip. */
+function settleAfterClose(ms = 200): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- campaign fixtures (plan-9 Task 10) ---------------------------------------------------
+
+interface CampaignDto {
+  readonly id: string;
+  readonly name: string;
+  readonly system: string;
+  readonly role: 'dm' | 'player';
+  readonly joinCode?: string;
+}
+
+/** `POST /api/campaigns`'s own response is ALWAYS to the creating DM (`toCampaignDto`'s doc
+ * comment: `joinCode` is omitted only for a non-DM's view via `GET /` — never for the creator's own
+ * create response) — narrowed to a required `joinCode` here so every call site doesn't need its own
+ * `string | undefined` guard for a value that is, in practice, always present at this call site. */
+interface CreatedCampaignDto extends CampaignDto {
+  readonly joinCode: string;
+}
+
+async function createCampaignHttp(
+  driver: ConformanceDriver,
+  dm: Session,
+  campaignId: string,
+): Promise<CreatedCampaignDto> {
+  const res = await driver.fetch('/api/campaigns', {
+    method: 'POST',
+    headers: { ...XRW, cookie: dm.cookie },
+    body: JSON.stringify({
+      id: campaignId,
+      name: 'Conformance Campaign',
+      system: 'srd-5e-2024',
+      corePack: { id: 'srd-5e-2024', version: '1.0.0' },
+    }),
+  });
+  expect(res.status, 'create campaign').toBe(201);
+  const body = (await res.json()) as CampaignDto;
+  expect(body.joinCode, 'the create response always carries a joinCode for the creating DM').toBeTruthy();
+  return body as CreatedCampaignDto;
+}
+
+async function joinCampaignHttp(
+  driver: ConformanceDriver,
+  session: Session,
+  code: string,
+  displayName?: string,
+): Promise<{ readonly status: number; readonly campaignId?: string }> {
+  const res = await driver.fetch('/api/campaigns/join', {
+    method: 'POST',
+    headers: { ...XRW, cookie: session.cookie },
+    body: JSON.stringify({ code, ...(displayName !== undefined ? { displayName } : {}) }),
+  });
+  const body = res.status === 200 ? ((await res.json()) as { campaignId: string }) : undefined;
+  return { status: res.status, campaignId: body?.campaignId };
+}
+
+/** A campaign-stream event with a placeholder envelope `actor` (ignored server-side — `stampActor`,
+ * `stream-actor.ts`, overwrites `userId`/`role` from the REAL connection identity before storing;
+ * only `deviceId` survives from the client-sent envelope, same precedent this file's existing
+ * `characterCreatedEvent`/`noteEvent` helpers already rely on). */
+function campaignEvent(
+  streamId: string,
+  type: string,
+  v: number,
+  payload: unknown,
+  placeholderUserId: string,
+  placeholderRole: 'owner' | 'dm' | 'member',
+): Event {
+  return {
+    id: crypto.randomUUID(),
+    stream: streamId,
+    ts: new Date().toISOString(),
+    actor: { userId: placeholderUserId, deviceId: 'conformance-device', role: placeholderRole },
+    type,
+    v,
+    payload,
+  };
+}
+
+function rollLoggedEvent(streamId: string, visibility: 'everyone' | 'dm' | 'private', label: string): Event {
+  return campaignEvent(
+    streamId,
+    'roll.logged',
+    1,
+    {
+      label,
+      formula: '1d20',
+      results: [{ die: 'd20', value: 12 }],
+      total: 12,
+      kind: 'check',
+      visibility,
+    },
+    'ignored-by-server',
+    'dm',
+  );
+}
+
+function chatMessageEvent(streamId: string, text: string, visibility: 'everyone' | 'dm' | 'private'): Event {
+  return campaignEvent(streamId, 'chat.message', 1, { text, visibility }, 'ignored-by-server', 'member');
+}
+
+function dmNoteAddedEvent(streamId: string): Event {
+  return campaignEvent(
+    streamId,
+    'dm.note_added',
+    1,
+    { id: crypto.randomUUID(), title: 'Secret', body: 'DM only' },
+    'ignored-by-server',
+    'dm',
+  );
 }
 
 interface AckResult {
@@ -596,6 +790,415 @@ async function ipRateLimitScenario(driver: ConformanceDriver): Promise<void> {
   expect(statuses[30], 'the 31st request in the same window is blocked').toBe(429);
 }
 
+// --- campaign scenarios (plan-9 Task 10) ----------------------------------------------------
+
+/** Lifecycle: create -> list (dm-of/member-of, joinCode never leaks to a non-DM) -> join by code
+ * -> rotate-code (the OLD code stops working, the NEW one works) -> DM removes a member -> the
+ * removed member's WS reconnect is refused outright (mirrors `ownerOnlyScenario`'s "no upgrade
+ * needed" technique: `GET /:id/ws` checks membership BEFORE ever touching `WsUpgrade`). Every
+ * assertion here is plain `fetch` — no WS needed at all, so this scenario needs no `adapters`
+ * restriction. */
+async function campaignLifecycleScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampLifeDm');
+  const member = await registerAndLogin(driver, 'CampLifeMember');
+  const campaignId = crypto.randomUUID();
+
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  expect(created.joinCode, 'a joinCode is issued to the DM').toBeTruthy();
+
+  const dmList = (await (
+    await driver.fetch('/api/campaigns', { headers: { cookie: dm.cookie } })
+  ).json()) as CampaignDto[];
+  expect(
+    dmList.some((c) => c.id === campaignId && c.role === 'dm'),
+    'the DM sees their own campaign',
+  ).toBe(true);
+
+  const joined = await joinCampaignHttp(driver, member, created.joinCode);
+  expect(joined.status, 'join by code').toBe(200);
+  expect(joined.campaignId).toBe(campaignId);
+
+  const memberList = (await (
+    await driver.fetch('/api/campaigns', { headers: { cookie: member.cookie } })
+  ).json()) as CampaignDto[];
+  const memberEntry = memberList.find((c) => c.id === campaignId);
+  expect(memberEntry?.role, 'a member sees their own campaign, role player').toBe('player');
+  expect(memberEntry?.joinCode, 'joinCode never leaks to a non-DM').toBeUndefined();
+
+  const rotateRes = await driver.fetch(`/api/campaigns/${campaignId}/rotate-code`, {
+    method: 'POST',
+    headers: { ...XRW, cookie: dm.cookie },
+  });
+  expect(rotateRes.status, 'DM rotates the join code').toBe(200);
+  const rotated = (await rotateRes.json()) as { joinCode: string };
+  expect(rotated.joinCode).not.toBe(created.joinCode);
+
+  const late = await registerAndLogin(driver, 'CampLifeLate');
+  const oldCodeJoin = await joinCampaignHttp(driver, late, created.joinCode);
+  expect(oldCodeJoin.status, 'the OLD join code no longer works after rotation').toBe(404);
+  const newCodeJoin = await joinCampaignHttp(driver, late, rotated.joinCode);
+  expect(newCodeJoin.status, 'the NEW join code works').toBe(200);
+
+  const removeRes = await driver.fetch(`/api/campaigns/${campaignId}/members/${late.userId}`, {
+    method: 'DELETE',
+    headers: { ...XRW, cookie: dm.cookie },
+  });
+  expect(removeRes.status, 'DM removes a member').toBe(204);
+
+  const reconnectRes = await driver.fetch(`/api/campaigns/${campaignId}/ws`, { headers: { cookie: late.cookie } });
+  expect(reconnectRes.status, 'a removed member is refused the WS handoff outright').toBe(403);
+}
+
+/** [gap (a)] "a member-role action driven to SUCCESS through the REAL adapter surface on BOTH
+ * adapters" — the exact root-cause class Task 8's own required Node e2e caught in production
+ * (`campaign-permissions.ts` never wired into either adapter's `CampaignActor` construction, so
+ * every real member join/append would have 500'd): a real member, joined via the real HTTP route,
+ * opens the campaign WS and appends a member-permitted event through it. */
+async function campaignMemberWriteScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampWriteDm');
+  const member = await registerAndLogin(driver, 'CampWriteMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  const joined = await joinCampaignHttp(driver, member, created.joinCode);
+  expect(joined.status).toBe(200);
+
+  const memberStream = await driver.openStream({ streamId, session: member, role: 'member' });
+  const { rid } = await sendHello(memberStream, streamId, 0);
+  const helloFrames = await memberStream.collect((buf) => buf.some((f) => isWelcomeFor(f, rid)));
+  const welcome = helloFrames.find((f): f is WelcomeMsg => isWelcomeFor(f, rid));
+  expect(welcome?.streams[0]?.id, 'welcome names the campaign stream').toBe(streamId);
+
+  const chat = chatMessageEvent(streamId, 'hi from a real member', 'everyone');
+  const outcome = await appendAndWait(memberStream, [chat]);
+  expect(outcome.rejected, 'a genuinely member-role actor succeeds through the real adapter surface').toEqual([]);
+  expect(outcome.acked).toHaveLength(1);
+  memberStream.close();
+  await settleAfterClose();
+}
+
+/** doc-08's read-filtering rules, exercised through CATCH-UP (not live fan-out — `filterForConnection`
+ * gates both identically, `campaign-actor.ts`'s own doc comment, so this needs only one connection
+ * per reader, portable to both adapters): `roll.logged`/`chat.message` `visibility: 'dm'` reach the
+ * DM and the sender; `'private'` reaches the SENDER ONLY (not even the DM); `dm.note_*` never
+ * reaches a non-DM connection; `'everyone'` reaches everybody. */
+async function campaignVisibilityScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampVisDm');
+  const member = await registerAndLogin(driver, 'CampVisMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  const joined = await joinCampaignHttp(driver, member, created.joinCode);
+  expect(joined.status).toBe(200);
+
+  const dmWriter = await driver.openStream({ streamId, session: dm, role: 'dm' });
+  const rollDm = rollLoggedEvent(streamId, 'dm', 'Secret initiative');
+  const rollPrivateDm = rollLoggedEvent(streamId, 'private', 'DM private roll');
+  const note = dmNoteAddedEvent(streamId);
+  const dmBatch = await appendAndWait(dmWriter, [rollDm, rollPrivateDm, note]);
+  expect(dmBatch.rejected, 'dm-authored visibility events all accepted').toEqual([]);
+  dmWriter.close();
+
+  const memberWriter = await driver.openStream({ streamId, session: member, role: 'member' });
+  const rollPrivateMember = rollLoggedEvent(streamId, 'private', 'Member private roll');
+  const chatDm = chatMessageEvent(streamId, 'psst dm only', 'dm');
+  const chatEveryone = chatMessageEvent(streamId, 'hello table', 'everyone');
+  const memberBatch = await appendAndWait(memberWriter, [rollPrivateMember, chatDm, chatEveryone]);
+  expect(memberBatch.rejected, 'member-authored visibility events all accepted').toEqual([]);
+  memberWriter.close();
+
+  async function catchUpIds(session: Session, role: 'dm' | 'member', expectedCount: number): Promise<Set<string>> {
+    const reader = await driver.openStream({ streamId, session, role });
+    const { rid } = await sendHello(reader, streamId, 0);
+    const frames = await reader.collect((buf) => {
+      const gotWelcome = buf.some((f) => isWelcomeFor(f, rid));
+      const total = buf
+        .filter((f): f is EventsMsg => isEventsFor(f, streamId))
+        .reduce((s, f) => s + f.events.length, 0);
+      return gotWelcome && total >= expectedCount;
+    }, 10_000);
+    const ids = new Set(
+      frames.filter((f): f is EventsMsg => isEventsFor(f, streamId)).flatMap((f) => f.events.map((e) => e.id)),
+    );
+    reader.close();
+    return ids;
+  }
+
+  const dmVisible = [rollDm.id, rollPrivateDm.id, note.id, chatDm.id, chatEveryone.id];
+  const dmSeen = await catchUpIds(dm, 'dm', dmVisible.length);
+  for (const id of dmVisible) expect(dmSeen.has(id), `dm sees ${id}`).toBe(true);
+  expect(
+    dmSeen.has(rollPrivateMember.id),
+    "dm does NOT see the member's private roll (private = roller only, not even the dm)",
+  ).toBe(false);
+
+  const memberVisible = [rollPrivateMember.id, chatDm.id, chatEveryone.id];
+  const memberSeen = await catchUpIds(member, 'member', memberVisible.length);
+  for (const id of memberVisible) expect(memberSeen.has(id), `member sees ${id}`).toBe(true);
+  expect(memberSeen.has(rollDm.id), 'member does not see a dm-visibility roll they did not author').toBe(false);
+  expect(memberSeen.has(rollPrivateDm.id), "member does not see the dm's private roll").toBe(false);
+  expect(memberSeen.has(note.id), 'member never sees dm.note_added').toBe(false);
+  await settleAfterClose(); // see settleAfterClose's own doc comment — last op was a campaign-stream close.
+}
+
+/** [Global Constraints "gateway forward+re-check"/"mirror verification"] A campaign MEMBER (not the
+ * DM) owns a character, links it to the campaign on the character's own socket
+ * (`character.campaign_joined`), mirrors the join on the campaign socket (accepted only because
+ * `Rpc.currentCampaignOf`'s real cross-actor read confirms the live link — `verifyCharacterMirror`),
+ * then forwards an owner-class event to the character THROUGH the campaign gateway
+ * (`mapGatewayActor`'s `owner` branch) — verified to have genuinely committed on the character
+ * stream's OWN storage via a fresh read, not merely acked locally. */
+async function campaignGatewayMirrorScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampGwDm');
+  const owner = await registerAndLogin(driver, 'CampGwOwner');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  const joined = await joinCampaignHttp(driver, owner, created.joinCode);
+  expect(joined.status).toBe(200);
+
+  const characterId = crypto.randomUUID();
+  const charStreamId = `char:${characterId}`;
+  await createCharacter(driver, owner, characterId);
+
+  const charStream = await driver.openStream({ streamId: charStreamId, session: owner });
+  const charCreated = characterCreatedEvent(charStreamId, owner.userId);
+  const charJoined = campaignEvent(charStreamId, 'character.campaign_joined', 1, { campaignId }, owner.userId, 'owner');
+  const charOutcome = await appendAndWait(charStream, [charCreated, charJoined]);
+  expect(charOutcome.rejected, 'character.created + character.campaign_joined both accepted').toEqual([]);
+  charStream.close();
+
+  const campStream = await driver.openStream({ streamId, session: owner, role: 'member' });
+  const mirrorJoin = campaignEvent(
+    streamId,
+    'campaign.character_joined',
+    1,
+    { characterId, ownerId: owner.userId, name: 'Conformance Character' },
+    owner.userId,
+    'member',
+  );
+  const mirrorOutcome = await appendAndWait(campStream, [mirrorJoin]);
+  expect(mirrorOutcome.rejected, 'campaign.character_joined mirror-verified via a real cross-actor Rpc read').toEqual(
+    [],
+  );
+
+  const forwardedNote = noteEvent(charStreamId, owner.userId, 8);
+  const forwardOutcome = await appendAndWait(campStream, [forwardedNote]);
+  expect(forwardOutcome.rejected, 'gateway-forwarded owner-class event accepted (owner mapping)').toEqual([]);
+  campStream.close();
+
+  const verifyReader = await driver.openStream({ streamId: charStreamId, session: owner });
+  const { rid } = await sendHello(verifyReader, charStreamId, 0);
+  const frames = await verifyReader.collect((buf) => {
+    const gotWelcome = buf.some((f) => isWelcomeFor(f, rid));
+    const total = buf
+      .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
+      .reduce((s, f) => s + f.events.length, 0);
+    return gotWelcome && total >= 3; // created + campaign_joined + the gateway-forwarded note
+  });
+  const readBackIds = frames
+    .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
+    .flatMap((f) => f.events.map((e) => e.id));
+  expect(readBackIds, 'the gateway-forwarded event genuinely landed on the character stream storage').toContain(
+    forwardedNote.id,
+  );
+  verifyReader.close();
+  await settleAfterClose();
+}
+
+/** [gap (d)] "Rpc.hasEvent/currentCampaignOf parity on a fresh/untouched stream (both adapters, same
+ * observable outcome)" — expressed black-box: a mirror join against a character stream that was
+ * NEVER created/joined-anywhere must be rejected identically on both adapters (`currentCampaignOf`
+ * reads `undefined` on a stream neither adapter has ever written to; `undefined !== thisCampaignId`
+ * on both). */
+async function campaignMirrorFreshStreamScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampMirrorFreshDm');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  await createCampaignHttp(driver, dm, campaignId);
+
+  const characterId = crypto.randomUUID(); // never created, never touched by any stream.
+  const campStream = await driver.openStream({ streamId, session: dm, role: 'dm' });
+  const mirrorJoin = campaignEvent(
+    streamId,
+    'campaign.character_joined',
+    1,
+    { characterId, ownerId: dm.userId, name: 'Ghost' },
+    dm.userId,
+    'dm',
+  );
+  const outcome = await appendAndWait(campStream, [mirrorJoin]);
+  expect(outcome.acked, 'a mirror join against a fresh/untouched character stream is never acked').toEqual([]);
+  expect(
+    outcome.rejected[0]?.code,
+    'Rpc.currentCampaignOf on an untouched stream reads undefined identically on both adapters, so the mirror fails the same way',
+  ).toBe('invalid');
+  campStream.close();
+  await settleAfterClose();
+}
+
+/** [gap (b)] Owner-forgery at the gateway boundary, two shapes: (1) a campaign MEMBER attempts an
+ * owner-role action on a character they do NOT own — refused (`mapGatewayActor`'s `owner` branch
+ * requires the payload's real owner to match the acting member); (2) a FOREIGN campaign's DM
+ * attempts to reach a character never joined to THEIR OWN campaign — refused (`mapGatewayActor`'s
+ * `dm` branch requires `meta.characters.has(characterId)` scoped to THIS campaign, fix round 1's
+ * Critical 1). Both prove the campaign gateway is the FIRST enforcement point: nothing is forwarded
+ * to the character stream's own pipeline at all for either forgery attempt. */
+async function campaignForgeryScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampForgeDm');
+  const memberA = await registerAndLogin(driver, 'CampForgeMemberA');
+  const memberB = await registerAndLogin(driver, 'CampForgeMemberB');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  expect((await joinCampaignHttp(driver, memberA, created.joinCode)).status).toBe(200);
+  expect((await joinCampaignHttp(driver, memberB, created.joinCode)).status).toBe(200);
+
+  const characterId = crypto.randomUUID();
+  const charStreamId = `char:${characterId}`;
+  await createCharacter(driver, memberA, characterId);
+
+  const charStream = await driver.openStream({ streamId: charStreamId, session: memberA });
+  const charCreated = characterCreatedEvent(charStreamId, memberA.userId);
+  const charJoined = campaignEvent(
+    charStreamId,
+    'character.campaign_joined',
+    1,
+    { campaignId },
+    memberA.userId,
+    'owner',
+  );
+  const charOutcome = await appendAndWait(charStream, [charCreated, charJoined]);
+  expect(charOutcome.rejected).toEqual([]);
+  charStream.close();
+
+  const aCampStream = await driver.openStream({ streamId, session: memberA, role: 'member' });
+  const mirrorJoin = campaignEvent(
+    streamId,
+    'campaign.character_joined',
+    1,
+    { characterId, ownerId: memberA.userId, name: 'A' },
+    memberA.userId,
+    'member',
+  );
+  const mirrorOutcome = await appendAndWait(aCampStream, [mirrorJoin]);
+  expect(mirrorOutcome.rejected).toEqual([]);
+  aCampStream.close();
+
+  // (1) memberB forges an owner-class action on memberA's character through the gateway.
+  const bCampStream = await driver.openStream({ streamId, session: memberB, role: 'member' });
+  const forgedNote = noteEvent(charStreamId, memberB.userId, 8);
+  const forgedOutcome = await appendAndWait(bCampStream, [forgedNote]);
+  expect(forgedOutcome.acked, 'a member forging an owner action on a character they do not own is never acked').toEqual(
+    [],
+  );
+  expect(
+    forgedOutcome.rejected[0]?.code,
+    "refused forbidden: mapGatewayActor's owner branch requires the payload's real owner to match the acting member",
+  ).toBe('forbidden');
+  bCampStream.close();
+
+  const verifyReader = await driver.openStream({ streamId: charStreamId, session: memberA });
+  const { rid } = await sendHello(verifyReader, charStreamId, 0);
+  const frames = await verifyReader.collect((buf) => {
+    const gotWelcome = buf.some((f) => isWelcomeFor(f, rid));
+    const total = buf
+      .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
+      .reduce((s, f) => s + f.events.length, 0);
+    return gotWelcome && total >= 2; // created + campaign_joined only — the forgery must not land.
+  });
+  const ids = frames
+    .filter((f): f is EventsMsg => isEventsFor(f, charStreamId))
+    .flatMap((f) => f.events.map((e) => e.id));
+  expect(ids, 'the forged note never reached the character stream at all').not.toContain(forgedNote.id);
+  verifyReader.close();
+
+  // (2) a DIFFERENT campaign's DM attempts to reach memberA's character (never joined to THAT dm's
+  // own campaign) via a dm-class gateway forward — "foreign-campaign DM reach attempt".
+  const foreignDm = await registerAndLogin(driver, 'CampForgeForeignDm');
+  const foreignCampaignId = crypto.randomUUID();
+  const foreignStreamId = `camp:${foreignCampaignId}`;
+  await createCampaignHttp(driver, foreignDm, foreignCampaignId);
+
+  const foreignDmStream = await driver.openStream({ streamId: foreignStreamId, session: foreignDm, role: 'dm' });
+  const dmClassEvent = campaignEvent(
+    charStreamId,
+    'resource.spent',
+    1,
+    { resourceId: 'ki-points', count: 1 },
+    foreignDm.userId,
+    'dm',
+  );
+  const foreignOutcome = await appendAndWait(foreignDmStream, [dmClassEvent]);
+  expect(foreignOutcome.acked, 'a foreign campaign DM cannot reach a character never joined to THEIR campaign').toEqual(
+    [],
+  );
+  expect(foreignOutcome.rejected[0]?.code).toBe('forbidden');
+  foreignDmStream.close();
+  await settleAfterClose();
+}
+
+/** The 12-member cap (doc-08/quotas.ts `CAMPAIGN_MEMBER_MAX`) — the ROUTE's own primary gate
+ * (`core/routes/campaigns.ts`'s header comment: "THIS route is the PRIMARY gate"), entirely
+ * REST-driven (no WS needed): the DM counts as member #1 (bootstrap `member.joined`); 11 more joins
+ * fill the cap at 12; the 13th is rejected. */
+async function campaignMemberQuotaScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampQuotaDm');
+  const campaignId = crypto.randomUUID();
+  const created = await createCampaignHttp(driver, dm, campaignId);
+
+  for (let i = 0; i < 11; i += 1) {
+    const member = await registerAndLogin(driver, `CampQuotaM${i}`);
+    const joined = await joinCampaignHttp(driver, member, created.joinCode);
+    expect(joined.status, `join #${i + 1} of 11 (within the 12-member cap including the DM)`).toBe(200);
+  }
+
+  const thirteenth = await registerAndLogin(driver, 'CampQuotaOver');
+  const overJoined = await joinCampaignHttp(driver, thirteenth, created.joinCode);
+  expect(overJoined.status, 'the 13th member is rejected by the route-level 12-member quota gate').toBe(409);
+}
+
+/** [gap (c), Node-only — see this file's header comment] Live presence: a member joins with a
+ * custom `displayName`, connects, and the LEADING-EDGE presence broadcast (a fresh `CampaignActor`
+ * instance's throttle starts at `-Infinity`, so the FIRST `hello` on it sends immediately — no
+ * throttle wait needed) carries that resolved display name back to the SAME connection (fix round
+ * 1's `liveDisplayNameFor`). Also proves `bye` on removal (doc-03/Global Constraints): the DM
+ * removes this same live member; their still-open socket receives a `bye {reason}` frame. */
+async function campaignPresenceAndByeScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampPresenceDm');
+  const member = await registerAndLogin(driver, 'CampPresenceMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const displayName = 'Aria the Bold';
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  const joined = await joinCampaignHttp(driver, member, created.joinCode, displayName);
+  expect(joined.status).toBe(200);
+
+  const memberStream = await driver.openStream({ streamId, session: member, role: 'member' });
+  await sendHello(memberStream, streamId, 0);
+  const frames = await memberStream.collect((buf) => buf.some((f) => f.t === 'members'), 5000);
+  const membersFrame = frames.find((f): f is MembersMsg => f.t === 'members');
+  expect(membersFrame, 'a live presence members frame arrives on connect').toBeDefined();
+  const own = membersFrame?.members.find((m) => m.userId === member.userId);
+  expect(
+    own?.displayName,
+    'gap (c): the display name set at join time flows end-to-end into the live presence frame',
+  ).toBe(displayName);
+  expect(own?.online).toBe(true);
+
+  const removeRes = await driver.fetch(`/api/campaigns/${campaignId}/members/${member.userId}`, {
+    method: 'DELETE',
+    headers: { ...XRW, cookie: dm.cookie },
+  });
+  expect(removeRes.status, 'DM removes the still-connected member').toBe(204);
+
+  const byeFrames = await memberStream.collect((buf) => buf.some((f) => f.t === 'bye'), 5000);
+  const bye = byeFrames.find((f): f is ByeMsg => f.t === 'bye');
+  expect(bye?.reason, 'bye on removal: the removed member is told why over their still-open socket').toBeTruthy();
+  memberStream.close();
+  await settleAfterClose();
+}
+
 export const scenarios: readonly Scenario[] = [
   {
     name: 'auth lifecycle: register -> salt -> login -> wrong-verifier 401 -> reset -> lockout',
@@ -608,4 +1211,36 @@ export const scenarios: readonly Scenario[] = [
   { name: 'tx atomicity: a txId group commits or rejects as one unit', run: txAtomicityScenario },
   { name: 'hello / catch-up paging: a 450-event stream pages 200/200/50', run: catchUpPagingScenario },
   { name: 'rate limits: the per-IP auth cap (30/min)', run: ipRateLimitScenario },
+
+  // --- campaign scenarios (plan-9 Task 10) --------------------------------------------------
+  {
+    name: 'campaign lifecycle: create / list / join / rotate-code / remove-member / refused reconnect',
+    run: campaignLifecycleScenario,
+  },
+  {
+    name: 'campaign gap (a): a real member-role action succeeds through the real adapter surface',
+    run: campaignMemberWriteScenario,
+  },
+  {
+    name: 'campaign read-visibility filtering: roll.logged/chat.message routing + dm.note_* DM-only',
+    run: campaignVisibilityScenario,
+  },
+  {
+    name: 'campaign gateway forward + mirror verification: a member-owned character joins and is written through',
+    run: campaignGatewayMirrorScenario,
+  },
+  {
+    name: 'campaign gap (d): mirror verification against a fresh/untouched character stream is refused identically',
+    run: campaignMirrorFreshStreamScenario,
+  },
+  {
+    name: 'campaign gap (b): owner-forgery and a foreign-campaign DM reach attempt are both refused at the gateway',
+    run: campaignForgeryScenario,
+  },
+  { name: 'campaign quota: the 12-member cap, 13th join refused', run: campaignMemberQuotaScenario },
+  {
+    name: 'campaign gap (c): live presence carries the resolved display name; bye on removal (Node-only — see header comment)',
+    run: campaignPresenceAndByeScenario,
+    adapters: ['node'],
+  },
 ];

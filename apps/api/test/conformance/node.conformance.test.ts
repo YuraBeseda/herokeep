@@ -97,11 +97,16 @@ function makeDriver(): ConformanceDriver {
     fetch(path, init) {
       return fetch(`${baseUrl}${path}`, init);
     },
+    // [plan-9 Task 10] `role` (`OpenStreamArgs`) is IGNORED here — a real campaign WS handoff
+    // resolves `dm`/`member` from the session's own D1 membership row for real (design ruling 1),
+    // the same way `char:`'s own path has always resolved `owner` for real; only the Cloudflare
+    // mocked-pair fallback (no real upgrade route to resolve either FROM) needs a caller-supplied
+    // role at all — see `scenarios.ts`'s `OpenStreamArgs.role` doc comment.
     async openStream({ streamId, session }: { streamId: string; session: Session }) {
-      const stream = new NodeStreamDriver(
-        `ws://127.0.0.1:${handle.port}/api/characters/${streamId.slice('char:'.length)}/ws`,
-        session.cookie,
-      );
+      const path = streamId.startsWith('camp:')
+        ? `/api/campaigns/${streamId.slice('camp:'.length)}/ws`
+        : `/api/characters/${streamId.slice('char:'.length)}/ws`;
+      const stream = new NodeStreamDriver(`ws://127.0.0.1:${handle.port}${path}`, session.cookie);
       await stream.waitUntilOpen();
       return stream;
     },
@@ -110,7 +115,13 @@ function makeDriver(): ConformanceDriver {
 
 describe('cross-adapter conformance — Node', () => {
   for (const scenario of scenarios) {
-    it(scenario.name, async () => {
+    // [plan-9 Task 10] `Scenario.adapters` — see `scenarios.ts`'s header comment for exactly why a
+    // campaign scenario would ever be restricted to one adapter (a documented harness limitation,
+    // never a real production divergence). Node is never excluded today, but the skip is wired
+    // symmetrically with the Cloudflare runner below so a FUTURE `adapters: ['cloudflare']` scenario
+    // (if one is ever needed) behaves correctly here too.
+    const runsHere = scenario.adapters === undefined || scenario.adapters.includes('node');
+    (runsHere ? it : it.skip)(scenario.name, async () => {
       await scenario.run(makeDriver());
     });
   }
