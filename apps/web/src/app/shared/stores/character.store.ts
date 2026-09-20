@@ -156,6 +156,10 @@ export class CharacterStore {
   // state (sockets, backoff, quotas, …) lives here.
   private readonly syncModeStreams = new Set<string>();
   private readonly localAppendListeners = new Set<(streamId: string, events: Event[]) => void>();
+  // Fix-wave review, Important finding 2: fires once `create()` has fully committed a brand-new
+  // stream — `SyncService` subscribes so an authed+leader tab uploads it right away instead of
+  // only on the next `status`/`isLeader` change (its constructor `effect()`'s own trigger).
+  private readonly createListeners = new Set<(streamId: string) => void>();
 
   // Serializes every mutating call's actual read/reduce/write work (see `enqueue`'s doc).
   private queue: Promise<void> = Promise.resolve();
@@ -274,6 +278,7 @@ export class CharacterStore {
         this.storagePersistService.requestPersist().catch(() => undefined);
       }
 
+      this.notifyCreate(streamId);
       return streamId;
     });
   }
@@ -400,6 +405,17 @@ export class CharacterStore {
     this.syncModeStreams.delete(streamId);
   }
 
+  /** Readonly surface for a caller OUTSIDE `CharacterStore` that needs to know, before doing
+   * something mode-sensitive to `streamId`, whether it is currently in the PENDING-write/sync
+   * fork (`enterSyncMode`) — e.g. `HeroReaderService.import`'s synced-stream import guard
+   * (fix-wave review, Important finding 1; see that method's own comment for why merging a
+   * `.hero` bundle into a synced stream is unsafe). Exposing just this one flag (rather than
+   * injecting the whole of `SyncService`, which itself injects `CharacterStore`) keeps that
+   * dependency one-directional. */
+  isSyncMode(streamId: string): boolean {
+    return this.syncModeStreams.has(streamId);
+  }
+
   /** `SyncService` (T8) subscribes here to ship every pending batch a syncing stream's `appendTx`/
    * `revert` produces. Fires once, AFTER those events are durably written and this store's own
    * signals updated — never before, so a listener that turns around and reads storage on the same
@@ -407,6 +423,18 @@ export class CharacterStore {
   onLocalAppend(cb: (streamId: string, events: Event[]) => void): () => void {
     this.localAppendListeners.add(cb);
     return () => this.localAppendListeners.delete(cb);
+  }
+
+  /** Fix-wave review, Important finding 2: `SyncService` subscribes here to catch a brand-new
+   * stream `create()` just committed — its own `status`/`isLeader` `effect()` only re-fires on a
+   * CHANGE to either, so a character created while ALREADY authed+leader would otherwise sit as an
+   * ordinary local-committed stream (same as solo/offline mode) until some LATER auth/leader
+   * transition (a login, a reload) happened to re-trigger reconciliation. Fires once, AFTER
+   * `create()`'s own write/signal updates (mirrors `onLocalAppend`'s own ordering contract).
+   * Returns an unsubscribe function. */
+  onCreate(cb: (streamId: string) => void): () => void {
+    this.createListeners.add(cb);
+    return () => this.createListeners.delete(cb);
   }
 
   /**
@@ -818,6 +846,10 @@ export class CharacterStore {
 
   private notifyLocalAppend(streamId: string, events: Event[]): void {
     for (const cb of this.localAppendListeners) cb(streamId, events);
+  }
+
+  private notifyCreate(streamId: string): void {
+    for (const cb of this.createListeners) cb(streamId);
   }
 
   /**

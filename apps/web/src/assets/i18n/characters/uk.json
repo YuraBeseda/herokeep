@@ -22,6 +22,7 @@
       "import-failed-bad-manifest": "Маніфест цього набору .hero недійсний.",
       "import-failed-bad-event": "У цьому наборі .hero виявлено недійсну подію (№{index}).",
       "import-failed-hash-mismatch": "Дані зображення в цьому наборі .hero не відповідають маніфесту.",
+      "import-failed-synced": "Імпорт недоступний, поки цей персонаж синхронізується.",
       "import-failed-generic": "Не вдалося імпортувати файл. Спробуйте ще раз."
     },
     "installBanner": {

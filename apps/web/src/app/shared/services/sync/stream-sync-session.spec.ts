@@ -419,6 +419,79 @@ describe('StreamSyncSession', () => {
     session.stop();
   });
 
+  // --- Final fix wave, Minor finding 3 ----------------------------------------------------------
+
+  it(
+    'hello.pending is byte-split, not just count-capped: an oversized-but-under-50 pending ' +
+      'backlog sends a byte-safe subset in hello, and the remainder follows as append frames ' +
+      'after welcome, without ever throwing (the pre-fix bug: a count-only cap let this throw ' +
+      "inside onOpen and the session never sent a hello at all, stuck 'connecting' forever)",
+    async () => {
+      const streamId = await store.create('Aria', 'feminine');
+      store.enterSyncMode(streamId);
+
+      // 30 events, well under `MAX_APPEND_EVENTS` (50), but each carries a ~6KB `description`
+      // (`LongTextSchema`, up to 20KB) — 30 * ~6KB is comfortably over the 128KB WS frame cap, so
+      // a count-only `hello.pending` slice (the pre-fix bug) would still overflow it.
+      const bigDescription = 'x'.repeat(6000);
+      const drafts = Array.from({ length: 30 }, () => ({
+        type: 'character.appearance_set' as const,
+        v: 1,
+        payload: { description: bigDescription },
+      }));
+      await store.appendTx(drafts);
+      const pendingIds = store
+        .events()
+        .slice(-30)
+        .map((e) => e.id);
+      expect(pendingIds).toHaveLength(30);
+
+      const { session, Factory } = newSession(streamId);
+      await session.start();
+      await flush();
+      const ws = Factory.instances[0];
+      ws.emitOpen();
+      await flush();
+
+      // No throw, no hang: exactly the hello itself was sent.
+      const sentAfterOpen = ws.parsedSent() as { t: string; pending?: { id: string }[] }[];
+      expect(sentAfterOpen).toHaveLength(1);
+      const hello = sentAfterOpen[0];
+      expect(hello.t).toBe('hello');
+      expect(hello.pending).toBeDefined();
+      expect(hello.pending!.length).toBeGreaterThan(0); // some progress was made
+      expect(hello.pending!.length).toBeLessThan(30); // but byte-capped, not the full backlog
+
+      // Local committed head is 1 (just `character.created`) — matches `headSeq`, so no resume;
+      // this exercises the ordinary leftoverPending-flush-after-welcome path.
+      ws.emitMessage({
+        t: 'welcome',
+        rid: 'r1',
+        serverTime: new Date().toISOString(),
+        streams: [
+          { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+        ],
+      });
+      await flush();
+
+      const appendFrames = ws
+        .parsedSent()
+        .slice(1)
+        .filter(
+          (m: unknown): m is { t: 'append'; events: { id: string }[] } =>
+            (m as { t: string }).t === 'append',
+        );
+      expect(appendFrames.length).toBeGreaterThan(0); // the leftover DID get flushed
+      const leftoverIds = appendFrames.flatMap((f) => f.events.map((e) => e.id));
+
+      // Nothing lost, nothing duplicated across hello.pending + the leftover flush.
+      const allSentIds = [...hello.pending!.map((e) => e.id), ...leftoverIds];
+      expect(new Set(allSentIds)).toEqual(new Set(pendingIds));
+      expect(allSentIds).toHaveLength(pendingIds.length);
+      session.stop();
+    },
+  );
+
   it('an unexpected close schedules a backoff-delayed reconnect, and firing it opens a new socket', async () => {
     const streamId = await store.create('Aria', 'feminine');
     store.enterSyncMode(streamId);
@@ -860,6 +933,107 @@ describe('StreamSyncSession', () => {
     expect(persisted.find((e) => e.id === pendingEvent.id)?.seq).toBe(3);
     expect(persisted.find((e) => e.id === missingTailEvent.id)?.seq).toBe(2);
     session.stop();
+  });
+
+  // --- Final fix wave, Minor finding 6 (T11b reject-side partition, parked) ----------------------
+
+  it('T11b round 2 (parked): a reject frame naming only a pending id during an in-flight resume drops it normally, no divergence', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const missingTailEvent = store.events().at(-1)!; // committed seq 2 — never uploaded (resume target)
+
+    store.enterSyncMode(streamId);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Backlog' } }]);
+    const pendingEvent = store.events().at(-1)!;
+
+    const onDivergence = vi.fn();
+    const { session, Factory } = newSession(streamId, { onDivergence });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    // A resume is now in flight (missingTailEvent's own ack hasn't arrived yet). This reject
+    // names ONLY the ordinary pending row.
+    ws.emitMessage({
+      t: 'reject',
+      rid: 'r2',
+      results: [{ id: pendingEvent.id, code: 'invalid', message: 'nope' }],
+    });
+    await flush();
+
+    expect(onDivergence).not.toHaveBeenCalled();
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.find((e) => e.id === pendingEvent.id)).toBeUndefined(); // dropped normally
+    // The resume itself is untouched — still unresolved, still committed at its original seq.
+    expect(persisted.find((e) => e.id === missingTailEvent.id)?.seq).toBe(2);
+
+    // Completing the resume afterward still works normally.
+    ws.emitMessage({
+      t: 'ack',
+      rid: 'r3',
+      results: [{ id: missingTailEvent.id, seq: missingTailEvent.seq! }],
+    });
+    await flush();
+    expect(onDivergence).not.toHaveBeenCalled();
+    session.stop();
+  });
+
+  it('T11b round 2 (parked): a mixed reject frame (a resume id + a pending id together) diverges the resume AND still drops the pending id', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Two' } }]);
+    const missingTailEvent = store.events().at(-1)!; // committed seq 2 — never uploaded (resume target)
+
+    store.enterSyncMode(streamId);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Backlog' } }]);
+    const pendingEvent = store.events().at(-1)!;
+
+    const onDivergence = vi.fn();
+    const { session, Factory } = newSession(streamId, { onDivergence });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    // ONE frame, both ids together — same "the server has no reason to split them" shape the
+    // mixed-ack spec above uses.
+    ws.emitMessage({
+      t: 'reject',
+      rid: 'r2',
+      results: [
+        { id: missingTailEvent.id, code: 'invalid', message: 'nope' },
+        { id: pendingEvent.id, code: 'invalid', message: 'nope' },
+      ],
+    });
+    await flush();
+
+    expect(onDivergence).toHaveBeenCalledTimes(1);
+    const persisted = await eventsRepository.byStream(streamId);
+    // The resume-tail id is COMMITTED history — never silently dropped, even though its own
+    // resume diverges (mirrors the non-mixed "reject during resume" spec above).
+    expect(persisted.find((e) => e.id === missingTailEvent.id)?.seq).toBe(2);
+    // The unrelated pending id still drops through the ordinary path regardless.
+    expect(persisted.find((e) => e.id === pendingEvent.id)).toBeUndefined();
   });
 });
 

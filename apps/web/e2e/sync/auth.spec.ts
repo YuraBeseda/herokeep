@@ -17,17 +17,16 @@ import {
  * `serve-with-proxy.mjs`, the ADR-012 recovery-codes step, and cross-device visibility of a
  * character created after login.
  *
- * `SyncService`'s reconciliation only runs when `AuthService.status`/`LeaderService.isLeader`
- * CHANGE value (`sync.service.ts`'s constructor `effect()`) — it does not watch for brand-new
- * local characters created mid-session. A character created while ALREADY authed+leader (this
- * flow's own order: register -> create) is therefore written locally as an ordinary committed
- * stream first, exactly like solo/offline mode, and only becomes a PENDING/synced stream once
- * reconciliation runs again — which a `page.reload()` triggers for real (a fresh bootstrap
- * re-fires `AuthService.init()` and leader election from scratch, landing on the SAME still-valid
- * session cookie). That reload is not a workaround for a broken assertion — it is the same
- * "close and reopen the app" trigger a real device goes through, and the scenario's actual
- * assertion (a second, completely independent browser context sees the character with the right
- * sheet) is exactly as strict either way.
+ * Final fix wave, Important finding 2: `SyncService`'s reconciliation used to run ONLY when
+ * `AuthService.status`/`LeaderService.isLeader` CHANGE value (`sync.service.ts`'s constructor
+ * `effect()`) — it never watched for a brand-new local character created mid-session, so a
+ * character created while ALREADY authed+leader (this flow's own order: register -> create) sat
+ * as an ordinary local-committed stream, exactly like solo/offline mode, until some LATER
+ * auth/leader transition (a login, a reload) happened to re-run reconciliation. `CharacterStore`
+ * now fires `onCreate` for every `create()`, which `SyncService` subscribes to directly — scenario
+ * (a) below asserts the new character reaches the server with NO `page.reload()` (and no other
+ * auth/leader transition) anywhere in between, proving that hook rather than relying on a reload
+ * to paper over it.
  */
 
 test.describe('auth: register, recovery codes, and cross-device visibility', () => {
@@ -55,9 +54,7 @@ test.describe('auth: register, recovery codes, and cross-device visibility', () 
       await expect(hpValueLocator(page, 'Max')).toHaveText('12');
     });
 
-    await test.step('a reload re-runs reconciliation and uploads the new character', async () => {
-      await page.reload();
-      await expect(page.locator('.play-tab')).toBeVisible();
+    await test.step('the new character uploads to the server on its own — no reload needed', async () => {
       await page.goto('/characters');
       await expect(syncBadgeForName(page, characterName)).toHaveAttribute(
         'data-sync-state',

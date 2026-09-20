@@ -20,6 +20,7 @@ import {
   HeroImportBadManifestError,
   HeroImportBadZipError,
   HeroImportHashMismatchError,
+  HeroImportSyncedStreamError,
   HeroReaderService,
 } from '@shared/services/export/hero-reader.service';
 import { AuthService } from '@shared/services/auth/auth.service';
@@ -222,6 +223,7 @@ export class CharactersListComponent {
       error instanceof HeroImportBadZipError ||
       error instanceof HeroImportBadManifestError ||
       error instanceof HeroImportHashMismatchError ||
+      error instanceof HeroImportSyncedStreamError ||
       error instanceof CharacterStoreNotLeaderError
     ) {
       return [error.code];

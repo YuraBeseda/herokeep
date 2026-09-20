@@ -182,6 +182,11 @@ export class SyncService {
       const leader = this.leaderService.isLeader();
       this.onAuthLeaderChange(status, leader);
     });
+    // Fix-wave review, Important finding 2: the effect above only re-fires on a `status`/
+    // `isLeader` CHANGE — a character `create()`d while ALREADY authed+leader wouldn't otherwise
+    // upload until some LATER transition re-ran `reconcile()` (a login, a reload). `onCreate`
+    // (`CharacterStore`'s own class doc) is the narrow hook that catches exactly this case.
+    this.characterStore.onCreate((streamId) => this.onCharacterCreated(streamId));
   }
 
   /** Per-streamId, cached `Signal` of the stream's current welcome-reported quota (R-pf1); `null`
@@ -213,8 +218,20 @@ export class SyncService {
     return cached;
   }
 
-  /** `characters-list.component.ts`'s delete flow — see class doc's "Deletion" section. */
+  /** `characters-list.component.ts`'s delete flow — see class doc's "Deletion" section.
+   *
+   * Fix-wave review, Minor finding 4: bumps `reconcileGeneration` FIRST, same as
+   * `enterIdleMode`/`enterLeaderMode` already do — an in-flight one-shot `restore()`/`upload()`
+   * for THIS (or any other) stream, started before this delete, re-checks `stillReconciling`
+   * before every trailing write (its own `startSession`, and `upload`'s `restore` fallback); this
+   * makes that check fail, so a gated restore that resolves AFTER the delete can no longer
+   * resurrect the just-deleted row. Coarser than strictly necessary (it also retires every OTHER
+   * in-flight reconcile op, not just this stream's), but matches the existing generation-based
+   * guard's own granularity — a delete is rare enough that superseding a same-tick unrelated
+   * upload/restore, which simply resumes on the next login/leader change, is an acceptable cost
+   * for a guarantee the alternative (a per-stream generation) doesn't buy anything more for here. */
   async deleteEverywhere(characterId: string): Promise<void> {
+    this.reconcileGeneration++;
     this.removeSession(characterId);
     await this.characterStore.deleteCharacter(characterId);
 
@@ -320,6 +337,24 @@ export class SyncService {
 
   private stillReconciling(generation: number): boolean {
     return generation === this.reconcileGeneration && this.mode === 'leader';
+  }
+
+  /** Fix-wave review, Important finding 2 — `CharacterStore.onCreate`'s subscriber. Only acts
+   * when this tab is ALREADY the leader mode's own live generation (an idle/follower tab has no
+   * business uploading anything; a genuinely fresh `authed`+leader transition instead goes through
+   * the ordinary `reconcile()` path, which will pick this same brand-new row up as "local-only"
+   * regardless — this hook is purely for the "already leader when created" case `reconcile()`'s
+   * own change-triggered effect can't see). Reuses `upload()` verbatim — a fresh local-only row is
+   * exactly what that method already handles, generation-guards included. */
+  private onCharacterCreated(streamId: string): void {
+    if (this.mode !== 'leader') return;
+    const generation = this.reconcileGeneration;
+    void (async () => {
+      const row = await this.charactersRepository.get(streamId);
+      if (!row) return; // deleted again before this async hop landed
+      if (!this.stillReconciling(generation)) return;
+      await this.upload(row, generation);
+    })();
   }
 
   private async upload(row: CharacterRow, generation: number): Promise<void> {
@@ -491,6 +526,14 @@ export class SyncService {
       this.toastService.show('sync.restore.failed');
       return;
     }
+
+    // Fix-wave review, Minor finding 4: re-checked HERE too, not just before the trailing
+    // `startSession` below — `deleteEverywhere` bumps `reconcileGeneration` precisely so THIS
+    // check can catch a delete (of this stream, or any other — same coarse generation-wide
+    // supersession `enterIdleMode`/`enterLeaderMode` already use) that raced this restore's own
+    // socket round trip: without it, `resetStreamFromServer` would unconditionally resurrect a
+    // just-deleted character's row/events from the server's copy, superseded generation or not.
+    if (!this.stillReconciling(generation)) return;
 
     collected.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
     await this.characterStore.resetStreamFromServer(streamId, collected);

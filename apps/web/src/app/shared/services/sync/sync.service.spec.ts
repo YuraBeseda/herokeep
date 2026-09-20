@@ -376,6 +376,69 @@ describe('SyncService', () => {
     expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
   });
 
+  // --- Final fix wave, Minor finding 4 -----------------------------------------------------------
+
+  it('deleting a character while its restore is gated in-flight does not resurrect it — the row stays gone', async () => {
+    const serverId = '00000000-0000-4000-8000-0000000000ab';
+    const streamId = `char:${serverId}`;
+
+    globalThis.fetch = routedFetch({
+      '/api/characters': () =>
+        jsonResponse(200, [{ id: serverId, name: 'ToDelete', system: 'srd-5e-2024' }]),
+    });
+
+    leaderState.set(true);
+    const sync = TestBed.inject(SyncService);
+    statusState.set('authed');
+    TestBed.tick();
+    await flush();
+
+    const catchupSocket = FakeWebSocket.instances[0];
+    catchupSocket.emitOpen();
+    await flush();
+
+    catchupSocket.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    // GATED: `welcome` landed (headSeq known: 1) but the `events` catch-up frame `restore()`'s
+    // own promise is still waiting on hasn't arrived yet — this character has NEVER existed
+    // locally at any point up to here. Delete it now, racing the still in-flight restore.
+    await sync.deleteEverywhere(streamId);
+
+    const createdEvent: Event = {
+      id: '11111111-1111-7111-8111-111111111112',
+      stream: streamId,
+      seq: 1,
+      ts: new Date().toISOString(),
+      actor: { userId: 'local', deviceId: 'd1', role: 'owner' },
+      type: 'character.created',
+      v: 1,
+      payload: {
+        name: 'ToDelete',
+        system: 'srd-5e-2024',
+        corePack: { id: corePack.id, version: corePack.version },
+        engineVersion: '1',
+        grammaticalGender: 'feminine',
+      },
+    } as unknown as Event;
+    catchupSocket.emitMessage({ t: 'events', stream: streamId, events: [createdEvent] });
+    await flush();
+
+    const charactersRepository = TestBed.inject(CharactersRepository);
+    expect(await charactersRepository.get(streamId)).toBeUndefined();
+    const eventsRepository = TestBed.inject(EventsRepository);
+    expect(await eventsRepository.byStream(streamId)).toEqual([]);
+    // No session was resurrected for it either.
+    expect(sync.syncState(streamId)()).toBe('offline');
+  });
+
   it('logout stops the session and leaveSyncMode, but pending rows are left untouched', async () => {
     leaderState.set(true);
     const store = TestBed.inject(CharacterStore);
@@ -621,5 +684,79 @@ describe('SyncService', () => {
     // resurrected under the current ('anon'/idle) mode.
     expect(sync.syncState(streamId)()).toBe('offline');
     expect(FakeWebSocket.instances).toHaveLength(1); // only the one-shot upload socket ever opened
+  });
+
+  // --- Final fix wave, Important finding 2 -----------------------------------------------------
+
+  it('a character created while ALREADY authed+leader uploads immediately — no reload/re-auth needed', async () => {
+    leaderState.set(true);
+    statusState.set('authed');
+    globalThis.fetch = routedFetch({ '/api/characters': () => jsonResponse(200, []) });
+
+    const sync = TestBed.inject(SyncService);
+    TestBed.tick();
+    await flush(); // reconcile() runs against an EMPTY local list — nothing to upload yet
+
+    const store = TestBed.inject(CharacterStore);
+    const postBodies: unknown[] = [];
+    globalThis.fetch = routedFetch({
+      '/api/characters': (init) => {
+        if (init?.method === 'POST') {
+          postBodies.push(JSON.parse(init.body as string));
+          return jsonResponse(201, { id: 'ignored', name: 'Aria', system: 'srd-5e-2024' });
+        }
+        return jsonResponse(200, []);
+      },
+    });
+
+    // No further `statusState`/`leaderState` change and no reload/re-injection of anything —
+    // this is the ENTIRE trigger this fix adds: `CharacterStore.create` itself.
+    const streamId = await store.create('Aria', 'feminine');
+    const bareId = streamId.slice('char:'.length);
+    const committedEvent = store.events()[0];
+    await flush();
+
+    expect(postBodies).toEqual([{ id: bareId, name: 'Aria', system: 'srd-5e-2024' }]);
+
+    const uploadSocket = FakeWebSocket.instances[0];
+    expect(uploadSocket).toBeDefined();
+    uploadSocket.emitOpen();
+    await flush();
+    uploadSocket.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+    });
+    await flush();
+    uploadSocket.emitMessage({
+      t: 'ack',
+      rid: 'r2',
+      results: [{ id: committedEvent.id, seq: committedEvent.seq! }],
+    });
+    await flush();
+
+    // Verified — an ongoing session socket now opens for the new stream, same as the "already
+    // local-only at reconcile time" upload flow's own trailing `startSession`.
+    expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
+    expect(sync.syncState(streamId)()).not.toBe('offline');
+  });
+
+  it('a character created while anon/idle does NOT trigger an upload attempt', async () => {
+    let fetchCalled = false;
+    globalThis.fetch = vi.fn<typeof fetch>(() => {
+      fetchCalled = true;
+      return Promise.resolve(jsonResponse(200, []));
+    });
+    leaderState.set(true); // CharacterStore.create needs leadership; SyncService stays idle (anon)
+    TestBed.inject(SyncService);
+    const store = TestBed.inject(CharacterStore);
+
+    await store.create('Aria', 'feminine');
+    await flush();
+
+    expect(fetchCalled).toBe(false);
   });
 });

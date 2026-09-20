@@ -4,9 +4,9 @@ This checklist covers what the automated suites deliberately don't: real install
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
 number. It supplements, and never replaces, the automated gates:
 
-- `pnpm check` — format, lint, typecheck, engine + web unit tests (562 web tests as of this plan;
-  includes the dev-mode perf-log spec below).
-- `pnpm --filter web e2e` — Playwright against the real production build: 8 spec files, 20 tests
+- `pnpm check` — format, lint, typecheck, engine + web unit tests (819 web tests as of the plan-8
+  client-sync final fix wave; includes the dev-mode perf-log spec below).
+- `pnpm --filter web e2e` — Playwright against the real production build: 8 spec files, 23 tests
   (offline, library/search/locale, character creation, level-up, play actions, export/import,
   axe accessibility).
 - `packages/engine/test/perf.test.ts` — an automated perf *tripwire* (median of 5 reduce+derive

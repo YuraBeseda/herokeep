@@ -23,6 +23,7 @@ import {
   HeroImportBadManifestError,
   HeroImportBadZipError,
   HeroImportHashMismatchError,
+  HeroImportSyncedStreamError,
   HeroReaderService,
   mergeEventsBySeq,
 } from './hero-reader.service';
@@ -612,6 +613,63 @@ describe('HeroReaderService', () => {
       expect(await eventsRepository.byStream(streamId)).toEqual([]);
     },
   );
+
+  // --- Final fix wave, Important finding 1 (plan-9 design item: "import-while-synced merge") ---
+
+  it('refuses to import over an existing character whose stream is currently in sync mode, writing nothing', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const charactersRepository = TestBed.inject(CharactersRepository);
+    const writer = TestBed.inject(HeroWriterService);
+    const reader = TestBed.inject(HeroReaderService);
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const created = mkEvent(uuid(100), 'character.created', createdPayload('Synced'));
+    await eventsRepository.append([created]);
+    await charactersRepository.upsertFromFacts(streamId, reduce([created]));
+    const { blob } = await writer.export(streamId);
+
+    // Diverge locally AFTER export, same shape the "diverged copy" merge spec above uses — so a
+    // successful merge would be clearly detectable (it isn't reached here).
+    const renamed = mkEvent(uuid(101), 'character.renamed', { name: 'Renamed after export' });
+    await eventsRepository.append([renamed]);
+
+    characterStore.enterSyncMode(streamId); // this stream now has a live sync session
+
+    await expect(reader.import(bundleFile(blob))).rejects.toBeInstanceOf(
+      HeroImportSyncedStreamError,
+    );
+
+    // Nothing written: the pre-import events, byte-identical — including the library-index row,
+    // which is never upserted here (only `CharacterStore` normally keeps it current; this test
+    // appends `renamed` directly via `EventsRepository`, bypassing that — so its own pre-import
+    // value, from the ORIGINAL `upsertFromFacts` call above, is what "untouched" means here).
+    const events = await eventsRepository.byStream(streamId);
+    expect(events.map((e) => e.id)).toEqual([created.id, renamed.id]);
+    const row = await charactersRepository.get(streamId);
+    expect(row?.name).toBe('Synced');
+  });
+
+  it('still imports a bundle for an UNKNOWN local character id, even while an UNRELATED stream is in sync mode', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const charactersRepository = TestBed.inject(CharactersRepository);
+    const writer = TestBed.inject(HeroWriterService);
+    const reader = TestBed.inject(HeroReaderService);
+    const characterStore = TestBed.inject(CharacterStore);
+
+    await eventsRepository.append([
+      mkEvent(uuid(102), 'character.created', createdPayload('Fresh')),
+    ]);
+    const { blob } = await writer.export(streamId);
+    // characterId unknown locally at import time — the 'created' path, which the sync-mode guard
+    // never checks (see `HeroImportSyncedStreamError`'s own doc: only the MERGE branch does).
+    await eventsRepository.removeStream(streamId);
+    await charactersRepository.remove(streamId);
+
+    characterStore.enterSyncMode(streamId);
+
+    const result = await reader.import(bundleFile(blob));
+    expect(result.mode).toBe('created');
+  });
 });
 
 describe('HeroReaderService when this tab is not the leader', () => {

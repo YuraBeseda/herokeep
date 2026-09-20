@@ -22,6 +22,7 @@
       "import-failed-bad-manifest": "That .hero bundle's manifest is invalid.",
       "import-failed-bad-event": "That .hero bundle has an invalid event (#{index}).",
       "import-failed-hash-mismatch": "That .hero bundle's image data doesn't match its manifest.",
+      "import-failed-synced": "Import unavailable while this character is syncing.",
       "import-failed-generic": "Couldn't import that file. Try again."
     },
     "installBanner": {

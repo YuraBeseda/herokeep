@@ -349,12 +349,24 @@ export class StreamSyncSession {
     this.connect();
   }
 
+  /** Fix-wave review, Minor finding 3: `hello.pending` must respect the SAME ≤50-events-AND-
+   * ≤128KB-per-frame cap doc-03 puts on every `append` frame — capping by COUNT alone (the
+   * pre-fix `pending.slice(0, MAX_APPEND_EVENTS)`) let 50 sufficiently large pending events push a
+   * single `hello` past `WS_MESSAGE_BYTES_MAX`, which `SyncSocket.send` then throws for
+   * synchronously, INSIDE `onOpen` — with nothing catching it there, the session never sends a
+   * `hello` at all and sits stuck 'connecting' forever. `chunkEventsForAppend` already computes
+   * exactly the byte-safe-AND-count-safe prefix this needs (its own doc): reusing it here means
+   * `hello.pending` carries that first chunk verbatim, and everything after it becomes
+   * `leftoverPending` — the SAME overflow field/flush-after-`welcome` mechanism the count-only cap
+   * already used, just now fed a byte-safe (not just count-safe) prefix. */
   private async sendHello(): Promise<void> {
     if (this.stopped || !this.socket) return;
     const rows = await this.eventsRepository.byStream(this.streamId);
     const committed = rows.filter((e) => e.seq !== undefined);
     const pending = rows.filter((e) => e.seq === undefined);
     const lastSeq = committed.length > 0 ? (committed[committed.length - 1].seq ?? 0) : 0;
+
+    const helloPending = chunkEventsForAppend(pending)[0] ?? [];
 
     const hello: HelloMsg = {
       t: 'hello',
@@ -363,9 +375,9 @@ export class StreamSyncSession {
       app: APP_VERSION,
       streams: [{ id: this.streamId, lastSeq }],
       have: [],
-      pending: pending.slice(0, MAX_APPEND_EVENTS),
+      pending: helloPending,
     };
-    this.leftoverPending = pending.slice(MAX_APPEND_EVENTS);
+    this.leftoverPending = pending.slice(helloPending.length);
     this.send(hello);
   }
 

@@ -79,6 +79,31 @@ export class HeroImportHashMismatchError extends Error {
   }
 }
 
+/**
+ * Fix-wave review, Important finding 1 (plan-9 design item: "import-while-synced merge") — the
+ * target `characterId` is KNOWN locally (this would be a `mode: 'merged'` import) AND its stream
+ * is currently in `CharacterStore`'s PENDING-write/sync fork (`isSyncMode`). Merging a bundle into
+ * such a stream would re-sequence its local history via `mergeEventsBySeq`/
+ * `EventsRepository.replaceStream` out from under a live (or about-to-reconnect) sync session: the
+ * next `hello` this stream sends reads the rewritten committed head as a local-ahead condition,
+ * `StreamSyncSession`'s own resume-verification then fails (the resent tail's ids/seqs no longer
+ * match what the merge produced), and `SyncService`'s server-wins `restore()` silently overwrites
+ * the just-merged import with the server's untouched copy — the import appears to succeed in the
+ * UI, then vanishes on the next reconnect. A real fix means reconciling a merge's re-sequenced
+ * seqs against a live pending/ack lifecycle (whether the merge itself should even be allowed to
+ * touch already-committed seqs, and how to re-derive `pendingOrder` for anything still pending) —
+ * deferred as a plan-9 design item; for now this is refused outright rather than attempted
+ * unsafely. Importing a bundle whose `characterId` is UNKNOWN locally (the `created` branch) is
+ * unaffected — a brand-new local stream has no sync session to race.
+ */
+export class HeroImportSyncedStreamError extends Error {
+  readonly code = 'characters.list.toast.import-failed-synced';
+  constructor() {
+    super('Cannot import a bundle over a character that is currently syncing.');
+    this.name = 'HeroImportSyncedStreamError';
+  }
+}
+
 export interface ImportResult {
   readonly characterId: string;
   readonly name: string;
@@ -200,6 +225,13 @@ export class HeroReaderService {
     return this.characterStore.runExclusive(async () => {
       const existingRow = await this.charactersRepository.get(characterId);
       const mode: ImportResult['mode'] = existingRow ? 'merged' : 'created';
+
+      // Fix-wave review, Important finding 1 — see `HeroImportSyncedStreamError`'s own doc.
+      // Checked here, BEFORE any write (`storeImages` included), and only for the MERGE path: a
+      // genuinely unknown `characterId` can't already have a live sync session.
+      if (mode === 'merged' && this.characterStore.isSyncMode(characterId)) {
+        throw new HeroImportSyncedStreamError();
+      }
 
       await this.storeImages(images);
 
