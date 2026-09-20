@@ -535,6 +535,112 @@ describe('cross-stream mirror verification', () => {
   });
 });
 
+describe('roster ownership: first-writer-wins on campaign.character_joined', () => {
+  // [final whole-branch review, Critical] refineAppendPermission's ownership check for
+  // campaign.character_joined/left was SELF-referential (`payload.ownerId === actor.userId`) —
+  // it never checked whether the claimed `characterId` was ALREADY linked to someone else.
+  // `verifyCharacterMirror`'s currency check doesn't catch this either: it only proves the
+  // character is CURRENTLY linked to THIS campaign, never WHO the recorded owner is. An
+  // established member could therefore re-claim another member's ALREADY-linked character simply
+  // by sending `campaign.character_joined {characterId, ownerId: themselves}` — no forged mirror
+  // event required, since the character genuinely IS linked (just to someone else).
+  it("an established member cannot claim ANOTHER member's already-linked character — rejected, roster unchanged, the impostor's subscribe stays refused, the real owner's gateway writes keep working", async () => {
+    const { characterId, char } = await seedJoinedCharacter(gw); // A owns and has joined characterId
+    await gw.campaignActor.append(
+      [makeCampEvent('member.joined', { userId: MEMBER_B, displayName: 'Bob', role: 'player' }, memberActor(MEMBER_B))],
+      memberActor(MEMBER_B),
+    );
+
+    const forgedClaim = makeCampEvent(
+      'campaign.character_joined',
+      { characterId, ownerId: MEMBER_B, name: "Alice's hero, claimed" },
+      memberActor(MEMBER_B),
+    );
+    const outcome = await gw.campaignActor.append([forgedClaim], memberActor(MEMBER_B));
+
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected[0]).toMatchObject({ id: forgedClaim.id, code: 'forbidden' });
+    const meta = await gw.campaignActor.getCampaignMeta();
+    expect(meta.characters.get(characterId)).toBe(MEMBER_A); // roster unchanged — still A's
+
+    // B's subscribe (which WOULD have been legitimate had the hijack landed) stays refused: B is
+    // not this campaign's dm, and the roster still names A as owner, not B.
+    const bobConn = gw.campConnections.accept({}, { userId: MEMBER_B, role: 'member', subs: [] });
+    await gw.campaignActor.handleMessage(bobConn, { t: 'subscribe', stream: `char:${characterId}`, lastSeq: 0 });
+    expect(gw.campConnections.framesFor(bobConn)).toEqual([]);
+    expect(gw.campConnections.getAttachment(bobConn).subs).toEqual([]);
+
+    // A's own gateway-forwarded writes for their OWN character still work — `mapGatewayActor`'s
+    // ownership branch still resolves A correctly since the roster entry was never overwritten.
+    const beforeLength = char.store.length;
+    const archived = makeCharEvent(characterId, 'character.archived', {}, memberActor(MEMBER_A));
+    const forwardOutcome = await gw.campaignActor.append([archived], memberActor(MEMBER_A));
+    expect(forwardOutcome.rejected).toEqual([]);
+    expect(char.store.length).toBe(beforeLength + 1);
+  });
+
+  it('the SAME owner re-joining their OWN character after a genuine character_left still succeeds (leave-then-rejoin is the sanctioned transfer path)', async () => {
+    const { characterId, char } = await seedJoinedCharacter(gw); // A joined
+
+    // A genuine, full leave (char-side then campaign-side) — frees the roster slot.
+    await char.actor.append(
+      [makeCharEvent(characterId, 'character.campaign_left', { campaignId: CAMPAIGN_UUID }, ownerActor(MEMBER_A))],
+      ownerActor(MEMBER_A),
+    );
+    await gw.campaignActor.append(
+      [
+        makeCampEvent(
+          'campaign.character_left',
+          { characterId, ownerId: MEMBER_A, name: 'Alice the Bold' },
+          memberActor(MEMBER_A),
+        ),
+      ],
+      memberActor(MEMBER_A),
+    );
+    let meta = await gw.campaignActor.getCampaignMeta();
+    expect(meta.characters.has(characterId)).toBe(false); // genuinely freed, not locked forever
+
+    // The SAME owner rejoins — first-writer-wins never fires because there is no EXISTING (and
+    // conflicting) roster entry left to collide with.
+    await char.actor.append(
+      [makeCharEvent(characterId, 'character.campaign_joined', { campaignId: CAMPAIGN_UUID }, ownerActor(MEMBER_A))],
+      ownerActor(MEMBER_A),
+    );
+    const rejoin = makeCampEvent(
+      'campaign.character_joined',
+      { characterId, ownerId: MEMBER_A, name: 'Alice the Bold, returned' },
+      memberActor(MEMBER_A),
+    );
+    const outcome = await gw.campaignActor.append([rejoin], memberActor(MEMBER_A));
+
+    expect(outcome.rejected).toEqual([]);
+    meta = await gw.campaignActor.getCampaignMeta();
+    expect(meta.characters.get(characterId)).toBe(MEMBER_A);
+
+    // Fully functional again: a gateway-forwarded owner write succeeds post-rejoin.
+    const beforeLength = char.store.length;
+    const archived = makeCharEvent(characterId, 'character.archived', {}, memberActor(MEMBER_A));
+    const forwardOutcome = await gw.campaignActor.append([archived], memberActor(MEMBER_A));
+    expect(forwardOutcome.rejected).toEqual([]);
+    expect(char.store.length).toBe(beforeLength + 1);
+  });
+
+  it('re-sending the IDENTICAL campaign.character_joined (same owner, same characterId) is a no-op, never rejected by first-writer-wins', async () => {
+    const { characterId } = await seedJoinedCharacter(gw); // A joined already
+
+    const resend = makeCampEvent(
+      'campaign.character_joined',
+      { characterId, ownerId: MEMBER_A, name: 'Alice the Bold' },
+      memberActor(MEMBER_A),
+    );
+    const outcome = await gw.campaignActor.append([resend], memberActor(MEMBER_A));
+
+    expect(outcome.rejected).toEqual([]);
+    const meta = await gw.campaignActor.getCampaignMeta();
+    expect(meta.characters.get(characterId)).toBe(MEMBER_A);
+  });
+});
+
 describe('after-commit notify fan-out (CampaignActor.handleNotify)', () => {
   async function settingsWithPartySheets(value: 'full' | 'overview' | 'none') {
     const meta = await gw.campaignActor.getCampaignMeta();

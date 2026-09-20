@@ -583,6 +583,32 @@ export class CampaignActor extends StreamActor {
    *   (b) `campaign.character_joined`/`campaign.character_left` and `party.overview_updated`
    *       require the actor to BE the character's owner (per the event's own `ownerId` payload
    *       field for the join/left pair, per `meta.characters` for the overview post) — DM exempt.
+   *   (b2) [final whole-branch review, Critical — first-writer-wins roster ownership]
+   *       `campaign.character_joined` is ADDITIONALLY rejected when `meta.characters` ALREADY
+   *       records a DIFFERENT `ownerId` for that `characterId`. Without this, (b)'s check alone is
+   *       self-referential — it only proves `payload.ownerId === actor.userId`, never that the
+   *       CLAIMED character isn't already someone else's — so an established member B could send
+   *       `campaign.character_joined {characterId: C, ownerId: B}` for member A's ALREADY-linked
+   *       character C: the mirror-verify (`verifyCharacterMirror`) only checks that C is CURRENTLY
+   *       linked to THIS campaign (true — A linked it), never WHO the linked owner is, so it
+   *       passes too, and `applyMetaHooks` would overwrite `meta.characters.set(C, B)`. That single
+   *       overwrite is a full roster hijack: B gains DM-subscribe-equivalent catch-up of C's FULL
+   *       history (bypassing `visibility.partySheets` `'none'`/`'overview'` entirely — a doc-08
+   *       violation reaching A's private `note.*` events), live `handleNotify` delivery as C's
+   *       "owner", the ability to author `party.overview_updated` for C, and — because
+   *       `mapGatewayActor`'s ownership branch now reads `meta.characters.get(characterId) ===
+   *       actor.userId`, B's userId — A's OWN gateway-forwarded writes for their own character
+   *       start being rejected `forbidden` (a member-triggered DoS against the real owner). NO new
+   *       `Rpc` plumbing needed: `meta.characters` (already read into this method's `meta`
+   *       parameter) is sufficient. Ownership TRANSFER is deliberately NOT supported by this check
+   *       at all — it requires `campaign.character_left` (freeing the roster slot; requires the
+   *       CURRENT recorded owner or the DM, per (b)'s own check) THEN a fresh
+   *       `campaign.character_joined` — the same "no half-join" two-step symmetry every other
+   *       mirror-verified transition in this file already uses, not a special case. Applies
+   *       uniformly regardless of role — the DM is NOT exempt from this specific check (unlike
+   *       (b)'s ownership check): re-pointing an EXISTING roster entry to a different owner without
+   *       going through `character_left` first is exactly the hijack shape this closes, and a DM
+   *       wanting to reassign a pregen goes through the same left-then-rejoin step as anyone else.
    *   (c) `member.renamed` is inherently self-only: its payload carries no OTHER user's id at all
    *       (`{displayName}`), so there is no separate guard to write — `applyMetaHooks` below
    *       always applies it to `actor.userId`, never anything from the payload.
@@ -647,6 +673,18 @@ export class CampaignActor extends StreamActor {
           code: 'forbidden',
           message: `event.forbidden: ${event.type} requires the character's own owner or this campaign's dm`,
         };
+      }
+      if (event.type === 'campaign.character_joined' && ownerId !== undefined) {
+        const characterId = readStringField(event.payload, 'characterId');
+        if (characterId !== undefined) {
+          const existingOwnerId = meta.characters.get(characterId);
+          if (existingOwnerId !== undefined && existingOwnerId !== ownerId) {
+            return {
+              code: 'forbidden',
+              message: `event.forbidden: campaign.character_joined: characterId ${characterId} is already linked to a different owner in this campaign's roster (first-writer-wins — leave via campaign.character_left, then re-join, to transfer)`,
+            };
+          }
+        }
       }
     }
 
