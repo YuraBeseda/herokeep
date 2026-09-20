@@ -1078,6 +1078,26 @@ export class CampaignActor extends StreamActor {
    *     to consume `party.overview_updated` instead (a deliberately opaque, DM/owner-controlled
    *     summary — design ruling 5), not this character's raw event stream.
    *
+   * [fix round 2, Critical — ALL THREE branches (`isDm`/`isOwner`/`isVisibleMember`) now ALSO
+   * require `isRostered` (`meta.characters.has(characterId)`, i.e. this character has genuinely
+   * gone through `campaign.character_joined`'s mirror-verified join, not merely a value in a
+   * `character.campaign_joined` payload)] Round-1 review escalated this: `CharacterActor`'s own
+   * `meta.campaignId` — what `notifyCampaignIfLinked` targets — is set from
+   * `character.campaign_joined`'s payload, authored DIRECTLY by the character's TRUE OWNER on
+   * their OWN socket, with NO campaign-side mirror acceptance required first and NO validation
+   * possible (`CharacterActor` has no `Db`/campaign-meta access — its own header comment). A
+   * malicious or simply BUGGY owner client can therefore set `campaignId` to ANY string, including
+   * a campaign this character was never rostered to — every subsequent commit on that character
+   * then reaches THAT foreign campaign's `handleNotify` regardless. Before this fix, `isDm` and
+   * `isVisibleMember` had NO roster check at all (unlike `isOwner`, whose `ownerId !== undefined`
+   * already implied it) — an unrostered stray `campaignId` reached every DM connection
+   * unconditionally, and (since `partySheets: 'full'` is the settings default) every member
+   * connection too: a live doc-08 violation needing ZERO adversarial pull, only a stray/forged
+   * `campaignId` on the PUSH side. `isRostered` closes this uniformly — a character not on THIS
+   * campaign's roster is delivered to NO connection here at all, DM included, matching the same
+   * roster-scoping principle `mapGatewayActor`/`handleSubscribe` already enforce on the
+   * write/subscribe sides (fix round 1).
+   *
    * Not gated on `subs`/subscription state at all — see `handleSubscribe`'s own doc comment for
    * why doing so would be wrong (it would let a DM/owner who hasn't subscribed miss events the
    * authorization matrix unconditionally promises them).
@@ -1087,14 +1107,15 @@ export class CampaignActor extends StreamActor {
     const characterId = fromStream.slice('char:'.length);
     const meta = await this.getCampaignMeta();
     const ownerId = meta.characters.get(characterId);
+    const isRostered = ownerId !== undefined;
     const partySheetsFull = meta.settings?.visibility.partySheets === 'full';
     const frame = { t: 'events' as const, stream: fromStream, events: [...events] };
 
     for (const conn of this.connections.all()) {
       const attachment = this.connections.getAttachment(conn);
-      const isDm = attachment.role === 'dm';
-      const isOwner = ownerId !== undefined && attachment.userId === ownerId;
-      const isVisibleMember = !isDm && !isOwner && partySheetsFull && meta.members.has(attachment.userId);
+      const isDm = isRostered && attachment.role === 'dm';
+      const isOwner = isRostered && attachment.userId === ownerId;
+      const isVisibleMember = isRostered && !isDm && !isOwner && partySheetsFull && meta.members.has(attachment.userId);
       if (isDm || isOwner || isVisibleMember) this.connections.send(conn, frame);
     }
   }

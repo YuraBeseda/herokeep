@@ -599,6 +599,53 @@ describe('after-commit notify fan-out (CampaignActor.handleNotify)', () => {
     const frames = gw.campConnections.framesFor(strangerConn).filter((f) => f.t === 'events');
     expect(frames).toEqual([]);
   });
+
+  // [fix round 2, Critical] `CharacterActor.meta.campaignId` (what `notifyCampaignIfLinked`
+  // targets) is set from `character.campaign_joined`'s payload, authored DIRECTLY by the
+  // character's TRUE OWNER on their own socket — with NO campaign-side mirror acceptance required
+  // first, and `CharacterActor` has no way to validate the payload's `campaignId` at all (no
+  // `Db`/campaign-meta access). A malicious or merely buggy owner client can set `campaignId` to a
+  // campaign this character was NEVER actually joined/rostered to. Before this fix, `isDm` and
+  // `isVisibleMember` had no roster check (`isOwner` alone did, via `ownerId !== undefined`) —
+  // notify from an unrostered character reached every DM connection unconditionally and, since
+  // `partySheets: 'full'` is the settings default, every member connection too. `isRostered`
+  // (`meta.characters.has(characterId)`) now gates ALL THREE branches.
+  it('an UNROSTERED character (owner self-set a stray campaignId, never actually joined this campaign) delivers to NOBODY on notify — dm and member alike', async () => {
+    await gw.campaignActor.append([makeCreated()], dmActor());
+    await gw.campaignActor.append(
+      [
+        makeCampEvent(
+          'member.joined',
+          { userId: MEMBER_A, displayName: 'Alice', role: 'player' },
+          memberActor(MEMBER_A),
+        ),
+      ],
+      memberActor(MEMBER_A),
+    );
+    const characterId = uuidv7();
+    const char = registerCharacter(gw, characterId);
+    await char.actor.append([makeCharCreated(characterId, MEMBER_A)], ownerActor(MEMBER_A));
+    // The owner sets campaignId to THIS campaign directly, WITHOUT ever going through the
+    // roster-verified two-append join sequence (no campaign.character_joined mirror was ever sent
+    // on the campaign side) — exactly the stray/forged-payload scenario the review named.
+    await char.actor.append(
+      [makeCharEvent(characterId, 'character.campaign_joined', { campaignId: CAMPAIGN_UUID }, ownerActor(MEMBER_A))],
+      ownerActor(MEMBER_A),
+    );
+    const preMeta = await gw.campaignActor.getCampaignMeta();
+    expect(preMeta.characters.has(characterId)).toBe(false); // confirm: genuinely never rostered
+
+    const dmConn = gw.campConnections.accept({}, { userId: DM_ID, role: 'dm', subs: [] });
+    const memberConn = gw.campConnections.accept({}, { userId: MEMBER_A, role: 'member', subs: [] });
+
+    const hpChanged = makeCharEvent(characterId, 'hp.changed', { delta: -1, kind: 'damage' }, ownerActor(MEMBER_A));
+    await char.actor.append([hpChanged], ownerActor(MEMBER_A));
+
+    for (const conn of [dmConn, memberConn]) {
+      const frames = gw.campConnections.framesFor(conn).filter((f) => f.t === 'events');
+      expect(frames.some((f) => f.t === 'events' && f.events.some((e) => e.id === hpChanged.id))).toBe(false);
+    }
+  });
 });
 
 describe('DM subscribe: catch-up via Rpc.readStream', () => {
