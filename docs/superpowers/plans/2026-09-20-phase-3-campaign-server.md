@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **STATUS: EXECUTED 2026-09-20 — all 11 tasks complete, campaign server (Phase 3 first slice) done.**
+> **STATUS: EXECUTED 2026-09-20 — all 11 tasks complete, campaign server (Phase 3 first slice) done; merged to main @ 77a355e. Client half = plan 10 (`2026-09-20-phase-3-campaign-client.md`).**
 
 **Goal:** Ship the campaign backend: campaign event schemas in `@hk/protocol`, the `CampaignActor` (permissions with a real `member` role, per-connection read filtering, presence, the char-stream gateway, cross-stream mirrors, blob relay) on BOTH adapters, campaigns/memberships D1 tables + join-by-code routes, `bye` frame emission (a plan-8 ledger flag), maintenance/quota coverage, and conformance scenarios for it all. The campaign CLIENT (host/join UI, party view, DM tools, blob transfer client, super-peer prefetch) is the NEXT plan — this plan ends with a server the conformance suite can drive as DM + members end-to-end.
 
