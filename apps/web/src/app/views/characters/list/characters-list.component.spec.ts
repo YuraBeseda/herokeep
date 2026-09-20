@@ -566,7 +566,29 @@ describe('CharactersListComponent', () => {
       expect(badge?.getAttribute('data-sync-state')).toBe(bucket);
     });
 
-    it('the pending state exposes the pending count in its accessible label', async () => {
+    // Fix-round 1, Important 1: color alone (synced=success vs pending=warning) is not a
+    // reliable distinction for colorblind users, and a `title` tooltip never fires on a touch
+    // device. Every non-pending state must render with NO visible digit — only `pending` shows
+    // one, in the DOM (not just the aria-label), which is itself a structural, non-color signal
+    // distinguishing it from every other state including `synced`.
+    it.each<SyncStateValue>(['synced', 'connecting', 'offline'])(
+      'the %s state never renders a visible digit badge',
+      async (state) => {
+        const { syncStateSignals } = reconfigure({ authStatus: 'authed' });
+        const db = TestBed.inject(HkDb);
+        const row = mkRow();
+        await db.characters.put(row);
+        syncStateSignals.set(row.id, signal(state));
+
+        const fixture = TestBed.createComponent(CharactersListComponent);
+        await fixture.whenStable();
+
+        const compiled = fixture.nativeElement as HTMLElement;
+        expect(compiled.querySelector('.characters-list__sync-badge-count')).toBeNull();
+      },
+    );
+
+    it('the pending state renders the pending count as a visible digit AND in its accessible label', async () => {
       const { syncStateSignals } = reconfigure({ authStatus: 'authed' });
       const db = TestBed.inject(HkDb);
       const row = mkRow();
@@ -579,6 +601,9 @@ describe('CharactersListComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
       const badge = compiled.querySelector('.characters-list__sync-badge');
       expect(badge?.getAttribute('aria-label')).toContain('4');
+      expect(
+        compiled.querySelector('.characters-list__sync-badge-count')?.textContent?.trim(),
+      ).toBe('4');
     });
   });
 });

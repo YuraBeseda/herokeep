@@ -72,7 +72,13 @@
                 [attr.data-sync-state]="syncStateBucket(row.id)"
                 [attr.aria-label]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
                 [title]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
-              ></span>
+              >
+                @if (syncStateBucket(row.id) === 'pending') {
+                  <span class="characters-list__sync-badge-count" aria-hidden="true">{{
+                    syncPendingCount(row.id)
+                  }}</span>
+                }
+              </span>
             }
           </button>
           <button

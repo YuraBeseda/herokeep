@@ -700,6 +700,50 @@ describe('SettingsComponent', () => {
       expect(toastShow).toHaveBeenCalledWith('settings.devices.toast.revoke-failed');
       expect(compiled.querySelectorAll('.settings__devices-row').length).toBe(2);
     });
+
+    // Fix-round 1, Minor 2: `DeviceRow.id` is `string | null` server-side (a pre-migration
+    // session row never got the additive `0001` column) — a null-id row must never offer revoke
+    // (there is no `DELETE /api/me/sessions/null`), and must still render distinctly from any
+    // other null-id row despite `@for`'s fallback track key not being `id`.
+    it('a null-id row (pre-migration session) never offers revoke, and still renders', async () => {
+      globalThis.fetch = routedFetch({
+        '/api/me/sessions': () =>
+          jsonResponse(200, [
+            { id: 'sess-1', deviceLabel: 'Chrome', createdAt: 1, lastSeenAt: 1, current: true },
+            { id: null, deviceLabel: 'Old device', createdAt: 2, lastSeenAt: 2, current: false },
+          ]),
+      });
+      await setup({ authStatus: 'authed', authUser: { userId: 'u1', username: 'A' } });
+      const fixture = TestBed.createComponent(SettingsComponent);
+      await flushAsync(fixture);
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const rows = compiled.querySelectorAll('.settings__devices-row');
+      expect(rows.length).toBe(2);
+
+      const nullIdRow = compiled.querySelector('.settings__devices-row[data-current="false"]');
+      expect(nullIdRow?.textContent).toContain('Old device');
+      expect(nullIdRow?.querySelector('.settings__devices-revoke')).toBeNull();
+    });
+
+    it('two null-id rows both render distinctly (fallback track key, not identity collapse)', async () => {
+      globalThis.fetch = routedFetch({
+        '/api/me/sessions': () =>
+          jsonResponse(200, [
+            { id: null, deviceLabel: 'Old device A', createdAt: 1, lastSeenAt: 1, current: false },
+            { id: null, deviceLabel: 'Old device B', createdAt: 2, lastSeenAt: 2, current: false },
+          ]),
+      });
+      await setup({ authStatus: 'authed', authUser: { userId: 'u1', username: 'A' } });
+      const fixture = TestBed.createComponent(SettingsComponent);
+      await flushAsync(fixture);
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const labels = Array.from(compiled.querySelectorAll('.settings__devices-label')).map((el) =>
+        el.textContent?.trim(),
+      );
+      expect(labels).toEqual(['Old device A', 'Old device B']);
+    });
   });
 
   // --- Quota card (task-9-brief.md) -------------------------------------------------------

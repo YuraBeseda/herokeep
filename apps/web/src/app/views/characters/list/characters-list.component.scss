@@ -88,15 +88,28 @@
   font-size: 0.875rem;
 }
 
-// Sync-status indicator (task-9-brief.md): a small, subtle dot — deliberately no visible text, so
-// it never competes with the name/system meta above it. State is conveyed by color plus the
-// `title`/`aria-label` (both bound in the template) for anyone hovering or using a screen reader.
+// Sync-status indicator (task-9-brief.md, non-color distinction added fix-round 1, Important 1).
+// Color alone (synced=success vs pending=warning) is not a reliable distinction. Colorblind
+// users, and anyone on a touch device unable to hover the title tooltip, have no other signal.
+// Two SHAPE-level cues now carry the same information color does, redundantly.
+//  - Filled (synced, pending) vs hollow/outline (connecting, offline). A filled dot means the
+//    sync session is open with nothing currently in question. A hollow one means not settled
+//    yet (connecting) or not syncing at all (offline).
+//  - Solid outline (connecting) vs DASHED outline (offline) distinguishes those two from each
+//    other without relying on the (motion-guarded, see below) pulse animation alone.
+// The pending state additionally grows to fit its own visible digit count (task-9-brief.md
+// suggestion: render the number beside or inside the dot). A count is information color truly
+// cannot convey at all, so it was never color-only to begin with. The digit is aria-hidden since
+// the outer badge aria-label and title (bound in the template) already speak the full localized
+// pending-count sentence.
 .characters-list__sync-badge {
-  display: inline-block;
-  width: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.5rem;
   height: 0.5rem;
   margin-block-start: var(--space-1);
-  border-radius: 50%;
+  border-radius: var(--radius-l);
   background: var(--text-2);
 
   &[data-sync-state='synced'] {
@@ -104,17 +117,34 @@
   }
 
   &[data-sync-state='pending'] {
+    min-width: 1rem;
+    height: 1rem;
+    padding-inline: 0.25rem;
     background: var(--warning);
   }
 
   &[data-sync-state='connecting'] {
-    background: var(--text-2);
+    background: transparent;
+    border: 1px solid var(--text-2);
     animation: characters-list-sync-pulse 1.2s ease-in-out infinite;
   }
 
   &[data-sync-state='offline'] {
     background: transparent;
-    border: 1px solid var(--text-2);
+    border: 1px dashed var(--text-2);
+  }
+}
+
+.characters-list__sync-badge-count {
+  color: var(--surface-0);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .characters-list__sync-badge[data-sync-state='connecting'] {
+    animation: none;
   }
 }
 

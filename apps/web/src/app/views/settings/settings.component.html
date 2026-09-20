@@ -126,8 +126,12 @@
         <p class="settings__devices-empty">{{ t('devices.empty') }}</p>
       } @else {
         <ul class="settings__devices-list">
-          @for (device of devices(); track device.id) {
-            <li class="settings__devices-row" [attr.data-current]="device.current">
+          @for (device of devices(); track trackDevice(device)) {
+            <li
+              class="settings__devices-row"
+              [attr.data-current]="device.current"
+              [attr.data-id]="device.id"
+            >
               <div class="settings__devices-info">
                 <span class="settings__devices-label">{{ device.deviceLabel }}</span>
                 @if (device.current) {
@@ -137,7 +141,7 @@
                   {{ t('devices.lastSeen', { time: relativeTime(device.lastSeenAt) }) }}
                 </span>
               </div>
-              @if (!device.current) {
+              @if (canRevoke(device)) {
                 <button
                   hk-button
                   [variant]="'danger'"

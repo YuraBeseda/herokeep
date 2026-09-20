@@ -320,7 +320,33 @@ export class SettingsComponent {
     return formatRelativeTime(timestampMs, this.localeService.locale());
   }
 
+  // `@for` track fn (fix-round 1, Minor 2): `DeviceRow.id` is `string | null` server-side
+  // (`apps/api/src/core/auth/sessions.ts`'s own `DeviceRow` — see its doc comment: the sessions
+  // table's PK is a token hash, never exposed over HTTP, so `id` names the ADDITIVE `0001`
+  // migration column instead, which existing pre-migration rows never got and so read `null`).
+  // `track device.id` alone would collapse every null-id row onto the SAME tracked identity —
+  // wrong diffing (Angular would treat two different null-id devices as one element being
+  // updated in place). `deviceLabel:createdAt` is a reasonable fallback identity for those rows:
+  // two sessions from the same device created at the exact same millisecond are vanishingly
+  // unlikely, and even a collision only costs a suboptimal re-render, never a wrong revoke target
+  // (that's `device` itself, passed by value, not derived from this key).
+  protected trackDevice(device: DeviceRow): string {
+    return device.id ?? `${device.deviceLabel}:${device.createdAt}`;
+  }
+
+  // Fix-round 1, Minor 2: a `null` id can never be revoked (there is no
+  // `DELETE /api/me/sessions/null` — the route 404s, and even if it didn't, "null" is not this
+  // row's identity). The template already hides the revoke button whenever this is `false`; this
+  // guard also short-circuits `revokeDevice` itself so nothing downstream could ever fire that
+  // request even if a future template change stopped checking it first.
+  protected canRevoke(device: DeviceRow): boolean {
+    return !device.current && device.id !== null;
+  }
+
   protected async revokeDevice(device: DeviceRow): Promise<void> {
+    if (device.id === null) return;
+    const id = device.id;
+
     const handle = this.dialogService.open(SettingsRevokeDeviceConfirmComponent, {
       data: { deviceLabel: device.deviceLabel },
     });
@@ -328,7 +354,7 @@ export class SettingsComponent {
     if (confirmed !== true) return;
 
     try {
-      await apiJson<void>(`/api/me/sessions/${device.id}`, { method: 'DELETE' });
+      await apiJson<void>(`/api/me/sessions/${id}`, { method: 'DELETE' });
       this.devicesResource.reload();
     } catch {
       this.toastService.show('settings.devices.toast.revoke-failed');
