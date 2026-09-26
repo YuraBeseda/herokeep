@@ -97,4 +97,27 @@ describe('BlobsRepository', () => {
     expect(row?.addedAt).toBeGreaterThanOrEqual(before);
     expect(row?.lastUsedAt).toBeGreaterThanOrEqual(before);
   });
+
+  it('re-put of an existing hash preserves pinned/addedAt/origin, only advancing lastUsedAt (Task-2 fix-round 1)', async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    const db = TestBed.inject(HkDb);
+
+    await repo.put(hash, 'image/webp', new Uint8Array([1, 2, 3]), { kind: 'thumb' });
+    const original = await repo.get(hash);
+    // Simulate a blob the version(3) upgrade (or a future Task 13 pin) already pinned, bypassing
+    // `put`'s own defaults — a re-`put` must not silently unpin/reset-origin this row.
+    await db.blobs.update(hash, { pinned: true, origin: 'peer' });
+    expect((await repo.get(hash))?.pinned).toBe(true);
+
+    const after = Date.now();
+    await repo.put(hash, 'image/webp', new Uint8Array([9, 9, 9, 9]), { kind: 'thumb' });
+
+    const row = await repo.get(hash);
+    expect(row?.pinned).toBe(true);
+    expect(row?.origin).toBe('peer');
+    expect(row?.addedAt).toBe(original?.addedAt);
+    expect(row?.lastUsedAt).toBeGreaterThanOrEqual(after);
+    expect(Array.from(row?.bytes ?? [])).toEqual([9, 9, 9, 9]);
+    expect(row?.size).toBe(4);
+  });
 });
