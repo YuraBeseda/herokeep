@@ -36,6 +36,32 @@ function escapeKeydown(): KeyboardEvent {
   return new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true });
 }
 
+// plan-10 task-7 fix round 1 (finding 1): a real consumer (`LeaveCampaignDialogComponent`) calls
+// `DialogRef.setDismissible` itself, from inside its own busy/settled lifecycle — this fixture
+// exposes the same call via two plain buttons so the specs below can drive it exactly the way a
+// real opened component would, rather than reaching into DI for the instance directly (the content
+// component lives in its OWN child injector, created per `open()` call — not one `TestBed.inject`
+// can reach from the test's own root injector).
+@Component({
+  selector: 'app-test-dismissible-dialog-content',
+  template: `
+    <button type="button" class="block-dismiss" (click)="dialogRef.setDismissible(false)">
+      {{ blockText }}
+    </button>
+    <button type="button" class="allow-dismiss" (click)="dialogRef.setDismissible(true)">
+      {{ allowText }}
+    </button>
+  `,
+})
+class TestDismissibleDialogContentComponent {
+  protected readonly dialogRef = inject(DialogRef);
+  // Interpolated (never a literal text node) — same convention `TestTitledDialogContentComponent`
+  // above already establishes — so `@angular-eslint/template/i18n` has nothing to flag in a
+  // fixture that only ever exists for this spec.
+  protected readonly blockText = 'block';
+  protected readonly allowText = 'allow';
+}
+
 describe('DialogService', () => {
   let service: DialogService;
   let trigger: HTMLButtonElement;
@@ -154,6 +180,57 @@ describe('DialogService', () => {
     handle.close('confirmed');
 
     expect(await handle.closed).toBe('confirmed');
+  });
+
+  // plan-10 task-7 fix round 1 (finding 1): a multi-step operation in flight (e.g. a campaign
+  // leave sequence between its two acks) must not be silently abandonable via ESC/backdrop.
+  describe('DialogRef.setDismissible', () => {
+    it('blocks Escape from closing the dialog while dismissible(false)', () => {
+      const handle = service.open(TestDismissibleDialogContentComponent);
+      TestBed.tick();
+      document.querySelector<HTMLButtonElement>('.block-dismiss')!.click();
+
+      document.body.dispatchEvent(escapeKeydown());
+      TestBed.tick();
+
+      expect(document.querySelector('hk-dialog')).not.toBeNull();
+      handle.close();
+    });
+
+    it('blocks a backdrop click from closing the dialog while dismissible(false)', () => {
+      const handle = service.open(TestDismissibleDialogContentComponent);
+      TestBed.tick();
+      document.querySelector<HTMLButtonElement>('.block-dismiss')!.click();
+
+      document.querySelector<HTMLElement>('.cdk-overlay-backdrop')!.click();
+      TestBed.tick();
+
+      expect(document.querySelector('hk-dialog')).not.toBeNull();
+      handle.close();
+    });
+
+    it('re-allows ESC/backdrop dismissal once set back to dismissible(true)', async () => {
+      const handle = service.open(TestDismissibleDialogContentComponent);
+      TestBed.tick();
+      document.querySelector<HTMLButtonElement>('.block-dismiss')!.click();
+      document.querySelector<HTMLButtonElement>('.allow-dismiss')!.click();
+
+      document.body.dispatchEvent(escapeKeydown());
+      TestBed.tick();
+
+      expect(await handle.closed).toBeUndefined();
+      expect(document.querySelector('hk-dialog')).toBeNull();
+    });
+
+    it("never blocks the opened component's OWN explicit close() — only the passive ESC/backdrop paths", async () => {
+      const handle = service.open(TestDismissibleDialogContentComponent);
+      TestBed.tick();
+      document.querySelector<HTMLButtonElement>('.block-dismiss')!.click();
+
+      handle.close('confirmed');
+
+      expect(await handle.closed).toBe('confirmed');
+    });
   });
 
   // task-12 fix round (axe `aria-dialog-name`, serious — every dialog previously had

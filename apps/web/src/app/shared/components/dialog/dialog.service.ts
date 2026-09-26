@@ -8,10 +8,27 @@ export const DIALOG_DATA = new InjectionToken<unknown>('hk.DIALOG_DATA');
 
 /** Close handle injected into the component a dialog opens, alongside `DIALOG_DATA`. */
 export class DialogRef<R = unknown> {
-  constructor(private readonly closeFn: (result?: R) => void) {}
+  constructor(
+    private readonly closeFn: (result?: R) => void,
+    private readonly setDismissibleFn: (dismissible: boolean) => void = () => undefined,
+  ) {}
 
   close(result?: R): void {
     this.closeFn(result);
+  }
+
+  /**
+   * Blocks ESC/backdrop-click dismissal while `dismissible` is `false` — the TWO passive
+   * dismissal paths `DialogService.open()` wires up itself. The opened component's own explicit
+   * `close()` calls (a Cancel/Confirm button, `resolveClosed` reached some other way) are NEVER
+   * affected by this flag; it exists purely to stop an in-flight, multi-step operation from being
+   * silently abandoned mid-way (plan-10 task-7 fix round 1: a campaign leave sequence that has
+   * already committed step (a) but not yet step (b) — dismissing the dialog there would strand
+   * the character in a half-left state with no visible way back in). Defaults to dismissible;
+   * every OTHER existing dialog never calls this and is unaffected.
+   */
+  setDismissible(dismissible: boolean): void {
+    this.setDismissibleFn(dismissible);
   }
 }
 
@@ -69,7 +86,13 @@ export class DialogService {
       resolveClosed(result);
     };
 
-    const dialogRef = new DialogRef(close);
+    // `DialogRef.setDismissible` (plan-10 task-7 fix round 1) — plain closure state, read by the
+    // backdrop/ESC subscriptions below; the opened component's own `close()` calls never consult
+    // it at all (they call `close` directly, not through this flag).
+    let dismissible = true;
+    const dialogRef = new DialogRef(close, (value) => {
+      dismissible = value;
+    });
     const contentInjector = Injector.create({
       parent: this.injector,
       providers: [
@@ -84,11 +107,13 @@ export class DialogService {
     shellRef.setInput('sheet', !!opts?.sheet);
     shellRef.setInput('ariaLabel', opts?.ariaLabel);
 
-    overlayRef.backdropClick().subscribe(() => close(undefined));
+    overlayRef.backdropClick().subscribe(() => {
+      if (dismissible) close(undefined);
+    });
     overlayRef.keydownEvents().subscribe((event) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        close(undefined);
+        if (dismissible) close(undefined);
       }
     });
 

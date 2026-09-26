@@ -60,6 +60,7 @@
     "loading": "Loading your characters…",
     "pick": "Link this character",
     "resume": "Finish linking",
+    "resumeLeave": "Finish leaving",
     "linkedElsewhere": "Already in another campaign",
     "notSynced": "Not synced yet",
     "notSyncedCta": "Manage sync status",

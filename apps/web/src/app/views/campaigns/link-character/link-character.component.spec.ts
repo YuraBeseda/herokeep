@@ -26,6 +26,13 @@ const CHAR_A = 'char:00000000-0000-4000-8000-0000000000c1';
 const CHAR_B = 'char:00000000-0000-4000-8000-0000000000c2';
 const CHAR_C = 'char:00000000-0000-4000-8000-0000000000c3';
 const CHAR_D = 'char:00000000-0000-4000-8000-0000000000c4';
+const CHAR_E = 'char:00000000-0000-4000-8000-0000000000c5';
+
+interface RosterEntryStub {
+  readonly ownerId: string;
+  readonly name: string;
+  readonly left: boolean;
+}
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -58,13 +65,20 @@ function mkEvent(type: string, payload: unknown, stream: string, seq?: number, i
 
 /** Commits every appended draft INSTANTLY (a `seq` is present from the very first write) — the
  * happy-path fake: `appendAndAwaitAck`'s first poll tick already sees it committed, so tests using
- * this never wait on a real timer. */
-function instantCommitPort(streamId: string): {
+ * this never wait on a real timer. `initialEvents` seeds the port as though `CharacterStore.load()`
+ * had already replayed this character's real storage — needed for a resume/resumeLeave test,
+ * where `runAttempt` re-derives step (a)'s state from THIS signal post-load, not from
+ * `eventsByCharacter` (a separate, `EventsRepository`-only snapshot feeding the picker's own
+ * eligibility badge). */
+function instantCommitPort(
+  streamId: string,
+  initialEvents: Event[] = [],
+): {
   events: WritableSignal<Event[]>;
   appendTx: ReturnType<typeof vi.fn>;
 } {
-  const events = signal<Event[]>([]);
-  let seq = 1;
+  const events = signal<Event[]>(initialEvents);
+  let seq = initialEvents.reduce((max, e) => Math.max(max, e.seq ?? 0), 0) + 1;
   const appendTx = vi.fn((drafts: DraftEvent[]): Promise<void> => {
     const draft = drafts[0];
     events.set([...events(), mkEvent(draft.type, draft.payload, streamId, seq++)]);
@@ -108,6 +122,9 @@ function configure(options: {
   campaignPort?: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
   characterLoad?: ReturnType<typeof vi.fn>;
   user?: AuthUser | null;
+  /** Bare characterId -> roster entry — fix round 1, finding 1's `resumeLeave` detection reads
+   * `CampaignStore.state()?.roster`. */
+  roster?: Record<string, RosterEntryStub>;
 }): {
   characterPort: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
   campaignPort: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
@@ -120,6 +137,7 @@ function configure(options: {
   const campaignPort = options.campaignPort ?? instantCommitPort(`camp:${CAMPAIGN_ID}`);
   const characterLoad = options.characterLoad ?? vi.fn().mockResolvedValue(undefined);
   const user = options.user === undefined ? { userId: OWNER_ID, username: 'alice' } : options.user;
+  const roster = new Map(Object.entries(options.roster ?? {}));
 
   TestBed.configureTestingModule({
     providers: [
@@ -138,6 +156,7 @@ function configure(options: {
         provide: CampaignStore,
         useValue: {
           campaignId: signal(CAMPAIGN_ID),
+          state: signal({ roster }),
           events: campaignPort.events.asReadonly(),
           appendTx: campaignPort.appendTx,
         },
@@ -233,11 +252,17 @@ describe('LinkCharacterComponent', () => {
   });
 
   it('a character ALREADY linked to THIS campaign shows "resume" and, on click, sends ONLY step (b)', async () => {
-    const { characterPort, campaignPort, characterLoad } = configure({
+    const joinedEvent = mkEvent(
+      'character.campaign_joined',
+      { campaignId: CAMPAIGN_ID },
+      CHAR_D,
+      1,
+    );
+    const characterPort = instantCommitPort(CHAR_D, [joinedEvent]);
+    const { campaignPort, characterLoad } = configure({
       rows: [mkRow(CHAR_D, 'Dara')],
-      eventsByCharacter: {
-        [CHAR_D]: [mkEvent('character.campaign_joined', { campaignId: CAMPAIGN_ID }, CHAR_D, 1)],
-      },
+      eventsByCharacter: { [CHAR_D]: [joinedEvent] },
+      characterPort,
     });
     const fixture = TestBed.createComponent(LinkCharacterComponent);
     await whenStable(fixture);
@@ -253,8 +278,10 @@ describe('LinkCharacterComponent', () => {
     resumeButton.click();
     await whenStable(fixture);
 
-    expect(characterLoad).not.toHaveBeenCalled();
-    expect(characterPort.appendTx).not.toHaveBeenCalled();
+    // Fix round 1, finding 2: resume now ALWAYS loads the character first — `retryCampaignLinkStepB`
+    // needs a LIVE `events()` signal to verify/await step (a)'s commit state, not a stale snapshot.
+    expect(characterLoad).toHaveBeenCalledWith(CHAR_D);
+    expect(characterPort.appendTx).not.toHaveBeenCalled(); // step (a) is never RE-sent
     expect(campaignPort.appendTx).toHaveBeenCalledTimes(1);
     const drafts = campaignPort.appendTx.mock.calls[0][0] as DraftEvent[];
     const draft = drafts[0];
@@ -264,6 +291,96 @@ describe('LinkCharacterComponent', () => {
       ownerId: OWNER_ID,
       name: 'Dara',
     });
+    expect(navigateSpy).toHaveBeenCalledWith(['/g', CAMPAIGN_ID, 'lobby']);
+  });
+
+  // Fix round 1, finding 1: a LEAVE dialog dismissed (or its tab closed) between step (a)
+  // committing and step (b) landing strands the character in a half-left state — the char-side
+  // link is already gone (so the sheet's own chip disappears), but the campaign's roster still
+  // shows the character active. This is the ONLY place that stuck state is ever discoverable again.
+  it('a character stuck HALF-LEFT (roster still active, char-side already left) shows "resumeLeave", and finishing it sends ONLY campaign.character_left', async () => {
+    const leftEvent = mkEvent('character.campaign_left', { campaignId: CAMPAIGN_ID }, CHAR_E, 1);
+    const characterPort = instantCommitPort(CHAR_E, [leftEvent]);
+    const { campaignPort, characterLoad } = configure({
+      rows: [mkRow(CHAR_E, 'Elara')],
+      eventsByCharacter: { [CHAR_E]: [leftEvent] },
+      characterPort,
+      roster: { [CHAR_E.slice('char:'.length)]: { ownerId: OWNER_ID, name: 'Elara', left: false } },
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const rowEl = compiled.querySelector('.link-character__row')!;
+    expect(rowEl.getAttribute('data-eligibility')).toBe('resumeLeave');
+    const finishButton = rowEl.querySelector<HTMLButtonElement>('.link-character__resume-leave')!;
+    expect(finishButton).toBeTruthy();
+
+    finishButton.click();
+    await whenStable(fixture);
+
+    expect(characterLoad).toHaveBeenCalledWith(CHAR_E);
+    expect(characterPort.appendTx).not.toHaveBeenCalled(); // step (a) is never re-sent
+    expect(campaignPort.appendTx).toHaveBeenCalledTimes(1);
+    const drafts = campaignPort.appendTx.mock.calls[0][0] as DraftEvent[];
+    expect(drafts[0].type).toBe('campaign.character_left');
+    expect(drafts[0].payload).toEqual({
+      characterId: CHAR_E.slice('char:'.length),
+      ownerId: OWNER_ID,
+      name: 'Elara',
+    });
+    expect(navigateSpy).toHaveBeenCalledWith(['/g', CAMPAIGN_ID, 'lobby']);
+  });
+
+  it('a roster entry belonging to ANOTHER owner is not treated as a stuck leave for me', async () => {
+    const leftEvent = mkEvent('character.campaign_left', { campaignId: CAMPAIGN_ID }, CHAR_E, 1);
+    configure({
+      rows: [mkRow(CHAR_E, 'Elara')],
+      eventsByCharacter: { [CHAR_E]: [leftEvent] },
+      characterPort: instantCommitPort(CHAR_E, [leftEvent]),
+      roster: {
+        [CHAR_E.slice('char:'.length)]: { ownerId: 'usr_someone_else', name: 'Elara', left: false },
+      },
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // Not linked to THIS campaign (char-side already left) and not a stuck-leave case either
+    // (roster ownerId mismatch) — falls through to plain 'eligible', not 'resumeLeave'.
+    const rowEl = compiled.querySelector('.link-character__row')!;
+    expect(rowEl.getAttribute('data-eligibility')).toBe('eligible');
+  });
+
+  // Fix round 1, finding 3: a thrown exception (e.g. NotLeaderError) before ANY step is ever
+  // recorded must still leave the user a way back in — not a dead-end generic error banner.
+  it('a thrown exception before any step is recorded still renders a Retry CTA, and Retry can succeed', async () => {
+    const characterPort = instantCommitPort(CHAR_A);
+    characterPort.appendTx.mockRejectedValueOnce(new CharacterStoreNotLeaderError());
+    const { campaignPort } = configure({ rows: [mkRow(CHAR_A, 'Aria')], characterPort });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.link-character__pick')!.click();
+    await whenStable(fixture);
+
+    expect(compiled.querySelector('.link-character__step')).toBeNull(); // no step ever recorded
+    expect(compiled.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+      campaignsEn.link.errors.characterNotLeader,
+    );
+    const retryButton = compiled.querySelector<HTMLButtonElement>('.link-character__retry');
+    expect(retryButton).toBeTruthy();
+
+    retryButton!.click();
+    await whenStable(fixture);
+
+    expect(characterPort.appendTx).toHaveBeenCalledTimes(2); // 1 failed attempt + 1 successful retry
+    expect(campaignPort.appendTx).toHaveBeenCalledTimes(1);
     expect(navigateSpy).toHaveBeenCalledWith(['/g', CAMPAIGN_ID, 'lobby']);
   });
 

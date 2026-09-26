@@ -9,6 +9,7 @@ import {
   type CampaignLinkParams,
   type CampaignLinkStepResult,
 } from '@shared/services/campaigns/campaign-link-sequence';
+import { lastCampaignLinkEvent } from '@shared/services/campaigns/character-campaign-link';
 import {
   CampaignStore,
   CampaignStoreNotAuthenticatedError,
@@ -63,9 +64,16 @@ export class LeaveCampaignDialogComponent {
   protected readonly linkedOk = computed(
     () => this.steps().length > 0 && this.steps().every((s) => s.outcome === 'committed'),
   );
+  /** Fix round 1 (finding 3): also true when an exception was THROWN before any step was ever
+   * recorded (`buildParams`'s own `CampaignStoreNotAuthenticatedError`, or `appendTx`'s
+   * `*NotLeaderError`s firing synchronously) — without this, that path left `steps` empty,
+   * `canRetry()` false, and the user stuck behind a generic error banner with no retry button (the
+   * SAME gap `LinkCharacterComponent.canRetry` fixes for the join side). */
   protected readonly canRetry = computed(() => {
+    if (this.busy()) return false;
     const list = this.steps();
-    return !this.busy() && list.length > 0 && list.at(-1)?.outcome !== 'committed';
+    const lastStepIncomplete = list.length > 0 && list.at(-1)?.outcome !== 'committed';
+    return lastStepIncomplete || this.errorKey() !== undefined;
   });
 
   protected cancel(): void {
@@ -76,30 +84,66 @@ export class LeaveCampaignDialogComponent {
     this.confirming.set(false);
     this.errorKey.set(undefined);
     this.busy.set(true);
+    // Fix round 1 (finding 1): block ESC/backdrop dismissal for the whole in-flight window — a
+    // dismissed mid-leave (step (a) committed, step (b) not yet attempted/settled) would strand
+    // this character half-left with no surviving recovery UI (the chip itself disappears the
+    // instant step (a) commits — see `CampaignChipComponent`'s own doc). Re-allowed in `finally`
+    // regardless of outcome: once settled (success, a clean reject, OR a thrown exception), the
+    // user can always close and, if incomplete, come back via `/g/:id/link-character`'s own
+    // `resumeLeave` bucket.
+    this.dialogRef.setDismissible(false);
     try {
-      const params = await this.buildParams();
-      const outcome = await runCampaignLinkSequence(params);
-      this.steps.set(outcome.steps);
-      if (outcome.ok) this.dialogRef.close(true);
+      await this.runOrResume();
+      if (this.linkedOk()) this.dialogRef.close(true);
     } catch (err) {
       this.errorKey.set(this.toErrorKey(err));
     } finally {
       this.busy.set(false);
+      this.dialogRef.setDismissible(true);
     }
   }
 
   protected async retry(): Promise<void> {
     this.errorKey.set(undefined);
     this.busy.set(true);
+    this.dialogRef.setDismissible(false);
     try {
-      const params = await this.buildParams();
-      const step = await retryCampaignLinkStepB(params);
-      this.steps.update((current) => [...current.slice(0, -1), step]);
+      await this.runOrResume();
       if (this.linkedOk()) this.dialogRef.close(true);
     } catch (err) {
       this.errorKey.set(this.toErrorKey(err));
     } finally {
       this.busy.set(false);
+      this.dialogRef.setDismissible(true);
+    }
+  }
+
+  /**
+   * Shared by `confirmLeave` (the first attempt) AND `retry` (every later one, including a retry
+   * after an exception THROWN so early that step (a) never even got sent) — re-derives WHETHER
+   * step (a) (`character.campaign_left` for THIS campaign) already exists fresh off
+   * `characterStore.events()` rather than trusting which method called it. Fix round 1: an
+   * earlier version had `retry()` always call `retryCampaignLinkStepB` directly, which is WRONG
+   * when the very first attempt failed INSIDE step (a) itself (e.g. `CharacterStoreNotLeaderError`
+   * thrown before anything was written) — that would have sent step (b) alone with NO step (a)
+   * ever having happened, violating ruling 4's ordering outright. Mirrors
+   * `LinkCharacterComponent.runAttempt`'s identical reasoning (that component's own doc has the
+   * fuller rationale).
+   */
+  private async runOrResume(): Promise<void> {
+    const params = await this.buildParams();
+    const linkInfo = lastCampaignLinkEvent(this.characterStore.events());
+    const alreadyHasStepA =
+      linkInfo?.type === 'character.campaign_left' && linkInfo.campaignId === params.campaignId;
+
+    if (alreadyHasStepA) {
+      const step = await retryCampaignLinkStepB(params);
+      this.steps.update((current) =>
+        current.length > 0 ? [...current.slice(0, -1), step] : [step],
+      );
+    } else {
+      const outcome = await runCampaignLinkSequence(params);
+      this.steps.set(outcome.steps);
     }
   }
 

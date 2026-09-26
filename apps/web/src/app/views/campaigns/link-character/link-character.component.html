@@ -70,6 +70,18 @@
                 {{ t('link.resume') }}
               </button>
             }
+            @case ('resumeLeave') {
+              <button
+                hk-button
+                type="button"
+                class="link-character__resume-leave"
+                [variant]="'primary'"
+                [disabled]="busy()"
+                (click)="select(candidate)"
+              >
+                {{ t('link.resumeLeave') }}
+              </button>
+            }
             @case ('linkedElsewhere') {
               <span class="link-character__notice">{{ t('link.linkedElsewhere') }}</span>
             }

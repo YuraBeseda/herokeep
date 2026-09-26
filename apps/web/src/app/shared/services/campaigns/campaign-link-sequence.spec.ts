@@ -366,4 +366,88 @@ describe('runCampaignLinkSequence / retryCampaignLinkStepB', () => {
     expect(retryResult).toMatchObject({ step: 'campaign', outcome: 'committed' });
     expect(charPort.appendTx).toHaveBeenCalledTimes(1); // never re-sent
   });
+
+  // Fix round 1 (finding 2): retryCampaignLinkStepB must re-verify (a) is genuinely COMMITTED —
+  // not just present — before ever sending (b), since a caller's own snapshot of (a) (e.g. a
+  // picker's candidate list) can be stale.
+  describe('retryCampaignLinkStepB re-verifies step (a) before sending (b)', () => {
+    it('a still-PENDING (a) that goes on to commit: waits for it, THEN sends (b) — no doomed round trip', async () => {
+      const pendingCharEvent = mkEvent(
+        'character.campaign_joined',
+        { campaignId: CAMPAIGN_ID },
+        undefined,
+        'pending-a',
+      );
+      const charPort = makePort([pendingCharEvent]);
+      const campPort = makePort();
+      const params = baseParams({ characterPort: charPort.port, campaignPort: campPort.port });
+
+      const retryPromise = retryCampaignLinkStepB(params);
+      // (b) must not be sent while (a) is still pending.
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      expect(campPort.appendTx).not.toHaveBeenCalled();
+
+      settle(charPort.state, 'pending-a', 1);
+
+      await waitFor(() => {
+        expect(
+          campPort.state().find((ev) => ev.type === 'campaign.character_joined'),
+        ).toBeDefined();
+      });
+      settle(
+        campPort.state,
+        campPort.state().find((ev) => ev.type === 'campaign.character_joined')!.id,
+        1,
+      );
+
+      const result = await retryPromise;
+      expect(result).toMatchObject({ step: 'campaign', outcome: 'committed' });
+      expect(charPort.appendTx).not.toHaveBeenCalled(); // (a) was never RE-sent, only awaited
+    });
+
+    it('a still-PENDING (a) that ends up REJECTED: returns the character-step result and never sends (b) at all', async () => {
+      const pendingCharEvent = mkEvent(
+        'character.campaign_joined',
+        { campaignId: CAMPAIGN_ID },
+        undefined,
+        'pending-a-2',
+      );
+      const charPort = makePort([pendingCharEvent]);
+      const campPort = makePort();
+      const params = baseParams({ characterPort: charPort.port, campaignPort: campPort.port });
+
+      const retryPromise = retryCampaignLinkStepB(params);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      reject(charPort.state, 'pending-a-2');
+
+      const result = await retryPromise;
+      expect(result).toMatchObject({ step: 'character', outcome: 'rejected' });
+      expect(campPort.appendTx).not.toHaveBeenCalled();
+    });
+
+    it('an ALREADY-committed (a) proceeds straight to (b) with no wait at all', async () => {
+      const committedCharEvent = mkEvent(
+        'character.campaign_joined',
+        { campaignId: CAMPAIGN_ID },
+        1,
+        'committed-a',
+      );
+      const charPort = makePort([committedCharEvent]);
+      const campPort = makePort();
+      const params = baseParams({ characterPort: charPort.port, campaignPort: campPort.port });
+
+      const retryPromise = retryCampaignLinkStepB(params);
+      await waitFor(() => {
+        expect(campPort.appendTx).toHaveBeenCalledTimes(1);
+      });
+      settle(
+        campPort.state,
+        campPort.state().find((ev) => ev.type === 'campaign.character_joined')!.id,
+        1,
+      );
+
+      const result = await retryPromise;
+      expect(result).toMatchObject({ step: 'campaign', outcome: 'committed' });
+    });
+  });
 });

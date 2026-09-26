@@ -89,11 +89,13 @@ function configure(options: {
   data?: LeaveCampaignDialogData;
 }): {
   close: ReturnType<typeof vi.fn>;
+  setDismissible: ReturnType<typeof vi.fn>;
   characterPort: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
   campaignPort: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
   campaignOpen: ReturnType<typeof vi.fn>;
 } {
   const close = vi.fn();
+  const setDismissible = vi.fn();
   const characterPort = options.characterPort ?? instantCommitPort(CHARACTER_STREAM);
   const campaignPort = options.campaignPort ?? instantCommitPort(`camp:${CAMPAIGN_ID}`);
   const campaignOpen = options.campaignOpen ?? vi.fn().mockResolvedValue(undefined);
@@ -117,7 +119,7 @@ function configure(options: {
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
-      { provide: DialogRef, useValue: { close } },
+      { provide: DialogRef, useValue: { close, setDismissible } },
       { provide: DIALOG_DATA, useValue: data },
       {
         provide: CharacterStore,
@@ -135,7 +137,7 @@ function configure(options: {
     ],
   });
 
-  return { close, characterPort, campaignPort, campaignOpen };
+  return { close, setDismissible, characterPort, campaignPort, campaignOpen };
 }
 
 async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<void> {
@@ -200,6 +202,21 @@ describe('LeaveCampaignDialogComponent', () => {
     expect(close).toHaveBeenCalledWith(true);
   });
 
+  // Fix round 1, finding 1(i): a dismissed-mid-leave dialog is exactly what strands a character
+  // half-left with no surviving UI — guard against ESC/backdrop for the whole in-flight window.
+  it('blocks dismissal (setDismissible(false)) for the whole in-flight window, and re-allows it once settled', async () => {
+    const { setDismissible } = configure({});
+    const fixture = TestBed.createComponent(LeaveCampaignDialogComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(setDismissible).not.toHaveBeenCalled();
+    compiled.querySelector<HTMLButtonElement>('.leave-campaign-dialog__confirm')!.click();
+    await whenStable(fixture);
+
+    expect(setDismissible.mock.calls.map((c: unknown[]) => c[0])).toEqual([false, true]);
+  });
+
   it('the (a)-committed/(b)-rejected recovery path: shows "link incomplete — retry", then Retry alone succeeds', async () => {
     const campaignPort = rejectOnceThenCommitPort(`camp:${CAMPAIGN_ID}`);
     const { close, characterPort } = configure({ campaignPort });
@@ -256,5 +273,30 @@ describe('LeaveCampaignDialogComponent', () => {
 
     const error = compiled.querySelector('[role="alert"]');
     expect(error?.textContent?.trim()).toBe(campaignsEn.link.errors.characterNotLeader);
+  });
+
+  // Fix round 1, finding 3: this exact scenario (a thrown exception before any step is ever
+  // recorded) must still leave a Retry CTA — not a dead-end error banner with nothing to click.
+  it('finding 3: a thrown exception before any step is recorded still renders Retry, and Retry can succeed', async () => {
+    const characterPort = instantCommitPort(CHARACTER_STREAM);
+    characterPort.appendTx.mockRejectedValueOnce(new CharacterStoreNotLeaderError());
+    const { close, campaignPort } = configure({ characterPort });
+    const fixture = TestBed.createComponent(LeaveCampaignDialogComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.leave-campaign-dialog__confirm')!.click();
+    await whenStable(fixture);
+
+    expect(compiled.querySelector('.leave-campaign-dialog__step')).toBeNull(); // no step recorded
+    const retryButton = compiled.querySelector<HTMLButtonElement>('.leave-campaign-dialog__retry');
+    expect(retryButton).toBeTruthy();
+
+    retryButton!.click();
+    await whenStable(fixture);
+
+    expect(characterPort.appendTx).toHaveBeenCalledTimes(2); // 1 failed + 1 successful retry
+    expect(campaignPort.appendTx).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledWith(true);
   });
 });

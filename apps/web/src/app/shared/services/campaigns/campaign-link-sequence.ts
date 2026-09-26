@@ -1,6 +1,7 @@
 import type { Signal } from '@angular/core';
 import type { Event } from '@hk/protocol';
 import type { DraftEvent } from '../../stores/character.store';
+import { lastCampaignLinkEvent } from './character-campaign-link';
 
 /**
  * Ruling 4 (plan-10 task-7-brief.md, verbatim): "JOIN = (a) char socket
@@ -262,14 +263,59 @@ export async function runCampaignLinkSequence(
  * Re-sends ONLY step (b) — ruling 4's documented recovery path for "(a) committed, (b) rejected
  * [or timed out]": "Partial states are legal (recovery = retry (b))". Also the right call for a
  * character whose step (a) committed in an EARLIER session/page-load (this device navigated away
- * before (b) ever landed) — callers discover that case via `campaignIdOfCharacter` already
- * reading the target campaign for a `'join'`, or already reading `undefined`/a DIFFERENT campaign
- * for a `'leave'` (the char-side half is already done either way).
+ * before (b) ever landed) — callers discover that case via `campaignIdOfCharacter`/
+ * `lastCampaignLinkEvent` already reading the target campaign for a `'join'`, or already reading
+ * `undefined`/a DIFFERENT campaign for a `'leave'` (the char-side half is already done either way).
+ *
+ * Fix round 1 (finding 2): a caller's OWN snapshot of step (a) (e.g. a picker's candidate list,
+ * read once when it loaded) can be STALE — step (a) might still be genuinely pending, not
+ * committed yet. Sending step (b) against a not-yet-committed (a) is a doomed round trip (the
+ * server's own mirror-verify rejects it outright — ruling 4: "SEQUENCE STRICTLY: await (a)'s ack
+ * first"). So this re-derives step (a)'s CURRENT state fresh from `params.characterPort.events()`
+ * (which the caller must have already pointed at the right character — e.g.
+ * `CharacterStore.load()`), and if it's still pending, awaits its settlement (the same poll
+ * `appendAndAwaitAck` itself uses) BEFORE ever building/sending step (b). If that settle-check
+ * itself doesn't end in `'committed'`, step (b) is skipped entirely and the CHARACTER step's own
+ * result is returned instead (still a valid `CampaignLinkStepResult` — just `step: 'character'`
+ * rather than `'campaign'` — so callers don't need a separate return shape for this case).
  */
 export async function retryCampaignLinkStepB(
   params: CampaignLinkParams,
 ): Promise<CampaignLinkStepResult> {
+  const characterStepCheck = await verifyStepACommitted(params);
+  if (characterStepCheck && characterStepCheck.outcome !== 'committed') return characterStepCheck;
   return runStepB(params);
+}
+
+/**
+ * Re-derives step (a)'s CURRENT commit state from `params.characterPort.events()` and, if it's
+ * still pending, awaits its settlement. Returns `undefined` when (a) is ALREADY committed (the
+ * common, fast-path case — no wait, `retryCampaignLinkStepB` proceeds straight to step (b)) or
+ * when the events signal doesn't show a matching link event at all (nothing to verify — step (b)
+ * is left to fail/reject on its own terms rather than guessing at a hard error here). Otherwise
+ * returns the CHARACTER step's own settled (or timed-out) result.
+ */
+async function verifyStepACommitted(
+  params: CampaignLinkParams,
+): Promise<CampaignLinkStepResult | undefined> {
+  const expectedType =
+    params.action === 'join' ? 'character.campaign_joined' : 'character.campaign_left';
+  const events = params.characterPort.events();
+  const linkInfo = lastCampaignLinkEvent(events);
+  if (linkInfo?.type !== expectedType || linkInfo.campaignId !== params.campaignId) {
+    return undefined;
+  }
+  if (linkInfo.committed) return undefined;
+
+  const outcome = await awaitEventSettled(
+    params.characterPort.events,
+    linkInfo.eventId,
+    params.ackOpts,
+  );
+  const event =
+    params.characterPort.events().find((e) => e.id === linkInfo.eventId) ??
+    events.find((e) => e.id === linkInfo.eventId)!;
+  return { step: 'character', outcome, event };
 }
 
 async function runStepB(params: CampaignLinkParams): Promise<CampaignLinkStepResult> {
