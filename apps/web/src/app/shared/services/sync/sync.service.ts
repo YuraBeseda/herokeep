@@ -927,7 +927,9 @@ export class SyncService {
 
     const path = `/g/${campaignId}`;
     if (this.router.url === path || this.router.url.startsWith(`${path}/`)) {
-      void this.router.navigateByUrl('/characters');
+      // Plan-10 Task 6 carry (task-5-report.md): `/campaigns` now exists — swapped from the
+      // placeholder `/characters` destination task-5 shipped before this route existed.
+      void this.router.navigateByUrl('/campaigns');
     }
   }
 

@@ -1,0 +1,46 @@
+<section class="join" *transloco="let t; read: 'campaigns'">
+  <h1 class="join__title">{{ t('join.title') }}</h1>
+
+  <form class="join__form" novalidate (submit)="$event.preventDefault(); confirm()">
+    <label class="join__field">
+      <span>{{ t('join.codeLabel') }}</span>
+      <input
+        type="text"
+        name="code"
+        autocomplete="off"
+        [value]="code()"
+        (input)="onCodeChange($any($event.target).value)"
+      />
+      <small class="join__hint">{{ t('join.codeHint') }}</small>
+    </label>
+
+    <label class="join__field">
+      <span>{{ t('join.displayNameLabel') }}</span>
+      <input
+        type="text"
+        name="displayName"
+        autocomplete="off"
+        [value]="displayName()"
+        (input)="onDisplayNameChange($any($event.target).value)"
+      />
+    </label>
+
+    @if (errorKey(); as key) {
+      <p class="join__error" role="alert">{{ t(key) }}</p>
+    }
+
+    <div class="join__actions">
+      <a routerLink="/campaigns" class="join__back">{{ t('join.back') }}</a>
+      <button
+        hk-button
+        type="submit"
+        class="join__confirm"
+        [variant]="'primary'"
+        [disabled]="!canSubmit()"
+        [attr.aria-busy]="submitting() ? 'true' : null"
+      >
+        {{ submitting() ? t('join.joining') : t('join.confirm') }}
+      </button>
+    </div>
+  </form>
+</section>

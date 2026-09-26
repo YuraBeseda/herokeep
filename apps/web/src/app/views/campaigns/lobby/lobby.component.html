@@ -1,0 +1,83 @@
+<section class="lobby" *transloco="let t; read: 'campaigns'">
+  <h2 class="lobby__title">{{ t('lobby.title') }}</h2>
+
+  @if (isDm()) {
+    <div class="lobby__join-code">
+      <h3>{{ t('lobby.joinCode.title') }}</h3>
+
+      @if (groupedJoinCode(); as code) {
+        <p class="lobby__code">{{ code }}</p>
+
+        <div class="lobby__join-code-actions">
+          <button
+            hk-button
+            [variant]="'ghost'"
+            type="button"
+            class="lobby__copy-link"
+            (click)="copyLink()"
+          >
+            {{ t('lobby.joinCode.copyLink') }}
+          </button>
+          <button
+            hk-button
+            [variant]="'ghost'"
+            type="button"
+            class="lobby__rotate"
+            [disabled]="!canManage() || rotating()"
+            (click)="rotate()"
+          >
+            {{ rotating() ? t('lobby.joinCode.rotating') : t('lobby.joinCode.rotate') }}
+          </button>
+        </div>
+
+        @if (qrSvg(); as svg) {
+          <div
+            class="lobby__qr"
+            [attr.aria-label]="t('lobby.joinCode.qrAlt')"
+            [innerHTML]="svg"
+          ></div>
+        }
+      }
+    </div>
+  }
+
+  <div class="lobby__members">
+    <h3>{{ t('lobby.members.title') }}</h3>
+    <ul class="lobby__members-list">
+      @for (member of members(); track member.userId) {
+        <li
+          class="lobby__member-row"
+          [attr.data-user-id]="member.userId"
+          [attr.data-removed]="member.removed"
+        >
+          <span
+            class="lobby__member-dot"
+            role="img"
+            [attr.data-online]="member.online"
+            [attr.aria-label]="t('lobby.members.' + (member.online ? 'online' : 'offline'))"
+            [title]="t('lobby.members.' + (member.online ? 'online' : 'offline'))"
+          ></span>
+          <span class="lobby__member-name">{{ member.displayName }}</span>
+          <span class="lobby__member-role" [attr.data-role]="member.role">{{
+            t('roles.' + member.role)
+          }}</span>
+          @if (member.removed) {
+            <span class="lobby__member-removed-badge">{{ t('lobby.members.removedBadge') }}</span>
+          }
+          @if (canRemove(member)) {
+            <button
+              hk-button
+              [variant]="'danger'"
+              type="button"
+              class="lobby__member-remove"
+              [disabled]="removingUserId() === member.userId"
+              (click)="removeMember(member)"
+            >
+              {{ t('lobby.members.remove') }}
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  </div>
+</section>

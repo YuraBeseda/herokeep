@@ -59,6 +59,13 @@
       >{{ t('nav.characters') }}</a
     >
     <a
+      routerLink="/campaigns"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      class="app-shell__link"
+      >{{ t('nav.campaigns') }}</a
+    >
+    <a
       routerLink="/library"
       routerLinkActive="is-active"
       [ariaCurrentWhenActive]="'page'"

@@ -1,0 +1,44 @@
+:host {
+  display: block;
+}
+
+.join {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.join__title {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.join__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.join__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.join__hint {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+.join__error {
+  color: var(--danger);
+}
+
+.join__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

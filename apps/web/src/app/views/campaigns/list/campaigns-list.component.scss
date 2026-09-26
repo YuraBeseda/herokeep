@@ -1,0 +1,139 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.campaigns-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.campaigns-list__title {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.campaigns-list__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.campaigns-list__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.campaigns-list__empty {
+  color: var(--text-2);
+}
+
+.campaigns-list__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-3);
+}
+
+.campaigns-list__item {
+  display: flex;
+  flex-direction: column;
+}
+
+.campaigns-list__open {
+  @include u.touch-target;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.campaigns-list__name {
+  font-weight: 600;
+}
+
+.campaigns-list__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.campaigns-list__role {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Sync-status indicator — same shape/color convention as `characters-list.component.scss`'s
+   own badge (see that file's comment for the full colorblind/non-color-only rationale); kept
+   identical here rather than pulled into a shared component since only these two views need it
+   and the class names are already view-scoped (`campaigns-list__*` vs `characters-list__*`). */
+.campaigns-list__sync-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-l);
+  background: var(--text-2);
+
+  &[data-sync-state='synced'] {
+    background: var(--success);
+  }
+
+  &[data-sync-state='pending'] {
+    min-width: 1rem;
+    height: 1rem;
+    padding-inline: 0.25rem;
+    background: var(--warning);
+  }
+
+  &[data-sync-state='connecting'] {
+    background: transparent;
+    border: 1px solid var(--text-2);
+    animation: campaigns-list-sync-pulse 1.2s ease-in-out infinite;
+  }
+
+  &[data-sync-state='offline'] {
+    background: transparent;
+    border: 1px dashed var(--text-2);
+  }
+}
+
+.campaigns-list__sync-badge-count {
+  color: var(--surface-0);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campaigns-list__sync-badge[data-sync-state='connecting'] {
+    animation: none;
+  }
+}
+
+@keyframes campaigns-list-sync-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

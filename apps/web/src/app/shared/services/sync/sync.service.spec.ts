@@ -991,7 +991,7 @@ describe('SyncService', () => {
       expect(await TestBed.inject(CampaignsRepository).get(campaignId)).toBeUndefined();
       const eventsRepository = TestBed.inject(EventsRepository);
       expect(await eventsRepository.byStream(streamId)).toHaveLength(1); // events stay
-      expect(routerMock.navigateByUrl).toHaveBeenCalledWith('/characters');
+      expect(routerMock.navigateByUrl).toHaveBeenCalledWith('/campaigns');
       expect(sync.syncState(streamId)()).toBe('offline');
     });
 

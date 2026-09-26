@@ -1,0 +1,21 @@
+<div class="campaign-shell" *transloco="let t; read: 'campaigns'">
+  <header class="campaign-shell__header">
+    <h1 class="campaign-shell__name">{{ state()?.name }}</h1>
+    @if (role(); as r) {
+      <span class="campaign-shell__role" [attr.data-role]="r">{{ t('roles.' + r) }}</span>
+    }
+  </header>
+
+  @if (!leaderService.isLeader()) {
+    <p class="campaign-shell__stale" role="status">{{ t('shell.staleNotice') }}</p>
+  }
+
+  <hk-tabs
+    class="campaign-shell__tabs"
+    [tabs]="tabsFor(t)"
+    [selected]="activeTabId()"
+    (selectedChange)="onTabSelected($event)"
+  />
+
+  <router-outlet />
+</div>

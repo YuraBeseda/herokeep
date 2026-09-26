@@ -1,0 +1,105 @@
+:host {
+  display: block;
+}
+
+.lobby__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+}
+
+.lobby__join-code,
+.lobby__members {
+  margin-block-end: var(--space-5);
+}
+
+.lobby__join-code h3,
+.lobby__members h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.lobby__code {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.lobby__join-code-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+/* QR codes need light modules on a light background to stay scannable regardless of the app's
+ * active theme (dark mode's default surface is too dark for reliable contrast against the
+ * library's unfilled/transparent "light" modules) — an explicit white backing, not a token,
+ * deliberately overrides the surrounding theme here. */
+.lobby__qr {
+  display: inline-block;
+  width: fit-content;
+  padding: var(--space-2);
+  border-radius: var(--radius-s);
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list, color-no-hex --
+   * deliberate exception: this is the one place in the app a color must NOT follow
+   * `@hk/ui-tokens`'s theme — a QR code needs genuine white behind it to scan reliably in dark
+   * mode, not `--surface-*` (which is near-black there). No existing token expresses "always
+   * light regardless of theme"; adding one to the shared package for this single use felt like
+   * more risk than one narrowly-scoped, explained exception. */
+  background: #fff;
+}
+
+.lobby__members-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby__member-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+}
+
+.lobby__member-row[data-removed='true'] {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.lobby__member-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--text-2);
+  flex-shrink: 0;
+
+  &[data-online='true'] {
+    background: var(--success);
+  }
+}
+
+.lobby__member-name {
+  font-weight: 600;
+}
+
+.lobby__member-role {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.lobby__member-removed-badge {
+  color: var(--danger);
+  font-size: 0.8125rem;
+}
+
+.lobby__member-remove {
+  margin-inline-start: auto;
+}

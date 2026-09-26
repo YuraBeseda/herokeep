@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { AuthService } from '@shared/services/auth/auth.service';
@@ -13,7 +13,7 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
-function configure(authService: Partial<AuthService>) {
+function configure(authService: Partial<AuthService>, returnUrl?: string) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ path: 'characters', children: [] }]),
@@ -28,6 +28,14 @@ function configure(authService: Partial<AuthService>) {
         loader: StubLoader,
       }),
       { provide: AuthService, useValue: authService },
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          snapshot: {
+            queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}),
+          },
+        },
+      },
     ],
   });
 }
@@ -57,6 +65,48 @@ describe('LoginComponent', () => {
     await fixture.whenStable();
 
     expect(login).toHaveBeenCalledWith('alice', 'hunter2-passphrase', 'My custom label');
+    expect(navigateSpy).toHaveBeenCalledWith(['/characters']);
+  });
+
+  it('navigates to ?returnUrl instead of /characters when present (plan-10 authGuard deep-link)', async () => {
+    const login = vi.fn().mockResolvedValue(undefined);
+    configure({ login }, '/g/00000000-0000-4000-8000-000000000001/lobby');
+
+    const fixture = TestBed.createComponent(LoginComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    setInput(compiled.querySelector('input[name="username"]')!, 'alice');
+    setInput(compiled.querySelector('input[name="password"]')!, 'hunter2-passphrase');
+    await fixture.whenStable();
+
+    compiled.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await fixture.whenStable();
+
+    expect(navigateByUrlSpy).toHaveBeenCalledWith('/g/00000000-0000-4000-8000-000000000001/lobby');
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('ignores a protocol-relative returnUrl ("//host/...") and falls back to /characters', async () => {
+    const login = vi.fn().mockResolvedValue(undefined);
+    configure({ login }, '//evil.example/phish');
+
+    const fixture = TestBed.createComponent(LoginComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    setInput(compiled.querySelector('input[name="username"]')!, 'alice');
+    setInput(compiled.querySelector('input[name="password"]')!, 'hunter2-passphrase');
+    await fixture.whenStable();
+
+    compiled.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await fixture.whenStable();
+
     expect(navigateSpy).toHaveBeenCalledWith(['/characters']);
   });
 

@@ -1,9 +1,14 @@
 import { inject } from '@angular/core';
 import type { CanActivateFn, CanDeactivateFn, ResolveFn, Routes } from '@angular/router';
 import { Router } from '@angular/router';
+import type { MembershipRole } from '@hk/protocol';
 import { ToastService } from './shared/components/toast/toast.service';
+import { apiJson } from './shared/services/api/api-fetch';
 import { AuthService } from './shared/services/auth/auth.service';
+import { CampaignsRepository } from './shared/services/storage/campaigns.repository';
+import type { CampaignRow } from './shared/services/storage/dexie.db';
 import { CharactersRepository } from './shared/services/storage/characters.repository';
+import { CampaignStore } from './shared/stores/campaign.store';
 import { CharacterStore } from './shared/stores/character.store';
 import type { RegisterComponent } from './views/auth/register/register.component';
 
@@ -86,6 +91,102 @@ export const redirectAuthedGuard: CanActivateFn = () => {
 export const confirmRecoveryCodesGuard: CanDeactivateFn<RegisterComponent> = (component) =>
   component.canDeactivate();
 
+/**
+ * `/campaigns`, `/join(/:code)`, `/g/:id`'s shared guard (plan-10 task-6-brief.md): redirects an
+ * anon user to `/login?returnUrl=<attempted url>` — `LoginComponent`'s own `returnUrl` handling
+ * (this task) sends them back here after a successful sign-in. `'unknown'` is allowed through,
+ * same posture as `redirectAuthedGuard`'s own `'anon'`/`'unknown'` table: `AuthService.init()`'s
+ * `GET /api/me` check is fire-and-forget (Global Constraints — the app never blocks boot), so a
+ * user who navigates straight to a campaign URL before that check resolves must still get a
+ * chance to render, not be bounced on a guess. A genuinely anon user attempting a
+ * campaign-scoped API call downstream (e.g. `campaignGuard`'s own `GET /api/campaigns`, or
+ * `CampaignStore.create`/`.join`) still fails cleanly (401 / `CampaignStoreNotAuthenticatedError`)
+ * — this guard is a UX shortcut, not the authorization boundary.
+ */
+export const authGuard: CanActivateFn = (_route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.status() === 'anon') {
+    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  }
+  return true;
+};
+
+/** `campaigns.ts`'s minimal `GET /api/campaigns` DTO row shape (`apps/api/src/core/routes/
+ * campaigns.ts`'s own `CampaignDto`) — duplicated here rather than imported (`apps/web` never
+ * imports `apps/api`'s source, the same boundary `sync.service.ts`'s own `RemoteCampaignDto`
+ * documents for the identical shape). */
+interface RemoteCampaignDto {
+  readonly id: string;
+  readonly name: string;
+  readonly system: string;
+  readonly role: MembershipRole;
+  readonly joinCode?: string;
+}
+
+/**
+ * `/g/:id`'s membership guard (plan-10 task-6-brief.md): "membership known locally or fetched".
+ * A `CampaignsRepository` row already cached for `:id` (the common case — created/joined on this
+ * device, or seeded by `SyncService.reconcileCampaigns` on a prior login) is trusted outright, no
+ * network call. Otherwise this fetches `GET /api/campaigns` (the same server-side membership
+ * listing `SyncService`'s own reconciliation uses) and seeds a row FROM that response if `:id` is
+ * in it — covering a fresh device / a campaign this device only ever saw a deep link for. No
+ * membership found either way (including a network failure — there's nothing left to trust)
+ * redirects to `/campaigns` with a toast; `CampaignStore.open()` is only ever called once
+ * membership is established, so a stranger can never trigger even a READ of a campaign's local
+ * event log. Route param `:id` is the BARE campaign id (`CampaignStore.campaignId()`'s own
+ * convention), never the `camp:`-prefixed stream id.
+ */
+export const campaignGuard: CanActivateFn = async (route) => {
+  const id = route.paramMap.get('id');
+  const router = inject(Router);
+  const toastService = inject(ToastService);
+  if (!id) return router.createUrlTree(['/campaigns']);
+
+  const campaignsRepository = inject(CampaignsRepository);
+  const campaignStore = inject(CampaignStore);
+
+  let row: CampaignRow | undefined = await campaignsRepository.get(id);
+  if (!row) {
+    try {
+      const remoteRows = await apiJson<RemoteCampaignDto[]>('/api/campaigns');
+      const found = remoteRows.find((r) => r.id === id);
+      if (found) {
+        row = {
+          id: found.id,
+          name: found.name,
+          system: found.system,
+          role: found.role,
+          joinCode: found.joinCode,
+          lastSeq: 0,
+          updatedAt: Date.now(),
+        };
+        await campaignsRepository.put(row);
+      }
+    } catch {
+      // Offline / server unreachable — nothing left to trust; falls through to the
+      // not-a-member redirect below, same as a genuine "you aren't a member" response would.
+    }
+  }
+
+  if (!row) {
+    toastService.show('campaigns.guard.notMember');
+    return router.createUrlTree(['/campaigns']);
+  }
+
+  try {
+    await campaignStore.open(`camp:${id}`);
+  } catch {
+    // `open()` is local-storage-only I/O (Dexie reads) — a failure here should be unreachable in
+    // practice, but mirrors `characterResolver`'s own defensive stance: fail the route rather than
+    // throw out of a guard.
+    toastService.show('campaigns.guard.notMember');
+    return router.createUrlTree(['/campaigns']);
+  }
+  return true;
+};
+
 export const routes: Routes = [
   {
     path: '',
@@ -138,6 +239,59 @@ export const routes: Routes = [
         canActivate: [levelUpGuard],
         loadComponent: () =>
           import('./views/characters/level-up/level-up.component').then((m) => m.LevelUpComponent),
+      },
+    ],
+  },
+  {
+    path: 'campaigns',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./views/campaigns/list/campaigns-list.component').then(
+        (m) => m.CampaignsListComponent,
+      ),
+  },
+  {
+    path: 'join',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./views/campaigns/join/join.component').then((m) => m.JoinComponent),
+  },
+  {
+    path: 'join/:code',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./views/campaigns/join/join.component').then((m) => m.JoinComponent),
+  },
+  {
+    path: 'g/:id',
+    canActivate: [authGuard, campaignGuard],
+    loadComponent: () =>
+      import('./views/campaigns/shell/campaign-shell.component').then(
+        (m) => m.CampaignShellComponent,
+      ),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'party' },
+      {
+        path: 'party',
+        loadComponent: () =>
+          import('./views/campaigns/party/party-tab.component').then((m) => m.PartyTabComponent),
+      },
+      {
+        path: 'log',
+        loadComponent: () =>
+          import('./views/campaigns/log/log-tab.component').then((m) => m.LogTabComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./views/campaigns/settings/campaign-settings.component').then(
+            (m) => m.CampaignSettingsComponent,
+          ),
+      },
+      {
+        path: 'lobby',
+        loadComponent: () =>
+          import('./views/campaigns/lobby/lobby.component').then((m) => m.LobbyComponent),
       },
     ],
   },

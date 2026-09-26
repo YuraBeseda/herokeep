@@ -1,0 +1,63 @@
+<section class="campaigns-list" *transloco="let t; read: 'campaigns'">
+  <div class="campaigns-list__header">
+    <h1 class="campaigns-list__title">{{ t('list.title') }}</h1>
+    <div class="campaigns-list__actions">
+      <button
+        hk-button
+        [variant]="'ghost'"
+        type="button"
+        class="campaigns-list__join"
+        (click)="onJoin()"
+      >
+        {{ t('list.join') }}
+      </button>
+      <button
+        hk-button
+        [variant]="'primary'"
+        type="button"
+        class="campaigns-list__create"
+        (click)="onCreate()"
+      >
+        {{ t('list.create') }}
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="campaigns-list__skeletons">
+      @for (row of skeletonRows; track row) {
+        <hk-skeleton width="100%" />
+      }
+    </div>
+  } @else if (rows().length === 0) {
+    <p class="campaigns-list__empty">{{ t('list.empty') }}</p>
+  } @else {
+    <div class="campaigns-list__grid" [attr.aria-label]="t('list.landmark')">
+      @for (row of rows(); track row.id) {
+        <hk-card class="campaigns-list__item">
+          <button type="button" class="campaigns-list__open" (click)="open(row)">
+            <span class="campaigns-list__name">{{ row.name }}</span>
+            <span class="campaigns-list__meta">
+              <span class="campaigns-list__role" [attr.data-role]="row.role">
+                {{ t('roles.' + row.role) }}
+              </span>
+              <span
+                class="campaigns-list__sync-badge"
+                role="img"
+                [attr.data-sync-state]="syncStateBucket(row.id)"
+                [attr.aria-label]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
+                [title]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
+              >
+                @if (syncStateBucket(row.id) === 'pending') {
+                  <span class="campaigns-list__sync-badge-count" aria-hidden="true">{{
+                    syncPendingCount(row.id)
+                  }}</span>
+                }
+              </span>
+            </span>
+          </button>
+        </hk-card>
+      }
+    </div>
+  }
+</section>

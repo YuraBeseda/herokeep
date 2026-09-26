@@ -1,0 +1,42 @@
+<ng-container *transloco="let t">
+  <h2 class="create-campaign-dialog__title" data-dialog-title>{{ t('campaigns.create.title') }}</h2>
+
+  <label class="create-campaign-dialog__field">
+    <span>{{ t('campaigns.create.nameLabel') }}</span>
+    <input
+      type="text"
+      name="name"
+      [value]="name()"
+      (input)="onNameChange($any($event.target).value)"
+    />
+  </label>
+
+  @if (nameTooLong()) {
+    <p class="create-campaign-dialog__error" role="alert">{{ t('campaigns.create.nameError') }}</p>
+  }
+  @if (errorKey(); as key) {
+    <p class="create-campaign-dialog__error" role="alert">{{ t(key) }}</p>
+  }
+
+  <div class="create-campaign-dialog__actions">
+    <button
+      hk-button
+      type="button"
+      [variant]="'ghost'"
+      class="create-campaign-dialog__cancel"
+      [disabled]="submitting()"
+      (click)="cancel()"
+    >
+      {{ t('campaigns.create.cancel') }}
+    </button>
+    <button
+      hk-button
+      type="button"
+      class="create-campaign-dialog__confirm"
+      [disabled]="!canSubmit()"
+      (click)="confirm()"
+    >
+      {{ submitting() ? t('campaigns.create.creating') : t('campaigns.create.confirm') }}
+    </button>
+  </div>
+</ng-container>

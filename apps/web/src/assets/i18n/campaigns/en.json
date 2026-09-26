@@ -1,5 +1,163 @@
 {
+  "not-leader": "Another tab is currently the active campaign-data writer. Try again from that tab.",
+  "not-authenticated": "You need to be signed in to do that.",
+  "roles": {
+    "dm": "DM",
+    "player": "Player"
+  },
   "removed": {
     "toast": "You've been removed from this campaign."
+  },
+  "guard": {
+    "notMember": "You're not a member of that campaign."
+  },
+  "list": {
+    "title": "Campaigns",
+    "landmark": "Campaigns",
+    "create": "New campaign",
+    "join": "Join campaign",
+    "empty": "You haven't joined or created any campaigns yet.",
+    "sync": {
+      "tooltip": {
+        "synced": "Synced",
+        "pending": "{count, plural, one {# change} other {# changes}} pending",
+        "connecting": "Connecting…",
+        "offline": "Not syncing"
+      }
+    }
+  },
+  "create": {
+    "title": "New campaign",
+    "nameLabel": "Name",
+    "nameError": "Enter a name, up to 200 characters.",
+    "cancel": "Cancel",
+    "confirm": "Create",
+    "creating": "Creating…",
+    "errors": {
+      "generic": "Couldn't create the campaign. Try again."
+    }
+  },
+  "join": {
+    "title": "Join a campaign",
+    "codeLabel": "Join code",
+    "codeHint": "Ask your DM for the 8-character join code.",
+    "codeError": "Enter a join code.",
+    "displayNameLabel": "Display name (optional)",
+    "back": "Back to campaigns",
+    "confirm": "Join",
+    "joining": "Joining…",
+    "errors": {
+      "invalidCode": "That join code isn't valid.",
+      "closed": "This campaign isn't open for joining right now.",
+      "full": "This campaign already has the maximum number of members.",
+      "network": "Couldn't reach the server. Check your connection and try again.",
+      "generic": "Couldn't join the campaign. Try again."
+    }
+  },
+  "shell": {
+    "tabs": {
+      "party": "Party",
+      "log": "Log",
+      "settings": "Settings",
+      "lobby": "Lobby"
+    },
+    "staleNotice": "Another tab is syncing this campaign — this view won't update live until you switch to it."
+  },
+  "lobby": {
+    "title": "Lobby",
+    "joinCode": {
+      "title": "Join code",
+      "copyLink": "Copy invite link",
+      "rotate": "Generate a new code",
+      "rotating": "Generating…",
+      "qrAlt": "QR code for the invite link"
+    },
+    "members": {
+      "title": "Members",
+      "online": "Online",
+      "offline": "Offline",
+      "removedBadge": "Removed",
+      "remove": "Remove"
+    },
+    "removeConfirm": {
+      "title": "Remove {name}?",
+      "body": "{name} will lose access to this campaign. This can't be undone from here.",
+      "cancel": "Cancel",
+      "confirm": "Remove"
+    },
+    "toast": {
+      "linkCopied": "Invite link copied.",
+      "linkCopyFailed": "Couldn't copy the link. Try copying it manually.",
+      "rotated": "Join code updated.",
+      "rotateFailed": "Couldn't generate a new join code. Try again.",
+      "memberRemoved": "{name} was removed from the campaign.",
+      "removeFailed": "Couldn't remove that member. Try again."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "readOnlyNotice": "Only the DM can change campaign settings.",
+    "save": "Save",
+    "saving": "Saving…",
+    "toast": {
+      "saved": "Campaign settings saved.",
+      "saveFailed": "Couldn't save the campaign settings. Try again."
+    },
+    "houseRules": {
+      "title": "House rules",
+      "strictValidation": "Strict rule validation (off = warnings only)",
+      "allowOverrides": "Allow manual overrides",
+      "editOutsideSession": {
+        "label": "Editing outside a session",
+        "free": "Free",
+        "dmApproval": "Needs DM approval",
+        "locked": "Locked"
+      },
+      "xpMode": {
+        "label": "Advancement",
+        "xp": "Experience points",
+        "milestone": "Milestone"
+      },
+      "hpOnLevelUp": {
+        "label": "HP on level up",
+        "roll": "Roll",
+        "average": "Average",
+        "choice": "Player's choice"
+      },
+      "encumbrance": {
+        "label": "Encumbrance",
+        "off": "Off",
+        "standard": "Standard",
+        "variant": "Variant (encumbered tiers)"
+      },
+      "attunementMax": "Attunement limit",
+      "startingLevel": "Starting level"
+    },
+    "visibility": {
+      "title": "Visibility",
+      "partySheets": {
+        "label": "Party sheets",
+        "none": "Hidden",
+        "overview": "Overview only",
+        "full": "Full sheets"
+      },
+      "rolls": {
+        "label": "Roll visibility",
+        "everyone": "Everyone",
+        "dm": "DM only"
+      },
+      "allowPrivateRolls": "Players may roll privately"
+    },
+    "join": {
+      "title": "Joining",
+      "open": "Open for joining",
+      "requireApproval": "New members need DM approval"
+    }
+  },
+  "party": {
+    "placeholder": "The party overview is coming soon."
+  },
+  "log": {
+    "placeholder": "The campaign log is coming soon."
   }
 }
