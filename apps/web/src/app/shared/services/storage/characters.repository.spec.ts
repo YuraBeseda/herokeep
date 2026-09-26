@@ -31,6 +31,7 @@ describe('CharactersRepository', () => {
       db.snapshots.clear(),
       db.characters.clear(),
       db.blobs.clear(),
+      db.campaigns.clear(),
     ]);
   });
 

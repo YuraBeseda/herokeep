@@ -18,6 +18,7 @@ describe('BlobsRepository', () => {
       db.snapshots.clear(),
       db.characters.clear(),
       db.blobs.clear(),
+      db.campaigns.clear(),
     ]);
   });
 
@@ -82,5 +83,18 @@ describe('BlobsRepository', () => {
     expect(row?.kind).toBeUndefined();
     expect(row?.width).toBeUndefined();
     expect(row?.height).toBeUndefined();
+  });
+
+  it('put stamps addedAt/lastUsedAt/origin/pinned defaults (doc-07 Blob record, plan-10 Task 2)', async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    const before = Date.now();
+
+    await repo.put(hash, 'image/webp', new Uint8Array([1, 2, 3]));
+
+    const row = await repo.get(hash);
+    expect(row?.origin).toBe('upload');
+    expect(row?.pinned).toBe(false);
+    expect(row?.addedAt).toBeGreaterThanOrEqual(before);
+    expect(row?.lastUsedAt).toBeGreaterThanOrEqual(before);
   });
 });

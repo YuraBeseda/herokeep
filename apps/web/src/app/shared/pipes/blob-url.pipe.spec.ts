@@ -10,6 +10,10 @@ const ROW: BlobRow = {
   bytes: new Uint8Array([1, 2, 3]),
   size: 3,
   kind: 'thumb',
+  addedAt: 1,
+  lastUsedAt: 1,
+  pinned: false,
+  origin: 'upload',
 };
 
 const ROW_B: BlobRow = {
@@ -18,6 +22,10 @@ const ROW_B: BlobRow = {
   bytes: new Uint8Array([9, 9]),
   size: 2,
   kind: 'thumb',
+  addedAt: 1,
+  lastUsedAt: 1,
+  pinned: false,
+  origin: 'upload',
 };
 
 @Component({

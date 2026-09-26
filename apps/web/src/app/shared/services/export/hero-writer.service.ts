@@ -142,7 +142,13 @@ export class HeroWriterService {
       // documents for a hash with no local row at all, rather than failing the whole export.
       const mime = HeroBundleImageSchema.shape.mime.safeParse(row.mime);
       if (!mime.success) continue;
-      const kind = row.kind ?? kindByHash.get(row.hash) ?? 'portrait';
+      // Plan-10 Task 2 widened `BlobRow.kind` to include `icon`/`banner` (doc-07's full set),
+      // but this method only ever resolves the two portrait-related hashes above, so a stored
+      // `icon`/`banner` kind here would only ever mean corrupted/legacy local data — treated the
+      // same as "no kind stored" (fall through to the positional guess from `kindByHash`) rather
+      // than widening `HeroBundleImage`'s own schema (bundles never carry icon/banner images).
+      const storedKind = row.kind === 'icon' || row.kind === 'banner' ? undefined : row.kind;
+      const kind = storedKind ?? kindByHash.get(row.hash) ?? 'portrait';
       resolved.push({ hash: row.hash, mime: mime.data, size: row.size, kind, bytes: row.bytes });
     }
     return resolved;

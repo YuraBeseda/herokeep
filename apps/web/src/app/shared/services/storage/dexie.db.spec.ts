@@ -1,6 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { Pack } from '@hk/protocol';
-import { HkDb, type PackRow, type SettingsRow } from '@shared/services/storage/dexie.db';
+import {
+  HkDb,
+  type CharacterRow,
+  type EventRow,
+  type PackRow,
+  type SettingsRow,
+  type SnapshotRow,
+} from '@shared/services/storage/dexie.db';
 
 /**
  * Mirrors the version(1)-only schema `dexie.db.ts` shipped before Task 16, so this spec can seed
@@ -108,5 +115,131 @@ describe('HkDb migration (version 1 -> 2)', () => {
     expect(await db.snapshots.count()).toBe(0);
     expect(await db.characters.count()).toBe(0);
     expect(await db.blobs.count()).toBe(0);
+  });
+});
+
+/** The pre-version(3) `blobs` row shape (no `addedAt`/`lastUsedAt`/`pinned`/`origin` yet) — the
+ * real `BlobRow` (post-Task-2) now REQUIRES those fields, so a fixture seeding a database "the
+ * way an existing install's browser actually has it on disk" (pre-migration) needs its own,
+ * narrower type rather than casting through the current `BlobRow`. */
+interface OldBlobRow {
+  hash: string;
+  mime: string;
+  bytes: Uint8Array;
+  size: number;
+  kind?: 'portrait' | 'thumb' | 'token';
+  width?: number;
+  height?: number;
+}
+
+/** Mirrors the version(1)+version(2) schema `dexie.db.ts` shipped before Task 2 (plan 10), so
+ * this spec can seed a database the way an existing install's browser actually has it on disk
+ * PRE-migration, then hand it to the real (version 1+2+3) `HkDb` and confirm the version(3)
+ * upgrade backfills sane defaults rather than leaving old rows structurally incomplete. */
+class OldHkDbV2 extends Dexie {
+  packs!: EntityTable<PackRow, 'key'>;
+  settings!: EntityTable<SettingsRow, 'key'>;
+  events!: EntityTable<EventRow, 'id'>;
+  snapshots!: EntityTable<SnapshotRow, 'stream'>;
+  characters!: EntityTable<CharacterRow, 'id'>;
+  blobs!: EntityTable<OldBlobRow, 'hash'>;
+
+  constructor() {
+    super('hk-db');
+    this.version(1).stores({
+      packs: '&key, id, version, kind',
+      settings: '&key',
+    });
+    this.version(2).stores({
+      events: '&id, stream, [stream+seq]',
+      snapshots: '&stream',
+      characters: '&id, name, updatedAt',
+      blobs: '&hash',
+    });
+  }
+}
+
+describe('HkDb migration (version 2 -> 3)', () => {
+  const openDbs: Dexie[] = [];
+
+  function track<T extends Dexie>(db: T): T {
+    openDbs.push(db);
+    return db;
+  }
+
+  beforeEach(async () => {
+    await Dexie.delete('hk-db');
+  });
+
+  afterEach(() => {
+    for (const db of openDbs.splice(0)) db.close();
+  });
+
+  it('backfills blob metadata defaults, pinning only the hash referenced by a character portraitThumbHash', async () => {
+    const oldDb = track(new OldHkDbV2());
+    const pinnedRow: OldBlobRow = {
+      hash: 'sha256:thumb',
+      mime: 'image/webp',
+      bytes: new Uint8Array([1]),
+      size: 1,
+      kind: 'thumb',
+    };
+    const unpinnedRow: OldBlobRow = {
+      hash: 'sha256:portrait',
+      mime: 'image/webp',
+      bytes: new Uint8Array([2]),
+      size: 1,
+      kind: 'portrait',
+    };
+    await oldDb.blobs.bulkPut([pinnedRow, unpinnedRow]);
+    await oldDb.characters.put({
+      id: 'char:1',
+      name: 'Ivan',
+      system: 'srd-5e-2024',
+      archived: false,
+      updatedAt: 1,
+      portraitThumbHash: 'sha256:thumb',
+    });
+    oldDb.close();
+
+    const before = Date.now();
+    const db = track(new HkDb());
+    await db.open();
+
+    const pinned = await db.blobs.get('sha256:thumb');
+    const unpinned = await db.blobs.get('sha256:portrait');
+
+    expect(pinned?.pinned).toBe(true);
+    expect(unpinned?.pinned).toBe(false);
+    expect(pinned?.origin).toBe('upload');
+    expect(unpinned?.origin).toBe('upload');
+    expect(pinned?.addedAt).toBeGreaterThanOrEqual(before);
+    expect(pinned?.lastUsedAt).toBeGreaterThanOrEqual(before);
+    expect(unpinned?.addedAt).toBeGreaterThanOrEqual(before);
+    expect(unpinned?.lastUsedAt).toBeGreaterThanOrEqual(before);
+  });
+
+  it('creates the version(3) campaigns table for a brand-new database', async () => {
+    const db = track(new HkDb());
+    await db.open();
+    expect(await db.campaigns.count()).toBe(0);
+  });
+
+  it('campaigns CRUD works on a database upgraded from version 2', async () => {
+    const oldDb = track(new OldHkDbV2());
+    oldDb.close();
+
+    const db = track(new HkDb());
+    await db.open();
+    await db.campaigns.put({
+      id: 'camp:1',
+      name: 'Curse of Strahd',
+      system: 'srd-5e-2024',
+      role: 'dm',
+      lastSeq: 0,
+      updatedAt: 1,
+    });
+
+    expect(await db.campaigns.count()).toBe(1);
   });
 });
