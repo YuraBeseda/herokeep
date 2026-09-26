@@ -7,18 +7,29 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { PROTO_VERSION, type Event, type ServerMessage } from '@hk/protocol';
+import { Router } from '@angular/router';
+import {
+  PROTO_VERSION,
+  type Event,
+  type MembershipRole,
+  type MembersMsg,
+  type PresenceMsg,
+  type ServerMessage,
+} from '@hk/protocol';
 import { APP_VERSION } from '@app/version';
 import { uuidv7 } from '@shared/helpers/uuid';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { ApiError, apiJson } from '@shared/services/api/api-fetch';
 import { AuthService, type AuthStatus } from '@shared/services/auth/auth.service';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { LeaderService } from '@shared/services/storage/leader.service';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { CharacterStore } from '@shared/stores/character.store';
 import { broadcastChannelName, SyncBroadcast, type BroadcastChannelFactory } from './broadcast';
+import type { VisibilityDocument } from './reconnect-signals';
 import {
   SyncSocket,
   SyncSocketOversizeError,
@@ -120,6 +131,83 @@ import {
  * (but still authed) tab instead enters FOLLOWER mode: it subscribes a `SyncBroadcast` per local
  * character and re-reads Dexie (`CharacterStore.reloadIfCurrent`) whenever poked, per design
  * ruling 4.
+ *
+ * ## Campaign sessions (plan-10 Task 5)
+ *
+ * `camp:<uuid>` streams reuse EVERY piece of the generic machinery above — the SAME
+ * `sessionsState` map (so `quotaFor`/`syncState` already work for a campaign streamId for free),
+ * the SAME leader-mode/idle-mode sweep (`stopLeaderMode`'s `[...sessionsState().keys()]` loop
+ * already stops a campaign session on logout/leader-loss, no separate code needed), the SAME
+ * `EventsRepository`/`ToastService` ports. `CampaignStore` (Task 4) is the store port — its
+ * `applyServerCommit`/`commitPending`/`dropPending` are per-streamId-parameterized (not scoped to
+ * whichever campaign is currently "open" for viewing), so ONE `CampaignStore` instance safely
+ * backs MANY simultaneous campaign sessions.
+ *
+ * `reconcileCampaigns` (mirrors `reconcile`, invoked alongside it from `enterLeaderMode`) has no
+ * local-only/server-only branch to resolve — unlike a character, a campaign row is NEVER cached
+ * locally without first round-tripping the server (`CampaignStore.create`/`join`), so there is no
+ * "upload" case. It only: (1) seeds/refreshes `CampaignsRepository` from `GET /api/campaigns`
+ * (task-4-report.md's judgment call 1 — real rows with correct roles land BEFORE any stream ever
+ * opens, so `CampaignStore.open`'s defensive `'player'` fallback should never fire via this path),
+ * then (2) starts a session for every locally known row.
+ *
+ * `CampaignStore` has no `onCreate` emitter (Task 4 didn't ship one, and adding one there is
+ * outside this task's file boundary) — the equivalent "don't wait for the next reconcile" shortcut
+ * instead reacts to its `streamId` SIGNAL (set by `open`/`create`/`join` alike): whenever it points
+ * at a stream this tab doesn't have a session for yet AND this tab is the live leader,
+ * `startCampaignSession` runs immediately. `reconcileCampaigns` remains the general safety net for
+ * anything this misses (e.g. leadership arriving AFTER `streamId` last changed — a plain field
+ * read inside `effect()` doesn't re-trigger it).
+ *
+ * `CampaignStore.gatewayAppend`'s single `setGateway` target (task-4-report.md: not per-stream)
+ * is attached/detached by a THIRD reactive `effect()`: whichever session matches the store's
+ * currently OPEN `streamId`, recomputed whenever either changes. `setGateway` only ever writes a
+ * plain instance field on `CampaignStore`, never an Angular signal, so doing this from inside an
+ * `effect()` that also reads `sessionsState()` is safe — no write-during-read self-trigger.
+ * `onAckEntries`/`onRejectEntries` (Task 4 fix round 1, controller ruling F2) are wired to
+ * `campaignStore.handleGatewayAckEntries`/`handleGatewayRejectEntries` on EVERY campaign session
+ * (not just the gateway-attached one) — harmless no-ops for ids that aren't the store's own
+ * outstanding `gatewayAppend` batch, and required so a gateway-forwarded reject recovers its real
+ * `code`/`message` instead of degrading to `{id}`-only. Character sessions never get these two
+ * hooks wired, unchanged from Task 4's fix round.
+ *
+ * `onMembers` (`welcome.members` or a standalone `members` frame) updates a per-BARE-campaignId
+ * signal read via `membersFor(campaignId)`. `onForeignEvents`/`onBinaryFrame` fan out to
+ * `registerForeignEventsConsumer`/`registerBinaryFrameConsumer`'s registries (Tasks 9/13's own
+ * seams) — a frame with nothing registered is simply dropped (never written to storage, never
+ * queued). `onNotice` maps EVERY notice to `ToastService.show(notice.key, notice.params)` —
+ * `NoticeMsg.level` has no effect (`ToastService.show` has no styling/level parameter to feed it;
+ * see `toast.service.ts`).
+ *
+ * `onBye`: any OTHER reason just closes the session (`removeSession`, matching the character
+ * path's own fallback stance for an unrecognized reason). `campaign.member_removed`
+ * (`CAMPAIGN_BYE_REASON_MEMBER_REMOVED` — doc-03's own exported `BYE_REASON_MEMBER_REMOVED`
+ * string, duplicated here rather than imported: `apps/web` never imports from `apps/api`, the
+ * same boundary Task 1's `WS_MESSAGE_BYTES_MAX` hoist into `@hk/protocol` exists to avoid
+ * re-litigating for every such shared literal) ADDITIONALLY drops this device's
+ * `CampaignsRepository` row (events stay — server is authoritative; a re-added member's row is
+ * simply re-seeded by a later `reconcileCampaigns` pass), toasts, and navigates away from any
+ * `/g/<id>`-prefixed route this tab is currently on.
+ *
+ * `onDivergence` is wired defensively only (`removeSession`, no restart) — `CampaignStore` has no
+ * `resetStreamFromServer` equivalent to actually repair one (task-4-report.md's judgment call 5),
+ * and a genuine local-ahead divergence is believed practically unreachable for a campaign stream
+ * in practice (`appendTx` never writes a locally-committed-with-unsent-seq row — see that store's
+ * own "Always-synced, no direct-commit lane" doc section — so local can never get ahead of what
+ * the server already told this device). This at least avoids a phantom "still open" bookkeeping
+ * entry if it ever somehow fires.
+ *
+ * Presence (`{t:'presence', state:'active'|'idle'}`, doc-03 verbatim: throttle ≥60 s, sent on
+ * state CHANGE only) is driven by a SINGLE `visibilitychange` listener (constructor-injectable via
+ * `SYNC_VISIBILITY_DOCUMENT` for specs), fanned out to every LIVE campaign session on each firing
+ * — independent per-session throttle bookkeeping (`presenceThrottle`, keyed by streamId) means one
+ * campaign's send never consumes another's window. No initial presence is sent merely because a
+ * session just opened (only a real `visibilitychange` firing triggers a send) — a documented, v1
+ * judgment call, not a doc-03 requirement.
+ *
+ * No `SyncBroadcast`/follower-tab reload story exists for campaigns yet (`onApplied` is left
+ * unwired) — `CampaignStore` has no `reloadIfCurrent`-shaped method for a follower tab to call, and
+ * `enterFollowerMode` above only iterates `CharactersRepository`. Flagged for a future task.
  */
 
 export type SyncStateValue = 'offline' | 'connecting' | 'synced' | `pending-${number}`;
@@ -129,6 +217,25 @@ interface RemoteCharacterDto {
   readonly name: string;
   readonly system: string;
 }
+
+interface RemoteCampaignDto {
+  readonly id: string;
+  readonly name: string;
+  readonly system: string;
+  readonly role: MembershipRole;
+  readonly joinCode?: string;
+}
+
+/** [plan-10 Task 5] doc-03's exported reason string for a DM-initiated removal
+ * (`apps/api/src/core/routes/campaigns.ts`'s `BYE_REASON_MEMBER_REMOVED`) — duplicated here as a
+ * plain string constant rather than imported: `apps/web` never imports from `apps/api` (a
+ * separate deployable target, reached only over the wire), the same boundary `@hk/protocol`'s own
+ * `WS_MESSAGE_BYTES_MAX` hoist (Task 1) exists to avoid re-litigating for every such shared
+ * literal. Keep the two in sync if that route ever changes it. */
+const CAMPAIGN_BYE_REASON_MEMBER_REMOVED = 'campaign.member_removed';
+
+/** [plan-10 Task 5] doc-03 verbatim: "presence {state} (throttle ≥60 s)". */
+const PRESENCE_THROTTLE_MS = 60_000;
 
 /** Constructor-injectable `WebSocket` factory for every socket `SyncService` opens (both the
  * long-lived `StreamSyncSession`s it starts and its own one-shot upload/restore sockets) —
@@ -157,6 +264,18 @@ export const SYNC_BROADCAST_FACTORY = new InjectionToken<BroadcastChannelFactory
   { factory: () => undefined },
 );
 
+/** [plan-10 Task 5] Constructor-injectable `document`-shaped presence source for campaign
+ * sessions' `visibilitychange` listener — defaults to `undefined` (use the real global
+ * `document`). Specs override this via a `TestBed` provider so a firing doesn't depend on jsdom's
+ * own (unavailable-to-control-per-test) `visibilityState`. Reuses `VisibilityDocument`
+ * (`reconnect-signals.ts`) — the same narrow shape `StreamSyncSession`'s own reconnect-trigger
+ * wiring already uses for the identical DOM event; consumed independently here since presence has
+ * nothing to do with reconnect triggers. */
+export const SYNC_VISIBILITY_DOCUMENT = new InjectionToken<VisibilityDocument | undefined>(
+  'SYNC_VISIBILITY_DOCUMENT',
+  { factory: () => undefined },
+);
+
 type SyncMode = 'idle' | 'leader' | 'follower';
 
 @Injectable({ providedIn: 'root' })
@@ -164,14 +283,20 @@ export class SyncService {
   private readonly authService = inject(AuthService);
   private readonly leaderService = inject(LeaderService);
   private readonly characterStore = inject(CharacterStore);
+  private readonly campaignStore = inject(CampaignStore);
   private readonly charactersRepository = inject(CharactersRepository);
+  private readonly campaignsRepository = inject(CampaignsRepository);
   private readonly eventsRepository = inject(EventsRepository);
   private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
   private readonly webSocketFactory = inject(SYNC_WEBSOCKET_FACTORY);
   private readonly wsUrlFnOverride = inject(SYNC_WS_URL_FN);
   private readonly broadcastFactory = inject(SYNC_BROADCAST_FACTORY);
+  private readonly visibilityDocument: VisibilityDocument =
+    inject(SYNC_VISIBILITY_DOCUMENT) ?? document;
 
   private readonly storePort: StreamSyncSessionStorePort = this.characterStore;
+  private readonly campaignStorePort: StreamSyncSessionStorePort = this.campaignStore;
   private readonly eventsPort: StreamSyncSessionEventsPort = this.eventsRepository;
   private readonly toastPort: StreamSyncSessionToastPort = this.toastService;
 
@@ -180,6 +305,21 @@ export class SyncService {
   private readonly followerSubs = new Map<string, () => void>();
   private readonly quotaSignalCache = new Map<string, Signal<QuotaInfo | null>>();
   private readonly syncStateSignalCache = new Map<string, Signal<SyncStateValue>>();
+
+  // --- campaign-session-only bookkeeping (plan-10 Task 5) --------------------------------------
+  private readonly campaignMembersState = signal<ReadonlyMap<string, MembersMsg['members']>>(
+    new Map(),
+  );
+  private readonly membersSignalCache = new Map<string, Signal<MembersMsg['members'] | null>>();
+  private readonly presenceThrottle = new Map<
+    string,
+    { state: PresenceMsg['state']; sentAt: number }
+  >();
+  private readonly foreignEventsConsumers = new Map<
+    string,
+    Set<(stream: string, events: Event[]) => void>
+  >();
+  private readonly binaryFrameConsumers = new Map<string, Set<(bytes: Uint8Array) => void>>();
 
   private mode: SyncMode = 'idle';
   private reconcileGeneration = 0;
@@ -195,6 +335,25 @@ export class SyncService {
     // upload until some LATER transition re-ran `reconcile()` (a login, a reload). `onCreate`
     // (`CharacterStore`'s own class doc) is the narrow hook that catches exactly this case.
     this.characterStore.onCreate((streamId) => this.onCharacterCreated(streamId));
+
+    // [plan-10 Task 5] `CampaignStore` has no `onCreate` emitter of its own — see class doc's
+    // "Campaign sessions" section for why this reacts to its `streamId` SIGNAL instead.
+    effect(() => {
+      const streamId = this.campaignStore.streamId();
+      if (streamId && this.mode === 'leader') this.startCampaignSession(streamId);
+    });
+
+    // [plan-10 Task 5] Gateway attach/detach — see class doc's "Campaign sessions" section for why
+    // this is safe to write from inside an `effect()` alongside a `sessionsState()` read.
+    effect(() => {
+      const openStreamId = this.campaignStore.streamId();
+      const session = openStreamId ? this.sessionsState().get(openStreamId) : undefined;
+      this.campaignStore.setGateway(session);
+    });
+
+    this.visibilityDocument.addEventListener('visibilitychange', () =>
+      this.onPresenceVisibilityChange(),
+    );
   }
 
   /** Per-streamId, cached `Signal` of the stream's current welcome-reported quota (R-pf1); `null`
@@ -224,6 +383,40 @@ export class SyncService {
       this.syncStateSignalCache.set(streamId, cached);
     }
     return cached;
+  }
+
+  /** [plan-10 Task 5] Per-campaign, cached `Signal` of the LAST roster this device has received —
+   * `welcome.members` (an initial snapshot, when the server includes one) or a later standalone
+   * `members` frame, whichever arrived most recently; `null` before either has arrived (including
+   * for a `campaignId` with no live session at all right now). `campaignId` is the BARE id (no
+   * `camp:` prefix) — the same convention `CampaignStore.campaignId`/route params use. */
+  membersFor(campaignId: string): Signal<MembersMsg['members'] | null> {
+    let cached = this.membersSignalCache.get(campaignId);
+    if (!cached) {
+      cached = computed(() => this.campaignMembersState().get(campaignId) ?? null);
+      this.membersSignalCache.set(campaignId, cached);
+    }
+    return cached;
+  }
+
+  /** [plan-10 Task 5] Registration seam for Task 9's subscription consumer: `cb` fires with EVERY
+   * `events` frame this campaign's live session receives that is addressed to a DIFFERENT stream
+   * than the campaign's own (doc-03's gateway — a subscribed character stream's catch-up/live
+   * events, forwarded over the campaign socket). Default (nothing registered) is to IGNORE such a
+   * frame outright — it is never written to storage by this service. Returns an unsubscribe
+   * function. */
+  registerForeignEventsConsumer(
+    campaignId: string,
+    cb: (stream: string, events: Event[]) => void,
+  ): () => void {
+    return registerConsumer(this.foreignEventsConsumers, campaignId, cb);
+  }
+
+  /** [plan-10 Task 5] Registration seam for Task 13's blob-transfer service: `cb` fires with EVERY
+   * binary `blob.chunk` frame this campaign's live session receives. Default (nothing registered)
+   * is a no-op — see class doc. Returns an unsubscribe function. */
+  registerBinaryFrameConsumer(campaignId: string, cb: (bytes: Uint8Array) => void): () => void {
+    return registerConsumer(this.binaryFrameConsumers, campaignId, cb);
   }
 
   /** `characters-list.component.ts`'s delete flow — see class doc's "Deletion" section.
@@ -269,6 +462,7 @@ export class SyncService {
     this.mode = 'leader';
     const generation = ++this.reconcileGeneration;
     void this.reconcile(generation);
+    void this.reconcileCampaigns(generation);
   }
 
   private async enterFollowerMode(): Promise<void> {
@@ -577,11 +771,29 @@ export class SyncService {
     void session.start();
   }
 
+  /** Generic teardown for BOTH stream kinds (plan-10 Task 5 widened this from character-only) —
+   * prefix-dispatches the kind-specific half: `leaveSyncMode` only means something for a `char:`
+   * stream (`CampaignStore` has no such mode — campaigns are always-synced); a `camp:` stream
+   * additionally drops its cached roster/presence-throttle bookkeeping. The gateway `setGateway`
+   * detach for a `camp:` stream is NOT done here — the constructor's own reactive `effect()`
+   * (class doc's "Campaign sessions" section) picks it up automatically once `sessionsState`
+   * changes below. */
   private removeSession(streamId: string): void {
     const session = this.sessionsState().get(streamId);
     if (!session) return;
     session.stop();
-    this.characterStore.leaveSyncMode(streamId);
+    if (streamId.startsWith('char:')) {
+      this.characterStore.leaveSyncMode(streamId);
+    } else if (streamId.startsWith('camp:')) {
+      const campaignId = campaignIdOf(streamId);
+      this.campaignMembersState.update((current) => {
+        if (!current.has(campaignId)) return current;
+        const next = new Map(current);
+        next.delete(campaignId);
+        return next;
+      });
+      this.presenceThrottle.delete(streamId);
+    }
     this.sessionsState.update((current) => {
       const next = new Map(current);
       next.delete(streamId);
@@ -622,10 +834,150 @@ export class SyncService {
   private wsUrlFor(streamId: string): string {
     return this.wsUrlFnOverride ? this.wsUrlFnOverride(streamId) : wsUrlForStream(streamId);
   }
+
+  // --- campaign sessions (plan-10 Task 5) -------------------------------------------------------
+
+  /** Mirrors `reconcile()` — see class doc's "Campaign sessions" section for why this has no
+   * local-only/server-only branch to resolve. */
+  private async reconcileCampaigns(generation: number): Promise<void> {
+    let serverRows: RemoteCampaignDto[];
+    try {
+      serverRows = await apiJson<RemoteCampaignDto[]>('/api/campaigns');
+    } catch {
+      // Offline / server unreachable — same posture as `reconcile()`'s own guard: no retry loop,
+      // the next auth/leader transition tries again.
+      return;
+    }
+    if (!this.stillReconciling(generation)) return;
+
+    // Task 4's report, judgment call 1: seed real rows (correct role) from the server's own DTO
+    // BEFORE any session ever opens for them — `CampaignStore.open`'s defensive `'player'`
+    // fallback should never be exercised via this path.
+    for (const row of serverRows) {
+      if (!this.stillReconciling(generation)) return;
+      const existing = await this.campaignsRepository.get(row.id);
+      await this.campaignsRepository.put({
+        id: row.id,
+        name: row.name,
+        system: row.system,
+        role: row.role,
+        joinCode: row.joinCode ?? existing?.joinCode,
+        lastSeq: existing?.lastSeq ?? 0,
+        updatedAt: existing?.updatedAt ?? Date.now(),
+      });
+    }
+    if (!this.stillReconciling(generation)) return;
+
+    const localRows = await this.campaignsRepository.list();
+    for (const row of localRows) {
+      if (!this.stillReconciling(generation)) return;
+      this.startCampaignSession(`camp:${row.id}`);
+    }
+  }
+
+  private startCampaignSession(streamId: string): void {
+    if (this.sessionsState().has(streamId)) return;
+    const campaignId = campaignIdOf(streamId);
+
+    const session = new StreamSyncSession({
+      streamId,
+      store: this.campaignStorePort,
+      eventsRepository: this.eventsPort,
+      toast: this.toastPort,
+      webSocketFactory: this.webSocketFactory,
+      wsUrlFn: this.wsUrlFnOverride,
+      onBye: (reason) => this.handleCampaignBye(streamId, reason),
+      onDivergence: () => this.handleCampaignDivergence(streamId),
+      onMembers: (members) => {
+        this.campaignMembersState.update((current) => {
+          const next = new Map(current);
+          next.set(campaignId, members);
+          return next;
+        });
+      },
+      onForeignEvents: (stream, events) => {
+        for (const cb of this.foreignEventsConsumers.get(campaignId) ?? []) cb(stream, events);
+      },
+      onBinaryFrame: (bytes) => {
+        for (const cb of this.binaryFrameConsumers.get(campaignId) ?? []) cb(bytes);
+      },
+      onNotice: (notice) => this.toastService.show(notice.key, notice.params),
+      // Task 4 fix round 1, controller ruling F2 — see class doc's "Campaign sessions" section.
+      onAckEntries: (results) => this.campaignStore.handleGatewayAckEntries(results),
+      onRejectEntries: (results) => this.campaignStore.handleGatewayRejectEntries(results),
+    });
+
+    this.sessionsState.update((current) => {
+      const next = new Map(current);
+      next.set(streamId, session);
+      return next;
+    });
+    void session.start();
+  }
+
+  private handleCampaignBye(streamId: string, reason: string): void {
+    this.removeSession(streamId);
+    if (reason !== CAMPAIGN_BYE_REASON_MEMBER_REMOVED) return;
+
+    const campaignId = campaignIdOf(streamId);
+    // Events stay — server is authoritative; a re-added member's row is simply re-seeded by a
+    // later `reconcileCampaigns` pass.
+    void this.campaignsRepository.remove(campaignId);
+    this.toastService.show('campaigns.removed.toast');
+
+    const path = `/g/${campaignId}`;
+    if (this.router.url === path || this.router.url.startsWith(`${path}/`)) {
+      void this.router.navigateByUrl('/characters');
+    }
+  }
+
+  /** See class doc's "Campaign sessions" section for why this is bookkeeping-only (no restart —
+   * `CampaignStore` has no repair primitive to hand off to). */
+  private handleCampaignDivergence(streamId: string): void {
+    this.removeSession(streamId);
+  }
+
+  private onPresenceVisibilityChange(): void {
+    const newState: PresenceMsg['state'] =
+      this.visibilityDocument.visibilityState === 'visible' ? 'active' : 'idle';
+    const now = Date.now();
+
+    for (const [streamId, session] of this.sessionsState()) {
+      if (!streamId.startsWith('camp:')) continue;
+      const last = this.presenceThrottle.get(streamId);
+      if (last?.state === newState) continue; // doc-03: sent on state CHANGE only
+      if (last && now - last.sentAt < PRESENCE_THROTTLE_MS) continue; // throttled — dropped, no queue
+
+      this.presenceThrottle.set(streamId, { state: newState, sentAt: now });
+      session.sendRaw({ t: 'presence', state: newState });
+    }
+  }
 }
 
 function stripStreamPrefix(streamId: string): string {
   return streamId.startsWith('char:') ? streamId.slice('char:'.length) : streamId;
+}
+
+function campaignIdOf(streamId: string): string {
+  return streamId.startsWith('camp:') ? streamId.slice('camp:'.length) : streamId;
+}
+
+/** Shared `Map<key, Set<callback>>` registration helper for
+ * `registerForeignEventsConsumer`/`registerBinaryFrameConsumer` — adds `cb` under `key`, pruning
+ * the key entirely once its callback set empties out, and returns an unsubscribe function. */
+function registerConsumer<T>(registry: Map<string, Set<T>>, key: string, cb: T): () => void {
+  let set = registry.get(key);
+  if (!set) {
+    set = new Set();
+    registry.set(key, set);
+  }
+  set.add(cb);
+  return () => {
+    const current = registry.get(key);
+    if (!current) return;
+    current.delete(cb);
+    if (current.size === 0) registry.delete(key);
+  };
 }
 
 // Re-exported so a consumer never needs to import `./broadcast` just to spell a channel name in a
