@@ -6,8 +6,10 @@ import { CampaignsRepository } from '../services/storage/campaigns.repository';
 import { HkDb } from '../services/storage/dexie.db';
 import { EventsRepository } from '../services/storage/events.repository';
 import { LeaderService } from '../services/storage/leader.service';
+import { SettingsRepository } from '../services/storage/settings.repository';
 import { PackStore } from './pack.store';
 import {
+  CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS,
   CampaignGatewayUnavailableError,
   CampaignStore,
   CampaignStoreNotAuthenticatedError,
@@ -154,25 +156,35 @@ const DM_ACTOR: Event['actor'] = { userId: 'u1', deviceId: 'srv', role: 'dm' };
 function configure(): {
   userState: WritableSignal<AuthUser | null>;
   readyState: WritableSignal<boolean>;
+  gatewayTimeoutMsState: WritableSignal<number>;
 } {
   const userState = signal<AuthUser | null>({ userId: 'u1', username: 'alice' });
   const readyState = signal(true);
+  // Fix round 1, F1b: production default (30s) unless a test overrides it BEFORE its own first
+  // `TestBed.inject(CampaignStore)` call — see `CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS`'s own doc for why
+  // this DI seam exists instead of `vi.useFakeTimers()`.
+  const gatewayTimeoutMsState = signal(30_000);
   TestBed.configureTestingModule({
     providers: [
       { provide: PackStore, useValue: { ready: readyState, corePack: signal(FAKE_CORE_PACK) } },
       { provide: AuthService, useValue: { user: userState } },
+      {
+        provide: CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS,
+        useFactory: () => gatewayTimeoutMsState(),
+      },
     ],
   });
-  return { userState, readyState };
+  return { userState, readyState, gatewayTimeoutMsState };
 }
 
 describe('CampaignStore', () => {
   let userState: WritableSignal<AuthUser | null>;
   let readyState: WritableSignal<boolean>;
+  let gatewayTimeoutMsState: WritableSignal<number>;
   const originalFetch = globalThis.fetch;
 
   beforeEach(async () => {
-    ({ userState, readyState } = configure());
+    ({ userState, readyState, gatewayTimeoutMsState } = configure());
     const db = TestBed.inject(HkDb);
     await Promise.all([db.events.clear(), db.campaigns.clear(), db.settings.clear()]);
   });
@@ -819,6 +831,207 @@ describe('CampaignStore', () => {
         ]),
       ).rejects.toThrow(CampaignStoreNotLeaderError);
       expect(sendRaw).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- gatewayAppend robustness (fix round 1) ---------------------------------------------------
+
+  describe('gatewayAppend robustness (fix round 1)', () => {
+    it('F1a: rejects with CampaignGatewayUnavailableError and leaves no leaked waiters when the gateway is SWAPPED during the actor() await', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:21212121-2121-2121-2121-212121212121';
+      await store.open(streamId);
+      const sendRaw1 = vi.fn();
+      store.setGateway({ sendRaw: sendRaw1 });
+
+      // Control the ONE real async hop `gatewayAppend` takes before it re-checks the port
+      // (`actor()`'s `deviceId()` Dexie round trip) so the swap below deterministically lands
+      // DURING that window, not before or after it.
+      let releaseDeviceId!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        releaseDeviceId = resolve;
+      });
+      const settingsRepository = TestBed.inject(SettingsRepository);
+      vi.spyOn(settingsRepository, 'deviceId').mockImplementation(async () => {
+        await gate;
+        return 'device-1';
+      });
+
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-000000000008', [
+        { type: 'character.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+
+      // The batch is registered in gatewayWaiters SYNCHRONOUSLY (fix round 1, F1a) — this swap
+      // happens strictly AFTER that registration, while `actor()` is still pending.
+      const sendRaw2 = vi.fn();
+      store.setGateway({ sendRaw: sendRaw2 });
+      releaseDeviceId();
+
+      await expect(promise).rejects.toThrow(CampaignGatewayUnavailableError);
+      expect(sendRaw1).not.toHaveBeenCalled();
+      expect(sendRaw2).not.toHaveBeenCalled(); // never sent through EITHER port once the swap raced ahead
+
+      // No leaked waiter: the private map genuinely has nothing left for this batch's id. There is
+      // no OTHER externally-observable way to assert this (the ids never got sent, so no mock call
+      // captured them) — a direct reach-in is the honest way to pin the invariant fix round 1's
+      // review explicitly asked for ("no leaked waiters").
+      expect(
+        (store as unknown as { gatewayWaiters: Map<string, unknown> }).gatewayWaiters.size,
+      ).toBe(0);
+    });
+
+    it('F1a: rejects with CampaignGatewayUnavailableError and leaves no leaked waiters when the gateway is DETACHED during the actor() await', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:21212121-2121-2121-2121-212121212122';
+      await store.open(streamId);
+      const sendRaw = vi.fn();
+      store.setGateway({ sendRaw });
+
+      let releaseDeviceId!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        releaseDeviceId = resolve;
+      });
+      const settingsRepository = TestBed.inject(SettingsRepository);
+      vi.spyOn(settingsRepository, 'deviceId').mockImplementation(async () => {
+        await gate;
+        return 'device-1';
+      });
+
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-000000000009', [
+        { type: 'character.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+
+      // Before the fix, the batch was registered ONLY after `actor()` resolved, so a detach
+      // landing HERE would run `failAllGatewayWaiters` against a map that didn't have it yet —
+      // the batch would then register anyway, `sendRaw` would fire through the stale port, and
+      // the promise would hang forever.
+      store.setGateway(undefined);
+      releaseDeviceId();
+
+      await expect(promise).rejects.toThrow(CampaignGatewayUnavailableError);
+      expect(sendRaw).not.toHaveBeenCalled();
+      expect(
+        (store as unknown as { gatewayWaiters: Map<string, unknown> }).gatewayWaiters.size,
+      ).toBe(0);
+    });
+
+    it('F1b: fails the caller after CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS when no ack/reject ever arrives', async () => {
+      // A small REAL duration, not vi.useFakeTimers(): faking timers broadly starves the genuine
+      // async completion fake-indexeddb (this store's real `deviceId()` Dexie round trip) depends
+      // on, which hung the whole test — see CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS's own doc.
+      // The exact duration doesn't matter to this test's own assertions (see below) — only that
+      // it's comfortably under the default test timeout, so the FINAL `rejects` assertion doesn't
+      // itself time out waiting for it.
+      gatewayTimeoutMsState.set(50);
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:22222222-2222-2222-2222-222222222222';
+      await store.open(streamId);
+      const sendRaw = vi.fn();
+      store.setGateway({ sendRaw });
+
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-00000000000a', [
+        { type: 'character.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+      await waitFor(() => sendRaw.mock.calls.length > 0);
+
+      const settled = vi.fn();
+      promise.then(settled, settled);
+      // Not yet — a `.then()` callback is NEVER invoked synchronously (always at least one
+      // microtask later), so this holds regardless of the timeout's actual duration or how much
+      // real wall-clock time `waitFor`'s own polling above already consumed under load. Avoids a
+      // real-time margin assertion (flaky under a full-suite run's heavier system load).
+      expect(settled).not.toHaveBeenCalled();
+
+      await expect(promise).rejects.toThrow(CampaignGatewayUnavailableError);
+    });
+
+    it('F4: after a partial-batch send failure, already-sent ids stay swallowable — a later ack for one never reaches the campaign-own pending-prefix walk', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:23232323-2323-2323-2323-232323232323';
+      await store.open(streamId);
+
+      let calls = 0;
+      const sendRaw = vi.fn((_msg: unknown) => {
+        calls++;
+        if (calls === 2) throw new Error('socket closed mid-batch');
+      });
+      store.setGateway({ sendRaw });
+
+      // 51 drafts forces chunkForGateway's ≤50-events-per-frame cap to split this into TWO
+      // chunks — the second `sendRaw` call is the one that throws above.
+      const drafts = Array.from({ length: 51 }, (_, i) => ({
+        type: 'character.renamed',
+        v: 1,
+        payload: { name: `N${i}` },
+      }));
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-00000000000b', drafts);
+      // Mark as handled immediately (before the `waitFor` below lets real time pass) — otherwise
+      // Node flags an unhandled-rejection warning for the window between the promise settling and
+      // the `expect(...).rejects` assertion actually attaching its own handler further down.
+      promise.catch(() => undefined);
+      await waitFor(() => sendRaw.mock.calls.length >= 2);
+
+      await expect(promise).rejects.toThrow('socket closed mid-batch');
+      expect(sendRaw).toHaveBeenCalledTimes(2);
+
+      const firstChunk = sendRaw.mock.calls[0][0] as { events: Event[] };
+      expect(firstChunk.events).toHaveLength(50);
+      const alreadySentId = firstChunk.events[0].id;
+
+      // Swallowed harmlessly — MUST NOT throw SyncGapError (the bug: this id would otherwise be
+      // treated as an unrecognized campaign-own pending id and mis-fire a gap).
+      await expect(
+        store.commitPending(streamId, [{ id: alreadySentId, seq: 1 }]),
+      ).resolves.toBeUndefined();
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.some((e) => e.id === alreadySentId)).toBe(false);
+    });
+
+    it('F2: handleGatewayRejectEntries resolves gatewayAppend with REAL code/message; a later dropPending call for the same id is a harmless no-op', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:24242424-2424-2424-2424-242424242424';
+      await store.open(streamId);
+      const sendRaw = vi.fn();
+      store.setGateway({ sendRaw });
+
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-00000000000c', [
+        { type: 'character.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+      await waitFor(() => sendRaw.mock.calls.length > 0);
+      const sentId = (sendRaw.mock.calls[0][0] as { events: Event[] }).events[0].id;
+
+      store.handleGatewayRejectEntries([{ id: sentId, code: 'forbidden', message: 'Not allowed' }]);
+
+      await expect(promise).resolves.toEqual({
+        acked: [],
+        rejected: [{ id: sentId, code: 'forbidden', message: 'Not allowed' }],
+      });
+
+      // StreamSyncSession's own LATER (bare-ids) dropPending call for the same frame — must be a
+      // harmless no-op, not a double-settle/throw.
+      await expect(store.dropPending(streamId, [sentId])).resolves.toBeUndefined();
+    });
+
+    it('F2: handleGatewayAckEntries resolves gatewayAppend directly; a later commitPending call for the same id is a harmless no-op', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:25252525-2525-2525-2525-252525252525';
+      await store.open(streamId);
+      const sendRaw = vi.fn();
+      store.setGateway({ sendRaw });
+
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-00000000000d', [
+        { type: 'character.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+      await waitFor(() => sendRaw.mock.calls.length > 0);
+      const sentId = (sendRaw.mock.calls[0][0] as { events: Event[] }).events[0].id;
+
+      store.handleGatewayAckEntries([{ id: sentId, seq: 42 }]);
+
+      await expect(promise).resolves.toEqual({ acked: [{ id: sentId, seq: 42 }], rejected: [] });
+
+      await expect(
+        store.commitPending(streamId, [{ id: sentId, seq: 42 }]),
+      ).resolves.toBeUndefined();
     });
   });
 });

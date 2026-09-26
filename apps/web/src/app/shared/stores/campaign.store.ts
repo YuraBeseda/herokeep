@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
+import { computed, inject, Injectable, InjectionToken, signal, type Signal } from '@angular/core';
 import {
   parseEvent,
   WS_MESSAGE_BYTES_MAX,
@@ -91,11 +91,12 @@ export interface CampaignGatewayPort {
  * `gatewayAppend`'s resolved result: which of the forwarded character-stream events the server
  * acked (with their assigned seq) vs rejected, mirroring one `append` batch's possible SPLIT
  * outcome (doc-03: an `ack`/`reject` frame can each cover only part of a batch). `rejected` entries
- * carry `code`/`message` ONLY when the underlying plumbing had them available — see class doc's
- * "Campaign-targeted gateway forwarding" section for exactly why a reject routed through
- * `dropPending`'s existing bare-`ids` signature loses that detail (the generic per-code toast
- * already fires for the user before that information is discarded; only the PROGRAMMATIC
- * per-event reason is unrecoverable today).
+ * carry real `code`/`message` when `SyncService` (T5) wires `StreamSyncSession`'s `onRejectEntries`
+ * hook (fix round 1, F2 — `handleGatewayRejectEntries`) through to this store; `{id}` ONLY
+ * (`code`/`message` `undefined`) if that hook is never wired and a reject is only ever seen via the
+ * older `dropPending`-routed fallback — see class doc's "Campaign-targeted gateway forwarding"
+ * section for exactly why THAT path loses the detail (the generic per-code toast already fires for
+ * the user before `StreamSyncSession.handleReject` discards it, ahead of calling `dropPending`).
  */
 export interface AckOrReject {
   readonly acked: { id: string; seq: number }[];
@@ -103,15 +104,42 @@ export interface AckOrReject {
 }
 
 /** One in-flight `gatewayAppend()` call's bookkeeping — `remaining` starts as every sent event's
- * id and shrinks as `commitPending`/`dropPending` route matching results here (set-equality
- * completion, mirroring `StreamSyncSession`'s own `resumeState.expected`/`acked` pattern — T11b). */
+ * id and shrinks as `commitPending`/`dropPending` (or the fix-round-1 `handleGatewayAckEntries`/
+ * `handleGatewayRejectEntries` fast path — F2) route matching results here (set-equality
+ * completion, mirroring `StreamSyncSession`'s own `resumeState.expected`/`acked` pattern — T11b).
+ * `settled` (fix round 1, F1a/F4/F1b) guards `resolve`/`reject` against being called twice — once
+ * true, any id still pointing at this batch in `gatewayWaiters` is a "swallow harmlessly, do not
+ * touch storage" marker rather than a live waiter (see `resolveGatewayAcks`/`resolveGatewayRejects`
+ * and `sendGatewayBatch`'s own docs for why some ids deliberately outlive a settled batch). */
 interface GatewayBatch {
   readonly remaining: Set<string>;
   readonly acked: { id: string; seq: number }[];
   readonly rejected: { id: string; code?: RejectCode; message?: string }[];
   readonly resolve: (result: AckOrReject) => void;
   readonly reject: (err: Error) => void;
+  settled: boolean;
+  timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 }
+
+/** How long `gatewayAppend` waits for every sent event's ack/reject before giving up (fix round 1,
+ * F1b) — `StreamSyncSession`'s reconnect loop (`handleClose`) never re-sends a gateway-forwarded
+ * append on this store's behalf (`sendRaw` bypasses that pipeline entirely, per its own doc), so a
+ * connection drop mid-flight would otherwise leave a batch's waiters registered forever with no way
+ * to ever complete. Set to match `Backoff`'s own reconnect cap (`backoff.ts`: exponential up to a
+ * hard 30s ceiling, doc-03's connection-lifecycle numbers) — a reconnect landing within one backoff
+ * cycle still has a fair chance to legitimately answer before this fires; a genuinely stuck
+ * connection gives up at a bounded, user-noticeable time instead of hanging indefinitely. */
+const GATEWAY_ACK_TIMEOUT_MS = 30_000;
+
+/** DI seam over `GATEWAY_ACK_TIMEOUT_MS` (fix round 1, F1b) — production code never overrides this
+ * (the factory default IS the real 30s value); `campaign.store.spec.ts` overrides it to a small
+ * real duration so the timeout test waits milliseconds, not 30 real seconds, and does so WITHOUT
+ * `vi.useFakeTimers()` (which proved unreliable here — real fake-indexeddb completion depends on
+ * genuine timer/microtask scheduling that faking broadly starves, hanging the whole test). */
+export const CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS = new InjectionToken<number>(
+  'CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS',
+  { factory: () => GATEWAY_ACK_TIMEOUT_MS },
+);
 
 const GATEWAY_MAX_APPEND_EVENTS = 50;
 // Same conservative fixed reserve `stream-sync-session.ts`'s own `chunkEventsForAppend` uses for
@@ -223,26 +251,42 @@ interface CampaignJoinResponse {
  * session (which structurally satisfies `CampaignGatewayPort` already) once it constructs/tears down
  * this campaign's session.
  *
- * The resulting `ack`/`reject` frames are NOT routed through any dedicated hook — `StreamSyncSession`
- * ships no such hook (T1's shipped surface has none, and adding one is out of this task's scope).
- * Instead they arrive exactly the way every OTHER ack/reject for this stream does: `StreamSyncSession`
- * always calls `this.store.commitPending(streamId, results)` / `this.store.dropPending(streamId, ids)`
- * unconditionally for whatever a campaign `ack`/`reject` frame contains — doc-03's gateway
- * multiplexes a forwarded append's own ack/reject onto that SAME frame. `commitPending`/`dropPending`
- * below therefore partition every incoming id FIRST by membership in `gatewayWaiters` (a table of
- * this store's own outstanding `gatewayAppend` calls) — exactly mirroring `StreamSyncSession`'s own
- * `resumeState`-based ack/reject partitioning (T11b round 2) — and route a match to the matching
- * `gatewayAppend` promise instead of the campaign's own pending-row bookkeeping. A gateway-forwarded
- * event's id NEVER appears among this stream's OWN Dexie rows (`EventsRepository.byStream(streamId)`)
- * — it is a `char:<id>` event, written (if anywhere) to that OTHER stream's own storage by a LATER
- * task, never here — so this partition can never collide with a genuine campaign-own id.
+ * The resulting `ack`/`reject` frames arrive two ways, both handled:
  *
- * One real, documented limitation from reusing `dropPending`'s existing signature this way:
- * `StreamSyncSession.handleReject` strips `code`/`message` down to bare `ids` BEFORE calling
- * `dropPending` (it already fired the generic per-code toast itself, first) — so a gateway-forwarded
- * REJECT's `AckOrReject.rejected` entry only ever carries `{id}` today, `code`/`message` staying
- * `undefined`. A gateway-forwarded ACK has no such loss (`commitPending` receives the full
- * `{id,seq}[]` verbatim) — only the reject arm is degraded. See `AckOrReject`'s own doc.
+ * 1. (Fix round 1, F2 — controller ruling) `StreamSyncSession` now ALSO ships `onAckEntries`/
+ *    `onRejectEntries` (optional, additive — see that class's own doc), firing with the frame's
+ *    FULL, unstripped `results` before any other handling. `SyncService` (T5) wires these to
+ *    `handleGatewayAckEntries`/`handleGatewayRejectEntries` below, which is how a gateway-forwarded
+ *    REJECT recovers a real `code`/`message` (see `AckOrReject`'s own doc).
+ * 2. Regardless of whether (1) is wired, the SAME results also arrive the way every OTHER ack/
+ *    reject for this stream does: `StreamSyncSession` always calls `this.store.commitPending(
+ *    streamId, results)` / `this.store.dropPending(streamId, ids)` unconditionally — doc-03's
+ *    gateway multiplexes a forwarded append's own ack/reject onto that SAME frame. `commitPending`/
+ *    `dropPending` below partition every incoming id FIRST by membership in `gatewayWaiters` (a
+ *    table of this store's own outstanding `gatewayAppend` calls) — exactly mirroring
+ *    `StreamSyncSession`'s own `resumeState`-based ack/reject partitioning (T11b round 2) — and
+ *    route a match to the matching `gatewayAppend` batch instead of the campaign's own pending-row
+ *    bookkeeping. Since (1) — when wired — already resolves/settles the batch and deletes its ids
+ *    from `gatewayWaiters`, this second arrival typically finds nothing left to do (a harmless
+ *    no-op); when (1) is NOT wired, this is the only path, and (for a reject) only ever supplies
+ *    bare `{id}` (`StreamSyncSession.handleReject` strips `code`/`message` before calling
+ *    `dropPending` — it already fired the generic per-code toast itself, first).
+ *
+ * A gateway-forwarded event's id NEVER appears among this stream's OWN Dexie rows
+ * (`EventsRepository.byStream(streamId)`) — it is a `char:<id>` event, written (if anywhere) to
+ * that OTHER stream's own storage by a LATER task, never here — so this partition can never
+ * collide with a genuine campaign-own id.
+ *
+ * Three more robustness properties added in fix round 1 (controller review findings F1a/F1b/F4):
+ * `gatewayAppend` registers its batch in `gatewayWaiters` SYNCHRONOUSLY, before its own first
+ * `await` (F1a) — a `setGateway` call landing during that await (detach OR swap to a different
+ * session) is caught by re-checking `this.gatewayPort === port` once the await resolves, instead of
+ * silently sending through a stale port and leaking a waiter nothing will ever settle. A per-batch
+ * `GATEWAY_ACK_TIMEOUT_MS` timer (F1b) fails the caller if no reconnect ever answers. A `sendRaw`
+ * failure partway through a multi-chunk batch (F4) deregisters only the NEVER-sent ids; already-sent
+ * ids stay registered against the now-settled batch so a later ack/reject for them is swallowed
+ * harmlessly rather than mis-routed into the campaign's own pending-prefix walk. See
+ * `sendGatewayBatch`'s own doc for the exact mechanics.
  */
 @Injectable({ providedIn: 'root' })
 export class CampaignStore {
@@ -252,6 +296,7 @@ export class CampaignStore {
   private readonly leaderService = inject(LeaderService);
   private readonly authService = inject(AuthService);
   private readonly packStore = inject(PackStore);
+  private readonly gatewayAckTimeoutMs = inject(CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS);
 
   private readonly streamIdState = signal<string | undefined>(undefined);
   private readonly loadedState = signal(false);
@@ -264,6 +309,20 @@ export class CampaignStore {
   // Keyed by the char-stream event id a still-outstanding gatewayAppend() call sent — see class
   // doc's "Campaign-targeted gateway forwarding" section.
   private readonly gatewayWaiters = new Map<string, GatewayBatch>();
+  // Fix round 1 (a bug F2's own test caught): `StreamSyncSession` ALWAYS calls `commitPending`/
+  // `dropPending` for a frame's full results, even when the fix-round-1 rich hooks
+  // (`handleGatewayAckEntries`/`handleGatewayRejectEntries`) already resolved every gateway id in
+  // it — that redundant second pass sees the SAME ids `gatewayWaiters` no longer has (the first
+  // pass already deleted them once consumed), which would otherwise mis-bucket them as "own" and
+  // throw `SyncGapError`. Every id ever routed through `resolveGatewayAcks`/`resolveGatewayRejects`
+  // is added here and NEVER removed — `commitPending`/`dropPending`'s own partition checks this
+  // SET too (not just `gatewayWaiters`), so a redundant same-frame delivery is always recognized as
+  // "mine, already handled" regardless of whether the batch is still tracked. Unbounded growth is
+  // an accepted v1 simplification: `gatewayAppend` is a low-frequency operation (doc-03's gateway
+  // use case — e.g. a DM editing an unclaimed pregen), so even a whole long-lived browser tab
+  // session's worth of ids here is a trivial amount of memory; a future task can add pruning if
+  // that assumption ever stops holding.
+  private readonly resolvedGatewayIds = new Set<string>();
   private readonly localAppendListeners = new Set<(streamId: string, events: Event[]) => void>();
 
   // Serializes every mutating call's actual read/write work — same rationale as
@@ -440,7 +499,11 @@ export class CampaignStore {
    * gateway forwarding" section for the full ack/reject routing design. Requires a `setGateway`d
    * live session; throws `CampaignGatewayUnavailableError` immediately (no queueing) when none is
    * attached. Resolves once EVERY sent event has been either acked or rejected (set-equality
-   * completion), or rejects if the gateway disconnects mid-flight. */
+   * completion), rejects if the gateway disconnects mid-flight — including a swap to a DIFFERENT
+   * session while this call's own `actor()` lookup was still resolving (fix round 1, F1a) — rejects
+   * (settling the whole batch, per `sendGatewayBatch`'s own doc for what happens to already-sent
+   * ids) if a chunk fails to send partway through a multi-chunk batch (fix round 1, F4), and rejects
+   * if no ack/reject for every sent id arrives within `GATEWAY_ACK_TIMEOUT_MS` (fix round 1, F1b). */
   async gatewayAppend(characterId: string, drafts: DraftEvent[]): Promise<AckOrReject> {
     this.assertLeader();
     if (drafts.length === 0) return { acked: [], rejected: [] };
@@ -448,35 +511,107 @@ export class CampaignStore {
     if (!port) throw new CampaignGatewayUnavailableError();
 
     const targetStream = `char:${characterId}`;
-    const actor = await this.actor();
     const txId = drafts.length > 1 ? uuidv7() : undefined;
-    const events: Event[] = drafts.map((draft) =>
+    // Fix round 1, F1a: every event's id is generated SYNCHRONOUSLY, before this method's first
+    // `await` — so the batch below can be registered in `gatewayWaiters` before control is ever
+    // yielded back to the event loop. `envelope()`'s `opts.id` (in `sendGatewayBatch`, once
+    // `actor()` resolves) reuses these SAME ids.
+    const ids = drafts.map(() => uuidv7());
+
+    return new Promise<AckOrReject>((resolve, reject) => {
+      const batch: GatewayBatch = {
+        remaining: new Set(ids),
+        acked: [],
+        rejected: [],
+        resolve,
+        reject,
+        settled: false,
+        timeoutHandle: undefined,
+      };
+      for (const id of ids) this.gatewayWaiters.set(id, batch);
+
+      void this.sendGatewayBatch(port, batch, ids, targetStream, txId, drafts);
+    });
+  }
+
+  /** The post-registration continuation of `gatewayAppend` — factored out so the Promise executor
+   * there can register `batch` in `gatewayWaiters` SYNCHRONOUSLY (see that method's own doc)
+   * before this method's own first `await this.actor()`.
+   *
+   * Fix round 1, F1a: re-checks `this.gatewayPort === port` immediately after that await resolves
+   * — a `setGateway` call landing DURING the await (a detach, or a swap to a different session) is
+   * otherwise invisible here, since `port` was captured by value before the await ever ran, and
+   * `failAllGatewayWaiters` (run synchronously by that `setGateway(undefined)` call) could only
+   * fail waiters registered BEFORE it ran — this batch's own registration (above, in
+   * `gatewayAppend`) already beat that race, so without this re-check the code below would
+   * proceed to `sendRaw` through a port that is no longer live, and the promise would never
+   * settle.
+   *
+   * Fix round 1, F4: a `sendRaw` failure partway through a multi-chunk batch deregisters only the
+   * ids that were NEVER sent (nothing will ever answer for them — safe to drop outright). Ids from
+   * chunks ALREADY sent before the failing one stay registered, still pointing at this batch —
+   * which this call settles (rejects) right here — so a LATER ack/reject for one of those
+   * already-sent ids is swallowed harmlessly by `resolveGatewayAcks`/`resolveGatewayRejects`'s own
+   * `batch.settled` check instead of falling through to the campaign's own pending-prefix walk
+   * (where an unrecognized id would mis-fire `SyncGapError`). */
+  private async sendGatewayBatch(
+    port: CampaignGatewayPort,
+    batch: GatewayBatch,
+    ids: readonly string[],
+    targetStream: string,
+    txId: string | undefined,
+    drafts: readonly DraftEvent[],
+  ): Promise<void> {
+    let actor: Event['actor'];
+    try {
+      actor = await this.actor();
+    } catch (err) {
+      this.deregisterGatewayIds(ids);
+      this.settleGatewayReject(
+        batch,
+        err instanceof Error
+          ? err
+          : new Error('CampaignStore.gatewayAppend: actor resolution failed'),
+      );
+      return;
+    }
+
+    if (this.gatewayPort !== port) {
+      this.deregisterGatewayIds(ids);
+      this.settleGatewayReject(batch, new CampaignGatewayUnavailableError());
+      return;
+    }
+
+    const events: Event[] = drafts.map((draft, i) =>
       this.validate(
-        this.envelope(targetStream, actor, draft.type, draft.v, draft.payload, { txId }),
+        this.envelope(targetStream, actor, draft.type, draft.v, draft.payload, {
+          txId,
+          id: ids[i],
+        }),
         draft.type,
         draft.v,
       ),
     );
 
-    return new Promise<AckOrReject>((resolve, reject) => {
-      const batch: GatewayBatch = {
-        remaining: new Set(events.map((e) => e.id)),
-        acked: [],
-        rejected: [],
-        resolve,
-        reject,
-      };
-      for (const e of events) this.gatewayWaiters.set(e.id, batch);
-
-      try {
-        for (const chunk of chunkForGateway(events)) {
-          port.sendRaw({ t: 'append', rid: uuidv7(), events: chunk });
-        }
-      } catch (err) {
-        for (const e of events) this.gatewayWaiters.delete(e.id);
-        reject(err instanceof Error ? err : new Error('CampaignStore.gatewayAppend: send failed'));
+    const sentIds = new Set<string>();
+    try {
+      for (const chunk of chunkForGateway(events)) {
+        port.sendRaw({ t: 'append', rid: uuidv7(), events: chunk });
+        for (const e of chunk) sentIds.add(e.id);
       }
-    });
+    } catch (err) {
+      for (const id of ids) {
+        if (!sentIds.has(id)) this.gatewayWaiters.delete(id);
+      }
+      this.settleGatewayReject(
+        batch,
+        err instanceof Error ? err : new Error('CampaignStore.gatewayAppend: send failed'),
+      );
+      return;
+    }
+
+    // Fix round 1, F1b: armed only once every event has actually gone out.
+    this.armGatewayTimeout(batch, ids);
   }
 
   /** Attaches (or, with `undefined`, detaches) the live campaign session `gatewayAppend` forwards
@@ -558,8 +693,8 @@ export class CampaignStore {
     return this.runExclusive(async () => {
       if (ackResults.length === 0) return;
 
-      const gatewayResults = ackResults.filter((r) => this.gatewayWaiters.has(r.id));
-      const ownResults = ackResults.filter((r) => !this.gatewayWaiters.has(r.id));
+      const gatewayResults = ackResults.filter((r) => this.isGatewayId(r.id));
+      const ownResults = ackResults.filter((r) => !this.isGatewayId(r.id));
       if (gatewayResults.length > 0) this.resolveGatewayAcks(gatewayResults);
       if (ownResults.length === 0) return;
 
@@ -609,9 +744,17 @@ export class CampaignStore {
     return this.runExclusive(async () => {
       if (ids.length === 0) return;
 
-      const gatewayIds = ids.filter((id) => this.gatewayWaiters.has(id));
-      const ownIds = ids.filter((id) => !this.gatewayWaiters.has(id));
-      if (gatewayIds.length > 0) this.resolveGatewayRejects(gatewayIds);
+      const gatewayIds = ids.filter((id) => this.isGatewayId(id));
+      const ownIds = ids.filter((id) => !this.isGatewayId(id));
+      if (gatewayIds.length > 0) {
+        // Bare ids only (this call's own signature) — `code`/`message`, when available, arrive
+        // separately via `handleGatewayRejectEntries` (fix round 1, F2), which always runs FIRST
+        // (`StreamSyncSession.onRejectEntries` fires before `dropPending` is ever called for the
+        // same frame) and already deletes/settles anything it resolved — so this is a no-op for
+        // any id that path already handled, and a degraded `{id}`-only fallback for any id it
+        // didn't (e.g. `onRejectEntries` never wired).
+        this.resolveGatewayRejects(gatewayIds.map((id) => ({ id })));
+      }
       if (ownIds.length === 0) return;
 
       await this.eventsRepository.removePending(streamId, ownIds);
@@ -625,6 +768,34 @@ export class CampaignStore {
   onLocalAppend(cb: (streamId: string, events: Event[]) => void): () => void {
     this.localAppendListeners.add(cb);
     return () => this.localAppendListeners.delete(cb);
+  }
+
+  /** [Fix round 1, F2 — controller ruling] `SyncService` (T5) wires this to the campaign's live
+   * `StreamSyncSession`'s `onAckEntries` hook — fires with an `ack` frame's FULL, unstripped
+   * `{id,seq}[]`, before `commitPending` is even called for the same frame. Functionally
+   * equivalent to what `commitPending`'s own gateway partition already resolves for a gateway id
+   * (an ack loses nothing either way going through `dropPending`/`commitPending`) — wired for
+   * symmetry with `handleGatewayRejectEntries` so a future session change can't silently stop
+   * gateway acks from resolving via this faster path. Ids not belonging to an outstanding
+   * `gatewayAppend()` call are ignored. */
+  handleGatewayAckEntries(results: readonly { id: string; seq: number }[]): void {
+    const mine = results.filter((r) => this.gatewayWaiters.has(r.id));
+    if (mine.length > 0) this.resolveGatewayAcks(mine);
+  }
+
+  /** [Fix round 1, F2 — controller ruling] `SyncService` (T5) wires this to the campaign's live
+   * `StreamSyncSession`'s `onRejectEntries` hook — fires with a `reject` frame's FULL, unstripped
+   * `{id,code,message}[]`, BEFORE `StreamSyncSession.handleReject` strips it down to bare `ids` for
+   * its own later `dropPending` call. This is what lets `AckOrReject.rejected` carry REAL
+   * `code`/`message` for a gateway-forwarded reject — see `AckOrReject`'s own doc. `dropPending`'s
+   * own later call for the SAME ids becomes a harmless no-op (the id is already gone from
+   * `gatewayWaiters` by the time it runs). Ids not belonging to an outstanding `gatewayAppend()`
+   * call are ignored. */
+  handleGatewayRejectEntries(
+    results: readonly { id: string; code: RejectCode; message: string }[],
+  ): void {
+    const mine = results.filter((r) => this.gatewayWaiters.has(r.id));
+    if (mine.length > 0) this.resolveGatewayRejects(mine);
   }
 
   // --- internals -----------------------------------------------------------------------------
@@ -683,16 +854,20 @@ export class CampaignStore {
     return new Date().toISOString();
   }
 
+  /** `opts.id`, when given, is used verbatim instead of minting a fresh `uuidv7()` — `gatewayAppend`
+   * (fix round 1, F1a) pre-generates its ids BEFORE its own first `await` so the batch can be
+   * registered in `gatewayWaiters` synchronously, then passes those SAME ids through here once
+   * `actor()` resolves, so the envelope actually sent matches what was registered. */
   private envelope(
     stream: string,
     actor: Event['actor'],
     type: string,
     v: number,
     payload: unknown,
-    opts: { txId?: string } = {},
+    opts: { txId?: string; id?: string } = {},
   ): unknown {
     return {
-      id: uuidv7(),
+      id: opts.id ?? uuidv7(),
       stream,
       ts: this.timestamp(),
       actor,
@@ -769,34 +944,89 @@ export class CampaignStore {
     for (const cb of this.localAppendListeners) cb(streamId, events);
   }
 
-  private resolveGatewayAcks(results: { id: string; seq: number }[]): void {
+  /** Arms `GATEWAY_ACK_TIMEOUT_MS` (fix round 1, F1b) once every event in `batch` has actually been
+   * sent — a no-op if the batch has already settled by the time this runs (defensive; not
+   * reachable in production, since nothing between the send loop and this call yields control). */
+  private armGatewayTimeout(batch: GatewayBatch, ids: readonly string[]): void {
+    if (batch.settled) return;
+    batch.timeoutHandle = setTimeout(() => {
+      for (const id of ids) {
+        if (this.gatewayWaiters.get(id) === batch) this.gatewayWaiters.delete(id);
+      }
+      this.settleGatewayReject(batch, new CampaignGatewayUnavailableError());
+    }, this.gatewayAckTimeoutMs);
+  }
+
+  private deregisterGatewayIds(ids: readonly string[]): void {
+    for (const id of ids) this.gatewayWaiters.delete(id);
+  }
+
+  /** Resolves `batch`'s promise exactly once (fix round 1, F1a/F4/F1b all route through this) —
+   * clears any armed timeout and flips `settled` so a LATER ack/reject arrival for one of this
+   * batch's already-sent-but-still-registered ids (F4) is recognized as "swallow, don't touch
+   * storage" by `resolveGatewayAcks`/`resolveGatewayRejects` rather than double-resolving. */
+  private settleGatewayResolve(batch: GatewayBatch): void {
+    if (batch.settled) return;
+    batch.settled = true;
+    if (batch.timeoutHandle !== undefined) clearTimeout(batch.timeoutHandle);
+    batch.resolve({ acked: batch.acked, rejected: batch.rejected });
+  }
+
+  /** Rejects `batch`'s promise exactly once — see `settleGatewayResolve`'s own doc; same
+   * idempotency/timeout-clearing guarantee, the failure arm. */
+  private settleGatewayReject(batch: GatewayBatch, err: Error): void {
+    if (batch.settled) return;
+    batch.settled = true;
+    if (batch.timeoutHandle !== undefined) clearTimeout(batch.timeoutHandle);
+    batch.reject(err);
+  }
+
+  /** `true` for an id that IS or EVER WAS a `gatewayAppend`-sent id — the union of "still actively
+   * tracked" (`gatewayWaiters`) and "already resolved once, kept around so a redundant same-frame
+   * second delivery is recognized" (`resolvedGatewayIds`, see its own doc). `commitPending`/
+   * `dropPending` use this (not a bare `gatewayWaiters.has`) to decide whether an incoming id
+   * belongs to the campaign's own pending-prefix walk at all. */
+  private isGatewayId(id: string): boolean {
+    return this.gatewayWaiters.has(id) || this.resolvedGatewayIds.has(id);
+  }
+
+  private resolveGatewayAcks(results: readonly { id: string; seq: number }[]): void {
     for (const r of results) {
+      this.resolvedGatewayIds.add(r.id);
       const batch = this.gatewayWaiters.get(r.id);
-      if (!batch) continue;
-      batch.acked.push(r);
-      batch.remaining.delete(r.id);
+      if (!batch) continue; // already fully consumed by an earlier pass — nothing left to do
       this.gatewayWaiters.delete(r.id);
-      if (batch.remaining.size === 0)
-        batch.resolve({ acked: batch.acked, rejected: batch.rejected });
+      // fix round 1, F4: batch already settled (partial-send failure, timeout, or completed by an
+      // earlier id in this same call) — swallow harmlessly, no re-push.
+      if (batch.settled || !batch.remaining.has(r.id)) continue;
+      batch.remaining.delete(r.id);
+      batch.acked.push(r);
+      if (batch.remaining.size === 0) this.settleGatewayResolve(batch);
     }
   }
 
-  private resolveGatewayRejects(ids: string[]): void {
-    for (const id of ids) {
-      const batch = this.gatewayWaiters.get(id);
+  private resolveGatewayRejects(
+    results: readonly { id: string; code?: RejectCode; message?: string }[],
+  ): void {
+    for (const r of results) {
+      this.resolvedGatewayIds.add(r.id);
+      const batch = this.gatewayWaiters.get(r.id);
       if (!batch) continue;
-      // `code`/`message` unavailable via `dropPending`'s bare-`ids` signature — see class doc.
-      batch.rejected.push({ id });
-      batch.remaining.delete(id);
-      this.gatewayWaiters.delete(id);
-      if (batch.remaining.size === 0)
-        batch.resolve({ acked: batch.acked, rejected: batch.rejected });
+      this.gatewayWaiters.delete(r.id);
+      if (batch.settled || !batch.remaining.has(r.id)) continue;
+      batch.remaining.delete(r.id);
+      batch.rejected.push(
+        r.code !== undefined ? { id: r.id, code: r.code, message: r.message } : { id: r.id },
+      );
+      if (batch.remaining.size === 0) this.settleGatewayResolve(batch);
     }
   }
 
   private failAllGatewayWaiters(): void {
     const batches = new Set(this.gatewayWaiters.values());
     this.gatewayWaiters.clear();
-    for (const batch of batches) batch.reject(new CampaignGatewayUnavailableError());
+    for (const batch of batches) {
+      this.settleGatewayReject(batch, new CampaignGatewayUnavailableError());
+    }
   }
 }

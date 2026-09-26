@@ -95,6 +95,19 @@ import {
  * socket, bypassing the local-append/hello/chunking pipeline entirely; a caller needing that
  * traffic to survive a reconnect is responsible for re-sending it itself (this session does not
  * remember or replay anything sent through them).
+ *
+ * ## `onAckEntries`/`onRejectEntries` (plan-10 Task 4 fix round 1, controller ruling F2)
+ *
+ * Two more optional hooks, additive and default-`undefined`: they fire with the INCOMING `ack`/
+ * `reject` frame's FULL, unstripped `results` array — BEFORE `handleAck`/`handleReject` do
+ * anything else with it (in particular, before `handleReject`'s own toast loop and before either
+ * handler calls into `store.commitPending`/`store.dropPending`, the latter of which only ever
+ * receives bare `ids`, having already lost `code`/`message`). `CampaignStore` (plan-10 Task 4)
+ * wires these to recover a gateway-forwarded reject's real `code`/`message` — its own
+ * `commitPending`/`dropPending`-routed path can only ever see `{id}` for a reject, since THIS
+ * class's `handleReject` already discards the rest before calling `dropPending`. Neither hook is
+ * set by `SyncService`'s character-stream wiring (`sync.service.ts`), so a character session's
+ * observable behavior is byte-identical to before this fix round — this is purely additive.
  */
 
 export interface QuotaInfo {
@@ -177,6 +190,13 @@ export interface StreamSyncSessionOptions {
   /** [plan-10 Task 1] EVERY `notice` frame, regardless of `key` — fires ALONGSIDE (not instead of)
    * this class's own existing `quota.warning` → toast handling. See class doc. */
   onNotice?: (notice: NoticeMsg) => void;
+  /** [plan-10 Task 4 fix round 1, F2] The FULL, unstripped `results` of every `ack` frame this
+   * session receives, fired before any other handling. See class doc's own section. */
+  onAckEntries?: (results: Extract<ServerMessage, { t: 'ack' }>['results']) => void;
+  /** [plan-10 Task 4 fix round 1, F2] The FULL, unstripped `results` of every `reject` frame this
+   * session receives (`{id,code,message}`, not yet stripped to bare `ids`), fired before the toast
+   * loop and before `store.dropPending`. See class doc's own section. */
+  onRejectEntries?: (results: Extract<ServerMessage, { t: 'reject' }>['results']) => void;
 }
 
 const LOCK_PREFIX = 'hk:sync:';
@@ -246,6 +266,10 @@ export class StreamSyncSession {
   private readonly onForeignEvents: ((stream: string, events: Event[]) => void) | undefined;
   private readonly onBinaryFrame: ((bytes: Uint8Array) => void) | undefined;
   private readonly onNotice: ((notice: NoticeMsg) => void) | undefined;
+  private readonly onAckEntries:
+    ((results: Extract<ServerMessage, { t: 'ack' }>['results']) => void) | undefined;
+  private readonly onRejectEntries:
+    ((results: Extract<ServerMessage, { t: 'reject' }>['results']) => void) | undefined;
   private readonly locksApi: LockManager | undefined;
 
   private socket: SyncSocket | undefined;
@@ -295,6 +319,8 @@ export class StreamSyncSession {
     this.onForeignEvents = options.onForeignEvents;
     this.onBinaryFrame = options.onBinaryFrame;
     this.onNotice = options.onNotice;
+    this.onAckEntries = options.onAckEntries;
+    this.onRejectEntries = options.onRejectEntries;
     this.locksApi = options.locks ?? navigator.locks;
     this.reconnectSignals = new ReconnectSignals({
       window: options.window,
@@ -606,6 +632,9 @@ export class StreamSyncSession {
    * resume's own outcome (resume never writes storage on success; on failure the whole stream gets
    * overwritten by `restore()` regardless of what else this frame committed). */
   private async handleAck(message: Extract<ServerMessage, { t: 'ack' }>): Promise<void> {
+    // [plan-10 Task 4 fix round 1, F2] Fires FIRST, with the frame's full results, before any
+    // resume-state partitioning or store routing — see class doc.
+    this.onAckEntries?.(message.results);
     if (this.resumeState) {
       const state = this.resumeState;
       const resumeResults = message.results.filter((r) => state.expected.has(r.id));
@@ -638,6 +667,10 @@ export class StreamSyncSession {
    * triggers `failDivergence` outright; any OTHER (non-resume) rejected id still goes through the
    * ordinary `dropPending` path regardless. */
   private async handleReject(message: Extract<ServerMessage, { t: 'reject' }>): Promise<void> {
+    // [plan-10 Task 4 fix round 1, F2] Fires FIRST, with the frame's full {id,code,message}
+    // results, before the toast loop below strips anything or `dropPending` is ever called with
+    // bare ids — see class doc.
+    this.onRejectEntries?.(message.results);
     for (const result of message.results) {
       this.toast.show(REJECT_TOAST_KEYS[result.code]);
     }

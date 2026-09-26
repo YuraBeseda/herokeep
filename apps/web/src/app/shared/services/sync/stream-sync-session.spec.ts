@@ -433,6 +433,82 @@ describe('StreamSyncSession', () => {
     session.stop();
   });
 
+  it("onAckEntries fires with the ack frame's FULL, unstripped results BEFORE commitPending runs (plan-10 Task 4 fix round 1, F2)", async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Pending Name' } }]);
+    const pendingEvent = store.events().at(-1)!;
+    const onAckEntries = vi.fn();
+    const onRejectEntries = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onAckEntries, onRejectEntries });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    ws.emitMessage({ t: 'ack', rid: 'r2', results: [{ id: pendingEvent.id, seq: 2 }] });
+    await flush();
+
+    expect(onAckEntries).toHaveBeenCalledTimes(1);
+    expect(onAckEntries).toHaveBeenCalledWith([{ id: pendingEvent.id, seq: 2 }]);
+    expect(onRejectEntries).not.toHaveBeenCalled();
+    // Existing behavior unchanged: the pending row still committed at its server seq.
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.find((e) => e.id === pendingEvent.id)?.seq).toBe(2);
+    session.stop();
+  });
+
+  it("onRejectEntries fires with the reject frame's FULL {id,code,message} BEFORE the toast loop / dropPending — existing toast+drop behavior is unchanged (plan-10 Task 4 fix round 1, F2)", async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    await store.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Doomed' } }]);
+    const rejected = store.events().at(-1)!;
+    const onRejectEntries = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onRejectEntries });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+      ],
+    });
+    await flush();
+
+    ws.emitMessage({
+      t: 'reject',
+      rid: 'r2',
+      results: [{ id: rejected.id, code: 'forbidden', message: 'nope' }],
+    });
+    await flush();
+
+    expect(onRejectEntries).toHaveBeenCalledTimes(1);
+    expect(onRejectEntries).toHaveBeenCalledWith([
+      { id: rejected.id, code: 'forbidden', message: 'nope' },
+    ]);
+    expect(toastShow).toHaveBeenCalledWith('sync.reject.forbidden');
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.find((e) => e.id === rejected.id)).toBeUndefined();
+    session.stop();
+  });
+
   it('onMembers fires for a standalone `members` frame', async () => {
     const streamId = await store.create('Aria', 'feminine');
     store.enterSyncMode(streamId);
