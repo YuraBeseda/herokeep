@@ -491,6 +491,114 @@ describe('CampaignStore', () => {
     });
   });
 
+  // --- appendToStream (plan-10 Task 8: party-overview publishing) ------------------------------
+
+  describe('appendToStream', () => {
+    it('appends onto the given streamId without disturbing whichever OTHER campaign is currently open', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const openStreamId = 'camp:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      const otherStreamId = 'camp:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+      await store.open(openStreamId);
+      await store.appendTx([{ type: 'campaign.renamed', v: 1, payload: { name: 'Open One' } }]);
+      const stateBefore = store.state();
+
+      await store.appendToStream(otherStreamId, [
+        { type: 'campaign.renamed', v: 1, payload: { name: 'Other' } },
+      ]);
+
+      // The currently-open campaign's own live signals are untouched.
+      expect(store.streamId()).toBe(openStreamId);
+      expect(store.state()).toEqual(stateBefore);
+
+      // But the OTHER stream's storage really did receive the event.
+      const persisted = await TestBed.inject(EventsRepository).byStream(otherStreamId);
+      expect(persisted).toHaveLength(1);
+      expect(persisted[0]?.payload).toEqual({ name: 'Other' });
+      expect(persisted[0]?.seq).toBeUndefined();
+    });
+
+    it("stamps the actor's role from the TARGET stream's own cached CampaignsRepository row, not roleState()", async () => {
+      const store = TestBed.inject(CampaignStore);
+      const openStreamId = 'camp:cccccccc-cccc-cccc-cccc-cccccccccccc';
+      const otherId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+      await store.open(openStreamId); // this device's role here defaults to undefined -> 'member'
+      await TestBed.inject(CampaignsRepository).put({
+        id: otherId,
+        name: 'Other Campaign',
+        system: 'sys',
+        role: 'dm',
+        lastSeq: 0,
+        updatedAt: 1,
+      });
+
+      await store.appendToStream(`camp:${otherId}`, [
+        { type: 'campaign.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+
+      const persisted = await TestBed.inject(EventsRepository).byStream(`camp:${otherId}`);
+      expect(persisted[0]?.actor.role).toBe('dm');
+    });
+
+    it('refreshes the live state/events signals when the target streamId IS the currently open one', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+      await store.open(streamId);
+
+      await store.appendToStream(streamId, [
+        { type: 'campaign.renamed', v: 1, payload: { name: 'Renamed Live' } },
+      ]);
+
+      expect(store.state()?.name).toBe('Renamed Live');
+    });
+
+    it('refuses an event.reverted draft outright', async () => {
+      const store = TestBed.inject(CampaignStore);
+      await expect(
+        store.appendToStream('camp:ffffffff-ffff-ffff-ffff-ffffffffffff', [
+          { type: 'event.reverted', v: 1, payload: {} },
+        ]),
+      ).rejects.toThrow(/event\.reverted/);
+    });
+
+    it('throws CampaignStoreNotLeaderError when this tab is not the leader', async () => {
+      installStubLocks();
+      const otherTab = TestBed.runInInjectionContext(() => new LeaderService());
+      await otherTab.acquire();
+      const store = TestBed.inject(CampaignStore);
+
+      await expect(
+        store.appendToStream('camp:11111111-2222-3333-4444-555555555555', [
+          { type: 'campaign.renamed', v: 1, payload: { name: 'X' } },
+        ]),
+      ).rejects.toThrow(CampaignStoreNotLeaderError);
+    });
+
+    it('throws CampaignStoreNotAuthenticatedError when no user is signed in', async () => {
+      userState.set(null);
+      const store = TestBed.inject(CampaignStore);
+
+      await expect(
+        store.appendToStream('camp:11111111-2222-3333-4444-555555555555', [
+          { type: 'campaign.renamed', v: 1, payload: { name: 'X' } },
+        ]),
+      ).rejects.toThrow(CampaignStoreNotAuthenticatedError);
+    });
+
+    it('onLocalAppend fires for the target streamId', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:66666666-7777-8888-9999-000000000000';
+      const calls: { streamId: string; events: Event[] }[] = [];
+      store.onLocalAppend((sid, events) => calls.push({ streamId: sid, events }));
+
+      await store.appendToStream(streamId, [
+        { type: 'campaign.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.streamId).toBe(streamId);
+    });
+  });
+
   // --- applyServerCommit -------------------------------------------------------------------------
 
   describe('applyServerCommit', () => {

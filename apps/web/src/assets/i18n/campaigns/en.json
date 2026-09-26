@@ -199,7 +199,28 @@
     }
   },
   "party": {
-    "placeholder": "The party overview is coming soon."
+    "title": "Party",
+    "empty": "No characters have joined this campaign yet.",
+    "hiddenNotice": "The DM has hidden party sheets for this campaign.",
+    "linkCta": {
+      "body": "You don't have a character in this campaign yet.",
+      "action": "Link a character"
+    },
+    "card": {
+      "portraitAlt": "{name}'s portrait",
+      "leftBadge": "Left the party",
+      "noOverview": "No overview shared yet.",
+      "hp": "HP {hp}/{hpMax}",
+      "hpWithTemp": "HP {hp}/{hpMax} (+{temp} temp)",
+      "ac": "AC {ac}",
+      "passivePerception": "Passive Perception {value}",
+      "classLevel": "{class} {level}",
+      "concentrating": "Concentrating"
+    },
+    "membersWithoutCharacter": {
+      "title": "No character yet",
+      "removedBadge": "Removed"
+    }
   },
   "log": {
     "placeholder": "The campaign log is coming soon."

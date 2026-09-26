@@ -199,7 +199,28 @@
     }
   },
   "party": {
-    "placeholder": "Огляд групи скоро з'явиться."
+    "title": "Група",
+    "empty": "До цієї кампанії ще ніхто не приєднався з персонажем.",
+    "hiddenNotice": "Майстер приховав листи персонажів групи для цієї кампанії.",
+    "linkCta": {
+      "body": "У вас ще немає персонажа в цій кампанії.",
+      "action": "Прив'язати персонажа"
+    },
+    "card": {
+      "portraitAlt": "Портрет {name}",
+      "leftBadge": "Покинув групу",
+      "noOverview": "Огляд ще не надіслано.",
+      "hp": "ХП {hp}/{hpMax}",
+      "hpWithTemp": "ХП {hp}/{hpMax} (+{temp} тимч.)",
+      "ac": "КЗ {ac}",
+      "passivePerception": "Пасивна Увага {value}",
+      "classLevel": "{class} {level}",
+      "concentrating": "Концентрується"
+    },
+    "membersWithoutCharacter": {
+      "title": "Без персонажа",
+      "removedBadge": "Видалено"
+    }
   },
   "log": {
     "placeholder": "Журнал кампанії скоро з'явиться."

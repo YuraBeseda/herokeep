@@ -1,0 +1,123 @@
+<section class="party-tab" *transloco="let t; read: 'campaigns'">
+  <h2 class="party-tab__title">{{ t('party.title') }}</h2>
+
+  @if (!hasOwnActiveCharacter()) {
+    <div class="party-tab__link-cta">
+      <p class="party-tab__link-cta-body">{{ t('party.linkCta.body') }}</p>
+      <button
+        hk-button
+        type="button"
+        [variant]="'primary'"
+        class="party-tab__link-cta-action"
+        (click)="goToLinkCharacter()"
+      >
+        {{ t('party.linkCta.action') }}
+      </button>
+    </div>
+  }
+
+  @if (!isDm() && partySheetsMode() === 'none') {
+    <p class="party-tab__hidden-notice">{{ t('party.hiddenNotice') }}</p>
+  }
+
+  @if (cards().length === 0) {
+    <p class="party-tab__empty">{{ t('party.empty') }}</p>
+  } @else {
+    <div class="party-tab__grid">
+      @for (card of cards(); track card.characterId) {
+        <div
+          class="party-tab__card"
+          role="group"
+          [attr.aria-label]="card.name"
+          [attr.data-left]="card.left"
+        >
+          @if ((card.overview?.portraitThumb | blobUrl)(); as thumbUrl) {
+            <img
+              class="party-tab__portrait"
+              [src]="thumbUrl"
+              [alt]="t('party.card.portraitAlt', { name: card.name })"
+            />
+          } @else {
+            <div
+              class="party-tab__portrait party-tab__portrait--placeholder"
+              [style.background]="monogram(card.name, card.characterId).background"
+              aria-hidden="true"
+            >
+              {{ monogram(card.name, card.characterId).initials }}
+            </div>
+          }
+
+          <span class="party-tab__name">{{ card.name }}</span>
+
+          @if (card.left) {
+            <span class="party-tab__left-badge">{{ t('party.card.leftBadge') }}</span>
+          }
+
+          @if (showOverviewDetails() && card.overview; as ov) {
+            <div class="party-tab__hp">
+              <hk-hp-bar
+                class="party-tab__hp-bar"
+                [current]="ov.hp"
+                [max]="ov.hpMax"
+                [temp]="ov.temp"
+              />
+              <span class="party-tab__hp-text">
+                @if (ov.temp > 0) {
+                  {{ t('party.card.hpWithTemp', { hp: ov.hp, hpMax: ov.hpMax, temp: ov.temp }) }}
+                } @else {
+                  {{ t('party.card.hp', { hp: ov.hp, hpMax: ov.hpMax }) }}
+                }
+              </span>
+            </div>
+
+            <div class="party-tab__stats">
+              <span class="party-tab__stat">{{ t('party.card.ac', { ac: ov.ac }) }}</span>
+              <span class="party-tab__stat">{{
+                t('party.card.passivePerception', { value: ov.passivePerception })
+              }}</span>
+            </div>
+
+            @if (classLine(t, ov); as line) {
+              <p class="party-tab__classes">{{ line }}</p>
+            }
+
+            @if (ov.concentration) {
+              <span class="party-tab__concentration">
+                <span class="party-tab__concentration-dot" aria-hidden="true"></span>
+                {{ t('party.card.concentrating') }}
+              </span>
+            }
+
+            @if (ov.conditions.length > 0) {
+              <ul class="party-tab__conditions">
+                @for (conditionId of ov.conditions; track conditionId) {
+                  <li class="party-tab__condition">{{ conditionName(conditionId) }}</li>
+                }
+              </ul>
+            }
+          } @else if (!card.left) {
+            <p class="party-tab__no-overview">{{ t('party.card.noOverview') }}</p>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (membersWithoutCharacter().length > 0) {
+    <div class="party-tab__no-character">
+      <h3 class="party-tab__no-character-title">{{ t('party.membersWithoutCharacter.title') }}</h3>
+      <ul class="party-tab__no-character-list">
+        @for (member of membersWithoutCharacter(); track member.userId) {
+          <li class="party-tab__no-character-row">
+            <span class="party-tab__no-character-name">{{ member.displayName }}</span>
+            @if (member.removed) {
+              <span class="party-tab__no-character-removed-badge">{{
+                t('party.membersWithoutCharacter.removedBadge')
+              }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</section>

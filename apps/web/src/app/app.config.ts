@@ -12,6 +12,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { routes } from './app.routes';
+import { PartyOverviewPublisherService } from './shared/services/campaigns/party-overview-publisher.service';
 import { AuthService } from './shared/services/auth/auth.service';
 import { TranslocoHttpLoader } from './shared/services/i18n/transloco.loader';
 import { SyncService } from './shared/services/sync/sync.service';
@@ -60,6 +61,15 @@ export const appConfig: ApplicationConfig = {
     // above resolves to `'authed'`).
     provideAppInitializer(() => {
       inject(SyncService);
+    }),
+    // `PartyOverviewPublisherService` (plan-10 task-8-brief.md, ruling 8): its constructor
+    // subscribes `CharacterStore.onLocalAppend` — instantiating it here, once, at boot (the SAME
+    // "inject() alone doesn't instantiate a nobody-else-injects service" reasoning as the
+    // `SyncService` initializer immediately above) is what actually starts it watching for
+    // campaign-linked characters' committed local appends, from app start, independent of
+    // whichever route (if any) is currently showing a campaign's party grid.
+    provideAppInitializer(() => {
+      inject(PartyOverviewPublisherService);
     }),
     // Registered in every build (including dev serve) but only *enabled* outside dev mode — `ng
     // serve` has no `ngsw-worker.js` to fetch, and a stale cached dev bundle would be actively

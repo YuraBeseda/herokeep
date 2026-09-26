@@ -494,6 +494,53 @@ export class CampaignStore {
     });
   }
 
+  /** [plan-10 Task 8] Appends `drafts` onto `streamId` WITHOUT touching whichever campaign (if any)
+   * is currently OPEN for viewing (`this.streamId()`/`this.state()`/`this.role()`) — unlike
+   * `appendTx`, which always targets `this.streamIdState()` and would silently reroute a DIFFERENT
+   * campaign's live "open" signals out from under whatever UI is currently reading them. The
+   * party-overview publisher (ruling 8: "after each committed local append on a campaign-linked
+   * character... the owning device appends `party.overview_updated`") needs to write onto THAT
+   * character's own campaign stream regardless of which campaign page (if any) happens to be open
+   * in this tab right now — a background action, not a UI-driven one.
+   *
+   * Same leader/auth preconditions, PENDING-only write discipline ("Always-synced" class doc
+   * section), and `event.reverted` refusal as `appendTx`. Refreshes `streamId`'s
+   * `CampaignsRepository` index row and — only if `streamId` happens to already be the currently
+   * open one — this store's live `events`/`state` signals (`refreshState`'s own
+   * one-stream-at-a-time discipline, reused verbatim). The actor's `role` is read from the cached
+   * `CampaignsRepository` row for `streamId` (falling back to `undefined` -> `'member'` via
+   * `toActorRole`, the SAME default `upsertCampaignRow` documents for an uncached stream) rather
+   * than `roleState()`, which only ever reflects the OPEN stream. */
+  async appendToStream(streamId: string, drafts: DraftEvent[]): Promise<void> {
+    this.assertLeader();
+    if (drafts.length === 0) return;
+    if (drafts.some((d) => d.type === 'event.reverted')) {
+      throw new Error(
+        'CampaignStore.appendToStream: campaign streams do not support "event.reverted" — there is no revert() for campaigns',
+      );
+    }
+    if (!this.authService.user()) throw new CampaignStoreNotAuthenticatedError();
+
+    return this.enqueue(async () => {
+      const txId = drafts.length > 1 ? uuidv7() : undefined;
+      const row = await this.campaignsRepository.get(toBareId(streamId));
+      const actor = await this.actor(row?.role);
+
+      const startOrder = await this.eventsRepository.nextPendingOrder(streamId);
+      const events: Event[] = drafts.map((draft) =>
+        this.validate(
+          this.envelope(streamId, actor, draft.type, draft.v, draft.payload, { txId }),
+          draft.type,
+          draft.v,
+        ),
+      );
+
+      await this.eventsRepository.appendPending(events, startOrder);
+      await this.refreshState(streamId);
+      this.notifyLocalAppend(streamId, events);
+    });
+  }
+
   /** Forwards `drafts` as events on `char:<characterId>` over this campaign's live socket (doc-03's
    * gateway) instead of the currently OPEN campaign stream — see class doc's "Campaign-targeted
    * gateway forwarding" section for the full ack/reject routing design. Requires a `setGateway`d
@@ -835,18 +882,22 @@ export class CampaignStore {
 
   /** The real signed-in user's id (never a `'local'` placeholder — see
    * `CampaignStoreNotAuthenticatedError`'s own doc for why campaigns have no offline fallback),
-   * stamped with this device's stable id and the CURRENTLY OPEN campaign's own membership role
-   * (`roleState`, `'dm'|'player'` mapped to the envelope's `'dm'|'member'` — `character.ts`'s
-   * `ActorRoleSchema` has no `'player'` value). Client-side role tagging here is advisory only —
-   * doc-08: "the client renders, never re-enforces" the authorization matrix; the server's own
-   * membership row is the real gate for whether this actor may author a given type. */
-  private async actor(): Promise<Event['actor']> {
+   * stamped with this device's stable id and a membership role (`'dm'|'player'` mapped to the
+   * envelope's `'dm'|'member'` — `character.ts`'s `ActorRoleSchema` has no `'player'` value).
+   * Defaults to the CURRENTLY OPEN campaign's own role (`roleState()`) when `roleOverride` is
+   * omitted — every pre-existing caller (`appendTx`, `sendGatewayBatch`) keeps this exact
+   * behavior. `appendToStream` (plan-10 Task 8) passes the TARGET stream's own cached role
+   * instead, since that stream is not necessarily the one `roleState()` reflects. Client-side role
+   * tagging here is advisory only — doc-08: "the client renders, never re-enforces" the
+   * authorization matrix; the server's own membership row is the real gate for whether this actor
+   * may author a given type. */
+  private async actor(roleOverride?: MembershipRole): Promise<Event['actor']> {
     const user = this.authService.user();
     if (!user) throw new CampaignStoreNotAuthenticatedError();
     return {
       userId: user.userId,
       deviceId: await this.deviceId(),
-      role: toActorRole(this.roleState()),
+      role: toActorRole(roleOverride ?? this.roleState()),
     };
   }
 
