@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { createContentIndex, derive, reduce, type SystemRules } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
@@ -115,6 +115,26 @@ async function advanceToReview(fixture: {
     next.click();
     await fixture.whenStable();
   }
+}
+
+/** Same fixture-1 (human fighter) decision set the "creating navigates to /c/<id>/play" test
+ * builds by hand — factored out so the plan-10 task-7 `?returnUrl=` tests (which only care about
+ * WHERE `onCreate` navigates, not the decisions themselves) don't have to repeat it. */
+function fillValidDecisions(state: CreateWizardState): void {
+  state.name.set('Aldric');
+  state.gender.set('masculine');
+  state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
+  state.setDecision('srd-5e-2024:system/5e-2024@0/background', ['srd-5e-2024:background/soldier']);
+  state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+  state.setDecision(
+    'srd-5e-2024:system/5e-2024@0/ability-scores',
+    ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+    { method: 'standardArray' },
+  );
+  state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/fighter']);
+  state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
+  state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
+  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
 }
 
 describe('CreateWizardComponent', () => {
@@ -262,6 +282,68 @@ describe('CreateWizardComponent', () => {
       'char:00000000-0000-7000-8000-000000000099',
       'play',
     ]);
+  });
+
+  it('honors a same-app-relative ?returnUrl instead of /c/<id>/play (plan-10 task-7: create-new-via-wizard-then-return)', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        snapshot: {
+          queryParamMap: convertToParamMap({
+            returnUrl: '/g/00000000-0000-4000-8000-000000000001/link-character',
+          }),
+        },
+      },
+    });
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    fillValidDecisions(state);
+    await fixture.whenStable();
+
+    await advanceToReview(fixture);
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.create-wizard__create')!
+      .click();
+    await fixture.whenStable();
+
+    expect(navigateByUrlSpy).toHaveBeenCalledWith(
+      '/g/00000000-0000-4000-8000-000000000001/link-character',
+    );
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('ignores a protocol-relative ?returnUrl ("//host/...") and falls back to /c/<id>/play', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        snapshot: { queryParamMap: convertToParamMap({ returnUrl: '//evil.example/phish' }) },
+      },
+    });
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    fillValidDecisions(state);
+    await fixture.whenStable();
+
+    await advanceToReview(fixture);
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.create-wizard__create')!
+      .click();
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith([
+      '/c',
+      'char:00000000-0000-7000-8000-000000000099',
+      'play',
+    ]);
+    expect(navigateByUrlSpy).not.toHaveBeenCalled();
   });
 
   it('a decided-but-invalid choice (over-budget point buy) keeps its step visible and blocked, disables the create button, and is fixable by revisiting it', async () => {

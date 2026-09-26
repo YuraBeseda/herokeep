@@ -54,6 +54,49 @@
       "generic": "Couldn't join the campaign. Try again."
     }
   },
+  "link": {
+    "title": "Link a character",
+    "intro": "Pick one of your characters to play in this campaign.",
+    "loading": "Loading your characters…",
+    "pick": "Link this character",
+    "resume": "Finish linking",
+    "linkedElsewhere": "Already in another campaign",
+    "notSynced": "Not synced yet",
+    "notSyncedCta": "Manage sync status",
+    "empty": "You don't have any characters yet.",
+    "createNew": "Create a new character",
+    "skip": "Skip for now",
+    "progress": {
+      "title": "Linking your character…",
+      "step": {
+        "character": "Updating character record",
+        "campaign": "Registering with the campaign"
+      },
+      "outcome": {
+        "committed": "Done",
+        "rejected": "Failed",
+        "timeout": "Still waiting…"
+      },
+      "success": "Your character is linked to this campaign.",
+      "incomplete": "Link incomplete — retry.",
+      "retry": "Retry"
+    },
+    "errors": {
+      "characterNotLeader": "Another tab is currently the active character-data writer. Try again from that tab.",
+      "generic": "Couldn't link that character. Try again."
+    }
+  },
+  "chip": {
+    "fallbackName": "Linked campaign",
+    "leave": "Leave campaign"
+  },
+  "leave": {
+    "title": "Leave this campaign?",
+    "body": "{name} will be removed from the campaign's roster. You can rejoin later with a new join code.",
+    "cancel": "Cancel",
+    "confirm": "Leave",
+    "success": "You've left the campaign."
+  },
   "shell": {
     "tabs": {
       "party": "Party",

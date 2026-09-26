@@ -14,10 +14,12 @@ import { ToastService } from '@shared/components/toast/toast.service';
 import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
+import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import { seedFighter } from './testing/character-fixtures';
 
@@ -44,6 +46,9 @@ const corePack = readPack(
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    // plan-10 task-7: `CampaignChipComponent` self-registers the `campaigns` scope from inside
+    // the sheet header — needed only for the tests that actually link a character to a campaign.
+    if (langPath === 'campaigns/en') return of(campaignsEn);
     return of({});
   }
 }
@@ -99,6 +104,7 @@ describe('SheetShellComponent (route resolver + shell)', () => {
       db.snapshots.clear(),
       db.characters.clear(),
       db.blobs.clear(),
+      db.campaigns.clear(),
     ]);
     // jsdom (this app's unit-test environment) does not reliably implement Blob-URL support —
     // stub it directly, same as `blob-url.pipe.spec.ts`, rather than depend on jsdom's actual
@@ -122,6 +128,43 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const classLine = root.querySelector('.sheet-shell__class-line')?.textContent ?? '';
     expect(classLine).toContain('Fighter');
     expect(classLine).toContain('1');
+  });
+
+  it('shows no campaign chip for a solo (never-joined) character', async () => {
+    const id = await seedFighter('Ivan');
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+
+    expect(root.querySelector('.campaign-chip')).toBeNull();
+  });
+
+  it('shows the campaign chip with the campaign name and a /g/:id link once the character has joined a campaign (plan-10 task-7)', async () => {
+    const id = await seedFighter('Ivan');
+    const campaignId = '00000000-0000-4000-8000-0000000000ab';
+
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId } },
+    ]);
+    await TestBed.inject(CampaignsRepository).put({
+      id: campaignId,
+      name: 'Curse of Strahd',
+      system: 'srd-5e-2024',
+      role: 'player',
+      lastSeq: 1,
+      updatedAt: Date.now(),
+    });
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    await harness.fixture.whenStable();
+    const root = harness.routeNativeElement!;
+
+    const link = root.querySelector<HTMLAnchorElement>('.campaign-chip__link');
+    expect(link?.textContent?.trim()).toBe('Curse of Strahd');
+    expect(link?.getAttribute('href')).toBe(`/g/${campaignId}`);
+    expect(root.querySelector('.campaign-chip__leave')?.textContent?.trim()).toBe(
+      campaignsEn.chip.leave,
+    );
   });
 
   it('renders an i18n not-found state for a character id with no CharactersRepository row, without crashing', async () => {

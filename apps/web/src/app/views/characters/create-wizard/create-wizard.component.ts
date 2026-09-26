@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import type { ContentIndex, Localizer, Sheet } from '@hk/engine';
 import {
   makeEntityId,
@@ -99,6 +99,7 @@ export class CreateWizardComponent {
   private readonly characterStore = inject(CharacterStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
 
   protected readonly genderOptions = GENDER_OPTIONS;
@@ -382,7 +383,7 @@ export class CreateWizardComponent {
       const [, ...rest] = this.state.buildTransaction();
       if (rest.length > 0) await this.characterStore.appendTx(rest);
       appendTxSucceeded = true;
-      await this.router.navigate(['/c', id, 'play']);
+      await this.navigateAfterCreate(id);
     } catch (error) {
       // Whole-branch review finding 2: if `appendTx` fails after `create()` already succeeded
       // (leadership lost between the two calls, a storage error, …), the stream `create()` wrote
@@ -402,5 +403,23 @@ export class CreateWizardComponent {
     } finally {
       this.creating.set(false);
     }
+  }
+
+  /**
+   * Plan-10 task-7-brief.md: "create-new via the wizard then return (returnUrl-style
+   * back-navigation to the join flow — reuse T6's returnUrl pattern)". Mirrors
+   * `LoginComponent.onSubmit`'s exact validation (`login.component.ts`, task-6-brief.md): a
+   * `?returnUrl=` query param is honored ONLY when it is same-app-relative (`startsWith('/')`,
+   * rejecting a protocol-relative `//host/...` value) — defense in depth only, since
+   * `Router.navigateByUrl` already can't leave the SPA for an absolute/external URL. Falls back to
+   * the wizard's ordinary `/c/<id>/play` destination otherwise, so every pre-existing caller (a
+   * plain `/characters/new` visit, no query param at all) is unaffected. */
+  private async navigateAfterCreate(id: string): Promise<void> {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+      await this.router.navigateByUrl(returnUrl);
+      return;
+    }
+    await this.router.navigate(['/c', id, 'play']);
   }
 }

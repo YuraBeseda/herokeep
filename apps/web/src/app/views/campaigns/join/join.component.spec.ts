@@ -69,7 +69,7 @@ describe('JoinComponent', () => {
     expect(input.value).toBe('');
   });
 
-  it('sends the trimmed code and optional display name to CampaignStore.join, then navigates to the new campaign lobby', async () => {
+  it('sends the trimmed code and optional display name to CampaignStore.join, then navigates to link-character (plan-10 task-7)', async () => {
     const { join } = configure({});
     const fixture = TestBed.createComponent(JoinComponent);
     await fixture.whenStable();
@@ -92,7 +92,7 @@ describe('JoinComponent', () => {
     // per task-6-brief.md's binding "Plan facts" ("the join form should accept sloppy input and
     // let the server normalize").
     expect(join).toHaveBeenCalledWith('7qx4-m2hn', 'Bob');
-    expect(navigateSpy).toHaveBeenCalledWith(['/g', 'new-id', 'lobby']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/g', 'new-id', 'link-character']);
   });
 
   it('shows the invalid-code message for a 404 ApiError', async () => {

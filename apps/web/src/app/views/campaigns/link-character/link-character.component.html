@@ -1,0 +1,116 @@
+<section class="link-character" *transloco="let t; read: 'campaigns'">
+  <h1 class="link-character__title">{{ t('link.title') }}</h1>
+  <p class="link-character__intro">{{ t('link.intro') }}</p>
+
+  @if (activeCharacterId()) {
+    <div class="link-character__progress" role="status" [attr.aria-live]="'polite'">
+      <h2 class="link-character__progress-title">{{ t('link.progress.title') }}</h2>
+      <ol class="link-character__steps">
+        @for (step of steps(); track step.step) {
+          <li class="link-character__step" [attr.data-outcome]="step.outcome">
+            <span class="link-character__step-label">{{
+              t('link.progress.step.' + step.step)
+            }}</span>
+            <span class="link-character__step-outcome">{{
+              t('link.progress.outcome.' + step.outcome)
+            }}</span>
+          </li>
+        }
+      </ol>
+
+      @if (errorKey(); as key) {
+        <p class="link-character__error" role="alert">{{ t(key) }}</p>
+      }
+
+      @if (linkedOk()) {
+        <p class="link-character__success">{{ t('link.progress.success') }}</p>
+      } @else if (canRetry()) {
+        <p class="link-character__incomplete">{{ t('link.progress.incomplete') }}</p>
+        <button
+          hk-button
+          type="button"
+          class="link-character__retry"
+          [variant]="'primary'"
+          [disabled]="busy()"
+          (click)="retry()"
+        >
+          {{ t('link.progress.retry') }}
+        </button>
+      }
+    </div>
+  } @else if (loading()) {
+    <p class="link-character__loading">{{ t('link.loading') }}</p>
+  } @else {
+    <ul class="link-character__list">
+      @for (candidate of candidates(); track candidate.row.id) {
+        <li class="link-character__row" [attr.data-eligibility]="eligibility(candidate)">
+          <span class="link-character__name">{{ candidate.row.name }}</span>
+          @switch (eligibility(candidate)) {
+            @case ('eligible') {
+              <button
+                hk-button
+                type="button"
+                class="link-character__pick"
+                [variant]="'primary'"
+                [disabled]="busy()"
+                (click)="select(candidate)"
+              >
+                {{ t('link.pick') }}
+              </button>
+            }
+            @case ('resume') {
+              <button
+                hk-button
+                type="button"
+                class="link-character__resume"
+                [variant]="'primary'"
+                [disabled]="busy()"
+                (click)="select(candidate)"
+              >
+                {{ t('link.resume') }}
+              </button>
+            }
+            @case ('linkedElsewhere') {
+              <span class="link-character__notice">{{ t('link.linkedElsewhere') }}</span>
+            }
+            @case ('notSynced') {
+              <span class="link-character__notice">{{ t('link.notSynced') }}</span>
+              <button
+                hk-button
+                type="button"
+                class="link-character__sync-cta"
+                [variant]="'ghost'"
+                (click)="goToCharactersList()"
+              >
+                {{ t('link.notSyncedCta') }}
+              </button>
+            }
+          }
+        </li>
+      } @empty {
+        <li class="link-character__empty">{{ t('link.empty') }}</li>
+      }
+    </ul>
+
+    <div class="link-character__actions">
+      <button
+        hk-button
+        type="button"
+        class="link-character__create-new"
+        [variant]="'ghost'"
+        (click)="createNew()"
+      >
+        {{ t('link.createNew') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="link-character__skip"
+        [variant]="'ghost'"
+        (click)="skip()"
+      >
+        {{ t('link.skip') }}
+      </button>
+    </div>
+  }
+</section>

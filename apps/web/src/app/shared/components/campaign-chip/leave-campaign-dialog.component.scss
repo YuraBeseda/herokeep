@@ -1,0 +1,47 @@
+.leave-campaign-dialog__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+}
+
+.leave-campaign-dialog__body {
+  margin: 0 0 var(--space-3);
+}
+
+.leave-campaign-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.leave-campaign-dialog__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.leave-campaign-dialog__step {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.leave-campaign-dialog__step[data-outcome='rejected'],
+.leave-campaign-dialog__step[data-outcome='timeout'] {
+  color: var(--danger);
+}
+
+.leave-campaign-dialog__step[data-outcome='committed'] {
+  color: var(--success);
+}
+
+.leave-campaign-dialog__error,
+.leave-campaign-dialog__incomplete {
+  color: var(--danger);
+}
+
+.leave-campaign-dialog__success {
+  color: var(--success);
+}

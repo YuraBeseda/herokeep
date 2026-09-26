@@ -293,6 +293,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./views/campaigns/lobby/lobby.component').then((m) => m.LobbyComponent),
       },
+      {
+        // Plan-10 task-7-brief.md: "pick an existing SYNCED character (or create-new via the
+        // wizard then return)". Reached right after `JoinComponent.confirm()` succeeds, and after
+        // `CreateWizardComponent`'s own `?returnUrl=` back-navigation (task-7's own addition to
+        // that component). No own `canActivate` — it inherits `g/:id`'s parent
+        // `authGuard`/`campaignGuard` pair like every other child here.
+        path: 'link-character',
+        loadComponent: () =>
+          import('./views/campaigns/link-character/link-character.component').then(
+            (m) => m.LinkCharacterComponent,
+          ),
+      },
     ],
   },
   {

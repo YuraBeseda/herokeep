@@ -83,7 +83,11 @@ export class JoinComponent {
     this.submitting.set(true);
     try {
       const streamId = await this.campaignStore.join(code, displayName || undefined);
-      await this.router.navigate(['/g', toBareId(streamId), 'lobby']);
+      // Plan-10 task-7-brief.md: "after POST /join succeeds → pick an existing SYNCED character
+      // (or create-new via the wizard then return)" — `LinkCharacterComponent` is that next step;
+      // it (or its own "skip for now") is what lands the user on `/g/<id>/lobby`, not this
+      // component directly.
+      await this.router.navigate(['/g', toBareId(streamId), 'link-character']);
     } catch (err) {
       this.errorKey.set(this.toErrorKey(err));
     } finally {

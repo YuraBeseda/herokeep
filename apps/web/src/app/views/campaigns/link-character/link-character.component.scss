@@ -1,0 +1,112 @@
+:host {
+  display: block;
+}
+
+.link-character {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 32rem;
+  margin-inline: auto;
+}
+
+.link-character__title {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.link-character__intro {
+  color: var(--text-2);
+}
+
+.link-character__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link-character__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+}
+
+.link-character__name {
+  font-weight: 600;
+}
+
+.link-character__notice {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+.link-character__empty {
+  color: var(--text-2);
+}
+
+.link-character__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.link-character__progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+}
+
+.link-character__progress-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.link-character__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link-character__step {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* Rejected/timed-out steps read as attention-needing without relying on color alone (the outcome
+   TEXT itself, resolved via `link.progress.outcome.*`, already says "committed"/"rejected"/
+   "waiting" in words) — the color is a reinforcing cue only. */
+.link-character__step[data-outcome='rejected'] .link-character__step-outcome,
+.link-character__step[data-outcome='timeout'] .link-character__step-outcome {
+  color: var(--danger);
+}
+
+.link-character__step[data-outcome='committed'] .link-character__step-outcome {
+  color: var(--success);
+}
+
+.link-character__error {
+  color: var(--danger);
+}
+
+.link-character__success {
+  color: var(--success);
+}
+
+.link-character__incomplete {
+  color: var(--danger);
+}

@@ -1,0 +1,58 @@
+<ng-container *transloco="let t; read: 'campaigns'">
+  <h2 class="leave-campaign-dialog__title" data-dialog-title>{{ t('leave.title') }}</h2>
+
+  @if (confirming()) {
+    <p class="leave-campaign-dialog__body">{{ t('leave.body', { name: characterName }) }}</p>
+    <div class="leave-campaign-dialog__actions">
+      <button
+        hk-button
+        type="button"
+        class="leave-campaign-dialog__cancel"
+        [variant]="'ghost'"
+        (click)="cancel()"
+      >
+        {{ t('leave.cancel') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="leave-campaign-dialog__confirm"
+        [variant]="'danger'"
+        (click)="confirmLeave()"
+      >
+        {{ t('leave.confirm') }}
+      </button>
+    </div>
+  } @else {
+    <div class="leave-campaign-dialog__progress" role="status" [attr.aria-live]="'polite'">
+      <ol class="leave-campaign-dialog__steps">
+        @for (step of steps(); track step.step) {
+          <li class="leave-campaign-dialog__step" [attr.data-outcome]="step.outcome">
+            <span>{{ t('link.progress.step.' + step.step) }}</span>
+            <span>{{ t('link.progress.outcome.' + step.outcome) }}</span>
+          </li>
+        }
+      </ol>
+
+      @if (errorKey(); as key) {
+        <p class="leave-campaign-dialog__error" role="alert">{{ t(key) }}</p>
+      }
+
+      @if (linkedOk()) {
+        <p class="leave-campaign-dialog__success">{{ t('leave.success') }}</p>
+      } @else if (canRetry()) {
+        <p class="leave-campaign-dialog__incomplete">{{ t('link.progress.incomplete') }}</p>
+        <button
+          hk-button
+          type="button"
+          class="leave-campaign-dialog__retry"
+          [variant]="'primary'"
+          [disabled]="busy()"
+          (click)="retry()"
+        >
+          {{ t('link.progress.retry') }}
+        </button>
+      }
+    </div>
+  }
+</ng-container>

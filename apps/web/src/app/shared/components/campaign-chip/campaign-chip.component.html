@@ -1,0 +1,16 @@
+@if (campaignId(); as id) {
+  <div class="campaign-chip" *transloco="let t; read: 'campaigns'">
+    <a class="campaign-chip__link" [routerLink]="['/g', id]">{{
+      campaignName() ?? t('chip.fallbackName')
+    }}</a>
+    <button
+      hk-button
+      type="button"
+      class="campaign-chip__leave"
+      [variant]="'ghost'"
+      (click)="leave()"
+    >
+      {{ t('chip.leave') }}
+    </button>
+  </div>
+}

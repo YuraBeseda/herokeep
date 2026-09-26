@@ -6,6 +6,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
+import { CampaignChipComponent } from '@shared/components/campaign-chip/campaign-chip.component';
 import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
@@ -41,6 +42,7 @@ type TabId = (typeof TAB_IDS)[number];
     NumberFieldComponent,
     ButtonComponent,
     BlobUrlPipe,
+    CampaignChipComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './sheet-shell.component.html',
