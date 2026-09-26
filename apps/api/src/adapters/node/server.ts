@@ -64,12 +64,12 @@ import { join, resolve } from 'node:path';
 import type { Duplex } from 'node:stream';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { getRequestListener } from '@hono/node-server';
+import { WS_MESSAGE_BYTES_MAX } from '@hk/protocol';
 import { WebSocketServer, type RawData } from 'ws';
 import { createApp } from '../../core/app.ts';
 import { runDailyMaintenance } from '../../core/maintenance.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
-import { WS_MESSAGE_BYTES_MAX } from '../../core/validate.ts';
 import type { WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
 import { assertConfigured, EnvConfig, loadEnvFile } from './config.env.ts';
 import { NodeMaintenanceStreams } from './maintenance-streams.ts';
@@ -308,7 +308,7 @@ export async function startNodeServer(options: NodeServerOptions = {}): Promise<
 
   const pending = new Map<string, PendingUpgrade>();
   // `maxPayload` (whole-branch review finding 1): `ws` defaults to ~100 MiB, far above doc-08's
-  // 128 KB WS-message cap (`core/validate.ts`'s `WS_MESSAGE_BYTES_MAX`) — without this, a client
+  // 128 KB WS-message cap (`@hk/protocol`'s `WS_MESSAGE_BYTES_MAX`) — without this, a client
   // could send an oversized frame that `ws` happily buffers/delivers instead of ever reaching
   // `validateEvent`'s own per-event check. `ws` enforces this itself at the frame-decode layer:
   // an oversized frame closes the connection with code 1009 before `'message'` ever fires, no

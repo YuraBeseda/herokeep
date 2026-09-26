@@ -19,7 +19,12 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { broadcastChannelName, SyncBroadcast, type BroadcastChannelFactory } from './broadcast';
-import { SyncSocket, SyncSocketOversizeError, wsUrl, type WebSocketFactory } from './socket';
+import {
+  SyncSocket,
+  SyncSocketOversizeError,
+  wsUrlForStream,
+  type WebSocketFactory,
+} from './socket';
 import {
   chunkEventsForAppend,
   StreamSyncSession,
@@ -134,9 +139,12 @@ export const SYNC_WEBSOCKET_FACTORY = new InjectionToken<WebSocketFactory | unde
   { factory: () => undefined },
 );
 
-/** Constructor-injectable url builder, overriding `wsUrl` (which reads `window.location`) —
- * defaults to `undefined` (use the real `wsUrl`). Specs override this via a `TestBed` provider. */
-export const SYNC_WS_URL_FN = new InjectionToken<((characterId: string) => string) | undefined>(
+/** Constructor-injectable url builder, overriding `wsUrlForStream` (which reads
+ * `window.location`) — defaults to `undefined` (use the real `wsUrlForStream`). Takes the FULL
+ * stream id (`char:<uuid>` / `camp:<uuid>` — plan-10 Task 1 widened this from a bare-character-
+ * uuid fn, migrating every caller below to match). Specs override this via a `TestBed`
+ * provider. */
+export const SYNC_WS_URL_FN = new InjectionToken<((streamId: string) => string) | undefined>(
   'SYNC_WS_URL_FN',
   { factory: () => undefined },
 );
@@ -612,8 +620,7 @@ export class SyncService {
   }
 
   private wsUrlFor(streamId: string): string {
-    const characterId = stripStreamPrefix(streamId);
-    return this.wsUrlFnOverride ? this.wsUrlFnOverride(characterId) : wsUrl(characterId);
+    return this.wsUrlFnOverride ? this.wsUrlFnOverride(streamId) : wsUrlForStream(streamId);
   }
 }
 

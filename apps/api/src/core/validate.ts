@@ -13,18 +13,12 @@ import { EVENT_STREAM_KIND, type Event, parseEvent } from '@hk/protocol';
 /** doc-08 §Quotas "Event payload" row: 16 KB per event. */
 export const EVENT_BYTES_MAX = 16 * 1024;
 
-/**
- * doc-08 §Quotas "WS message" row: 128 KB per WS FRAME (distinct from `EVENT_BYTES_MAX` above,
- * which caps one event's own size — an `append`/`hello.pending` frame can batch up to 50 events,
- * so this cap exists independently to bound the whole message, not just each event inside it).
- * Whole-branch review finding 1: this constant lives in core (not duplicated per adapter) so both
- * adapters enforce the SAME number — Node's `adapters/node/server.ts` passes it as `ws`'s own
- * `maxPayload` option (that library close(1009)s a connection sending an oversized frame itself);
- * Cloudflare's `adapters/cloudflare/character-stream.do.ts` measures the decoded message's byte
- * length in `webSocketMessage` and closes 1009 before ever parsing it, since the Hibernation API
- * has no `maxPayload`-equivalent option of its own to enforce this at the transport layer.
- */
-export const WS_MESSAGE_BYTES_MAX = 128 * 1024;
+// doc-08 §Quotas "WS message" row (128 KB per WS FRAME) used to live here as its own local
+// `const`, duplicated verbatim in `apps/web`'s `socket.ts` (`apps/web` can't import `apps/api`
+// — separate deployable apps). Plan-10 Task 1 hoisted it to `@hk/protocol`'s sync module
+// (`WS_MESSAGE_BYTES_MAX`, `packages/protocol/src/sync/messages.ts`) as the single source of
+// truth both apps now import — see that export's own doc comment for the adapter-by-adapter
+// enforcement details (Node's `ws` `maxPayload`, Cloudflare's manual byte-length check).
 
 /**
  * Measures an event's serialized size the same way it is actually stored and transmitted: the

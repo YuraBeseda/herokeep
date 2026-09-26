@@ -22,6 +22,7 @@ import {
   SubscribeMsgSchema,
   UnsubscribeMsgSchema,
   WelcomeMsgSchema,
+  WS_MESSAGE_BYTES_MAX,
   parseClientMessage,
 } from '../src/sync/index.ts';
 
@@ -39,6 +40,12 @@ const event = (overrides: Record<string, unknown> = {}) => ({
 describe('PROTO_VERSION', () => {
   it('is 1', () => {
     expect(PROTO_VERSION).toBe(1);
+  });
+});
+
+describe('WS_MESSAGE_BYTES_MAX', () => {
+  it('is the doc-08 §Quotas 128 KB WS-frame cap — single source of truth for both apps/api and apps/web (plan-10 Task 1 hoist)', () => {
+    expect(WS_MESSAGE_BYTES_MAX).toBe(128 * 1024);
   });
 });
 

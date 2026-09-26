@@ -59,8 +59,9 @@ class FakeWebSocket implements WebSocketLike {
   static instances: FakeWebSocket[] = [];
 
   readonly url: string;
-  readonly sent: string[] = [];
+  readonly sent: (string | Uint8Array)[] = [];
   closeCalls: { code?: number; reason?: string }[] = [];
+  binaryType: 'blob' | 'arraybuffer' | undefined;
 
   onopen: (() => void) | null = null;
   onclose: Handler = null;
@@ -72,7 +73,7 @@ class FakeWebSocket implements WebSocketLike {
     FakeWebSocket.instances.push(this);
   }
 
-  send(data: string): void {
+  send(data: string | Uint8Array): void {
     this.sent.push(data);
   }
 
@@ -93,7 +94,9 @@ class FakeWebSocket implements WebSocketLike {
   }
 
   parsedSent(): { t: string; [k: string]: unknown }[] {
-    return this.sent.map((s) => JSON.parse(s) as { t: string; [k: string]: unknown });
+    return this.sent
+      .filter((s): s is string => typeof s === 'string')
+      .map((s) => JSON.parse(s) as { t: string; [k: string]: unknown });
   }
 }
 
@@ -211,7 +214,9 @@ describe('SyncService', () => {
         },
         { provide: ToastService, useValue: { show: toastShow } },
         { provide: SYNC_WEBSOCKET_FACTORY, useValue: FakeWebSocket },
-        { provide: SYNC_WS_URL_FN, useValue: (characterId: string) => `ws://test/${characterId}` },
+        // Plan-10 Task 1: SYNC_WS_URL_FN now takes the FULL stream id (`char:<uuid>`), not a bare
+        // characterId — see sessionSocket.url's assertion below, migrated to match.
+        { provide: SYNC_WS_URL_FN, useValue: (streamId: string) => `ws://test/${streamId}` },
         { provide: SYNC_BROADCAST_FACTORY, useValue: FakeBroadcastChannel },
       ],
     });
@@ -287,7 +292,7 @@ describe('SyncService', () => {
     // Verified (seqs matched) — an ONGOING session socket is now opened for this stream.
     expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
     const sessionSocket = FakeWebSocket.instances[1];
-    expect(sessionSocket.url).toBe(`ws://test/${bareId}`);
+    expect(sessionSocket.url).toBe(`ws://test/${streamId}`);
 
     expect(sync.syncState(streamId)()).not.toBe('offline');
   });

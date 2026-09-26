@@ -10,6 +10,18 @@ import { BlobHashSchema, SemverSchema } from '../pack/common.ts';
  */
 export const PROTO_VERSION = 1 as const;
 
+/**
+ * doc-08 §Quotas "WS message" row: 128 KB per WS FRAME (distinct from any per-event size cap —
+ * an `append`/`hello.pending` frame can batch up to 50 events, so this bounds the whole message,
+ * not just one event inside it; it applies identically to binary `blob.chunk` frames, not just
+ * JSON ones). Single source of truth (plan-10 Task 1 hoist): previously duplicated as a local
+ * `const` in both `apps/api/src/core/validate.ts` and `apps/web/src/app/shared/services/sync/
+ * socket.ts` (flagged as a follow-up in plan-8's task-7-report.md) — both `apps/api` (Node's `ws`
+ * `maxPayload` option, Cloudflare's manual byte-length check) and `apps/web` (`SyncSocket.send`/
+ * `sendBinary`'s own oversize guard) now import this one constant instead.
+ */
+export const WS_MESSAGE_BYTES_MAX = 128 * 1024;
+
 // Authorization role for a sync-protocol actor (ADR-012 §Authorization). Distinct from
 // events/envelope.ts's ActorRoleSchema (owner|dm|system|member, used to stamp committed
 // events — plan-9 Task 1 widened it to add 'member' for campaign-stream events): this is the

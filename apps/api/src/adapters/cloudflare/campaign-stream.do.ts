@@ -38,7 +38,7 @@
  */
 import { DurableObject } from 'cloudflare:workers';
 import type { DurableObjectStorage } from '@cloudflare/workers-types';
-import type { Actor, Event } from '@hk/protocol';
+import { type Actor, type Event, WS_MESSAGE_BYTES_MAX } from '@hk/protocol';
 import { CampaignActor, campaignQuotas } from '../../core/streams/campaign-actor.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 // [plan-9 Task 8] `campaign-permissions.ts`, NOT `core/permissions.ts` — that character-stream
@@ -48,7 +48,6 @@ import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 // `campaign-permissions.ts`'s own header comment; `adapters/node/stream-host.ts` makes the same
 // choice for the same reason.
 import * as campaignPermissions from '../../core/campaign-permissions.ts';
-import { WS_MESSAGE_BYTES_MAX } from '../../core/validate.ts';
 import type { AppendResult } from '../../ports/stream.ts';
 import type { Rpc, RpcAppendOutcome, RpcEventMatch } from '../../ports/infra.ts';
 import { DoSqlStreamStore } from './store.sqlite-do.ts';

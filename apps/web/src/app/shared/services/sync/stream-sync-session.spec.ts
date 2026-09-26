@@ -84,8 +84,9 @@ class FakeWebSocket implements WebSocketLike {
   static instances: FakeWebSocket[] = [];
 
   readonly url: string;
-  readonly sent: string[] = [];
+  readonly sent: (string | Uint8Array)[] = [];
   closeCalls: { code?: number; reason?: string }[] = [];
+  binaryType: 'blob' | 'arraybuffer' | undefined;
 
   onopen: (() => void) | null = null;
   onclose: Handler = null;
@@ -97,7 +98,7 @@ class FakeWebSocket implements WebSocketLike {
     FakeWebSocket.instances.push(this);
   }
 
-  send(data: string): void {
+  send(data: string | Uint8Array): void {
     this.sent.push(data);
   }
 
@@ -113,14 +114,24 @@ class FakeWebSocket implements WebSocketLike {
     this.onmessage?.({ data: JSON.stringify(message) });
   }
 
+  /** Drives a BINARY frame (see `socket.ts`'s `onBinaryFrame` doc) — `data` is whatever a real
+   * socket would hand `onmessage` once `binaryType` is `'arraybuffer'`. */
+  emitBinary(bytes: ArrayBuffer | Uint8Array): void {
+    this.onmessage?.({ data: bytes });
+  }
+
   /** Simulates a server/network-initiated close (as opposed to OUR side calling `close()`) —
    * fires the same `onclose` a real socket would. */
   emitServerClose(code = 1006, reason = 'lost'): void {
     this.onclose?.({ code, reason });
   }
 
+  /** JSON-parses every TEXT frame sent so far (skips any binary `sendBinary` payload — those
+   * aren't JSON and a dedicated test asserts on `sent` directly for that case). */
   parsedSent(): unknown[] {
-    return this.sent.map((s) => JSON.parse(s) as unknown);
+    return this.sent
+      .filter((s): s is string => typeof s === 'string')
+      .map((s) => JSON.parse(s) as unknown);
   }
 }
 
@@ -343,7 +354,7 @@ describe('StreamSyncSession', () => {
     await flush();
 
     expect(ws.sent).toHaveLength(2); // resync hello sent in response to the gap
-    const second = JSON.parse(ws.sent[1]) as { t: string };
+    const second = JSON.parse(ws.sent[1] as string) as { t: string };
     expect(second.t).toBe('hello');
     session.stop();
   });
@@ -374,6 +385,224 @@ describe('StreamSyncSession', () => {
 
     expect(toastShow).toHaveBeenCalledTimes(1);
     expect(toastShow).toHaveBeenCalledWith('sync.quota.warning', undefined);
+    session.stop();
+  });
+
+  it('connect() builds the socket url from wsUrlFn(streamId) — the FULL prefixed stream id, not a bare characterId (plan-10 Task 1: SYNC_WS_URL_FN/wsUrlFn widened to a streamId-keyed fn)', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+
+    const seenArgs: string[] = [];
+    const { session } = newSession(streamId, {
+      wsUrlFn: (arg: string) => {
+        seenArgs.push(arg);
+        return 'ws://test/whatever';
+      },
+    });
+    await session.start();
+    await flush();
+
+    expect(seenArgs).toEqual([streamId]);
+    session.stop();
+  });
+
+  it('onNotice fires for EVERY notice frame (not just quota.warning), passing the full ServerMessage through verbatim', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onNotice = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onNotice });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    ws.emitMessage({ t: 'notice', level: 'info', key: 'pack.updated', params: { id: 'core' } });
+    await flush();
+
+    expect(onNotice).toHaveBeenCalledTimes(1);
+    expect(onNotice).toHaveBeenCalledWith({
+      t: 'notice',
+      level: 'info',
+      key: 'pack.updated',
+      params: { id: 'core' },
+    });
+    // Non-quota.warning notices still don't toast (unchanged existing behavior).
+    expect(toastShow).not.toHaveBeenCalled();
+    session.stop();
+  });
+
+  it('onMembers fires for a standalone `members` frame', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onMembers = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onMembers });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    const members = [
+      { userId: 'usr_1', displayName: 'Ivan', role: 'owner' as const, online: true },
+    ];
+    ws.emitMessage({ t: 'members', members });
+    await flush();
+
+    expect(onMembers).toHaveBeenCalledTimes(1);
+    expect(onMembers).toHaveBeenCalledWith(members);
+    session.stop();
+  });
+
+  it('onMembers also fires from welcome.members when the welcome frame carries an initial roster', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onMembers = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onMembers });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    const members = [{ userId: 'usr_1', displayName: 'Ivan', role: 'dm' as const, online: true }];
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+      members,
+    });
+    await flush();
+
+    expect(onMembers).toHaveBeenCalledTimes(1);
+    expect(onMembers).toHaveBeenCalledWith(members);
+    session.stop();
+  });
+
+  it('welcome with no members field does not fire onMembers', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onMembers = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onMembers });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+    });
+    await flush();
+
+    expect(onMembers).not.toHaveBeenCalled();
+    session.stop();
+  });
+
+  it('onForeignEvents fires (instead of applyServerCommit) for an events frame addressed to a DIFFERENT stream than this session owns — the gateway-forwarded-character-event case (doc-03)', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onForeignEvents = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onForeignEvents });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    const foreignStream = 'char:00000000-0000-4000-8000-000000000099';
+    const foreignEvent: Event = {
+      id: '22222222-2222-4222-8222-222222222222',
+      stream: foreignStream,
+      seq: 1,
+      ts: new Date().toISOString(),
+      actor: { userId: 'other', deviceId: 'd9', role: 'member' },
+      type: 'character.renamed',
+      v: 1,
+      payload: { name: 'Someone Else' },
+    };
+    ws.emitMessage({ t: 'events', stream: foreignStream, events: [foreignEvent] });
+    await flush();
+
+    expect(onForeignEvents).toHaveBeenCalledTimes(1);
+    expect(onForeignEvents).toHaveBeenCalledWith(foreignStream, [foreignEvent]);
+    // Never applied to THIS session's own store — the whole point of routing it elsewhere.
+    const persisted = await eventsRepository.byStream(streamId);
+    expect(persisted.find((e) => e.id === foreignEvent.id)).toBeUndefined();
+    session.stop();
+  });
+
+  it('onBinaryFrame delivers a binary frame received over the socket, as a Uint8Array', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onBinaryFrame = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onBinaryFrame });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    ws.emitBinary(new Uint8Array([1, 2, 3]).buffer);
+    await flush();
+
+    expect(onBinaryFrame).toHaveBeenCalledTimes(1);
+    const [received] = onBinaryFrame.mock.calls[0] as [Uint8Array];
+    expect(Array.from(received)).toEqual([1, 2, 3]);
+    session.stop();
+  });
+
+  it('sendRaw() writes a ClientMessage straight to the open socket, bypassing the append/pending pipeline', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+
+    const { session, Factory } = newSession(streamId);
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+    const sentBeforeCount = ws.sent.length;
+
+    session.sendRaw({ t: 'subscribe', stream: 'camp:11111111-1111-4111-8111-111111111111' });
+    await flush();
+
+    expect(ws.sent).toHaveLength(sentBeforeCount + 1);
+    const last = JSON.parse(ws.sent[ws.sent.length - 1] as string) as { t: string; stream: string };
+    expect(last).toEqual({ t: 'subscribe', stream: 'camp:11111111-1111-4111-8111-111111111111' });
+    session.stop();
+  });
+
+  it('sendBinary() writes raw bytes straight to the open socket', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+
+    const { session, Factory } = newSession(streamId);
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    const bytes = new Uint8Array([9, 9, 9]);
+    session.sendBinary(bytes);
+    await flush();
+
+    expect(ws.sent[ws.sent.length - 1]).toEqual(bytes);
     session.stop();
   });
 

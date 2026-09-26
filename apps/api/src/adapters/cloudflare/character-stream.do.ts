@@ -46,7 +46,7 @@
  */
 import { DurableObject } from 'cloudflare:workers';
 import type { DurableObjectStorage } from '@cloudflare/workers-types';
-import type { Actor, Event } from '@hk/protocol';
+import { type Actor, type Event, WS_MESSAGE_BYTES_MAX } from '@hk/protocol';
 import { CharacterActor } from '../../core/streams/character-actor.ts';
 import { NO_OP_RPC } from '../../core/streams/stream-actor.ts';
 import type { AppendResult } from '../../ports/stream.ts';
@@ -54,7 +54,6 @@ import type { Rpc, RpcAppendOutcome } from '../../ports/infra.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import * as permissions from '../../core/permissions.ts';
 import * as quotas from '../../core/quotas.ts';
-import { WS_MESSAGE_BYTES_MAX } from '../../core/validate.ts';
 import { DoSqlStreamStore } from './store.sqlite-do.ts';
 import { HibernatingConnections, type HibernationHost } from './connections.do.ts';
 import { INTERNAL_ROLE_HEADER, INTERNAL_STREAM_ID_HEADER, INTERNAL_USER_ID_HEADER } from './internal-headers.ts';
@@ -230,7 +229,7 @@ export class CharacterStreamDO extends DurableObject<Env> {
    * decide" shape Node's `server.ts` now uses too. */
   override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     // Whole-branch review finding 1: the Hibernation API has no `ws`-style `maxPayload` option of
-    // its own (Node's `server.ts` enforces `core/validate.ts`'s `WS_MESSAGE_BYTES_MAX` at the
+    // its own (Node's `server.ts` enforces `@hk/protocol`'s `WS_MESSAGE_BYTES_MAX` at the
     // library layer instead) — this is the Cloudflare-side equivalent, a manual length guard
     // BEFORE any JSON parse/actor dispatch runs, so an oversized frame never reaches the actor at
     // all. Closed 1009 ("message too big"), matching Node's `ws` behavior for the same condition

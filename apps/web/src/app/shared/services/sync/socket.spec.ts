@@ -1,9 +1,9 @@
-import type { ClientMessage, ServerMessage } from '@hk/protocol';
+import { WS_MESSAGE_BYTES_MAX, type ClientMessage, type ServerMessage } from '@hk/protocol';
 import {
   SyncSocket,
   SyncSocketOversizeError,
-  WS_MESSAGE_BYTES_MAX,
   wsUrl,
+  wsUrlForStream,
   type WebSocketLike,
 } from './socket';
 
@@ -18,8 +18,9 @@ class FakeWebSocket implements WebSocketLike {
   static instances: FakeWebSocket[] = [];
 
   readonly url: string;
-  readonly sent: string[] = [];
+  readonly sent: (string | Uint8Array)[] = [];
   closeCalls: { code?: number; reason?: string }[] = [];
+  binaryType: 'blob' | 'arraybuffer' | undefined;
 
   onopen: (() => void) | null = null;
   onclose: Handler = null;
@@ -31,7 +32,7 @@ class FakeWebSocket implements WebSocketLike {
     FakeWebSocket.instances.push(this);
   }
 
-  send(data: string): void {
+  send(data: string | Uint8Array): void {
     this.sent.push(data);
   }
 
@@ -73,6 +74,42 @@ describe('wsUrl', () => {
     const url = wsUrl('char-1', { protocol: 'https:', host: 'herokeep.example' });
 
     expect(url).toBe('wss://herokeep.example/api/characters/char-1/ws');
+  });
+});
+
+describe('wsUrlForStream', () => {
+  it('maps a char: stream id to /api/characters/<id>/ws', () => {
+    const url = wsUrlForStream('char:char-1', { protocol: 'http:', host: 'localhost:4200' });
+
+    expect(url).toBe('ws://localhost:4200/api/characters/char-1/ws');
+  });
+
+  it('maps a camp: stream id to /api/campaigns/<id>/ws', () => {
+    const url = wsUrlForStream('camp:camp-1', { protocol: 'http:', host: 'localhost:4200' });
+
+    expect(url).toBe('ws://localhost:4200/api/campaigns/camp-1/ws');
+  });
+
+  it('maps https: to wss: for a campaign stream too', () => {
+    const url = wsUrlForStream('camp:camp-1', { protocol: 'https:', host: 'herokeep.example' });
+
+    expect(url).toBe('wss://herokeep.example/api/campaigns/camp-1/ws');
+  });
+
+  it('throws for a stream id with neither a char: nor camp: prefix', () => {
+    expect(() => wsUrlForStream('bogus:x', { protocol: 'http:', host: 'localhost:4200' })).toThrow(
+      /bogus:x/,
+    );
+  });
+
+  it('wsUrl(characterId) delegates to wsUrlForStream with a char: prefix', () => {
+    const viaWsUrl = wsUrl('char-1', { protocol: 'https:', host: 'herokeep.example' });
+    const viaWsUrlForStream = wsUrlForStream('char:char-1', {
+      protocol: 'https:',
+      host: 'herokeep.example',
+    });
+
+    expect(viaWsUrl).toBe(viaWsUrlForStream);
   });
 });
 
@@ -188,5 +225,75 @@ describe('SyncSocket', () => {
     socket.close();
 
     expect(FakeWebSocket.instances[0].closeCalls).toHaveLength(1);
+  });
+
+  it('sets binaryType to arraybuffer on the underlying socket so incoming binary frames never arrive as a Blob', () => {
+    const Factory = factory();
+    new SyncSocket({ url: 'wss://x', webSocketFactory: Factory });
+
+    expect(FakeWebSocket.instances[0].binaryType).toBe('arraybuffer');
+  });
+
+  it('sendBinary() writes raw bytes straight to the socket (no JSON envelope)', () => {
+    const Factory = factory();
+    const socket = new SyncSocket({ url: 'wss://x', webSocketFactory: Factory });
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+
+    socket.sendBinary(bytes);
+
+    expect(FakeWebSocket.instances[0].sent).toEqual([bytes]);
+  });
+
+  it('sendBinary() throws SyncSocketOversizeError instead of sending when bytes exceed 128 KB, and never writes to the socket', () => {
+    const Factory = factory();
+    const socket = new SyncSocket({ url: 'wss://x', webSocketFactory: Factory });
+    const oversized = new Uint8Array(WS_MESSAGE_BYTES_MAX + 1);
+
+    expect(() => socket.sendBinary(oversized)).toThrow(SyncSocketOversizeError);
+    expect(FakeWebSocket.instances[0].sent).toEqual([]);
+  });
+
+  it('dispatches an incoming ArrayBuffer frame to onBinaryFrame as a Uint8Array, WITHOUT attempting JSON parse (never calls onMessage/onProtocolError)', () => {
+    const Factory = factory();
+    const onMessage = vi.fn();
+    const onProtocolError = vi.fn();
+    const onBinaryFrame = vi.fn();
+    new SyncSocket({
+      url: 'wss://x',
+      webSocketFactory: Factory,
+      onMessage,
+      onProtocolError,
+      onBinaryFrame,
+    });
+    const bytes = new Uint8Array([9, 8, 7]).buffer;
+
+    FakeWebSocket.instances[0].emitMessage(bytes);
+
+    expect(onBinaryFrame).toHaveBeenCalledTimes(1);
+    const [received] = onBinaryFrame.mock.calls[0] as [Uint8Array];
+    expect(received).toBeInstanceOf(Uint8Array);
+    expect(Array.from(received)).toEqual([9, 8, 7]);
+    expect(onMessage).not.toHaveBeenCalled();
+    expect(onProtocolError).not.toHaveBeenCalled();
+  });
+
+  it('dispatches an incoming Uint8Array (ArrayBufferView) frame to onBinaryFrame too', () => {
+    const Factory = factory();
+    const onBinaryFrame = vi.fn();
+    new SyncSocket({ url: 'wss://x', webSocketFactory: Factory, onBinaryFrame });
+    const bytes = new Uint8Array([5, 6]);
+
+    FakeWebSocket.instances[0].emitMessage(bytes);
+
+    expect(onBinaryFrame).toHaveBeenCalledTimes(1);
+    const [received] = onBinaryFrame.mock.calls[0] as [Uint8Array];
+    expect(Array.from(received)).toEqual([5, 6]);
+  });
+
+  it('a binary frame arriving with no onBinaryFrame handler configured is silently ignored (no throw)', () => {
+    const Factory = factory();
+    new SyncSocket({ url: 'wss://x', webSocketFactory: Factory });
+
+    expect(() => FakeWebSocket.instances[0].emitMessage(new Uint8Array([1]).buffer)).not.toThrow();
   });
 });

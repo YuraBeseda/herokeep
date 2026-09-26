@@ -1,9 +1,12 @@
 import { signal, type Signal } from '@angular/core';
 import {
   PROTO_VERSION,
+  WS_MESSAGE_BYTES_MAX,
   type ClientMessage,
   type Event,
   type HelloMsg,
+  type MembersMsg,
+  type NoticeMsg,
   type RejectCode,
   type ServerMessage,
 } from '@hk/protocol';
@@ -19,8 +22,7 @@ import {
 import {
   SyncSocket,
   SyncSocketOversizeError,
-  WS_MESSAGE_BYTES_MAX,
-  wsUrl,
+  wsUrlForStream,
   type WebSocketFactory,
 } from './socket';
 
@@ -72,6 +74,27 @@ import {
  * checks `resumeState` and HOLDS (buffers) any new local edit made while a resume is in flight,
  * flushing the buffer (in order) once the resume completes — sending it immediately instead would
  * mix that append's own ack into the very frame resume verification is trying to interpret.
+ *
+ * ## Campaign-capable plumbing (plan-10 Task 1)
+ *
+ * This class was character-stream-only through plan-8; Task 1 widens its TRANSPORT surface so a
+ * later task can drive a `camp:<uuid>` stream through the SAME class ("extend, don't fork" — no
+ * campaign store/UI/blob logic lands here, only the hooks/methods a campaign session needs):
+ * `wsUrlFn` now takes the FULL stream id (not a bare character uuid) and defaults to
+ * `wsUrlForStream`, which already knows both `char:`/`camp:` routes. Four new optional hooks cover
+ * frame kinds this class previously ignored outright: `onMembers` (a standalone `members` frame,
+ * OR `welcome.members` when the server includes an initial roster), `onForeignEvents` (an `events`
+ * frame addressed to a DIFFERENT stream than this session's own — doc-03's gateway forwards a
+ * subscribed character stream's events over a campaign socket this way), `onBinaryFrame` (a
+ * `blob.chunk` binary frame, forwarded verbatim from `SyncSocket`'s own hook of the same name —
+ * NOT run through the sequential JSON `msgQueue`, since blob-chunk ordering has no bearing on the
+ * event-ordering guarantee that queue exists for), and `onNotice` (EVERY notice, not just the
+ * `quota.warning` key this class already toasts — added alongside, not instead of, that existing
+ * handling). `sendRaw`/`sendBinary` are new PUBLIC escape hatches for traffic that isn't itself an
+ * `append` (`subscribe`/`unsubscribe`/`presence`/`blob.*`) — they write straight to the open
+ * socket, bypassing the local-append/hello/chunking pipeline entirely; a caller needing that
+ * traffic to survive a reconnect is responsible for re-sending it itself (this session does not
+ * remember or replay anything sent through them).
  */
 
 export interface QuotaInfo {
@@ -121,9 +144,10 @@ export interface StreamSyncSessionOptions {
   locks?: LockManager;
   window?: EventListenable;
   document?: VisibilityDocument;
-  /** Builds the absolute `ws://`/`wss://` url from the bare character uuid; defaults to `wsUrl`.
-   * Overridable so specs don't depend on `window.location`. */
-  wsUrlFn?: (characterId: string) => string;
+  /** Builds the absolute `ws://`/`wss://` url from the FULL stream id (`char:<uuid>` /
+   * `camp:<uuid>` — plan-10 Task 1 widened this from a bare-character-uuid fn); defaults to
+   * `wsUrlForStream`. Overridable so specs don't depend on `window.location`. */
+  wsUrlFn?: (streamId: string) => string;
   /** Fires after this session successfully applies server-committed content for this stream (a
    * caught-up `events` frame, or an `ack`) — `SyncService` wires this to
    * `SyncBroadcast.publish()` so follower tabs know to re-read Dexie. NOT fired for this device's
@@ -139,6 +163,20 @@ export interface StreamSyncSessionOptions {
    * this session cannot repair by itself. `SyncService` responds with its existing server-wins
    * `restore()` for the stream. */
   onDivergence?: () => void;
+  /** [plan-10 Task 1] A presence roster — a standalone `members` frame, OR `welcome.members` when
+   * the server includes an initial one. See class doc's "Campaign-capable plumbing" section. */
+  onMembers?: (members: MembersMsg['members']) => void;
+  /** [plan-10 Task 1] An `events` frame addressed to a stream OTHER than this session's own —
+   * see class doc. Fires INSTEAD of the normal `applyServerCommit` path (which only ever runs for
+   * this session's own `streamId`). */
+  onForeignEvents?: (stream: string, events: Event[]) => void;
+  /** [plan-10 Task 1] A binary `blob.chunk` frame received over this session's socket, forwarded
+   * verbatim from `SyncSocket`'s own `onBinaryFrame` — see class doc for why this bypasses the
+   * sequential JSON frame queue. */
+  onBinaryFrame?: (bytes: Uint8Array) => void;
+  /** [plan-10 Task 1] EVERY `notice` frame, regardless of `key` — fires ALONGSIDE (not instead of)
+   * this class's own existing `quota.warning` → toast handling. See class doc. */
+  onNotice?: (notice: NoticeMsg) => void;
 }
 
 const LOCK_PREFIX = 'hk:sync:';
@@ -194,17 +232,20 @@ const REJECT_TOAST_KEYS: Readonly<Record<RejectCode, string>> = {
 
 export class StreamSyncSession {
   private readonly streamId: string;
-  private readonly characterId: string;
   private readonly store: StreamSyncSessionStorePort;
   private readonly eventsRepository: StreamSyncSessionEventsPort;
   private readonly toast: StreamSyncSessionToastPort;
   private readonly webSocketFactory: WebSocketFactory | undefined;
   private readonly backoff: Backoff;
   private readonly reconnectSignals: ReconnectSignals;
-  private readonly wsUrlFn: (characterId: string) => string;
+  private readonly wsUrlFn: (streamId: string) => string;
   private readonly onApplied: (() => void) | undefined;
   private readonly onBye: ((reason: string) => void) | undefined;
   private readonly onDivergence: (() => void) | undefined;
+  private readonly onMembers: ((members: MembersMsg['members']) => void) | undefined;
+  private readonly onForeignEvents: ((stream: string, events: Event[]) => void) | undefined;
+  private readonly onBinaryFrame: ((bytes: Uint8Array) => void) | undefined;
+  private readonly onNotice: ((notice: NoticeMsg) => void) | undefined;
   private readonly locksApi: LockManager | undefined;
 
   private socket: SyncSocket | undefined;
@@ -241,18 +282,19 @@ export class StreamSyncSession {
 
   constructor(options: StreamSyncSessionOptions) {
     this.streamId = options.streamId;
-    this.characterId = options.streamId.startsWith('char:')
-      ? options.streamId.slice('char:'.length)
-      : options.streamId;
     this.store = options.store;
     this.eventsRepository = options.eventsRepository;
     this.toast = options.toast;
     this.webSocketFactory = options.webSocketFactory;
     this.backoff = new Backoff(options.rng);
-    this.wsUrlFn = options.wsUrlFn ?? ((id) => wsUrl(id));
+    this.wsUrlFn = options.wsUrlFn ?? wsUrlForStream;
     this.onApplied = options.onApplied;
     this.onBye = options.onBye;
     this.onDivergence = options.onDivergence;
+    this.onMembers = options.onMembers;
+    this.onForeignEvents = options.onForeignEvents;
+    this.onBinaryFrame = options.onBinaryFrame;
+    this.onNotice = options.onNotice;
     this.locksApi = options.locks ?? navigator.locks;
     this.reconnectSignals = new ReconnectSignals({
       window: options.window,
@@ -310,12 +352,16 @@ export class StreamSyncSession {
   private connect(): void {
     if (this.stopped) return;
     this.connectionStateState.set('connecting');
-    const url = this.wsUrlFn(this.characterId);
+    const url = this.wsUrlFn(this.streamId);
     this.socket = new SyncSocket({
       url,
       webSocketFactory: this.webSocketFactory,
       onOpen: () => void this.sendHello(),
       onMessage: (message) => this.enqueue(message),
+      // [plan-10 Task 1] Forwarded verbatim, NOT through `enqueue`/`msgQueue` — see class doc's
+      // "Campaign-capable plumbing" section for why binary-frame ordering doesn't need the same
+      // strict sequencing the JSON message queue exists to guarantee.
+      onBinaryFrame: (bytes) => this.onBinaryFrame?.(bytes),
       onClose: () => this.handleClose(),
       onError: () => undefined,
       // `SyncSocket` already closed the socket on a protocol error — the resulting `onClose`
@@ -416,8 +462,12 @@ export class StreamSyncSession {
       case 'bye':
         this.handleBye(message);
         return;
+      case 'members':
+        this.handleMembers(message);
+        return;
       default:
-        // members/blob.* frames — out of this task's scope (task-8-brief.md).
+        // blob.pull/blob.unavailable frames — Task 13's job (blob codec), out of this task's
+        // scope (task-1-brief.md's scope guard: "no blob logic").
         return;
     }
   }
@@ -428,6 +478,8 @@ export class StreamSyncSession {
     this.quotaWarningShown = false;
     const streamWelcome = message.streams.find((s) => s.id === this.streamId);
     this.quotaState.set(streamWelcome?.quota ?? null);
+    // [plan-10 Task 1] An initial roster, when the server includes one — see class doc.
+    if (message.members) this.onMembers?.(message.members);
 
     const headSeq = streamWelcome?.headSeq ?? 0;
     const rows = await this.eventsRepository.byStream(this.streamId);
@@ -525,7 +577,13 @@ export class StreamSyncSession {
   }
 
   private async handleEvents(message: Extract<ServerMessage, { t: 'events' }>): Promise<void> {
-    if (message.stream !== this.streamId) return;
+    if (message.stream !== this.streamId) {
+      // [plan-10 Task 1] Doc-03's gateway: a campaign socket forwards a SUBSCRIBED character
+      // stream's own `events` frames — those land on that OTHER stream's id, not this session's.
+      // See class doc's "Campaign-capable plumbing" section.
+      this.onForeignEvents?.(message.stream, message.events);
+      return;
+    }
     try {
       await this.store.applyServerCommit(this.streamId, message.events);
       await this.refreshPendingCount();
@@ -602,6 +660,9 @@ export class StreamSyncSession {
   }
 
   private handleNotice(message: Extract<ServerMessage, { t: 'notice' }>): void {
+    // [plan-10 Task 1] Fires for EVERY notice, alongside (not instead of) the quota.warning-
+    // specific toast below — see class doc.
+    this.onNotice?.(message);
     if (message.key !== 'quota.warning') return;
     if (this.quotaWarningShown) return;
     this.quotaWarningShown = true;
@@ -612,6 +673,12 @@ export class StreamSyncSession {
     const reason = message.reason;
     this.stop();
     this.onBye?.(reason);
+  }
+
+  /** [plan-10 Task 1] A standalone `members` frame (doc-03's presence-snapshot row) — see class
+   * doc. `handleWelcome` covers the OTHER source of a roster (`welcome.members`) itself. */
+  private handleMembers(message: Extract<ServerMessage, { t: 'members' }>): void {
+    this.onMembers?.(message.members);
   }
 
   // --- outbound: local appends -----------------------------------------------------------------
@@ -651,6 +718,25 @@ export class StreamSyncSession {
 
   private send(message: ClientMessage): void {
     this.socket?.send(message);
+  }
+
+  /** [plan-10 Task 1] PUBLIC escape hatch: writes `message` straight to this session's open
+   * socket, bypassing the append/pending pipeline entirely (no chunking, no
+   * `hello`/pending-row bookkeeping) — for traffic that isn't itself an `append`
+   * (`subscribe`/`unsubscribe`/`presence`/`blob.have`/…), wired up by later tasks. A no-op while
+   * disconnected, same as every other outbound path here — the caller is responsible for
+   * re-sending anything that needs to survive a reconnect; this session does not remember or
+   * replay it. See class doc's "Campaign-capable plumbing" section. */
+  sendRaw(message: ClientMessage): void {
+    this.send(message);
+  }
+
+  /** [plan-10 Task 1] PUBLIC escape hatch: writes raw bytes (a `blob.chunk` binary frame) straight
+   * to this session's open socket via `SyncSocket.sendBinary` — same oversize-guard contract as
+   * that method (throws `SyncSocketOversizeError`, never silently truncates). A no-op while
+   * disconnected (no queued socket to write to). See class doc. */
+  sendBinary(bytes: Uint8Array): void {
+    this.socket?.sendBinary(bytes);
   }
 
   private async refreshPendingCount(): Promise<void> {

@@ -161,6 +161,7 @@ class FakeClientSocket implements WebSocketLike {
   onclose: Handler = null;
   onerror: Handler = null;
   onmessage: Handler = null;
+  binaryType: 'blob' | 'arraybuffer' | undefined;
   closed = false;
 
   constructor(
@@ -175,8 +176,11 @@ class FakeClientSocket implements WebSocketLike {
     });
   }
 
-  send(data: string): void {
+  send(data: string | Uint8Array): void {
     if (this.closed) return;
+    // This harness scripts JSON (character-stream) traffic only — binary `blob.chunk` frames are
+    // Task 13's job, out of scope for plan-8's regression suite this file exercises.
+    if (typeof data !== 'string') return;
     const parsed: unknown = JSON.parse(data);
     this.server.receive(this, parsed);
   }
