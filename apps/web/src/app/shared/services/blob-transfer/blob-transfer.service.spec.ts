@@ -194,6 +194,24 @@ function mkOverviewEvent(characterId: string, portraitThumb: string): Event {
   };
 }
 
+/** Joins `characterId` to the campaign roster (`campaign-projection.ts`'s `state.roster` — a
+ * SEPARATE map from `state.overviews`, populated only by this event type) — the missing piece an
+ * earlier draft of the P1 tests here didn't actually exercise (P1 requires BOTH a local
+ * `CharacterRow.portraitThumbHash` AND roster membership; a `party.overview_updated` event alone
+ * only ever lands in `state.overviews`, i.e. P2). */
+function mkJoinedEvent(characterId: string, ownerId = 'usr_1'): Event {
+  const id = `00000000-0000-4000-8000-${String(nextEventId++).padStart(12, '0')}`;
+  return {
+    id,
+    stream: CAMPAIGN_STREAM,
+    ts: '2026-09-26T00:00:00.000Z',
+    actor: { userId: ownerId, deviceId: 'dev_1', role: 'member' },
+    type: 'campaign.character_joined',
+    v: 1,
+    payload: { characterId, ownerId, name: 'Own Character' },
+  };
+}
+
 async function putBlobBytes(hash: string, bytes: Uint8Array): Promise<void> {
   await TestBed.inject(BlobsRepository).put(hash, 'image/webp', bytes);
 }
@@ -289,6 +307,51 @@ describe('BlobTransferService', () => {
     );
   });
 
+  // Fix round 1, Minor: nothing enforced the server's own MAX_HASHES_PER_CONNECTION (512) client-
+  // side before this fix — a large enough campaign's `blob.have` would rely entirely on the
+  // server's own silent per-connection drop, losing an arbitrary tail instead of a prioritized one.
+  it('caps announced blob.have hashes at 512, ordering OWN hashes (P1) before a large party roster (P2) so they always survive the cut', async () => {
+    const OWN_COUNT = 5;
+    const PARTY_COUNT = 515; // total 520 > the 512 cap
+    const charactersRepository = TestBed.inject(CharactersRepository);
+    const events: Event[] = [];
+    const ownHashes: string[] = [];
+    const partyHashes: string[] = [];
+
+    for (let i = 0; i < OWN_COUNT; i++) {
+      const characterId = `00000000-0000-4000-8000-0000${String(i).padStart(8, '0')}`;
+      const hash = `sha256:own${i.toString(16).padStart(5, '0')}${'0'.repeat(56)}`;
+      ownHashes.push(hash);
+      await charactersRepository.put(
+        mkCharacterRow({ id: `char:${characterId}`, portraitThumbHash: hash }),
+      );
+      events.push(mkJoinedEvent(characterId));
+    }
+    for (let i = 0; i < PARTY_COUNT; i++) {
+      const characterId = `00000000-0000-4000-8000-0001${String(i).padStart(8, '0')}`;
+      const hash = `sha256:party${i.toString(16).padStart(4, '0')}${'0'.repeat(55)}`;
+      partyHashes.push(hash);
+      events.push(mkOverviewEvent(characterId, hash));
+    }
+    await TestBed.inject(EventsRepository).append(events);
+    await Promise.all(
+      [...ownHashes, ...partyHashes].map((h) => putBlobBytes(h, new Uint8Array([1]))),
+    );
+
+    await connectCampaign();
+    // `runConnectSequence` resolves 520 Dexie reads (parallelized, but still genuinely async
+    // fake-indexeddb round trips) before `announceHave` ever runs — poll with real ticks instead
+    // of a fixed flush count, which proved unreliable at this scale on a loaded machine.
+    const deadline = Date.now() + 10_000;
+    while (fakeSync.sendBlobHave.mock.calls.length === 0 && Date.now() < deadline) {
+      await tick();
+    }
+
+    const announced = fakeSync.sendBlobHave.mock.calls.flatMap((c) => c[1]);
+    expect(announced).toHaveLength(512);
+    for (const h of ownHashes) expect(announced).toContain(h);
+  }, 20_000);
+
   // --- flow control: single in-flight per campaign ------------------------------------------------
 
   it('never has more than one blob.request in flight at a time for the same campaign', async () => {
@@ -328,6 +391,23 @@ describe('BlobTransferService', () => {
     expect(fakeSync.sendBlobRequest).toHaveBeenCalledTimes(1);
   });
 
+  // Fix round 1 [Important]: a completed peer download was silently stamped `origin:'upload'`
+  // (BlobsRepository.put had no way to receive an explicit origin at all) — doc-07/the plan's own
+  // binding constraint says "store with origin:'peer'". No prior test asserted this.
+  it('stores a completed download with origin:"peer" (doc-07: peer-received blobs are stamped origin:\'peer\')', async () => {
+    const otherCharacterId = '00000000-0000-4000-8000-0000000000fa';
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const hash = await sha256Hex(bytes);
+    await TestBed.inject(EventsRepository).append([mkOverviewEvent(otherCharacterId, hash)]);
+
+    await connectCampaign();
+    fakeSync.emitBinary(CAMPAIGN_ID, encodeBlobChunkFrame(hash, 0, 1, 1, bytes));
+    await flush();
+
+    const row = await TestBed.inject(BlobsRepository).get(hash);
+    expect(row?.origin).toBe('peer');
+  });
+
   it('discards a mismatched assembly (never stores it) and retries — a REJECT never lands in BlobsRepository', async () => {
     const otherCharacterId = '00000000-0000-4000-8000-0000000000dd';
     const realBytes = new Uint8Array([1, 2, 3]);
@@ -350,6 +430,43 @@ describe('BlobTransferService', () => {
     expect(fakeSync.sendBlobRequest.mock.calls.length).toBeGreaterThan(1);
     expect(fakeSync.sendBlobRequest.mock.calls.at(-1)?.[2]).toBe(claimedHash);
   }, 10_000);
+
+  // Fix round 1, Minor: the missing isolation test for `onBinaryFrame`'s own hashPrefix guard —
+  // a foreign chunk (belonging to some OTHER hash entirely) arriving mid-transfer must be ignored
+  // outright, not merged into the in-flight assembly.
+  it('ignores a chunk frame whose hashPrefix belongs to a DIFFERENT hash, arriving mid-transfer', async () => {
+    const otherCharacterId = '00000000-0000-4000-8000-0000000000fb';
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    const hash = await sha256Hex(bytes);
+    const foreignHash = 'sha256:' + 'f'.repeat(64); // unrelated to `hash`, never requested
+    await TestBed.inject(EventsRepository).append([mkOverviewEvent(otherCharacterId, hash)]);
+
+    await connectCampaign();
+    expect(fakeSync.sendBlobRequest).toHaveBeenCalledTimes(1);
+
+    // First real chunk (index 0 of 2) — establishes the in-flight assembly.
+    fakeSync.emitBinary(CAMPAIGN_ID, encodeBlobChunkFrame(hash, 0, 2, 1, bytes.subarray(0, 2)));
+    await flush();
+    expect(await TestBed.inject(BlobsRepository).get(hash)).toBeUndefined(); // still assembling
+
+    // A FOREIGN frame — same shape, same `total`/`to`, but its header names a hash this device
+    // never requested. Must be dropped silently: no store, no crash, no corruption of the
+    // genuine in-flight assembly above.
+    fakeSync.emitBinary(
+      CAMPAIGN_ID,
+      encodeBlobChunkFrame(foreignHash, 1, 2, 1, new Uint8Array([9, 9])),
+    );
+    await flush();
+    expect(await TestBed.inject(BlobsRepository).get(hash)).toBeUndefined();
+    expect(await TestBed.inject(BlobsRepository).get(foreignHash)).toBeUndefined();
+
+    // The REAL second chunk still completes the assembly normally afterward.
+    fakeSync.emitBinary(CAMPAIGN_ID, encodeBlobChunkFrame(hash, 1, 2, 1, bytes.subarray(2)));
+    await flush();
+
+    const row = await TestBed.inject(BlobsRepository).get(hash);
+    expect(Array.from(row?.bytes ?? [])).toEqual(Array.from(bytes));
+  });
 
   // --- serve queue one-at-a-time -----------------------------------------------------------------
 

@@ -1,5 +1,6 @@
 import {
   isOrphanSweepDue,
+  prioritizeAnnounceHashes,
   selectLruEvictions,
   selectOrphans,
   type CacheableBlob,
@@ -107,5 +108,52 @@ describe('isOrphanSweepDue', () => {
 
   it('is due well past the interval', () => {
     expect(isOrphanSweepDue(1000, 1000 + WEEK_MS * 3, WEEK_MS)).toBe(true);
+  });
+});
+
+describe('prioritizeAnnounceHashes', () => {
+  it('returns every hash, in order, when under the cap', () => {
+    const entries = [
+      { hash: 'a', pinned: false },
+      { hash: 'b', pinned: true },
+    ];
+    expect(prioritizeAnnounceHashes(entries, 10)).toEqual(['b', 'a']);
+  });
+
+  it('puts every PINNED hash before any unpinned hash, preserving relative order within each group', () => {
+    const entries = [
+      { hash: 'unpinned-1', pinned: false },
+      { hash: 'pinned-1', pinned: true },
+      { hash: 'unpinned-2', pinned: false },
+      { hash: 'pinned-2', pinned: true },
+    ];
+    expect(prioritizeAnnounceHashes(entries, 10)).toEqual([
+      'pinned-1',
+      'pinned-2',
+      'unpinned-1',
+      'unpinned-2',
+    ]);
+  });
+
+  it('caps the result at the given limit, dropping unpinned hashes first', () => {
+    const entries = [
+      { hash: 'pinned-1', pinned: true },
+      { hash: 'unpinned-1', pinned: false },
+      { hash: 'unpinned-2', pinned: false },
+    ];
+    expect(prioritizeAnnounceHashes(entries, 2)).toEqual(['pinned-1', 'unpinned-1']);
+  });
+
+  it('caps even when EVERY hash is pinned (doc-08 server cap is per-connection, not per-priority)', () => {
+    const entries = [
+      { hash: 'a', pinned: true },
+      { hash: 'b', pinned: true },
+      { hash: 'c', pinned: true },
+    ];
+    expect(prioritizeAnnounceHashes(entries, 2)).toEqual(['a', 'b']);
+  });
+
+  it('returns an empty array for an empty input', () => {
+    expect(prioritizeAnnounceHashes([], 512)).toEqual([]);
   });
 });

@@ -18,6 +18,7 @@ import type { BlobRow } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import { CacheManagerService } from './cache-manager.service';
+import { prioritizeAnnounceHashes } from './blob-cache-policy';
 import {
   decodeBlobChunkHeader,
   encodeBlobChunkFrame,
@@ -25,6 +26,14 @@ import {
   splitIntoChunks,
 } from './blob-chunk-codec';
 import { sniffImageMime } from './image-mime-sniff';
+
+/** [plan-10 Task 13 fix round 1, Minor] Copied from `apps/api/src/core/streams/blob-relay.ts`'s
+ * own `MAX_HASHES_PER_CONNECTION` (read-only reference, same "apps/web cannot import apps/api"
+ * boundary the codec constants document) — "Excess announcements beyond this cap are silently
+ * dropped for that connection." Enforced client-side (`prioritizeAnnounceHashes`) rather than
+ * relying entirely on the server's own silent drop, so THIS device controls which hashes survive
+ * (pinned/own first) instead of losing an arbitrary tail. */
+export const MAX_ANNOUNCE_HASHES = 512;
 
 /** doc-07's client-side design gives no explicit number for how long a requester waits for
  * SOMETHING (a `blob.pull`-triggered chunk, or `blob.unavailable`) before giving up — a judgment
@@ -354,11 +363,27 @@ export class BlobTransferService {
     const wanted = await this.computeWantedForCampaign(campaignId);
     await this.cacheManagerService.refreshPins();
 
-    const relevant = [...wanted.p1, ...wanted.p2, ...wanted.p3];
-    const held: string[] = [];
-    for (const w of relevant) {
-      if (await this.blobsRepository.get(w.hash)) held.push(w.hash);
+    // Reads are fired in PARALLEL (`Promise.all`), not one `await` per hash in a loop — a large
+    // campaign's roster can put hundreds of hashes through this on every connect, and a strictly
+    // sequential Dexie round trip per hash was measured to be slow enough to matter once the
+    // ≤512 announce cap fix (below) added a realistic test at that scale.
+    //
+    // [fix round 1, Minor] OWN hashes (P1 thumb + P3 full portrait) are ordered BEFORE party
+    // hashes (P2) here — deliberately NOT the P1→P2→P3 fetch-priority order used elsewhere in
+    // this file — because this list feeds the ANNOUNCE cap below: `prioritizeAnnounceHashes`
+    // still groups by each row's actual `pinned` flag on top of this (own AND already-pinned
+    // party hashes both win), but ordering own tiers first here means a cap-triggering slice
+    // never drops an own hash purely for being positioned after a large party roster.
+    const relevant = [...wanted.p1, ...wanted.p3, ...wanted.p2];
+    const relevantRows = await Promise.all(relevant.map((w) => this.blobsRepository.get(w.hash)));
+    const heldEntries: { hash: string; pinned: boolean }[] = [];
+    for (let i = 0; i < relevant.length; i++) {
+      const row = relevantRows[i];
+      if (row) heldEntries.push({ hash: relevant[i].hash, pinned: row.pinned });
     }
+    // [fix round 1, Minor] Explicitly enforced client-side, prioritizing pinned (own/current-
+    // campaign) hashes first — see `MAX_ANNOUNCE_HASHES`'s own doc comment.
+    const held = prioritizeAnnounceHashes(heldEntries, MAX_ANNOUNCE_HASHES);
     this.announceHave(campaignId, held);
 
     await this.enqueueMissing(watcher, wanted.p1);
@@ -405,12 +430,15 @@ export class BlobTransferService {
     watcher: CampaignWatcher,
     wanted: readonly WantedHash[],
   ): Promise<void> {
-    for (const w of wanted) {
-      if (watcher.queue.some((q) => q.hash === w.hash)) continue;
-      if (watcher.current?.hash === w.hash) continue;
-      const existing = await this.blobsRepository.get(w.hash);
-      if (existing) continue;
-      watcher.queue.push(w);
+    // Synchronous dedup FIRST (queue/current-in-flight membership never changes mid-loop here),
+    // then the Dexie "already held" reads run in PARALLEL — see `runConnectSequence`'s identical
+    // reasoning for why a sequential per-hash `await` doesn't scale to a large roster.
+    const candidates = wanted.filter(
+      (w) => !watcher.queue.some((q) => q.hash === w.hash) && watcher.current?.hash !== w.hash,
+    );
+    const existingRows = await Promise.all(candidates.map((w) => this.blobsRepository.get(w.hash)));
+    for (let i = 0; i < candidates.length; i++) {
+      if (!existingRows[i]) watcher.queue.push(candidates[i]);
     }
     watcher.queue.sort((a, b) => a.tier - b.tier);
   }
@@ -563,7 +591,14 @@ export class BlobTransferService {
     }
 
     const mime = sniffImageMime(assembled) ?? 'application/octet-stream';
-    await this.blobsRepository.put(digestHex, mime, assembled, { kind: inflight.kind });
+    // Fix round 1 [Important]: `origin: 'peer'` — doc-07/the plan's binding constraint ("store
+    // with origin:'peer', correct kind"). `BlobsRepository.put`'s own doc explains why an
+    // explicit `meta.origin` here can never clobber an ALREADY-established origin on a hash this
+    // device happens to already hold under a different origin.
+    await this.blobsRepository.put(digestHex, mime, assembled, {
+      kind: inflight.kind,
+      origin: 'peer',
+    });
     watcher.backoff.reset();
     this.announceHave(campaignId, [digestHex]);
     await this.cacheManagerService.refreshPins();

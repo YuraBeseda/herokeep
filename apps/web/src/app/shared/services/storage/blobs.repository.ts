@@ -33,20 +33,33 @@ export class BlobsRepository {
    * writes a peer/import/pack blob yet).
    *
    * Fix-round 1 (Task-2 review, [Important]): a re-`put` of an EXISTING hash PRESERVES its
-   * `addedAt`/`pinned`/`origin` — only `lastUsedAt` (and the content/meta fields) advance. The
-   * caller has no way to pass `pinned`/`origin` through `meta`, so re-stamping them on every
-   * write would silently unpin/un-attribute a row on any re-upload of byte-identical content
-   * (`ImagePipelineService.processPortrait` calls `put` unconditionally, no get-before-put
-   * guard) — defeating the version(3) upgrade's pin signal before Task 13 ever reads it. This is
-   * still FIELD preservation only, not cache-management logic (Task 13 owns eviction/LRU). */
+   * `addedAt`/`pinned`/`origin` — only `lastUsedAt` (and the content/meta fields) advance. This
+   * is still FIELD preservation only, not cache-management logic (Task 13 owns eviction/LRU).
+   *
+   * Plan-10 Task 13 fix-round 1 ([Important]): `meta.origin` lets a caller stamp a NEW row's
+   * origin explicitly (`BlobTransferService.finishAssembly` passes `'peer'` for a
+   * doc-07-verified, completed peer transfer — previously this parameter didn't exist at all, so
+   * EVERY peer-received blob was silently mis-stamped `'upload'` by the `existing?.origin ??
+   * 'upload'` fallback below). The re-put-preserves-origin rule above still wins over an explicit
+   * `meta.origin` on an EXISTING row: `origin` is computed BEFORE `...meta` is spread (and
+   * `meta.origin` is destructured out of the spread, below) specifically so a re-`put`'s own
+   * `meta.origin` can never override an already-established origin — e.g. a portrait re-upload
+   * (`origin: 'upload'`) landing on a hash that happens to collide with one this device already
+   * has from a peer (`origin: 'peer'`) must not flip it back to `'upload'`. A NEW hash with no
+   * `meta.origin` still defaults to `'upload'` (the only origin any pre-Task-13 caller ever
+   * produced), unchanged. */
   async put(
     hash: string,
     mime: string,
     bytes: Uint8Array,
-    meta?: { kind?: BlobRow['kind']; width?: number; height?: number },
+    meta?: { kind?: BlobRow['kind']; width?: number; height?: number; origin?: BlobRow['origin'] },
   ): Promise<void> {
     const now = Date.now();
     const existing = await this.db.blobs.get(hash);
+    // `origin` is pulled out of `meta` separately (not left to the `...rest` spread below) so an
+    // explicit `meta.origin` can win on a NEW row but can NEVER override an EXISTING row's own
+    // preserved origin — see this method's own doc for why.
+    const { origin: explicitOrigin, ...restMeta } = meta ?? {};
     await this.db.blobs.put({
       hash,
       mime,
@@ -55,8 +68,8 @@ export class BlobsRepository {
       addedAt: existing?.addedAt ?? now,
       lastUsedAt: now,
       pinned: existing?.pinned ?? false,
-      origin: existing?.origin ?? 'upload',
-      ...meta,
+      origin: existing?.origin ?? explicitOrigin ?? 'upload',
+      ...restMeta,
     });
     for (const cb of this.arrivalListeners) cb(hash);
   }

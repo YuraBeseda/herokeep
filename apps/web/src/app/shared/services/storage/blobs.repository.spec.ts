@@ -121,7 +121,42 @@ describe('BlobsRepository', () => {
     expect(row?.size).toBe(4);
   });
 
-  // --- plan-10 Task 13 additions (doc-07 §Cache management) -------------------------------------
+  // --- plan-10 Task 13 fix round 1: origin is actually persisted ---------------------------------
+
+  it('put() stamps an EXPLICIT meta.origin on a brand-new hash (e.g. a peer-received blob)', async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    await repo.put(hash, 'image/webp', new Uint8Array([1, 2, 3]), {
+      kind: 'thumb',
+      origin: 'peer',
+    });
+
+    expect((await repo.get(hash))?.origin).toBe('peer');
+  });
+
+  it('put() defaults to "upload" on a new hash when meta.origin is omitted (unchanged behavior)', async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    await repo.put(hash, 'image/webp', new Uint8Array([1, 2, 3]), { kind: 'thumb' });
+
+    expect((await repo.get(hash))?.origin).toBe('upload');
+  });
+
+  it("put() PRESERVES an existing row's origin on re-put even when a DIFFERENT meta.origin is explicitly passed (Task-2 fix-round 1 rule extended)", async () => {
+    const repo = TestBed.inject(BlobsRepository);
+    await repo.put(hash, 'image/webp', new Uint8Array([1, 2, 3]), {
+      kind: 'thumb',
+      origin: 'peer',
+    });
+    expect((await repo.get(hash))?.origin).toBe('peer');
+
+    // A later re-put (e.g. a re-upload of byte-identical content) explicitly claims 'upload' —
+    // the ALREADY-ESTABLISHED origin must win, exactly like pinned/addedAt already do.
+    await repo.put(hash, 'image/webp', new Uint8Array([9, 9, 9, 9]), {
+      kind: 'thumb',
+      origin: 'upload',
+    });
+
+    expect((await repo.get(hash))?.origin).toBe('peer');
+  });
 
   describe('touchLastUsed', () => {
     it('advances lastUsedAt on an existing row without touching any other field', async () => {
