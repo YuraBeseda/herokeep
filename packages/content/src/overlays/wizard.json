@@ -1,8 +1,8 @@
 [
   {
     "id": "srd-5e-2024:class/wizard",
-    "cite": "SRD 5.2.1, Wizard Core Traits; Wizard Subclass; Ability Score Improvement",
-    "note": "Core Traits table: \"Armor Training: None\"; \"Weapon Proficiencies: Simple weapons\"; \"Skill Proficiencies: Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion\". @4/feat matches the Ability Score Improvement feature's text (identical wording to Fighter's). R20: the SRD's Prepared Spells column (4/5/6/7/9 for levels 1-5) is not duplicated here as rows[].extra.preparedSpells — transformClasses() already carries the same values verbatim under the upstream row extra key extra['wizard-prepared-spells'] (ClassLevelRowSchema.extra keys are slug-only by design; a second camelCase copy would be redundant).",
+    "cite": "SRD 5.2.1, Wizard Core Traits; Cantrips; Wizard Subclass; Scholar; Ability Score Improvement; Epic Boon",
+    "note": "Core Traits table: \"Armor Training: None\"; \"Weapon Proficiencies: Simple weapons\"; \"Skill Proficiencies: Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion\". Task 8 (phase 4 plan 11): extended 6->20. @4/feat matches the Ability Score Improvement feature's text (identical wording to Fighter's); the feature (wizard-ability-score-improvement) repeats at Wizard levels 4, 8, 12, 16 (vendored desc: \"You gain this feature again at Wizard levels 8, 12, and 16\") -- @8/@12/@16/feat below reuse the exact @4/feat shape; none of these (nor @19) fall within any currently-tested apps/web level-up flow (which stops at level 2), verified by the full gate staying green. Epic Boon is a separate feature (wizard-epic-boon) granted at level 19, same open \"or another feat of your choice for which you qualify\" wording as ASI -- @19/feat reuses the identical query:{type:'feat'} pick, same reasoning as Fighter's (see fighter.json's class-level note). R20/T3/T8: the Cantrips column (3 at levels 1-3, 4 at levels 4-9, 5 at levels 10-20; vendored srd-2024_wizard_cantrips) is NOT the same key transformClasses() auto-carries -- the upstream pk 'srd-2024_wizard_cantrips' auto-slugs to row extra key 'wizard-cantrips', but packages/engine/src/derive/spellcasting.ts's cantripsKnownKey('wizard') (T3) reads 'wizard-cantrips-known' specifically -- so levels 1/4/10 below author an EXPLICIT second, correctly-keyed extra column ('wizard-cantrips-known': 3/4/5) alongside the harmless, unread auto-generated 'wizard-cantrips' key. bestRowExtra (T3) picks the highest row at or below the character's level, so these three breakpoints alone cover all 20 levels correctly (levels 2-3 fall through to level 1's row, 5-9 to level 4's, 11-20 to level 10's) -- the wizard-spellcasting feature's own cantripsKnown FORMULA ('3 + floor(classLevel(wizard) / 4)') now only matters as a dead-but-harmless fallback for a hypothetical level below 1 or a future pack that drops the row extras; it was previously the LIVE value and, per the original overlay's own note, diverged from the real table above level 7 -- that divergence is now closed. These are plain `extra` data additions (no new choice, no new grant), so they cannot perturb any existing outstanding-choice flow -- confirmed by the gate staying green. R20: the SRD's Prepared Spells column (4/5/6/.../25 across all 20 levels) is not duplicated here as rows[].extra either -- transformClasses() already carries it verbatim under the upstream row extra key extra['wizard-prepared-spells'] for EVERY level 1-20 (verified against the vendored srd-2024_wizard_prepared-spells column), which is BYTE-IDENTICAL to preparedSpellsKey('wizard') (T3) -- zero authoring needed, unlike cantrips-known's key mismatch above. Scholar (@2, level 2): SRD text \"Choose one of the following skills in which you have proficiency: Arcana, History, Investigation, Medicine, Nature, or Religion. You have Expertise in the chosen skill.\" NOT authored as a choice, deliberately, despite being schema-expressible (pick:{static:[...]} over the six real skill entity ids would validate cleanly) -- two compounding reasons: (1) the resulting EXPERTISE EFFECT can't be applied without an engine change regardless (packages/engine/src/derive/composition.ts's decision-activation loop only activates a selected entity's own effects when it resolves to type 'feat' or 'feature' -- `if (e && (e.type === 'feat' || e.type === 'feature')) activateRoot(sel)` -- a chosen 'skill' entity's effects, which it has none authored per doc-04's own type table, are never activated this way), so authoring just the choice buys nothing functional; (2) apps/web's level-up flow (level-up.state.spec.ts, level-up.component.spec.ts) drives a Wizard 1->2 transition end-to-end and asserts `state.complete()`/a specific step sequence -- a real, level-2-gated choice with no backing UI to answer it in that flow's existing test setup left `state.complete()` false, breaking two pre-existing specs (confirmed empirically: authored, ran the full gate, reverted after seeing the exact failures, matching this task's 'document why a different shape is better' escape hatch, same as the weapon-mastery count-growth carry below). Authoring only the CHOICE while its effect stays inert would have shipped a UI-facing decision point with no payoff, at the cost of an apps/web fix outside this task's explicit 'no web' scope -- not worth it for zero functional gain. Flagged for controller triage as a combined carry: a future engine+web task should extend composition.ts's activation (or read the decision directly in deriveAbilities), author the @2/scholar-skill choice, AND extend the two apps/web level-up specs to answer it.",
     "set": {
       "armorTraining": [],
       "weaponProficiencies": ["simple"],
@@ -12,6 +12,10 @@
       }
     },
     "rows": [
+      {
+        "level": 1,
+        "extra": { "wizard-cantrips-known": 3 }
+      },
       {
         "level": 3,
         "choices": [
@@ -34,6 +38,59 @@
             "pick": { "query": { "type": "feat" } },
             "count": 1
           }
+        ],
+        "extra": { "wizard-cantrips-known": 4 }
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/wizard@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "wizard", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 10,
+        "extra": { "wizard-cantrips-known": 5 }
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/wizard@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "wizard", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/wizard@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "wizard", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/wizard@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "wizard", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
         ]
       }
     ]
@@ -41,7 +98,7 @@
   {
     "id": "srd-5e-2024:feature/wizard-spellcasting",
     "cite": "SRD 5.2.1, Spellcasting (Wizard)",
-    "note": "SRD text: \"You know three Wizard cantrips of your choice ... When you reach Wizard levels 4 and 10, you learn another Wizard cantrip.\" cantripsKnown: '3 + floor(classLevel(wizard) / 4)' matches the vendored Cantrips column exactly through this task's level 1-5 scope (3 at levels 1-3, 4 at levels 4-5); at higher, out-of-scope levels it diverges from the table (e.g. predicts 5 at levels 8-9 where the table holds at 4) because the true progression is a stepped table, not a linear function of level — flagged for 1b. preparedCount is intentionally omitted — no formula: the 2024 Prepared Spells column is a table (4/5/6/7/9 for levels 1-5), not linear in level. That table already lives on the wizard class entity, at each level row's extra['wizard-prepared-spells'] (upstream-derived by transformClasses(), R12); 1b's derive should read the prepared-spells count from there rather than from this effect.",
+    "note": "SRD text: \"You know three Wizard cantrips of your choice ... When you reach Wizard levels 4 and 10, you learn another Wizard cantrip.\" cantripsKnown formula unchanged ('3 + floor(classLevel(wizard) / 4)') -- Task 8 makes it a dead-but-harmless fallback, superseded at every real level by the class entity's now-correct 'wizard-cantrips-known' row extras (see class/wizard's note above); kept rather than removed so a pack that ever drops the row extras still gets a levels-1-7-correct value instead of nothing. preparedCount is intentionally still omitted -- no formula: the 2024 Prepared Spells column is a table (4 through 25 across levels 1-20), not linear in level. That table already lives on the wizard class entity, at each level row's extra['wizard-prepared-spells'] (upstream-derived by transformClasses(), R12, verified now for all 20 levels, not just 1-5); packages/engine/src/derive/spellcasting.ts's bestRowExtra(preparedSpellsKey) reads it directly, exactly as it did for the original 1-5 scope.",
     "merge": {
       "effects": [
         {
@@ -61,7 +118,7 @@
   {
     "id": "srd-5e-2024:feature/wizard-evoker-evocation-savant",
     "cite": "SRD 5.2.1, Evoker — Evocation Savant",
-    "note": "SRD text grants two free Evocation spells (level 2 or lower) added to the spellbook at level 3, plus one more whenever a new spell-slot level is reached. Recorded as a tag for 1a's text-level scope; the free-spellbook-addition mechanic is Phase-4/1b vocabulary.",
+    "note": "SRD text grants two free Evocation spells (level 2 or lower) added to the spellbook at level 3, plus one more whenever a new spell-slot level is reached. Recorded as a tag for 1a's text-level scope; the free-spellbook-addition mechanic is still outside doc-04's effects table in phase 4 (no \"add a chosen spell to the spellbook for free, gated on reaching a new slot level\" effect type exists).",
     "merge": {
       "effects": [{ "type": "tag.grant", "tag": "evocation-savant" }]
     }
@@ -69,9 +126,111 @@
   {
     "id": "srd-5e-2024:feature/wizard-evoker-potent-cantrip",
     "cite": "SRD 5.2.1, Evoker — Potent Cantrip",
-    "note": "SRD text: a damaging cantrip that misses its attack roll or is saved against still deals half damage (and no additional effect). Recorded as a tag for 1a's text-level scope.",
+    "note": "SRD text: a damaging cantrip that misses its attack roll or is saved against still deals half damage (and no additional effect). Recorded as a tag for 1a's text-level scope; still outside doc-04's effects table in phase 4 (no half-damage-on-miss-or-save effect type exists).",
     "merge": {
       "effects": [{ "type": "tag.grant", "tag": "potent-cantrip" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-arcane-recovery",
+    "cite": "SRD 5.2.1, Arcane Recovery",
+    "note": "SRD text: \"When you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher... Once you use this feature, you can't do so again until you finish a Long Rest.\" Granted at Wizard level 1 -- within the originally-authored level 1-5 range but MISSED by the earlier phase; closed here for ruling 9's \"every class ships\" bar (T8 is the first task revisiting wizard.json with ruling-9 rigor across the whole class). Inexpressible: a player-chosen, combined-level-budgeted partial restoration of facts.slotsUsed (a per-spell-level array, not a single resource pool) -- resource.define models a single scalar pool with a reset trigger, not \"spend up to N budget points across several distinct slot-level counters, chosen freely\". Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Arcane Recovery",
+          "description": "You can regain some of your magical energy by studying your spellbook. When you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher. For example, if you're a level 4 Wizard, you can recover up to two levels' worth of spell slots, regaining either one level 2 spell slot or two level 1 spell slots.\n\nOnce you use this feature, you can't do so again until you finish a Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-memorize-spell",
+    "cite": "SRD 5.2.1, Memorize Spell",
+    "note": "SRD text: \"Whenever you finish a Short Rest, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared for your Spellcasting feature with another level 1+ spell from the book.\" Granted at Wizard level 5. Inexpressible: a rest-triggered, single-spell swap within facts.preparedSpells -- no effect type models a partial/single-entry replacement of a prepared-spells list gated on a rest trigger (the Spellcasting feature's own preparedMax is a COUNT, not a swap mechanic). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Memorize Spell",
+          "description": "Whenever you finish a Short Rest, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared for your Spellcasting feature with another level 1+ spell from the book."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-ritual-adept",
+    "cite": "SRD 5.2.1, Ritual Adept",
+    "note": "SRD text: \"You can cast any spell as a Ritual if that spell has the Ritual tag and the spell is in your spellbook. You needn't have the spell prepared, but you must read from the book to cast a spell in this way.\" Granted at Wizard level 1 -- within the originally-authored level 1-5 range but MISSED by the earlier phase; closed here for completeness alongside Arcane Recovery. NOT a fallback: this feature's mechanic is ALREADY fully carried by the 'wizard-spellcasting' feature's own spellcasting.define effect, which has `ritual: true` (authored since the original 1-5 task) -- that flag is the general \"this caster can ritual-cast known ritual spells\" behavior the 2024 rules generalize per class, and Ritual Adept is simply the Wizard-specific restatement/naming of it (the \"without preparing it, reading from the spellbook\" nuance is implicit in a spellbook-preparation caster and needs no separate effect). This overlay entry carries no merge -- it exists only to document, in the pack source itself, that the feature is intentionally effect-less rather than silently forgotten."
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-scholar",
+    "cite": "SRD 5.2.1, Scholar",
+    "note": "SRD text: \"Choose one of the following skills in which you have proficiency: Arcana, History, Investigation, Medicine, Nature, or Religion. You have Expertise in the chosen skill.\" Granted at Wizard level 2. NEITHER the choice NOR an effect is authored here -- see class/wizard's note above for the full reasoning (the Expertise effect can't be applied without an engine change regardless of whether the choice exists, and authoring the choice alone broke two pre-existing apps/web level-up specs for zero functional gain; both are a combined carry for a future engine+web task). This entry carries no merge -- it exists only to document, in the pack source itself, that the feature is intentionally effect-less and choice-less rather than silently forgotten."
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-signature-spells",
+    "cite": "SRD 5.2.1, Signature Spells",
+    "note": "SRD text: \"Choose two level 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast each of them once at level 3 without expending a spell slot. When you do so, you can't cast them in this way again until you finish a Short or Long Rest. To cast either spell at a higher level, you must expend a spell slot.\" Granted at Wizard level 20. Inexpressible as a compound mechanic: the spell.grant effect targets one FIXED spell id, not \"a spell the player already knows/has in their spellbook, chosen at the table\" (no pick shape filters a query down to \"entities already selected by this character\"), and even a chosen spell's free-cast-once-per-rest sub-mechanic (a per-spell resource pool distinct from the class's normal slot pool) has no modeling path. Text-feature fallback per ruling 9's bar; flagged as the most complex compound gap found in this task.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Signature Spells",
+          "description": "Choose two level 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast each of them once at level 3 without expending a spell slot. When you do so, you can't cast them in this way again until you finish a Short or Long Rest. To cast either spell at a higher level, you must expend a spell slot."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-spell-mastery",
+    "cite": "SRD 5.2.1, Spell Mastery",
+    "note": "SRD text: \"Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an action. You always have those spells prepared, and you can cast them at their lowest level without expending a spell slot. To cast either spell at a higher level, you must expend a spell slot. Whenever you finish a Long Rest, you can study your spellbook and replace one of those spells with an eligible spell of the same level from the book.\" Granted at Wizard level 18. Same compound-gap class as Signature Spells (player-chosen-from-spellbook selection + at-will free casting + a long-rest swap sub-mechanic) -- text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Spell Mastery",
+          "description": "You have achieved such mastery over certain spells that you can cast them at will. Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an action. You always have those spells prepared, and you can cast them at their lowest level without expending a spell slot. To cast either spell at a higher level, you must expend a spell slot.\n\nWhenever you finish a Long Rest, you can study your spellbook and replace one of those spells with an eligible spell of the same level from the book."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-evoker-empowered-evocation",
+    "cite": "SRD 5.2.1, Evoker — Empowered Evocation",
+    "note": "SRD text: \"Whenever you cast a Wizard spell from the Evocation school, you can add your Intelligence modifier to one damage roll of that spell.\" Granted at Evoker level 10. damage.bonus{value:'mod(int)', filter:{spell:true}} is the RIGHT effect type (a flat ability-mod damage bonus, school-filter aside) but is CURRENTLY INERT: packages/engine/src/derive/spellcasting.ts's own header comment documents that a spell-targeted attack.bonus/damage.bonus (filter.spell: true) is \"reserved for a future task\" -- packages/engine/src/derive/attacks.ts's matchesFilter already refuses such a filter on a weapon row (correctly excluding it there), but nothing yet derives a spell-attack/spell-damage row for it to apply to at all (no spell-casting-roll modeling exists yet in this phase). Authored anyway (matching the schema's own documented, anticipated gap rather than falling back to feature.text) since it's the structurally correct effect, just pending a future engine feature; flagged. The Evocation-school filter itself is also not modeled (AttackFilterSchema has no spell-school field) -- a future engine task consuming this would need to add one, or accept it applying to all spell damage.",
+    "merge": {
+      "effects": [{ "type": "damage.bonus", "value": "mod(int)", "filter": { "spell": true } }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-evoker-overchannel",
+    "cite": "SRD 5.2.1, Evoker — Overchannel",
+    "note": "SRD text: \"When you cast a Wizard spell with a spell slot of levels 1–5 that deals damage, you can deal maximum damage with that spell on the turn you cast it. The first time you do so, you suffer no adverse effect. If you use this feature again before you finish a Long Rest, you take 2d12 Necrotic damage for each level of the spell slot immediately after you cast it. This damage ignores Resistance and Immunity. Each time you use this feature again before finishing a Long Rest, the Necrotic damage per spell level increases by 1d12.\" Granted at Evoker level 14. Inexpressible: an escalating self-damage cost (2d12 -> 3d12 -> ... per use since the last long rest) tied to a \"maximize this spell's damage\" toggle -- no effect type models either the maximize-damage override or an escalating-per-use cost counter. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Overchannel",
+          "description": "You can increase the power of your spells. When you cast a Wizard spell with a spell slot of levels 1–5 that deals damage, you can deal maximum damage with that spell on the turn you cast it.\n\nThe first time you do so, you suffer no adverse effect. If you use this feature again before you finish a Long Rest, you take 2d12 Necrotic damage for each level of the spell slot immediately after you cast it. This damage ignores Resistance and Immunity.\n\nEach time you use this feature again before finishing a Long Rest, the Necrotic damage per spell level increases by 1d12."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/wizard-evoker-sculpt-spells",
+    "cite": "SRD 5.2.1, Evoker — Sculpt Spells",
+    "note": "SRD text: \"When you cast an Evocation spell that affects other creatures that you can see, you can choose a number of them equal to 1 plus the spell's level. The chosen creatures automatically succeed on their saving throws against the spell, and they take no damage if they would normally take half damage on a successful save.\" Granted at Evoker level 6. Inexpressible: a per-cast, player-chosen creature-exclusion from an area spell's effect -- no effect type models excluding specific targets from a spell's saving throw/damage resolution. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Sculpt Spells",
+          "description": "You can create pockets of relative safety within the effects of your evocations. When you cast an Evocation spell that affects other creatures that you can see, you can choose a number of them equal to 1 plus the spell's level. The chosen creatures automatically succeed on their saving throws against the spell, and they take no damage if they would normally take half damage on a successful save."
+        }
+      ]
     }
   }
 ]

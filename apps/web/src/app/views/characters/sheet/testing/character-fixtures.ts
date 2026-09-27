@@ -54,7 +54,10 @@ export async function seedFighter(
   if (fightingStyle) {
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
   }
-  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+  // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+  // (T6 carry closed), not a `literal: 'text'` free-text placeholder — the selection must be a
+  // real entity id, not the bare word 'longsword'.
+  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['srd-5e-2024:item/longsword']);
 
   const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);
   state.equipItem(chainMail);

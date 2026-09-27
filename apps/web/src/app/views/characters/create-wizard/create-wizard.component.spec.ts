@@ -134,7 +134,9 @@ function fillValidDecisions(state: CreateWizardState): void {
   state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/fighter']);
   state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
   state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+  // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+  // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['srd-5e-2024:item/longsword']);
 }
 
 describe('CreateWizardComponent', () => {
@@ -254,7 +256,11 @@ describe('CreateWizardComponent', () => {
     state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/fighter']);
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+      'srd-5e-2024:item/longsword',
+    ]);
     await fixture.whenStable();
 
     expect(state.outstanding()).toEqual([]);
@@ -367,7 +373,11 @@ describe('CreateWizardComponent', () => {
     state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/fighter']);
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+      'srd-5e-2024:item/longsword',
+    ]);
     await fixture.whenStable();
 
     // Unlike species/background (validly decided, vanished from the stepper), the invalid
@@ -426,7 +436,11 @@ describe('CreateWizardComponent', () => {
     state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/fighter']);
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+      'srd-5e-2024:item/longsword',
+    ]);
     const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);
     state.equipItem(chainMail);
     state.addItem('srd-5e-2024:item/longsword', 1); // added, deliberately left UNEQUIPPED
@@ -444,7 +458,10 @@ describe('CreateWizardComponent', () => {
     expect(find('Ability scores')?.selection).toContain('Strength 15');
     expect(find('Ability scores')?.selection).toContain('Charisma 8');
     expect(find('Fighting Style')?.selection).toBe('Defense');
-    expect(find('Weapon Masteries')?.selection).toBe('longsword');
+    // Task 8: weapon-masteries is now a real query pick over item entities, so its selection
+    // resolves through the index/localizer like any other entity-id decision (was the raw
+    // literal-text string 'longsword' before the T6/T8 pick-shape swap).
+    expect(find('Weapon Masteries')?.selection).toBe('Longsword');
     // The synthetic class-skills choice has no backing `Choice` entity — falls back to its own
     // step's label key ("Skills") rather than an empty `Localizer.choicePrompt`.
     const skillsPair = pairs.find((p) => p.prompt === 'Skills');
@@ -566,7 +583,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+      'srd-5e-2024:item/longsword',
+    ]);
 
     const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);
     state.equipItem(chainMail);
@@ -661,7 +682,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+      'srd-5e-2024:item/longsword',
+    ]);
     await fixture.whenStable();
 
     expect(state.outstanding()).toEqual([]);
@@ -722,7 +747,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
-    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['longsword']);
+    // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+      'srd-5e-2024:item/longsword',
+    ]);
     await fixture.whenStable();
 
     expect(state.outstanding()).toEqual([]);

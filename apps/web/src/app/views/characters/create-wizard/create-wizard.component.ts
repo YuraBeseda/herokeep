@@ -323,8 +323,9 @@ export class CreateWizardComponent {
   // every other choice resolves a full entity id straight off the index, recognizes an ability
   // token (`str:+2` / `str:15` — the `abilities`/`abilityGeneration` picks' own selection shape;
   // see `ABILITY_VALUE_RE`) into a structured `SelectionPart`, and otherwise passes the raw value
-  // through as-is (a `literal` pick's free-text entry, e.g. weapon-masteries — never an entity id,
-  // nothing to resolve).
+  // through as-is (a `literal` pick's free-text entry — never an entity id, nothing to resolve;
+  // task 8, phase 4 plan 11: weapon-masteries used to be this overlay's one real-pack example but is
+  // now a real `query` pick, so its selections resolve as full entity ids like any other).
   private formatSelectionParts(
     choiceId: string,
     selection: string[],

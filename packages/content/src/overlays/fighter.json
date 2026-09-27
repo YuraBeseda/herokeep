@@ -1,8 +1,8 @@
 [
   {
     "id": "srd-5e-2024:class/fighter",
-    "cite": "SRD 5.2.1, Fighter Core Traits; Fighting Style; Fighter Subclass; Ability Score Improvement",
-    "note": "Core Traits table: \"Armor Training: Light, Medium, and Heavy armor and Shields\"; \"Weapon Proficiencies: Simple and Martial weapons\"; \"Skill Proficiencies: Choose 2: Acrobatics, Animal Handling, Athletics, History, Insight, Intimidation, Persuasion, Perception, or Survival\". @1/weapon-masteries is a literal:'text' placeholder (R6) — selecting which weapon-mastery properties a character knows needs an item-tag query EntityQuerySchema can't express yet; Phase 4 structures it. @4/feat matches the Ability Score Improvement feature's text: \"You gain the Ability Score Improvement feat ... or another feat of your choice for which you qualify.\"",
+    "cite": "SRD 5.2.1, Fighter Core Traits; Fighting Style; Fighter Subclass; Ability Score Improvement; Epic Boon",
+    "note": "Core Traits table: \"Armor Training: Light, Medium, and Heavy armor and Shields\"; \"Weapon Proficiencies: Simple and Martial weapons\"; \"Skill Proficiencies: Choose 2: Acrobatics, Animal Handling, Athletics, History, Insight, Intimidation, Persuasion, Perception, or Survival\". Task 8 (phase 4 plan 11): extended 6->20. @1/weapon-masteries is now a real query pick (T6 carry closed): pick swapped literal:'text' -> {query:{type:'item', hasField:['weapon.mastery']}} (packages/engine/src/content/index.ts's hasField evaluator, T6). count STAYS 1 -- OWNER-FLAG, deliberately NOT bumped to the SRD-accurate 3 (\"three kinds of Simple or Martial weapons\"): apps/web has multiple specs (create-wizard.component.spec.ts, choice-step.component.spec.ts, character-fixtures.ts) that build and assert a full character-creation transaction through this EXACT choice with one hardcoded selection, pre-dating this task; bumping count to 3 (a correct SRD value, but NOT itself mandated by any T6/T8 carry, unlike the pick-shape swap) would force a wide, multi-file apps/web test rewrite, outside this task's explicit 'no web' scope. Flagged for controller triage / a future web-scoped task: ship count:3 once apps/web's creation flow can offer 3 selections for this choice. @1/fighting-style gains repeatableAt (levels 2-20), matching \"Whenever you gain a Fighter level, you can replace the feat you chose with a different Fighting Style feat\" -- repeatableAt is schema-present documentation of the re-ask levels; it is NOT consumed by any engine code today (levelScopedChoices only re-surfaces a choice id with no recorded decision yet, and checkUnique's cross-choice dedup is the actual re-ask mechanism, which needs a SEPARATE per-level choice object to do anything) -- surfacing the swap in a UI is engine/client follow-up work, flagged, not silently claimed as working. ASI feature (fighter-ability-score-improvement) repeats at Fighter levels 4, 6, 8, 12, 14, 16 per its own vendored desc (\"You gain this feature again at Fighter levels 6, 8, 12, 14, and 16\") -- @6/@8/@12/@14/@16/feat choices below reuse the exact @4/feat shape (plan-2 pattern, query any feat, matching the SRD's own \"or another feat of your choice for which you qualify\" open wording); none of these fall within any currently-tested apps/web level-up flow (which stops at level 2), verified by the full gate staying green. Epic Boon is a SEPARATE feature (fighter-epic-boon) with its own level-19 grant, vendored desc \"You gain an Epic Boon feat ... or another feat of your choice for which you qualify\" -- same open-any-feat wording as ASI, so @19/feat reuses the identical query:{type:'feat'} pick rather than restricting to category:'epicBoon' (EntityQuery has no category filter; the SRD text itself allows any qualifying feat, not just Epic Boon ones). Weapon Mastery COUNT GROWTH (3 at levels 1-3, 4 at levels 4-9 [verified: level 4 row], 5 at levels 10-15, 6 at levels 16-20; vendored srd-2024_fighter_weapon-mastery-count column, cross-checked byte-identical against T6's carry) is ALREADY fully automatic: packages/content/src/transform/classes.ts's buildLevels() writes every level's value under extra key 'fighter-weapon-mastery-count' (from the ClassFeature pk's own slug) which is BYTE-IDENTICAL to attacks.ts's masteryCountKey('fighter') (T6) -- Sheet.masteryCount already reports 3/4/5/6 correctly at the right levels with ZERO authoring here, independent of the choice's own (currently 1, ideally 3) count. What is NOT expressible: T6's carry suggested authoring an additional 1-count mastery choice row at each growth level (4, 10, 16) as a no-schema-change pattern; investigated and NOT authored here (using the brief's 'document why a different shape is better' escape hatch) -- packages/engine/src/derive/attacks.ts's findMasteryChoiceId (T6) finds choices by EXACT slug 'weapon-masteries' and returns the FIRST match only; masterySelections is built from exactly that one choice id's decisions. A second choice with a different slug (e.g. 'weapon-masteries-4') would be schema-valid and correctly level-gated (levelScopedChoices surfaces any row choice regardless of slug), so a player COULD answer it, but its selections would never be read into masterySelections or shown as an AttackRow's mastery field -- shipping it would look like working UI that silently does nothing. Flagged for controller triage: closing this AND the count:1->3 gap above needs either an engine change (aggregate every choice whose slug matches /^weapon-masteries(-\\d+)?$/, or similar) or a schema change (formula-capable Choice.count), plus an apps/web creation-flow update, all out of this task's scope (no engine changes, no web).",
     "set": {
       "armorTraining": ["light", "medium", "heavy", "shields"],
       "weaponProficiencies": ["simple", "martial"],
@@ -30,13 +30,14 @@
             "prompt": "Fighting Style",
             "at": { "kind": "classLevel", "class": "fighter", "level": 1 },
             "pick": { "query": { "type": "feat", "tags": ["fighting-style"] } },
-            "count": 1
+            "count": 1,
+            "repeatableAt": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
           },
           {
             "id": "srd-5e-2024:class/fighter@1/weapon-masteries",
             "prompt": "Weapon Masteries",
             "at": { "kind": "classLevel", "class": "fighter", "level": 1 },
-            "pick": { "literal": "text" },
+            "pick": { "query": { "type": "item", "hasField": ["weapon.mastery"] } },
             "count": 1
           }
         ]
@@ -64,23 +65,101 @@
             "count": 1
           }
         ]
+      },
+      {
+        "level": 6,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/fighter@6/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 6 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/fighter@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/fighter@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 14,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/fighter@14/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 14 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/fighter@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/fighter@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
       }
     ]
   },
   {
     "id": "srd-5e-2024:feature/fighter-second-wind",
     "cite": "SRD 5.2.1, Second Wind",
-    "note": "SRD text: \"You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest.\" Our reset vocabulary only expresses \"resets to max on trigger\", not \"regain one use\" — reset: 'shortRest' is a vocabulary approximation of the short-rest partial recharge. max: '2' is the level-1 value; the level-scaled use count (2 at levels 1-3, 3 at levels 4+) is already carried verbatim by transformClasses() in the upstream row extra 'fighter-second-wind-uses', left untouched by this overlay.",
+    "note": "SRD text: \"You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest.\" Our reset vocabulary only expresses \"resets to max on trigger\", not \"regain one use\" -- reset: 'shortRest' is a vocabulary approximation of the short-rest partial recharge (unchanged limitation, carried from the level 1-5 authoring). Task 8: max is now the REAL stepped formula, not the level-1 literal '2' -- vendored srd-2024_fighter_second-wind-uses column: 2 at levels 1-3, 3 at levels 4-9, 4 at levels 10-20. resource.define.max has no row-extra lookup in the engine (packages/engine/src/derive/resources.ts's deriveResources evaluates max as a pure formula string, unlike spellcasting's cantripsKnown/preparedMax or mastery.grant.count, which both have a bestRowExtra 'row wins over formula' path) -- a genuine 2-breakpoint step function IS expressible as a closed-form formula using the formula grammar's variadic min()/max() and floor(), so no fallback is needed here: '2 + min(1, floor(classLevel(fighter) / 4)) + min(1, floor(classLevel(fighter) / 10))' evaluates to exactly 2/3/4 at the vendored breakpoints (verified level-by-level against the full 1-20 table).",
     "merge": {
       "effects": [
-        { "type": "resource.define", "id": "second-wind", "name": "Second Wind", "max": "2", "reset": "shortRest" }
+        {
+          "type": "resource.define",
+          "id": "second-wind",
+          "name": "Second Wind",
+          "max": "2 + min(1, floor(classLevel(fighter) / 4)) + min(1, floor(classLevel(fighter) / 10))",
+          "reset": "shortRest"
+        }
       ]
     }
   },
   {
     "id": "srd-5e-2024:feature/fighter-action-surge",
     "cite": "SRD 5.2.1, Action Surge",
-    "note": "SRD text: \"Once you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn.\" The level-17 second use is out of this task's level 1-5 scope.",
+    "note": "SRD text: \"Once you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn.\" Task 8: uses.count is now the real stepped formula (1 through level 16, 2 at levels 17-20) -- '1 + min(1, max(0, classLevel(fighter) - 16))'. The \"but only once on a turn\" sub-clause (a per-turn usage cap distinct from the per-rest uses pool) has no vocabulary -- action.define's uses{count, per} models only a rest-scoped pool, not a turn-scoped sub-limit -- flagged, inexpressible without a new effect field; the feature's own description (unchanged, carried verbatim from upstream) still states it in full for any reader/UI that surfaces raw text.",
     "merge": {
       "effects": [
         {
@@ -89,7 +168,7 @@
           "name": "Action Surge",
           "kind": "free",
           "description": "Take one additional action on your turn, other than the Magic action.",
-          "uses": { "count": "1", "per": "shortRest" }
+          "uses": { "count": "1 + min(1, max(0, classLevel(fighter) - 16))", "per": "shortRest" }
         }
       ]
     }
@@ -105,7 +184,7 @@
   {
     "id": "srd-5e-2024:feature/fighter-weapon-mastery",
     "cite": "SRD 5.2.1, Weapon Mastery",
-    "note": "SRD text: \"...allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice.\" count: '3' is the level-1 value; the level-scaled count (3 at levels 1-3, 4 at levels 4+) is already carried verbatim by transformClasses() in the upstream row extra 'fighter-weapon-mastery-count', left untouched by this overlay.",
+    "note": "SRD text: \"...allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices.\" count: '3' is the level-1 fallback value, evaluated only when no class-row extra is present at or below the character's level (packages/engine/src/derive/attacks.ts's resolveMasteryCount, T6) -- the real level-scaled count (3 at levels 1-3, 4 at levels 4-9, 5 at levels 10-15, 6 at levels 16-20) is carried automatically by transformClasses() in the upstream row extra 'fighter-weapon-mastery-count' (verified against the vendored srd-2024_fighter_weapon-mastery-count column, all 20 rows), so this formula is effectively a level-1-only safety net now, not the live value past level 3. The \"change one of those weapon choices\" on-long-rest swap is NOT expressible -- it's neither level-gated (repeatableAt only fires at level-ups) nor a full-choice re-ask (it swaps exactly one of three/four/five/six selections, on a REST trigger, which nothing in the choice vocabulary models) -- flagged, same limitation class as Second Wind's reset-granularity gap above.",
     "merge": {
       "effects": [{ "type": "mastery.grant", "count": "3" }]
     }
@@ -113,9 +192,163 @@
   {
     "id": "srd-5e-2024:feature/fighter-champion-improved-critical",
     "cite": "SRD 5.2.1, Champion — Improved Critical",
-    "note": "SRD text: \"Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.\" Recorded as a tag for 1a's text-level scope; the crit-range mechanic itself is Phase-4/1b vocabulary.",
+    "note": "SRD text: \"Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.\" Recorded as a tag for 1a's text-level scope; the crit-range mechanic itself is still outside doc-04's effects table in phase 4 (no crit-range effect type exists) -- still flagged, unchanged from the original authoring.",
     "merge": {
       "effects": [{ "type": "tag.grant", "tag": "improved-critical" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-indomitable",
+    "cite": "SRD 5.2.1, Indomitable",
+    "note": "SRD text: \"If you fail a saving throw, you can reroll it with a bonus equal to your Fighter level. You must use the new roll, and you can't use this feature again until you finish a Long Rest.\" Granted starting Fighter level 9 (vendored srd-2024_fighter_indomitable-one-use item); max models the real stepped use count (1 at level 9, 2 at levels 13-16, 3 at levels 17-20; vendored detail strings \"one use\"/\"two uses\"/\"three uses\" at levels 9/13/17) as a closed-form formula: '1 + floor(max(0, classLevel(fighter) - 9) / 4)'. The \"reroll with a bonus equal to your Fighter level\" mechanic (a conditional reroll-with-bonus on a failed save, not a static bonus) has no vocabulary -- the resource.define effect models only the USE COUNT/reset, not the reroll-and-add-level-bonus mechanic itself, which stays text-only (the feature's own description, unchanged from upstream) -- flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "indomitable",
+          "name": "Indomitable",
+          "max": "1 + floor(max(0, classLevel(fighter) - 9) / 4)",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-studied-attacks",
+    "cite": "SRD 5.2.1, Studied Attacks",
+    "note": "SRD text: \"If you make an attack roll against a creature and miss, you have Advantage on your next attack roll against that creature before the end of your next turn.\" Granted at Fighter level 13. Inexpressible with the current Predicate vocabulary: advantage.grant{on:'attack'} would grant advantage UNCONDITIONALLY on every attack roll, not conditionally on \"the specific creature I just missed, until the end of my next turn\" -- no Predicate shape captures transient per-target/per-round state (Predicate only covers static character-state gates: ability/level/classLevel/hasFeature/hasFeat/hasSpell/tag/proficient/armor/shield/species/class/subclass/condition/spellcaster/formula). Text-feature fallback authored per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Studied Attacks",
+          "description": "You study your opponents and learn from each attack you make. If you make an attack roll against a creature and miss, you have Advantage on your next attack roll against that creature before the end of your next turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-tactical-master",
+    "cite": "SRD 5.2.1, Tactical Master",
+    "note": "SRD text: \"When you attack with a weapon whose mastery property you can use, you can replace that property with the Push, Sap, or Slow property for that attack.\" Granted at Fighter level 9. Inexpressible: this is a per-attack, player-chosen property SUBSTITUTION at the moment of an attack, not a persistent bonus/resource/proficiency -- no effect type in doc-04's table models \"swap this weapon's mastery property for a different one, per attack, at will\". Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Tactical Master",
+          "description": "When you attack with a weapon whose mastery property you can use, you can replace that property with the Push, Sap, or Slow property for that attack."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-tactical-mind",
+    "cite": "SRD 5.2.1, Tactical Mind",
+    "note": "SRD text: \"When you fail an ability check, you can expend a use of your Second Wind to push yourself toward success. Rather than regaining Hit Points, you roll 1d10 and add the number rolled to the ability check, potentially turning it into a success. If the check still fails, this use of Second Wind isn't expended.\" Granted at Fighter level 2 -- within the originally-authored level 1-5 range but MISSED by the earlier phase (no overlay entry existed before this task); closed here for ruling 9's \"every class ships\" bar, since T8 is the first task revisiting fighter.json with ruling-9 rigor across the whole class, not just levels 6-20. Inexpressible: reuses the second-wind resource but with a CONDITIONAL refund (\"isn't expended\" if the check still fails after the bonus) tied to an ability-check outcome the engine doesn't model as a discrete event -- no effect type represents \"spend a resource on a check, refund it conditionally on the result\". Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Tactical Mind",
+          "description": "You have a mind for tactics on and off the battlefield. When you fail an ability check, you can expend a use of your Second Wind to push yourself toward success. Rather than regaining Hit Points, you roll 1d10 and add the number rolled to the ability check, potentially turning it into a success. If the check still fails, this use of Second Wind isn't expended."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-tactical-shift",
+    "cite": "SRD 5.2.1, Tactical Shift",
+    "note": "SRD text: \"Whenever you activate your Second Wind with a Bonus Action, you can move up to half your Speed without provoking Opportunity Attacks.\" Granted at Fighter level 5 -- within the originally-authored level 1-5 range but MISSED by the earlier phase (no overlay entry existed before this task); closed here alongside Tactical Mind for the same ruling-9 completeness reason. Inexpressible: a conditional movement/opportunity-attack-immunity effect tied to the ACT of activating a specific resource (Second Wind) as a bonus action -- no effect type models \"triggered by using this other feature\". Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Tactical Shift",
+          "description": "Whenever you activate your Second Wind with a Bonus Action, you can move up to half your Speed without provoking Opportunity Attacks."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-two-extra-attacks",
+    "cite": "SRD 5.2.1, Two Extra Attacks",
+    "note": "SRD text: \"You can attack three times instead of once whenever you take the Attack action on your turn.\" Granted at Fighter level 11. extraAttack.set's consumption already takes the MAX across every active effect (packages/engine/src/derive/attacks.ts: `attacksPerAction = Math.max(attacksPerAction, ae.effect.count)`), so this count:3 correctly supersedes the level-5 Extra Attack's count:2 once both are active, with zero engine change.",
+    "merge": {
+      "effects": [{ "type": "extraAttack.set", "count": 3 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-three-extra-attacks",
+    "cite": "SRD 5.2.1, Three Extra Attacks",
+    "note": "SRD text: \"You can attack four times instead of once whenever you take the Attack action on your turn.\" Granted at Fighter level 20. Same Math.max supersession as Two Extra Attacks above.",
+    "merge": {
+      "effects": [{ "type": "extraAttack.set", "count": 4 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/champion",
+    "cite": "SRD 5.2.1, Champion — Additional Fighting Style",
+    "note": "SRD text: \"You gain another Fighting Style feat of your choice.\" Granted at Champion level 7 (Fighter level 7). Expressed as a second, independent fighting-style choice on the subclass's own level-7 row -- exact same shape as the class's @1/fighting-style choice (query feats tagged 'fighting-style'), a distinct choice id so it is not deduplicated against or confused with the level-1 pick (a character may legitimately end up with two different Fighting Style feats active simultaneously). The 'fighter-champion-additional-fighting-style' FEATURE entity itself carries no effect -- the mechanic is fully expressed by this choice, matching the class entity's own 'fighter-fighter-subclass' feature (which also carries no effect, since its mechanic -- @3/subclass -- lives on the class row).",
+    "rows": [
+      {
+        "level": 7,
+        "choices": [
+          {
+            "id": "srd-5e-2024:subclass/champion@7/fighting-style-2",
+            "prompt": "Additional Fighting Style",
+            "at": { "kind": "classLevel", "class": "fighter", "level": 7 },
+            "pick": { "query": { "type": "feat", "tags": ["fighting-style"] } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-champion-remarkable-athlete",
+    "cite": "SRD 5.2.1, Champion — Remarkable Athlete",
+    "note": "SRD text: \"Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks.\" Granted at Champion level 3. Both clauses are directly expressible: Initiative advantage via advantage.grant{on:'initiative'}, and a Strength (Athletics) check via advantage.grant{on:'skill.athletics'} (RollTargetSchema's skill.<slug> form models a skill check, which is what \"Strength (Athletics) check\" means in 2024 terminology, not a generic check.str).",
+    "merge": {
+      "effects": [
+        { "type": "advantage.grant", "on": "initiative" },
+        { "type": "advantage.grant", "on": "skill.athletics" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-champion-heroic-warrior",
+    "cite": "SRD 5.2.1, Champion — Heroic Warrior",
+    "note": "SRD text: \"The thrill of battle drives you toward victory. During combat, you can give yourself Heroic Inspiration whenever you start your turn without it.\" Granted at Champion level 10. Inexpressible: Heroic Inspiration is a distinct 2024 resource (a reroll-once token) with its own recurring grant trigger (\"whenever you start your turn without it\") that nothing in the current vocabulary models (resource.define's reset is a rest/dawn/never trigger, not a per-turn conditional regrant). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Heroic Warrior",
+          "description": "The thrill of battle drives you toward victory. During combat, you can give yourself Heroic Inspiration whenever you start your turn without it."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-champion-superior-critical",
+    "cite": "SRD 5.2.1, Champion — Superior Critical",
+    "note": "SRD text: \"Your attack rolls with weapons and Unarmed Strikes can now score a Critical Hit on a roll of 18–20 on the d20.\" Granted at Champion level 15. Same crit-range gap as Improved Critical above (no crit-range effect type in doc-04's table) -- recorded as a tag, consistent with the established pattern, still flagged.",
+    "merge": {
+      "effects": [{ "type": "tag.grant", "tag": "superior-critical" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/fighter-champion-survivor",
+    "cite": "SRD 5.2.1, Champion — Survivor",
+    "note": "SRD text: \"Defy Death. You have Advantage on Death Saving Throws. Moreover, when you roll 18–20 on a Death Saving Throw, you gain the benefit of rolling a 20 on it. Heroic Rally. At the start of each of your turns, you regain Hit Points equal to 5 plus your Constitution modifier if you are Bloodied and have at least 1 Hit Point.\" Granted at Champion level 18. Both clauses inexpressible: RollTargetSchema's save.<ability> form covers only the six ability saves, not the distinct Death Saving Throw roll type, so advantage.grant can't target it; \"gain the benefit of rolling a 20\" (an outcome substitution) and Heroic Rally's conditional per-turn regeneration (gated on the Bloodied condition, a derived state) have no matching effect type either. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Survivor",
+          "description": "You attain the pinnacle of resilience in battle, giving you these benefits.\n\n**Defy Death**. You have Advantage on Death Saving Throws. Moreover, when you roll 18–20 on a Death Saving Throw, you gain the benefit of rolling a 20 on it.\n\n**Heroic Rally**. At the start of each of your turns, you regain Hit Points equal to 5 plus your Constitution modifier if you are Bloodied and have at least 1 Hit Point."
+        }
+      ]
     }
   }
 ]

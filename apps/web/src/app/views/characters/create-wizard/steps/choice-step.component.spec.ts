@@ -126,7 +126,17 @@ describe('ChoiceStepComponent', () => {
     expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('a literal-pick choice (weapon masteries) renders typed values as chips and records the decision', async () => {
+  // Task 8 (phase 4 plan 11): weapon-masteries' pick swapped from `literal: 'text'` to a real
+  // `query` over item entities with a `weapon.mastery` field (T6 carry closed) — it was the only
+  // literal-pick choice in the real SRD pack, and after this swap the pack has ZERO literal picks
+  // left (verified: `pick.literal` no longer occurs anywhere in the built pack). The
+  // `.choice-step__literal-input`/`.choice-step__literal-form` rendering path itself is untouched
+  // production code, just no longer exercised by an integration test against the real pack — a
+  // residual coverage gap flagged in task-8-report.md for controller triage (closing it cleanly
+  // needs a small hand-built synthetic pack, out of this content-only task's scope). This test now
+  // covers weapon-masteries' real, current behavior: a single-select query pick, same shape as the
+  // species test above.
+  it('a query-pick choice (weapon masteries) renders item cards; selecting one records a real item id', async () => {
     const state = createState();
     state.name.set('Aldric');
     state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
@@ -136,19 +146,16 @@ describe('ChoiceStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const input = compiled.querySelector<HTMLInputElement>('.choice-step__literal-input');
-    const form = compiled.querySelector<HTMLFormElement>('.choice-step__literal-form');
-    expect(input).toBeTruthy();
-    expect(form).toBeTruthy();
+    const buttons = compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select');
+    expect(buttons.length).toBeGreaterThan(0);
 
-    input!.value = 'longsword';
-    input!.dispatchEvent(new Event('input'));
-    form!.dispatchEvent(new Event('submit', { cancelable: true }));
+    buttons[0].click();
     await fixture.whenStable();
 
-    const chips = Array.from(compiled.querySelectorAll('hk-chip'));
-    expect(chips.some((c) => c.textContent?.trim() === 'longsword')).toBe(true);
-    expect(state.decisions().get(WEAPON_MASTERIES_CHOICE)).toEqual(['longsword']);
+    const decided = state.decisions().get(WEAPON_MASTERIES_CHOICE);
+    expect(decided?.length).toBe(1);
+    expect(decided?.[0]).toMatch(/^srd-5e-2024:item\//);
+    expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
   });
 
   it('the synthetic class-skills pick renders chips from the fighter skillChoice, enforces count 2, and shows the diagnostic on a 3rd pick', async () => {
