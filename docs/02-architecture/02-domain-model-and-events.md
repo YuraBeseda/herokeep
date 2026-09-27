@@ -96,7 +96,7 @@ generated, e.g. quota notices — none in v1).
 | `death_save.recorded` | O, D | `{result: success \| failure \| critSuccess \| critFailure}` | reset by heal/stabilize |
 | `stabilized` | O, D | `{}` | |
 | `slot.spent` / `slot.restored` | O | `{level, pact?: boolean, count?}` | |
-| `resource.spent` / `resource.restored` | O, D | `{resourceId, count?}` | second wind, rage… |
+| `resource.spent` / `resource.restored` | O, D | `{resourceId, count?}` | second wind, rage…; `resourceId` is a slug OR `item:<uuid>` (Phase 4: per-instance item charges, keyed by the item's own `instanceId` — colon makes it collision-safe against any slug-keyed resource) |
 | `spell.prepared` / `spell.unprepared` | O | `{spellId, classId}` | |
 | `spell.learned` / `spell.forgotten` | O | `{spellId, classId, source: levelUp \| scroll \| copy}` | spellbook / known |
 | `spell.cast` | O | `{spellId, level, slotUsed?: boolean, concentration?: boolean}` | convenience event that folds to slot + concentration |

@@ -58,7 +58,7 @@ Entity types and their specific data (abridged; schema is authoritative):
 | `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `encumbrance?` (`standard`/`variant` carry-capacity data — see below), `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
 | `species` | `size`, `speed`, `creatureType`, `lifespan?`; traits as `grants` |
 | `background` | `abilityScores[]` (2024: the three abilities the player may raise), `originFeat`, `skillProficiencies[]`, `toolProficiency`, `equipment` option |
-| `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column). `extra`'s plain-text values (`ExtraTextSchema`) are MECHANICAL NOTATION — table-column values like dice or ordinal labels, not display prose — so they are exempt from the Localizer; display prose for a feature belongs in that feature's (already-localized) `description`, not in an `extra` column. `extra` is also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, read as "highest row at or below the character's level" — see § Choices/extra below), `subclassLevel`, `multiclass {prereq, gains}` |
+| `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column). `extra`'s plain-text values (`ExtraTextSchema`) are MECHANICAL NOTATION — table-column values like dice or ordinal labels, not display prose — so they are exempt from the Localizer; display prose for a feature belongs in that feature's (already-localized) `description`, not in an `extra` column. `extra` is also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, e.g. `"wizard-cantrips-known"`/`"fighter-weapon-mastery-count"`): `@hk/engine`'s `bestRowExtra` (`derive/spellcasting.ts`) takes the HIGHEST such row at or below the character's level, resolving it through the formula grammar if the row's own value is itself a formula string. `spellcasting.define`'s `cantripsKnown`/`preparedCount` formulas and `mastery.grant`'s `count` formula (effects table below) are each read ONLY as a fallback, when no matching row-extra exists for that class/key at or below the current level — a row always wins over the flat formula once one is authored. Other `class`-level fields: `subclassLevel`, `multiclass {prereq, gains}` |
 | `subclass` | `class`, `levels[{level, grants[], choices[]}]` |
 | `feature` | text + `effects` + `choices` + `uses?` (`resource.define` shorthand) |
 | `feat` | `category` (origin/general/fightingStyle/epicBoon), `repeatable`, prerequisites, effects, choices |
@@ -309,6 +309,37 @@ Short or Long Rest." The reducer stays content-free (it doesn't know "Warlock" b
 NOT hardcoded into `rest.taken@1`'s handler — same as `resourcesUsed`, it's the proposer's job (T14)
 to emit an explicit `slot.restored {pact: true, count}` event as part of a rest transaction, exactly
 like `resource.restored` is emitted per active resource today.
+
+## Item charges and attunement
+
+`item.charges` (optional; phase 4, plan 11 task 4) is `{ max: Formula, reset:
+shortRest|longRest|dawn|never }` — the same formula grammar every other resource max uses
+(`level`, `prof`, `classLevel(id)`, `mod(ab)`, `score(ab)`, `hitDie(classId)`, `resource(id)`).
+`@hk/engine`'s `deriveResources` materializes one resource per ACTIVE (equipped OR attuned)
+inventory instance whose item declares `charges`, keyed `item:<instanceId>` — never
+`item:<itemId>`, so two instances of the same item never collide, and the key can never collide
+with a `resource.define` id either (`item:` contains a colon, illegal in every `SlugSchema`
+value used for those ids). This reuses the existing `resource.spent`/`resource.restored` events
+and `propose/rest.ts`'s generic reset-by-trigger sweep unchanged — no new event type. A charged
+item's resource (and its spend/restore controls) exists only while the item is active;
+un-equipping/un-attuning it removes it from `Sheet.resources`, but `facts.resourcesUsed` for that
+key is untouched and simply resumes being read on re-equip (removing the item from inventory
+entirely leaves a harmless orphaned key).
+
+`item.attunement` (optional) is `{ required: boolean, by?: Predicate }`. `by`, when present, is
+the item's own attunement-requirement predicate (e.g. "requires attunement by a Wizard") —
+evaluated at derive time, per inventory instance, against that instance's own predicate context
+(ability scores, class, level, tags, active features), and pre-resolved onto
+`Sheet.inventory[].attunementAllowed` (present only when `by` exists; absent means no
+restriction). `propose.attune()` refuses with the `'attune.by'` code when `attunementAllowed ===
+false`, checked BEFORE the pre-existing `'attune.max'` cap (`sheet.attunementMax`). `attunementMax`
+itself defaults to `system.attunementMax` but can be overridden per `derive()` call via the
+optional 4th `overrides: { attunementMax?: number, encumbrance?: 'off'|'standard'|'variant' }`
+parameter (`derive/overrides.ts`'s `DeriveOverrides`) — the same override seam `encumbrance`
+below reuses; a campaign's own house-rule `attunementMax` (plan-10's edit-lock projection) is
+what the client threads through it. `Sheet.overridesProvenance` — `{ attunementMax?: 'house
+rule', encumbrance?: 'house rule' }` — records that tag per-key, only for whichever override(s)
+were actually supplied, so the sheet can show it as such.
 
 ## Encumbrance
 

@@ -18,8 +18,9 @@ import { collectPredicateFormulas } from '../predicate/evaluate.ts';
  * would reject any real dice/text extra as a formula-syntax error the moment content authored one
  * (no fixture did, before this task — see task-1-report.md). The rule: a value that matches
  * `DiceSchema` OR `ExtraTextSchema` (the two narrower, typed shapes `ExtraValueSchema` unions
- * alongside `ValueSchema`) is a typed literal, not a formula candidate — mirrors `ExtraValueSchema`'s
- * own union order (typed shapes are more specific than the generic formula fallback).
+ * alongside `ValueSchema`) is a typed literal, not a formula candidate — this deliberately checks
+ * only those two non-formula member shapes, NOT `ExtraValueSchema`'s own declared union order
+ * (`ValueSchema | DiceSchema | ExtraTextSchema`, `enums.ts`, generic formula shape listed first).
  *
  * Caveat (documented, not a bug): a formula string with NO operator/paren/comma/underscore character
  * at all (a bare identifier, e.g. a formula that's literally "level") also happens to satisfy

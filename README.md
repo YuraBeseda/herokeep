@@ -20,19 +20,19 @@ Content: `pnpm --filter @hk/content build:pack` generates the SRD 5.2.1 core pac
 
 - `pnpm --filter web start` — dev server
 - `pnpm --filter web build` — production build; `postbuild` measures the real gzipped initial bundle against a ≤600 KB budget
-- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (8 specs, 20 tests: offline, library/search/locale, character creation, level-up, play actions, export/import, axe) against it
+- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (9 specs, 24 tests: offline, library/search/locale, character creation, level-up, multiclassing, play actions, export/import, axe) against it
 
 PWA: `@angular/service-worker` precaches the app shell, fonts, icon sprite, i18n JSON and the core content pack, so the app keeps working in airplane mode after a first load; updates prompt rather than auto-reload. An in-app dismissible banner on the characters list offers native install on Chromium (`beforeinstallprompt`), or an iOS "Add to Home Screen" instructions sheet (with the 7-day standalone-storage warning) on Safari, which never fires that event; the Play tab can hold a Screen Wake Lock during play (the toggle is hidden entirely where the API isn't supported). See `docs/manual-device-checklist.md` for the manual install/offline/export/perf passes this plan adds.
 
 ### Character builder & sheet
 
-Fighter (Champion) and Wizard (Evoker), levels 1–5 (`docs/03-roadmap/phase-1-solo-builder.md`).
+Fighter (Champion) and Wizard (Evoker) launched at levels 1–5 (`docs/03-roadmap/phase-1-solo-builder.md`); Phase 4 slice 1 (below) extends both to level 20 and adds Barbarian (Berserker), Cleric (Life), and Warlock (Fiend), also to 20.
 
 - `/characters` — character list, with Import (`.hero` bundles) and the install banner.
 - `/characters/new` — an engine-driven creation wizard: name + grammatical gender, species, background, ability scores by all four SRD methods (standard array, point buy, manual entry, 4d6-drop-lowest rolling with the rolls recorded in the timeline), class/skills/fighting style, spells, equipment added from the library; review → one transaction that also sets HP to max.
 - `/c/:id` — the sheet: **Play** (HP/temp HP/damage/heal, death saves, inspiration, hit dice, spell slots and other resources with prepare/cast and a concentration indicator, conditions and exhaustion chips, inventory with add-from-library/custom items/currency, short/long rest with a hit-dice picker, and a dice roller with a session roll log), **Build** (re-enter the wizard for outstanding choices, rename, appearance, portrait upload), **Timeline** (localized sentences in en/ru/uk with ICU gender/plural, filters, revert with confirmation), and an **Export** button (`.hero` bundle: full event log + portrait blobs, via save-picker → Share → download fallback).
 - `/c/:id/level-up` — XP entry and a level-up wizard (HP roll or average, subclass at 3, feat/ASI at 4, spells), undo as one transaction.
-- Scope notes: equipment is added from the library rather than chosen from class starting-equipment packages (design ruling); weapon mastery is entered freeform rather than through a constrained picker (current schema limitation, Phase 4); custom inventory items are name+qty+notes lines only, no custom weapon/armor mechanics (Phase 4); encumbrance isn't modeled (a campaign house-rule, Phase 3); token art is identical to the portrait thumbnail today (see `docs/manual-device-checklist.md`'s backlog notes).
+- Scope notes: equipment is added from the library rather than chosen from class starting-equipment packages (design ruling); custom inventory items are name+qty+notes lines only, no custom weapon/armor mechanics; token art is identical to the portrait thumbnail today (see `docs/manual-device-checklist.md`'s backlog notes). Weapon mastery (a real constrained picker) and encumbrance (opt-in via campaign house rules, off by default) both shipped in Phase 4 slice 1 — see below.
 
 ### Accounts & cross-device sync (Phase 2 — complete)
 
@@ -149,10 +149,50 @@ BroadcastChannel) widened to a `camp:` stream kind alongside `char:`:
   relaying to the DM's party card via the blob transfer client, and the session/edit-lock round
   trip.
 
+### Phase 4 slice 1 — engine vocabulary, multiclassing & five classes to 20 (complete)
+
+Five classes now play to level 20 with full SRD 5.2.1 mechanics: Fighter (Champion), Wizard
+(Evoker), Barbarian (Berserker), Cleric (Life), and Warlock (Fiend) — each with its one SRD
+subclass. Getting there required widening the engine's own vocabulary (game rules stay DATA, per
+`CLAUDE.md`'s non-negotiable rule) rather than hand-coding any of it:
+
+- **New pack vocabulary** (`docs/02-architecture/04-content-packs.md`, additive-only — existing
+  packs/characters keep parsing byte-identically): `FlatDiceSchema`/`DiceOrFlatSchema` for
+  no-die flat damage (the Blowgun's "1" damage, previously a broken `0d4+1` hack); class-row
+  `extra` columns now accept dice/plain-text values alongside numbers and formulas, for stepped
+  per-level tables (Rage damage, weapon-mastery count, stepped cantrips-known); `EntityQuerySchema`
+  gained a `hasField` filter, so Weapon Mastery is now a real constrained picker
+  (`{query: {type: 'item', hasField: ['weapon.mastery']}}`) instead of freeform text; item
+  `charges` (per-instance resources, keyed `item:<uuid>`, reusing the existing resource
+  spend/restore events) and `attunement.by` (a predicate, enforced at last) both went from
+  schema-only to actually wired; encumbrance (`standard`/`variant` carry-capacity modes) is a new,
+  opt-in `derive()` override — off by default for solo play, toggled per campaign from DM-only
+  house rules (`/g/:id/settings`) alongside the existing session-lock rule.
+- **Multiclassing** (ADR-007): leveling up offers a "which class?" picker whenever more than one
+  advancement is available — the character's own next level, plus any new class whose 13+
+  ability-score prerequisite is met (checked against EVERY class already taken, not just the new
+  one). The multiclass spell-slot table combines each class's own caster level (full casters count
+  every level; half-casters — Paladin, Ranger — round UP per the 2024 SRD's own text, a deliberate
+  change from 2014's round-down) and looks up the combined total on the same 20-row table a
+  single-class full caster already uses. Pact Magic (Warlock) slots stay a separate pool, castable
+  interchangeably with regular slots, and recover on a short OR long rest.
+- **Performance**: `derive()` on the heaviest scenario this slice ships (a level-20, two-class
+  character with 30 events) measures a **0.549 ms median** (25 samples) against doc-05's budget of
+  <5 ms desktop / <15 ms mid-phone — roughly 9x and 27x headroom respectively, on ordinary
+  dev/CI hardware. No Web Worker needed for this slice.
+- **e2e**: the default (offline) Playwright project gained a multiclass scenario (level up a
+  fighter, pick "Multiclass into Barbarian" from the which-class picker, complete Barbarian's own
+  level-1 choices, confirm the sheet shows both classes); the real-API `e2e:sync` suite's own
+  character-creation helper was repaired for the new constrained weapon-mastery picker.
+- Slice 2 (remaining 7 classes, feats at scale, magic-item data at scale) and slice 3 (`.hkpack`
+  import, homebrew, pack rebase) are next; see the plan file below.
+
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current ones are
 `2026-09-13-phase-1b-play-and-polish.md` (client), `2026-09-13-phase-2-accounts-sync-backend.md`
 (backend), `2026-09-19-phase-2-client-sync.md` (client auth + sync UI, completing Phase 2),
-`2026-09-20-phase-3-campaign-server.md` (campaign backend, Phase 3 first slice), and
-`2026-09-20-phase-3-campaign-client.md` (campaign client, completing Phase 3 — above).
+`2026-09-20-phase-3-campaign-server.md` (campaign backend, Phase 3 first slice),
+`2026-09-20-phase-3-campaign-client.md` (campaign client, completing Phase 3), and
+`2026-09-27-phase-4-engine-vocabulary-and-classes.md` (engine vocabulary, multiclassing, and five
+classes to 20 — Phase 4 slice 1, above).

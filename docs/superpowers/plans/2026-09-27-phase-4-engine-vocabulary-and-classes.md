@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **STATUS: WRITTEN 2026-09-27 — Phase 4 slice 1 of ~3 (slice 2 = remaining 7 classes + feats + magic-item data at scale; slice 3 = .hkpack import, quick homebrew, pack update/rebase).**
+> **STATUS: EXECUTED 2026-09-27 — all 14 tasks complete, Phase 4 slice 1 (engine vocabulary, multiclassing, five classes — Fighter, Wizard, Barbarian, Cleric, Warlock — to level 20) done. Slice 2 = remaining 7 classes + feats + magic-item data at scale; slice 3 = .hkpack import, quick homebrew, pack update/rebase.**
 
 **Goal:** Retire Phase 4's vocabulary risk: extend the pack format and engine so EVERY SRD 5.2.1 class mechanic is expressible (flat damage, dice/text progression columns, item tag queries, charges, attunement rules, encumbrance, all four slot progressions, multiclassing), fix the latent multiclass derive bugs, and prove the vocabulary by shipping FIVE classes with full mechanics to level 20 — Fighter & Wizard (extending plan 2's 1–5) plus Barbarian, Cleric, and Warlock with their SRD subclasses — ending with multiclass goldens and a derive-perf measurement against the 15 ms budget.
 

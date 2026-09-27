@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -6,9 +6,9 @@ number. It supplements, and never replaces, the automated gates:
 
 - `pnpm check` — format, lint, typecheck, engine + web unit tests (819 web tests as of the plan-8
   client-sync final fix wave; includes the dev-mode perf-log spec below).
-- `pnpm --filter web e2e` — Playwright against the real production build: 8 spec files, 23 tests
-  (offline, library/search/locale, character creation, level-up, play actions, export/import,
-  axe accessibility).
+- `pnpm --filter web e2e` — Playwright against the real production build: 9 spec files, 24 tests
+  (offline, library/search/locale, character creation, level-up, multiclassing, play actions,
+  export/import, axe accessibility).
 - `packages/engine/test/perf.test.ts` — an automated perf *tripwire* (median of 5 reduce+derive
   runs over an extended fixture, budget 150 ms — generous CI headroom, not the real-device number).
   This is the "automated proxy" the plan's Global Constraints refer to; the device numbers below
@@ -149,7 +149,7 @@ the **development** build, not the installed production PWA, to see it.
 ## 5. Accessibility / e2e pointers
 
 - Full suite: `pnpm --filter web e2e` (builds production first via the `pree2e` script, then runs
-  all 8 Playwright spec files against it).
+  all 9 Playwright spec files against it).
 - Accessibility only: `pnpm --filter web e2e -- e2e/a11y.spec.ts` — runs `apps/web/e2e/a11y.spec.ts`
   alone (11 axe-core passes: home, library, a library detail, settings, about, the characters list,
   the ability-scores wizard step, the sheet's play/build/timeline tabs, the short-rest dialog, the
@@ -276,7 +276,45 @@ from that pass, or create fresh ones.
 
 ---
 
-## 8. Known Phase-4 / backlog items
+## 8. Multiclassing & pact-slot casting (Phase 4 slice 1, plan 11)
+
+**What this proves:** the which-class picker (ADR-007) and Pact Magic casting render and respond
+correctly to real touch input on a real phone — `apps/web/e2e/multiclass.spec.ts` (default
+project) and the engine goldens already prove the underlying logic; this is the same real-device
+reality-check sections 1–2 already do for install/offline.
+
+### Procedure
+
+1. On the installed app, build a Fighter through the creation wizard (as in section 2). Award it
+   300 XP (the sheet's Award XP field) and tap the "Level up available" badge.
+2. Confirm a "Which class?" picker appears, offering the character's own next level PLUS at least
+   one "Multiclass into <class>" option (the standard array qualifies for more than one class) —
+   confirm every option is comfortably tappable at your device's real screen width, with no
+   overlap or overflow.
+3. Tap a "Multiclass into <class>" option. Confirm the wizard skips straight into that class's own
+   level-1 choices with no HP step at all (a brand-new class's own level 1 is priced automatically
+   at that class's average hit die — no roll/average choice to make, unlike your very first
+   class's own level 1, which took the hit die's max value at character creation), and complete
+   them.
+4. Finish the level-up. Confirm the sheet header now reads both classes (e.g. "Fighter 1 ·
+   Barbarian 1").
+5. Separately, build a Warlock through the creation wizard (Pact Magic grants its first slot at
+   level 1 — no extra leveling needed for this check). Prepare a known spell, then Cast it, and
+   confirm the cast dialog's slot picker offers a "Pact slot" option. Cast it, confirm the pact pip
+   fills (visually distinct from a regular slot's own pips at the same level, once both exist),
+   then take a short rest and confirm it restores — Pact Magic recovers on a short OR long rest,
+   unlike regular slots (which only recover on a long rest).
+
+### Results
+
+| Device | Date | Which-class picker | New-class choices | Pact-slot cast/rest |
+| --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a, Chrome)_ | | | | |
+| | | | | |
+
+---
+
+## 9. Known Phase-4 / backlog items
 
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file
 again, but worth knowing about while doing manual passes:
