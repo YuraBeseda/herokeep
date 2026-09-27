@@ -475,6 +475,47 @@ export class SyncService {
     }
   }
 
+  /**
+   * [plan-10 Task 12 round 2] Pulls a character this device does NOT yet have locally but which
+   * NOW appears in `GET /api/characters` — the claim-completion path (doc-02 L178-179): once the
+   * DM's handover completes `POST /:id/transfer`, the claimed pregen shows up in the claiming
+   * member's OWN character list for the first time, exactly like any character that already
+   * existed server-side before this device ever registered (a fresh device pulling an EXISTING
+   * owned character — `reconcile()`'s own restore branch, its class doc's "Restore" section).
+   * Reuses that SAME `restore()` routine directly (one-shot `hello`/catch-up/
+   * `resetStreamFromServer`, then `startSession`) rather than re-implementing it — the only new
+   * thing here is the TARGETED, on-demand entry point `reconcile()` itself doesn't expose (it only
+   * ever runs its own full sweep, on a login/leader-transition/reconnect signal).
+   *
+   * Returns `'restored'` (already-local counts as success — idempotent, matching every other
+   * restore-adjacent method's "safe to call again" posture), `'notYetVisible'` (the server's own
+   * list doesn't have it yet — a real, expected transient window right after a handover, before
+   * this exact HTTP round trip; the caller's own UI offers "try again"), or `'failed'` (not the
+   * leader — this device can't safely write Dexie from a non-leader tab, same guard `reconcile`'s
+   * whole call chain already assumes throughout — or the server/network call itself failed).
+   */
+  async pullClaimedCharacter(
+    characterId: string,
+  ): Promise<'restored' | 'notYetVisible' | 'failed'> {
+    if (this.mode !== 'leader') return 'failed';
+    const streamId = `char:${characterId}`;
+    const existingLocal = await this.charactersRepository.get(streamId);
+    if (existingLocal) return 'restored';
+
+    let serverRows: RemoteCharacterDto[];
+    try {
+      serverRows = await apiJson<RemoteCharacterDto[]>('/api/characters');
+    } catch {
+      return 'failed';
+    }
+    if (!serverRows.some((r) => r.id === characterId)) return 'notYetVisible';
+
+    const generation = this.reconcileGeneration;
+    await this.restore(streamId, generation);
+    const nowLocal = await this.charactersRepository.get(streamId);
+    return nowLocal ? 'restored' : 'failed';
+  }
+
   // --- mode switching (the constructor's effect) ----------------------------------------------
 
   private onAuthLeaderChange(status: AuthStatus, leader: boolean): void {

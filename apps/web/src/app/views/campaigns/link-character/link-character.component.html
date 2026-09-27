@@ -46,18 +46,56 @@
         <h2 class="link-character__claimed-title">{{ t('link.claimed.title') }}</h2>
         <ul class="link-character__claimed-list">
           @for (pregen of claimedPregens(); track pregen.characterId) {
-            <li class="link-character__claimed-row">
+            <li
+              class="link-character__claimed-row"
+              [attr.data-claim-state]="claimState(pregen.characterId)"
+            >
               <span class="link-character__claimed-name">{{ pregen.name }}</span>
               <p class="link-character__claimed-note">{{ t('link.claimed.note') }}</p>
-              <button
-                hk-button
-                type="button"
-                class="link-character__claimed-action"
-                [variant]="'primary'"
-                (click)="goToParty()"
-              >
-                {{ t('link.claimed.action') }}
-              </button>
+              @switch (claimState(pregen.characterId)) {
+                @case ('pulling') {
+                  <p class="link-character__claimed-status">{{ t('link.claimed.pulling') }}</p>
+                }
+                @case ('notYetVisible') {
+                  <p class="link-character__claimed-status" role="alert">
+                    {{ t('link.claimed.notYetVisible') }}
+                  </p>
+                  <button
+                    hk-button
+                    type="button"
+                    class="link-character__claimed-action"
+                    [variant]="'primary'"
+                    (click)="claimPregen(pregen)"
+                  >
+                    {{ t('link.claimed.retry') }}
+                  </button>
+                }
+                @case ('failed') {
+                  <p class="link-character__claimed-status" role="alert">
+                    {{ t('link.claimed.failed') }}
+                  </p>
+                  <button
+                    hk-button
+                    type="button"
+                    class="link-character__claimed-action"
+                    [variant]="'primary'"
+                    (click)="claimPregen(pregen)"
+                  >
+                    {{ t('link.claimed.retry') }}
+                  </button>
+                }
+                @default {
+                  <button
+                    hk-button
+                    type="button"
+                    class="link-character__claimed-action"
+                    [variant]="'primary'"
+                    (click)="claimPregen(pregen)"
+                  >
+                    {{ t('link.claimed.action') }}
+                  </button>
+                }
+              }
             </li>
           }
         </ul>

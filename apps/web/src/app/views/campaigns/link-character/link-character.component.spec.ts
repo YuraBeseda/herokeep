@@ -125,10 +125,14 @@ function configure(options: {
   /** Bare characterId -> roster entry — fix round 1, finding 1's `resumeLeave` detection reads
    * `CampaignStore.state()?.roster`. */
   roster?: Record<string, RosterEntryStub>;
+  /** [round 2] `SyncService.pullClaimedCharacter`'s stub — defaults to a plain unused mock;
+   * the "claimed" bucket's own tests override it. */
+  pullClaimedCharacter?: ReturnType<typeof vi.fn>;
 }): {
   characterPort: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
   campaignPort: { events: WritableSignal<Event[]>; appendTx: ReturnType<typeof vi.fn> };
   characterLoad: ReturnType<typeof vi.fn>;
+  pullClaimedCharacter: ReturnType<typeof vi.fn>;
 } {
   const rows = options.rows ?? [mkRow(CHAR_A, 'Aria')];
   const eventsByCharacter = options.eventsByCharacter ?? {};
@@ -138,6 +142,7 @@ function configure(options: {
   const characterLoad = options.characterLoad ?? vi.fn().mockResolvedValue(undefined);
   const user = options.user === undefined ? { userId: OWNER_ID, username: 'alice' } : options.user;
   const roster = new Map(Object.entries(options.roster ?? {}));
+  const pullClaimedCharacter = options.pullClaimedCharacter ?? vi.fn().mockResolvedValue('failed');
 
   TestBed.configureTestingModule({
     providers: [
@@ -178,13 +183,16 @@ function configure(options: {
       },
       {
         provide: SyncService,
-        useValue: { syncState: (id: string) => signal(syncStates[id] ?? 'synced') },
+        useValue: {
+          syncState: (id: string) => signal(syncStates[id] ?? 'synced'),
+          pullClaimedCharacter,
+        },
       },
       { provide: AuthService, useValue: { user: signal(user) } },
     ],
   });
 
-  return { characterPort, campaignPort, characterLoad };
+  return { characterPort, campaignPort, characterLoad, pullClaimedCharacter };
 }
 
 async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<void> {
@@ -504,31 +512,103 @@ describe('LinkCharacterComponent', () => {
     expect(error?.textContent?.trim()).toBe(campaignsEn.link.errors.characterNotLeader);
   });
 
-  // [plan-10 Task 12] Ruling 6's claim flow, M's own half: once the DM's handover fully commits,
-  // the roster ALREADY lists M as the owner of a character M never created locally — this is the
-  // ONLY way such a character is ever surfaced back to M (see `ClaimedPregen`'s own class doc for
-  // the full server-rule tracing of why no further protocol action is offered here).
-  it('shows a pregen HANDED TO ME (roster ownerId === my userId, not among my own local characters) as "claimed", with an honest note and a Go-to-party action', async () => {
-    const PREGEN_ID = 'd0000000-0000-4000-8000-0000000000f9';
+  // [plan-10 Task 12 round 2] Ruling 6's claim flow, M's own half — NOW REAL (doc-02 L178-179):
+  // once the DM's handover fully commits, the roster ALREADY lists M as the owner of a character
+  // M never created locally — this bucket surfaces it, and "Claim it" drives
+  // `SyncService.pullClaimedCharacter` (round 2's real discovery/restore, not a stopgap).
+  const PREGEN_ID = 'd0000000-0000-4000-8000-0000000000f9';
+
+  it('shows a pregen HANDED TO ME as "claimed", with an honest note and a "Claim it" action', async () => {
     configure({
       rows: [mkRow(CHAR_A, 'Aria')],
-      roster: {
-        [PREGEN_ID]: { ownerId: OWNER_ID, name: 'Pregen Paul', left: false },
-      },
+      roster: { [PREGEN_ID]: { ownerId: OWNER_ID, name: 'Pregen Paul', left: false } },
     });
     const fixture = TestBed.createComponent(LinkCharacterComponent);
     await whenStable(fixture);
-    const router = TestBed.inject(Router);
-    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain('Pregen Paul');
     expect(compiled.textContent).toContain(campaignsEn.link.claimed.title);
     const action = compiled.querySelector<HTMLButtonElement>('.link-character__claimed-action')!;
-    expect(action).toBeTruthy();
+    expect(action.textContent?.trim()).toBe(campaignsEn.link.claimed.action);
+  });
 
-    action.click();
-    expect(navigateSpy).toHaveBeenCalledWith(['/g', CAMPAIGN_ID, 'party']);
+  it('"Claim it" calls SyncService.pullClaimedCharacter(bareId); on "restored" the row disappears from the claimed bucket (candidates reloaded)', async () => {
+    // `CharactersRepository.list()` resolves to THIS SAME array reference on every call — mutating
+    // it (as the real `pullClaimedCharacter` would, by writing a new local Dexie row) is what lets
+    // this test observe `loadCandidates()`'s own re-fetch actually picking up the newly-local row,
+    // the same way the real `CharactersRepository`/Dexie would.
+    const dynamicRows = [mkRow(CHAR_A, 'Aria')];
+    const pullClaimedCharacter = vi.fn().mockImplementation((characterId: string) => {
+      dynamicRows.push(mkRow(`char:${characterId}`, 'Pregen Paul'));
+      return Promise.resolve('restored');
+    });
+    configure({
+      rows: dynamicRows,
+      roster: { [PREGEN_ID]: { ownerId: OWNER_ID, name: 'Pregen Paul', left: false } },
+      pullClaimedCharacter,
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.link-character__claimed-action')!.click();
+    await whenStable(fixture);
+
+    expect(pullClaimedCharacter).toHaveBeenCalledWith(PREGEN_ID);
+    expect(compiled.querySelector('.link-character__claimed')).toBeNull();
+    // The claimed pregen now shows among the ordinary candidates (candidates reloaded from
+    // CharactersRepository after a successful pull) — in production, its own restored event log
+    // already shows it linked to this campaign, so `eligibility()` would classify it 'resume';
+    // this test's fake `EventsRepository` has no events wired for the newly-added row, so it only
+    // asserts the row REAPPEARED, not the exact eligibility bucket (covered by the dedicated
+    // `eligibility()`/'resume' tests elsewhere in this file for a real, event-backed candidate).
+    const row = Array.from(compiled.querySelectorAll('.link-character__row')).find((r) =>
+      r.textContent?.includes('Pregen Paul'),
+    );
+    expect(row).toBeTruthy();
+  });
+
+  it('"Claim it" shows an honest "not visible yet" message (with a retry) on "notYetVisible", without touching the candidates list', async () => {
+    const pullClaimedCharacter = vi.fn().mockResolvedValue('notYetVisible');
+    configure({
+      rows: [mkRow(CHAR_A, 'Aria')],
+      roster: { [PREGEN_ID]: { ownerId: OWNER_ID, name: 'Pregen Paul', left: false } },
+      pullClaimedCharacter,
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.link-character__claimed-action')!.click();
+    await whenStable(fixture);
+
+    expect(compiled.textContent).toContain(campaignsEn.link.claimed.notYetVisible);
+    const retryButton = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.link-character__claimed-action'),
+    ).find((b) => b.textContent?.trim() === campaignsEn.link.claimed.retry);
+    expect(retryButton).toBeTruthy();
+
+    retryButton!.click();
+    await whenStable(fixture);
+    expect(pullClaimedCharacter).toHaveBeenCalledTimes(2);
+  });
+
+  it('"Claim it" shows an honest failure message (with a retry) on "failed"', async () => {
+    const pullClaimedCharacter = vi.fn().mockResolvedValue('failed');
+    configure({
+      rows: [mkRow(CHAR_A, 'Aria')],
+      roster: { [PREGEN_ID]: { ownerId: OWNER_ID, name: 'Pregen Paul', left: false } },
+      pullClaimedCharacter,
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.link-character__claimed-action')!.click();
+    await whenStable(fixture);
+
+    expect(compiled.textContent).toContain(campaignsEn.link.claimed.failed);
   });
 
   it('does NOT show a roster entry as claimed when it belongs to someone else, is left, or is already one of my own local characters', async () => {

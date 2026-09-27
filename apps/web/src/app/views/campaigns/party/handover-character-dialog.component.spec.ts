@@ -21,6 +21,33 @@ const DM_ID = 'usr_dm1';
 const MEMBER_A = 'usr_alice';
 const MEMBER_B = 'usr_bob';
 
+/** `RequestInfo | URL` -> a plain string — `String(input)` would use `Request`'s default
+ * `[object Object]` stringification for a real `Request` instance (`no-base-to-string`). */
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+/** [round 2] Step 5 (`ownerTransfer`) is now `POST /api/characters/:id/transfer`, not a plain
+ * `appendTx` — every test in this file stubs the global `fetch` so that call never reaches a
+ * real network. Defaults to success (204); individual tests override `fetchImpl.current`. */
+const fetchImpl = {
+  current: (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
+    Promise.resolve(new Response(null, { status: 204 })),
+};
+
+beforeEach(() => {
+  fetchImpl.current = () => Promise.resolve(new Response(null, { status: 204 }));
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+    fetchImpl.current(input, init),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 interface RosterEntryFixture {
   ownerId: string;
   name: string;
@@ -238,8 +265,16 @@ describe('HandoverCharacterDialogComponent', () => {
     expect(campaignAppendTx).not.toHaveBeenCalled();
   });
 
-  it('Confirm loads the character then runs the FULL 5-step sequence in order and closes true', async () => {
+  it('Confirm loads the character then runs the FULL 5-step sequence in order (steps 1-4 via appendTx, step 5 via the transfer route) and closes true', async () => {
     const { close, characterLoad, characterAppendTx, campaignAppendTx } = configure({});
+    const transferCalls: { url: string; body: unknown }[] = [];
+    fetchImpl.current = (input, init) => {
+      transferCalls.push({
+        url: requestUrl(input),
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      });
+      return Promise.resolve(new Response(null, { status: 204 }));
+    };
     const fixture = TestBed.createComponent(HandoverCharacterDialogComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
@@ -250,14 +285,11 @@ describe('HandoverCharacterDialogComponent', () => {
     await whenStable(fixture);
 
     expect(characterLoad).toHaveBeenCalledWith(CHARACTER_ID);
-    expect(characterAppendTx).toHaveBeenCalledTimes(3); // leave, rejoin, transfer
+    expect(characterAppendTx).toHaveBeenCalledTimes(2); // leave, rejoin (no longer the transfer)
     expect(campaignAppendTx).toHaveBeenCalledTimes(2); // roster clear, roster rejoin
-    const transferDraft = (characterAppendTx.mock.calls[2][0] as DraftEvent[])[0];
-    expect(transferDraft).toEqual({
-      type: 'character.owner_transferred',
-      v: 1,
-      payload: { toUserId: MEMBER_A },
-    });
+    expect(transferCalls).toEqual([
+      { url: `/api/characters/${CHARACTER_ID}/transfer`, body: { toUserId: MEMBER_A } },
+    ]);
     expect(close).toHaveBeenCalledWith(true);
   });
 

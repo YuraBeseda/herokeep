@@ -445,6 +445,129 @@ describe('SyncService', () => {
     expect(FakeWebSocket.instances.length).toBeGreaterThanOrEqual(2);
   });
 
+  // [plan-10 Task 12 round 2] pullClaimedCharacter — the claim-completion discovery/restore path
+  // (doc-02 L178-179). Reuses `restore()` directly; these tests pin the NEW targeted entry point
+  // `reconcile()` itself doesn't expose.
+  describe('pullClaimedCharacter (claim-completion discovery/restore)', () => {
+    it('returns "restored" immediately, with no network call, when the character is ALREADY local', async () => {
+      leaderState.set(true);
+      const sync = TestBed.inject(SyncService);
+      statusState.set('authed');
+      TestBed.tick();
+      await flush();
+
+      const charactersRepository = TestBed.inject(CharactersRepository);
+      const serverId = '00000000-0000-4000-8000-0000000000dd';
+      const streamId = `char:${serverId}`;
+      await charactersRepository.put({
+        id: streamId,
+        name: 'Already Mine',
+        system: 'srd-5e-2024',
+        archived: false,
+        updatedAt: Date.now(),
+      });
+
+      const fetchSpy = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(200, [])));
+      globalThis.fetch = fetchSpy;
+
+      const result = await sync.pullClaimedCharacter(serverId);
+
+      expect(result).toBe('restored');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns "notYetVisible" when the character is neither local nor yet in GET /api/characters', async () => {
+      globalThis.fetch = routedFetch({ '/api/characters': () => jsonResponse(200, []) });
+      leaderState.set(true);
+      const sync = TestBed.inject(SyncService);
+      statusState.set('authed');
+      TestBed.tick();
+      await flush();
+
+      const result = await sync.pullClaimedCharacter('00000000-0000-4000-8000-0000000000ee');
+
+      expect(result).toBe('notYetVisible');
+      expect(FakeWebSocket.instances).toHaveLength(0);
+    });
+
+    it('returns "failed" when this tab is not the leader', async () => {
+      leaderState.set(false);
+      const sync = TestBed.inject(SyncService);
+      statusState.set('authed');
+      TestBed.tick();
+      await flush();
+
+      const result = await sync.pullClaimedCharacter('00000000-0000-4000-8000-0000000000ff');
+
+      expect(result).toBe('failed');
+    });
+
+    it('restores the character (full catch-up, real Dexie row) once the server list shows it, and resolves "restored"', async () => {
+      const serverId = '00000000-0000-4000-8000-0000000000cc';
+      const streamId = `char:${serverId}`;
+      let serverHasIt = false;
+      globalThis.fetch = routedFetch({
+        '/api/characters': () =>
+          jsonResponse(
+            200,
+            serverHasIt ? [{ id: serverId, name: 'Claimed Paul', system: 'srd-5e-2024' }] : [],
+          ),
+      });
+
+      leaderState.set(true);
+      const sync = TestBed.inject(SyncService);
+      statusState.set('authed');
+      TestBed.tick();
+      await flush(); // initial reconcile: server list still empty, finds nothing
+      expect(FakeWebSocket.instances).toHaveLength(0);
+
+      serverHasIt = true; // the DM's handover has just landed server-side
+      const pending = sync.pullClaimedCharacter(serverId);
+      await flush();
+
+      const catchupSocket = FakeWebSocket.instances[0];
+      expect(catchupSocket).toBeDefined();
+      catchupSocket.emitOpen();
+      await flush();
+
+      const createdEvent: Event = {
+        id: '22222222-2222-7222-8222-222222222222',
+        stream: streamId,
+        seq: 1,
+        ts: new Date().toISOString(),
+        actor: { userId: 'usr_dm', deviceId: 'd1', role: 'owner' },
+        type: 'character.created',
+        v: 1,
+        payload: {
+          name: 'Claimed Paul',
+          system: 'srd-5e-2024',
+          corePack: { id: corePack.id, version: corePack.version },
+          engineVersion: '1',
+          grammaticalGender: 'masculine',
+        },
+      } as unknown as Event;
+
+      catchupSocket.emitMessage({
+        t: 'welcome',
+        rid: 'r1',
+        serverTime: new Date().toISOString(),
+        streams: [
+          { id: streamId, headSeq: 1, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 1 } },
+        ],
+      });
+      await flush();
+      catchupSocket.emitMessage({ t: 'events', stream: streamId, events: [createdEvent] });
+      await flush();
+
+      const result = await pending;
+      expect(result).toBe('restored');
+
+      const charactersRepository = TestBed.inject(CharactersRepository);
+      const row = await charactersRepository.get(streamId);
+      expect(row?.name).toBe('Claimed Paul');
+    });
+  });
+
   // --- Final fix wave, Minor finding 4 -----------------------------------------------------------
 
   it('deleting a character while its restore is gated in-flight does not resurrect it — the row stays gone', async () => {

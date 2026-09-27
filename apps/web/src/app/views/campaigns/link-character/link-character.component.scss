@@ -110,3 +110,45 @@
 .link-character__incomplete {
   color: var(--danger);
 }
+
+.link-character__claimed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+}
+
+.link-character__claimed-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.link-character__claimed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link-character__claimed-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.link-character__claimed-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+/* Same "words already say it, color reinforces" posture as `.link-character__step` above. */
+.link-character__claimed-row[data-claim-state='notYetVisible'] .link-character__claimed-status,
+.link-character__claimed-row[data-claim-state='failed'] .link-character__claimed-status {
+  color: var(--danger);
+}

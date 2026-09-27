@@ -1,3 +1,4 @@
+import { ApiError, apiJson } from '../api/api-fetch';
 import type { DraftEvent } from '../../stores/character.store';
 import {
   appendAndAwaitAck,
@@ -38,26 +39,31 @@ import { currentOwnerIdOf, lastCampaignLinkEvent } from './character-campaign-li
  *       (dm-exempt from the ownerId self-match check — this is what lets the DM name M as the
  *       final owner here, before M has done anything at all). `(b2)`'s existing-owner check
  *       passes since the roster slot is empty (cleared by (2)).
- *   (5) `ownerTransfer` — DIRECT char-side `character.owner_transferred {toUserId}` — sent LAST,
- *       while the DM is STILL the character's own established owner (backstop passes one final
- *       time). Moving this step any earlier breaks EVERY subsequent char-side step: once
- *       `meta.ownerId` flips away from the DM, the owner backstop refuses every further
- *       DM-authored owner-class append on this character, including the rejoin (3) this sequence
- *       still needs — a real deadlock, pinned by `campaign-gateway.test.ts`'s own "sent too early"
- *       test.
+ *   (5) `ownerTransfer` — `POST /api/characters/:id/transfer {toUserId}` (round 2: was a DIRECT
+ *       char-side `character.owner_transferred` append; now a real ownership move — doc-02
+ *       L178-179's binding claim ruling, "a claimed pregen behaves like any player character",
+ *       is not satisfiable from a client-side-only event append, since D1's `characters.owner_id`
+ *       is a SEPARATE, server-authoritative copy `character-actor.ts`'s own header comment
+ *       documents — see `core/routes/characters.ts`'s own route doc comment for the full
+ *       dual-write design this now drives). Sent LAST, while the DM is STILL the character's own
+ *       established owner (the route's own authorization check requires exactly that). Moving
+ *       this step any earlier breaks EVERY subsequent char-side step: once ownership flips away
+ *       from the DM, the owner backstop refuses every further DM-authored owner-class DIRECT
+ *       append on this character, including the rejoin (3) this sequence still needs — a real
+ *       deadlock, pinned by `campaign-gateway.test.ts`'s own "sent too early" test (still true:
+ *       this route is authorization-gated on the SAME "session user is the CURRENT owner" check).
  *
- * Each step function independently re-derives whether it is ALREADY done from FRESH state
+ * Steps (1)-(4) each independently re-derive whether they are ALREADY done from FRESH state
  * (`characterPort.events()`/`rosterEntry()`) before deciding whether to append anything at all —
  * the same "always re-check reality before choosing fresh-vs-resume" pattern
- * `campaign-link-sequence.ts`'s fix round 1 established (findings 2/3 there). This is what makes
- * `runPregenHandoverSequence` itself both the FRESH-attempt AND the RETRY entry point: a caller's
- * "Retry" button just calls this function again — whatever already committed is skipped, and the
- * sequence picks up exactly where it left off.
+ * `campaign-link-sequence.ts`'s fix round 1 established (findings 2/3 there). Step (5) does the
+ * same, reading `currentOwnerIdOf` (which the SERVER-appended `character.owner_transferred` event
+ * feeds once it round-trips back through the DM's own live sync session — same ordinary fan-out
+ * every OTHER externally-committed event on an open stream already gets, `stream-actor.ts`'s
+ * `fanOut`). This is what makes `runPregenHandoverSequence` itself both the FRESH-attempt AND the
+ * RETRY entry point: a caller's "Retry" button just calls this function again — whatever already
+ * committed is skipped, and the sequence picks up exactly where it left off.
  */
-
-export function ownerTransferDraft(toUserId: string): DraftEvent {
-  return { type: 'character.owner_transferred', v: 1, payload: { toUserId } };
-}
 
 export type HandoverStepName =
   'characterLeave' | 'rosterClear' | 'characterRejoin' | 'rosterRejoin' | 'ownerTransfer';
@@ -122,15 +128,40 @@ async function appendStep(
   return result.outcome;
 }
 
-async function stepCharacterLeave(p: HandoverParams): Promise<HandoverStepResult> {
+/**
+ * A single, MONOTONIC classification of how far this handover has already progressed, read fresh
+ * from `characterPort.events()`/`rosterEntry()` every call. Each step below skips itself when
+ * `currentPhase(p) >= <the phase that step completes>` — deliberately NOT five independent
+ * "does MY OWN target state already hold" checks: a per-step event-log heuristic (e.g.
+ * `stepCharacterLeave`'s original "is the LAST relevant char-side event a committed LEFT for this
+ * campaign?") goes STALE once a LATER step also completes — by the time step (3) (the rejoin) has
+ * committed, the last relevant char-side event is a JOIN, not a LEFT, even though step (1)
+ * genuinely DID happen earlier in this same handover. Since `character.campaign_left`'s hook
+ * UNCONDITIONALLY clears `meta.campaignId` (`character-actor.ts`), wrongly re-sending step (1)
+ * after step (3) has already rejoined would silently UNDO that rejoin — this is not a merely
+ * redundant resend, it is destructive. Ordering the phases from the MOST-complete signal down to
+ * the least is what makes this monotonic and immune to that staleness: once ANY later-phase signal
+ * is observed, every earlier step is unconditionally treated as done, regardless of what its own
+ * narrower, single-purpose event-log check would say in isolation.
+ */
+function currentPhase(p: HandoverParams): 0 | 1 | 2 | 3 | 4 | 5 {
+  if (currentOwnerIdOf(p.characterPort.events()) === p.toUserId) return 5;
+  const entry = p.rosterEntry();
+  if (entry?.left === false && entry.ownerId === p.toUserId) return 4;
+  const stillOriginalRoster = entry?.ownerId === p.fromOwnerId && entry.left === false;
   const link = lastCampaignLinkEvent(p.characterPort.events());
-  if (
-    link?.type === 'character.campaign_left' &&
+  const rejoinedThisCampaign =
+    link?.type === 'character.campaign_joined' &&
     link.campaignId === p.campaignId &&
-    link.committed
-  ) {
-    return { step: 'characterLeave', outcome: 'skipped' };
-  }
+    link.committed;
+  const leftThisCampaign =
+    link?.type === 'character.campaign_left' && link.campaignId === p.campaignId && link.committed;
+  if (!stillOriginalRoster) return rejoinedThisCampaign ? 3 : 2;
+  return leftThisCampaign ? 1 : 0;
+}
+
+async function stepCharacterLeave(p: HandoverParams): Promise<HandoverStepResult> {
+  if (currentPhase(p) >= 1) return { step: 'characterLeave', outcome: 'skipped' };
   const outcome = await appendStep(
     p.characterPort,
     characterCampaignLinkDraft('leave', p.campaignId),
@@ -140,9 +171,7 @@ async function stepCharacterLeave(p: HandoverParams): Promise<HandoverStepResult
 }
 
 async function stepRosterClear(p: HandoverParams): Promise<HandoverStepResult> {
-  if (p.rosterEntry()?.left === true) {
-    return { step: 'rosterClear', outcome: 'skipped' };
-  }
+  if (currentPhase(p) >= 2) return { step: 'rosterClear', outcome: 'skipped' };
   const draft = campaignCharacterLinkDraft('leave', {
     characterId: p.characterId,
     ownerId: p.fromOwnerId,
@@ -153,14 +182,7 @@ async function stepRosterClear(p: HandoverParams): Promise<HandoverStepResult> {
 }
 
 async function stepCharacterRejoin(p: HandoverParams): Promise<HandoverStepResult> {
-  const link = lastCampaignLinkEvent(p.characterPort.events());
-  if (
-    link?.type === 'character.campaign_joined' &&
-    link.campaignId === p.campaignId &&
-    link.committed
-  ) {
-    return { step: 'characterRejoin', outcome: 'skipped' };
-  }
+  if (currentPhase(p) >= 3) return { step: 'characterRejoin', outcome: 'skipped' };
   const outcome = await appendStep(
     p.characterPort,
     characterCampaignLinkDraft('join', p.campaignId),
@@ -170,10 +192,7 @@ async function stepCharacterRejoin(p: HandoverParams): Promise<HandoverStepResul
 }
 
 async function stepRosterRejoin(p: HandoverParams): Promise<HandoverStepResult> {
-  const entry = p.rosterEntry();
-  if (entry?.left === false && entry.ownerId === p.toUserId) {
-    return { step: 'rosterRejoin', outcome: 'skipped' };
-  }
+  if (currentPhase(p) >= 4) return { step: 'rosterRejoin', outcome: 'skipped' };
   const draft = campaignCharacterLinkDraft('join', {
     characterId: p.characterId,
     ownerId: p.toUserId,
@@ -183,12 +202,30 @@ async function stepRosterRejoin(p: HandoverParams): Promise<HandoverStepResult> 
   return { step: 'rosterRejoin', outcome };
 }
 
+/**
+ * [round 2] Calls the REAL ownership-transfer route instead of appending
+ * `character.owner_transferred` directly — see this module's own class doc, step (5). A genuine
+ * `ApiError` (any status: a 403/404/409 from the route's own checks, or a `status: 0` network
+ * failure) is folded into `'rejected'` here — this step has no `CampaignStoreNotLeaderError`-style
+ * TYPE the dialog needs to distinguish (unlike steps (1)-(4)'s plain `appendTx` calls); the
+ * per-step retry UI's own "click retry" already covers every one of these causes uniformly. Any
+ * OTHER (unexpected, non-`ApiError`) thrown value still propagates — this step doesn't swallow a
+ * genuine bug.
+ */
 async function stepOwnerTransfer(p: HandoverParams): Promise<HandoverStepResult> {
-  if (currentOwnerIdOf(p.characterPort.events()) === p.toUserId) {
-    return { step: 'ownerTransfer', outcome: 'skipped' };
+  if (currentPhase(p) >= 5) return { step: 'ownerTransfer', outcome: 'skipped' };
+  try {
+    await apiJson(`/api/characters/${p.characterId}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ toUserId: p.toUserId }),
+    });
+    return { step: 'ownerTransfer', outcome: 'committed' };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { step: 'ownerTransfer', outcome: 'rejected' };
+    }
+    throw err;
   }
-  const outcome = await appendStep(p.characterPort, ownerTransferDraft(p.toUserId), p.ackOpts);
-  return { step: 'ownerTransfer', outcome };
 }
 
 const STEP_FNS: readonly ((p: HandoverParams) => Promise<HandoverStepResult>)[] = [

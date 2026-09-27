@@ -69,8 +69,12 @@
     "skip": "Skip for now",
     "claimed": {
       "title": "Handed to you",
-      "note": "Your DM has handed this character over to you. It's already linked to this campaign — full editing from your own device is coming in a future update; for now, you can view it from the party list.",
-      "action": "Go to the party"
+      "note": "Your DM has handed this character over to you. Claim it to pull it onto this device, then finish linking it to the campaign.",
+      "action": "Claim it",
+      "pulling": "Claiming…",
+      "notYetVisible": "Not visible on your account yet — try again in a moment.",
+      "failed": "Couldn't claim that character. Try again.",
+      "retry": "Try again"
     },
     "progress": {
       "title": "Linking your character…",

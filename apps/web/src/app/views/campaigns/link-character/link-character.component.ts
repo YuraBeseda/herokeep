@@ -38,26 +38,31 @@ interface Candidate {
 }
 
 /**
- * [plan-10 Task 12] Ruling 6's claim flow, M's own half: once the DM's handover fully commits
- * (`pregen-handover-sequence.ts`), the roster ALREADY lists M as this characterId's owner and the
- * character is ALREADY fully joined to this campaign at the protocol level — there is no further
- * `character.campaign_joined`/`campaign.character_joined` for M to send (that would be a
- * duplicate, harmless but pointless, join). What M's OWN device is still missing is simply a LOCAL
- * copy (this pregen was never in `CharactersRepository` — the DM created it, not M) — reaching for
- * one requires new sync/gateway-mediated-write plumbing outside this task's scope (see
- * task-12-report.md's "M's claim completion" section for the full server-rule tracing: a claimed
- * pregen's D1 `owner_id` never moves in this codebase, so M's own device cannot open a DIRECT
- * socket to it, and the campaign gateway cannot bootstrap a not-yet-rostered character's first
- * write either — no path exists for M to author anything on this stream). This bucket is
- * deliberately HONEST about that: it surfaces the (already-true) claimed state and a link back to
- * the party (where the character is already visible, owned by M, per the roster), not a broken
- * "link" action pretending to do more than the server currently supports.
+ * [plan-10 Task 12 round 2] Ruling 6's claim flow, M's own half — NOW REAL (doc-02 L178-179's
+ * binding "a claimed pregen behaves like any player character" ruling; round 1's honest-UI
+ * stopgap was controller-ruled insufficient — R-T12). Once the DM's handover fully commits
+ * (`pregen-handover-sequence.ts`, whose LAST step is now `POST /api/characters/:id/transfer`,
+ * `apps/api`'s real ownership move), the character genuinely appears in M's OWN
+ * `GET /api/characters` for the first time. `SyncService.pullClaimedCharacter` (round 2) reuses
+ * the EXACT SAME restore routine a brand-new device already uses for any pre-existing owned
+ * character (`SyncService.reconcile`'s own restore branch) to pull it down; once local, the
+ * roster/char-side link ALREADY show it joined to THIS campaign (the DM's own steps 3/4 already
+ * committed `character.campaign_joined`/`campaign.character_joined`) — `loadCandidates()` picking
+ * it up afterward is what makes T7's OWN `eligibility()` classify it `'resume'`, so "Finish
+ * linking" (T7's EXISTING, already-shipped action) is all that's left, and it resends
+ * `campaign.character_joined` idempotently (server-verified no-op:
+ * `campaign-gateway.test.ts`'s "re-sending the IDENTICAL campaign.character_joined... is a
+ * no-op"). No new join-sequence code is needed here — only the discovery/restore step.
  */
 export interface ClaimedPregen {
   /** Bare character uuid — `CampaignState.roster`'s own key shape. */
   readonly characterId: string;
   readonly name: string;
 }
+
+/** Per-row state for `claimedPregens`' own "Claim it" action — `undefined` means idle/not yet
+ * attempted (the ordinary starting state for every row). */
+export type ClaimPullState = 'pulling' | 'notYetVisible' | 'failed';
 
 /**
  * `/g/:id/link-character` (plan-10 task-7-brief.md): "pick an existing SYNCED character (or
@@ -214,9 +219,30 @@ export class LinkCharacterComponent {
     return result;
   });
 
-  protected goToParty(): void {
-    const campaignId = this.campaignId();
-    if (campaignId) void this.router.navigate(['/g', campaignId, 'party']);
+  protected readonly claimStates = signal<ReadonlyMap<string, ClaimPullState>>(new Map());
+
+  protected claimState(characterId: string): ClaimPullState | undefined {
+    return this.claimStates().get(characterId);
+  }
+
+  /** [round 2] Pulls a claimed pregen onto this device (`SyncService.pullClaimedCharacter` —
+   * reuses the ordinary new-device restore routine). On success, the row disappears from THIS
+   * bucket and reappears in the ordinary candidates list below (via `loadCandidates()`'s
+   * refresh), now eligible `'resume'` — T7's EXISTING "Finish linking" completes ruling 4's join
+   * (a harmless, idempotent resend of the already-committed campaign-side mirror). */
+  protected async claimPregen(pregen: ClaimedPregen): Promise<void> {
+    this.claimStates.update((current) => new Map(current).set(pregen.characterId, 'pulling'));
+    const result = await this.syncService.pullClaimedCharacter(pregen.characterId);
+    if (result === 'restored') {
+      this.claimStates.update((current) => {
+        const next = new Map(current);
+        next.delete(pregen.characterId);
+        return next;
+      });
+      await this.loadCandidates();
+      return;
+    }
+    this.claimStates.update((current) => new Map(current).set(pregen.characterId, result));
   }
 
   protected async select(candidate: Candidate): Promise<void> {
