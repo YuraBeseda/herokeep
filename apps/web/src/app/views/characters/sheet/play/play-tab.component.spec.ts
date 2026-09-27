@@ -23,6 +23,7 @@ import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.ser
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
 import { levelUpToTwo, seedFighter, seedWizard } from '../testing/character-fixtures';
@@ -86,6 +87,7 @@ class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
     if (langPath === 'characters/ru') return of(charactersRu);
+    if (langPath === 'campaigns/en') return of(campaignsEn);
     return of({});
   }
 }
@@ -2463,5 +2465,224 @@ describe('PlayTabComponent — wake lock toggle', () => {
     await fixture.whenStable();
     expect(disable).toHaveBeenCalledTimes(1);
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+// --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ---------------------------------
+//
+// `CampaignEditLockService` itself (the full editOutsideSession x session.active x role matrix)
+// is fully covered by its OWN spec (`campaign-edit-lock.spec.ts`) — these specs only assert
+// `PlayTabComponent`'s WIRING: the banner renders with the right mode-specific copy, a
+// representative sample of every mutating-action CATEGORY the brief names (hp/rest/inspiration/
+// resources/conditions/notes/inventory) is disabled while locked, and — the documented ruling-7
+// BOUNDARY — rolling dice is NEVER disabled by this lock (only by T10's own, unrelated "is a live
+// campaign session open" gate).
+describe('PlayTabComponent — campaign edit lock (plan-10 task-14-brief.md, ruling 7)', () => {
+  const CAMPAIGN_ID = '88888888-8888-8888-8888-888888888888';
+  const CAMPAIGN_STREAM = `camp:${CAMPAIGN_ID}`;
+
+  function setup(): void {
+    configureReal(
+      [],
+      [
+        {
+          provide: AuthService,
+          useValue: { user: signal<AuthUser | null>({ userId: 'u1', username: 'Bob' }) },
+        },
+      ],
+    );
+  }
+
+  beforeEach(async () => {
+    setup();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+      db.campaigns.clear(),
+      db.blobs.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  function fullSettings(
+    rule: CampaignSettings['houseRules']['editOutsideSession'],
+  ): CampaignSettings {
+    return {
+      system: 'srd-5e-2024',
+      packs: [],
+      houseRules: {
+        strictValidation: true,
+        allowOverrides: true,
+        editOutsideSession: rule,
+        xpMode: 'xp',
+        hpOnLevelUp: 'roll',
+        encumbrance: 'standard',
+        attunementMax: 3,
+        startingLevel: 1,
+      },
+      visibility: { partySheets: 'overview', rolls: 'dm', allowPrivateRolls: true },
+      join: { open: true, requireApproval: false },
+    };
+  }
+
+  async function seedCampaign(
+    rule: CampaignSettings['houseRules']['editOutsideSession'],
+    opts: { role?: 'dm' | 'player'; sessionActive?: boolean } = {},
+  ): Promise<void> {
+    const campaignStore = TestBed.inject(CampaignStore);
+    const drafts = [
+      { type: 'campaign.settings_changed', v: 1, payload: { settings: fullSettings(rule) } },
+      {
+        type: 'member.joined',
+        v: 1,
+        payload: { userId: 'u1', displayName: 'Bob', role: opts.role ?? 'player' },
+      },
+      ...(opts.sessionActive ? [{ type: 'session.started', v: 1, payload: {} }] : []),
+    ];
+    await campaignStore.appendToStream(CAMPAIGN_STREAM, drafts);
+  }
+
+  async function linkCharacter(characterId: string): Promise<void> {
+    const characterStore = TestBed.inject(CharacterStore);
+    characterStore.enterSyncMode(characterId);
+    await characterStore.appendTx([
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+    ]);
+  }
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  it('shows no banner and nothing disabled for a solo (non-campaign-linked) character', async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.damage).disabled).toBe(false);
+  });
+
+  it('shows no banner when houseRules.editOutsideSession is "free"', async () => {
+    const characterId = await seedFighter('Ivan');
+    await seedCampaign('free');
+    await linkCharacter(characterId);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.damage).disabled).toBe(false);
+  });
+
+  it('shows no banner while a session is active, even under the "locked" rule', async () => {
+    const characterId = await seedFighter('Ivan');
+    await seedCampaign('locked', { sessionActive: true });
+    await linkCharacter(characterId);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.damage).disabled).toBe(false);
+  });
+
+  it('exempts the campaign\'s own DM even under "locked" with no active session', async () => {
+    const characterId = await seedFighter('Ivan');
+    await seedCampaign('locked', { role: 'dm' });
+    await linkCharacter(characterId);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.damage).disabled).toBe(false);
+  });
+
+  it('shows the DISTINCT dmApprovalV1 banner for the "dmApproval" rule (OWNER-FLAG: v1 has no approval queue)', async () => {
+    const characterId = await seedFighter('Ivan');
+    await seedCampaign('dmApproval');
+    await linkCharacter(characterId);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const banner = compiled.querySelector('.campaign-edit-lock-banner');
+    expect(banner?.getAttribute('role')).toBe('status');
+    expect(banner?.textContent?.trim()).toBe(campaignsEn.edit.dmApprovalV1);
+  });
+
+  it('locks the mutating action surface for an ordinary member under "locked" with no session, while ROLLING DICE STAYS ENABLED (the documented ruling-7 boundary)', async () => {
+    const characterId = await seedFighter('Ivan');
+    await seedCampaign('locked');
+    const characterStore = TestBed.inject(CharacterStore);
+    characterStore.enterSyncMode(characterId);
+    await characterStore.appendTx([
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+      { type: 'condition.added', v: 1, payload: { conditionId: 'srd-5e-2024:condition/blinded' } },
+    ]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const banner = compiled.querySelector('.campaign-edit-lock-banner');
+    expect(banner?.getAttribute('role')).toBe('status');
+    expect(banner?.textContent?.trim()).toBe(campaignsEn.edit.locked);
+
+    // HP
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.damage).disabled).toBe(true);
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.heal).disabled).toBe(true);
+    expect(buttonNamed(compiled, charactersEn.sheet.hp.addTemp).disabled).toBe(true);
+    // Rest
+    expect(buttonNamed(compiled, charactersEn.sheet.rest.short).disabled).toBe(true);
+    expect(buttonNamed(compiled, charactersEn.sheet.rest.long).disabled).toBe(true);
+    // Inspiration
+    expect(
+      compiled.querySelector<HTMLButtonElement>('.play-tab__inspiration-toggle')!.disabled,
+    ).toBe(true);
+    // Conditions: add is disabled, and the already-present condition's remove affordance is hidden
+    expect(buttonNamed(compiled, charactersEn.sheet.conditions.add).disabled).toBe(true);
+    expect(compiled.querySelector('.play-tab__conditions .hk-chip__remove')).toBeNull();
+    // Resources — fighter-1's "second wind" resource pips render read-only (no spend/restore)
+    const resourcePips = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.play-tab__resources button'),
+    );
+    expect(resourcePips.length).toBeGreaterThan(0);
+    for (const pip of resourcePips) expect(pip.disabled).toBe(true);
+    // Inventory
+    expect(buttonNamed(compiled, charactersEn.sheet.inventory.addFromLibrary).disabled).toBe(true);
+    expect(buttonNamed(compiled, charactersEn.sheet.inventory.addCustom).disabled).toBe(true);
+    expect(buttonNamed(compiled, charactersEn.sheet.inventory.remove).disabled).toBe(true);
+    expect(
+      compiled.querySelector<HTMLButtonElement>(
+        `[aria-label="${charactersEn.sheet.inventory.qtyIncrease}"]`,
+      )!.disabled,
+    ).toBe(true);
+    expect(buttonNamed(compiled, charactersEn.sheet.inventory.currencyApply).disabled).toBe(true);
+    // Notes
+    expect(compiled.querySelector<HTMLButtonElement>('.play-tab__notes-add')!.disabled).toBe(true);
+
+    // --- Rolling dice is NEVER gated by this lock (ruling 7's own boundary) ---
+    const abilityCard = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.play-tab__ability'),
+    ).find((c) => c.querySelector('.hk-card__header')?.textContent?.trim() === 'Strength')!;
+    expect(buttonNamed(abilityCard, charactersEn.sheet.roll.check).disabled).toBe(false);
+    expect(buttonNamed(abilityCard, charactersEn.sheet.roll.save).disabled).toBe(false);
   });
 });

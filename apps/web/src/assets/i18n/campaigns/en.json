@@ -8,6 +8,10 @@
   "removed": {
     "toast": "You've been removed from this campaign."
   },
+  "edit": {
+    "locked": "This campaign locks sheet edits outside a live session. Ask your DM to start a session, or wait for one — you can still roll dice and chat.",
+    "dmApprovalV1": "This campaign requires DM approval to edit outside a session. Approval requests aren't available in this app yet — ask your DM to start a session, or wait for one. You can still roll dice and chat."
+  },
   "guard": {
     "notMember": "You're not a member of that campaign."
   },
@@ -115,7 +119,11 @@
       "settings": "Settings",
       "lobby": "Lobby"
     },
-    "staleNotice": "Another tab is syncing this campaign — this view won't update live until you switch to it."
+    "staleNotice": "Another tab is syncing this campaign — this view won't update live until you switch to it.",
+    "session": {
+      "active": "Session in progress",
+      "activeWithTitle": "Session in progress — {title}"
+    }
   },
   "lobby": {
     "title": "Lobby",
@@ -390,7 +398,15 @@
       "started": "Session started — {title}",
       "startedNoTitle": "Session started",
       "ended": "Session ended — {title}",
-      "endedNoTitle": "Session ended"
+      "endedNoTitle": "Session ended",
+      "titleLabel": "Session title (optional)",
+      "start": "Start session",
+      "starting": "Starting…",
+      "end": "End session",
+      "ending": "Ending…",
+      "errors": {
+        "generic": "Couldn't update the session. Try again."
+      }
     },
     "visibilityHint": {
       "dm": "Only visible to you and the DM",

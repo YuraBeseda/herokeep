@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
@@ -16,7 +17,9 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
-function configure(options: { isLeader?: boolean } = {}): void {
+function configure(
+  options: { isLeader?: boolean; session?: { active: boolean; title?: string } } = {},
+): void {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -42,10 +45,11 @@ function configure(options: { isLeader?: boolean } = {}): void {
         },
         loader: StubLoader,
       }),
+      provideTranslocoMessageformat(),
       {
         provide: CampaignStore,
         useValue: {
-          state: signal({ name: 'Curse of Strahd' }),
+          state: signal({ name: 'Curse of Strahd', session: options.session }),
           role: signal('dm'),
         },
       },
@@ -88,6 +92,49 @@ describe('CampaignShellComponent', () => {
     expect(
       compiled.querySelector('[role="status"].campaign-shell__stale')?.textContent?.trim(),
     ).toBe(campaignsEn.shell.staleNotice);
+  });
+
+  it('shows no active-session indicator when there is no session yet', async () => {
+    configure({ session: undefined });
+    const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');
+    const compiled = harness.routeNativeElement!;
+    expect(compiled.querySelector('.campaign-shell__session')).toBeNull();
+  });
+
+  it('shows no active-session indicator while the session is inactive', async () => {
+    configure({ session: { active: false } });
+    const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');
+    const compiled = harness.routeNativeElement!;
+    expect(compiled.querySelector('.campaign-shell__session')).toBeNull();
+  });
+
+  it('shows the active-session indicator (with title) as a status region while a session is active', async () => {
+    configure({ session: { active: true, title: 'Session 4: Into the mist' } });
+    const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');
+    const compiled = harness.routeNativeElement!;
+    const indicator = compiled.querySelector('.campaign-shell__session');
+    expect(indicator).not.toBeNull();
+    expect(indicator?.getAttribute('role')).toBe('status');
+    expect(indicator?.textContent?.trim()).toBe(
+      campaignsEn.shell.session.activeWithTitle.replace('{title}', 'Session 4: Into the mist'),
+    );
+  });
+
+  it('shows the title-less active-session indicator when the started session carries no title', async () => {
+    configure({ session: { active: true } });
+    const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');
+    const compiled = harness.routeNativeElement!;
+    expect(compiled.querySelector('.campaign-shell__session')?.textContent?.trim()).toBe(
+      campaignsEn.shell.session.active,
+    );
+  });
+
+  it('coexists with the follower-mode stale notice (both render when both conditions hold)', async () => {
+    configure({ isLeader: false, session: { active: true, title: 'Session 4' } });
+    const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');
+    const compiled = harness.routeNativeElement!;
+    expect(compiled.querySelector('.campaign-shell__stale')).not.toBeNull();
+    expect(compiled.querySelector('.campaign-shell__session')).not.toBeNull();
   });
 
   it('navigates between tabs via hk-tabs', async () => {

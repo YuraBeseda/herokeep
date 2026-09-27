@@ -95,8 +95,64 @@ export class LogTabComponent {
 
   protected readonly state = this.campaignStore.state;
   protected readonly entries = computed<readonly LogEntry[]>(() => this.state()?.log ?? []);
+  /** Gates the session start/end controls (plan-10 task-14-brief.md: "session.started/ended ...
+   * buttons in the log view header ... gated isDm" — `session.started`/`session.ended` are
+   * DM-only events per `CAMPAIGN_EVENT_ACTORS`, so a non-DM member never sees either control at
+   * all, not merely a disabled one). */
+  protected readonly isDm = computed(() => this.campaignStore.role() === 'dm');
+  protected readonly sessionActive = computed(() => this.state()?.session?.active ?? false);
 
   private readonly logContainer = viewChild<ElementRef<HTMLElement>>('logContainer');
+
+  // --- DM session start/end (plan-10 task-14-brief.md) -----------------------------------------
+
+  protected readonly sessionTitleDraft = signal('');
+  protected readonly sessionBusy = signal(false);
+
+  /** Starting with no title typed sends `{}` (no `title` field at all, matching `SessionStartedV1`'s
+   * optional field — never an empty-string `title`). Ending never re-prompts for a title (a
+   * judgment call, task-14-report.md: ending a session doesn't need naming — the session's own
+   * displayed title throughout its lifetime is whatever `session.started` gave it). */
+  protected async onStartSession(): Promise<void> {
+    if (this.sessionBusy()) return;
+    const title = this.sessionTitleDraft().trim();
+    this.sessionBusy.set(true);
+    try {
+      await this.campaignStore.appendTx([
+        { type: 'session.started', v: 1, payload: title ? { title } : {} },
+      ]);
+      this.sessionTitleDraft.set('');
+    } catch (err) {
+      this.toastSessionError(err);
+    } finally {
+      this.sessionBusy.set(false);
+    }
+  }
+
+  protected async onEndSession(): Promise<void> {
+    if (this.sessionBusy()) return;
+    this.sessionBusy.set(true);
+    try {
+      await this.campaignStore.appendTx([{ type: 'session.ended', v: 1, payload: {} }]);
+    } catch (err) {
+      this.toastSessionError(err);
+    } finally {
+      this.sessionBusy.set(false);
+    }
+  }
+
+  protected onSessionTitleChange(value: string): void {
+    this.sessionTitleDraft.set(value);
+  }
+
+  private toastSessionError(err: unknown): void {
+    const key =
+      err instanceof CampaignStoreNotLeaderError ||
+      err instanceof CampaignStoreNotAuthenticatedError
+        ? err.code
+        : 'campaigns.log.session.errors.generic';
+    this.toastService.show(key);
+  }
 
   // --- Composer ---------------------------------------------------------------------------------
 

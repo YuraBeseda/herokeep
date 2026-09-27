@@ -30,6 +30,16 @@
   font-size: 0.875rem;
 }
 
+.campaign-shell__session {
+  margin-block-end: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .campaign-shell__tabs {
   margin-block-end: var(--space-4);
 }

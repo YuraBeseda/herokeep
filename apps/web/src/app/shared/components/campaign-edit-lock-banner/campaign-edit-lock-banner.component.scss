@@ -1,0 +1,13 @@
+:host {
+  display: contents;
+}
+
+.campaign-edit-lock-banner {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  color: var(--warning);
+  font-size: 0.875rem;
+}

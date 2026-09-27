@@ -10,6 +10,16 @@
     <p class="campaign-shell__stale" role="status">{{ t('shell.staleNotice') }}</p>
   }
 
+  @if (state()?.session?.active) {
+    <p class="campaign-shell__session" role="status">
+      {{
+        state()?.session?.title
+          ? t('shell.session.activeWithTitle', { title: state()?.session?.title })
+          : t('shell.session.active')
+      }}
+    </p>
+  }
+
   <hk-tabs
     class="campaign-shell__tabs"
     [tabs]="tabsFor(t)"

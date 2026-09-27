@@ -1,5 +1,10 @@
 @if (sheet(); as s) {
   <div class="play-tab" *transloco="let t; read: 'characters'">
+    <!-- Campaign edit lock (plan-10 task-14-brief.md, ruling 7): purely presentational, its own
+         `campaigns` scope — see that component's own class doc. Renders nothing while
+         `editLock().mode` is undefined (free / session active / DM / solo). -->
+    <app-campaign-edit-lock-banner [mode]="editLock().mode" />
+
     <!-- Dice roller + roll log (task-7-brief.md): advantage/disadvantage toggle, manual entry,
          and the session-local log itself. Placed first so the toggle is visible before any
          tap-to-roll affordance below it is used. -->
@@ -150,7 +155,13 @@
           <hk-chip [selected]="true">
             {{ t('sheet.hp.concentratingOn', { name: resolveName(conc.spellId) }) }}
           </hk-chip>
-          <button hk-button type="button" [variant]="'ghost'" (click)="onEndConcentration()">
+          <button
+            hk-button
+            type="button"
+            [variant]="'ghost'"
+            [disabled]="editLocked()"
+            (click)="onEndConcentration()"
+          >
             {{ t('sheet.hp.endConcentration') }}
           </button>
         </div>
@@ -173,13 +184,31 @@
           [ngModel]="hpAmount()"
           (ngModelChange)="onHpAmountChange($event)"
         />
-        <button hk-button type="button" [variant]="'danger'" (click)="onDamage()">
+        <button
+          hk-button
+          type="button"
+          [variant]="'danger'"
+          [disabled]="editLocked()"
+          (click)="onDamage()"
+        >
           {{ t('sheet.hp.damage') }}
         </button>
-        <button hk-button type="button" [variant]="'ghost'" (click)="onHeal()">
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="editLocked()"
+          (click)="onHeal()"
+        >
           {{ t('sheet.hp.heal') }}
         </button>
-        <button hk-button type="button" [variant]="'ghost'" (click)="onAddTemp()">
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="editLocked()"
+          (click)="onAddTemp()"
+        >
           {{ t('sheet.hp.addTemp') }}
         </button>
       </div>
@@ -218,19 +247,37 @@
         </dl>
         @if (s.hp.current === 0) {
           <div class="play-tab__death-save-actions">
-            <button hk-button type="button" [variant]="'ghost'" (click)="onDeathSave('success')">
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              [disabled]="editLocked()"
+              (click)="onDeathSave('success')"
+            >
               {{ t('sheet.hp.deathSaveSuccess') }}
             </button>
-            <button hk-button type="button" [variant]="'ghost'" (click)="onDeathSave('failure')">
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              [disabled]="editLocked()"
+              (click)="onDeathSave('failure')"
+            >
               {{ t('sheet.hp.deathSaveFailure') }}
             </button>
-            <button hk-button type="button" (click)="onDeathSave('critSuccess')">
+            <button
+              hk-button
+              type="button"
+              [disabled]="editLocked()"
+              (click)="onDeathSave('critSuccess')"
+            >
               {{ t('sheet.hp.deathSaveCritSuccess') }}
             </button>
             <button
               hk-button
               type="button"
               [variant]="'danger'"
+              [disabled]="editLocked()"
               (click)="onDeathSave('critFailure')"
             >
               {{ t('sheet.hp.deathSaveCritFailure') }}
@@ -245,10 +292,16 @@
          hit-dice counters already render in the HP section above. -->
     <hk-sheet-section [titleKey]="'characters.sheet.rest.title'" class="play-tab__section">
       <div class="play-tab__rest-actions">
-        <button hk-button type="button" [variant]="'ghost'" (click)="onShortRest()">
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="editLocked()"
+          (click)="onShortRest()"
+        >
           {{ t('sheet.rest.short') }}
         </button>
-        <button hk-button type="button" (click)="onLongRest()">
+        <button hk-button type="button" [disabled]="editLocked()" (click)="onLongRest()">
           {{ t('sheet.rest.long') }}
         </button>
       </div>
@@ -262,6 +315,7 @@
         class="play-tab__inspiration-toggle"
         [variant]="s.inspiration ? 'primary' : 'ghost'"
         [attr.aria-pressed]="s.inspiration"
+        [disabled]="editLocked()"
         (click)="onToggleInspiration()"
       >
         {{ s.inspiration ? t('sheet.inspiration.on') : t('sheet.inspiration.off') }}
@@ -364,6 +418,7 @@
                     [used]="slot.used"
                     [labelKey]="'characters.sheet.spellcasting.slotPipLabel'"
                     [labelParams]="{ level: slot.level }"
+                    [viewReadonly]="editLocked()"
                     (spend)="onSpendSlot(slot.level)"
                     (restore)="onRestoreSlot(slot.level)"
                   />
@@ -392,6 +447,7 @@
                           hk-button
                           type="button"
                           [variant]="'ghost'"
+                          [disabled]="editLocked()"
                           (click)="onCastCantrip(spell.id, spell.concentration)"
                         >
                           {{ t('sheet.spellcasting.cast') }}
@@ -407,6 +463,7 @@
                           type="button"
                           [variant]="isSpellPrepared(block, spell.id) ? 'primary' : 'ghost'"
                           [attr.aria-pressed]="isSpellPrepared(block, spell.id)"
+                          [disabled]="editLocked()"
                           (click)="onTogglePrepared(block, spell.id)"
                         >
                           {{
@@ -420,6 +477,7 @@
                           hk-button
                           type="button"
                           [variant]="'ghost'"
+                          [disabled]="editLocked()"
                           (click)="onCastLeveled(block, spell)"
                         >
                           {{ t('sheet.spellcasting.cast') }}
@@ -440,6 +498,7 @@
                           hk-button
                           type="button"
                           [variant]="'ghost'"
+                          [disabled]="editLocked()"
                           (click)="onCastLeveled(block, spell)"
                         >
                           {{ t('sheet.spellcasting.cast') }}
@@ -480,6 +539,7 @@
                 [used]="resourceRow.used"
                 [labelKey]="'characters.sheet.resources.pipLabel'"
                 [labelParams]="{ name: resourceLabel(resourceRow) }"
+                [viewReadonly]="editLocked()"
                 (spend)="onSpendResource(resourceRow.id)"
                 (restore)="onRestoreResource(resourceRow.id)"
               />
@@ -537,6 +597,7 @@
         type="button"
         class="play-tab__conditions-add"
         [variant]="'ghost'"
+        [disabled]="editLocked()"
         (click)="onAddCondition()"
       >
         {{ t('sheet.conditions.add') }}
@@ -546,7 +607,7 @@
           @for (condition of conditions(); track condition.id) {
             <hk-chip
               [selected]="true"
-              [removable]="true"
+              [removable]="!editLocked()"
               (remove)="onRemoveCondition(condition.id)"
             >
               {{
@@ -613,10 +674,16 @@
       class="play-tab__section"
     >
       <div class="play-tab__inventory-actions">
-        <button hk-button type="button" (click)="onAddFromLibrary()">
+        <button hk-button type="button" [disabled]="editLocked()" (click)="onAddFromLibrary()">
           {{ t('sheet.inventory.addFromLibrary') }}
         </button>
-        <button hk-button type="button" [variant]="'ghost'" (click)="onAddCustomItem()">
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="editLocked()"
+          (click)="onAddCustomItem()"
+        >
           {{ t('sheet.inventory.addCustom') }}
         </button>
       </div>
@@ -653,7 +720,7 @@
                     hk-button
                     type="button"
                     [variant]="'ghost'"
-                    [disabled]="entry.row.qty <= 1"
+                    [disabled]="entry.row.qty <= 1 || editLocked()"
                     [attr.aria-label]="t('sheet.inventory.qtyDecrease')"
                     (click)="onDecreaseQty(entry.row)"
                   >
@@ -664,6 +731,7 @@
                     hk-button
                     type="button"
                     [variant]="'ghost'"
+                    [disabled]="editLocked()"
                     [attr.aria-label]="t('sheet.inventory.qtyIncrease')"
                     (click)="onIncreaseQty(entry.row)"
                   >
@@ -675,6 +743,7 @@
                     hk-button
                     type="button"
                     [variant]="'ghost'"
+                    [disabled]="editLocked()"
                     (click)="onToggleEquip(entry.row)"
                   >
                     {{
@@ -687,6 +756,7 @@
                     hk-button
                     type="button"
                     [variant]="'ghost'"
+                    [disabled]="editLocked()"
                     (click)="onToggleAttune(entry.row)"
                   >
                     {{
@@ -700,6 +770,7 @@
                   hk-button
                   type="button"
                   [variant]="'danger'"
+                  [disabled]="editLocked()"
                   (click)="onRemoveItem(entry.row)"
                 >
                   {{ t('sheet.inventory.remove') }}
@@ -727,7 +798,13 @@
             </li>
           }
         </ul>
-        <button hk-button type="button" [variant]="'ghost'" (click)="onApplyCurrency()">
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="editLocked()"
+          (click)="onApplyCurrency()"
+        >
           {{ t('sheet.inventory.currencyApply') }}
         </button>
       </div>
@@ -740,7 +817,13 @@
       [collapsible]="true"
       class="play-tab__section"
     >
-      <button hk-button type="button" class="play-tab__notes-add" (click)="onAddNote()">
+      <button
+        hk-button
+        type="button"
+        class="play-tab__notes-add"
+        [disabled]="editLocked()"
+        (click)="onAddNote()"
+      >
         {{ t('sheet.notes.add') }}
       </button>
       @if (notes().length > 0) {
@@ -752,10 +835,22 @@
                 <p class="play-tab__note-body">{{ note.body }}</p>
               }
               <div class="play-tab__note-actions">
-                <button hk-button type="button" [variant]="'ghost'" (click)="onEditNote(note)">
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'ghost'"
+                  [disabled]="editLocked()"
+                  (click)="onEditNote(note)"
+                >
                   {{ t('sheet.notes.edit') }}
                 </button>
-                <button hk-button type="button" [variant]="'ghost'" (click)="onRemoveNote(note)">
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'ghost'"
+                  [disabled]="editLocked()"
+                  (click)="onRemoveNote(note)"
+                >
                   {{ t('sheet.notes.remove') }}
                 </button>
               </div>

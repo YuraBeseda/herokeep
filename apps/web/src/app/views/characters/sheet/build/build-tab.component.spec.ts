@@ -4,11 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
-import { parsePack, type Pack } from '@hk/protocol';
+import { parsePack, type CampaignSettings, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
 import {
   ImageInvalidTypeError,
   ImagePipelineService,
@@ -17,8 +18,10 @@ import {
 } from '@shared/services/images/image-pipeline.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { seedFighter } from '../testing/character-fixtures';
 import { BuildTabComponent } from './build-tab.component';
@@ -84,6 +87,7 @@ async function pollUntil(
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'campaigns/en') return of(campaignsEn);
     return of({});
   }
 }
@@ -441,5 +445,191 @@ describe('BuildTabComponent', () => {
     await pollUntil(fixture, () => uploadButton.disabled === false);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(showSpy).not.toHaveBeenCalled();
+  });
+});
+
+// --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ---------------------------------
+//
+// `CampaignEditLockService` itself (the full matrix) is covered by its own spec — these specs
+// only assert `BuildTabComponent`'s WIRING: the banner, and every mutating control this tab owns
+// (rename/appearance/portrait/gender/outstanding-choice re-entry) disabled while locked.
+describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ruling 7)', () => {
+  const CAMPAIGN_ID = '77777777-7777-7777-7777-777777777777';
+  const CAMPAIGN_STREAM = `camp:${CAMPAIGN_ID}`;
+
+  function configureWithCampaign(): void {
+    const processPortrait = vi
+      .fn<ImagePipelineService['processPortrait']>()
+      .mockResolvedValue(STUBBED_PIPELINE_RESULT);
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: {
+            availableLangs: ['en', 'ru', 'uk'],
+            defaultLang: 'en',
+            fallbackLang: 'en',
+            reRenderOnLangChange: true,
+            prodMode: true,
+          },
+          loader: StubLoader,
+        }),
+        provideTranslocoMessageformat(),
+        {
+          provide: PackStore,
+          useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        },
+        {
+          provide: StoragePersistService,
+          useValue: { requestPersist: vi.fn().mockResolvedValue(true) },
+        },
+        { provide: ImagePipelineService, useValue: { processPortrait } },
+        {
+          provide: AuthService,
+          useValue: { user: signal<AuthUser | null>({ userId: 'u1', username: 'Bob' }) },
+        },
+      ],
+    });
+  }
+
+  beforeEach(async () => {
+    configureWithCampaign();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+      db.campaigns.clear(),
+      db.blobs.clear(),
+    ]);
+    URL.createObjectURL = vi.fn(() => 'blob:fake-portrait-url');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    TestBed.inject(HkDb).close();
+  });
+
+  function fullSettings(
+    rule: CampaignSettings['houseRules']['editOutsideSession'],
+  ): CampaignSettings {
+    return {
+      system: 'srd-5e-2024',
+      packs: [],
+      houseRules: {
+        strictValidation: true,
+        allowOverrides: true,
+        editOutsideSession: rule,
+        xpMode: 'xp',
+        hpOnLevelUp: 'roll',
+        encumbrance: 'standard',
+        attunementMax: 3,
+        startingLevel: 1,
+      },
+      visibility: { partySheets: 'overview', rolls: 'dm', allowPrivateRolls: true },
+      join: { open: true, requireApproval: false },
+    };
+  }
+
+  async function seedLockedCampaignAndLink(characterId: string): Promise<void> {
+    const campaignStore = TestBed.inject(CampaignStore);
+    await campaignStore.appendToStream(CAMPAIGN_STREAM, [
+      { type: 'campaign.settings_changed', v: 1, payload: { settings: fullSettings('locked') } },
+      {
+        type: 'member.joined',
+        v: 1,
+        payload: { userId: 'u1', displayName: 'Bob', role: 'player' },
+      },
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    characterStore.enterSyncMode(characterId);
+    await characterStore.appendTx([
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+    ]);
+  }
+
+  it('shows no banner and nothing disabled for a solo (non-campaign-linked) character', async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(
+      compiled.querySelector<HTMLButtonElement>('.build-tab__rename-form button[type=submit]')!
+        .disabled,
+    ).toBe(false);
+  });
+
+  it('locks rename/appearance/portrait/gender/outstanding-choices for an ordinary member under "locked" with no session', async () => {
+    const characterId = await seedFighter('Ivan', { fightingStyle: false });
+    await seedLockedCampaignAndLink(characterId);
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const banner = compiled.querySelector('.campaign-edit-lock-banner');
+    expect(banner?.getAttribute('role')).toBe('status');
+    expect(banner?.textContent?.trim()).toBe(campaignsEn.edit.locked);
+
+    // Rename (typing a valid name first, so this isn't ALSO blocked by !nameValid())
+    const nameInput = compiled.querySelector<HTMLInputElement>('.build-tab__rename-input')!;
+    nameInput.value = 'Ivan the Bold';
+    nameInput.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(
+      compiled.querySelector<HTMLButtonElement>('.build-tab__rename-form button[type=submit]')!
+        .disabled,
+    ).toBe(true);
+
+    // Appearance
+    expect(
+      compiled.querySelector<HTMLButtonElement>('.build-tab__appearance-form button[type=submit]')!
+        .disabled,
+    ).toBe(true);
+
+    // Portrait
+    expect(compiled.querySelector<HTMLButtonElement>('.build-tab__portrait-upload')!.disabled).toBe(
+      true,
+    );
+
+    // Gender
+    expect(
+      compiled.querySelector<HTMLFieldSetElement>('.build-tab__gender-fieldset')!.disabled,
+    ).toBe(true);
+
+    // Outstanding choice re-entry (ChoiceStepComponent has no disabled input of its own — wrapped
+    // in a native `<fieldset disabled>`, which reliably blocks descendant control interaction, incl.
+    // in jsdom, even though the leaf `<button>`'s OWN `.disabled` property stays `false`).
+    const outstandingFieldset = compiled.querySelector<HTMLFieldSetElement>(
+      '.build-tab__outstanding-fieldset',
+    );
+    expect(outstandingFieldset).not.toBeNull();
+    expect(outstandingFieldset?.disabled).toBe(true);
+  });
+
+  it('exempts the DM and shows no banner while a session is active', async () => {
+    const characterId = await seedFighter('Ivan');
+    const campaignStore = TestBed.inject(CampaignStore);
+    await campaignStore.appendToStream(CAMPAIGN_STREAM, [
+      { type: 'campaign.settings_changed', v: 1, payload: { settings: fullSettings('locked') } },
+      { type: 'member.joined', v: 1, payload: { userId: 'u1', displayName: 'Bob', role: 'dm' } },
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    characterStore.enterSyncMode(characterId);
+    await characterStore.appendTx([
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+    ]);
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(compiled.querySelector<HTMLButtonElement>('.build-tab__portrait-upload')!.disabled).toBe(
+      false,
+    );
   });
 });

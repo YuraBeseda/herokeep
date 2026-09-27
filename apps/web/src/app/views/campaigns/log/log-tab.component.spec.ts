@@ -33,6 +33,7 @@ function configure(options: {
   state?: Partial<CampaignState>;
   userId?: string | null;
   appendTx?: ReturnType<typeof vi.fn>;
+  role?: 'dm' | 'player';
 }): { appendTx: ReturnType<typeof vi.fn> } {
   const appendTx = options.appendTx ?? vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
@@ -52,7 +53,7 @@ function configure(options: {
         provide: CampaignStore,
         useValue: {
           state: signal(options.state ?? mkState()),
-          role: signal('player'),
+          role: signal(options.role ?? 'player'),
           campaignId: signal('00000000-0000-4000-8000-000000000001'),
           appendTx,
         },
@@ -466,6 +467,107 @@ describe('LogTabComponent', () => {
       await fixture.whenStable();
 
       expect(showSpy).toHaveBeenCalledWith('campaigns.log.composer.errors.generic');
+    });
+  });
+
+  describe('DM session start/end controls (task-14-brief.md)', () => {
+    it('shows no session controls at all for a non-DM member', async () => {
+      configure({ role: 'player', state: mkState({ session: { active: false } }) });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.log-tab__session-start')).toBeNull();
+      expect(compiled.querySelector('.log-tab__session-end')).toBeNull();
+    });
+
+    it('shows a labeled Start form for the DM when no session is active, and appends session.started with the typed title', async () => {
+      const { appendTx } = configure({
+        role: 'dm',
+        state: mkState({ session: { active: false } }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      let compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.log-tab__session-end')).toBeNull();
+      const titleInput = compiled.querySelector<HTMLInputElement>('#log-tab-session-title')!;
+      const label = compiled.querySelector('label[for="log-tab-session-title"]');
+      expect(label?.textContent?.trim()).toBe(campaignsEn.log.session.titleLabel);
+
+      titleInput.value = 'Session 4: Into the mist';
+      titleInput.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      compiled = fixture.nativeElement as HTMLElement;
+      compiled.querySelector<HTMLButtonElement>('.log-tab__session-start-submit')!.click();
+      await fixture.whenStable();
+
+      expect(appendTx).toHaveBeenCalledWith([
+        { type: 'session.started', v: 1, payload: { title: 'Session 4: Into the mist' } },
+      ]);
+    });
+
+    it('starts a session with no title when the field is left blank', async () => {
+      const { appendTx } = configure({
+        role: 'dm',
+        state: mkState({ session: { active: false } }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      compiled.querySelector<HTMLButtonElement>('.log-tab__session-start-submit')!.click();
+      await fixture.whenStable();
+
+      expect(appendTx).toHaveBeenCalledWith([{ type: 'session.started', v: 1, payload: {} }]);
+    });
+
+    it('shows an End session button for the DM while a session is active, and appends session.ended on click', async () => {
+      const { appendTx } = configure({
+        role: 'dm',
+        state: mkState({ session: { active: true, title: 'Session 4' } }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.log-tab__session-start')).toBeNull();
+      const endButton = compiled.querySelector<HTMLButtonElement>('.log-tab__session-end')!;
+      expect(endButton.textContent?.trim()).toBe(campaignsEn.log.session.end);
+      endButton.click();
+      await fixture.whenStable();
+
+      expect(appendTx).toHaveBeenCalledWith([{ type: 'session.ended', v: 1, payload: {} }]);
+    });
+
+    it('toasts CampaignStoreNotLeaderError.code on a rejected session.started append', async () => {
+      const appendTx = vi.fn().mockRejectedValue(new CampaignStoreNotLeaderError());
+      configure({ role: 'dm', state: mkState({ session: { active: false } }), appendTx });
+      const showSpy = vi.fn();
+      TestBed.overrideProvider(ToastService, { useValue: { show: showSpy } });
+
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      compiled.querySelector<HTMLButtonElement>('.log-tab__session-start-submit')!.click();
+      await fixture.whenStable();
+
+      expect(showSpy).toHaveBeenCalledWith(new CampaignStoreNotLeaderError().code);
+    });
+
+    it('toasts the generic session error key on any other rejection', async () => {
+      const appendTx = vi.fn().mockRejectedValue(new Error('boom'));
+      configure({ role: 'dm', state: mkState({ session: { active: true } }), appendTx });
+      const showSpy = vi.fn();
+      TestBed.overrideProvider(ToastService, { useValue: { show: showSpy } });
+
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      compiled.querySelector<HTMLButtonElement>('.log-tab__session-end')!.click();
+      await fixture.whenStable();
+
+      expect(showSpy).toHaveBeenCalledWith('campaigns.log.session.errors.generic');
     });
   });
 });

@@ -32,6 +32,7 @@ import {
 } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
+import { CampaignEditLockBannerComponent } from '@shared/components/campaign-edit-lock-banner/campaign-edit-lock-banner.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
 import { DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
@@ -45,6 +46,7 @@ import {
   DerivedPopoverDirective,
   type DerivedValue,
 } from '@shared/directives/derived-popover.directive';
+import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';
 import { bareCharacterId } from '@shared/services/campaigns/campaign-link-sequence';
 import { projectCampaign } from '@shared/services/campaigns/campaign-projection';
 import { campaignIdOfCharacter } from '@shared/services/campaigns/character-campaign-link';
@@ -281,6 +283,7 @@ type ScopedT = (key: string, params?: Record<string, unknown>) => string;
     TranslocoDirective,
     FormsModule,
     ButtonComponent,
+    CampaignEditLockBannerComponent,
     CardComponent,
     ChipComponent,
     HpBarComponent,
@@ -314,6 +317,17 @@ export class PlayTabComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly eventsRepository = inject(EventsRepository);
   private readonly syncService = inject(SyncService);
+
+  // --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ----------------------------------
+  private readonly campaignEditLockService = inject(CampaignEditLockService);
+  /** Reactive, cross-stream lock verdict for THIS character's linked campaign (if any) — see
+   * `CampaignEditLockService.editLockFor`'s own doc for the full design (staleness bounds, DM/solo
+   * exemptions). `editLocked` is what every mutating control below gates on; `editLock().mode`
+   * feeds the banner (`<app-campaign-edit-lock-banner>` at the top of the template) directly. */
+  protected readonly editLock = this.campaignEditLockService.editLockFor(
+    this.characterStore.events,
+  );
+  protected readonly editLocked = computed(() => this.editLock().locked);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;

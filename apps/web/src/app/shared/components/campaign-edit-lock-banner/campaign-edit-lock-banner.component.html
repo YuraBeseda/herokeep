@@ -1,0 +1,5 @@
+@if (mode(); as m) {
+  <p class="campaign-edit-lock-banner" role="status" *transloco="let t; read: 'campaigns'">
+    {{ t('edit.' + m) }}
+  </p>
+}

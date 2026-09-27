@@ -1,5 +1,44 @@
 <section class="log-tab" *transloco="let t; read: 'campaigns'">
-  <h2 class="log-tab__title">{{ t('log.title') }}</h2>
+  <div class="log-tab__header">
+    <h2 class="log-tab__title">{{ t('log.title') }}</h2>
+
+    @if (isDm()) {
+      @if (sessionActive()) {
+        <button
+          hk-button
+          type="button"
+          [variant]="'danger'"
+          class="log-tab__session-end"
+          [disabled]="sessionBusy()"
+          (click)="onEndSession()"
+        >
+          {{ sessionBusy() ? t('log.session.ending') : t('log.session.end') }}
+        </button>
+      } @else {
+        <form class="log-tab__session-start" (ngSubmit)="onStartSession()">
+          <label class="log-tab__session-start-label" for="log-tab-session-title">{{
+            t('log.session.titleLabel')
+          }}</label>
+          <input
+            id="log-tab-session-title"
+            type="text"
+            class="log-tab__session-start-title"
+            name="sessionTitle"
+            [ngModel]="sessionTitleDraft()"
+            (ngModelChange)="onSessionTitleChange($event)"
+          />
+          <button
+            hk-button
+            type="submit"
+            class="log-tab__session-start-submit"
+            [disabled]="sessionBusy()"
+          >
+            {{ sessionBusy() ? t('log.session.starting') : t('log.session.start') }}
+          </button>
+        </form>
+      }
+    }
+  </div>
 
   <div
     class="log-tab__log"

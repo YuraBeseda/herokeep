@@ -3,9 +3,11 @@ import { validateSelection } from '@hk/engine';
 import { LongTextSchema, ShortTextSchema, type GrammaticalGender } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
+import { CampaignEditLockBannerComponent } from '@shared/components/campaign-edit-lock-banner/campaign-edit-lock-banner.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
+import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import {
   ImageInvalidTypeError,
@@ -88,6 +90,7 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
   imports: [
     TranslocoDirective,
     ButtonComponent,
+    CampaignEditLockBannerComponent,
     CardComponent,
     SheetSectionComponent,
     ChoiceStepComponent,
@@ -103,6 +106,16 @@ export class BuildTabComponent {
   private readonly imagePipelineService = inject(ImagePipelineService);
   private readonly placeholderService = inject(PlaceholderService);
   private readonly toastService = inject(ToastService);
+
+  // --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ----------------------------------
+  private readonly campaignEditLockService = inject(CampaignEditLockService);
+  /** See `PlayTabComponent`'s identical field for the full design doc (staleness bounds, DM/solo
+   * exemptions) — this tab's every mutating control (rename/appearance/portrait/gender/outstanding
+   * choice re-entry) gates on `editLocked`. */
+  protected readonly editLock = this.campaignEditLockService.editLockFor(
+    this.characterStore.events,
+  );
+  protected readonly editLocked = computed(() => this.editLock().locked);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly outstanding = this.characterStore.outstanding;

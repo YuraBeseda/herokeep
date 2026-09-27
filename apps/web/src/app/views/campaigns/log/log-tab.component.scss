@@ -2,9 +2,39 @@
   display: block;
 }
 
+.log-tab__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
 .log-tab__title {
-  margin: 0 0 var(--space-4);
+  margin: 0;
   font-family: var(--font-display);
+}
+
+.log-tab__session-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.log-tab__session-start-label {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.log-tab__session-start-title {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font: inherit;
 }
 
 .log-tab__log {
