@@ -1,5 +1,5 @@
 import { type Choice, type Entity, type EntityQuery, type Predicate, parseChoiceId } from '@hk/protocol';
-import { findChoice } from '../content/choices.ts';
+import { findChoice, splitOccurrence } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, error } from '../diagnostics.ts';
 import type { PredicateContext } from '../predicate/context.ts';
@@ -41,21 +41,35 @@ function checkPrerequisites(
 /** `Choice.unique` (default true): the selected value(s) may not repeat within this call, nor repeat a
  * value already recorded by another decision for the SAME (owner, slug) — e.g. a `repeatableAt` re-ask.
  * `unique: false` (e.g. a genuinely repeatable pick) skips this check entirely. */
-function checkUnique(choice: Choice, choiceId: string, facts: Facts, selection: string[]): Diagnostic[] {
+function checkUnique(
+  choice: Choice,
+  choiceId: string,
+  facts: Facts,
+  selection: string[],
+  index: ContentIndex,
+): Diagnostic[] {
   if (!choice.unique) return [];
   const issues: Diagnostic[] = [];
-  const parsed = parseChoiceId(choiceId);
+  // Occurrence-scoped ids (plan 11 final wave F1) compare by their AUTHORED base id's (owner, slug),
+  // so a repeatable feat's 2nd acquisition sees the 1st acquisition's picks as prior.
+  const parsed = parseChoiceId(splitOccurrence(choiceId).baseId);
   const prior = new Set<string>();
   if (parsed) {
     for (const [id, vals] of Object.entries(facts.decisions)) {
       if (id === choiceId) continue;
-      const p = parseChoiceId(id);
+      const p = parseChoiceId(splitOccurrence(id).baseId);
       if (p?.entityId === parsed.entityId && p.slug === parsed.slug) for (const v of vals) prior.add(v);
     }
   }
+  // A pack-flagged repeatable entity (`feat.repeatable`, data — e.g. the SRD's ASI) may be picked
+  // again by a LATER decision of the same (owner, slug); within one decision it still may not repeat.
+  const repeatable = (v: string): boolean => {
+    const e = index.get(v);
+    return e?.type === 'feat' && e.repeatable === true;
+  };
   const seen = new Set<string>();
   for (const v of selection) {
-    if (seen.has(v) || prior.has(v)) {
+    if (seen.has(v) || (prior.has(v) && !repeatable(v))) {
       issues.push(
         error('selection.duplicate', `"${v}" was already selected for this choice`, { path: choiceId, entityId: v }),
       );
@@ -424,7 +438,7 @@ export function validateSelection(
       const e = index.get(s);
       if (e) issues.push(...checkPrerequisites(e.prerequisites, ctx, choiceId, s));
     }
-    issues.push(...checkUnique(choice, choiceId, facts, selection));
+    issues.push(...checkUnique(choice, choiceId, facts, selection, index));
   } else if ('query' in choice.pick) {
     issues.push(...validateQuery(choice.pick.query, index, choice, choiceId, selection));
     issues.push(...validateSubclassLevel(choice, index, choiceId, selection));
@@ -432,7 +446,7 @@ export function validateSelection(
       const e = index.get(s);
       if (e) issues.push(...checkPrerequisites(e.prerequisites, ctx, choiceId, s));
     }
-    issues.push(...checkUnique(choice, choiceId, facts, selection));
+    issues.push(...checkUnique(choice, choiceId, facts, selection, index));
   } else if ('abilities' in choice.pick) {
     issues.push(...validateAbilitiesPick(choice.pick.abilities, owner, sheet, index, choiceId, selection));
   } else if ('abilityGeneration' in choice.pick) {
@@ -443,7 +457,7 @@ export function validateSelection(
         error('selection.count', `Expected ${choice.count} selection(s), got ${selection.length}`, { path: choiceId }),
       );
     }
-    issues.push(...checkUnique(choice, choiceId, facts, selection));
+    issues.push(...checkUnique(choice, choiceId, facts, selection, index));
   } else if ('equipmentOption' in choice.pick) {
     // Accept any (task-13-brief.md): the 1b UI is the only validator of which bundle was chosen.
     if (selection.length !== choice.count) {

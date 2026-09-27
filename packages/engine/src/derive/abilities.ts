@@ -83,13 +83,22 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   // generically any future one) -------------------------------------------------------------------
   const baseScores = new Map<string, number>(abilityIds.map((id) => [id, 10]));
   let baseSelection: string[] | undefined;
-  const bonusSources: { ownerId: string; selection: string[] }[] = [];
+  const bonusSources: { ownerId: string; selection: string[]; key?: string }[] = [];
   for (const choiceId of Object.keys(facts.decisions).sort()) {
     const found = findChoice(index, choiceId);
     if (!found) continue;
     if ('abilityGeneration' in found.choice.pick) baseSelection = facts.decisions[choiceId];
     else if ('abilities' in found.choice.pick) {
-      bonusSources.push({ ownerId: found.owner.id, selection: facts.decisions[choiceId] ?? [] });
+      // Plan 11 final wave F1: an occurrence-scoped decision (a repeatable feat's 2nd+ acquisition,
+      // `content/choices.ts`) shares its owner with occurrence #1, so under `sum-unique-key`'s
+      // default `source#feature` key the two would collapse to a max instead of summing. It gets
+      // its own stacking key; an authored (occurrence #1) id keeps the default key — unchanged.
+      const key = found.choice.id === choiceId ? undefined : `decision:${choiceId}`;
+      bonusSources.push({
+        ownerId: found.owner.id,
+        selection: facts.decisions[choiceId] ?? [],
+        ...(key !== undefined ? { key } : {}),
+      });
     }
   }
 
@@ -107,13 +116,14 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   };
 
   for (const sel of baseSelection ?? []) applyAbilityEntry(sel, (ability, value) => baseScores.set(ability, value));
-  for (const { ownerId, selection } of bonusSources) {
+  for (const { ownerId, selection, key } of bonusSources) {
     for (const sel of selection) {
       applyAbilityEntry(sel, (ability, value) =>
         table.add(`score.${ability}`, {
           source: ownerId,
           kind: 'ability.bonus',
           amount: value,
+          ...(key !== undefined ? { key } : {}),
           policy: 'sum-unique-key',
         }),
       );

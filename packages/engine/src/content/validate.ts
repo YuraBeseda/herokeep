@@ -112,7 +112,11 @@ export function validatePack(pack: Pack, available: Pack[]): Diagnostic[] {
     for (const key of Object.keys(strings)) {
       const fullId = `${targetPackId}:${key}`;
       const choice = parseChoiceId(fullId);
-      const unknown = choice ? !findChoice(index, fullId) : parseEntityId(fullId) === null || !index.has(fullId);
+      // `.choice.id === fullId`: an occurrence-scoped id (plan 11 F1) resolves via findChoice but is
+      // never a translation key of its own — the localizer reads the authored base id's strings.
+      const unknown = choice
+        ? findChoice(index, fullId)?.choice.id !== fullId
+        : parseEntityId(fullId) === null || !index.has(fullId);
       if (unknown)
         out.push(
           warning('i18n.unknownKey', `Translation key "${key}" does not match an entity in ${targetPackId}`, {

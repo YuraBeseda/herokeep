@@ -238,6 +238,56 @@ describe('LevelUpState', () => {
     expect(characterStore.sheet()?.hp.max.value).toBe(36);
   });
 
+  it('fighter 5→6: taking the ASI feat AGAIN surfaces a second (occurrence-scoped) ability step; both picks land on the sheet', async () => {
+    // Plan 11 final wave F1: before the fix the second ASI pick was rejected as a duplicate and its
+    // ability sub-choice never surfaced (same authored choice id as the level-4 one, already decided).
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const levelTo = async (xp: number, pick?: (s: LevelUpState) => void): Promise<void> => {
+      await awardXp(characterStore, xp);
+      const s = createState(FIGHTER);
+      pick?.(s);
+      s.chooseAverageHp();
+      expect(s.complete()).toBe(true);
+      await characterStore.appendTx(s.buildTransaction());
+    };
+    await levelTo(300);
+    await levelTo(600, (s) => s.setDecision(SUBCLASS_CHOICE, [CHAMPION]));
+    await levelTo(1800, (s) => {
+      s.setDecision(FEAT_CHOICE, [ASI_FEAT]);
+      s.setDecision(ASI_CHOICE, ['str:+2']);
+    });
+    await levelTo(3800); // → 6500 XP, level 5 (no fighter choices)
+    expect(characterStore.sheet()?.level).toBe(5);
+
+    await awardXp(characterStore, 7500); // → 14000 XP, level 6
+    const state = createState(FIGHTER);
+    const FEAT_CHOICE_6 = 'srd-5e-2024:class/fighter@6/feat';
+    expect(state.outstanding().map((r) => r.choiceId)).toEqual([FEAT_CHOICE_6]);
+
+    state.setDecision(FEAT_CHOICE_6, [ASI_FEAT]);
+    expect(state.invalidDecisions().size).toBe(0); // a repeatable feat is not a duplicate
+    const second = state.outstanding().map((r) => r.choiceId);
+    expect(second).toHaveLength(1);
+    expect(second[0]).not.toBe(ASI_CHOICE); // occurrence #1's id is already decided
+    expect(state.steps().some((s) => s.choiceId === second[0])).toBe(true);
+
+    expect(state.validate(second[0], ['str:+2']).map((d) => d.code)).toEqual([
+      'selection.abilityMax',
+    ]); // 19 + 2 > 20 — validated against the SAME base choice
+    state.setDecision(second[0], ['dex:+2']);
+    expect(state.outstanding()).toEqual([]);
+    state.chooseAverageHp();
+    expect(state.complete()).toBe(true);
+
+    await characterStore.appendTx(state.buildTransaction());
+    const sheet = characterStore.sheet()!;
+    expect(sheet.level).toBe(6);
+    expect(sheet.abilities['str']?.score.value).toBe(19); // 15 + 2 (Soldier) + 2 (ASI #1)
+    expect(sheet.abilities['dex']?.score.value).toBe(15); // 13 + 2 (ASI #2)
+    expect(sheet.outstandingChoices.filter((c) => c.ownerId === ASI_FEAT)).toEqual([]);
+  });
+
   it('wizard 1→2 offers a spells step; a learned spell queues spell.learned, sharing one txId with level.gained', async () => {
     await seedWizard('Elowen');
     const characterStore = TestBed.inject(CharacterStore);

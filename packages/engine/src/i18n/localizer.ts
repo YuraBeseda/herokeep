@@ -81,7 +81,8 @@ export function createLocalizer(index: ContentIndex, locale: string): Localizer 
     const parsed = parseEntityId(owner.id);
     if (!parsed) return { text: '', locale: 'en', isFallback: true };
     if (base !== 'en') {
-      const hit = lookup(parsed.packId, stripPack(choiceId), 'prompt');
+      // `choice.id`, not `choiceId`: an occurrence-scoped id (plan 11 F1) shares its base's strings.
+      const hit = lookup(parsed.packId, stripPack(choice.id), 'prompt');
       if (hit) return hit;
     }
     return source(choice.prompt);

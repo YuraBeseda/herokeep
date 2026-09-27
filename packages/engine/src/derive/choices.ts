@@ -1,4 +1,5 @@
 import type { Choice, ChoiceAt, Entity } from '@hk/protocol';
+import { occurrenceChoiceId } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import type { Facts } from '../reduce/facts.ts';
@@ -131,16 +132,24 @@ export function selectedEntityChoices(
 ): { requests: ChoiceRequest[]; issues: Diagnostic[] } {
   const requests: ChoiceRequest[] = [];
   const seen = new Set<string>();
+  // Plan 11 final wave F1: acquisitions counted per entity — the n-th selection of the same
+  // feat/feature asks its nested choices under `occurrenceChoiceId(c.id, n)` (n = 1 is the
+  // authored id, unchanged). Only the COUNT matters (occurrences are interchangeable slots), so
+  // the result is independent of decision insertion order.
+  const acquisitions = new Map<string, number>();
 
   for (const selection of Object.values(facts.decisions)) {
     for (const selectedId of selection) {
       const chosen = index.get(selectedId);
       if (!chosen || (chosen.type !== 'feat' && chosen.type !== 'feature')) continue;
+      const occurrence = (acquisitions.get(chosen.id) ?? 0) + 1;
+      acquisitions.set(chosen.id, occurrence);
       for (const c of chosen.choices) {
-        if (alreadyAsked.has(c.id) || seen.has(c.id) || facts.decisions[c.id] !== undefined) continue;
+        const id = occurrenceChoiceId(c.id, occurrence);
+        if (alreadyAsked.has(id) || seen.has(id) || facts.decisions[id] !== undefined) continue;
         if (!atIsSurfaced(c.at, facts, index)) continue;
-        seen.add(c.id);
-        requests.push({ choiceId: c.id, ownerId: chosen.id, count: c.count });
+        seen.add(id);
+        requests.push({ choiceId: id, ownerId: chosen.id, count: c.count });
       }
     }
   }
