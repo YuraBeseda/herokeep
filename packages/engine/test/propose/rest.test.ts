@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest';
+import type { Sheet } from '../../src/derive/sheet.ts';
 import type { SystemRules } from '../../src/reduce/facts.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
 import { propose } from '../../src/propose/index.ts';
 import { baseSheet, created, ev, wrapAll } from './support.ts';
 
 const fighter = 'core-mini:class/fighter';
+const warlock = 'core-mini:class/warlock';
+
+/** A solo Warlock's spellcasting block (task 3's pact shape — see `casting.test.ts`'s own copy). */
+const pactSheet = (overrides: Partial<{ level: number; count: number; used: number }> = {}): Sheet =>
+  baseSheet({
+    spellcasting: [
+      {
+        classId: warlock,
+        ability: 'cha',
+        dc: { value: 14, contributions: [] },
+        attack: { value: 6, contributions: [] },
+        slots: [],
+        pact: { level: 3, count: 2, used: 1, ...overrides },
+        preparation: 'prepared',
+        prepared: [],
+        known: [],
+        ritual: false,
+      },
+    ],
+  });
 
 const resourceSheet = () =>
   baseSheet({
@@ -103,5 +124,59 @@ describe('propose.rest', () => {
     const final = reduce([...setup, ...wrapAll(4, proposed)], undefined, rules);
 
     expect(final.resourcesUsed).toEqual({ 'second-wind': 0, 'channel-divinity': 1 });
+  });
+
+  // Task 11 (phase 4 plan 11) — the sanctioned pact-awareness addition to `propose/rest.ts`, vendored
+  // `ClassFeature.json` pk `srd-2024_warlock_pact-magic`: "You regain all expended Pact Magic spell
+  // slots when you finish a Short or Long Rest." Unlike every other resource in this file (gated by
+  // `reset:'shortRest'`/`'longRest'`), Pact Magic restores on EITHER rest kind — so this is emitted
+  // unconditionally, not folded into the `sheet.resources` loop above.
+  describe('pact slot restoration', () => {
+    it('short rest emits slot.restored{pact:true, count: pact.count} — the full-restore form, mirroring resource.restored', () => {
+      expect(propose.rest(pactSheet(), 'short')).toEqual([
+        { type: 'rest.taken', v: 1, payload: { kind: 'short' } },
+        { type: 'slot.restored', v: 1, payload: { level: 3, pact: true, count: 2 } },
+      ]);
+    });
+
+    it('long rest ALSO emits slot.restored{pact:true, count} — the same full-restore form as short rest', () => {
+      expect(propose.rest(pactSheet(), 'long')).toEqual([
+        { type: 'rest.taken', v: 1, payload: { kind: 'long' } },
+        { type: 'slot.restored', v: 1, payload: { level: 3, pact: true, count: 2 } },
+      ]);
+    });
+
+    it('a sheet with no pact lane (no Warlock) emits no slot.restored at all — unchanged from before this task', () => {
+      expect(propose.rest(baseSheet(), 'short')).toEqual([{ type: 'rest.taken', v: 1, payload: { kind: 'short' } }]);
+    });
+
+    it('short-rest round-trip through the real reducer: facts.pactSlots.used fully resets to 0', () => {
+      const setup = [created, ev(2, 'slot.spent', { level: 3, pact: true, count: 2 })];
+      const rules = mkRules();
+      const proposed = propose.rest(pactSheet(), 'short');
+      const final = reduce([...setup, ...wrapAll(3, proposed)], undefined, rules);
+      expect(final.pactSlots).toEqual({ used: 0 });
+    });
+
+    it('long-rest round-trip: facts.pactSlots.used resets to 0 ALONGSIDE the regular slotsUsed reset (restoreAllSlots)', () => {
+      const setup = [
+        created,
+        ev(2, 'slot.spent', { level: 1 }),
+        ev(3, 'slot.spent', { level: 3, pact: true, count: 2 }),
+      ];
+      const rules = mkRules();
+      const proposed = propose.rest(pactSheet(), 'long');
+      const final = reduce([...setup, ...wrapAll(4, proposed)], undefined, rules);
+      expect(final.pactSlots).toEqual({ used: 0 });
+      expect(final.slotsUsed).toEqual({});
+    });
+
+    it('regular slots stay long-rest-only, UNCHANGED by this task: a short rest never clears facts.slotsUsed', () => {
+      const setup = [created, ev(2, 'slot.spent', { level: 1 })];
+      const rules = mkRules();
+      const proposed = propose.rest(pactSheet(), 'short');
+      const final = reduce([...setup, ...wrapAll(3, proposed)], undefined, rules);
+      expect(final.slotsUsed).toEqual({ 1: 1 });
+    });
   });
 });
