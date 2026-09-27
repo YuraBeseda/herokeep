@@ -30,6 +30,27 @@ export interface ContentIndex {
 
 const byIdAsc = (a: Entity, b: Entity) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
+/**
+ * `EntityQuerySchema.hasField`'s evaluator (ruling 4, phase 4 plan 11 task 6): walks a dot-path
+ * against a raw candidate entity object, segment by segment, testing OWN-property presence at each
+ * level. GENERIC — works for any entity shape and any dot-path, not mastery-specific (the fighter
+ * Weapon Mastery choice, `{type: 'item', hasField: ['weapon.mastery']}`, is just the first caller).
+ *
+ * BINDING (T1-review carry, task-1-report.md): must use `Object.hasOwn`, never `in` or a bare
+ * `candidate.foo !== undefined` check — a prototype-chain name like `'constructor'`/`'toString'`
+ * must NOT match, even though `(candidate as any).constructor !== undefined` would otherwise be true
+ * for every plain object. A missing or non-object intermediate segment is a non-match, not an error
+ * (`EntityQuerySchema.hasField`'s own doc comment in `@hk/protocol`).
+ */
+function hasFieldPath(candidate: unknown, path: string): boolean {
+  let current: unknown = candidate;
+  for (const segment of path.split('.')) {
+    if (current === null || typeof current !== 'object' || !Object.hasOwn(current, segment)) return false;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current !== undefined;
+}
+
 export function createContentIndex(input: Pack[], opts: ContentIndexOptions = {}): ContentIndex {
   const diagnostics: Diagnostic[] = [];
   const { selected, diagnostics: selDiag } = selectPackVersions(input, opts.pins);
@@ -107,6 +128,7 @@ export function createContentIndex(input: Pack[], opts: ContentIndexOptions = {}
       const wantClasses = q.classes?.map((c) => resolveClassRef(c) ?? c);
       return (byType.get(q.type) ?? []).filter((e) => {
         if (q.tags && !q.tags.every((t) => e.tags.includes(t))) return false;
+        if (q.hasField && !q.hasField.every((p) => hasFieldPath(e, p))) return false;
         if (q.level !== undefined && !(e.type === 'spell' && e.level === q.level)) return false;
         if (q.school !== undefined && !(e.type === 'spell' && e.school === q.school)) return false;
         if (wantClasses) {

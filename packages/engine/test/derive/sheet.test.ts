@@ -196,6 +196,7 @@ describe('derive: Sheet assembly', () => {
         'initiative',
         'attacks',
         'attacksPerAction',
+        'masteryCount',
         'spellcasting',
         'resources',
         'actions',
@@ -219,6 +220,7 @@ describe('derive: Sheet assembly', () => {
     expect(sheet.ac.value).toBe(21); // 16 (chain mail) + 2 (dex, uncapped) + 2 (shield) + 1 (defense, armor worn)
     expect(sheet.attacks).toHaveLength(1);
     expect(sheet.attacks[0]).toMatchObject({ itemId: 'core-mini:item/longsword', mastery: 'sap' });
+    expect(sheet.masteryCount).toBe(2); // core-mini fighter's mastery.grant.count formula ("2"), level 2 has no row-extra
     expect(sheet.inventory.find((i) => i.instanceId === 'i4')?.resolved).toBe(false);
   });
 });

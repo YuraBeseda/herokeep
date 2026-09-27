@@ -25,9 +25,16 @@ const load = (name: string): unknown =>
  * no carrying-capacity numeric text at all to cite) and one new item entity (`whetstone`,
  * deliberately with no `weight` field, to test the "absent weight = 0" load-sourcing case) — again
  * legitimate content growth, not drift.
+ *
+ * `core-mini` re-pinned again in task 6 (structural weapon mastery): one new item entity (`dagger`,
+ * a weapon with no `mastery` property — proves `EntityQuerySchema.hasField`'s evaluator checks the
+ * SECOND path segment independently, not merely whether `weapon` exists) and the fighter class's
+ * level-3 row gained `extra: {"fighter-weapon-mastery-count": 5}` (proves the row-extra-wins-over-
+ * formula precedence for `mastery.grant.count`, mirroring `cantripsKnown`'s existing row-extra test
+ * data) — again legitimate content growth for this task's own tests, not drift.
  */
 const PHASE_4_BASELINE_HASHES: Record<string, string> = {
-  'core-mini': 'dd6dbba2ca4a457e52d9a8d93ad4b013f96cbf95695d473085740fe13dae9b92',
+  'core-mini': 'e4a669b78f0b7f9327718825d7e67de4809f34bb080caf103e51379a0080ae8d',
   'content-mini': '574a873c2062d0c850a5b20978b0a84b6da7c5bfa2a1bfd9ef1d74ce7d0aa9d9',
   'translation-mini': 'e3326b8e102787ae64a7e0bc814e1a7080b1df0c94911a1970d2e207db03d04e',
   'asi-mini': '5c4640f77bc3b5e211e372bef4ed7be8027b45f41241f5f5cab5fda75aa637a0',

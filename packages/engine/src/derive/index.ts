@@ -318,6 +318,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     initiative,
     attacks: attacks.attacks,
     attacksPerAction: attacks.attacksPerAction,
+    ...(attacks.masteryCount !== undefined ? { masteryCount: attacks.masteryCount } : {}),
     spellcasting: spellcasting.blocks,
     ...(spellcasting.concentration ? { concentration: spellcasting.concentration } : {}),
     resources: resources.resources,

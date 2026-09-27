@@ -139,6 +139,67 @@ describe('deriveAttacks', () => {
     expect(result.attacks[0]!.mastery).toBeUndefined();
   });
 
+  it('backward tolerance (phase 4 plan 11 task 6): a legacy literal-text mastery decision neither crashes nor grants a mastery it cannot resolve', () => {
+    const facts = withAbilities({ str: 16 });
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];
+    facts.inventory = [
+      { instanceId: 'i1', itemId: 'core-mini:item/longsword', qty: 1, equipped: true, attuned: false },
+    ];
+    // the plan-5 typo-trap format: a plain mastery-property/weapon-name string, not an entity id —
+    // exactly what an old literal:'text' UI would have recorded. Events are immutable, so a real
+    // character could carry this forever.
+    facts.decisions['core-mini:class/fighter@1/weapon-masteries'] = ['Sap'];
+
+    expect(() => deriveAll(facts)).not.toThrow();
+    const { result } = deriveAll(facts);
+    expect(result.issues).toEqual([]);
+    expect(result.attacks[0]!.mastery).toBeUndefined(); // the literal never matches a real entity id
+  });
+
+  it('resolves an entity-id selection correctly even when a legacy literal string sits alongside it in the same decision', () => {
+    const facts = withAbilities({ str: 16 });
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];
+    facts.inventory = [
+      { instanceId: 'i1', itemId: 'core-mini:item/longsword', qty: 1, equipped: true, attuned: false },
+      { instanceId: 'i2', itemId: 'core-mini:item/rapier', qty: 1, equipped: true, attuned: false },
+    ];
+    facts.decisions['core-mini:class/fighter@1/weapon-masteries'] = ['core-mini:item/longsword', 'Vex'];
+    const { result } = deriveAll(facts);
+
+    const longsword = result.attacks.find((a) => a.itemId === 'core-mini:item/longsword')!;
+    const rapier = result.attacks.find((a) => a.itemId === 'core-mini:item/rapier')!;
+    expect(longsword.mastery).toBe('sap'); // resolved via its real entity id
+    expect(rapier.mastery).toBeUndefined(); // 'Vex' is a legacy literal, not core-mini:item/rapier's id
+  });
+
+  describe('masteryCount (phase 4 plan 11 task 6)', () => {
+    it('is undefined without an active mastery.grant effect', () => {
+      const facts = withAbilities({});
+      // no classes -> no mastery.grant effect at all
+      const { result } = deriveAll(facts);
+
+      expect(result.masteryCount).toBeUndefined();
+    });
+
+    it('falls back to evaluating mastery.grant.count as a formula when no row-extra is authored', () => {
+      const facts = withAbilities({});
+      facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }]; // no extra at level 1
+      const { result } = deriveAll(facts);
+
+      expect(result.masteryCount).toBe(2); // core-mini fighter's mastery.grant.count formula is "2"
+    });
+
+    it("prefers a class level-row's typed extra column over the mastery.grant formula (T3's bestRowExtra pattern)", () => {
+      const facts = withAbilities({});
+      // core-mini fighter's level-3 row carries extra['fighter-weapon-mastery-count'] = 5, which
+      // must win over the flat mastery.grant.count formula ("2").
+      facts.classes = [{ classId: 'core-mini:class/fighter', level: 3 }];
+      const { result } = deriveAll(facts);
+
+      expect(result.masteryCount).toBe(5);
+    });
+  });
+
   it('produces no attack row for an equipped custom item with no itemId', () => {
     const facts = withAbilities({});
     facts.inventory = [{ instanceId: 'i1', qty: 1, equipped: true, attuned: false, name: 'Homemade club' }];

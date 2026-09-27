@@ -6,6 +6,7 @@ import type { Facts } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
 import type { ActiveEffect, Composition } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
+import { bestRowExtra } from './spellcasting.ts';
 
 export interface AttackRow {
   instanceId: string;
@@ -107,27 +108,72 @@ function findMasteryChoiceId(comp: Composition, index: ContentIndex): string | u
 }
 
 /**
+ * Row-extra key convention (phase 4 plan 11 task 6, mirroring `spellcasting.ts`'s
+ * `cantripsKnownKey`/`preparedSpellsKey` exactly): the per-level weapon-mastery COUNT a class's own
+ * `ClassLevelRow.extra` may supply (SRD fighter: 3 at levels 1-3, 4 at levels 4+), preferred over
+ * `mastery.grant`'s flat `count` formula when present — see `resolveMasteryCount` below.
+ */
+const masteryCountKey = (classSlug: string): string => `${classSlug}-weapon-mastery-count`;
+
+/**
+ * `mastery.grant.count`'s resolved numeric value for ONE active effect: `bestRowExtra` (T3's
+ * row-extra-wins-over-formula pattern) on the granting entity's own row-extra table wins when the
+ * granting entity is a `class` and actually supplies one at-or-below the character's level in it;
+ * every other case (a non-class source — e.g. a subclass or feat, out of this task's authored
+ * scope — or no row-extra yet at the current level) falls back to evaluating `count` as a formula
+ * directly, which is byte-identical to today's fixed `"3"`/`"2"` behavior for every pack that never
+ * authors the row extra (T8's job, not this task's).
+ */
+function resolveMasteryCount(
+  count: string,
+  source: string,
+  comp: Composition,
+  index: ContentIndex,
+  evalFormula: (f: string) => number,
+): number {
+  const entity = index.get(source);
+  if (entity?.type === 'class') {
+    const slug = parseEntityId(source)?.slug;
+    if (slug !== undefined) {
+      const classLevel = comp.classLevels[source] ?? 0;
+      const rowExtra = bestRowExtra(entity, classLevel, masteryCountKey(slug), evalFormula);
+      if (rowExtra !== undefined) return rowExtra;
+    }
+  }
+  return evalFormula(count);
+}
+
+/**
  * Derives one `AttackRow` per equipped weapon (inventory entries with no `itemId` — custom items —
  * contribute no row, even if `custom` happens to carry weapon-shaped data: out of this task's
- * scope, per task-11-brief.md) plus the character's `attacksPerAction`. `toHit` = ability mod +
- * proficiency bonus (when proficient) + matching `attack.bonus` effects; `damage.bonus` = ability
- * mod + matching `damage.bonus` effects. `attacksPerAction` is the max over every `extraAttack.set`
- * effect's `count`, default 1 (never itself gated per-weapon).
+ * scope, per task-11-brief.md) plus the character's `attacksPerAction` and `masteryCount` (phase 4
+ * plan 11 task 6 — see `resolveMasteryCount`, undefined when no `mastery.grant` effect is active).
+ * `toHit` = ability mod + proficiency bonus (when proficient) + matching `attack.bonus` effects;
+ * `damage.bonus` = ability mod + matching `damage.bonus` effects. `attacksPerAction` is the max over
+ * every `extraAttack.set` effect's `count`, default 1 (never itself gated per-weapon).
  */
 export function deriveAttacks(
   abilities: AbilitiesResult,
   comp: Composition,
   facts: Facts,
   index: ContentIndex,
-): { attacks: AttackRow[]; attacksPerAction: number; issues: Diagnostic[] } {
+): { attacks: AttackRow[]; attacksPerAction: number; masteryCount?: number; issues: Diagnostic[] } {
   const issues: Diagnostic[] = [];
   const table = new ModifierTable();
   const mod = (ability: string) => abilities.abilities[ability]?.mod ?? 0;
 
   const profSlugs = weaponProficiencySlugs(facts, index, abilities.effects);
   const masteryChoiceId = findMasteryChoiceId(comp, index);
+  // Selections are always compared as opaque strings against real entity ids (never re-derived from
+  // the choice's `pick` shape) — this is why consumption here needs zero change whether the choice
+  // is today's `literal: 'text'` placeholder or T8's future `query` pick, AND why an old character's
+  // plan-5 literal-text decision (e.g. a recorded mastery-property name like "sap") is automatically
+  // inert rather than crashing (backward tolerance, phase 4 plan 11 task 6): a legacy literal never
+  // equals a real `item:` entity id, so `.has(entity.id)` below simply never matches it — the row's
+  // `mastery` stays `undefined`, exactly as if nothing had been selected yet. Events are immutable,
+  // so this fallback-by-construction (not a special-cased branch) is what makes an old decision safe
+  // to replay forever without a reducer/schema migration.
   const masterySelections = new Set(masteryChoiceId ? (facts.decisions[masteryChoiceId] ?? []) : []);
-  const hasMasteryGrant = abilities.effects.some((ae) => ae.effect.type === 'mastery.grant');
 
   let attacksPerAction = 1;
   for (const ae of abilities.effects) {
@@ -148,6 +194,18 @@ export function deriveAttacks(
     resource: () => 0,
   };
   const evalFormula = (f: string) => evalFormulaString(f, formulaCtx);
+
+  // Count from the typed extra column (phase 4 plan 11 task 6): sums every active `mastery.grant`
+  // effect's resolved count (multiple only for a future multiclass mastery-granting combo — out of
+  // this task's authored scope, but not unsafe to sum). `undefined` (not `0`) when no such effect is
+  // active at all, so `hasMasteryGrant` below and `Sheet.masteryCount`'s presence gate stay identical.
+  let masteryCount: number | undefined;
+  for (const ae of abilities.effects) {
+    if (ae.effect.type !== 'mastery.grant') continue;
+    const contribution = resolveMasteryCount(ae.effect.count, ae.source, comp, index, evalFormula);
+    masteryCount = (masteryCount ?? 0) + contribution;
+  }
+  const hasMasteryGrant = masteryCount !== undefined;
 
   const attacks: AttackRow[] = [];
   for (const inv of facts.inventory) {
@@ -202,5 +260,5 @@ export function deriveAttacks(
 
   attacks.sort((a, b) => (a.instanceId < b.instanceId ? -1 : a.instanceId > b.instanceId ? 1 : 0));
 
-  return { attacks, attacksPerAction, issues };
+  return { attacks, attacksPerAction, ...(masteryCount !== undefined ? { masteryCount } : {}), issues };
 }

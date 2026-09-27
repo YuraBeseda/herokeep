@@ -39,6 +39,14 @@ export interface Sheet {
   initiative: Derived<number>;
   attacks: AttackRow[];
   attacksPerAction: number;
+  /**
+   * Phase 4 plan 11 task 6: the resolved `mastery.grant` count (row-extra-wins-over-formula, see
+   * `derive/attacks.ts`'s `resolveMasteryCount`) — how many weapon-mastery properties the character
+   * currently knows. Present ONLY while at least one `mastery.grant` effect is active (mirrors
+   * `carry`/`concentration`'s "absent, not merely `undefined`, when irrelevant" convention), so every
+   * pre-task-6 golden/fixture without an active mastery-granting class stays byte-identical.
+   */
+  masteryCount?: number;
   spellcasting: SpellcastingBlock[];
   /**
    * task-3-brief.md (play UI, phase-1b plan 6): `deriveSpellcasting` (`derive/spellcasting.ts`)

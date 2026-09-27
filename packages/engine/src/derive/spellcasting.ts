@@ -74,9 +74,12 @@ const cantripsKnownKey = (classSlug: string): string => `${classSlug}-cantrips-k
  * The highest `ClassLevelRow.extra[key]` at or below `classLevel`, resolved through `evalFormula`
  * when it's a formula string — shared by `preparedMax` and `cantripsKnown`, both of which need the
  * identical "row-extra wins over a formula fallback" precedence (task-1-report.md's finding #5;
- * task-3-brief.md's "CLOSE IT" instruction for `cantripsKnown`).
+ * task-3-brief.md's "CLOSE IT" instruction for `cantripsKnown`). Exported (phase 4 plan 11 task 6):
+ * `derive/attacks.ts`'s `mastery.grant.count` wiring reuses this exact pattern rather than forking
+ * it — `<classSlug>-weapon-mastery-count` wins over the effect's flat formula the same way
+ * `<classSlug>-cantrips-known` already wins over `cantripsKnown`'s.
  */
-function bestRowExtra(
+export function bestRowExtra(
   classEntity: ClassEntity,
   classLevel: number,
   key: string,

@@ -53,6 +53,39 @@ describe('createContentIndex', () => {
     expect(idx.resolveClassRef('wizard')).toBeUndefined();
   });
 
+  it('answers hasField queries (ruling 4, phase 4 plan 11 task 6): own-property dot-path presence', () => {
+    const idx = createContentIndex([core, content]);
+
+    // longsword/rapier/shortbow all declare weapon.mastery; the dagger (added this task) and every
+    // non-weapon item (armor/shield/gear) do not — proving both "present nested value" (match) and
+    // "missing intermediate object" (chain-mail etc. have no `weapon` key at all — a non-match, not
+    // an error) in one real-fixture query, per EntityQuerySchema.hasField's own doc comment.
+    expect(
+      idx
+        .query({ type: 'item', hasField: ['weapon.mastery'] })
+        .map((e) => e.id)
+        .sort(),
+    ).toEqual(['core-mini:item/longsword', 'core-mini:item/rapier', 'core-mini:item/shortbow']);
+
+    // the dagger HAS a `weapon` object but no `mastery` key on it — proves the second segment is
+    // checked independently of the first (not just "does `weapon` exist").
+    expect(idx.query({ type: 'item', hasField: ['weapon'] }).map((e) => e.id)).toContain('core-mini:item/dagger');
+    expect(idx.query({ type: 'item', hasField: ['weapon.mastery'] }).map((e) => e.id)).not.toContain(
+      'core-mini:item/dagger',
+    );
+
+    // a path nothing declares -> empty, not an error.
+    expect(idx.query({ type: 'item', hasField: ['weapon.doesNotExist'] })).toEqual([]);
+
+    // AND semantics with `tags` (same as hasField's own multi-entry AND, task-1-report.md).
+    expect(idx.query({ type: 'item', tags: ['finesse-never-a-real-tag'], hasField: ['weapon.mastery'] })).toEqual([]);
+
+    // BINDING T1-review carry: 'constructor' is reachable via the prototype chain on every plain
+    // object (`({}).constructor !== undefined`) but is never an OWN property of parsed JSON content
+    // — Object.hasOwn must reject it, not `in`/bare `!== undefined`.
+    expect(idx.query({ type: 'item', hasField: ['constructor'] })).toEqual([]);
+  });
+
   it('reports duplicate ids across packs and bad override targets', () => {
     // same id twice inside one pack is a schema error; across packs it is an index error:
     const clash = { ...content, id: 'core-mini', version: '1.0.1', dependencies: [] } as Pack;
