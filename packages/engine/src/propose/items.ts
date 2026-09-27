@@ -20,14 +20,31 @@ export function equip(_sheet: Sheet, instanceId: string, equipped: boolean): Pro
 }
 
 /**
- * Refuses attuning (not un-attuning) past `sheet.attunementMax` with `'attune.max'` — the
- * controller ruling's resolution for the reducer's deliberate permissiveness here (doc-02: the
- * cap is a UI/proposer concern, not a reducer invariant). Re-attuning an already-attuned instance
- * is always a no-op allowed through (it doesn't raise the attuned count).
+ * Refuses attuning (not un-attuning) with two independent checks, in order:
+ *
+ * 1. `'attune.by'` (phase 4, plan 11 task 4 — survey fact "item.attunement.by NOT enforced
+ *    anywhere"): when the item declares an `attunement.by` predicate, `Sheet.inventory[].
+ *    attunementAllowed` is that predicate PRE-RESOLVED at derive time (derive/index.ts's
+ *    `attunementPredicateContext` — this function never touches a `ContentIndex`, per this file's
+ *    own header comment). `attunementAllowed === false` refuses; `true` or absent (no
+ *    `attunement.by` on the item at all) both proceed. Checked BEFORE the cap so a player always
+ *    learns the REAL reason an attune is impossible for an item they could never wear anyway, not a
+ *    misleading "you're out of slots".
+ * 2. `'attune.max'` past `sheet.attunementMax` — the controller ruling's resolution for the
+ *    reducer's deliberate permissiveness here (doc-02: the cap is a UI/proposer concern, not a
+ *    reducer invariant).
+ *
+ * Re-attuning an already-attuned instance is always a no-op allowed through the cap (it doesn't
+ * raise the attuned count) — but NOT through the `attune.by` check, which is a property of the item
+ * itself, independent of the character's current attuned count.
  */
 export function attune(sheet: Sheet, instanceId: string, attuned: boolean): ProposedEvent[] {
   if (!attuned) return [mk('item.unattuned', { instanceId } satisfies ItemUnattuned)];
-  const already = sheet.inventory.find((i) => i.instanceId === instanceId)?.attuned ?? false;
+  const entry = sheet.inventory.find((i) => i.instanceId === instanceId);
+  if (entry?.attunementAllowed === false) {
+    throw new ProposeError([error('attune.by', "This item's attunement requirement is not met")]);
+  }
+  const already = entry?.attuned ?? false;
   const attunedCount = sheet.inventory.filter((i) => i.attuned).length;
   if (!already && attunedCount >= sheet.attunementMax) {
     throw new ProposeError([error('attune.max', `Cannot attune more than ${sheet.attunementMax} items`)]);

@@ -3,7 +3,9 @@ import type { InventoryEntry } from '../../src/reduce/facts.ts';
 import { propose } from '../../src/propose/index.ts';
 import { baseSheet, captureProposeError } from './support.ts';
 
-const entry = (over: Partial<InventoryEntry & { resolved: boolean }>): InventoryEntry & { resolved: boolean } => ({
+type SheetInventoryEntry = InventoryEntry & { resolved: boolean; attunementAllowed?: boolean };
+
+const entry = (over: Partial<SheetInventoryEntry>): SheetInventoryEntry => ({
   instanceId: 'i0',
   qty: 1,
   equipped: false,
@@ -70,6 +72,56 @@ describe('propose.attune', () => {
     expect(propose.attune(sheet, 'i3', false)).toEqual([
       { type: 'item.unattuned', v: 1, payload: { instanceId: 'i3' } },
     ]);
+  });
+
+  // `item.attunement.by` enforcement (survey fact, phase 4 plan 11 task 4): `attunementAllowed` is
+  // pre-resolved onto the inventory entry at derive time (derive/index.ts's
+  // `attunementPredicateContext`) — propose only ever reads the boolean off `Sheet`, never a
+  // `ContentIndex` (propose/index.ts's own header comment).
+  it('refuses with "attune.by" when the entry\'s attunementAllowed is false', () => {
+    const sheet = baseSheet({
+      attunementMax: 3,
+      inventory: [entry({ instanceId: 'i1', attuned: false, attunementAllowed: false })],
+    });
+    const err = captureProposeError(() => propose.attune(sheet, 'i1', true));
+    expect(err.diagnostics[0]?.code).toBe('attune.by');
+  });
+
+  it('allows attuning when attunementAllowed is true', () => {
+    const sheet = baseSheet({
+      attunementMax: 3,
+      inventory: [entry({ instanceId: 'i1', attuned: false, attunementAllowed: true })],
+    });
+    expect(propose.attune(sheet, 'i1', true)).toEqual([{ type: 'item.attuned', v: 1, payload: { instanceId: 'i1' } }]);
+  });
+
+  it('allows attuning when attunementAllowed is absent (no attunement.by on the item at all)', () => {
+    const sheet = baseSheet({ attunementMax: 3, inventory: [entry({ instanceId: 'i1', attuned: false })] });
+    expect(propose.attune(sheet, 'i1', true)).toEqual([{ type: 'item.attuned', v: 1, payload: { instanceId: 'i1' } }]);
+  });
+
+  it('un-attuning (attuned:false) is always allowed even when attunementAllowed is false', () => {
+    const sheet = baseSheet({
+      attunementMax: 3,
+      inventory: [entry({ instanceId: 'i1', attuned: true, attunementAllowed: false })],
+    });
+    expect(propose.attune(sheet, 'i1', false)).toEqual([
+      { type: 'item.unattuned', v: 1, payload: { instanceId: 'i1' } },
+    ]);
+  });
+
+  it('the attunement.by refusal takes priority over the attune.max cap check', () => {
+    const sheet = baseSheet({
+      attunementMax: 3,
+      inventory: [
+        entry({ instanceId: 'i1', attuned: true }),
+        entry({ instanceId: 'i2', attuned: true }),
+        entry({ instanceId: 'i3', attuned: true }),
+        entry({ instanceId: 'i4', attuned: false, attunementAllowed: false }),
+      ],
+    });
+    const err = captureProposeError(() => propose.attune(sheet, 'i4', true));
+    expect(err.diagnostics[0]?.code).toBe('attune.by'); // not 'attune.max', even though both conditions hold
   });
 });
 

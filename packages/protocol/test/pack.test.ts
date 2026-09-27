@@ -11,9 +11,16 @@ const load = (name: string): unknown =>
  * pre-existing fixture packs parsing byte-identically. Hashes captured from `parsePack()`'s output
  * BEFORE any phase-4 schema edits (worktree phase-4-plan11-engine-vocabulary, base 676d884); this
  * test must still pass after all of task 1's additions land.
+ *
+ * `core-mini` re-pinned in task 4 (charges/attunement): the pack's own CONTENT intentionally grew
+ * (three new item entities — `wand-of-sparks` with `charges`, `ring-of-the-fighter` and
+ * `orb-of-the-mind` with `attunement.by` — added for this task's fixtures), which is a legitimate
+ * hash change, not the schema-widening drift this net exists to catch (re-run `pnpm vitest run
+ * --project protocol test/pack.test.ts -t byte-identically` after intentionally editing a pinned
+ * fixture to get the new value).
  */
 const PHASE_4_BASELINE_HASHES: Record<string, string> = {
-  'core-mini': '4d017a45ccd29e6ea467d8108575baee683e9ef5a8cf81bbb67ec0f7a9ec36f8',
+  'core-mini': '2322ea43676d6818bab3925159bc45f342694aa92260d4fa6416396bd9a55bd7',
   'content-mini': '574a873c2062d0c850a5b20978b0a84b6da7c5bfa2a1bfd9ef1d74ce7d0aa9d9',
   'translation-mini': 'e3326b8e102787ae64a7e0bc814e1a7080b1df0c94911a1970d2e207db03d04e',
   'asi-mini': '5c4640f77bc3b5e211e372bef4ed7be8027b45f41241f5f5cab5fda75aa637a0',

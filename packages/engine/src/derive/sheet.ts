@@ -54,16 +54,42 @@ export interface Sheet {
   actions: ActionView[];
   /** Union (by kind+target) of armor/weapon/tool/language proficiency, assembled in derive/index.ts. */
   proficiencies: { kind: string; target: string; level: string; sources: string[] }[];
-  /** `resolved: false` for an entry whose `itemId` no longer resolves in the content index — an unknown-id chip. */
-  inventory: (InventoryEntry & { resolved: boolean })[];
+  /**
+   * `resolved: false` for an entry whose `itemId` no longer resolves in the content index — an
+   * unknown-id chip. `attunementAllowed` (phase 4, plan 11 task 4): present ONLY when the resolved
+   * item entity declares `item.attunement.by` (a `Predicate`) — `true`/`false` is that predicate
+   * evaluated against the character's current derive-time state (abilities, classes, proficiencies,
+   * conditions, tags, active features — see `attunementPredicateContext` in `derive/index.ts`).
+   * Absent (not merely `true`) when the item has no `attunement.by` at all, so no existing golden/
+   * fixture without one ever gains the key — `propose.attune` (which only ever sees a `Sheet`, never
+   * a `ContentIndex`) reads this to refuse an attune whose requirement isn't met, exactly the same
+   * "pre-resolve at derive time so propose only needs Sheet" shape `resolved` and `attunementMax`
+   * already use.
+   */
+  inventory: (InventoryEntry & { resolved: boolean; attunementAllowed?: boolean })[];
   /**
    * Task 14 controller ruling: `system.attunementMax` (the pack-declared attunement cap; the
    * reducer stays permissive per doc-02, so this is a UI/proposer-side limit, not a reducer
    * invariant) — `propose.attune` refuses past it. Read verbatim from `index.system()` in
    * derive/index.ts; not on `task-13-brief.md`'s literal Sheet snippet, added additively here so
    * `propose.attune` (which only ever sees a `Sheet`) has somewhere to read it from.
+   *
+   * Ruling 1 (phase 4, plan 11 task 4): when `derive()`'s optional `overrides.attunementMax` is
+   * given, THIS is the overridden value (not the pack's own) — `overridesProvenance.attunementMax`
+   * then reads `'house rule'`. Kept a plain `number` (not reshaped into a `Derived`-like wrapper)
+   * so every existing reader (`propose/items.ts`'s `sheet.attunementMax` comparison, every existing
+   * test/golden fixture) keeps compiling and comparing unchanged.
    */
   attunementMax: number;
+  /**
+   * Ruling 1 (phase 4, plan 11 task 4): present ONLY when at least one `derive()` `overrides` field
+   * was actually supplied for THIS call — so every existing call site (which never passes
+   * `overrides`) never gains this key, keeping every prior golden/exact-key-list test byte-identical.
+   * `'house rule'` is the literal provenance tag task 12's UI shows next to an overridden value (the
+   * plan's own wording). `encumbrance` is listed on the type now (task 5 extends this object, not a
+   * new one) but is never set by this task — task 4 doesn't compute or read encumbrance at all.
+   */
+  overridesProvenance?: { attunementMax?: 'house rule'; encumbrance?: 'house rule' };
   currency: Facts['currency'];
   inspiration: boolean;
   conditions: HpResult['conditions'];

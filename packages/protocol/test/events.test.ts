@@ -138,6 +138,39 @@ describe.each(NEW_EVENT_CASES)('parseEvent $type', ({ type, accept }) => {
   });
 });
 
+// Ruling 3 (phase 4, plan 11 task 4 — "item charges = per-instance resources"): `resourceId` on
+// `resource.spent`/`resource.restored` was a bare content-pack slug (`SlugSchema`, no colon) until
+// this task additively widened it to ALSO accept the `item:<instanceId>` key an item's charges are
+// tracked under (`instanceId` is always a UUID — same shape as `ItemAddedV1.instanceId` etc.). Every
+// pre-existing slug-shaped `resourceId` (e.g. `'second-wind'`) still validates unchanged; only the
+// NEW colon-prefixed shape is newly accepted — additive, not breaking.
+describe('resourceId: additive widening for item-charge keys', () => {
+  const UUID_C = '33333333-4444-4555-8666-777777777777';
+
+  it.each(['resource.spent', 'resource.restored'])('%s still accepts a plain content-pack slug', (type) => {
+    const r = parseEvent({ ...base, type, payload: { resourceId: 'second-wind' } });
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+  });
+
+  it.each(['resource.spent', 'resource.restored'])('%s accepts the item:<uuid> charges key', (type) => {
+    const r = parseEvent({ ...base, type, payload: { resourceId: `item:${UUID_C}` } });
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+  });
+
+  it.each(['resource.spent', 'resource.restored'])(
+    '%s rejects item: followed by a non-UUID (colon is not a legal slug char either)',
+    (type) => {
+      const r = parseEvent({ ...base, type, payload: { resourceId: 'item:not-a-uuid' } });
+      expect(r.ok).toBe(false);
+    },
+  );
+
+  it.each(['resource.spent', 'resource.restored'])('%s rejects an unrelated colon-prefixed key', (type) => {
+    const r = parseEvent({ ...base, type, payload: { resourceId: `feature:${UUID_C}` } });
+    expect(r.ok).toBe(false);
+  });
+});
+
 // Scoped to character.ts's OWN registries (not the merged `EVENT_PAYLOADS`/`EVENT_ACTORS` from
 // index.ts, which additionally carries the campaign-stream catalog as of plan-9 Task 1) — this
 // describe block is specifically about the Phase-1 character-stream catalog staying complete.

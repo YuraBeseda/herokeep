@@ -387,6 +387,31 @@
       "effects": [{ "type": "damage.resistance", "types": ["cold"] }]
     },
     {
+      "id": "core-mini:item/wand-of-sparks",
+      "type": "item",
+      "name": "Wand of Sparks",
+      "category": "magic",
+      "weight": 1,
+      "charges": { "max": "3", "reset": "dawn" }
+    },
+    {
+      "id": "core-mini:item/ring-of-the-fighter",
+      "type": "item",
+      "name": "Ring of the Fighter",
+      "category": "magic",
+      "weight": 0,
+      "attunement": { "required": true, "by": { "class": "core-mini:class/fighter" } },
+      "effects": [{ "type": "ac.bonus", "value": 1, "key": "ring-of-the-fighter" }]
+    },
+    {
+      "id": "core-mini:item/orb-of-the-mind",
+      "type": "item",
+      "name": "Orb of the Mind",
+      "category": "magic",
+      "weight": 1,
+      "attunement": { "required": true, "by": { "spellcaster": true } }
+    },
+    {
       "id": "core-mini:feature/skill-expert",
       "type": "feature",
       "name": "Skill Expert",

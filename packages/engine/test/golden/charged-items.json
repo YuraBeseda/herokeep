@@ -1,0 +1,174 @@
+{
+  "name": "charged-items-and-attunement",
+  "packs": ["core-mini"],
+  "events": [
+    {
+      "id": "018f9000-0000-7000-8000-000000000001",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 1,
+      "ts": "2026-09-27T12:00:01.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Zara",
+        "system": "mini",
+        "corePack": { "id": "core-mini", "version": "1.0.0" },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000002",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 2,
+      "ts": "2026-09-27T12:00:02.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "core-mini:class/fighter", "level": 1 }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000003",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 3,
+      "ts": "2026-09-27T12:00:03.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "44444444-4444-7444-8444-444444444441",
+        "itemId": "core-mini:item/wand-of-sparks",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000004",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 4,
+      "ts": "2026-09-27T12:00:04.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": { "instanceId": "44444444-4444-7444-8444-444444444441" }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000005",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 5,
+      "ts": "2026-09-27T12:00:05.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "44444444-4444-7444-8444-444444444442",
+        "itemId": "core-mini:item/ring-of-the-fighter",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000006",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 6,
+      "ts": "2026-09-27T12:00:06.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "item.attuned",
+      "v": 1,
+      "payload": { "instanceId": "44444444-4444-7444-8444-444444444442" }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000007",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 7,
+      "ts": "2026-09-27T12:00:07.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "44444444-4444-7444-8444-444444444443",
+        "itemId": "core-mini:item/orb-of-the-mind",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000008",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 8,
+      "ts": "2026-09-27T12:00:08.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "resource.spent",
+      "v": 1,
+      "payload": { "resourceId": "item:44444444-4444-7444-8444-444444444441", "count": 1 }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000009",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 9,
+      "ts": "2026-09-27T12:00:09.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "resource.spent",
+      "v": 1,
+      "payload": { "resourceId": "item:44444444-4444-7444-8444-444444444441" }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-00000000000a",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 10,
+      "ts": "2026-09-27T12:00:10.000Z",
+      "actor": { "userId": "u", "deviceId": "d", "role": "owner" },
+      "type": "resource.restored",
+      "v": 1,
+      "payload": { "resourceId": "item:44444444-4444-7444-8444-444444444441", "count": 1 }
+    }
+  ],
+  "expect": {
+    "facts.resourcesUsed[\"item:44444444-4444-7444-8444-444444444441\"]": 1,
+    "facts.inventory[1].attuned": true,
+    "sheet.resources": [
+      {
+        "id": "item:44444444-4444-7444-8444-444444444441",
+        "name": "Wand of Sparks",
+        "max": {
+          "value": 3,
+          "contributions": [
+            {
+              "source": "core-mini:item/wand-of-sparks",
+              "kind": "item.charges",
+              "formula": "3",
+              "key": "item:44444444-4444-7444-8444-444444444441"
+            }
+          ]
+        },
+        "used": 1,
+        "reset": "dawn",
+        "display": "number",
+        "source": "core-mini:item/wand-of-sparks"
+      },
+      {
+        "id": "second-wind",
+        "name": "Second Wind",
+        "max": {
+          "value": 2,
+          "contributions": [
+            {
+              "source": "core-mini:class/fighter",
+              "feature": "core-mini:feature/second-wind",
+              "kind": "resource.define",
+              "formula": "2",
+              "key": "second-wind"
+            }
+          ]
+        },
+        "used": 0,
+        "reset": "shortRest",
+        "display": "pips",
+        "source": "core-mini:feature/second-wind"
+      }
+    ],
+    "sheet.inventory[0].instanceId": "44444444-4444-7444-8444-444444444441",
+    "sheet.inventory[1].instanceId": "44444444-4444-7444-8444-444444444442",
+    "sheet.inventory[1].attunementAllowed": true,
+    "sheet.inventory[2].instanceId": "44444444-4444-7444-8444-444444444443",
+    "sheet.inventory[2].attunementAllowed": false
+  }
+}

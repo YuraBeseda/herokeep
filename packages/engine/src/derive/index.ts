@@ -3,23 +3,27 @@ import type { ContentIndex } from '../content/index.ts';
 import { findChoice } from '../content/choices.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
+import type { PredicateContext } from '../predicate/context.ts';
+import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts, SystemRules } from '../reduce/facts.ts';
 import { deriveAbilities } from './abilities.ts';
 import type { AbilitiesResult } from './abilities.ts';
 import { deriveActions } from './actions.ts';
 import { deriveAttacks } from './attacks.ts';
 import { byChoiceId, creationChoices, levelScopedChoices, selectedEntityChoices } from './choices.ts';
-import { type Composition, compose } from './composition.ts';
+import { type Composition, compose, equippedArmor } from './composition.ts';
 import { deriveDefense } from './defense.ts';
 import { deriveHp } from './hp.ts';
 import { ModifierTable } from './modifiers.ts';
-import { deriveResources } from './resources.ts';
+import type { DeriveOverrides } from './overrides.ts';
+import { type ResourceView, deriveResources } from './resources.ts';
 import type { ChoiceRequest, Sheet } from './sheet.ts';
 import { deriveSpellcasting } from './spellcasting.ts';
 
 export * from './sheet.ts';
 export * from './advancement.ts';
 export * from './validation.ts';
+export * from './overrides.ts';
 
 /** `{amount}` for a plain int, `{formula}` for a formula string — mirrors every other derive/*.ts helper. */
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>
@@ -132,11 +136,78 @@ function deriveProficiencies(facts: Facts, abilities: AbilitiesResult, index: Co
 }
 
 /**
+ * `item.attunement.by` enforcement (survey fact, phase 4 plan 11 task 4): a full `PredicateContext`
+ * built from the derive-time locals already computed by the time `derive()` builds `inventory`
+ * (`abilities`, `comp`, `facts`, `index`, `proficiencies`, plus `resources`/`sheet.resources` for
+ * formula's `resource()` — the MOST complete of this file's own predicate contexts, since every
+ * other domain has already derived by this point). This is the file's 4th independent
+ * "build a PredicateContext from whatever's on hand at this derive stage" helper — matching the
+ * SAME established, undeduplicated pattern `composition.ts`'s own internal `ctx`, `abilities.ts`'s
+ * `deferredCtx`, and `advancement.ts`'s `multiclassPredicateContext` each already use (each call site
+ * has different data available, so each builds its own rather than forcing a shared, lowest-common-
+ * denominator signature) — not a new anti-pattern introduced by this task.
+ */
+function attunementPredicateContext(
+  abilities: AbilitiesResult,
+  comp: Composition,
+  facts: Facts,
+  index: ContentIndex,
+  proficiencies: Sheet['proficiencies'],
+  resources: ResourceView[],
+  isSpellcaster: boolean,
+): PredicateContext {
+  const activeSet = new Set(comp.entities);
+  const { category: armorCategory, hasShield } = equippedArmor(facts, index);
+  const abilityScore = (a: string) => abilities.abilities[a]?.score.value ?? 0;
+  return {
+    level: comp.totalLevel,
+    abilityScore,
+    classLevel: (ref) => comp.classLevels[index.resolveClassRef(ref) ?? ref] ?? 0,
+    hasFeature: (id) => activeSet.has(id),
+    hasFeat: (id) => activeSet.has(id),
+    hasSpell: (id) => comp.effects.some((e) => e.effect.type === 'spell.grant' && e.effect.spell === id),
+    hasTag: (tag) => comp.effects.some((e) => e.effect.type === 'tag.grant' && e.effect.tag === tag),
+    isProficient: (kind, target) =>
+      kind === 'skill'
+        ? (abilities.skills[target]?.proficiency ?? 'none') !== 'none'
+        : kind === 'save'
+          ? abilities.abilities[target]?.saveProficient === true
+          : proficiencies.some((p) => p.kind === kind && p.target === target),
+    armorCategory: () => armorCategory,
+    hasShield: () => hasShield,
+    speciesId: () => comp.entities.find((id) => index.get(id)?.type === 'species'),
+    classIds: () => facts.classes.map((c) => index.resolveClassRef(c.classId) ?? c.classId),
+    subclassIds: () => facts.classes.map((c) => c.subclassId).filter((id): id is string => id !== undefined),
+    hasCondition: (id) => facts.conditions.some((c) => c.conditionId === id),
+    isSpellcaster: () => isSpellcaster,
+    formula: {
+      level: comp.totalLevel,
+      prof: abilities.prof,
+      classLevel: (ref) => comp.classLevels[index.resolveClassRef(ref) ?? ref] ?? 0,
+      mod: (a) => abilities.abilities[a]?.mod ?? 0,
+      score: abilityScore,
+      hitDie: (slug) => {
+        const classId = index.resolveClassRef(slug) ?? slug;
+        const e = index.get(classId);
+        return e?.type === 'class' ? e.hitDie : 0;
+      },
+      resource: (slug) => resources.find((r) => r.id === slug)?.max.value ?? 0,
+    },
+  };
+}
+
+/**
  * Derives the FULL `Sheet` (task-13-brief.md — the integration task over tasks 8-12's per-domain
  * modules). `rules` is optional for compatibility: without it, `deriveHp` prices every level as
  * average and pushes a `'derive.noSystemRules'` warning (R-pf2).
+ *
+ * Ruling 1 (phase 4, plan 11 task 4 — "house-rule overrides into derive"): `overrides` is optional
+ * and trailing (4th parameter) so every existing 2-arg/3-arg call site (apps/web's character.store,
+ * the foreign-character-session path, the goldens harness, every test in this package) keeps
+ * compiling and behaving byte-identically without passing it — the engine itself never computes an
+ * override value, it only applies one the caller already hands in (see `derive/overrides.ts`).
  */
-export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): Sheet {
+export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, overrides?: DeriveOverrides): Sheet {
   const issues: Diagnostic[] = [];
   for (const choiceId of Object.keys(facts.decisions).sort()) {
     if (!findChoice(index, choiceId) && !isSyntheticDecision(choiceId, index))
@@ -170,8 +241,16 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
   const initiative = deriveInitiative(comp, abilities, resources.resources, index);
   const proficiencies = deriveProficiencies(facts, abilities, index);
 
+  // `item.attunement.by` (survey fact, phase 4 plan 11 task 4): built once per `derive()` call
+  // (lazily — only if at least one item actually declares `attunement.by`, since every predicate
+  // evaluation is a getter-driven closure that reads live off the same already-computed locals) and
+  // reused per item below.
+  let attunementCtx: PredicateContext | undefined;
+  const isSpellcaster = spellcasting.blocks.length > 0;
+
   const inventory = facts.inventory.map((item) => {
-    const resolved = item.itemId === undefined || index.has(item.itemId);
+    const entity = item.itemId !== undefined ? index.get(item.itemId) : undefined;
+    const resolved = item.itemId === undefined || entity !== undefined;
     if (!resolved) {
       issues.push(
         warning('derive.unresolvedItem', `Inventory item "${item.itemId}" does not resolve to a pack entity`, {
@@ -179,7 +258,18 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
         }),
       );
     }
-    return { ...item, resolved };
+    const attunementBy = entity?.type === 'item' ? entity.attunement?.by : undefined;
+    if (!attunementBy) return { ...item, resolved };
+    attunementCtx ??= attunementPredicateContext(
+      abilities,
+      comp,
+      facts,
+      index,
+      proficiencies,
+      resources.resources,
+      isSpellcaster,
+    );
+    return { ...item, resolved, attunementAllowed: evaluatePredicate(attunementBy, attunementCtx) };
   });
 
   const classes = facts.classes.map((c) => {
@@ -211,7 +301,10 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules): 
     actions: actions.actions,
     proficiencies,
     inventory,
-    attunementMax: index.system().attunementMax,
+    attunementMax: overrides?.attunementMax ?? index.system().attunementMax,
+    ...(overrides?.attunementMax !== undefined
+      ? { overridesProvenance: { attunementMax: 'house rule' as const } }
+      : {}),
     currency: { ...facts.currency },
     inspiration: facts.inspiration,
     conditions: hp.conditions,

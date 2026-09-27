@@ -76,6 +76,51 @@ export function deriveResources(
     }
   }
 
+  // Ruling 3 (phase 4, plan 11 task 4 — "item charges = per-instance resources"): one ResourceView
+  // per ACTIVE (equipped OR attuned — composition.ts:228's own activation gate, re-checked per
+  // INSTANCE here rather than read off `comp.entities`, since `Composition.entities` is deduplicated
+  // by entity id and would wrongly report a second, inactive instance of the same item type as
+  // active) inventory item whose entity declares `charges`, keyed `item:<instanceId>` — never
+  // `item:<itemId>`, so two instances of the same item type never collide. The key can never collide
+  // with a `resource.define` id either: `item:` contains a colon, which no `SlugSchema` value (every
+  // `resource.define.id` to date) can ever contain. Reuses the SAME `table`/`meta`/`resourcesUsed`
+  // machinery as above — no new event, no new reducer path (`propose.rest` already iterates
+  // `sheet.resources` generically by `reset`, so a `shortRest`/`longRest`-reset charged item is
+  // auto-restored on rest with zero changes to `propose/rest.ts`).
+  //
+  // v1 semantics (documented, not a bug): the ResourceView DEFINITION only exists while the item is
+  // active — unequip/un-attune it and it disappears from `sheet.resources` — but `facts.resourcesUsed`
+  // for that key is untouched by derive (derive never writes facts) and simply isn't read while the
+  // item is inactive, so the used-count survives and reappears correctly on re-equip. If the item is
+  // removed from inventory entirely, its `resourcesUsed` entry has no consumer left to reference it
+  // and lingers forever — acceptable for v1 (a few stray keys in a JSON blob, not a correctness bug);
+  // an eventual orphan-sweep belongs with any future general facts-pruning backlog item, not this task.
+  for (const item of facts.inventory) {
+    if (!(item.equipped || item.attuned) || item.itemId === undefined) continue;
+    const entity = index.get(item.itemId);
+    if (entity?.type !== 'item' || !entity.charges) continue;
+    const resourceId = `item:${item.instanceId}`;
+    table.add(`resource:${resourceId}`, {
+      source: item.itemId,
+      kind: 'item.charges',
+      formula: entity.charges.max,
+      key: resourceId,
+      policy: 'sum-unique-key',
+    });
+    // Never overwritten by a second instance: `resourceId` already embeds `instanceId`, so this key
+    // is unique per loop iteration by construction (no "first one wins" ambiguity like the
+    // `resource.define` loop above has to guard against for a genuinely re-declared shared id).
+    meta.set(resourceId, {
+      name: entity.name,
+      reset: entity.charges.reset,
+      // `ItemEntitySchema.charges` carries no `display` field (unlike `resource.define`'s effect
+      // shape, which is authored per-feature) — 'number' is a reasonable engine-side default; T12
+      // may special-case pips per item category later if that's wanted, this task doesn't invent one.
+      display: 'number',
+      source: item.itemId,
+    });
+  }
+
   const resources: ResourceView[] = [...meta.entries()]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([id, m]) => ({

@@ -94,8 +94,27 @@ export const SlotRestoredV1 = z.strictObject({
   pact: z.boolean().optional(),
   count: z.int().min(1).optional(),
 });
-export const ResourceSpentV1 = z.strictObject({ resourceId: SlugSchema, count: z.int().min(1).optional() });
-export const ResourceRestoredV1 = z.strictObject({ resourceId: SlugSchema, count: z.int().min(1).optional() });
+/**
+ * Ruling 3 (phase 4, plan 11 task 4 — "item charges = per-instance resources"): item charges
+ * derive as a resource keyed `item:<instanceId>` (`instanceId` is always a UUID — same shape as
+ * `ItemAddedV1.instanceId` and friends), reusing `resource.spent`/`resource.restored` verbatim (no
+ * new event). `resourceId` was `SlugSchema` alone (lowercase-alnum-hyphen, no colon) before this
+ * task — a bare `item:<uuid>` value FAILS `SlugSchema` (colon isn't a legal slug character), so this
+ * is the additive-extend case the brief anticipated: `ResourceKeySchema` widens `resourceId` to
+ * ALSO accept the `item:<uuid>` shape via `z.union`. Every pre-existing slug-shaped `resourceId`
+ * (every content pack's `resource.define.id` to date) still validates completely unchanged; only the
+ * NEW colon-prefixed shape is newly accepted. Collision-safe by construction: a colon can never
+ * appear in a `SlugSchema` value, so an `item:`-keyed resource can never collide with a feature/
+ * entity-defined one.
+ */
+const ItemResourceKeySchema = z.string().regex(/^item:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+export const ResourceKeySchema = z.union([SlugSchema, ItemResourceKeySchema]);
+
+export const ResourceSpentV1 = z.strictObject({ resourceId: ResourceKeySchema, count: z.int().min(1).optional() });
+export const ResourceRestoredV1 = z.strictObject({
+  resourceId: ResourceKeySchema,
+  count: z.int().min(1).optional(),
+});
 
 // --- Spells --------------------------------------------------------------------------
 
