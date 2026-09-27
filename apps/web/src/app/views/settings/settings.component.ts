@@ -13,6 +13,11 @@ import { formatBytes, type ByteUnit } from '@shared/helpers/format-bytes';
 import { formatRelativeTime } from '@shared/helpers/format-relative-time';
 import { apiJson } from '@shared/services/api/api-fetch';
 import { AuthService } from '@shared/services/auth/auth.service';
+import {
+  CACHE_CAP_MAX_BYTES,
+  CACHE_CAP_MIN_BYTES,
+  CacheManagerService,
+} from '@shared/services/blob-transfer/cache-manager.service';
 import { PackLoader } from '@shared/services/engine/pack-loader';
 import { LocaleService, type Locale } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
@@ -188,6 +193,7 @@ export class SettingsComponent {
   private readonly packLoader = inject(PackLoader);
   private readonly toastService = inject(ToastService);
   private readonly storagePersistService = inject(StoragePersistService);
+  private readonly cacheManagerService = inject(CacheManagerService);
   protected readonly authService = inject(AuthService);
   private readonly syncService = inject(SyncService);
   private readonly charactersRepository = inject(CharactersRepository);
@@ -210,6 +216,17 @@ export class SettingsComponent {
   protected readonly quotaMb = computed(() =>
     this.formatMb(this.storagePersistService.estimate()?.quota),
   );
+
+  // --- Blob cache card (plan-10 Task 13, doc-07 §Cache management) -----------------------------
+
+  protected readonly cacheCapMinMb = Math.round(CACHE_CAP_MIN_BYTES / BYTES_PER_MB);
+  protected readonly cacheCapMaxMb = Math.round(CACHE_CAP_MAX_BYTES / BYTES_PER_MB);
+  protected readonly cacheCapMb = computed(() =>
+    Math.round(this.cacheManagerService.capBytes() / BYTES_PER_MB),
+  );
+  protected readonly cacheEstimate = this.cacheManagerService.estimate;
+  protected readonly cacheUsedMb = computed(() => this.formatMb(this.cacheEstimate()?.usage));
+  protected readonly cacheQuotaMb = computed(() => this.formatMb(this.cacheEstimate()?.quota));
 
   // --- Devices card (task-9-brief.md) ---------------------------------------------------------
 
@@ -265,6 +282,16 @@ export class SettingsComponent {
 
   protected async requestPersist(): Promise<void> {
     await this.storagePersistService.requestPersist();
+  }
+
+  /** The slider's own `(input)` handler — `value` is the raw `<input type="range">` string, in
+   * MB; `CacheManagerService.setCapBytes` clamps to `[CACHE_CAP_MIN_BYTES, CACHE_CAP_MAX_BYTES]`
+   * and immediately re-runs the LRU sweep against the new cap. A non-numeric value (shouldn't
+   * happen from a real range input, but defensive) is silently ignored. */
+  protected onCacheCapInput(value: string): void {
+    const mb = Number(value);
+    if (!Number.isFinite(mb)) return;
+    void this.cacheManagerService.setCapBytes(mb * BYTES_PER_MB);
   }
 
   protected async removePack(pack: Pack): Promise<void> {

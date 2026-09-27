@@ -320,6 +320,9 @@ export class SyncService {
     Set<(stream: string, events: Event[]) => void>
   >();
   private readonly binaryFrameConsumers = new Map<string, Set<(bytes: Uint8Array) => void>>();
+  // [plan-10 Task 13] blob-transfer service seams — see class doc's "Campaign sessions" section.
+  private readonly blobPullConsumers = new Map<string, Set<(hash: string, to: string) => void>>();
+  private readonly blobUnavailableConsumers = new Map<string, Set<(hash: string) => void>>();
 
   private mode: SyncMode = 'idle';
   private reconcileGeneration = 0;
@@ -418,6 +421,62 @@ export class SyncService {
   registerBinaryFrameConsumer(campaignId: string, cb: (bytes: Uint8Array) => void): () => void {
     return registerConsumer(this.binaryFrameConsumers, campaignId, cb);
   }
+
+  /** [plan-10 Task 13] Registration seam for the blob-transfer service: `cb` fires with EVERY
+   * `blob.pull {hash, to}` frame this campaign's live session receives (the server asking this
+   * connection, a holder, to stream a blob to the connection named by `to`). Default (nothing
+   * registered) is a no-op. Returns an unsubscribe function. */
+  registerBlobPullConsumer(campaignId: string, cb: (hash: string, to: string) => void): () => void {
+    return registerConsumer(this.blobPullConsumers, campaignId, cb);
+  }
+
+  /** [plan-10 Task 13] Registration seam for the blob-transfer service: `cb` fires with EVERY
+   * `blob.unavailable {hash}` frame this campaign's live session receives. Default (nothing
+   * registered) is a no-op. Returns an unsubscribe function. */
+  registerBlobUnavailableConsumer(campaignId: string, cb: (hash: string) => void): () => void {
+    return registerConsumer(this.blobUnavailableConsumers, campaignId, cb);
+  }
+
+  /** [plan-10 Task 13] Sends `blob.have {hashes}` over `campaignId`'s live campaign socket — the
+   * blob-transfer service's own announce path (doc-07: "on connect and after each completed
+   * download"). Silent no-op when this campaign has no live session right now, same contract as
+   * every other `sendRaw`-based outbound path in this service. */
+  sendBlobHave(campaignId: string, hashes: readonly string[]): void {
+    this.sessionsState()
+      .get(`camp:${campaignId}`)
+      ?.sendRaw({ t: 'blob.have', hashes: [...hashes] });
+  }
+
+  /** [plan-10 Task 13] Sends `blob.request {rid, hash}`. Silent no-op with no live session. */
+  sendBlobRequest(campaignId: string, rid: string, hash: string): void {
+    this.sessionsState().get(`camp:${campaignId}`)?.sendRaw({ t: 'blob.request', rid, hash });
+  }
+
+  /** [plan-10 Task 13] Sends `blob.cancel {hash}` — the requester giving up on its own in-flight
+   * transfer (a request timeout). Silent no-op with no live session. */
+  sendBlobCancel(campaignId: string, hash: string): void {
+    this.sessionsState().get(`camp:${campaignId}`)?.sendRaw({ t: 'blob.cancel', hash });
+  }
+
+  /** [plan-10 Task 13] Sends `frame` (a complete `blob.chunk` binary frame, already encoded by
+   * `blob-chunk-codec.ts`) straight to `campaignId`'s live socket via `StreamSyncSession.sendBinary`
+   * — the holder side of a transfer. Silent no-op with no live session. */
+  sendBlobChunk(campaignId: string, frame: Uint8Array): void {
+    this.sessionsState().get(`camp:${campaignId}`)?.sendBinary(frame);
+  }
+
+  /** [plan-10 Task 13] Every campaign id (bare, no `camp:` prefix) with a currently LIVE session —
+   * the blob-transfer service's own driver for "which campaigns should I be prefetching/serving
+   * for right now", since it needs every concurrently-synced campaign, not just whichever one
+   * `CampaignStore` currently has "open" for viewing (`membersFor`'s own doc makes the same
+   * distinction). */
+  readonly liveCampaignIds: Signal<ReadonlySet<string>> = computed(() => {
+    const ids = new Set<string>();
+    for (const streamId of this.sessionsState().keys()) {
+      if (streamId.startsWith('camp:')) ids.add(campaignIdOf(streamId));
+    }
+    return ids;
+  });
 
   /** [plan-10 Task 9] Sends `subscribe {t:'subscribe', stream, lastSeq?}` (`@hk/protocol`'s
    * `SubscribeMsgSchema`) over `campaignId`'s LIVE campaign socket, via that session's own public
@@ -971,6 +1030,13 @@ export class SyncService {
       },
       onBinaryFrame: (bytes) => {
         for (const cb of this.binaryFrameConsumers.get(campaignId) ?? []) cb(bytes);
+      },
+      // [plan-10 Task 13] See registerBlobPullConsumer/registerBlobUnavailableConsumer's own docs.
+      onBlobPull: (hash, to) => {
+        for (const cb of this.blobPullConsumers.get(campaignId) ?? []) cb(hash, to);
+      },
+      onBlobUnavailable: (hash) => {
+        for (const cb of this.blobUnavailableConsumers.get(campaignId) ?? []) cb(hash);
       },
       onNotice: (notice) => this.toastService.show(notice.key, notice.params),
       // Task 4 fix round 1, controller ruling F2 — see class doc's "Campaign sessions" section.

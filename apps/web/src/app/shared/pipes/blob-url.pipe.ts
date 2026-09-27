@@ -67,12 +67,19 @@ export class BlobUrlPipe implements PipeTransform, OnDestroy {
   // which is itself a valid "current" value (matches `transform(undefined)` on first call, below).
   private currentHash: string | undefined;
   private currentUrl: string | undefined;
+  private currentWritable: WritableSignal<string | undefined> | undefined;
   private currentState: Signal<string | undefined> = signal<string | undefined>(
     undefined,
   ).asReadonly();
   // Incremented on every hash change; an in-flight `load()` only applies its result if this is
   // still the token it was handed — see `load()`.
   private loadToken = 0;
+  // [plan-10 Task 13] See class doc's "ARRIVAL INVALIDATION" section.
+  private readonly unsubscribeArrival: () => void;
+
+  constructor() {
+    this.unsubscribeArrival = this.blobsRepository.onArrival((hash) => this.onArrival(hash));
+  }
 
   transform(hash: string | undefined): Signal<string | undefined> {
     if (hash === this.currentHash) return this.currentState;
@@ -81,6 +88,7 @@ export class BlobUrlPipe implements PipeTransform, OnDestroy {
     this.revokeCurrentUrl();
 
     const state = signal<string | undefined>(undefined);
+    this.currentWritable = state;
     this.currentState = state.asReadonly();
     const token = ++this.loadToken;
     if (hash) void this.load(hash, token, state);
@@ -89,6 +97,21 @@ export class BlobUrlPipe implements PipeTransform, OnDestroy {
 
   ngOnDestroy(): void {
     this.revokeCurrentUrl();
+    this.unsubscribeArrival();
+  }
+
+  /** [plan-10 Task 13] `BlobsRepository.onArrival`'s subscriber — see class doc's "ARRIVAL
+   * INVALIDATION" section. Ignored unless `hash` is the one THIS instance currently displays AND
+   * it is still unresolved (a URL already resolved, or a different hash entirely, has nothing to
+   * redo). Re-runs `load()` against the SAME already-published `currentWritable` signal — never a
+   * fresh one — so the template's existing binding (from an earlier `transform()` call) actually
+   * observes the update. */
+  private onArrival(hash: string): void {
+    if (hash !== this.currentHash || this.currentUrl !== undefined || !this.currentWritable) {
+      return;
+    }
+    const token = ++this.loadToken;
+    void this.load(hash, token, this.currentWritable);
   }
 
   private revokeCurrentUrl(): void {

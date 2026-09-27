@@ -1612,5 +1612,151 @@ describe('SyncService', () => {
         expect(() => sync.unsubscribeForeignStream(campaignId, foreignStream)).not.toThrow();
       });
     });
+
+    // plan-10 task-13-brief.md: the blob-transfer service's own transport seams.
+    describe('blob.* transport (plan-10 Task 13)', () => {
+      const campaignId = '00000000-0000-4000-8000-0000000000ce';
+      const streamId = `camp:${campaignId}`;
+
+      async function startCampaignSession(): Promise<FakeWebSocket> {
+        await TestBed.inject(CampaignsRepository).put({
+          id: campaignId,
+          name: 'X',
+          system: 'srd-5e-2024',
+          role: 'dm',
+          lastSeq: 0,
+          updatedAt: 1,
+        });
+        globalThis.fetch = routedFetch({
+          '/api/characters': () => jsonResponse(200, []),
+          '/api/campaigns': () => jsonResponse(200, []),
+        });
+        leaderState.set(true);
+        TestBed.inject(SyncService);
+        statusState.set('authed');
+        TestBed.tick();
+        await flush();
+        const socket = FakeWebSocket.instances.find((s) => s.url === `ws://test/${streamId}`)!;
+        socket.emitOpen();
+        await flush();
+        return socket;
+      }
+
+      it('blob.pull frames route to a registered consumer as {hash, to}; unregistered campaigns ignore them; unsubscribe stops delivery', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        // No consumer registered yet — must be a silent no-op.
+        expect(() =>
+          socket.emitMessage({ t: 'blob.pull', hash: 'sha256:' + 'a'.repeat(64), to: '3' }),
+        ).not.toThrow();
+        await flush();
+
+        const received: [string, string][] = [];
+        const unsubscribe = sync.registerBlobPullConsumer(campaignId, (hash, to) => {
+          received.push([hash, to]);
+        });
+
+        socket.emitMessage({ t: 'blob.pull', hash: 'sha256:' + 'a'.repeat(64), to: '3' });
+        await flush();
+        expect(received).toEqual([['sha256:' + 'a'.repeat(64), '3']]);
+
+        unsubscribe();
+        socket.emitMessage({ t: 'blob.pull', hash: 'sha256:' + 'a'.repeat(64), to: '3' });
+        await flush();
+        expect(received).toHaveLength(1); // no further delivery after unsubscribe
+      });
+
+      it('blob.unavailable frames route to a registered consumer as {hash}; unregistered campaigns ignore them', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        expect(() =>
+          socket.emitMessage({ t: 'blob.unavailable', hash: 'sha256:' + 'b'.repeat(64) }),
+        ).not.toThrow();
+        await flush();
+
+        const received: string[] = [];
+        sync.registerBlobUnavailableConsumer(campaignId, (hash) => received.push(hash));
+        socket.emitMessage({ t: 'blob.unavailable', hash: 'sha256:' + 'b'.repeat(64) });
+        await flush();
+        expect(received).toEqual(['sha256:' + 'b'.repeat(64)]);
+      });
+
+      it('sendBlobHave writes {t:"blob.have", hashes} straight to the live campaign socket', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.sendBlobHave(campaignId, ['sha256:' + 'a'.repeat(64), 'sha256:' + 'b'.repeat(64)]);
+        await flush();
+
+        expect(socket.parsedSent()).toContainEqual({
+          t: 'blob.have',
+          hashes: ['sha256:' + 'a'.repeat(64), 'sha256:' + 'b'.repeat(64)],
+        });
+      });
+
+      it('sendBlobRequest writes {t:"blob.request", rid, hash}', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.sendBlobRequest(campaignId, 'req-1', 'sha256:' + 'c'.repeat(64));
+        await flush();
+
+        expect(socket.parsedSent()).toContainEqual({
+          t: 'blob.request',
+          rid: 'req-1',
+          hash: 'sha256:' + 'c'.repeat(64),
+        });
+      });
+
+      it('sendBlobCancel writes {t:"blob.cancel", hash}', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.sendBlobCancel(campaignId, 'sha256:' + 'd'.repeat(64));
+        await flush();
+
+        expect(socket.parsedSent()).toContainEqual({
+          t: 'blob.cancel',
+          hash: 'sha256:' + 'd'.repeat(64),
+        });
+      });
+
+      it('sendBlobChunk writes the given bytes straight to the socket as a binary frame', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.sendBlobChunk(campaignId, new Uint8Array([1, 2, 3]));
+        await flush();
+
+        const binarySent = socket.sent.filter((s): s is Uint8Array => s instanceof Uint8Array);
+        expect(binarySent).toHaveLength(1);
+        expect(Array.from(binarySent[0])).toEqual([1, 2, 3]);
+      });
+
+      it('every send* is a silent no-op (never throws) when this campaign has no live session', () => {
+        const sync = TestBed.inject(SyncService);
+        expect(() => sync.sendBlobHave(campaignId, ['sha256:' + 'a'.repeat(64)])).not.toThrow();
+        expect(() =>
+          sync.sendBlobRequest(campaignId, 'r', 'sha256:' + 'a'.repeat(64)),
+        ).not.toThrow();
+        expect(() => sync.sendBlobCancel(campaignId, 'sha256:' + 'a'.repeat(64))).not.toThrow();
+        expect(() => sync.sendBlobChunk(campaignId, new Uint8Array([1]))).not.toThrow();
+      });
+
+      it('liveCampaignIds reflects every campaign with a currently live session, updating as sessions start/stop', async () => {
+        const sync = TestBed.inject(SyncService);
+        expect(sync.liveCampaignIds().has(campaignId)).toBe(false);
+
+        await startCampaignSession();
+        expect(sync.liveCampaignIds().has(campaignId)).toBe(true);
+
+        statusState.set('anon'); // logout tears down every session
+        TestBed.tick();
+        await flush();
+        expect(sync.liveCampaignIds().has(campaignId)).toBe(false);
+      });
+    });
   });
 });

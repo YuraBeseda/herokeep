@@ -44,6 +44,33 @@
         </button>
       }
     }
+
+    <div class="settings__cache">
+      <h3 class="settings__cache-title">{{ t('storage.cache.title') }}</h3>
+      <p class="settings__cache-hint">{{ t('storage.cache.hint') }}</p>
+      <label class="settings__cache-label" for="settings-cache-cap">
+        {{ t('storage.cache.cap-label', { value: cacheCapMb() }) }}
+      </label>
+      <input
+        id="settings-cache-cap"
+        class="settings__cache-slider"
+        type="range"
+        [min]="cacheCapMinMb"
+        [max]="cacheCapMaxMb"
+        step="50"
+        [value]="cacheCapMb()"
+        [attr.aria-valuemin]="cacheCapMinMb"
+        [attr.aria-valuemax]="cacheCapMaxMb"
+        [attr.aria-valuenow]="cacheCapMb()"
+        [attr.aria-valuetext]="t('storage.cache.cap-label', { value: cacheCapMb() })"
+        (input)="onCacheCapInput($any($event.target).value)"
+      />
+      @if (cacheUsedMb(); as cacheUsed) {
+        <p class="settings__cache-usage">
+          {{ t('storage.cache.usage', { used: cacheUsed, quota: cacheQuotaMb() }) }}
+        </p>
+      }
+    </div>
   </hk-card>
 
   <hk-card class="settings__section" [header]="t('packs.title')">

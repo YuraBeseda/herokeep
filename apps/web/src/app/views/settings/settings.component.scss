@@ -157,3 +157,34 @@
   color: var(--warning);
   font-weight: 600;
 }
+
+.settings__cache {
+  margin-block-start: var(--space-4);
+}
+
+.settings__cache-title {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.settings__cache-hint {
+  margin: 0 0 var(--space-3);
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.settings__cache-label {
+  display: block;
+  margin-block-end: var(--space-2);
+  font-weight: 600;
+}
+
+.settings__cache-slider {
+  width: 100%;
+}
+
+.settings__cache-usage {
+  margin: var(--space-2) 0 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}

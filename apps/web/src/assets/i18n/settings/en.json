@@ -15,7 +15,13 @@
     "title": "Storage",
     "used": "{used} MB used of {quota} MB available",
     "persist": "Keep data on this device",
-    "persisted": "Storage is protected"
+    "persisted": "Storage is protected",
+    "cache": {
+      "title": "Campaign image cache",
+      "hint": "Portraits and tokens shared in campaigns are cached on this device up to this limit.",
+      "cap-label": "Cache limit: {value} MB",
+      "usage": "{used} MB used of {quota} MB device storage"
+    }
   },
   "packs": {
     "title": "Content packs",

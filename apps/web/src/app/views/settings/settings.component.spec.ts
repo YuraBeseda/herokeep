@@ -12,6 +12,7 @@ import { AuthService, type AuthStatus, type AuthUser } from '@shared/services/au
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
+import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import type { QuotaInfo } from '@shared/services/sync/stream-sync-session';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { ThemeService } from '@shared/services/theme/theme.service';
@@ -170,8 +171,20 @@ async function setup(options: {
   // `TestBed.configureTestingModule` itself); the Quota card reads `CharactersRepository.list()`
   // straight off it, so every test starts from a clean `characters` table regardless of what an
   // earlier test in this file left behind (mirrors `characters-list.component.spec.ts`'s own
-  // per-test `db.characters.clear()`).
-  await TestBed.inject(HkDb).characters.clear();
+  // per-test `db.characters.clear()`). `settings`/`blobs`/`campaigns`/`events`/`snapshots` are
+  // cleared too (plan-10 Task 13): the new Cache card's `CacheManagerService` is REAL here (every
+  // dependency it needs is already either real `HkDb`-backed or the `StoragePersistService` stub
+  // above), so a persisted `blobCacheCapBytes`/`blobOrphanSweepLastRunAt` row or a stray blob from
+  // an earlier test must not leak into this test's cache-card assertions.
+  const db = TestBed.inject(HkDb);
+  await Promise.all([
+    db.characters.clear(),
+    db.settings.clear(),
+    db.blobs.clear(),
+    db.campaigns.clear(),
+    db.events.clear(),
+    db.snapshots.clear(),
+  ]);
 
   return {
     translationPacksState,
@@ -415,6 +428,50 @@ describe('SettingsComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.settings__persist-button')).toBeNull();
     expect(compiled.querySelector('.settings__storage-usage')).toBeNull();
+  });
+
+  // --- Blob cache card (plan-10 Task 13, doc-07 §Cache management) -------------------------------
+
+  describe('Blob cache card', () => {
+    it('renders the slider defaulting to 500 MB, labeled with the live value text (a11y)', async () => {
+      await setup({});
+      const fixture = TestBed.createComponent(SettingsComponent);
+      await fixture.whenStable();
+      // `CacheManagerService.ready` settles asynchronously — give it a turn.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const slider = compiled.querySelector<HTMLInputElement>('#settings-cache-cap');
+      expect(slider).toBeTruthy();
+      expect(slider?.min).toBe('100');
+      expect(slider?.max).toBe('2048'); // 2 GB = 2048 MB (binary), not a round 2000
+      expect(slider?.value).toBe('500');
+      expect(slider?.getAttribute('aria-valuetext')).toContain('500');
+
+      const label = compiled.querySelector('label.settings__cache-label');
+      expect(label?.getAttribute('for')).toBe('settings-cache-cap');
+      expect(label?.textContent).toContain('500');
+    });
+
+    it('moving the slider persists the new cap via CacheManagerService', async () => {
+      await setup({});
+      const fixture = TestBed.createComponent(SettingsComponent);
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const slider = compiled.querySelector<HTMLInputElement>('#settings-cache-cap')!;
+      slider.value = '750';
+      slider.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+
+      const capBytes = await TestBed.inject(SettingsRepository).get<number>('blobCacheCapBytes');
+      expect(capBytes).toBe(750 * 1024 * 1024);
+    });
   });
 
   // --- Account card (task-9-brief.md) -----------------------------------------------------

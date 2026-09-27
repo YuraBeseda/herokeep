@@ -197,6 +197,15 @@ export interface StreamSyncSessionOptions {
    * session receives (`{id,code,message}`, not yet stripped to bare `ids`), fired before the toast
    * loop and before `store.dropPending`. See class doc's own section. */
   onRejectEntries?: (results: Extract<ServerMessage, { t: 'reject' }>['results']) => void;
+  /** [plan-10 Task 13] A `blob.pull {hash, to}` frame — the server asking THIS connection (a
+   * holder) to stream a blob's bytes to the connection named by `to` (the relay-local integer id,
+   * stringified). Previously silently dropped by `handleFrame`'s default case ("Task 13's job,
+   * blob codec" — task-1-brief.md's own scope guard); wired now that this task owns it. */
+  onBlobPull?: (hash: string, to: string) => void;
+  /** [plan-10 Task 13] A `blob.unavailable {hash}` frame — no holder was online for a
+   * `blob.request` this session sent. Same previously-dropped default-case history as
+   * `onBlobPull` above. */
+  onBlobUnavailable?: (hash: string) => void;
 }
 
 const LOCK_PREFIX = 'hk:sync:';
@@ -270,6 +279,8 @@ export class StreamSyncSession {
     ((results: Extract<ServerMessage, { t: 'ack' }>['results']) => void) | undefined;
   private readonly onRejectEntries:
     ((results: Extract<ServerMessage, { t: 'reject' }>['results']) => void) | undefined;
+  private readonly onBlobPull: ((hash: string, to: string) => void) | undefined;
+  private readonly onBlobUnavailable: ((hash: string) => void) | undefined;
   private readonly locksApi: LockManager | undefined;
 
   private socket: SyncSocket | undefined;
@@ -321,6 +332,8 @@ export class StreamSyncSession {
     this.onNotice = options.onNotice;
     this.onAckEntries = options.onAckEntries;
     this.onRejectEntries = options.onRejectEntries;
+    this.onBlobPull = options.onBlobPull;
+    this.onBlobUnavailable = options.onBlobUnavailable;
     this.locksApi = options.locks ?? navigator.locks;
     this.reconnectSignals = new ReconnectSignals({
       window: options.window,
@@ -491,9 +504,15 @@ export class StreamSyncSession {
       case 'members':
         this.handleMembers(message);
         return;
+      case 'blob.pull':
+        // [plan-10 Task 13] Previously the default case's job (task-1-brief.md's scope guard:
+        // "no blob logic") — wired now that this task owns the blob codec.
+        this.onBlobPull?.(message.hash, message.to);
+        return;
+      case 'blob.unavailable':
+        this.onBlobUnavailable?.(message.hash);
+        return;
       default:
-        // blob.pull/blob.unavailable frames — Task 13's job (blob codec), out of this task's
-        // scope (task-1-brief.md's scope guard: "no blob logic").
         return;
     }
   }

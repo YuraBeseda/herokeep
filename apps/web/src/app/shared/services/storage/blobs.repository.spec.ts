@@ -120,4 +120,110 @@ describe('BlobsRepository', () => {
     expect(Array.from(row?.bytes ?? [])).toEqual([9, 9, 9, 9]);
     expect(row?.size).toBe(4);
   });
+
+  // --- plan-10 Task 13 additions (doc-07 §Cache management) -------------------------------------
+
+  describe('touchLastUsed', () => {
+    it('advances lastUsedAt on an existing row without touching any other field', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await repo.put(hash, 'image/webp', new Uint8Array([1]), { kind: 'thumb' });
+      const before = await repo.get(hash);
+
+      const after = Date.now();
+      await repo.touchLastUsed(hash);
+
+      const row = await repo.get(hash);
+      expect(row?.lastUsedAt).toBeGreaterThanOrEqual(after);
+      expect(row?.pinned).toBe(before?.pinned);
+      expect(row?.origin).toBe(before?.origin);
+      expect(row?.addedAt).toBe(before?.addedAt);
+    });
+
+    // Regression (plan-10 Task 13): the FIRST implementation used Dexie's partial `Table.update()`
+    // for this write, which this project's IndexedDB test backend (fake-indexeddb) was found to
+    // silently corrupt an existing row's `bytes` (a `Uint8Array`) into a plain `{0:.., 1:.., ...}`
+    // object — caught by `blob-transfer.service.spec.ts`'s own chunk-assembly test, which stores a
+    // blob and then (indirectly, via `CacheManagerService.refreshPins()`) calls this method on it.
+    // `touchLastUsed` now does a full get-then-`put()` instead — this pins that `bytes` survives a
+    // real `Uint8Array`, not a degraded plain object, across the call.
+    it('preserves bytes as a genuine Uint8Array (not a degraded plain object) across the call', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      const original = new Uint8Array([5, 6, 7, 8]);
+      await repo.put(hash, 'image/webp', original);
+
+      await repo.touchLastUsed(hash);
+
+      const row = await repo.get(hash);
+      expect(Array.from(row?.bytes ?? [])).toEqual([5, 6, 7, 8]);
+    });
+
+    it('is a no-op for a hash that does not exist (never throws)', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await expect(repo.touchLastUsed('missing')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('setPinned', () => {
+    it('flips pinned to true on an existing row', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await repo.put(hash, 'image/webp', new Uint8Array([1]));
+      await repo.setPinned(hash, true);
+      expect((await repo.get(hash))?.pinned).toBe(true);
+    });
+
+    it('flips pinned back to false', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await repo.put(hash, 'image/webp', new Uint8Array([1]));
+      await repo.setPinned(hash, true);
+      await repo.setPinned(hash, false);
+      expect((await repo.get(hash))?.pinned).toBe(false);
+    });
+
+    it('is a no-op for a hash that does not exist (never throws)', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await expect(repo.setPinned('missing', true)).resolves.toBeUndefined();
+    });
+
+    // Regression (plan-10 Task 13) — see `touchLastUsed`'s own identical regression test above for
+    // the full story; `setPinned` had the same `Table.update()`-corrupts-`bytes` bug.
+    it('preserves bytes as a genuine Uint8Array (not a degraded plain object) across the call', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      const original = new Uint8Array([1, 2, 3, 4]);
+      await repo.put(hash, 'image/webp', original);
+
+      await repo.setPinned(hash, true);
+
+      const row = await repo.get(hash);
+      expect(Array.from(row?.bytes ?? [])).toEqual([1, 2, 3, 4]);
+    });
+  });
+
+  describe('list', () => {
+    it('returns every row in the table', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await repo.put('h1', 'image/png', new Uint8Array([1]));
+      await repo.put('h2', 'image/png', new Uint8Array([2]));
+      const rows = await repo.list();
+      expect(rows.map((r) => r.hash).sort()).toEqual(['h1', 'h2']);
+    });
+
+    it('returns an empty array when the table is empty', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      expect(await repo.list()).toEqual([]);
+    });
+  });
+
+  describe('remove', () => {
+    it('deletes an existing row', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await repo.put(hash, 'image/png', new Uint8Array([1]));
+      await repo.remove(hash);
+      expect(await repo.get(hash)).toBeUndefined();
+    });
+
+    it('is a no-op for a hash that does not exist (never throws)', async () => {
+      const repo = TestBed.inject(BlobsRepository);
+      await expect(repo.remove('missing')).resolves.toBeUndefined();
+    });
+  });
 });

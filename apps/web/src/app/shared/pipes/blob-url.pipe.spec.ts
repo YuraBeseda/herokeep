@@ -43,6 +43,14 @@ describe('BlobUrlPipe', () => {
   let get: ReturnType<typeof vi.fn<BlobsRepository['get']>>;
   let createObjectURL: ReturnType<typeof vi.fn<(obj: Blob | MediaSource) => string>>;
   let revokeObjectURL: ReturnType<typeof vi.fn<(url: string) => void>>;
+  // Task 13: a fake `onArrival` registry — real enough to let a test simulate
+  // `BlobsRepository.put()` calling back into every registered pipe instance.
+  let arrivalListeners: Set<(hash: string) => void>;
+  let onArrival: ReturnType<typeof vi.fn<BlobsRepository['onArrival']>>;
+
+  function emitArrival(hash: string): void {
+    for (const cb of arrivalListeners) cb(hash);
+  }
 
   beforeEach(() => {
     get = vi.fn<BlobsRepository['get']>().mockResolvedValue(ROW);
@@ -53,8 +61,14 @@ describe('BlobUrlPipe', () => {
     URL.createObjectURL = createObjectURL;
     URL.revokeObjectURL = revokeObjectURL;
 
+    arrivalListeners = new Set();
+    onArrival = vi.fn<BlobsRepository['onArrival']>((cb) => {
+      arrivalListeners.add(cb);
+      return () => arrivalListeners.delete(cb);
+    });
+
     TestBed.configureTestingModule({
-      providers: [{ provide: BlobsRepository, useValue: { get, put: vi.fn() } }],
+      providers: [{ provide: BlobsRepository, useValue: { get, put: vi.fn(), onArrival } }],
     });
   });
 
@@ -181,5 +195,82 @@ describe('BlobUrlPipe', () => {
 
     expect(state()).toBe('blob:fake-url-1'); // unchanged — the stale resolution was ignored
     expect(createObjectURL).toHaveBeenCalledTimes(1); // never created a URL for the stale ROW
+  });
+
+  // --- Task 13: arrival invalidation (a miss must not be permanent — the party grid must show
+  // thumbs as they arrive over the blob-transfer socket, not just on a fresh `transform()` call) --
+
+  describe('arrival invalidation', () => {
+    it('registers with BlobsRepository.onArrival once, and unsubscribes on destroy', () => {
+      const pipe = TestBed.runInInjectionContext(() => new BlobUrlPipe());
+      expect(onArrival).toHaveBeenCalledTimes(1);
+      expect(arrivalListeners.size).toBe(1);
+
+      pipe.ngOnDestroy();
+      expect(arrivalListeners.size).toBe(0);
+    });
+
+    it('retries a hash that previously resolved to "not found" once an arrival notification names that SAME hash', async () => {
+      get.mockResolvedValueOnce(undefined); // first look: not stored locally yet
+      get.mockResolvedValueOnce(ROW); // second look, after "arrival": now it is
+
+      const pipe = TestBed.runInInjectionContext(() => new BlobUrlPipe());
+      const state = pipe.transform(ROW.hash);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(state()).toBeUndefined();
+      expect(createObjectURL).not.toHaveBeenCalled();
+
+      emitArrival(ROW.hash); // e.g. BlobsRepository.put(ROW.hash, ...) just landed
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(state()).toBe('blob:fake-url');
+    });
+
+    it('ignores an arrival notification for a DIFFERENT hash than the one currently displayed', async () => {
+      get.mockResolvedValue(undefined);
+      const pipe = TestBed.runInInjectionContext(() => new BlobUrlPipe());
+      const state = pipe.transform(ROW.hash);
+      await Promise.resolve();
+      await Promise.resolve();
+      get.mockClear();
+
+      emitArrival(ROW_B.hash); // some OTHER hash arrived — not this pipe's own
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(get).not.toHaveBeenCalled();
+      expect(state()).toBeUndefined();
+    });
+
+    it('ignores an arrival notification once a URL has already resolved (no redundant refetch)', async () => {
+      const pipe = TestBed.runInInjectionContext(() => new BlobUrlPipe());
+      const state = pipe.transform(ROW.hash);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(state()).toBe('blob:fake-url');
+      get.mockClear();
+      createObjectURL.mockClear();
+
+      emitArrival(ROW.hash); // already resolved — nothing to redo
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(get).not.toHaveBeenCalled();
+      expect(createObjectURL).not.toHaveBeenCalled();
+    });
+
+    it('ignores an arrival notification while no hash is current (undefined)', async () => {
+      const pipe = TestBed.runInInjectionContext(() => new BlobUrlPipe());
+      pipe.transform(undefined);
+      get.mockClear();
+
+      emitArrival(ROW.hash);
+      await Promise.resolve();
+
+      expect(get).not.toHaveBeenCalled();
+    });
   });
 });

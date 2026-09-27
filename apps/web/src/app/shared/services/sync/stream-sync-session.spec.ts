@@ -621,6 +621,65 @@ describe('StreamSyncSession', () => {
     session.stop();
   });
 
+  it("onBlobPull fires with {hash, to} for a `blob.pull` frame — plan-10 Task 13's own wiring (previously silently dropped by the default case)", async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onBlobPull = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onBlobPull });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    ws.emitMessage({ t: 'blob.pull', hash: 'sha256:' + 'a'.repeat(64), to: '7' });
+    await flush();
+
+    expect(onBlobPull).toHaveBeenCalledTimes(1);
+    expect(onBlobPull).toHaveBeenCalledWith('sha256:' + 'a'.repeat(64), '7');
+    session.stop();
+  });
+
+  it('onBlobUnavailable fires with {hash} for a `blob.unavailable` frame', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onBlobUnavailable = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onBlobUnavailable });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    ws.emitMessage({ t: 'blob.unavailable', hash: 'sha256:' + 'b'.repeat(64) });
+    await flush();
+
+    expect(onBlobUnavailable).toHaveBeenCalledTimes(1);
+    expect(onBlobUnavailable).toHaveBeenCalledWith('sha256:' + 'b'.repeat(64));
+    session.stop();
+  });
+
+  it('a `blob.pull`/`blob.unavailable` frame with no hook registered is silently ignored (never throws)', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+
+    const { session, Factory } = newSession(streamId, {});
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    expect(() => {
+      ws.emitMessage({ t: 'blob.pull', hash: 'sha256:' + 'a'.repeat(64), to: '1' });
+      ws.emitMessage({ t: 'blob.unavailable', hash: 'sha256:' + 'b'.repeat(64) });
+    }).not.toThrow();
+    await flush();
+    session.stop();
+  });
+
   it('onBinaryFrame delivers a binary frame received over the socket, as a Uint8Array', async () => {
     const streamId = await store.create('Aria', 'feminine');
     store.enterSyncMode(streamId);

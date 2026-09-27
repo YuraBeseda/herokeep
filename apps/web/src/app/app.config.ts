@@ -12,6 +12,8 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { routes } from './app.routes';
+import { BlobTransferService } from './shared/services/blob-transfer/blob-transfer.service';
+import { CacheManagerService } from './shared/services/blob-transfer/cache-manager.service';
 import { PartyOverviewPublisherService } from './shared/services/campaigns/party-overview-publisher.service';
 import { AuthService } from './shared/services/auth/auth.service';
 import { TranslocoHttpLoader } from './shared/services/i18n/transloco.loader';
@@ -70,6 +72,20 @@ export const appConfig: ApplicationConfig = {
     // whichever route (if any) is currently showing a campaign's party grid.
     provideAppInitializer(() => {
       inject(PartyOverviewPublisherService);
+    }),
+    // `CacheManagerService`/`BlobTransferService` (plan-10 Task 13, doc-07 §Blob transfer +
+    // §Cache management): same "inject() alone doesn't instantiate a nobody-else-injects service"
+    // reasoning as the initializers above. `CacheManagerService` first (its constructor's boot-time
+    // weekly orphan sweep and cap-loading are pure Dexie/Settings I/O, no network); then
+    // `BlobTransferService`, whose own constructor effect starts watching
+    // `SyncService.liveCampaignIds()` for campaign sessions to prefetch/serve blobs for. Order
+    // doesn't affect correctness (Angular resolves the DI graph regardless), but mirrors the
+    // dependency direction for readability.
+    provideAppInitializer(() => {
+      inject(CacheManagerService);
+    }),
+    provideAppInitializer(() => {
+      inject(BlobTransferService);
     }),
     // Registered in every build (including dev serve) but only *enabled* outside dev mode — `ng
     // serve` has no `ngsw-worker.js` to fetch, and a stale cached dev bundle would be actively
