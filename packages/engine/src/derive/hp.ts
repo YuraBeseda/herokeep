@@ -87,7 +87,28 @@ export function deriveHp(
   const table = new ModifierTable();
   const hitDice: HpResult['hitDice'] = {};
 
-  for (const classId of Object.keys(comp.classLevels).sort()) {
+  // Ruling 8 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) is authoritative —
+  // NEVER re-sort. `comp.classLevels`'s keys carry no order of their own (`Record`), so the
+  // iteration order is rebuilt here from `facts.classes` directly (first occurrence per resolved
+  // class id), replacing the previous `Object.keys(comp.classLevels).sort()` (alphabetical — a bug:
+  // it silently reassigned "which class is first" away from the character's actual creation order).
+  const orderedClassIds: string[] = [];
+  const seenClassIds = new Set<string>();
+  for (const c of facts.classes) {
+    const id = index.resolveClassRef(c.classId) ?? c.classId;
+    if (!seenClassIds.has(id)) {
+      seenClassIds.add(id);
+      orderedClassIds.push(id);
+    }
+  }
+  // Ruling 7: the system's `hpRules.firstLevelMaxHitDie` rule applies to the FIRST class's level 1
+  // ONLY (5e: you take the max value of your class's hit die at 1st character level, once — every
+  // other level, including a later multiclassed-in class's own "level 1", rolls/averages like any
+  // other level). A single-class character's only class is trivially `firstClassId`, so this is
+  // byte-identical to the pre-fix single-class behavior.
+  const firstClassId = orderedClassIds[0];
+
+  for (const classId of orderedClassIds) {
     const entity = index.get(classId);
     if (entity?.type !== 'class') {
       issues.push(warning('derive.unresolvedEntity', `Unresolved class "${classId}"`, { entityId: classId }));
@@ -100,7 +121,7 @@ export function deriveHp(
 
     for (let lvl = 1; lvl <= levels; lvl++) {
       const dieAmount =
-        lvl === 1
+        lvl === 1 && classId === firstClassId
           ? hpRules.firstLevelMaxHitDie
             ? hitDie
             : averageHitDie(hitDie, hpRules.averageRounding)

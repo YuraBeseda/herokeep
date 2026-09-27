@@ -100,13 +100,23 @@ function deriveProficiencies(facts: Facts, abilities: AbilitiesResult, index: Co
     if ((RANK[level] ?? 0) > (RANK[cur.level] ?? 0)) cur.level = level;
   };
 
-  for (const c of facts.classes) {
+  // Ruling 7 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) decides which entry
+  // is "first" — the FIRST class always contributes its full armor/weapon proficiency list; any
+  // LATER class (index > 0) contributes only its `multiclass.gains` list (the SRD multiclass
+  // table: e.g. a later-class Fighter grants light/medium armor + shields + martial weapons, never
+  // heavy armor). Compat: a class with no `multiclass`/`gains` data at all (old/fixture packs that
+  // predate this ruling) falls back to its FULL list even as a later class, so untouched content
+  // keeps granting exactly what it always granted.
+  facts.classes.forEach((c, i) => {
     const classId = index.resolveClassRef(c.classId) ?? c.classId;
     const classEntity = index.get(classId);
-    if (classEntity?.type !== 'class') continue;
-    for (const slug of classEntity.armorTraining) add('armor', slug, 'proficient', classId);
-    for (const slug of classEntity.weaponProficiencies) add('weapon', slug, 'proficient', classId);
-  }
+    if (classEntity?.type !== 'class') return;
+    const gains = i > 0 ? classEntity.multiclass?.gains : undefined;
+    const armorTraining = gains ? gains.armorTraining : classEntity.armorTraining;
+    const weaponProficiencies = gains ? gains.weaponProficiencies : classEntity.weaponProficiencies;
+    for (const slug of armorTraining) add('armor', slug, 'proficient', classId);
+    for (const slug of weaponProficiencies) add('weapon', slug, 'proficient', classId);
+  });
 
   for (const ae of abilities.effects) {
     const eff = ae.effect;

@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "id": "multiclass-mini",
+  "version": "1.0.0",
+  "kind": "content",
+  "system": "mini",
+  "name": "Multiclass mini (test)",
+  "dependencies": [{ "id": "core-mini", "range": "^1" }],
+  "entities": [
+    {
+      "id": "multiclass-mini:class/wizard",
+      "type": "class",
+      "name": "Wizard",
+      "hitDie": 6,
+      "primaryAbility": ["int"],
+      "saves": ["int", "wis"],
+      "armorTraining": [],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": { "from": ["stealth"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [{ "level": 1, "grants": [] }],
+      "multiclass": {
+        "prerequisites": { "ability": { "int": { "gte": 13 } } },
+        "gains": { "armorTraining": [], "weaponProficiencies": [], "skillChoiceCount": 0 }
+      }
+    }
+  ],
+  "overrides": [
+    {
+      "target": "core-mini:system/mini",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/multiclass",
+          "value": {
+            "prerequisites": {
+              "core-mini:class/fighter": { "ability": { "str": { "gte": 13 } } },
+              "core-mini:class/druid": { "ability": { "wis": { "gte": 13 } } },
+              "multiclass-mini:class/wizard": { "ability": { "int": { "gte": 13 } } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "target": "core-mini:class/fighter",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/multiclass",
+          "value": {
+            "prerequisites": { "ability": { "str": { "gte": 13 } } },
+            "gains": {
+              "armorTraining": ["light", "medium", "shields"],
+              "weaponProficiencies": ["simple", "martial"],
+              "skillChoiceCount": 0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
