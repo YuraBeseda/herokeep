@@ -133,10 +133,13 @@ describe('ChoiceStepComponent', () => {
   // `.choice-step__literal-input`/`.choice-step__literal-form` rendering path itself is untouched
   // production code, just no longer exercised by an integration test against the real pack — a
   // residual coverage gap flagged in task-8-report.md for controller triage (closing it cleanly
-  // needs a small hand-built synthetic pack, out of this content-only task's scope). This test now
-  // covers weapon-masteries' real, current behavior: a single-select query pick, same shape as the
-  // species test above.
-  it('a query-pick choice (weapon masteries) renders item cards; selecting one records a real item id', async () => {
+  // needs a small hand-built synthetic pack, out of this content-only task's scope). Fix round 1:
+  // count is 3 (the real SRD value, not the original round's scope-limited 1) — `onToggle`'s
+  // `count !== 1` branch (choice-step.component.ts, pre-existing code) already does generic
+  // toggle/append multi-select, the exact same path the `skills` choice above exercises at
+  // count:2, so this mirrors that test's "select up to count, diagnostic beyond it" shape instead
+  // of the single-select species/count:1 shape.
+  it('a query-pick choice (weapon masteries) renders item cards, enforces count 3, and shows the diagnostic on a 4th pick', async () => {
     const state = createState();
     state.name.set('Aldric');
     state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
@@ -146,16 +149,32 @@ describe('ChoiceStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const buttons = compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select');
-    expect(buttons.length).toBeGreaterThan(0);
+    const buttons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+    );
+    expect(buttons.length).toBeGreaterThan(3);
 
     buttons[0].click();
     await fixture.whenStable();
+    buttons[1].click();
+    await fixture.whenStable();
+    buttons[2].click();
+    await fixture.whenStable();
+
+    const afterThree = state.decisions().get(WEAPON_MASTERIES_CHOICE);
+    expect(afterThree?.length).toBe(3);
+    for (const id of afterThree ?? []) expect(id).toMatch(/^srd-5e-2024:item\//);
+    expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+    expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
+    expect(buttons[2].getAttribute('aria-pressed')).toBe('true');
+    expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBe(0);
+
+    buttons[3].click();
+    await fixture.whenStable();
 
     const decided = state.decisions().get(WEAPON_MASTERIES_CHOICE);
-    expect(decided?.length).toBe(1);
-    expect(decided?.[0]).toMatch(/^srd-5e-2024:item\//);
-    expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+    expect(decided?.length).toBe(4);
+    expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBeGreaterThan(0);
   });
 
   it('the synthetic class-skills pick renders chips from the fighter skillChoice, enforces count 2, and shows the diagnostic on a 3rd pick', async () => {

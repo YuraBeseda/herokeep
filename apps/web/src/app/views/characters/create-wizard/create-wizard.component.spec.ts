@@ -135,8 +135,12 @@ function fillValidDecisions(state: CreateWizardState): void {
   state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
   state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
   // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-  // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
-  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['srd-5e-2024:item/longsword']);
+  // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
+  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+    'srd-5e-2024:item/longsword',
+    'srd-5e-2024:item/shortsword',
+    'srd-5e-2024:item/dagger',
+  ]);
 }
 
 describe('CreateWizardComponent', () => {
@@ -257,9 +261,11 @@ describe('CreateWizardComponent', () => {
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
     // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
     state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
       'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
     ]);
     await fixture.whenStable();
 
@@ -374,9 +380,11 @@ describe('CreateWizardComponent', () => {
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
     // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
     state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
       'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
     ]);
     await fixture.whenStable();
 
@@ -437,9 +445,11 @@ describe('CreateWizardComponent', () => {
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
     // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
     state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
       'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
     ]);
     const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);
     state.equipItem(chainMail);
@@ -460,8 +470,11 @@ describe('CreateWizardComponent', () => {
     expect(find('Fighting Style')?.selection).toBe('Defense');
     // Task 8: weapon-masteries is now a real query pick over item entities, so its selection
     // resolves through the index/localizer like any other entity-id decision (was the raw
-    // literal-text string 'longsword' before the T6/T8 pick-shape swap).
-    expect(find('Weapon Masteries')?.selection).toBe('Longsword');
+    // literal-text string 'longsword' before the T6/T8 pick-shape swap). Fix round 1: count is
+    // 3, so all three chosen weapons' localized names appear.
+    expect(find('Weapon Masteries')?.selection).toContain('Longsword');
+    expect(find('Weapon Masteries')?.selection).toContain('Shortsword');
+    expect(find('Weapon Masteries')?.selection).toContain('Dagger');
     // The synthetic class-skills choice has no backing `Choice` entity — falls back to its own
     // step's label key ("Skills") rather than an empty `Localizer.choicePrompt`.
     const skillsPair = pairs.find((p) => p.prompt === 'Skills');
@@ -584,9 +597,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
     // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
     state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
       'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
     ]);
 
     const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);
@@ -683,9 +698,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
     // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
     state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
       'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
     ]);
     await fixture.whenStable();
 
@@ -748,9 +765,11 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision('srd-5e-2024:class/fighter@1/skills', ['athletics', 'perception']);
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
     // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-    // (T6 carry closed), not a `literal: 'text'` free-text placeholder.
+    // (T6 carry closed), not a `literal: 'text'` free-text placeholder. Fix round 1: count is 3.
     state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
       'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
     ]);
     await fixture.whenStable();
 

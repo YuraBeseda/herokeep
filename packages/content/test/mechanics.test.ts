@@ -156,12 +156,12 @@ describe('fighter and wizard 6–20 mechanics (task 8)', () => {
     expect(choiceIds).not.toContain('srd-5e-2024:class/fighter@5/feat');
   });
 
-  it('fighter: weapon-masteries is a real query pick (count stays 1, apps/web scope carry) and fighting-style repeats at every later level', () => {
+  it('fighter: weapon-masteries is a real query pick, count 3 (fix round 1), and fighting-style repeats at every later level', () => {
     const f = patchedClasses.find((c) => c.id === 'srd-5e-2024:class/fighter') as ClassShape;
     const l1 = f.levels.find((r) => r.level === 1)!;
     const masteries = l1.choices.find((c) => c.id.endsWith('/weapon-masteries'))!;
     expect(masteries.pick).toEqual({ query: { type: 'item', hasField: ['weapon.mastery'] } });
-    expect(masteries.count).toBe(1);
+    expect(masteries.count).toBe(3);
     const style = l1.choices.find((c) => c.id.endsWith('/fighting-style')) as unknown as { repeatableAt: number[] };
     expect(style.repeatableAt).toEqual(
       Array.from({ length: 19 }, (_, i) => i + 2), // 2..20
@@ -248,12 +248,14 @@ describe('fighter and wizard 6–20 mechanics (task 8)', () => {
     expect(w.levels.find((r) => r.level === 20)?.extra?.['wizard-prepared-spells']).toBe(25);
   });
 
-  it('wizard: Scholar is deliberately NOT authored as a choice (engine + apps/web carry, documented)', () => {
+  it('wizard: Scholar has a feature.text fallback (fix round 1) but its choice stays deliberately unauthored (engine + apps/web carry)', () => {
     const w = patchedClasses.find((c) => c.id === 'srd-5e-2024:class/wizard') as ClassShape;
     const choiceIds = w.levels.flatMap((r) => r.choices.map((c) => c.id));
     expect(choiceIds.some((id) => id.includes('scholar'))).toBe(false);
-    const scholar = patchedFeatures.find((x) => x.id.endsWith('wizard-scholar')) as { effects: unknown[] };
-    expect(scholar.effects).toEqual([]);
+    const scholar = patchedFeatures.find((x) => x.id.endsWith('wizard-scholar')) as {
+      effects: { type: string }[];
+    };
+    expect(scholar.effects.some((e) => e.type === 'feature.text')).toBe(true);
   });
 
   it('evoker: Empowered Evocation authors the (currently inert) spell damage.bonus; Overchannel/Sculpt Spells fall back to text', () => {

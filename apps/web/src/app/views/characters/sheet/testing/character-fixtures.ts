@@ -24,7 +24,8 @@ async function persist(state: CreateWizardState): Promise<string> {
 /**
  * Persists the exact "fighter-1" fixture `create-wizard.component.spec.ts`'s binding spec drives:
  * soldier background, standard-array abilities, fighter class, athletics/perception skills, Defense
- * fighting style, a longsword mastery pick, and chain mail + longsword + shield all equipped —
+ * fighting style, three weapon mastery picks (longsword/shortsword/dagger), and chain mail +
+ * longsword + shield all equipped —
  * `hp.max` 12 / `ac` 19 / `prof` 2, with the AC total backed by exactly 3 contributions (chain mail,
  * shield, Defense). Returns the persisted `char:<uuid>` stream id.
  *
@@ -55,9 +56,13 @@ export async function seedFighter(
     state.setDecision('srd-5e-2024:class/fighter@1/fighting-style', ['srd-5e-2024:feat/defense']);
   }
   // Task 8 (phase 4 plan 11): weapon-masteries' pick is now a real query over item entities
-  // (T6 carry closed), not a `literal: 'text'` free-text placeholder — the selection must be a
-  // real entity id, not the bare word 'longsword'.
-  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', ['srd-5e-2024:item/longsword']);
+  // (T6 carry closed), not a `literal: 'text'` free-text placeholder — the selection must be real
+  // entity ids, not bare words. Fix round 1: count is 3 (the real SRD value), not 1.
+  state.setDecision('srd-5e-2024:class/fighter@1/weapon-masteries', [
+    'srd-5e-2024:item/longsword',
+    'srd-5e-2024:item/shortsword',
+    'srd-5e-2024:item/dagger',
+  ]);
 
   const chainMail = state.addItem('srd-5e-2024:item/chain-mail', 1);
   state.equipItem(chainMail);
