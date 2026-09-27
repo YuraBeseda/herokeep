@@ -64,6 +64,21 @@ export const BLOB_IDLE_SCHEDULER = new InjectionToken<BlobIdleScheduler>('BLOB_I
   factory: () => defaultIdleScheduler,
 });
 
+/** [final review wave, finding 3] Trailing debounce window for the two `onLocalAppend`-triggered
+ * `runConnectSequence` re-runs (`onCharacterLocalAppend`/`onCampaignLocalAppend`, below) — NOT
+ * applied to `connectEffect`'s own call (`startWatcher`), which must stay immediate since it fires
+ * on a genuine reconnect transition, not on every local commit. Mirrors
+ * `PartyOverviewPublisherService`'s `PARTY_OVERVIEW_PUBLISH_DEBOUNCE_MS` pattern exactly (per-key
+ * trailing `setTimeout` + a DI seam so specs can shrink it), including its 5 s default: nothing
+ * about THIS hook's own timing argues for a different value — like that publisher, it exists to
+ * close a "the local roster/campaign state a re-scan needs hasn't landed yet" gap after a commit,
+ * not to meet any tighter user-visible deadline (unlike `BLOB_REQUEST_TIMEOUT_MS`, which bounds an
+ * actual network wait for a peer). Production code never overrides this. */
+export const BLOB_LOCAL_APPEND_DEBOUNCE_MS = new InjectionToken<number>(
+  'BLOB_LOCAL_APPEND_DEBOUNCE_MS',
+  { factory: () => 5_000 },
+);
+
 type WantedTier = 1 | 2 | 3;
 
 interface WantedHash {
@@ -214,11 +229,18 @@ export class BlobTransferService {
   private readonly snapshotsRepository = inject(SnapshotsRepository);
   private readonly requestTimeoutMs = inject(BLOB_REQUEST_TIMEOUT_MS);
   private readonly idleScheduler = inject(BLOB_IDLE_SCHEDULER);
+  private readonly localAppendDebounceMs = inject(BLOB_LOCAL_APPEND_DEBOUNCE_MS);
   private readonly injector = inject(Injector);
   private readonly characterStore = inject(CharacterStore);
   private readonly campaignStore = inject(CampaignStore);
 
   private readonly watchers = new Map<string, CampaignWatcher>();
+  /** [final review wave, finding 3] Per-campaignId debounce timers for
+   * `scheduleDebouncedConnectSequence` — kept separate from `CampaignWatcher.retryTimeoutHandle`
+   * (a different concern: THAT one re-queues a single failed blob request) and cleared in
+   * `stopWatcher` so a still-pending debounced re-run can never fire for a campaign this service
+   * has already stopped watching. */
+  private readonly localAppendDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor() {
     effect(() => {
@@ -259,6 +281,16 @@ export class BlobTransferService {
     // `startDmSuperPeerLoop`'s own re-entry guard) `runConnectSequence` is simpler and lower-risk
     // than hand-duplicating its announce-building logic here, and correctly also re-queues any
     // P1/P2 the FIRST connect-time attempt couldn't see yet.
+    //
+    // [final review wave, finding 3] BOTH hooks route through `scheduleDebouncedConnectSequence`
+    // (a per-campaignId TRAILING debounce, `BLOB_LOCAL_APPEND_DEBOUNCE_MS`) rather than calling
+    // `runConnectSequence` directly — undebounced, EVERY local commit on a campaign-linked
+    // character (a single HP tap included) re-ran the WHOLE connect sequence: a fresh campaign-wide
+    // event re-projection, a roster-wide Dexie read pass, and a `blob.have` frame, unconditionally,
+    // per commit. A burst of rapid edits now collapses into ONE deferred re-run reflecting the
+    // LATEST state, `PARTY_OVERVIEW_PUBLISH_DEBOUNCE_MS`-style. `connectEffect`'s OWN
+    // `runConnectSequence` call below (the genuine "on connect" trigger) is UNCHANGED — still
+    // immediate — since it fires once per real reconnect transition, never once per local commit.
     this.characterStore.onLocalAppend((streamId) => this.onCharacterLocalAppend(streamId));
     this.campaignStore.onLocalAppend((streamId) => this.onCampaignLocalAppend(streamId));
   }
@@ -267,14 +299,33 @@ export class BlobTransferService {
     if (this.characterStore.streamId() !== streamId) return; // moved on to a different character
     const campaignId = campaignIdOfCharacter(this.characterStore.events());
     if (!campaignId || !this.watchers.has(campaignId)) return;
-    void this.runConnectSequence(campaignId);
+    this.scheduleDebouncedConnectSequence(campaignId);
   }
 
   private onCampaignLocalAppend(streamId: string): void {
     if (this.campaignStore.streamId() !== streamId) return; // a DIFFERENT campaign is open now
     const campaignId = this.campaignStore.campaignId();
     if (!campaignId || !this.watchers.has(campaignId)) return;
-    void this.runConnectSequence(campaignId);
+    this.scheduleDebouncedConnectSequence(campaignId);
+  }
+
+  /** [final review wave, finding 3] Trailing per-campaignId debounce around the two hook-triggered
+   * `runConnectSequence` re-runs above — see `BLOB_LOCAL_APPEND_DEBOUNCE_MS`'s own doc. A NEW
+   * hook firing for the same campaign within the window resets the timer (mirrors
+   * `PartyOverviewPublisherService.schedule`'s identical shape) rather than queuing a second
+   * re-run, so a rapid burst of local commits collapses into exactly ONE re-run,
+   * `localAppendDebounceMs` after the LAST one. Re-checks `watchers.has(campaignId)` when the
+   * timer actually fires (not just when it was scheduled) — the watcher may have stopped during
+   * the debounce window (campaign no longer live), in which case there is nothing left to do. */
+  private scheduleDebouncedConnectSequence(campaignId: string): void {
+    const existing = this.localAppendDebounceTimers.get(campaignId);
+    if (existing !== undefined) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      this.localAppendDebounceTimers.delete(campaignId);
+      if (!this.watchers.has(campaignId)) return;
+      void this.runConnectSequence(campaignId);
+    }, this.localAppendDebounceMs);
+    this.localAppendDebounceTimers.set(campaignId, timer);
   }
 
   // --- watcher lifecycle -----------------------------------------------------------------------
@@ -361,6 +412,11 @@ export class BlobTransferService {
     if (watcher.retryTimeoutHandle !== undefined) clearTimeout(watcher.retryTimeoutHandle);
     watcher.dmLoopActive = false;
     this.watchers.delete(campaignId);
+    const debounceTimer = this.localAppendDebounceTimers.get(campaignId);
+    if (debounceTimer !== undefined) {
+      clearTimeout(debounceTimer);
+      this.localAppendDebounceTimers.delete(campaignId);
+    }
     void this.cacheManagerService.refreshPins();
   }
 

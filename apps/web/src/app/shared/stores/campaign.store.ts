@@ -1038,12 +1038,23 @@ export class CampaignStore {
 
   /** Arms `GATEWAY_ACK_TIMEOUT_MS` (fix round 1, F1b) once every event in `batch` has actually been
    * sent — a no-op if the batch has already settled by the time this runs (defensive; not
-   * reachable in production, since nothing between the send loop and this call yields control). */
+   * reachable in production, since nothing between the send loop and this call yields control).
+   *
+   * [final review wave, fold-in] The timeout handler also adds every `ids` entry to
+   * `resolvedGatewayIds` — mirroring `resolveGatewayAcks`/`resolveGatewayRejects`'s own bookkeeping
+   * — NOT just removing them from `gatewayWaiters`. Without this, a late ack/reject that still
+   * arrives on a live socket AFTER this timeout already gave up (the request wasn't actually lost,
+   * just slower than `gatewayAckTimeoutMs`) would find the id in neither set: `isGatewayId` would
+   * return `false`, and `commitPending`/`dropPending` would misfile it into the campaign's OWN
+   * pending-prefix walk, throwing a spurious `SyncGapError` for an id that was never a campaign-own
+   * pending row to begin with. Keeping it in `resolvedGatewayIds` makes that late arrival the same
+   * harmless swallow every OTHER post-settlement duplicate already gets. */
   private armGatewayTimeout(batch: GatewayBatch, ids: readonly string[]): void {
     if (batch.settled) return;
     batch.timeoutHandle = setTimeout(() => {
       for (const id of ids) {
         if (this.gatewayWaiters.get(id) === batch) this.gatewayWaiters.delete(id);
+        this.resolvedGatewayIds.add(id);
       }
       this.settleGatewayReject(batch, new CampaignGatewayUnavailableError());
     }, this.gatewayAckTimeoutMs);

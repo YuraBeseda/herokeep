@@ -99,7 +99,11 @@ not an automatic one.
 
 - The DO assigns `seq` strictly increasing per stream; `events` frames are always in
   order; a client that detects a gap (`seq != lastSeq + 1`) re-sends `hello` for that
-  stream (never guesses).
+  stream (never guesses). Character streams hold to that check strictly; campaign streams
+  tolerate FORWARD seq jumps instead of treating every gap as fatal, since doc-08's
+  per-viewer visibility filtering leaves permanent, per-viewer holes in a campaign
+  stream's seq numbering that a `hello` re-send can never close — a BACKWARD move stays a
+  fatal divergence on both.
 - Client-side: `committed[]` sorted by seq, `pending[]` in creation order. `facts =
   reduce(committed ++ pending)`. On `ack`, move the event to committed at its seq; on
   `reject`, drop it and re-derive; show a toast for `forbidden`/`quota`.

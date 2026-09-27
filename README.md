@@ -90,10 +90,10 @@ stream on both server adapters, and a full `apps/web` UI + blob-relay client on 
   forwards it through a gateway with a stamped actor (dm, or owner when a member acts on their own
   character), and the character stream re-checks permissions independently. Character-side commits
   mirror back to the campaign stream (e.g. `campaign.character_joined`) once the corresponding
-  character-stream event is confirmed, so joins can't half-complete. `POST /api/characters/:id/
-  transfer` moves a character's real D1 ownership between accounts (session-authed, current-owner
-  gated) — what makes claiming a DM-handed-over pregen a genuine ownership change, not just a
-  roster relabel.
+  character-stream event is confirmed, so joins can't half-complete.
+  `POST /api/characters/:id/transfer` moves a character's real D1 ownership between accounts
+  (session-authed, current-owner gated) — what makes claiming a DM-handed-over pregen a genuine
+  ownership change, not just a roster relabel.
 - Presence (`members` snapshots, throttled) and a server-side image/blob relay (holder priority,
   16-byte chunk header, ≤64 KB chunks, 1 in-flight per requester, 2 concurrent serves per holder)
   round out the socket surface.

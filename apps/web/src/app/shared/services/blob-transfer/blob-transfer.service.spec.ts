@@ -14,6 +14,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { encodeBlobChunkFrame } from './blob-chunk-codec';
 import {
   BLOB_IDLE_SCHEDULER,
+  BLOB_LOCAL_APPEND_DEBOUNCE_MS,
   BLOB_REQUEST_TIMEOUT_MS,
   BlobTransferService,
   type BlobIdleScheduler,
@@ -146,6 +147,17 @@ async function flush(times = 10): Promise<void> {
     TestBed.tick();
     await tick();
   }
+}
+
+// [final review wave, finding 3] A small, but comfortably-flush()-dominating REAL duration for
+// `BLOB_LOCAL_APPEND_DEBOUNCE_MS` — same "small real duration, never `vi.useFakeTimers()`" posture
+// `campaign.store.spec.ts`'s own `CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS` doc explains (fake timers starve
+// real fake-indexeddb microtask scheduling). Deliberately larger than `flush()`'s own real-but-tiny
+// wall-clock overhead (10 real ticks) so a test asserting "nothing fired yet, immediately after the
+// burst" can never flake by accidentally outlasting the debounce window on a loaded machine.
+const LOCAL_APPEND_DEBOUNCE_MS = 100;
+async function waitPastLocalAppendDebounce(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, LOCAL_APPEND_DEBOUNCE_MS + 150));
 }
 
 // --- idle scheduler test double — a MANUALLY-DRAINED queue (never auto-runs synchronously) so a
@@ -283,6 +295,7 @@ describe('BlobTransferService', () => {
         { provide: CharacterStore, useValue: fakeCharacterStore },
         { provide: BLOB_IDLE_SCHEDULER, useValue: idle.scheduler },
         { provide: BLOB_REQUEST_TIMEOUT_MS, useValue: requestTimeoutMs },
+        { provide: BLOB_LOCAL_APPEND_DEBOUNCE_MS, useValue: LOCAL_APPEND_DEBOUNCE_MS },
       ],
     });
 
@@ -380,7 +393,59 @@ describe('BlobTransferService', () => {
     fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, [
       mkCharCampaignJoinedEvent(CHARACTER_ID, CAMPAIGN_ID),
     ]);
-    await flush();
+    // [final review wave, finding 3] The hook-triggered re-run is now debounced — must wait past
+    // the window, not just flush() microtasks, before the re-announce is expected.
+    await waitPastLocalAppendDebounce();
+
+    expect(fakeSync.sendBlobHave).toHaveBeenCalledWith(CAMPAIGN_ID, [hash]);
+  });
+
+  // [final review wave, finding 3] Undebounced, EVERY local commit on a campaign-linked character
+  // re-ran the WHOLE connect sequence (a fresh campaign-wide re-projection, a roster-wide Dexie
+  // read pass, and a `blob.have` frame) — a burst of rapid edits (e.g. several HP taps) fired it
+  // once PER commit. This pins the fix: a per-campaignId trailing debounce collapses a rapid burst
+  // into exactly ONE deferred re-run.
+  it('collapses a rapid burst of onLocalAppend-triggered hook fires into exactly ONE deferred re-run, reflecting the LATEST state', async () => {
+    const hash = 'sha256:' + 'e0'.repeat(32);
+    await TestBed.inject(CharactersRepository).put(mkCharacterRow({ portraitThumbHash: hash }));
+    await putBlobBytes(hash, new Uint8Array([1]));
+
+    // Connects with no roster entry yet, same setup as the re-announce test above.
+    await connectCampaign();
+    expect(fakeSync.sendBlobHave).not.toHaveBeenCalled();
+
+    await TestBed.inject(EventsRepository).append([mkJoinedEvent(CHARACTER_ID)]);
+    const joinedEvent = mkCharCampaignJoinedEvent(CHARACTER_ID, CAMPAIGN_ID);
+
+    // THREE rapid hook fires in a tight synchronous burst — each one would (pre-fix) call
+    // `sendBlobHave` immediately and independently, once per fire.
+    fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, [joinedEvent]);
+    fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, [joinedEvent]);
+    fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, [joinedEvent]);
+
+    // Not asserting "hasn't fired yet" here — `flush()`'s own real (if small) wall-clock overhead
+    // (10 real ticks) proved unreliable to bound against a fixed debounce window on a loaded
+    // machine (`campaign.store.spec.ts`'s own `CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS` doc notes the same
+    // class of flakiness). The COLLAPSE itself — exactly ONE call despite THREE rapid fires — is
+    // what this test pins; waiting it out is enough to prove that on its own.
+    await waitPastLocalAppendDebounce();
+
+    expect(fakeSync.sendBlobHave).toHaveBeenCalledTimes(1);
+    expect(fakeSync.sendBlobHave).toHaveBeenCalledWith(CAMPAIGN_ID, [hash]);
+  });
+
+  // The connect-path (`connectEffect`) call is a DIFFERENT trigger than the two `onLocalAppend`
+  // hooks above (finding 3 debounces ONLY the hook-triggered re-runs) — this pins that it stays
+  // immediate: with the roster already populated BEFORE `connectCampaign()` runs, the very first
+  // connect sequence must announce without waiting out any debounce window at all (`connectCampaign`
+  // itself only ever flush()es real microtasks/ticks, never a real-time wait).
+  it('does not debounce the connect-path (connectEffect) call — sendBlobHave still fires immediately on connect', async () => {
+    const hash = 'sha256:' + 'f0'.repeat(32);
+    await TestBed.inject(CharactersRepository).put(mkCharacterRow({ portraitThumbHash: hash }));
+    await putBlobBytes(hash, new Uint8Array([1]));
+    await TestBed.inject(EventsRepository).append([mkJoinedEvent(CHARACTER_ID)]);
+
+    await connectCampaign();
 
     expect(fakeSync.sendBlobHave).toHaveBeenCalledWith(CAMPAIGN_ID, [hash]);
   });

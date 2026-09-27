@@ -1107,6 +1107,38 @@ describe('CampaignStore', () => {
       await expect(promise).rejects.toThrow(CampaignGatewayUnavailableError);
     });
 
+    it('final review wave: a late ack that arrives AFTER the gateway timeout already gave up is still swallowed harmlessly — never misfiled into the campaign-own pending-prefix walk as a spurious SyncGapError', async () => {
+      // Same small-real-duration reasoning as the F1b test above.
+      gatewayTimeoutMsState.set(50);
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:22222222-2222-2222-2222-222222222223';
+      await store.open(streamId);
+      const sendRaw = vi.fn();
+      store.setGateway({ sendRaw });
+
+      const promise = store.gatewayAppend('bbbbbbbb-0000-0000-0000-00000000000f', [
+        { type: 'character.renamed', v: 1, payload: { name: 'X' } },
+      ]);
+      await waitFor(() => sendRaw.mock.calls.length > 0);
+      const sentId = (sendRaw.mock.calls[0][0] as { events: Event[] }).events[0].id;
+
+      promise.catch(() => undefined);
+      // Let the timeout actually fire and settle the batch — the ack below arrives on a still-live
+      // socket AFTER that point, exactly the ">30s-late ack" scenario the timeout can't tell apart
+      // from a genuinely lost one.
+      await expect(promise).rejects.toThrow(CampaignGatewayUnavailableError);
+
+      // Before the fix: `sentId` is in neither `gatewayWaiters` nor `resolvedGatewayIds` once the
+      // timeout handler runs, so `isGatewayId` returns false and this late ack gets misfiled into
+      // the campaign's own pending-prefix walk — throwing SyncGapError for an id that was never a
+      // campaign-own pending row.
+      await expect(
+        store.commitPending(streamId, [{ id: sentId, seq: 1 }]),
+      ).resolves.toBeUndefined();
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.some((e) => e.id === sentId)).toBe(false);
+    });
+
     it('F4: after a partial-batch send failure, already-sent ids stay swallowable — a later ack for one never reaches the campaign-own pending-prefix walk', async () => {
       const store = TestBed.inject(CampaignStore);
       const streamId = 'camp:23232323-2323-2323-2323-232323232323';
