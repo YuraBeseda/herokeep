@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **STATUS: WRITTEN 2026-09-20 — NOT STARTED (owner paused the loop after plan 9).**
+> **STATUS: EXECUTED 2026-09-27 — all 16 tasks complete, campaign client (Phase 3 second/final
+> slice) done on branch `worktree-phase-3-plan10-campaign-client`. Phase 3 COMPLETE (server @
+> plan 9, merged @ 77a355e; client = this plan) — this branch is not yet merged to `main`.**
 
 **Goal:** Ship the campaign CLIENT against the plan-9 server (merged @ 77a355e): host/join UI with code+QR, campaign replica store + projector, party overview, DM tools (effects via the gateway, member sheets via subscribe, explicit unlink), roll log + chat with visibility, presence, the doc-07 blob transfer client with prefetch tiers + DM super-peer + cache management, pregens/claiming, session grouping + edit-outside-session, and campaign export — ending Phase 3 ("usable for my group").
 

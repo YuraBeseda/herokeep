@@ -67,41 +67,92 @@ Accounts and cross-device sync are shipped. The app is still fully usable logged
 - `pnpm --filter web e2e:sync` — a second Playwright project against a real Node API adapter (register/login/recover, cross-device restore, live two-context sync, device revocation), separate from the default offline-only e2e suite.
 - Self-hosting the Node adapter on your own Windows PC (NSSM service, Caddy TLS, dynamic DNS, backups) — the route to reach it from another device over your own LAN/WAN: [`docs/self-hosting-windows.md`](docs/self-hosting-windows.md).
 
-### Campaigns (Phase 3 — server, first slice)
+### Campaigns (Phase 3 — complete)
 
-The campaign backend is shipped in `apps/api`: campaigns with an 8-char join code (Crockford
-base32, no vowels, rotate-able), DM/member roles, and a per-campaign event stream on both
-adapters, gated by the same conformance suite as the character streams.
+The campaign backend (`apps/api`) and client (`apps/web`) are both shipped: campaigns with an
+8-char join code (Crockford base32, no vowels, rotate-able), DM/member roles, a per-campaign event
+stream on both server adapters, and a full `apps/web` UI + blob-relay client on top of it.
+
+**Server** (`apps/api`), gated by the same conformance suite as the character streams:
 
 - Routes: `POST /api/campaigns` (create, DM = creator), `GET /api/campaigns` (mine: DM-of +
   member-of), `POST /api/campaigns/join` (by join code, only when the campaign has joining open),
   `POST /api/campaigns/:id/rotate-code` (DM), `DELETE /api/campaigns/:id/members/:userId` (DM
   removes a member — closes that member's campaign sockets with a `bye` frame), and
   `GET /api/campaigns/:id/ws` (membership-verified socket, role stamped `dm`/`member`).
-- Read visibility is filtered per connection: DM notes never reach non-DM members; roll log
-  entries route by their own visibility field (public/DM-only/roller-only); everything is still
-  stored regardless of who can currently read it.
+- Read visibility is filtered per connection, on both live delivery and reconnect catch-up: DM
+  notes never reach non-DM members; roll log and chat entries route by their own visibility field
+  (everyone/DM-only/roller-only); everything is still stored regardless of who can currently read
+  it, so a filtered-out event is a real, permanent per-viewer gap in that viewer's own seq
+  numbering — not a transport loss (`apps/web`'s own sync stores tolerate the resulting forward
+  seq jumps on campaign streams specifically; see the "campaign client" bullets below).
 - A campaign socket's `append` can target a member's own character stream — the campaign actor
   forwards it through a gateway with a stamped actor (dm, or owner when a member acts on their own
   character), and the character stream re-checks permissions independently. Character-side commits
   mirror back to the campaign stream (e.g. `campaign.character_joined`) once the corresponding
-  character-stream event is confirmed, so joins can't half-complete.
+  character-stream event is confirmed, so joins can't half-complete. `POST /api/characters/:id/
+  transfer` moves a character's real D1 ownership between accounts (session-authed, current-owner
+  gated) — what makes claiming a DM-handed-over pregen a genuine ownership change, not just a
+  roster relabel.
 - Presence (`members` snapshots, throttled) and a server-side image/blob relay (holder priority,
   16-byte chunk header, ≤64 KB chunks, 1 in-flight per requester, 2 concurrent serves per holder)
-  round out the socket surface; the relay only forwards bytes between connected members — no
-  client transfer UI yet (that's the next plan).
+  round out the socket surface.
 - Quotas: 20 MB events / 12 members / 6 non-core packs per campaign, enforced at both the route
   and the actor's append path. Nightly maintenance syncs each campaign stream's `bytes_used` into
   D1 alongside the existing per-user totals (which campaign usage does not count against).
 - `apps/api/test/conformance/` runs campaign lifecycle, visibility-filtering, gateway/mirror, and
   quota scenarios against BOTH adapters, same as the character-stream scenarios.
 
-The campaign CLIENT (host/join UI, party view, DM tools, blob transfer UI) is the next plan; this
-slice ends with a server the conformance suite (and any WS client) can drive end-to-end.
+**Client** (`apps/web`), reusing the plan-8 sync machinery (`StreamSyncSession`/Web Locks/
+BroadcastChannel) widened to a `camp:` stream kind alongside `char:`:
+
+- `/campaigns` — every campaign this device has created, joined, or was seeded from the account on
+  login, with per-row role and sync-state badges. `/join`, `/join/:code` (deep-link pre-filled) —
+  the join screen; `/g/:id/lobby` — the DM's own join code (grouped `XXXX-XXXX`), a QR code
+  (`qrcode-generator`, lazy-loaded, encoding `<origin>/join/<code>`), copy-link/rotate, and the
+  member list (online presence, DM remove).
+- `/g/:id/party` — the party overview grid (HP/AC/passive perception/classes/conditions/
+  concentration, a portrait thumb once the blob relay has pulled it), a DM effects panel per card
+  (damage/heal/temp HP, conditions, inspiration, XP or milestone levels, item grants, a manual
+  sheet-path override) routed through the campaign gateway onto the target character's own stream,
+  a DM-only read-only member-sheet drill-in (gated by the campaign's `partySheets: 'full'`
+  setting), pregen creation (`Add pregen`) and DM-driven hand-over to a member (the real 5-step
+  sequence ending in the ownership-transfer route above), and DM unlink for a removed member's
+  now-ownerless character.
+- `/g/:id/log` — the roll log (reusing the sheet's own dice-result rendering) and chat, both with
+  a per-message visibility picker (everyone/DM-only/private, gated by the campaign's own
+  settings), and the DM's session start/end controls. `/g/:id/settings` — DM-editable house rules
+  and visibility settings (read-only for everyone else) plus a DM-only campaign export (a
+  `.herokeep-campaign` backup of the campaign's own settings/roster/sessions/log — no member
+  character data, no import yet). `/g/:id/link-character` — pick an existing synced character (or
+  create one, returning here), resume an interrupted join/leave, or claim a pregen the DM just
+  handed over (pulls it onto the device via the same restore routine a new device uses, then
+  finishes linking it).
+- A play-tab roll publishes to the campaign stream (visibility from the campaign's own settings)
+  whenever that character is campaign-linked and its campaign socket isn't offline — independent
+  of whether a DM session is currently active. `houseRules.editOutsideSession` (`locked`/
+  `dmApproval`) disables a linked, non-DM character's mutating choice steps outside an active
+  session, with a banner explaining why; a background poll (≤15 s) picks up a session starting/
+  ending or a house-rule change on another device without a reload.
+- `BlobTransferService` speaks doc-07's relay protocol over the campaign socket: `blob.have`
+  announced on connect (own portrait thumbs once this device's own roster link has actually
+  landed — re-announced on every subsequent local character/campaign commit, not just the first
+  connect) and after every completed download, prefetch tiers P1 (own thumb) → P2 (party thumbs)
+  → P3 (own full portrait, idle) → P4 (DM only: every announced hash, continuous), and a
+  one-blob-in-flight requester / serve-one-at-a-time holder state machine with SHA-256-verified
+  assembly. `CacheManagerService` adds pinning (own + current campaigns), an LRU cap with a
+  Settings slider, and a weekly orphan sweep.
+- `pnpm --filter web e2e:sync` (below) now also covers the campaign client end-to-end: create/
+  join/party overview, visibility-routed rolls and chat, a DM effect landing live on the owning
+  member's own open sheet, a lobby removal closing the removed member's campaign UI, DM unlink,
+  the full pregen-handover-and-claim path through the real transfer route, a member's portrait
+  relaying to the DM's party card via the blob transfer client, and the session/edit-lock round
+  trip.
 
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current ones are
 `2026-09-13-phase-1b-play-and-polish.md` (client), `2026-09-13-phase-2-accounts-sync-backend.md`
-(backend), `2026-09-19-phase-2-client-sync.md` (client auth + sync UI, completing Phase 2), and
-`2026-09-20-phase-3-campaign-server.md` (campaign backend, above — Phase 3 first slice).
+(backend), `2026-09-19-phase-2-client-sync.md` (client auth + sync UI, completing Phase 2),
+`2026-09-20-phase-3-campaign-server.md` (campaign backend, Phase 3 first slice), and
+`2026-09-20-phase-3-campaign-client.md` (campaign client, completing Phase 3 — above).

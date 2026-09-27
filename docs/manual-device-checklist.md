@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -224,7 +224,59 @@ running for longer than one sitting), use the self-host route instead:
 
 ---
 
-## 7. Known Phase-4 / backlog items
+## 7. Campaigns (Phase 3, plan 10) — two-device table test
+
+**What this proves:** the same things `pnpm --filter web e2e:sync`'s campaign specs
+(`campaign-table.spec.ts`, `campaign-claim.spec.ts`, `campaign-portrait.spec.ts`,
+`campaign-session-lock.spec.ts`) already prove with two/three browser contexts on one machine —
+join by scanning a real QR code with a real camera, visibility-routed rolls, a DM effect landing
+live, a portrait actually relaying over Wi‑Fi, and a lobby removal — but between two real devices
+on real Wi‑Fi, and with a real camera reading the QR code (something no Playwright context can
+exercise).
+
+Use the same LAN-reachable dev server as section 6 (`pnpm --filter api dev:node` +
+`pnpm --filter web start -- --host 0.0.0.0`), with both phones already signed in to their own
+accounts (section 6, steps 1–3) — reuse phone A/B's accounts and characters if you still have them
+from that pass, or create fresh ones.
+
+### Procedure
+
+1. **Create + join by QR**: on phone A, go to **Campaigns** → **New campaign**, name it, confirm —
+   this lands on the campaign's **Lobby** tab, which shows the join code and a QR code. On phone B,
+   open the device camera (or QR scanner) and point it at phone A's screen; confirm it offers to
+   open the `/join/<code>` link, tap it, and confirm the join screen's code field is already filled
+   in. Fill a display name, **Join**, then pick (or create) a character to link.
+2. **Party overview**: on phone A's **Party** tab, confirm phone B's linked character's card
+   appears with a name, HP/AC, and class/level within a few seconds (no manual refresh).
+3. **Roll visibility**: on phone B's own character sheet (Play tab), set the roll-visibility picker
+   above the dice roller to **DM only**, then tap any **Roll check** button. On phone A's **Log**
+   tab, confirm the roll appears. If you have a third device (or a second account) joined as an
+   ordinary player, confirm that device's own Log tab does **not** show it.
+4. **Chat**: send a chat message from either phone at the default **Everyone** visibility; confirm
+   it appears on the other phone's Log tab live, no reload.
+5. **DM effect lands live**: on phone A's **Party** tab, expand **DM tools** on phone B's
+   character's card and apply a small amount of damage. On phone B — sheet already open, no
+   reload — confirm the Play tab's Current HP drops by that amount within a few seconds.
+6. **Portrait relay**: on phone B, set a portrait (Build tab, if this character doesn't already
+   have one). On phone A's **Party** tab, confirm the placeholder monogram on that character's
+   card is eventually replaced by the real portrait thumbnail (this is the blob-transfer client
+   actually pulling the image bytes from phone B over the campaign socket — phone A never
+   received the file any other way).
+7. **Removal bye**: on phone A's **Lobby** tab, tap **Remove** on phone B's member row and confirm.
+   On phone B — wherever it currently is inside the campaign (Party/Log/Lobby/Settings) — confirm
+   it's redirected to the **Campaigns** list within a few seconds, with a toast explaining it was
+   removed, with no manual action on phone B.
+
+### Results
+
+| Devices (A / B) | Date | QR join | Roll visibility | DM effect live | Portrait relay | Removal bye |
+| --- | --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a / iPhone 13, Safari)_ | | | | | | |
+| | | | | | | |
+
+---
+
+## 8. Known Phase-4 / backlog items
 
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file
 again, but worth knowing about while doing manual passes:

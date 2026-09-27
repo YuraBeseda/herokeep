@@ -88,9 +88,9 @@ function groupJoinCode(code: string): string {
  * npm-registry verification evidence) — `await import('qrcode-generator')` inside a `resource()`
  * loader, same "dynamically imported and cached, keeps the library out of the app's initial
  * bundle" pattern `markdown.service.ts` already established for `marked`/`dompurify`. Renders via
- * `createSvgTag({scalable:true})` — a plain, self-generated (never user-authored) SVG string —
- * bypassed through `DomSanitizer.bypassSecurityTrustHtml` exactly like that same service does for
- * its own (DOMPurify-sanitized) HTML.
+ * `createSvgTag({cellSize: 4, margin: 2})` — a plain, self-generated (never user-authored) SVG
+ * string — bypassed through `DomSanitizer.bypassSecurityTrustHtml` exactly like that same service
+ * does for its own (DOMPurify-sanitized) HTML.
  *
  * ## Follower-mode write gating (task-6-brief.md ruling; see `CampaignShellComponent`'s own doc)
  *
