@@ -27,6 +27,14 @@
   gap: var(--space-2);
 }
 
+/* [plan-10 task-14 fix round 1] Same "fieldset can't reach a custom element's host click binding"
+ * reasoning `choice-step.component.scss`'s identical class documents — the `.ts`'s own
+ * `onSelectSlot` guard is the real gate, this is the visual/pointer-interaction half only. */
+.abilities-improve-step__chip--disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 .abilities-improve-step__diagnostics {
   margin: var(--space-3) 0 0;
   padding: 0;

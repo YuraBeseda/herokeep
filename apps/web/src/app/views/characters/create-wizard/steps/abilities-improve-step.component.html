@@ -8,7 +8,12 @@
           </span>
           <div class="abilities-improve-step__chips">
             @for (a of optionsForSlot(slot); track a.id) {
-              <hk-chip [selected]="isAssigned(slot, a.id)" (click)="onSelectSlot(slot, a.id)">
+              <hk-chip
+                [selected]="isAssigned(slot, a.id)"
+                [class.abilities-improve-step__chip--disabled]="disabled()"
+                [attr.aria-disabled]="disabled() ? 'true' : null"
+                (click)="onSelectSlot(slot, a.id)"
+              >
                 {{ abilityName(a.id) }}
               </hk-chip>
             }

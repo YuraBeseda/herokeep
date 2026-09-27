@@ -12,6 +12,15 @@
   gap: var(--space-2);
 }
 
+/* [plan-10 task-14 fix round 1] `hk-chip` is a custom element, not a "listed" form-associated one
+ * — a wrapping `<fieldset disabled>` never reaches its host `(click)` binding in a real browser
+ * (only `onToggle()`'s own `disabled()` guard, above in the .ts, actually blocks the commit). This
+ * class is the visual/pointer-interaction half only. */
+.choice-step__chip--disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 .choice-step__literal {
   display: flex;
   flex-direction: column;

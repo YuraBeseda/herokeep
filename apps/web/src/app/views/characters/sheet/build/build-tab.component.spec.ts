@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type CampaignSettings, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -23,6 +24,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import { ChoiceStepComponent } from '../../create-wizard/steps/choice-step.component';
 import { seedFighter } from '../testing/character-fixtures';
 import { BuildTabComponent } from './build-tab.component';
 
@@ -600,14 +602,25 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
       compiled.querySelector<HTMLFieldSetElement>('.build-tab__gender-fieldset')!.disabled,
     ).toBe(true);
 
-    // Outstanding choice re-entry (ChoiceStepComponent has no disabled input of its own — wrapped
-    // in a native `<fieldset disabled>`, which reliably blocks descendant control interaction, incl.
-    // in jsdom, even though the leaf `<button>`'s OWN `.disabled` property stays `false`).
+    // Outstanding choice re-entry: the wrapping `<fieldset disabled>` still correctly blocks the
+    // query/static/literal branches' real `<button>`s (per the HTML spec — a real browser DOES
+    // cascade fieldset-disabled onto listed form elements)...
     const outstandingFieldset = compiled.querySelector<HTMLFieldSetElement>(
       '.build-tab__outstanding-fieldset',
     );
     expect(outstandingFieldset).not.toBeNull();
     expect(outstandingFieldset?.disabled).toBe(true);
+
+    // ...but `hk-choice-step`'s OWN `disabled` input (fix round 1) is the AUTHORITATIVE gate for
+    // its `skills`/`abilities` branches' `<hk-chip>` clicks — a custom element, never "listed",
+    // so fieldset-disabled alone never reaches its host `(click)` binding in a real browser. This
+    // asserts the WIRING (editLocked() forwarded), not just the fieldset property — the actual
+    // click-through behavior is covered end-to-end in choice-step.component.spec.ts/
+    // abilities-improve-step.component.spec.ts's own "disabled input" describe blocks.
+    const choiceStepDebugEl = fixture.debugElement.query(By.directive(ChoiceStepComponent));
+    expect(choiceStepDebugEl).not.toBeNull();
+    const choiceStepInstance = choiceStepDebugEl.componentInstance as ChoiceStepComponent;
+    expect(choiceStepInstance.disabled()).toBe(true);
   });
 
   it('exempts the DM and shows no banner while a session is active', async () => {

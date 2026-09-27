@@ -159,4 +159,65 @@ describe('AbilitiesImproveStepComponent', () => {
 
     expect(state.decisions().get(ASI_CHOICE)).toEqual(['cha:+2']);
   });
+
+  // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------
+  //
+  // Same reviewer finding `choice-step.component.spec.ts`'s identical describe block documents:
+  // a wrapping `<fieldset disabled>` is cosmetic-only for `hk-chip`'s host `(click)` binding in a
+  // real browser (it's a custom element, not a "listed" form-associated one) — this component's
+  // own `disabled` input (gating `onSelectSlot` directly) is the real fix.
+  describe('disabled input (fix round 1 — the chip click-through gate)', () => {
+    it('does NOT commit an ability-slot chip click while disabled=true, and marks the chip aria-disabled', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+
+      const fixture = TestBed.createComponent(AbilitiesImproveStepComponent);
+      fixture.componentRef.setInput('choiceId', ASI_CHOICE);
+      fixture.componentRef.setInput('disabled', true);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const charisma = findChip(compiled, 'Charisma');
+      expect(charisma.getAttribute('aria-disabled')).toBe('true');
+
+      charisma.click();
+      await fixture.whenStable();
+
+      expect(state.decisions().get(ASI_CHOICE)).toBeUndefined();
+    });
+
+    it('still commits ability-slot chip clicks when disabled is explicitly false (regression net)', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+
+      const fixture = TestBed.createComponent(AbilitiesImproveStepComponent);
+      fixture.componentRef.setInput('choiceId', ASI_CHOICE);
+      fixture.componentRef.setInput('disabled', false);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const charisma = findChip(compiled, 'Charisma');
+      expect(charisma.getAttribute('aria-disabled')).toBeNull();
+
+      charisma.click();
+      await fixture.whenStable();
+
+      expect(state.decisions().get(ASI_CHOICE)).toEqual(['cha:+2']);
+    });
+
+    it('defaults to enabled when the input is never set at all (every pre-existing consumer, incl. the create wizard)', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+
+      const fixture = TestBed.createComponent(AbilitiesImproveStepComponent);
+      fixture.componentRef.setInput('choiceId', ASI_CHOICE);
+      await fixture.whenStable(); // `disabled` never set
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      findChip(compiled, 'Charisma').click();
+      await fixture.whenStable();
+
+      expect(state.decisions().get(ASI_CHOICE)).toEqual(['cha:+2']);
+    });
+  });
 });

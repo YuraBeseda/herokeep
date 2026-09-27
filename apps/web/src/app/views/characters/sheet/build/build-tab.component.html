@@ -9,11 +9,17 @@
       class="build-tab__section"
     >
       @if (outstanding().length > 0) {
-        <!-- `hk-choice-step` (shared with the create wizard) has no disabled/readonly input of its
-             own — modifying it would widen this task's blast radius onto the wizard flow too. A
-             native `<fieldset disabled>` reliably blocks every descendant control's interaction
-             instead (verified: jsdom suppresses the click event even though the LEAF `<button>`'s
-             own `.disabled` property stays `false` — see task-14-report.md). -->
+        <!-- [plan-10 task-14 fix round 1 — controller ruling] `hk-choice-step`/
+             `hk-abilities-improve-step` now carry their OWN `disabled` input — the AUTHORITATIVE
+             gate (their `onToggle`/`onAddLiteral`/`onRemoveLiteral`/`onSelectSlot` handlers all
+             no-op while `true`). The wrapping `<fieldset disabled>` is kept too: it still correctly
+             blocks the `query`/`static`/`literal` branches' real `<button>`s per the HTML spec (a
+             real browser DOES cascade fieldset-disabled onto listed form elements), but is COSMETIC
+             ONLY for the `skills`/`abilities` branches' `<hk-chip>` clicks — a custom element is
+             never a "listed" form-associated element, so fieldset-disabled never reaches its host
+             `(click)` binding there (see task-14-report.md fix round 1: the original jsdom-only
+             verification over-generalized — jsdom's own fieldset emulation blocks EVERY descendant
+             regardless of element type, which real browsers don't). -->
         <fieldset
           class="build-tab__outstanding-list build-tab__outstanding-fieldset"
           [disabled]="editLocked()"
@@ -25,6 +31,7 @@
                 [sheet]="s"
                 [validate]="validateChoice"
                 [commit]="commitChoice"
+                [disabled]="editLocked()"
               />
             </hk-card>
           }

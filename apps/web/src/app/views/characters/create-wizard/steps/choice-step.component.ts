@@ -94,6 +94,20 @@ export class ChoiceStepComponent {
   readonly sheet = input<Sheet | undefined>(undefined);
   readonly validate = input<ChoiceValidateFn | undefined>(undefined);
   readonly commit = input<ChoiceCommitFn | undefined>(undefined);
+  /** [plan-10 task-14 fix round 1 — controller-sanctioned] `false` by default (every pre-existing
+   * consumer — the create wizard, and the build tab's own OTHER, unlocked-sheet case — is
+   * byte-identical). `BuildTabComponent` passes its own `editLocked()` through here so a locked
+   * member can't commit an outstanding decision. This is the AUTHORITATIVE gate — `onToggle`/
+   * `onAddLiteral`/`onRemoveLiteral` below all no-op while `true`, regardless of which DOM element
+   * the user clicked. A wrapping `<fieldset disabled>` (`build-tab.component.html`) still helps for
+   * the `query`/`static`/`literal` branches (real `<button>`s, correctly cascade-disabled by
+   * fieldset per the HTML spec) but is COSMETIC ONLY for the `skills` branch's `<hk-chip>` clicks
+   * below — `hk-chip` is a custom element, not a "listed" form-associated element, so a real
+   * browser's fieldset-disabled cascade never reaches its host `(click)` binding (task-14-report.md
+   * fix round 1: verified empirically that jsdom's OWN fieldset-disabled emulation over-blocks
+   * relative to the WHATWG spec, which is why the original implementation's jsdom-only test gave
+   * false confidence). */
+  readonly disabled = input(false);
 
   // Working (uncommitted-until-`commit`) UI state — always reset when `choiceId` changes (a
   // fresh mount for a different choice never inherits a stale selection/diagnostics/draft; see
@@ -179,6 +193,7 @@ export class ChoiceStepComponent {
   }
 
   protected onToggle(id: string): void {
+    if (this.disabled()) return;
     const current = this.selection();
     const v = this.view();
     // A count:1 query/static pick (species/background/class in the SRD system's own creation
@@ -198,6 +213,7 @@ export class ChoiceStepComponent {
 
   protected onAddLiteral(event: Event): void {
     event.preventDefault();
+    if (this.disabled()) return;
     const value = this.literalDraft().trim();
     if (!value) return;
     this.literalDraft.set('');
@@ -205,6 +221,7 @@ export class ChoiceStepComponent {
   }
 
   protected onRemoveLiteral(value: string): void {
+    if (this.disabled()) return;
     this.applySelection(this.selection().filter((v) => v !== value));
   }
 

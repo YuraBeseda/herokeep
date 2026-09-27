@@ -68,6 +68,13 @@ export class AbilitiesImproveStepComponent {
   readonly sheet = input<Sheet | undefined>(undefined);
   readonly validate = input<ChoiceValidateFn | undefined>(undefined);
   readonly commit = input<ChoiceCommitFn | undefined>(undefined);
+  /** [plan-10 task-14 fix round 1 — controller-sanctioned] Mirrors `ChoiceStepComponent`'s own
+   * `disabled` input (see that class's doc for the full "why" — `hk-chip` isn't a listed
+   * form-associated element, so a wrapping `<fieldset disabled>` alone never blocks its host
+   * `(click)` binding in a real browser). `false` by default — every pre-existing consumer (the
+   * create wizard) is byte-identical; `ChoiceStepComponent` forwards its own `disabled()` here for
+   * the `abilities` pick (a background's +2/+1, or an ASI feat's +2 at level 4/8/12/16/19). */
+  readonly disabled = input(false);
 
   protected readonly info = computed<ImproveInfo | undefined>(() => {
     const index = this.engineFacade.index();
@@ -135,6 +142,7 @@ export class AbilitiesImproveStepComponent {
   }
 
   protected onSelectSlot(slot: number, abilityId: string): void {
+    if (this.disabled()) return;
     this.assignment.update((prev) => {
       const next = { ...prev };
       if (next[slot] === abilityId) delete next[slot];

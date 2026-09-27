@@ -186,6 +186,101 @@ describe('ChoiceStepComponent', () => {
     expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBeGreaterThan(0);
   });
 
+  // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------
+  //
+  // The reviewer's own finding: a wrapping `<fieldset disabled>` (`build-tab.component.html`) is
+  // COSMETIC ONLY for this branch in a real browser — `hk-chip` is a custom element, not a
+  // "listed" form-associated one, so fieldset-disabled never reaches its host `(click)` binding.
+  // `ChoiceStepComponent`'s own `disabled` input (gating `onToggle` directly) is the real fix;
+  // these specs assert the STORE side effect is untouched on click, never the fieldset property.
+  describe('disabled input (fix round 1 — the chip click-through gate)', () => {
+    it('does NOT commit a skills-chip click while disabled=true, and marks the chip aria-disabled', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+      state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', CLASS_SKILLS_CHOICE);
+      fixture.componentRef.setInput('disabled', true);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const athletics = Array.from(compiled.querySelectorAll('hk-chip')).find(
+        (c) => c.textContent?.trim() === 'Athletics',
+      ) as HTMLElement;
+      expect(athletics.getAttribute('aria-disabled')).toBe('true');
+
+      athletics.click();
+      await fixture.whenStable();
+
+      expect(state.decisions().get(CLASS_SKILLS_CHOICE)).toBeUndefined();
+    });
+
+    it('still commits skills-chip clicks when disabled is explicitly false (regression net — the create wizard and an unlocked build tab)', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+      state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', CLASS_SKILLS_CHOICE);
+      fixture.componentRef.setInput('disabled', false);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const athletics = Array.from(compiled.querySelectorAll('hk-chip')).find(
+        (c) => c.textContent?.trim() === 'Athletics',
+      ) as HTMLElement;
+      expect(athletics.getAttribute('aria-disabled')).toBeNull();
+
+      athletics.click();
+      await fixture.whenStable();
+
+      expect(state.decisions().get(CLASS_SKILLS_CHOICE)).toEqual(['athletics']);
+    });
+
+    it('defaults to enabled when the input is never set at all (every pre-existing consumer, incl. the create wizard)', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+      state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', CLASS_SKILLS_CHOICE);
+      await fixture.whenStable(); // `disabled` never set
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const athletics = Array.from(compiled.querySelectorAll('hk-chip')).find(
+        (c) => c.textContent?.trim() === 'Athletics',
+      ) as HTMLElement;
+      athletics.click();
+      await fixture.whenStable();
+
+      expect(state.decisions().get(CLASS_SKILLS_CHOICE)).toEqual(['athletics']);
+    });
+
+    it('forwards disabled=true to hk-abilities-improve-step for the "abilities" pick', async () => {
+      const state = createState();
+      state.name.set('Aldric');
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', 'srd-5e-2024:background/soldier@0/ability-scores');
+      fixture.componentRef.setInput('disabled', true);
+      await fixture.whenStable();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const strength = Array.from(compiled.querySelectorAll('hk-chip')).find(
+        (c) => c.textContent?.trim() === 'Strength',
+      ) as HTMLElement;
+      expect(strength.getAttribute('aria-disabled')).toBe('true');
+
+      strength.click();
+      await fixture.whenStable();
+
+      expect(
+        state.decisions().get('srd-5e-2024:background/soldier@0/ability-scores'),
+      ).toBeUndefined();
+    });
+  });
+
   it("routes the system's 'abilityGeneration' pick to hk-ability-scores-step and a background's 'abilities' pick to hk-abilities-improve-step (task-7)", async () => {
     const state = createState();
     state.name.set('Aldric');

@@ -322,4 +322,46 @@ describe('CampaignEditLockService.editLockFor', () => {
 
     expect(fixture.componentInstance.editLock()).toEqual({ locked: false });
   });
+
+  // [Fix round 1, Minor fold-in] The bounded poll (this file's own class doc: "a plain
+  // `setInterval` scoped to this signal's own lifetime") must actually stop when the hosting
+  // component is destroyed — an un-torn-down interval would otherwise leak for the lifetime of
+  // the whole app (every play/build tab visit adds one), the exact "cleaned up via `effect()`'s
+  // own injector-scoped cleanup" claim the class doc makes.
+  it('tears down the poll interval when the hosting component is destroyed', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    await eventsRepository.append([
+      campaignEvent('campaign.settings_changed', { settings: settingsWith('locked') }, DM_ID, 'dm'),
+      campaignEvent(
+        'member.joined',
+        { userId: USER_ID, displayName: 'Bob', role: 'player' },
+        USER_ID,
+        'member',
+      ),
+    ]);
+
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+
+    const fixture = TestBed.createComponent(TestEditLockHostComponent);
+    fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
+    await fixture.whenStable();
+
+    // Filtered to calls using THIS service's own poll delay — the zoneless test harness/Angular's
+    // own internals may set OTHER unrelated intervals/timeouts during `whenStable()`'s own
+    // stability tracking; only this service's own `setInterval(cb, POLL_MS)` call is this test's
+    // concern.
+    const ownCallCount = setIntervalSpy.mock.calls.filter((call) => call[1] === POLL_MS).length;
+    expect(ownCallCount).toBe(1);
+    const clearCallsBeforeDestroy = clearIntervalSpy.mock.calls.length;
+
+    fixture.destroy();
+
+    // A real, ADDITIONAL `clearInterval` call fired by destroy (not merely "called at some point")
+    // — nothing else in this test's own lifecycle clears anything before this point.
+    expect(clearIntervalSpy.mock.calls.length).toBeGreaterThan(clearCallsBeforeDestroy);
+
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
+  });
 });
