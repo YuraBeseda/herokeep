@@ -46,12 +46,16 @@ import type { Handler } from '../reducer.ts';
  * depends on it.
  */
 export const HANDLERS: Record<string, Handler> = {
+  // `pact: true` routes to the SEPARATE `facts.pactSlots.used` counter instead of `slotsUsed[level]`
+  // (ruling 2, phase 4 plan 11 task 3 — Warlock Pact Magic slots are tracked apart from regular spell
+  // slots per the vendored 2024 SRD; see `facts.ts`'s `pactSlots` field comment). `level` is still
+  // required by the event shape but is not consulted on the pact branch — `derive/spellcasting.ts`
+  // is the sole source of truth for a pact slot's actual level (it scales with class level).
   'slot.spent@1': (f, e) => {
     const p = e.payload as SlotSpent;
     const skip = requireCreated(f);
     if (skip) return skip;
-    // `pact` is accepted but ignored in Phase 1 — no pact casters are wired yet; pact and
-    // non-pact spends of the same level share one `slotsUsed[level]` counter.
+    if (p.pact) return { ...f, pactSlots: { used: f.pactSlots.used + (p.count ?? 1) } };
     const used = (f.slotsUsed[p.level] ?? 0) + (p.count ?? 1);
     return { ...f, slotsUsed: { ...f.slotsUsed, [p.level]: used } };
   },
@@ -60,6 +64,7 @@ export const HANDLERS: Record<string, Handler> = {
     const p = e.payload as SlotRestored;
     const skip = requireCreated(f);
     if (skip) return skip;
+    if (p.pact) return { ...f, pactSlots: { used: Math.max(0, f.pactSlots.used - (p.count ?? 1)) } };
     const used = Math.max(0, (f.slotsUsed[p.level] ?? 0) - (p.count ?? 1));
     return { ...f, slotsUsed: { ...f.slotsUsed, [p.level]: used } };
   },

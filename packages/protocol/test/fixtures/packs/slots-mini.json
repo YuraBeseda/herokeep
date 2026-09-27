@@ -1,0 +1,218 @@
+{
+  "format": 1,
+  "id": "slots-mini",
+  "version": "1.0.0",
+  "kind": "content",
+  "system": "mini",
+  "name": "Slots mini (test)",
+  "dependencies": [{ "id": "core-mini", "range": "^1" }],
+  "entities": [
+    {
+      "id": "slots-mini:feature/sorcerer-spellcasting",
+      "type": "feature",
+      "name": "Spellcasting",
+      "description": "Cast sorcerer spells.",
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "sorcerer",
+          "ability": "cha",
+          "list": "sorcerer",
+          "preparation": "known",
+          "slots": "full",
+          "cantripsKnown": "2 + floor(classLevel(sorcerer) / 4)"
+        }
+      ]
+    },
+    {
+      "id": "slots-mini:class/sorcerer",
+      "type": "class",
+      "name": "Sorcerer",
+      "hitDie": 6,
+      "primaryAbility": ["cha"],
+      "saves": ["con", "cha"],
+      "armorTraining": [],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": { "from": ["stealth"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [
+        {
+          "level": 1,
+          "grants": [{ "feature": "slots-mini:feature/sorcerer-spellcasting" }],
+          "extra": { "sorcerer-cantrips-known": 4 }
+        }
+      ]
+    },
+    {
+      "id": "slots-mini:feature/cleric-spellcasting",
+      "type": "feature",
+      "name": "Spellcasting",
+      "description": "Cast cleric spells.",
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "cleric",
+          "ability": "wis",
+          "list": "cleric",
+          "preparation": "prepared",
+          "slots": "full",
+          "ritual": true
+        }
+      ]
+    },
+    {
+      "id": "slots-mini:class/cleric",
+      "type": "class",
+      "name": "Cleric",
+      "hitDie": 8,
+      "primaryAbility": ["wis"],
+      "saves": ["wis", "cha"],
+      "armorTraining": ["light", "medium", "shields"],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": { "from": ["perception"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [{ "level": 1, "grants": [{ "feature": "slots-mini:feature/cleric-spellcasting" }] }]
+    },
+    {
+      "id": "slots-mini:feature/paladin-spellcasting",
+      "type": "feature",
+      "name": "Spellcasting",
+      "description": "Cast paladin spells.",
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "paladin",
+          "ability": "cha",
+          "list": "paladin",
+          "preparation": "prepared",
+          "slots": "half"
+        }
+      ]
+    },
+    {
+      "id": "slots-mini:class/paladin",
+      "type": "class",
+      "name": "Paladin",
+      "hitDie": 10,
+      "primaryAbility": ["str", "cha"],
+      "saves": ["wis", "cha"],
+      "armorTraining": ["light", "medium", "heavy", "shields"],
+      "weaponProficiencies": ["simple", "martial"],
+      "skillChoice": { "from": ["athletics"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [{ "level": 1, "grants": [{ "feature": "slots-mini:feature/paladin-spellcasting" }] }]
+    },
+    {
+      "id": "slots-mini:feature/arcane-trickster-spellcasting",
+      "type": "feature",
+      "name": "Spellcasting",
+      "description": "Cast arcane trickster spells.",
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "arcane-trickster",
+          "ability": "int",
+          "list": "wizard",
+          "preparation": "known",
+          "slots": "third"
+        }
+      ]
+    },
+    {
+      "id": "slots-mini:class/arcane-trickster",
+      "type": "class",
+      "name": "Arcane Trickster (fixture)",
+      "hitDie": 8,
+      "primaryAbility": ["dex"],
+      "saves": ["dex", "int"],
+      "armorTraining": ["light"],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": { "from": ["stealth"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [{ "level": 1, "grants": [{ "feature": "slots-mini:feature/arcane-trickster-spellcasting" }] }]
+    },
+    {
+      "id": "slots-mini:feature/warlock-pact-magic",
+      "type": "feature",
+      "name": "Pact Magic",
+      "description": "Cast warlock spells with pact slots that all share one level, recovering on a short or long rest.",
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "warlock",
+          "ability": "cha",
+          "list": "warlock",
+          "preparation": "prepared",
+          "slots": "pact"
+        }
+      ]
+    },
+    {
+      "id": "slots-mini:class/warlock",
+      "type": "class",
+      "name": "Warlock",
+      "hitDie": 8,
+      "primaryAbility": ["cha"],
+      "saves": ["wis", "cha"],
+      "armorTraining": ["light"],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": { "from": ["stealth"], "count": 1 },
+      "subclassLevel": 3,
+      "levels": [{ "level": 1, "grants": [{ "feature": "slots-mini:feature/warlock-pact-magic" }] }]
+    }
+  ],
+  "overrides": [
+    {
+      "target": "core-mini:system/mini",
+      "patch": [
+        {
+          "op": "add",
+          "path": "/tables/spellSlots/half",
+          "value": [[], [2], [3], [3], [4, 2]]
+        },
+        {
+          "op": "add",
+          "path": "/tables/spellSlots/third",
+          "value": [[], [], [2], [3], [3]]
+        },
+        {
+          "op": "add",
+          "path": "/tables/spellSlots/pact",
+          "value": [[1], [2], [0, 2], [0, 2], [0, 0, 2]]
+        },
+        {
+          "op": "add",
+          "path": "/tables/multiclassSlots",
+          "value": {
+            "weights": {
+              "full": { "divisor": 1, "rounding": "down" },
+              "half": { "divisor": 2, "rounding": "up" }
+            },
+            "slots": [
+              [2],
+              [3],
+              [4, 2],
+              [4, 3],
+              [4, 3, 2],
+              [4, 3, 3],
+              [4, 3, 3, 1],
+              [4, 3, 3, 2],
+              [4, 3, 3, 3, 1],
+              [4, 3, 3, 3, 2],
+              [4, 3, 3, 3, 2, 1],
+              [4, 3, 3, 3, 2, 1],
+              [4, 3, 3, 3, 2, 1, 1],
+              [4, 3, 3, 3, 2, 1, 1],
+              [4, 3, 3, 3, 2, 1, 1, 1],
+              [4, 3, 3, 3, 2, 1, 1, 1],
+              [4, 3, 3, 3, 2, 1, 1, 1, 1],
+              [4, 3, 3, 3, 3, 1, 1, 1, 1],
+              [4, 3, 3, 3, 3, 2, 1, 1, 1],
+              [4, 3, 3, 3, 3, 2, 2, 1, 1]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

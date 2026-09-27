@@ -83,6 +83,18 @@ export interface Facts {
   hitDiceSpent: Record<string, number>; // classId → spent
   deathSaves: { successes: number; failures: number };
   slotsUsed: Record<number, number>; // spell level → used
+  /**
+   * Warlock Pact Magic usage (doc-02's `pactSlots?`), tracked SEPARATELY from `slotsUsed` (ruling
+   * 2, phase 4 plan 11 task 3) — the vendored 2024 SRD's Pact Magic text (`packages/content/
+   * upstream/open5e-srd-2024/ClassFeature.json`, pk `srd-2024_warlock_pact-magic`) makes every pact
+   * slot the SAME level at a given character level, so a single running `used` count (not keyed by
+   * spell level, unlike `slotsUsed`) is sufficient — `derive/spellcasting.ts` supplies the level and
+   * count from `system.tables.spellSlots.pact` at derive time. `SlotSpentV1`/`SlotRestoredV1`
+   * (`packages/protocol/src/events/character.ts`) already carry an optional `pact: boolean` flag
+   * (pre-existing, predates this task) that `reduce/handlers/casting.ts` routes here instead of
+   * `slotsUsed` when set.
+   */
+  pactSlots: { used: number };
   resourcesUsed: Record<string, number>; // resourceId → used
   conditions: ConditionEntry[];
   concentration?: { spellId: string; sinceEventId: string };
@@ -118,6 +130,7 @@ export function emptyFacts(streamId: string): Facts {
     hitDiceSpent: {},
     deathSaves: { successes: 0, failures: 0 },
     slotsUsed: {},
+    pactSlots: { used: 0 },
     resourcesUsed: {},
     conditions: [],
     preparedSpells: {},

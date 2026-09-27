@@ -78,10 +78,31 @@ describe('slot.spent / slot.restored', () => {
     expect(f.slotsUsed).toEqual({ 3: 2, 1: 2 });
   });
 
-  it('the pact field is accepted but ignored — pact and non-pact spends of the same level accumulate together', () => {
+  it('pact: true routes to facts.pactSlots.used instead of slotsUsed[level] (ruling 2, phase 4 plan 11 task 3)', () => {
     const setup = [ev(2, 'slot.spent', { level: 2, pact: true }), ev(3, 'slot.spent', { level: 2, pact: false })];
     const f = reduce([created, ...setup]);
-    expect(f.slotsUsed).toEqual({ 2: 2 });
+    expect(f.pactSlots).toEqual({ used: 1 });
+    expect(f.slotsUsed).toEqual({ 2: 1 });
+  });
+
+  it('pact spends accumulate independently of the level payload field, defaulting count to 1', () => {
+    const setup = [
+      ev(2, 'slot.spent', { level: 3, pact: true }),
+      ev(3, 'slot.spent', { level: 5, pact: true, count: 2 }),
+    ];
+    const f = reduce([created, ...setup]);
+    expect(f.pactSlots).toEqual({ used: 3 });
+    expect(f.slotsUsed).toEqual({});
+  });
+
+  it('pact: true restores from facts.pactSlots.used, floored at 0, leaving slotsUsed untouched', () => {
+    const setup = [
+      ev(2, 'slot.spent', { level: 3, pact: true, count: 2 }),
+      ev(3, 'slot.restored', { level: 3, pact: true }),
+      ev(4, 'slot.restored', { level: 3, pact: true, count: 5 }),
+    ];
+    const f = reduce([created, ...setup]);
+    expect(f.pactSlots).toEqual({ used: 0 });
   });
 
   it('restored subtracts (default count 1), floored at 0 — it does NOT reset to 0', () => {

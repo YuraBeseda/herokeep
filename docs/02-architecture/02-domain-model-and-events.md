@@ -54,7 +54,11 @@ Facts {
   classes: [{classId, level, subclassId?}],      // order = order gained
   xp, levelGrants (milestone),
   hp: {current, temp, max override?}, hitDice: {classId → spent}, deathSaves: {s, f},
-  slots: {level → used}, pactSlots?, resources: {resourceId → used},
+  slots: {level → used}, pactSlots: {used},   // pact (Warlock) slots tracked apart from `slots` —
+                                               // all pact slots share one level, so a running count
+                                               // suffices; `derive` supplies the level/count from
+                                               // `system.tables.spellSlots.pact` (phase 4 plan 11 task 3)
+  resources: {resourceId → used},
   conditions: [{conditionId, source, since, until?, level?}],   // exhaustion has level
   concentration?: {spellId, since},
   inventory: [{instanceId, itemId, qty, equipped, attuned, name?, notes?, custom?}],

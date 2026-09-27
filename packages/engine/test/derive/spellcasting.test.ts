@@ -32,6 +32,27 @@ const deriveAll = (facts: ReturnType<typeof baseFacts>) => {
   };
 };
 
+// `slots-mini` (phase 4 plan 11 task 3): system-entity overrides adding `spellSlots.half/third/pact`
+// and `tables.multiclassSlots`, plus fixture classes exercising each progression — see
+// packages/protocol/test/fixtures/packs/slots-mini.json for the exact tables (the `multiclassSlots`
+// table is the real 2024 SRD Multiclass Spellcaster table, verbatim).
+const slotsIndex = createContentIndex([loadFixturePack('core-mini'), loadFixturePack('slots-mini')]);
+
+const withAbilitiesSlots = (overrides: Partial<Record<'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha', number>>) => {
+  const facts = baseFacts();
+  const scores = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...overrides };
+  facts.decisions['core-mini:system/mini@0/ability-scores'] = (['str', 'dex', 'con', 'int', 'wis', 'cha'] as const).map(
+    (a) => `${a}:${scores[a]}`,
+  );
+  return facts;
+};
+
+const deriveSlots = (facts: ReturnType<typeof baseFacts>) => {
+  const comp = compose(facts, slotsIndex);
+  const abilities = deriveAbilities(facts, comp, slotsIndex);
+  return { comp, abilities, spellcasting: deriveSpellcasting(abilities, comp, facts, slotsIndex) };
+};
+
 describe('deriveSpellcasting', () => {
   it('computes spell DC and attack bonus from proficiency bonus and the casting ability mod', () => {
     const facts = withAbilities({ wis: 16 }); // mod +3
@@ -135,6 +156,158 @@ describe('deriveSpellcasting', () => {
     const r1 = deriveAll(facts).spellcasting;
     const r2 = deriveAll(facts).spellcasting;
 
+    expect(r1).toEqual(r2);
+  });
+});
+
+describe('deriveSpellcasting: slot progressions + multiclass table (phase 4 plan 11 task 3, ruling 2)', () => {
+  it("reads a half-caster's own per-class slot table when it is the only spellcasting class", () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/paladin', level: 4 }];
+    const { spellcasting } = deriveSlots(facts);
+
+    expect(spellcasting.blocks).toHaveLength(1);
+    expect(spellcasting.blocks[0]!.slots).toEqual([{ level: 1, max: 3, used: 0 }]);
+    expect(spellcasting.blocks[0]!.pact).toBeUndefined();
+  });
+
+  it("reads a third-caster's own per-class slot table when it is the only spellcasting class", () => {
+    const facts = withAbilitiesSlots({ int: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/arcane-trickster', level: 3 }];
+    const { spellcasting } = deriveSlots(facts);
+
+    expect(spellcasting.blocks).toHaveLength(1);
+    expect(spellcasting.blocks[0]!.slots).toEqual([{ level: 1, max: 2, used: 0 }]);
+  });
+
+  it('a pact caster gets level+count from system.tables.spellSlots.pact and used from facts.pactSlots (never facts.slotsUsed)', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/warlock', level: 5 }];
+    facts.pactSlots = { used: 1 };
+    facts.slotsUsed = { 3: 9 }; // a decoy regular-slot entry at the SAME spell level — must not leak into `pact`
+    const { spellcasting } = deriveSlots(facts);
+
+    expect(spellcasting.blocks).toHaveLength(1);
+    expect(spellcasting.blocks[0]!.slots).toEqual([]);
+    expect(spellcasting.blocks[0]!.pact).toEqual({ level: 3, count: 2, used: 1 });
+  });
+
+  it('a level 1 warlock has one level-1 pact slot', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/warlock', level: 1 }];
+    const { spellcasting } = deriveSlots(facts);
+
+    expect(spellcasting.blocks[0]!.pact).toEqual({ level: 1, count: 1, used: 0 });
+  });
+
+  it(
+    'combines two full-caster classes at their SUMMED level on system.tables.multiclassSlots, ' +
+      'overriding both blocks’ own per-class tables identically (a pooled resource)',
+    () => {
+      const facts = withAbilitiesSlots({ cha: 16, wis: 16 });
+      facts.classes = [
+        { classId: 'slots-mini:class/sorcerer', level: 3 }, // solo full[2] would be [4,2]
+        { classId: 'slots-mini:class/cleric', level: 2 }, // solo full[1] would be [3]
+      ];
+      const { spellcasting } = deriveSlots(facts);
+
+      expect(spellcasting.blocks).toHaveLength(2);
+      const expectedRow = [
+        { level: 1, max: 4, used: 0 },
+        { level: 2, max: 3, used: 0 },
+        { level: 3, max: 2, used: 0 },
+      ];
+      // combined caster level = 3 + 2 = 5 -> multiclassSlots.slots[4] = [4,3,2] (SRD table row 5) -
+      // NEITHER class's own solo `full` table at its own level is [4,3,2] (see the comments above),
+      // so this can only pass if the combined table is actually being used, not either solo table.
+      expect(spellcasting.blocks[0]!.slots).toEqual(expectedRow);
+      expect(spellcasting.blocks[1]!.slots).toEqual(expectedRow);
+    },
+  );
+
+  it(
+    "combines a full caster and a half caster reproducing the SRD's own worked example " +
+      '(Ranger 4 / Sorcerer 3 -> caster level 5 -> 4/3/2 slots), rounding the half-caster UP per class before summing',
+    () => {
+      const facts = withAbilitiesSlots({ cha: 16, wis: 16 });
+      facts.classes = [
+        { classId: 'slots-mini:class/paladin', level: 4 }, // half: ceil(4/2) = 2
+        { classId: 'slots-mini:class/sorcerer', level: 3 }, // full: floor(3/1) = 3 -> combined level 5
+      ];
+      const { spellcasting } = deriveSlots(facts);
+
+      const expectedRow = [
+        { level: 1, max: 4, used: 0 },
+        { level: 2, max: 3, used: 0 },
+        { level: 3, max: 2, used: 0 },
+      ];
+      expect(spellcasting.blocks[0]!.slots).toEqual(expectedRow);
+      expect(spellcasting.blocks[1]!.slots).toEqual(expectedRow);
+    },
+  );
+
+  it(
+    'a Fighter/Paladin multiclass with the Spellcasting feature from only ONE class keeps that ' +
+      'class\'s own solo table (vendored 2024 SRD, pk srd-2024_multiclassing_spellcasting: "If you ' +
+      'multiclass but have the Spellcasting feature from only one class, follow the rules for that class.")',
+    () => {
+      const facts = withAbilitiesSlots({ cha: 16 });
+      facts.classes = [
+        { classId: 'core-mini:class/fighter', level: 3 }, // grants no spellcasting.define effect
+        { classId: 'slots-mini:class/paladin', level: 1 }, // half[0] = [] (no slots yet at level 1)
+      ];
+      const { spellcasting } = deriveSlots(facts);
+
+      // If the gate were wrongly `facts.classes.length > 1` instead of "more than one Spellcasting
+      // feature", this would wrongly combine to multiclassSlots.slots[0] = [2] (one level-1 slot).
+      expect(spellcasting.blocks).toHaveLength(1);
+      expect(spellcasting.blocks[0]!.classId).toBe('slots-mini:class/paladin');
+      expect(spellcasting.blocks[0]!.slots).toEqual([]);
+    },
+  );
+
+  it('pools slot usage across combined classes via the single facts.slotsUsed counter (no per-class split)', () => {
+    const facts = withAbilitiesSlots({ cha: 16, wis: 16 });
+    facts.classes = [
+      { classId: 'slots-mini:class/paladin', level: 4 },
+      { classId: 'slots-mini:class/sorcerer', level: 3 },
+    ];
+    facts.slotsUsed = { 1: 2, 3: 1 };
+    const { spellcasting } = deriveSlots(facts);
+
+    const expectedRow = [
+      { level: 1, max: 4, used: 2 },
+      { level: 2, max: 3, used: 0 },
+      { level: 3, max: 2, used: 1 },
+    ];
+    for (const block of spellcasting.blocks) expect(block.slots).toEqual(expectedRow);
+  });
+
+  it('cantripsKnown: a class level-row extra wins over the cantripsKnown formula (closes the task-1-report.md fallback gap)', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/sorcerer', level: 1 }];
+    const { spellcasting } = deriveSlots(facts);
+
+    // row extra 'sorcerer-cantrips-known' at level 1 is 4; the formula ("2 + floor(classLevel/4)") would give 2 — row wins.
+    expect(spellcasting.blocks[0]!.cantripsKnown).toBe(4);
+  });
+
+  it('cantripsKnown stays undefined when a class defines neither a row extra nor a cantripsKnown formula', () => {
+    const facts = withAbilitiesSlots({ wis: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/cleric', level: 1 }];
+    const { spellcasting } = deriveSlots(facts);
+
+    expect(spellcasting.blocks[0]!.cantripsKnown).toBeUndefined();
+  });
+
+  it('is deterministic across repeated derivations of a multiclass combined-table facts object', () => {
+    const facts = withAbilitiesSlots({ cha: 16, wis: 16 });
+    facts.classes = [
+      { classId: 'slots-mini:class/paladin', level: 4 },
+      { classId: 'slots-mini:class/sorcerer', level: 3 },
+    ];
+    const r1 = deriveSlots(facts).spellcasting;
+    const r2 = deriveSlots(facts).spellcasting;
     expect(r1).toEqual(r2);
   });
 });

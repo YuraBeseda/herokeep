@@ -219,6 +219,25 @@ Pact-magic casters never participate: their slots are tracked separately (`facts
 are not part of this table (`weights` has no `pact` key — `MulticlassProgressionSchema` excludes
 it). Single-class characters keep using the per-class `spellSlots` table unchanged.
 
+**When the combined table applies (engine consumption, phase 4 plan 11 task 3):** the gate is NOT
+"more than one class" — it's "more than one class with the Spellcasting feature." Quoted verbatim
+from the same vendored passage: "Once you have the Spellcasting feature from more than one class,
+use the rules below. If you multiclass but have the Spellcasting feature from only one class,
+follow the rules for that class." A Fighter 3 / Wizard 5 character therefore keeps using Wizard's
+own solo `spellSlots.full` table — Fighter contributes no `spellcasting.define` effect at all.
+`packages/engine/src/derive/spellcasting.ts` implements this by counting active
+`spellcasting.define` effects whose `slots` progression has an entry in `multiclassSlots.weights`
+(so an authored-but-unweighted `third` progression, per the OWNER-FLAG above, also stays solo); the
+combined table only applies once that count is 2 or more.
+
+Pact Magic slots (Warlock) recover on a short OR long rest — the vendored 2024 SRD's own Warlock
+feature text (`packages/content/upstream/open5e-srd-2024/ClassFeature.json`, pk
+`srd-2024_warlock_pact-magic`): "You regain all expended Pact Magic spell slots when you finish a
+Short or Long Rest." The reducer stays content-free (it doesn't know "Warlock" by name), so this is
+NOT hardcoded into `rest.taken@1`'s handler — same as `resourcesUsed`, it's the proposer's job (T14)
+to emit an explicit `slot.restored {pact: true, count}` event as part of a rest transaction, exactly
+like `resource.restored` is emitted per active resource today.
+
 ## Overrides
 
 ```jsonc
