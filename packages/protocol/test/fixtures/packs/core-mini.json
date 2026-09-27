@@ -56,6 +56,16 @@
       },
       "hpRules": { "firstLevelMaxHitDie": true, "averageRounding": "up" },
       "attunementMax": 3,
+      "encumbrance": {
+        "standard": { "capacity": "score(str) * 15" },
+        "variant": {
+          "capacity": "score(str) * 15",
+          "thresholds": [
+            { "capacity": "score(str) * 5", "state": "encumbered", "speedPenalty": 10 },
+            { "capacity": "score(str) * 10", "state": "heavilyEncumbered", "speedPenalty": 20 }
+          ]
+        }
+      },
       "abilityGeneration": {
         "standardArray": [15, 14, 13, 12, 10, 8],
         "pointBuy": {
@@ -264,6 +274,12 @@
         "range": { "normal": 80, "long": 320 },
         "mastery": "vex"
       }
+    },
+    {
+      "id": "core-mini:item/whetstone",
+      "type": "item",
+      "name": "Whetstone",
+      "category": "gear"
     },
     {
       "id": "core-mini:spell/fireball",

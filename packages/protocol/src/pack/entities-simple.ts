@@ -8,6 +8,7 @@ import {
   SlotProgressionSchema,
   UsesSchema,
 } from './enums.ts';
+import { FormulaSchema } from './formula.ts';
 import { AbilityKeySchema, ClassRefSchema, PredicateSchema } from './predicate.ts';
 
 const NonNegInt = z.int().min(0);
@@ -94,6 +95,50 @@ export const SystemEntitySchema = entity('system', {
   }),
   hpRules: z.strictObject({ firstLevelMaxHitDie: z.boolean(), averageRounding: z.enum(['up', 'down']) }),
   attunementMax: NonNegInt,
+  /**
+   * Ruling 1 (phase 4, plan 11, task 5 — "encumbrance option"): carry-capacity formulas/thresholds,
+   * DATA (not TS constants), consumed by `@hk/engine`'s `deriveEncumbrance` only when a character's
+   * `derive()` call opts in via `overrides.encumbrance: 'standard' | 'variant'` (default `'off'` —
+   * zero computation, byte-identical to pre-task behavior). `standard` and `variant` are each
+   * independently optional so a pack may supply either, both, or neither.
+   *
+   * SRD-silent, VERIFIED (not assumed): unlike `multiclassSlots` above, the vendored 2024 snapshot
+   * (`packages/content/upstream/open5e-srd-2024/Rule.json`, `ConditionDescription.json`) carries NO
+   * numeric carrying-capacity/encumbrance rule text at all — `Rule.json`'s own "Interacting with
+   * Objects" entry (pk `srd-2024_exploration_interacting-with-objects`) points at "the rules for
+   * carrying capacity in 'Rules Glossary'", but that glossary chapter isn't part of this vendored
+   * snapshot, and `ConditionDescription.json` has no "encumbered" condition entry either. So BOTH
+   * `standard` and `variant` numbers here are entirely a content-pack author's judgment call (T7's
+   * job, cited-or-flagged there, same posture as `multiclassSlots.weights.third` above) — this
+   * schema only shapes the DATA; the engine only ever evaluates whatever formula is supplied here,
+   * never a hardcoded 5e number.
+   *
+   * `capacity` formulas are evaluated against the formula grammar (`score(str)` etc. — see doc-04);
+   * `variant.thresholds[].speedPenalty` is carried as DATA for a future consumer (T12 display, or a
+   * later engine task) — `deriveEncumbrance` does NOT apply it to `Sheet.speed` itself (documented
+   * engine-side: no vendored text justifies a specific speed-reduction amount this task could cite).
+   */
+  encumbrance: z
+    .strictObject({
+      standard: z.strictObject({ capacity: FormulaSchema }).optional(),
+      variant: z
+        .strictObject({
+          /** Hard cap: load beyond this is `'overloaded'` regardless of the graded thresholds below. */
+          capacity: FormulaSchema,
+          /** Graded, ascending by resolved `capacity` — `load >= threshold.capacity` activates it. */
+          thresholds: z
+            .array(
+              z.strictObject({
+                capacity: FormulaSchema,
+                state: z.enum(['encumbered', 'heavilyEncumbered']),
+                speedPenalty: NonNegInt.optional(),
+              }),
+            )
+            .min(1),
+        })
+        .optional(),
+    })
+    .optional(),
   multiclass: z.strictObject({ prerequisites: z.record(ClassRefSchema, PredicateSchema) }).optional(),
   abilityGeneration: z.strictObject({
     standardArray: z.array(z.int().min(1).max(30)).min(1),

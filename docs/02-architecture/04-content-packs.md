@@ -55,7 +55,7 @@ Entity types and their specific data (abridged; schema is authoritative):
 
 | Type | Specific data |
 |------|---------------|
-| `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
+| `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `encumbrance?` (`standard`/`variant` carry-capacity data — see below), `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
 | `species` | `size`, `speed`, `creatureType`, `lifespan?`; traits as `grants` |
 | `background` | `abilityScores[]` (2024: the three abilities the player may raise), `originFeat`, `skillProficiencies[]`, `toolProficiency`, `equipment` option |
 | `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column). `extra`'s plain-text values (`ExtraTextSchema`) are MECHANICAL NOTATION — table-column values like dice or ordinal labels, not display prose — so they are exempt from the Localizer; display prose for a feature belongs in that feature's (already-localized) `description`, not in an `extra` column. `extra` is also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, read as "highest row at or below the character's level" — see § Choices/extra below), `subclassLevel`, `multiclass {prereq, gains}` |
@@ -237,6 +237,67 @@ Short or Long Rest." The reducer stays content-free (it doesn't know "Warlock" b
 NOT hardcoded into `rest.taken@1`'s handler — same as `resourcesUsed`, it's the proposer's job (T14)
 to emit an explicit `slot.restored {pact: true, count}` event as part of a rest transaction, exactly
 like `resource.restored` is emitted per active resource today.
+
+## Encumbrance
+
+`system.encumbrance` (optional; phase 4, plan 11, task 5) holds carry-capacity formulas/thresholds
+for `@hk/engine`'s `deriveEncumbrance` — DATA, never a hardcoded 5e number in engine code, and
+computed ONLY when a `derive()` call opts in via `overrides.encumbrance: 'standard' | 'variant'`
+(the 4th, optional `derive()` parameter — see `packages/engine/src/derive/overrides.ts`). The
+default, `'off'` (or `overrides` omitted entirely, as every pre-phase-4 call site still does), is
+zero computation — no `Sheet.carry` field, no `Sheet.overridesProvenance.encumbrance` key — so
+every existing golden/fixture stays byte-identical.
+
+```jsonc
+"encumbrance": {
+  "standard": { "capacity": "score(str) * 15" },
+  "variant": {
+    "capacity": "score(str) * 15",           // hard cap: load beyond this is always 'overloaded'
+    "thresholds": [
+      { "capacity": "score(str) * 5", "state": "encumbered", "speedPenalty": 10 },
+      { "capacity": "score(str) * 10", "state": "heavilyEncumbered", "speedPenalty": 20 }
+    ]
+  }
+}
+```
+
+**SRD-silent, verified (not assumed).** Unlike `multiclassSlots` above, the vendored 2024 snapshot
+has NO numeric carrying-capacity or encumbrance rule text to quote at all, for either mode. Checked
+directly: `packages/content/upstream/open5e-srd-2024/Rule.json`'s own "Interacting with Objects"
+entry (pk `srd-2024_exploration_interacting-with-objects`) says only "the GM might require you to
+abide by the rules for carrying capacity in 'Rules Glossary'" — that glossary chapter (where the
+2024 PHB actually states the STR×15/×5/×10 numbers) is not part of this vendored snapshot's 56 Rule
+entries, none of which mention carrying/lifting weight numerically; `ConditionDescription.json`'s
+15 conditions also include no "encumbered" state. So the example above is TEST-FIXTURE data (used
+in `packages/protocol/test/fixtures/packs/core-mini.json` and this repo's own engine tests), chosen
+to match the commonly-known 5e convention for readability, but it carries **no SRD citation** — a
+future content-pack author (T7 or later) must either find independently-citable source text or
+author it as their own documented house-rule choice, the same OWNER-FLAG posture as
+`multiclassSlots.weights.third` above.
+
+**Shape.** `standard` and `variant` are independently optional (a pack may supply either, both, or
+neither); `overrides.encumbrance` selects which one a given `derive()` call uses — asking for a mode
+the pack doesn't supply produces a `'derive.encumbranceConfigMissing'` warning diagnostic and no
+`Sheet.carry` (not a crash). `standard.capacity` is a single hard cap: `Sheet.carry.state` is binary,
+`'normal'` or `'overloaded'`. `variant.capacity` is likewise a hard cap (`'overloaded'` beyond it,
+taking priority over the graded thresholds), and `variant.thresholds[]` are graded states — sorted
+ascending by resolved `capacity` and applied with `load >= threshold.capacity`, so the HIGHEST
+satisfied threshold wins; below every threshold is `'normal'`.
+
+**Load.** `Sheet.carry.load` sums EVERY `facts.inventory` entry's resolved weight × `qty` — unlike
+item charges/attunement (which only apply to an ACTIVE, equipped-or-attuned instance), carrying
+capacity counts everything on a character's person regardless of equipped state. A resolved item
+reads `item.weight ?? 0` (the field predates this task — see the entity table above); a fully custom
+inventory entry (no `itemId`) reads `custom.weight` if it's a number, else `0` (`custom` is a
+free-form bag with no schema-enforced `weight` key). `item.container.capacityLb` (existing field) is
+NOT consumed by this total — reducing effective load for items carried inside a container is
+out of this task's scope, a candidate for later work.
+
+**Speed.** `variant.thresholds[].speedPenalty` is carried as DATA only — `deriveEncumbrance` does
+NOT apply it to `Sheet.speed` this task (no vendored text exists to justify a specific
+speed-reduction NUMBER as SRD fact, the same silence noted above). It's a display-only hook for a
+later consumer (e.g. task 12's UI, or a future engine task) to read directly off the matched
+threshold; `Sheet.speed` itself is untouched by encumbrance in this phase.
 
 ## Overrides
 

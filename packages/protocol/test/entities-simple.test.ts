@@ -185,6 +185,85 @@ describe('simple entity schemas', () => {
     expect(oldShapeRejected.success).toBe(false);
   });
 
+  it('system entity: encumbrance standard/variant carry-capacity data (ruling 1, task 5)', () => {
+    // Standard-only.
+    const standardOnly = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+      encumbrance: { standard: { capacity: 'score(str) * 15' } },
+    });
+    expect(standardOnly.success, JSON.stringify(standardOnly.error?.issues)).toBe(true);
+
+    // Variant-only, graded thresholds.
+    const variantOnly = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+      encumbrance: {
+        variant: {
+          capacity: 'score(str) * 15',
+          thresholds: [
+            { capacity: 'score(str) * 5', state: 'encumbered', speedPenalty: 10 },
+            { capacity: 'score(str) * 10', state: 'heavilyEncumbered', speedPenalty: 20 },
+          ],
+        },
+      },
+    });
+    expect(variantOnly.success, JSON.stringify(variantOnly.error?.issues)).toBe(true);
+
+    // Both modes supplied together.
+    const both = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+      encumbrance: {
+        standard: { capacity: 'score(str) * 15' },
+        variant: {
+          capacity: 'score(str) * 15',
+          thresholds: [{ capacity: 'score(str) * 5', state: 'encumbered' }],
+        },
+      },
+    });
+    expect(both.success, JSON.stringify(both.error?.issues)).toBe(true);
+  });
+
+  it('encumbrance is optional and rejects invalid shapes', () => {
+    const withoutIt = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+    });
+    expect(withoutIt.success, JSON.stringify(withoutIt.error?.issues)).toBe(true);
+
+    const badState = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+      encumbrance: {
+        variant: {
+          capacity: 'score(str) * 15',
+          thresholds: [{ capacity: 'score(str) * 5', state: 'overloaded' }], // not a threshold state
+        },
+      },
+    });
+    expect(badState.success).toBe(false);
+
+    const emptyThresholds = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+      encumbrance: { variant: { capacity: 'score(str) * 15', thresholds: [] } },
+    });
+    expect(emptyThresholds.success).toBe(false);
+
+    const negativeSpeedPenalty = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+      encumbrance: {
+        variant: {
+          capacity: 'score(str) * 15',
+          thresholds: [{ capacity: 'score(str) * 5', state: 'encumbered', speedPenalty: -10 }],
+        },
+      },
+    });
+    expect(negativeSpeedPenalty.success).toBe(false);
+  });
+
   it('accepts minimal valid instances of each simple type', () => {
     const ok = (
       schema: { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown } } },

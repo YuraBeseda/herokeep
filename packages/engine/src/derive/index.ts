@@ -13,6 +13,7 @@ import { deriveAttacks } from './attacks.ts';
 import { byChoiceId, creationChoices, levelScopedChoices, selectedEntityChoices } from './choices.ts';
 import { type Composition, compose, equippedArmor } from './composition.ts';
 import { deriveDefense } from './defense.ts';
+import { deriveEncumbrance } from './encumbrance.ts';
 import { deriveHp } from './hp.ts';
 import { ModifierTable } from './modifiers.ts';
 import type { DeriveOverrides } from './overrides.ts';
@@ -24,6 +25,7 @@ export * from './sheet.ts';
 export * from './advancement.ts';
 export * from './validation.ts';
 export * from './overrides.ts';
+export * from './encumbrance.ts';
 
 /** `{amount}` for a plain int, `{formula}` for a formula string — mirrors every other derive/*.ts helper. */
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>
@@ -238,6 +240,16 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   issues.push(...resources.issues);
   const actions = deriveActions(comp, index);
 
+  // Ruling 1 (phase 4, plan 11 task 5 — "encumbrance option"): computed ONLY when the caller opts
+  // in via `overrides.encumbrance` — 'off' (the default, including `overrides` omitted entirely)
+  // is zero computation, so every pre-task-5 call site/golden stays byte-identical.
+  let carry: Sheet['carry'];
+  if (overrides?.encumbrance !== undefined && overrides.encumbrance !== 'off') {
+    const encumbrance = deriveEncumbrance(overrides.encumbrance, abilities, comp, facts, index, resources.resources);
+    issues.push(...encumbrance.issues);
+    carry = encumbrance.carry;
+  }
+
   const initiative = deriveInitiative(comp, abilities, resources.resources, index);
   const proficiencies = deriveProficiencies(facts, abilities, index);
 
@@ -277,6 +289,17 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     return { classId, level: c.level, ...(c.subclassId !== undefined ? { subclassId: c.subclassId } : {}) };
   });
 
+  // Ruling 1 (phase 4, plan 11 tasks 4 + 5): one merged `overridesProvenance`, built from whichever
+  // override fields were actually supplied THIS call — `encumbrance: 'off'` does NOT count (that's
+  // the non-house-rule default, same as omitting the field entirely), matching `carry`'s own gate
+  // above. Present on `Sheet` only when at least one key was set (T4's existing exact-key-list
+  // sheet.test.ts assertion and every prior golden stay unaffected when neither is supplied).
+  const overridesProvenance: NonNullable<Sheet['overridesProvenance']> = {};
+  if (overrides?.attunementMax !== undefined) overridesProvenance.attunementMax = 'house rule';
+  if (overrides?.encumbrance !== undefined && overrides.encumbrance !== 'off')
+    overridesProvenance.encumbrance = 'house rule';
+  const hasOverridesProvenance = Object.keys(overridesProvenance).length > 0;
+
   return {
     name: facts.name,
     system: facts.system,
@@ -301,10 +324,9 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     actions: actions.actions,
     proficiencies,
     inventory,
+    ...(carry ? { carry } : {}),
     attunementMax: overrides?.attunementMax ?? index.system().attunementMax,
-    ...(overrides?.attunementMax !== undefined
-      ? { overridesProvenance: { attunementMax: 'house rule' as const } }
-      : {}),
+    ...(hasOverridesProvenance ? { overridesProvenance } : {}),
     currency: { ...facts.currency },
     inspiration: facts.inspiration,
     conditions: hp.conditions,

@@ -18,9 +18,16 @@ const load = (name: string): unknown =>
  * hash change, not the schema-widening drift this net exists to catch (re-run `pnpm vitest run
  * --project protocol test/pack.test.ts -t byte-identically` after intentionally editing a pinned
  * fixture to get the new value).
+ *
+ * `core-mini` re-pinned again in task 5 (encumbrance): `core-mini:system/mini` gained an
+ * `encumbrance` block (`standard`/`variant` carry-capacity test data — NOT SRD-cited, see
+ * `docs/02-architecture/04-content-packs.md`'s "Encumbrance" section; the vendored 2024 snapshot has
+ * no carrying-capacity numeric text at all to cite) and one new item entity (`whetstone`,
+ * deliberately with no `weight` field, to test the "absent weight = 0" load-sourcing case) — again
+ * legitimate content growth, not drift.
  */
 const PHASE_4_BASELINE_HASHES: Record<string, string> = {
-  'core-mini': '2322ea43676d6818bab3925159bc45f342694aa92260d4fa6416396bd9a55bd7',
+  'core-mini': 'dd6dbba2ca4a457e52d9a8d93ad4b013f96cbf95695d473085740fe13dae9b92',
   'content-mini': '574a873c2062d0c850a5b20978b0a84b6da7c5bfa2a1bfd9ef1d74ce7d0aa9d9',
   'translation-mini': 'e3326b8e102787ae64a7e0bc814e1a7080b1df0c94911a1970d2e207db03d04e',
   'asi-mini': '5c4640f77bc3b5e211e372bef4ed7be8027b45f41241f5f5cab5fda75aa637a0',

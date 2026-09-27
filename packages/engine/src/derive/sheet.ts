@@ -3,6 +3,7 @@ import type { Facts, InventoryEntry } from '../reduce/facts.ts';
 import type { AbilitiesResult, AbilityBlock } from './abilities.ts';
 import type { ActionView } from './actions.ts';
 import type { AttackRow } from './attacks.ts';
+import type { Carry } from './encumbrance.ts';
 import type { HpResult } from './hp.ts';
 import type { Derived } from './modifiers.ts';
 import type { ResourceView } from './resources.ts';
@@ -90,6 +91,22 @@ export interface Sheet {
    * new one) but is never set by this task — task 4 doesn't compute or read encumbrance at all.
    */
   overridesProvenance?: { attunementMax?: 'house rule'; encumbrance?: 'house rule' };
+  /**
+   * Ruling 1 (phase 4, plan 11 task 5 — "encumbrance option"): present ONLY when `derive()`'s
+   * `overrides.encumbrance` is `'standard'` or `'variant'` for THIS call (never for `'off'`/absent,
+   * the default — zero computation, so every pre-task-5 golden/fixture stays byte-identical) AND
+   * the pack actually authors that mode's `system.encumbrance` config (a `'derive.
+   * encumbranceConfigMissing'` warning is pushed to `issues` instead when it doesn't, and `carry`
+   * stays absent). `mode` records which of the two was active — read this rather than
+   * `overridesProvenance.encumbrance` (which, matching `attunementMax`'s existing shape, is just
+   * the `'house rule'` tag, not the mode) for anything mode-specific. `load` sums every
+   * `facts.inventory` entry's resolved weight × `qty`, regardless of equipped/attuned state — see
+   * `derive/encumbrance.ts` and doc-04's "Encumbrance" section for the full sourcing/SRD-silence
+   * write-up. NOT applied to `Sheet.speed`: no vendored 2024 text exists to cite a specific
+   * speed-reduction number, so `variant`'s per-threshold `speedPenalty` (if authored) stays
+   * display-only data on this block, for a later consumer (task 12, or a future engine task).
+   */
+  carry?: Carry;
   currency: Facts['currency'];
   inspiration: boolean;
   conditions: HpResult['conditions'];

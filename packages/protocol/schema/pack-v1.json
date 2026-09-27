@@ -46,16 +46,16 @@
       "$ref": "#/$defs/__schema17"
     },
     "overrides": {
-      "$ref": "#/$defs/__schema144"
+      "$ref": "#/$defs/__schema146"
     },
     "assets": {
-      "$ref": "#/$defs/__schema148"
-    },
-    "i18n": {
       "$ref": "#/$defs/__schema150"
     },
-    "strings": {
+    "i18n": {
       "$ref": "#/$defs/__schema152"
+    },
+    "strings": {
+      "$ref": "#/$defs/__schema154"
     }
   },
   "required": [
@@ -1225,11 +1225,14 @@
             "attunementMax": {
               "$ref": "#/$defs/__schema88"
             },
-            "multiclass": {
+            "encumbrance": {
               "$ref": "#/$defs/__schema141"
             },
+            "multiclass": {
+              "$ref": "#/$defs/__schema143"
+            },
             "abilityGeneration": {
-              "$ref": "#/$defs/__schema142"
+              "$ref": "#/$defs/__schema144"
             }
           },
           "required": [
@@ -4349,6 +4352,67 @@
     "__schema141": {
       "type": "object",
       "properties": {
+        "standard": {
+          "type": "object",
+          "properties": {
+            "capacity": {
+              "$ref": "#/$defs/__schema36"
+            }
+          },
+          "required": [
+            "capacity"
+          ],
+          "additionalProperties": false
+        },
+        "variant": {
+          "type": "object",
+          "properties": {
+            "capacity": {
+              "$ref": "#/$defs/__schema36"
+            },
+            "thresholds": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema142"
+              }
+            }
+          },
+          "required": [
+            "capacity",
+            "thresholds"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema142": {
+      "type": "object",
+      "properties": {
+        "capacity": {
+          "$ref": "#/$defs/__schema36"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "encumbered",
+            "heavilyEncumbered"
+          ]
+        },
+        "speedPenalty": {
+          "$ref": "#/$defs/__schema88"
+        }
+      },
+      "required": [
+        "capacity",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "__schema143": {
+      "type": "object",
+      "properties": {
         "prerequisites": {
           "type": "object",
           "propertyNames": {
@@ -4364,14 +4428,14 @@
       ],
       "additionalProperties": false
     },
-    "__schema142": {
+    "__schema144": {
       "type": "object",
       "properties": {
         "standardArray": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema143"
+            "$ref": "#/$defs/__schema145"
           }
         },
         "pointBuy": {
@@ -4442,20 +4506,20 @@
       ],
       "additionalProperties": false
     },
-    "__schema143": {
+    "__schema145": {
       "type": "integer",
       "minimum": 1,
       "maximum": 30
     },
-    "__schema144": {
+    "__schema146": {
       "default": [],
       "maxItems": 500,
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema145"
+        "$ref": "#/$defs/__schema147"
       }
     },
-    "__schema145": {
+    "__schema147": {
       "type": "object",
       "properties": {
         "target": {
@@ -4466,7 +4530,7 @@
           "maxItems": 100,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema146"
+            "$ref": "#/$defs/__schema148"
           }
         }
       },
@@ -4476,7 +4540,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema146": {
+    "__schema148": {
       "oneOf": [
         {
           "type": "object",
@@ -4486,7 +4550,7 @@
               "const": "add"
             },
             "path": {
-              "$ref": "#/$defs/__schema147"
+              "$ref": "#/$defs/__schema149"
             },
             "value": {}
           },
@@ -4505,7 +4569,7 @@
               "const": "replace"
             },
             "path": {
-              "$ref": "#/$defs/__schema147"
+              "$ref": "#/$defs/__schema149"
             },
             "value": {}
           },
@@ -4524,7 +4588,7 @@
               "const": "remove"
             },
             "path": {
-              "$ref": "#/$defs/__schema147"
+              "$ref": "#/$defs/__schema149"
             }
           },
           "required": [
@@ -4535,19 +4599,19 @@
         }
       ]
     },
-    "__schema147": {
+    "__schema149": {
       "type": "string",
       "pattern": "^(\\/([^/~]|~0|~1)*)*$"
     },
-    "__schema148": {
+    "__schema150": {
       "default": [],
       "maxItems": 2000,
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema149"
+        "$ref": "#/$defs/__schema151"
       }
     },
-    "__schema149": {
+    "__schema151": {
       "type": "object",
       "properties": {
         "hash": {
@@ -4584,17 +4648,17 @@
       ],
       "additionalProperties": false
     },
-    "__schema150": {
+    "__schema152": {
       "default": {},
       "type": "object",
       "propertyNames": {
         "$ref": "#/$defs/__schema15"
       },
       "additionalProperties": {
-        "$ref": "#/$defs/__schema151"
+        "$ref": "#/$defs/__schema153"
       }
     },
-    "__schema151": {
+    "__schema153": {
       "type": "object",
       "propertyNames": {
         "type": "string",
@@ -4614,8 +4678,8 @@
         }
       }
     },
-    "__schema152": {
-      "$ref": "#/$defs/__schema151"
+    "__schema154": {
+      "$ref": "#/$defs/__schema153"
     }
   }
 }
