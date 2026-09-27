@@ -444,3 +444,141 @@ describe('barbarian to level 20 mechanics (task 9)', () => {
     expect(pack.entities.some((e) => e.id === 'srd-5e-2024:class/barbarian')).toBe(true);
   });
 });
+
+describe('cleric and life domain to level 20 mechanics (task 10)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.cleric].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedSubclasses = applyOverlays(
+    subclasses,
+    o.cleric.filter((x) => subclasses.some((s) => s.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.cleric.filter((x) => features.some((f) => f.id === x.id)),
+  );
+
+  interface ClassShape {
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    levels: {
+      level: number;
+      extra?: Record<string, unknown>;
+      choices: { id: string; pick: unknown; count: number }[];
+    }[];
+  }
+
+  it('cleric: core traits (no heavy armor, simple weapons only, 2-skill choice from the cleric list)', () => {
+    const c = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/cleric') as ClassShape;
+    expect(c.armorTraining).toEqual(['light', 'medium', 'shields']);
+    expect(c.armorTraining).not.toContain('heavy');
+    expect(c.weaponProficiencies).toEqual(['simple']);
+    expect(c.skillChoice.count).toBe(2);
+    expect(c.skillChoice.from).toEqual(
+      expect.arrayContaining(['history', 'insight', 'medicine', 'persuasion', 'religion']),
+    );
+  });
+
+  it('cleric: an ASI/feat choice is authored at every 2024 ASI level (4, 8, 12, 16, 19) and subclass at 3', () => {
+    const c = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/cleric') as ClassShape;
+    const choiceIds = c.levels.flatMap((r) => r.choices.map((ch) => ch.id));
+    for (const level of [4, 8, 12, 16, 19]) {
+      expect(choiceIds, `level ${level}`).toContain(`srd-5e-2024:class/cleric@${level}/feat`);
+    }
+    expect(choiceIds).toContain('srd-5e-2024:class/cleric@3/subclass');
+    // Not offered at a non-ASI level.
+    expect(choiceIds).not.toContain('srd-5e-2024:class/cleric@5/feat');
+  });
+
+  it('cleric: no weapon-mastery choice is authored (Cleric has no vendored Weapon Mastery feature)', () => {
+    const c = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/cleric') as ClassShape;
+    const choiceIds = c.levels.flatMap((r) => r.choices.map((ch) => ch.id));
+    expect(choiceIds.some((id) => id.includes('weapon-master'))).toBe(false);
+  });
+
+  it('cleric: spellcasting is a real full prepared caster keyed on Wisdom, with cantrips-known row extras at 3/4/5 (1/4/10)', () => {
+    const spellcasting = patchedFeatures.find((x) => x.id.endsWith('cleric-spellcasting')) as {
+      effects: { type: string; cantripsKnown?: string }[];
+    };
+    const sc = spellcasting.effects.find((e) => e.type === 'spellcasting.define');
+    expect(sc).toMatchObject({ preparation: 'prepared', slots: 'full', ability: 'wis', focus: true, ritual: true });
+    expect(sc?.cantripsKnown).toBe('3 + floor(classLevel(cleric) / 4)');
+
+    const c = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/cleric') as ClassShape;
+    expect(c.levels.find((r) => r.level === 1)?.extra?.['cleric-cantrips-known']).toBe(3);
+    expect(c.levels.find((r) => r.level === 4)?.extra?.['cleric-cantrips-known']).toBe(4);
+    expect(c.levels.find((r) => r.level === 10)?.extra?.['cleric-cantrips-known']).toBe(5);
+    // Prepared spells stayed on the pre-existing, upstream-auto-carried key (unchanged shape).
+    expect(c.levels.find((r) => r.level === 20)?.extra?.['cleric-prepared-spells']).toBe(22);
+  });
+
+  it('cleric: Channel Divinity and Divine Intervention are real resources, not level-1 literals', () => {
+    const cd = patchedFeatures.find((x) => x.id.endsWith('cleric-channel-divinity')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    const cdDef = cd.effects.find((e) => e.type === 'resource.define');
+    expect(cdDef).toMatchObject({ id: 'channel-divinity', reset: 'shortRest' });
+    expect(cdDef?.max).toContain('classLevel(cleric)');
+    expect(cdDef?.max).not.toBe('2');
+
+    const di = patchedFeatures.find((x) => x.id.endsWith('cleric-divine-intervention')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    expect(di.effects.find((e) => e.type === 'resource.define')).toMatchObject({
+      id: 'divine-intervention',
+      max: '1',
+      reset: 'longRest',
+    });
+  });
+
+  it('cleric: features with genuinely inexpressible mechanics (unrepresentable two-option choices, untriggerable bonuses, conditional resets) carry a feature.text fallback', () => {
+    for (const slug of [
+      'divine-order',
+      'sear-undead',
+      'blessed-strikes',
+      'improved-blessed-strikes',
+      'greater-divine-intervention',
+    ]) {
+      const feat = patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/cleric-${slug}`) as {
+        effects: { type: string }[];
+      };
+      expect(
+        feat.effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('life domain: Preserve Life is a real action.define drawing on the Channel Divinity resource; the rest of the subclass falls back to text', () => {
+    const subclass = patchedSubclasses.find((s) => s.id === 'srd-5e-2024:subclass/life-domain');
+    expect(subclass).toBeDefined();
+
+    const preserveLife = patchedFeatures.find((x) => x.id.endsWith('cleric-life-domain-preserve-life')) as {
+      effects: { type: string; resource?: string; kind?: string }[];
+    };
+    expect(preserveLife.effects).toContainEqual(
+      expect.objectContaining({ type: 'action.define', kind: 'action', resource: 'channel-divinity' }),
+    );
+
+    for (const slug of ['disciple-of-life', 'life-domain-spells', 'blessed-healer', 'supreme-healing']) {
+      const feat = patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/cleric-life-domain-${slug}`) as {
+        effects: { type: string }[];
+      };
+      expect(
+        feat.effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('buildPack composes the cleric overlay with zero diagnostics', () => {
+    const pack = buildPack();
+    expect(pack.entities.some((e) => e.id === 'srd-5e-2024:class/cleric')).toBe(true);
+    expect(pack.entities.some((e) => e.id === 'srd-5e-2024:subclass/life-domain')).toBe(true);
+  });
+});

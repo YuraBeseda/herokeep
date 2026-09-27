@@ -1,0 +1,298 @@
+[
+  {
+    "id": "srd-5e-2024:class/cleric",
+    "cite": "SRD 5.2.1, Cleric Core Traits; Spellcasting; Divine Order; Cleric Subclasses; Ability Score Improvement; Epic Boon",
+    "note": "Core Traits table (srd-2024_cleric_core-traits): \"Primary Ability: Wisdom\"; \"Saving Throw Proficiencies: Wisdom and Charisma\"; \"Skill Proficiencies: Choose 2: History, Insight, Medicine, Persuasion, or Religion\"; \"Weapon Proficiencies: Simple weapons\"; \"Armor Training: Light and Medium armor and Shields\" -- no Heavy armor training and no weapon-mastery choice at all (Cleric is a Simple-weapons-only class; unlike Fighter/Barbarian there is no vendored 'weapon-mastery' ClassFeature under srd-2024_cleric, confirmed absent from the full pk list). Task 10 (phase 4 plan 11): new overlay, class 1->20. class.multiclass (gains: light/medium/shields armor training, no weapon gains, skillChoiceCount 0; prerequisite wis>=13) was ALREADY populated by transform/classes.ts's MULTICLASS_GAINS/MULTICLASS_PREREQUISITES tables (phase 4 plan 11 task 7, ruling 2/5) -- verified present on the transformed entity before authoring this overlay; untouched here. Ability Score Improvement feature (cleric-ability-score-improvement) repeats at Cleric levels 4 (base), 8, 12, 16 per its own vendored desc (\"You gain this feature again at Cleric levels 8, 12, and 16\") -- @4/@8/@12/@16/feat choices below reuse the exact plan-2/Fighter/Wizard/Barbarian query-any-feat shape. Epic Boon is a SEPARATE feature (cleric-epic-boon) with its own level-19 grant, vendored desc \"You gain an Epic Boon feat ... or another feat of your choice for which you qualify. Boon of Fate is recommended.\" -- same open-any-feat wording, so @19/feat reuses the identical query:{type:'feat'} pick. Cleric Subclasses (cleric-cleric-subclasses, level 3) carries no overlay entry of its own -- its mechanic is fully expressed by the @3/subclass choice below, matching Fighter/Barbarian's own '<class>-<class>-subclass' precedent (the feature entity itself needs no merge). cantripsKnown key mismatch (same gap class as Wizard/T8): transformClasses() auto-slugs the upstream pk 'srd-2024_cleric_cantrips' to row extra key 'cleric-cantrips' (verified against the vendored srd-2024_cleric_cantrips ClassFeatureItem rows: column_value 3 at levels 1-3, 4 at levels 4-9, 5 at levels 10-20), but packages/engine/src/derive/spellcasting.ts's cantripsKnownKey('cleric') reads 'cleric-cantrips-known' specifically -- so levels 1/4/10 below author an EXPLICIT second, correctly-keyed extra column ('cleric-cantrips-known': 3/4/5) alongside the harmless, unread auto-generated 'cleric-cantrips' key, exactly mirroring Wizard's T8 fix. The Prepared Spells column (4 through 22 across levels 1-20, verified against every one of the 20 vendored srd-2024_cleric_prepared-spells ClassFeatureItem rows) is NOT duplicated here -- transformClasses() already carries it verbatim under extra['cleric-prepared-spells'] for every level, which is BYTE-IDENTICAL to preparedSpellsKey('cleric') (T3) -- zero authoring needed, same as Wizard's 'wizard-prepared-spells'. Divine Order (@1, level 1): SRD text (srd-2024_cleric_divine-order) offers a CHOICE between two named, mechanically distinct options (\"Protector\": Martial weapon proficiency + Heavy armor training; \"Thaumaturge\": one extra Cleric cantrip + an Intelligence (Arcana or Religion) check bonus equal to Wisdom modifier, minimum +1) -- NOT authored as a choice here; see the feature's own overlay entry below for the full investigation (a static two-option pick was verified schema-expressible but genuinely blocked: overlays can only PATCH existing entities, never create new ones -- Divine Order is a SINGLE upstream ClassFeature/ClassFeatureItem record with no separate 'Protector'/'Thaumaturge' entities anywhere in the vendored snapshot to reference, same categorical gap as T9's raging-condition finding). Ritual casting: srd-2024_cleric_spellcasting's own vendored text contains NO mention of Ritual casting anywhere (unlike Wizard, whose ritual:true is grounded in the Wizard-specific 'Ritual Adept' feature text) -- OWNER-FLAG, SRD-silent for this vendored snapshot (grepped Rule.json for a general 'Ritual Casting'/'Spells' chapter rule; none exists here, same silence class as multiclassSlots' third-caster rounding and the encumbrance formulas). Authored `ritual: true` anyway from well-established public 2024 PHB knowledge (a prepared spell with the Ritual tag can be cast as a Ritual without expending a slot) since Cleric's spell list itself marks several spells Ritual-tagged (e.g. Augury, Detect Magic) and the mechanic is uncontroversial, universal 5e spellcasting-chapter text this vendored SRD excerpt simply doesn't include -- recorded as this pack's own documented choice, not a false SRD citation.",
+    "set": {
+      "armorTraining": ["light", "medium", "shields"],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": {
+        "from": ["history", "insight", "medicine", "persuasion", "religion"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "extra": { "cleric-cantrips-known": 3 }
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/cleric@3/subclass",
+            "prompt": "Cleric Subclass",
+            "at": { "kind": "classLevel", "class": "cleric", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["cleric"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/cleric@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "cleric", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ],
+        "extra": { "cleric-cantrips-known": 4 }
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/cleric@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "cleric", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 10,
+        "extra": { "cleric-cantrips-known": 5 }
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/cleric@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "cleric", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/cleric@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "cleric", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/cleric@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "cleric", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-spellcasting",
+    "cite": "SRD 5.2.1, Spellcasting (Cleric)",
+    "note": "SRD text (abridged): \"You know three cantrips of your choice from the Cleric spell list ... When you reach Cleric levels 4 and 10, you learn another cantrip.\" \"Prepared Spells of Level 1+ ... To start, choose four level 1 spells ... The number of spells on your list increases as you gain Cleric levels, as shown in the Prepared Spells column.\" \"Spellcasting Ability. Wisdom is your spellcasting ability.\" \"Spellcasting Focus. You can use a Holy Symbol as a Spellcasting Focus.\" preparation:'prepared' (not 'spellbook' -- Cleric has no spellbook mechanic, matching the schema's PreparationSchema enum). cantripsKnown carries the SAME dead-but-harmless linear fallback formula shape as Wizard's ('3 + floor(classLevel(cleric) / 4)') -- superseded at every real level 1-20 by the class entity's now-correct 'cleric-cantrips-known' row extras (see class/cleric's note). preparedCount is intentionally omitted -- no formula: the Prepared Spells column (4 through 22 across levels 1-20) is a table, not linear in level; it already lives on the class entity at extra['cleric-prepared-spells'] for every level (byte-identical to preparedSpellsKey('cleric')), read directly by bestRowExtra -- zero authoring needed here, same as Wizard's preparedCount omission. Cleric spell-LIST membership (which spells resolve for `list:'cleric'`) comes free from transform/spells.ts's mapClasses, not from this effect or the descriptive 'cleric-spell-list' ClassFeature entity (which carries no ClassFeatureItem row anywhere in the vendored snapshot and so is never granted to any character -- left untouched, same as Wizard's homologous table-data entities).",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "cleric",
+          "ability": "wis",
+          "list": "cleric",
+          "preparation": "prepared",
+          "slots": "full",
+          "ritual": true,
+          "focus": true,
+          "cantripsKnown": "3 + floor(classLevel(cleric) / 4)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-divine-order",
+    "cite": "SRD 5.2.1, Divine Order",
+    "note": "SRD text: \"You have dedicated yourself to one of the following sacred roles of your choice.\n\nProtector. Trained for battle, you gain proficiency with Martial weapons and training with Heavy armor.\n\nThaumaturge. You know one extra cantrip from the Cleric spell list. In addition, your mystical connection to the divine gives you a bonus to your Intelligence (Arcana or Religion) checks. The bonus equals your Wisdom modifier (minimum of +1).\" Granted at Cleric level 1. INVESTIGATED per the brief: a two-option static choice (`pick:{static:[protectorId, thaumaturgeId]}` over two feature entities, each carrying its own real effects -- proficiency.grant x2 for Protector, spell.grant + check.bonus for Thaumaturge -- all individually expressible in doc-04's vocabulary) is the RIGHT shape and IS schema-supported (EntityQuerySchema/PickSchema's `static` form takes an explicit id list; composition.ts's decision-activation loop DOES activate a selected 'feature'-typed entity's effects, verified by reading composition.ts directly). But it is categorically BLOCKED within this task's content-only scope: `applyOverlays` (merge.ts) can only PATCH an entity that already exists in the composed pack (`Unmatched overlay: <id>` throws otherwise) -- it can never CREATE a new entity. The vendored snapshot has exactly ONE ClassFeature/ClassFeatureItem record for Divine Order (srd-2024_cleric_divine-order, one row at level 1) with no separate 'Protector'/'Thaumaturge' ClassFeature entries anywhere to target -- there is nothing to patch a static pick onto. This is the SAME categorical gap T9 hit authoring Rage's active-state clauses (no conditions-overlay layer existed to create a 'raging' condition) -- a real, correct effect shape exists in the vocabulary, but content-only authoring cannot manufacture the entities it would need to reference. Authoring EITHER Protector's or Thaumaturge's effects unconditionally (with no working choice mechanism to gate between them) would be ACTIVELY WRONG -- granting one specific option to every Cleric regardless of the player's actual pick -- so neither is authored as a bare effect. Text-feature fallback per ruling 9's bar; flagged as a T12/future-content-or-engine carry: closing this needs either an entity-creation-capable overlay layer (so Protector/Thaumaturge can become real, separately-targetable feature entities) or a schema/engine change letting a choice's `static` pick reference inline, overlay-authored sub-options.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Divine Order",
+          "description": "You have dedicated yourself to one of the following sacred roles of your choice.\n\n**Protector.** Trained for battle, you gain proficiency with Martial weapons and training with Heavy armor.\n\n**Thaumaturge.** You know one extra cantrip from the Cleric spell list. In addition, your mystical connection to the divine gives you a bonus to your Intelligence (Arcana or Religion) checks. The bonus equals your Wisdom modifier (minimum of +1)."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-channel-divinity",
+    "cite": "SRD 5.2.1, Channel Divinity (Cleric)",
+    "note": "SRD text (abridged): \"You can use this class's Channel Divinity twice. You regain one of its expended uses when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain additional uses when you reach certain Cleric levels ... You start with two such effects: Divine Spark and Turn Undead.\" Granted at Cleric level 2. max is a real stepped formula matching the vendored srd-2024_cleric_channel-divinity-uses column exactly (2 at levels 2-5, 3 at levels 6-17, 4 at levels 18-20; verified against every one of the 19 vendored ClassFeatureItem rows for this column, levels 2-20 -- the brief's own '2@2, 3@6' hint undercounted the third, level-18 breakpoint, closed here): '2 + min(1, floor(classLevel(cleric) / 6)) + min(1, floor(classLevel(cleric) / 18))', same closed-form min/floor technique as Fighter's Second Wind/Barbarian's Rage. reset:'shortRest' is the SAME vocabulary approximation those two already carry for a \"regain one on short rest, all on long rest\" clause (our reset vocabulary only expresses \"resets to max on trigger\", not \"regain one use\") -- unchanged limitation, not re-litigated; flagged. The Divine Spark/Turn Undead option texts (a player-chosen heal-or-damage effect and a Frightened+Incapacitated Undead-only save effect, respectively) stay entirely in this entity's own already-carried `description` (verbatim from upstream) -- matching Rage/Second Wind's established precedent of NOT duplicating an already-carried description into a redundant feature.text once at least one real effect (the resource) is authored.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "channel-divinity",
+          "name": "Channel Divinity",
+          "max": "2 + min(1, floor(classLevel(cleric) / 6)) + min(1, floor(classLevel(cleric) / 18))",
+          "reset": "shortRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-sear-undead",
+    "cite": "SRD 5.2.1, Sear Undead",
+    "note": "SRD text: \"Whenever you use Turn Undead, you can roll a number of d8s equal to your Wisdom modifier (minimum of 1d8) and add the rolls together. Each Undead that fails its saving throw against that use of Turn Undead takes Radiant damage equal to the roll's total.\" Granted at Cleric level 5 (a BASE Cleric feature, not subclass-specific -- verified against the vendored parent field, srd-2024_cleric). Inexpressible: bonus damage triggered by using Turn Undead, itself an unauthored, purely-descriptive Channel Divinity sub-option (see cleric-channel-divinity's note) with no discrete 'action.define'/resource of its own to hang a trigger off -- no effect type models 'roll bonus damage whenever this OTHER undescribed sub-ability is used', same gap class as Barbarian's Frenzy (a dice-count-from-an-ability-modifier bonus tied to using an unauthored trigger). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Sear Undead",
+          "description": "Whenever you use Turn Undead, you can roll a number of d8s equal to your Wisdom modifier (minimum of 1d8) and add the rolls together. Each Undead that fails its saving throw against that use of Turn Undead takes Radiant damage equal to the roll's total. This damage doesn't end the turn effect."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-blessed-strikes",
+    "cite": "SRD 5.2.1, Blessed Strikes",
+    "note": "SRD text: \"Divine power infuses you in battle. You gain one of the following options of your choice ... Divine Strike. Once on each of your turns when you hit a creature with an attack roll using a weapon, you can cause the target to take an extra 1d8 Necrotic or Radiant damage (your choice). Potent Spellcasting. Add your Wisdom modifier to the damage you deal with any Cleric cantrip.\" Granted at Cleric level 7. SAME categorical gap as Divine Order above: a genuine two-option player choice with no separate 'Divine Strike'/'Potent Spellcasting' entities anywhere in the vendored snapshot for a static pick to reference (only one ClassFeature/ClassFeatureItem record, srd-2024_cleric_blessed-strikes, exists). Authoring either option unconditionally would grant it to every Cleric regardless of choice -- actively wrong. Text-feature fallback per ruling 9's bar; flagged, same carry as Divine Order.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Blessed Strikes",
+          "description": "Divine power infuses you in battle. You gain one of the following options of your choice (if you get either option from a Cleric subclass in an older book, use only the option you choose for this feature).\n\n**Divine Strike.** Once on each of your turns when you hit a creature with an attack roll using a weapon, you can cause the target to take an extra 1d8 Necrotic or Radiant damage (your choice).\n\n**Potent Spellcasting.** Add your Wisdom modifier to the damage you deal with any Cleric cantrip."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-divine-intervention",
+    "cite": "SRD 5.2.1, Divine Intervention",
+    "note": "SRD text: \"As a Magic action, choose any Cleric spell of level 5 or lower that doesn't require a Reaction to cast. As part of the same action, you cast that spell without expending a spell slot or needing Material components. You can't use this feature again until you finish a Long Rest.\" Granted at Cleric level 10. Same shape class as Fighter's Indomitable: the USE COUNT/reset (a flat 1 use, Long Rest reset) is real and directly expressible via resource.define; the mechanic itself (casting ANY qualifying spell for free, player-chosen at the moment of use) has no vocabulary -- no effect type models 'cast an arbitrary spell you know without a slot'. Only the resource is authored; the casting mechanic stays text-only in this entity's own (already-carried) description, matching Indomitable's precedent of not duplicating it into a redundant feature.text once a real effect is present.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "divine-intervention",
+          "name": "Divine Intervention",
+          "max": "1",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-improved-blessed-strikes",
+    "cite": "SRD 5.2.1, Improved Blessed Strikes",
+    "note": "SRD text: \"The option you chose for Blessed Strikes grows more powerful. Divine Strike. The extra damage of your Divine Strike increases to 2d8. Potent Spellcasting. When you cast a Cleric cantrip and deal damage to a creature with it, you can give vitality to yourself or another creature within 60 feet of yourself, granting a number of Temporary Hit Points equal to twice your Wisdom modifier.\" Granted at Cleric level 14. Same compound-gap class as Blessed Strikes itself (unauthored above); a strict extension of that unresolved choice, so it inherits the same gap. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Improved Blessed Strikes",
+          "description": "The option you chose for Blessed Strikes grows more powerful.\n\n**Divine Strike.** The extra damage of your Divine Strike increases to 2d8.\n\n**Potent Spellcasting.** When you cast a Cleric cantrip and deal damage to a creature with it, you can give vitality to yourself or another creature within 60 feet of yourself, granting a number of Temporary Hit Points equal to twice your Wisdom modifier."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-greater-divine-intervention",
+    "cite": "SRD 5.2.1, Greater Divine Intervention",
+    "note": "SRD text: \"You can call on even more powerful divine intervention. When you use your Divine Intervention feature, you can choose Wish when you select a spell. If you do so, you can't use Divine Intervention again until you finish 2d4 Long Rests.\" Granted at Cleric level 20. Inexpressible: a conditional, dice-randomized OVERRIDE of another resource's own reset cadence (Divine Intervention's own resource.define, authored above, resets on a plain 'longRest' trigger; this feature would need to conditionally extend that to '2d4 Long Rests' depending on a choice made at the moment of use) -- no ResetSchema value or effect field models a randomized, choice-conditional reset extension. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Greater Divine Intervention",
+          "description": "You can call on even more powerful divine intervention. When you use your Divine Intervention feature, you can choose *Wish* when you select a spell. If you do so, you can't use Divine Intervention again until you finish 2d4 Long Rests."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/life-domain",
+    "cite": "SRD 5.2.1, Life Domain",
+    "note": "Subclass entity itself carries no overlay entry beyond this note -- its features (below) are granted via the upstream levels[] rows already produced by transformClasses(); no additional class-row choice is needed on the subclass (unlike Champion's Additional Fighting Style, Life Domain's SRD text adds no second player decision at any level -- Domain Spells is a pure grant, not a choice, per its own text: \"you thereafter always have the listed spells prepared\")."
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-life-domain-disciple-of-life",
+    "cite": "SRD 5.2.1, Life Domain — Disciple of Life",
+    "note": "SRD text: \"When a spell you cast with a spell slot restores Hit Points to a creature, that creature regains additional Hit Points on the turn you cast the spell. The additional Hit Points equal 2 plus the spell slot's level.\" Granted at Life Domain level 3 (Cleric level 3). Inexpressible: a triggered bonus-healing-on-cast mechanic -- doc-04's effects table has NO healing-related effect type at all (no 'heal.bonus'/'heal.grant' entry exists in the vocabulary; the closest relatives, damage.bonus/attack.bonus, only ever ADD DAMAGE, never healing), so there is nothing to attach this to regardless of trigger-vocabulary limitations. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Disciple of Life",
+          "description": "When a spell you cast with a spell slot restores Hit Points to a creature, that creature regains additional Hit Points on the turn you cast the spell. The additional Hit Points equal 2 plus the spell slot's level."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-life-domain-life-domain-spells",
+    "cite": "SRD 5.2.1, Life Domain — Life Domain Spells",
+    "note": "SRD text: \"Your connection to this divine domain ensures you always have certain spells ready. When you reach a Cleric level specified in the Life Domain Spells table, you thereafter always have the listed spells prepared ... If another Cleric feature gives you spells that you always have prepared, those spells don't count against the number of spells you can prepare.\" Table: level 3 (Aid, Bless, Cure Wounds, Lesser Restoration), level 5 (Mass Healing Word, Revivify), level 7 (Aura of Life, Death Ward), level 9 (Greater Restoration, Mass Cure Wounds). Granted once at Life Domain level 3 (the single vendored ClassFeatureItem row for this feature); the 5/7/9 breakpoints live only inside the feature's own description text, not as separate grant rows. EXPRESSIVENESS VERDICT (per the brief's explicit instruction to verify before authoring): doc-04's `spell.grant` effect DOES carry a purpose-built `alwaysPrepared: boolean` field that reads, on paper, like exactly the right vocabulary for this mechanic. Traced its actual consumption in `packages/engine/src/derive/spellcasting.ts`'s `deriveSpellcasting` before authoring anything: `SpellcastingBlock.prepared` is populated SOLELY from `facts.preparedSpells[classId]` (a player decision fact) -- the function never iterates `spell.grant` effects at all. Grepped the entire engine source for `alwaysPrepared`: zero matches anywhere outside the protocol schema itself. The ONLY consumers of `spell.grant` anywhere in `@hk/engine` are `hasSpell` predicate checks (abilities.ts/index.ts/validation.ts, for prerequisite gating) and `content/refs.ts`'s dependency-ref collector -- neither folds a granted spell into any prepared/known list or surfaces it to a character sheet in any other way. So `alwaysPrepared` is a genuinely UNCONSUMED schema field today, not a currently-inert-but-structurally-correct one in the Empowered Evocation sense (that gap is a documented 'reserved for a future task' partial pipeline; this one has literally no code path at all). Authoring `spell.grant{alwaysPrepared:true}` here would be schema-valid but produce ZERO visible behavior -- the granted spells would not appear as prepared, would not count toward (or exempt themselves from) preparedMax, and would not be castable via the normal slot-spending flow; per the brief's explicit 'if granted-spells-as-always-prepared isn't modeled, text fallback + flag, DON'T hack preparedMax' instruction, this stays a text fallback rather than an inert authored effect (unlike Empowered Evocation's damage.bonus, which at least matches a documented, named future-engine reservation). Flagged as a genuine T12/future-engine carry: `deriveSpellcasting` needs a pass that folds active `spell.grant{alwaysPrepared:true}` effects into each block's `prepared[]` (and excludes them from consuming `preparedMax`) before this mechanic can be authored as a real effect.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Life Domain Spells",
+          "description": "Your connection to this divine domain ensures you always have certain spells ready. When you reach a Cleric level specified in the Life Domain Spells table, you thereafter always have the listed spells prepared. These spells don't count against the number of spells you can prepare.\n\n**Life Domain Spells**\n\n|Cleric Level|Prepared Spells|\n|---|---|\n|3rd|Aid, Bless, Cure Wounds, Lesser Restoration|\n|5th|Mass Healing Word, Revivify|\n|7th|Aura of Life, Death Ward|\n|9th|Greater Restoration, Mass Cure Wounds|"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-life-domain-preserve-life",
+    "cite": "SRD 5.2.1, Life Domain — Preserve Life",
+    "note": "SRD text: \"As a Magic action, you present your Holy Symbol and expend a use of your Channel Divinity to evoke healing energy that can restore a number of Hit Points equal to five times your Cleric level. Choose Bloodied creatures within 30 feet of yourself (which can include you), and divide those Hit Points among them. This feature can restore a creature to no more than half its Hit Point maximum.\" Granted at Life Domain level 3 (Cleric level 3). PARTIALLY expressible, matching Fighter's Second Wind/Action Surge precedent for 'an activatable ability that draws from a named resource pool': `action.define`'s own `resource` field (SlugSchema, optional) is built exactly for 'this action consumes an existing named resource instead of its own `uses` pool' -- verified against `packages/engine/src/derive/actions.ts`'s `deriveActions`, which surfaces `ActionView.resource` as a genuine (non-inert) passthrough field for any UI to display 'costs 1 Channel Divinity' against. Authored `action.define{kind:'action', resource:'channel-divinity'}` referencing the SAME resource id as cleric-channel-divinity's resource.define above -- a real, meaningfully-consumed effect (unlike a schema-present-but-code-path-free field), NOT a fallback. The healing MATH itself (5 x Cleric level, divided among chosen Bloodied creatures, capped at half max HP each) stays text-only in the entity's own already-carried description -- doc-04's vocabulary has no healing-amount effect type at all (same gap noted on Disciple of Life above), so nothing further can be authored regardless; matching Second Wind/Indomitable's precedent of not duplicating that description into a redundant feature.text once a real effect exists.",
+    "merge": {
+      "effects": [
+        {
+          "type": "action.define",
+          "id": "preserve-life",
+          "name": "Preserve Life",
+          "kind": "action",
+          "description": "Expend a use of Channel Divinity to evoke healing energy restoring HP equal to five times your Cleric level, divided among Bloodied creatures within 30 feet of yourself (including yourself); no creature is restored beyond half its Hit Point maximum.",
+          "resource": "channel-divinity"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-life-domain-blessed-healer",
+    "cite": "SRD 5.2.1, Life Domain — Blessed Healer",
+    "note": "SRD text: \"The healing spells you cast on others heal you as well. Immediately after you cast a spell with a spell slot that restores Hit Points to one or more creatures other than yourself, you regain Hit Points equal to 2 plus the spell slot's level.\" Granted at Life Domain level 6 (Cleric level 6). Same gap class as Disciple of Life: a triggered self-heal-on-cast mechanic with no healing effect type in the vocabulary at all. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Blessed Healer",
+          "description": "The healing spells you cast on others heal you as well. Immediately after you cast a spell with a spell slot that restores Hit Points to one or more creatures other than yourself, you regain Hit Points equal to 2 plus the spell slot's level."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/cleric-life-domain-supreme-healing",
+    "cite": "SRD 5.2.1, Life Domain — Supreme Healing",
+    "note": "SRD text: \"When you would normally roll one or more dice to restore Hit Points to a creature with a spell or Channel Divinity, don't roll those dice for the healing; instead use the highest number possible for each die.\" Granted at Life Domain level 17 (Cleric level 17; the brief's guessed level 17 confirmed exact against the vendored ClassFeatureItem row -- no level-10 Life Domain feature exists in this vendored snapshot at all, correcting the brief's speculative '3,6,10,17' list to the verified '3,6,17'). Inexpressible: a dice-roll-maximizing override applied retroactively to ANY future healing roll from spells or Channel Divinity -- same gap class as Wizard Evoker's Overchannel (no effect type overrides how dice are rolled), compounded by the fact that no healing-roll vocabulary exists at all in the first place (see Disciple of Life/Preserve Life above). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Supreme Healing",
+          "description": "When you would normally roll one or more dice to restore Hit Points to a creature with a spell or Channel Divinity, don't roll those dice for the healing; instead use the highest number possible for each die. For example, instead of restoring 2d6 Hit Points to a creature with a spell, you restore 12."
+        }
+      ]
+    }
+  }
+]
