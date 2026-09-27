@@ -215,11 +215,61 @@
       "ac": "КЗ {ac}",
       "passivePerception": "Пасивна Увага {value}",
       "classLevel": "{class} {level}",
-      "concentrating": "Концентрується"
+      "concentrating": "Концентрується",
+      "viewSheet": "Переглянути лист"
     },
     "membersWithoutCharacter": {
       "title": "Без персонажа",
       "removedBadge": "Видалено"
+    }
+  },
+  "memberSheet": {
+    "loading": "Завантаження листа {name}…",
+    "unauthorized": "Не вдалося завантажити лист {name}. Можливо, у вас більше немає доступу до перегляду.",
+    "error": "Не вдалося відобразити лист {name} зараз.",
+    "close": "Закрити",
+    "level": "Рівень {level}",
+    "hpTitle": "ХП",
+    "hp": "ХП {hp}/{hpMax}",
+    "hpWithTemp": "ХП {hp}/{hpMax} (+{temp} тимч.)",
+    "deathSaves": "Рятівні кидки від смерті — успіхи {successes}/{max}, провали {failures}/{max}",
+    "ac": "КЗ",
+    "initiative": "Ініціатива",
+    "passivePerception": "Пасивна Увага",
+    "speed": "Швидкість",
+    "concentratingOn": "Концентрується на: {name}",
+    "abilities": {
+      "title": "Характеристики",
+      "score": "Значення",
+      "mod": "Мод.",
+      "save": "Рятівний кидок"
+    },
+    "skills": {
+      "title": "Навички",
+      "empty": "Немає навичок."
+    },
+    "conditions": {
+      "title": "Стани",
+      "empty": "Немає станів."
+    },
+    "spellcasting": {
+      "title": "Заклинання",
+      "slotsLevel": "Комірки {level} рівня",
+      "slotPipLabel": "Комірка заклинання {level} рівня, {index} з {max}",
+      "known": "Відомі",
+      "prepared": "Підготовлені",
+      "empty": "Немає заклинань."
+    },
+    "resources": {
+      "title": "Ресурси",
+      "usedOf": "{used} / {max}",
+      "pipLabel": "{name}, використання {index} з {max}",
+      "empty": "Немає ресурсів."
+    },
+    "inventory": {
+      "title": "Інвентар",
+      "entry": "{name} × {qty}",
+      "empty": "Немає предметів."
     }
   },
   "log": {

@@ -1418,5 +1418,76 @@ describe('SyncService', () => {
 
       expect(setGatewaySpy).toHaveBeenCalledWith(undefined);
     });
+
+    // plan-10 task-9-brief.md: the DM party-sheet drill-in's subscribe transport path.
+    describe('subscribeForeignStream / unsubscribeForeignStream', () => {
+      const campaignId = '00000000-0000-4000-8000-0000000000cd';
+      const streamId = `camp:${campaignId}`;
+      const foreignStream = 'char:11111111-1111-4111-8111-111111111111';
+
+      async function startCampaignSession(): Promise<FakeWebSocket> {
+        await TestBed.inject(CampaignsRepository).put({
+          id: campaignId,
+          name: 'X',
+          system: 'srd-5e-2024',
+          role: 'dm',
+          lastSeq: 0,
+          updatedAt: 1,
+        });
+        globalThis.fetch = routedFetch({
+          '/api/characters': () => jsonResponse(200, []),
+          '/api/campaigns': () => jsonResponse(200, []),
+        });
+        leaderState.set(true);
+        TestBed.inject(SyncService);
+        statusState.set('authed');
+        TestBed.tick();
+        await flush();
+        const socket = FakeWebSocket.instances.find((s) => s.url === `ws://test/${streamId}`)!;
+        socket.emitOpen();
+        await flush();
+        return socket;
+      }
+
+      it('subscribeForeignStream with no lastSeq sends {t:"subscribe", stream} (full catch-up) over the live campaign socket', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.subscribeForeignStream(campaignId, foreignStream);
+        await flush();
+
+        expect(socket.parsedSent()).toContainEqual({ t: 'subscribe', stream: foreignStream });
+      });
+
+      it('subscribeForeignStream with a lastSeq sends it verbatim (the gap-rule re-subscribe path)', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.subscribeForeignStream(campaignId, foreignStream, 7);
+        await flush();
+
+        expect(socket.parsedSent()).toContainEqual({
+          t: 'subscribe',
+          stream: foreignStream,
+          lastSeq: 7,
+        });
+      });
+
+      it('unsubscribeForeignStream sends {t:"unsubscribe", stream} over the live campaign socket', async () => {
+        const socket = await startCampaignSession();
+        const sync = TestBed.inject(SyncService);
+
+        sync.unsubscribeForeignStream(campaignId, foreignStream);
+        await flush();
+
+        expect(socket.parsedSent()).toContainEqual({ t: 'unsubscribe', stream: foreignStream });
+      });
+
+      it('both are a silent no-op (never throw) when this campaign has no live session', () => {
+        const sync = TestBed.inject(SyncService);
+        expect(() => sync.subscribeForeignStream(campaignId, foreignStream)).not.toThrow();
+        expect(() => sync.unsubscribeForeignStream(campaignId, foreignStream)).not.toThrow();
+      });
+    });
   });
 });

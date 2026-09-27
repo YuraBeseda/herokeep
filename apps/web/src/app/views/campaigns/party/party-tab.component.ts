@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { MembershipRole } from '@hk/protocol';
 import { ButtonComponent } from '@shared/components/button/button.component';
+import { DialogService } from '@shared/components/dialog/dialog.service';
 import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { AuthService } from '@shared/services/auth/auth.service';
@@ -10,6 +11,7 @@ import type { PartyOverview } from '@shared/services/campaigns/campaign-projecti
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
+import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
 
 /** A `visibility.partySheets` mode, resolved with the same default `defaultCampaignSettings`
  * (`campaign-settings.component.ts`, task-6-report.md judgment call 7) uses for a campaign with
@@ -72,6 +74,7 @@ export class PartyTabComponent {
   private readonly placeholderService = inject(PlaceholderService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly dialogService = inject(DialogService);
 
   protected readonly state = this.campaignStore.state;
   protected readonly role = this.campaignStore.role;
@@ -80,6 +83,11 @@ export class PartyTabComponent {
   protected readonly partySheetsMode = computed<PartySheetsMode>(
     () => this.state()?.settings?.visibility.partySheets ?? 'overview',
   );
+
+  /** [plan-10 Task 9] Gates the party card's "View sheet" drill-in affordance — ruling 8's exact
+   * wording (task-8-report.md carry): "`'full'` additionally enables DM (and only DM) sheet-
+   * subscribe drill-in." */
+  protected readonly canDrillIn = computed(() => this.isDm() && this.partySheetsMode() === 'full');
 
   /** DM: always full detail. Member: full detail UNLESS `partySheets === 'none'` — see class
    * doc's "partySheets gating" section. */
@@ -149,5 +157,19 @@ export class PartyTabComponent {
 
   protected goToLinkCharacter(): void {
     void this.router.navigate(['../link-character'], { relativeTo: this.route });
+  }
+
+  /** [plan-10 Task 9] Opens the DM party-sheet drill-in for `card` — the caller (the template)
+   * already gates this behind `canDrillIn()`, so this method trusts it was only ever invoked for
+   * an authorized viewer (same "the opener already checked" posture `MemberSheetDialogComponent`
+   * itself documents). `campaignId()` is guaranteed defined here — this component only ever
+   * renders once `campaignGuard` has already opened a campaign stream. */
+  protected openMemberSheet(card: PartyCardVm): void {
+    const campaignId = this.campaignStore.campaignId();
+    if (!campaignId) return;
+    this.dialogService.open(MemberSheetDialogComponent, {
+      data: { campaignId, characterId: card.characterId, name: card.name },
+      sheet: true,
+    });
   }
 }

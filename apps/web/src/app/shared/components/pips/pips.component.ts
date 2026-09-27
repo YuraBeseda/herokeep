@@ -17,6 +17,16 @@ import { TranslocoDirective } from '@jsverse/transloco';
  * `hk-toast` already use), interpolated with `{index, max}` (this pip's 1-based position and the
  * row's total) plus whatever extra `labelParams` the caller supplies (e.g. `{level}` for a spell
  * slot row, `{name}` for a resource).
+ *
+ * `viewReadonly` (plan-10 task-9-brief.md, the DM party-sheet drill-in's readonly-input refactor —
+ * `[viewReadonly]` in a template, never aliased to a bare `readonly` attribute:
+ * `@angular-eslint/no-input-rename` disallows that): defaults to `false`, byte-identical to every
+ * pre-existing consumer (`play-tab.component.ts`'s own spell-slot/resource rows never set it).
+ * `true` renders every pip permanently `disabled`
+ * (fill state still visible via `aria-pressed`/the `--filled` class — a read-only viewer still
+ * needs to SEE what's spent, just never click) and makes `onPipClick` itself a defensive no-op —
+ * belt-and-braces alongside the disabled attribute, which already suppresses native click/keyboard
+ * activation in every browser and in jsdom.
  */
 @Component({
   selector: 'hk-pips',
@@ -30,6 +40,7 @@ export class PipsComponent {
   readonly used = input.required<number>();
   readonly labelKey = input.required<string>();
   readonly labelParams = input<Record<string, unknown>>({});
+  readonly viewReadonly = input(false);
 
   readonly spend = output<void>();
   readonly restore = output<void>();
@@ -59,7 +70,7 @@ export class PipsComponent {
   }
 
   protected onPipClick(i: number): void {
-    if (this.disabled(i)) return;
+    if (this.viewReadonly() || this.disabled(i)) return;
     if (this.filled(i)) {
       this.restore.emit();
     } else {

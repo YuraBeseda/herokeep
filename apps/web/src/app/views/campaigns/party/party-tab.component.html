@@ -53,6 +53,18 @@
             <span class="party-tab__left-badge">{{ t('party.card.leftBadge') }}</span>
           }
 
+          @if (canDrillIn()) {
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              class="party-tab__view-sheet"
+              (click)="openMemberSheet(card)"
+            >
+              {{ t('party.card.viewSheet') }}
+            </button>
+          }
+
           @if (showOverviewDetails() && card.overview; as ov) {
             <div class="party-tab__hp">
               <hk-hp-bar

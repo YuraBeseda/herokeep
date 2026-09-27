@@ -215,11 +215,61 @@
       "ac": "КД {ac}",
       "passivePerception": "Пассивная Внимательность {value}",
       "classLevel": "{class} {level}",
-      "concentrating": "Концентрируется"
+      "concentrating": "Концентрируется",
+      "viewSheet": "Посмотреть лист"
     },
     "membersWithoutCharacter": {
       "title": "Без персонажа",
       "removedBadge": "Удалён"
+    }
+  },
+  "memberSheet": {
+    "loading": "Загрузка листа {name}…",
+    "unauthorized": "Не удалось загрузить лист {name}. Возможно, у вас больше нет доступа к его просмотру.",
+    "error": "Не удалось отобразить лист {name} сейчас.",
+    "close": "Закрыть",
+    "level": "Уровень {level}",
+    "hpTitle": "ХП",
+    "hp": "ХП {hp}/{hpMax}",
+    "hpWithTemp": "ХП {hp}/{hpMax} (+{temp} врем.)",
+    "deathSaves": "Спасброски от смерти — успехи {successes}/{max}, провалы {failures}/{max}",
+    "ac": "КД",
+    "initiative": "Инициатива",
+    "passivePerception": "Пассивная Внимательность",
+    "speed": "Скорость",
+    "concentratingOn": "Концентрируется на: {name}",
+    "abilities": {
+      "title": "Характеристики",
+      "score": "Значение",
+      "mod": "Мод.",
+      "save": "Спасбросок"
+    },
+    "skills": {
+      "title": "Навыки",
+      "empty": "Нет навыков."
+    },
+    "conditions": {
+      "title": "Состояния",
+      "empty": "Нет состояний."
+    },
+    "spellcasting": {
+      "title": "Заклинания",
+      "slotsLevel": "Ячейки {level} уровня",
+      "slotPipLabel": "Ячейка заклинания {level} уровня, {index} из {max}",
+      "known": "Известные",
+      "prepared": "Подготовленные",
+      "empty": "Нет заклинательства."
+    },
+    "resources": {
+      "title": "Ресурсы",
+      "usedOf": "{used} / {max}",
+      "pipLabel": "{name}, использование {index} из {max}",
+      "empty": "Нет ресурсов."
+    },
+    "inventory": {
+      "title": "Инвентарь",
+      "entry": "{name} × {qty}",
+      "empty": "Нет предметов."
     }
   },
   "log": {

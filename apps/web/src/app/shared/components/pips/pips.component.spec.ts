@@ -24,6 +24,7 @@ class StubLoader implements TranslocoLoader {
       [used]="used()"
       [labelKey]="'characters.sheet.pipLabel'"
       [labelParams]="{ level: 3 }"
+      [viewReadonly]="readonly()"
       (spend)="onSpend()"
       (restore)="onRestore()"
     />
@@ -32,6 +33,7 @@ class StubLoader implements TranslocoLoader {
 class HostComponent {
   readonly max = signal(3);
   readonly used = signal(1);
+  readonly readonly = signal(false);
   spendCount = 0;
   restoreCount = 0;
 
@@ -130,5 +132,35 @@ describe('PipsComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(pipButtons(compiled)).toHaveLength(0);
+  });
+
+  // plan-10 task-9-brief.md: the DM party-sheet drill-in's readonly-input refactor — pinned
+  // separately from the (untouched, still-passing-unmodified-above) default-`false` behavior.
+  describe('readonly', () => {
+    it('disables every pip regardless of fill state, and neither spend nor restore ever emits', async () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.readonly.set(true);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const pips = pipButtons(compiled);
+      expect(pips.every((p) => p.disabled)).toBe(true);
+      // Fill state is still visibly communicated — a read-only viewer must still SEE what's spent.
+      expect(pips[0].getAttribute('aria-pressed')).toBe('true');
+      expect(pips[1].getAttribute('aria-pressed')).toBe('false');
+
+      pips[0].click();
+      pips[1].click();
+      await fixture.whenStable();
+      expect(fixture.componentInstance.spendCount).toBe(0);
+      expect(fixture.componentInstance.restoreCount).toBe(0);
+    });
+
+    it('defaults to false — a consumer that never sets it is byte-identical to before this task', async () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(pipButtons(compiled).some((p) => p.disabled)).toBe(false);
+    });
   });
 });

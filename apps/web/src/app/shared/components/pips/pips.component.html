@@ -6,7 +6,7 @@
       [class.hk-pips__pip--filled]="filled(i)"
       [attr.aria-pressed]="filled(i)"
       [attr.aria-label]="t(labelKey(), pipParams(i))"
-      [disabled]="disabled(i)"
+      [disabled]="viewReadonly() || disabled(i)"
       (click)="onPipClick(i)"
     ></button>
   }

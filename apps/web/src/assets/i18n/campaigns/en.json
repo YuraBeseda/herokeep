@@ -215,11 +215,61 @@
       "ac": "AC {ac}",
       "passivePerception": "Passive Perception {value}",
       "classLevel": "{class} {level}",
-      "concentrating": "Concentrating"
+      "concentrating": "Concentrating",
+      "viewSheet": "View sheet"
     },
     "membersWithoutCharacter": {
       "title": "No character yet",
       "removedBadge": "Removed"
+    }
+  },
+  "memberSheet": {
+    "loading": "Loading {name}'s sheet…",
+    "unauthorized": "Couldn't load {name}'s sheet. You may no longer have permission to view it.",
+    "error": "Couldn't display {name}'s sheet right now.",
+    "close": "Close",
+    "level": "Level {level}",
+    "hpTitle": "HP",
+    "hp": "HP {hp}/{hpMax}",
+    "hpWithTemp": "HP {hp}/{hpMax} (+{temp} temp)",
+    "deathSaves": "Death saves — successes {successes}/{max}, failures {failures}/{max}",
+    "ac": "AC",
+    "initiative": "Initiative",
+    "passivePerception": "Passive Perception",
+    "speed": "Speed",
+    "concentratingOn": "Concentrating on {name}",
+    "abilities": {
+      "title": "Abilities",
+      "score": "Score",
+      "mod": "Mod",
+      "save": "Save"
+    },
+    "skills": {
+      "title": "Skills",
+      "empty": "No skills."
+    },
+    "conditions": {
+      "title": "Conditions",
+      "empty": "No conditions."
+    },
+    "spellcasting": {
+      "title": "Spellcasting",
+      "slotsLevel": "Level {level} slots",
+      "slotPipLabel": "Level {level} spell slot {index} of {max}",
+      "known": "Known",
+      "prepared": "Prepared",
+      "empty": "No spellcasting."
+    },
+    "resources": {
+      "title": "Resources",
+      "usedOf": "{used} / {max}",
+      "pipLabel": "{name} use {index} of {max}",
+      "empty": "No resources."
+    },
+    "inventory": {
+      "title": "Inventory",
+      "entry": "{name} × {qty}",
+      "empty": "No items."
     }
   },
   "log": {

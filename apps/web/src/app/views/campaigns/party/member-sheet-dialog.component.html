@@ -1,0 +1,283 @@
+<div class="member-sheet-dialog" *transloco="let t; read: 'campaigns'">
+  <header class="member-sheet-dialog__header">
+    <h2 class="member-sheet-dialog__title" data-dialog-title>
+      {{ data.name }}
+      @if (levelClassLine(); as line) {
+        <span class="member-sheet-dialog__subtitle">{{ line }}</span>
+      }
+    </h2>
+    <button
+      hk-button
+      type="button"
+      [variant]="'ghost'"
+      class="member-sheet-dialog__close"
+      (click)="close()"
+    >
+      {{ t('memberSheet.close') }}
+    </button>
+  </header>
+
+  @switch (status()) {
+    @case ('loading') {
+      <p class="member-sheet-dialog__status" role="status">
+        {{ t('memberSheet.loading', { name: data.name }) }}
+      </p>
+    }
+    @case ('unauthorized') {
+      <p class="member-sheet-dialog__status member-sheet-dialog__status--error" role="alert">
+        {{ t('memberSheet.unauthorized', { name: data.name }) }}
+      </p>
+    }
+    @case ('error') {
+      <p class="member-sheet-dialog__status member-sheet-dialog__status--error" role="alert">
+        {{ t('memberSheet.error', { name: data.name }) }}
+      </p>
+    }
+    @case ('ready') {
+      @if (sheet(); as s) {
+        <div class="member-sheet-dialog__body">
+          <!-- HP + death saves -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.hpTitle'"
+            class="member-sheet-dialog__section"
+          >
+            <hk-hp-bar
+              class="member-sheet-dialog__hp-bar"
+              [current]="s.hp.current"
+              [max]="s.hp.max.value"
+              [temp]="s.hp.temp"
+            />
+            <span class="member-sheet-dialog__hp-text">
+              @if (s.hp.temp > 0) {
+                {{
+                  t('memberSheet.hpWithTemp', {
+                    hp: s.hp.current,
+                    hpMax: s.hp.max.value,
+                    temp: s.hp.temp,
+                  })
+                }}
+              } @else {
+                {{ t('memberSheet.hp', { hp: s.hp.current, hpMax: s.hp.max.value }) }}
+              }
+            </span>
+            @if (s.hp.current === 0) {
+              <p class="member-sheet-dialog__death-saves">
+                {{
+                  t('memberSheet.deathSaves', {
+                    successes: s.hp.deathSaves.successes,
+                    failures: s.hp.deathSaves.failures,
+                    max: maxDeathSaves,
+                  })
+                }}
+              </p>
+            }
+          </hk-sheet-section>
+
+          <!-- Core stats -->
+          <div class="member-sheet-dialog__stats">
+            <hk-stat-tile
+              [labelKey]="'campaigns.memberSheet.ac'"
+              [value]="s.ac.value"
+              [emphasized]="true"
+            />
+            <hk-stat-tile
+              [labelKey]="'campaigns.memberSheet.initiative'"
+              [value]="s.initiative.value"
+            />
+            <hk-stat-tile
+              [labelKey]="'campaigns.memberSheet.passivePerception'"
+              [value]="s.passivePerception"
+            />
+            @for (speed of speedRows(); track speed.mode) {
+              <hk-stat-tile
+                [labelKey]="'campaigns.memberSheet.speed'"
+                [value]="speed.value"
+                [sub]="speed.mode"
+              />
+            }
+          </div>
+
+          @if (s.concentration; as conc) {
+            <hk-chip [selected]="true" class="member-sheet-dialog__concentration">
+              {{ t('memberSheet.concentratingOn', { name: resolveName(conc.spellId) }) }}
+            </hk-chip>
+          }
+
+          <!-- Abilities -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.abilities.title'"
+            class="member-sheet-dialog__section"
+          >
+            <div class="member-sheet-dialog__ability-grid">
+              @for (row of abilityRows(); track row.id) {
+                <hk-card [header]="row.label" class="member-sheet-dialog__ability">
+                  <dl class="member-sheet-dialog__ability-stats">
+                    <div>
+                      <dt>{{ t('memberSheet.abilities.score') }}</dt>
+                      <dd>{{ row.score }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ t('memberSheet.abilities.mod') }}</dt>
+                      <dd>{{ row.mod }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ t('memberSheet.abilities.save') }}</dt>
+                      <dd
+                        [class.member-sheet-dialog__ability-value--proficient]="row.saveProficient"
+                      >
+                        {{ row.save }}
+                      </dd>
+                    </div>
+                  </dl>
+                </hk-card>
+              }
+            </div>
+          </hk-sheet-section>
+
+          <!-- Skills -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.skills.title'"
+            class="member-sheet-dialog__section"
+          >
+            @if (skillRows().length > 0) {
+              <ul class="member-sheet-dialog__skills">
+                @for (skill of skillRows(); track skill.id) {
+                  <li>
+                    <span>{{ skill.label }}</span>
+                    <span>{{ skill.total }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="member-sheet-dialog__empty">{{ t('memberSheet.skills.empty') }}</p>
+            }
+          </hk-sheet-section>
+
+          <!-- Conditions -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.conditions.title'"
+            class="member-sheet-dialog__section"
+          >
+            @if (conditions().length > 0) {
+              <div class="member-sheet-dialog__conditions">
+                @for (condition of conditions(); track condition.id) {
+                  <hk-chip [selected]="true">{{ condition.name }}</hk-chip>
+                }
+              </div>
+            } @else {
+              <p class="member-sheet-dialog__empty">{{ t('memberSheet.conditions.empty') }}</p>
+            }
+          </hk-sheet-section>
+
+          <!-- Spellcasting -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.spellcasting.title'"
+            [collapsible]="true"
+            class="member-sheet-dialog__section"
+          >
+            @if (spellBlocks().length > 0) {
+              @for (block of spellBlocks(); track block.classId) {
+                <div class="member-sheet-dialog__spellblock">
+                  <h3 class="member-sheet-dialog__subtitle">{{ resolveName(block.classId) }}</h3>
+                  @for (slot of block.slots; track slot.level) {
+                    <div class="member-sheet-dialog__slot-row">
+                      <span>{{
+                        t('memberSheet.spellcasting.slotsLevel', { level: slot.level })
+                      }}</span>
+                      <hk-pips
+                        [max]="slot.max"
+                        [used]="slot.used"
+                        [labelKey]="'campaigns.memberSheet.spellcasting.slotPipLabel'"
+                        [labelParams]="{ level: slot.level }"
+                        [viewReadonly]="true"
+                      />
+                    </div>
+                  }
+                  <div class="member-sheet-dialog__spell-lists">
+                    <div>
+                      <h3 class="member-sheet-dialog__subtitle">
+                        {{ t('memberSheet.spellcasting.known') }}
+                      </h3>
+                      <ul>
+                        @for (spell of block.knownSpells; track spell.id) {
+                          <li>{{ spell.name }}</li>
+                        }
+                      </ul>
+                    </div>
+                    @if (block.preparedSpells.length > 0) {
+                      <div>
+                        <h3 class="member-sheet-dialog__subtitle">
+                          {{ t('memberSheet.spellcasting.prepared') }}
+                        </h3>
+                        <ul>
+                          @for (spell of block.preparedSpells; track spell.id) {
+                            <li>{{ spell.name }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            } @else {
+              <p class="member-sheet-dialog__empty">{{ t('memberSheet.spellcasting.empty') }}</p>
+            }
+          </hk-sheet-section>
+
+          <!-- Resources -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.resources.title'"
+            [collapsible]="true"
+            class="member-sheet-dialog__section"
+          >
+            @if (resources().length > 0) {
+              <div class="member-sheet-dialog__resources">
+                @for (resourceRow of resources(); track resourceRow.id) {
+                  <hk-card
+                    [header]="resourceLabel(resourceRow)"
+                    class="member-sheet-dialog__resource"
+                  >
+                    <span>{{
+                      t('memberSheet.resources.usedOf', {
+                        used: resourceRow.used,
+                        max: resourceRow.max.value,
+                      })
+                    }}</span>
+                    <hk-pips
+                      [max]="resourceRow.max.value"
+                      [used]="resourceRow.used"
+                      [labelKey]="'campaigns.memberSheet.resources.pipLabel'"
+                      [labelParams]="{ name: resourceLabel(resourceRow) }"
+                      [viewReadonly]="true"
+                    />
+                  </hk-card>
+                }
+              </div>
+            } @else {
+              <p class="member-sheet-dialog__empty">{{ t('memberSheet.resources.empty') }}</p>
+            }
+          </hk-sheet-section>
+
+          <!-- Inventory -->
+          <hk-sheet-section
+            [titleKey]="'campaigns.memberSheet.inventory.title'"
+            [collapsible]="true"
+            class="member-sheet-dialog__section"
+          >
+            @if (inventoryRows().length > 0) {
+              <ul class="member-sheet-dialog__inventory">
+                @for (entry of inventoryRows(); track $index) {
+                  <li>
+                    {{ t('memberSheet.inventory.entry', { name: entry.name, qty: entry.qty }) }}
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="member-sheet-dialog__empty">{{ t('memberSheet.inventory.empty') }}</p>
+            }
+          </hk-sheet-section>
+        </div>
+      }
+    }
+  }
+</div>

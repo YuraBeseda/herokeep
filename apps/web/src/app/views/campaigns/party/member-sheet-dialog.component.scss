@@ -1,0 +1,175 @@
+:host {
+  display: block;
+  max-width: 40rem;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.member-sheet-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.member-sheet-dialog__title {
+  margin: 0;
+  font-family: var(--font-display);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.member-sheet-dialog__subtitle {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.member-sheet-dialog__close {
+  flex-shrink: 0;
+}
+
+.member-sheet-dialog__status {
+  color: var(--text-2);
+}
+
+.member-sheet-dialog__status--error {
+  color: var(--danger);
+}
+
+.member-sheet-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.member-sheet-dialog__section {
+  display: block;
+}
+
+.member-sheet-dialog__hp-bar {
+  display: block;
+  width: 100%;
+}
+
+.member-sheet-dialog__hp-text {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-2);
+}
+
+.member-sheet-dialog__death-saves {
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.member-sheet-dialog__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.member-sheet-dialog__concentration {
+  align-self: flex-start;
+}
+
+.member-sheet-dialog__ability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2);
+}
+
+.member-sheet-dialog__ability-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+  margin: 0;
+
+  dt {
+    font-size: 0.6875rem;
+    color: var(--text-2);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.member-sheet-dialog__ability-value--proficient {
+  color: var(--accent);
+}
+
+.member-sheet-dialog__skills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+}
+
+.member-sheet-dialog__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.member-sheet-dialog__spellblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.member-sheet-dialog__slot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.member-sheet-dialog__spell-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.member-sheet-dialog__subtitle {
+  margin: 0 0 var(--space-1);
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.member-sheet-dialog__resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-2);
+}
+
+.member-sheet-dialog__inventory {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.member-sheet-dialog__empty {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}

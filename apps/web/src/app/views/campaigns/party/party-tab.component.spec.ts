@@ -5,11 +5,13 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import type { MembershipRole } from '@hk/protocol';
+import { DialogService } from '@shared/components/dialog/dialog.service';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
 import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
 import { PartyTabComponent } from './party-tab.component';
 
 class StubLoader implements TranslocoLoader {
@@ -46,8 +48,11 @@ function configure(options: {
   role?: MembershipRole;
   state?: Partial<CampaignState>;
   userId?: string | null;
-}): { navigateSpy: ReturnType<typeof vi.fn> } {
+}): { navigateSpy: ReturnType<typeof vi.fn>; dialogOpenSpy: ReturnType<typeof vi.fn> } {
   const navigateSpy = vi.fn().mockResolvedValue(true);
+  const dialogOpenSpy = vi
+    .fn()
+    .mockReturnValue({ closed: Promise.resolve(undefined), close: vi.fn() });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -81,10 +86,16 @@ function configure(options: {
         },
       },
       { provide: EngineFacade, useValue: stubEngineFacade() },
+      // [plan-10 Task 9] Spied/mocked rather than the real `DialogService` — this spec's own
+      // TestBed provides none of `MemberSheetDialogComponent`'s own DI needs (SyncService/
+      // PackStore/EngineFacade with a real pack); that component's own rendering is exhaustively
+      // covered by `member-sheet-dialog.component.spec.ts` instead. This boundary only asserts
+      // PartyTabComponent calls `DialogService.open` with the right component/data.
+      { provide: DialogService, useValue: { open: dialogOpenSpy } },
     ],
   });
   TestBed.inject(Router).navigate = navigateSpy;
-  return { navigateSpy };
+  return { navigateSpy, dialogOpenSpy };
 }
 
 describe('PartyTabComponent', () => {
@@ -373,5 +384,80 @@ describe('PartyTabComponent', () => {
 
     expect(compiled.querySelector('.party-tab__empty')).not.toBeNull();
     expect(compiled.querySelector('.party-tab__card')).toBeNull();
+  });
+
+  // plan-10 task-9-brief.md: DM party-sheet drill-in — gated on ruling 8's exact wording
+  // ("'full' additionally enables DM (and only DM) sheet-subscribe drill-in").
+  describe('DM sheet-subscribe drill-in ("View sheet")', () => {
+    function stateWithFullVisibility(): Partial<CampaignState> {
+      return mkState({
+        roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+        settings: {
+          visibility: { partySheets: 'full', rolls: 'everyone', allowPrivateRolls: true },
+        } as unknown as CampaignState['settings'],
+      });
+    }
+
+    function viewSheetButton(compiled: HTMLElement): HTMLButtonElement | null {
+      return (
+        Array.from(compiled.querySelectorAll<HTMLButtonElement>('.party-tab__card button')).find(
+          (b) => b.textContent?.trim() === 'View sheet',
+        ) ?? null
+      );
+    }
+
+    it('DM + partySheets "full": renders the "View sheet" button, which opens MemberSheetDialogComponent with the right data', async () => {
+      const { dialogOpenSpy } = configure({ role: 'dm', state: stateWithFullVisibility() });
+
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const button = viewSheetButton(compiled);
+      expect(button).not.toBeNull();
+      button?.click();
+      await fixture.whenStable();
+
+      expect(dialogOpenSpy).toHaveBeenCalledTimes(1);
+      const [component, opts] = dialogOpenSpy.mock.calls[0] as [
+        unknown,
+        { data: unknown; sheet?: boolean },
+      ];
+      expect(component).toBe(MemberSheetDialogComponent);
+      expect(opts.data).toEqual({
+        campaignId: '00000000-0000-4000-8000-000000000001',
+        characterId: 'char-1',
+        name: 'Ivan',
+      });
+      expect(opts.sheet).toBe(true);
+    });
+
+    it('DM + partySheets "overview" (not "full"): no "View sheet" button', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+          settings: {
+            visibility: { partySheets: 'overview', rolls: 'everyone', allowPrivateRolls: true },
+          } as unknown as CampaignState['settings'],
+        }),
+      });
+
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(viewSheetButton(compiled)).toBeNull();
+    });
+
+    it('a MEMBER (not DM) with partySheets "full": no "View sheet" button, even though the setting itself is "full"', async () => {
+      configure({ role: 'player', state: stateWithFullVisibility() });
+
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(viewSheetButton(compiled)).toBeNull();
+    });
   });
 });

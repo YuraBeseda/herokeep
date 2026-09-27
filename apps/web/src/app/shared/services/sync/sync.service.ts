@@ -419,6 +419,36 @@ export class SyncService {
     return registerConsumer(this.binaryFrameConsumers, campaignId, cb);
   }
 
+  /** [plan-10 Task 9] Sends `subscribe {t:'subscribe', stream, lastSeq?}` (`@hk/protocol`'s
+   * `SubscribeMsgSchema`) over `campaignId`'s LIVE campaign socket, via that session's own public
+   * `sendRaw` escape hatch (`StreamSyncSession`'s "Campaign-capable plumbing" doc section) — the
+   * transport path `task-5-report.md` flagged as still-needed for this task. `lastSeq` omitted (or
+   * `undefined`) asks the server for a full catch-up from the beginning (doc-03: "catch-up pages
+   * arrive... from `(lastSeq ?? 0)+1`"); the DM party-sheet drill-in's own gap-rule re-subscribe
+   * passes its last known-good seq instead. A silent no-op — same "no live session = nothing to
+   * send" contract every other `sendRaw`-based outbound path in this service already has (see
+   * `onPresenceVisibilityChange`) — when this campaign has no live session right now (not this
+   * tab's leader, or momentarily disconnected): the caller is expected to treat "never got a
+   * reply" the same way it treats a genuinely unauthorized subscribe (a bounded timeout, per
+   * task-9-brief.md), since from the caller's side the two are indistinguishable. */
+  subscribeForeignStream(campaignId: string, stream: string, lastSeq?: number): void {
+    this.sessionsState()
+      .get(`camp:${campaignId}`)
+      ?.sendRaw(
+        lastSeq !== undefined ? { t: 'subscribe', stream, lastSeq } : { t: 'subscribe', stream },
+      );
+  }
+
+  /** [plan-10 Task 9] Sends `unsubscribe {t:'unsubscribe', stream}` — the drill-in's own cleanup
+   * (dialog close, or navigating away from the campaign) calls this so the server stops forwarding
+   * that character stream's events over this campaign socket. Same silent-no-op contract as
+   * `subscribeForeignStream` above when there is no live session to send it over — nothing to clean
+   * up server-side in that case either, since a session that isn't live never had the subscription
+   * in the first place. */
+  unsubscribeForeignStream(campaignId: string, stream: string): void {
+    this.sessionsState().get(`camp:${campaignId}`)?.sendRaw({ t: 'unsubscribe', stream });
+  }
+
   /** `characters-list.component.ts`'s delete flow — see class doc's "Deletion" section.
    *
    * Fix-wave review, Minor finding 4: bumps `reconcileGeneration` FIRST, same as
