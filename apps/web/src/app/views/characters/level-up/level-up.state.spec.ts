@@ -36,6 +36,7 @@ const corePack = readPack(
 
 const FIGHTER = 'srd-5e-2024:class/fighter';
 const WIZARD = 'srd-5e-2024:class/wizard';
+const BARBARIAN = 'srd-5e-2024:class/barbarian';
 const SUBCLASS_CHOICE = 'srd-5e-2024:class/fighter@3/subclass';
 const CHAMPION = 'srd-5e-2024:subclass/champion';
 const FEAT_CHOICE = 'srd-5e-2024:class/fighter@4/feat';
@@ -347,5 +348,69 @@ describe('LevelUpState', () => {
     expect(after).toEqual(before);
     expect(characterStore.sheet()?.level).toBe(3);
     expect(characterStore.sheet()?.abilities['str']?.score.value).toBe(17);
+  });
+
+  // Fix round 1, item 3 (reviewer, LOW — folded in): mirrors the FIGHTER undo tests above,
+  // exactly, but for an `isNewClass` multiclass pick — undo must cleanly remove the whole new
+  // class, not just roll back a level number on an existing one.
+  it('undo of a multiclass pick ("Multiclass into Barbarian") cleanly removes the new class from sheet.classes, restoring the pre-pick sheet exactly', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await awardXp(characterStore, 300);
+    // Same real-multiclass-eligibility note every other test in this file carries (str 17 / dex
+    // 13, T7's real `system.multiclass.prerequisites` data).
+    expect(characterStore.advancements().some((a) => a.classId === BARBARIAN)).toBe(true);
+    const before = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
+
+    const state = createState(BARBARIAN);
+    expect(state.advancement()?.classId).toBe(BARBARIAN);
+    expect(state.advancement()?.isNewClass).toBe(true);
+    expect(state.advancement()?.hpChoice).toBe(false); // a brand-new class's level 1 never rolls
+    state.setDecision('srd-5e-2024:class/barbarian@1/skills', ['nature', 'survival']);
+    state.setDecision('srd-5e-2024:class/barbarian@1/weapon-masteries', [
+      'srd-5e-2024:item/battleaxe',
+      'srd-5e-2024:item/blowgun',
+    ]);
+    expect(state.outstanding()).toEqual([]);
+    expect(state.complete()).toBe(true);
+
+    const drafts = state.buildTransaction();
+    expect(drafts).toEqual([
+      { type: 'level.gained', v: 1, payload: { classId: BARBARIAN, level: 1 } },
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: {
+          choiceId: 'srd-5e-2024:class/barbarian@1/skills',
+          selection: ['nature', 'survival'],
+        },
+      },
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: {
+          choiceId: 'srd-5e-2024:class/barbarian@1/weapon-masteries',
+          selection: ['srd-5e-2024:item/battleaxe', 'srd-5e-2024:item/blowgun'],
+        },
+      },
+    ]);
+
+    await characterStore.appendTx(drafts);
+    expect(characterStore.sheet()?.classes).toEqual([
+      { classId: 'srd-5e-2024:class/fighter', level: 1 },
+      { classId: BARBARIAN, level: 1 },
+    ]);
+
+    const lastEvent = characterStore.events().at(-1)!;
+    expect(lastEvent.txId).toBeDefined();
+    const last3 = characterStore.events().slice(-3);
+    expect(new Set(last3.map((e) => e.txId)).size).toBe(1);
+    await characterStore.revert({ txId: lastEvent.txId });
+
+    const after = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
+    expect(after).toEqual(before);
+    expect(characterStore.sheet()?.classes).toEqual([
+      { classId: 'srd-5e-2024:class/fighter', level: 1 },
+    ]);
   });
 });

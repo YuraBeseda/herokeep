@@ -281,22 +281,70 @@ describe('LevelUpComponent', () => {
     expect(root.querySelector('.level-up__hp-roll')).toBeNull();
     expect(root.querySelector('.level-up')).not.toBeNull();
 
-    const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish');
-    if (finishButton && !finishButton.disabled) {
-      finishButton.click();
-      await pollUntil(
-        harness.fixture,
-        () =>
-          characterStore
-            .sheet()
-            ?.classes.some((c) => c.classId === 'srd-5e-2024:class/barbarian') ?? false,
+    // Fix round 1 (reviewer HIGH finding): `reHomeActiveStep`'s old "vanished, not found ->
+    // land on the LAST step" fallback wrongly fired here too, since `previousSteps` was still
+    // `[]` (the picker's own gate) on the very first effect run after a class is picked — this
+    // landed the wizard on REVIEW with Barbarian's real level-1 choices (skills, then weapon
+    // masteries — verified against the built pack) skipped entirely, `Finish` disabled, no
+    // explanation. The fix lands on the FIRST step of a genuinely fresh (grown-from-empty) list
+    // instead. This assertion is the reviewer's own exact repro: the first outstanding CHOICE
+    // step is active, not Review.
+    expect(root.querySelector('.level-up__review')).toBeNull();
+    const skillsChips = Array.from(root.querySelectorAll('hk-chip'));
+    expect(skillsChips.length).toBeGreaterThan(0); // the skills choice step is showing
+
+    // Drive the flow THROUGH both of Barbarian's real level-1 choices (no conditional guard
+    // around the load-bearing assertions below — fix round 1, MEDIUM finding: the previous
+    // version's `if (finishButton && !finishButton.disabled)` silently skipped its own commit
+    // assertion whenever the choices weren't actually resolved).
+    const findChip = (text: string): HTMLElement =>
+      skillsChips.find((c) => c.textContent?.trim() === text) as HTMLElement;
+    findChip('Nature').click();
+    await harness.fixture.whenStable();
+    findChip('Survival').click();
+    await harness.fixture.whenStable();
+
+    const masteryButtons = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+    );
+    expect(masteryButtons.length).toBeGreaterThan(1); // the weapon-masteries choice step now shows
+    masteryButtons[0].click();
+    await harness.fixture.whenStable();
+    masteryButtons[1].click();
+    await harness.fixture.whenStable();
+
+    const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
+    expect(finishButton).not.toBeNull();
+    expect(finishButton.disabled).toBe(false); // genuinely enabled, not skipped
+    finishButton.click();
+
+    // `seedFighter` itself already committed a `level.gained{classId: fighter}` at creation —
+    // a bare `.some(type === 'level.gained')` predicate would match THAT pre-existing event
+    // immediately and return before this Finish click's own (async) commit ever lands, so this
+    // polls for the BARBARIAN-specific event.
+    await pollUntil(harness.fixture, () =>
+      characterStore
+        .events()
+        .some(
+          (e) =>
+            e.type === 'level.gained' &&
+            (e.payload as { classId?: string }).classId === 'srd-5e-2024:class/barbarian',
+        ),
+    );
+
+    const levelGained = characterStore
+      .events()
+      .find(
+        (e) =>
+          e.type === 'level.gained' &&
+          (e.payload as { classId?: string }).classId === 'srd-5e-2024:class/barbarian',
       );
-      expect(characterStore.sheet()?.classes).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ classId: 'srd-5e-2024:class/barbarian', level: 1 }),
-        ]),
-      );
-    }
+    expect(levelGained?.payload).toEqual({ classId: 'srd-5e-2024:class/barbarian', level: 1 });
+    expect(characterStore.sheet()?.classes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ classId: 'srd-5e-2024:class/barbarian', level: 1 }),
+      ]),
+    );
   });
 
   it('the barred case: a character whose OWN multiclass prerequisite fails is never offered a picker at all — the wizard opens directly on its own class', async () => {

@@ -148,8 +148,25 @@ export class LevelUpComponent {
   };
 
   // Re-homes `activeStepId` whenever it stops appearing in `state.steps()` (a choice step
-  // vanishing the moment its decision resolves) — verbatim port of `CreateWizardComponent`'s own
-  // `reHomeActiveStep` effect; see its doc for the full reasoning.
+  // vanishing the moment its decision resolves) — a port of `CreateWizardComponent`'s own
+  // `reHomeActiveStep` effect (see its doc for the general reasoning), with ONE deliberate
+  // divergence for task 12's which-class picker (fix round 1, HIGH finding):
+  //
+  // `state.steps()` is `[]` the entire time the picker is showing (`LevelUpState.steps`'s own
+  // gate: `if (!a) return [];`, `a` being `advancement()`, which stays `undefined` until a class
+  // is chosen) — so `this.previousSteps` is STILL `[]` on the very first effect run after a class
+  // IS picked. The generic "vanished, not found anywhere -> land on the LAST step" fallback
+  // (`formerIndex === -1 ? steps.length - 1 : ...`) then means "growth from a genuinely empty
+  // list" and "a step vanished from a real, non-empty list" were wrongly treated identically: for
+  // an `isNewClass` pick (`hpChoice` is always `false` at a brand-new class's level 1 — the
+  // default `activeStepId`, `'hp'`, is never even a member of the new `steps()`), this landed the
+  // wizard on REVIEW with every mandatory level-1 choice step skipped entirely (reviewer's real-
+  // pack repro: Barbarian's `@1/weapon-masteries` choice never surfaced). `this.previousSteps
+  // .length === 0` distinguishes that GROWTH-FROM-EMPTY case (a brand-new step list appearing
+  // where none existed before -> land on the FIRST step) from every other `formerIndex === -1`
+  // case (a non-empty list that genuinely no longer contains the active id at all -> keep the
+  // original "land on the last step" fallback, unchanged — the existing specs are the net for
+  // that path).
   private previousSteps: LevelUpStep[] = [];
   private readonly reHomeActiveStep = effect(() => {
     const steps = this.state.steps();
@@ -157,7 +174,11 @@ export class LevelUpComponent {
     if (!steps.some((s) => s.id === activeId)) {
       const formerIndex = this.previousSteps.findIndex((s) => s.id === activeId);
       const targetIndex =
-        formerIndex === -1 ? steps.length - 1 : Math.min(formerIndex, steps.length - 1);
+        formerIndex === -1
+          ? this.previousSteps.length === 0
+            ? 0
+            : steps.length - 1
+          : Math.min(formerIndex, steps.length - 1);
       const target = steps[targetIndex] ?? steps.at(-1);
       if (target) this.activeStepId.set(target.id);
     }

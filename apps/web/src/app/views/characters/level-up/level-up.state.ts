@@ -238,19 +238,60 @@ export class LevelUpState {
     return result;
   });
 
+  /** Fix round 1 (discovered while driving a genuine end-to-end multiclass flow for task 12's
+   * own regression net — a pre-existing latent defect, not itself the reviewer's HIGH finding,
+   * but one that blocks satisfying it honestly): each choiceId's position in `steps()`'s choice
+   * list is fixed the FIRST time it's ever seen (in either `outstanding()` or
+   * `invalidDecisions()`) and never reassigned afterward, even as that SAME choiceId moves
+   * between those two signals — a partial multi-select pick (one of `count: 2` chips tapped)
+   * lands its choiceId in `invalidDecisions()` INSTEAD of `outstanding()` for that one tick.
+   * Without this, the naive `[...outstanding, ...invalid]` concatenation below silently
+   * REORDERED the whole remaining choice list the moment any ONE simultaneously-outstanding
+   * choice's category flipped (e.g. Barbarian's level-1 draft offers `@1/skills` (count 2) AND
+   * `@1/weapon-masteries` (count 2) at once — tapping a single skill chip moved `weapon-
+   * masteries` from second to first in the list), which visibly reshuffled `LevelUpComponent`'s
+   * own stepper mid-flow and broke its `reHomeActiveStep` effect's "land at the same relative
+   * index" logic (that effect's own fix is separate, in `level-up.component.ts`). Never
+   * triggered before task 12: no solo single-class level in the real pack ever had 2+
+   * SIMULTANEOUSLY outstanding choices at once (a feat choice's own ability-scores sub-choice
+   * only ever *appears* once the feat itself is picked — sequential, not simultaneous) — a
+   * multiclass new-class draft is the first scenario that does, because `multiclass.gains
+   * .skillChoiceCount` is unwired (task-2-report.md's own carry) and so a newly-multiclassed
+   * class's full `skillChoice` is offered ALONGSIDE its other level-1 choices. A plain instance
+   * field, not a signal: mutated synchronously from inside this `computed()` (idempotent per id
+   * — once assigned, an id's order value is never reassigned, so re-invoking this function with
+   * the same inputs is side-effect-free the second time), never via an `effect()` (which would
+   * introduce an async gap where a synchronous `steps()` read right after a decision changes
+   * could see a stale, not-yet-updated order — every existing `level-up.state.spec.ts` test
+   * reads `steps()` synchronously with no `TestBed.tick()` in between). */
+  private readonly choiceOrder = new Map<string, number>();
+
   /** ORDER: 'hp' (always — `Advancement.hpChoice` is always true in 1b's XP-mode scope, per
    * `pendingAdvancements`'s own doc) → one 'choice' step per outstanding-or-invalidly-decided
-   * choiceId (engine sorted order; a newly-unlocked sub-choice, e.g. the ASI feat's own
-   * ability-scores pick, simply appears once its decision lands, same as the creation wizard) →
-   * 'spells' (only when the class being leveled has a spellcasting block) → 'review'. */
+   * choiceId (STABLE first-seen order — see `choiceOrder`'s own doc; a newly-unlocked sub-choice,
+   * e.g. the ASI feat's own ability-scores pick, simply appears once its decision lands, same as
+   * the creation wizard) → 'spells' (only when the class being leveled has a spellcasting block)
+   * → 'review'. */
   readonly steps: Signal<LevelUpStep[]> = computed(() => {
     const a = this.advancement();
-    if (!a) return [];
+    if (!a) {
+      this.choiceOrder.clear();
+      return [];
+    }
     const steps: LevelUpStep[] = [];
     if (a.hpChoice) steps.push({ id: 'hp', labelKey: 'characters.levelUp.steps.hp', kind: 'hp' });
 
     const seen = new Set<string>();
-    const ids = [...this.outstanding().map((r) => r.choiceId), ...this.invalidDecisions().keys()];
+    const rawIds = [
+      ...this.outstanding().map((r) => r.choiceId),
+      ...this.invalidDecisions().keys(),
+    ];
+    for (const id of rawIds) {
+      if (!this.choiceOrder.has(id)) this.choiceOrder.set(id, this.choiceOrder.size);
+    }
+    const ids = [...new Set(rawIds)].sort(
+      (x, y) => (this.choiceOrder.get(x) ?? 0) - (this.choiceOrder.get(y) ?? 0),
+    );
     for (const choiceId of ids) {
       if (seen.has(choiceId)) continue;
       seen.add(choiceId);
