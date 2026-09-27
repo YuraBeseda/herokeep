@@ -201,6 +201,73 @@ describe('ForeignCharacterSession', () => {
     expect(session.sheet()).toBe(sheetAfterFirstTwo);
   });
 
+  // Fix round 1 (controller review, Important finding): the server's notify fan-out isn't gated on
+  // subscription state, so a live commit landing while the initial subscribe's own catch-up paging
+  // is still in flight can make the very FIRST frame this session ever receives an out-of-order
+  // notify — a gap before this session has ever gone 'ready'. `handleFrame` unconditionally clears
+  // the one-shot arm-timeout on ANY frame (including this gapped one) before the gap check runs, so
+  // without re-arming on the gap-triggered re-subscribe, a re-subscribe whose own catch-up then
+  // never arrives would leave `status` stuck 'loading' forever — recoverable only by manually
+  // closing and reopening the drill-in.
+  describe('fix round 1: a gap on the very FIRST frame (racing the initial subscribe)', () => {
+    function outOfOrderEvent(streamId: string, seq: number): Event {
+      return {
+        id: '99999999-9999-7999-8999-999999999999',
+        stream: streamId,
+        seq,
+        ts: new Date().toISOString(),
+        actor: { userId: 'u1', deviceId: 'd1', role: 'owner' },
+        type: 'hp.changed',
+        v: 1,
+        payload: { current: 10 },
+      };
+    }
+
+    it('re-arms the timeout on the gap-triggered re-subscribe — if that re-subscribe\'s own catch-up then never arrives, status still resolves to "unauthorized" instead of staying "loading" forever', async () => {
+      const characterId = '11111111-1111-4111-8111-111111111112';
+      const streamId = `char:${characterId}`;
+      const session = makeSession(characterId, { timeoutMs: 15 });
+      session.start();
+
+      // The very first frame this session ever receives is a live notify at seq 5 — lastKnownSeq
+      // is still 0 (expected 1), so this is a gap, not a catch-up.
+      sync.emit(campaignId, streamId, [outOfOrderEvent(streamId, 5)]);
+
+      expect(sync.subscribeCalls).toEqual([
+        { campaignId, stream: streamId }, // the initial subscribe (start())
+        { campaignId, stream: streamId, lastSeq: 0 }, // the gap-triggered re-subscribe
+      ]);
+      expect(session.status()).toBe('loading'); // not yet resolved either way
+
+      // The re-subscribe's own catch-up never arrives — before this fix, the ONE-SHOT timeout was
+      // already consumed by the first (gapped) frame, and this session would spin 'loading' forever.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      expect(session.status()).toBe('unauthorized');
+    });
+
+    it('happy variant: once the gap-triggered re-subscribe\'s own catch-up arrives, status still resolves to "ready" (the fix does not break recovery)', async () => {
+      const streamId = await seedFighter('Ivan');
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      const session = makeSession(bareCharacterId(streamId), { timeoutMs: 15 });
+      session.start();
+
+      // First frame received is out-of-order (a live notify racing the subscribe's own catch-up).
+      sync.emit(campaignId, streamId, [outOfOrderEvent(streamId, events.length + 5)]);
+      expect(session.status()).toBe('loading');
+
+      // The re-subscribe's own catch-up arrives well within the re-armed timeout window.
+      sync.emit(campaignId, streamId, events);
+
+      expect(session.status()).toBe('ready');
+      expect(session.sheet()?.hp.max.value).toBe(12);
+
+      // The re-armed timer, having been cleared by this successful frame, must never fire late.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(session.status()).toBe('ready');
+    });
+  });
+
   it('duplicate-id tolerance: a frame re-delivering an already-applied id alongside a new contiguous one applies only the new one', async () => {
     const streamId = await seedFighter('Ivan');
     const allEvents = await TestBed.inject(EventsRepository).byStream(streamId);

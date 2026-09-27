@@ -212,6 +212,19 @@ export class ForeignCharacterSession {
       // touch `statusState`/`sheetState` — whatever this session already had (possibly still
       // `'loading'`, possibly a good `'ready'` sheet from an earlier frame) is left exactly as is
       // until the re-subscribe's own catch-up lands.
+      //
+      // [Fix round 1] Re-arm the timeout HERE, unconditionally. `clearArmedTimeout()` above already
+      // fired for this frame (any frame at all proves authorization — including a gapped one), so
+      // without this a first-frame gap would consume the ONE-SHOT timeout with nothing left to
+      // catch a re-subscribe whose own catch-up then never arrives — status would stay 'loading'
+      // forever instead of eventually resolving to 'unauthorized'. Reachable in real play: the
+      // server's notify fan-out isn't gated on subscription state, so a live commit landing while
+      // the subscribe's own catch-up paging is still in flight can make the FIRST frame this
+      // session ever receives an out-of-order notify. Re-armed unconditionally (not only while
+      // still 'loading') — simpler code; re-arming from an already-'ready' session is harmless,
+      // since the timeout callback itself only ever regresses a still-'loading' status (see
+      // `armTimeout`).
+      this.armTimeout();
       this.sync.subscribeForeignStream(this.campaignId, this.streamId, this.lastKnownSeq);
       return;
     }
