@@ -1,13 +1,21 @@
 /** `/api/characters/*` (task-6-brief). Every route here requires a valid session (`requireAuth`,
  * same as `core/routes/me.ts`); ownership beyond "is logged in" is then checked per-route against
  * the D1 index row (`findCharacterById`) — doc-10 §Request routing: "verify session + ownership
- * ... (Db)". D1 is the ownership authority for every route here, including the WS handoff: this
- * file never reads a stream's own `CharacterActor` meta to decide who owns a character (see
- * `character-actor.ts`'s header comment for why each store's `ownerId` copy has exactly one
- * writer, and D1's is this file).
+ * ... (Db)". D1 is the ownership authority for every route here, including the WS handoff.
+ *
+ * [plan-10 Task 12 round 2 — CORRECTS this file's own earlier stance] D1's `owner_id` column no
+ * longer has "exactly one writer" — this was true through Phase 2 (only the create route ever
+ * wrote it) but is no longer accurate now that claiming/handing over a character is a real,
+ * supported flow (doc-02 L178-179: "a claimed pregen behaves like any player character" — ruling
+ * 6). `POST /:id/transfer` below is the SECOND writer, moving `owner_id` to a new user and
+ * appending the matching `character.owner_transferred` event on the SAME stream `character-
+ * actor.ts`'s meta hook (commit ca50db0) already reacts to — this file still never READS the
+ * stream's own `CharacterActor` meta to decide ownership (D1 stays the read-side authority for
+ * every route), it just now has two write paths instead of one.
  */
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import type { Actor, Event } from '@hk/protocol';
 import type { AuthDeps } from '../auth/types.ts';
 import { requireAuth, type AuthEnv } from '../auth/middleware.ts';
 import type { StreamHost } from '../../ports/stream.ts';
@@ -16,13 +24,16 @@ import { requireXRequestedWith } from '../http/xrw-gate.ts';
 import { installErrorHandler } from '../http/error-handler.ts';
 import { badRequest, conflict, forbidden, limitExceeded, notFound, quotaExceeded } from '../errors.ts';
 import { USER_CHARACTER_COUNT_MAX, USER_QUOTA_BYTES_MAX } from '../quotas.ts';
+import { uuidv7 } from '../ids.ts';
 import {
   adjustUserQuotaBytes,
   countCharactersForOwner,
   deleteCharacterIndexRow,
   findCharacterById,
+  findUserById,
   getUserQuotaBytes,
   listCharactersForOwner,
+  updateCharacterOwner,
   upsertCharacterIndexRow,
 } from '../db/queries.ts';
 
@@ -219,6 +230,103 @@ export function createCharacterRoutes(deps: CharactersDeps) {
     }
 
     return deps.wsUpgrade.upgrade(c.req.raw, { streamId: `char:${id}`, userId: user.userId, role: 'owner' });
+  });
+
+  interface TransferBody {
+    readonly toUserId?: string;
+  }
+
+  /**
+   * `POST /:id/transfer` (plan-10 Task 12 round 2, doc-02 L178-179's binding claim/hand-over
+   * ruling) — mirrors `core/routes/campaigns.ts`'s own dual-write pattern EXACTLY (D1 first, one
+   * atomic event append second, best-effort D1 rollback on append failure; see that file's
+   * header comment, "Atomic campaign bootstrap" + "Thrown appends"):
+   *
+   *   1. Authorization: the session user must be `existing.ownerId` (same 404-not-403 "don't
+   *      leak existence" stance every other route here already takes).
+   *   2. Target validation: `toUserId` must name a real user (D1 lookup) — `characters.owner_id`
+   *      has a NOT NULL FK to `users.id` (`db/schema.ts`), so an unknown target would otherwise
+   *      surface as an ugly constraint-violation 500 instead of an honest 404.
+   *   3. Quota admission for the RECEIVING owner — the create route's OWN two gates
+   *      (`USER_CHARACTER_COUNT_MAX`/`USER_QUOTA_BYTES_MAX`), just checked against the target's
+   *      totals instead of the acting user's own. Skipped entirely for a (degenerate,
+   *      self-)transfer to the CURRENT owner — their own totals already include this character,
+   *      so re-checking would wrongly double-count it against their own cap.
+   *   4. D1 first: `updateCharacterOwner` (the row's OWN `updatedAt`, not touched by anything
+   *      else here), then a best-effort BIDIRECTIONAL `adjustUserQuotaBytes` re-attribution of
+   *      the row's cached `bytesUsed` — mirrors `DELETE /:id`'s own "best-effort immediate
+   *      decrement so freed space is usable without waiting a day" rationale (that route's own
+   *      comment), just in both directions here since a transfer, unlike a delete, has a second
+   *      party who GAINS the freed space. `core/maintenance.ts`'s own quota chain recomputes
+   *      every owner's total FROM SCRATCH each run, keyed off D1's `owner_id` (now already
+   *      updated) — this step only closes the ≤24h staleness window early, it is not what makes
+   *      re-attribution eventually-correct (that already falls out of the maintenance job's own
+   *      from-scratch recompute, unconditionally).
+   *   5. Event append second: `character.owner_transferred {toUserId}`, actor stamped from the
+   *      SESSION-verified CURRENT owner (`EVENT_ACTORS['character.owner_transferred'] =
+   *      ['dm', 'owner']`, `packages/protocol/src/events/character.ts` — 'owner' is genuinely
+   *      granted here, not just 'dm'). `character-actor.ts`'s meta hook (commit ca50db0) applies
+   *      the ownership change at the stream-meta level the moment this commits, and the owner
+   *      backstop there is what then refuses the OLD owner's own further direct writes.
+   */
+  app.post('/:id/transfer', async (c) => {
+    const user = c.get('user');
+    const id = c.req.param('id');
+    const body = await parseJsonBody<TransferBody>(c.req.raw);
+    if (!body.toUserId) throw badRequest('toUserId is required');
+    const toUserId = body.toUserId;
+
+    const existing = await findCharacterById(deps.db, id);
+    if (existing?.ownerId !== user.userId) throw notFound('Character not found');
+
+    const targetUser = await findUserById(deps.db, toUserId);
+    if (!targetUser) throw notFound('Unknown target user');
+
+    if (toUserId !== existing.ownerId) {
+      const targetCount = await countCharactersForOwner(deps.db, toUserId);
+      if (targetCount >= USER_CHARACTER_COUNT_MAX) {
+        throw limitExceeded(
+          `Character limit reached: the recipient already has ${USER_CHARACTER_COUNT_MAX} characters`,
+        );
+      }
+      const targetQuotaBytesUsed = await getUserQuotaBytes(deps.db, toUserId);
+      if (targetQuotaBytesUsed >= USER_QUOTA_BYTES_MAX) {
+        throw quotaExceeded(`Storage quota reached: the recipient is already at ${USER_QUOTA_BYTES_MAX} bytes`);
+      }
+    }
+
+    const now = Date.now();
+    const fromOwnerId = existing.ownerId;
+    const transferredBytes = existing.bytesUsed;
+
+    await updateCharacterOwner(deps.db, id, toUserId, now);
+    await adjustUserQuotaBytes(deps.db, fromOwnerId, -transferredBytes);
+    await adjustUserQuotaBytes(deps.db, toUserId, transferredBytes);
+
+    const actor: Actor = { userId: fromOwnerId, role: 'owner' };
+    const event: Event = {
+      id: uuidv7(),
+      stream: `char:${id}`,
+      ts: new Date().toISOString(),
+      actor: { userId: actor.userId, deviceId: 'api-route', role: actor.role },
+      type: 'character.owner_transferred',
+      v: 1,
+      payload: { toUserId },
+    };
+
+    try {
+      const result = await deps.streamHost.get(`char:${id}`).append([event], actor);
+      if (result.lastSeq === 0) throw new Error('character transfer: owner_transferred was rejected');
+    } catch (err) {
+      // Best-effort D1 rollback — same posture as campaigns.ts's POST / (covers BOTH a clean
+      // rejection and a thrown store fault).
+      await updateCharacterOwner(deps.db, id, fromOwnerId, existing.updatedAt).catch(() => undefined);
+      await adjustUserQuotaBytes(deps.db, toUserId, -transferredBytes).catch(() => undefined);
+      await adjustUserQuotaBytes(deps.db, fromOwnerId, transferredBytes).catch(() => undefined);
+      throw err instanceof Error ? err : new Error('character transfer: event append failed');
+    }
+
+    return c.body(null, 204);
   });
 
   return app;

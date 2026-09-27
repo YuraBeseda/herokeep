@@ -15,11 +15,23 @@ import { FakeStreamStore } from './fake-stream-store.ts';
 
 export class FakeStreamHost implements StreamHost {
   private readonly stores = new Map<string, FakeStreamStore>();
+  /** [plan-10 Task 12 round 2] Test-only fault injection: the VERY NEXT `.get(streamId).append(...)`
+   * call throws instead of reaching the store — a one-shot flag, consumed on use. Mirrors
+   * `campaigns.test.ts`'s own `CampaignActorStreamHost.failNextAppendFor` exactly (same class doc
+   * rationale: simulates a real adapter's `append` THROWING, a store-transaction fault, distinct
+   * from an ordinary clean rejection). Added for `characters.test.ts`'s transfer-rollback
+   * coverage; harmless to every other test in this file (never set unless a test calls it). */
+  private readonly failNext = new Set<string>();
 
   get(streamId: string): StreamHandle {
     const store = this.storeFor(streamId, true);
     return {
-      append: (events: Event[], _actor: Actor): Promise<AppendResult> => store.append(events),
+      append: (events: Event[], _actor: Actor): Promise<AppendResult> => {
+        if (this.failNext.delete(streamId)) {
+          return Promise.reject(new Error('simulated store fault (fake-stream-host.ts failNextAppendFor)'));
+        }
+        return store.append(events);
+      },
       read: (fromSeq: number, limit: number): Promise<Event[]> => store.read(fromSeq, limit),
       head: (): Promise<number> => store.head(),
       notify: (): Promise<void> => Promise.resolve(),
@@ -47,5 +59,10 @@ export class FakeStreamHost implements StreamHost {
   /** Test-only inspection: whether `.get()` has ever been called for `streamId`. */
   has(streamId: string): boolean {
     return this.stores.has(streamId);
+  }
+
+  /** [plan-10 Task 12 round 2] Arms the one-shot fault above. */
+  failNextAppendFor(streamId: string): void {
+    this.failNext.add(streamId);
   }
 }

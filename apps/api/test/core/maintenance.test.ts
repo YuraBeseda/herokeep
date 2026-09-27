@@ -282,6 +282,33 @@ describe('runDailyMaintenance — the quota chain (controller ruling, quotas.ts)
     expect(report.ownersQuotaRecomputed).toBe(2);
   });
 
+  // [plan-10 Task 12 round 2] doc-02 L178-179's binding claim/hand-over ruling: verifies the
+  // maintenance job's OWN "recompute every owner's total from scratch, keyed off D1's CURRENT
+  // owner_id" design (this file's own pre-existing loop, unchanged by this task) already
+  // re-attributes a transferred character's bytes to its new owner on the very next sweep — no
+  // maintenance-job code change was needed for this; this test exists to PROVE that, not to
+  // exercise a new code path.
+  it("re-attributes a transferred character's bytes to its NEW owner on the next sweep, and zeroes the OLD owner once they have no characters left", async () => {
+    const now = Date.now();
+    await seedUser('owner-old', 'transfer-old-owner', now);
+    await seedUser('owner-new', 'transfer-new-owner', now);
+    // Simulates POST /:id/transfer's own D1-first write having already moved owner_id — this
+    // test only cares about what the NEXT maintenance run does with that new D1 state, not the
+    // transfer route itself (characters.test.ts's own suite covers that route directly).
+    await seedCharacter('char-transferred', 'owner-new', now, { bytesUsed: 0, eventCount: 0 });
+
+    const streams = new FakeMaintenanceStreams();
+    streams.setUsage('char:char-transferred', { bytesUsed: 7000, eventCount: 15 });
+
+    const report = await runDailyMaintenance({ db: handle.db, streams, now });
+    expect(report.charactersSynced).toBe(1);
+
+    const [oldOwner] = await handle.db.select().from(users).where(eq(users.id, 'owner-old'));
+    const [newOwner] = await handle.db.select().from(users).where(eq(users.id, 'owner-new'));
+    expect(oldOwner?.quotaBytesUsed).toBe(0); // owns nothing anymore — swept by finding-4's fix
+    expect(newOwner?.quotaBytesUsed).toBe(7000); // the full transferred total, attributed fresh
+  });
+
   it('leaves a user whose quota_bytes_used is already 0 and has no characters untouched (no spurious write needed)', async () => {
     const now = Date.now();
     await seedUser('owner-empty', 'empty-quota-owner', now);

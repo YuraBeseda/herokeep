@@ -313,6 +313,19 @@ export async function updateCharacterUsage(db: Db, id: string, bytesUsed: number
   await db.update(characters).set({ bytesUsed, eventCount }).where(eq(characters.id, id));
 }
 
+/** [plan-10 Task 12 round 2] Moves a character index row's `owner_id` to a NEW user — the D1
+ * half of `POST /api/characters/:id/transfer`'s dual-write (`core/routes/characters.ts`). A
+ * SECOND writer of this column, alongside the create route's own `upsertCharacterIndexRow` call
+ * (see that function's doc comment, and `characters.ts`'s own header comment, both updated
+ * alongside this to no longer claim "exactly one writer" — ownership TRANSFER is precisely the
+ * event `character.owner_transferred` names, doc-02: "claim / hand over"). Deliberately narrow
+ * (like `updateCharacterUsage`), touching only `owner_id`/`updated_at` — never `name`/
+ * `campaign_id`/`archived_at`/`bytes_used`/`event_count`, none of which change just because
+ * ownership moved. */
+export async function updateCharacterOwner(db: Db, id: string, ownerId: string, updatedAt: number): Promise<void> {
+  await db.update(characters).set({ ownerId, updatedAt }).where(eq(characters.id, id));
+}
+
 /** Count of a user's character index rows, for the 50-characters/user quota (ADR-012). Counts
  * every row regardless of `archivedAt` — whether an archived character still counts against
  * quota is doc-08's call and is verified/adjusted in Task 6, which owns the archive semantics. */

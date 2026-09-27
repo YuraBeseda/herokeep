@@ -450,6 +450,274 @@ describe('WS handoff (GET /api/characters/:id/ws)', () => {
   });
 });
 
+// [plan-10 Task 12 round 2] POST /:id/transfer — doc-02 L178-179's binding claim/hand-over
+// ruling ("a claimed pregen behaves like any player character"). See characters.ts's own route
+// doc comment for the full dual-write design this suite pins.
+describe('POST /api/characters/:id/transfer', () => {
+  async function createCharacter(cookie: string, id: string, name = 'Aria'): Promise<void> {
+    const res = await app.request('/api/characters', {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ id, name, system: 'srd-5e-2024' }),
+    });
+    expect(res.status).toBe(201);
+  }
+
+  function transfer(id: string, cookie: string, toUserId: string) {
+    return app.request(`/api/characters/${id}/transfer`, {
+      method: 'POST',
+      headers: { ...XRW, cookie },
+      body: JSON.stringify({ toUserId }),
+    });
+  }
+
+  it('404s for a non-owner (does not leak existence)', async () => {
+    const ownerCookie = await loginAndGetCookie('TxOwner1', verifierHex('b1'));
+    const strangerCookie = await loginAndGetCookie('TxStranger1', verifierHex('b2'));
+    const strangerId = await meUserId(strangerCookie);
+    const id = uuidv7();
+    await createCharacter(ownerCookie, id);
+
+    const res = await transfer(id, strangerCookie, strangerId);
+    expect(res.status).toBe(404);
+  });
+
+  it('404s transferring a character that does not exist at all', async () => {
+    const cookie = await loginAndGetCookie('TxOwner2', verifierHex('b3'));
+    const otherCookie = await loginAndGetCookie('TxOther2', verifierHex('b4'));
+    const otherId = await meUserId(otherCookie);
+
+    const res = await transfer(uuidv7(), cookie, otherId);
+    expect(res.status).toBe(404);
+  });
+
+  it('404s transferring to an UNKNOWN target user', async () => {
+    const cookie = await loginAndGetCookie('TxOwner3', verifierHex('b5'));
+    const id = uuidv7();
+    await createCharacter(cookie, id);
+
+    const res = await transfer(id, cookie, 'usr_does_not_exist');
+    expect(res.status).toBe(404);
+  });
+
+  it('moves D1 owner_id: the character leaves the old owner’s list and appears in the new owner’s', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom1', verifierHex('b6'));
+    const newCookie = await loginAndGetCookie('TxTo1', verifierHex('b7'));
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id, 'Handoff Hero');
+
+    const res = await transfer(id, oldCookie, newUserId);
+    expect(res.status).toBe(204);
+
+    const oldList = (await (
+      await app.request('/api/characters', { headers: { ...XRW, cookie: oldCookie } })
+    ).json()) as {
+      id: string;
+    }[];
+    expect(oldList.map((r) => r.id)).not.toContain(id);
+    const newList = (await (
+      await app.request('/api/characters', { headers: { ...XRW, cookie: newCookie } })
+    ).json()) as {
+      id: string;
+    }[];
+    expect(newList.map((r) => r.id)).toContain(id);
+  });
+
+  it('appends character.owner_transferred{toUserId} on the character stream, actor-stamped as the OLD (pre-transfer) owner', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom2', verifierHex('b8'));
+    const newCookie = await loginAndGetCookie('TxTo2', verifierHex('b9'));
+    const oldUserId = await meUserId(oldCookie);
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id);
+
+    const res = await transfer(id, oldCookie, newUserId);
+    expect(res.status).toBe(204);
+
+    const events = await streamHost.storeFor(`char:${id}`).read(1, 1000);
+    const transferEvent = events.find((e) => e.type === 'character.owner_transferred');
+    expect(transferEvent).toMatchObject({
+      payload: { toUserId: newUserId },
+      actor: { userId: oldUserId, role: 'owner' },
+    });
+  });
+
+  it('the WS handoff now serves the NEW owner and REFUSES the OLD owner post-transfer', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom3', verifierHex('b10'));
+    const newCookie = await loginAndGetCookie('TxTo3', verifierHex('b11'));
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id);
+
+    await transfer(id, oldCookie, newUserId);
+
+    const newRes = await app.request(`/api/characters/${id}/ws`, {
+      headers: { cookie: newCookie, Origin: APP_ORIGIN },
+    });
+    expect(newRes.status).toBe(200);
+    expect(wsUpgradeCalls.at(-1)).toEqual({ streamId: `char:${id}`, userId: newUserId, role: 'owner' });
+
+    const oldRes = await app.request(`/api/characters/${id}/ws`, {
+      headers: { cookie: oldCookie, Origin: APP_ORIGIN },
+    });
+    expect(oldRes.status).toBe(403);
+  });
+
+  it('the old owner can no longer archive/delete post-transfer; the new owner can', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom4', verifierHex('b12'));
+    const newCookie = await loginAndGetCookie('TxTo4', verifierHex('b13'));
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id);
+
+    await transfer(id, oldCookie, newUserId);
+
+    const oldArchive = await app.request(`/api/characters/${id}/archive`, {
+      method: 'POST',
+      headers: { ...XRW, cookie: oldCookie },
+    });
+    expect(oldArchive.status).toBe(404);
+
+    const newArchive = await app.request(`/api/characters/${id}/archive`, {
+      method: 'POST',
+      headers: { ...XRW, cookie: newCookie },
+    });
+    expect(newArchive.status).toBe(204);
+  });
+
+  it('re-attributes users.quota_bytes_used immediately (best-effort), both directions', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom5', verifierHex('b14'));
+    const newCookie = await loginAndGetCookie('TxTo5', verifierHex('b15'));
+    const oldUserId = await meUserId(oldCookie);
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id, 'Chonky Transfer');
+    // Simulate a prior maintenance sync having already recorded this character's own bytesUsed
+    // and the old owner's aggregate quota.
+    await upsertCharacterIndexRow(handle.db, {
+      id,
+      ownerId: oldUserId,
+      name: 'Chonky Transfer',
+      system: 'srd-5e-2024',
+      campaignId: null,
+      archivedAt: null,
+      bytesUsed: 400_000,
+      eventCount: 3,
+      updatedAt: Date.now(),
+    });
+    await adjustUserQuotaBytes(handle.db, oldUserId, 400_000);
+    expect(await getUserQuotaBytes(handle.db, oldUserId)).toBe(400_000);
+    expect(await getUserQuotaBytes(handle.db, newUserId)).toBe(0);
+
+    const res = await transfer(id, oldCookie, newUserId);
+    expect(res.status).toBe(204);
+
+    expect(await getUserQuotaBytes(handle.db, oldUserId)).toBe(0);
+    expect(await getUserQuotaBytes(handle.db, newUserId)).toBe(400_000);
+  });
+
+  it('a self-transfer (toUserId === current owner) is a harmless no-op, quota-wise', async () => {
+    const cookie = await loginAndGetCookie('TxSelf1', verifierHex('b16'));
+    const userId = await meUserId(cookie);
+    const id = uuidv7();
+    await createCharacter(cookie, id);
+    await upsertCharacterIndexRow(handle.db, {
+      id,
+      ownerId: userId,
+      name: 'Aria',
+      system: 'srd-5e-2024',
+      campaignId: null,
+      archivedAt: null,
+      bytesUsed: 250_000,
+      eventCount: 2,
+      updatedAt: Date.now(),
+    });
+    await adjustUserQuotaBytes(handle.db, userId, 250_000);
+
+    const res = await transfer(id, cookie, userId);
+    expect(res.status).toBe(204);
+    expect(await getUserQuotaBytes(handle.db, userId)).toBe(250_000);
+  });
+
+  it('refuses with an honest limit error when the recipient is already at the 50-character cap', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom6', verifierHex('b17'));
+    const newCookie = await loginAndGetCookie('TxTo6', verifierHex('b18'));
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id);
+    for (let i = 0; i < USER_CHARACTER_COUNT_MAX; i += 1) {
+      await upsertCharacterIndexRow(handle.db, {
+        id: uuidv7(),
+        ownerId: newUserId,
+        name: `Seed ${i}`,
+        system: 'srd-5e-2024',
+        campaignId: null,
+        archivedAt: null,
+        bytesUsed: 0,
+        eventCount: 0,
+        updatedAt: Date.now(),
+      });
+    }
+
+    const res = await transfer(id, oldCookie, newUserId);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('limit_exceeded');
+    // Nothing moved — the D1-first write must not have happened ahead of this gate.
+    expect(await countCharactersForOwner(handle.db, await meUserId(oldCookie))).toBe(1);
+  });
+
+  it('refuses with an honest quota error when the recipient is already at/over the byte cap', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom7', verifierHex('b19'));
+    const newCookie = await loginAndGetCookie('TxTo7', verifierHex('b20'));
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id);
+    await adjustUserQuotaBytes(handle.db, newUserId, USER_QUOTA_BYTES_MAX);
+
+    const res = await transfer(id, oldCookie, newUserId);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('quota_exceeded');
+  });
+
+  it('rolls back the D1 owner_id/quota move (best-effort) when the event append THROWS', async () => {
+    const oldCookie = await loginAndGetCookie('TxFrom8', verifierHex('b21'));
+    const newCookie = await loginAndGetCookie('TxTo8', verifierHex('b22'));
+    const oldUserId = await meUserId(oldCookie);
+    const newUserId = await meUserId(newCookie);
+    const id = uuidv7();
+    await createCharacter(oldCookie, id);
+    await upsertCharacterIndexRow(handle.db, {
+      id,
+      ownerId: oldUserId,
+      name: 'Aria',
+      system: 'srd-5e-2024',
+      campaignId: null,
+      archivedAt: null,
+      bytesUsed: 100_000,
+      eventCount: 1,
+      updatedAt: Date.now(),
+    });
+    await adjustUserQuotaBytes(handle.db, oldUserId, 100_000);
+    streamHost.failNextAppendFor(`char:${id}`);
+
+    const res = await transfer(id, oldCookie, newUserId);
+    expect(res.status).toBe(500);
+
+    // D1 rolled all the way back: still the old owner, quotas unchanged.
+    const oldList = (await (
+      await app.request('/api/characters', { headers: { ...XRW, cookie: oldCookie } })
+    ).json()) as {
+      id: string;
+    }[];
+    expect(oldList.map((r) => r.id)).toContain(id);
+    expect(await getUserQuotaBytes(handle.db, oldUserId)).toBe(100_000);
+    expect(await getUserQuotaBytes(handle.db, newUserId)).toBe(0);
+  });
+});
+
 // --- CharacterActor (direct, no HTTP) --------------------------------------------------------
 
 const STREAM_ID = `char:${uuidv7()}`;
