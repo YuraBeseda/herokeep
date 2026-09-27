@@ -11,6 +11,7 @@ import type { CampaignState } from '@shared/services/campaigns/campaign-projecti
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import { HandoverCharacterDialogComponent } from './handover-character-dialog.component';
 import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
 import { PartyTabComponent } from './party-tab.component';
 import { UnlinkCharacterDialogComponent } from './unlink-character-dialog.component';
@@ -591,6 +592,126 @@ describe('PartyTabComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
 
       expect(compiled.querySelector('app-dm-effects-panel')).toBeNull();
+    });
+  });
+
+  // plan-10 task-12-brief.md: pregens + claiming (ruling 6). A pregen has NO protocol flag — it is
+  // derived purely from the roster's own `ownerId` matching the campaign's DM (`state.members`,
+  // `role: 'dm'`).
+  describe('pregens (DM-owned rostered characters) + handover', () => {
+    function stateWithPregen(overrides: Partial<CampaignState> = {}): Partial<CampaignState> {
+      return mkState({
+        members: new Map([
+          ['u-dm', { displayName: 'Gary', role: 'dm', removed: false }],
+          ['u-alice', { displayName: 'Alice', role: 'player', removed: false }],
+        ]),
+        roster: new Map([['char-1', { ownerId: 'u-dm', name: 'Pregen Paul', left: false }]]),
+        ...overrides,
+      });
+    }
+
+    it('the DM sees an "Add pregen" button that navigates to the create wizard with a returnUrl back to link-character', async () => {
+      const { navigateSpy } = configure({ role: 'dm', state: stateWithPregen() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const button = compiled.querySelector<HTMLButtonElement>('.party-tab__add-pregen');
+      expect(button).not.toBeNull();
+      button!.click();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/characters/new'], {
+        queryParams: { returnUrl: '/g/00000000-0000-4000-8000-000000000001/link-character' },
+      });
+    });
+
+    it('a non-DM member never sees the "Add pregen" button', async () => {
+      configure({ role: 'player', state: stateWithPregen() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.party-tab__add-pregen')).toBeNull();
+    });
+
+    it('a roster card whose ownerId is the campaign DM shows the pregen badge; an ordinary member-owned card does not', async () => {
+      configure({
+        role: 'player',
+        state: stateWithPregen({
+          roster: new Map([
+            ['char-1', { ownerId: 'u-dm', name: 'Pregen Paul', left: false }],
+            ['char-2', { ownerId: 'u-alice', name: 'Alice PC', left: false }],
+          ]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const cards = Array.from(compiled.querySelectorAll('.party-tab__card'));
+      const pregenCard = cards.find((c) => c.textContent?.includes('Pregen Paul'))!;
+      const aliceCard = cards.find((c) => c.textContent?.includes('Alice PC'))!;
+      expect(pregenCard.querySelector('.party-tab__pregen-badge')).not.toBeNull();
+      expect(aliceCard.querySelector('.party-tab__pregen-badge')).toBeNull();
+    });
+
+    it('the DM sees "Hand over to…" on their OWN pregen card, and it opens HandoverCharacterDialogComponent with the right data', async () => {
+      const { dialogOpenSpy } = configure({ role: 'dm', state: stateWithPregen() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const button = compiled.querySelector<HTMLButtonElement>('.party-tab__handover');
+      expect(button).not.toBeNull();
+      button!.click();
+      await fixture.whenStable();
+
+      expect(dialogOpenSpy).toHaveBeenCalledTimes(1);
+      const [component, opts] = dialogOpenSpy.mock.calls[0] as [unknown, { data: unknown }];
+      expect(component).toBe(HandoverCharacterDialogComponent);
+      expect(opts.data).toEqual({
+        campaignId: '00000000-0000-4000-8000-000000000001',
+        characterId: 'char-1',
+        characterName: 'Pregen Paul',
+        fromOwnerId: 'u-dm',
+      });
+    });
+
+    it('a non-DM member never sees "Hand over to…", even on the pregen card', async () => {
+      configure({ role: 'player', state: stateWithPregen() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.party-tab__handover')).toBeNull();
+    });
+
+    it('the DM never sees "Hand over to…" on an ordinary MEMBER-owned card (not a pregen)', async () => {
+      configure({
+        role: 'dm',
+        state: stateWithPregen({
+          roster: new Map([['char-2', { ownerId: 'u-alice', name: 'Alice PC', left: false }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.party-tab__handover')).toBeNull();
+    });
+
+    it('the DM never sees "Hand over to…" on a pregen that has already LEFT the roster', async () => {
+      configure({
+        role: 'dm',
+        state: stateWithPregen({
+          roster: new Map([['char-1', { ownerId: 'u-dm', name: 'Pregen Paul', left: true }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.party-tab__handover')).toBeNull();
     });
   });
 });

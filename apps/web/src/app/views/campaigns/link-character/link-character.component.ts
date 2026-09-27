@@ -38,6 +38,28 @@ interface Candidate {
 }
 
 /**
+ * [plan-10 Task 12] Ruling 6's claim flow, M's own half: once the DM's handover fully commits
+ * (`pregen-handover-sequence.ts`), the roster ALREADY lists M as this characterId's owner and the
+ * character is ALREADY fully joined to this campaign at the protocol level — there is no further
+ * `character.campaign_joined`/`campaign.character_joined` for M to send (that would be a
+ * duplicate, harmless but pointless, join). What M's OWN device is still missing is simply a LOCAL
+ * copy (this pregen was never in `CharactersRepository` — the DM created it, not M) — reaching for
+ * one requires new sync/gateway-mediated-write plumbing outside this task's scope (see
+ * task-12-report.md's "M's claim completion" section for the full server-rule tracing: a claimed
+ * pregen's D1 `owner_id` never moves in this codebase, so M's own device cannot open a DIRECT
+ * socket to it, and the campaign gateway cannot bootstrap a not-yet-rostered character's first
+ * write either — no path exists for M to author anything on this stream). This bucket is
+ * deliberately HONEST about that: it surfaces the (already-true) claimed state and a link back to
+ * the party (where the character is already visible, owned by M, per the roster), not a broken
+ * "link" action pretending to do more than the server currently supports.
+ */
+export interface ClaimedPregen {
+  /** Bare character uuid — `CampaignState.roster`'s own key shape. */
+  readonly characterId: string;
+  readonly name: string;
+}
+
+/**
  * `/g/:id/link-character` (plan-10 task-7-brief.md): "pick an existing SYNCED character (or
  * create-new via the wizard then return) → ruling-4 two-append sequence with per-step status +
  * retry UI". Reached from `JoinComponent.confirm()` right after a campaign join succeeds, and from
@@ -173,6 +195,28 @@ export class LinkCharacterComponent {
   protected isSelectable(candidate: Candidate): boolean {
     const e = this.eligibility(candidate);
     return e === 'eligible' || e === 'resume' || e === 'resumeLeave';
+  }
+
+  /** See `ClaimedPregen`'s own class doc. A roster row that is `!left`, owned (per the roster) by
+   * ME, and NOT already one of my local `CharactersRepository` rows — the only way a roster entry
+   * satisfies "owned by me" without also being a candidate above is a DM handover that landed on a
+   * character I never created locally myself. */
+  protected readonly claimedPregens = computed<readonly ClaimedPregen[]>(() => {
+    const roster = this.roster();
+    const userId = this.authService.user()?.userId;
+    if (!roster || !userId) return [];
+    const localIds = new Set(this.candidates().map((c) => bareCharacterId(c.row.id)));
+    const result: ClaimedPregen[] = [];
+    for (const [characterId, entry] of roster) {
+      if (entry.left || entry.ownerId !== userId || localIds.has(characterId)) continue;
+      result.push({ characterId, name: entry.name });
+    }
+    return result;
+  });
+
+  protected goToParty(): void {
+    const campaignId = this.campaignId();
+    if (campaignId) void this.router.navigate(['/g', campaignId, 'party']);
   }
 
   protected async select(candidate: Candidate): Promise<void> {

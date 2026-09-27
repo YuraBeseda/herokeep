@@ -1,5 +1,9 @@
 import type { Event } from '@hk/protocol';
-import { campaignIdOfCharacter, lastCampaignLinkEvent } from './character-campaign-link';
+import {
+  campaignIdOfCharacter,
+  currentOwnerIdOf,
+  lastCampaignLinkEvent,
+} from './character-campaign-link';
 
 const STREAM = 'char:00000000-0000-4000-8000-000000000001';
 const CAMPAIGN_A = '00000000-0000-4000-8000-0000000000a1';
@@ -7,13 +11,19 @@ const CAMPAIGN_B = '00000000-0000-4000-8000-0000000000b2';
 
 let nextEventId = 1;
 
-function mkEvent(type: string, payload: unknown, seq?: number, id?: string): Event {
+function mkEvent(
+  type: string,
+  payload: unknown,
+  seq?: number,
+  id?: string,
+  actorUserId = 'usr_owner',
+): Event {
   const eventId = id ?? `00000000-0000-4000-8000-${String(nextEventId++).padStart(12, '0')}`;
   return {
     id: eventId,
     stream: STREAM,
     ts: '2026-09-26T00:00:00.000Z',
-    actor: { userId: 'usr_owner', deviceId: 'dev_1', role: 'owner' },
+    actor: { userId: actorUserId, deviceId: 'dev_1', role: 'owner' },
     type,
     v: 1,
     payload,
@@ -133,5 +143,50 @@ describe('lastCampaignLinkEvent', () => {
       eventId: 'evt-left-pending',
       committed: false,
     });
+  });
+});
+
+describe('currentOwnerIdOf', () => {
+  it('returns undefined for an empty event list', () => {
+    expect(currentOwnerIdOf([])).toBeUndefined();
+  });
+
+  it("returns character.created's SESSION-STAMPED actor.userId when no transfer has ever happened", () => {
+    const events = [mkEvent('character.created', { name: 'Aria' }, 1, undefined, 'usr_creator')];
+    expect(currentOwnerIdOf(events)).toBe('usr_creator');
+  });
+
+  it('returns the NEW owner after a committed character.owner_transferred', () => {
+    const events = [
+      mkEvent('character.created', { name: 'Aria' }, 1, undefined, 'usr_creator'),
+      mkEvent('character.owner_transferred', { toUserId: 'usr_claimer' }, 2),
+    ];
+    expect(currentOwnerIdOf(events)).toBe('usr_claimer');
+  });
+
+  it('a still-PENDING character.owner_transferred (no seq yet) is honored too — the tail always wins', () => {
+    const events = [
+      mkEvent('character.created', { name: 'Aria' }, 1, undefined, 'usr_creator'),
+      mkEvent('character.owner_transferred', { toUserId: 'usr_claimer' }),
+    ];
+    expect(currentOwnerIdOf(events)).toBe('usr_claimer');
+  });
+
+  it('a SECOND transfer overrides the first', () => {
+    const events = [
+      mkEvent('character.created', { name: 'Aria' }, 1, undefined, 'usr_creator'),
+      mkEvent('character.owner_transferred', { toUserId: 'usr_first_claimer' }, 2),
+      mkEvent('character.owner_transferred', { toUserId: 'usr_second_claimer' }, 3),
+    ];
+    expect(currentOwnerIdOf(events)).toBe('usr_second_claimer');
+  });
+
+  it('ignores unrelated event types interleaved among the relevant ones', () => {
+    const events = [
+      mkEvent('character.created', { name: 'Aria' }, 1, undefined, 'usr_creator'),
+      mkEvent('character.owner_transferred', { toUserId: 'usr_claimer' }, 2),
+      mkEvent('xp.awarded', { amount: 100 }, 3),
+    ];
+    expect(currentOwnerIdOf(events)).toBe('usr_claimer');
   });
 });

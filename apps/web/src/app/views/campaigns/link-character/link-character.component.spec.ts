@@ -504,6 +504,53 @@ describe('LinkCharacterComponent', () => {
     expect(error?.textContent?.trim()).toBe(campaignsEn.link.errors.characterNotLeader);
   });
 
+  // [plan-10 Task 12] Ruling 6's claim flow, M's own half: once the DM's handover fully commits,
+  // the roster ALREADY lists M as the owner of a character M never created locally — this is the
+  // ONLY way such a character is ever surfaced back to M (see `ClaimedPregen`'s own class doc for
+  // the full server-rule tracing of why no further protocol action is offered here).
+  it('shows a pregen HANDED TO ME (roster ownerId === my userId, not among my own local characters) as "claimed", with an honest note and a Go-to-party action', async () => {
+    const PREGEN_ID = 'd0000000-0000-4000-8000-0000000000f9';
+    configure({
+      rows: [mkRow(CHAR_A, 'Aria')],
+      roster: {
+        [PREGEN_ID]: { ownerId: OWNER_ID, name: 'Pregen Paul', left: false },
+      },
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Pregen Paul');
+    expect(compiled.textContent).toContain(campaignsEn.link.claimed.title);
+    const action = compiled.querySelector<HTMLButtonElement>('.link-character__claimed-action')!;
+    expect(action).toBeTruthy();
+
+    action.click();
+    expect(navigateSpy).toHaveBeenCalledWith(['/g', CAMPAIGN_ID, 'party']);
+  });
+
+  it('does NOT show a roster entry as claimed when it belongs to someone else, is left, or is already one of my own local characters', async () => {
+    const OTHER_OWNED = 'd0000000-0000-4000-8000-0000000000fa';
+    const LEFT_ONE = 'd0000000-0000-4000-8000-0000000000fb';
+    configure({
+      rows: [mkRow(CHAR_A, 'Aria')],
+      roster: {
+        [OTHER_OWNED]: { ownerId: 'usr_someone_else', name: 'Not Mine', left: false },
+        [LEFT_ONE]: { ownerId: OWNER_ID, name: 'Already Left', left: true },
+        [CHAR_A.slice('char:'.length)]: { ownerId: OWNER_ID, name: 'Aria', left: false },
+      },
+    });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.link-character__claimed')).toBeNull();
+    expect(compiled.textContent).not.toContain('Not Mine');
+    expect(compiled.textContent).not.toContain('Already Left');
+  });
+
   it('shows the empty state when the account has no characters at all', async () => {
     configure({ rows: [] });
     const fixture = TestBed.createComponent(LinkCharacterComponent);

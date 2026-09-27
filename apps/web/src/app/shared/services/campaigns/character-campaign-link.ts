@@ -1,4 +1,9 @@
-import type { CharacterCampaignJoined, CharacterCampaignLeft, Event } from '@hk/protocol';
+import type {
+  CharacterCampaignJoined,
+  CharacterCampaignLeft,
+  CharacterOwnerTransferred,
+  Event,
+} from '@hk/protocol';
 
 /**
  * N-pf1 (plan-10 task-7-brief.md's pre-flight note): "how does the CLIENT know a character's
@@ -79,4 +84,28 @@ export function lastCampaignLinkEvent(events: readonly Event[]): CampaignLinkEve
 export function campaignIdOfCharacter(events: readonly Event[]): string | undefined {
   const last = lastCampaignLinkEvent(events);
   return last?.type === 'character.campaign_joined' ? last.campaignId : undefined;
+}
+
+/**
+ * Plan-10 Task 12: "who currently owns this character?" — mirrors `campaignIdOfCharacter`'s own
+ * finding exactly (`packages/engine/src/reduce/handlers/identity.ts`: `character.owner_transferred`
+ * is ALSO `notApplicableSolo` — `Facts` never carries an `ownerId` field either). A pure, backward
+ * scan for the LAST event that establishes ownership: `character.owner_transferred`'s own
+ * `toUserId` payload field, or — if none has ever committed — `character.created`'s SESSION-VERIFIED
+ * `actor.userId` (the server stamps this, never trusting a client-sent `actor` field for anything
+ * ownership-relevant — `character-actor.ts`'s own header comment). Returns `undefined` only for an
+ * empty event list (a character with no `character.created` at all is not reachable in practice —
+ * same "not assumed away" stance `CharacterMeta`'s own doc comment takes server-side).
+ */
+export function currentOwnerIdOf(events: readonly Event[]): string | undefined {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.type === 'character.owner_transferred') {
+      return (event.payload as CharacterOwnerTransferred).toUserId;
+    }
+    if (event.type === 'character.created') {
+      return event.actor.userId;
+    }
+  }
+  return undefined;
 }

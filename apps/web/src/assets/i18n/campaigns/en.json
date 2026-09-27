@@ -67,6 +67,11 @@
     "empty": "You don't have any characters yet.",
     "createNew": "Create a new character",
     "skip": "Skip for now",
+    "claimed": {
+      "title": "Handed to you",
+      "note": "Your DM has handed this character over to you. It's already linked to this campaign — full editing from your own device is coming in a future update; for now, you can view it from the party list.",
+      "action": "Go to the party"
+    },
     "progress": {
       "title": "Linking your character…",
       "step": {
@@ -76,7 +81,8 @@
       "outcome": {
         "committed": "Done",
         "rejected": "Failed",
-        "timeout": "Still waiting…"
+        "timeout": "Still waiting…",
+        "skipped": "Already done"
       },
       "success": "Your character is linked to this campaign.",
       "incomplete": "Link incomplete — retry.",
@@ -202,6 +208,7 @@
     "title": "Party",
     "empty": "No characters have joined this campaign yet.",
     "hiddenNotice": "The DM has hidden party sheets for this campaign.",
+    "addPregen": "Add pregen",
     "linkCta": {
       "body": "You don't have a character in this campaign yet.",
       "action": "Link a character"
@@ -209,6 +216,7 @@
     "card": {
       "portraitAlt": "{name}'s portrait",
       "leftBadge": "Left the party",
+      "pregenBadge": "Pregen",
       "noOverview": "No overview shared yet.",
       "hp": "HP {hp}/{hpMax}",
       "hpWithTemp": "HP {hp}/{hpMax} (+{temp} temp)",
@@ -293,6 +301,32 @@
     },
     "errors": {
       "generic": "Couldn't unlink that character. Try again."
+    }
+  },
+  "handover": {
+    "action": "Hand over to…",
+    "title": "Hand over {name}?",
+    "memberPicker": {
+      "label": "Give this character to:",
+      "empty": "No eligible members to hand this character to yet."
+    },
+    "cancel": "Cancel",
+    "confirm": "Hand over",
+    "success": "{name} now belongs to {member}.",
+    "incomplete": "Handover incomplete — retry.",
+    "retry": "Retry",
+    "progress": {
+      "step": {
+        "characterLeave": "Detaching the character record",
+        "rosterClear": "Clearing the roster slot",
+        "characterRejoin": "Reattaching the character record",
+        "rosterRejoin": "Registering the new owner",
+        "ownerTransfer": "Transferring ownership"
+      }
+    },
+    "errors": {
+      "characterNotLeader": "Another tab is currently the active character-data writer. Try again from that tab.",
+      "generic": "Couldn't hand over that character. Try again."
     }
   },
   "memberSheet": {

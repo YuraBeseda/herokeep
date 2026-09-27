@@ -1,5 +1,18 @@
 <section class="party-tab" *transloco="let t; read: 'campaigns'">
-  <h2 class="party-tab__title">{{ t('party.title') }}</h2>
+  <div class="party-tab__header">
+    <h2 class="party-tab__title">{{ t('party.title') }}</h2>
+    @if (isDm()) {
+      <button
+        hk-button
+        type="button"
+        [variant]="'ghost'"
+        class="party-tab__add-pregen"
+        (click)="addPregen()"
+      >
+        {{ t('party.addPregen') }}
+      </button>
+    }
+  </div>
 
   @if (!hasOwnActiveCharacter()) {
     <div class="party-tab__link-cta">
@@ -49,6 +62,10 @@
 
           <span class="party-tab__name">{{ card.name }}</span>
 
+          @if (isPregen(card)) {
+            <span class="party-tab__pregen-badge">{{ t('party.card.pregenBadge') }}</span>
+          }
+
           @if (card.left) {
             <span class="party-tab__left-badge">{{ t('party.card.leftBadge') }}</span>
           }
@@ -74,6 +91,18 @@
               (click)="openUnlink(card)"
             >
               {{ t('unlink.action') }}
+            </button>
+          }
+
+          @if (canHandOver(card)) {
+            <button
+              hk-button
+              type="button"
+              [variant]="'primary'"
+              class="party-tab__handover"
+              (click)="openHandover(card)"
+            >
+              {{ t('handover.action') }}
             </button>
           }
 

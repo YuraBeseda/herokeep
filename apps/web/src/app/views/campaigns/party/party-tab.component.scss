@@ -2,8 +2,17 @@
   display: block;
 }
 
+.party-tab__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
 .party-tab__title {
-  margin: 0 0 var(--space-4);
+  margin: 0;
   font-family: var(--font-display);
 }
 
@@ -77,8 +86,16 @@
   font-size: 0.8125rem;
 }
 
+.party-tab__pregen-badge {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .party-tab__view-sheet,
-.party-tab__unlink {
+.party-tab__unlink,
+.party-tab__handover {
   align-self: flex-end;
 }
 

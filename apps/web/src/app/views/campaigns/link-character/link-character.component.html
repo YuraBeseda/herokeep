@@ -41,6 +41,29 @@
   } @else if (loading()) {
     <p class="link-character__loading">{{ t('link.loading') }}</p>
   } @else {
+    @if (claimedPregens().length > 0) {
+      <div class="link-character__claimed">
+        <h2 class="link-character__claimed-title">{{ t('link.claimed.title') }}</h2>
+        <ul class="link-character__claimed-list">
+          @for (pregen of claimedPregens(); track pregen.characterId) {
+            <li class="link-character__claimed-row">
+              <span class="link-character__claimed-name">{{ pregen.name }}</span>
+              <p class="link-character__claimed-note">{{ t('link.claimed.note') }}</p>
+              <button
+                hk-button
+                type="button"
+                class="link-character__claimed-action"
+                [variant]="'primary'"
+                (click)="goToParty()"
+              >
+                {{ t('link.claimed.action') }}
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
     <ul class="link-character__list">
       @for (candidate of candidates(); track candidate.row.id) {
         <li class="link-character__row" [attr.data-eligibility]="eligibility(candidate)">

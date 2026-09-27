@@ -1,0 +1,95 @@
+<ng-container *transloco="let t; read: 'campaigns'">
+  <h2 class="handover-character-dialog__title" data-dialog-title>
+    {{ t('handover.title', { name: characterName }) }}
+  </h2>
+
+  @if (confirming()) {
+    <div class="handover-character-dialog__picker">
+      <span id="handover-member-picker-label" class="handover-character-dialog__picker-label">{{
+        t('handover.memberPicker.label')
+      }}</span>
+      @if (members().length === 0) {
+        <p class="handover-character-dialog__picker-empty">
+          {{ t('handover.memberPicker.empty') }}
+        </p>
+      } @else {
+        <ul
+          class="handover-character-dialog__members"
+          role="radiogroup"
+          [attr.aria-labelledby]="'handover-member-picker-label'"
+        >
+          @for (member of members(); track member.userId) {
+            <li>
+              <button
+                hk-button
+                type="button"
+                class="handover-character-dialog__member"
+                [variant]="selectedUserId() === member.userId ? 'primary' : 'ghost'"
+                role="radio"
+                [attr.aria-checked]="selectedUserId() === member.userId"
+                (click)="selectMember(member.userId)"
+              >
+                {{ member.displayName }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="handover-character-dialog__actions">
+      <button
+        hk-button
+        type="button"
+        class="handover-character-dialog__cancel"
+        [variant]="'ghost'"
+        (click)="cancel()"
+      >
+        {{ t('handover.cancel') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="handover-character-dialog__confirm"
+        [variant]="'primary'"
+        [disabled]="!selectedUserId()"
+        (click)="confirmHandover()"
+      >
+        {{ t('handover.confirm') }}
+      </button>
+    </div>
+  } @else {
+    <div class="handover-character-dialog__progress" role="status" [attr.aria-live]="'polite'">
+      <ol class="handover-character-dialog__steps">
+        @for (step of steps(); track step.step) {
+          <li class="handover-character-dialog__step" [attr.data-outcome]="step.outcome">
+            <span>{{ t('handover.progress.step.' + step.step) }}</span>
+            <span>{{ t('link.progress.outcome.' + step.outcome) }}</span>
+          </li>
+        }
+      </ol>
+
+      @if (errorKey(); as key) {
+        <p class="handover-character-dialog__error" role="alert">{{ t(key) }}</p>
+      }
+
+      @if (handedOverOk()) {
+        <p class="handover-character-dialog__success">
+          {{ t('handover.success', { name: characterName, member: selectedMemberName() }) }}
+        </p>
+      } @else if (canRetry()) {
+        <p class="handover-character-dialog__incomplete">{{ t('handover.incomplete') }}</p>
+        <button
+          hk-button
+          type="button"
+          class="handover-character-dialog__retry"
+          [variant]="'primary'"
+          [disabled]="busy()"
+          (click)="retry()"
+        >
+          {{ t('handover.retry') }}
+        </button>
+      }
+    </div>
+  }
+</ng-container>

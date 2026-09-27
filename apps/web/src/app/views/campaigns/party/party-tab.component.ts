@@ -13,6 +13,7 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { DmEffectsPanelComponent } from './dm-effects-panel.component';
+import { HandoverCharacterDialogComponent } from './handover-character-dialog.component';
 import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
 import { UnlinkCharacterDialogComponent } from './unlink-character-dialog.component';
 
@@ -105,6 +106,27 @@ export class PartyTabComponent {
     () => this.isDm() || this.partySheetsMode() !== 'none',
   );
 
+  /** [plan-10 Task 12] This campaign's own DM userId, derived from `state.members` (design
+   * ruling 3 has no separate `dmId` field client-side — `MemberEntry.role === 'dm'` is the same
+   * live signal every other campaign-role check in this codebase already reads). `undefined` only
+   * before `state` has resolved at all. */
+  protected readonly dmUserId = computed(() => {
+    const state = this.state();
+    if (!state) return undefined;
+    for (const [userId, entry] of state.members) {
+      if (entry.role === 'dm') return userId;
+    }
+    return undefined;
+  });
+
+  /** A pregen (task-12-brief.md: "NO protocol flag exists — a pregen is just a DM-owned rostered
+   * character") — the badge/handover-eligibility derivation, used by BOTH the template's badge and
+   * `canHandOver` below. */
+  protected isPregen(card: PartyCardVm): boolean {
+    const dmId = this.dmUserId();
+    return dmId !== undefined && card.ownerId === dmId;
+  }
+
   protected readonly cards = computed<PartyCardVm[]>(() => {
     const state = this.state();
     if (!state) return [];
@@ -168,6 +190,45 @@ export class PartyTabComponent {
 
   protected goToLinkCharacter(): void {
     void this.router.navigate(['../link-character'], { relativeTo: this.route });
+  }
+
+  /** [plan-10 Task 12] DM "add pregen" (task-12-brief.md): "runs the existing creation wizard
+   * flagged pregen... auto-join to campaign per ruling 4 via the DM's own sockets" — reuses T7's
+   * OWN `?returnUrl=` mechanism verbatim (`CreateWizardComponent`'s already-shipped, already-tested
+   * pattern), landing the DM back on `/g/:id/link-character` (T7's own screen) where the brand-new
+   * character shows up as `'eligible'` and the DM completes ruling 4's join with ONE more click —
+   * on the DM's own device/sockets, exactly like any owned character joining a campaign (no gateway
+   * involved at all; a pregen is, structurally, nothing but an ordinary DM-owned character joined
+   * to their own campaign). Deliberately NOT a bespoke one-click "auto-join" flow: that would mean
+   * re-deriving T7's own join-sequence wiring a second time inside this already-large task, for a
+   * shared, high-traffic component (`CreateWizardComponent`), for a marginal UX gain over one extra
+   * tap on an already-working screen. */
+  protected addPregen(): void {
+    const campaignId = this.campaignStore.campaignId();
+    if (!campaignId) return;
+    void this.router.navigate(['/characters/new'], {
+      queryParams: { returnUrl: `/g/${campaignId}/link-character` },
+    });
+  }
+
+  /** [plan-10 Task 12] "Hand over to…" — DM-only, and only ever on a card this DM themselves
+   * currently owns (`isPregen`) that hasn't already left the roster. Never a general
+   * reassign-any-character tool (mirrors `canUnlink`'s own scope-guard posture). */
+  protected canHandOver(card: PartyCardVm): boolean {
+    return this.isDm() && !card.left && this.isPregen(card);
+  }
+
+  protected openHandover(card: PartyCardVm): void {
+    const campaignId = this.campaignStore.campaignId();
+    if (!campaignId) return;
+    this.dialogService.open(HandoverCharacterDialogComponent, {
+      data: {
+        campaignId,
+        characterId: card.characterId,
+        characterName: card.name,
+        fromOwnerId: card.ownerId,
+      },
+    });
   }
 
   /** [plan-10 Task 9] Opens the DM party-sheet drill-in for `card` — the caller (the template)
