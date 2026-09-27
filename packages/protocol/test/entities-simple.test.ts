@@ -118,7 +118,11 @@ describe('simple entity schemas', () => {
     expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
   });
 
-  it('system entity: multiclassSlots table with per-progression weights and a rounding rule (ruling 2)', () => {
+  it('system entity: multiclassSlots table with PER-PROGRESSION weights + rounding (ruling 2, fix round 1)', () => {
+    // 2024 SRD (vendored, Rule.json pk "srd-2024_multiclassing_spellcasting"): full casters
+    // contribute all their levels (divisor 1, rounding is a no-op); half casters contribute
+    // "Half your levels (round UP)" — divisor 2, rounding 'up' (a deliberate 2024 change from the
+    // 2014 round-down rule). 'third' is SRD-silent in that passage; still expressible as data.
     const r = SystemEntitySchema.safeParse({
       ...baseSystem,
       tables: {
@@ -126,8 +130,11 @@ describe('simple entity schemas', () => {
         proficiency: [2, 2],
         spellSlots: { full: [[2], [3]] },
         multiclassSlots: {
-          weights: { full: 1, half: 2, third: 3 },
-          rounding: 'floorPerClass',
+          weights: {
+            full: { divisor: 1, rounding: 'down' },
+            half: { divisor: 2, rounding: 'up' },
+            third: { divisor: 3, rounding: 'down' },
+          },
           slots: [[2], [3]],
         },
       },
@@ -135,34 +142,47 @@ describe('simple entity schemas', () => {
     expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
   });
 
-  it('multiclassSlots is optional and rejects invalid weights/rounding', () => {
+  it('multiclassSlots is optional and rejects invalid divisor/rounding shapes', () => {
     const withoutIt = SystemEntitySchema.safeParse({
       ...baseSystem,
       tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
     });
     expect(withoutIt.success, JSON.stringify(withoutIt.error?.issues)).toBe(true);
 
-    const badWeight = SystemEntitySchema.safeParse({
+    const badDivisor = SystemEntitySchema.safeParse({
       ...baseSystem,
       tables: {
         xp: [0],
         proficiency: [2],
         spellSlots: { full: [[2]] },
-        multiclassSlots: { weights: { full: 0 }, rounding: 'floorPerClass', slots: [[2]] },
+        multiclassSlots: { weights: { full: { divisor: 0, rounding: 'down' } }, slots: [[2]] },
       },
     });
-    expect(badWeight.success).toBe(false);
+    expect(badDivisor.success).toBe(false);
 
-    const badRounding = SystemEntitySchema.safeParse({
+    const badRoundingValue = SystemEntitySchema.safeParse({
       ...baseSystem,
       tables: {
         xp: [0],
         proficiency: [2],
         spellSlots: { full: [[2]] },
-        multiclassSlots: { weights: { full: 1 }, rounding: 'ceilOnSum', slots: [[2]] },
+        multiclassSlots: { weights: { full: { divisor: 1, rounding: 'nearest' } }, slots: [[2]] },
       },
     });
-    expect(badRounding.success).toBe(false);
+    expect(badRoundingValue.success).toBe(false);
+
+    // fix round 1: the OLD top-level `rounding: 'floorPerClass'` shape must no longer parse —
+    // rounding is per-progression data now, not a single global rule.
+    const oldShapeRejected = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: {
+        xp: [0],
+        proficiency: [2],
+        spellSlots: { full: [[2]] },
+        multiclassSlots: { weights: { full: 1 }, rounding: 'floorPerClass', slots: [[2]] },
+      },
+    });
+    expect(oldShapeRejected.success).toBe(false);
   });
 
   it('accepts minimal valid instances of each simple type', () => {

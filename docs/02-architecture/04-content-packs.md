@@ -58,7 +58,7 @@ Entity types and their specific data (abridged; schema is authoritative):
 | `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
 | `species` | `size`, `speed`, `creatureType`, `lifespan?`; traits as `grants` |
 | `background` | `abilityScores[]` (2024: the three abilities the player may raise), `originFeat`, `skillProficiencies[]`, `toolProficiency`, `equipment` option |
-| `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column); also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, read as "highest row at or below the character's level" — see § Choices/extra below), `subclassLevel`, `multiclass {prereq, gains}` |
+| `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column). `extra`'s plain-text values (`ExtraTextSchema`) are MECHANICAL NOTATION — table-column values like dice or ordinal labels, not display prose — so they are exempt from the Localizer; display prose for a feature belongs in that feature's (already-localized) `description`, not in an `extra` column. `extra` is also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, read as "highest row at or below the character's level" — see § Choices/extra below), `subclassLevel`, `multiclass {prereq, gains}` |
 | `subclass` | `class`, `levels[{level, grants[], choices[]}]` |
 | `feature` | text + `effects` + `choices` + `uses?` (`resource.define` shorthand) |
 | `feat` | `category` (origin/general/fightingStyle/epicBoon), `repeatable`, prerequisites, effects, choices |
@@ -180,22 +180,44 @@ migrating a specific field to `DiceOrFlatSchema` is future work.
 
 `system.tables.multiclassSlots` (optional) holds the combined-caster-level slot table for
 multiclass characters, plus the DATA needed to compute that combined level — never hardcoded in
-engine code:
+engine code. Rounding is **per-progression data**, not one global rule, because the direction
+differs by progression (see the citation below):
 
 ```jsonc
 "multiclassSlots": {
-  "weights": { "full": 1, "half": 2, "third": 3 },   // integer divisor; weight = 1/divisor
-  "rounding": "floorPerClass",
-  "slots": [[2], [3], [4, 2], …]                     // same per-row shape as one spellSlots table
+  "weights": {
+    "full": { "divisor": 1, "rounding": "down" },  // divisor 1 never has a remainder — no-op
+    "half": { "divisor": 2, "rounding": "up" },
+    "third": { "divisor": 3, "rounding": "down" }  // OWNER-FLAG: SRD-silent, see below
+  },
+  "slots": [[2], [3], [4, 2], …]                   // same per-row shape as one spellSlots table
 }
 ```
 
-`rounding: "floorPerClass"` means each class's own level is divided by its progression's divisor
-and rounded down *individually*, then the results are summed across classes (SRD: "Divide...by
-two...by three, rounding down" per class, then add) — not a floor applied to the final sum.
+Each class's own level is divided by its progression's `divisor` and rounded `rounding`
+**individually**, then the results are summed across classes; the combined total is looked up on
+the Multiclass Spellcaster table. This is quoted verbatim from the vendored 2024 SRD text
+(`packages/content/upstream/open5e-srd-2024/Rule.json`, pk
+`srd-2024_multiclassing_spellcasting`):
+
+> You determine your available spell slots by adding together the following:
+> - All your levels in the Bard, Cleric, Druid, Sorcerer, and Wizard classes
+> - Half your levels (round up) in the Paladin and Ranger classes
+
+So **half-caster levels round UP** — a deliberate 2024 change from the 2014 rule (which rounded
+half- and third-caster contributions DOWN). An earlier draft of this table wrongly carried the
+2014 round-down rule as if it were current 2024 text; corrected here.
+
+**OWNER-FLAG (2024 SRD-silent on third casters):** the quoted passage names only full and half
+casters — it gives no rule at all for third-caster classes (Eldritch Knight, Arcane Trickster).
+`third` stays expressible in `weights` (nothing stops a pack from supplying it), but its
+`divisor`/`rounding` are not specified by the core rules text this repo has access to; a content
+pack author must choose a value (the 2014 precedent, if adopted, is divisor 3 / round down) and
+record that choice as their own decision, not an SRD citation.
+
 Pact-magic casters never participate: their slots are tracked separately (`facts.pactSlots`) and
-are not part of this table. Single-class characters keep using the per-class `spellSlots` table
-unchanged.
+are not part of this table (`weights` has no `pact` key — `MulticlassProgressionSchema` excludes
+it). Single-class characters keep using the per-class `spellSlots` table unchanged.
 
 ## Overrides
 

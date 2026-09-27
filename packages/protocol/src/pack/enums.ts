@@ -39,6 +39,12 @@ export const ValueSchema = z.union([z.int(), FormulaSchema]);
  * `validateFormula()` — so e.g. "1d6" or "Rage Damage" already satisfied `FormulaSchema`'s regex
  * without being valid formulas). This schema exists to make "plain text, not a formula" an explicit,
  * named shape rather than a coincidence of a loose charset check.
+ *
+ * i18n stance (fix round 1, controller-adjudicated): `ExtraTextSchema` values are MECHANICAL
+ * NOTATION — table-column values like dice or ordinal labels — not display prose, so they are
+ * exempt from the engine Localizer (rule 2 in CLAUDE.md's non-negotiables). Display prose for a
+ * feature belongs in that feature's `description`, which is already localized; do not route
+ * `extra` values through the Localizer or treat their absence from a translation pack as a bug.
  */
 export const ExtraTextSchema = z
   .string()

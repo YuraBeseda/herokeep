@@ -4161,16 +4161,27 @@
                 ]
               },
               "additionalProperties": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 10
+                "type": "object",
+                "properties": {
+                  "divisor": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "rounding": {
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down"
+                    ]
+                  }
+                },
+                "required": [
+                  "divisor",
+                  "rounding"
+                ],
+                "additionalProperties": false
               }
-            },
-            "rounding": {
-              "type": "string",
-              "enum": [
-                "floorPerClass"
-              ]
             },
             "slots": {
               "maxItems": 20,
@@ -4182,7 +4193,6 @@
           },
           "required": [
             "weights",
-            "rounding",
             "slots"
           ],
           "additionalProperties": false

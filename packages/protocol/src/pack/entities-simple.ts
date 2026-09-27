@@ -37,23 +37,43 @@ export const SystemEntitySchema = entity('system', {
      *  this is a `partialRecord`, so a pack supplies whichever progressions its classes use. */
     spellSlots: z.partialRecord(SlotProgressionSchema, z.array(z.array(NonNegInt).max(9)).max(20)),
     /**
-     * Ruling 2 (phase 4, plan 11 task 1): the multiclass combined-caster-level slot table, plus the
-     * DATA (not TS constants) needed to compute that combined level from each class's own level —
-     * `weights[progression]` is an integer DIVISOR (full=1, half=2, third=3, i.e. weight = 1/divisor),
-     * and `rounding: 'floorPerClass'` means each class's own level is divided by its progression's
-     * divisor and rounded down INDIVIDUALLY, before summing across classes (SRD: "Divide... by two...
-     * by three, rounding down" per class, then add) — not a floor applied to the final sum. `slots`
-     * has the same per-row shape as one `spellSlots` progression array: index 0 = combined caster
-     * level 1, row[i] = max slots for spell level i+1. Pact-magic casters are excluded from `weights`
-     * (`MulticlassProgressionSchema` has no `pact` member) — pact slots are tracked separately and
-     * never contribute to this table. Optional: single-class characters keep using the per-class
-     * `spellSlots` table untouched (byte-identical existing behavior); engine consumption (T2/T3) is
-     * out of this task's scope.
+     * Ruling 2 (phase 4, plan 11 task 1; rounding shape corrected in fix round 1): the multiclass
+     * combined-caster-level slot table, plus the DATA (not TS constants) needed to compute that
+     * combined level from each class's own level — `weights[progression]` is `{divisor, rounding}`:
+     * divide the class's own level by `divisor`, round `rounding` ('up' | 'down'), INDIVIDUALLY per
+     * class, before summing across classes.
+     *
+     * Rounding is PER-PROGRESSION data, not a single global rule, because the 2024 SRD text (vendored,
+     * `packages/content/upstream/open5e-srd-2024/Rule.json`, pk
+     * "srd-2024_multiclassing_spellcasting") specifies different directions per progression — quoted
+     * verbatim: "You determine your available spell slots by adding together the following: — All
+     * your levels in the Bard, Cleric, Druid, Sorcerer, and Wizard classes — Half your levels (round
+     * UP) in the Paladin and Ranger classes." So: full = {divisor: 1, rounding: n/a — divisor 1 never
+     * has a fractional part, so either direction is a no-op}; half = {divisor: 2, rounding: 'up'} —
+     * this is a DELIBERATE 2024 change from the 2014 rule (which rounded half-casters DOWN); an
+     * earlier draft of this schema/doc wrongly carried the 2014 round-down text as if it were the
+     * 2024 rule, which fix round 1 corrects.
+     *
+     * OWNER-FLAG (2024 SRD-silent): that passage names no third-caster (Eldritch Knight/Arcane
+     * Trickster) contribution at all — only full and half casters are mentioned. `third` stays
+     * expressible in `weights` (`MulticlassProgressionSchema` includes it), but its divisor/rounding
+     * are NOT specified by the core rules text available to this repo; a content pack author (T7)
+     * must choose a value and note the choice (2014 precedent, if adopted: divisor 3, round down) —
+     * this is a content-authoring decision, not something this schema can resolve.
+     *
+     * `slots` has the same per-row shape as one `spellSlots` progression array: index 0 = combined
+     * caster level 1, row[i] = max slots for spell level i+1. Pact-magic casters are excluded from
+     * `weights` (`MulticlassProgressionSchema` has no `pact` member) — pact slots are tracked
+     * separately and never contribute to this table. Optional: single-class characters keep using the
+     * per-class `spellSlots` table untouched (byte-identical existing behavior); engine consumption
+     * (T2/T3) is out of this task's scope.
      */
     multiclassSlots: z
       .strictObject({
-        weights: z.partialRecord(MulticlassProgressionSchema, z.int().min(1).max(10)),
-        rounding: z.enum(['floorPerClass']),
+        weights: z.partialRecord(
+          MulticlassProgressionSchema,
+          z.strictObject({ divisor: z.int().min(1).max(10), rounding: z.enum(['up', 'down']) }),
+        ),
         slots: z.array(z.array(NonNegInt).max(9)).max(20),
       })
       .optional(),
