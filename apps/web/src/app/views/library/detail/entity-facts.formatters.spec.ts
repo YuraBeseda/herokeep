@@ -154,6 +154,17 @@ describe('entity-facts.formatters', () => {
       expect(formatWeaponDamage(weapon)).toEqual({ kind: 'text', text: '1d8 slashing' });
     });
 
+    it('formats a flat-damage weapon (ruling 6, Blowgun) as its bare integer, not [object Object]', () => {
+      const weapon: NonNullable<ItemEntity['weapon']> = {
+        kind: 'ranged',
+        category: 'martial',
+        damage: { flat: 1 },
+        damageType: 'piercing',
+        properties: [],
+      };
+      expect(formatWeaponDamage(weapon)).toEqual({ kind: 'text', text: '1 piercing' });
+    });
+
     it('formats armor class as its bare number', () => {
       const armor: NonNullable<ItemEntity['armor']> = {
         category: 'heavy',

@@ -123,8 +123,15 @@ export function formatRarity(rarity: string): FactValue {
   return formatSlug(rarity);
 }
 
+/**
+ * Ruling 6 (phase 4 plan 11 task 7): `weapon.damage` is `DiceOrFlat` (a `Dice` string or
+ * `{ flat: number }`, e.g. the Blowgun) — normalize to a bare dice-notation-or-integer string
+ * BEFORE interpolating, matching `@hk/engine`'s own `derive/attacks.ts` consumption (a flat amount
+ * displays as its plain integer, not `[object Object]`).
+ */
 export function formatWeaponDamage(weapon: NonNullable<ItemEntity['weapon']>): FactValue {
-  return plain(`${weapon.damage} ${weapon.damageType}`);
+  const dice = typeof weapon.damage === 'string' ? weapon.damage : String(weapon.damage.flat);
+  return plain(`${dice} ${weapon.damageType}`);
 }
 
 export function formatArmorClass(armor: NonNullable<ItemEntity['armor']>): FactValue {

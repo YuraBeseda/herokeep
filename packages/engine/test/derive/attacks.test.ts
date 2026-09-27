@@ -46,6 +46,25 @@ describe('deriveAttacks', () => {
     expect(row.properties).toEqual(['versatile']);
   });
 
+  it('normalizes a flat-damage weapon (ruling 6, Blowgun) to a bare numeric dice string, no ability bonus lost', () => {
+    // `core-mini:item/blowgun`'s `weapon.damage` is `{ flat: 1 }` (DiceOrFlatSchema), not a Dice
+    // string. `AttackRow.damage.dice` stays `string` (unchanged — apps/web's play-tab component and
+    // `entity-facts.formatters.ts` both consume it as a plain string) via a matching consumption
+    // update: a flat amount normalizes to its bare integer, e.g. "1", NOT the old "0d4+1" zero-
+    // count-die hack, which `@hk/engine`'s own `parseRollSpec` REJECTS (a `0d4` term has `n <= 0` and
+    // throws `DiceFormulaError`) — "1" parses as a flat MODIFIER term with zero dice, correctly.
+    const facts = withAbilities({ dex: 14 }); // dex mod +2 (ranged weapon always uses dex)
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];
+    facts.inventory = [{ instanceId: 'i1', itemId: 'core-mini:item/blowgun', qty: 1, equipped: true, attuned: false }];
+    const { result } = deriveAll(facts);
+
+    expect(result.attacks).toHaveLength(1);
+    const row = result.attacks[0]!;
+    expect(row.damage.dice).toBe('1');
+    expect(row.damage.type).toBe('piercing');
+    expect(row.ability).toBe('dex');
+  });
+
   it('picks dex over str for a finesse weapon when dex is higher', () => {
     const facts = withAbilities({ str: 10, dex: 16 }); // dex mod +3 beats str mod 0
     facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];

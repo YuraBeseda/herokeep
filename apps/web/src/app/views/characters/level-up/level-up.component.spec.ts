@@ -116,7 +116,14 @@ describe('LevelUpComponent', () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
-    expect(characterStore.advancements()).toHaveLength(1);
+    // Phase 4 plan 11 task 7: the real SRD pack's `system.multiclass.prerequisites` now makes this
+    // fixture character genuinely eligible to multiclass into Barbarian/Rogue too (str 17 / dex 13
+    // after the soldier background bonus) — real 5e eligibility, not a bug. The level-up route still
+    // opens on the character's OWN class (`isNewClass: false` sorts first — `derive/advancement.ts`),
+    // which the rest of this test verifies via the HP-average button below.
+    expect(
+      characterStore.advancements().find((a) => a.classId === 'srd-5e-2024:class/fighter')?.toLevel,
+    ).toBe(2);
 
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;

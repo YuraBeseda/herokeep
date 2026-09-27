@@ -142,4 +142,32 @@ describe('pendingAdvancements: ruling 7 — new-class (multiclass) offers gated 
     // to fail — so wizard is still offered despite druid's own str/wis being unrelatedly low.
     expect(advancements.some((a) => a.classId === wizard && a.isNewClass)).toBe(true);
   });
+
+  it('sorts existing-class advancements before new-class offers, even when alphabetical id order would put a new class first', () => {
+    // Phase 4 plan 11 task 7 finding: once a real content pack populates `system.multiclass.
+    // prerequisites` for every class (as the SRD pack now does), a character's own EXISTING class
+    // can alphabetically sort AFTER a class they merely QUALIFY to multiclass into — here,
+    // `multiclass-mini:class/wizard` (existing) sorts after `core-mini:class/fighter` (a new-class
+    // offer). A pure `byClassId` sort would put the new-class offer FIRST, which broke real
+    // consumers that pick `pendingAdvancements()[0]` expecting their own class's normal level-up
+    // (apps/web's `LevelUpState`, surfaced by the real SRD pack's own multiclass-eligible fixture
+    // character). Existing-class entries must sort before new-class entries regardless of id.
+    const facts = emptyFacts('char:test');
+    facts.decisions['core-mini:system/mini@0/ability-scores'] = [
+      'str:15',
+      'dex:10',
+      'con:10',
+      'int:15',
+      'wis:10',
+      'cha:10',
+    ];
+    facts.classes = [{ classId: wizard, level: 1 }]; // 'multiclass-mini:...' sorts AFTER 'core-mini:...'
+    facts.xp = 300;
+    const sheet = derive(facts, mcIndex, mcRules());
+    const advancements = pendingAdvancements(sheet, facts, mcIndex);
+    expect(advancements.map((a) => ({ classId: a.classId, isNewClass: a.isNewClass }))).toEqual([
+      { classId: wizard, isNewClass: false },
+      { classId: fighter, isNewClass: true },
+    ]);
+  });
 });

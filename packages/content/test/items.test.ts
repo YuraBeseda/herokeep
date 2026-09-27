@@ -1,3 +1,4 @@
+import { DiceOrFlatSchema } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { transformItems } from '../src/transform/items.ts';
 import { expectAllValid } from './support/valid.ts';
@@ -59,14 +60,26 @@ describe('item transform', () => {
     for (const a of light) expect(a.armor.dexCap, a.id).toBeUndefined();
   });
 
-  it('every weapon has exactly one mastery and a valid dice string', () => {
+  it('every weapon has exactly one mastery and a valid dice-or-flat damage value', () => {
     const weapons = items.filter((i) => (i as { category?: string }).category === 'weapon');
     expect(weapons.length).toBeGreaterThanOrEqual(30);
     for (const w of weapons) {
-      const wp = (w as { weapon?: { mastery?: string; damage?: string } }).weapon;
+      const wp = (w as { weapon?: { mastery?: string; damage?: unknown } }).weapon;
       expect(wp?.mastery, w.id).toBeTruthy();
-      expect(wp?.damage, w.id).toMatch(/^\d{1,2}d(4|6|8|10|12|20|100)([+-]\d{1,3})?$/);
+      expect(DiceOrFlatSchema.safeParse(wp?.damage).success, w.id).toBe(true);
     }
+  });
+
+  it('spot golden: Blowgun deals a flat 1 Piercing damage, not a zero-count-die hack (ruling 6, SRD 5.2.1)', () => {
+    // Confirmed against the vendored snapshot: Weapon.json's `srd-2024_blowgun.damage_dice` is the
+    // bare string "1" (every other weapon's `damage_dice` matches `NdS` notation) — the ONLY weapon
+    // in this vendored SRD 5.2.1 subset without die-roll damage (verified via a full scan). Rule.json's
+    // own "Damage Rolls" entry confirms this is intentional SRD text: "you don't add your ability
+    // modifier to a fixed damage amount that doesn't use a roll, such as the damage of a Blowgun."
+    expect(byId.get('srd-5e-2024:item/blowgun')).toMatchObject({
+      category: 'weapon',
+      weapon: { kind: 'ranged', category: 'martial', damage: { flat: 1 }, damageType: 'piercing' },
+    });
   });
 
   it('magic items carry rarity and attunement where required', () => {

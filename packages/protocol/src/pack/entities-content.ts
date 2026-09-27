@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SlugSchema } from '../ids.ts';
-import { DiceSchema } from './common.ts';
+import { DiceOrFlatSchema, DiceSchema } from './common.ts';
 import { entity } from './entity-base.ts';
 import { DamageTypeSchema, LongTextSchema, ResetSchema } from './enums.ts';
 import { FormulaSchema } from './formula.ts';
@@ -48,7 +48,13 @@ export const ItemEntitySchema = entity('item', {
     .strictObject({
       kind: z.enum(['melee', 'ranged']),
       category: z.enum(['simple', 'martial']),
-      damage: DiceSchema,
+      /**
+       * Ruling 6 (phase 4 plan 11 task 7): `DiceOrFlatSchema`, not `DiceSchema` — retires the
+       * Blowgun's zero-count-die encoding hack (`"0d4+1"`, `packages/content/src/transform/
+       * items.ts`, pre-task-7) in favor of the real `{ flat: N }` shape (T1's `FlatDiceSchema`).
+       * `versatile` below is untouched (`DiceSchema` only): no SRD weapon has flat versatile damage.
+       */
+      damage: DiceOrFlatSchema,
       damageType: DamageTypeSchema,
       versatile: DiceSchema.optional(),
       properties: z.array(SlugSchema).default([]),

@@ -1,6 +1,34 @@
-import type { ClassLevelRow, Choice, Entity, Predicate } from '@hk/protocol';
+import {
+  DiceSchema,
+  ExtraTextSchema,
+  type ClassLevelRow,
+  type Choice,
+  type Entity,
+  type Predicate,
+} from '@hk/protocol';
 import type { FormulaSite } from '../effects/validate.ts';
 import { collectPredicateFormulas } from '../predicate/evaluate.ts';
+
+/**
+ * T1 carry (phase 4 plan 11, ruling 5): discriminates a `ClassLevelRow.extra` STRING value between a
+ * typed literal (skip formula-grammar validation) and a genuine formula-validation candidate.
+ * `ExtraValueSchema` (protocol) accepts int/formula (`ValueSchema`), dice notation (`DiceSchema`, e.g.
+ * Rage Damage "1d6") or short plain text (`ExtraTextSchema`, e.g. an ordinal column "1st") — but this
+ * file previously pushed EVERY string `extra` value into `validateFormula()` unconditionally, which
+ * would reject any real dice/text extra as a formula-syntax error the moment content authored one
+ * (no fixture did, before this task — see task-1-report.md). The rule: a value that matches
+ * `DiceSchema` OR `ExtraTextSchema` (the two narrower, typed shapes `ExtraValueSchema` unions
+ * alongside `ValueSchema`) is a typed literal, not a formula candidate — mirrors `ExtraValueSchema`'s
+ * own union order (typed shapes are more specific than the generic formula fallback).
+ *
+ * Caveat (documented, not a bug): a formula string with NO operator/paren/comma/underscore character
+ * at all (a bare identifier, e.g. a formula that's literally "level") also happens to satisfy
+ * `ExtraTextSchema`'s loose letters/digits/space/'/- charset and would be misclassified as typed text
+ * rather than validated as a formula. Every formula this repo actually authors uses at least one
+ * operator or a function call, so this is an accepted, narrow edge case, not a real gap in practice.
+ */
+const isTypedExtraLiteral = (value: string): boolean =>
+  DiceSchema.safeParse(value).success || ExtraTextSchema.safeParse(value).success;
 
 export interface PredicateSite {
   path: string;
@@ -48,7 +76,7 @@ export function collectEntityFormulas(e: Entity): FormulaSite[] {
     e.levels.forEach((row, r) => {
       sites.push(...predicateFormulas(rowPredicateSites(row, `levels.${r}`)));
       for (const [key, value] of Object.entries(row.extra ?? {})) {
-        if (typeof value === 'string')
+        if (typeof value === 'string' && !isTypedExtraLiteral(value))
           sites.push({ path: `levels.${r}.extra.${key}`, src: value, allowComparison: false });
       }
     });

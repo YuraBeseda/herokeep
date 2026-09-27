@@ -88,6 +88,42 @@ describe('collectEntityFormulas', () => {
       { path: 'levels.0.extra.sneak', src: 'ceil(classLevel(c) / 2)', allowComparison: false },
     ]);
   });
+
+  it('skips formula-grammar validation for row-extra values shaped like Dice or ExtraText (T1 carry, ruling 5)', () => {
+    // Discrimination rule: a string `extra` value that parses as `DiceSchema` (e.g. Rage Damage
+    // "1d6") or `ExtraTextSchema` (e.g. an ordinal column "1st") is a typed literal, not a formula —
+    // it must NOT reach `validateFormula()` (which would reject it: "d" and a leading digit aren't
+    // legal formula grammar). A genuine formula string (uses an operator/paren/function) still does.
+    const cls = {
+      id: 'x-pack:class/c',
+      type: 'class',
+      name: 'C',
+      tags: [],
+      prerequisites: [],
+      effects: [],
+      grants: [],
+      choices: [],
+      hitDie: 8,
+      primaryAbility: ['int'],
+      saves: ['int'],
+      armorTraining: [],
+      weaponProficiencies: [],
+      toolProficiencies: [],
+      skillChoice: { from: ['arcana'], count: 1 },
+      subclassLevel: 3,
+      levels: [
+        {
+          level: 1,
+          grants: [],
+          choices: [],
+          extra: { rage: '1d6', ordinal: '1st', bonus: 'level + 2' },
+        },
+      ],
+    } as unknown as Entity;
+    expect(collectEntityFormulas(cls)).toEqual([
+      { path: 'levels.0.extra.bonus', src: 'level + 2', allowComparison: false },
+    ]);
+  });
 });
 
 describe('collectEntityPredicates (class/subclass level-row grants)', () => {

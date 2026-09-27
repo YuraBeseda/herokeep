@@ -3552,7 +3552,25 @@
           ]
         },
         "damage": {
-          "$ref": "#/$defs/__schema67"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/__schema67"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "flat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 999
+                }
+              },
+              "required": [
+                "flat"
+              ],
+              "additionalProperties": false
+            }
+          ]
         },
         "damageType": {
           "$ref": "#/$defs/__schema45"

@@ -25,6 +25,20 @@ export interface AttackRow {
 type Weapon = NonNullable<ItemEntity['weapon']>;
 type AttackFilter = Extract<Effect, { type: 'attack.bonus' }>['filter'];
 
+/**
+ * Ruling 6 (phase 4 plan 11 task 7): `weapon.damage` is now `DiceOrFlat` (`ItemEntitySchema`
+ * widened from `DiceSchema`), but `AttackRow.damage.dice` stays `string` on purpose — it's consumed
+ * as a plain dice-notation string by apps/web (`play-tab.component.ts`'s `parseRollSpec(attack.
+ * damage.dice)` and template interpolation; `entity-facts.formatters.ts`'s `formatWeaponDamage`),
+ * none of which is touched by this task. A `Dice` string passes through unchanged; a `FlatDice`
+ * normalizes to its bare integer (e.g. `"1"`), which `@hk/engine`'s own `parseRollSpec` (`dice/
+ * parse.ts`) parses correctly as a flat MODIFIER term with zero dice — unlike the retired `"0d4+1"`
+ * zero-count-die hack it replaces, which `parseRollSpec` actually REJECTS (`DICE_RE` matches `0d4`,
+ * then `n <= 0` throws `DiceFormulaError`): rolling Blowgun damage in the app would have crashed.
+ */
+const weaponDamageDice = (damage: Weapon['damage']): string =>
+  typeof damage === 'string' ? damage : String(damage.flat);
+
 /** `{amount}` for a plain int, `{formula}` for a formula string — both legal for `ValueSchema` effects. */
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>
   typeof v === 'number' ? { amount: v } : { formula: v };
@@ -251,7 +265,7 @@ export function deriveAttacks(
       itemId: entity.id,
       name: entity.id,
       toHit,
-      damage: { dice: weapon.damage, bonus: damageBonus, type: weapon.damageType },
+      damage: { dice: weaponDamageDice(weapon.damage), bonus: damageBonus, type: weapon.damageType },
       properties: weapon.properties,
       mastery: masteryActive ? weapon.mastery : undefined,
       ability,

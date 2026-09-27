@@ -24,6 +24,22 @@ export interface Advancement {
 
 const byClassId = (a: Advancement, b: Advancement) => (a.classId < b.classId ? -1 : a.classId > b.classId ? 1 : 0);
 
+/**
+ * Phase 4 plan 11 task 7 finding: once a real content pack populates `system.multiclass.
+ * prerequisites` for every class (the SRD pack now does — see doc-04), a character's own EXISTING
+ * class can alphabetically sort AFTER a class they merely QUALIFY to multiclass into (e.g.
+ * `srd-5e-2024:class/wizard`, already taken, sorts after `srd-5e-2024:class/barbarian`, a mere
+ * new-class offer). A pure `byClassId` sort put the new-class offer first, which broke real
+ * consumers of `pendingAdvancements()[0]` expecting their own class's normal level-up flow
+ * (task-2-report.md's own carry anticipated MULTIPLE entries but not this specific ordering
+ * collision — surfaced only once T7 populated real data on the real pack). Existing-class entries
+ * (`isNewClass: false`) now sort before every new-class offer (`isNewClass: true`) regardless of id;
+ * `byClassId` remains the tiebreak WITHIN each group, so nothing changes when only one group is
+ * present (every pre-existing single-entry-per-group test/golden stays byte-identical).
+ */
+const byExistingFirstThenClassId = (a: Advancement, b: Advancement) =>
+  a.isNewClass === b.isNewClass ? byClassId(a, b) : a.isNewClass ? 1 : -1;
+
 /** `steps` for one class's row at `toLevel` — shared by both the "level up" and "new class" branches. */
 const rowSteps = (
   classId: string,
@@ -143,5 +159,5 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
     }
   }
 
-  return advancements.sort(byClassId);
+  return advancements.sort(byExistingFirstThenClassId);
 }

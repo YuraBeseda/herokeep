@@ -1,4 +1,4 @@
-import { DiceSchema, type Entity } from '@hk/protocol';
+import { DiceSchema, FlatDiceSchema, type DiceOrFlat, type Entity } from '@hk/protocol';
 import { itemId } from '../ids.ts';
 import { type FixtureRecord, pkSlug, readFixture } from '../upstream.ts';
 import { baseEntity, fieldBool, fieldNum, fieldOptionalStr, fieldStr, pkStr } from './common.ts';
@@ -17,7 +17,7 @@ interface Cost {
 interface WeaponShape {
   kind: WeaponKind;
   category: WeaponCategory;
-  damage: string;
+  damage: DiceOrFlat;
   damageType: string;
   versatile?: string;
   properties: string[];
@@ -57,18 +57,32 @@ const RARITY_MAP: Record<string, Rarity> = {
  */
 const RANGED_WITHOUT_AMMUNITION = new Set(['srd-2024_dart']);
 
+/** A `damage_dice` string that is a plain non-negative integer, e.g. `"1"` — a flat amount, no die. */
+const FLAT_DAMAGE_RE = /^\d{1,3}$/;
+
 /**
- * SRD 5.2.1 anomaly: the Blowgun (`srd-2024_blowgun`) deals a flat 1 Piercing damage with no die
- * roll — confirmed against the official 2024 weapons table, so upstream's `damage_dice: "1"` is
- * correct, not a data error. `DiceSchema` only expresses `NdS(+/-M)` rolls, so a bare flat value
- * can't be represented directly. This encodes it as `0d4+1`: zero d4s (contributing nothing) plus
- * a flat +1, which always resolves to exactly 1 and satisfies `DiceSchema` without fabricating
- * variance the real weapon doesn't have. Flagged in the task report for reconsideration (e.g. a
- * dedicated flat-damage representation) — every other weapon's `damage_dice` is schema-valid as-is.
+ * Ruling 6 (phase 4 plan 11 task 7): parses `damage_dice` as real `NdS(+/-M)` notation when it
+ * matches `DiceSchema`, else as a flat amount (`FlatDiceSchema`) when it's a bare non-negative
+ * integer, else throws (an unrecognized shape). Verified over the full vendored `Weapon.json` (38
+ * records): the Blowgun (`srd-2024_blowgun`, `damage_dice: "1"`) is the ONLY weapon that doesn't
+ * already match `DiceSchema` — confirmed by SRD text, `Rule.json`'s own "Damage Rolls" entry: "you
+ * don't add your ability modifier to a fixed damage amount that doesn't use a roll, such as the
+ * damage of a Blowgun." This replaces the previous zero-count-die encoding hack (`"0d4+1"`), which
+ * satisfied `DiceSchema` syntactically but was semantically wrong (implies a d4 that isn't real) and
+ * is REJECTED by `@hk/engine`'s dice-notation parser (`parseRollSpec`): a `0d4` term has `n <= 0` and
+ * throws `DiceFormulaError`, so the old hack would have crashed the first time a player tried to roll
+ * Blowgun damage in the app. `{ flat: 1 }` is both semantically correct and safely consumable — see
+ * `packages/engine/src/derive/attacks.ts`'s matching consumption update.
  */
-const DAMAGE_DICE_OVERRIDES: Record<string, string> = {
-  'srd-2024_blowgun': '0d4+1',
-};
+function parseWeaponDamage(raw: string, pk: FixtureRecord['pk'], label: string): DiceOrFlat {
+  if (DiceSchema.safeParse(raw).success) return raw;
+  if (FLAT_DAMAGE_RE.test(raw)) {
+    const flat = Number(raw);
+    const parsed = FlatDiceSchema.safeParse({ flat });
+    if (parsed.success) return parsed.data;
+  }
+  throw new Error(`items: weapon "${String(pk)}" has ${label} "${raw}" that satisfies neither Dice nor FlatDice`);
+}
 
 /**
  * Upstream cost is a decimal-gp string (e.g. `"15.00"`, `"0.05"`). Parsed to integer copper first,
@@ -214,8 +228,7 @@ function buildWeaponShape(
     throw new Error(`items: weapon "${pk}" has no mastery property assigned`);
   }
 
-  const rawDamage = DAMAGE_DICE_OVERRIDES[pk] ?? fieldStr(weaponRec.fields, 'damage_dice', pk);
-  const damage = assertDice(rawDamage, pk, 'damage');
+  const damage = parseWeaponDamage(fieldStr(weaponRec.fields, 'damage_dice', pk), pk, 'damage');
 
   const kind: WeaponKind = hasAmmunition || RANGED_WITHOUT_AMMUNITION.has(pk) ? 'ranged' : 'melee';
   const category: WeaponCategory = fieldBool(weaponRec.fields, 'is_simple', pk) ? 'simple' : 'martial';

@@ -172,9 +172,19 @@ predicates. Evaluation context: `level`, `prof`, `classLevel(id)`, `mod(ab)`,
 `DiceSchema` is `NdS(+/-M)` notation, e.g. `1d8`, `2d6+3`, `8d6`. `FlatDiceSchema` (phase 4,
 additive) is a fixed amount with no die: `{ "flat": 1 }`, for a component that's a plain bonus
 rather than a roll (replacing zero-count-die hacks like `0d4+1`). `DiceOrFlatSchema` accepts
-either form. As of this task `DiceSchema` itself is unchanged and every field that already used it
-(`item.weapon.damage`/`versatile`, `spell.damage.dice`) still accepts only dice-string notation;
-migrating a specific field to `DiceOrFlatSchema` is future work.
+either form.
+
+**Migrated this task (ruling 6, phase 4 plan 11 task 7): `item.weapon.damage`.** The Blowgun
+(SRD 5.2.1) deals a flat 1 Piercing damage with no die roll — upstream's `damage_dice: "1"`, the
+ONLY weapon in the vendored SRD 5.2.1 snapshot without `NdS` notation (verified over the full 38
+records). It's now `{ "flat": 1 }`, replacing the old `"0d4+1"` encoding, which was not just
+inelegant but actually BROKEN: `@hk/engine`'s own dice parser (`dice/parse.ts`'s `parseRollSpec`)
+rejects a `0d4` term (`n <= 0` throws `DiceFormulaError`), so rolling Blowgun damage in the app
+would have crashed. `weapon.versatile` and `spell.damage.dice` are untouched (`DiceSchema` only —
+no SRD weapon has flat versatile damage); migrating either is future work if content ever needs it.
+`AttackRow.damage.dice` (engine, `derive/attacks.ts`) stays `string` — a flat amount normalizes to
+its bare integer (`"1"`, which `parseRollSpec` correctly reads as a zero-dice flat modifier) so
+existing string consumers (apps/web's roll UI, the Library detail formatter) need no shape change.
 
 ## Multiclass spellcasting table
 
@@ -230,6 +240,68 @@ own solo `spellSlots.full` table — Fighter contributes no `spellcasting.define
 (so an authored-but-unweighted `third` progression, per the OWNER-FLAG above, also stays solo); the
 combined table only applies once that count is 2 or more.
 
+**Real system data (phase 4 plan 11 task 7).** `srd-5e-2024:system/5e-2024`'s
+`tables.spellSlots.half` (Paladin/Ranger), `.pact` (Warlock) and `tables.multiclassSlots.slots` are
+transcribed verbatim from the vendored `ClassFeatureItem.json` (`packages/content/upstream/
+open5e-srd-2024/`) — `srd-2024_paladin_slots-1st`..`slots-5th` for half-casters (cross-checked
+byte-identical to Ranger's own rows), `srd-2024_warlock_spell-slots` (count) +
+`srd-2024_warlock_slot-level` (slot level) combined into T3's sparse-row pact encoding, and the
+20-row Multiclass Spellcaster table from `Rule.json` above (byte-identical to the single-class
+full-caster table — not a coincidence, 5e's multiclass table has always mirrored it, so
+`multiclassSlots.slots` and `spellSlots.full` are the SAME array). `tables.spellSlots.third`
+(Eldritch Knight/Arcane Trickster) is OWNER-FLAG: this vendored SRD 5.2.1 snapshot doesn't include
+either subclass (Fighter's only SRD subclass here is Champion, Rogue's is Thief —
+`CharacterClass.json`'s `subclass_of` links name only the 12 SRD subclasses), so there is no
+vendored per-level table; authored from public SRD/PHB knowledge (unchanged 2014→2024: one-third of
+a full caster's levels, starts at class level 3, capped at 4th-level spells).
+
+**`system.multiclass.prerequisites` (T2 carry, ruling 2): populated for all 12 classes.** Single
+primary-ability classes (8 of 12) are cited verbatim from the same `Rule.json` passage quoted above
+("a score of at least 13 in the primary ability of the new class") combined with
+`transform/classes.ts`'s own `PRIMARY_ABILITY` table. The 4 dual-primary-ability classes (Fighter,
+Monk, Paladin, Ranger) are OWNER-FLAG: the vendored passage's one worked example (Barbarian → Druid)
+only covers single-ability classes, so it never states whether a dual-ability class needs EITHER or
+BOTH abilities at 13+; authored from public SRD/PHB knowledge (unchanged since 2014): Fighter is an
+OR (either ability qualifies), Monk/Paladin/Ranger are AND (both required).
+
+**`pendingAdvancements` ordering fix (discovered by task 7, real-pack ripple of the system map above).**
+Once `system.multiclass.prerequisites` is populated for real, a character's own EXISTING class can
+sort AFTER a class they merely qualify to multiclass into (e.g. `srd-5e-2024:class/wizard`, already
+taken, sorts after `srd-5e-2024:class/barbarian`, a new-class offer — plain alphabetical order).
+`packages/engine/src/derive/advancement.ts`'s `pendingAdvancements` now sorts every existing-class
+entry (`isNewClass: false`) before every new-class offer (`isNewClass: true`), alphabetical only as
+the tiebreak within each group — so a UI reading `pendingAdvancements()[0]` (today's
+`LevelUpState`, per task 2's carry) keeps landing on the character's own normal level-up instead of
+a same-priority multiclass offer it never asked to see. This surfaced only once a real pack (not a
+synthetic fixture) supplied both a real character with qualifying ability scores AND system-wide
+prerequisite data at the same time — no fixture pack before this task exercised that combination.
+
+**System map vs. class-entity field (T2 carry, resolved).** `advancement.ts`'s `pendingAdvancements`
+reads `system.multiclass.prerequisites` — that map is the GATING authority. The class entity's own
+singular `multiclass.prerequisites` field (pre-existing schema, predates plan 11) is
+validation/reference-collection only: it's walked by `content/refs.ts`'s dependency-ref collector at
+pack-validation time, but `advancement.ts` never reads it. The five slice-1 classes that carry
+`multiclass.gains` (below) also populate this field — required alongside `gains` by
+`ClassEntitySchema.multiclass`'s shape — with the SAME predicate value the system map carries for
+that class (one source of truth, `MULTICLASS_PREREQUISITES` in `packages/content/src/static/
+system.ts`, exported and reused by `transform/classes.ts`), so the two can never drift for a class
+that has both.
+
+**`class.multiclass.gains` (T2 carry #3, ruling 2): the five slice-1 classes.** Fighter, Wizard,
+Barbarian, Cleric and Warlock's own class entities carry real `gains` data (a later class's
+proficiencies when multiclassed in — `packages/engine/src/derive/index.ts`'s `deriveProficiencies`
+applies it as a RESTRICTION, never a union, replacing that class's own full proficiency lists for
+any class beyond the character's first). ⚠️ OWNER-FLAG, 2024-SRD-silent: `Rule.json`'s own
+`srd-2024_multiclassing_proficiencies` entry is prose only ("you gain only some of the new class's
+starting proficiencies, as detailed in each class's description") — no `ClassFeature` entry anywhere
+in this vendored snapshot actually details it per class. Authored from public SRD 5.2.1 knowledge
+(the 2014→2024-unchanged multiclass proficiencies table); none of the five grants a bonus skill
+choice (that's reserved for Bard/Rogue in the 2024 table, neither in this slice), so every
+`skillChoiceCount` is `0`. The other 7 classes carry no `multiclass` field on their own class entity
+at all (only the system map's entry, above) — `gains` is unauthored for them until a later slice
+needs it; `deriveProficiencies`'s documented compat fallback (absent `gains` = full proficiency list)
+already covers this correctly.
+
 Pact Magic slots (Warlock) recover on a short OR long rest — the vendored 2024 SRD's own Warlock
 feature text (`packages/content/upstream/open5e-srd-2024/ClassFeature.json`, pk
 `srd-2024_warlock_pact-magic`): "You regain all expended Pact Magic spell slots when you finish a
@@ -270,10 +342,13 @@ abide by the rules for carrying capacity in 'Rules Glossary'" — that glossary 
 entries, none of which mention carrying/lifting weight numerically; `ConditionDescription.json`'s
 15 conditions also include no "encumbered" state. So the example above is TEST-FIXTURE data (used
 in `packages/protocol/test/fixtures/packs/core-mini.json` and this repo's own engine tests), chosen
-to match the commonly-known 5e convention for readability, but it carries **no SRD citation** — a
-future content-pack author (T7 or later) must either find independently-citable source text or
-author it as their own documented house-rule choice, the same OWNER-FLAG posture as
-`multiclassSlots.weights.third` above.
+to match the commonly-known 5e convention for readability, but it carries **no SRD citation**.
+
+**Real system data (T5 carry, phase 4 plan 11 task 7).** `srd-5e-2024:system/5e-2024` now carries
+this exact same `standard`/`variant` configuration — OWNER-FLAG, since no independently-citable
+vendored text exists for either mode (see above); recorded as this pack's own documented choice
+(the well-known public 5e carrying-capacity formulas, STR score × 15/5/10), matching
+`multiclassSlots.weights.third`'s OWNER-FLAG posture.
 
 **Shape.** `standard` and `variant` are independently optional (a pack may supply either, both, or
 neither); `overrides.encumbrance` selects which one a given `derive()` call uses — asking for a mode

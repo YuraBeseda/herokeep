@@ -98,6 +98,24 @@ describe('class / subclass / spell / item', () => {
       },
     });
     ok({
+      // Ruling 6 (phase 4 plan 11 task 7): the Blowgun deals a flat 1 Piercing damage with no die
+      // roll (SRD 5.2.1) — `weapon.damage` accepts `DiceOrFlatSchema`, so this is `{ flat: 1 }`
+      // rather than the old zero-count-die hack (`"0d4+1"`).
+      id: `${P}:item/blowgun`,
+      type: 'item',
+      name: 'Blowgun',
+      category: 'weapon',
+      weapon: {
+        kind: 'ranged',
+        category: 'martial',
+        damage: { flat: 1 },
+        damageType: 'piercing',
+        properties: ['ammunition', 'loading'],
+        mastery: 'vex',
+        range: { normal: 25, long: 100 },
+      },
+    });
+    ok({
       id: `${P}:item/chain-mail`,
       type: 'item',
       name: 'Chain Mail',

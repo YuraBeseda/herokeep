@@ -103,7 +103,13 @@ describe('LevelUpState', () => {
     expect(characterStore.sheet()?.hp.max.value).toBe(12);
 
     await awardXp(characterStore, 300);
-    expect(characterStore.advancements().map((a) => a.toLevel)).toEqual([2]);
+    // Phase 4 plan 11 task 7: the real SRD pack now populates `system.multiclass.prerequisites` for
+    // all 12 classes, and this fixture's ability scores (str 17, dex 13 after the soldier background
+    // bonus) genuinely qualify for Barbarian (str >= 13) and Rogue (dex >= 13) too — real, correct
+    // 5e multiclass eligibility, not a bug. `LevelUpState` (below) still resolves to the character's
+    // OWN class first (`isNewClass: false` sorts before new-class offers — see `derive/advancement.
+    // ts`), so this test asserts the fighter's own entry rather than the exact full list.
+    expect(characterStore.advancements().find((a) => a.classId === FIGHTER)?.toLevel).toBe(2);
 
     const state = createState();
     expect(state.advancement()?.classId).toBe(FIGHTER);
@@ -148,7 +154,8 @@ describe('LevelUpState', () => {
 
     await awardXp(characterStore, 600);
     expect(characterStore.facts()?.xp).toBe(900);
-    expect(characterStore.advancements().map((a) => a.toLevel)).toEqual([3]);
+    // Same real-multiclass-eligibility note as the level 1→2 test above.
+    expect(characterStore.advancements().find((a) => a.classId === FIGHTER)?.toLevel).toBe(3);
 
     const state = createState();
     expect(state.outstanding().map((r) => r.choiceId)).toEqual([SUBCLASS_CHOICE]);

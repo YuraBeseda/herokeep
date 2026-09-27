@@ -32,9 +32,14 @@ const load = (name: string): unknown =>
  * level-3 row gained `extra: {"fighter-weapon-mastery-count": 5}` (proves the row-extra-wins-over-
  * formula precedence for `mastery.grant.count`, mirroring `cantripsKnown`'s existing row-extra test
  * data) — again legitimate content growth for this task's own tests, not drift.
+ *
+ * `core-mini` re-pinned again in task 7 (ruling 6, Blowgun flat-damage migration): one new item
+ * entity (`blowgun`, `weapon.damage: { flat: 1 }` — exercises `DiceOrFlatSchema` end-to-end and
+ * `@hk/engine`'s matching flat-damage consumption fix in `derive/attacks.ts`) — again legitimate
+ * content growth for this task's own tests, not drift.
  */
 const PHASE_4_BASELINE_HASHES: Record<string, string> = {
-  'core-mini': 'e4a669b78f0b7f9327718825d7e67de4809f34bb080caf103e51379a0080ae8d',
+  'core-mini': 'a5b69c8617380a4e622e063146d74c657877307a138439092caa154f44e76396',
   'content-mini': '574a873c2062d0c850a5b20978b0a84b6da7c5bfa2a1bfd9ef1d74ce7d0aa9d9',
   'translation-mini': 'e3326b8e102787ae64a7e0bc814e1a7080b1df0c94911a1970d2e207db03d04e',
   'asi-mini': '5c4640f77bc3b5e211e372bef4ed7be8027b45f41241f5f5cab5fda75aa637a0',
