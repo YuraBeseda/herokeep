@@ -1,5 +1,5 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, computed, effect, inject, resource, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { SafeHtml } from '@angular/platform-browser';
 import {
@@ -18,11 +18,14 @@ import {
   makeEntityId,
   NoteAddedV1,
   parseEntityId,
+  type CampaignSettings,
+  type CampaignVisibility,
   type ConcentrationEnded,
   type ItemRemoved,
   type ItemUpdated,
   type ResourceRestored,
   type ResourceSpent,
+  type RollLogged,
   type SlotRestored,
   type SpellPrepared,
   type SpellUnprepared,
@@ -42,6 +45,9 @@ import {
   DerivedPopoverDirective,
   type DerivedValue,
 } from '@shared/directives/derived-popover.directive';
+import { bareCharacterId } from '@shared/services/campaigns/campaign-link-sequence';
+import { projectCampaign } from '@shared/services/campaigns/campaign-projection';
+import { campaignIdOfCharacter } from '@shared/services/campaigns/character-campaign-link';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
@@ -49,11 +55,14 @@ import { cryptoRng } from '@shared/services/engine/rng';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { WakeLockService } from '@shared/services/pwa/wake-lock.service';
 import { RollLogService } from '@shared/services/roll-log/roll-log.service';
+import { EventsRepository } from '@shared/services/storage/events.repository';
+import { SyncService } from '@shared/services/sync/sync.service';
 import {
   CharacterStore,
   CharacterStoreNotLeaderError,
   type DraftEvent,
 } from '@shared/stores/character.store';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
 import {
@@ -229,6 +238,24 @@ const modifierTerm = (n: number): string => (n === 0 ? '' : n > 0 ? `+${n}` : `$
 
 type D20RollKind = 'check' | 'save' | 'skill' | 'attackToHit' | 'spellAttack';
 
+// [plan-10 task-10-brief.md, ruling 5] Maps this play tab's own roll-trigger vocabulary onto
+// `RollLoggedV1.kind` ('check'|'attack'|'damage'|'save'|'spell'|'custom') for campaign publishing.
+// `skill` -> `'check'`: a 5e skill check IS an ability check with proficiency applied — the schema
+// has no separate "skill" kind. `spellAttack` -> `'attack'`: a spell attack roll is fundamentally a
+// to-hit roll (same mechanic as `attackToHit`, just using the spellcasting modifier) — the schema's
+// own `'spell'` kind is left unused by this component (reserved for a future non-attack spell-
+// related roll this play tab doesn't yet trigger, e.g. a spell save DC display); `'custom'` is
+// likewise reserved for a future free-form roll type. Attack damage (`onRollAttackDamage`, not a
+// `D20RollKind` at all — it's a d20-free damage roll) maps to `'damage'` directly at its own call
+// site below, not through this table.
+const ROLL_KIND_MAP: Record<D20RollKind, RollLogged['kind']> = {
+  check: 'check',
+  save: 'save',
+  skill: 'check',
+  attackToHit: 'attack',
+  spellAttack: 'attack',
+};
+
 // The scoped `t()` shape every roll handler below accepts (same "caller passes its own template-
 // scoped `t()`" convention `AbilityScoresStepComponent.onRollAll` documents — `LiveAnnouncer`
 // needs the resolved STRING right now, which only a scoped `t()` call, not a raw key, both
@@ -282,6 +309,11 @@ export class PlayTabComponent {
   private readonly rollLogService = inject(RollLogService);
   private readonly liveAnnouncer = inject(LiveAnnouncer);
   protected readonly wakeLockService = inject(WakeLockService);
+
+  // --- Campaign roll publishing (plan-10 task-10-brief.md, ruling 5) ---------------------------
+  private readonly campaignStore = inject(CampaignStore);
+  private readonly eventsRepository = inject(EventsRepository);
+  private readonly syncService = inject(SyncService);
 
   protected readonly sheet = this.characterStore.sheet;
   protected readonly signed = signed;
@@ -1096,6 +1128,113 @@ export class PlayTabComponent {
     };
   }
 
+  // --- Campaign roll publishing context (plan-10 task-10-brief.md, ruling 5) -------------------
+
+  // `undefined` whenever this character isn't campaign-linked, OR is linked but the campaign has
+  // no LIVE session open right now (`SyncService.syncState` — the same gate T8's party-overview
+  // publisher uses, "a campaign session is open"). Recomputed reactively off `characterStore
+  // .events()` (so a fresh `character.campaign_joined` commit or a character switch picks this up
+  // immediately) and `syncService.syncState(streamId)()`.
+  protected readonly campaignRollStreamId = computed<string | undefined>(() => {
+    const campaignId = campaignIdOfCharacter(this.characterStore.events());
+    if (!campaignId) return undefined;
+    const streamId = `camp:${campaignId}`;
+    return this.syncService.syncState(streamId)() === 'offline' ? undefined : streamId;
+  });
+
+  // Fetches the linked campaign's OWN settings document directly from storage (never `campaign
+  // Store.state()`, which only reflects whichever campaign this tab happens to have OPEN for
+  // viewing elsewhere — same "not necessarily this character's own campaign" reasoning task-8-
+  // report.md's `PartyOverviewPublisherService` documents for the identical cross-stream read).
+  // Refetches only when `campaignRollStreamId` itself changes (a new campaign, or context lost).
+  protected readonly campaignRollSettings = resource({
+    params: () => this.campaignRollStreamId(),
+    loader: async ({ params }): Promise<CampaignSettings | null> => {
+      if (!params) return null;
+      const events = await this.eventsRepository.byStream(params);
+      return projectCampaign(events).settings;
+    },
+  });
+
+  // Ruling 5: "'private' shown only if `allowPrivateRolls`" — defaults to `true` (the same "no
+  // settings document posted yet" fallback `defaultCampaignSettings` — campaign-settings.component
+  // .ts — uses) so a freshly created campaign's still-catching-up settings don't spuriously hide
+  // the option. `undefined` (no picker at all) whenever there's no live campaign context — the
+  // panel's own `visibilityOptions` input treats `undefined` as "hide the picker entirely".
+  protected readonly rollVisibilityOptions = computed<readonly CampaignVisibility[] | undefined>(
+    () => {
+      if (!this.campaignRollStreamId()) return undefined;
+      const allowPrivate = this.campaignRollSettings.value()?.visibility.allowPrivateRolls ?? true;
+      return allowPrivate
+        ? (['everyone', 'dm', 'private'] as const)
+        : (['everyone', 'dm'] as const);
+    },
+  );
+
+  // Sticky (not one-shot) — bound two-way to `RollLogPanelComponent`'s own `visibility` model,
+  // exactly like `advantageMode` above binds to that panel's `advantageMode` model.
+  protected readonly rollVisibility = signal<CampaignVisibility>('everyone');
+
+  // Resets the sticky visibility pick back to the campaign's own default (`settings.visibility
+  // .rolls`, default `'everyone'`) whenever campaign context first resolves (a fresh link, a
+  // character switch, or the settings resource finishing its fetch) — never on every render (this
+  // effect's only dependencies are the resource's own value and the resolved streamId, neither of
+  // which changes on a manual pick via `setRollVisibility` below).
+  private readonly resetRollVisibilityDefault = effect(() => {
+    if (!this.campaignRollStreamId()) return;
+    const settings = this.campaignRollSettings.value();
+    this.rollVisibility.set(settings?.visibility.rolls ?? 'everyone');
+  });
+
+  protected setRollVisibility(v: CampaignVisibility): void {
+    this.rollVisibility.set(v);
+  }
+
+  // The actual publish, fired once per roll (ruling 5: "the ROLLER publishes, one event per roll,
+  // no debounce — rolls are discrete") immediately after the SAME roll's `RollLogService.add`
+  // call. `label` is a pre-rendered PLAIN STRING (never a Transloco key) — `RollLoggedV1.label` is
+  // `ShortTextSchema`, a plain string the wire protocol stores verbatim and every other campaign
+  // member's log renders AS-IS regardless of their own locale; there is no way to keep this
+  // structurally re-localizable cross-viewer once it leaves this device; documented schema
+  // constraint, not an i18n-rule violation (the caller resolves it via its own scoped `t()`, the
+  // SAME string `LiveAnnouncer` already announces). Best-effort: failures (leadership lost,
+  // logged out, a schema reject) are swallowed — same "no user-facing retry for a background
+  // publish" posture `PartyOverviewPublisherService` documents.
+  private publishRoll(
+    kind: RollLogged['kind'],
+    formula: string,
+    dice: readonly { sides: number; value: number }[],
+    total: number,
+    label: string,
+  ): void {
+    const streamId = this.campaignRollStreamId();
+    if (!streamId) return;
+    const streamIdOfCharacter = this.characterStore.streamId();
+    if (!streamIdOfCharacter) return;
+
+    const draft: DraftEvent = {
+      type: 'roll.logged',
+      v: 1,
+      payload: {
+        characterId: bareCharacterId(streamIdOfCharacter),
+        label,
+        formula,
+        // Ruling (task-10-brief.md schema facts): include ALL rolled dice (kept AND dropped —
+        // e.g. both d20s of an advantage/disadvantage roll), never just the kept subset — "the log
+        // shows what was rolled". `total` (below) is the already-computed FINAL total; the schema
+        // has no per-die `kept` flag, so a dropped die is not distinguishable from a kept one once
+        // published (documented data-loss, not a bug — see task-10-report.md).
+        results: dice.map((d) => ({ die: `d${d.sides}`, value: d.value })),
+        total,
+        kind,
+        visibility: this.rollVisibility(),
+      } satisfies RollLogged,
+    };
+    void this.campaignStore.appendToStream(streamId, [draft]).catch(() => {
+      // Best-effort background publish — see this method's own doc.
+    });
+  }
+
   // --- Dice roller (task-7-brief.md) ------------------------------------------------------------
 
   // Every tap-to-roll affordance below uses the ROW'S ALREADY-DERIVED total as the roll's
@@ -1111,8 +1250,11 @@ export class PlayTabComponent {
   ): void {
     const mode = this.advantageMode();
     const diceTerm = mode === 'adv' ? '2d20kh1' : mode === 'dis' ? '2d20kl1' : '1d20';
-    const spec = parseRollSpec(`${diceTerm}${modifierTerm(modifier)}`);
+    const formula = `${diceTerm}${modifierTerm(modifier)}`;
+    const spec = parseRollSpec(formula);
     const result = roll(spec, cryptoRng);
+    const rollKind = ROLL_KIND_MAP[kind];
+    const streamId = this.characterStore.streamId();
 
     this.rollLogService.add({
       labelKey: `sheet.roll.entries.${kind}`,
@@ -1120,8 +1262,22 @@ export class PlayTabComponent {
       dice: result.dice,
       modifier,
       total: result.total,
+      formula,
+      kind: rollKind,
+      ...(streamId ? { characterId: bareCharacterId(streamId) } : {}),
       ...(mode !== 'normal' ? { advantage: mode } : {}),
     });
+    // [plan-10 task-10-brief.md] Published in campaign context AFTER the local log entry, from the
+    // SAME roll (`result.dice`/`result.total` — never recomputed). `label` resolves through this
+    // handler's own scoped `t()` (see `publishRoll`'s doc for why a plain rendered string, not a
+    // key, is what the wire schema needs).
+    this.publishRoll(
+      rollKind,
+      formula,
+      result.dice,
+      result.total,
+      t(`sheet.roll.entries.${kind}`, params),
+    );
     // One-shot: advantage/disadvantage applies to exactly the roll that just consumed it (task-7-
     // brief.md: "applies to the NEXT d20 roll"), then the panel's toggle group reflects Normal
     // again via this same two-way-bound signal.
@@ -1166,6 +1322,12 @@ export class PlayTabComponent {
     const result = roll(spec, cryptoRng);
     const bonus = attack.damage.bonus.value;
     const total = result.total + bonus;
+    // The parsed `spec` above is dice-only (`attack.damage.dice`, e.g. "1d8") — the bonus is added
+    // programmatically to the roll's own total, never string-concatenated into it, so the
+    // published `formula` reconstructs the FULL expression (dice + modifier term) the same way
+    // `performD20Roll` already builds its own.
+    const formula = `${attack.damage.dice}${modifierTerm(bonus)}`;
+    const streamId = this.characterStore.streamId();
 
     this.rollLogService.add({
       labelKey: 'sheet.roll.entries.attackDamage',
@@ -1173,7 +1335,17 @@ export class PlayTabComponent {
       dice: result.dice,
       modifier: bonus,
       total,
+      formula,
+      kind: 'damage',
+      ...(streamId ? { characterId: bareCharacterId(streamId) } : {}),
     });
+    this.publishRoll(
+      'damage',
+      formula,
+      result.dice,
+      total,
+      t('sheet.roll.entries.attackDamage', { name: attack.name }),
+    );
     void this.liveAnnouncer.announce(
       t('sheet.roll.announce.attackDamage', { name: attack.name, total }),
     );

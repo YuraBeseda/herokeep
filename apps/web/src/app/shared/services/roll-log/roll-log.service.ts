@@ -1,4 +1,5 @@
 import { effect, inject, Injectable, signal, type Signal } from '@angular/core';
+import type { RollLogged } from '@hk/protocol';
 import { uuidv7 } from '../../helpers/uuid';
 import { CharacterStore } from '../../stores/character.store';
 
@@ -16,7 +17,20 @@ export interface RollEntryDie {
  * of this log resolves it through the SAME `read: 'characters'` scope) plus its ICU params, kept
  * separate from a pre-rendered string so the log re-localizes correctly if the UI locale changes
  * mid-session. `advantage` is set only for a d20 roll actually made under advantage/disadvantage
- * (never for a damage or manual entry). `manual` flags an `addManual` entry. */
+ * (never for a damage or manual entry). `manual` flags an `addManual` entry.
+ *
+ * [plan-10 task-10-brief.md, ruling 5] `formula`/`kind`/`characterId` are ADDITIVE, optional
+ * fields — every pre-existing call site (this service's own `addManual`, and any caller that
+ * doesn't care about campaign publishing) compiles and behaves exactly as before, unchanged.
+ * They're populated by `PlayTabComponent`'s own "roller" methods (`performD20Roll`/
+ * `onRollAttackDamage` — the two call sites that actually invoke `@hk/engine`'s `roll()` against a
+ * real dice spec) so THAT component can, when this character is linked to a campaign with a live
+ * session open, ALSO publish a `roll.logged` event onto the campaign stream from the very same
+ * roll — see that component's own doc for the publishing path. `addManual`'s entries never carry
+ * these (a manually-typed total has no dice/formula of its own — `RollLoggedV1.results` requires
+ * at least one rolled die, which a manual entry structurally can't supply), so they are NEVER
+ * published, by construction. This service itself stays entirely unaware of campaigns — it never
+ * reads or writes these fields beyond storing whatever the caller passes in `add()`. */
 export interface RollEntry {
   readonly id: string;
   readonly ts: string;
@@ -27,6 +41,9 @@ export interface RollEntry {
   readonly total: number;
   readonly advantage?: 'adv' | 'dis';
   readonly manual?: boolean;
+  readonly formula?: string;
+  readonly kind?: RollLogged['kind'];
+  readonly characterId?: string;
 }
 
 const MAX_ENTRIES = 50;

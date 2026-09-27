@@ -130,6 +130,67 @@ describe('RollLogPanelComponent', () => {
     expect(amountAfter.value).toBe('');
   });
 
+  // [plan-10 task-10-brief.md, ruling 5] The picker only renders when `PlayTabComponent` passes a
+  // defined `visibilityOptions` (campaign-linked + session open) — "solo behavior unchanged"
+  // otherwise, exactly like `advantageMode`'s own additive posture.
+  describe('campaign visibility picker (plan-10 task-10-brief.md)', () => {
+    it('renders no picker at all when visibilityOptions is undefined (solo / no campaign context)', async () => {
+      const fixture = TestBed.createComponent(RollLogPanelComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.roll-log-panel__visibility')).toBeNull();
+    });
+
+    it('renders exactly the given options, defaults to the bound value, and is mutually exclusive', async () => {
+      const fixture = TestBed.createComponent(RollLogPanelComponent);
+      fixture.componentRef.setInput('visibilityOptions', ['everyone', 'dm', 'private']);
+      fixture.componentRef.setInput('visibility', 'dm');
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const group = compiled.querySelector('.roll-log-panel__visibility')!;
+      expect(group).not.toBeNull();
+      expect(group.querySelectorAll('button')).toHaveLength(3);
+      expect(
+        buttonNamed(compiled, charactersEn.sheet.roll.visibility.dm).getAttribute('aria-pressed'),
+      ).toBe('true');
+      expect(
+        buttonNamed(compiled, charactersEn.sheet.roll.visibility.everyone).getAttribute(
+          'aria-pressed',
+        ),
+      ).toBe('false');
+
+      buttonNamed(compiled, charactersEn.sheet.roll.visibility.private).click();
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.visibility()).toBe('private');
+      expect(
+        buttonNamed(compiled, charactersEn.sheet.roll.visibility.private).getAttribute(
+          'aria-pressed',
+        ),
+      ).toBe('true');
+      expect(
+        buttonNamed(compiled, charactersEn.sheet.roll.visibility.dm).getAttribute('aria-pressed'),
+      ).toBe('false');
+    });
+
+    it('omits "Private" when allowPrivateRolls is false (only "everyone"/"dm" passed)', async () => {
+      const fixture = TestBed.createComponent(RollLogPanelComponent);
+      fixture.componentRef.setInput('visibilityOptions', ['everyone', 'dm']);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const group = compiled.querySelector('.roll-log-panel__visibility')!;
+      expect(group.querySelectorAll('button')).toHaveLength(2);
+      expect(
+        Array.from(group.querySelectorAll('button')).some(
+          (b) => b.textContent?.trim() === charactersEn.sheet.roll.visibility.private,
+        ),
+      ).toBe(false);
+    });
+  });
+
   it('Clear log empties the log and brings back the empty message', async () => {
     const fixture = TestBed.createComponent(RollLogPanelComponent);
     await fixture.whenStable();

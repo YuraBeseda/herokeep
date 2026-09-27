@@ -3,7 +3,12 @@
     <!-- Dice roller + roll log (task-7-brief.md): advantage/disadvantage toggle, manual entry,
          and the session-local log itself. Placed first so the toggle is visible before any
          tap-to-roll affordance below it is used. -->
-    <app-roll-log-panel [(advantageMode)]="advantageMode" class="play-tab__section" />
+    <app-roll-log-panel
+      [(advantageMode)]="advantageMode"
+      [visibilityOptions]="rollVisibilityOptions()"
+      [(visibility)]="rollVisibility"
+      class="play-tab__section"
+    />
 
     <!-- Wake lock toggle (task-11-brief.md): hidden entirely when the Screen Wake Lock API isn't
          supported (Global Constraints). -->

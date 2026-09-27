@@ -273,6 +273,32 @@
     }
   },
   "log": {
-    "placeholder": "The campaign log is coming soon."
+    "title": "Log",
+    "landmark": "Campaign log",
+    "empty": "Nothing here yet.",
+    "session": {
+      "started": "Session started — {title}",
+      "startedNoTitle": "Session started",
+      "ended": "Session ended — {title}",
+      "endedNoTitle": "Session ended"
+    },
+    "visibilityHint": {
+      "dm": "Only visible to you and the DM",
+      "private": "Only visible to you"
+    },
+    "composer": {
+      "label": "Message",
+      "byteCount": "{count}/{max} bytes",
+      "send": "Send",
+      "visibilityGroup": "Who can see this message",
+      "visibility": {
+        "everyone": "Everyone",
+        "dm": "DM only",
+        "private": "Private"
+      },
+      "errors": {
+        "generic": "Couldn't send that message. Try again."
+      }
+    }
   }
 }

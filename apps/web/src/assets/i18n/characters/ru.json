@@ -329,6 +329,12 @@
         "advantage": "Преимущество",
         "disadvantage": "Помеха"
       },
+      "visibilityGroup": "Кто увидит этот бросок",
+      "visibility": {
+        "everyone": "Все",
+        "dm": "Только Мастер",
+        "private": "Приватно"
+      },
       "clear": "Очистить журнал",
       "empty": "Пока нет бросков.",
       "manualTag": "Вручную",

@@ -329,6 +329,12 @@
         "advantage": "Перевага",
         "disadvantage": "Завада"
       },
+      "visibilityGroup": "Хто побачить цей кидок",
+      "visibility": {
+        "everyone": "Усі",
+        "dm": "Лише Майстер",
+        "private": "Приватно"
+      },
       "clear": "Очистити журнал",
       "empty": "Ще немає кидків.",
       "manualTag": "Вручну",

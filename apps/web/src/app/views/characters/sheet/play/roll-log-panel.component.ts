@@ -1,6 +1,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { Component, inject, model, signal } from '@angular/core';
+import { Component, inject, input, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import type { CampaignVisibility } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DiceResultComponent } from '@shared/components/dice-result/dice-result.component';
@@ -66,6 +67,20 @@ export class RollLogPanelComponent {
 
   readonly advantageMode = model<AdvantageMode>('normal');
 
+  /** [plan-10 task-10-brief.md, ruling 5] `undefined` (the default) hides the picker entirely —
+   * "solo behavior unchanged" for every character not linked to a campaign with a live session
+   * open. `PlayTabComponent` computes this reactively (campaign-linked + session open +
+   * `allowPrivateRolls`) and passes it down; this component only renders whatever it's given,
+   * exactly like `hitDiceRollOptions` (`RestDialogComponent`)'s own "resolve before opening"
+   * convention. */
+  readonly visibilityOptions = input<readonly CampaignVisibility[] | undefined>(undefined);
+
+  /** Sticky (NOT one-shot, unlike `advantageMode`) — ruling 5's picker default is
+   * `settings.visibility.rolls`, changeable per session, applying to every subsequent roll until
+   * the player changes it again. `PlayTabComponent` owns the writable signal this binds to and
+   * resets it to the campaign's own default whenever campaign context first resolves. */
+  readonly visibility = model<CampaignVisibility>('everyone');
+
   protected readonly entries = this.rollLogService.entries;
   protected readonly manualLabelOptions = MANUAL_LABEL_OPTIONS;
 
@@ -74,6 +89,10 @@ export class RollLogPanelComponent {
 
   protected setAdvantageMode(mode: AdvantageMode): void {
     this.advantageMode.set(mode);
+  }
+
+  protected setVisibility(v: CampaignVisibility): void {
+    this.visibility.set(v);
   }
 
   protected onManualAmountChange(value: number | null): void {

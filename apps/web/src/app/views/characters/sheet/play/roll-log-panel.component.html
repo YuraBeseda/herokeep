@@ -38,6 +38,26 @@
       </button>
     </div>
 
+    @if (visibilityOptions(); as options) {
+      <div
+        class="roll-log-panel__visibility"
+        role="group"
+        [attr.aria-label]="t('sheet.roll.visibilityGroup')"
+      >
+        @for (option of options; track option) {
+          <button
+            hk-button
+            type="button"
+            [variant]="visibility() === option ? 'primary' : 'ghost'"
+            [attr.aria-pressed]="visibility() === option"
+            (click)="setVisibility(option)"
+          >
+            {{ t('sheet.roll.visibility.' + option) }}
+          </button>
+        }
+      </div>
+    }
+
     <div class="roll-log-panel__manual">
       <hk-number-field
         [labelKey]="'characters.sheet.roll.manual.amountLabel'"

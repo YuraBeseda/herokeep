@@ -329,6 +329,12 @@
         "advantage": "Advantage",
         "disadvantage": "Disadvantage"
       },
+      "visibilityGroup": "Who can see this roll",
+      "visibility": {
+        "everyone": "Everyone",
+        "dm": "DM only",
+        "private": "Private"
+      },
       "clear": "Clear log",
       "empty": "No rolls yet.",
       "manualTag": "Manual",

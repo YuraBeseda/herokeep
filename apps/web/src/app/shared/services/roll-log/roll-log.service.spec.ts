@@ -108,6 +108,44 @@ describe('RollLogService', () => {
     });
   });
 
+  // [plan-10 task-10-brief.md, ruling 5] `formula`/`kind`/`characterId` are ADDITIVE optional
+  // fields on `RollEntry` — this service never inspects or acts on them, it just stores whatever
+  // the caller passes through `add()` unchanged, exactly like every other field.
+  it('passes formula/kind/characterId through unchanged when a caller supplies them', () => {
+    configure();
+    const service = injectService();
+
+    service.add({
+      labelKey: 'sheet.roll.entries.check',
+      params: { name: 'Strength' },
+      dice: [{ sides: 20, value: 12, kept: true }],
+      modifier: 3,
+      total: 15,
+      formula: '1d20+3',
+      kind: 'check',
+      characterId: 'char-a',
+    });
+
+    expect(service.entries()[0]).toMatchObject({
+      formula: '1d20+3',
+      kind: 'check',
+      characterId: 'char-a',
+    });
+  });
+
+  // Pre-existing call sites (e.g. `addManual`) never supply these — they must stay `undefined`.
+  it('leaves formula/kind/characterId undefined when a caller does not supply them', () => {
+    configure();
+    const service = injectService();
+
+    service.addManual('sheet.roll.manual.labels.other', {}, 5);
+
+    const [entry] = service.entries();
+    expect(entry?.formula).toBeUndefined();
+    expect(entry?.kind).toBeUndefined();
+    expect(entry?.characterId).toBeUndefined();
+  });
+
   it('clear() empties the log', () => {
     configure();
     const service = injectService();
