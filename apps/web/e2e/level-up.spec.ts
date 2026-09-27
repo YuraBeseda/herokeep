@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createFighter } from './helpers/create-fighter';
+import { chooseOwnClassIfPrompted } from './helpers/level-up';
 
 const CHARACTER_NAME = 'Aldric Level Up';
 
@@ -42,6 +43,9 @@ test.describe('level up — XP entry, average HP, and revert', () => {
     await test.step('open the level-up wizard and take the average HP', async () => {
       await page.locator('.sheet-shell__level-up-badge').click();
       await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
+      // Fighter-1's own ability scores clear a multiclass offer (see `chooseOwnClassIfPrompted`'s
+      // doc) — keep leveling Fighter.
+      await chooseOwnClassIfPrompted(page);
       await page.locator('.level-up__hp-average').click();
       await expect(page.locator('.level-up__hp-result')).toHaveText('Taking the average.');
     });

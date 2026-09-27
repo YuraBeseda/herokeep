@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createFighter } from './helpers/create-fighter';
 import { createWizard, prepareSpell } from './helpers/create-wizard';
+import { chooseOwnClassIfPrompted } from './helpers/level-up';
 
 const FIGHTER_NAME = 'Aldric Rest Actions';
 const WIZARD_NAME = 'Aldric Spellcaster';
@@ -17,6 +18,25 @@ function hpValueLocator(page: Page, label: 'Current' | 'Max'): Locator {
     .locator('.play-tab__hp-stats')
     .locator('hk-stat-tile', { hasText: label })
     .locator('.hk-stat-tile__value');
+}
+
+/** Selects the cast dialog's slot option by its LEVEL, not by the `<select>`'s own `value` — as of
+ * task 12 (phase 4 plan 11) that `value` is the option's ARRAY INDEX, not its spell level
+ * (`cast-dialog.component.ts`'s own doc: two options can share a `level` once a pact lane exists,
+ * e.g. a Warlock's pact slot and a regular slot at the same level on a multiclassed character, so
+ * index is the only value stable enough to disambiguate them — a bare `value: '3'` no longer means
+ * "the level-3 option"). This reads the matching `<option>`'s actual `value` attribute first
+ * rather than assuming a fixed index, so it stays correct regardless of how many slot levels or
+ * pact-lane options sit below the one being picked. Matches on `"Level {level} ("` — the
+ * non-pact `slotOption` translation's own fixed prefix (`characters/en.json`) — which never
+ * collides with the separate `slotOptionPact` string ("Pact slot, level …"). */
+async function selectCastSlotByLevel(page: Page, level: number): Promise<void> {
+  const option = page
+    .locator('.cast-dialog__slot-select option')
+    .filter({ hasText: `Level ${level} (` });
+  const value = await option.getAttribute('value');
+  if (value === null) throw new Error(`no cast-dialog slot option for level ${level}`);
+  await page.locator('.cast-dialog__slot-select').selectOption({ value });
 }
 
 /** Fills the shared HP-controls amount field (`hk-number-field`, cleared back to empty by the
@@ -41,6 +61,9 @@ async function applyHp(page: Page, amount: number, action: 'Damage' | 'Heal'): P
  */
 async function completeLevelUp(page: Page, pickName?: string): Promise<void> {
   await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
+  // The wizard fixture's own ability scores clear a multiclass offer too (see
+  // `chooseOwnClassIfPrompted`'s doc) — keep leveling Wizard.
+  await chooseOwnClassIfPrompted(page);
   await page.locator('.level-up__hp-average').click();
   await page.locator('.level-up__next').click();
 
@@ -205,7 +228,7 @@ test.describe('play actions', () => {
       await preparedRow.getByRole('button', { name: 'Cast', exact: true }).click();
 
       await expect(page.locator('.cast-dialog__title')).toHaveText('Cast Magic Missile');
-      await page.locator('.cast-dialog__slot-select').selectOption({ value: '3' });
+      await selectCastSlotByLevel(page, 3);
       await page
         .locator('.cast-dialog__actions')
         .getByRole('button', { name: 'Cast', exact: true })
@@ -224,7 +247,7 @@ test.describe('play actions', () => {
       await preparedRow.getByRole('button', { name: 'Cast', exact: true }).click();
 
       await expect(page.locator('.cast-dialog__title')).toHaveText('Cast Sleep');
-      await page.locator('.cast-dialog__slot-select').selectOption({ value: '3' });
+      await selectCastSlotByLevel(page, 3);
       await page
         .locator('.cast-dialog__actions')
         .getByRole('button', { name: 'Cast', exact: true })

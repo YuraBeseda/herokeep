@@ -122,55 +122,63 @@ export async function pickSkills(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Perception', exact: true }).click();
 }
 
-/** Step 8/9: the fighter's own two level-1 choices — Fighting Style (a `query` pick, rendered
- * as `hk-entity-picker` cards: Defense, matching `fighter-1.json`) and Weapon Masteries (a
- * `literal:'text'` pick with `count: 1` — see `packages/content/src/overlays/fighter.json`'s own
- * note on why it's freeform text, not a query). A single literal ENTRY naming two weapons
- * ("Longsword, Shortsword") is what satisfies task-15-brief.md's "freeform chips — enter two
- * weapon names" AND the choice's `count: 1`: two SEPARATE chips would push `selection.length` to
- * 2, which `validateSelection` flags as a `selection.count` error, blocking the review's
- * `complete()` gate — confirmed against `choice-step.component.spec.ts`'s own literal-pick unit
- * test, which records exactly one string per submitted chip.
+/** Step 8/9: the fighter's own two level-1 choices — Fighting Style (a `query` pick, rendered as
+ * `hk-entity-picker` cards: Defense, matching `fighter-1.json`) and Weapon Masteries. Task 8
+ * (phase 4 plan 11) closed T6's carry and swapped Weapon Masteries from a `literal:'text'` pick
+ * into a REAL `query` pick — `{query: {type: 'item', hasField: ['weapon.mastery']}}`, `count: 3`
+ * as of fix round 1 (matching the SRD's "three kinds of Simple or Martial weapons") — see
+ * `packages/content/src/overlays/fighter.json`'s own note. Both choices now render as
+ * `hk-entity-picker` card grids — the SAME DOM shape the old literal-vs-picker branch used to tell
+ * them apart by — so this loop instead reads the step's own `.choice-step__title` heading text:
+ * `choicePrompt` renders the pack's own `prompt` field verbatim in the default 'en' locale
+ * (`packages/engine/src/i18n/localizer.ts`), i.e. literally "Fighting Style" or "Weapon
+ * Masteries". Which three weapons are picked for Masteries doesn't matter to
+ * `fighter-1.json`'s golden assertions (AC/HP/prof — masteries only feed the attacks table,
+ * unexercised by `create-fighter.spec.ts`); Longsword and Shortsword (already equipped by
+ * `equipGear` below) plus Dagger are picked, all three carrying a real `weapon.mastery` field
+ * (every weapon in the pack does — `packages/content/src/transform/items.ts` throws at build time
+ * on any that doesn't).
  *
- * `outstandingChoices`' own ordering between these two isn't asserted here — whichever renders
- * first, this loop tells them apart by DOM shape (`hk-entity-picker`'s card grid vs the literal
- * pick's text-entry form), not position. Each resolves (and auto-advances) the instant it's
- * picked — the SECOND iteration's own selection is what carries the wizard on to Equipment, so
- * this loop (unlike every other choice step here) never clicks Next either.
+ * `outstandingChoices`' own ordering between the two choices isn't asserted here — whichever
+ * renders first, the title-text check above decides the branch, not position. Each resolves (and
+ * auto-advances) the instant its own last required pick lands: Fighting Style after one click
+ * (`count: 1`, single-select — `onToggle`'s replace-on-tap branch), Weapon Masteries after its
+ * third (`count: 3`, accumulate/multi-select) — so, like the old literal shape, this loop never
+ * clicks Next itself; the SECOND iteration's own final click is what carries the wizard on to
+ * Equipment.
  *
- * Which of the two is showing is decided with a `Promise.race` between two POLLING `waitFor`
- * calls (not a one-shot `locator.count()`, which isn't actionability-polled and proved less
- * reliable here first) — whichever selector's element is ACTUALLY, currently visible decides the
- * branch. That alone still isn't enough, though: `CreateWizardComponent`'s own `reHomeActiveStep`
- * effect (the thing that auto-advances once a decision resolves — see this file's module doc) runs
- * on its OWN scheduling tick, not synchronously with the click that resolved the decision, so the
- * JUST-COMPLETED step's view can still be sitting on screen for a brief window afterward. Without
- * waiting that out, the loop's SECOND iteration can start its own check inside that window, see
- * the (about-to-vanish) FIRST step still "currently visible" and act on it AGAIN — re-clicking an
- * already-selected `hk-entity-picker` card actually DESELECTS it (count:1 toggle) — and then hang
- * for the rest of the test's timeout once the real transition finally fires mid-click and the
- * target element is never seen again (confirmed via this exact failure's trace: the second
- * `.entity-picker` wait resolved in ~6ms, far too fast to be a fresh render, and the following
- * click log ends on "element was detached from the DOM, retrying" with no further progress).
- * Explicitly waiting for THIS iteration's own acted-on element to leave the DOM before looping
- * closes that window. */
+ * `CreateWizardComponent`'s own `reHomeActiveStep` effect (this file's module doc) runs on its OWN
+ * scheduling tick, not synchronously with the click that resolves a decision, so the
+ * JUST-COMPLETED step's view can still be sitting on screen for a brief window afterward — reading
+ * `.choice-step__title` inside that window on the loop's SECOND iteration would see the
+ * (about-to-vanish) FIRST step's own heading and act on it again, same failure class the original
+ * comment here described (a re-click on an already-selected card can even DESELECT it). Each
+ * branch below waits for its own LAST acted-on button to leave the DOM before the loop reads the
+ * title again: the entity-picker's `@for` tracks `row.id`, and Fighting Style's `ids` are entirely
+ * different entities from Weapon Masteries', so every row — the just-clicked one included — is
+ * torn down and rebuilt the instant `ChoiceStepComponent`'s reused instance receives the next
+ * `choiceId`, closing the race the same way the original branch's own detached-wait did. */
 export async function pickFightingStyleAndWeaponMasteries(page: Page): Promise<void> {
+  const WEAPON_MASTERIES_TITLE = 'Weapon Masteries';
+  const WEAPON_PICKS: readonly string[] = ['Longsword', 'Shortsword', 'Dagger'];
+
   for (let i = 0; i < 2; i++) {
-    const picker = page.locator('.entity-picker');
-    const literalForm = page.locator('.choice-step__literal-form');
-    const shown = await Promise.race([
-      picker.waitFor({ state: 'visible' }).then((): 'picker' => 'picker'),
-      literalForm.waitFor({ state: 'visible' }).then((): 'literal' => 'literal'),
-    ]);
-    if (shown === 'picker') {
+    const title = page.locator('.choice-step__title');
+    await title.waitFor({ state: 'visible' });
+    const heading = (await title.textContent())?.trim();
+    if (heading === WEAPON_MASTERIES_TITLE) {
+      for (const weapon of WEAPON_PICKS) {
+        await page.getByRole('button', { name: weapon, exact: true }).click();
+      }
+      const lastWeaponButton = page.getByRole('button', {
+        name: WEAPON_PICKS[WEAPON_PICKS.length - 1],
+        exact: true,
+      });
+      await lastWeaponButton.waitFor({ state: 'detached' });
+    } else {
       const defenseButton = page.getByRole('button', { name: 'Defense', exact: true });
       await defenseButton.click();
       await defenseButton.waitFor({ state: 'detached' });
-    } else {
-      await literalForm.locator('.choice-step__literal-input').fill('Longsword, Shortsword');
-      const addButton = literalForm.getByRole('button', { name: 'Add', exact: true });
-      await addButton.click();
-      await addButton.waitFor({ state: 'detached' });
     }
   }
 }

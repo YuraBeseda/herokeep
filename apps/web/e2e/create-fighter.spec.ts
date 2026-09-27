@@ -60,7 +60,7 @@ test.describe('character creation — golden path', () => {
       await pickSkills(page);
     });
 
-    await test.step('fighting style (Defense) and weapon masteries (freeform chips)', async () => {
+    await test.step('fighting style (Defense) and weapon masteries (3-weapon query pick)', async () => {
       await pickFightingStyleAndWeaponMasteries(page);
       await expect(page.locator('.equipment-step')).toBeVisible();
     });
