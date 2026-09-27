@@ -28,8 +28,11 @@ function hpValueLocator(page: Page, label: 'Current' | 'Max'): Locator {
  * "the level-3 option"). This reads the matching `<option>`'s actual `value` attribute first
  * rather than assuming a fixed index, so it stays correct regardless of how many slot levels or
  * pact-lane options sit below the one being picked. Matches on `"Level {level} ("` — the
- * non-pact `slotOption` translation's own fixed prefix (`characters/en.json`) — which never
- * collides with the separate `slotOptionPact` string ("Pact slot, level …"). */
+ * non-pact `slotOption` translation's own fixed prefix (`characters/en.json`). Playwright's
+ * `hasText` is a case-INSENSITIVE substring match, so this CAN also match the `slotOptionPact`
+ * string ("Pact slot, level {level} (…"); it is safe here only because this spec drives a
+ * single-class Wizard (no pact lane). A future collision fails loudly (strict-mode violation on
+ * `getAttribute` over a multi-match locator), not silently. */
 async function selectCastSlotByLevel(page: Page, level: number): Promise<void> {
   const option = page
     .locator('.cast-dialog__slot-select option')
