@@ -67,6 +67,27 @@ interface ActiveConditionRow {
  * to the generic per-code toast `StreamSyncSession`'s own `REJECT_TOAST_KEYS` channel already
  * raises for ANY gateway reject (task-11-brief.md's own instruction: "the panel should ALSO
  * reflect per-effect success/failure inline").
+ *
+ * ## Fix round 1 — honest overview-mode damage/heal feedback
+ *
+ * A server ACK only means the event was accepted and appended — NOT that the reducer's own effect
+ * actually applied. `hp.changed{kind:'damage'|'heal'}` skips with `'hp-unresolved'` when the
+ * character's underlying `facts.hp.current` is still the long-rest `'max'` sentinel (`dm-
+ * effects.ts`'s own delta-vs-absolute class doc), and `HpSnapshot.currentWasMax` — the ONLY signal
+ * that could tell this component whether that's the case — is only ever knowable from a live
+ * `Sheet` (`MemberSheetDialogComponent`'s 'full' mode). The party card's 'overview' mode
+ * (`PartyOverview`, no such field in `PartyOverviewUpdatedV1`) STRUCTURALLY cannot know either way
+ * — `hp().currentWasMax` reads `undefined` there, not `false`. Telling the DM "Applied." on an ACK
+ * in that blind spot is dishonest: the event may have silently no-opped.
+ *
+ * Fix: `applyDamage`/`applyHeal` pass `caveatIfUnresolvedSentinel: hp.currentWasMax === undefined`
+ * to `send()`; on a successful ack, `feedbackCaveated` is set from that flag and the template picks
+ * `dmEffects.status.appliedCaveat` (a caveated "sent, but may not have applied yet" phrasing)
+ * instead of the plain `dmEffects.status.applied`. Every OTHER action (temp HP — never reads prior
+ * state; inspiration/condition/xp/level/item/override — no sentinel concept at all) always passes
+ * no caveat and keeps the plain success message. A REJECT is unaffected either way (still the
+ * plain `dmEffects.status.failed`) — the caveat is specifically about a MISLEADING SUCCESS, not
+ * failure, which is already accurate.
  */
 @Component({
   selector: 'app-dm-effects-panel',
@@ -101,6 +122,10 @@ export class DmEffectsPanelComponent {
   protected readonly busy = signal(false);
   protected readonly feedbackOk = signal<boolean | undefined>(undefined);
   protected readonly feedbackMessage = signal<string | undefined>(undefined);
+  /** `true` only alongside a successful (`feedbackOk() === true`) damage/heal ack sent WITHOUT
+   * sentinel certainty (fix round 1 — see class doc). Meaningless/ignored whenever `feedbackOk()`
+   * isn't `true`. */
+  protected readonly feedbackCaveated = signal(false);
 
   // HP
   protected readonly damageAmount = signal<number | null>(1);
@@ -169,14 +194,18 @@ export class DmEffectsPanelComponent {
     const hp = this.hp();
     const amount = this.damageAmount();
     if (!hp || amount === null || amount <= 0) return;
-    await this.send(damageDraft(amount, hp));
+    await this.send(damageDraft(amount, hp), {
+      caveatIfUnresolvedSentinel: hp.currentWasMax === undefined,
+    });
   }
 
   protected async applyHeal(): Promise<void> {
     const hp = this.hp();
     const amount = this.healAmount();
     if (!hp || amount === null || amount <= 0) return;
-    await this.send(healDraft(amount, hp));
+    await this.send(healDraft(amount, hp), {
+      caveatIfUnresolvedSentinel: hp.currentWasMax === undefined,
+    });
   }
 
   protected async applyTemp(): Promise<void> {
@@ -302,15 +331,20 @@ export class DmEffectsPanelComponent {
     }
   }
 
-  private async send(drafts: DraftEvent[]): Promise<void> {
+  private async send(
+    drafts: DraftEvent[],
+    options?: { readonly caveatIfUnresolvedSentinel?: boolean },
+  ): Promise<void> {
     this.busy.set(true);
     this.feedbackOk.set(undefined);
     this.feedbackMessage.set(undefined);
+    this.feedbackCaveated.set(false);
     try {
       const result = await this.campaignStore.gatewayAppend(this.characterId(), drafts);
       const ok = result.rejected.length === 0;
       this.feedbackOk.set(ok);
       this.feedbackMessage.set(ok ? undefined : result.rejected[0]?.message);
+      this.feedbackCaveated.set(ok && options?.caveatIfUnresolvedSentinel === true);
     } catch (err) {
       this.feedbackOk.set(false);
       this.feedbackMessage.set(err instanceof Error ? err.message : undefined);

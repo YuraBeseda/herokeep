@@ -262,7 +262,13 @@
           role="status"
           [class.dm-effects-panel__feedback--error]="feedbackOk() === false"
         >
-          {{ feedbackOk() ? t('dmEffects.status.applied') : t('dmEffects.status.failed') }}
+          {{
+            feedbackOk()
+              ? feedbackCaveated()
+                ? t('dmEffects.status.appliedCaveat')
+                : t('dmEffects.status.applied')
+              : t('dmEffects.status.failed')
+          }}
           @if (feedbackMessage(); as message) {
             {{ message }}
           }

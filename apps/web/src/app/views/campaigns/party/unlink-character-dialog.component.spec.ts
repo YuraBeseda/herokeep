@@ -127,6 +127,22 @@ describe('UnlinkCharacterDialogComponent', () => {
     expect(compiled.querySelector('.unlink-character-dialog__confirm')).toBeTruthy();
   });
 
+  // Fix round 1 (Minor) — same a11y assertion `member-sheet-dialog.component.spec.ts`'s own
+  // "data-dialog-title wiring" test makes, adapted to this component's simpler (non-CDK-overlay)
+  // harness: the title element itself carries `data-dialog-title` (`DialogComponent`'s own
+  // `aria-labelledby` wiring reads this attribute when the real `DialogService` opens it — task-
+  // 9-report.md), with the character name correctly interpolated into it.
+  it('a11y: the title element carries data-dialog-title, with the character name interpolated', async () => {
+    configure({});
+    const fixture = TestBed.createComponent(UnlinkCharacterDialogComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const title = compiled.querySelector('[data-dialog-title]');
+    expect(title).not.toBeNull();
+    expect(title?.textContent).toContain('Aria');
+  });
+
   it('Cancel closes with false and touches neither gatewayAppend nor appendTx', async () => {
     const { close, gatewayAppend, appendTx } = configure({});
     const fixture = TestBed.createComponent(UnlinkCharacterDialogComponent);

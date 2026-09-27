@@ -272,6 +272,7 @@
     },
     "status": {
       "applied": "Applied.",
+      "appliedCaveat": "Sent — applies once the character's HP is initialized.",
       "failed": "Couldn't apply that change."
     }
   },

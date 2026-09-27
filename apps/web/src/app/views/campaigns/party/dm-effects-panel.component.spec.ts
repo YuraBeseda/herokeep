@@ -433,4 +433,103 @@ describe('DmEffectsPanelComponent', () => {
 
     expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.applied);
   });
+
+  // Fix round 1 (Important): a server ACK does not mean the reducer's effect actually applied —
+  // `hp.changed{damage|heal}` silently skips as 'hp-unresolved' while the target's HP is still the
+  // long-rest 'max' sentinel, which 'overview' mode (no `currentWasMax` field at all in
+  // `PartyOverviewUpdatedV1`) can never detect. The ack feedback must say so instead of the plain
+  // "Applied." — full mode (a live Sheet, `currentWasMax` a real boolean) keeps the plain message.
+  describe('fix round 1: honest overview-mode damage/heal feedback', () => {
+    it('overview mode (hp.currentWasMax undefined) damage ack shows the CAVEATED message, not the plain one', async () => {
+      const { gatewayAppend } = configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      // HostComponent's default hp has no `currentWasMax` key at all — genuine overview mode.
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expand(compiled);
+      fixture.detectChanges();
+
+      setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 1);
+      fixture.detectChanges();
+      clickButtonWithText(compiled, campaignsEn.dmEffects.hp.damage);
+      await whenStable(fixture);
+
+      expect(gatewayAppend).toHaveBeenCalled();
+      expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.appliedCaveat);
+      expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.status.applied);
+    });
+
+    it('overview mode heal ack ALSO shows the caveated message', async () => {
+      configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expand(compiled);
+      fixture.detectChanges();
+
+      setNumberField(compiled, campaignsEn.dmEffects.hp.healLabel, 1);
+      fixture.detectChanges();
+      clickButtonWithText(compiled, campaignsEn.dmEffects.hp.heal);
+      await whenStable(fixture);
+
+      expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.appliedCaveat);
+      expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.status.applied);
+    });
+
+    it('full mode (hp.currentWasMax a real boolean, from a live Sheet) damage ack shows the PLAIN message', async () => {
+      configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.hp.set({ current: 10, max: 20, temp: 2, currentWasMax: false });
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expand(compiled);
+      fixture.detectChanges();
+
+      setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 1);
+      fixture.detectChanges();
+      clickButtonWithText(compiled, campaignsEn.dmEffects.hp.damage);
+      await whenStable(fixture);
+
+      expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.applied);
+      expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.status.appliedCaveat);
+    });
+
+    it('a REJECTED damage in overview mode still shows the plain "failed" message (the caveat is about a misleading SUCCESS, not failure)', async () => {
+      const gatewayAppend = vi.fn().mockResolvedValue({
+        acked: [],
+        rejected: [{ id: 'x', code: 'forbidden' }],
+      } satisfies AckOrReject);
+      configure({ gatewayAppend });
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expand(compiled);
+      fixture.detectChanges();
+
+      setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 1);
+      fixture.detectChanges();
+      clickButtonWithText(compiled, campaignsEn.dmEffects.hp.damage);
+      await whenStable(fixture);
+
+      expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.failed);
+      expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.status.appliedCaveat);
+    });
+
+    it('a non-HP action (inspiration) always shows the plain message, even with no currentWasMax info at all', async () => {
+      configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      // Default hp has no currentWasMax — same "unknown sentinel" shape as overview mode — but
+      // inspiration has no sentinel concept, so it must never be caveated.
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      expand(compiled);
+      fixture.detectChanges();
+
+      clickButtonWithText(compiled, campaignsEn.dmEffects.inspiration.grant);
+      await whenStable(fixture);
+
+      expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.applied);
+      expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.status.appliedCaveat);
+    });
+  });
 });
