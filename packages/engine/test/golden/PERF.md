@@ -16,3 +16,4 @@ Median of 5 `reduce` + `derive` runs over `fighter-5-play`'s real event log (cre
 - 2026-09-13T03:20:54.165Z: 536 events, samples [3.01, 3.38, 3.91, 3.91, 12.18] ms, median 3.91 ms (budget 150 ms)
 - 2026-09-13T03:23:00.487Z: 536 events, samples [2.83, 2.93, 3.83, 6.93, 12.39] ms, median 3.83 ms (budget 150 ms)
 - 2026-09-13T03:38:20.012Z: 536 events, samples [3.06, 3.12, 3.24, 4.16, 16.18] ms, median 3.24 ms (budget 150 ms)
+- 2026-09-27T20:10:51.946Z: derive-only, multi-fighter1-wizard19 (level 20, 2 classes, 30 events), 25 samples, median 0.549 ms (doc-05 budget: <5ms desktop / <15ms mid phone; task-13 measurement, not the reduce+derive 536-event tripwire above)

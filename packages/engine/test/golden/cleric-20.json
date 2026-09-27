@@ -1,0 +1,568 @@
+{
+  "name": "cleric-20",
+  "packs": ["dist:srd-5e-2024"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000000001",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 1,
+      "ts": "2026-09-09T12:00:01.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Beren",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "masculine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000002",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 2,
+      "ts": "2026-09-09T12:00:02.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["srd-5e-2024:species/human"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000003",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 3,
+      "ts": "2026-09-09T12:00:03.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/acolyte"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000004",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 4,
+      "ts": "2026-09-09T12:00:04.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/acolyte@0/ability-scores",
+        "selection": ["wis:+2", "con:+1"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000005",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 5,
+      "ts": "2026-09-09T12:00:05.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["wis:15", "con:14", "dex:13", "str:12", "int:10", "cha:8"],
+        "context": {
+          "method": "standardArray"
+        }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000006",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 6,
+      "ts": "2026-09-09T12:00:06.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000007",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 7,
+      "ts": "2026-09-09T12:00:07.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/cleric@1/skills",
+        "selection": ["insight", "religion"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000008",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 8,
+      "ts": "2026-09-09T12:00:08.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 2,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000009",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 9,
+      "ts": "2026-09-09T12:00:09.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/life-domain"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000a",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 10,
+      "ts": "2026-09-09T12:00:10.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 4,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000b",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 11,
+      "ts": "2026-09-09T12:00:11.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/cleric@4/feat",
+        "selection": ["srd-5e-2024:feat/ability-score-improvement"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000c",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 12,
+      "ts": "2026-09-09T12:00:12.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores",
+        "selection": ["wis:+2"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000d",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 13,
+      "ts": "2026-09-09T12:00:13.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 5,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000e",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 14,
+      "ts": "2026-09-09T12:00:14.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 6,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000f",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 15,
+      "ts": "2026-09-09T12:00:15.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 7,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000010",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 16,
+      "ts": "2026-09-09T12:00:16.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 8,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000011",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 17,
+      "ts": "2026-09-09T12:00:17.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 9,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000012",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 18,
+      "ts": "2026-09-09T12:00:18.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 10,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000013",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 19,
+      "ts": "2026-09-09T12:00:19.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 11,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000014",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 20,
+      "ts": "2026-09-09T12:00:20.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 12,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000015",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 21,
+      "ts": "2026-09-09T12:00:21.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 13,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000016",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 22,
+      "ts": "2026-09-09T12:00:22.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 14,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000017",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 23,
+      "ts": "2026-09-09T12:00:23.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 15,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000018",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 24,
+      "ts": "2026-09-09T12:00:24.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 16,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000019",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 25,
+      "ts": "2026-09-09T12:00:25.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 17,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001a",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 26,
+      "ts": "2026-09-09T12:00:26.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 18,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001b",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 27,
+      "ts": "2026-09-09T12:00:27.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 19,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000001c",
+      "stream": "char:22222222-2222-7222-8222-222222222222",
+      "seq": 28,
+      "ts": "2026-09-09T12:00:28.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/cleric",
+        "level": 20,
+        "hpRoll": "average"
+      }
+    }
+  ],
+  "expect": {
+    "sheet.level": 20,
+    "sheet.hp.max.value": 143,
+    "sheet.prof": 6,
+    "sheet.abilities[\"wis\"].save.value": 10,
+    "sheet.resources[0].id": "channel-divinity",
+    "sheet.resources[0].max.value": 4,
+    "sheet.spellcasting[0].slots": [
+      {
+        "level": 1,
+        "max": 4,
+        "used": 0
+      },
+      {
+        "level": 2,
+        "max": 3,
+        "used": 0
+      },
+      {
+        "level": 3,
+        "max": 3,
+        "used": 0
+      },
+      {
+        "level": 4,
+        "max": 3,
+        "used": 0
+      },
+      {
+        "level": 5,
+        "max": 3,
+        "used": 0
+      },
+      {
+        "level": 6,
+        "max": 2,
+        "used": 0
+      },
+      {
+        "level": 7,
+        "max": 2,
+        "used": 0
+      },
+      {
+        "level": 8,
+        "max": 1,
+        "used": 0
+      },
+      {
+        "level": 9,
+        "max": 1,
+        "used": 0
+      }
+    ],
+    "sheet.spellcasting[0].preparedMax": 22,
+    "sheet.spellcasting[0].cantripsKnown": 5
+  }
+}
