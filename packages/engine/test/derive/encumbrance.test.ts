@@ -169,6 +169,60 @@ describe('derive: Sheet.carry.load — inventory weight sourcing', () => {
     const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
     expect(sheet.carry?.load).toBe(0);
   });
+
+  // Fix round 1 (task 5 review, Important): `item.custom` is an UNVALIDATED bag
+  // (`ItemAddedV1.custom: z.record(..., z.unknown())` checks only the key, never the value) — a
+  // client can put anything in `custom.weight`. Each of these must produce a SANE `load` (never
+  // NaN, which would silently poison every threshold comparison to `false`/'normal'; never a
+  // negative offset to every other item's weight).
+  it('custom.weight: NaN contributes 0, not NaN (would otherwise poison the whole load)', () => {
+    const facts = baseFacts();
+    facts.inventory = [
+      { instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }, // 55, real weight
+      { instanceId: 'i2', qty: 1, equipped: false, attuned: false, custom: { weight: NaN } },
+    ];
+    const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
+    expect(sheet.carry?.load).toBe(55); // NOT NaN
+    expect(Number.isNaN(sheet.carry?.load)).toBe(false);
+  });
+
+  it('custom.weight: Infinity contributes 0, not Infinity', () => {
+    const facts = baseFacts();
+    facts.inventory = [
+      { instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false },
+      { instanceId: 'i2', qty: 1, equipped: false, attuned: false, custom: { weight: Infinity } },
+    ];
+    const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
+    expect(sheet.carry?.load).toBe(55);
+  });
+
+  it('custom.weight: -Infinity contributes 0, not -Infinity', () => {
+    const facts = baseFacts();
+    facts.inventory = [
+      { instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false },
+      { instanceId: 'i2', qty: 1, equipped: false, attuned: false, custom: { weight: -Infinity } },
+    ];
+    const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
+    expect(sheet.carry?.load).toBe(55);
+  });
+
+  it('custom.weight: negative contributes 0, not a negative offset to other items', () => {
+    const facts = baseFacts();
+    facts.inventory = [
+      { instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }, // 55
+      { instanceId: 'i2', qty: 1, equipped: false, attuned: false, custom: { weight: -1000 } },
+    ];
+    const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
+    expect(sheet.carry?.load).toBe(55); // NOT 55 - 1000 = -945
+  });
+
+  it('custom.weight: an absurdly huge but FINITE positive value is legal and NOT clamped', () => {
+    const facts = baseFacts();
+    facts.inventory = [{ instanceId: 'i1', qty: 1, equipped: false, attuned: false, custom: { weight: 1_000_000 } }];
+    const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
+    expect(sheet.carry?.load).toBe(1_000_000);
+    expect(sheet.carry?.state).toBe('overloaded'); // 1,000,000 > capacity (150) — comparison stays sane
+  });
 });
 
 describe('derive: overridesProvenance merges attunementMax + encumbrance independently', () => {
