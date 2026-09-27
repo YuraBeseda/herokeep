@@ -8,10 +8,13 @@ import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { AuthService } from '@shared/services/auth/auth.service';
 import type { PartyOverview } from '@shared/services/campaigns/campaign-projection';
+import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
+import { DmEffectsPanelComponent } from './dm-effects-panel.component';
 import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
+import { UnlinkCharacterDialogComponent } from './unlink-character-dialog.component';
 
 /** A `visibility.partySheets` mode, resolved with the same default `defaultCampaignSettings`
  * (`campaign-settings.component.ts`, task-6-report.md judgment call 7) uses for a campaign with
@@ -26,6 +29,7 @@ interface PartyCardVm {
   readonly characterId: string;
   readonly name: string;
   readonly left: boolean;
+  readonly ownerId: string;
   readonly overview: PartyOverview | undefined;
 }
 
@@ -62,7 +66,13 @@ interface MemberWithoutCharacterVm {
  */
 @Component({
   selector: 'app-party-tab',
-  imports: [TranslocoDirective, ButtonComponent, HpBarComponent, BlobUrlPipe],
+  imports: [
+    TranslocoDirective,
+    ButtonComponent,
+    HpBarComponent,
+    BlobUrlPipe,
+    DmEffectsPanelComponent,
+  ],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './party-tab.component.html',
   styleUrl: './party-tab.component.scss',
@@ -102,6 +112,7 @@ export class PartyTabComponent {
       characterId,
       name: entry.name,
       left: entry.left,
+      ownerId: entry.ownerId,
       overview: state.overviews.get(characterId),
     }));
   });
@@ -170,6 +181,44 @@ export class PartyTabComponent {
     this.dialogService.open(MemberSheetDialogComponent, {
       data: { campaignId, characterId: card.characterId, name: card.name },
       sheet: true,
+    });
+  }
+
+  /** [plan-10 Task 11] `DmEffectsPanelComponent`'s HP baseline for THIS card — 'overview' mode
+   * only ever has `PartyOverview.hp/hpMax/temp` (never `currentWasMax`, which only a live `Sheet`
+   * can supply — task-11-report.md's own documented limitation). `undefined` when no overview has
+   * arrived yet at all (the panel renders its own "no baseline" hint in that case). */
+  protected hpSnapshot(card: PartyCardVm): HpSnapshot | undefined {
+    const ov = card.overview;
+    return ov ? { current: ov.hp, max: ov.hpMax, temp: ov.temp } : undefined;
+  }
+
+  protected activeConditionIds(card: PartyCardVm): readonly string[] {
+    return card.overview?.conditions ?? [];
+  }
+
+  /** [plan-10 Task 11] Scoped EXACTLY to doc-03's §bye obligation: a roster entry whose character
+   * hasn't left yet (`left: false`) but whose OWNING member has been removed/left the campaign —
+   * `member.removed`/`member.left` unlink the MEMBERSHIP only, never the character, so this is the
+   * ONLY way such a character is ever discoverable/unlinkable again (see
+   * `dm-unlink-sequence.ts`'s own class doc for the full server-rule citation). Deliberately NOT a
+   * general "unlink any character" tool — an active member's own character is never offered this
+   * action here. */
+  protected canUnlink(card: PartyCardVm): boolean {
+    if (!this.isDm() || card.left) return false;
+    return this.state()?.members.get(card.ownerId)?.removed === true;
+  }
+
+  protected openUnlink(card: PartyCardVm): void {
+    const campaignId = this.campaignStore.campaignId();
+    if (!campaignId) return;
+    this.dialogService.open(UnlinkCharacterDialogComponent, {
+      data: {
+        campaignId,
+        characterId: card.characterId,
+        ownerId: card.ownerId,
+        characterName: card.name,
+      },
     });
   }
 }

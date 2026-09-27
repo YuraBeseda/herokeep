@@ -1,0 +1,64 @@
+<ng-container *transloco="let t; read: 'campaigns'">
+  <h2 class="unlink-character-dialog__title" data-dialog-title>
+    {{ t('unlink.title', { name: characterName }) }}
+  </h2>
+
+  @if (confirming()) {
+    <p class="unlink-character-dialog__body">{{ t('unlink.body', { name: characterName }) }}</p>
+    <div class="unlink-character-dialog__actions">
+      <button
+        hk-button
+        type="button"
+        class="unlink-character-dialog__cancel"
+        [variant]="'ghost'"
+        (click)="cancel()"
+      >
+        {{ t('unlink.cancel') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="unlink-character-dialog__confirm"
+        [variant]="'danger'"
+        (click)="confirmUnlink()"
+      >
+        {{ t('unlink.confirm') }}
+      </button>
+    </div>
+  } @else {
+    <div class="unlink-character-dialog__progress" role="status" [attr.aria-live]="'polite'">
+      <ol class="unlink-character-dialog__steps">
+        @for (step of steps(); track step.step) {
+          <li class="unlink-character-dialog__step" [attr.data-ok]="step.ok">
+            <span>{{ t('unlink.progress.step.' + step.step) }}</span>
+            <span>{{
+              t(step.ok ? 'link.progress.outcome.committed' : 'link.progress.outcome.rejected')
+            }}</span>
+          </li>
+        }
+      </ol>
+
+      @if (errorKey(); as key) {
+        <p class="unlink-character-dialog__error" role="alert">{{ t(key) }}</p>
+      }
+
+      @if (unlinkedOk()) {
+        <p class="unlink-character-dialog__success">
+          {{ t('unlink.success', { name: characterName }) }}
+        </p>
+      } @else if (canRetry()) {
+        <p class="unlink-character-dialog__incomplete">{{ t('unlink.incomplete') }}</p>
+        <button
+          hk-button
+          type="button"
+          class="unlink-character-dialog__retry"
+          [variant]="'primary'"
+          [disabled]="busy()"
+          (click)="retry()"
+        >
+          {{ t('unlink.retry') }}
+        </button>
+      }
+    </div>
+  }
+</ng-container>

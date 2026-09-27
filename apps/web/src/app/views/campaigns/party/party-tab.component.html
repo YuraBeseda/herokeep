@@ -65,6 +65,18 @@
             </button>
           }
 
+          @if (canUnlink(card)) {
+            <button
+              hk-button
+              type="button"
+              [variant]="'danger'"
+              class="party-tab__unlink"
+              (click)="openUnlink(card)"
+            >
+              {{ t('unlink.action') }}
+            </button>
+          }
+
           @if (showOverviewDetails() && card.overview; as ov) {
             <div class="party-tab__hp">
               <hk-hp-bar
@@ -109,6 +121,14 @@
             }
           } @else if (!card.left) {
             <p class="party-tab__no-overview">{{ t('party.card.noOverview') }}</p>
+          }
+
+          @if (isDm() && !card.left) {
+            <app-dm-effects-panel
+              [characterId]="card.characterId"
+              [hp]="hpSnapshot(card)"
+              [activeConditionIds]="activeConditionIds(card)"
+            />
           }
         </div>
       }

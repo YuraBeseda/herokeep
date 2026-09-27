@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.dm-effects-panel__toggle {
+  align-self: flex-end;
+}
+
+.dm-effects-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+  width: 100%;
+}
+
+.dm-effects-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dm-effects-panel__hp-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.dm-effects-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dm-effects-panel__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.dm-effects-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.8125rem;
+}
+
+.dm-effects-panel__text-input {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  color: var(--text-1);
+}
+
+.dm-effects-panel__hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+.dm-effects-panel__feedback {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-2);
+}
+
+.dm-effects-panel__feedback--error {
+  color: var(--danger);
+}

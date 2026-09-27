@@ -512,6 +512,7 @@
     "empty": "Подій поки немає.",
     "revert": "Скасувати",
     "revertedBadge": "Скасовано",
+    "overrideBadge": "Ручна зміна",
     "unknown": "Щось відбулося ({type}).",
     "groupSuffix": "{count, plural, one {(+# подія)} few {(+# події)} many {(+# подій)} other {(+# події)}}",
     "family": {

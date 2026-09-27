@@ -48,6 +48,12 @@
   color: var(--text-2);
 }
 
+/* doc-02 L111: override.applied "rendered distinctly" — a left accent bar on the whole row, in
+   addition to the badge below, so a skimmed timeline still surfaces manual overrides visually. */
+.timeline-tab__row--override .timeline-tab__card {
+  border-inline-start: 3px solid var(--accent);
+}
+
 .timeline-tab__badge {
   flex: 0 0 auto;
   color: var(--text-2);
@@ -55,6 +61,11 @@
   border: 1px solid var(--border-1);
   border-radius: var(--radius-s);
   padding: 0 var(--space-1);
+}
+
+.timeline-tab__badge--override {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .timeline-tab__row-actions {

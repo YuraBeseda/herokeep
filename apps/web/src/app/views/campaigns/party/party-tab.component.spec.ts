@@ -13,6 +13,7 @@ import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
 import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
 import { PartyTabComponent } from './party-tab.component';
+import { UnlinkCharacterDialogComponent } from './unlink-character-dialog.component';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -458,6 +459,138 @@ describe('PartyTabComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
 
       expect(viewSheetButton(compiled)).toBeNull();
+    });
+  });
+
+  // plan-10 task-11-brief.md: doc-03 §bye obligation — scoped EXACTLY to a left:false roster
+  // entry whose owning member has been removed/left the campaign.
+  describe('DM unlink (doc-03 §bye obligation)', () => {
+    function stateWithRemovedOwner(): Partial<CampaignState> {
+      return mkState({
+        members: new Map([['u-gone', { displayName: 'Charlie', role: 'player', removed: true }]]),
+        roster: new Map([['char-1', { ownerId: 'u-gone', name: 'Grog', left: false }]]),
+      });
+    }
+
+    function unlinkButton(compiled: HTMLElement): HTMLButtonElement | null {
+      return (
+        Array.from(compiled.querySelectorAll<HTMLButtonElement>('.party-tab__card button')).find(
+          (b) => b.textContent?.trim() === 'Unlink character',
+        ) ?? null
+      );
+    }
+
+    it('DM sees "Unlink character" on a left:false roster entry whose owner has been removed', async () => {
+      configure({ role: 'dm', state: stateWithRemovedOwner() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(unlinkButton(compiled)).not.toBeNull();
+    });
+
+    it('opens UnlinkCharacterDialogComponent with the ROSTER ownerId (not the DM) on click', async () => {
+      const { dialogOpenSpy } = configure({ role: 'dm', state: stateWithRemovedOwner() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      unlinkButton(compiled)!.click();
+      await fixture.whenStable();
+
+      expect(dialogOpenSpy).toHaveBeenCalledTimes(1);
+      const [component, opts] = dialogOpenSpy.mock.calls[0] as [unknown, { data: unknown }];
+      expect(component).toBe(UnlinkCharacterDialogComponent);
+      expect(opts.data).toEqual({
+        campaignId: '00000000-0000-4000-8000-000000000001',
+        characterId: 'char-1',
+        ownerId: 'u-gone',
+        characterName: 'Grog',
+      });
+    });
+
+    it('no unlink button when the owner is still an active (non-removed) member', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          members: new Map([['u-player', { displayName: 'Bob', role: 'player', removed: false }]]),
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(unlinkButton(compiled)).toBeNull();
+    });
+
+    it('no unlink button once the roster entry itself already shows left:true', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          members: new Map([['u-gone', { displayName: 'Charlie', role: 'player', removed: true }]]),
+          roster: new Map([['char-1', { ownerId: 'u-gone', name: 'Grog', left: true }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(unlinkButton(compiled)).toBeNull();
+    });
+
+    it('a non-DM member never sees the unlink action, even for a removed owner', async () => {
+      configure({ role: 'player', state: stateWithRemovedOwner() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(unlinkButton(compiled)).toBeNull();
+    });
+  });
+
+  // plan-10 task-11-brief.md: mounted on the party card (works in 'overview' mode), DM-only.
+  describe('DM effects panel mounting', () => {
+    it('mounts app-dm-effects-panel for the DM on an active (not-left) card', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('app-dm-effects-panel')).not.toBeNull();
+    });
+
+    it('never mounts the panel for a non-DM viewer', async () => {
+      configure({
+        role: 'player',
+        state: mkState({
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('app-dm-effects-panel')).toBeNull();
+    });
+
+    it('never mounts the panel on a left:true card, even for the DM', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Departed', left: true }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('app-dm-effects-panel')).toBeNull();
     });
   });
 });

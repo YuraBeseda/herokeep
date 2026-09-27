@@ -1,0 +1,273 @@
+<div class="dm-effects-panel" *transloco="let t; read: 'campaigns'">
+  <button
+    hk-button
+    type="button"
+    [variant]="'ghost'"
+    class="dm-effects-panel__toggle"
+    [attr.aria-expanded]="expanded()"
+    (click)="toggle()"
+  >
+    {{ t('dmEffects.toggle') }}
+  </button>
+
+  @if (expanded()) {
+    <div class="dm-effects-panel__body" role="group" [attr.aria-label]="t('dmEffects.toggle')">
+      <hk-sheet-section
+        [titleKey]="'campaigns.dmEffects.hp.title'"
+        class="dm-effects-panel__section"
+      >
+        <div class="dm-effects-panel__hp-row">
+          <hk-number-field
+            [labelKey]="'campaigns.dmEffects.hp.damageLabel'"
+            [min]="0"
+            [step]="1"
+            [ngModel]="damageAmount()"
+            (ngModelChange)="onDamageAmountChange($event)"
+          />
+          <button
+            hk-button
+            type="button"
+            [variant]="'danger'"
+            [disabled]="busy() || !canApplyHp()"
+            (click)="applyDamage()"
+          >
+            {{ t('dmEffects.hp.damage') }}
+          </button>
+        </div>
+        <div class="dm-effects-panel__hp-row">
+          <hk-number-field
+            [labelKey]="'campaigns.dmEffects.hp.healLabel'"
+            [min]="0"
+            [step]="1"
+            [ngModel]="healAmount()"
+            (ngModelChange)="onHealAmountChange($event)"
+          />
+          <button
+            hk-button
+            type="button"
+            [variant]="'primary'"
+            [disabled]="busy() || !canApplyHp()"
+            (click)="applyHeal()"
+          >
+            {{ t('dmEffects.hp.heal') }}
+          </button>
+        </div>
+        <div class="dm-effects-panel__hp-row">
+          <hk-number-field
+            [labelKey]="'campaigns.dmEffects.hp.tempLabel'"
+            [min]="0"
+            [step]="1"
+            [ngModel]="tempAmount()"
+            (ngModelChange)="onTempAmountChange($event)"
+          />
+          <button
+            hk-button
+            type="button"
+            [variant]="'ghost'"
+            [disabled]="busy()"
+            (click)="applyTemp()"
+          >
+            {{ t('dmEffects.hp.addTemp') }}
+          </button>
+        </div>
+        @if (!canApplyHp()) {
+          <p class="dm-effects-panel__hint">{{ t('dmEffects.hp.noBaseline') }}</p>
+        }
+      </hk-sheet-section>
+
+      <hk-sheet-section
+        [titleKey]="'campaigns.dmEffects.inspiration.title'"
+        class="dm-effects-panel__section"
+      >
+        <div class="dm-effects-panel__actions">
+          <button
+            hk-button
+            type="button"
+            [variant]="'primary'"
+            [disabled]="busy()"
+            (click)="grantInspiration(true)"
+          >
+            {{ t('dmEffects.inspiration.grant') }}
+          </button>
+          <button
+            hk-button
+            type="button"
+            [variant]="'ghost'"
+            [disabled]="busy()"
+            (click)="grantInspiration(false)"
+          >
+            {{ t('dmEffects.inspiration.revoke') }}
+          </button>
+        </div>
+      </hk-sheet-section>
+
+      <hk-sheet-section
+        [titleKey]="'campaigns.dmEffects.conditions.title'"
+        class="dm-effects-panel__section"
+      >
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="busy()"
+          (click)="onAddCondition()"
+        >
+          {{ t('dmEffects.conditions.add') }}
+        </button>
+        @if (activeConditionRows().length > 0) {
+          <div class="dm-effects-panel__conditions">
+            @for (row of activeConditionRows(); track row.id) {
+              <hk-chip [selected]="true" [removable]="true" (remove)="onRemoveCondition(row.id)">
+                {{ row.name }}
+                <span hk-chip-remove class="visually-hidden">{{
+                  t('dmEffects.conditions.remove')
+                }}</span>
+              </hk-chip>
+            }
+          </div>
+        }
+      </hk-sheet-section>
+
+      @if (xpMode() === 'xp') {
+        <hk-sheet-section
+          [titleKey]="'campaigns.dmEffects.xp.title'"
+          class="dm-effects-panel__section"
+        >
+          <hk-number-field
+            [labelKey]="'campaigns.dmEffects.xp.amountLabel'"
+            [step]="1"
+            [ngModel]="xpAmount()"
+            (ngModelChange)="onXpAmountChange($event)"
+          />
+          <label class="dm-effects-panel__field">
+            <span>{{ t('dmEffects.xp.reasonLabel') }}</span>
+            <input
+              type="text"
+              class="dm-effects-panel__text-input"
+              [value]="xpReason()"
+              (input)="onXpReasonChange($any($event.target).value)"
+            />
+          </label>
+          <button
+            hk-button
+            type="button"
+            [variant]="'primary'"
+            [disabled]="busy()"
+            (click)="grantXp()"
+          >
+            {{ t('dmEffects.xp.grant') }}
+          </button>
+        </hk-sheet-section>
+      } @else {
+        <hk-sheet-section
+          [titleKey]="'campaigns.dmEffects.level.title'"
+          class="dm-effects-panel__section"
+        >
+          <hk-number-field
+            [labelKey]="'campaigns.dmEffects.level.countLabel'"
+            [min]="1"
+            [step]="1"
+            [ngModel]="levelCount()"
+            (ngModelChange)="onLevelCountChange($event)"
+          />
+          <button
+            hk-button
+            type="button"
+            [variant]="'primary'"
+            [disabled]="busy()"
+            (click)="grantLevel()"
+          >
+            {{ t('dmEffects.level.grant') }}
+          </button>
+        </hk-sheet-section>
+      }
+
+      <hk-sheet-section
+        [titleKey]="'campaigns.dmEffects.item.title'"
+        class="dm-effects-panel__section"
+      >
+        <label class="dm-effects-panel__field">
+          <span>{{ t('dmEffects.item.nameLabel') }}</span>
+          <input
+            type="text"
+            class="dm-effects-panel__text-input"
+            [value]="itemName()"
+            (input)="onItemNameChange($any($event.target).value)"
+          />
+        </label>
+        <hk-number-field
+          [labelKey]="'campaigns.dmEffects.item.qtyLabel'"
+          [min]="1"
+          [step]="1"
+          [ngModel]="itemQty()"
+          (ngModelChange)="onItemQtyChange($event)"
+        />
+        <button
+          hk-button
+          type="button"
+          [variant]="'ghost'"
+          [disabled]="busy()"
+          (click)="grantItem()"
+        >
+          {{ t('dmEffects.item.grant') }}
+        </button>
+      </hk-sheet-section>
+
+      <hk-sheet-section
+        [titleKey]="'campaigns.dmEffects.override.title'"
+        class="dm-effects-panel__section"
+      >
+        <label class="dm-effects-panel__field">
+          <span>{{ t('dmEffects.override.pathLabel') }}</span>
+          <input
+            type="text"
+            class="dm-effects-panel__text-input"
+            [value]="overridePath()"
+            (input)="onOverridePathChange($any($event.target).value)"
+          />
+        </label>
+        <p class="dm-effects-panel__hint">{{ t('dmEffects.override.pathHint') }}</p>
+        <label class="dm-effects-panel__field">
+          <span>{{ t('dmEffects.override.valueLabel') }}</span>
+          <input
+            type="text"
+            class="dm-effects-panel__text-input"
+            [value]="overrideValue()"
+            (input)="onOverrideValueChange($any($event.target).value)"
+          />
+        </label>
+        <label class="dm-effects-panel__field">
+          <span>{{ t('dmEffects.override.reasonLabel') }}</span>
+          <input
+            type="text"
+            class="dm-effects-panel__text-input"
+            [value]="overrideReason()"
+            (input)="onOverrideReasonChange($any($event.target).value)"
+          />
+        </label>
+        <button
+          hk-button
+          type="button"
+          [variant]="'primary'"
+          [disabled]="busy() || !canApplyOverride()"
+          (click)="applyOverride()"
+        >
+          {{ t('dmEffects.override.apply') }}
+        </button>
+      </hk-sheet-section>
+
+      @if (feedbackOk() !== undefined) {
+        <p
+          class="dm-effects-panel__feedback"
+          role="status"
+          [class.dm-effects-panel__feedback--error]="feedbackOk() === false"
+        >
+          {{ feedbackOk() ? t('dmEffects.status.applied') : t('dmEffects.status.failed') }}
+          @if (feedbackMessage(); as message) {
+            {{ message }}
+          }
+        </p>
+      }
+    </div>
+  }
+</div>

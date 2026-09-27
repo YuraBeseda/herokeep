@@ -1,0 +1,46 @@
+.unlink-character-dialog__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+}
+
+.unlink-character-dialog__body {
+  margin: 0 0 var(--space-3);
+}
+
+.unlink-character-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.unlink-character-dialog__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.unlink-character-dialog__step {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.unlink-character-dialog__step[data-ok='false'] {
+  color: var(--danger);
+}
+
+.unlink-character-dialog__step[data-ok='true'] {
+  color: var(--success);
+}
+
+.unlink-character-dialog__error,
+.unlink-character-dialog__incomplete {
+  color: var(--danger);
+}
+
+.unlink-character-dialog__success {
+  color: var(--success);
+}

@@ -223,6 +223,77 @@
       "removedBadge": "Removed"
     }
   },
+  "dmEffects": {
+    "toggle": "DM tools",
+    "hp": {
+      "title": "HP",
+      "damageLabel": "Damage amount",
+      "damage": "Damage",
+      "healLabel": "Heal amount",
+      "heal": "Heal",
+      "tempLabel": "Temp HP amount",
+      "addTemp": "Add temp HP",
+      "noBaseline": "No HP baseline yet for this character — waiting on a party overview or a live sheet."
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "grant": "Grant inspiration",
+      "revoke": "Revoke inspiration"
+    },
+    "conditions": {
+      "title": "Conditions",
+      "add": "Add condition",
+      "remove": "Remove"
+    },
+    "xp": {
+      "title": "Experience",
+      "amountLabel": "XP amount",
+      "reasonLabel": "Reason (optional)",
+      "grant": "Award XP"
+    },
+    "level": {
+      "title": "Level",
+      "countLabel": "Levels to grant",
+      "grant": "Grant a level"
+    },
+    "item": {
+      "title": "Item",
+      "nameLabel": "Item name",
+      "qtyLabel": "Quantity",
+      "grant": "Grant item"
+    },
+    "override": {
+      "title": "Manual override",
+      "pathLabel": "Sheet path",
+      "pathHint": "e.g. ac, abilities.str.score, speed.walk",
+      "valueLabel": "Value",
+      "reasonLabel": "Reason (required)",
+      "apply": "Apply override"
+    },
+    "status": {
+      "applied": "Applied.",
+      "failed": "Couldn't apply that change."
+    }
+  },
+  "unlink": {
+    "action": "Unlink character",
+    "title": "Unlink {name}?",
+    "body": "{name}'s owner has left this campaign. Unlinking removes their character from the active roster — they can rejoin with a new join code later.",
+    "cancel": "Cancel",
+    "confirm": "Unlink",
+    "success": "{name} was unlinked.",
+    "incomplete": "Unlink incomplete — retry.",
+    "retry": "Retry",
+    "progress": {
+      "step": {
+        "character": "Updating character record",
+        "campaign": "Removing from the roster"
+      }
+    },
+    "errors": {
+      "generic": "Couldn't unlink that character. Try again."
+    }
+  },
   "memberSheet": {
     "loading": "Loading {name}'s sheet…",
     "unauthorized": "Couldn't load {name}'s sheet. You may no longer have permission to view it.",

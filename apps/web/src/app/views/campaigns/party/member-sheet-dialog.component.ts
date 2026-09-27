@@ -12,10 +12,12 @@ import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { PipsComponent } from '@shared/components/pips/pips.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { StatTileComponent } from '@shared/components/stat-tile/stat-tile.component';
+import { ForeignCharacterSession } from '@shared/services/campaigns/foreign-character-session';
+import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { PackStore } from '@shared/stores/pack.store';
-import { ForeignCharacterSession } from '@shared/services/campaigns/foreign-character-session';
+import { DmEffectsPanelComponent } from './dm-effects-panel.component';
 
 export interface MemberSheetDialogData {
   /** Bare campaign uuid (no `camp:` prefix). */
@@ -80,15 +82,16 @@ interface SpellRow {
  * codebase does that for any dialog today, so this dialog handles it itself rather than depending on
  * a mechanism that doesn't exist).
  *
- * ## T11 effects-panel seam
+ * ## T11 effects panel
  *
- * `characterId`/`campaignId` (`protected readonly data`) and the live `sheet()` signal are already
- * exposed as `protected` members — Task 11's DM effects panel (hp/condition/etc. adjustments on a
- * character the DM doesn't own) mounts here by adding its own section to this same template, reading
- * `data.characterId/campaignId` and calling `CampaignStore.gatewayAppend(data.characterId, drafts)`
- * (the existing doc-03 gateway-forwarding path, task-4-brief.md/task-8-report.md — NOT a new write
- * path). Nothing here needs to change for that: this task builds no DM-effects UI at all (scope
- * guard, task-9-brief.md), only the read-only viewer + this documented mounting point.
+ * `DmEffectsPanelComponent` mounts here (this task's own doc previously only reserved the seam;
+ * plan-10 Task 11 now fills it), reading `data.characterId` directly and the live `sheet()`'s HP/
+ * conditions as its own `hp`/`activeConditionIds` inputs — unlike the party card's 'overview' mode
+ * (only `PartyOverview.hp/hpMax/temp`, no `currentWasMax`), THIS mode has the full subscribed
+ * `Sheet`, so `hpSnapshot` below also supplies `currentWasMax` (`dm-effects.ts`'s own sentinel-
+ * resolution finding). The panel writes via `CampaignStore.gatewayAppend` directly (injected by
+ * itself, not through this dialog) — the existing doc-03 gateway-forwarding path, unaffected by
+ * this dialog's own read-only `ForeignCharacterSession` viewer.
  */
 @Component({
   selector: 'app-member-sheet-dialog',
@@ -97,6 +100,7 @@ interface SpellRow {
     ButtonComponent,
     CardComponent,
     ChipComponent,
+    DmEffectsPanelComponent,
     HpBarComponent,
     PipsComponent,
     SheetSectionComponent,
@@ -180,6 +184,26 @@ export class MemberSheetDialogComponent {
       level: c.level,
     }));
   });
+
+  /** [plan-10 Task 11] `DmEffectsPanelComponent`'s HP baseline — the live subscribed `Sheet`'s own
+   * `hp.currentWasMax` flag is available here (unlike the party card's 'overview' mode), so damage/
+   * heal composed through this mount correctly resolves the long-rest sentinel first when needed
+   * (`dm-effects.ts`'s own finding). `undefined` while the sheet hasn't loaded yet (`'loading'`/
+   * `'unauthorized'`/`'error'` status) — the panel renders its own "no baseline" hint then. */
+  protected readonly hpSnapshot = computed<HpSnapshot | undefined>(() => {
+    const sheet = this.sheet();
+    if (!sheet) return undefined;
+    return {
+      current: sheet.hp.current,
+      max: sheet.hp.max.value,
+      temp: sheet.hp.temp,
+      currentWasMax: sheet.hp.currentWasMax,
+    };
+  });
+
+  protected readonly conditionIds = computed<readonly string[]>(
+    () => this.sheet()?.conditions.map((c) => c.conditionId) ?? [],
+  );
 
   protected readonly spellBlocks = computed<
     (SpellcastingBlock & { knownSpells: SpellRow[]; preparedSpells: SpellRow[] })[]

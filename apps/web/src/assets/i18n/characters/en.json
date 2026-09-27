@@ -512,6 +512,7 @@
     "empty": "No events yet.",
     "revert": "Revert",
     "revertedBadge": "Reverted",
+    "overrideBadge": "Manual override",
     "unknown": "Something happened ({type}).",
     "groupSuffix": "{count, plural, one {(+# more event)} other {(+# more events)}}",
     "family": {

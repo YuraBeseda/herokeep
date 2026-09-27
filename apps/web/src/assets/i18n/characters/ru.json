@@ -512,6 +512,7 @@
     "empty": "Событий пока нет.",
     "revert": "Отменить",
     "revertedBadge": "Отменено",
+    "overrideBadge": "Ручное изменение",
     "unknown": "Что-то произошло ({type}).",
     "groupSuffix": "{count, plural, one {(+# событие)} few {(+# события)} many {(+# событий)} other {(+# события)}}",
     "family": {

@@ -216,6 +216,18 @@ export class TimelineTabComponent {
     );
   }
 
+  // doc-02 L111: "`override.applied` ... rendered distinctly" — a DM-applied (or solo self-
+  // applied, `EVENT_ACTORS['override.applied'] = ['dm','owner']`) manual override changes a Sheet
+  // value OUTSIDE the ordinary rule-driven event vocabulary, so the timeline flags it visually
+  // (badge, this file's own SCSS) in addition to its ordinary sentence (which already renders
+  // `{path}`/`{reason}` verbatim via `characters.timeline.override-applied`'s own ICU params —
+  // `buildParams`, `event-sentence.pipe.ts`). A tx-group's OWN lead-type check (`row.leadType`,
+  // matching `canRevert`'s identical pattern) is enough: `override.applied` is never itself
+  // grouped into a mixed-type tx by any producer in this codebase.
+  protected isOverride(row: TimelineRow): boolean {
+    return row.leadType === 'override.applied';
+  }
+
   // `decision.made`'s `context.rolls` (T7's ability-roll flow — `context: {method, scores,
   // rolls}`) is the only payload shape this tab renders dice for; every other event type (and a
   // `decision.made` with no roll context, e.g. standard array) returns `undefined` and the

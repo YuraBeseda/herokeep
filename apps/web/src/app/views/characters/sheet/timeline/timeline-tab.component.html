@@ -17,6 +17,7 @@
         <li
           class="timeline-tab__row"
           [class.timeline-tab__row--reverted]="isReverted(row)"
+          [class.timeline-tab__row--override]="isOverride(row)"
           [attr.data-family]="familyOf(row)"
         >
           <hk-card class="timeline-tab__card">
@@ -27,6 +28,11 @@
                     | eventSentence: index() : localizer() : row.events.length : grammaticalGender()
                 }}
               </p>
+              @if (isOverride(row)) {
+                <span class="timeline-tab__badge timeline-tab__badge--override">{{
+                  t('timeline.overrideBadge')
+                }}</span>
+              }
               @if (isReverted(row)) {
                 <span class="timeline-tab__badge">{{ t('timeline.revertedBadge') }}</span>
               }

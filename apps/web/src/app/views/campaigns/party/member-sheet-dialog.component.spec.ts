@@ -196,6 +196,31 @@ describe('MemberSheetDialogComponent', () => {
     expect(buttonLabels.some((l) => l === 'Damage' || l === 'Heal' || l === 'Cast')).toBe(false);
   });
 
+  // plan-10 task-11-brief.md: the T11 effects-panel seam this component's own class doc reserved.
+  it('mounts app-dm-effects-panel once ready, with the live Sheet HP baseline resolved (no "no baseline" hint)', async () => {
+    const streamId = await seedFighter('Ivan');
+    const characterId = streamId.slice('char:'.length);
+    const events = await TestBed.inject(EventsRepository).byStream(streamId);
+
+    openDialog({ campaignId, characterId, name: 'Ivan' });
+    TestBed.tick();
+    sync.emit(campaignId, streamId, events);
+    TestBed.tick();
+    await Promise.resolve();
+    TestBed.tick();
+
+    const panel = document.querySelector('app-dm-effects-panel');
+    expect(panel).toBeTruthy();
+
+    const toggle = panel?.querySelector<HTMLButtonElement>('.dm-effects-panel__toggle');
+    toggle?.click();
+    TestBed.tick();
+
+    expect(panel?.textContent).not.toContain(
+      'No HP baseline yet for this character — waiting on a party overview or a live sheet.',
+    );
+  });
+
   it('unauthorized-silent timeout renders the unauthorized status without crashing', async () => {
     // No `seedFighter` needed — this path never reaches `reduce`/`derive`.
     openDialog({ campaignId, characterId: '11111111-1111-4111-8111-111111111111', name: 'Ghost' });

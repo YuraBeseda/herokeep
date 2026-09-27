@@ -292,4 +292,36 @@ describe('TimelineTabComponent', () => {
     expect(characterStore.skippedIds().has(targetId)).toBe(true);
     expect(revertEventRow.querySelector('.timeline-tab__revert')).toBeNull();
   });
+
+  // doc-02 L111: "override.applied ... rendered distinctly" (plan-10 task-11-brief.md's
+  // verification instruction) — a badge + a row-level accent class, IN ADDITION to the ordinary
+  // sentence (which already interpolates {path}/{reason} via its own ICU template).
+  it('override.applied renders a distinct badge (doc-02 L111), unlike an ordinary event row', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Interim' } },
+    ]);
+    await characterStore.appendTx([
+      {
+        type: 'override.applied',
+        v: 1,
+        payload: { path: 'ac', value: 18, reason: 'story reward' },
+      },
+    ]);
+
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+
+    const rows = rowEls(fixture);
+    const overrideRow = rows[0]; // newest-first
+    const renamedRow = rows[1];
+    expect(sentenceOf(overrideRow)).toContain('ac');
+    expect(sentenceOf(overrideRow)).toContain('story reward');
+    expect(overrideRow.querySelector('.timeline-tab__badge--override')).not.toBeNull();
+    expect(overrideRow.classList.contains('timeline-tab__row--override')).toBe(true);
+    // An ordinary (non-override) row gets NEITHER the badge nor the row-level class.
+    expect(renamedRow.querySelector('.timeline-tab__badge--override')).toBeNull();
+    expect(renamedRow.classList.contains('timeline-tab__row--override')).toBe(false);
+  });
 });

@@ -276,6 +276,13 @@
               <p class="member-sheet-dialog__empty">{{ t('memberSheet.inventory.empty') }}</p>
             }
           </hk-sheet-section>
+
+          <!-- DM tools (plan-10 Task 11) -->
+          <app-dm-effects-panel
+            [characterId]="data.characterId"
+            [hp]="hpSnapshot()"
+            [activeConditionIds]="conditionIds()"
+          />
         </div>
       }
     }
