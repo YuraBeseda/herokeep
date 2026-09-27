@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ChoiceSchema, parseChoiceId } from '../src/pack/choice.ts';
+import { ChoiceSchema, EntityQuerySchema, parseChoiceId } from '../src/pack/choice.ts';
 
 describe('choice ids', () => {
   it('parses <entityId>@<level>/<slug>', () => {
@@ -50,5 +50,21 @@ describe('ChoiceSchema', () => {
     expect(ChoiceSchema.safeParse({ ...c, at: { kind: 'classLevel', class: 'fighter' } }).success).toBe(false);
     expect(ChoiceSchema.safeParse({ ...c, pick: { static: [] } }).success).toBe(false);
     expect(ChoiceSchema.safeParse({ ...c, id: 'not-a-choice-id' }).success).toBe(false);
+  });
+});
+
+describe('EntityQuerySchema hasField (ruling 4: weapon-mastery choices as real entity queries)', () => {
+  it('accepts a dot-path field-presence filter, alone or combined with tags (AND semantics)', () => {
+    expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['weapon.mastery'] }).success).toBe(true);
+    expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['weapon.mastery'], tags: ['martial'] }).success).toBe(
+      true,
+    );
+    expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['armor.stealthDisadvantage'] }).success).toBe(true);
+  });
+
+  it('rejects malformed paths', () => {
+    expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['weapon mastery'] }).success).toBe(false);
+    expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['.weapon'] }).success).toBe(false);
+    expect(EntityQuerySchema.safeParse({ type: 'item', hasField: [''] }).success).toBe(false);
   });
 });

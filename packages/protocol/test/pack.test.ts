@@ -1,9 +1,23 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { PackSchema, formatIssues, parsePack } from '../src/pack/pack.ts';
 
 const load = (name: string): unknown =>
   JSON.parse(readFileSync(new URL(`./fixtures/packs/${name}.json`, import.meta.url), 'utf8'));
+
+/**
+ * Phase 4 (plan 11, task 1) additive-safety net: every phase-4 pack-vocabulary widening must leave
+ * pre-existing fixture packs parsing byte-identically. Hashes captured from `parsePack()`'s output
+ * BEFORE any phase-4 schema edits (worktree phase-4-plan11-engine-vocabulary, base 676d884); this
+ * test must still pass after all of task 1's additions land.
+ */
+const PHASE_4_BASELINE_HASHES: Record<string, string> = {
+  'core-mini': '4d017a45ccd29e6ea467d8108575baee683e9ef5a8cf81bbb67ec0f7a9ec36f8',
+  'content-mini': '574a873c2062d0c850a5b20978b0a84b6da7c5bfa2a1bfd9ef1d74ce7d0aa9d9',
+  'translation-mini': 'e3326b8e102787ae64a7e0bc814e1a7080b1df0c94911a1970d2e207db03d04e',
+  'asi-mini': '5c4640f77bc3b5e211e372bef4ed7be8027b45f41241f5f5cab5fda75aa637a0',
+};
 
 describe('PackSchema', () => {
   it('accepts the three fixture packs', () => {
@@ -96,5 +110,14 @@ describe('PackSchema', () => {
     const core = load('core-mini') as Record<string, unknown>;
     expect(PackSchema.safeParse({ ...core, format: 2 }).success).toBe(false);
     expect(PackSchema.safeParse({ ...core, version: '1.0' }).success).toBe(false);
+  });
+
+  it('phase-4 additive-safety net: fixture packs parse byte-identically', () => {
+    for (const [name, sha] of Object.entries(PHASE_4_BASELINE_HASHES)) {
+      const r = parsePack(load(name));
+      if (!r.ok) throw new Error(`${name}: ${formatIssues(r.issues).join('\n')}`);
+      const actual = createHash('sha256').update(JSON.stringify(r.pack)).digest('hex');
+      expect(actual, `${name} parse output changed`).toBe(sha);
+    }
   });
 });

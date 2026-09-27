@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { EntityIdSchema, EntityTypeSchema, SlugSchema } from '../ids.ts';
 import { entity } from './entity-base.ts';
-import { ResetSchema, ShortTextSchema, SlotProgressionSchema, UsesSchema } from './enums.ts';
+import {
+  MulticlassProgressionSchema,
+  ResetSchema,
+  ShortTextSchema,
+  SlotProgressionSchema,
+  UsesSchema,
+} from './enums.ts';
 import { AbilityKeySchema, ClassRefSchema, PredicateSchema } from './predicate.ts';
 
 const NonNegInt = z.int().min(0);
@@ -26,8 +32,31 @@ export const SystemEntitySchema = entity('system', {
     xp: z.array(NonNegInt).min(1).max(20),
     /** proficiency[i] = bonus at level i+1. */
     proficiency: z.array(z.int().min(1)).min(1).max(20),
-    /** spellSlots[progression][levelIndex] = slots per spell level (index 0 = 1st-level slots). */
+    /** spellSlots[progression][levelIndex] = slots per spell level (index 0 = 1st-level slots). Every
+     *  progression in `SlotProgressionSchema` (full, half, third, pact, none) is a valid key here —
+     *  this is a `partialRecord`, so a pack supplies whichever progressions its classes use. */
     spellSlots: z.partialRecord(SlotProgressionSchema, z.array(z.array(NonNegInt).max(9)).max(20)),
+    /**
+     * Ruling 2 (phase 4, plan 11 task 1): the multiclass combined-caster-level slot table, plus the
+     * DATA (not TS constants) needed to compute that combined level from each class's own level —
+     * `weights[progression]` is an integer DIVISOR (full=1, half=2, third=3, i.e. weight = 1/divisor),
+     * and `rounding: 'floorPerClass'` means each class's own level is divided by its progression's
+     * divisor and rounded down INDIVIDUALLY, before summing across classes (SRD: "Divide... by two...
+     * by three, rounding down" per class, then add) — not a floor applied to the final sum. `slots`
+     * has the same per-row shape as one `spellSlots` progression array: index 0 = combined caster
+     * level 1, row[i] = max slots for spell level i+1. Pact-magic casters are excluded from `weights`
+     * (`MulticlassProgressionSchema` has no `pact` member) — pact slots are tracked separately and
+     * never contribute to this table. Optional: single-class characters keep using the per-class
+     * `spellSlots` table untouched (byte-identical existing behavior); engine consumption (T2/T3) is
+     * out of this task's scope.
+     */
+    multiclassSlots: z
+      .strictObject({
+        weights: z.partialRecord(MulticlassProgressionSchema, z.int().min(1).max(10)),
+        rounding: z.enum(['floorPerClass']),
+        slots: z.array(z.array(NonNegInt).max(9)).max(20),
+      })
+      .optional(),
   }),
   currencies: z.array(z.strictObject({ id: SlugSchema, name: ShortTextSchema, inCopper: z.int().min(1) })).min(1),
   damageTypes: z.array(SlugSchema).min(1),

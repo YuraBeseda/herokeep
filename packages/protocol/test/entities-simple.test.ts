@@ -74,6 +74,97 @@ describe('simple entity schemas', () => {
     expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
   });
 
+  const baseSystem = {
+    id: `${P}:system/5e-2024`,
+    type: 'system' as const,
+    name: 'D&D 5e (2024 rules)',
+    abilities: [{ id: 'wis', name: 'Wisdom' }],
+    skills: [{ id: 'stealth', name: 'Stealth', ability: 'dex' }],
+    saves: ['wis'],
+    compositionSlots: [{ id: 'class', entityType: 'class' as const, count: 'many' as const, at: 'levelUp' as const }],
+    restTypes: ['shortRest' as const],
+    currencies: [{ id: 'gp', name: 'Gold', inCopper: 100 }],
+    damageTypes: ['fire'],
+    sizes: ['medium'],
+    restRules: {
+      shortRest: { allowHitDice: true },
+      longRest: {
+        hpToMax: true,
+        restoreAllSlots: true,
+        hitDiceRegainDivisor: 2,
+        hitDiceRegainMin: 1,
+        exhaustionReduce: 1,
+      },
+    },
+    hpRules: { firstLevelMaxHitDie: true, averageRounding: 'up' as const },
+    attunementMax: 3,
+    abilityGeneration: {
+      standardArray: [15, 14, 13, 12, 10, 8],
+      pointBuy: { budget: 27, min: 8, max: 15, costs: { '8': 0 } },
+      roll: '4d6kh3',
+      manual: { min: 3, max: 18 },
+    },
+  };
+
+  it('system entity: half/third/pact spell slot progressions (ruling 2)', () => {
+    const r = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: {
+        xp: [0, 300],
+        proficiency: [2, 2],
+        spellSlots: { full: [[2], [3]], half: [[2], [2]], third: [[2], [2]], pact: [[1], [1]], none: [[], []] },
+      },
+    });
+    expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
+  });
+
+  it('system entity: multiclassSlots table with per-progression weights and a rounding rule (ruling 2)', () => {
+    const r = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: {
+        xp: [0, 300],
+        proficiency: [2, 2],
+        spellSlots: { full: [[2], [3]] },
+        multiclassSlots: {
+          weights: { full: 1, half: 2, third: 3 },
+          rounding: 'floorPerClass',
+          slots: [[2], [3]],
+        },
+      },
+    });
+    expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
+  });
+
+  it('multiclassSlots is optional and rejects invalid weights/rounding', () => {
+    const withoutIt = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } },
+    });
+    expect(withoutIt.success, JSON.stringify(withoutIt.error?.issues)).toBe(true);
+
+    const badWeight = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: {
+        xp: [0],
+        proficiency: [2],
+        spellSlots: { full: [[2]] },
+        multiclassSlots: { weights: { full: 0 }, rounding: 'floorPerClass', slots: [[2]] },
+      },
+    });
+    expect(badWeight.success).toBe(false);
+
+    const badRounding = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables: {
+        xp: [0],
+        proficiency: [2],
+        spellSlots: { full: [[2]] },
+        multiclassSlots: { weights: { full: 1 }, rounding: 'ceilOnSum', slots: [[2]] },
+      },
+    });
+    expect(badRounding.success).toBe(false);
+  });
+
   it('accepts minimal valid instances of each simple type', () => {
     const ok = (
       schema: { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown } } },

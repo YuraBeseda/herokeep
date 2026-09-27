@@ -55,10 +55,10 @@ Entity types and their specific data (abridged; schema is authoritative):
 
 | Type | Specific data |
 |------|---------------|
-| `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
+| `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
 | `species` | `size`, `speed`, `creatureType`, `lifespan?`; traits as `grants` |
 | `background` | `abilityScores[]` (2024: the three abilities the player may raise), `originFeat`, `skillProficiencies[]`, `toolProficiency`, `equipment` option |
-| `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]`, `subclassLevel`, `multiclass {prereq, gains}` |
+| `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column); also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, read as "highest row at or below the character's level" — see § Choices/extra below), `subclassLevel`, `multiclass {prereq, gains}` |
 | `subclass` | `class`, `levels[{level, grants[], choices[]}]` |
 | `feature` | text + `effects` + `choices` + `uses?` (`resource.define` shorthand) |
 | `feat` | `category` (origin/general/fightingStyle/epicBoon), `repeatable`, prerequisites, effects, choices |
@@ -88,12 +88,20 @@ Entity types and their specific data (abridged; schema is authoritative):
 ```
 
 `pick` forms: `{ "static": ["id", …] }`, `{ "query": {type, tags?, level?, classes?,
-school?} }`, `{ "abilities": { "count": 2, "max": 20, "improve": "+1|+2/+1" } }` (ASI-style
+school?, hasField?} }`, `{ "abilities": { "count": 2, "max": 20, "improve": "+1|+2/+1" } }` (ASI-style
 improvements), `{ "abilityGeneration": true }` (the creation-time score assignment; the
 allowed methods and their parameters come from `system.abilityGeneration`, and the
 selection records the method, the six scores and — for `roll` — every die result),
 `{ "literal": "text" }` (names), `{ "equipmentOption": [...] }`. Selections are stored in
 `decision.made` events by choice id.
+
+`EntityQuerySchema`'s filters are AND-combined: `tags` (an entity's `tags[]` must include every
+listed tag) and `hasField` (dot-paths, e.g. `"weapon.mastery"`, that must be present on the
+candidate entity — a field-presence filter, preferred over inventing a bespoke tag taxonomy for
+data the schema already models structurally). Fighter's Weapon Mastery choice, for example, is a
+real entity query rather than a `literal: "text"` placeholder:
+`{ "query": { "type": "item", "hasField": ["weapon.mastery"] } }` selects exactly the items that
+carry a weapon-mastery property.
 
 ## Predicates
 
@@ -158,6 +166,36 @@ Division is integer division rounding down unless wrapped in `ceil`. Max length 
 depth 16. Comparisons (`>= <= > < ==`) are allowed only inside `{ "formula": … }`
 predicates. Evaluation context: `level`, `prof`, `classLevel(id)`, `mod(ab)`,
 `score(ab)`, `hitDie(classId)`, `resource(id)`.
+
+## Dice values
+
+`DiceSchema` is `NdS(+/-M)` notation, e.g. `1d8`, `2d6+3`, `8d6`. `FlatDiceSchema` (phase 4,
+additive) is a fixed amount with no die: `{ "flat": 1 }`, for a component that's a plain bonus
+rather than a roll (replacing zero-count-die hacks like `0d4+1`). `DiceOrFlatSchema` accepts
+either form. As of this task `DiceSchema` itself is unchanged and every field that already used it
+(`item.weapon.damage`/`versatile`, `spell.damage.dice`) still accepts only dice-string notation;
+migrating a specific field to `DiceOrFlatSchema` is future work.
+
+## Multiclass spellcasting table
+
+`system.tables.multiclassSlots` (optional) holds the combined-caster-level slot table for
+multiclass characters, plus the DATA needed to compute that combined level — never hardcoded in
+engine code:
+
+```jsonc
+"multiclassSlots": {
+  "weights": { "full": 1, "half": 2, "third": 3 },   // integer divisor; weight = 1/divisor
+  "rounding": "floorPerClass",
+  "slots": [[2], [3], [4, 2], …]                     // same per-row shape as one spellSlots table
+}
+```
+
+`rounding: "floorPerClass"` means each class's own level is divided by its progression's divisor
+and rounded down *individually*, then the results are summed across classes (SRD: "Divide...by
+two...by three, rounding down" per class, then add) — not a floor applied to the final sum.
+Pact-magic casters never participate: their slots are tracked separately (`facts.pactSlots`) and
+are not part of this table. Single-class characters keep using the per-class `spellSlots` table
+unchanged.
 
 ## Overrides
 

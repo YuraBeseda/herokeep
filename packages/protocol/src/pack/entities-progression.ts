@@ -2,15 +2,27 @@ import { z } from 'zod';
 import { EntityIdSchema, SlugSchema } from '../ids.ts';
 import { ChoiceSchema } from './choice.ts';
 import { FeatureGrantSchema, entity } from './entity-base.ts';
-import { ValueSchema } from './enums.ts';
+import { ExtraValueSchema } from './enums.ts';
 import { AbilityKeySchema, PredicateSchema } from './predicate.ts';
 
 export const ClassLevelRowSchema = z.strictObject({
   level: z.int().min(1).max(20),
   grants: z.array(FeatureGrantSchema).default([]),
   choices: z.array(ChoiceSchema).default([]),
-  /** Free-form numeric facts for this row (e.g. { attacks: 2, sneakAttackDice: 3 }); read by effects via formulas later. */
-  extra: z.record(SlugSchema, ValueSchema).optional(),
+  /**
+   * Free-form facts for this row: an int, a formula, a dice roll (e.g. Rage Damage "1d6"), or short
+   * plain text (e.g. an ordinal column) — see `ExtraValueSchema` (ruling 5). Also the established,
+   * minimal mechanism for STEPPED per-level tables that don't fit a single formula (the
+   * stepped-cantrip decision, phase 4 task 1): one `extra` entry per level-with-a-change, keyed by
+   * convention `"<classSlug>-<fact>"` (e.g. `wizard-prepared-spells`, `wizard-cantrips-known`), read
+   * by the engine as "highest row at or below the character's class level that carries the key" —
+   * already proven end-to-end for `<classSlug>-prepared-spells` by `deriveSpellcasting()`
+   * (`packages/engine/src/derive/spellcasting.ts`). No dedicated table-valued column type was added:
+   * a per-level extra entry is strictly less machinery than a new schema shape, and is exactly what
+   * T8's wizard-to-20 content needs for `cantripsKnown`'s stepped table (3/1st, 4/4th, 5/10th) too —
+   * see task-1-report.md for the full rationale.
+   */
+  extra: z.record(SlugSchema, ExtraValueSchema).optional(),
 });
 export type ClassLevelRow = z.infer<typeof ClassLevelRowSchema>;
 
