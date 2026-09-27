@@ -7,6 +7,7 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import type { CampaignState, MemberEntry } from './campaign-projection';
 import {
   CAMPAIGN_EDIT_LOCK_POLL_INTERVAL_MS,
+  campaignDeriveOverridesFromState,
   campaignEditLockFromState,
   CampaignEditLockService,
 } from './campaign-edit-lock';
@@ -143,6 +144,51 @@ describe('campaignEditLockFromState — ruling 7 (edit-outside-session) matrix',
     expect(campaignEditLockFromState(state, USER_ID)).toEqual({
       locked: true,
       mode: 'dmApprovalV1',
+    });
+  });
+});
+
+// --- Pure function: overrides plumbing (phase 4, plan 11, task 12) --------------------------
+
+describe('campaignDeriveOverridesFromState — ruling 1 (overrides plumbing)', () => {
+  it('returns {} (engine defaults) for a solo (never-linked) character — no campaign context', () => {
+    expect(campaignDeriveOverridesFromState(null)).toEqual({});
+  });
+
+  it('returns {} when the campaign exists but no settings document has been posted yet', () => {
+    expect(campaignDeriveOverridesFromState(mkState())).toEqual({});
+  });
+
+  it('passes houseRules.attunementMax/encumbrance straight through for a settings-having campaign', () => {
+    const state = mkState({ settings: settingsWith('free') });
+    expect(campaignDeriveOverridesFromState(state)).toEqual({
+      attunementMax: 3,
+      encumbrance: 'standard',
+    });
+  });
+
+  it('reflects a variant/off encumbrance mode and a non-default attunementMax, unmodified', () => {
+    const base = settingsWith('free');
+    const state = mkState({
+      settings: {
+        ...base,
+        houseRules: { ...base.houseRules, encumbrance: 'variant', attunementMax: 5 },
+      },
+    });
+    expect(campaignDeriveOverridesFromState(state)).toEqual({
+      attunementMax: 5,
+      encumbrance: 'variant',
+    });
+  });
+
+  it('never gates on houseRules.allowOverrides — that flag governs a different mechanism (manual override.applied events, doc-08)', () => {
+    const base = settingsWith('free');
+    const state = mkState({
+      settings: { ...base, houseRules: { ...base.houseRules, allowOverrides: false } },
+    });
+    expect(campaignDeriveOverridesFromState(state)).toEqual({
+      attunementMax: 3,
+      encumbrance: 'standard',
     });
   });
 });
@@ -363,5 +409,101 @@ describe('CampaignEditLockService.editLockFor', () => {
 
     setIntervalSpy.mockRestore();
     clearIntervalSpy.mockRestore();
+  });
+});
+
+// --- CampaignEditLockService.overridesFor: reuses campaignStateFor, task 12 -----------------
+
+@Component({ selector: 'app-test-overrides-host', template: '' })
+class TestOverridesHostComponent {
+  private readonly service = inject(CampaignEditLockService);
+  readonly characterEvents: WritableSignal<Event[]> = signal([]);
+  readonly overrides = this.service.overridesFor(this.characterEvents);
+}
+
+describe('CampaignEditLockService.overridesFor', () => {
+  beforeEach(async () => {
+    configure();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([db.events.clear(), db.settings.clear()]);
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  it('is {} (engine defaults) for a solo (never-linked) character', async () => {
+    const fixture = TestBed.createComponent(TestOverridesHostComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.overrides()).toEqual({});
+  });
+
+  it("resolves the linked campaign's attunementMax/encumbrance house rules once its settings sync down", async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const settings = settingsWith('free');
+    await eventsRepository.append([
+      campaignEvent(
+        'campaign.settings_changed',
+        {
+          settings: {
+            ...settings,
+            houseRules: { ...settings.houseRules, attunementMax: 5, encumbrance: 'variant' },
+          },
+        },
+        DM_ID,
+        'dm',
+      ),
+      campaignEvent(
+        'member.joined',
+        { userId: USER_ID, displayName: 'Bob', role: 'player' },
+        USER_ID,
+        'member',
+      ),
+    ]);
+
+    const fixture = TestBed.createComponent(TestOverridesHostComponent);
+    fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.overrides()).toEqual({
+      attunementMax: 5,
+      encumbrance: 'variant',
+    });
+  });
+
+  it('picks up a house-rule change (a DM edit synced from another device) within one poll interval, with no characterEvents change', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    await eventsRepository.append([
+      campaignEvent('campaign.settings_changed', { settings: settingsWith('free') }, DM_ID, 'dm'),
+      campaignEvent(
+        'member.joined',
+        { userId: USER_ID, displayName: 'Bob', role: 'player' },
+        USER_ID,
+        'member',
+      ),
+    ]);
+
+    const fixture = TestBed.createComponent(TestOverridesHostComponent);
+    fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.overrides()).toEqual({
+      attunementMax: 3,
+      encumbrance: 'standard',
+    });
+
+    const updated = settingsWith('free');
+    await eventsRepository.append([
+      campaignEvent(
+        'campaign.settings_changed',
+        { settings: { ...updated, houseRules: { ...updated.houseRules, encumbrance: 'off' } } },
+        DM_ID,
+        'dm',
+      ),
+    ]);
+    await waitPastPoll();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.overrides()).toEqual({ attunementMax: 3, encumbrance: 'off' });
   });
 });

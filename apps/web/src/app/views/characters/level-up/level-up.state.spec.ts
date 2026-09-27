@@ -73,8 +73,18 @@ function configureReal(): void {
   });
 }
 
-function createState(): LevelUpState {
-  return TestBed.runInInjectionContext(() => new LevelUpState());
+/** `classId`, when given, is passed straight to `LevelUpState.chooseClass` right after
+ * construction — a no-op (via that method's own "not currently offered" guard) whenever
+ * `classChoices()` is empty (the pre-existing single-class-only contract), so every existing
+ * call site can pass its INTENDED class unconditionally regardless of whether THIS particular
+ * fixture happens to be multiclass-eligible (task 12, phase 4 plan 11 — the which-class picker;
+ * `seedFighter`'s own real-pack ability scores are genuinely eligible for Barbarian/Rogue too,
+ * T7's real `system.multiclass.prerequisites` data — every fighter-leveling test in this file
+ * needs its OWN class picked before `advancement()` resolves to anything at all). */
+function createState(classId?: string): LevelUpState {
+  const state = TestBed.runInInjectionContext(() => new LevelUpState());
+  if (classId) state.chooseClass(classId);
+  return state;
 }
 
 async function awardXp(characterStore: CharacterStore, amount: number): Promise<void> {
@@ -111,7 +121,7 @@ describe('LevelUpState', () => {
     // ts`), so this test asserts the fighter's own entry rather than the exact full list.
     expect(characterStore.advancements().find((a) => a.classId === FIGHTER)?.toLevel).toBe(2);
 
-    const state = createState();
+    const state = createState(FIGHTER);
     expect(state.advancement()?.classId).toBe(FIGHTER);
     expect(state.outstanding()).toEqual([]); // fighter's level-2 row has no choices
 
@@ -135,7 +145,7 @@ describe('LevelUpState', () => {
     const characterStore = TestBed.inject(CharacterStore);
     await awardXp(characterStore, 300);
 
-    const state = createState();
+    const state = createState(FIGHTER);
     state.chooseAverageHp();
     expect(state.hpRoll()).toBe('average');
 
@@ -147,7 +157,7 @@ describe('LevelUpState', () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await awardXp(characterStore, 300);
-    const level2 = createState();
+    const level2 = createState(FIGHTER);
     level2.chooseAverageHp();
     await characterStore.appendTx(level2.buildTransaction());
     expect(characterStore.sheet()?.level).toBe(2);
@@ -157,7 +167,7 @@ describe('LevelUpState', () => {
     // Same real-multiclass-eligibility note as the level 1→2 test above.
     expect(characterStore.advancements().find((a) => a.classId === FIGHTER)?.toLevel).toBe(3);
 
-    const state = createState();
+    const state = createState(FIGHTER);
     expect(state.outstanding().map((r) => r.choiceId)).toEqual([SUBCLASS_CHOICE]);
     expect(state.steps().some((s) => s.choiceId === SUBCLASS_CHOICE)).toBe(true);
 
@@ -192,12 +202,12 @@ describe('LevelUpState', () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await awardXp(characterStore, 300);
-    const level2 = createState();
+    const level2 = createState(FIGHTER);
     level2.chooseAverageHp();
     await characterStore.appendTx(level2.buildTransaction());
 
     await awardXp(characterStore, 600);
-    const level3 = createState();
+    const level3 = createState(FIGHTER);
     level3.setDecision(SUBCLASS_CHOICE, [CHAMPION]);
     level3.chooseAverageHp();
     await characterStore.appendTx(level3.buildTransaction());
@@ -206,7 +216,7 @@ describe('LevelUpState', () => {
     await awardXp(characterStore, 1800);
     expect(characterStore.facts()?.xp).toBe(2700);
 
-    const state = createState();
+    const state = createState(FIGHTER);
     expect(state.outstanding().map((r) => r.choiceId)).toEqual([FEAT_CHOICE]);
 
     state.setDecision(FEAT_CHOICE, [ASI_FEAT]);
@@ -246,7 +256,7 @@ describe('LevelUpState', () => {
     await awardXp(characterStore, 300);
     expect(characterStore.advancements().map((a) => a.toLevel)).toEqual([2]);
 
-    const state = createState();
+    const state = createState(WIZARD);
     expect(state.advancement()?.classId).toBe(WIZARD);
     expect(state.steps().some((s) => s.kind === 'spells')).toBe(true);
 
@@ -277,14 +287,14 @@ describe('LevelUpState', () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await awardXp(characterStore, 300);
-    const level2 = createState();
+    const level2 = createState(FIGHTER);
     level2.chooseAverageHp();
     await characterStore.appendTx(level2.buildTransaction());
     await awardXp(characterStore, 600);
 
     const before = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
 
-    const state = createState();
+    const state = createState(FIGHTER);
     state.setDecision(SUBCLASS_CHOICE, [CHAMPION]);
     state.chooseAverageHp();
     await characterStore.appendTx(state.buildTransaction());
@@ -303,12 +313,12 @@ describe('LevelUpState', () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await awardXp(characterStore, 300);
-    const level2 = createState();
+    const level2 = createState(FIGHTER);
     level2.chooseAverageHp();
     await characterStore.appendTx(level2.buildTransaction());
 
     await awardXp(characterStore, 600);
-    const level3 = createState();
+    const level3 = createState(FIGHTER);
     level3.setDecision(SUBCLASS_CHOICE, [CHAMPION]);
     level3.chooseAverageHp();
     await characterStore.appendTx(level3.buildTransaction());
@@ -316,7 +326,7 @@ describe('LevelUpState', () => {
     await awardXp(characterStore, 1800);
     const before = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
 
-    const state = createState();
+    const state = createState(FIGHTER);
     state.setDecision(FEAT_CHOICE, [ASI_FEAT]);
     state.setDecision(ASI_CHOICE, ['str:+2']);
     state.chooseAverageHp();

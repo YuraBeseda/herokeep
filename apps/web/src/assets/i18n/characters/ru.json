@@ -152,6 +152,12 @@
   },
   "levelUp": {
     "title": "Повышение до {level} уровня",
+    "classPicker": {
+      "title": "Какой класс?",
+      "label": "Выберите класс для повышения",
+      "levelUp": "Повысить {class} до {level} уровня",
+      "multiclass": "Мультикласс: {class}"
+    },
     "steps": {
       "hp": "Очки здоровья",
       "choice": "Выбор",
@@ -383,6 +389,8 @@
       "cantripsKnown": "Известно заговоров",
       "slotsLevel": "Ячейки {level} уровня",
       "slotPipLabel": "Ячейка {level} уровня {index} из {max}",
+      "pactSlotsLevel": "Ячейки Соглашения ({level} уровня)",
+      "pactPipLabel": "Ячейка Соглашения {index} из {max}, {level} уровня",
       "prepared": "Подготовленные заклинания",
       "known": "Известные заклинания",
       "preparedOf": "{prepared} / {max} подготовлено",
@@ -394,6 +402,7 @@
         "title": "Наложить: {name}",
         "slotLabel": "Ячейка заклинания",
         "slotOption": "{level} уровень (осталось {remaining})",
+        "slotOptionPact": "Ячейка Соглашения, {level} уровень (осталось {remaining})",
         "noSlots": "Нет доступных ячеек заклинаний.",
         "replacesConcentration": "Это прекратит текущую концентрацию.",
         "cancel": "Отмена",
@@ -456,6 +465,16 @@
       "remove": "Удалить предмет",
       "weight": "{value, plural, one {# фунт} few {# фунта} many {# фунтов} other {# фунта}}",
       "totalWeight": "Общий вес: {value, plural, one {# фунт} few {# фунта} many {# фунтов} other {# фунта}}",
+      "carry": {
+        "summary": "{load} / {capacity} фунтов переносится",
+        "speedPenalty": "Скорость −{value} фут.",
+        "state": {
+          "normal": "Норма",
+          "encumbered": "Обременён",
+          "heavilyEncumbered": "Сильно обременён",
+          "overloaded": "Перегружен"
+        }
+      },
       "currencyTitle": "Валюта",
       "currencyApply": "Применить",
       "addDialog": {

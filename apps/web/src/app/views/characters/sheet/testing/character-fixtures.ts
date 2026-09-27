@@ -98,6 +98,31 @@ export async function seedWizard(name = 'Elowen'): Promise<string> {
 }
 
 /**
+ * Persists a level-1 warlock (phase 4, plan 11, task 12 — the pact-lane UI's own fixture; mirrors
+ * `seedWizard`'s "species/background/ability-scores/class only" minimalism exactly). Warlock's
+ * level-1 Pact Magic feature (`system.tables.spellSlots.pact`, T3/T7/T11) populates
+ * `sheet.spellcasting[0].pact = {level: 1, count: 1, used: 0}` regardless of any further player
+ * choice — same "the class's own level-1 grants already populate spellcasting[0].slots" reasoning
+ * `seedWizard`'s own doc gives for its `.slots`. Returns the persisted `char:<uuid>` stream id.
+ */
+export async function seedWarlock(name = 'Kaelen'): Promise<string> {
+  const state = TestBed.runInInjectionContext(() => new CreateWizardState());
+  state.name.set(name);
+  state.gender.set('masculine');
+  state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
+  state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+  state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+  state.setDecision(
+    `${SYSTEM_ID}@0/ability-scores`,
+    ['str:10', 'dex:13', 'con:14', 'int:8', 'wis:12', 'cha:15'],
+    { method: 'standardArray' },
+  );
+  state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/warlock']);
+
+  return persist(state);
+}
+
+/**
  * Levels the character CURRENTLY LOADED in `CharacterStore` (via `seedFighter`/`seedWizard` above
  * — must already be persisted and loaded) from 1 to 2, through a real `LevelUpState` session:
  * `xp.awarded` → `LevelUpState` → scripted `rollHp` → `buildTransaction()` → `appendTx`, the exact
@@ -112,12 +137,23 @@ export async function seedWizard(name = 'Elowen'): Promise<string> {
  * `seedFighter`'s fighter (level 3/4 are its only choice rows) and `seedWizard`'s wizard (same:
  * level 3 subclass, level 4 feat) — so `LevelUpState.complete()` is reachable off `rollHp` alone,
  * with no `setDecision` calls needed here.
+ *
+ * Task 12 (phase 4, plan 11): `seedFighter`'s own real-pack ability scores are genuinely
+ * multiclass-eligible (T7's real `system.multiclass.prerequisites` data — same note every
+ * fighter-leveling spec in this codebase now carries), so `characterStore.advancements()` can
+ * report more than one entry here — the which-class picker's own `LevelUpState.advancement()`
+ * then stays `undefined` until a class is chosen. This helper always levels the character's OWN
+ * (already-taken) class — `state.chooseClass(facts.classes[0].classId)`, a no-op via that
+ * method's own guard whenever there's nothing to pick from (the pre-existing single-class-only
+ * contract, unaffected).
  */
 export async function levelUpToTwo(hpRoll = 5): Promise<void> {
   const characterStore = TestBed.inject(CharacterStore);
   await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
 
   const state = TestBed.runInInjectionContext(() => new LevelUpState());
+  const ownClassId = characterStore.facts()?.classes[0]?.classId;
+  if (ownClassId) state.chooseClass(ownClassId);
   const hitDie = state.hitDie();
   if (hitDie === undefined) {
     throw new Error('levelUpToTwo: no pending advancement with a resolvable hit die');

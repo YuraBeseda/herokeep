@@ -7,6 +7,7 @@ import {
   reduce,
   type Advancement,
   type ChoiceRequest,
+  type DeriveOverrides,
   type Facts,
   type ProposedEvent,
   type Sheet,
@@ -21,6 +22,7 @@ import {
   type GrammaticalGender,
 } from '@hk/protocol';
 import { uuidv7 } from '../helpers/uuid';
+import { CampaignEditLockService } from '../services/campaigns/campaign-edit-lock';
 import { EngineFacade } from '../services/engine/engine.facade';
 import { StoragePersistService } from '../services/pwa/storage-persist.service';
 import { CharactersRepository } from '../services/storage/characters.repository';
@@ -140,6 +142,7 @@ export class CharacterStore {
   private readonly packStore = inject(PackStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly storagePersistService = inject(StoragePersistService);
+  private readonly campaignEditLockService = inject(CampaignEditLockService);
 
   private readonly streamIdState = signal<string | undefined>(undefined);
   private readonly loadedState = signal(false);
@@ -169,11 +172,22 @@ export class CharacterStore {
   readonly facts: Signal<Facts | undefined> = this.factsState.asReadonly();
   readonly events: Signal<Event[]> = this.eventsState.asReadonly();
 
+  /** Ruling 1 (phase 4, plan 11, task 12 — "overrides plumbing"): for a campaign-linked character,
+   * the campaign's OWN settings document's `attunementMax`/`encumbrance` house rules — reactive,
+   * cross-stream, same staleness bounds as `CampaignEditLockService.editLockFor`'s own doc (this is
+   * that service's `overridesFor`, built on the identical `campaignStateFor` projection-read
+   * plan-10 established). `{}` (engine defaults) for a solo character — see
+   * `campaignDeriveOverridesFromState`'s own doc. Root-lifetime (this store is `providedIn: 'root'`
+   * and never destroyed), reactive to `this.events` alone (a fresh `character.campaign_joined`
+   * commit, or `load()` switching to a different character stream) plus its own bounded poll. */
+  private readonly campaignOverrides: Signal<DeriveOverrides> =
+    this.campaignEditLockService.overridesFor(this.events);
+
   /** `undefined` until packs are ready AND a character's facts have been loaded/created. */
   readonly sheet: Signal<Sheet | undefined> = computed(() => {
     const facts = this.factsState();
     if (!facts || !this.packStore.ready()) return undefined;
-    return derive(facts, this.engineFacade.index(), this.systemRules());
+    return derive(facts, this.engineFacade.index(), this.systemRules(), this.campaignOverrides());
   });
 
   readonly outstanding: Signal<ChoiceRequest[]> = computed(() => {

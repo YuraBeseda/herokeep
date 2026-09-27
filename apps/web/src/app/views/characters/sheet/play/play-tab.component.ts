@@ -66,7 +66,12 @@ import {
 } from '@shared/stores/character.store';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
-import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
+import {
+  CastDialogComponent,
+  type CastDialogData,
+  type CastDialogResult,
+  type CastDialogSlotOption,
+} from './cast-dialog.component';
 import {
   ConditionDialogComponent,
   type ConditionDialogData,
@@ -572,6 +577,32 @@ export class PlayTabComponent {
     this.inventoryRows().reduce((sum, entry) => sum + (entry.weight ?? 0), 0),
   );
 
+  // Task 12 (phase 4 plan 11): `Sheet.carry` (task-5-report.md's shape, `{mode, capacity, load,
+  // state}`) is present ONLY when `derive()` was called with `overrides.encumbrance: 'standard' |
+  // 'variant'` for THIS character — a campaign house rule (`CharacterStore`'s own `campaignOverrides`
+  // wiring, task 12) or, for a solo character, never at all (engine default `'off'`, no computation).
+  // Absent, not a zeroed struct, when inactive — the template gates the whole block on this.
+  protected readonly carry = computed<Sheet['carry']>(() => this.sheet()?.carry);
+
+  // Scope-RELATIVE key (no 'characters.' prefix — mirrors `skillProficiencyLabelKey`'s own doc:
+  // the template's scoped `t()` already prepends the scope itself).
+  protected carryStateLabelKey(state: NonNullable<Sheet['carry']>['state']): string {
+    return `sheet.inventory.carry.state.${state}`;
+  }
+
+  // `variant.thresholds[].speedPenalty` (task-5-report.md: "carried as plain DATA ... for T12's UI
+  // ... to read directly off the matched threshold") lives on the PACK's own `system.encumbrance`
+  // config, never on `Sheet.carry` itself (the engine deliberately never touches `Sheet.speed` —
+  // see that report's "Speed-interaction verdict"). Display-only: the matched threshold's
+  // `state === carry.state` entry, when the pack authored one for it (never for `'normal'`/
+  // `'overloaded'`, which have no threshold row) and it declared a `speedPenalty` at all.
+  protected readonly carrySpeedPenalty = computed<number | undefined>(() => {
+    const carry = this.carry();
+    if (carry?.mode !== 'variant') return undefined;
+    const thresholds = this.engineFacade.index().system().encumbrance?.variant?.thresholds ?? [];
+    return thresholds.find((t) => t.state === carry.state)?.speedPenalty;
+  });
+
   // Currency editor draft (task-5-brief.md): `null` until the player edits a field, matching the
   // `hpAmount` convention above — `effectiveCurrency` falls back to the live `sheet().currency`
   // whenever there's no in-progress edit, so the five fields always start pre-filled with the
@@ -838,6 +869,28 @@ export class PlayTabComponent {
     this.appendDraft([{ type: 'slot.restored', v: 1, payload: { level } satisfies SlotRestored }]);
   }
 
+  // Task 12 (phase 4 plan 11) — the pact lane's own pip row (T3/T11's `SpellcastingBlock.pact
+  // {level, count, used}`), rendered SEPARATELY from `.slots` (task-3-report.md: a pact block's
+  // `.slots` is deliberately always `[]`, so it can never appear in the generic per-level rows
+  // above). `opts.pact: true` selects the SEPARATE propose lane T11 added (`propose/casting.ts`'s
+  // `spendSlot`) — never a fallback tried after the regular lane fails; refuses with the SAME
+  // `'slot.none-left'` code already in `KNOWN_PROPOSE_DIAGNOSTIC_CODES`, so the existing toast
+  // wiring needs no changes.
+  protected onSpendPactSlot(level: number): void {
+    const sheet = this.sheet();
+    if (!sheet) return;
+    this.tryPropose(() => propose.spendSlot(sheet, level, { pact: true }));
+  }
+
+  // Same "no explicit count -> subtract exactly one" default `onRestoreSlot` already relies on
+  // (task-3-report.md's `slot.restored@1` handler: a missing `count` decrements by 1, whether
+  // `pact` or not) — one pip click, one unit restored.
+  protected onRestorePactSlot(level: number): void {
+    this.appendDraft([
+      { type: 'slot.restored', v: 1, payload: { level, pact: true } satisfies SlotRestored },
+    ]);
+  }
+
   protected onSpendResource(resourceId: string): void {
     this.appendDraft([
       { type: 'resource.spent', v: 1, payload: { resourceId } satisfies ResourceSpent },
@@ -913,23 +966,41 @@ export class PlayTabComponent {
   // `propose.cast` must validate against the CURRENT sheet, not a stale snapshot; a slot spent
   // out from under a still-open dialog surfaces as a genuine `'slot.none-left'` `ProposeError`,
   // caught by `tryPropose` exactly like any other refusal.
+  //
+  // Task 12 (phase 4 plan 11): the pact lane offers a SEPARATE option (never merged with the
+  // regular list) whenever `block.pact.level >= row.level` and a pact slot remains — mirrors
+  // `pactSlotFor`'s own "where level suffices" eligibility rule (`propose/casting.ts`, T11).
+  // `CastDialogResult.pact` selects it; per the engine's own tested contract (`propose.cast —
+  // pact lane`, task-11), a pact spend's `opts.level` is the SPELL's own base level (`row.level`)
+  // — NOT the pact's displayed level — the `slot.spent{level: pact.level, pact: true}` event T11
+  // emits alongside `spell.cast` is what actually records the pact slot's own level; this handler
+  // never invents that substitution itself, it only forwards `row.level` unchanged either way.
   protected async onCastLeveled(block: SpellcastingBlock, row: SpellRow): Promise<void> {
-    const availableSlots = block.slots.filter((s) => s.level >= row.level && s.used < s.max);
+    const regularOptions = block.slots.filter((s) => s.level >= row.level && s.used < s.max);
+    const pact = block.pact;
+    const pactOptions: CastDialogSlotOption[] =
+      pact && pact.level >= row.level && pact.used < pact.count
+        ? [{ level: pact.level, max: pact.count, used: pact.used, pact: true }]
+        : [];
     const handle = this.dialogService.open(CastDialogComponent, {
       data: {
         spellName: row.name,
         spellLevel: row.level,
         spellConcentration: row.concentration,
-        availableSlots,
+        availableSlots: [...regularOptions, ...pactOptions],
         alreadyConcentrating: this.concentration() !== undefined,
       } satisfies CastDialogData,
     });
-    const chosenLevel = await handle.closed;
-    if (typeof chosenLevel !== 'number') return;
+    const result = (await handle.closed) as CastDialogResult | undefined;
+    if (!result) return;
     const sheet = this.sheet();
     if (!sheet) return;
     this.tryPropose(() =>
-      propose.cast(sheet, row.id, { level: chosenLevel, concentration: row.concentration }),
+      propose.cast(sheet, row.id, {
+        level: result.pact ? row.level : result.level,
+        concentration: row.concentration,
+        ...(result.pact ? { pact: true } : {}),
+      }),
     );
   }
 

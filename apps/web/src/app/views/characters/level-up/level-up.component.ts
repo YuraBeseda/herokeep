@@ -4,6 +4,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { StepperComponent, type HkStepperStep } from '@shared/components/stepper/stepper.component';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import type {
   ChoiceCommitFn,
@@ -53,6 +54,7 @@ export class LevelUpComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
+  private readonly engineFacade = inject(EngineFacade);
 
   // The wizard's own navigation cursor — `hk-stepper` never derives this itself (mirrors
   // `CreateWizardComponent`'s own doc). Defaults to 'hp': `state.steps()` always starts with it
@@ -180,6 +182,19 @@ export class LevelUpComponent {
 
   protected onRollHp(): void {
     this.state.rollHp();
+  }
+
+  // Task 12 (phase 4 plan 11) — the which-class picker (ADR-007). Falls back to the raw id for
+  // anything the content index doesn't resolve (same defensive convention `PlayTabComponent
+  // .resolveName`/`MemberSheetDialogComponent.resolveName` already use everywhere in this codebase
+  // for a pack-derived entity name).
+  protected resolveClassName(classId: string): string {
+    const index = this.engineFacade.index();
+    return index.has(classId) ? this.engineFacade.localizer().name(classId) : classId;
+  }
+
+  protected onChooseClass(classId: string): void {
+    this.state.chooseClass(classId);
   }
 
   protected async onFinish(): Promise<void> {

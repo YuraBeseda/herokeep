@@ -66,3 +66,21 @@
   justify-content: space-between;
   gap: var(--space-2);
 }
+
+/* The which-class picker (task 12, phase 4 plan 11, ADR-007) — a simple vertical button stack,
+   same pattern the wizard's own hp-actions button row already uses elsewhere in this file. */
+.level-up__class-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.level-up__class-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.level-up__class-picker-option {
+  text-align: left;
+}

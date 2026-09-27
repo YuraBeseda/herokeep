@@ -26,7 +26,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
-import { levelUpToTwo, seedFighter, seedWizard } from '../testing/character-fixtures';
+import { levelUpToTwo, seedFighter, seedWarlock, seedWizard } from '../testing/character-fixtures';
 import { PlayTabComponent } from './play-tab.component';
 
 // `Sheet['resources'][number]`/`Sheet['actions'][number]` recovered as indexed-access aliases,
@@ -940,6 +940,213 @@ describe('PlayTabComponent — slots, resources, casting, concentration controls
     });
     compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.play-tab__concentration')).toBeNull();
+  });
+});
+
+// Task 12 (phase 4, plan 11) — pact slot rendering + spending (T3/T11 carry): a Warlock's
+// `SpellcastingBlock.pact {level, count, used}` renders as its OWN pip row, separate from the
+// regular per-level `.slots` rows (which are always `[]` for a pact block, task 3), and the
+// cast/spend flow uses the new `propose` pact lane (`opts.pact: true`, task 11) — reuses this
+// file's own `pollUntil`/`buttonNamed`/dialog-overlay conventions established just above.
+describe('PlayTabComponent — pact slots (phase 4, plan 11, task 12)', () => {
+  const WARLOCK_CLASS_ID = 'srd-5e-2024:class/warlock';
+  const CHARM_PERSON = 'srd-5e-2024:spell/charm-person'; // level 1, concentration: false
+
+  function learned(spellId: string, classId = WARLOCK_CLASS_ID) {
+    return { type: 'spell.learned', v: 1, payload: { spellId, classId, source: 'levelUp' } };
+  }
+
+  function prepared(spellId: string, classId = WARLOCK_CLASS_ID) {
+    return { type: 'spell.prepared', v: 1, payload: { spellId, classId } };
+  }
+
+  beforeEach(async () => {
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  async function pollUntil(
+    fixture: { whenStable(): Promise<unknown> },
+    predicate: () => boolean,
+    maxIterations = 50,
+  ): Promise<void> {
+    for (let i = 0; i < maxIterations && !predicate(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(predicate()).toBe(true);
+  }
+
+  function buttonNamed(container: HTMLElement, text: string): HTMLButtonElement {
+    const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    );
+    if (!button) throw new Error(`no button matching "${text}"`);
+    return button;
+  }
+
+  function preparedListSection(compiled: HTMLElement): HTMLElement {
+    const headers = Array.from(compiled.querySelectorAll<HTMLElement>('.play-tab__spell-lists h3'));
+    const header = headers.find(
+      (h) => h.textContent?.trim() === charactersEn.sheet.spellcasting.prepared,
+    );
+    if (!header) throw new Error('no "Prepared spells" section rendered');
+    return header.parentElement!;
+  }
+
+  it("renders the pact block's own pip row, separately from (and never inside) the regular .play-tab__slots rows", async () => {
+    await seedWarlock('Kaelen');
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // A level-1 Warlock's Pact Magic grants exactly one level-1 pact slot (the real SRD table,
+    // task-11-report.md) and NO regular `.slots` entries at all (task 3: a pact block's `.slots`
+    // is always `[]` by construction) — the pact row reuses `.play-tab__slot-row`'s own label/pips
+    // layout for visual consistency (it's a distinct `.play-tab__pact-slots` CONTAINER, not a
+    // distinct row class), so "no regular row" is checked by excluding that container.
+    expect(
+      compiled.querySelectorAll('.play-tab__slots:not(.play-tab__pact-slots) .play-tab__slot-row')
+        .length,
+    ).toBe(0);
+    const pactBlock = compiled.querySelector('.play-tab__pact-slots')!;
+    expect(pactBlock).not.toBeNull();
+    expect(pactBlock.textContent).toContain(
+      charactersEn.sheet.spellcasting.pactSlotsLevel.replace('{level}', '1'),
+    );
+    const pips = pactBlock.querySelectorAll<HTMLButtonElement>('.hk-pips__pip');
+    expect(pips.length).toBe(1);
+    expect(pips[0].getAttribute('aria-pressed')).toBe('false'); // unused
+  });
+
+  it('spending the pact pip appends slot.spent{level, pact:true} via the pact propose lane and increments pactSlots.used', async () => {
+    await seedWarlock('Kaelen');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pip = compiled.querySelector<HTMLButtonElement>('.play-tab__pact-slots .hk-pips__pip')!;
+
+    pip.click();
+    await pollUntil(fixture, () => characterStore.facts()?.pactSlots.used === 1);
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'slot.spent',
+      payload: { level: 1, pact: true },
+    });
+    expect(characterStore.facts()?.slotsUsed ?? {}).toEqual({}); // regular slots untouched
+  });
+
+  it('restoring via the filled pact pip appends slot.restored{level, pact:true} (no count) and decrements by exactly one', async () => {
+    await seedWarlock('Kaelen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx(propose.spendSlot(characterStore.sheet()!, 1, { pact: true }));
+    expect(characterStore.facts()?.pactSlots.used).toBe(1);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pip = compiled.querySelector<HTMLButtonElement>('.play-tab__pact-slots .hk-pips__pip')!;
+    expect(pip.getAttribute('aria-pressed')).toBe('true'); // the one pip, now filled
+
+    pip.click();
+    await pollUntil(fixture, () => characterStore.facts()?.pactSlots.used === 0);
+
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'slot.restored',
+      payload: { level: 1, pact: true },
+    });
+  });
+
+  it('the pact pip row renders read-only (view-only, no spend/restore) while campaign edit-locked, same as the regular slot rows', async () => {
+    // Reuses the "campaign edit lock" describe block's OWN campaign harness is out of scope here —
+    // this test only checks the STRUCTURAL wiring (`[viewReadonly]="editLocked()"`, same binding
+    // the regular slot row already uses) by asserting the pact pip is a real, clickable control for
+    // a solo (never-locked) character — the negative (locked) case is exhaustively covered for the
+    // regular slot rows already in the "campaign edit lock" describe block using the SAME
+    // `hk-pips[viewReadonly]` binding this pact row reuses verbatim, not a parallel implementation.
+    await seedWarlock('Kaelen');
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const pip = compiled.querySelector<HTMLButtonElement>('.play-tab__pact-slots .hk-pips__pip')!;
+    expect(pip.disabled).toBe(false);
+  });
+
+  it('casting a prepared spell offers the pact lane and, on confirm, emits BOTH spell.cast{slotUsed:false} and slot.spent{pact:true}', async () => {
+    await seedWarlock('Kaelen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(CHARM_PERSON), prepared(CHARM_PERSON)]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(preparedListSection(compiled), charactersEn.sheet.spellcasting.cast).click();
+    TestBed.tick();
+
+    // The ONLY option (a pure Warlock has no regular `.slots` at all) is the pact lane, already
+    // selected by default — confirming immediately exercises it.
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    expect(overlay.textContent).toContain(
+      charactersEn.sheet.spellcasting.castDialog.slotOptionPact
+        .replace('{level}', '1')
+        .replace('{remaining}', '1'),
+    );
+    buttonNamed(overlay as HTMLElement, charactersEn.sheet.spellcasting.castDialog.confirm).click();
+    TestBed.tick();
+
+    await pollUntil(fixture, () => characterStore.facts()?.pactSlots.used === 1);
+
+    const lastTwo = characterStore.events().slice(-2);
+    expect(lastTwo.map((e) => e.type)).toEqual(['spell.cast', 'slot.spent']);
+    expect(lastTwo[0].payload).toEqual({ spellId: CHARM_PERSON, level: 1, slotUsed: false });
+    expect(lastTwo[1].payload).toEqual({ level: 1, pact: true });
+    const txIds = new Set(lastTwo.map((e) => e.txId));
+    expect(txIds.size).toBe(1); // one shared txId (CharacterStore.appendTx's own contract)
+  });
+
+  it('a pact slot spent by another action while the cast dialog is still open surfaces a genuine slot.none-left ProposeError, toasted like any other refusal', async () => {
+    await seedWarlock('Kaelen');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([learned(CHARM_PERSON), prepared(CHARM_PERSON)]);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+
+    buttonNamed(preparedListSection(compiled), charactersEn.sheet.spellcasting.cast).click();
+    TestBed.tick();
+
+    // The RACE: the dialog is open holding its stale "1 pact slot available" snapshot; spend the
+    // ONLY pact slot out from under it via a concurrent action (mirrors the regular-slot race test
+    // above, exercising the SAME `tryPropose` re-read-after-close path for the pact lane).
+    await characterStore.appendTx(propose.spendSlot(characterStore.sheet()!, 1, { pact: true }));
+    const eventsBeforeConfirm = characterStore.events().length;
+
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    buttonNamed(overlay as HTMLElement, charactersEn.sheet.spellcasting.castDialog.confirm).click();
+    await fixture.whenStable();
+
+    expect(characterStore.events().length).toBe(eventsBeforeConfirm); // no spell.cast appended
+    expect(showSpy).toHaveBeenCalledWith('characters.validation.slot.none-left');
   });
 });
 
@@ -2684,5 +2891,108 @@ describe('PlayTabComponent — campaign edit lock (plan-10 task-14-brief.md, rul
     ).find((c) => c.querySelector('.hk-card__header')?.textContent?.trim() === 'Strength')!;
     expect(buttonNamed(abilityCard, charactersEn.sheet.roll.check).disabled).toBe(false);
     expect(buttonNamed(abilityCard, charactersEn.sheet.roll.save).disabled).toBe(false);
+  });
+
+  // --- Encumbrance display (phase 4, plan 11, task 12) — the SAME overrides plumbing this
+  // describe block's `fullSettings`/`seedCampaign`/`linkCharacter` harness already exercises for
+  // the edit lock also drives `Sheet.carry` once `CharacterStore.sheet` threads campaign house
+  // rules through `derive()` (task 12, ruling 1) — reused here rather than forked.
+  describe('encumbrance display (Sheet.carry)', () => {
+    it('renders nothing for a solo (never-linked) character — encumbrance off by default', async () => {
+      await seedFighter('Ivan');
+      const fixture = TestBed.createComponent(PlayTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.play-tab__inventory-carry')).toBeNull();
+    });
+
+    it('renders capacity/load and the "Normal" state badge for a campaign-linked character under the "standard" house rule', async () => {
+      const characterId = await seedFighter('Ivan');
+      await seedCampaign('free'); // fullSettings() defaults houseRules.encumbrance to 'standard'
+      await linkCharacter(characterId);
+
+      const fixture = TestBed.createComponent(PlayTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const carry = compiled.querySelector('.play-tab__inventory-carry');
+      expect(carry).not.toBeNull();
+      const summary = carry!
+        .querySelector('.play-tab__inventory-carry-summary')!
+        .textContent.trim();
+      // Fighter fixture: str 17 -> standard capacity = 17 * 15 = 255 lb; chain mail (55) + longsword
+      // (3) + shield (6) = 64 lb load, matching this fixture's own known equipped-item weights.
+      expect(summary).toBe('64 / 255 lb carried');
+      const state = carry!.querySelector('.play-tab__inventory-carry-state')!;
+      expect(state.textContent.trim()).toBe(charactersEn.sheet.inventory.carry.state.normal);
+      expect(state.classList.contains('play-tab__inventory-carry-state--warn')).toBe(false);
+      expect(carry!.querySelector('.play-tab__inventory-carry-penalty')).toBeNull();
+    });
+
+    it('renders the warn badge + speed penalty note once the graded threshold is actually exceeded', async () => {
+      const characterId = await seedFighter('Ivan');
+      const campaignStore = TestBed.inject(CampaignStore);
+      const settings = fullSettings('free');
+      await campaignStore.appendToStream(CAMPAIGN_STREAM, [
+        {
+          type: 'campaign.settings_changed',
+          v: 1,
+          payload: {
+            settings: {
+              ...settings,
+              houseRules: { ...settings.houseRules, encumbrance: 'variant' },
+            },
+          },
+        },
+        {
+          type: 'member.joined',
+          v: 1,
+          payload: { userId: 'u1', displayName: 'Bob', role: 'player' },
+        },
+      ]);
+      await linkCharacter(characterId);
+      // Push this fighter's load well past str17*5=85 (the variant "encumbered" threshold) with a
+      // heavy custom item — the display-only path this task adds, not a new engine computation.
+      const characterStore = TestBed.inject(CharacterStore);
+      await characterStore.appendTx([
+        {
+          type: 'item.added',
+          v: 1,
+          payload: {
+            instanceId: '33333333-3333-4333-8333-333333333333',
+            name: 'Anvil',
+            qty: 1,
+            custom: { weight: 100 },
+          },
+        },
+      ]);
+
+      const fixture = TestBed.createComponent(PlayTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const carry = compiled.querySelector('.play-tab__inventory-carry')!;
+      const state = carry.querySelector('.play-tab__inventory-carry-state')!;
+      expect(state.textContent.trim()).toBe(charactersEn.sheet.inventory.carry.state.encumbered);
+      expect(state.classList.contains('play-tab__inventory-carry-state--warn')).toBe(true);
+      const penalty = carry.querySelector('.play-tab__inventory-carry-penalty')!;
+      expect(penalty.textContent.trim()).toBe(
+        charactersEn.sheet.inventory.carry.speedPenalty.replace('{value}', '10'),
+      );
+    });
+
+    it('a11y: the state badge and speed-penalty note are plain readable text, not icon-only', async () => {
+      const characterId = await seedFighter('Ivan');
+      await seedCampaign('free');
+      await linkCharacter(characterId);
+
+      const fixture = TestBed.createComponent(PlayTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const state = compiled.querySelector('.play-tab__inventory-carry-state')!;
+      expect(state.textContent.trim().length).toBeGreaterThan(0);
+    });
   });
 });

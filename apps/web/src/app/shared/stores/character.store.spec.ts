@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal, type WritableSignal } from '@angular/core';
+import { ApplicationRef, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ENGINE_VERSION } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
-import { parsePack, type Pack } from '@hk/protocol';
+import { parsePack, type CampaignSettings, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
@@ -15,6 +15,7 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import { PackStore } from '@shared/stores/pack.store';
+import { seedFighter } from '../../views/characters/sheet/testing/character-fixtures';
 import { CharacterStore, CharacterStoreNotLeaderError, SyncGapError } from './character.store';
 
 // The `pretest` script (apps/web/package.json) runs `pnpm --filter @hk/content build:pack` first,
@@ -935,6 +936,81 @@ describe('CharacterStore', () => {
       await expect(store.resetStreamFromServer(streamId, [])).rejects.toThrow(
         CharacterStoreNotLeaderError,
       );
+    });
+  });
+
+  // --- Campaign overrides plumbing (phase 4, plan 11, task 12, ruling 1) ---------------------
+  describe('campaign overrides plumbing (ruling 1)', () => {
+    const CAMPAIGN_ID = '77777777-7777-4777-8777-777777777777';
+    const CAMPAIGN_STREAM = `camp:${CAMPAIGN_ID}`;
+
+    function fullSettings(
+      encumbrance: CampaignSettings['houseRules']['encumbrance'],
+      attunementMax: number,
+    ): CampaignSettings {
+      return {
+        system: 'srd-5e-2024',
+        packs: [],
+        houseRules: {
+          strictValidation: true,
+          allowOverrides: true,
+          editOutsideSession: 'free',
+          xpMode: 'xp',
+          hpOnLevelUp: 'roll',
+          encumbrance,
+          attunementMax,
+          startingLevel: 1,
+        },
+        visibility: { partySheets: 'overview', rolls: 'dm', allowPrivateRolls: true },
+        join: { open: true, requireApproval: false },
+      };
+    }
+
+    async function seedCampaign(
+      encumbrance: CampaignSettings['houseRules']['encumbrance'],
+      attunementMax: number,
+    ): Promise<void> {
+      const eventsRepository = TestBed.inject(EventsRepository);
+      await eventsRepository.append([
+        {
+          id: 'evt-campaign-created',
+          stream: CAMPAIGN_STREAM,
+          seq: 1,
+          ts: '2026-01-01T00:00:00.000Z',
+          actor: { userId: 'dm1', deviceId: 'd1', role: 'owner' },
+          type: 'campaign.settings_changed',
+          v: 1,
+          payload: { settings: fullSettings(encumbrance, attunementMax) },
+        } as unknown as Event,
+      ]);
+    }
+
+    it('a solo (never-linked) character gets no overrides — engine defaults', async () => {
+      await seedFighter('Ivan');
+      const store = TestBed.inject(CharacterStore);
+
+      expect(store.sheet()?.attunementMax).toBe(3); // engine/pack default, unmodified
+      expect(store.sheet()?.carry).toBeUndefined(); // encumbrance off by default
+    });
+
+    it("a campaign-linked character's sheet reflects the campaign's own attunementMax/encumbrance house rules", async () => {
+      const streamId = await seedFighter('Ivan');
+      await seedCampaign('standard', 5);
+      const store = TestBed.inject(CharacterStore);
+      store.enterSyncMode(streamId);
+      await store.appendTx([
+        { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+      ]);
+      // No component/fixture here to drive `whenStable()` per-fixture (unlike `campaign-edit-lock
+      // .spec.ts`'s own reactive tests) — `ApplicationRef.whenStable()` is the app-wide equivalent:
+      // it awaits every pending task (including `overridesFor`'s own `resource()` fetch) regardless
+      // of which injector created it.
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.sheet()?.attunementMax).toBe(5);
+      expect(store.sheet()?.carry?.mode).toBe('standard');
+      expect(store.sheet()?.overridesProvenance?.attunementMax).toBe('house rule');
+      expect(store.sheet()?.overridesProvenance?.encumbrance).toBe('house rule');
     });
   });
 });

@@ -76,14 +76,49 @@ export class LevelUpState {
     return { restRules: system.restRules, hpRules: system.hpRules };
   });
 
-  /** The class this session is leveling — the first (`pendingAdvancements`'s own classId sort) of
-   * whatever `CharacterStore.advancements()` currently reports. 1b never offers a picker across
-   * multiple simultaneously-eligible classes (out of scope, task-13-brief.md) — a character with
-   * more than one eligible class at once always advances this one first; a second visit to
-   * `/c/:id/level-up` after committing handles the next. */
-  readonly advancement: Signal<Advancement | undefined> = computed(
-    () => this.characterStore.advancements()[0],
-  );
+  /** Task 12 (phase 4, plan 11) — the which-class picker's own selection, when one was needed
+   * (see `classChoices`'s doc). Never reset mid-session: once a class is picked, this session
+   * stays committed to it (a `characterStore.advancements()` list can't itself change mid-session
+   * — nothing this session does mutates the LIVE character until `buildTransaction()` is finally
+   * committed). */
+  private readonly selectedClassId = signal<string | undefined>(undefined);
+
+  /** ADR-007 (multiclass advancement/level-up flow): whenever `CharacterStore.advancements()`
+   * reports MORE THAN ONE entry (either two+ classes already on the sheet both crossed an XP
+   * breakpoint, or one already-taken class's own level-up sits ALONGSIDE one or more eligible
+   * new-class offers — `Advancement.isNewClass`, task-2-report.md), the level-up flow starts with
+   * a "which class" choice before anything else — ADR-007 L108: "the same flow with a 'which
+   * class' choice first". Exactly one entry (the pre-existing, single-class-only 1b contract,
+   * task-13-brief.md) never shows a picker at all — `advancement` below auto-selects it,
+   * byte-identical to before this task. The BARRED case (task-2's "every already-taken class must
+   * still meet its own multiclass prerequisite, or no new-class entries are offered at all") falls
+   * naturally out of this: a barred sheet's `advancements()` reports only the existing-class
+   * entry/entries it always would have, so `classChoices` stays empty (or single-entry) and no
+   * multiclass option is ever shown — no separate barring logic needed here. */
+  readonly classChoices: Signal<Advancement[]> = computed(() => {
+    const all = this.characterStore.advancements();
+    return all.length > 1 ? all : [];
+  });
+
+  /** The class this session is leveling. Exactly one `characterStore.advancements()` entry:
+   * auto-selected (the pre-existing 1b single-class contract, unchanged). More than one: the
+   * picker's own choice (`chooseClass`), `undefined` until the player picks — the template gates
+   * the whole wizard on this being defined, showing the picker instead (see `classChoices`'s
+   * doc). */
+  readonly advancement: Signal<Advancement | undefined> = computed(() => {
+    const all = this.characterStore.advancements();
+    if (all.length <= 1) return all[0];
+    const selected = this.selectedClassId();
+    return selected === undefined ? undefined : all.find((a) => a.classId === selected);
+  });
+
+  /** The which-class picker's own commit — `LevelUpComponent`'s picker step calls this once the
+   * player taps an option. A no-op for an id not currently offered (defensive; the template only
+   * ever wires this to `classChoices()`'s own entries). */
+  chooseClass(classId: string): void {
+    if (!this.classChoices().some((a) => a.classId === classId)) return;
+    this.selectedClassId.set(classId);
+  }
 
   private readonly classEntity = computed(() => {
     const a = this.advancement();

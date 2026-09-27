@@ -1,5 +1,32 @@
 <section class="level-up" *transloco="let t; read: 'characters'">
-  @if (state.advancement(); as advancement) {
+  @if (state.classChoices().length > 0 && !state.advancement()) {
+    <div class="level-up__class-picker">
+      <h1 class="level-up__title">{{ t('levelUp.classPicker.title') }}</h1>
+      <div
+        class="level-up__class-picker-options"
+        role="group"
+        [attr.aria-label]="t('levelUp.classPicker.label')"
+      >
+        @for (option of state.classChoices(); track option.classId) {
+          <button
+            hk-button
+            type="button"
+            class="level-up__class-picker-option"
+            (click)="onChooseClass(option.classId)"
+          >
+            {{
+              option.isNewClass
+                ? t('levelUp.classPicker.multiclass', { class: resolveClassName(option.classId) })
+                : t('levelUp.classPicker.levelUp', {
+                    class: resolveClassName(option.classId),
+                    level: option.toLevel,
+                  })
+            }}
+          </button>
+        }
+      </div>
+    </div>
+  } @else if (state.advancement(); as advancement) {
     <h1 class="level-up__title">
       {{ t('levelUp.title', { level: advancement.toLevel }) }}
     </h1>

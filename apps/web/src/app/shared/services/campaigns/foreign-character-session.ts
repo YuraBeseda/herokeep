@@ -1,6 +1,15 @@
 import { signal, type Signal } from '@angular/core';
-import { derive, reduce, type ContentIndex, type Sheet, type SystemRules } from '@hk/engine';
+import {
+  derive,
+  reduce,
+  type ContentIndex,
+  type DeriveOverrides,
+  type Sheet,
+  type SystemRules,
+} from '@hk/engine';
 import type { Event, Pack } from '@hk/protocol';
+import { campaignDeriveOverridesFromState } from './campaign-edit-lock';
+import { projectCampaign } from './campaign-projection';
 
 /**
  * `ForeignCharacterSession` — plan-10 task-9-brief.md: the DM party-sheet drill-in's viewer
@@ -62,6 +71,28 @@ import type { Event, Pack } from '@hk/protocol';
  * against `packStore.corePack()`) before ever calling `derive()`, and lands on `status: 'error'`
  * (never a thrown exception bubbling out of a `registerForeignEventsConsumer` callback) whenever it
  * doesn't match, or `packStore.corePack()` isn't loaded at all.
+ *
+ * ## House-rule overrides (phase 4, plan 11, task 12, ruling 1 — "DM drill-in should reflect the
+ * same house rules")
+ *
+ * This session already knows its own `campaignId` (unlike the general "which campaign is THIS
+ * character linked to" case `CampaignEditLockService.overridesFor` solves for a play/build tab) —
+ * so it reads that SAME campaign's settings document directly via the optional `campaignEvents`
+ * port, and folds it through the identical pure projection `CampaignEditLockService` uses
+ * (`campaignDeriveOverridesFromState` — same pattern, reused, not forked). Not an Angular service
+ * (this class's own non-DI posture, above), so it can't `inject()`/`effect()` — `refreshOverrides`
+ * is instead a plain async method, fetched once on `start()` and then on a bounded
+ * `overridesPollMs` (default 15s, same bound `CampaignEditLockService`'s own poll uses) `setInterval`
+ * — an honest, cheaper analogue of that service's `effect()`-driven poll, since this class already
+ * manages its own timers manually (the `timeoutMs` arm/disarm above). Best-effort: a failed fetch
+ * (offline, a transient storage error) leaves whatever overrides this session already had — same
+ * fail-open posture `campaignDeriveOverridesFromState` itself already applies for a campaign with
+ * no settings document yet. Only re-derives (`recompute()`) when this session is ALREADY `'ready'`
+ * — never lets an overrides-poll tick prematurely flip a still-`'loading'`/`'unauthorized'` session
+ * (no character frames yet at all would make `recompute()`'s own pack-mismatch guard misfire).
+ * `campaignEvents` omitted entirely (every pre-task-12 caller) is byte-identical to before this
+ * task — `overrides` stays `{}`, `derive()`'s 4th argument is simply omitted, same as omitting it
+ * always was.
  */
 
 export type ForeignCharacterStatus = 'loading' | 'ready' | 'unauthorized' | 'error';
@@ -88,6 +119,14 @@ export interface ForeignCharacterEnginePort {
   index(): ContentIndex;
 }
 
+/** The narrow slice of `EventsRepository` this session reads for house-rule overrides (task 12,
+ * class doc's "House-rule overrides" section) — a real `EventsRepository` satisfies this
+ * structurally, same "narrow port, no whole-service injection" convention as every other port on
+ * this options interface. */
+export interface ForeignCharacterCampaignPort {
+  byStream(streamId: string): Promise<Event[]>;
+}
+
 export interface ForeignCharacterSessionOptions {
   /** The bare campaign uuid (no `camp:` prefix) — same convention `CampaignStore.campaignId`/route
    * params use. */
@@ -105,9 +144,16 @@ export interface ForeignCharacterSessionOptions {
   timeoutMs?: number;
   setTimeoutFn?: (cb: () => void, ms: number) => ReturnType<typeof setTimeout>;
   clearTimeoutFn?: (handle: ReturnType<typeof setTimeout>) => void;
+  /** House-rule overrides (class doc) — omitted entirely (every pre-task-12 caller) means `derive()`
+   * runs with no overrides at all, byte-identical to before this task. */
+  campaignEvents?: ForeignCharacterCampaignPort;
+  overridesPollMs?: number;
+  setIntervalFn?: (cb: () => void, ms: number) => ReturnType<typeof setInterval>;
+  clearIntervalFn?: (handle: ReturnType<typeof setInterval>) => void;
 }
 
 const DEFAULT_TIMEOUT_MS = 8_000;
+const DEFAULT_OVERRIDES_POLL_MS = 15_000;
 
 export class ForeignCharacterSession {
   private readonly campaignId: string;
@@ -118,9 +164,18 @@ export class ForeignCharacterSession {
   private readonly timeoutMs: number;
   private readonly setTimeoutFn: (cb: () => void, ms: number) => ReturnType<typeof setTimeout>;
   private readonly clearTimeoutFn: (handle: ReturnType<typeof setTimeout>) => void;
+  private readonly campaignEvents: ForeignCharacterCampaignPort | undefined;
+  private readonly overridesPollMs: number;
+  private readonly setIntervalFn: (cb: () => void, ms: number) => ReturnType<typeof setInterval>;
+  private readonly clearIntervalFn: (handle: ReturnType<typeof setInterval>) => void;
 
   private unregister: (() => void) | undefined;
   private timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  private overridesTimer: ReturnType<typeof setInterval> | undefined;
+  // `{}` (no overrides) until the first `refreshOverrides()` resolves — same "no settings document
+  // posted yet -> free defaults" fail-open posture `campaignDeriveOverridesFromState` itself
+  // already applies (class doc's "House-rule overrides" section).
+  private overrides: DeriveOverrides = {};
   // Every event id ever successfully folded in, so an overlapping catch-up/notify redelivery is
   // recognized as a benign duplicate rather than a gap (class doc).
   private readonly appliedIds = new Set<string>();
@@ -144,10 +199,16 @@ export class ForeignCharacterSession {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.setTimeoutFn = options.setTimeoutFn ?? setTimeout;
     this.clearTimeoutFn = options.clearTimeoutFn ?? clearTimeout;
+    this.campaignEvents = options.campaignEvents;
+    this.overridesPollMs = options.overridesPollMs ?? DEFAULT_OVERRIDES_POLL_MS;
+    this.setIntervalFn = options.setIntervalFn ?? setInterval;
+    this.clearIntervalFn = options.clearIntervalFn ?? clearInterval;
   }
 
   /** Registers this session's foreign-events consumer and sends the initial `subscribe` (no
-   * `lastSeq` — a full catch-up from the beginning). Idempotent — a second call is a no-op. */
+   * `lastSeq` — a full catch-up from the beginning). Idempotent — a second call is a no-op.
+   * `campaignEvents` (class doc's "House-rule overrides" section), when supplied, also fetches this
+   * campaign's settings once right away and arms a bounded poll for later house-rule changes. */
   start(): void {
     if (this.started) return;
     this.started = true;
@@ -157,6 +218,14 @@ export class ForeignCharacterSession {
     });
     this.armTimeout();
     this.sync.subscribeForeignStream(this.campaignId, this.streamId);
+
+    if (this.campaignEvents) {
+      void this.refreshOverrides();
+      this.overridesTimer = this.setIntervalFn(
+        () => void this.refreshOverrides(),
+        this.overridesPollMs,
+      );
+    }
   }
 
   /** Tears this session down: cancels any armed timeout, unregisters from the campaign's
@@ -168,9 +237,33 @@ export class ForeignCharacterSession {
     if (this.stopped) return;
     this.stopped = true;
     this.clearArmedTimeout();
+    if (this.overridesTimer !== undefined) {
+      this.clearIntervalFn(this.overridesTimer);
+      this.overridesTimer = undefined;
+    }
     this.unregister?.();
     this.unregister = undefined;
     if (this.started) this.sync.unsubscribeForeignStream(this.campaignId, this.streamId);
+  }
+
+  /** Class doc's "House-rule overrides" section. Best-effort: a failed fetch leaves `this.overrides`
+   * exactly as it was (never regresses to `{}` on a transient error). Only re-derives when this
+   * session is ALREADY `'ready'` — an overrides tick that lands before the first real character
+   * frame ever arrives must never itself flip `'loading'`/`'unauthorized'` toward `'error'` (there
+   * would be no `facts`/`corePack` context yet for `recompute()`'s own pack-mismatch guard to judge
+   * honestly). */
+  private async refreshOverrides(): Promise<void> {
+    if (!this.campaignEvents || this.stopped) return;
+    let next: DeriveOverrides;
+    try {
+      const events = await this.campaignEvents.byStream(`camp:${this.campaignId}`);
+      next = campaignDeriveOverridesFromState(projectCampaign(events));
+    } catch {
+      return;
+    }
+    if (this.stopped) return;
+    this.overrides = next;
+    if (this.statusState() === 'ready') this.recompute();
   }
 
   private armTimeout(): void {
@@ -256,7 +349,7 @@ export class ForeignCharacterSession {
     }
 
     try {
-      const sheet = derive(facts, index, rules);
+      const sheet = derive(facts, index, rules, this.overrides);
       this.sheetState.set(sheet);
       this.statusState.set('ready');
     } catch {

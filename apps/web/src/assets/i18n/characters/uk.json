@@ -152,6 +152,12 @@
   },
   "levelUp": {
     "title": "Підвищення до {level} рівня",
+    "classPicker": {
+      "title": "Який клас?",
+      "label": "Оберіть клас для підвищення",
+      "levelUp": "Підвищити {class} до {level} рівня",
+      "multiclass": "Мультиклас: {class}"
+    },
     "steps": {
       "hp": "Очки здоров'я",
       "choice": "Вибір",
@@ -383,6 +389,8 @@
       "cantripsKnown": "Відомо заговорів",
       "slotsLevel": "Комірки {level} рівня",
       "slotPipLabel": "Комірка {level} рівня {index} з {max}",
+      "pactSlotsLevel": "Комірки Угоди ({level} рівня)",
+      "pactPipLabel": "Комірка Угоди {index} з {max}, {level} рівня",
       "prepared": "Підготовлені заклинання",
       "known": "Відомі заклинання",
       "preparedOf": "{prepared} / {max} підготовлено",
@@ -394,6 +402,7 @@
         "title": "Накласти: {name}",
         "slotLabel": "Комірка заклинання",
         "slotOption": "{level} рівень (залишилось {remaining})",
+        "slotOptionPact": "Комірка Угоди, {level} рівень (залишилось {remaining})",
         "noSlots": "Немає доступних комірок заклинань.",
         "replacesConcentration": "Це припинить поточну концентрацію.",
         "cancel": "Скасувати",
@@ -456,6 +465,16 @@
       "remove": "Видалити предмет",
       "weight": "{value, plural, one {# фунт} few {# фунти} many {# фунтів} other {# фунта}}",
       "totalWeight": "Загальна вага: {value, plural, one {# фунт} few {# фунти} many {# фунтів} other {# фунта}}",
+      "carry": {
+        "summary": "{load} / {capacity} фунтів переноситься",
+        "speedPenalty": "Швидкість −{value} фут.",
+        "state": {
+          "normal": "Норма",
+          "encumbered": "Обтяжений",
+          "heavilyEncumbered": "Сильно обтяжений",
+          "overloaded": "Перевантажений"
+        }
+      },
       "currencyTitle": "Валюта",
       "currencyApply": "Застосувати",
       "addDialog": {

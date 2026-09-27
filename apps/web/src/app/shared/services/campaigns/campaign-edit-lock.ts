@@ -8,6 +8,7 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
+import type { DeriveOverrides } from '@hk/engine';
 import type { Event } from '@hk/protocol';
 import { AuthService } from '../auth/auth.service';
 import { EventsRepository } from '../storage/events.repository';
@@ -67,6 +68,25 @@ export function campaignEditLockFromState(
   // as a flat lockout. A future task adding a real DM-approval request/response flow should extend
   // this branch (e.g. a per-request override), not remove the distinct `mode`.
   return { locked: true, mode: rule === 'dmApproval' ? 'dmApprovalV1' : 'locked' };
+}
+
+/**
+ * Ruling 1 (phase 4, plan 11, task 12 — "overrides plumbing"): campaign-linked characters derive
+ * `derive()`'s `DeriveOverrides` STRAIGHT from the campaign's own settings document's
+ * `houseRules.attunementMax`/`houseRules.encumbrance` — a direct passthrough, not gated by
+ * `houseRules.allowOverrides` (that flag governs a DIFFERENT mechanism, a member's own manual
+ * `override.applied` events during play — doc-08's permission table — not whether the table's
+ * ATTUNEMENT-CAP/ENCUMBRANCE-MODE house rules themselves apply to derive). Same fail-open posture
+ * as `campaignEditLockFromState`: `state: null` (no campaign context — a genuinely solo character,
+ * ruling 1's "solo defaults", or a linked character whose campaign events haven't synced down yet)
+ * and `state.settings === null` (campaign exists but no settings document has ever been posted)
+ * BOTH return `{}` — the engine's own `derive()` defaults (no attunement override, encumbrance
+ * `'off'`), never a half-applied guess.
+ */
+export function campaignDeriveOverridesFromState(state: CampaignState | null): DeriveOverrides {
+  const houseRules = state?.settings?.houseRules;
+  if (!houseRules) return {};
+  return { attunementMax: houseRules.attunementMax, encumbrance: houseRules.encumbrance };
 }
 
 const DEFAULT_POLL_MS = 15_000;
@@ -133,6 +153,38 @@ export class CampaignEditLockService {
    * THAT context, so they're torn down automatically alongside whatever calls this (e.g. a
    * `PlayTabComponent`/`BuildTabComponent` instance), not this service's own root lifetime. */
   editLockFor(characterEvents: Signal<readonly Event[]>): Signal<CampaignEditLockState> {
+    const state = this.campaignStateFor(characterEvents);
+    return computed<CampaignEditLockState>(() =>
+      campaignEditLockFromState(state(), this.authService.user()?.userId),
+    );
+  }
+
+  /**
+   * Ruling 1 (phase 4, plan 11, task 12 — "overrides plumbing"): the `DeriveOverrides` a
+   * campaign-linked character's `derive()` call should thread through — REUSES `campaignStateFor`
+   * (the exact same cross-stream projection read `editLockFor` above is built on, plan-10's
+   * edit-lock pattern) rather than forking a second Dexie-polling mechanism; only the pure
+   * projection function on the end differs (`campaignDeriveOverridesFromState` vs.
+   * `campaignEditLockFromState`). Same staleness bounds as `editLockFor`'s own doc (immediate on a
+   * `characterEvents` change, bounded `CAMPAIGN_EDIT_LOCK_POLL_INTERVAL_MS` poll otherwise) — a
+   * campaign's house-rule change (encumbrance mode, attunement cap) reaches a linked character's
+   * `Sheet` within one poll interval, same as a lock-state change already does. Solo characters
+   * (ruling 1) get `{}` (engine defaults) — see `campaignDeriveOverridesFromState`'s own doc. Same
+   * injection-context requirement as `editLockFor`. */
+  overridesFor(characterEvents: Signal<readonly Event[]>): Signal<DeriveOverrides> {
+    const state = this.campaignStateFor(characterEvents);
+    return computed<DeriveOverrides>(() => campaignDeriveOverridesFromState(state()));
+  }
+
+  /** The shared cross-stream projection read both `editLockFor` and `overridesFor` build on — see
+   * `editLockFor`'s own doc (staleness bounds, poll mechanics, injection-context requirement) for
+   * the full design; factored out here purely so the two public methods never duplicate this
+   * Dexie-read/poll machinery. `null` exactly when `characterEvents` resolves to no campaign link
+   * at all — the caller's own pure projection function decides what that means for its own verdict
+   * (`campaignEditLockFromState`/`campaignDeriveOverridesFromState` both fail open on `null`). */
+  private campaignStateFor(
+    characterEvents: Signal<readonly Event[]>,
+  ): Signal<CampaignState | null> {
     const streamId = computed<string | undefined>(() => {
       const campaignId = campaignIdOfCharacter(characterEvents());
       return campaignId ? `camp:${campaignId}` : undefined;
@@ -167,11 +219,10 @@ export class CampaignEditLockService {
         params === undefined ? [] : await this.eventsRepository.byStream(params.id),
     });
 
-    return computed<CampaignEditLockState>(() => {
-      if (streamId() === undefined) return campaignEditLockFromState(null, undefined);
+    return computed<CampaignState | null>(() => {
+      if (streamId() === undefined) return null;
       const events = campaignEvents.value();
-      const state = events === undefined ? null : projectCampaign(events);
-      return campaignEditLockFromState(state, this.authService.user()?.userId);
+      return events === undefined ? null : projectCampaign(events);
     });
   }
 }

@@ -54,9 +54,12 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
+    // Task 12: option `value` is the ARRAY INDEX (never the bare level) — two options can share
+    // the same `level` (a pact slot and a regular slot both at level 3), so index is what
+    // disambiguates the selection; see the component's own class doc.
     const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
     expect(options).toHaveLength(2);
-    expect(options.map((o) => o.value)).toEqual(['1', '2']);
+    expect(options.map((o) => o.value)).toEqual(['0', '1']);
     expect(options[0].textContent).toContain('1');
     expect(options.some((o) => o.value === '' || /no slot/i.test(o.textContent ?? ''))).toBe(false);
   });
@@ -104,7 +107,7 @@ describe('CastDialogComponent', () => {
     );
   });
 
-  it('confirm closes the dialog with the (default, first-option) selected slot level', async () => {
+  it('confirm closes the dialog with a CastDialogResult for the (default, first-option) selected slot', async () => {
     configure();
     const handle = open({
       ...BASE_DATA,
@@ -121,7 +124,7 @@ describe('CastDialogComponent', () => {
       .click();
     TestBed.tick();
 
-    expect(await handle.closed).toBe(1);
+    expect(await handle.closed).toEqual({ level: 1 });
   });
 
   it('confirm closes with a CHANGED slot selection when the select is changed before confirming', async () => {
@@ -136,7 +139,8 @@ describe('CastDialogComponent', () => {
     TestBed.tick();
 
     const select = document.querySelector<HTMLSelectElement>('select')!;
-    select.value = '2';
+    // Index-based value (task 12) — '1' selects the SECOND option (level 2), not "value 1".
+    select.value = '1';
     select.dispatchEvent(new Event('change'));
     TestBed.tick();
 
@@ -146,7 +150,78 @@ describe('CastDialogComponent', () => {
       .click();
     TestBed.tick();
 
-    expect(await handle.closed).toBe(2);
+    expect(await handle.closed).toEqual({ level: 2 });
+  });
+
+  // --- Pact-lane option (phase 4, plan 11, task 12) -------------------------------------------
+
+  it('renders the pact option with its own distinct label, alongside a regular option at the SAME level', () => {
+    configure();
+    open({
+      ...BASE_DATA,
+      availableSlots: [
+        { level: 3, max: 1, used: 0 },
+        { level: 3, max: 2, used: 1, pact: true },
+      ],
+    });
+    TestBed.tick();
+
+    const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
+    expect(options).toHaveLength(2);
+    expect(options[0].textContent?.trim()).toBe(
+      charactersEn.sheet.spellcasting.castDialog.slotOption
+        .replace('{level}', '3')
+        .replace('{remaining}', '1'),
+    );
+    expect(options[1].textContent?.trim()).toBe(
+      charactersEn.sheet.spellcasting.castDialog.slotOptionPact
+        .replace('{level}', '3')
+        .replace('{remaining}', '1'),
+    );
+  });
+
+  it('confirm closes with { level, pact: true } when the pact option is selected', async () => {
+    configure();
+    const handle = open({
+      ...BASE_DATA,
+      availableSlots: [
+        { level: 1, max: 2, used: 0 },
+        { level: 3, max: 2, used: 0, pact: true },
+      ],
+    });
+    TestBed.tick();
+
+    const select = document.querySelector<HTMLSelectElement>('select')!;
+    select.value = '1'; // the pact option, index 1
+    select.dispatchEvent(new Event('change'));
+    TestBed.tick();
+
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
+    buttons
+      .find((b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm)!
+      .click();
+    TestBed.tick();
+
+    expect(await handle.closed).toEqual({ level: 3, pact: true });
+  });
+
+  it('confirm closes with no pact field at all for a regular (non-pact) selection', async () => {
+    configure();
+    const handle = open({
+      ...BASE_DATA,
+      availableSlots: [{ level: 1, max: 2, used: 0 }],
+    });
+    TestBed.tick();
+
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
+    buttons
+      .find((b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm)!
+      .click();
+    TestBed.tick();
+
+    const result = await handle.closed;
+    expect(result).toEqual({ level: 1 });
+    expect(result).not.toHaveProperty('pact');
   });
 
   it('cancel closes the dialog with undefined', async () => {

@@ -173,6 +173,24 @@
   margin: 0 0 var(--space-2);
 }
 
+/* Encumbrance display (task 12, phase 4 plan 11) — present only when Sheet.carry is (a campaign
+   house rule turned encumbrance on for this character). Same muted-text register as the total
+   weight line above; only the state badge itself calls out --danger once actually encumbered. */
+.play-tab__inventory-carry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: 0.875rem;
+  margin: 0 0 var(--space-1);
+}
+
+.play-tab__inventory-carry-state--warn {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .play-tab__inventory-item {
   display: flex;
   flex-direction: column;

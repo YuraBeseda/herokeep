@@ -15,6 +15,7 @@ import { StatTileComponent } from '@shared/components/stat-tile/stat-tile.compon
 import { ForeignCharacterSession } from '@shared/services/campaigns/foreign-character-session';
 import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { PackStore } from '@shared/stores/pack.store';
 import { DmEffectsPanelComponent } from './dm-effects-panel.component';
@@ -118,13 +119,19 @@ export class MemberSheetDialogComponent {
   private readonly syncService = inject(SyncService);
   private readonly packStore = inject(PackStore);
   private readonly engineFacade = inject(EngineFacade);
+  private readonly eventsRepository = inject(EventsRepository);
 
+  // Task 12, ruling 1 ("DM drill-in should reflect the same house rules"): `campaignEvents` lets
+  // this session read the SAME campaign's own settings document (`ForeignCharacterSession`'s own
+  // "House-rule overrides" class doc section) — a real `EventsRepository.byStream` call, exactly
+  // the narrow port that class expects.
   private readonly session = new ForeignCharacterSession({
     campaignId: this.data.campaignId,
     characterId: this.data.characterId,
     sync: this.syncService,
     packStore: { corePack: () => this.packStore.corePack() },
     engineFacade: { index: () => this.engineFacade.index() },
+    campaignEvents: { byStream: (streamId) => this.eventsRepository.byStream(streamId) },
   });
 
   protected readonly status = this.session.status;

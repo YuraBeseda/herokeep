@@ -425,6 +425,24 @@
                 </div>
               }
             </div>
+            @if (block.pact; as pact) {
+              <div class="play-tab__slots play-tab__pact-slots">
+                <div class="play-tab__slot-row">
+                  <span class="play-tab__slot-label">{{
+                    t('sheet.spellcasting.pactSlotsLevel', { level: pact.level })
+                  }}</span>
+                  <hk-pips
+                    [max]="pact.count"
+                    [used]="pact.used"
+                    [labelKey]="'characters.sheet.spellcasting.pactPipLabel'"
+                    [labelParams]="{ level: pact.level }"
+                    [viewReadonly]="editLocked()"
+                    (spend)="onSpendPactSlot(pact.level)"
+                    (restore)="onRestorePactSlot(pact.level)"
+                  />
+                </div>
+              </div>
+            }
             @if (block.preparedMax !== undefined) {
               <p class="play-tab__prepared-count">
                 {{
@@ -688,6 +706,24 @@
         </button>
       </div>
 
+      @if (carry(); as carry) {
+        <p class="play-tab__inventory-carry">
+          <span class="play-tab__inventory-carry-summary">
+            {{ t('sheet.inventory.carry.summary', { load: carry.load, capacity: carry.capacity }) }}
+          </span>
+          <span
+            class="play-tab__inventory-carry-state"
+            [class.play-tab__inventory-carry-state--warn]="carry.state !== 'normal'"
+          >
+            {{ t(carryStateLabelKey(carry.state)) }}
+          </span>
+          @if (carrySpeedPenalty(); as penalty) {
+            <span class="play-tab__inventory-carry-penalty">
+              {{ t('sheet.inventory.carry.speedPenalty', { value: penalty }) }}
+            </span>
+          }
+        </p>
+      }
       @if (inventoryRows().length > 0) {
         <p class="play-tab__inventory-total-weight">
           {{ t('sheet.inventory.totalWeight', { value: totalWeight() }) }}

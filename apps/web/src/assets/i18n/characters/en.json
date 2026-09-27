@@ -152,6 +152,12 @@
   },
   "levelUp": {
     "title": "Level up to {level}",
+    "classPicker": {
+      "title": "Which class?",
+      "label": "Choose which class to advance",
+      "levelUp": "Level up {class} to {level}",
+      "multiclass": "Multiclass into {class}"
+    },
     "steps": {
       "hp": "Hit points",
       "choice": "Choice",
@@ -383,6 +389,8 @@
       "cantripsKnown": "Cantrips known",
       "slotsLevel": "Level {level} slots",
       "slotPipLabel": "Level {level} slot {index} of {max}",
+      "pactSlotsLevel": "Pact slots (level {level})",
+      "pactPipLabel": "Pact slot {index} of {max}, level {level}",
       "prepared": "Prepared spells",
       "known": "Known spells",
       "preparedOf": "{prepared} / {max} prepared",
@@ -394,6 +402,7 @@
         "title": "Cast {name}",
         "slotLabel": "Spell slot",
         "slotOption": "Level {level} ({remaining} left)",
+        "slotOptionPact": "Pact slot, level {level} ({remaining} left)",
         "noSlots": "No spell slots available.",
         "replacesConcentration": "Casting this will end your current concentration.",
         "cancel": "Cancel",
@@ -456,6 +465,16 @@
       "remove": "Remove item",
       "weight": "{value, plural, one {# lb} other {# lb}}",
       "totalWeight": "Total weight: {value, plural, one {# lb} other {# lb}}",
+      "carry": {
+        "summary": "{load} / {capacity} lb carried",
+        "speedPenalty": "Speed −{value} ft.",
+        "state": {
+          "normal": "Normal",
+          "encumbered": "Encumbered",
+          "heavilyEncumbered": "Heavily encumbered",
+          "overloaded": "Overloaded"
+        }
+      },
       "currencyTitle": "Currency",
       "currencyApply": "Apply",
       "addDialog": {

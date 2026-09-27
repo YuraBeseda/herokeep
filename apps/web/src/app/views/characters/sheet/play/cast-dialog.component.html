@@ -13,13 +13,18 @@
     <label class="cast-dialog__slot-label">
       <span>{{ t('characters.sheet.spellcasting.castDialog.slotLabel') }}</span>
       <select class="cast-dialog__slot-select" (change)="onSlotChange($any($event.target).value)">
-        @for (slot of data.availableSlots; track slot.level) {
-          <option [value]="slot.level" [selected]="slot.level === selectedLevel()">
+        @for (slot of data.availableSlots; track $index) {
+          <option [value]="$index" [selected]="$index === selectedIndex()">
             {{
-              t('characters.sheet.spellcasting.castDialog.slotOption', {
-                level: slot.level,
-                remaining: slot.max - slot.used,
-              })
+              slot.pact
+                ? t('characters.sheet.spellcasting.castDialog.slotOptionPact', {
+                    level: slot.level,
+                    remaining: slot.max - slot.used,
+                  })
+                : t('characters.sheet.spellcasting.castDialog.slotOption', {
+                    level: slot.level,
+                    remaining: slot.max - slot.used,
+                  })
             }}
           </option>
         }
@@ -33,7 +38,7 @@
     <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
       {{ t('characters.sheet.spellcasting.castDialog.cancel') }}
     </button>
-    <button hk-button type="button" [disabled]="selectedLevel() === undefined" (click)="confirm()">
+    <button hk-button type="button" [disabled]="selectedIndex() === undefined" (click)="confirm()">
       {{ t('characters.sheet.spellcasting.castDialog.confirm') }}
     </button>
   </div>

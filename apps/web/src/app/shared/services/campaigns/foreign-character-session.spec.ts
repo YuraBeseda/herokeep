@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
-import { parsePack, type Event, type Pack } from '@hk/protocol';
+import { parsePack, type CampaignSettings, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
@@ -15,6 +15,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import { seedFighter } from '../../../views/characters/sheet/testing/character-fixtures';
 import {
   ForeignCharacterSession,
+  type ForeignCharacterCampaignPort,
   type ForeignCharacterSyncPort,
 } from './foreign-character-session';
 
@@ -139,7 +140,14 @@ describe('ForeignCharacterSession', () => {
 
   function makeSession(
     characterId: string,
-    opts: { timeoutMs?: number; packStoreOverride?: { corePack: () => Pack | undefined } } = {},
+    opts: {
+      timeoutMs?: number;
+      packStoreOverride?: { corePack: () => Pack | undefined };
+      campaignEvents?: ForeignCharacterCampaignPort;
+      overridesPollMs?: number;
+      setIntervalFn?: (cb: () => void, ms: number) => ReturnType<typeof setInterval>;
+      clearIntervalFn?: (handle: ReturnType<typeof setInterval>) => void;
+    } = {},
   ): ForeignCharacterSession {
     return new ForeignCharacterSession({
       campaignId,
@@ -148,6 +156,10 @@ describe('ForeignCharacterSession', () => {
       packStore: opts.packStoreOverride ?? packStore,
       engineFacade,
       timeoutMs: opts.timeoutMs,
+      campaignEvents: opts.campaignEvents,
+      overridesPollMs: opts.overridesPollMs,
+      setIntervalFn: opts.setIntervalFn,
+      clearIntervalFn: opts.clearIntervalFn,
     });
   }
 
@@ -406,5 +418,150 @@ describe('ForeignCharacterSession', () => {
 
     expect(session.status()).toBe('loading');
     expect(session.sheet()).toBeUndefined();
+  });
+
+  // --- House-rule overrides (phase 4, plan 11, task 12, ruling 1) -----------------------------
+  describe('house-rule overrides (phase 4, plan 11, task 12, ruling 1)', () => {
+    const campaignStream = `camp:${campaignId}`;
+
+    function settingsWith(
+      encumbrance: CampaignSettings['houseRules']['encumbrance'],
+      attunementMax: number,
+    ): CampaignSettings {
+      return {
+        system: 'srd-5e-2024',
+        packs: [],
+        houseRules: {
+          strictValidation: true,
+          allowOverrides: true,
+          editOutsideSession: 'free',
+          xpMode: 'xp',
+          hpOnLevelUp: 'roll',
+          encumbrance,
+          attunementMax,
+          startingLevel: 1,
+        },
+        visibility: { partySheets: 'overview', rolls: 'dm', allowPrivateRolls: true },
+        join: { open: true, requireApproval: false },
+      };
+    }
+
+    /** Records every `byStream` call and lets the test swap what it returns mid-flight — the
+     * `ForeignCharacterCampaignPort` this session's overrides poll reads through. */
+    class FakeCampaignPort implements ForeignCharacterCampaignPort {
+      events: Event[] = [];
+      readonly calls: string[] = [];
+      rejectNext = false;
+
+      byStream(streamId: string): Promise<Event[]> {
+        this.calls.push(streamId);
+        if (this.rejectNext) {
+          this.rejectNext = false;
+          return Promise.reject(new Error('storage unavailable'));
+        }
+        return Promise.resolve(this.events);
+      }
+    }
+
+    function settingsChangedEvent(streamId: string, settings: CampaignSettings): Event {
+      return {
+        id: `evt-settings-${Math.random().toString(36).slice(2)}`,
+        stream: streamId,
+        seq: 1,
+        ts: '2026-01-01T00:00:00.000Z',
+        actor: { userId: 'dm1', deviceId: 'd1', role: 'owner' },
+        type: 'campaign.settings_changed',
+        v: 1,
+        payload: { settings },
+      } as unknown as Event;
+    }
+
+    it('derive() runs with no overrides at all when campaignEvents is omitted (every pre-task-12 caller, byte-identical)', async () => {
+      const streamId = await seedFighter('Ivan');
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      const session = makeSession(bareCharacterId(streamId));
+      session.start();
+
+      sync.emit(campaignId, streamId, events);
+
+      expect(session.status()).toBe('ready');
+      expect(session.sheet()?.attunementMax).toBe(3); // pack default, unmodified
+    });
+
+    it("fetches this campaign's settings once on start() and folds attunementMax/encumbrance into the derived sheet", async () => {
+      const streamId = await seedFighter('Ivan');
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      const campaignPort = new FakeCampaignPort();
+      campaignPort.events = [settingsChangedEvent(campaignStream, settingsWith('standard', 5))];
+
+      const session = makeSession(bareCharacterId(streamId), { campaignEvents: campaignPort });
+      session.start();
+      expect(campaignPort.calls).toEqual([campaignStream]);
+
+      sync.emit(campaignId, streamId, events);
+      // The overrides fetch (a real async call) races the synchronous character frame above — one
+      // more `refreshOverrides()` pass confirms the derived sheet reflects it once both have settled.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(session.status()).toBe('ready');
+      expect(session.sheet()?.attunementMax).toBe(5);
+      expect(session.sheet()?.carry?.mode).toBe('standard');
+    });
+
+    it('a house-rule change lands within one overridesPollMs tick, with no new character frame at all', async () => {
+      const streamId = await seedFighter('Ivan');
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      const campaignPort = new FakeCampaignPort();
+      campaignPort.events = [settingsChangedEvent(campaignStream, settingsWith('off', 3))];
+
+      const session = makeSession(bareCharacterId(streamId), {
+        campaignEvents: campaignPort,
+        overridesPollMs: 15,
+      });
+      session.start();
+      sync.emit(campaignId, streamId, events);
+      await Promise.resolve();
+      expect(session.sheet()?.attunementMax).toBe(3);
+      expect(session.sheet()?.carry).toBeUndefined();
+
+      campaignPort.events = [settingsChangedEvent(campaignStream, settingsWith('variant', 7))];
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      expect(session.sheet()?.attunementMax).toBe(7);
+      expect(session.sheet()?.carry?.mode).toBe('variant');
+    });
+
+    it("a failed overrides fetch is best-effort — it never flips a still-'loading' session toward 'error'", async () => {
+      const streamId = await seedFighter('Ivan');
+      const campaignPort = new FakeCampaignPort();
+      campaignPort.rejectNext = true;
+
+      const session = makeSession(bareCharacterId(streamId), { campaignEvents: campaignPort });
+      session.start();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(session.status()).toBe('loading'); // no character frame has arrived yet — unaffected
+    });
+
+    it('close() stops the overrides poll — no further byStream calls after teardown', async () => {
+      const streamId = await seedFighter('Ivan');
+      const campaignPort = new FakeCampaignPort();
+      campaignPort.events = [settingsChangedEvent(campaignStream, settingsWith('standard', 5))];
+
+      const session = makeSession(bareCharacterId(streamId), {
+        campaignEvents: campaignPort,
+        overridesPollMs: 15,
+      });
+      session.start();
+      await Promise.resolve();
+      const callsBeforeClose = campaignPort.calls.length;
+
+      session.close();
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      expect(campaignPort.calls.length).toBe(callsBeforeClose);
+    });
   });
 });
