@@ -29,7 +29,7 @@
  *     handling was in this task's scope. Wiring them is a Phase-3/pack-pinning-task change to
  *     `applyMetaHooks` below, not a shape change.
  */
-import type { Actor, CharacterCampaignJoined, Event } from '@hk/protocol';
+import type { Actor, CharacterCampaignJoined, CharacterOwnerTransferred, Event } from '@hk/protocol';
 import type { Conn } from '../../ports/connections.ts';
 import { type AppendOutcome, StreamActor } from './stream-actor.ts';
 
@@ -205,6 +205,20 @@ export class CharacterActor extends StreamActor {
         await this.store.setMeta(META_KEY_ARCHIVED, '1');
       } else if (event.type === 'character.restored') {
         await this.store.setMeta(META_KEY_ARCHIVED, '0');
+      } else if (event.type === 'character.owner_transferred') {
+        // [plan-10 Task 12, EXECUTION-TIME VERIFICATION finding] This case was missing entirely —
+        // `META_KEY_OWNER_ID` was set ONLY from `character.created`, never updated again, so a
+        // claim's `character.owner_transferred` committed (EVENT_ACTORS: `['dm', 'owner']`,
+        // doc-08 L61-62: DM ✔ for pregens) but never actually moved ownership at the STREAM level —
+        // this file's own owner backstop (`append`, above) kept honoring the OLD owner forever,
+        // and the NEW owner's own appends were never recognized as legitimate. Fixed by setting
+        // `META_KEY_OWNER_ID` from the event's own `toUserId` payload field on every acked commit,
+        // mirroring `character.created`'s existing pattern exactly (trust the committed event, no
+        // separate "is this a legitimate transfer" re-check here — `permissions.ts`'s
+        // `EVENT_ACTORS` + this method's own owner backstop are what already gated whether this
+        // event was allowed to commit at all; this hook only reacts to what committed).
+        const payload = event.payload as CharacterOwnerTransferred;
+        await this.store.setMeta(META_KEY_OWNER_ID, payload.toUserId);
       } else if (event.type === 'character.campaign_joined') {
         // Plan-9 Task 6, deliverable 5: the SERVER meta hook `notifyCampaignIfLinked` keys off —
         // the client-side `notApplicableSolo` reducer no-ops (doc-01/doc-05) are a separate,

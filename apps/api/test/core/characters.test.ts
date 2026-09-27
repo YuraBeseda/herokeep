@@ -994,4 +994,41 @@ describe('CharacterActor — owner backstop (defense in depth vs. mapGatewayActo
     );
     expect(backstopRejection).toBeUndefined();
   });
+
+  // [plan-10 Task 12] EXECUTION-TIME VERIFICATION obligation: once `character.owner_transferred`
+  // commits (and its meta hook — this task's own fix — actually updates `meta.ownerId`), the
+  // backstop above must honor the NEW owner going forward: the OLD owner's own further owner-class
+  // appends are refused, and the NEW owner's succeed, with NO separate backstop code change needed
+  // — `metaBefore.ownerId` being correctly updated is sufficient by construction.
+  it('[plan-10 Task 12] after character.owner_transferred commits, the OLD owner is refused and the NEW owner succeeds — the backstop honors the transfer automatically', async () => {
+    const system = makeCharacterSystem();
+    const oldOwner: Actor = { userId: 'user-old-owner', role: 'owner' };
+    const newOwner: Actor = { userId: 'user-new-owner', role: 'owner' };
+    await system.actor.append(
+      [makeCharacterCreatedEvent({ actor: { userId: oldOwner.userId, deviceId: 'd1', role: 'owner' } })],
+      oldOwner,
+    );
+
+    const transfer = makeNoteEvent({
+      type: 'character.owner_transferred',
+      v: 1,
+      payload: { toUserId: newOwner.userId },
+    });
+    const transferOutcome = await system.actor.append([transfer], oldOwner);
+    expect(transferOutcome.rejected).toEqual([]);
+    expect((await system.actor.getCharacterMeta()).ownerId).toBe(newOwner.userId);
+
+    // The OLD owner's own further owner-class append is now refused by the backstop.
+    const oldOwnerAttempt = await system.actor.append([makeNoteEvent()], oldOwner);
+    expect(oldOwnerAttempt.acked).toEqual([]);
+    expect(oldOwnerAttempt.rejected[0]).toMatchObject({
+      code: 'forbidden',
+      message: expect.stringContaining("is not this character's established owner") as string,
+    });
+
+    // The NEW owner's own append succeeds.
+    const newOwnerAttempt = await system.actor.append([makeNoteEvent()], newOwner);
+    expect(newOwnerAttempt.rejected).toEqual([]);
+    expect(newOwnerAttempt.acked).toHaveLength(1);
+  });
 });

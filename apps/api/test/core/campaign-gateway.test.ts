@@ -641,6 +641,161 @@ describe('roster ownership: first-writer-wins on campaign.character_joined', () 
   });
 });
 
+describe('ownership transfer (pregen claim, ruling 6 — plan-10 task-12)', () => {
+  /** Seeds a DM-owned pregen already joined to `gw`'s campaign — same shape as the existing "a
+   * DM's own pregen" gateway test above, factored out so both the success-path and the
+   * naive-ordering-fails tests below share it. */
+  async function seedPregen(gw: GatewaySystem): Promise<{ characterId: string; char: CharacterSystem }> {
+    await gw.campaignActor.append([makeCreated()], dmActor());
+    await gw.campaignActor.append(
+      [makeCampEvent('member.joined', { userId: DM_ID, displayName: 'GM', role: 'dm' }, dmActor())],
+      dmActor(),
+    );
+    await gw.campaignActor.append(
+      [
+        makeCampEvent(
+          'member.joined',
+          { userId: MEMBER_A, displayName: 'Alice', role: 'player' },
+          memberActor(MEMBER_A),
+        ),
+      ],
+      memberActor(MEMBER_A),
+    );
+    const characterId = uuidv7();
+    const char = registerCharacter(gw, characterId);
+    await char.actor.append([makeCharCreated(characterId, DM_ID)], ownerActor(DM_ID));
+    await char.actor.append(
+      [makeCharEvent(characterId, 'character.campaign_joined', { campaignId: CAMPAIGN_UUID }, ownerActor(DM_ID))],
+      ownerActor(DM_ID),
+    );
+    await gw.campaignActor.append(
+      [makeCampEvent('campaign.character_joined', { characterId, ownerId: DM_ID, name: 'Pregen Paul' }, dmActor())],
+      dmActor(),
+    );
+    return { characterId, char };
+  }
+
+  /**
+   * PINS the validated handover order (task-12-brief's own sequence-ordering analysis — CORRECTED
+   * against the real server code; see task-12-report.md for the full derivation). The key
+   * realization the brief's own speculative ordering missed: a DM-owned PREGEN is a character the
+   * DM D1-owns directly (created via the DM's own `CharacterStore`, exactly like any of their own
+   * characters) — the DM therefore has a genuine DIRECT connection to the pregen's own stream the
+   * ENTIRE time (D1's `characters.owner_id` never moves in this codebase — see
+   * `core/routes/characters.ts`'s header comment — only the STREAM's own `meta.ownerId` does, via
+   * this task's fix). Every char-side step below is authored DIRECTLY on the character's own
+   * stream (`char.actor.append`, mirroring the DM's real device having that character loaded in
+   * their OWN `CharacterStore`) — NEVER through `CampaignActor`'s gateway — which sidesteps
+   * `mapGatewayActor`'s roster-timing entirely. Only the CAMPAIGN-side roster mirror events go
+   * through `CampaignActor` (also LOCAL, on the DM's own campaign socket, dm-exempt from the
+   * ownerId self-match check both times):
+   *   (A) DIRECT char-side `character.campaign_left {campaignId}` — backstop passes (DM is still
+   *       the established owner at this point).
+   *   (B) LOCAL campaign-side `campaign.character_left` (roster clear) — `verifyCharacterMirror`'s
+   *       LEFT check needs `current !== thisCampaignId` RIGHT NOW, which is exactly why this must
+   *       run BEFORE the char-side rejoins, not after.
+   *   (C) DIRECT char-side `character.campaign_joined {campaignId}` (REJOIN, same campaign) —
+   *       backstop still passes (still the DM); required so `verifyCharacterMirror`'s JOIN check
+   *       can pass for (D).
+   *   (D) LOCAL campaign-side `campaign.character_joined {ownerId: M}` — dm-exempt from the
+   *       ownerId self-match check, so the DM can name a DIFFERENT final owner (M) here, before M
+   *       has done anything at all; `(b2)`'s existing-owner check passes since the roster slot is
+   *       currently empty (cleared in (B)).
+   *   (E) DIRECT char-side `character.owner_transferred {toUserId: M}` — sent LAST, while the DM
+   *       is STILL the character's own established owner (backstop passes one final time); THIS
+   *       is the event whose (currently missing) meta hook this task adds.
+   *
+   * A test below pins why (E) can NOT be moved earlier (e.g. right after (A)): once
+   * `meta.ownerId` flips to M, EVERY subsequent DIRECT append from the DM (role 'owner', backstop-
+   * scoped) is refused — there is no owner-class event left for the DM to author on this
+   * character directly, including the very rejoin/roster steps this sequence still needs.
+   */
+  it('the DM completes the FULL 5-step handover unassisted (direct char-stream access + their own campaign socket); M subsequently gateway-writes the character; the OLD owner no longer can', async () => {
+    const { characterId, char } = await seedPregen(gw);
+
+    // (A) DIRECT char-side leave.
+    const stepA = makeCharEvent(characterId, 'character.campaign_left', { campaignId: CAMPAIGN_UUID }, dmActor());
+    const outA = await char.actor.append([stepA], ownerActor(DM_ID));
+    expect(outA.rejected).toEqual([]);
+
+    // (B) LOCAL campaign-side roster clear.
+    const stepB = makeCampEvent(
+      'campaign.character_left',
+      { characterId, ownerId: DM_ID, name: 'Pregen Paul' },
+      dmActor(),
+    );
+    const outB = await gw.campaignActor.append([stepB], dmActor());
+    expect(outB.rejected).toEqual([]);
+    expect((await gw.campaignActor.getCampaignMeta()).characters.has(characterId)).toBe(false);
+
+    // (C) DIRECT char-side rejoin (same campaign).
+    const stepC = makeCharEvent(characterId, 'character.campaign_joined', { campaignId: CAMPAIGN_UUID }, dmActor());
+    const outC = await char.actor.append([stepC], ownerActor(DM_ID));
+    expect(outC.rejected).toEqual([]);
+
+    // (D) LOCAL campaign-side roster re-add, pointing at MEMBER_A (M).
+    const stepD = makeCampEvent(
+      'campaign.character_joined',
+      { characterId, ownerId: MEMBER_A, name: 'Pregen Paul' },
+      dmActor(),
+    );
+    const outD = await gw.campaignActor.append([stepD], dmActor());
+    expect(outD.rejected).toEqual([]);
+    expect((await gw.campaignActor.getCampaignMeta()).characters.get(characterId)).toBe(MEMBER_A);
+
+    // (E) DIRECT char-side ownership transfer — LAST.
+    const stepE = makeCharEvent(characterId, 'character.owner_transferred', { toUserId: MEMBER_A }, dmActor());
+    const outE = await char.actor.append([stepE], ownerActor(DM_ID));
+    expect(outE.rejected).toEqual([]);
+    expect(outE.acked).toHaveLength(1);
+
+    const finalMeta = await char.actor.getCharacterMeta();
+    expect(finalMeta.ownerId).toBe(MEMBER_A); // the hook this task adds
+
+    // M (MEMBER_A) can now gateway-forward an owner-class write on their newly-claimed character
+    // (mapGatewayActor's OWNERSHIP branch now matches M, per the roster (D) just set).
+    const rename = makeCharEvent(characterId, 'character.renamed', { name: 'Paul' }, memberActor(MEMBER_A));
+    const renameOutcome = await gw.campaignActor.append([rename], memberActor(MEMBER_A));
+    expect(renameOutcome.rejected).toEqual([]);
+
+    // The OLD owner (the DM) — even via what would still be a DIRECT socket in production (D1
+    // ownership never moves) — is now refused by the character-side owner backstop.
+    const dmDirectAttempt = makeCharEvent(
+      characterId,
+      'character.gender_set',
+      { grammaticalGender: 'masculine' },
+      ownerActor(DM_ID),
+    );
+    const directOutcome = await char.actor.append([dmDirectAttempt], ownerActor(DM_ID));
+    expect(directOutcome.acked).toEqual([]);
+    expect(directOutcome.rejected[0]).toMatchObject({ code: 'forbidden' });
+  });
+
+  it('sending the transfer (E) too EARLY (right after step (A)) deadlocks the rest of the sequence: the DM, once meta.ownerId flips away from them, can no longer author (B)/(C)/(D) at all', async () => {
+    const { characterId, char } = await seedPregen(gw);
+
+    const stepA = makeCharEvent(characterId, 'character.campaign_left', { campaignId: CAMPAIGN_UUID }, dmActor());
+    await char.actor.append([stepA], ownerActor(DM_ID));
+
+    // Naive order: transfer right away — still legitimate ON ITS OWN (the DM is still the
+    // established owner at this point).
+    const earlyTransfer = makeCharEvent(characterId, 'character.owner_transferred', { toUserId: MEMBER_A }, dmActor());
+    const transferOutcome = await char.actor.append([earlyTransfer], ownerActor(DM_ID));
+    expect(transferOutcome.rejected).toEqual([]);
+
+    // The rejoin (C) the sequence still needs (so the campaign-side mirror (D) can later verify)
+    // is now refused: the DM's direct append is role 'owner', but `meta.ownerId` is already M.
+    const stepC = makeCharEvent(characterId, 'character.campaign_joined', { campaignId: CAMPAIGN_UUID }, dmActor());
+    const outC = await char.actor.append([stepC], ownerActor(DM_ID));
+
+    expect(outC.acked).toEqual([]);
+    expect(outC.rejected[0]).toMatchObject({
+      code: 'forbidden',
+      message: expect.stringContaining("is not this character's established owner") as string,
+    });
+  });
+});
+
 describe('after-commit notify fan-out (CampaignActor.handleNotify)', () => {
   async function settingsWithPartySheets(value: 'full' | 'overview' | 'none') {
     const meta = await gw.campaignActor.getCampaignMeta();

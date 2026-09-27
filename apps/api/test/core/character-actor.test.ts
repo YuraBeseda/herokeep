@@ -100,6 +100,43 @@ describe('meta.campaignId set/clear', () => {
   });
 });
 
+describe('meta.ownerId set on character.owner_transferred (plan-10 Task 12 fix)', () => {
+  it('character.owner_transferred sets meta.ownerId from its own toUserId payload field', async () => {
+    await system.actor.append([makeCreated()], OWNER);
+    const NEW_OWNER = 'usr_new_owner';
+
+    const outcome = await system.actor.append(
+      [makeEvent('character.owner_transferred', { toUserId: NEW_OWNER })],
+      OWNER,
+    );
+
+    expect(outcome.rejected).toEqual([]);
+    const meta = await system.actor.getCharacterMeta();
+    expect(meta.ownerId).toBe(NEW_OWNER);
+  });
+
+  it('a DM-authored character.owner_transferred (claim flows, EVENT_ACTORS grants dm) also updates meta.ownerId', async () => {
+    await system.actor.append([makeCreated()], OWNER);
+    const NEW_OWNER = 'usr_claiming_member';
+    const dm: Actor = { userId: 'usr_dm', role: 'dm' };
+
+    const outcome = await system.actor.append(
+      [
+        makeEvent(
+          'character.owner_transferred',
+          { toUserId: NEW_OWNER },
+          { actor: { userId: dm.userId, deviceId: 'd1', role: 'dm' } },
+        ),
+      ],
+      dm,
+    );
+
+    expect(outcome.rejected).toEqual([]);
+    const meta = await system.actor.getCharacterMeta();
+    expect(meta.ownerId).toBe(NEW_OWNER);
+  });
+});
+
 describe('after-commit campaign notify (Rpc.notify)', () => {
   it('never calls rpc.notify when the character has no campaign link at all', async () => {
     await system.actor.append([makeCreated()], OWNER);
