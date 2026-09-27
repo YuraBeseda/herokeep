@@ -1,3 +1,4 @@
+import type { Predicate } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import { constantPredicateContext, type PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
@@ -67,9 +68,20 @@ function multiclassPredicateContext(sheet: Sheet, index: ContentIndex): Predicat
  * `multiclass.prerequisites` (a per-classRef `Predicate` — DATA, populated by a content pack, T7),
  * every class the character does NOT already have is offered as a `toLevel: 1` / `isNewClass: true`
  * entry once its own prerequisite predicate holds against the character's current sheet (ability
- * scores, mainly). A system with no `multiclass.prerequisites` (every pack before ruling 7,
- * including the shared `core-mini`/`content-mini` test fixtures) preserves the exact pre-ruling-7
- * behavior: only classes already on `sheet.classes` are ever listed.
+ * scores, mainly) — AND (fix round 1) every ALREADY-TAKEN class's own prerequisite still holds too.
+ * 2024 SRD (vendored, `packages/content/upstream/open5e-srd-2024/Rule.json`, pk
+ * "srd-2024_multiclassing_prerequisties"), verbatim: "To qualify for a new class, you must have a
+ * score of at least 13 in the primary ability of the new class and your current classes." Both
+ * directions are required — the new class's own prerequisite is not enough on its own if a class
+ * already on the sheet no longer meets ITS OWN prerequisite (scores can move after a class is
+ * taken, e.g. an ASI down some other path is not modeled, but the check is re-evaluated fresh
+ * regardless). If ANY already-taken class fails its own (documented) prerequisite, NO new-class
+ * entries are offered at all that call. A system with no `multiclass.prerequisites` (every pack
+ * before ruling 7, including the shared `core-mini`/`content-mini` test fixtures) preserves the
+ * exact pre-ruling-7 behavior: only classes already on `sheet.classes` are ever listed. An
+ * already-taken class with NO entry in the map (absent-data compat, same posture as
+ * `multiclass.gains`'s own fallback) bars nothing — only classes that HAVE documented prerequisite
+ * data are held to it.
  *
  * `steps` = the `ChoiceRequest`s the row at exactly `toLevel` asks (a class's subclass choice
  * "materializes at subclassLevel" simply because the pack places that `Choice` inside the row at
@@ -101,19 +113,33 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
   if (prerequisites) {
     const taken = new Set(sheet.classes.map((c) => c.classId));
     const ctx = multiclassPredicateContext(sheet, index);
+    const resolvedPrereqs = new Map<string, Predicate>();
     for (const [classRef, predicate] of Object.entries(prerequisites)) {
-      const classId = index.resolveClassRef(classRef) ?? classRef;
-      if (taken.has(classId)) continue;
-      const classEntity = index.get(classId);
-      if (classEntity?.type !== 'class') continue;
-      if (!evaluatePredicate(predicate, ctx)) continue;
-      advancements.push({
-        classId,
-        toLevel: 1,
-        steps: rowSteps(classId, classEntity.levels, 1),
-        hpChoice: false,
-        isNewClass: true,
-      });
+      resolvedPrereqs.set(index.resolveClassRef(classRef) ?? classRef, predicate);
+    }
+
+    // Both-direction check (2024 SRD, see this function's own doc): every already-taken class
+    // must still meet ITS OWN prerequisite before ANY new class is offered. A taken class absent
+    // from the map bars nothing (compat).
+    const currentClassesQualify = sheet.classes.every((c) => {
+      const predicate = resolvedPrereqs.get(c.classId);
+      return predicate === undefined || evaluatePredicate(predicate, ctx);
+    });
+
+    if (currentClassesQualify) {
+      for (const [classId, predicate] of resolvedPrereqs) {
+        if (taken.has(classId)) continue;
+        const classEntity = index.get(classId);
+        if (classEntity?.type !== 'class') continue;
+        if (!evaluatePredicate(predicate, ctx)) continue;
+        advancements.push({
+          classId,
+          toLevel: 1,
+          steps: rowSteps(classId, classEntity.levels, 1),
+          hpChoice: false,
+          isNewClass: true,
+        });
+      }
     }
   }
 

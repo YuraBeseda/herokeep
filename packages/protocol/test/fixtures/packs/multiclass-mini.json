@@ -35,7 +35,6 @@
           "value": {
             "prerequisites": {
               "core-mini:class/fighter": { "ability": { "str": { "gte": 13 } } },
-              "core-mini:class/druid": { "ability": { "wis": { "gte": 13 } } },
               "multiclass-mini:class/wizard": { "ability": { "int": { "gte": 13 } } }
             }
           }
