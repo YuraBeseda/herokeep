@@ -1,0 +1,270 @@
+[
+  {
+    "id": "srd-5e-2024:class/warlock",
+    "cite": "SRD 5.2.1, Warlock Core Traits; Pact Magic; Eldritch Invocations; Ability Score Improvement; Epic Boon",
+    "note": "Task 11 (phase 4 plan 11): new overlay, class 1->20 -- this task also validates ruling 2's pact lane (facts.pactSlots/SpellcastingBlock.pact, task 3; propose/casting.ts and propose/rest.ts pact-awareness, task 11's own sanctioned engine half) end-to-end against a REAL class for the first time. Core Traits table (srd-2024_warlock_core-traits): \"Primary Ability: Charisma\"; \"Saving Throw Proficiencies: Wisdom and Charisma\"; \"Skill Proficiencies: Choose 2: Arcana, Deception, History, Intimidation, Investigation, Nature, or Religion\"; \"Weapon Proficiencies: Simple weapons\"; \"Armor Training: Light armor\" -- no Medium/Heavy/Shields (unlike Cleric/Barbarian) and no weapon-mastery choice at all (Warlock is a Simple-weapons-only class; no vendored 'weapon-mastery' ClassFeature under srd-2024_warlock, confirmed absent from the full pk list, same absence class as Cleric). class.multiclass (gains: light armor training only, simple weapons, skillChoiceCount 0; prerequisite cha>=13) was ALREADY populated by transform/classes.ts's MULTICLASS_GAINS/MULTICLASS_PREREQUISITES tables (phase 4 plan 11 task 7) -- verified present on the transformed entity before authoring this overlay; untouched here. Ability Score Improvement (warlock-ability-score-improvement) repeats at Warlock levels 4 (base), 8, 12, 16 per its own vendored desc (\"You gain this feature again at Warlock levels 8, 12, and 16\") -- @4/@8/@12/@16/feat choices below reuse the exact Fighter/Wizard/Barbarian/Cleric query-any-feat shape. Epic Boon is a SEPARATE feature (warlock-epic-boon) with its own level-19 grant, identically permissive vendored desc (\"You gain an Epic Boon feat ... or another feat of your choice for which you qualify\") -- @19/feat reuses the identical pick. warlock-warlock-subclass (level 3, \"You gain a Warlock subclass of your choice\") carries no overlay entry of its own -- fully expressed by the @3/subclass choice below, matching every prior class's own '<class>-<class>-subclass' precedent. cantripsKnown key mismatch (same gap class as Wizard/Cleric, task 8/10): transformClasses() auto-slugs the upstream pk 'srd-2024_warlock_cantrips' to row extra key 'warlock-cantrips' (verified against every one of the 20 vendored srd-2024_warlock_cantrips ClassFeatureItem rows: column_value 2 at levels 1-3, 3 at levels 4-9, 4 at levels 10-20 -- matches the brief's own guess '2@1, 3@4, 4@10' exactly), but packages/engine/src/derive/spellcasting.ts's cantripsKnownKey('warlock') reads 'warlock-cantrips-known' specifically -- levels 1/4/10 below author an EXPLICIT second, correctly-keyed extra column ('warlock-cantrips-known': 2/3/4), exactly mirroring Wizard/Cleric's fix. Unlike Wizard/Cleric, the spellcasting.define effect (see warlock-pact-magic below) carries NO cantripsKnown formula at all -- omitted rather than kept as a dead-but-harmless linear fallback (Wizard/Cleric's precedent), since this class is authored from scratch in this task (no pre-existing formula to supersede) and the three row extras below cover every one of levels 1-20 via bestRowExtra's 'highest row at or below classLevel' rule, so a formula would never be reached; same omission logic Cleric already applied to preparedCount. The Prepared Spells column (2 through 15 across levels 1-20, verified against every one of the 20 vendored srd-2024_warlock_prepared-spells ClassFeatureItem rows) is NOT duplicated here -- transformClasses() already carries it verbatim under extra['warlock-prepared-spells'], which is BYTE-IDENTICAL to preparedSpellsKey('warlock') -- zero authoring needed, same as Wizard's 'wizard-prepared-spells'/Cleric's 'cleric-prepared-spells'. Eldritch Invocations / Pact Boon entity-existence investigation (per the brief's explicit 'CHECK FIRST' instruction, resolving BOTH of its open questions at once): grepped the full vendored snapshot (ClassFeature.json, ClassFeatureItem.json, Feat.json, FeatBenefit.json) for any invocation-specific entity -- NONE exists anywhere. Every one of the ~20+ named invocation options (Agonizing Blast, Devil's Sight, Pact of the Blade, Pact of the Chain, Pact of the Tome, etc.) lives as a markdown '###' sub-heading inside the single `desc` field of ONE reference entity, srd-2024_warlock_eldritch-invocation-options -- and that entity is NEVER granted at any Warlock level (confirmed: absent from every one of the 20 levels[].grants arrays, same un-granted-reference-table shape as Cleric's own 'cleric-spell-list'). In the 2024 rules, Pact Boons (\"Pact of the Blade\"/\"Pact of the Chain\"/\"Pact of the Tome\") are THEMSELVES three of those invocation options, not a separate class feature or choice mechanism at all -- there is no vendored 'Pact Boon' ClassFeature anywhere (grepped by name; none found) -- so the brief's 'Pact Boon: an invocation subset at level 1 or a feature choice?' question resolves to 'folded into Eldritch Invocations, not separate'. This is the SAME categorical gap Divine Order (T10) and Rage's raging-condition (T9) already hit: a real, correctly-shaped choice mechanism (`pick:{query:...}` over invocation entities) is schema- and engine-valid, but overlays can only PATCH an entity that already exists in the composed pack (`Unmatched overlay: <id>` throws otherwise) -- there is nothing to patch a query/static pick onto, because content-only authoring cannot manufacture the ~20 individual invocation entities the vendored snapshot never produced. Eldritch Invocations (the level-1 grant feature, warlock-eldritch-invocations) therefore gets a feature.text fallback below, per ruling 9's bar -- same posture as Divine Order, not re-litigated further. warlock-eldritch-invocation-count (the CLASS_TABLE_DATA column-data feature, granted every level) and warlock-eldritch-invocation-options (the un-granted reference table) both carry no overlay entry, matching the column-data-only and un-granted-reference-table precedents respectively (Fighter/Barbarian's mastery-count columns; Cleric's spell-list entity).",
+    "set": {
+      "armorTraining": ["light"],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": {
+        "from": ["arcana", "deception", "history", "intimidation", "investigation", "nature", "religion"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "extra": { "warlock-cantrips-known": 2 }
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/warlock@3/subclass",
+            "prompt": "Warlock Subclass",
+            "at": { "kind": "classLevel", "class": "warlock", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["warlock"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/warlock@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "warlock", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ],
+        "extra": { "warlock-cantrips-known": 3 }
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/warlock@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "warlock", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 10,
+        "extra": { "warlock-cantrips-known": 4 }
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/warlock@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "warlock", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/warlock@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "warlock", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/warlock@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "warlock", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-pact-magic",
+    "cite": "SRD 5.2.1, Pact Magic",
+    "note": "THE central pact-lane validator for this task (ruling 2, tasks 3/11) -- slots:'pact' is the one setting that makes T3's sparse-row engine machinery and T11's propose/casting.ts+propose/rest.ts pact-awareness actually reachable by a real character for the first time. SRD text (abridged, full text verbatim below): \"Cantrips. You know two Warlock cantrips of your choice ... Spell Slots. The Warlock Features table shows how many spell slots you have to cast your Warlock spells of levels 1-5. The table also shows the level of those slots, all of which are the same level. You regain all expended Pact Magic spell slots when you finish a Short or Long Rest. For example, when you're a level 5 Warlock, you have two level 3 spell slots. To cast the level 1 spell Charm Person, you must spend one of those slots, and you cast it as a level 3 spell. Prepared Spells of Level 1+ ... To start, choose two level 1 Warlock spells ... Spellcasting Ability. Charisma is the spellcasting ability for your Warlock spells. Spellcasting Focus. You can use an Arcane Focus as a Spellcasting Focus for your Warlock spells.\" slots:'pact' resolves through system.tables.spellSlots.pact (task 7's PACT_SLOTS, packages/content/src/static/system.ts) -- CROSS-CHECKED here again against the same worked example the module's own header comment already cites (\"level 5 Warlock, two level 3 spell slots\" -> PACT_SLOTS[4] = [0,0,2]) and against the full 20-row srd-2024_warlock_spell-slots/srd-2024_warlock_slot-level ClassFeatureItem columns (verified every row: 1/1st, 2/1st, 2/2nd x2, 2/3rd x2, 2/4th x2, 2/5th x3, 3/5th x6, 4/5th x4 -- byte-identical to PACT_SLOTS). preparation:'prepared' (matches 'Prepared Spells of Level 1+', the same mechanic name Cleric/Wizard already use). ability:'cha', focus:true both grounded DIRECTLY in this feature's own vendored text (\"Charisma is the spellcasting ability\"; \"You can use an Arcane Focus as a Spellcasting Focus\") -- no OWNER-FLAG needed, unlike Cleric's ritual:true. ritual:false is likewise NOT an owner-flag: this vendored text never mentions Ritual casting for Warlock at all (grepped the full desc; absent), and base 2024 Warlock genuinely has no ritual-casting class feature (Ritual casting only arrives via the unauthored Pact of the Tome invocation, itself inside the categorically-blocked Eldritch Invocations gap documented on the class entity's own note) -- authoring ritual:true unconditionally here would be ACTIVELY WRONG (every Warlock would gain a benefit gated behind a specific, unpicked invocation), so false is the CORRECT base-class value, not a silent omission. cantripsKnown/preparedCount both intentionally OMITTED from this effect -- see the class entity's own note for why (row extras at 1/4/10 and the pre-existing 'warlock-prepared-spells' key respectively already cover every level 1-20).",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "warlock",
+          "ability": "cha",
+          "list": "warlock",
+          "preparation": "prepared",
+          "slots": "pact",
+          "ritual": false,
+          "focus": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-eldritch-invocations",
+    "cite": "SRD 5.2.1, Eldritch Invocations",
+    "note": "SRD text: \"You have unearthed Eldritch Invocations, pieces of forbidden knowledge that imbue you with an abiding magical ability or other lessons. You gain one invocation of your choice, such as Pact of the Tome. Invocations are described in the 'Eldritch Invocation Options' section later in this class's description. Prerequisites. If an invocation has a prerequisite, you must meet it to learn that invocation. For example, if an invocation requires you to be a level 5+ Warlock, you can select the invocation once you reach Warlock level 5. Replacing and Gaining Invocations. Whenever you gain a Warlock level, you can replace one of your invocations with another one for which you qualify. You can't replace an invocation if it's a prerequisite for another invocation that you have. When you gain certain Warlock levels, you gain more invocations of your choice, as shown in the Invocations column of the Warlock Features table. You can't pick the same invocation more than once unless its description says otherwise.\" Granted at Warlock level 1 (the count grows automatically via warlock-eldritch-invocation-count's own row extras, harmlessly-unread bookkeeping data, same as every other count-only column). CATEGORICALLY BLOCKED (see the class entity's own note for the full entity-existence investigation): no separate invocation entity exists anywhere in the vendored snapshot to target a query/static pick at -- every invocation option (including the Pact Boons, Pact of the Blade/Chain/Tome, which ARE part of this same invocation list in the 2024 rules, not a separate feature) lives as prose inside one un-granted reference entity. Authoring a choice here is impossible within content-only scope, same as Divine Order/Rage. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Eldritch Invocations",
+          "description": "You have unearthed Eldritch Invocations, pieces of forbidden knowledge that imbue you with an abiding magical ability or other lessons. You gain one invocation of your choice, such as Pact of the Tome. Invocations are described in the \"Eldritch Invocation Options\" section later in this class's description.\n\n**Prerequisites.** If an invocation has a prerequisite, you must meet it to learn that invocation. For example, if an invocation requires you to be a level 5+ Warlock, you can select the invocation once you reach Warlock level 5.\n\n**Replacing and Gaining Invocations.** Whenever you gain a Warlock level, you can replace one of your invocations with another one for which you qualify. You can't replace an invocation if it's a prerequisite for another invocation that you have.\n\nWhen you gain certain Warlock levels, you gain more invocations of your choice, as shown in the Invocations column of the Warlock Features table.\n\nYou can't pick the same invocation more than once unless its description says otherwise."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-magical-cunning",
+    "cite": "SRD 5.2.1, Magical Cunning",
+    "note": "SRD text: \"You can perform an esoteric rite for 1 minute. At the end of it, you regain expended Pact Magic spell slots but no more than a number equal to half your maximum (round up). Once you use this feature, you can't do so again until you finish a Long Rest.\" Granted at Warlock level 2. Same shape class as Fighter's Second Wind/Cleric's Divine Intervention: the USE COUNT/reset (a flat 1 use, Long Rest reset) is real and directly expressible via resource.define -- authored as a genuine, meaningfully-consumed effect, not a fallback. The mechanic itself (partially restoring Pact Magic slots, capped at half your maximum rounded up) has no vocabulary -- no effect type models 'restore N of a DIFFERENT resource, computed from that resource's own current max' -- so it stays text-only in this entity's own already-carried description, matching Second Wind/Indomitable/Divine Intervention's precedent of not duplicating it into a redundant feature.text once a real effect is present. Eldritch Master (level 20, see below) modifies this feature's OWN trigger effect (\"regain ALL slots instead of half\") -- a trigger-vocabulary gap on that entity, not this one.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "magical-cunning",
+          "name": "Magical Cunning",
+          "max": "1",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-contact-patron",
+    "cite": "SRD 5.2.1, Contact Patron",
+    "note": "SRD text: \"In the past, you usually contacted your patron through intermediaries. Now you can communicate directly; you always have the Contact Other Plane spell prepared. With this feature, you can cast the spell without expending a spell slot to contact your patron, and you automatically succeed on the spell's saving throw. Once you cast the spell with this feature, you can't do so in this way again until you finish a Long Rest.\" Granted at Warlock level 9. Same shape class as Cleric's Divine Intervention: the USE COUNT/reset (flat 1, Long Rest) is real and directly expressible; the mechanic itself (casting one SPECIFIC named spell for free, with an automatic save success) has no vocabulary -- no effect type grants 'automatic success on a specific spell's save' or 'always-prepared free cast of a named spell'. Only the resource is authored; the casting mechanic stays text-only in the already-carried description.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "contact-patron",
+          "name": "Contact Patron",
+          "max": "1",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-mystic-arcanum",
+    "cite": "SRD 5.2.1, Mystic Arcanum",
+    "note": "SRD text: \"Your patron grants you a magical secret called an arcanum. Choose one level 6 Warlock spell as this arcanum. You can cast your arcanum spell once without expending a spell slot, and you must finish a Long Rest before you can cast it in this way again. As shown in the Warlock Features table, you gain another Warlock spell of your choice that can be cast in this way when you reach Warlock levels 13 (level 7 spell), 15 (level 8 spell), and 17 (level 9 spell). You regain all uses of your Mystic Arcanum when you finish a Long Rest. Whenever you gain a Warlock level, you can replace one of your arcanum spells with another Warlock spell of the same level.\" Granted identically at Warlock levels 11, 13, 15, 17 (ONE feature entity, re-granted -- verified against the vendored ClassFeatureItem rows, which carry no separate entity per spell-level breakpoint, only a descriptive per-level 'level N spell' extra value on the CLASS row). Because this is a single entity granted repeatedly rather than four separate entities activating at four different levels, its effects can't be individually level-gated the way four distinct grants could -- so the RESOURCE POOL's own `max` is authored as a stepped FORMULA (the same closed-form min/floor technique Channel Divinity/Rage/Second Wind already use) that grows by 1 exactly at each of 11/13/15/17: 'min(1, floor(classLevel(warlock) / 11)) + min(1, floor(classLevel(warlock) / 13)) + min(1, floor(classLevel(warlock) / 15)) + min(1, floor(classLevel(warlock) / 17))' (verified: 0 below 11, 1 at 11-12, 2 at 13-14, 3 at 15-16, 4 at 17-20). This is a FAITHFUL pooled representation, not an approximation: each of the (up to four) specific arcanum spells already has exactly one use each per the SRD text, all resetting together on a Long Rest, so 'a pool of size N, reset:longRest' and 'N independent 1-use-per-long-rest resources' are lossless-equivalent for counting purposes -- the pool never lets the player exceed the total free-cast budget the SRD grants, and WHICH specific arcanum spell is cast with a given use is inherently a player-tracked choice this vocabulary doesn't model anyway (same as Divine Intervention's 'cast any qualifying spell' gap). A real, meaningfully-consumed effect, not a fallback. Spell selection/replacement itself stays text-only in the already-carried description.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "mystic-arcanum",
+          "name": "Mystic Arcanum",
+          "max": "min(1, floor(classLevel(warlock) / 11)) + min(1, floor(classLevel(warlock) / 13)) + min(1, floor(classLevel(warlock) / 15)) + min(1, floor(classLevel(warlock) / 17))",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-eldritch-master",
+    "cite": "SRD 5.2.1, Eldritch Master",
+    "note": "SRD text: \"When you use your Magical Cunning feature, you regain all your expended Pact Magic spell slots.\" Granted at Warlock level 20. Inexpressible: a conditional enhancement triggered by using a DIFFERENT, already-authored feature (Magical Cunning) -- no effect type models 'when this other feature/resource is used, do X', same trigger-vocabulary gap class as Barbarian's Frenzy/Cleric's Sear Undead (\"bonus effect triggered by using this other feature\"). Note this is NOT the same as authoring Magical Cunning's slot-restoration unconditionally (which would be actively wrong for a level < 20 Warlock) -- the gap is specifically the missing trigger link between two real, already-authored resources. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Eldritch Master",
+          "description": "When you use your Magical Cunning feature, you regain all your expended Pact Magic spell slots."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/fiend-patron",
+    "cite": "SRD 5.2.1, Fiend Patron",
+    "note": "Subclass entity itself carries no overlay entry beyond this note -- its features (below) are granted via the upstream levels[] rows already produced by transformClasses(); no additional class-row choice is needed on the subclass itself (matching Life Domain's precedent -- the subclass entity adds no second player decision at level 3; each individual feature below is where any further choice/effect investigation happens)."
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-fiend-patron-dark-ones-blessing",
+    "cite": "SRD 5.2.1, Fiend Patron — Dark One's Blessing",
+    "note": "SRD text: \"When you reduce an enemy to 0 Hit Points, you gain Temporary Hit Points equal to your Charisma modifier plus your Warlock level (minimum of 1 Temporary Hit Point). You also gain this benefit if someone else reduces an enemy within 10 feet of you to 0 Hit Points.\" Granted at Fiend Patron level 3 (Warlock level 3). Inexpressible on TWO independent counts, either one alone sufficient: (1) no 'reduce a creature to 0 HP' trigger vocabulary exists anywhere in doc-04 (same 'per-trigger player choice' gap class as Barbarian's Instinctive Pounce/Fighter's Tactical Shift); (2) doc-04's effects table has NO temporary-HP-grant effect type at all (verified -- the closest relatives, hp.bonus/hp.perLevel, only ever raise MAX hp, never grant temporary HP; same 'no healing/temp-HP vocabulary' gap class Cleric's Life Domain already carries for its own HP-restoration features). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Dark One's Blessing",
+          "description": "When you reduce an enemy to 0 Hit Points, you gain Temporary Hit Points equal to your Charisma modifier plus your Warlock level (minimum of 1 Temporary Hit Point). You also gain this benefit if someone else reduces an enemy within 10 feet of you to 0 Hit Points."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-fiend-patron-fiend-spells",
+    "cite": "SRD 5.2.1, Fiend Patron — Fiend Spells",
+    "note": "SRD text: \"The magic of your patron ensures you always have certain spells ready; when you reach a Warlock level specified in the Fiend Spells table, you thereafter always have the listed spells prepared. Table: Fiend Spells -- 3rd: Burning Hands, Command, Scorching Ray, Suggestion; 5th: Fireball, Stinking Cloud; 7th: Fire Shield, Wall of Fire; 9th: Geas, Insect Plague.\" Granted once at Fiend Patron level 3 (the single vendored ClassFeatureItem row); the 5/7/9 breakpoints live only inside the feature's own description text. SAME expressiveness gap Cleric's Life Domain Spells already carries (T10 report, re-confirmed here, not re-traced from scratch): `spell.grant`'s `alwaysPrepared: boolean` field reads like the purpose-built vocabulary, but `deriveSpellcasting` (packages/engine/src/derive/spellcasting.ts) populates `SpellcastingBlock.prepared` SOLELY from `facts.preparedSpells[classId]` -- it never iterates `spell.grant` effects at all, and `alwaysPrepared` has zero consumers anywhere in `@hk/engine` outside prerequisite (`hasSpell`) checks. Authoring `spell.grant{alwaysPrepared:true}` here would be schema-valid but produce ZERO visible behavior. Text fallback per the brief's own 'DON'T hack preparedMax' instruction; same T10 carry (deriveSpellcasting needs a pass folding alwaysPrepared grants into prepared[]), not a new one.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Fiend Spells",
+          "description": "The magic of your patron ensures you always have certain spells ready. When you reach a Warlock level specified in the Fiend Spells table, you thereafter always have the listed spells prepared. These spells don't count against the number of spells you can prepare.\n\n**Fiend Spells**\n\n|Warlock Level|Spells|\n|---|---|\n|3rd|Burning Hands, Command, Scorching Ray, Suggestion|\n|5th|Fireball, Stinking Cloud|\n|7th|Fire Shield, Wall of Fire|\n|9th|Geas, Insect Plague|"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-fiend-patron-dark-ones-own-luck",
+    "cite": "SRD 5.2.1, Fiend Patron — Dark One's Own Luck",
+    "note": "SRD text: \"You can call on your fiendish patron to alter fate in your favor. When you make an ability check or a saving throw, you can use this feature to add 1d10 to your roll. You can do so after seeing the roll but before any of the roll's effects occur. You can use this feature a number of times equal to your Charisma modifier (minimum of once), but you can use it no more than once per roll. You regain all expended uses when you finish a Long Rest.\" Granted at Fiend Patron level 6 (Warlock level 6). PARTIALLY expressible, same shape class as every other 'named resource pool, freeform trigger' feature in this file: the USE COUNT/reset -- a formula directly grounded in the vendored text ('a number of times equal to your Charisma modifier, minimum of once'), reset Long Rest -- is real and directly expressible: 'max(1, mod(cha))' (verified against the compiled formula evaluator's max()/mod() functions, same technique Primal Champion (T9)/Channel Divinity (T10) already prove out). Authored as a genuine effect, not a fallback. The roll-bonus mechanic itself ('add 1d10 to an ability check or save, once per roll, after seeing the roll') has no vocabulary -- doc-04's advantage.grant/save.bonus/check.bonus effects only ever apply BEFORE a roll is made, never as a reactive post-roll add-on -- so it stays text-only in the already-carried description.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "dark-ones-own-luck",
+          "name": "Dark One's Own Luck",
+          "max": "max(1, mod(cha))",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-fiend-patron-fiendish-resilience",
+    "cite": "SRD 5.2.1, Fiend Patron — Fiendish Resilience",
+    "note": "SRD text: \"Choose one damage type, other than Force, whenever you finish a Short or Long Rest. You have Resistance to that damage type until you choose a different one with this feature.\" Granted at Fiend Patron level 10 (Warlock level 10). Inexpressible: this is a freely re-pickable choice made at will on every rest (not a level-gated, one-time class-progression choice like a subclass/feat pick -- the Choice machinery this pack uses throughout is exclusively level-gated, per `at:{kind:'classLevel',...}`), and even if a damage-type pick COULD be authored, the resulting `damage.resistance{types:[...]}` effect would need to be GATED on 'whichever type was most recently chosen' -- a build-time-vs-runtime-toggle gap of the exact same shape Barbarian's Rage (T9) already established: `damage.resistance` genuinely exists and is genuinely consumed, but authoring it unconditionally (or for one arbitrarily-fixed type) would be ACTIVELY WRONG, not merely inert. Text-feature fallback per ruling 9's bar and the Rage precedent; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Fiendish Resilience",
+          "description": "Choose one damage type, other than Force, whenever you finish a Short or Long Rest. You have Resistance to that damage type until you choose a different one with this feature."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/warlock-fiend-patron-hurl-through-hell",
+    "cite": "SRD 5.2.1, Fiend Patron — Hurl Through Hell",
+    "note": "SRD text: \"Once per turn when you hit a creature with an attack roll, you can try to instantly transport the target through the Lower Planes. The target must succeed on a Charisma saving throw against your spell save DC, or the target disappears and hurtles through a nightmare landscape. The target takes 8d10 Psychic damage if it isn't a Fiend, and it has the Incapacitated condition until the end of your next turn, when it returns to the space it previously occupied or the nearest unoccupied space. Once you use this feature, you can't use it again until you finish a Long Rest unless you expend a Pact Magic spell slot (no action required) to restore your use of it.\" Granted at Fiend Patron level 14 (Warlock level 14). Inexpressible: a compound 'once per turn, on-hit trigger, save-or-effect, with a SEPARATE alternate-currency (a Pact Magic slot) restoration path' -- no trigger vocabulary for 'on hit with an attack roll' exists (same gap class as Barbarian's Brutal Strike), and even the resource-restoration half is unlike every other resource.define in this file: it isn't a rest-based reset at all, but a player-optional PACT-SLOT-FOR-USE exchange -- no effect field models spending one resource to restore a different, unrelated one. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Hurl Through Hell",
+          "description": "Once per turn when you hit a creature with an attack roll, you can try to instantly transport the target through the Lower Planes. The target must succeed on a Charisma saving throw against your spell save DC, or the target disappears and hurtles through a nightmare landscape. The target takes 8d10 Psychic damage if it isn't a Fiend, and it has the Incapacitated condition until the end of your next turn, when it returns to the space it previously occupied or the nearest unoccupied space.\n\nOnce you use this feature, you can't use it again until you finish a Long Rest unless you expend a Pact Magic spell slot (no action required) to restore your use of it."
+        }
+      ]
+    }
+  }
+]

@@ -8,6 +8,7 @@ import feats from './feats.json' with { type: 'json' };
 import barbarian from './barbarian.json' with { type: 'json' };
 import cleric from './cleric.json' with { type: 'json' };
 import fighter from './fighter.json' with { type: 'json' };
+import warlock from './warlock.json' with { type: 'json' };
 import wizard from './wizard.json' with { type: 'json' };
 
 export interface Overlays {
@@ -20,11 +21,12 @@ export interface Overlays {
   barbarian: Overlay[];
   cleric: Overlay[];
   fighter: Overlay[];
+  warlock: Overlay[];
   wizard: Overlay[];
 }
 
 /**
- * Reads and types the ten overlay JSON files under `src/overlays/`. Each is a plain `Overlay[]`
+ * Reads and types the eleven overlay JSON files under `src/overlays/`. Each is a plain `Overlay[]`
  * (see `merge.ts`); callers filter by which entity array they're patching (`applyOverlays` throws
  * on an overlay whose `id` matches nothing in the array it's given).
  */
@@ -39,6 +41,7 @@ export function loadOverlays(): Overlays {
     barbarian: barbarian as Overlay[],
     cleric: cleric as Overlay[],
     fighter: fighter as Overlay[],
+    warlock: warlock as Overlay[],
     wizard: wizard as Overlay[],
   };
 }

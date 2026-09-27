@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildPack } from '../src/build.ts';
 import { applyOverlays } from '../src/overlays/merge.ts';
-import { loadOverlays } from '../src/overlays/load.ts'; // { corrections, systemChoices, species, fightingStyles, barbarian, fighter, wizard }
+import { loadOverlays } from '../src/overlays/load.ts'; // { corrections, systemChoices, species, fightingStyles, barbarian, cleric, fighter, warlock, wizard }
 import { transformClasses } from '../src/transform/classes.ts';
 import { transformFeats } from '../src/transform/feats.ts';
 
@@ -580,5 +580,163 @@ describe('cleric and life domain to level 20 mechanics (task 10)', () => {
     const pack = buildPack();
     expect(pack.entities.some((e) => e.id === 'srd-5e-2024:class/cleric')).toBe(true);
     expect(pack.entities.some((e) => e.id === 'srd-5e-2024:subclass/life-domain')).toBe(true);
+  });
+});
+
+describe('warlock and fiend patron to level 20 mechanics (task 11)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.warlock].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedSubclasses = applyOverlays(
+    subclasses,
+    o.warlock.filter((x) => subclasses.some((s) => s.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.warlock.filter((x) => features.some((f) => f.id === x.id)),
+  );
+
+  interface ClassShape {
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    levels: {
+      level: number;
+      extra?: Record<string, unknown>;
+      choices: { id: string; pick: unknown; count: number }[];
+    }[];
+  }
+
+  it('warlock: core traits (light armor only, simple weapons only, 2-skill choice from the warlock list)', () => {
+    const w = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/warlock') as ClassShape;
+    expect(w.armorTraining).toEqual(['light']);
+    expect(w.weaponProficiencies).toEqual(['simple']);
+    expect(w.skillChoice.count).toBe(2);
+    expect(w.skillChoice.from).toEqual(
+      expect.arrayContaining(['arcana', 'deception', 'history', 'intimidation', 'investigation', 'nature', 'religion']),
+    );
+  });
+
+  it('warlock: an ASI/feat choice is authored at every 2024 ASI level (4, 8, 12, 16, 19) and subclass at 3', () => {
+    const w = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/warlock') as ClassShape;
+    const choiceIds = w.levels.flatMap((r) => r.choices.map((ch) => ch.id));
+    for (const level of [4, 8, 12, 16, 19]) {
+      expect(choiceIds, `level ${level}`).toContain(`srd-5e-2024:class/warlock@${level}/feat`);
+    }
+    expect(choiceIds).toContain('srd-5e-2024:class/warlock@3/subclass');
+    // Not offered at a non-ASI level.
+    expect(choiceIds).not.toContain('srd-5e-2024:class/warlock@5/feat');
+  });
+
+  it('warlock: no weapon-mastery choice is authored (Warlock has no vendored Weapon Mastery feature)', () => {
+    const w = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/warlock') as ClassShape;
+    const choiceIds = w.levels.flatMap((r) => r.choices.map((ch) => ch.id));
+    expect(choiceIds.some((id) => id.includes('weapon-master'))).toBe(false);
+  });
+
+  it('warlock: Pact Magic is a real spellcasting.define with slots:pact, keyed on Charisma, with cantrips-known row extras at 2/3/4 (1/4/10)', () => {
+    const pactMagic = patchedFeatures.find((x) => x.id.endsWith('warlock-pact-magic')) as {
+      effects: { type: string; cantripsKnown?: string; preparedCount?: string }[];
+    };
+    const sc = pactMagic.effects.find((e) => e.type === 'spellcasting.define');
+    expect(sc).toMatchObject({
+      preparation: 'prepared',
+      slots: 'pact',
+      ability: 'cha',
+      focus: true,
+      ritual: false,
+    });
+    expect(sc?.cantripsKnown).toBeUndefined();
+    expect(sc?.preparedCount).toBeUndefined();
+
+    const w = patchedClasses.find((x) => x.id === 'srd-5e-2024:class/warlock') as ClassShape;
+    expect(w.levels.find((r) => r.level === 1)?.extra?.['warlock-cantrips-known']).toBe(2);
+    expect(w.levels.find((r) => r.level === 4)?.extra?.['warlock-cantrips-known']).toBe(3);
+    expect(w.levels.find((r) => r.level === 10)?.extra?.['warlock-cantrips-known']).toBe(4);
+    // Prepared spells stayed on the pre-existing, upstream-auto-carried key (unchanged shape).
+    expect(w.levels.find((r) => r.level === 20)?.extra?.['warlock-prepared-spells']).toBe(15);
+  });
+
+  it('warlock: pact slots resolve through the REAL system pact table, matching the SRD worked example (level 5 -> two level 3 slots)', () => {
+    // End-to-end pact-lane validation (ruling 2): the same sparse-row shape task 3's engine reads,
+    // now sourced from the real SRD pack rather than a synthetic fixture.
+    const pack = buildPack();
+    const system = pack.entities.find((e) => e.type === 'system') as {
+      tables: { spellSlots: { pact?: number[][] } };
+    };
+    expect(system.tables.spellSlots.pact?.[4]).toEqual([0, 0, 2]);
+  });
+
+  it("warlock: Magical Cunning, Contact Patron, Mystic Arcanum, and Dark One's Own Luck are real resources, not text-only", () => {
+    const mc = patchedFeatures.find((x) => x.id.endsWith('warlock-magical-cunning')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    expect(mc.effects.find((e) => e.type === 'resource.define')).toMatchObject({
+      id: 'magical-cunning',
+      max: '1',
+      reset: 'longRest',
+    });
+
+    const cp = patchedFeatures.find((x) => x.id.endsWith('warlock-contact-patron')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    expect(cp.effects.find((e) => e.type === 'resource.define')).toMatchObject({
+      id: 'contact-patron',
+      max: '1',
+      reset: 'longRest',
+    });
+
+    const ma = patchedFeatures.find((x) => x.id.endsWith('warlock-mystic-arcanum')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    const maDef = ma.effects.find((e) => e.type === 'resource.define');
+    expect(maDef).toMatchObject({ id: 'mystic-arcanum', reset: 'longRest' });
+    expect(maDef?.max).toContain('classLevel(warlock)');
+
+    const dool = patchedFeatures.find((x) => x.id.endsWith('warlock-fiend-patron-dark-ones-own-luck')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    expect(dool.effects.find((e) => e.type === 'resource.define')).toMatchObject({
+      id: 'dark-ones-own-luck',
+      max: 'max(1, mod(cha))',
+      reset: 'longRest',
+    });
+  });
+
+  it('warlock: features with genuinely inexpressible mechanics (unmanufacturable invocation entities, untriggerable bonuses, no healing/temp-HP vocabulary) carry a feature.text fallback', () => {
+    for (const slug of ['eldritch-invocations', 'eldritch-master']) {
+      const feat = patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/warlock-${slug}`) as {
+        effects: { type: string }[];
+      };
+      expect(
+        feat.effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it("fiend patron: Dark One's Own Luck is a real resource; the rest of the subclass falls back to text", () => {
+    const subclass = patchedSubclasses.find((s) => s.id === 'srd-5e-2024:subclass/fiend-patron');
+    expect(subclass).toBeDefined();
+
+    for (const slug of ['dark-ones-blessing', 'fiend-spells', 'fiendish-resilience', 'hurl-through-hell']) {
+      const feat = patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/warlock-fiend-patron-${slug}`) as {
+        effects: { type: string }[];
+      };
+      expect(
+        feat.effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('buildPack composes the warlock overlay with zero diagnostics', () => {
+    const pack = buildPack();
+    expect(pack.entities.some((e) => e.id === 'srd-5e-2024:class/warlock')).toBe(true);
+    expect(pack.entities.some((e) => e.id === 'srd-5e-2024:subclass/fiend-patron')).toBe(true);
   });
 });
