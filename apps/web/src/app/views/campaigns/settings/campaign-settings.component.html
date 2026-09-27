@@ -244,4 +244,18 @@
       {{ saving() ? t('settings.saving') : t('settings.save') }}
     </button>
   }
+
+  @if (isDm()) {
+    <div class="campaign-settings__section">
+      <button
+        hk-button
+        type="button"
+        class="campaign-settings__export"
+        [variant]="'ghost'"
+        (click)="openExportDialog()"
+      >
+        {{ t('settings.exportAction') }}
+      </button>
+    </div>
+  }
 </section>

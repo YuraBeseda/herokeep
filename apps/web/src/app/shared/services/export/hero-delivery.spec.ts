@@ -47,6 +47,28 @@ describe('deliverHeroBundle', () => {
     );
   });
 
+  it('defaults to the .hero accept extension, and honors a caller-supplied extensions list (plan-10 Task 15: campaign bundles use .herocampaign)', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    const close = vi.fn().mockResolvedValue(undefined);
+    const createWritable = vi.fn().mockResolvedValue({ write, close });
+    const showSaveFilePicker = vi.fn().mockResolvedValue({ createWritable });
+    Object.assign(window, { showSaveFilePicker });
+
+    await deliverHeroBundle(blob, fileName);
+    expect(showSaveFilePicker).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        types: [expect.objectContaining({ accept: { 'application/zip': ['.hero'] } })],
+      }),
+    );
+
+    await deliverHeroBundle(blob, 'Campaign.herocampaign', undefined, ['.herocampaign']);
+    expect(showSaveFilePicker).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        types: [expect.objectContaining({ accept: { 'application/zip': ['.herocampaign'] } })],
+      }),
+    );
+  });
+
   it('the user cancelling the save picker (AbortError) returns "cancelled" without falling through', async () => {
     const showSaveFilePicker = vi
       .fn()

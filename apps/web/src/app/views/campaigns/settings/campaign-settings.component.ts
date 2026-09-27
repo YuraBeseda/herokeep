@@ -4,6 +4,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { CampaignSettings } from '@hk/protocol';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
+import { DialogService } from '@shared/components/dialog/dialog.service';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LeaderService } from '@shared/services/storage/leader.service';
@@ -12,6 +13,7 @@ import {
   CampaignStoreNotAuthenticatedError,
   CampaignStoreNotLeaderError,
 } from '@shared/stores/campaign.store';
+import { CampaignExportDialogComponent } from './campaign-export-dialog.component';
 
 /** doc-02 §"Campaign settings document"'s own example values — the ONLY defaults that document
  * pins explicitly (`attunementMax: 3`, `startingLevel: 1`); the remaining enum defaults
@@ -77,6 +79,7 @@ export class CampaignSettingsComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly leaderService = inject(LeaderService);
   private readonly toastService = inject(ToastService);
+  private readonly dialogService = inject(DialogService);
 
   protected readonly role = this.campaignStore.role;
   protected readonly isDm = computed(() => this.role() === 'dm');
@@ -206,5 +209,16 @@ export class CampaignSettingsComponent {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /** DM-only, gated by `isDm()` alone — NOT `canEdit()` (task-15-brief.md: "DM-only … gated
+   * isDm"). Exporting is a read-only backup action, not an edit of the campaign document, so a DM
+   * on a non-leader tab can still use it (unlike `save()`, which genuinely needs the write lock). */
+  protected openExportDialog(): void {
+    const campaignId = this.campaignStore.campaignId();
+    if (!this.isDm() || !campaignId) return;
+    this.dialogService.open(CampaignExportDialogComponent, {
+      data: { campaignId, name: this.campaignStore.state()?.name ?? '' },
+    });
   }
 }

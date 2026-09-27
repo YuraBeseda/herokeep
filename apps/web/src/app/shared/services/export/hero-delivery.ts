@@ -43,18 +43,27 @@ function isUserAbort(err: unknown): boolean {
  * plain, DI-free function has no Transloco access of its own (see this file's class doc — no
  * TestBed at all), so the caller resolves the string first (`SheetShellComponent.onExport`, via
  * the injected `TranslocoService`) and passes it in; the English default here only covers a
- * caller that doesn't (there is exactly one real caller today, and it always passes one). */
+ * caller that doesn't (there is exactly one real caller today, and it always passes one).
+ *
+ * `extensions` (plan-10 Task 15): the `showSaveFilePicker` `accept` list for THIS bundle's own
+ * file extension — every ZIP bundle this app ever builds shares the same `application/zip` MIME,
+ * but a `.hero` character bundle and a `.herocampaign` campaign bundle (`CampaignWriterService`)
+ * are DIFFERENT extensions; hardcoding `.hero` here would make the browser's save dialog offer (and
+ * in some browsers, silently coerce the saved filename to) the wrong one for a campaign export.
+ * Defaults to `['.hero']` — every pre-existing call site (character export) passes 3 args and gets
+ * byte-identical behavior to before this parameter existed. */
 export async function deliverHeroBundle(
   blob: Blob,
   fileName: string,
   description = 'Herokeep character',
+  extensions: readonly string[] = ['.hero'],
 ): Promise<HeroDeliveryOutcome> {
   const showSaveFilePicker = (window as unknown as WindowWithSaveFilePicker).showSaveFilePicker;
   if (typeof showSaveFilePicker === 'function') {
     try {
       const handle = await showSaveFilePicker({
         suggestedName: fileName,
-        types: [{ description, accept: { 'application/zip': ['.hero'] } }],
+        types: [{ description, accept: { 'application/zip': [...extensions] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(blob);

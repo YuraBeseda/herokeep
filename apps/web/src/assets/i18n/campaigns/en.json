@@ -214,7 +214,18 @@
       "title": "Joining",
       "open": "Open for joining",
       "requireApproval": "New members need DM approval"
-    }
+    },
+    "exportAction": "Export campaign"
+  },
+  "export": {
+    "title": "Export campaign data",
+    "body": "Downloads a backup of this campaign's own data — settings, roster, sessions, and the log. It doesn't include any member's character sheet, which stays private to them, or any images. This file can't be imported back into Herokeep yet; keep it as a backup.",
+    "cancel": "Close",
+    "confirm": "Export",
+    "exporting": "Exporting…",
+    "success": "Campaign exported.",
+    "failure": "Couldn't export the campaign. Try again.",
+    "pickerDescription": "Herokeep campaign backup"
   },
   "party": {
     "title": "Party",

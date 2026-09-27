@@ -3,12 +3,16 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import type { CampaignSettings, MembershipRole } from '@hk/protocol';
+import { DialogService } from '@shared/components/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { CampaignStore, CampaignStoreNotLeaderError } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import { CampaignExportDialogComponent } from './campaign-export-dialog.component';
 import { CampaignSettingsComponent } from './campaign-settings.component';
+
+const CAMPAIGN_ID = '00000000-0000-4000-8000-0000000000a1';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -42,10 +46,16 @@ function configure(options: {
   isLeader?: boolean;
   settings?: CampaignSettings | null;
   appendTx?: ReturnType<typeof vi.fn>;
-}): { appendTx: ReturnType<typeof vi.fn>; toastShow: ReturnType<typeof vi.fn> } {
+}): {
+  appendTx: ReturnType<typeof vi.fn>;
+  toastShow: ReturnType<typeof vi.fn>;
+  dialogOpen: ReturnType<typeof vi.fn>;
+} {
   const appendTx = options.appendTx ?? vi.fn().mockResolvedValue(undefined);
   const toastShow = vi.fn();
+  const dialogOpen = vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) });
   const state = signal<Partial<CampaignState>>({
+    name: 'The Sunless Citadel',
     system: 'srd-5e-2024',
     settings: options.settings === undefined ? mkSettings() : options.settings,
   });
@@ -64,14 +74,20 @@ function configure(options: {
       }),
       {
         provide: CampaignStore,
-        useValue: { state, role: signal(options.role ?? 'dm'), appendTx },
+        useValue: {
+          state,
+          role: signal(options.role ?? 'dm'),
+          appendTx,
+          campaignId: signal(CAMPAIGN_ID),
+        },
       },
       { provide: LeaderService, useValue: { isLeader: signal(options.isLeader ?? true) } },
       { provide: ToastService, useValue: { show: toastShow } },
+      { provide: DialogService, useValue: { open: dialogOpen } },
     ],
   });
 
-  return { appendTx, toastShow };
+  return { appendTx, toastShow, dialogOpen };
 }
 
 describe('CampaignSettingsComponent', () => {
@@ -168,5 +184,40 @@ describe('CampaignSettingsComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const value = compiled.querySelector('hk-number-field');
     expect(value).not.toBeNull();
+  });
+
+  // --- campaign export (plan-10 Task 15) ------------------------------------------------------
+
+  it('shows the Export campaign button for the DM, even on a NON-leader tab (export is DM-gated, not leader-gated)', async () => {
+    configure({ role: 'dm', isLeader: false });
+    const fixture = TestBed.createComponent(CampaignSettingsComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const button = compiled.querySelector<HTMLButtonElement>('.campaign-settings__export');
+    expect(button).not.toBeNull();
+    expect(button!.textContent?.trim()).toBe(campaignsEn.settings.exportAction);
+  });
+
+  it('hides the Export campaign button for a player', async () => {
+    configure({ role: 'player' });
+    const fixture = TestBed.createComponent(CampaignSettingsComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaign-settings__export')).toBeNull();
+  });
+
+  it('clicking Export opens CampaignExportDialogComponent with the current campaignId and name', async () => {
+    const { dialogOpen } = configure({ role: 'dm', isLeader: true });
+    const fixture = TestBed.createComponent(CampaignSettingsComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    compiled.querySelector<HTMLButtonElement>('.campaign-settings__export')!.click();
+
+    expect(dialogOpen).toHaveBeenCalledWith(CampaignExportDialogComponent, {
+      data: { campaignId: CAMPAIGN_ID, name: 'The Sunless Citadel' },
+    });
   });
 });
