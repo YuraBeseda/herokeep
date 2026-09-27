@@ -27,10 +27,20 @@ async function clickNext(page: Page): Promise<void> {
 
 /** How to reach `/characters/new`: a plain `page.goto` (every spec but `locale.spec.ts`, which
  * tracks the browser's `load` event count and must stay on ONE hard navigation for its whole
- * test — see that spec's own doc) or a client-side click through the nav + list's own "New
- * character" button (no navigation event at all). */
-export async function openCreateWizard(page: Page, via: 'goto' | 'nav' = 'goto'): Promise<void> {
-  if (via === 'nav') {
+ * test — see that spec's own doc), a client-side click through the nav + list's own "New
+ * character" button (no navigation event at all), or (plan-10 task-16, the DM "Add pregen" flow —
+ * `party-tab.component.ts`'s `addPregen()`) `'current'`, which navigates nowhere at all: the
+ * caller has ALREADY landed on `/characters/new?returnUrl=...` via its own in-app navigation (a
+ * fresh `page.goto` here would drop that query param, and with it `CreateWizardComponent`'s own
+ * post-create `returnUrl` redirect — see `nameCharacter`'s own doc for why `finishReviewAndCreate`
+ * can't be reused unmodified in that flow either). */
+export async function openCreateWizard(
+  page: Page,
+  via: 'goto' | 'nav' | 'current' = 'goto',
+): Promise<void> {
+  if (via === 'current') {
+    return;
+  } else if (via === 'nav') {
     await page.getByRole('link', { name: 'Characters', exact: true }).click();
     await page.getByRole('button', { name: 'New character', exact: true }).click();
   } else {
@@ -44,7 +54,7 @@ export async function openCreateWizard(page: Page, via: 'goto' | 'nav' = 'goto')
 export async function nameCharacter(
   page: Page,
   name: string,
-  via: 'goto' | 'nav' = 'goto',
+  via: 'goto' | 'nav' | 'current' = 'goto',
 ): Promise<void> {
   await openCreateWizard(page, via);
   await page.locator('.create-wizard__name-input').fill(name);
@@ -204,12 +214,14 @@ export async function finishReviewAndCreate(page: Page): Promise<string> {
 
 /** The full binding path, start to finish: name → species → background → background abilities →
  * class → ability scores → skills → fighting style/weapon masteries → equipment → create.
- * Returns the new character's id. `via: 'nav'` is for `locale.spec.ts` only (see
- * `openCreateWizard`'s doc). */
+ * Returns the new character's id (parsed off the post-create URL — NOT valid when `via:
+ * 'current'` and a `returnUrl` is in play, since creation then lands somewhere other than
+ * `/c/<id>/play`; see `finishReviewAndCreate`'s own doc). `via: 'nav'` is for `locale.spec.ts`
+ * only, `via: 'current'` for the campaign e2e's DM-pregen flow (see `openCreateWizard`'s doc). */
 export async function createFighter(
   page: Page,
   name: string,
-  via: 'goto' | 'nav' = 'goto',
+  via: 'goto' | 'nav' | 'current' = 'goto',
 ): Promise<string> {
   await nameCharacter(page, name, via);
   await pickSpecies(page);

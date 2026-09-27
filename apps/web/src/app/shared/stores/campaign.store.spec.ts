@@ -657,12 +657,16 @@ describe('CampaignStore', () => {
       expect(persisted.filter((e) => e.id === pendingEvent.id)).toHaveLength(1);
     });
 
-    it('throws SyncGapError on a genuine gap, writing nothing', async () => {
+    it('tolerates a FORWARD seq jump (doc-08 per-viewer filtered catch-up — a task-16 e2e regression: without this, a viewer excluded from an intervening dm/private event sendHello()-loops forever)', async () => {
       const store = TestBed.inject(CampaignStore);
       const streamId = 'camp:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
       await store.open(streamId);
 
-      const gappy = campaignEvent(
+      // Seqs 1-4 never reach this device at all — e.g. filtered out because they were a
+      // `'dm'`/`'private'`-visibility `roll.logged`/`chat.message` this connection isn't allowed
+      // to see (`campaign-actor.ts`'s `isVisibleTo`). The server's `welcome.headSeq` still
+      // advanced past them; this device's FIRST visible event for the stream is seq 5.
+      const jumped = campaignEvent(
         streamId,
         '10000000-0000-0000-0000-000000000003',
         'campaign.renamed',
@@ -672,9 +676,40 @@ describe('CampaignStore', () => {
         5,
       );
 
-      await expect(store.applyServerCommit(streamId, [gappy])).rejects.toThrow(SyncGapError);
+      await expect(store.applyServerCommit(streamId, [jumped])).resolves.toBeUndefined();
       const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
-      expect(persisted).toHaveLength(0);
+      expect(persisted.find((e) => e.id === jumped.id)?.seq).toBe(5);
+      expect(store.state()?.name).toBe('X');
+    });
+
+    it('still throws SyncGapError when a BRAND-NEW id claims an already-passed seq (a real backward move — corruption, never legitimate filtering)', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0';
+      await store.open(streamId);
+
+      const first = campaignEvent(
+        streamId,
+        '10000000-0000-0000-0000-00000000000a',
+        'campaign.renamed',
+        1,
+        { name: 'First' },
+        DM_ACTOR,
+        5,
+      );
+      await store.applyServerCommit(streamId, [first]); // frontier now 5 (forward-jump tolerated)
+
+      const backward = campaignEvent(
+        streamId,
+        '10000000-0000-0000-0000-00000000000b',
+        'campaign.renamed',
+        1,
+        { name: 'Backward' },
+        DM_ACTOR,
+        3,
+      );
+      await expect(store.applyServerCommit(streamId, [backward])).rejects.toThrow(SyncGapError);
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.some((e) => e.id === backward.id)).toBe(false);
     });
 
     it('tolerates a benign echo of an already-committed row, and throws on a disagreeing one', async () => {
@@ -749,18 +784,37 @@ describe('CampaignStore', () => {
       expect(store.state()?.name).toBe('Three');
     });
 
-    it('throws SyncGapError on an ack-seq mismatch, writing nothing', async () => {
+    it("tolerates a FORWARD ack-seq jump (another actor's filtered-for-this-device event interleaved between two of this device's own pending sends), assigning each row its OWN acked seq", async () => {
       const store = TestBed.inject(CampaignStore);
       const streamId = 'camp:12121212-1212-1212-1212-121212121212';
       await store.open(streamId);
       await store.appendTx([{ type: 'campaign.renamed', v: 1, payload: { name: 'Pending' } }]);
       const pendingEvent = store.events().at(-1)!;
 
+      // Seq 99, not 1 — some OTHER actor's own event(s) (e.g. a `'private'`-visibility roll this
+      // device never even receives, not even as the DM) occupied every seq in between.
       await expect(
         store.commitPending(streamId, [{ id: pendingEvent.id, seq: 99 }]),
-      ).rejects.toThrow(SyncGapError);
+      ).resolves.toBeUndefined();
       const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
-      expect(persisted.find((e) => e.id === pendingEvent.id)?.seq).toBeUndefined();
+      expect(persisted.find((e) => e.id === pendingEvent.id)?.seq).toBe(99);
+    });
+
+    it('still throws SyncGapError on a BACKWARD ack (a seq at or before what this stream already committed past) — genuine corruption', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const streamId = 'camp:12b12b12-12b1-12b1-12b1-12b12b12b12b';
+      await store.open(streamId);
+      await store.appendTx([{ type: 'campaign.renamed', v: 1, payload: { name: 'First' } }]);
+      const first = store.events().at(-1)!;
+      await store.commitPending(streamId, [{ id: first.id, seq: 10 }]); // frontier now 10
+
+      await store.appendTx([{ type: 'campaign.renamed', v: 1, payload: { name: 'Second' } }]);
+      const second = store.events().at(-1)!;
+      await expect(store.commitPending(streamId, [{ id: second.id, seq: 4 }])).rejects.toThrow(
+        SyncGapError,
+      );
+      const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
+      expect(persisted.find((e) => e.id === second.id)?.seq).toBeUndefined();
     });
 
     it("routes an ack belonging to an outstanding gatewayAppend call to that call instead of the campaign's own pending-prefix walk, without throwing", async () => {

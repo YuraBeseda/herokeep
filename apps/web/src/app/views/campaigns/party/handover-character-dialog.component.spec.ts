@@ -284,13 +284,55 @@ describe('HandoverCharacterDialogComponent', () => {
     compiled.querySelector<HTMLButtonElement>('.handover-character-dialog__confirm')!.click();
     await whenStable(fixture);
 
-    expect(characterLoad).toHaveBeenCalledWith(CHARACTER_ID);
+    // `CharacterStore.load()` needs the FULL `char:<uuid>` stream id (it's the Dexie row key) —
+    // `data.characterId` here is the BARE form `PartyTabComponent.openHandover`'s only real
+    // caller always passes (`CampaignState.roster`'s own keying); this pins the task-16
+    // e2e-discovered fix: passing the bare id straight through left `CharacterStore.streamId()`
+    // holding a malformed value, failing EVERY subsequent `appendTx`'s own protocol schema
+    // validation (`stream` must match `char:`/`camp:`) — invisible to this file's own fakes
+    // (`instantCommitAppendTx` stamps a fixed, correct `stream` regardless of what `load()` was
+    // actually called with), so only a real integration run ever surfaced it.
+    expect(characterLoad).toHaveBeenCalledWith(`char:${CHARACTER_ID}`);
     expect(characterAppendTx).toHaveBeenCalledTimes(2); // leave, rejoin (no longer the transfer)
     expect(campaignAppendTx).toHaveBeenCalledTimes(2); // roster clear, roster rejoin
     expect(transferCalls).toEqual([
       { url: `/api/characters/${CHARACTER_ID}/transfer`, body: { toUserId: MEMBER_A } },
     ]);
     expect(close).toHaveBeenCalledWith(true);
+  });
+
+  it('normalizes `data.characterId` to `char:<uuid>` for CharacterStore.load() regardless of which form the caller passed — bare or already-prefixed', async () => {
+    const { characterLoad: bareLoad } = configure({});
+    const bareFixture = TestBed.createComponent(HandoverCharacterDialogComponent);
+    await whenStable(bareFixture);
+    const bareCompiled = bareFixture.nativeElement as HTMLElement;
+    bareCompiled.querySelector<HTMLButtonElement>('.handover-character-dialog__member')!.click();
+    await whenStable(bareFixture);
+    bareCompiled.querySelector<HTMLButtonElement>('.handover-character-dialog__confirm')!.click();
+    await whenStable(bareFixture);
+    expect(bareLoad).toHaveBeenCalledWith(`char:${CHARACTER_ID}`);
+
+    TestBed.resetTestingModule();
+    const { characterLoad: prefixedLoad } = configure({
+      data: {
+        campaignId: CAMPAIGN_ID,
+        characterId: `char:${CHARACTER_ID}`,
+        characterName: 'Pregen Paul',
+        fromOwnerId: DM_ID,
+      },
+    });
+    const prefixedFixture = TestBed.createComponent(HandoverCharacterDialogComponent);
+    await whenStable(prefixedFixture);
+    const prefixedCompiled = prefixedFixture.nativeElement as HTMLElement;
+    prefixedCompiled
+      .querySelector<HTMLButtonElement>('.handover-character-dialog__member')!
+      .click();
+    await whenStable(prefixedFixture);
+    prefixedCompiled
+      .querySelector<HTMLButtonElement>('.handover-character-dialog__confirm')!
+      .click();
+    await whenStable(prefixedFixture);
+    expect(prefixedLoad).toHaveBeenCalledWith(`char:${CHARACTER_ID}`);
   });
 
   it('blocks dismissal for the whole in-flight window, and re-allows it once settled', async () => {

@@ -674,14 +674,40 @@ export class CampaignStore {
 
   // --- StreamSyncSessionStorePort (mirrors CharacterStore's implementation of the same shape) ----
 
-  /** Same contract as `CharacterStore.applyServerCommit` (see that method's doc for the full
-   * algorithm walkthrough this mirrors verbatim: new content lands at the next expected committed
-   * seq, a pending echo TRANSITIONS in place, an already-committed echo is tolerated only if it
-   * agrees with the local seq, any other gap throws `SyncGapError` without writing anything).
-   * Unlike `CharacterStore`, `StreamSyncSession.handleEvents` only ever calls this for events
-   * addressed to THIS session's own stream (a gateway-forwarded event for a DIFFERENT stream goes
-   * through `onForeignEvents` instead, entirely bypassing this store) — so no gateway-partitioning
-   * is needed here, only in `commitPending`/`dropPending` below. */
+  /** Mirrors `CharacterStore.applyServerCommit`'s algorithm (new content lands at its given seq, a
+   * pending echo of this device's own event TRANSITIONS in place, an already-committed echo is
+   * tolerated only if it agrees with the local seq) with ONE deliberate divergence a character
+   * stream never needs: FORWARD seq jumps are tolerated, not just an exact `expected` match.
+   *
+   * ## Why a campaign stream can't use `CharacterStore`'s strict `e.seq === expected` check
+   *
+   * Doc-08's read-visibility filtering (`campaign-actor.ts`'s `isVisibleTo`/`filterForConnection`)
+   * applies to BOTH live fan-out AND `hello`'s catch-up paging — a `'dm'`-visibility roll never
+   * reaches a non-DM, non-roller connection's socket at ALL, and a `'private'` one never reaches
+   * anyone but its own actor, not even the DM. The server's real seq space still advances for
+   * those events (they occupy real seq numbers in `headSeq`), so a viewer this filtering excludes
+   * will legitimately see its NEXT visible event arrive several seqs ahead of its own local head —
+   * a real, permanent, per-viewer hole, not a transport loss. WebSocket-over-TCP already guarantees
+   * ordered, reliable delivery within one open connection, so a genuinely MISSED live frame (the
+   * kind `SyncGapError` -> `sendHello()` recovery exists for) can only ever happen across a
+   * reconnect — and a reconnect's own `hello` catch-up re-derives the SAME filtered view, which
+   * means it can NEVER close a hole created by filtering. Treating every forward jump as a fatal
+   * gap needing a `sendHello()` retry — this store's original behavior, copied verbatim from
+   * `CharacterStore` — therefore spun forever the first time a 3-connection campaign (this repo's
+   * own task-16 e2e caught it) had a mixed-visibility event: the excluded viewer's session
+   * `sendHello()`-looped indefinitely, never able to resync (found and fixed here; see
+   * `campaign.store.spec.ts`'s own regression test for the exact reproduction).
+   *
+   * A BACKWARD move (`e.seq` at or before the frontier this device has already advanced past, for
+   * an id it has never seen before) is still a genuine `SyncGapError` — seqs are unique and
+   * monotonic per stream, so a brand-new id claiming an already-passed seq slot can only mean real
+   * corruption/divergence, never legitimate filtering. An already-committed row's seq disagreeing
+   * with what the server just sent is, likewise, still always a hard error.
+   *
+   * `StreamSyncSession.handleEvents` only ever calls this for events addressed to THIS session's
+   * own stream (a gateway-forwarded event for a DIFFERENT stream goes through `onForeignEvents`
+   * instead, entirely bypassing this store) — so no gateway-partitioning is needed here, only in
+   * `commitPending`/`dropPending` below. */
   async applyServerCommit(streamId: string, events: Event[]): Promise<void> {
     this.assertLeader();
     return this.runExclusive(async () => {
@@ -694,22 +720,26 @@ export class CampaignStore {
       const sorted = [...events].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
       const toInsert: Event[] = [];
       const toTransition: Event[] = [];
-      let expected = head + 1;
+      let frontier = head;
 
       for (const e of sorted) {
         const existingRow = byId.get(e.id);
 
         if (existingRow === undefined) {
-          if (e.seq !== expected) throw new SyncGapError(streamId, expected, e.seq);
+          if (e.seq === undefined || e.seq <= frontier) {
+            throw new SyncGapError(streamId, frontier + 1, e.seq);
+          }
           toInsert.push(e);
-          expected++;
+          frontier = e.seq;
           continue;
         }
 
         if (existingRow.seq === undefined) {
-          if (e.seq !== expected) throw new SyncGapError(streamId, expected, e.seq);
+          if (e.seq === undefined || e.seq <= frontier) {
+            throw new SyncGapError(streamId, frontier + 1, e.seq);
+          }
           toTransition.push(e);
-          expected++;
+          frontier = e.seq;
           continue;
         }
 
@@ -720,7 +750,7 @@ export class CampaignStore {
 
       if (toInsert.length > 0) await this.eventsRepository.appendCommittedAt(toInsert);
       for (const e of toTransition) {
-        // `e.seq` is guaranteed defined — every `toTransition` entry passed the `e.seq !== expected`
+        // `e.seq` is guaranteed defined — every `toTransition` entry passed the `e.seq <= frontier`
         // (a `number`) check above without throwing.
         await this.eventsRepository.assignSeqs(streamId, e.id, e.seq!, 1);
       }
@@ -729,12 +759,22 @@ export class CampaignStore {
     });
   }
 
-  /** Same contiguous-prefix algorithm as `CharacterStore.commitPending` (a partial-prefix ack is the
-   * normal case, not an edge case; an idempotent replay of an id `applyServerCommit` already
-   * transitioned is tolerated iff it agrees with the now-committed seq), PLUS the gateway partition
-   * described in class doc: any `ackResults` entry whose id belongs to an outstanding
-   * `gatewayAppend()` call is routed there FIRST and never reaches the campaign's own pending-prefix
-   * walk (so it can never falsely `SyncGapError` against ids this stream never wrote). */
+  /** Mirrors `CharacterStore.commitPending`'s algorithm (a partial-prefix ack is the normal case,
+   * not an edge case; an idempotent replay of an id `applyServerCommit` already transitioned is
+   * tolerated iff it agrees with the now-committed seq), PLUS the gateway partition described in
+   * class doc: any `ackResults` entry whose id belongs to an outstanding `gatewayAppend()` call is
+   * routed there FIRST and never reaches the campaign's own pending-prefix walk (so it can never
+   * falsely `SyncGapError` against ids this stream never wrote).
+   *
+   * Like `applyServerCommit` above, this tolerates FORWARD seq jumps rather than requiring an
+   * exact `expectedSeq` match — see that method's own doc for the full "why" (doc-08 per-viewer
+   * filtering: between two of THIS device's own pending sends, a DIFFERENT actor's `'private'`-
+   * visibility event — invisible to this device even if it's the DM — can legitimately land at an
+   * intervening seq). The FIFO ordering check (`nextPending?.id !== ack.id` — this device's own
+   * acks must still name its own pending rows in the exact order they were sent) is untouched; only
+   * the numeric seq comparison is relaxed, and each row is assigned ITS OWN acked seq individually
+   * (`assignSeqs(..., count: 1)`) rather than one batched contiguous-range call — a range can no
+   * longer be assumed once gaps are tolerated. */
   async commitPending(streamId: string, ackResults: { id: string; seq: number }[]): Promise<void> {
     this.assertLeader();
     return this.runExclusive(async () => {
@@ -751,7 +791,7 @@ export class CampaignStore {
       const head = rows.reduce((max, e) => (e.seq !== undefined ? Math.max(max, e.seq) : max), 0);
 
       let pendingIndex = 0;
-      let expectedSeq = head + 1;
+      let frontier = head;
       const toAssign: { id: string; seq: number }[] = [];
 
       for (const ack of ownResults) {
@@ -764,18 +804,19 @@ export class CampaignStore {
         }
 
         const nextPending = pending[pendingIndex];
-        if (nextPending?.id !== ack.id) throw new SyncGapError(streamId, expectedSeq, ack.seq);
-        if (ack.seq !== expectedSeq) throw new SyncGapError(streamId, expectedSeq, ack.seq);
+        if (nextPending?.id !== ack.id) throw new SyncGapError(streamId, frontier + 1, ack.seq);
+        if (ack.seq <= frontier) throw new SyncGapError(streamId, frontier + 1, ack.seq);
 
         toAssign.push(ack);
         pendingIndex++;
-        expectedSeq++;
+        frontier = ack.seq;
       }
 
       if (toAssign.length === 0) return;
 
-      const first = toAssign[0];
-      await this.eventsRepository.assignSeqs(streamId, first.id, first.seq, toAssign.length);
+      for (const ack of toAssign) {
+        await this.eventsRepository.assignSeqs(streamId, ack.id, ack.seq, 1);
+      }
       await this.refreshState(streamId);
     });
   }

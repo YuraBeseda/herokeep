@@ -132,8 +132,19 @@ export class HandoverCharacterDialogComponent {
       // D1-owns every pregen they create, exactly like any of their own characters; see
       // `pregen-handover-sequence.ts`'s class doc) — needed either way: a fresh attempt appends
       // through it directly, a retry needs its `events()` signal live to re-derive what already
-      // committed.
-      await this.characterStore.load(this.data.characterId);
+      // committed. `CharacterStore.load()` requires the FULL `char:<uuid>` stream id (it's used
+      // directly as the Dexie row key), but `this.data.characterId` is documented as "either
+      // form" — `PartyTabComponent.openHandover`'s only caller passes the BARE id straight from
+      // `CampaignState.roster`'s own keying. Without this normalization, `load()` "succeeds" on a
+      // stream that has never existed (a bare uuid with no `char:` prefix), leaving `streamId()`
+      // holding that same malformed value — every subsequent `appendTx` in this sequence then
+      // builds its event with that bad value as `stream`, failing protocol schema validation
+      // (`Invalid string: must match pattern /^(char|camp):.../`) on step (1) — found via the
+      // task-16 e2e (a real handover had never round-tripped through this dialog before).
+      const fullCharacterId = this.data.characterId.startsWith('char:')
+        ? this.data.characterId
+        : `char:${this.data.characterId}`;
+      await this.characterStore.load(fullCharacterId);
       const outcome = await runPregenHandoverSequence({
         characterPort: this.characterStore,
         campaignPort: this.campaignStore,

@@ -10,6 +10,7 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import type { SyncStateValue } from '@shared/services/sync/sync.service';
 import { SyncService } from '@shared/services/sync/sync.service';
+import { CharacterStore } from '@shared/stores/character.store';
 import { encodeBlobChunkFrame } from './blob-chunk-codec';
 import {
   BLOB_IDLE_SCHEDULER,
@@ -97,6 +98,32 @@ class FakeSyncService {
       this.syncStateSignals.set(streamId, sig);
     }
     return sig;
+  }
+}
+
+// --- fake CharacterStore — this task's own `onLocalAppend` re-announce hook (task-16 e2e fix)
+// only needs a controllable `streamId`/`events` pair plus a callback registry; nothing here
+// otherwise touches character-sheet state, so a full `CharacterStore` (with its own heavy
+// `EngineFacade`/`LocaleService`/Transloco dependency chain) would be pure test-setup overhead. --
+
+class FakeCharacterStore {
+  private readonly streamIdState = signal<string | undefined>(undefined);
+  readonly streamId: Signal<string | undefined> = this.streamIdState.asReadonly();
+  private readonly eventsState = signal<Event[]>([]);
+  readonly events: Signal<Event[]> = this.eventsState.asReadonly();
+  private readonly listeners = new Set<(streamId: string, events: Event[]) => void>();
+
+  onLocalAppend(cb: (streamId: string, events: Event[]) => void): () => void {
+    this.listeners.add(cb);
+    return () => this.listeners.delete(cb);
+  }
+
+  /** Test-only driver: sets this "loaded character"'s stream/events, then fires `onLocalAppend`
+   * exactly like `CharacterStore.appendTx` does once a write commits. */
+  commitLocalAppend(streamId: string, events: Event[]): void {
+    this.streamIdState.set(streamId);
+    this.eventsState.set(events);
+    for (const cb of this.listeners) cb(streamId, events);
   }
 }
 
@@ -216,8 +243,26 @@ async function putBlobBytes(hash: string, bytes: Uint8Array): Promise<void> {
   await TestBed.inject(BlobsRepository).put(hash, 'image/webp', bytes);
 }
 
+/** The CHARACTER-stream half of a campaign link (`character.campaign_joined@1`) —
+ * `campaignIdOfCharacter` (`character-campaign-link.ts`) reads exactly this shape off
+ * `CharacterStore.events()`; task-16's own re-announce hook (`BlobTransferService`'s
+ * `onCharacterLocalAppend`) resolves the just-linked campaign id from it. */
+function mkCharCampaignJoinedEvent(characterId: string, campaignId: string): Event {
+  const id = `00000000-0000-4000-8000-${String(nextEventId++).padStart(12, '0')}`;
+  return {
+    id,
+    stream: `char:${characterId}`,
+    ts: '2026-09-26T00:00:00.000Z',
+    actor: { userId: 'usr_1', deviceId: 'dev_1', role: 'owner' },
+    type: 'character.campaign_joined',
+    v: 1,
+    payload: { campaignId },
+  };
+}
+
 describe('BlobTransferService', () => {
   let fakeSync: FakeSyncService;
+  let fakeCharacterStore: FakeCharacterStore;
   let idle: ReturnType<typeof makeIdleScheduler>;
 
   // `requestTimeoutMs` defaults generously high (5s) — real enough that NONE of the ordinary
@@ -229,11 +274,13 @@ describe('BlobTransferService', () => {
   // default, or once, standalone, from that one test, never both for the same test).
   async function setup(requestTimeoutMs = 5_000): Promise<void> {
     fakeSync = new FakeSyncService();
+    fakeCharacterStore = new FakeCharacterStore();
     idle = makeIdleScheduler();
 
     TestBed.configureTestingModule({
       providers: [
         { provide: SyncService, useValue: fakeSync },
+        { provide: CharacterStore, useValue: fakeCharacterStore },
         { provide: BLOB_IDLE_SCHEDULER, useValue: idle.scheduler },
         { provide: BLOB_REQUEST_TIMEOUT_MS, useValue: requestTimeoutMs },
       ],
@@ -305,6 +352,57 @@ describe('BlobTransferService', () => {
       expect.any(String),
       'sha256:' + 'b'.repeat(64),
     );
+  });
+
+  // Task-16 e2e fix: the ordinary flow is "join the campaign, THEN separately link a character"
+  // (ruling 4) — the very first connect-time `runConnectSequence` almost always fires before that
+  // second step ever commits (the campaign socket typically opens in well under the time it takes
+  // a person to click through the link-character screen), so P1's own-portrait announce sees an
+  // EMPTY roster on that first pass. Without a re-trigger, nothing ever re-announces it — found by
+  // this plan's own real two-browser-context e2e (a member's portrait never relayed to the DM on
+  // the first session). This test pins the fix: `BlobTransferService.onCharacterLocalAppend`
+  // (wired to `CharacterStore.onLocalAppend`, the SAME hook `PartyOverviewPublisherService` uses
+  // for its own analogous concern) re-runs the connect sequence once the roster entry lands.
+  it("re-announces P1 once this device's own character link to an ALREADY-watched campaign commits — the roster entry lands AFTER the first connect, not before", async () => {
+    const hash = 'sha256:' + 'c'.repeat(64);
+    await TestBed.inject(CharactersRepository).put(mkCharacterRow({ portraitThumbHash: hash }));
+    await putBlobBytes(hash, new Uint8Array([1]));
+
+    // Connects with NO roster entry yet — mirrors the real ordering: the campaign socket is
+    // already live before the character has been linked to it at all.
+    await connectCampaign();
+    expect(fakeSync.sendBlobHave).not.toHaveBeenCalled();
+
+    // The character-side link now commits locally (`character.campaign_joined`) — the roster's
+    // OWN campaign-side mirror event lands too (ruling 4's step (b)), then the fake
+    // `CharacterStore` fires `onLocalAppend` exactly as the real store does once a write commits.
+    await TestBed.inject(EventsRepository).append([mkJoinedEvent(CHARACTER_ID)]);
+    fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, [
+      mkCharCampaignJoinedEvent(CHARACTER_ID, CAMPAIGN_ID),
+    ]);
+    await flush();
+
+    expect(fakeSync.sendBlobHave).toHaveBeenCalledWith(CAMPAIGN_ID, [hash]);
+  });
+
+  it('does NOT re-run the connect sequence for a local append on a character linked to a DIFFERENT (or no) campaign', async () => {
+    const hash = 'sha256:' + 'd'.repeat(64);
+    await TestBed.inject(CharactersRepository).put(mkCharacterRow({ portraitThumbHash: hash }));
+    await putBlobBytes(hash, new Uint8Array([1]));
+    await connectCampaign();
+    fakeSync.sendBlobHave.mockClear();
+
+    // No campaign link at all (an ordinary, unrelated character edit).
+    fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, []);
+    await flush();
+    expect(fakeSync.sendBlobHave).not.toHaveBeenCalled();
+
+    // Linked to a campaign this service has no live watcher for.
+    fakeCharacterStore.commitLocalAppend(CHARACTER_STREAM, [
+      mkCharCampaignJoinedEvent(CHARACTER_ID, '00000000-0000-4000-8000-0000000000ff'),
+    ]);
+    await flush();
+    expect(fakeSync.sendBlobHave).not.toHaveBeenCalled();
   });
 
   // Fix round 1, Minor: nothing enforced the server's own MAX_HASHES_PER_CONNECTION (512) client-

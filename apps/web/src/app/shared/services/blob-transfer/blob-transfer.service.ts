@@ -7,6 +7,7 @@ import {
   type EffectRef,
 } from '@angular/core';
 import { uuidv7 } from '@shared/helpers/uuid';
+import { campaignIdOfCharacter } from '@shared/services/campaigns/character-campaign-link';
 import { projectCampaign } from '@shared/services/campaigns/campaign-projection';
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { Backoff } from '@shared/services/sync/backoff';
@@ -17,6 +18,8 @@ import { CharactersRepository } from '@shared/services/storage/characters.reposi
 import type { BlobRow } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
+import { CampaignStore } from '@shared/stores/campaign.store';
+import { CharacterStore } from '@shared/stores/character.store';
 import { CacheManagerService } from './cache-manager.service';
 import { prioritizeAnnounceHashes } from './blob-cache-policy';
 import {
@@ -212,6 +215,8 @@ export class BlobTransferService {
   private readonly requestTimeoutMs = inject(BLOB_REQUEST_TIMEOUT_MS);
   private readonly idleScheduler = inject(BLOB_IDLE_SCHEDULER);
   private readonly injector = inject(Injector);
+  private readonly characterStore = inject(CharacterStore);
+  private readonly campaignStore = inject(CampaignStore);
 
   private readonly watchers = new Map<string, CampaignWatcher>();
 
@@ -225,6 +230,51 @@ export class BlobTransferService {
       // production code has no reason to react synchronously to this signal.
       queueMicrotask(() => this.reconcileCampaignWatchers(liveIds));
     });
+
+    // [task-16 e2e fix] `runConnectSequence`'s P1 own-portrait announce is computed from this
+    // device's LOCAL roster state (`computeWantedForCampaign`'s `ownRosterIds`, which needs the
+    // CAMPAIGN-side `campaign.character_joined` roster mirror event, ruling 4's step (b)), but
+    // `connectEffect` (`startWatcher`, below) only ever calls `runConnectSequence` ONCE per genuine
+    // reconnect (its own `wasConnected` gate) — and that connect fires the INSTANT the campaign's
+    // socket opens, which is typically WELL BEFORE the ordinary two-step join flow (join the
+    // campaign, THEN separately link a character) has committed either half of that sequence.
+    // Found via the task-16 e2e (a real member's own portrait NEVER announced, hence never relayed
+    // to the DM, on the very first session after joining): without a re-trigger, nothing ever
+    // re-runs P1 once the roster entry finally lands, so it silently never announces until some
+    // LATER reconnect (a reload) happens to re-run `runConnectSequence` with fresh state.
+    //
+    // TWO hooks, mirroring `PartyOverviewPublisherService`'s own identical-shaped
+    // `characterStore.onLocalAppend` pattern (guarded below by re-checking each store's own
+    // current `streamId()`/`campaignId()` against the fired `streamId`, the same "moved on to
+    // something else" guard that service's own doc explains):
+    //   - the CHARACTER-side commit (step (a), `character.campaign_joined`) — resolves WHICH
+    //     campaign this character just linked to (`campaignIdOfCharacter`), but on its own still
+    //     fires too early (step (a) commits locally BEFORE step (b) is even sent, per ruling 4's
+    //     "gated on server-acked (a)" sequencing) to have the roster entry yet;
+    //   - the CAMPAIGN-side commit (step (b), or ANY other local campaign append — the DM's own
+    //     pregen-handover roster rejoin included) — this is what actually POPULATES `state.roster`,
+    //     so re-running here is what actually closes the gap; the character-side hook is kept too
+    //     as defense in depth for any future path that skips straight to a campaign-side append.
+    // Re-running the WHOLE (already idempotent — see `enqueueMissing`'s own dedup,
+    // `startDmSuperPeerLoop`'s own re-entry guard) `runConnectSequence` is simpler and lower-risk
+    // than hand-duplicating its announce-building logic here, and correctly also re-queues any
+    // P1/P2 the FIRST connect-time attempt couldn't see yet.
+    this.characterStore.onLocalAppend((streamId) => this.onCharacterLocalAppend(streamId));
+    this.campaignStore.onLocalAppend((streamId) => this.onCampaignLocalAppend(streamId));
+  }
+
+  private onCharacterLocalAppend(streamId: string): void {
+    if (this.characterStore.streamId() !== streamId) return; // moved on to a different character
+    const campaignId = campaignIdOfCharacter(this.characterStore.events());
+    if (!campaignId || !this.watchers.has(campaignId)) return;
+    void this.runConnectSequence(campaignId);
+  }
+
+  private onCampaignLocalAppend(streamId: string): void {
+    if (this.campaignStore.streamId() !== streamId) return; // a DIFFERENT campaign is open now
+    const campaignId = this.campaignStore.campaignId();
+    if (!campaignId || !this.watchers.has(campaignId)) return;
+    void this.runConnectSequence(campaignId);
   }
 
   // --- watcher lifecycle -----------------------------------------------------------------------
