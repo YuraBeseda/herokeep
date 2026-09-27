@@ -52,16 +52,43 @@ const rowPredicateSites = (row: ClassLevelRow, path: string): PredicateSite[] =>
   ...row.choices.flatMap((c, i) => choicePredicateSites(c, `${path}.choices.${i}`)),
 ];
 
+type SystemEntity = Extract<Entity, { type: 'system' }>;
+
+/** System predicate sites (plan 11 final wave F2): `multiclass.prerequisites`, one per class ref. */
+const systemPredicateSites = (e: SystemEntity): PredicateSite[] =>
+  Object.entries(e.multiclass?.prerequisites ?? {}).map(([ref, p]) => ({
+    path: `multiclass.prerequisites.${ref}`,
+    p,
+  }));
+
+/** System value-formula sites (plan 11 final wave F2): encumbrance capacities. */
+const systemFormulaSites = (e: SystemEntity): FormulaSite[] => {
+  const sites: FormulaSite[] = [];
+  const enc = e.encumbrance;
+  if (enc?.standard)
+    sites.push({ path: 'encumbrance.standard.capacity', src: enc.standard.capacity, allowComparison: false });
+  if (enc?.variant) {
+    sites.push({ path: 'encumbrance.variant.capacity', src: enc.variant.capacity, allowComparison: false });
+    enc.variant.thresholds.forEach((t, i) =>
+      sites.push({ path: `encumbrance.variant.thresholds.${i}.capacity`, src: t.capacity, allowComparison: false }),
+    );
+  }
+  return sites;
+};
+
 /**
  * Every predicate site on an entity, in traversal order: entity-level prerequisites, grants[].when,
  * choices[].prerequisites, then — for class/subclass — each level row's grants[].when followed by
- * its choices[].prerequisites. Shared by formula collection (`collectEntityFormulas`) and predicate
- * shape checking (`validatePack`) so the two walkers cannot drift.
+ * its choices[].prerequisites, or — for the system — its multiclass prerequisites. Shared by formula
+ * collection (`collectEntityFormulas`) and predicate shape checking (`validatePack`) so the two
+ * walkers cannot drift.
  */
 export function collectEntityPredicates(e: Entity): PredicateSite[] {
   const sites = entityPredicateSites(e);
   if (e.type === 'class' || e.type === 'subclass') {
     e.levels.forEach((row, r) => sites.push(...rowPredicateSites(row, `levels.${r}`)));
+  } else if (e.type === 'system') {
+    sites.push(...systemPredicateSites(e));
   }
   return sites;
 }
@@ -81,6 +108,8 @@ export function collectEntityFormulas(e: Entity): FormulaSite[] {
           sites.push({ path: `levels.${r}.extra.${key}`, src: value, allowComparison: false });
       }
     });
+  } else if (e.type === 'system') {
+    sites.push(...predicateFormulas(systemPredicateSites(e)), ...systemFormulaSites(e));
   }
   return sites;
 }

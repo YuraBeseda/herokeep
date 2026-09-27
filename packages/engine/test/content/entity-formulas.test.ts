@@ -170,6 +170,64 @@ describe('collectEntityPredicates (class/subclass level-row grants)', () => {
   });
 });
 
+// Plan 11 final wave F2 (ledger Carry-V): the `system` entity's own formula/predicate sites —
+// `multiclass.prerequisites` (predicates) and `encumbrance.{standard,variant}.capacity` /
+// `variant.thresholds[].capacity` (formulas) — are deep-validated like every other entity's.
+describe('collectEntityPredicates / collectEntityFormulas (system arm)', () => {
+  const systemWith = (extra: Record<string, unknown>): Entity => {
+    const sys = loadFixturePack('core-mini').entities.find((e) => e.type === 'system')!;
+    return { ...sys, ...extra };
+  };
+
+  it('collects multiclass prerequisites and encumbrance capacities', () => {
+    const sys = systemWith({
+      multiclass: { prerequisites: { fighter: { any: [{ formula: 'score(str) >= 13' }, { tag: 't' }] } } },
+      encumbrance: {
+        standard: { capacity: 'score(str) * 15' },
+        variant: {
+          capacity: 'score(str) * 15',
+          thresholds: [{ capacity: 'score(str) * 5', state: 'encumbered', speedPenalty: 10 }],
+        },
+      },
+    });
+    expect(collectEntityPredicates(sys)).toEqual([
+      { path: 'multiclass.prerequisites.fighter', p: { any: [{ formula: 'score(str) >= 13' }, { tag: 't' }] } },
+    ]);
+    expect(collectEntityFormulas(sys)).toEqual([
+      { path: 'multiclass.prerequisites.fighter.any.0.formula', src: 'score(str) >= 13', allowComparison: true },
+      { path: 'encumbrance.standard.capacity', src: 'score(str) * 15', allowComparison: false },
+      { path: 'encumbrance.variant.capacity', src: 'score(str) * 15', allowComparison: false },
+      { path: 'encumbrance.variant.thresholds.0.capacity', src: 'score(str) * 5', allowComparison: false },
+    ]);
+  });
+
+  it('validatePack reports a malformed system capacity formula and prerequisite predicate', () => {
+    const pack = loadFixturePack('core-mini');
+    const i = pack.entities.findIndex((e) => e.type === 'system');
+    pack.entities[i] = {
+      ...pack.entities[i]!,
+      multiclass: { prerequisites: { fighter: { formula: 'score(str) >=' } } },
+      encumbrance: { standard: { capacity: 'score(str) *' } },
+    } as Entity;
+    const d = validatePack(pack, []);
+    expect(d.map((x) => [x.code, x.path])).toEqual([
+      ['formula.syntax', `entities.${i}.multiclass.prerequisites.fighter.formula`],
+      ['formula.syntax', `entities.${i}.encumbrance.standard.capacity`],
+    ]);
+    expect(d.every((x) => x.entityId === pack.entities[i]!.id)).toBe(true);
+  });
+
+  it('validatePack shape-checks a too-deep multiclass prerequisite', () => {
+    const pack = loadFixturePack('core-mini');
+    const i = pack.entities.findIndex((e) => e.type === 'system');
+    pack.entities[i] = {
+      ...pack.entities[i]!,
+      multiclass: { prerequisites: { fighter: nest(PREDICATE_MAX_DEPTH + 1) } },
+    } as Entity;
+    expect(validatePack(pack, []).map((x) => x.code)).toContain('predicate.tooDeep');
+  });
+});
+
 describe('validatePack wires entity formulas', () => {
   it('reports a syntax error in feature.uses.count with the entity path', () => {
     const pack = loadFixturePack('core-mini');
