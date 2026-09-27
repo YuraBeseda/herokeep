@@ -1,0 +1,385 @@
+[
+  {
+    "id": "srd-5e-2024:class/barbarian",
+    "cite": "SRD 5.2.1, Barbarian Core Traits; Barbarian Subclass; Ability Score Improvement; Epic Boon",
+    "note": "Core Traits table: \"Primary Ability: Strength\"; \"Saving Throw Proficiencies: Strength and Constitution\"; \"Skill Proficiencies: Choose 2: Animal Handling, Athletics, Intimidation, Nature, Perception, or Survival\"; \"Weapon Proficiencies: Simple and Martial weapons\"; \"Armor Training: Light and Medium armor and Shields\" (no Heavy armor training, unlike Fighter -- consistent with Fast Movement/Rage both keying off \"while you aren't wearing Heavy armor\"/\"if you don Heavy armor\"). Task 9 (phase 4 plan 11): new overlay, class 1->20. @1/weapon-masteries is a real query pick, same shape as T6/T8's fighter carry: {query:{type:'item', hasField:['weapon.mastery']}} -- EntityQuery has no weapon-kind (melee/ranged) filter (verified: packages/protocol/src/pack/choice.ts's EntityQuerySchema is type/tags/level/classes/school/hasField only), so unlike Fighter (which may pick masteries on ANY weapon), this choice CANNOT be restricted to \"Simple or Martial Melee weapons of your choice\" per the vendored srd-2024_barbarian_weapon-mastery desc -- a barbarian can, through this app, pick a mastery on a ranged weapon, which the SRD disallows. Flagged; same vocabulary gap as Fighter's, worse fit here since the SRD text is melee-only. count 2 matches the vendored srd-2024_barbarian_weapon-mastery-count level-1 column value (\"2\"), cross-checked against the full 1-20 column (2 at levels 1-3, 3 at levels 4-9, 4 at levels 10-20). Weapon Mastery COUNT GROWTH is already fully automatic exactly like Fighter's: transformClasses() writes every level's value under extra key 'barbarian-weapon-mastery-count' (from the ClassFeature pk's own slug), which packages/engine/src/derive/attacks.ts's masteryCountKey('barbarian') reads byte-identically -- Sheet.masteryCount already reports 2/3/4 at the right levels with zero authoring here. The CHOICE mechanism still can't grow past its starting count (same findMasteryChoiceId first-match-by-slug limitation carried from T8, not re-litigated here -- T12 engine carry). Ability Score Improvement feature (barbarian-ability-score-improvement) repeats at Barbarian levels 4 (base), 8, 12, 16 per its own vendored desc (\"You gain this feature again at Barbarian levels 8, 12, and 16\") -- @4/@8/@12/@16/feat choices below reuse the exact plan-2 query-any-feat shape (matching the SRD's own \"or another feat of your choice for which you qualify\" open wording). Epic Boon is a SEPARATE feature (barbarian-epic-boon) with its own level-19 grant, vendored desc \"You gain an Epic Boon feat ... or another feat of your choice for which you qualify. Boon of Irresistible Offense is recommended.\" -- same open-any-feat wording as ASI, so @19/feat reuses the identical query:{type:'feat'} pick (EntityQuery has no category filter to restrict to epicBoon-tagged feats, and the SRD text itself permits any qualifying feat). Barbarian Subclass (barbarian-barbarian-subclass, level 3) carries no overlay entry of its own -- its mechanic is fully expressed by the @3/subclass choice below, matching Fighter's fighter-fighter-subclass precedent (the feature entity itself needs no merge).",
+    "set": {
+      "armorTraining": ["light", "medium", "shields"],
+      "weaponProficiencies": ["simple", "martial"],
+      "skillChoice": {
+        "from": ["animal-handling", "athletics", "intimidation", "nature", "perception", "survival"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@1/weapon-masteries",
+            "prompt": "Weapon Masteries",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 1 },
+            "pick": { "query": { "type": "item", "hasField": ["weapon.mastery"] } },
+            "count": 2
+          }
+        ]
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@3/subclass",
+            "prompt": "Barbarian Subclass",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["barbarian"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/barbarian@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "barbarian", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-unarmored-defense",
+    "cite": "SRD 5.2.1, Unarmored Defense",
+    "note": "SRD text: \"While you aren't wearing any armor, your base Armor Class equals 10 plus your Dexterity and Constitution modifiers. You can use a Shield and still gain this benefit.\" This is the class's SIGNATURE mechanic and doc-04's effects table expresses it fully and correctly (checked hard, per the brief): `ac.formula` (\"candidates; engine takes the max\", packages/engine/src/derive/defense.ts's deriveDefense) plus the effect-common `when: Predicate` field, gated on `{armor:{category:['none']}}` -- verified against packages/engine/src/derive/composition.ts's `equippedArmor()`/`armorCategory` PredicateContext accessor: armor category comes from currently-EQUIPPED inventory items ONLY (a worn shield is tracked separately via `hasShield`, never folded into `armorCategory()`), so \"can use a Shield and still gain this benefit\" is satisfied for free -- equipping only a shield (no armor piece) leaves `armorCategory()` at 'none' and the formula stays active; a shield's own +2 sums on top via a SEPARATE ac.bonus contribution (defense.ts's SHIELD_AC_BONUS_KEY), not through this effect at all. The `when` predicate is score-free (armor equip state, not an ability check) so it's evaluated eagerly at composition time (not deferred), and `ac.formula` competes as a genuine max-of-formulas candidate alongside the base 10+dex and any equipped-armor candidate -- if the character later equips armor, `armorCategory()` flips away from 'none' and this candidate drops out of the pool entirely (re-evaluated on every derive() call from current facts.inventory), so the AC correctly reverts to the armor's own formula, never double-counting or leaking the unarmored bonus while armored. Verified against packages/engine/test/derive/defense.test.ts's existing `ac.formula` coverage (max-of-formulas competition, already-shipped and tested machinery) before authoring this -- a REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        {
+          "type": "ac.formula",
+          "formula": "10 + mod(dex) + mod(con)",
+          "key": "barbarian-unarmored-defense",
+          "when": { "armor": { "category": ["none"] } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-rage",
+    "cite": "SRD 5.2.1, Rage",
+    "note": "SRD text (abridged): \"You can enter your Rage the number of times shown for your Barbarian level in the Rages column ... You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest.\" max is a real stepped formula matching the vendored srd-2024_barbarian_rages column exactly (2 at levels 1-2, 3 at 3-5, 4 at 6-11, 5 at 12-16, 6 at 17-20; verified level-by-level with a standalone script against the compiled formula evaluator before authoring): '2 + min(1, floor(classLevel(barbarian) / 3)) + min(1, floor(classLevel(barbarian) / 6)) + min(1, floor(classLevel(barbarian) / 12)) + min(1, floor(classLevel(barbarian) / 17))'. reset: 'shortRest' is the SAME vocabulary approximation Second Wind/T8 already carries for a \"regain one on short rest, all on long rest\" clause (our reset vocabulary only expresses \"resets to max on trigger\", not \"regain one use\"); unchanged limitation, not re-litigated. Everything else Rage's active-state text describes (Damage Resistance to bludgeoning/piercing/slashing, the Rage Damage bonus on Strength attacks, Advantage on Strength checks/saves, no Concentration/spells, and the round-by-round extension/10-minute-cap duration mechanics) is gated on \"while your Rage is active\" -- a MOMENTARY, player-toggled combat state that this engine's Sheet-derivation model has no facts representation for at all (verified: no `condition`/`tag`/predicate anywhere tracks \"is currently raging\", unlike armor-equip state which IS a stable Facts.inventory fact suitable for Unarmored Defense's predicate above). Authoring any of those clauses as an unconditional effect (e.g. damage.bonus or damage.resistance with no gate) would be ACTIVELY WRONG -- always granting the bonus/resistance/advantage even when NOT raging -- which is a different and worse failure mode than Empowered Evocation's genuinely-inert (never-wrongly-applied) T8 precedent, so that same posture does NOT apply here; correctly gating requires a \"raging\" toggleable state that doesn't exist in Facts/Predicate today (no schema/engine change in this task's scope). Per the brief's 'document why a different shape is better' escape hatch: only the uses-pool resource is authored as a real effect; the rest of Rage's mechanics stay in this entity's own (already-localized) `description` text, which every reader/UI already surfaces in full -- matching Second Wind/Action Surge/Indomitable/Weapon Mastery's own established precedent of NOT duplicating a feature's already-carried description into a redundant feature.text when at least one real effect is authored. Flagged as a T12/future-engine carry: a \"raging\" activatable condition (or an equivalent resource-active predicate) is needed before Rage Damage/Damage Resistance/Strength Advantage can be authored as correctly-gated effects. The Rage Damage NUMBER itself (srd-2024_barbarian_rage-damage column: +2 at levels 1-8, +3 at 9-15, +4 at 16-20) already lands automatically as the typed extra 'barbarian-rage-damage' via transformClasses() (T7's classifyExtraValue, NUMERIC_EXTRA_RE) -- zero authoring needed here, data is present and correct for whenever the raging-state gap closes.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "rage",
+          "name": "Rage",
+          "max": "2 + min(1, floor(classLevel(barbarian) / 3)) + min(1, floor(classLevel(barbarian) / 6)) + min(1, floor(classLevel(barbarian) / 12)) + min(1, floor(classLevel(barbarian) / 17))",
+          "reset": "shortRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-weapon-mastery",
+    "cite": "SRD 5.2.1, Weapon Mastery",
+    "note": "SRD text: \"...allows you to use the mastery properties of two kinds of Simple or Martial Melee weapons of your choice... Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices.\" count: '2' is the level-1 fallback value, evaluated only when no class-row extra is present at or below the character's level (packages/engine/src/derive/attacks.ts's resolveMasteryCount, T6) -- the real level-scaled count (2 at 1-3, 3 at 4-9, 4 at 10-20) is carried automatically by the upstream row extra 'barbarian-weapon-mastery-count' (see the class entity's own note for the full growth/melee-filter discussion), so this formula is a level-1-only safety net past level 3. The \"change one of those weapon choices\" on-long-rest swap is NOT expressible, same limitation class as Fighter's identical gap (neither level-gated nor a partial-selection re-ask) -- flagged, unchanged from that precedent.",
+    "merge": {
+      "effects": [{ "type": "mastery.grant", "count": "2" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-danger-sense",
+    "cite": "SRD 5.2.1, Danger Sense",
+    "note": "SRD text: \"You have Advantage on Dexterity saving throws unless you have the Incapacitated condition.\" Granted at Barbarian level 2. Fully expressible: advantage.grant{on:'save.dex'} for the base clause, gated `when:{not:{condition:'srd-5e-2024:condition/incapacitated'}}` for the exclusion -- the condition predicate reads `facts.conditions` (a genuine, dynamic per-character fact, unlike Rage's momentary-toggle gap above), is score-free so it evaluates eagerly at composition, and the incapacitated condition entity already exists in this pack (srd-2024_incapacitated, transformConditions()). A REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        {
+          "type": "advantage.grant",
+          "on": "save.dex",
+          "when": { "not": { "condition": "srd-5e-2024:condition/incapacitated" } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-reckless-attack",
+    "cite": "SRD 5.2.1, Reckless Attack",
+    "note": "SRD text: \"When you make your first attack roll on your turn, you can decide to attack recklessly. Doing so gives you Advantage on attack rolls using Strength ... but attack rolls against you have Advantage [until the start of your next turn].\" Granted at Barbarian level 2. Inexpressible: a PER-TURN player choice (not a permanent trait) that grants advantage to the barbarian's own Strength attacks while ALSO granting advantage to attacks made against them -- both halves are transient, opt-in, per-turn states with no Predicate/facts representation (same class of gap as Rage's active-state clauses above: no \"I am currently attacking recklessly\" toggle exists). Authoring an unconditional advantage.grant would be wrong in the same way an unconditional Rage-Damage bonus would be. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Reckless Attack",
+          "description": "You can throw aside all concern for defense to attack with increased ferocity. When you make your first attack roll on your turn, you can decide to attack recklessly. Doing so gives you Advantage on attack rolls using Strength until the start of your next turn, but attack rolls against you have Advantage during that time."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-primal-knowledge",
+    "cite": "SRD 5.2.1, Primal Knowledge",
+    "note": "SRD text: \"You gain proficiency in another skill of your choice from the skill list available to Barbarians at level 1. In addition, while your Rage is active, you can ... make [certain skill checks] as a Strength check even if it normally uses a different ability...\" Granted at Barbarian level 3. Both clauses inexpressible: the skill-proficiency grant is a CHOICE (query the barbarian skill list, count 1) -- but skill-granting choices are UNACTIVATABLE per the settled T8 pattern (composition.ts's decision-surfacing machinery never reaches skill selections' effects; same Scholar-lesson gap, not re-authored here), and the ability-reassignment clause is gated on \"while your Rage is active\", the same unrepresentable momentary state as every other Rage-active clause above. Text-feature fallback per ruling 9's bar; flagged (both the skill-choice-unactivatable gap and the raging-state gap).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Primal Knowledge",
+          "description": "You gain proficiency in another skill of your choice from the skill list available to Barbarians at level 1.\n\nIn addition, while your Rage is active, you can channel primal power when you attempt certain tasks; whenever you make an ability check using one of the following skills, you can make it as a Strength check even if it normally uses a different ability: Acrobatics, Intimidation, Perception, Stealth, or Survival. When you use this ability, your Strength represents primal power coursing through you, honing your agility, bearing, and senses."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-extra-attack",
+    "cite": "SRD 5.2.1, Extra Attack",
+    "note": "SRD text: \"You can attack twice instead of once whenever you take the Attack action on your turn.\" Granted at Barbarian level 5. Identical shape to Fighter's own Extra Attack.",
+    "merge": {
+      "effects": [{ "type": "extraAttack.set", "count": 2 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-fast-movement",
+    "cite": "SRD 5.2.1, Fast Movement",
+    "note": "SRD text: \"Your speed increases by 10 feet while you aren't wearing Heavy armor.\" Granted at Barbarian level 5. Fully expressible: speed.bonus{mode:'walk', value:10}, gated `when:{armor:{category:['none','light','medium']}}` (every category EXCEPT heavy) -- the same score-free, eagerly-evaluated armor predicate proven for Unarmored Defense above, and speed.bonus is genuinely consumed (packages/engine/src/derive/abilities.ts's own speed-derivation loop, `sum-unique-key` policy). A REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 10,
+          "when": { "armor": { "category": ["none", "light", "medium"] } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-feral-instinct",
+    "cite": "SRD 5.2.1, Feral Instinct",
+    "note": "SRD text: \"Your instincts are so honed that you have Advantage on Initiative rolls.\" Granted at Barbarian level 7. Identical shape to Champion's Remarkable Athlete initiative clause (T8 precedent).",
+    "merge": {
+      "effects": [{ "type": "advantage.grant", "on": "initiative" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-instinctive-pounce",
+    "cite": "SRD 5.2.1, Instinctive Pounce",
+    "note": "SRD text: \"As part of the Bonus Action you take to enter your Rage, you can move up to half your Speed.\" Granted at Barbarian level 7. Inexpressible: a movement grant triggered by the ACT of using another feature (entering Rage) -- no effect type models \"triggered by using this other feature\", same gap class as Fighter's Tactical Shift. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Instinctive Pounce",
+          "description": "As part of the Bonus Action you take to enter your Rage, you can move up to half your Speed."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-brutal-strike",
+    "cite": "SRD 5.2.1, Brutal Strike",
+    "note": "SRD text (abridged): \"If you use Reckless Attack, you can forgo any Advantage on one Strength-based attack roll of your choice ... the target takes an extra 1d10 damage ... and you can cause one Brutal Strike effect of your choice [Forceful Blow / Hamstring Blow].\" Granted at Barbarian level 9 (a BASE Barbarian feature, not subclass-specific -- verified against the vendored parent field). Inexpressible: a per-attack, player-chosen damage/effect substitution conditioned on Reckless Attack (itself unauthored above, a per-turn toggle) -- no combination of doc-04's effects models this compound trigger+choice+extra-damage mechanic. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Brutal Strike",
+          "description": "If you use Reckless Attack, you can forgo any Advantage on one Strength-based attack roll of your choice on your turn. The chosen attack roll mustn't have Disadvantage. If the chosen attack roll hits, the target takes an extra 1d10 damage of the same type dealt by the weapon or Unarmed Strike, and you can cause one Brutal Strike effect of your choice. You have the following effect options.\n\n**Forceful Blow.** The target is pushed 15 feet straight away from you. You can then move up to half your Speed straight toward the target without provoking Opportunity Attacks.\n\n**Hamstring Blow.** The target's Speed is reduced by 15 feet until the start of your next turn. A target can be affected by only one Hamstring Blow at a time the most recent one."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-relentless-rage",
+    "cite": "SRD 5.2.1, Relentless Rage",
+    "note": "SRD text: \"If you drop to 0 Hit Points while your Rage is active and don't die outright, you can make a DC 10 Constitution saving throw [to instead stay up] ... Each time you use this feature after the first, the DC increases by 5 ... [resets to 10 on rest].\" Granted at Barbarian level 11. Inexpressible: an HP-threshold-triggered saving throw with an escalating, resettable DC, gated on the same unrepresentable raging state -- no \"on drop to 0 HP\" trigger vocabulary exists. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Relentless Rage",
+          "description": "Your Rage can keep you fighting despite grievous wounds. If you drop to 0 Hit Points while your Rage is active and don't die outright, you can make a DC 10 Constitution saving throw. If you succeed, your Hit Points instead change to a number equal to twice your Barbarian level.\n\nEach time you use this feature after the first, the DC increases by 5. When you finish a Short or Long Rest, the DC resets to 10."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-improved-brutal-strike",
+    "cite": "SRD 5.2.1, Improved Brutal Strike",
+    "note": "SRD text (abridged): adds Staggering Blow and Sundering Blow as further Brutal Strike effect options. Granted at Barbarian level 13. Same compound-gap class as Brutal Strike itself, unauthored above; a strict extension of that gap. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Improved Brutal Strike",
+          "description": "You have honed new ways to attack furiously. The following effects are now among your Brutal Strike options.\n\n**Staggering Blow.** The target has Disadvantage on the next saving throw it makes, and it can't make Opportunity Attacks until the start of your next turn.\n\n**Sundering Blow.** Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-persistent-rage",
+    "cite": "SRD 5.2.1, Persistent Rage",
+    "note": "SRD text (abridged): \"When you roll Initiative, you can regain all expended uses of Rage [once per Long Rest]. In addition, your Rage ... now lasts for 10 minutes without you needing to do anything to extend it...\" Granted at Barbarian level 15. Inexpressible: an Initiative-roll-triggered resource restoration (no \"on roll Initiative\" trigger vocabulary, distinct from resource.define's rest-only reset triggers) plus a duration-mechanic change (Rage's round-by-round extension itself is untracked, per the barbarian-rage note above). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Persistent Rage",
+          "description": "When you roll Initiative, you can regain all expended uses of Rage. After you regain uses of Rage in this way, you can't do so again until you finish a Long Rest.\n\nIn addition, your Rage is so fierce that it now lasts for 10 minutes without you needing to do anything to extend it from round to round. Your Rage ends early if you have the Unconscious condition (not just the Incapacitated condition) or don Heavy armor."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-improved-brutal-strike-enhanced",
+    "cite": "SRD 5.2.1, Improved Brutal Strike (Enhanced)",
+    "note": "SRD text: \"The extra damage of your Brutal Strike increases to 2d10. In addition, you can use two different Brutal Strike effects whenever you use your Brutal Strike feature.\" Granted at Barbarian level 17. Same compound-gap class as Brutal Strike/Improved Brutal Strike above. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Improved Brutal Strike (Enhanced)",
+          "description": "The extra damage of your Brutal Strike increases to 2d10. In addition, you can use two different Brutal Strike effects whenever you use your Brutal Strike feature."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-indomitable-might",
+    "cite": "SRD 5.2.1, Indomitable Might",
+    "note": "SRD text: \"If your total for a Strength check or Strength saving throw is less than your Strength score, you can use that score in place of the total.\" Granted at Barbarian level 18. Inexpressible: a conditional per-roll OUTCOME SUBSTITUTION (compare a rolled total against a static score and possibly replace it) -- no effect type models this, same gap class as Champion's Survivor (\"gain the benefit of rolling a 20\"). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Indomitable Might",
+          "description": "If your total for a Strength check or Strength saving throw is less than your Strength score, you can use that score in place of the total."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/barbarian-primal-champion",
+    "cite": "SRD 5.2.1, Primal Champion",
+    "note": "SRD text: \"You embody primal power. Your Strength and Constitution scores increase by 4, to a maximum of 25.\" Granted at Barbarian level 20. Fully expressible and verified against packages/engine/src/derive/abilities.ts/modifiers.ts BEFORE authoring: ability.bonus{value:4} sums unconditionally (sum-unique-key), and ability.max{value:25} uses the 'cap' policy, which per modifiers.ts's `resolve()` and its own test (packages/engine/test/derive/modifiers.test.ts, 'cap clamps the final value after bonuses') only ever LOWERS the running value when a cap contribution is present and exceeded -- there is no default/hardcoded 20-cap contribution anywhere in abilities.ts (grepped: no bare '20' literal), so this feature's own ability.max{value:25} is the ONLY cap ever applied to a Primal-Champion-having character's Strength/Constitution, correctly raising the effective ceiling to 25 exactly as the SRD text describes (a score already at or above 25 before the +4 is simply clamped back down to 25, matching \"to a maximum of 25\"). A REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        { "type": "ability.bonus", "ability": "str", "value": 4 },
+        { "type": "ability.bonus", "ability": "con", "value": 4 },
+        { "type": "ability.max", "ability": "str", "value": 25 },
+        { "type": "ability.max", "ability": "con", "value": 25 }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/path-of-the-berserker",
+    "cite": "SRD 5.2.1, Path of the Berserker",
+    "note": "Subclass entity itself carries no overlay entry beyond this note -- its features (below) are granted via the upstream levels[] rows already produced by transformClasses(); no additional class-row choice is needed on the subclass (unlike Champion's Additional Fighting Style, Berserker's SRD text adds no second player decision at any level)."
+  },
+  {
+    "id": "srd-5e-2024:feature/path-of-the-berserker-frenzy",
+    "cite": "SRD 5.2.1, Path of the Berserker — Frenzy",
+    "note": "SRD text: \"If you use Reckless Attack while your Rage is active, you deal extra damage to the first target you hit ... roll a number of d6s equal to your Rage Damage bonus...\" Granted at Berserker level 3 (Barbarian level 3). Inexpressible: compounds the unauthored Reckless Attack toggle AND the unrepresentable raging-active state AND a dice-count-from-another-typed-extra lookup (Rage Damage bonus, itself a plain number not a dice count) -- no vocabulary combination reaches this. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Frenzy",
+          "description": "If you use Reckless Attack while your Rage is active, you deal extra damage to the first target you hit on your turn with a Strength-based attack. To determine the extra damage, roll a number of d6s equal to your Rage Damage bonus, and add them together. The damage has the same type as the weapon or Unarmed Strike used for the attack."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/path-of-the-berserker-mindless-rage",
+    "cite": "SRD 5.2.1, Path of the Berserker — Mindless Rage",
+    "note": "SRD text: \"You have Immunity to the Charmed and Frightened conditions while your Rage is active. If you're Charmed or Frightened when you enter your Rage, the condition ends on you.\" Granted at Berserker level 6 (Barbarian level 6). Inexpressible AS A PERMANENT EFFECT: condition.immunity{types:['charmed','frightened']} exists in doc-04's vocabulary and WOULD be consumed by the engine, but authoring it unconditionally would be actively wrong -- granting permanent immunity even while NOT raging, which the SRD text explicitly scopes to \"while your Rage is active\" (the same unrepresentable momentary state as every other Rage-active clause in this pack). Same posture as barbarian-rage's own damage-resistance/strength-advantage clauses: a real effect type exists but can't be correctly GATED, so a text fallback is the better shape, not a silently-wrong always-on grant. Text-feature fallback per ruling 9's bar; flagged as the same raging-state T12/future-engine carry.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Mindless Rage",
+          "description": "You have Immunity to the Charmed and Frightened conditions while your Rage is active. If you're Charmed or Frightened when you enter your Rage, the condition ends on you."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/path-of-the-berserker-retaliation",
+    "cite": "SRD 5.2.1, Path of the Berserker — Retaliation",
+    "note": "SRD text: \"When you take damage from a creature that is within 5 feet of you, you can take a Reaction to make one melee attack against that creature...\" Granted at Berserker level 10 (Barbarian level 10). Inexpressible: a damage-triggered Reaction granting an extra attack -- no \"on taking damage\" trigger vocabulary exists, same gap class as Fighter's Studied Attacks/Tactical Master. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Retaliation",
+          "description": "When you take damage from a creature that is within 5 feet of you, you can take a Reaction to make one melee attack against that creature, using a weapon or an Unarmed Strike."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/path-of-the-berserker-intimidating-presence",
+    "cite": "SRD 5.2.1, Path of the Berserker — Intimidating Presence",
+    "note": "SRD text (abridged): Bonus Action, 30-foot Emanation, Wisdom saving throw (DC 8 + Strength modifier + Proficiency Bonus) or Frightened 1 minute (repeatable save); once per Long Rest, or restore a use by expending a Rage use. Granted at Berserker level 14 (Barbarian level 14). Inexpressible: no effect type models an area save-or-condition ability (action.define only shells an activatable ability's uses/reset, it doesn't model a save DC or an imposed condition on a target), and the reset trigger itself is non-standard (long rest OR conditional Rage expenditure, neither a plain ResetSchema value). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Intimidating Presence",
+          "description": "As a Bonus Action, you can strike terror into others with your menacing presence and primal power. When you do so, each creature of your choice in a 30-foot Emanation originating from you must make a Wisdom saving throw (DC 8 plus your Strength modifier and Proficiency Bonus). On a failed save, a creature has the Frightened condition for 1 minute. At the end of each of the Frightened creature's turns, the creature repeats the save, ending the effect on itself on a success.\n\nOnce you use this feature, you can't use it again until you finish a Long Rest unless you expend a use of your Rage (no action required) to restore your use of it."
+        }
+      ]
+    }
+  }
+]

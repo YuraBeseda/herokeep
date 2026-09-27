@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildPack } from '../src/build.ts';
 import { applyOverlays } from '../src/overlays/merge.ts';
-import { loadOverlays } from '../src/overlays/load.ts'; // { corrections, systemChoices, species, fightingStyles, fighter, wizard }
+import { loadOverlays } from '../src/overlays/load.ts'; // { corrections, systemChoices, species, fightingStyles, barbarian, fighter, wizard }
 import { transformClasses } from '../src/transform/classes.ts';
 import { transformFeats } from '../src/transform/feats.ts';
 
@@ -278,5 +278,169 @@ describe('fighter and wizard 6–20 mechanics (task 8)', () => {
   it('buildPack composes the extended overlays with zero diagnostics', () => {
     const pack = buildPack();
     expect(pack.entities.length).toBeGreaterThan(0);
+  });
+});
+
+describe('barbarian to level 20 mechanics (task 9)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.barbarian].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedSubclasses = applyOverlays(
+    subclasses,
+    o.barbarian.filter((x) => subclasses.some((s) => s.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.barbarian.filter((x) => features.some((f) => f.id === x.id)),
+  );
+
+  interface ClassShape {
+    saves: string[];
+    armorTraining: string[];
+    skillChoice: { from: string[]; count: number };
+    levels: {
+      level: number;
+      extra?: Record<string, unknown>;
+      choices: { id: string; pick: unknown; count: number }[];
+    }[];
+  }
+
+  it('barbarian: core traits (no heavy armor training, 2-skill choice from the barbarian list)', () => {
+    const b = patchedClasses.find((c) => c.id === 'srd-5e-2024:class/barbarian') as ClassShape;
+    expect(b.saves).toEqual(['con', 'str']);
+    expect(b.armorTraining).toEqual(['light', 'medium', 'shields']);
+    expect(b.armorTraining).not.toContain('heavy');
+    expect(b.skillChoice.count).toBe(2);
+    expect(b.skillChoice.from).toEqual(
+      expect.arrayContaining(['animal-handling', 'athletics', 'intimidation', 'nature', 'perception', 'survival']),
+    );
+  });
+
+  it('barbarian: an ASI/feat choice is authored at every 2024 ASI level (4, 8, 12, 16, 19) and subclass at 3', () => {
+    const b = patchedClasses.find((c) => c.id === 'srd-5e-2024:class/barbarian') as ClassShape;
+    const choiceIds = b.levels.flatMap((r) => r.choices.map((c) => c.id));
+    for (const level of [4, 8, 12, 16, 19]) {
+      expect(choiceIds, `level ${level}`).toContain(`srd-5e-2024:class/barbarian@${level}/feat`);
+    }
+    expect(choiceIds).toContain('srd-5e-2024:class/barbarian@3/subclass');
+    // Not offered at a non-ASI level.
+    expect(choiceIds).not.toContain('srd-5e-2024:class/barbarian@5/feat');
+  });
+
+  it('barbarian: weapon-masteries is a real query pick with the vendored level-1 count (2)', () => {
+    const b = patchedClasses.find((c) => c.id === 'srd-5e-2024:class/barbarian') as ClassShape;
+    const l1 = b.levels.find((r) => r.level === 1)!;
+    const masteries = l1.choices.find((c) => c.id.endsWith('/weapon-masteries'))!;
+    expect(masteries.pick).toEqual({ query: { type: 'item', hasField: ['weapon.mastery'] } });
+    expect(masteries.count).toBe(2);
+  });
+
+  it('barbarian: Unarmored Defense is a real ac.formula gated on wearing no armor', () => {
+    const ud = patchedFeatures.find((x) => x.id.endsWith('barbarian-unarmored-defense')) as {
+      effects: { type: string; formula?: string; when?: unknown }[];
+    };
+    expect(ud.effects).toContainEqual({
+      type: 'ac.formula',
+      formula: '10 + mod(dex) + mod(con)',
+      key: 'barbarian-unarmored-defense',
+      when: { armor: { category: ['none'] } },
+    });
+  });
+
+  it('barbarian: Rage is a real stepped resource formula, not a level-1 literal', () => {
+    const rage = patchedFeatures.find((x) => x.id.endsWith('feature/barbarian-rage')) as {
+      effects: { type: string; id?: string; max?: string; reset?: string }[];
+    };
+    const def = rage.effects.find((e) => e.type === 'resource.define');
+    expect(def).toMatchObject({ id: 'rage', reset: 'shortRest' });
+    expect(def?.max).toContain('classLevel(barbarian)');
+    expect(def?.max).not.toBe('2');
+  });
+
+  it('barbarian: Danger Sense and Feral Instinct and Fast Movement are real, armor/condition-gated effects', () => {
+    const danger = patchedFeatures.find((x) => x.id.endsWith('danger-sense')) as {
+      effects: { type: string; on?: string; when?: unknown }[];
+    };
+    expect(danger.effects).toContainEqual({
+      type: 'advantage.grant',
+      on: 'save.dex',
+      when: { not: { condition: 'srd-5e-2024:condition/incapacitated' } },
+    });
+
+    const feral = patchedFeatures.find((x) => x.id.endsWith('feral-instinct')) as {
+      effects: { type: string; on?: string }[];
+    };
+    expect(feral.effects).toContainEqual({ type: 'advantage.grant', on: 'initiative' });
+
+    const fast = patchedFeatures.find((x) => x.id.endsWith('fast-movement')) as {
+      effects: { type: string; mode?: string; value?: number; when?: unknown }[];
+    };
+    expect(fast.effects).toContainEqual({
+      type: 'speed.bonus',
+      mode: 'walk',
+      value: 10,
+      when: { armor: { category: ['none', 'light', 'medium'] } },
+    });
+  });
+
+  it('barbarian: Primal Champion raises the ability cap to 25 alongside a +4 bonus', () => {
+    const champion = patchedFeatures.find((x) => x.id.endsWith('primal-champion')) as {
+      effects: { type: string; ability?: string; value?: number }[];
+    };
+    expect(champion.effects).toContainEqual({ type: 'ability.bonus', ability: 'str', value: 4 });
+    expect(champion.effects).toContainEqual({ type: 'ability.bonus', ability: 'con', value: 4 });
+    expect(champion.effects).toContainEqual({ type: 'ability.max', ability: 'str', value: 25 });
+    expect(champion.effects).toContainEqual({ type: 'ability.max', ability: 'con', value: 25 });
+  });
+
+  it('barbarian: extraAttack.set at level 5', () => {
+    const extra = patchedFeatures.find((x) => x.id.endsWith('feature/barbarian-extra-attack')) as {
+      effects: { type: string; count?: number }[];
+    };
+    expect(extra.effects).toContainEqual({ type: 'extraAttack.set', count: 2 });
+  });
+
+  it('barbarian: features with genuinely inexpressible (raging-state or per-trigger) mechanics carry a feature.text fallback', () => {
+    for (const slug of [
+      'reckless-attack',
+      'primal-knowledge',
+      'instinctive-pounce',
+      'brutal-strike',
+      'relentless-rage',
+      'improved-brutal-strike',
+      'persistent-rage',
+      'improved-brutal-strike-enhanced',
+      'indomitable-might',
+    ]) {
+      const feat = patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/barbarian-${slug}`) as {
+        effects: { type: string }[];
+      };
+      expect(
+        feat.effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('path of the berserker: every feature carries a feature.text fallback (raging-state or trigger/action gaps)', () => {
+    for (const slug of ['frenzy', 'mindless-rage', 'retaliation', 'intimidating-presence']) {
+      const feat = patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/path-of-the-berserker-${slug}`) as {
+        effects: { type: string }[];
+      };
+      expect(
+        feat.effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+    const berserker = patchedSubclasses.find((s) => s.id === 'srd-5e-2024:subclass/path-of-the-berserker');
+    expect(berserker).toBeDefined();
+  });
+
+  it('buildPack composes the barbarian overlay with zero diagnostics', () => {
+    const pack = buildPack();
+    expect(pack.entities.some((e) => e.id === 'srd-5e-2024:class/barbarian')).toBe(true);
   });
 });
