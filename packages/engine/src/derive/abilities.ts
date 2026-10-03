@@ -6,7 +6,7 @@ import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
 import type { PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
-import { type ActiveEffect, type Composition, equippedArmor } from './composition.ts';
+import { type ActiveEffect, type Composition, equippedArmor, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
 import { type ProficiencyLevel, proficiencyAmount, proficiencyBonus, proficiencyLevel } from './proficiency.ts';
 
@@ -137,7 +137,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'ability.bonus',
         amount: eff.value,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     } else if (eff.type === 'ability.set') {
@@ -146,7 +146,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'ability.set',
         amount: eff.value,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'set-if-higher',
       });
     } else if (eff.type === 'ability.max') {
@@ -155,7 +155,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'ability.max',
         amount: eff.value,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'cap',
       });
     }
@@ -267,7 +267,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'save.bonus',
         ...amountOrFormula(eff.value),
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     }
@@ -295,7 +295,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'skill.bonus',
         ...amountOrFormula(eff.value),
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     }
@@ -325,7 +325,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'speed.set',
         amount: eff.value,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'set-if-higher',
       });
     } else if (eff.type === 'speed.bonus') {
@@ -334,7 +334,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         feature: ae.feature,
         kind: 'speed.bonus',
         amount: eff.value,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     }

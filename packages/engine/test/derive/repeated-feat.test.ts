@@ -2,6 +2,7 @@ import { type Event, type Pack } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { findChoice, occurrenceChoiceId, splitOccurrence } from '../../src/content/choices.ts';
 import { createContentIndex } from '../../src/content/index.ts';
+import { compose } from '../../src/derive/composition.ts';
 import { derive } from '../../src/derive/index.ts';
 import { validateSelection } from '../../src/derive/validation.ts';
 import { createLocalizer } from '../../src/i18n/localizer.ts';
@@ -9,7 +10,7 @@ import type { SystemRules } from '../../src/reduce/facts.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
 import { loadDistPack } from '../support/golden.ts';
 
-// Plan 11 final wave F1 — a repeatable feat acquired TWICE (the SRD's Ability Score Improvement,
+// Plan 11 final wave F1 + plan 12 task 1 — a repeatable feat acquired TWICE (the SRD's Ability Score Improvement,
 // offered at Fighter 4 and 6) must surface its nested sub-choice once PER ACQUISITION. Occurrence
 // #1 keeps the pack-authored choice id verbatim (every pre-existing event log keeps resolving to
 // it); occurrence #2+ get a distinct, engine-derived id.
@@ -157,17 +158,38 @@ describe('repeated feat acquisition (occurrence-scoped nested choices)', () => {
     expect(featChoicesOutstanding(events).map((c) => c.choiceId)).toEqual([occurrenceChoiceId(asiChoice, 3)]);
   });
 
-  // Reviewer sub-question: `Composition.entities` dedupes by entity id, so a twice-taken feat's
-  // DIRECT (passive) effects apply once. Pinned with `it.fails` as a slice-2 carry (see
-  // final-wave-report.md): no shipped repeatable feat (ASI, Skilled, Magic Initiate) carries a
-  // direct effect — their benefits all flow through nested choices, which ARE per-occurrence now.
-  it.fails('stacks a twice-taken repeatable feat’s direct effects (slice-2 carry)', () => {
+  // Plan 12 task 1: compose emits the direct effects of a feat/feature once PER ACQUISITION
+  // (occurrence #2+ tagged `ActiveEffect.occurrence`), and stacking keys discriminate on it.
+  const patchedIndex = (effects: unknown[]) => {
     const patched: Pack = structuredClone(pack);
     const feat = patched.entities.find((e) => e.id === asi)!;
-    feat.effects = [...feat.effects, { type: 'ability.bonus', ability: 'wis', value: 1 }] as typeof feat.effects;
-    const idx = createContentIndex([patched]);
+    feat.effects = [...feat.effects, ...effects] as typeof feat.effects;
+    return createContentIndex([patched]);
+  };
+
+  it('stacks a twice-taken repeatable feat’s direct effects', () => {
+    const idx = patchedIndex([{ type: 'ability.bonus', ability: 'wis', value: 1 }]);
     const events = [...fighter6(), decide(`${fighter}@6/feat`, [asi])];
     const sheet = derive(reduce(events, undefined, rules), idx, rules);
     expect(sheet.abilities['wis']!.score.value).toBe(14); // 12 + 1 + 1
+  });
+
+  it('sums a twice-taken feat’s speed.bonus (unkeyed and keyed) and leaves one acquisition at a single application', () => {
+    const idx = patchedIndex([
+      { type: 'speed.bonus', mode: 'walk', value: 5 },
+      { type: 'speed.bonus', mode: 'walk', value: 3, key: 'k' },
+    ]);
+    const once = derive(reduce(fighter6(), undefined, rules), idx, rules);
+    const twice = derive(reduce([...fighter6(), decide(`${fighter}@6/feat`, [asi])], undefined, rules), idx, rules);
+    expect(twice.speed['walk']!.value - once.speed['walk']!.value).toBe(8);
+    const base = derive(reduce(fighter6(), undefined, rules), index, rules);
+    expect(once.speed['walk']!.value - base.speed['walk']!.value).toBe(8);
+  });
+
+  it('tags only occurrence #2+ (occurrence #1 effects carry no discriminator)', () => {
+    const idx = patchedIndex([{ type: 'ability.bonus', ability: 'wis', value: 1 }]);
+    const facts = reduce([...fighter6(), decide(`${fighter}@6/feat`, [asi])], undefined, rules);
+    const mine = compose(facts, idx).effects.filter((e) => e.source === asi && e.effect.type === 'ability.bonus');
+    expect(mine.map((e) => e.occurrence).sort()).toEqual([2, undefined]);
   });
 });

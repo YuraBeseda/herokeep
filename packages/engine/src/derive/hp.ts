@@ -3,7 +3,7 @@ import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
 import type { Facts, SystemRules } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
-import type { Composition } from './composition.ts';
+import { type Composition, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
 
 export interface HpResult {
@@ -176,7 +176,7 @@ export function deriveHp(
         feature: ae.feature,
         kind: 'hp.perLevel',
         amount: eff.value * comp.totalLevel,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     } else if (eff.type === 'hp.bonus') {
@@ -185,7 +185,7 @@ export function deriveHp(
         feature: ae.feature,
         kind: 'hp.bonus',
         ...amountOrFormula(eff.value),
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     }

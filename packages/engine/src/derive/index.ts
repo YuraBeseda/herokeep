@@ -11,7 +11,7 @@ import type { AbilitiesResult } from './abilities.ts';
 import { deriveActions } from './actions.ts';
 import { deriveAttacks } from './attacks.ts';
 import { byChoiceId, creationChoices, levelScopedChoices, selectedEntityChoices } from './choices.ts';
-import { type Composition, compose, equippedArmor } from './composition.ts';
+import { type Composition, compose, equippedArmor, occurrenceKey } from './composition.ts';
 import { deriveDefense } from './defense.ts';
 import { deriveEncumbrance } from './encumbrance.ts';
 import { deriveHp } from './hp.ts';
@@ -76,7 +76,7 @@ function deriveInitiative(
       feature: ae.feature,
       kind: 'initiative.bonus',
       ...amountOrFormula(eff.value),
-      key: eff.key,
+      key: occurrenceKey(ae, eff.key),
       policy: 'sum-unique-key',
     });
   }

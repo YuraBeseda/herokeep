@@ -30,6 +30,22 @@ export interface ActiveEffect {
    * `effect.when` once scores exist and drops the effect if it fails.
    */
   deferred?: boolean;
+  /**
+   * Plan 12 task 1: the 1-based acquisition ordinal of a REPEAT-acquired feat/feature (the same
+   * entity chosen by 2+ decisions). Set ONLY on occurrence #2 and later — occurrence #1 (and every
+   * single-acquisition effect) leaves it undefined, so its stacking keys stay byte-identical.
+   */
+  occurrence?: number;
+}
+
+/**
+ * The stacking key for a `sum-unique-key` contribution of `ae`: undefined/authored key unchanged
+ * for occurrence #1; occurrence #2+ gets a distinct key so the repeat acquisition SUMS with (rather
+ * than collapsing into) the first. Uses the same `source#feature` default `ModifierTable` applies.
+ */
+export function occurrenceKey(ae: ActiveEffect, key: string | undefined): string | undefined {
+  if (ae.occurrence === undefined) return key;
+  return `${key ?? `${ae.source}#${ae.feature ?? ''}`}--${ae.occurrence}`;
 }
 
 export interface Composition {
@@ -121,16 +137,17 @@ export function compose(facts: Facts, index: ContentIndex): Composition {
     hasShield: () => equippedHasShield,
   };
 
-  const collectEffects = (entity: Entity, source: string, feature: string | undefined) => {
+  const collectEffects = (entity: Entity, source: string, feature: string | undefined, occurrence?: number) => {
+    const occ = occurrence === undefined ? {} : { occurrence };
     for (const eff of entity.effects) {
       if (eff.when) {
         if (needsScores(eff.when)) {
-          effects.push({ effect: eff, source, feature, deferred: true });
+          effects.push({ effect: eff, source, feature, deferred: true, ...occ });
           continue;
         }
         if (!evaluatePredicate(eff.when, ctx)) continue;
       }
-      effects.push({ effect: eff, source, feature });
+      effects.push({ effect: eff, source, feature, ...occ });
       if (eff.type === 'tag.grant') activeTags.add(eff.tag);
       if (eff.type === 'spellcasting.define') sawSpellcaster = true;
     }
@@ -202,6 +219,7 @@ export function compose(facts: Facts, index: ContentIndex): Composition {
     }
   };
 
+  const acquisitions = new Map<string, number>();
   const system = index.system();
   const creationSlotChoiceIds = new Set(
     system.compositionSlots.filter((s) => s.at === 'creation').map((s) => `${system.id}@0/${s.id}`),
@@ -215,7 +233,14 @@ export function compose(facts: Facts, index: ContentIndex): Composition {
     }
     for (const sel of selections) {
       const e = index.get(sel);
-      if (e && (e.type === 'feat' || e.type === 'feature')) activateRoot(sel);
+      if (!e || (e.type !== 'feat' && e.type !== 'feature')) continue;
+      // Same acquisition count `derive/choices.ts` uses for nested choices: the n-th (n >= 2)
+      // decision selecting this entity re-applies its DIRECT effects, tagged with the ordinal.
+      // Grants are not re-walked (a granted feature is one fact, not one per acquisition).
+      const n = (acquisitions.get(sel) ?? 0) + 1;
+      acquisitions.set(sel, n);
+      if (n === 1) activateRoot(sel);
+      else if (activeIds.has(sel)) collectEffects(e, sel, undefined, n);
     }
   }
 

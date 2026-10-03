@@ -300,6 +300,26 @@ describe('deriveSpellcasting: slot progressions + multiclass table (phase 4 plan
     expect(spellcasting.blocks[0]!.cantripsKnown).toBeUndefined();
   });
 
+  it('a class defining spellcasting TWICE counts as ONE caster for the combined-table gate (dedupe by classId)', () => {
+    const pack = structuredClone(loadFixturePack('slots-mini'));
+    const holder = pack.entities.find((e) =>
+      e.effects.some((f) => f.type === 'spellcasting.define' && f.class.endsWith('paladin')),
+    )!;
+    const def = holder.effects.find((f) => f.type === 'spellcasting.define')!;
+    holder.effects = [...holder.effects, structuredClone(def)];
+    const dupIndex = createContentIndex([loadFixturePack('core-mini'), pack]);
+
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: 'slots-mini:class/paladin', level: 4 }];
+    const comp = compose(facts, dupIndex);
+    const abilities = deriveAbilities(facts, comp, dupIndex);
+    const { blocks } = deriveSpellcasting(abilities, comp, facts, dupIndex);
+
+    expect(blocks.length).toBeGreaterThanOrEqual(1);
+    // Solo paladin 4 keeps its OWN half-caster row, not the combined multiclass row.
+    for (const b of blocks) expect(b.slots).toEqual([{ level: 1, max: 3, used: 0 }]);
+  });
+
   it('is deterministic across repeated derivations of a multiclass combined-table facts object', () => {
     const facts = withAbilitiesSlots({ cha: 16, wis: 16 });
     facts.classes = [

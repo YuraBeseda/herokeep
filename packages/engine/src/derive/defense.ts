@@ -4,7 +4,7 @@ import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
-import type { Composition } from './composition.ts';
+import { type Composition, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
 
 export interface DefenseResult {
@@ -121,7 +121,7 @@ export function deriveDefense(
         feature: ae.feature,
         kind: 'ac.formula',
         formula: eff.formula,
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'max-of-formulas',
       });
     } else if (eff.type === 'ac.bonus') {
@@ -130,7 +130,7 @@ export function deriveDefense(
         feature: ae.feature,
         kind: 'ac.bonus',
         ...amountOrFormula(eff.value),
-        key: eff.key,
+        key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     }

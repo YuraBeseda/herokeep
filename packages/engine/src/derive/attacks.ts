@@ -4,7 +4,7 @@ import type { Diagnostic } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
-import type { ActiveEffect, Composition } from './composition.ts';
+import { type ActiveEffect, type Composition, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
 import { bestRowExtra } from './spellcasting.ts';
 
@@ -241,7 +241,7 @@ export function deriveAttacks(
           feature: ae.feature,
           kind: 'attack.bonus',
           ...amountOrFormula(eff.value),
-          key: eff.key,
+          key: occurrenceKey(ae, eff.key),
           policy: 'sum-unique-key',
         });
       } else if (eff.type === 'damage.bonus' && matchesFilter(eff.filter, weapon)) {
@@ -250,7 +250,7 @@ export function deriveAttacks(
           feature: ae.feature,
           kind: 'damage.bonus',
           ...amountOrFormula(eff.value),
-          key: eff.key,
+          key: occurrenceKey(ae, eff.key),
           policy: 'sum-unique-key',
         });
       }

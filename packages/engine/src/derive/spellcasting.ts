@@ -237,12 +237,16 @@ export function deriveSpellcasting(
   const weights = system.tables.multiclassSlots?.weights;
   const isWeightedCaster = (c: CasterEntry): c is CasterEntry & { slotsKind: MulticlassProgression } =>
     weights !== undefined && c.slotsKind !== 'pact' && c.slotsKind !== 'none' && weights[c.slotsKind] !== undefined;
-  const weightedCasters = casters.filter(isWeightedCaster);
+  // The gate counts DISTINCT classes (SRD: "the Spellcasting feature from more than one class"),
+  // not define effects — a class defining spellcasting twice is still one caster. First define wins.
+  const distinctWeighted = casters
+    .filter(isWeightedCaster)
+    .filter((c, i, all) => all.findIndex((o) => o.classId === c.classId) === i);
 
   let combinedRow: number[] | undefined;
   const combinedClassIds = new Set<string>();
-  if (weights !== undefined && weightedCasters.length >= 2) {
-    const combinedLevel = weightedCasters.reduce((sum, c) => {
+  if (weights !== undefined && distinctWeighted.length >= 2) {
+    const combinedLevel = distinctWeighted.reduce((sum, c) => {
       const w = weights[c.slotsKind]!;
       const divided = c.classLevel / w.divisor;
       return sum + (w.rounding === 'up' ? Math.ceil(divided) : Math.floor(divided));
@@ -256,7 +260,7 @@ export function deriveSpellcasting(
         ),
       );
     }
-    for (const c of weightedCasters) combinedClassIds.add(c.classId);
+    for (const c of distinctWeighted) combinedClassIds.add(c.classId);
   }
 
   // ---- Pass 2: build each block. ----------------------------------------------------------------
