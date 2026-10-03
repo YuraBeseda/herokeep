@@ -428,7 +428,11 @@ describe('LevelUpState', () => {
     expect(state.advancement()?.classId).toBe(BARBARIAN);
     expect(state.advancement()?.isNewClass).toBe(true);
     expect(state.advancement()?.hpChoice).toBe(false); // a brand-new class's level 1 never rolls
-    state.setDecision('srd-5e-2024:class/barbarian@1/skills', ['nature', 'survival']);
+    // Plan 12 final wave W1: Barbarian's multiclass row grants no skill pick (gains
+    // .skillChoiceCount 0), so weapon masteries is its only level-1 choice as a later class.
+    expect(state.outstanding().map((o) => o.choiceId)).toEqual([
+      'srd-5e-2024:class/barbarian@1/weapon-masteries',
+    ]);
     state.setDecision('srd-5e-2024:class/barbarian@1/weapon-masteries', [
       'srd-5e-2024:item/battleaxe',
       'srd-5e-2024:item/blowgun',
@@ -439,14 +443,6 @@ describe('LevelUpState', () => {
     const drafts = state.buildTransaction();
     expect(drafts).toEqual([
       { type: 'level.gained', v: 1, payload: { classId: BARBARIAN, level: 1 } },
-      {
-        type: 'decision.made',
-        v: 1,
-        payload: {
-          choiceId: 'srd-5e-2024:class/barbarian@1/skills',
-          selection: ['nature', 'survival'],
-        },
-      },
       {
         type: 'decision.made',
         v: 1,
@@ -465,8 +461,8 @@ describe('LevelUpState', () => {
 
     const lastEvent = characterStore.events().at(-1)!;
     expect(lastEvent.txId).toBeDefined();
-    const last3 = characterStore.events().slice(-3);
-    expect(new Set(last3.map((e) => e.txId)).size).toBe(1);
+    const lastTx = characterStore.events().slice(-drafts.length);
+    expect(new Set(lastTx.map((e) => e.txId)).size).toBe(1);
     await characterStore.revert({ txId: lastEvent.txId });
 
     const after = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;

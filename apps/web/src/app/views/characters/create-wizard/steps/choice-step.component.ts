@@ -1,6 +1,12 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { findChoice, resolveChoiceCount, type Diagnostic, type Sheet } from '@hk/engine';
-import { makeEntityId, parseChoiceId, parseEntityId } from '@hk/protocol';
+import {
+  classSkillPick,
+  findChoice,
+  resolveChoiceCount,
+  type Diagnostic,
+  type Sheet,
+} from '@hk/engine';
+import { makeEntityId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
@@ -30,11 +36,6 @@ type ChoiceView =
   // it (by design, per task-6-brief.md's resolution note).
   | { kind: 'unsupported' };
 
-// The R5 synthetic class-skills decision id has no backing `Choice` entity at all — it's
-// recognized purely by this suffix (see `packages/engine/src/derive/choices.ts`'s
-// `skillsChoiceId`).
-const SKILLS_SUFFIX = '@1/skills';
-
 // Only diagnostic codes this step's own pick forms (query/static/literal/skills) can actually
 // produce (see `validation.ts`) get a specific message; anything else (an `abilities`/
 // `abilityGeneration` diagnostic bleeding through the shared `validate()` call, or a future code
@@ -51,7 +52,8 @@ const KNOWN_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
 
 /**
  * Generic engine-driven choice step (task-6-brief.md): resolves `choiceId` to its `Choice` (or,
- * for the synthetic `<classId>@1/skills` id, to the owning class's `skillChoice`) and renders the
+ * for the synthetic `<classId>@1/skills` / `<classId>@1/multiclass-skills` ids, to the owning
+ * class's `skillChoice` list via the engine's `classSkillPick`) and renders the
  * right pick-form widget — `hk-entity-picker` for `query`/`static`, chips for the synthetic
  * skills pick, a freeform chip-entry for `literal` (the engine's `literal` pick carries no option
  * list of its own — see the class doc on `ChoiceView` — so "chip multi-select" here means each
@@ -120,23 +122,21 @@ export class ChoiceStepComponent {
     const id = this.choiceId();
     const index = this.engineFacade.index();
 
-    if (id.endsWith(SKILLS_SUFFIX)) {
-      const parsed = parseChoiceId(id);
-      const classId = parsed
-        ? (index.resolveClassRef(parsed.entityId) ?? parsed.entityId)
-        : undefined;
-      const classEntity = classId ? index.get(classId) : undefined;
-      if (!classId || classEntity?.type !== 'class') return { kind: 'unsupported' };
-
+    // Either synthetic class skill pick — the initial class's `<classId>@1/skills`, or a later
+    // class's `<classId>@1/multiclass-skills` bonus pick (plan 12 final wave W1) — resolved by the
+    // engine (`classSkillPick`) to the class's own skill list and that pick's count.
+    const skillPick = classSkillPick(id, index);
+    if (skillPick) {
+      const { classId } = skillPick;
       const packId = parseEntityId(classId)?.packId;
       const localizer = this.engineFacade.localizer();
-      const options = classEntity.skillChoice.from.map((slug): SkillOption => {
+      const options = skillPick.from.map((slug): SkillOption => {
         const skillEntityId = packId ? makeEntityId(packId, 'skill', slug) : undefined;
         const skillEntity = skillEntityId ? index.get(skillEntityId) : undefined;
         const name = skillEntity ? localizer.name(skillEntityId!) : slug;
         return { id: slug, name };
       });
-      return { kind: 'skills', classId, options, count: classEntity.skillChoice.count };
+      return { kind: 'skills', classId, options, count: skillPick.count };
     }
 
     const found = findChoice(index, id);

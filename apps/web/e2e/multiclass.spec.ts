@@ -18,18 +18,14 @@ const CHARACTER_NAME = 'Aldric Multiclass';
  *
  * A brand-new class's level 1 never asks for HP (`Advancement.hpChoice` is always `false` for an
  * `isNewClass` pick — `level-up.state.ts`'s own `steps()` doc) — so this flow skips straight from
- * the class picker into Barbarian's own level-1 choices: the synthetic `@1/skills` class-skills
- * pick (unconditionally offered on ANY newly-taken class today — `multiclass.gains
- * .skillChoiceCount` is a documented, ledgered slice-2 gap, not something this test works around or
- * asserts against — the 2024 SRD's own multiclass table only grants a bonus skill for Bard/Rogue,
- * neither being Barbarian) and `@1/weapon-masteries` (a real `count: 2` query pick, same shape as
- * Fighter's own `count: 3` pick since task 8). Which of the two renders first isn't asserted
- * (mirrors `create-fighter.ts`'s own stance on its analogous pair) — told apart here by DOM shape
- * (`.choice-step__chips` vs `.entity-picker`), which — unlike Fighter's two level-1 choices, both
- * `query` picks as of task 8 — genuinely differs between these two.
+ * the class picker into Barbarian's own level-1 choice: `@1/weapon-masteries` (a real `count: 2`
+ * query pick, same shape as Fighter's own `count: 3` pick since task 8). Plan 12 final wave W1
+ * wired `multiclass.gains.skillChoiceCount`: a later class no longer gets its full `@1/skills`
+ * creation pick, and Barbarian's multiclass row grants no bonus skill (only Bard/Rogue/Ranger do,
+ * via `@1/multiclass-skills`) — so no skill chips render here at all.
  */
 test.describe('level up — multiclassing into a second class', () => {
-  test('leveling a fighter offers a which-class picker; multiclassing into Barbarian skips HP, completes both new-class level-1 choices, and the sheet shows both classes', async ({
+  test('leveling a fighter offers a which-class picker; multiclassing into Barbarian skips HP, completes its new-class level-1 choice, and the sheet shows both classes', async ({
     page,
   }) => {
     await test.step('create the fighter-1 character', async () => {
@@ -63,29 +59,15 @@ test.describe('level up — multiclassing into a second class', () => {
       await expect(page.locator('.choice-step__title')).toBeVisible();
     });
 
-    await test.step("Barbarian's own level-1 choices: class skills and weapon masteries", async () => {
-      // Same "which shape is up right now" + "wait for the just-acted-on element to leave the DOM
-      // before looping" technique `create-fighter.ts`'s own module doc explains at length — the
-      // SAME `ChoiceStepComponent`/`reHomeActiveStep` auto-advance race applies here too.
-      for (let i = 0; i < 2; i++) {
-        const chips = page.locator('.choice-step__chips');
-        const picker = page.locator('.entity-picker');
-        const shown = await Promise.race([
-          chips.waitFor({ state: 'visible' }).then((): 'chips' => 'chips'),
-          picker.waitFor({ state: 'visible' }).then((): 'picker' => 'picker'),
-        ]);
-        if (shown === 'chips') {
-          await page.getByRole('button', { name: 'Athletics', exact: true }).click();
-          const survival = page.getByRole('button', { name: 'Survival', exact: true });
-          await survival.click();
-          await survival.waitFor({ state: 'detached' });
-        } else {
-          await page.getByRole('button', { name: 'Handaxe', exact: true }).click();
-          const javelin = page.getByRole('button', { name: 'Javelin', exact: true });
-          await javelin.click();
-          await javelin.waitFor({ state: 'detached' });
-        }
-      }
+    await test.step("Barbarian's own level-1 choice: weapon masteries (no multiclass skill pick)", async () => {
+      await expect(page.locator('.entity-picker')).toBeVisible();
+      await expect(page.locator('.choice-step__chips')).toHaveCount(0);
+      // "Wait for the just-acted-on element to leave the DOM" — the same `ChoiceStepComponent`/
+      // `reHomeActiveStep` auto-advance race `create-fighter.ts`'s own module doc explains.
+      await page.getByRole('button', { name: 'Handaxe', exact: true }).click();
+      const javelin = page.getByRole('button', { name: 'Javelin', exact: true });
+      await javelin.click();
+      await javelin.waitFor({ state: 'detached' });
     });
 
     await test.step('review shows complete (no HP roll was ever required); finish', async () => {

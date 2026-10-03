@@ -285,26 +285,21 @@ describe('LevelUpComponent', () => {
     // Fix round 1 (reviewer HIGH finding): `reHomeActiveStep`'s old "vanished, not found ->
     // land on the LAST step" fallback wrongly fired here too, since `previousSteps` was still
     // `[]` (the picker's own gate) on the very first effect run after a class is picked — this
-    // landed the wizard on REVIEW with Barbarian's real level-1 choices (skills, then weapon
-    // masteries — verified against the built pack) skipped entirely, `Finish` disabled, no
+    // landed the wizard on REVIEW with Barbarian's real level-1 choices (then skills + weapon
+    // masteries; weapon masteries only since W1) skipped entirely, `Finish` disabled, no
     // explanation. The fix lands on the FIRST step of a genuinely fresh (grown-from-empty) list
     // instead. This assertion is the reviewer's own exact repro: the first outstanding CHOICE
     // step is active, not Review.
     expect(root.querySelector('.level-up__review')).toBeNull();
-    const skillsChips = Array.from(root.querySelectorAll('hk-chip'));
-    expect(skillsChips.length).toBeGreaterThan(0); // the skills choice step is showing
+    // Plan 12 final wave W1: Barbarian's multiclass row grants no skill (gains.skillChoiceCount 0),
+    // so its full `@1/skills` creation pick is no longer offered — weapon masteries is the only
+    // level-1 choice, and no skill chips render.
+    expect(root.querySelectorAll('.choice-step__chips hk-chip').length).toBe(0);
 
-    // Drive the flow THROUGH both of Barbarian's real level-1 choices (no conditional guard
-    // around the load-bearing assertions below — fix round 1, MEDIUM finding: the previous
-    // version's `if (finishButton && !finishButton.disabled)` silently skipped its own commit
-    // assertion whenever the choices weren't actually resolved).
-    const findChip = (text: string): HTMLElement =>
-      skillsChips.find((c) => c.textContent?.trim() === text) as HTMLElement;
-    findChip('Nature').click();
-    await harness.fixture.whenStable();
-    findChip('Survival').click();
-    await harness.fixture.whenStable();
-
+    // Drive the flow THROUGH Barbarian's real level-1 choice (no conditional guard around the
+    // load-bearing assertions below — fix round 1, MEDIUM finding: the previous version's
+    // `if (finishButton && !finishButton.disabled)` silently skipped its own commit assertion
+    // whenever the choices weren't actually resolved).
     const masteryButtons = Array.from(
       root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
     );
@@ -345,6 +340,93 @@ describe('LevelUpComponent', () => {
       expect.arrayContaining([
         expect.objectContaining({ classId: 'srd-5e-2024:class/barbarian', level: 1 }),
       ]),
+    );
+  });
+
+  // Plan 12 final wave W1: `multiclass.gains.skillChoiceCount` is wired — a fighter multiclassing
+  // into Bard (gains.skillChoiceCount 1) is asked for ONE skill from Bard's own list (the synthetic
+  // `<class>@1/multiclass-skills` pick), never Bard's full 3-skill creation pick, and the pick lands
+  // as a real proficiency on the sheet.
+  it('fighter → bard: the new class offers a 1-skill multiclass pick from its own list, and the pick lands as proficient', async () => {
+    const SYSTEM_ID = 'srd-5e-2024:system/5e-2024';
+    const FIGHTER = 'srd-5e-2024:class/fighter';
+    const BARD = 'srd-5e-2024:class/bard';
+    const state = TestBed.runInInjectionContext(() => new CreateWizardState());
+    state.name.set('Lirael');
+    state.gender.set('feminine');
+    state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    // cha 13 clears Bard's own multiclass prerequisite.
+    state.setDecision(
+      `${SYSTEM_ID}@0/ability-scores`,
+      ['str:15', 'dex:10', 'con:14', 'int:8', 'wis:12', 'cha:13'],
+      { method: 'standardArray' },
+    );
+    state.setDecision(`${SYSTEM_ID}@0/class`, [FIGHTER]);
+    state.setDecision(`${FIGHTER}@1/skills`, ['athletics', 'perception']);
+    state.setDecision(`${FIGHTER}@1/fighting-style`, ['srd-5e-2024:feat/defense']);
+    state.setDecision(`${FIGHTER}@1/weapon-masteries`, [
+      'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    const id = await characterStore.create(state.name().trim(), state.gender());
+    const [, ...rest] = state.buildTransaction();
+    await characterStore.appendTx(rest);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+    expect(characterStore.advancements().find((a) => a.classId === BARD)?.isNewClass).toBe(true);
+    expect(characterStore.sheet()?.skills['arcana']?.proficiency).toBe('none');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+    await chooseClassIfOffered(
+      root,
+      harness.fixture,
+      charactersEn.levelUp.classPicker.multiclass.replace('{class}', 'Bard'),
+    );
+
+    // The multiclass skill pick is the first step: "Choose 1 skill for Bard", chips = Bard's list.
+    expect(root.querySelector('.choice-step__title')?.textContent?.trim()).toBe(
+      'Choose 1 skill for Bard',
+    );
+    const chips = Array.from(root.querySelectorAll<HTMLElement>('.choice-step__chips hk-chip'));
+    const bardList = corePack.entities.find((e) => e.id === BARD);
+    expect(bardList?.type).toBe('class');
+    expect(chips.length).toBe(bardList?.type === 'class' ? bardList.skillChoice.from.length : -1);
+    chips.find((c) => c.textContent?.trim() === 'Arcana')!.click();
+    await harness.fixture.whenStable();
+
+    for (let i = 0; i < 5 && root.querySelector('.level-up__finish') === null; i++) {
+      root.querySelector<HTMLButtonElement>('.level-up__next')?.click();
+      await harness.fixture.whenStable();
+    }
+    const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
+    expect(finishButton.disabled).toBe(false);
+    finishButton.click();
+
+    await pollUntil(harness.fixture, () =>
+      characterStore
+        .events()
+        .some(
+          (e) =>
+            e.type === 'decision.made' &&
+            (e.payload as { choiceId?: string }).choiceId === `${BARD}@1/multiclass-skills`,
+        ),
+    );
+    expect(
+      characterStore
+        .events()
+        .some(
+          (e) =>
+            e.type === 'decision.made' &&
+            (e.payload as { choiceId?: string }).choiceId === `${BARD}@1/skills`,
+        ),
+    ).toBe(false);
+    expect(characterStore.sheet()?.skills['arcana']?.proficiency).toBe('proficient');
+    expect(characterStore.outstanding().map((o) => o.choiceId)).not.toContain(
+      `${BARD}@1/multiclass-skills`,
     );
   });
 

@@ -247,7 +247,7 @@ export class LevelUpState {
    * lands its choiceId in `invalidDecisions()` INSTEAD of `outstanding()` for that one tick.
    * Without this, the naive `[...outstanding, ...invalid]` concatenation below silently
    * REORDERED the whole remaining choice list the moment any ONE simultaneously-outstanding
-   * choice's category flipped (e.g. Barbarian's level-1 draft offers `@1/skills` (count 2) AND
+   * choice's category flipped (e.g. Barbarian's level-1 draft offered `@1/skills` (count 2) AND
    * `@1/weapon-masteries` (count 2) at once — tapping a single skill chip moved `weapon-
    * masteries` from second to first in the list), which visibly reshuffled `LevelUpComponent`'s
    * own stepper mid-flow and broke its `reHomeActiveStep` effect's "land at the same relative
@@ -255,9 +255,11 @@ export class LevelUpState {
    * triggered before task 12: no solo single-class level in the real pack ever had 2+
    * SIMULTANEOUSLY outstanding choices at once (a feat choice's own ability-scores sub-choice
    * only ever *appears* once the feat itself is picked — sequential, not simultaneous) — a
-   * multiclass new-class draft is the first scenario that does, because `multiclass.gains
-   * .skillChoiceCount` is unwired (task-2-report.md's own carry) and so a newly-multiclassed
-   * class's full `skillChoice` is offered ALONGSIDE its other level-1 choices. A plain instance
+   * multiclass new-class draft is the first scenario that does: a newly-multiclassed class's
+   * skill pick is offered ALONGSIDE its other level-1 choices (originally its full `skillChoice`,
+   * since `multiclass.gains.skillChoiceCount` was unwired; since the plan-12 final wave (W1) it is
+   * wired — only a class whose gains grant a bonus skill (e.g. the SRD's Bard/Rogue/Ranger) asks a
+   * `<classId>@1/multiclass-skills` pick, of that count, alongside its row choices). A plain instance
    * field, not a signal: mutated synchronously from inside this `computed()` (idempotent per id
    * — once assigned, an id's order value is never reassigned, so re-invoking this function with
    * the same inputs is side-effect-free the second time), never via an `effect()` (which would
