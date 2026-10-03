@@ -261,13 +261,23 @@ describe('charged items over the real pack (derive smoke)', () => {
     const s1 = sheetFor(spent);
     expect(s1.resources.find((x) => x.id === `item:${WAND}`)!.used).toBe(3);
 
-    // Engine carry (no engine change in this task): propose.rest only sweeps shortRest/longRest
-    // resets, so 'dawn' charges are restored manually (resource.restored), never by a rest event.
-    const restEvents = propose.rest(s1, 'long');
-    expect(restEvents.some((e) => JSON.stringify(e.payload).includes(`item:${WAND}`))).toBe(false);
-
-    const s2 = sheetFor([...spent, ev('resource.restored', { resourceId: `item:${WAND}` })]);
+    // A short rest leaves dawn charges alone; a long rest restores them to full (v1: full restore
+    // even for rolled-regain items — generous approximation).
+    const shortEvents = propose.rest(s1, 'short');
+    expect(shortEvents.some((e) => JSON.stringify(e.payload).includes(`item:${WAND}`))).toBe(false);
+    const longEvents = propose.rest(s1, 'long');
+    const s2 = sheetFor([...spent, ...longEvents.map((e) => ev(e.type, e.payload))]);
     expect(s2.resources.find((x) => x.id === `item:${WAND}`)!.used).toBe(0);
+
+    // 'never' items (e.g. Scarab of Protection) are never swept by a rest.
+    const scarab = '33333333-3333-4333-8333-cccccccccccc';
+    const s3 = sheetFor([
+      ...base(),
+      ev('item.added', { instanceId: scarab, itemId: `${FP}:item/scarab-of-protection`, qty: 1 }),
+      ev('item.equipped', { instanceId: scarab }),
+      ev('resource.spent', { resourceId: `item:${scarab}`, count: 2 }),
+    ]);
+    expect(propose.rest(s3, 'long').some((e) => JSON.stringify(e.payload).includes(`item:${scarab}`))).toBe(false);
   });
 
   it('attunement.by resolves against the sheet: Holy Avenger is refused for a non-paladin', () => {

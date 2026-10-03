@@ -26,7 +26,12 @@ export function rest(
   const payload: RestTaken = { kind, ...(hitDice !== undefined ? { hitDiceSpent: hitDice } : {}) };
   const events: ProposedEvent[] = [mk('rest.taken', payload)];
   for (const r of sheet.resources) {
-    if (r.reset === 'shortRest' || (kind === 'long' && r.reset === 'longRest')) {
+    // Plan 12 task 6 fix: a LONG rest also restores `reset:'dawn'` resources (charged magic items) —
+    // a long rest spans a dawn in ordinary play (v1 approximation). Short rest never touches them;
+    // `reset:'never'` stays manual-only. CONSTRAINT: items whose text regains a ROLLED amount
+    // ("regains 1d6 + 1 expended charges") get a FULL restore here — a generous approximation
+    // pending dice integration in rest flows.
+    if (r.reset === 'shortRest' || (kind === 'long' && (r.reset === 'longRest' || r.reset === 'dawn'))) {
       events.push(mk('resource.restored', { resourceId: r.id }));
     }
   }

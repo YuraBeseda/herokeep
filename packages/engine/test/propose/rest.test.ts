@@ -81,6 +81,44 @@ describe('propose.rest', () => {
     ]);
   });
 
+  it('dawn-reset resources (charged items): NOT restored by a short rest, restored to full by a long rest', () => {
+    const dawnSheet = baseSheet({
+      resources: [
+        {
+          id: 'item:11111111-1111-4111-8111-aaaaaaaaaaaa',
+          name: 'Wand',
+          max: { value: 7, contributions: [] },
+          used: 4,
+          reset: 'dawn',
+          display: 'number',
+          source: 'z',
+        },
+      ],
+    });
+    expect(propose.rest(dawnSheet, 'short')).toEqual([{ type: 'rest.taken', v: 1, payload: { kind: 'short' } }]);
+    expect(propose.rest(dawnSheet, 'long')).toEqual([
+      { type: 'rest.taken', v: 1, payload: { kind: 'long' } },
+      { type: 'resource.restored', v: 1, payload: { resourceId: 'item:11111111-1111-4111-8111-aaaaaaaaaaaa' } },
+    ]);
+  });
+
+  it("'never'-reset resources are never swept by either rest kind", () => {
+    const s = baseSheet({
+      resources: [
+        {
+          id: 'gem',
+          name: 'Gem',
+          max: { value: 5, contributions: [] },
+          used: 1,
+          reset: 'never',
+          display: 'number',
+          source: 'z',
+        },
+      ],
+    });
+    expect(propose.rest(s, 'long')).toEqual([{ type: 'rest.taken', v: 1, payload: { kind: 'long' } }]);
+  });
+
   it('forwards a given hitDice array as rest.taken.hitDiceSpent', () => {
     const events = propose.rest(baseSheet(), 'short', [{ classId: fighter, count: 1 }]);
     expect(events).toEqual([
