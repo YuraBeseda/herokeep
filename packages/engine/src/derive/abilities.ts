@@ -1,4 +1,4 @@
-import type { BackgroundEntity, ClassEntity, SpeciesEntity } from '@hk/protocol';
+import { type BackgroundEntity, type ClassEntity, type SpeciesEntity, parseEntityId } from '@hk/protocol';
 import { findChoice } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
@@ -87,6 +87,19 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   for (const choiceId of Object.keys(facts.decisions).sort()) {
     const found = findChoice(index, choiceId);
     if (!found) continue;
+    // A decided choice that selects skill entities grants proficiency in them, whoever owns the choice.
+    // (A class's `<class>@1/skills` decision is NOT an authored Choice, so `findChoice` skips it above and
+    // it can never double-grant here; `union` policy dedups across any other proficiency source anyway.)
+    for (const sel of facts.decisions[choiceId] ?? []) {
+      const skill = index.get(sel);
+      if (skill?.type === 'skill') {
+        table.add(`skill.${parseEntityId(sel)?.slug ?? sel}`, {
+          source: found.owner.id,
+          kind: 'proficient',
+          policy: 'union',
+        });
+      }
+    }
     if ('abilityGeneration' in found.choice.pick) baseSelection = facts.decisions[choiceId];
     else if ('abilities' in found.choice.pick) {
       // Plan 11 final wave F1: an occurrence-scoped decision (a repeatable feat's 2nd+ acquisition,
