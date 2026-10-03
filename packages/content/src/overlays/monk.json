@@ -357,12 +357,12 @@
   {
     "id": "srd-5e-2024:feature/monk-disciplined-survivor",
     "cite": "SRD 5.2.1, Disciplined Survivor",
-    "note": "SRD text: \"Your physical and mental discipline grant you proficiency in all saving throws. Additionally, whenever you make a saving throw and fail, you can expend 1 Focus Point to reroll it.\" Granted at level 14. The proficiency half is a real effect: proficiency.grant{kind:'save', level:'proficient'} for the four saves the Monk does not already have (str, con, int, cha; dex and wis come from the class) -- idempotent over the class saves. The Focus-spending reroll is a trigger/spend-gated play-flow clause (no reroll vocabulary) and stays as a feature.text rider; flagged.",
+    "note": "SRD text: \"Your physical and mental discipline grant you proficiency in all saving throws. Additionally, whenever you make a saving throw and fail, you can expend 1 Focus Point to reroll it.\" Granted at level 14. The proficiency half is a real effect: proficiency.grant{kind:'save', level:'proficient'} for the four saves the Monk does not already have (con, int, wis, cha; the class's own saves are str and dex per the corrected core-traits row -- an earlier draft wrongly assumed dex/wis and missed wis, caught in review and pinned by a derive-level all-six-saves test) -- idempotent over the class saves. The Focus-spending reroll is a trigger/spend-gated play-flow clause (no reroll vocabulary) and stays as a feature.text rider; flagged.",
     "merge": {
       "effects": [
-        { "type": "proficiency.grant", "kind": "save", "target": "str", "level": "proficient" },
         { "type": "proficiency.grant", "kind": "save", "target": "con", "level": "proficient" },
         { "type": "proficiency.grant", "kind": "save", "target": "int", "level": "proficient" },
+        { "type": "proficiency.grant", "kind": "save", "target": "wis", "level": "proficient" },
         { "type": "proficiency.grant", "kind": "save", "target": "cha", "level": "proficient" },
         {
           "type": "feature.text",

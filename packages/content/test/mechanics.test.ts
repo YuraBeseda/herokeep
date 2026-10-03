@@ -1200,16 +1200,7 @@ describe('monk and warrior of the open hand to level 20 mechanics (task 8)', () 
   });
 
   it('monk: real saves effect (Disciplined Survivor) and text fallbacks for state/spend-gated features', () => {
-    expect(feature('disciplined-survivor').effects).toEqual(
-      expect.arrayContaining(
-        ['str', 'con', 'int', 'cha'].map((target) => ({
-          type: 'proficiency.grant',
-          kind: 'save',
-          target,
-          level: 'proficient',
-        })),
-      ),
-    );
+    expect(feature('disciplined-survivor').effects.some((e) => e.type === 'proficiency.grant')).toBe(true);
     for (const slug of [
       'martial-arts',
       'uncanny-metabolism',
@@ -1280,5 +1271,42 @@ describe('monk integration over the real pack (task 8)', () => {
       [20, 60],
     ];
     for (const [l, speed] of expected) expect(sheetOf(monkChar(l)).speed['walk']!.value, `level ${l}`).toBe(speed);
+  });
+
+  const equipped = (level: number, ...slugs: string[]) => {
+    const facts = reduce(monkChar(level), undefined, featRules);
+    facts.inventory = slugs.map((s, i) => ({
+      instanceId: `i${i}`,
+      itemId: `${FP}:item/${s}`,
+      qty: 1,
+      equipped: true,
+      attuned: false,
+    }));
+    return derive(facts, featIndex, featRules);
+  };
+
+  it('Disciplined Survivor at monk 14: proficient in ALL SIX saves (str/dex from class, con/int/wis/cha granted)', () => {
+    const at13 = equipped(13).abilities;
+    expect(
+      Object.entries(at13)
+        .filter(([, a]) => a.saveProficient)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['dex', 'str']);
+    const at14 = equipped(14).abilities;
+    expect(Object.keys(at14).sort()).toEqual(['cha', 'con', 'dex', 'int', 'str', 'wis']);
+    for (const [k, a] of Object.entries(at14)) expect(a.saveProficient, k).toBe(true);
+  });
+
+  it('Unarmored Defense and Movement are suppressed by armor and by a shield alone (text: armor OR Shield)', () => {
+    // unarmored: 10 + dex 3 + wis 2 = 15, speed 30 + 15 at level 6 = 45
+    expect(equipped(6).ac.value).toBe(15);
+    expect(equipped(6).speed['walk']!.value).toBe(45);
+    // chain mail: flat 16, no unarmored formula, no movement bonus
+    expect(equipped(6, 'chain-mail').ac.value).toBe(16);
+    expect(equipped(6, 'chain-mail').speed['walk']!.value).toBe(30);
+    // shield only: formula suppressed -> 10 + dex 3 + shield 2 = 15 (a leaked formula would give 17); no movement bonus
+    expect(equipped(6, 'shield').ac.value).toBe(15);
+    expect(equipped(6, 'shield').speed['walk']!.value).toBe(30);
   });
 });
