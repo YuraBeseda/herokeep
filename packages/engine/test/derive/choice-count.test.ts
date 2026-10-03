@@ -94,6 +94,23 @@ describe('count formula validation', () => {
     expect(validatePack(growthPack(GROWTH), [])).toEqual([]);
   });
 
+  it.each(['mod(str)', 'score(str)', 'prof', '3 + prof', 'resource(rage)', 'max(2, mod(dex))'])(
+    'rejects count formula %s: symbols outside the count context (level, classLevel, hitDie)',
+    (src) => {
+      const issues = validatePack(growthPack(src), []);
+      expect(issues.some((i) => i.severity === 'error' && i.path?.includes('count'))).toBe(true);
+    },
+  );
+
+  it('accepts level, classLevel and hitDie in a count formula', () => {
+    expect(validatePack(growthPack('1 + floor(level / 5) + min(1, hitDie(fighter) / 12)'), [])).toEqual([]);
+  });
+
+  it('an unevaluable count resolves to 1 without throwing (mirrors predicate formulas: validation reports, derive never fails)', () => {
+    const bad = createContentIndex([growthPack('3 +')]);
+    expect(request([created, ...upTo(4)], bad)?.count).toBe(1);
+  });
+
   it('rejects a count formula that references an unknown symbol', () => {
     const issues = validatePack(growthPack('3 + bogus(fighter)'), []);
     expect(issues.length).toBeGreaterThan(0);

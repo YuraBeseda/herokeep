@@ -11,6 +11,8 @@ export interface FormulaSite {
   path: string;
   src: string;
   allowComparison: boolean;
+  /** A choice `count` formula: restricted to the count context's symbols (formula/validate.ts). */
+  countContext?: boolean;
 }
 
 /** Field names that hold a formula (or an int-or-formula value) per effect type. */

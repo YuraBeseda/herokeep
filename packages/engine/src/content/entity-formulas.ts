@@ -99,7 +99,9 @@ const predicateFormulas = (sites: PredicateSite[]): FormulaSite[] =>
 /** Formula-string `Choice.count` sites (plan 12 task 2); an int count is not a formula. */
 const choiceCountSites = (choices: Choice[], path: string): FormulaSite[] =>
   choices.flatMap((c, i) =>
-    typeof c.count === 'string' ? [{ path: `${path}.${i}.count`, src: c.count, allowComparison: false }] : [],
+    typeof c.count === 'string'
+      ? [{ path: `${path}.${i}.count`, src: c.count, allowComparison: false, countContext: true }]
+      : [],
   );
 
 export function collectEntityFormulas(e: Entity): FormulaSite[] {

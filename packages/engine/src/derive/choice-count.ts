@@ -10,7 +10,9 @@ import type { Facts } from '../reduce/facts.ts';
  * composition and ability derivation exist — so the formula context is deliberately narrow: `level`,
  * `classLevel(...)` and `hitDie(...)` are live; `prof`/`mod`/`score`/`resource` evaluate to 0 and must
  * not be relied on in a count. The result is floored and clamped to at least 1 (a choice always asks
- * for something); a formula that cannot be evaluated resolves to 1 (pack validation reports it).
+ * for something). Pack validation rejects any other symbol (`validateCountSymbols`, formula/validate.ts
+ * — keep in sync). A formula that cannot be evaluated resolves to 1, mirroring the predicate-formula
+ * posture (predicate/evaluate.ts: validation reports, derive never fails).
  */
 export function resolveChoiceCount(
   choice: Pick<Choice, 'count'>,

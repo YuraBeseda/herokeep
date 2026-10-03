@@ -1,7 +1,7 @@
 import { type Choice, type Entity, PACK_LIMITS, type Pack, parseChoiceId, parseEntityId } from '@hk/protocol';
 import { type Diagnostic, error, warning } from '../diagnostics.ts';
 import { validateEffects } from '../effects/validate.ts';
-import { validateFormula } from '../formula/validate.ts';
+import { validateCountSymbols, validateFormula } from '../formula/validate.ts';
 import { checkPredicateShape } from '../predicate/depth.ts';
 import { findChoice } from './choices.ts';
 import { createContentIndex } from './index.ts';
@@ -95,6 +95,7 @@ export function validatePack(pack: Pack, available: Pack[]): Diagnostic[] {
       out.push(
         ...validateFormula(s.src, { allowComparison: s.allowComparison, path: `${base}.${s.path}`, entityId: e.id }),
       );
+      if (s.countContext) out.push(...validateCountSymbols(s.src, `${base}.${s.path}`, e.id));
     }
     for (const s of collectEntityPredicates(e)) out.push(...checkPredicateShape(s.p, `${base}.${s.path}`, e.id));
     const resolveClass = (r: string) => index.resolveClassRef(r);
