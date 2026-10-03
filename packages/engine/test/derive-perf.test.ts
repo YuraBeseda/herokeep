@@ -22,10 +22,24 @@ import { loadDistPack, loadGoldens } from './support/golden.ts';
  * figure directly for its WORKER-NEEDED-or-not verdict. No worker is built by this task either way
  * (ruling 10 is explicit: measure and flag, don't build).
  */
-describe('derive-only perf (heaviest golden)', () => {
-  it('derives multi-fighter1-wizard19 (20-level, two-class) well within CI headroom of the 15ms doc-05 budget', () => {
-    const fixture = loadGoldens().find((f) => f.name === 'multi-fighter1-wizard19');
-    if (!fixture) throw new Error('multi-fighter1-wizard19 golden fixture not found — run task 13 first');
+/**
+ * Plan 12 task 15: re-measured over the slice-2 goldens too — the three densest level-20 casters
+ * (sorcerer: subclass HP + 4 resources; druid; paladin: 5 resources + half-caster) and the two
+ * slot-lane multiclass cases — alongside the original plan-11 heaviest golden (same baseline row).
+ */
+const PERF_FIXTURES = [
+  'multi-fighter1-wizard19',
+  'sorcerer-20',
+  'druid-20',
+  'paladin-20',
+  'multi-paladin5-cleric3',
+  'multi-sorcerer5-warlock3',
+];
+
+describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
+  it('derives well within CI headroom of the 15ms doc-05 budget', () => {
+    const fixture = loadGoldens().find((f) => f.name === fixtureName);
+    if (!fixture) throw new Error(`${fixtureName} golden fixture not found`);
 
     const events = fixture.events.map((e) => {
       const r = parseEvent(e);
@@ -52,7 +66,7 @@ describe('derive-only perf (heaviest golden)', () => {
     const median = samples[Math.floor(samples.length / 2)]!;
 
     console.info(
-      `[derive-perf] multi-fighter1-wizard19 (level 20, 2 classes, ${events.length} events): ` +
+      `[derive-perf] ${fixtureName} (${events.length} events): ` +
         `samples(ms)=${samples.map((s) => s.toFixed(3)).join(', ')} median=${median.toFixed(3)}ms ` +
         `(doc-05 budget: <5ms desktop / <15ms mid phone)`,
     );
@@ -60,10 +74,10 @@ describe('derive-only perf (heaviest golden)', () => {
     if (process.env['HK_RECORD_PERF'] === '1') {
       const perfMdPath = new URL('golden/PERF.md', import.meta.url);
       const line =
-        `- ${new Date().toISOString()}: derive-only, multi-fighter1-wizard19 (level 20, 2 classes, ` +
-        `${events.length} events), 25 samples, median ${median.toFixed(3)} ms ` +
-        `(doc-05 budget: <5ms desktop / <15ms mid phone; task-13 measurement, not the reduce+derive ` +
-        `536-event tripwire above)\n`;
+        `- ${new Date().toISOString()}: derive-only, ${fixtureName} (${events.length} events), ` +
+        `25 samples, median ${median.toFixed(3)} ms ` +
+        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-12 task-15 measurement, not the ` +
+        `reduce+derive 536-event tripwire above)\n`;
       if (!existsSync(perfMdPath)) {
         writeFileSync(
           perfMdPath,

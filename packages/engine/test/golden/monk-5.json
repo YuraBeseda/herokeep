@@ -1,0 +1,218 @@
+{
+  "name": "monk-5",
+  "packs": ["dist:srd-5e-2024"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000000001",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 1,
+      "ts": "2026-09-09T12:00:01.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Lian",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000002",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 2,
+      "ts": "2026-09-09T12:00:02.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["srd-5e-2024:species/human"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000003",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 3,
+      "ts": "2026-09-09T12:00:03.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000004",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 4,
+      "ts": "2026-09-09T12:00:04.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/soldier@0/ability-scores",
+        "selection": ["dex:+2", "con:+1"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000005",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 5,
+      "ts": "2026-09-09T12:00:05.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["dex:15", "wis:14", "con:13", "str:12", "int:10", "cha:8"],
+        "context": {
+          "method": "standardArray"
+        }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000006",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 6,
+      "ts": "2026-09-09T12:00:06.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/monk",
+        "level": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000007",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 7,
+      "ts": "2026-09-09T12:00:07.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/monk@1/skills",
+        "selection": ["acrobatics", "insight"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000008",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 8,
+      "ts": "2026-09-09T12:00:08.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/monk",
+        "level": 2,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000009",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 9,
+      "ts": "2026-09-09T12:00:09.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/monk",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/warrior-of-the-open-hand"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000a",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 10,
+      "ts": "2026-09-09T12:00:10.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/monk",
+        "level": 4,
+        "hpRoll": "average"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000b",
+      "stream": "char:33333333-3333-7333-8333-333333333333",
+      "seq": 11,
+      "ts": "2026-09-09T12:00:11.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/monk",
+        "level": 5,
+        "hpRoll": "average"
+      }
+    }
+  ],
+  "expect": {
+    "sheet.level": 5,
+    "sheet.hp.max.value": 38,
+    "sheet.prof": 3,
+    "sheet.ac.value": 15,
+    "sheet.classes[0].subclassId": "srd-5e-2024:subclass/warrior-of-the-open-hand",
+    "sheet.abilities[\"dex\"].save.value": 6,
+    "sheet.abilities[\"str\"].save.value": 4,
+    "sheet.resources[0].id": "focus-points",
+    "sheet.resources[0].max.value": 5
+  }
+}
