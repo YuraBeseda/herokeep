@@ -1,6 +1,7 @@
 import { DiceSchema, FlatDiceSchema, type DiceOrFlat, type Entity } from '@hk/protocol';
 import { itemId } from '../ids.ts';
 import { type FixtureRecord, pkSlug, readFixture } from '../upstream.ts';
+import { parseAttunementBy, parseCharges } from './charges.ts';
 import { baseEntity, fieldBool, fieldNum, fieldOptionalStr, fieldStr, pkStr } from './common.ts';
 
 type ItemCategory = 'weapon' | 'armor' | 'shield' | 'gear' | 'tool' | 'consumable' | 'magic';
@@ -368,13 +369,21 @@ function buildMagicItem(rec: FixtureRecord): Entity {
   const requiresAttunement = fieldBool(rec.fields, 'requires_attunement', pk);
   const cost = parseMagicItemCost(rec.fields, pk);
   const weight = parseWeight(fieldStr(rec.fields, 'weight', pk), pk);
+  const desc = fieldStr(rec.fields, 'desc', pk);
+  // Plan 12 task 6 (rulings 7 + 8): conservative parsed charges + attunement.by (see charges.ts).
+  const charges = parseCharges(desc);
+  const detail = rec.fields['attunement_detail'];
+  const by = requiresAttunement && typeof detail === 'string' ? parseAttunementBy(detail) : undefined;
 
   return {
     type: 'item',
-    ...baseEntity(itemId(slug), name, fieldStr(rec.fields, 'desc', pk)),
+    ...baseEntity(itemId(slug), name, desc),
     category: 'magic',
     rarity,
-    ...(requiresAttunement ? { attunement: { required: true } } : {}),
+    ...(requiresAttunement
+      ? { attunement: { required: true, ...(by?.kind === 'predicate' ? { by: by.predicate } : {}) } }
+      : {}),
+    ...(charges ? { charges: { max: String(charges.max), reset: charges.reset } } : {}),
     ...(cost ? { cost } : {}),
     ...(weight !== undefined ? { weight } : {}),
   };

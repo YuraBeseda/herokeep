@@ -87,4 +87,42 @@ describe('item transform', () => {
     expect(magic.some((m) => (m as { attunement?: { required: boolean } }).attunement?.required)).toBe(true);
     for (const m of magic) expect((m as { rarity?: string }).rarity, m.id).toBeTruthy();
   });
+
+  // Plan 12 task 6 (rulings 7 + 8): charges / attunement.by parsed from vendored text.
+  interface MagicShape {
+    charges?: { max: string; reset: string };
+    attunement?: { required: boolean; by?: unknown };
+  }
+  const magicOf = (slug: string) => byId.get(`srd-5e-2024:item/${slug}`) as unknown as MagicShape;
+
+  it('charged staples carry charges {max, reset}', () => {
+    expect(magicOf('wand-of-magic-missiles').charges).toEqual({ max: '7', reset: 'dawn' });
+    expect(magicOf('staff-of-the-magi').charges).toEqual({ max: '50', reset: 'dawn' });
+    expect(magicOf('scarab-of-protection').charges).toEqual({ max: '12', reset: 'never' });
+  });
+
+  it('exactly 43 items carry charges; ambiguous ones carry none', () => {
+    const charged = items.filter((i) => (i as unknown as MagicShape).charges);
+    expect(charged).toHaveLength(43);
+    for (const slug of ['luck-blade-longsword', 'cube-of-force', 'wand-of-web', 'ring-of-three-wishes', 'longsword']) {
+      expect(magicOf(slug).charges, slug).toBeUndefined();
+    }
+  });
+
+  it('attunement.by: class and spellcaster forms are predicates; others stay required-only', () => {
+    expect(magicOf('holy-avenger').attunement).toEqual({
+      required: true,
+      by: { class: 'srd-5e-2024:class/paladin' },
+    });
+    expect(magicOf('staff-of-healing').attunement?.by).toEqual({
+      any: [
+        { class: 'srd-5e-2024:class/bard' },
+        { class: 'srd-5e-2024:class/cleric' },
+        { class: 'srd-5e-2024:class/druid' },
+      ],
+    });
+    expect(magicOf('wand-of-fireballs').attunement).toEqual({ required: true, by: { spellcaster: true } });
+    expect(magicOf('dwarven-thrower').attunement).toEqual({ required: true });
+    expect(items.filter((i) => (i as unknown as MagicShape).attunement?.by)).toHaveLength(18);
+  });
 });
