@@ -51,7 +51,7 @@ export interface ClassSkillPick {
 /** Resolves either synthetic class skill-pick id to its class, option list and count (else undefined). */
 export function classSkillPick(choiceId: string, index: ContentIndex): ClassSkillPick | undefined {
   const parsed = parseChoiceId(choiceId);
-  if (!parsed || parsed.level !== 1) return undefined;
+  if (parsed?.level !== 1) return undefined;
   const multiclass = parsed.slug === MULTICLASS_SKILLS_CHOICE_SLUG;
   if (!multiclass && parsed.slug !== SKILLS_CHOICE_SLUG) return undefined;
   const classId = index.resolveClassRef(parsed.entityId) ?? parsed.entityId;

@@ -120,7 +120,14 @@ describe('multiclass weapon gains on the real SRD pack (W2): wizard → monk', (
   const srd = createContentIndex([loadDistPack('srd-5e-2024')]);
   const facts = () => {
     const f = baseFacts();
-    f.decisions['srd-5e-2024:system/5e-2024@0/ability-scores'] = ['str:10', 'dex:14', 'con:12', 'int:15', 'wis:13', 'cha:8'];
+    f.decisions['srd-5e-2024:system/5e-2024@0/ability-scores'] = [
+      'str:10',
+      'dex:14',
+      'con:12',
+      'int:15',
+      'wis:13',
+      'cha:8',
+    ];
     f.classes = [
       { classId: 'srd-5e-2024:class/wizard', level: 1 },
       { classId: 'srd-5e-2024:class/monk', level: 1 },
