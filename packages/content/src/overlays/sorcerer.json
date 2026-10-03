@@ -1,0 +1,365 @@
+[
+  {
+    "id": "srd-5e-2024:class/sorcerer",
+    "cite": "SRD 5.2.1, Core Sorcerer Traits; Spellcasting (Sorcerer); Sorcerer Subclass; Metamagic; Ability Score Improvement; Epic Boon",
+    "note": "Task 12 (phase 4 plan 12): new overlay, class 1->20. Core Sorcerer Traits (vendored srd-2024_sorcerer_core-traits): \"Hit Point Die: D6 per Sorcerer level\" (upstream hit_dice D6, correct as vendored); \"Saving Throw Proficiencies: Constitution and Charisma\" (upstream saving_throws [cha, con], correct as vendored); \"Skill Proficiencies: Choose 2: Arcana, Deception, Insight, Intimidation, Persuasion, or Religion\" -- the transform seeds skillChoice.from with all 18 skills and count 0, so BOTH the six-skill list and count:2 are restated (`set` replaces the whole object); \"Weapon Proficiencies: Simple weapons\"; \"Armor Training: None\" (already []). Cantrips column (vendored srd-2024_sorcerer_cantrips: 4 at levels 1-3, 5 at 4-9, 6 at 10-20 -- the highest cantrip count in the game): transformClasses() auto-carries it under extra['sorcerer-cantrips'], which is NOT the key packages/engine/src/derive/spellcasting.ts reads (cantripsKnownKey('sorcerer') = 'sorcerer-cantrips-known'), so levels 1/4/10 author the explicit correctly-keyed extra (4/5/6) alongside the harmless unread auto key (bard/wizard precedent); bestRowExtra picks the highest row at or below the character's level, so three breakpoints cover all 20 levels. Prepared Spells column (2,4,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22; verified level-by-level against every vendored srd-2024_sorcerer_prepared-spells row) is carried verbatim under extra['sorcerer-prepared-spells'] == preparedSpellsKey('sorcerer'): zero authoring. Spell Slots 1st-9th columns ride on the rows as extras; slot rows used by derive come from the system 'full' table, cross-checked against the vendored columns by a derive-level test. Sorcery Points column (2@2 -> 20@20) is carried as extra['sorcerer-sorcery-points'] and mechanized as the Font of Magic resource (see that entry). Sorcerer Subclass @3 (Draconic Sorcery is the only SRD subclass); ASI @4/8/12/16 and Epic Boon @19 use the standard open feat pick. METAMAGIC RE-GRANT: the vendored class rows grant the Metamagic feature at levels 2 and 10 only, but the vendored feature text says \"You gain two more options at Sorcerer level 10 and two more at Sorcerer level 17\"; level 17 is authored as a second re-grant of the same text feature (mirrors the vendored level-10 re-grant) so the sheet surfaces the entitlement at all three levels. Flagged: upstream rows omit level 17.",
+    "set": {
+      "armorTraining": [],
+      "weaponProficiencies": ["simple"],
+      "skillChoice": {
+        "from": ["arcana", "deception", "insight", "intimidation", "persuasion", "religion"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "extra": { "sorcerer-cantrips-known": 4 }
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/sorcerer@3/subclass",
+            "prompt": "Sorcerer Subclass",
+            "at": { "kind": "classLevel", "class": "sorcerer", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["sorcerer"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/sorcerer@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "sorcerer", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ],
+        "extra": { "sorcerer-cantrips-known": 5 }
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/sorcerer@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "sorcerer", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 10,
+        "extra": { "sorcerer-cantrips-known": 6 }
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/sorcerer@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "sorcerer", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/sorcerer@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "sorcerer", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 17,
+        "grants": [{ "feature": "srd-5e-2024:feature/sorcerer-metamagic" }]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/sorcerer@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "sorcerer", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-spellcasting",
+    "cite": "SRD 5.2.1, Spellcasting (Sorcerer)",
+    "note": "SRD text: Charisma is the spellcasting ability; prepared spells of level 1+ from the Sorcerer list (count from the Prepared Spells column); \"You can use an Arcane Focus as a Spellcasting Focus\" (focus:true); full-caster slots (system 'full' table). NO ritual casting is granted by the vendored Sorcerer text, so ritual:false. No cantripsKnown/preparedCount formulas: both counts are read from the class rows' extras (see class/sorcerer's note), exact for all 20 levels.",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "sorcerer",
+          "ability": "cha",
+          "list": "sorcerer",
+          "preparation": "prepared",
+          "slots": "full",
+          "ritual": false,
+          "focus": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-innate-sorcery",
+    "cite": "SRD 5.2.1, Innate Sorcery",
+    "note": "SRD text: \"As a Bonus Action, you can unleash that magic for 1 minute, during which you gain the following benefits: the spell save DC of your Sorcerer spells increases by 1; you have Advantage on the attack rolls of Sorcerer spells you cast. You can use this feature twice, and you regain all expended uses of it when you finish a Long Rest.\" Granted at Sorcerer level 1. The two uses are a real pool: resource.define 'innate-sorcery' max 2 reset longRest plus action.define{kind:'bonus', resource} so the activation spends a use. The ACTIVE-STATE benefits are TEXT (ruling 9): a spell save DC +1 limited to Sorcerer spells and a spell-attack-only advantage while a timed state is on have no vocabulary (advantage.grant is a standing grant, not a timed toggle, and there is no spell-DC bonus effect), and authoring either as a standing effect would be state-wrong. They ride in the action description. Flagged: slice-3 vocabulary candidate (timed self-state toggles with effects).",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "innate-sorcery",
+          "name": "Innate Sorcery",
+          "max": "2",
+          "reset": "longRest"
+        },
+        {
+          "type": "action.define",
+          "id": "innate-sorcery",
+          "name": "Innate Sorcery",
+          "kind": "bonus",
+          "description": "Unleash your innate magic for 1 minute. While it lasts, the spell save DC of your Sorcerer spells increases by 1, and you have Advantage on the attack rolls of Sorcerer spells you cast. (Tracked as a pool of two uses that return on a Long Rest; the benefits themselves are applied by hand.)",
+          "resource": "innate-sorcery"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-font-of-magic",
+    "cite": "SRD 5.2.1, Font of Magic; Sorcery Points column",
+    "note": "SRD text: \"You have 2 Sorcery Points, and you gain more as you reach higher levels, as shown in the Sorcery Points column ... You regain all expended Sorcery Points when you finish a Long Rest.\" Granted at Sorcerer level 2. max is the closed form 'classLevel(sorcerer)': the vendored srd-2024_sorcerer_sorcery-points column (typed extra 'sorcerer-sorcery-points') is 2 at level 2 rising by one each level to 20 at level 20 -- verified row-by-row (all 19 rows 2..20) in test/mechanics.test.ts; level 1 has no row, and the define lives on THIS feature (first granted at level 2) so the pool materializes only from level 2 (monk Focus Points precedent). reset longRest is exact; display 'number' because the pool reaches 20. The two conversions this feature introduces -- Converting Spell Slots to Sorcery Points (expend a slot, gain points equal to its level) and Creating Spell Slots (bonus action, SP cost table 2/3/5/6/7 for slots 1-5, min levels 2/3/5/7/9, created slots vanish on Long Rest) -- are cross-pool play-flow with no effect type (slot counter <-> resource counter; same gap class as Bard's Font of Inspiration slot conversion), kept in the already-localized feature description, which every reader surfaces in full (monk-focus-points / barbarian-rage precedent: no duplicate feature.text beside a real effect). Flagged: slice-3 vocabulary candidate (slot<->resource conversion proposals).",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "sorcery-points",
+          "name": "Sorcery Points",
+          "max": "classLevel(sorcerer)",
+          "reset": "longRest",
+          "display": "number"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-metamagic",
+    "cite": "SRD 5.2.1, Metamagic; Metamagic Options",
+    "note": "SRD text: gain two Metamagic options of your choice at level 2, two more at level 10 and two more at level 17; replace one on each level-up. ENTITY-EXISTENCE CHECK (brief): the vendored ClassFeature.json has NO per-option rows -- all ten options (Careful, Distant, Empowered, Extended, Heightened, Quickened, Seeking, Subtle, Transmuted, Twinned Spell) live inside ONE CLASS_FEATURE_OPTION_LIST row (srd-2024_sorcerer_metamagic-options, one markdown blob), which transformClasses() materializes as the single feature entity feature/sorcerer-metamagic-options (no effects, not granted by any class row). There are therefore no option entities for a query pick to target: a pick would need either a literal-text choice (the picks would be free strings no effect can read) or authored synthetic entities (invented content, not SRD data) -- the choice is categorically impossible. TEXT FALLBACK + FLAG: the feature text lists every option with its cost and effect so the player reads and tracks their two (then four, then six) chosen options by hand; each option is a per-cast spell modifier (reroll, range/duration/damage-type change, forced save disadvantage, casting-time change) with no composition-time vocabulary anyway. The Sorcery Point cost is spent from the sorcery-points pool by hand. Flagged: slice-3 candidate (a data-driven option-list materialization so Metamagic/Maneuvers/Invocations-style picks are entity-backed).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Metamagic",
+          "description": "You gain two Metamagic options of your choice (two more at Sorcerer level 10 and two more at level 17); whenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don't know. To use an option, spend the Sorcery Points it costs. You can use only one Metamagic option on a spell when you cast it unless otherwise noted.\n\nCareful Spell (1 SP): protect up to your Charisma modifier (minimum 1) creatures from a spell that forces saves; they automatically succeed and take no damage on a successful-save-for-half.\nDistant Spell (1 SP): double a spell's range (range of 5 feet or more), or make a Touch spell's range 30 feet.\nEmpowered Spell (1 SP): reroll up to your Charisma modifier (minimum 1) damage dice and use the new rolls; usable alongside another Metamagic option.\nExtended Spell (1 SP): double a duration of 1 minute or longer (max 24 hours); Advantage on saves to maintain Concentration on it.\nHeightened Spell (2 SP): one target has Disadvantage on saves against the spell.\nQuickened Spell (2 SP): change a casting time of an action to a Bonus Action (no other level 1+ spell that turn).\nSeeking Spell (1 SP): reroll a missed spell attack roll and use the new roll; usable alongside another Metamagic option.\nSubtle Spell (1 SP): cast without Verbal, Somatic, or Material components (except consumed or costed Material components).\nTransmuted Spell (1 SP): change a damage type among Acid, Cold, Fire, Lightning, Poison, Thunder.\nTwinned Spell (1 SP): raise the effective level of a spell that scales by target count by 1."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-sorcerous-restoration",
+    "cite": "SRD 5.2.1, Sorcerous Restoration",
+    "note": "SRD text: \"When you finish a Short Rest, you can regain expended Sorcery Points, but no more than a number equal to half your Sorcerer level (round down). Once you use this feature, you can't do so again until you finish a Long Rest.\" Granted at Sorcerer level 5. TEXT FALLBACK + FLAG: resource resets are all-or-nothing rest-based (reset restores the full pool); a capped PARTIAL regain on a Short Rest (floor(level/2)) with a once-per-Long-Rest gate has no reset semantics (same family as the Channel Divinity / rolled-regain precedents). The sorcery-points pool stays longRest; the player restores up to half their level by hand after a Short Rest.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Sorcerous Restoration",
+          "description": "When you finish a Short Rest, you can regain expended Sorcery Points, but no more than a number equal to half your Sorcerer level (round down). Once you use this feature, you can't do so again until you finish a Long Rest. (Tracked on the sheet as a Long Rest pool: restore the points by hand after a Short Rest.)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-sorcery-incarnate",
+    "cite": "SRD 5.2.1, Sorcery Incarnate",
+    "note": "SRD text: \"If you have no uses of Innate Sorcery left, you can use it if you spend 2 Sorcery Points when you take the Bonus Action to activate it. In addition, while your Innate Sorcery feature is active, you can use up to two of your Metamagic options on each spell you cast.\" Granted at Sorcerer level 7. TEXT FALLBACK + FLAG: a cross-pool alternative cost (spend 2 points of one resource instead of a use of another) and a while-active relaxation of the one-option-per-spell rule have no effect types; Innate Sorcery's active state is itself text (see that entry).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Sorcery Incarnate",
+          "description": "If you have no uses of Innate Sorcery left, you can use it if you spend 2 Sorcery Points when you take the Bonus Action to activate it.\n\nIn addition, while your Innate Sorcery feature is active, you can use up to two of your Metamagic options on each spell you cast."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-arcane-apotheosis",
+    "cite": "SRD 5.2.1, Arcane Apotheosis",
+    "note": "SRD text: \"While your Innate Sorcery feature is active, you can use one Metamagic option on each of your turns without spending Sorcery Points on it.\" Granted at Sorcerer level 20. TEXT FALLBACK + FLAG: a per-turn free Metamagic while a timed state is on -- no per-turn cost waiver or state-gated vocabulary.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Arcane Apotheosis",
+          "description": "While your Innate Sorcery feature is active, you can use one Metamagic option on each of your turns without spending Sorcery Points on it."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-draconic-sorcery-draconic-resilience",
+    "cite": "SRD 5.2.1, Draconic Sorcery — Draconic Resilience",
+    "note": "SRD text: \"Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level. ... While you aren't wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.\" Granted at Draconic level 3. BOTH HALVES ARE FULLY EXPRESSIBLE (registry check, ruling 5): (1) hp.bonus exists and takes an int-or-formula value, and the engine evaluates it with the full formula context (derive/hp.ts) -- +3 at level 3 plus +1 per level after is exactly the closed form 'classLevel(sorcerer)' (3 at 3, 4 at 4, ... 20 at 20); the effect lives on a feature that only exists once Draconic Sorcery is chosen at 3, so there is no pre-3 leak. (2) ac.formula '10 + mod(dex) + mod(cha)' keyed 'draconic-resilience', gated on `armor: none` ONLY -- unlike the Monk (armor OR shield), the SRD text says \"aren't wearing armor\" and a Shield is not armor, so a carried Shield does not suppress it (barbarian Unarmored Defense shape; the engine takes the best of the available base formulas and a Shield still adds its +2). Derive-level tests pin HP (con-aware, level by level) and AC with/without armor and with a shield.",
+    "merge": {
+      "effects": [
+        {
+          "type": "hp.bonus",
+          "value": "classLevel(sorcerer)"
+        },
+        {
+          "type": "ac.formula",
+          "formula": "10 + mod(dex) + mod(cha)",
+          "key": "draconic-resilience",
+          "when": { "armor": { "category": ["none"] } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-draconic-sorcery-draconic-spells",
+    "cite": "SRD 5.2.1, Draconic Sorcery — Draconic Spells",
+    "note": "SRD text: \"When you reach a Sorcerer level specified in the Draconic Spells table, you thereafter always have the listed spells prepared.\" Table: level 3 Alter Self, Chromatic Orb, Command, Dragon's Breath; level 5 Fear, Fly; level 7 Arcane Eye, Charm Monster; level 9 Legend Lore, Summon Dragon. Granted at Draconic level 3 as ONE feature, so each spell.grant{alwaysPrepared:true} is level-gated with `when: classLevel sorcerer gte N` (paladin Oath Spells precedent). All ten spells exist in the pack; always-prepared spells don't count against the prepared cap (vendored Spellcasting text), proven by a derive-level test.",
+    "merge": {
+      "effects": [
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/alter-self",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 3 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/chromatic-orb",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 3 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/command",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 3 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/dragons-breath",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 3 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/fear",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 5 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/fly",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 5 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/arcane-eye",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 7 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/charm-monster",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 7 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/legend-lore",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 9 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/summon-dragon",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "sorcerer": { "gte": 9 } } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-draconic-sorcery-elemental-affinity",
+    "cite": "SRD 5.2.1, Draconic Sorcery — Elemental Affinity",
+    "note": "SRD text: choose Acid, Cold, Fire, Lightning, or Poison; \"You have Resistance to that damage type, and when you cast a spell that deals damage of that type, you can add your Charisma modifier to one damage roll of that spell.\" Granted at Draconic level 6. TEXT FALLBACK + FLAG. damage.resistance exists but its `types` are FIXED authored values: it cannot express a resistance that depends on a character's choice, and authoring all five resistances would be state-wrong (a Fire sorcerer is not resistant to Cold); a pick with no effect reading it would be decorative (the Dragonborn ancestry resistance is likewise unauthored in this pack). The Charisma-to-one-damage-roll rider is a per-cast, type-conditional spell-damage modifier with no vocabulary. Flagged: slice-3 vocabulary candidate (choice-parameterised damage.resistance, also fixing Dragonborn ancestry).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Elemental Affinity",
+          "description": "Your draconic magic has an affinity with a damage type associated with dragons. Choose one of those types: Acid, Cold, Fire, Lightning, or Poison.\n\nYou have Resistance to that damage type, and when you cast a spell that deals damage of that type, you can add your Charisma modifier to one damage roll of that spell."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-draconic-sorcery-dragon-wings",
+    "cite": "SRD 5.2.1, Draconic Sorcery — Dragon Wings",
+    "note": "SRD text: \"As a Bonus Action, you can cause draconic wings to appear on your back. The wings last for 1 hour or until you dismiss them (no action required). For the duration, you have a Fly Speed of 60 feet. Once you use this feature, you can't use it again until you finish a Long Rest unless you spend 3 Sorcery Points (no action required) to restore your use of it.\" Granted at Draconic level 14. The single use per Long Rest is a real pool: resource.define 'dragon-wings' max 1 reset longRest plus action.define{kind:'bonus', resource}. The 60 ft Fly Speed is deliberately NOT authored as speed.set/bonus: that would be a permanent fly speed while the wings are a 1-hour timed state (state-wrong; no timed-toggle vocabulary). The 3-Sorcery-Point restore is a cross-pool conversion with no effect type. Both ride in the action description. Flagged with Innate Sorcery's timed-state candidate.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "dragon-wings",
+          "name": "Dragon Wings",
+          "max": "1",
+          "reset": "longRest"
+        },
+        {
+          "type": "action.define",
+          "id": "dragon-wings",
+          "name": "Dragon Wings",
+          "kind": "bonus",
+          "description": "Cause draconic wings to appear on your back. They last for 1 hour or until you dismiss them (no action required); for the duration you have a Fly Speed of 60 feet. Once used, you can't use this again until you finish a Long Rest unless you spend 3 Sorcery Points (no action required) to restore your use of it. (Tracked as a one-use Long Rest pool; the Fly Speed and the Sorcery Point restore are applied by hand.)",
+          "resource": "dragon-wings"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/sorcerer-draconic-sorcery-dragon-companion",
+    "cite": "SRD 5.2.1, Draconic Sorcery — Dragon Companion",
+    "note": "SRD text: \"You can cast Summon Dragon without a Material component. You can also cast it once without a spell slot, and you regain the ability to cast it in this way when you finish a Long Rest. Whenever you start casting the spell, you can modify it so that it doesn't require Concentration. If you do so, the spell's duration becomes 1 minute for that casting.\" The vendored class data grants this feature at Draconic level 19 (pk srd-2024_sorcerer_draconic-sorcery_dragon-dragon-companion, level 19); public SRD 5.2.1 places it at level 18 -- OWNER-FLAG: left as vendored (overlays patch effects, not grant levels, and the vendored row is the authority here). The free cast is a real once-per-Long-Rest pool: resource.define 'dragon-companion' max 1 reset longRest (a tracker for the slot-free Summon Dragon cast; Summon Dragon is already always prepared from Draconic Spells at 9). The Material-component waiver and the optional no-Concentration/1-minute modification are per-cast spell modifiers with no vocabulary, so they ride as feature.text.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "dragon-companion",
+          "name": "Dragon Companion (free Summon Dragon)",
+          "max": "1",
+          "reset": "longRest"
+        },
+        {
+          "type": "feature.text",
+          "name": "Dragon Companion",
+          "description": "You can cast Summon Dragon without a Material component. You can also cast it once without a spell slot (tracked as a one-use Long Rest pool), and you regain the ability to cast it in this way when you finish a Long Rest.\n\nWhenever you start casting the spell, you can modify it so that it doesn't require Concentration. If you do so, the spell's duration becomes 1 minute for that casting."
+        }
+      ]
+    }
+  }
+]

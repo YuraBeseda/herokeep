@@ -2197,3 +2197,303 @@ describe('bard integration over the real pack (task 11)', () => {
     expect(s.issues.filter((i) => i.severity === 'error')).toEqual([]);
   });
 });
+
+describe('sorcerer and draconic sorcery to level 20 mechanics (task 12)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.sorcerer].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.sorcerer.filter((x) => features.some((f) => f.id === x.id)),
+  );
+  interface SorcShape {
+    hitDie: number;
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount?: number } };
+    levels: { level: number; grants: { feature: string }[]; choices: { id: string; pick: unknown }[] }[];
+  }
+  const sorc = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/sorcerer') as unknown as SorcShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/${slug}`) as unknown as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('sorcerer: core traits (d6, con/cha saves, simple weapons, no armor, 2 of the six listed skills)', () => {
+    const s = sorc();
+    expect(s.hitDie).toBe(6);
+    expect([...s.saves].sort()).toEqual(['cha', 'con']);
+    expect(s.armorTraining).toEqual([]);
+    expect(s.weaponProficiencies).toEqual(['simple']);
+    expect(s.skillChoice.count).toBe(2);
+    expect([...s.skillChoice.from].sort()).toEqual([
+      'arcana',
+      'deception',
+      'insight',
+      'intimidation',
+      'persuasion',
+      'religion',
+    ]);
+  });
+
+  it('sorcerer: multiclass gains = none (SRD-silent, owner-flagged)', () => {
+    expect(sorc().multiclass.gains).toEqual({ armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 });
+  });
+
+  it('sorcerer: choices — subclass @3, ASI 4/8/12/16 + boon 19; Metamagic is never a pick', () => {
+    const choices = sorc().levels.flatMap((r) => r.choices);
+    const ids = choices.map((c) => c.id);
+    expect(choices.find((c) => c.id === 'srd-5e-2024:class/sorcerer@3/subclass')!.pick).toEqual({
+      query: { type: 'subclass', classes: ['sorcerer'] },
+    });
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/sorcerer@${level}/feat`);
+    expect(ids.some((id) => id.includes('metamagic') || id.includes('affinity'))).toBe(false);
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/sorcerer').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/draconic-sorcery']);
+  });
+
+  it('Metamagic: no per-option entities exist (single option-list blob), so text-only at 2, 10 and 17', () => {
+    expect(patchedFeatures.filter((f) => f.id.includes('metamagic')).map((f) => f.id)).toEqual([
+      'srd-5e-2024:feature/sorcerer-metamagic',
+      'srd-5e-2024:feature/sorcerer-metamagic-options',
+    ]);
+    expect(feature('sorcerer-metamagic').effects.map((e) => e.type)).toEqual(['feature.text']);
+    expect(feature('sorcerer-metamagic-options').effects).toEqual([]);
+    const at = sorc()
+      .levels.filter((r) => r.grants.some((g) => g.feature.endsWith('sorcerer-metamagic')))
+      .map((r) => r.level);
+    expect(at).toEqual([2, 10, 17]);
+  });
+
+  it('sorcerer: Spellcasting is a CHA full caster with prepared spells + arcane focus, no ritual casting', () => {
+    expect(feature('sorcerer-spellcasting').effects).toEqual([
+      {
+        type: 'spellcasting.define',
+        class: 'sorcerer',
+        ability: 'cha',
+        list: 'sorcerer',
+        preparation: 'prepared',
+        slots: 'full',
+        ritual: false,
+        focus: true,
+      },
+    ]);
+  });
+
+  it('sorcerer: text fallbacks present for the inexpressible features', () => {
+    for (const slug of [
+      'sorcerer-metamagic',
+      'sorcerer-sorcerous-restoration',
+      'sorcerer-sorcery-incarnate',
+      'sorcerer-arcane-apotheosis',
+      'sorcerer-draconic-sorcery-elemental-affinity',
+      'sorcerer-draconic-sorcery-dragon-companion',
+    ]) {
+      expect(
+        feature(slug).effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('Elemental Affinity: no damage.resistance authored (a fixed type would be state-wrong for a chosen one)', () => {
+    expect(feature('sorcerer-draconic-sorcery-elemental-affinity').effects.map((e) => e.type)).toEqual([
+      'feature.text',
+    ]);
+  });
+
+  it('Draconic Resilience is hp.bonus classLevel + ac.formula gated on NO ARMOR only (a shield is not armor)', () => {
+    expect(feature('sorcerer-draconic-sorcery-draconic-resilience').effects).toEqual([
+      { type: 'hp.bonus', value: 'classLevel(sorcerer)' },
+      {
+        type: 'ac.formula',
+        formula: '10 + mod(dex) + mod(cha)',
+        key: 'draconic-resilience',
+        when: { armor: { category: ['none'] } },
+      },
+    ]);
+  });
+});
+
+describe('sorcerer integration over the real pack (task 12)', () => {
+  const sorcId = `${FP}:class/sorcerer`;
+  const draconic = `${FP}:subclass/draconic-sorcery`;
+  const spell = (s: string) => `${FP}:spell/${s}`;
+  function sorcChar(level: number, opts: { cha?: number; draconic?: boolean; skills?: string[] } = {}): Event[] {
+    featSeq = 0;
+    return [
+      featEv('character.created', {
+        name: 'Ember',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, ['dex:+2', 'con:+1']),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, [
+        'str:8',
+        'dex:13',
+        'con:13',
+        'int:10',
+        'wis:10',
+        `cha:${opts.cha ?? 15}`,
+      ]),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', {
+          classId: sorcId,
+          level: i + 1,
+          hpRoll: 'average',
+          ...(opts.draconic && i + 1 === 3 ? { subclassId: draconic } : {}),
+        }),
+      ),
+      featDecide(`${sorcId}@1/skills`, opts.skills ?? ['persuasion', 'arcana']),
+    ];
+  }
+  const block = (level: number, opts: { draconic?: boolean } = {}) =>
+    sheetOf(sorcChar(level, opts)).spellcasting.find((b) => b.classId === sorcId)!;
+  const res = (level: number, id: string, opts: { draconic?: boolean } = {}) =>
+    sheetOf(sorcChar(level, opts)).resources.find((r) => r.id === id);
+
+  it('saves: con + cha proficient and nothing else (derive-level)', () => {
+    const a = sheetOf(sorcChar(1)).abilities;
+    expect(
+      Object.entries(a)
+        .filter(([, v]) => v.saveProficient)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['cha', 'con']);
+  });
+
+  it('armor: none; weapons: simple only (derive-level)', () => {
+    const p = sheetOf(sorcChar(1)).proficiencies;
+    const has = (kind: string, target: string) => p.some((x) => x.kind === kind && x.target === target);
+    for (const t of ['light', 'medium', 'heavy', 'shields']) expect(has('armor', t), t).toBe(false);
+    expect(has('weapon', 'simple')).toBe(true);
+    expect(has('weapon', 'martial')).toBe(false);
+  });
+
+  it('class skills: two of the six are accepted and become proficient (derive-level)', () => {
+    const s = sheetOf(sorcChar(1, { skills: ['insight', 'religion'] }));
+    expect(s.issues.filter((i) => i.code === 'derive.unknownSkill')).toEqual([]);
+    for (const k of ['insight', 'religion']) expect(s.skills[k]!.proficiency, k).toBe('proficient');
+    expect(s.skills['stealth']!.proficiency).toBe('none');
+  });
+
+  it('full-caster slots follow the vendored columns level by level', () => {
+    const max = (l: number) => block(l).slots.map((s) => s.max);
+    expect(max(1)).toEqual([2]);
+    expect(max(3)).toEqual([4, 2]);
+    expect(max(5)).toEqual([4, 3, 2]);
+    expect(max(9)).toEqual([4, 3, 3, 3, 1]);
+    expect(max(13)).toEqual([4, 3, 3, 3, 2, 1, 1]);
+    expect(max(18)).toEqual([4, 3, 3, 3, 3, 1, 1, 1, 1]);
+    expect(max(20)).toEqual([4, 3, 3, 3, 3, 2, 2, 1, 1]);
+  });
+
+  it('cantrips known follow the vendored Cantrips column (4@1-3, 5@4-9, 6@10-20)', () => {
+    const col: Record<number, number> = { 1: 4, 2: 4, 3: 4, 4: 5, 5: 5, 9: 5, 10: 6, 14: 6, 20: 6 };
+    for (const [l, n] of Object.entries(col)) expect(block(Number(l)).cantripsKnown, `level ${l}`).toBe(n);
+  });
+
+  it('prepared-spell cap follows the vendored Prepared Spells column (2@1 ... 22@20)', () => {
+    const col = [2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22];
+    col.forEach((n, i) => expect(block(i + 1).preparedMax, `level ${i + 1}`).toBe(n));
+  });
+
+  it('Sorcery Points: absent at 1, then max == class level == the vendored column at every level 2..20', () => {
+    expect(res(1, 'sorcery-points')).toBeUndefined();
+    const pack = featPack.entities.find((e) => e.id === sorcId) as unknown as {
+      levels: { level: number; extra: Record<string, number> }[];
+    };
+    for (let l = 2; l <= 20; l++) {
+      const vendored = pack.levels.find((r) => r.level === l)!.extra['sorcerer-sorcery-points'];
+      expect(vendored, `vendored row ${l}`).toBe(l);
+      expect(res(l, 'sorcery-points')?.max.value, `level ${l}`).toBe(vendored);
+    }
+    expect(res(2, 'sorcery-points')?.max.value).toBe(2);
+    expect(res(20, 'sorcery-points')?.max.value).toBe(20);
+    expect(res(10, 'sorcery-points')?.reset).toBe('longRest');
+  });
+
+  it('Innate Sorcery: two uses per long rest from level 1, bonus action spends the pool', () => {
+    for (const l of [1, 7, 20]) {
+      expect(res(l, 'innate-sorcery')?.max.value, `level ${l}`).toBe(2);
+      expect(res(l, 'innate-sorcery')?.reset).toBe('longRest');
+    }
+    expect(sheetOf(sorcChar(1)).actions.find((a) => a.id === 'innate-sorcery')).toMatchObject({
+      kind: 'bonus',
+      resource: 'innate-sorcery',
+    });
+  });
+
+  it('Draconic Resilience HP: +3 at 3 then +1 per level (== sorcerer level), absent without the subclass', () => {
+    const hp = (l: number, d: boolean) => sheetOf(sorcChar(l, { draconic: d })).hp.max.value;
+    for (const l of [1, 2]) expect(hp(l, true), `level ${l}`).toBe(hp(l, false));
+    for (const l of [3, 4, 5, 10, 17, 20]) expect(hp(l, true) - hp(l, false), `level ${l}`).toBe(l);
+  });
+
+  const equipped = (level: number, ...slugs: string[]) => {
+    const facts = reduce(sorcChar(level, { draconic: true }), undefined, featRules);
+    facts.inventory = slugs.map((s, i) => ({
+      instanceId: `i${i}`,
+      itemId: `${FP}:item/${s}`,
+      qty: 1,
+      equipped: true,
+      attuned: false,
+    }));
+    return derive(facts, featIndex, featRules);
+  };
+
+  it('Draconic Resilience AC: 10+dex+cha unarmored, suppressed by armor, NOT by a shield', () => {
+    // dex 13+2 = 15 (+2), cha 15 (+2): 10 + 2 + 2 = 14 from level 3; plain 12 before (no subclass formula)
+    expect(sheetOf(sorcChar(3)).ac.value).toBe(12);
+    expect(equipped(3).ac.value).toBe(14);
+    // chain mail: flat 16, formula suppressed
+    expect(equipped(3, 'chain-mail').ac.value).toBe(16);
+    // shield is not armor: formula still applies, shield adds +2
+    expect(equipped(3, 'shield').ac.value).toBe(16);
+  });
+
+  it('Draconic Spells: always prepared by level 3/5/7/9, off the prepared cap', () => {
+    const ap = (l: number) => [...(block(l, { draconic: true }).alwaysPrepared ?? [])].sort();
+    const at3 = ['alter-self', 'chromatic-orb', 'command', 'dragons-breath'];
+    const at5 = [...at3, 'fear', 'fly'];
+    const at7 = [...at5, 'arcane-eye', 'charm-monster'];
+    const at9 = [...at7, 'legend-lore', 'summon-dragon'];
+    expect(block(2, { draconic: true }).alwaysPrepared ?? []).toEqual([]);
+    expect(ap(3)).toEqual(at3.map(spell).sort());
+    expect(ap(4)).toEqual(at3.map(spell).sort());
+    expect(ap(5)).toEqual(at5.map(spell).sort());
+    expect(ap(7)).toEqual(at7.map(spell).sort());
+    expect(ap(9)).toEqual(at9.map(spell).sort());
+    expect(ap(20)).toEqual(at9.map(spell).sort());
+    expect(block(9, { draconic: true }).preparedMax).toBe(14);
+  });
+
+  it('Dragon Wings (14) and Dragon Companion (19, as vendored) are one-use long-rest pools', () => {
+    const d = { draconic: true };
+    expect(res(13, 'dragon-wings', d)).toBeUndefined();
+    expect(res(14, 'dragon-wings', d)?.max.value).toBe(1);
+    expect(res(14, 'dragon-wings', d)?.reset).toBe('longRest');
+    expect(sheetOf(sorcChar(14, d)).actions.find((a) => a.id === 'dragon-wings')).toMatchObject({
+      kind: 'bonus',
+      resource: 'dragon-wings',
+    });
+    expect(res(18, 'dragon-companion', d)).toBeUndefined();
+    expect(res(19, 'dragon-companion', d)?.max.value).toBe(1);
+  });
+
+  it('Draconic Sorcery resolves through level 20 without breaking the sheet', () => {
+    const s = sheetOf(sorcChar(20, { draconic: true }));
+    expect(s.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  });
+});

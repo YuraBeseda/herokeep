@@ -15,6 +15,7 @@ import monk from './monk.json' with { type: 'json' };
 import paladin from './paladin.json' with { type: 'json' };
 import ranger from './ranger.json' with { type: 'json' };
 import bard from './bard.json' with { type: 'json' };
+import sorcerer from './sorcerer.json' with { type: 'json' };
 
 export interface Overlays {
   corrections: Overlay[];
@@ -33,6 +34,7 @@ export interface Overlays {
   paladin: Overlay[];
   ranger: Overlay[];
   bard: Overlay[];
+  sorcerer: Overlay[];
 }
 
 /**
@@ -58,5 +60,6 @@ export function loadOverlays(): Overlays {
     paladin: paladin as Overlay[],
     ranger: ranger as Overlay[],
     bard: bard as Overlay[],
+    sorcerer: sorcerer as Overlay[],
   };
 }

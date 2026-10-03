@@ -105,6 +105,6 @@ describe('class transform', () => {
 
     // Classes outside the five slice-1 classes get no `multiclass` field on the CLASS entity (the
     // system-level `multiclass.prerequisites` map still covers all 12 — see static.test.ts).
-    expect(bySlug('sorcerer').multiclass).toBeUndefined();
+    expect(bySlug('druid').multiclass).toBeUndefined();
   });
 });

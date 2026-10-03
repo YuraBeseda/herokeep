@@ -65,6 +65,11 @@ const MULTICLASS_GAINS: Record<
   // for Bard/Rogue) plus one Musical Instrument -- no weapons. The instrument has no `gains` field
   // (schema carries armor, weapons, skill count only), so it is not representable here; flagged.
   bard: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
+  // Plan 12 task 12. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
+  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
+  // Sorcerer's multiclass row grants no armor, weapon, or skill proficiencies (Sorcerer Armor Training
+  // is "None" per the vendored sorcerer_core-traits).
+  sorcerer: { armorTraining: [], weaponProficiencies: [] },
 };
 
 /**
