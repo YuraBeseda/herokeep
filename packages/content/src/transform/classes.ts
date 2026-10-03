@@ -54,6 +54,11 @@ const MULTICLASS_GAINS: Record<
   // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
   // Paladin's multiclass row grants Martial weapons, Light and Medium armor, and Shields -- no skills.
   paladin: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: ['martial'] },
+  // Plan 12 task 10. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
+  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
+  // Ranger's multiclass row grants Martial weapons, Light and Medium armor, Shields, and ONE skill
+  // from the Ranger skill list (the Rogue precedent for a bonus skill).
+  ranger: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: ['martial'], skillChoiceCount: 1 },
 };
 
 /**

@@ -1,0 +1,409 @@
+[
+  {
+    "id": "srd-5e-2024:class/ranger",
+    "cite": "SRD 5.2.1, Ranger Core Traits; Weapon Mastery; Fighting Style; Ranger Subclass; Ability Score Improvement; Epic Boon",
+    "note": "Task 10 (phase 4 plan 12): new overlay, class 1->20. Core Traits table (srd-2024_ranger_core-traits): \"Hit Point Die: D10\"; \"Saving Throw Proficiencies: Strength and Dexterity\" (upstream already carries [dex, str], derive-level test pins it); \"Skill Proficiencies: Choose 3: Animal Handling, Athletics, Insight, Investigation, Nature, Perception, Stealth, or Survival\"; \"Weapon Proficiencies: Simple and Martial weapons\"; \"Armor Training: Light and Medium armor and Shields\". class.multiclass gains/prereq (dex>=13 AND wis>=13, from the existing prerequisites table) come from transform/classes.ts MULTICLASS_GAINS (this task added the ranger entry: martial weapons, light/medium armor, shields, ONE skill -- owner-flagged, SRD-silent). Choices: Weapon Mastery @1 -- vendored text \"mastery properties of two kinds of weapons of your choice with which you have proficiency\" (no vendored count column for Ranger: flat 2), same item/hasField query pick as Paladin/Rogue; Fighting Style @2 as a fighting-style feat pick (the Druidic Warrior alternative is NOT expressible, see that feature's note); subclass @3 (Hunter is the only vendored Ranger subclass); ASI feat picks @4/@8/@12/@16 per the vendored \"Ranger levels 8, 12, and 16\" repeat text; Epic Boon @19 (open-any-feat wording, as cleric/paladin@19). SPELL COLUMNS (verified against the built pack, all 20 rows): Prepared Spells (2@1, 3@2, 4@3, 5@4, 6@5-6, 7@7-8, 9@9-10, 10@11-12, 11@13-14, 12@15-16, 14@17-18, 15@19-20) is carried by transformClasses() under extra['ranger-prepared-spells'] == preparedSpellsKey('ranger'); the Spell Slots columns under ranger-slots-1st..5th; Ranger has NO cantrips column (verified: no srd-2024_ranger_cantrips feature) so no cantripsKnown key is authored. Slot rows used by derive come from the system 'half' table, cross-checked level-by-level against the five vendored slots-Nth columns by a derive-level test. The 'ranger-favored-enemy-uses' column (2@1-4, 3@5-8, 4@9-12, 5@13-16, 6@17-20) also rides on the class rows as an extra; the resource below reproduces it with a closed-form max.",
+    "set": {
+      "armorTraining": ["light", "medium", "shields"],
+      "weaponProficiencies": ["simple", "martial"],
+      "skillChoice": {
+        "from": [
+          "animal-handling",
+          "athletics",
+          "insight",
+          "investigation",
+          "nature",
+          "perception",
+          "stealth",
+          "survival"
+        ],
+        "count": 3
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@1/weapon-masteries",
+            "prompt": "Weapon Masteries",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 1 },
+            "pick": { "query": { "type": "item", "hasField": ["weapon.mastery"] } },
+            "count": 2
+          }
+        ]
+      },
+      {
+        "level": 2,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@2/fighting-style",
+            "prompt": "Fighting Style",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 2 },
+            "pick": { "query": { "type": "feat", "tags": ["fighting-style"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@3/subclass",
+            "prompt": "Ranger Subclass",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["ranger"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/ranger@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "ranger", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-spellcasting",
+    "cite": "SRD 5.2.1, Spellcasting (Ranger)",
+    "note": "SRD text (abridged): \"Spell Slots. The Ranger Features table shows how many spell slots you have ... Prepared Spells of Level 1+ ... To start, choose two level 1 Ranger spells ... Spellcasting Ability. Wisdom is your spellcasting ability for your Ranger spells. Spellcasting Focus. You can use a Druidic Focus as a Spellcasting Focus.\" Granted at Ranger level 1 (the vendored ClassFeatureItem row; the 2024 Ranger casts from level 1). Same shape as Paladin: ability 'wis'; list 'ranger' (class-ref form); preparation 'prepared'; slots 'half' (system half-caster table, verified against vendored slots-1st..5th); focus true (Druidic Focus); ritual false (the vendored text has NO Ritual Casting clause). cantripsKnown/preparedCount/spellsKnown deliberately omitted: Ranger has no cantrips column, and the Prepared Spells column already lives on the class entity at extra['ranger-prepared-spells'].",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "ranger",
+          "ability": "wis",
+          "list": "ranger",
+          "preparation": "prepared",
+          "slots": "half",
+          "ritual": false,
+          "focus": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-favored-enemy",
+    "cite": "SRD 5.2.1, Favored Enemy (Ranger); Favored Enemy column of the Ranger Features table",
+    "note": "SRD text: \"You always have the Hunter's Mark spell prepared. You can cast it twice without expending a spell slot, and you regain all expended uses of this ability when you finish a Long Rest. The number of times you can cast the spell without a spell slot increases when you reach certain Ranger levels, as shown in the Favored Enemy column.\" Granted at Ranger level 1. Two real effects: spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/hunters-mark (verified present in the built pack; T3 machinery -- excluded from the preparedMax cap), and resource.define 'favored-enemy' with max '2 + floor((classLevel(ranger) - 1) / 4)' which reproduces the vendored column exactly (2 at levels 1-4, 3 at 5-8, 4 at 9-12, 5 at 13-16, 6 at 17-20; verified against all 20 rows of srd-2024_ranger_favored-enemy-uses). FREE-CAST HONESTY: this resource is a TRACKING PIP ONLY. No engine mechanism links a resource to free casts of a spell (spell.grant.uses is not consumed by any reader -- same finding as Paladin's Smite / Faithful Steed): casting Hunter's Mark from the sheet still spends a slot; the user ticks the pip manually when they use a free casting. Not state-wrong (no number on the sheet is derived from it); the spend linkage is propose-flow territory.",
+    "merge": {
+      "effects": [
+        { "type": "spell.grant", "spell": "srd-5e-2024:spell/hunters-mark", "alwaysPrepared": true },
+        {
+          "type": "resource.define",
+          "id": "favored-enemy",
+          "name": "Favored Enemy (free Hunter's Mark casts)",
+          "max": "2 + floor((classLevel(ranger) - 1) / 4)",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-weapon-mastery",
+    "cite": "SRD 5.2.1, Weapon Mastery (Ranger)",
+    "note": "SRD text: \"...use the mastery properties of two kinds of weapons of your choice with which you have proficiency ... Whenever you finish a Long Rest, you can change the kinds of weapons you chose.\" Granted at Ranger level 1. mastery.grant count '2' -- flat (verified: no srd-2024_ranger_weapon-mastery-count column exists). The long-rest swap is NOT expressible (same limitation as every other class) -- flagged.",
+    "merge": {
+      "effects": [{ "type": "mastery.grant", "count": "2" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-deft-explorer",
+    "cite": "SRD 5.2.1, Deft Explorer",
+    "note": "SRD text: \"Expertise. Choose one of your skill proficiencies with which you lack Expertise. You gain Expertise in that skill. Languages. You know two languages of your choice.\" Granted at Ranger level 2. NOT authored as a choice: the Expertise half would need a skill pick that applies proficiency.grant{level:'expertise'} to a skill the character is ALREADY proficient in; the engine has no pick-driven expertise form and a plain skill pick would GRANT base proficiency (state-wrong: gives proficiency to a skill the character lacks). The two free languages have no choice-driven language grant either (language.grant targets a fixed id). Text-feature fallback per ruling 9's bar; flagged -- slice-3 vocabulary candidate shared with Rogue/Bard Expertise.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Deft Explorer",
+          "description": "Thanks to your travels, you gain the following benefits. **Expertise.** Choose one of your skill proficiencies with which you lack Expertise. You gain Expertise in that skill. **Languages.** You know two languages of your choice from the language tables in Character Creation."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-fighting-style",
+    "cite": "SRD 5.2.1, Fighting Style (Ranger)",
+    "note": "SRD text: \"You gain a Fighting Style feat of your choice ... Instead of choosing one of those feats, you can choose the option below. Druidic Warrior. You learn two Druid cantrips of your choice ... The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips.\" Granted at Ranger level 2. The feat pick is a real class-row choice (class/ranger@2/fighting-style). The Druidic Warrior ALTERNATIVE is not authored: it is a second, non-feat option inside the same pick (no mixed 'feat OR inline option' pick form; overlays cannot create a new entity), and it would additionally need known-cantrip plumbing for a class with no cantrip column. Same categorical gap as Paladin's Blessed Warrior. Text-feature fallback; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Druidic Warrior",
+          "description": "Instead of choosing a Fighting Style feat, you can choose this option. **Druidic Warrior.** You learn two Druid cantrips of your choice. Guidance and Starry Wisp are recommended. The chosen cantrips count as Ranger spells for you, and Wisdom is your spellcasting ability for them. Whenever you gain a Ranger level, you can replace one of these cantrips with another Druid cantrip."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-extra-attack",
+    "cite": "SRD 5.2.1, Extra Attack (Ranger)",
+    "note": "SRD text: \"You can attack twice instead of once whenever you take the Attack action on your turn.\" Granted at Ranger level 5. Fully expressible: extraAttack.set{count:2} (Paladin/Monk/Fighter precedent).",
+    "merge": {
+      "effects": [{ "type": "extraAttack.set", "count": 2 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-expertise",
+    "cite": "SRD 5.2.1, Expertise (Ranger)",
+    "note": "SRD text: \"Choose two of your skill proficiencies with which you lack Expertise. You gain Expertise in those skills.\" Granted at Ranger level 9. Same finding as Deft Explorer and Rogue's Expertise: a plain skill pick would grant base proficiency (state-wrong) and the engine has no pick-driven expertise form; authoring nothing numeric. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Expertise",
+          "description": "Choose two of your skill proficiencies with which you lack Expertise. You gain Expertise in those skills."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-roving",
+    "cite": "SRD 5.2.1, Roving",
+    "note": "SRD text: \"Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed and a Swim Speed equal to your Speed.\" Granted at Ranger level 6. The walk-speed half is a real speed.bonus{mode:'walk', value:10} gated on armor category none/light/medium (Barbarian Fast Movement precedent; a shield does not suppress it). The Climb and Swim speeds are 'equal to your Speed' -- speed.set/speed.bonus take a FIXED integer, so a speed that tracks the (species-dependent, bonus-modified) walk speed cannot be expressed; a fixed 40 would be wrong for any non-30 species. Those clauses stay in the carried text; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 10,
+          "when": { "armor": { "category": ["none", "light", "medium"] } }
+        },
+        {
+          "type": "feature.text",
+          "name": "Roving",
+          "description": "You also have a Climb Speed and a Swim Speed equal to your Speed (your Speed increases by 10 feet while you aren't wearing Heavy armor; the walking increase is applied to your Speed automatically)."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-tireless",
+    "cite": "SRD 5.2.1, Tireless",
+    "note": "SRD text: \"Temporary Hit Points. As a Magic action, you can give yourself a number of Temporary Hit Points equal to 1d8 plus your Wisdom modifier (minimum of 1). You can use this action a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest. Decrease Exhaustion. Whenever you finish a Short Rest, your Exhaustion level, if any, decreases by 1.\" Granted at Ranger level 10. Real: resource.define 'tireless' max 'max(1, mod(wis))' reset longRest (the formula grammar's variadic max, as Aura of Protection), and action.define{kind:'action', resource:'tireless'} for the Magic action (spends the pool). The 1d8+WIS temp-HP roll is in the action description (no temp-HP grant effect type exists). The short-rest Exhaustion decrease is a rest-time rider with no vocabulary; carried in the description, flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "tireless",
+          "name": "Tireless",
+          "max": "max(1, mod(wis))",
+          "reset": "longRest"
+        },
+        {
+          "type": "action.define",
+          "id": "tireless-temporary-hit-points",
+          "name": "Tireless: Temporary Hit Points",
+          "kind": "action",
+          "description": "As a Magic action, give yourself Temporary Hit Points equal to 1d8 plus your Wisdom modifier (minimum of 1). Whenever you finish a Short Rest, your Exhaustion level, if any, decreases by 1.",
+          "resource": "tireless"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-relentless-hunter",
+    "cite": "SRD 5.2.1, Relentless Hunter",
+    "note": "SRD text: \"Taking damage can't break your Concentration on Hunter's Mark.\" Granted at Ranger level 13. Inexpressible: a spell-specific concentration rule with no concentration vocabulary. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Relentless Hunter",
+          "description": "Taking damage can't break your Concentration on Hunter's Mark."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-natures-veil",
+    "cite": "SRD 5.2.1, Nature's Veil",
+    "note": "SRD text: \"As a Bonus Action, you can give yourself the Invisible condition until the end of your next turn. You can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.\" Granted at Ranger level 14. Fully expressible: resource.define 'natures-veil' max 'max(1, mod(wis))' reset longRest plus action.define{kind:'bonus', resource:'natures-veil'}.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "natures-veil",
+          "name": "Nature's Veil",
+          "max": "max(1, mod(wis))",
+          "reset": "longRest"
+        },
+        {
+          "type": "action.define",
+          "id": "natures-veil",
+          "name": "Nature's Veil",
+          "kind": "bonus",
+          "description": "Give yourself the Invisible condition until the end of your next turn.",
+          "resource": "natures-veil"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-precise-hunter",
+    "cite": "SRD 5.2.1, Precise Hunter",
+    "note": "SRD text: \"You have Advantage on attack rolls against the creature currently marked by your Hunter's Mark.\" Granted at Ranger level 17. Inexpressible: advantage conditioned on a transient spell-mark on one target; an unconditional advantage.grant would be actively wrong. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Precise Hunter",
+          "description": "You have Advantage on attack rolls against the creature currently marked by your Hunter's Mark."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-feral-senses",
+    "cite": "SRD 5.2.1, Feral Senses",
+    "note": "SRD text: \"Your connection to the forces of nature grants you Blindsight with a range of 30 feet.\" Granted at Ranger level 18. Fully expressible: sense.grant{sense:'blindsight', range:30}.",
+    "merge": {
+      "effects": [{ "type": "sense.grant", "sense": "blindsight", "range": 30 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-foe-slayer",
+    "cite": "SRD 5.2.1, Foe Slayer",
+    "note": "SRD text: \"The damage die of your Hunter's Mark is a d10 rather than a d6.\" Granted at Ranger level 20. Inexpressible: modifies the dice of a specific spell's damage; no spell-damage-override vocabulary. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Foe Slayer",
+          "description": "The damage die of your Hunter's Mark is a d10 rather than a d6."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/hunter",
+    "cite": "SRD 5.2.1, Hunter",
+    "note": "Subclass entity carries no overlay change beyond this note: its features are granted via the levels[] rows transformClasses() already produced (verified: Hunter's Lore + Hunter's Prey @3, Defensive Tactics @7, Superior Hunter's Prey @11, Superior Hunter's Defense @15; vendored feature pks srd-2024_ranger_hunter_*). The Ranger subclass choice itself is the class row choice class/ranger@3/subclass."
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-hunter-hunters-lore",
+    "cite": "SRD 5.2.1, Hunter -- Hunter's Lore",
+    "note": "SRD text: \"While a creature is marked by your Hunter's Mark, you know whether that creature has any Immunities, Resistances, or Vulnerabilities, and if the creature has any, you know what they are.\" Hunter level 3. Informational knowledge about a marked target; nothing numeric. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Hunter's Lore",
+          "description": "While a creature is marked by your Hunter's Mark, you know whether that creature has any Immunities, Resistances, or Vulnerabilities, and if the creature has any, you know what they are."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-hunter-hunters-prey",
+    "cite": "SRD 5.2.1, Hunter -- Hunter's Prey",
+    "note": "SRD text: \"You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one. Colossus Slayer ... Horde Breaker ...\" Hunter level 3. OPTION-ENTITY CHECK: the vendored snapshot materializes ONE ClassFeature (srd-2024_ranger_hunter_hunters-prey) with both options only as prose -- no Colossus Slayer / Horde Breaker option entities exist in the pack (verified by id scan: the only hunter-* entities are the four feature rows plus the subclass), unlike Warlock invocations. A pick needs a feat query or a static list of existing entity ids and overlays cannot create entities, so the choice is categorical-inexpressible. The extra 1d8 is a dice rider (no dice damage.bonus) and Horde Breaker is an extra attack. Text-feature fallback per ruling 9's bar; flagged: slice-3 candidate (option entities or an inline-option pick).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Hunter's Prey",
+          "description": "You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one. **Colossus Slayer.** When you hit a creature with a weapon, the weapon deals an extra 1d8 damage to the target if it's missing any of its Hit Points. You can deal this extra damage only once per turn. **Horde Breaker.** Once on each of your turns when you make an attack with a weapon, you can make another attack with the same weapon against a different creature that is within 5 feet of the original target, that is within the weapon's range, and that you haven't attacked this turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-hunter-defensive-tactics",
+    "cite": "SRD 5.2.1, Hunter -- Defensive Tactics",
+    "note": "SRD text: \"You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one. Escape the Horde ... Multiattack Defense ...\" Hunter level 7. Same option-entity finding as Hunter's Prey (prose-only options, no entities); both options are turn-scoped reactions to other creatures' attacks with no vocabulary. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Defensive Tactics",
+          "description": "You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one. **Escape the Horde.** Opportunity Attacks have Disadvantage against you. **Multiattack Defense.** When a creature hits you with an attack roll, that creature has Disadvantage on all other attack rolls against you this turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-hunter-superior-hunters-prey",
+    "cite": "SRD 5.2.1, Hunter -- Superior Hunter's Prey",
+    "note": "SRD text: \"Once per turn when you deal damage to a creature marked by your Hunter's Mark, you can also deal that spell's extra damage to a different creature that you can see within 30 feet of the first creature.\" Hunter level 11. Inexpressible: multi-target spell-damage rider. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Superior Hunter's Prey",
+          "description": "Once per turn when you deal damage to a creature marked by your Hunter's Mark, you can also deal that spell's extra damage to a different creature that you can see within 30 feet of the first creature."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/ranger-hunter-superior-hunters-defense",
+    "cite": "SRD 5.2.1, Hunter -- Superior Hunter's Defense",
+    "note": "SRD text: \"When you take damage, you can take a Reaction to give yourself Resistance to that damage and any other damage of the same type until the end of the current turn.\" Hunter level 15. Not authored as damage.resistance: it applies only after a Reaction, for one damage type, until the end of one turn -- an unconditional resistance would be actively wrong. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Superior Hunter's Defense",
+          "description": "When you take damage, you can take a Reaction to give yourself Resistance to that damage and any other damage of the same type until the end of the current turn."
+        }
+      ]
+    }
+  }
+]

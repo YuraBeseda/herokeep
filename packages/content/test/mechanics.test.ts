@@ -1620,3 +1620,294 @@ describe('paladin integration over the real pack (task 9)', () => {
     });
   });
 });
+
+describe('ranger and hunter to level 20 mechanics (task 10)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.ranger].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.ranger.filter((x) => features.some((f) => f.id === x.id)),
+  );
+  interface RangerShape {
+    hitDie: number;
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount: number } };
+    levels: { level: number; choices: { id: string; pick: unknown; count: number | string }[] }[];
+  }
+  const ranger = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/ranger') as unknown as RangerShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/ranger-${slug}`) as unknown as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('ranger: core traits (d10, str/dex saves, light+medium+shields, simple+martial, 3 skills from 8)', () => {
+    const r = ranger();
+    expect(r.hitDie).toBe(10);
+    expect([...r.saves].sort()).toEqual(['dex', 'str']);
+    expect(r.armorTraining).toEqual(['light', 'medium', 'shields']);
+    expect(r.weaponProficiencies).toEqual(['simple', 'martial']);
+    expect(r.skillChoice.count).toBe(3);
+    expect([...r.skillChoice.from].sort()).toEqual(
+      [
+        'animal-handling',
+        'athletics',
+        'insight',
+        'investigation',
+        'nature',
+        'perception',
+        'stealth',
+        'survival',
+      ].sort(),
+    );
+  });
+
+  it('ranger: multiclass gains = martial, light/medium armor, shields, ONE skill (owner-flagged, SRD-silent)', () => {
+    expect(ranger().multiclass.gains).toEqual({
+      armorTraining: ['light', 'medium', 'shields'],
+      weaponProficiencies: ['martial'],
+      skillChoiceCount: 1,
+    });
+  });
+
+  it('ranger: choices — masteries x2 @1, fighting style @2, Hunter subclass @3, ASI 4/8/12/16 + boon 19', () => {
+    const rows = ranger().levels;
+    const choices = rows.flatMap((r) => r.choices);
+    const ids = choices.map((c) => c.id);
+    const mastery = choices.find((c) => c.id === 'srd-5e-2024:class/ranger@1/weapon-masteries')!;
+    expect(mastery.count).toBe(2);
+    expect(mastery.pick).toEqual({ query: { type: 'item', hasField: ['weapon.mastery'] } });
+    const style = rows.find((r) => r.level === 2)!.choices.find((c) => c.id.endsWith('/fighting-style'))!;
+    expect(style.pick).toEqual({ query: { type: 'feat', tags: ['fighting-style'] } });
+    expect(choices.find((c) => c.id === 'srd-5e-2024:class/ranger@3/subclass')!.pick).toEqual({
+      query: { type: 'subclass', classes: ['ranger'] },
+    });
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/ranger@${level}/feat`);
+    expect(ids).not.toContain('srd-5e-2024:class/ranger@10/feat');
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/ranger').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/hunter']);
+  });
+
+  it('ranger: Spellcasting is a WIS half-caster with prepared spells, druidic focus, no ritual casting', () => {
+    expect(feature('spellcasting').effects).toEqual([
+      {
+        type: 'spellcasting.define',
+        class: 'ranger',
+        ability: 'wis',
+        list: 'ranger',
+        preparation: 'prepared',
+        slots: 'half',
+        ritual: false,
+        focus: true,
+      },
+    ]);
+  });
+
+  it('ranger: text fallbacks present for the inexpressible features (expertise, Hunter options, riders)', () => {
+    for (const slug of [
+      'deft-explorer',
+      'expertise',
+      'fighting-style',
+      'precise-hunter',
+      'relentless-hunter',
+      'foe-slayer',
+      'roving',
+      'hunter-hunters-lore',
+      'hunter-hunters-prey',
+      'hunter-defensive-tactics',
+      'hunter-superior-hunters-prey',
+      'hunter-superior-hunters-defense',
+    ]) {
+      expect(
+        feature(slug).effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('ranger: Expertise / Deft Explorer are NEVER authored as skill picks or proficiency grants (state-wrong shape)', () => {
+    for (const slug of ['deft-explorer', 'expertise']) {
+      expect(
+        feature(slug).effects.map((e) => e.type),
+        slug,
+      ).toEqual(['feature.text']);
+    }
+    const choices = ranger().levels.flatMap((r) => r.choices);
+    expect(choices.some((c) => /expertise|deft/.test(c.id))).toBe(false);
+  });
+});
+
+describe('ranger integration over the real pack (task 10)', () => {
+  const rangerId = `${FP}:class/ranger`;
+  const spell = (s: string) => `${FP}:spell/${s}`;
+  function rangerChar(level: number, opts: { hunter?: boolean; wis?: number } = {}): Event[] {
+    featSeq = 0;
+    const wis = opts.wis ?? 14;
+    return [
+      featEv('character.created', {
+        name: 'Elora',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, ['str:+2', 'con:+1']),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, [
+        'str:15',
+        'dex:13',
+        'con:13',
+        'int:10',
+        `wis:${wis}`,
+        'cha:8',
+      ]),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', {
+          classId: rangerId,
+          level: i + 1,
+          hpRoll: 'average',
+          ...(opts.hunter && i + 1 === 3 ? { subclassId: `${FP}:subclass/hunter` } : {}),
+        }),
+      ),
+    ];
+  }
+  const block = (level: number) => sheetOf(rangerChar(level)).spellcasting.find((b) => b.classId === rangerId)!;
+  const equipped = (level: number, ...slugs: string[]) => {
+    const facts = reduce(rangerChar(level), undefined, featRules);
+    facts.inventory = slugs.map((s, i) => ({
+      instanceId: `i${i}`,
+      itemId: `${FP}:item/${s}`,
+      qty: 1,
+      equipped: true,
+      attuned: false,
+    }));
+    return derive(facts, featIndex, featRules);
+  };
+
+  it('saves: str + dex proficient and nothing else (derive-level)', () => {
+    const a = sheetOf(rangerChar(1)).abilities;
+    expect(
+      Object.entries(a)
+        .filter(([, v]) => v.saveProficient)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['dex', 'str']);
+  });
+
+  it('armor + weapon proficiencies: light/medium/shields, simple + martial, NOT heavy (derive-level)', () => {
+    const p = sheetOf(rangerChar(1)).proficiencies;
+    const has = (kind: string, target: string) => p.some((x) => x.kind === kind && x.target === target);
+    for (const t of ['light', 'medium', 'shields']) expect(has('armor', t), t).toBe(true);
+    expect(has('armor', 'heavy')).toBe(false);
+    for (const t of ['simple', 'martial']) expect(has('weapon', t), t).toBe(true);
+  });
+
+  it('half-caster slots follow the vendored columns level by level (2@1, 3@3, 4/2@5, 4/3/2@9, 4/3/3/1@13, 4/3/3/3/2@19)', () => {
+    const max = (l: number) => block(l).slots.map((s) => s.max);
+    expect(max(1)).toEqual([2]);
+    expect(max(2)).toEqual([2]);
+    expect(max(3)).toEqual([3]);
+    expect(max(5)).toEqual([4, 2]);
+    expect(max(7)).toEqual([4, 3]);
+    expect(max(9)).toEqual([4, 3, 2]);
+    expect(max(11)).toEqual([4, 3, 3]);
+    expect(max(13)).toEqual([4, 3, 3, 1]);
+    expect(max(15)).toEqual([4, 3, 3, 2]);
+    expect(max(17)).toEqual([4, 3, 3, 3, 1]);
+    expect(max(19)).toEqual([4, 3, 3, 3, 2]);
+    expect(max(20)).toEqual([4, 3, 3, 3, 2]);
+    expect(block(1).cantripsKnown ?? 0).toBe(0); // no cantrips column vendored for Ranger
+  });
+
+  it('prepared-spell cap follows the vendored Prepared Spells column (2@1 ... 15@19-20)', () => {
+    const col: Record<number, number> = {
+      1: 2,
+      2: 3,
+      3: 4,
+      4: 5,
+      5: 6,
+      6: 6,
+      7: 7,
+      8: 7,
+      9: 9,
+      10: 9,
+      11: 10,
+      12: 10,
+      13: 11,
+      14: 11,
+      15: 12,
+      16: 12,
+      17: 14,
+      18: 14,
+      19: 15,
+      20: 15,
+    };
+    for (const [l, n] of Object.entries(col)) expect(block(Number(l)).preparedMax, `level ${l}`).toBe(n);
+  });
+
+  it("Favored Enemy: Hunter's Mark always prepared from level 1 (real pack spell) + free-cast tracker 2/3/4/5/6", () => {
+    expect(featIndex.get(spell('hunters-mark'))?.type).toBe('spell');
+    expect(block(1).alwaysPrepared).toEqual([spell('hunters-mark')]);
+    expect(block(1).prepared).toContain(spell('hunters-mark'));
+    expect(block(20).alwaysPrepared).toEqual([spell('hunters-mark')]);
+    const fe = (l: number) => sheetOf(rangerChar(l)).resources.find((r) => r.id === 'favored-enemy');
+    const col: Record<number, number> = { 1: 2, 2: 2, 4: 2, 5: 3, 8: 3, 9: 4, 12: 4, 13: 5, 16: 5, 17: 6, 20: 6 };
+    for (const [l, n] of Object.entries(col)) expect(fe(Number(l))?.max.value, `level ${l}`).toBe(n);
+    expect(fe(1)).toMatchObject({ reset: 'longRest' });
+    // the always-prepared grant does not eat the prepared cap
+    expect(block(1).preparedMax).toBe(2);
+  });
+
+  it('Weapon Mastery count 2, Extra Attack at 5', () => {
+    expect(sheetOf(rangerChar(1)).masteryCount).toBe(2);
+    expect(sheetOf(rangerChar(4)).attacksPerAction).toBe(1);
+    expect(sheetOf(rangerChar(5)).attacksPerAction).toBe(2);
+  });
+
+  it('Roving (6): walk speed +10 unless wearing heavy armor (derive-level)', () => {
+    expect(equipped(5).speed['walk']!.value).toBe(30);
+    expect(equipped(6).speed['walk']!.value).toBe(40);
+    expect(equipped(6, 'chain-shirt').speed['walk']!.value).toBe(40);
+    expect(equipped(6, 'chain-mail').speed['walk']!.value).toBe(30);
+  });
+
+  it("Tireless (10) and Nature's Veil (14): Wisdom-modifier long-rest pools with min 1 + spending actions", () => {
+    const pool = (l: number, id: string, wis?: number) =>
+      sheetOf(rangerChar(l, { wis })).resources.find((r) => r.id === id);
+    expect(pool(9, 'tireless')).toBeUndefined();
+    expect(pool(10, 'tireless')?.max.value).toBe(2); // WIS 14 -> +2
+    expect(pool(10, 'tireless', 8)?.max.value).toBe(1); // negative modifier floors at 1
+    expect(pool(10, 'tireless')?.reset).toBe('longRest');
+    expect(pool(13, 'natures-veil')).toBeUndefined();
+    expect(pool(14, 'natures-veil')?.max.value).toBe(2);
+    expect(pool(14, 'natures-veil', 8)?.max.value).toBe(1);
+    expect(sheetOf(rangerChar(14)).actions.find((a) => a.id === 'natures-veil')).toMatchObject({
+      kind: 'bonus',
+      resource: 'natures-veil',
+    });
+    expect(sheetOf(rangerChar(10)).actions.find((a) => a.id === 'tireless-temporary-hit-points')).toMatchObject({
+      resource: 'tireless',
+    });
+  });
+
+  it('Feral Senses (18): Blindsight 30 ft, absent before', () => {
+    const bs = (l: number) => sheetOf(rangerChar(l)).senses.find((s) => s.sense === 'blindsight');
+    expect(bs(17)).toBeUndefined();
+    expect(bs(18)?.range).toBe(30);
+    expect(bs(20)?.range).toBe(30);
+  });
+
+  it('Hunter subclass resolves from level 3 without breaking the sheet (text-only features)', () => {
+    const s = sheetOf(rangerChar(15, { hunter: true }));
+    expect(s.spellcasting.find((b) => b.classId === rangerId)!.alwaysPrepared).toEqual([spell('hunters-mark')]);
+  });
+});
