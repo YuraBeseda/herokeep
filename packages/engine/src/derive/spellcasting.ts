@@ -34,6 +34,14 @@ export interface SpellcastingBlock {
   preparedMax?: number;
   /** From `facts.preparedSpells`/`knownSpells`, keyed by the class's resolved (canonical) entity id — see `classId` below. */
   prepared: string[];
+  /**
+   * Plan 12 task 3: spells in `prepared` that come from an active `spell.grant { alwaysPrepared: true }`
+   * on THIS class (or its subclass). They do NOT count against `preparedMax` (count
+   * `prepared.length - alwaysPrepared.length`) and cannot be unprepared (`propose.unprepare` refuses
+   * with `spell.always-prepared`; a stray `spell.unprepared` event is harmless — it only edits facts,
+   * and this list is re-merged at derive time). Absent (not `[]`) when the class has none.
+   */
+  alwaysPrepared?: string[];
   known: string[];
   cantripsKnown?: number;
   ritual: boolean;
@@ -263,6 +271,23 @@ export function deriveSpellcasting(
     for (const c of distinctWeighted) combinedClassIds.add(c.classId);
   }
 
+  // ---- Always-prepared grants: `spell.grant { alwaysPrepared: true }`, bound to the GRANTING class. --
+  // The granting class is the effect's root source entity when that is a class, or its parent class
+  // when it is a subclass (oath/circle/domain spells). A source that is neither (feat, species, item)
+  // names no class, so it binds to no block. Deduped by spell id within a class (a twice-taken source
+  // or two features granting the same spell yield one entry), first-seen order.
+  const alwaysPreparedByClass = new Map<string, string[]>();
+  for (const ae of abilities.effects) {
+    const eff = ae.effect;
+    if (eff.type !== 'spell.grant' || !eff.alwaysPrepared) continue;
+    const src = index.get(ae.source);
+    const grantingClass = src?.type === 'class' ? src.id : src?.type === 'subclass' ? src.class : undefined;
+    if (grantingClass === undefined) continue;
+    const list = alwaysPreparedByClass.get(grantingClass) ?? [];
+    if (!list.includes(eff.spell)) list.push(eff.spell);
+    alwaysPreparedByClass.set(grantingClass, list);
+  }
+
   // ---- Pass 2: build each block. ----------------------------------------------------------------
   const blocks: SpellcastingBlock[] = [];
   for (const c of casters) {
@@ -296,6 +321,9 @@ export function deriveSpellcasting(
       cantripsKnown = evalFormula(c.cantripsKnownFormula);
     }
 
+    const alwaysPrepared = alwaysPreparedByClass.get(classId);
+    const preparedList = facts.preparedSpells[classId] ?? [];
+
     blocks.push({
       classId,
       ability: c.ability,
@@ -305,7 +333,10 @@ export function deriveSpellcasting(
       ...(pact ? { pact } : {}),
       preparation: c.preparation,
       preparedMax,
-      prepared: facts.preparedSpells[classId] ?? [],
+      prepared: alwaysPrepared
+        ? [...preparedList, ...alwaysPrepared.filter((s) => !preparedList.includes(s))]
+        : preparedList,
+      ...(alwaysPrepared ? { alwaysPrepared } : {}),
       known: facts.knownSpells[classId] ?? [],
       cantripsKnown,
       ritual: c.ritual,

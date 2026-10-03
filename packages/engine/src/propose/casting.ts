@@ -1,4 +1,4 @@
-import type { SlotSpent, SpellCast } from '@hk/protocol';
+import type { SlotSpent, SpellCast, SpellUnprepared } from '@hk/protocol';
 import type { Sheet } from '../derive/sheet.ts';
 import { error } from '../diagnostics.ts';
 import { ProposeError, type ProposedEvent } from './index.ts';
@@ -69,6 +69,25 @@ function pactSlotFor(sheet: Sheet, level: number): { level: number; count: numbe
  * comment — not the caller's requested `level`, and silently substituting one for the other without
  * being asked would surprise a caller who explicitly asked for a specific `level`.
  */
+/**
+ * Plan 12 task 3 — drafts `spell.unprepared`, refusing (`'spell.always-prepared'`) when the spell is
+ * in that class block's `alwaysPrepared` list (a `spell.grant { alwaysPrepared: true }` from the class
+ * or its subclass). Always-prepared spells are re-merged at derive time, so the event would be a
+ * no-op anyway; the refusal exists so a UI surfaces a reason instead of silently doing nothing.
+ */
+export function unprepare(sheet: Sheet, classId: string, spellId: string): ProposedEvent[] {
+  const block = sheet.spellcasting.find((b) => b.classId === classId);
+  if (block?.alwaysPrepared?.includes(spellId)) {
+    throw new ProposeError([
+      error('spell.always-prepared', `"${spellId}" is always prepared and cannot be unprepared`, {
+        entityId: spellId,
+      }),
+    ]);
+  }
+  const payload: SpellUnprepared = { spellId, classId };
+  return [mk('spell.unprepared', payload)];
+}
+
 export function spendSlot(sheet: Sheet, level: number, opts?: { pact?: boolean }): ProposedEvent[] {
   if (opts?.pact) {
     const pact = pactSlotFor(sheet, level);

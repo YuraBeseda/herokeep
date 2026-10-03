@@ -332,6 +332,85 @@ describe('deriveSpellcasting: slot progressions + multiclass table (phase 4 plan
   });
 });
 
+describe('deriveSpellcasting: always-prepared spell.grant (phase 4 plan 12 task 3)', () => {
+  const OATH = 'core-mini:spell/bless';
+  const OTHER = 'core-mini:spell/shield';
+  const PALADIN = 'slots-mini:class/paladin';
+  const SORCERER = 'slots-mini:class/sorcerer';
+
+  /** slots-mini with `spell.grant`s appended to the named class entity's own effects. */
+  const grantIndex = (grants: Record<string, string[]>, alwaysPrepared = true) => {
+    const pack = structuredClone(loadFixturePack('slots-mini'));
+    for (const [classId, spells] of Object.entries(grants)) {
+      const holder = pack.entities.find((e) => e.id === classId)!;
+      for (const spell of spells) {
+        holder.effects = [...holder.effects, { type: 'spell.grant', spell, alwaysPrepared } as never];
+      }
+    }
+    return createContentIndex([loadFixturePack('core-mini'), pack]);
+  };
+  const run = (idx: ReturnType<typeof grantIndex>, facts: ReturnType<typeof baseFacts>) => {
+    const comp = compose(facts, idx);
+    const abilities = deriveAbilities(facts, comp, idx);
+    return deriveSpellcasting(abilities, comp, facts, idx).blocks;
+  };
+
+  it('an alwaysPrepared grant appears in the granting class block prepared list and in alwaysPrepared', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: PALADIN, level: 4 }];
+    facts.preparedSpells[PALADIN] = [OTHER];
+    const [block] = run(grantIndex({ [PALADIN]: [OATH] }), facts);
+
+    expect(block!.prepared).toEqual([OTHER, OATH]);
+    expect(block!.alwaysPrepared).toEqual([OATH]);
+  });
+
+  it('does not count against preparedMax (the cap is unchanged; counted = prepared minus alwaysPrepared)', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: PALADIN, level: 4 }];
+    facts.preparedSpells[PALADIN] = [OTHER];
+    const plain = run(grantIndex({}), facts)[0]!;
+    const granted = run(grantIndex({ [PALADIN]: [OATH] }), facts)[0]!;
+
+    expect(granted.preparedMax).toBe(plain.preparedMax);
+    expect(granted.prepared.length - granted.alwaysPrepared!.length).toBe(plain.prepared.length);
+  });
+
+  it('a non-alwaysPrepared spell.grant never touches the prepared list; blocks carry no alwaysPrepared key', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: PALADIN, level: 4 }];
+    const [block] = run(grantIndex({ [PALADIN]: [OATH] }, false), facts);
+    expect(block!.prepared).toEqual([]);
+    expect('alwaysPrepared' in block!).toBe(false);
+  });
+
+  it('multiclass: the grant binds to the granting class block only', () => {
+    const facts = withAbilitiesSlots({ cha: 16, wis: 16 });
+    facts.classes = [
+      { classId: PALADIN, level: 4 },
+      { classId: SORCERER, level: 3 },
+    ];
+    const blocks = run(grantIndex({ [PALADIN]: [OATH] }), facts);
+    const pal = blocks.find((b) => b.classId === PALADIN)!;
+    const sor = blocks.find((b) => b.classId === SORCERER)!;
+
+    expect(blocks).toHaveLength(2);
+    expect(pal.prepared).toEqual([OATH]);
+    expect(sor.prepared).toEqual([]);
+    expect(sor.alwaysPrepared).toBeUndefined();
+  });
+
+  it('dedupes by spell id within a block (same spell granted twice, or already prepared manually)', () => {
+    const facts = withAbilitiesSlots({ cha: 16 });
+    facts.classes = [{ classId: PALADIN, level: 4 }];
+    facts.preparedSpells[PALADIN] = [OATH];
+    const [block] = run(grantIndex({ [PALADIN]: [OATH, OATH] }), facts);
+
+    expect(block!.prepared).toEqual([OATH]);
+    expect(block!.alwaysPrepared).toEqual([OATH]);
+  });
+});
+
 describe('deriveResources', () => {
   it('evaluates a resource max formula against the class level', () => {
     const facts1 = withAbilities({});

@@ -183,3 +183,23 @@ describe('propose.cast — pact lane', () => {
     expect(final.slotsUsed).toEqual({});
   });
 });
+
+describe('propose.unprepare (phase 4 plan 12 task 3)', () => {
+  it('refuses to unprepare an always-prepared spell with spell.always-prepared', () => {
+    const sheet = casterSheet({ prepared: [fireball], alwaysPrepared: [fireball] });
+    const err = captureProposeError(() => propose.unprepare(sheet, wizard, fireball));
+    expect(err.diagnostics[0]!.code).toBe('spell.always-prepared');
+  });
+
+  it('drafts spell.unprepared for an ordinary prepared spell', () => {
+    const sheet = casterSheet({ prepared: [fireball] });
+    expect(propose.unprepare(sheet, wizard, fireball)).toEqual([
+      { type: 'spell.unprepared', v: 1, payload: { spellId: fireball, classId: wizard } },
+    ]);
+  });
+
+  it('the always-prepared flag is per class block', () => {
+    const sheet = casterSheet({ prepared: [fireball], alwaysPrepared: [fireball] });
+    expect(() => propose.unprepare(sheet, warlock, fireball)).not.toThrow();
+  });
+});

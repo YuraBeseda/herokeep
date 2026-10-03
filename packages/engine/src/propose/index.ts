@@ -40,6 +40,7 @@ export const propose = {
   tempHp: vitals.tempHp,
   spendSlot: casting.spendSlot,
   cast: casting.cast,
+  unprepare: casting.unprepare,
   rest: restFamily.rest,
   spendHitDie: vitals.spendHitDie,
   deathSave: vitals.deathSave,
