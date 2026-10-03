@@ -387,6 +387,7 @@
       "dc": "Сложность испытания",
       "attack": "Бонус атаки заклинанием",
       "cantripsKnown": "Известно заговоров",
+      "sharedSlots": "Ячейки заклинаний",
       "slotsLevel": "Ячейки {level} уровня",
       "slotPipLabel": "Ячейка {level} уровня {index} из {max}",
       "pactSlotsLevel": "Ячейки Соглашения ({level} уровня)",

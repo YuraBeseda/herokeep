@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { signal, type Provider, type WritableSignal } from '@angular/core';
+import { computed, signal, type Provider, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { propose, type Sheet } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -2994,5 +2994,128 @@ describe('PlayTabComponent — campaign edit lock (plan-10 task-14-brief.md, rul
       const state = compiled.querySelector('.play-tab__inventory-carry-state')!;
       expect(state.textContent.trim().length).toBeGreaterThan(0);
     });
+  });
+});
+
+// Hand-shapes the sheet the component reads: no shipped pack content produces a pooled multiclass
+// caster in this fixture set (and none grants always-prepared spells yet), so the REAL persisted
+// sheet is re-derived through `mutate` before the component is created — everything else (events,
+// `appendTx`, `propose.*` against the shaped sheet) stays the real wiring. Must run BEFORE
+// `TestBed.createComponent(PlayTabComponent)` (the component captures `characterStore.sheet` once).
+function shapeSheet(mutate: (sheet: Sheet) => Sheet): void {
+  const store = TestBed.inject(CharacterStore);
+  const real = store.sheet;
+  Object.defineProperty(store, 'sheet', {
+    value: computed(() => {
+      const sheet = real();
+      return sheet ? mutate(sheet) : sheet;
+    }),
+  });
+}
+
+function resetSpellDb(): Promise<unknown[]> {
+  const db = TestBed.inject(HkDb);
+  return Promise.all([
+    db.events.clear(),
+    db.settings.clear(),
+    db.snapshots.clear(),
+    db.characters.clear(),
+  ]);
+}
+
+// Plan 12 task 4: a pooled multiclass caster gets the SAME combined slot row on every block.
+describe('PlayTabComponent — pooled multiclass slot row renders once (plan 12 task 4)', () => {
+  const POOLED = [
+    { level: 1, max: 4, used: 1 },
+    { level: 2, max: 3, used: 0 },
+  ];
+
+  beforeEach(async () => {
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    await resetSpellDb();
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  const slotRows = (c: HTMLElement) => c.querySelectorAll('.play-tab__slot-row');
+  const sharedHeader = (c: HTMLElement) =>
+    Array.from(c.querySelectorAll('h3')).filter(
+      (h) => h.textContent?.trim() === charactersEn.sheet.spellcasting.sharedSlots,
+    );
+
+  it('Cleric 3 / Wizard 2: the shared pool renders ONCE under a shared header, not once per class block', async () => {
+    await seedWizard('Elowen');
+    shapeSheet((sheet) => {
+      const [wizard] = sheet.spellcasting;
+      return {
+        ...sheet,
+        spellcasting: [
+          { ...wizard, classId: 'srd-5e-2024:class/cleric', slots: POOLED.map((s) => ({ ...s })) },
+          { ...wizard, slots: POOLED.map((s) => ({ ...s })) },
+        ],
+      };
+    });
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(sharedHeader(compiled)).toHaveLength(1);
+    expect(slotRows(compiled)).toHaveLength(POOLED.length); // 2 rows, not 4
+    // Both per-class sections remain (DC/attack/lists), but neither re-renders the pool.
+    const blocks = compiled.querySelectorAll('.play-tab__spellblock:not(.play-tab__shared-slots)');
+    expect(blocks).toHaveLength(2);
+    blocks.forEach((b) => expect(b.querySelector('.play-tab__slot-row')).toBeNull());
+    // The shared pool's pips reflect the engine row (level 1: 4 max, 1 used).
+    const firstRow = slotRows(compiled)[0]!;
+    expect(firstRow.querySelectorAll('.hk-pips__pip')).toHaveLength(4);
+    expect(firstRow.querySelectorAll('.hk-pips__pip--filled')).toHaveLength(1);
+  });
+
+  it('Warlock / Cleric: the pact lane and the regular slot row stay separate (nothing is shared)', async () => {
+    await seedWizard('Elowen');
+    shapeSheet((sheet) => {
+      const [wizard] = sheet.spellcasting;
+      return {
+        ...sheet,
+        spellcasting: [
+          {
+            ...wizard,
+            classId: 'srd-5e-2024:class/warlock',
+            slots: [],
+            pact: { level: 2, count: 2, used: 0 },
+          },
+          { ...wizard, classId: 'srd-5e-2024:class/cleric', slots: POOLED.map((s) => ({ ...s })) },
+        ],
+      };
+    });
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(sharedHeader(compiled)).toHaveLength(0);
+    expect(compiled.querySelectorAll('.play-tab__pact-slots .play-tab__slot-row')).toHaveLength(1);
+    // Regular rows: only the cleric's two levels (the pact row is a `.play-tab__slot-row` too).
+    expect(slotRows(compiled)).toHaveLength(POOLED.length + 1);
+  });
+
+  it('a solo Wizard is unchanged: its slots render inside its own block, with no shared header', async () => {
+    await seedWizard('Elowen');
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(sharedHeader(compiled)).toHaveLength(0);
+    expect(compiled.querySelector('.play-tab__shared-slots')).toBeNull();
+    expect(
+      compiled.querySelector('.play-tab__spellblock .play-tab__slots .play-tab__slot-row'),
+    ).not.toBeNull();
+    expect(slotRows(compiled)).toHaveLength(1);
   });
 });

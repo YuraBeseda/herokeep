@@ -387,6 +387,7 @@
       "dc": "Складність рятівного кидка",
       "attack": "Бонус атаки заклинанням",
       "cantripsKnown": "Відомо заговорів",
+      "sharedSlots": "Комірки заклинань",
       "slotsLevel": "Комірки {level} рівня",
       "slotPipLabel": "Комірка {level} рівня {index} з {max}",
       "pactSlotsLevel": "Комірки Угоди ({level} рівня)",

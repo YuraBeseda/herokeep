@@ -376,7 +376,33 @@
 
     <!-- Spellcasting -->
     <hk-sheet-section [titleKey]="'characters.sheet.spellcasting.title'" class="play-tab__section">
+      <ng-template #slotRows let-slots>
+        @for (slot of slots; track slot.level) {
+          <div class="play-tab__slot-row">
+            <span class="play-tab__slot-label">{{
+              t('sheet.spellcasting.slotsLevel', { level: slot.level })
+            }}</span>
+            <hk-pips
+              [max]="slot.max"
+              [used]="slot.used"
+              [labelKey]="'characters.sheet.spellcasting.slotPipLabel'"
+              [labelParams]="{ level: slot.level }"
+              [viewReadonly]="editLocked()"
+              (spend)="onSpendSlot(slot.level)"
+              (restore)="onRestoreSlot(slot.level)"
+            />
+          </div>
+        }
+      </ng-template>
       @if (spellBlocks().length > 0) {
+        @for (slots of sharedSlotRows(); track $index) {
+          <div class="play-tab__spellblock play-tab__shared-slots">
+            <h3 class="play-tab__subtitle">{{ t('sheet.spellcasting.sharedSlots') }}</h3>
+            <div class="play-tab__slots">
+              <ng-container *ngTemplateOutlet="slotRows; context: { $implicit: slots }" />
+            </div>
+          </div>
+        }
         @for (block of spellBlocks(); track block.classId) {
           <div class="play-tab__spellblock">
             <div class="play-tab__spell-stats">
@@ -407,24 +433,11 @@
                 />
               }
             </div>
-            <div class="play-tab__slots">
-              @for (slot of block.slots; track slot.level) {
-                <div class="play-tab__slot-row">
-                  <span class="play-tab__slot-label">{{
-                    t('sheet.spellcasting.slotsLevel', { level: slot.level })
-                  }}</span>
-                  <hk-pips
-                    [max]="slot.max"
-                    [used]="slot.used"
-                    [labelKey]="'characters.sheet.spellcasting.slotPipLabel'"
-                    [labelParams]="{ level: slot.level }"
-                    [viewReadonly]="editLocked()"
-                    (spend)="onSpendSlot(slot.level)"
-                    (restore)="onRestoreSlot(slot.level)"
-                  />
-                </div>
-              }
-            </div>
+            @if (!block.slotsShared) {
+              <div class="play-tab__slots">
+                <ng-container *ngTemplateOutlet="slotRows; context: { $implicit: block.slots }" />
+              </div>
+            }
             @if (block.pact; as pact) {
               <div class="play-tab__slots play-tab__pact-slots">
                 <div class="play-tab__slot-row">

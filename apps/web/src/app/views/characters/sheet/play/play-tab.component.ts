@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Component, computed, effect, inject, resource, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -197,6 +198,10 @@ const DENOMINATIONS: readonly Denomination[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
 type AbilityBlock = Sheet['abilities'][string];
 type AttackRow = Sheet['attacks'][number];
 type SpellcastingBlock = Sheet['spellcasting'][number];
+
+// Value identity of a slot row (level/max/used triples) — see `PlayTabComponent.sharedSlotKeys`.
+const slotRowKey = (slots: SpellcastingBlock['slots']): string =>
+  slots.map((s) => `${s.level}:${s.max}:${s.used}`).join('|');
 type ResourceView = Sheet['resources'][number];
 type ActionView = Sheet['actions'][number];
 type InventoryRow = Sheet['inventory'][number];
@@ -285,6 +290,7 @@ type ScopedT = (key: string, params?: Record<string, unknown>) => string;
 @Component({
   selector: 'app-play-tab',
   imports: [
+    NgTemplateOutlet,
     TranslocoDirective,
     FormsModule,
     ButtonComponent,
@@ -411,15 +417,54 @@ export class PlayTabComponent {
   // fed). `known`/`prepared` become resolved `SpellRow[]` instead of bare name strings, so the
   // template can gate cantrip-vs-leveled Cast/Prepare affordances off each spell's own level.
   protected readonly spellBlocks = computed<
-    (SpellcastingBlock & { knownSpells: SpellRow[]; preparedSpells: SpellRow[] })[]
+    (SpellcastingBlock & {
+      knownSpells: SpellRow[];
+      preparedSpells: SpellRow[];
+      slotsShared: boolean;
+    })[]
   >(() => {
     const sheet = this.sheet();
     if (!sheet) return [];
+    const shared = this.sharedSlotKeys();
     return sheet.spellcasting.map((block) => ({
       ...block,
       knownSpells: block.known.map((id) => this.spellRow(id)),
       preparedSpells: block.prepared.map((id) => this.spellRow(id)),
+      slotsShared: shared.has(slotRowKey(block.slots)),
     }));
+  });
+
+  // Pooled-slot dedupe (plan 12 task 4): for a pooled multiclass caster the engine emits the SAME
+  // combined slot row on EVERY participating block (`derive/spellcasting.ts`; pinned by
+  // `spellcasting.test.ts`), so a row that appears (value-identical) on 2+ blocks IS the shared
+  // pool — and since slot `used` is one global per-level counter in the facts, identical rows are
+  // one resource however they arose. No multiclass rules live here: only "identical engine output
+  // renders once". A pact block has an empty `slots` row and is never grouped (it renders its own
+  // pact lane); a solo caster's row is unique so it stays on its own block.
+  private readonly sharedSlotKeys = computed<ReadonlySet<string>>(() => {
+    const counts = new Map<string, number>();
+    for (const block of this.sheet()?.spellcasting ?? []) {
+      if (block.slots.length === 0) continue;
+      const key = slotRowKey(block.slots);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return new Set([...counts].filter(([, n]) => n >= 2).map(([key]) => key));
+  });
+
+  protected readonly sharedSlotRows = computed<SpellcastingBlock['slots'][]>(() => {
+    const sheet = this.sheet();
+    if (!sheet) return [];
+    const shared = this.sharedSlotKeys();
+    const seen = new Set<string>();
+    const rows: SpellcastingBlock['slots'][] = [];
+    for (const block of sheet.spellcasting) {
+      const key = slotRowKey(block.slots);
+      if (shared.has(key) && !seen.has(key)) {
+        seen.add(key);
+        rows.push(block.slots);
+      }
+    }
+    return rows;
   });
 
   // task-3-brief.md: `Sheet.concentration` (added this task, `derive/sheet.ts`) is present only

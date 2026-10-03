@@ -387,6 +387,7 @@
       "dc": "Save DC",
       "attack": "Attack bonus",
       "cantripsKnown": "Cantrips known",
+      "sharedSlots": "Spell slots",
       "slotsLevel": "Level {level} slots",
       "slotPipLabel": "Level {level} slot {index} of {max}",
       "pactSlotsLevel": "Pact slots (level {level})",
