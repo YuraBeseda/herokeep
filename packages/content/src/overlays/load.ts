@@ -12,6 +12,7 @@ import warlock from './warlock.json' with { type: 'json' };
 import wizard from './wizard.json' with { type: 'json' };
 import rogue from './rogue.json' with { type: 'json' };
 import monk from './monk.json' with { type: 'json' };
+import paladin from './paladin.json' with { type: 'json' };
 
 export interface Overlays {
   corrections: Overlay[];
@@ -27,6 +28,7 @@ export interface Overlays {
   wizard: Overlay[];
   rogue: Overlay[];
   monk: Overlay[];
+  paladin: Overlay[];
 }
 
 /**
@@ -49,5 +51,6 @@ export function loadOverlays(): Overlays {
     wizard: wizard as Overlay[],
     rogue: rogue as Overlay[],
     monk: monk as Overlay[],
+    paladin: paladin as Overlay[],
   };
 }

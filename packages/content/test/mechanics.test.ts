@@ -1310,3 +1310,313 @@ describe('monk integration over the real pack (task 8)', () => {
     expect(equipped(6, 'shield').speed['walk']!.value).toBe(30);
   });
 });
+
+describe('paladin and oath of devotion to level 20 mechanics (task 9)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.paladin].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.paladin.filter((x) => features.some((f) => f.id === x.id)),
+  );
+  interface PaladinShape {
+    hitDie: number;
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount: number } };
+    levels: { level: number; choices: { id: string; pick: unknown; count: number | string }[] }[];
+  }
+  const paladin = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/paladin') as unknown as PaladinShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/paladin-${slug}`) as unknown as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('paladin: core traits (d10, wis/cha saves, all armor + shields, simple + martial, 2 skills from 6)', () => {
+    const p = paladin();
+    expect(p.hitDie).toBe(10);
+    expect([...p.saves].sort()).toEqual(['cha', 'wis']);
+    expect(p.armorTraining).toEqual(['light', 'medium', 'heavy', 'shields']);
+    expect(p.weaponProficiencies).toEqual(['simple', 'martial']);
+    expect(p.skillChoice.count).toBe(2);
+    expect([...p.skillChoice.from].sort()).toEqual(
+      ['athletics', 'insight', 'intimidation', 'medicine', 'persuasion', 'religion'].sort(),
+    );
+  });
+
+  it('paladin: multiclass gains = martial weapons, light/medium armor, shields (owner-flagged, SRD-silent)', () => {
+    expect(paladin().multiclass.gains).toEqual({
+      armorTraining: ['light', 'medium', 'shields'],
+      weaponProficiencies: ['martial'],
+      skillChoiceCount: 0,
+    });
+  });
+
+  it('paladin: choices — masteries x2 @1, fighting style @2, Devotion-only subclass @3, ASI 4/8/12/16 + boon 19', () => {
+    const rows = paladin().levels;
+    const choices = rows.flatMap((r) => r.choices);
+    const ids = choices.map((c) => c.id);
+    const mastery = choices.find((c) => c.id === 'srd-5e-2024:class/paladin@1/weapon-masteries')!;
+    expect(mastery.count).toBe(2);
+    expect(mastery.pick).toEqual({ query: { type: 'item', hasField: ['weapon.mastery'] } });
+    const style = rows.find((r) => r.level === 2)!.choices.find((c) => c.id.endsWith('/fighting-style'))!;
+    expect(style.pick).toEqual({ query: { type: 'feat', tags: ['fighting-style'] } });
+    expect(choices.find((c) => c.id === 'srd-5e-2024:class/paladin@3/subclass')!.pick).toEqual({
+      query: { type: 'subclass', classes: ['paladin'] },
+    });
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/paladin@${level}/feat`);
+    expect(ids).not.toContain('srd-5e-2024:class/paladin@10/feat');
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/paladin').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/oath-of-devotion']);
+  });
+
+  it('paladin: Spellcasting is a CHA half-caster with prepared spells, holy-symbol focus, no ritual casting', () => {
+    expect(feature('spellcasting').effects).toEqual([
+      {
+        type: 'spellcasting.define',
+        class: 'paladin',
+        ability: 'cha',
+        list: 'paladin',
+        preparation: 'prepared',
+        slots: 'half',
+        ritual: false,
+        focus: true,
+      },
+    ]);
+  });
+
+  it('paladin: Oath of Devotion spells are level-gated always-prepared grants over real pack spell ids', () => {
+    const effs = feature('oath-of-devotion-spells').effects as unknown as {
+      type: string;
+      spell: string;
+      alwaysPrepared: boolean;
+      when: { classLevel: { paladin: { gte: number } } };
+    }[];
+    const byLevel: Record<number, string[]> = {};
+    for (const e of effs) {
+      expect(e.type).toBe('spell.grant');
+      expect(e.alwaysPrepared).toBe(true);
+      (byLevel[e.when.classLevel.paladin.gte] ??= []).push(e.spell.replace('srd-5e-2024:spell/', ''));
+    }
+    expect(byLevel).toEqual({
+      3: ['protection-from-evil-and-good', 'shield-of-faith'],
+      5: ['aid', 'zone-of-truth'],
+      9: ['beacon-of-hope', 'dispel-magic'],
+      13: ['freedom-of-movement', 'guardian-of-faith'],
+      17: ['commune', 'flame-strike'],
+    });
+    for (const e of effs) expect(featIndex.get(e.spell)?.type, e.spell).toBe('spell');
+  });
+
+  it('paladin: text fallbacks present for the state/ally/choice-gated features', () => {
+    for (const slug of [
+      'fighting-style',
+      'radiant-strikes',
+      'restoring-touch',
+      'aura-of-courage',
+      'aura-expansion',
+      'oath-of-devotion-aura-of-devotion',
+      'oath-of-devotion-smite-of-protection',
+    ]) {
+      expect(
+        feature(slug).effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+});
+
+describe('paladin integration over the real pack (task 9)', () => {
+  const paladinId = `${FP}:class/paladin`;
+  const spell = (s: string) => `${FP}:spell/${s}`;
+  function paladinChar(level: number, opts: { devotion?: boolean; cha?: number } = {}): Event[] {
+    featSeq = 0;
+    const cha = opts.cha ?? 14;
+    return [
+      featEv('character.created', {
+        name: 'Aldis',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'masculine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, ['str:+2', 'con:+1']),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, [
+        'str:15',
+        'dex:8',
+        'con:13',
+        'int:10',
+        'wis:12',
+        `cha:${cha}`,
+      ]),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', {
+          classId: paladinId,
+          level: i + 1,
+          hpRoll: 'average',
+          ...(opts.devotion && i + 1 === 3 ? { subclassId: `${FP}:subclass/oath-of-devotion` } : {}),
+        }),
+      ),
+    ];
+  }
+  const block = (level: number, opts: { devotion?: boolean } = {}) =>
+    sheetOf(paladinChar(level, opts)).spellcasting.find((b) => b.classId === paladinId)!;
+
+  it('saves: wis + cha proficient and nothing else (derive-level)', () => {
+    const a = sheetOf(paladinChar(1)).abilities;
+    expect(
+      Object.entries(a)
+        .filter(([, v]) => v.saveProficient)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['cha', 'wis']);
+  });
+
+  it('armor + weapon proficiencies: light/medium/heavy/shields, simple + martial (derive-level)', () => {
+    const p = sheetOf(paladinChar(1)).proficiencies;
+    const has = (kind: string, target: string) => p.some((x) => x.kind === kind && x.target === target);
+    for (const t of ['light', 'medium', 'heavy', 'shields']) expect(has('armor', t), t).toBe(true);
+    for (const t of ['simple', 'martial']) expect(has('weapon', t), t).toBe(true);
+  });
+
+  it('half-caster slots pin the half table: 2@1, 3@3, 4+2@5, 4/3/2@9, 4/3/3/1@13, 4/3/3/3/2@19-20', () => {
+    const max = (l: number) => block(l).slots.map((s) => s.max);
+    expect(max(1)).toEqual([2]);
+    expect(max(2)).toEqual([2]);
+    expect(max(3)).toEqual([3]);
+    expect(max(5)).toEqual([4, 2]);
+    expect(max(7)).toEqual([4, 3]);
+    expect(max(9)).toEqual([4, 3, 2]);
+    expect(max(13)).toEqual([4, 3, 3, 1]);
+    expect(max(17)).toEqual([4, 3, 3, 3, 1]);
+    expect(max(19)).toEqual([4, 3, 3, 3, 2]);
+    expect(max(20)).toEqual([4, 3, 3, 3, 2]);
+    expect(block(1).cantripsKnown ?? 0).toBe(0);
+  });
+
+  it('prepared-spell cap follows the vendored Prepared Spells column', () => {
+    const col: Record<number, number> = { 1: 2, 2: 3, 3: 4, 5: 6, 9: 9, 11: 10, 13: 11, 17: 14, 19: 15, 20: 15 };
+    for (const [l, n] of Object.entries(col)) expect(block(Number(l)).preparedMax, `level ${l}`).toBe(n);
+  });
+
+  it("Paladin's Smite (2) and Faithful Steed (5) are always prepared and each carry a long-rest free-cast resource", () => {
+    expect(block(1).alwaysPrepared).toBeUndefined();
+    expect(block(2).alwaysPrepared).toEqual([spell('divine-smite')]);
+    expect([...block(5).alwaysPrepared!].sort()).toEqual([spell('divine-smite'), spell('find-steed')].sort());
+    const res = (l: number, id: string) => sheetOf(paladinChar(l)).resources.find((r) => r.id === id);
+    expect(res(1, 'paladins-smite')).toBeUndefined();
+    expect(res(2, 'paladins-smite')).toMatchObject({ reset: 'longRest', max: { value: 1 } });
+    expect(res(4, 'faithful-steed')).toBeUndefined();
+    expect(res(5, 'faithful-steed')).toMatchObject({ reset: 'longRest', max: { value: 1 } });
+  });
+
+  it('Oath of Devotion grants accumulate at 3/5/9/13/17, are always-prepared, and do not eat the prepared cap', () => {
+    const ap = (l: number) => block(l, { devotion: true }).alwaysPrepared ?? [];
+    const base = [spell('divine-smite')];
+    expect(block(2, { devotion: true }).alwaysPrepared).toEqual(base); // no subclass yet at 2
+    expect([...ap(3)].sort()).toEqual(
+      [...base, spell('protection-from-evil-and-good'), spell('shield-of-faith')].sort(),
+    );
+    expect(ap(4)).toEqual(ap(3));
+    expect([...ap(5)].sort()).toEqual([...ap(4), spell('find-steed'), spell('aid'), spell('zone-of-truth')].sort());
+    const l17 = ap(17)
+      .map((s) => s.replace(`${FP}:spell/`, ''))
+      .sort();
+    expect(l17).toEqual(
+      [
+        'divine-smite',
+        'find-steed',
+        'protection-from-evil-and-good',
+        'shield-of-faith',
+        'aid',
+        'zone-of-truth',
+        'beacon-of-hope',
+        'dispel-magic',
+        'freedom-of-movement',
+        'guardian-of-faith',
+        'commune',
+        'flame-strike',
+      ].sort(),
+    );
+    const b = block(17, { devotion: true });
+    expect(b.preparedMax).toBe(14);
+    for (const s of b.alwaysPrepared ?? []) expect(b.prepared).toContain(s);
+    // without the oath only the class-level grants appear
+    expect([...block(17).alwaysPrepared!].sort()).toEqual([spell('divine-smite'), spell('find-steed')].sort());
+  });
+
+  it('Lay on Hands pool = 5 x paladin level, long-rest reset', () => {
+    for (const l of [1, 2, 7, 20]) {
+      expect(
+        sheetOf(paladinChar(l)).resources.find((r) => r.id === 'lay-on-hands'),
+        `level ${l}`,
+      ).toMatchObject({
+        reset: 'longRest',
+        max: { value: 5 * l },
+      });
+    }
+  });
+
+  it('Channel Divinity: absent before 3, 2 uses at 3-10, 3 uses from 11 (matches cleric reset precedent)', () => {
+    const cd = (l: number) => sheetOf(paladinChar(l)).resources.find((r) => r.id === 'paladin-channel-divinity');
+    expect(cd(1)).toBeUndefined();
+    expect(cd(2)).toBeUndefined();
+    for (const l of [3, 5, 10]) expect(cd(l)?.max.value, `level ${l}`).toBe(2);
+    for (const l of [11, 15, 20]) expect(cd(l)?.max.value, `level ${l}`).toBe(3);
+    expect(cd(3)?.reset).toBe('shortRest');
+    // Divine Sense surfaces as a bonus action spending that pool
+    expect(sheetOf(paladinChar(3)).actions.find((a) => a.id === 'divine-sense')).toMatchObject({
+      kind: 'bonus',
+      resource: 'paladin-channel-divinity',
+    });
+  });
+
+  it('Aura of Protection (6): every save gains max(1, CHA mod), suppressed while Incapacitated (derive-level)', () => {
+    const saves = (l: number, cha?: number) => {
+      const a = sheetOf(paladinChar(l, { cha })).abilities;
+      return Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v.save.value]));
+    };
+    const before = saves(5);
+    const after = saves(6); // proficiency bonus is +3 at both levels -> the delta is the aura alone
+    for (const k of Object.keys(before)) expect(after[k]! - before[k]!, k).toBe(2); // CHA 14 -> +2
+    // negative modifier floors at +1: CHA 8 (-1) still grants +1
+    const lowBefore = saves(5, 8);
+    const lowAfter = saves(6, 8);
+    for (const k of Object.keys(lowBefore)) expect(lowAfter[k]! - lowBefore[k]!, k).toBe(1);
+    // Incapacitated: the aura is inactive
+    const facts = reduce(paladinChar(6), undefined, featRules);
+    facts.conditions = [
+      { conditionId: `${FP}:condition/incapacitated`, sinceEventId: '018f7000-0000-7000-8000-000000000001' },
+    ];
+    const down = derive(facts, featIndex, featRules).abilities;
+    for (const k of Object.keys(before)) expect(down[k]!.save.value, k).toBe(before[k]);
+  });
+
+  it('Extra Attack at 5, weapon mastery count 2, Oath resources (Holy Nimbus at 20, Sacred Weapon action at 3)', () => {
+    expect(sheetOf(paladinChar(4)).attacksPerAction).toBe(1);
+    expect(sheetOf(paladinChar(5)).attacksPerAction).toBe(2);
+    expect(sheetOf(paladinChar(1)).masteryCount).toBe(2);
+    const dev = (l: number) => sheetOf(paladinChar(l, { devotion: true }));
+    expect(dev(19).resources.find((r) => r.id === 'holy-nimbus')).toBeUndefined();
+    expect(dev(20).resources.find((r) => r.id === 'holy-nimbus')).toMatchObject({
+      reset: 'longRest',
+      max: { value: 1 },
+    });
+    expect(dev(3).actions.find((a) => a.id === 'sacred-weapon')).toMatchObject({
+      resource: 'paladin-channel-divinity',
+    });
+    expect(dev(9).actions.find((a) => a.id === 'abjure-foes')).toMatchObject({
+      kind: 'action',
+      resource: 'paladin-channel-divinity',
+    });
+  });
+});

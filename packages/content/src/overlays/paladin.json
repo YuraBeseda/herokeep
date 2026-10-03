@@ -1,0 +1,468 @@
+[
+  {
+    "id": "srd-5e-2024:class/paladin",
+    "cite": "SRD 5.2.1, Paladin Core Traits; Weapon Mastery; Fighting Style; Paladin Subclass; Ability Score Improvement; Epic Boon",
+    "note": "Task 9 (phase 4 plan 12): new overlay, class 1->20. Core Traits table (srd-2024_paladin_core-traits): \"Hit Point Die: D10\"; \"Saving Throw Proficiencies: Wisdom and Charisma\" (upstream already carries [cha, wis], derive-level test pins it); \"Skill Proficiencies: Choose 2: Athletics, Insight, Intimidation, Medicine, Persuasion, or Religion\"; \"Weapon Proficiencies: Simple and Martial weapons\"; \"Armor Training: Light, Medium, and Heavy armor and Shields\". class.multiclass gains/prereq (str>=13 AND cha>=13) come from transform/classes.ts MULTICLASS_GAINS/MULTICLASS_PREREQUISITES (this task added the paladin gains entry, owner-flagged SRD-silent). Choices: Weapon Mastery @1 -- vendored text \"mastery properties of two kinds of weapons of your choice with which you have proficiency\" (no vendored count column exists for Paladin, unlike Fighter/Barbarian: flat 2), same item/hasField query pick as Fighter/Barbarian; Fighting Style @2 (vendored srd-2024_paladin_fighting-style, ClassFeatureItem level 2) as a fighting-style feat pick (the Blessed Warrior alternative is NOT expressible, see that feature's note); subclass @3 (Oath of Devotion is the only vendored Paladin subclass); ASI feat picks @4/@8/@12/@16 per the vendored \"Paladin levels 8, 12, and 16\" repeat text; Epic Boon @19 (open-any-feat wording, same as cleric@19). The Prepared Spells column (2 at level 1 ... 15 at 19-20, 20 vendored rows) is already carried by transformClasses() under extra['paladin-prepared-spells'] (== preparedSpellsKey('paladin')) and the Spell Slots columns under paladin-slots-1st..5th; Paladin has NO cantrips column (verified: no srd-2024_paladin_cantrips feature) so no cantripsKnown key is authored. The slot rows used by derive come from the system 'half' table (T7 of plan 11), cross-checked level-by-level against the five vendored slots-Nth columns (2@1-2, 3@3-4, 4+2@5-6, 4/3@7-8, 4/3/2@9-10, ... 4/3/3/3/2@19-20) by a derive-level test.",
+    "set": {
+      "armorTraining": ["light", "medium", "heavy", "shields"],
+      "weaponProficiencies": ["simple", "martial"],
+      "skillChoice": {
+        "from": ["athletics", "insight", "intimidation", "medicine", "persuasion", "religion"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@1/weapon-masteries",
+            "prompt": "Weapon Masteries",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 1 },
+            "pick": { "query": { "type": "item", "hasField": ["weapon.mastery"] } },
+            "count": 2
+          }
+        ]
+      },
+      {
+        "level": 2,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@2/fighting-style",
+            "prompt": "Fighting Style",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 2 },
+            "pick": { "query": { "type": "feat", "tags": ["fighting-style"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@3/subclass",
+            "prompt": "Paladin Subclass",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["paladin"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/paladin@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "paladin", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-spellcasting",
+    "cite": "SRD 5.2.1, Spellcasting (Paladin)",
+    "note": "SRD text (abridged): \"Spell Slots. The Paladin Features table shows how many spell slots you have ... Prepared Spells of Level 1+ ... To start, choose two level 1 Paladin spells ... Spellcasting Ability. Charisma is your spellcasting ability for your Paladin spells. Spellcasting Focus. You can use a Holy Symbol as a Spellcasting Focus.\" Granted at Paladin level 1 (the vendored ClassFeatureItem row; the 2024 Paladin casts from level 1). Field-by-field against the cleric/warlock precedent: ability 'cha'; list 'paladin' (class-ref form; membership comes free from transform/spells.ts mapClasses); preparation 'prepared'; slots 'half' (the system half-caster table, verified level-by-level against the vendored paladin slots-1st..5th columns); focus true (Holy Symbol). ritual false: the vendored Paladin spellcasting text has NO Ritual Casting clause (unlike Wizard's Ritual Adept), and the 2024 Paladin has none -- authored explicitly false rather than left to the default. cantripsKnown/preparedCount/spellsKnown deliberately omitted: Paladin has no cantrips (no vendored cantrips column), and the Prepared Spells column already lives on the class entity at extra['paladin-prepared-spells'], read directly by bestRowExtra. Always-prepared spells granted by other Paladin features do not count against that cap (vendored: \"those spells don't count against the number of spells you can prepare\") -- exactly the T3 alwaysPrepared machinery, exercised by the Paladin's Smite / Faithful Steed / Oath grants below.",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "paladin",
+          "ability": "cha",
+          "list": "paladin",
+          "preparation": "prepared",
+          "slots": "half",
+          "ritual": false,
+          "focus": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-lay-on-hands",
+    "cite": "SRD 5.2.1, Lay On Hands",
+    "note": "SRD text: \"You have a pool of healing power that replenishes when you finish a Long Rest. With that pool, you can restore a total number of Hit Points equal to five times your Paladin level.\" Granted at Paladin level 1. Fully expressible: resource.define max '5 * classLevel(paladin)', reset 'longRest', display 'number' (a hit-point pool, not a pip count). The Bonus Action touch, the 5-HP Poisoned removal and the healing math stay in the entity's own carried description (no healing-amount effect type exists in the vocabulary -- same gap as cleric's Preserve Life), matching the precedent of not duplicating the description once a real effect exists.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "lay-on-hands",
+          "name": "Lay On Hands",
+          "max": "5 * classLevel(paladin)",
+          "reset": "longRest",
+          "display": "number"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-weapon-mastery",
+    "cite": "SRD 5.2.1, Weapon Mastery (Paladin)",
+    "note": "SRD text: \"...use the mastery properties of two kinds of weapons of your choice with which you have proficiency ... Whenever you finish a Long Rest, you can change the kinds of weapons you chose.\" Granted at Paladin level 1. mastery.grant count '2' -- flat, because the vendored snapshot carries no growth column for Paladin (verified: no srd-2024_paladin_weapon-mastery-count feature; unlike Fighter/Barbarian), so there is no row extra to override the formula. The long-rest swap is NOT expressible (same limitation as Fighter's/Barbarian's identical gap) -- flagged, unchanged from that precedent.",
+    "merge": {
+      "effects": [{ "type": "mastery.grant", "count": "2" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-fighting-style",
+    "cite": "SRD 5.2.1, Fighting Style (Paladin)",
+    "note": "SRD text: \"You gain a Fighting Style feat of your choice ... Instead of choosing one of those feats, you can choose the option below. Blessed Warrior. You learn two Cleric cantrips of your choice ... The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips.\" Granted at Paladin level 2. The feat pick is a real class-row choice (class/paladin@2/fighting-style, authored on the class entity). The Blessed Warrior ALTERNATIVE is not authored: it is a second, non-feat option inside the same pick (a choice's pick is either a feat query or a static list -- there is no mixed 'feat OR this inline option' form) and overlays cannot create a Blessed Warrior entity to put in a static list (applyOverlays only patches existing entities -- same categorical gap as cleric's Divine Order). Cleric cantrips granted as Paladin spells would additionally need spell.listAdd/known-spell plumbing for a paladin with no cantrip slot count. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Blessed Warrior",
+          "description": "Instead of choosing a Fighting Style feat, you can choose this option. **Blessed Warrior.** You learn two Cleric cantrips of your choice. Guidance and Sacred Flame are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-paladins-smite",
+    "cite": "SRD 5.2.1, Paladin's Smite",
+    "note": "SRD text: \"You always have the Divine Smite spell prepared. In addition, you can cast it without expending a spell slot, but you must finish a Long Rest before you can cast it in this way again.\" Granted at Paladin level 2. Divine Smite is a SPELL in 2024 (srd-5e-2024:spell/divine-smite, on the Paladin list), so no damage mechanization lives here. Two real effects: spell.grant{alwaysPrepared:true} (T3 machinery: appears in the Paladin block's prepared[]/alwaysPrepared[] and is excluded from the preparedMax cap) and a resource.define 'paladins-smite' (1 use, longRest) tracking the free cast. spell.grant.uses is deliberately NOT used: nothing in the engine consumes it (verified: no reader outside the hasSpell predicate and refs collector), so the free cast is tracked by the explicit resource pip instead.",
+    "merge": {
+      "effects": [
+        { "type": "spell.grant", "spell": "srd-5e-2024:spell/divine-smite", "alwaysPrepared": true },
+        {
+          "type": "resource.define",
+          "id": "paladins-smite",
+          "name": "Paladin's Smite (free cast)",
+          "max": "1",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-channel-divinity",
+    "cite": "SRD 5.2.1, Channel Divinity (Paladin)",
+    "note": "SRD text (abridged): \"You start with one such effect: Divine Sense ... You can use this class's Channel Divinity twice. You regain one of its expended uses when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain an additional use when you reach Paladin level 11.\" Granted at Paladin level 3. CLERIC PRECEDENT MATCHED (cleric-channel-divinity): resource.define with a closed-form min/floor stepped max and reset 'shortRest' -- the same documented vocabulary approximation of 'regain one on short rest, all on long rest' (our reset vocabulary only expresses 'resets to max on trigger'); it is over-generous on a short rest, not state-wrong, and is flagged exactly as cleric/fighter/barbarian flag it. max '2 + min(1, floor(classLevel(paladin) / 11))' reproduces the vendored srd-2024_paladin_channel-divinity-uses column exactly (2 at levels 3-10, 3 at 11-20, verified against all 18 rows). DIVERGENCE FROM CLERIC, deliberate: resource id 'paladin-channel-divinity', not 'channel-divinity' -- deriveResources keys resources by id with 'highest wins' stacking, so a Cleric/Paladin multiclass sharing one id would silently collapse two independent per-class pools (\"this class's Channel Divinity\") into one; a class-scoped id keeps both. Divine Sense (the one effect every Paladin starts with, Bonus Action) is authored as action.define{kind:'bonus', resource:'paladin-channel-divinity'} (the Preserve Life / Second Wind precedent); its detection details stay in the carried description.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "paladin-channel-divinity",
+          "name": "Channel Divinity",
+          "max": "2 + min(1, floor(classLevel(paladin) / 11))",
+          "reset": "shortRest"
+        },
+        {
+          "type": "action.define",
+          "id": "divine-sense",
+          "name": "Divine Sense",
+          "kind": "bonus",
+          "description": "Expend a use of Channel Divinity. For 10 minutes or until Incapacitated, you know the location and creature type of any Celestial, Fiend or Undead within 60 feet of yourself, and detect any consecrated or desecrated place or object in that radius.",
+          "resource": "paladin-channel-divinity"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-abjure-foes",
+    "cite": "SRD 5.2.1, Abjure Foes",
+    "note": "SRD text: \"As a Magic action, you can expend one use of this class's Channel Divinity to overwhelm foes with awe ... target a number of creatures equal to your Charisma modifier (minimum of one) ... Wisdom saving throw or have the Frightened condition for 1 minute or until it takes any damage.\" Granted at Paladin level 9. Partially expressible, cleric Preserve Life precedent: action.define{kind:'action', resource:'paladin-channel-divinity'} is a real, consumed passthrough. The target count, save and Frightened rider stay in the carried description (no effect type applies a condition to OTHER creatures).",
+    "merge": {
+      "effects": [
+        {
+          "type": "action.define",
+          "id": "abjure-foes",
+          "name": "Abjure Foes",
+          "kind": "action",
+          "description": "Expend a use of Channel Divinity: up to your Charisma modifier (minimum 1) creatures you can see within 60 feet must succeed on a Wisdom save or be Frightened for 1 minute or until they take damage.",
+          "resource": "paladin-channel-divinity"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-extra-attack",
+    "cite": "SRD 5.2.1, Extra Attack (Paladin)",
+    "note": "SRD text: \"You can attack twice instead of once whenever you take the Attack action on your turn.\" Granted at Paladin level 5. Fully expressible: extraAttack.set{count:2} (Monk/Fighter precedent).",
+    "merge": {
+      "effects": [{ "type": "extraAttack.set", "count": 2 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-faithful-steed",
+    "cite": "SRD 5.2.1, Faithful Steed",
+    "note": "SRD text: \"You always have the Find Steed spell prepared. You can also cast the spell once without expending a spell slot, and you regain the ability to do so when you finish a Long Rest.\" Granted at Paladin level 5. Same shape as Paladin's Smite: spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/find-steed plus a 'faithful-steed' resource.define (1, longRest) for the free cast.",
+    "merge": {
+      "effects": [
+        { "type": "spell.grant", "spell": "srd-5e-2024:spell/find-steed", "alwaysPrepared": true },
+        {
+          "type": "resource.define",
+          "id": "faithful-steed",
+          "name": "Faithful Steed (free cast)",
+          "max": "1",
+          "reset": "longRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-aura-of-protection",
+    "cite": "SRD 5.2.1, Aura of Protection",
+    "note": "SRD text: \"You radiate a protective, unseeable aura in a 10-foot Emanation ... The aura is inactive while you have the Incapacitated condition. You and your allies in the aura gain a bonus to saving throws equal to your Charisma modifier (minimum bonus of +1). If another Paladin is present, a creature can benefit from only one Aura of Protection at a time.\" Granted at Paladin level 6. AURA EXPRESSIBILITY FINDING: the SELF part is fully expressible and is authored -- the Paladin is always inside their own aura, so save.bonus{value:'max(1, mod(cha))'} (no target = all six saves; the formula grammar's variadic max floors a negative modifier at +1) gated by when:{not:{condition:incapacitated}} (the aura is inactive while Incapacitated; the condition predicate reads facts.conditions). Verified at derive level by test: every save rises by the CHA mod from level 6, floors at +1 for CHA 8, and drops to the pre-aura value while Incapacitated. The ALLY part (allies within the emanation) is out of single-character scope: there is no effect type that applies a bonus to OTHER characters' sheets, and the one-aura-at-a-time stacking rule between Paladins likewise needs a cross-character view. Those clauses stay in the carried description, same split as the Paladin-aura features below.",
+    "merge": {
+      "effects": [
+        {
+          "type": "save.bonus",
+          "value": "max(1, mod(cha))",
+          "when": { "not": { "condition": "srd-5e-2024:condition/incapacitated" } },
+          "key": "paladin-aura-of-protection"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-aura-of-courage",
+    "cite": "SRD 5.2.1, Aura of Courage",
+    "note": "SRD text: \"You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there.\" Granted at Paladin level 10. The self part is a condition immunity: condition.immunity exists in the vocabulary (and would need the same Incapacitated gate as Aura of Protection) but is NOT consumed anywhere in @hk/engine derive (verified by grep: only the refs collector reads it; no sheet field surfaces condition immunities), so authoring it would be an inert no-op rather than a mechanic. The ally part is out of single-character scope (see Aura of Protection). Text-feature fallback per ruling 9's bar; flagged -- the engine carry is a derive consumer for condition.immunity.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Aura of Courage",
+          "description": "You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-radiant-strikes",
+    "cite": "SRD 5.2.1, Radiant Strikes",
+    "note": "SRD text: \"When you hit a target with an attack roll using a Melee weapon or an Unarmed Strike, the target takes an extra 1d8 Radiant damage.\" Granted at Paladin level 11. Inexpressible: damage.bonus takes a ValueSchema (integer or numeric formula), never a dice expression, so a flat extra 1d8 cannot be represented (same gap class as Sneak Attack's dice, handled for Rogue via typed display-only extras, which has no analogue here as the extra die is constant). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Radiant Strikes",
+          "description": "Your strikes now carry supernatural power. When you hit a target with an attack roll using a Melee weapon or an Unarmed Strike, the target takes an extra 1d8 Radiant damage."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-restoring-touch",
+    "cite": "SRD 5.2.1, Restoring Touch",
+    "note": "SRD text: \"When you use Lay On Hands on a creature, you can also remove one or more of the following conditions from the creature: Blinded, Charmed, Deafened, Frightened, Paralyzed, or Stunned. You must expend 5 Hit Points from the healing pool ... for each of these conditions you remove.\" Granted at Paladin level 14. Inexpressible: a rider on a use of another feature that removes conditions from a TARGET creature while spending pool points; no action/effect type models condition removal or a per-use pool spend variant. Text-feature fallback per ruling 9's bar; flagged. (The Lay On Hands pool itself is a real resource.)",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Restoring Touch",
+          "description": "When you use Lay On Hands on a creature, you can also remove one or more of the following conditions from the creature: Blinded, Charmed, Deafened, Frightened, Paralyzed, or Stunned. You must expend 5 Hit Points from the healing pool of Lay On Hands for each of these conditions you remove; those points don't also restore Hit Points to the creature."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-aura-expansion",
+    "cite": "SRD 5.2.1, Aura Expansion",
+    "note": "SRD text: \"Your Aura of Protection is now a 30-foot Emanation.\" Granted at Paladin level 18. The emanation radius only changes WHICH ALLIES are covered; the Paladin's own save bonus (authored on Aura of Protection) is unaffected, and ally coverage is out of single-character scope. Nothing numeric to author. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Aura Expansion",
+          "description": "Your Aura of Protection is now a 30-foot Emanation."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/oath-of-devotion",
+    "cite": "SRD 5.2.1, Oath of Devotion",
+    "note": "Subclass entity carries no overlay change beyond this note: its features are granted via the levels[] rows transformClasses() already produced (verified: Sacred Weapon + Oath Spells @3, Aura of Devotion @7, Smite of Protection @15, Holy Nimbus @20; the vendored parent for these is srd-2024_oath-of-devotion and their pks are srd-2024_paladin_oath-of-devotion_*). The Paladin subclass choice itself is the class row choice class/paladin@3/subclass. The oath spells are NOT a player decision (a pure grant), so no extra choice is added."
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-oath-of-devotion-spells",
+    "cite": "SRD 5.2.1, Oath of Devotion Spells",
+    "note": "SRD text: \"The magic of your oath ensures you always have certain spells ready; when you reach a Paladin level specified in the Oath of Devotion Spells table, you thereafter always have the listed spells prepared.\" Table: 3 Protection from Evil and Good, Shield of Faith; 5 Aid, Zone of Truth; 9 Beacon of Hope, Dispel Magic; 13 Freedom of Movement, Guardian of Faith; 17 Commune, Flame Strike. Granted once at Oath level 3 (single vendored ClassFeatureItem row); the 5/9/13/17 breakpoints live only in the description table, so each spell.grant{alwaysPrepared:true} is level-gated with when:{classLevel:{paladin:{gte:N}}}. ALL TEN spell ids resolved against the built pack's spell entities (protection-from-evil-and-good, shield-of-faith, aid, zone-of-truth, beacon-of-hope, dispel-magic, freedom-of-movement, guardian-of-faith, commune, flame-strike) -- none missing from the SRD pack, nothing skipped, no invented ids (a content test also resolves each id through the real content index). Engine binding (T3): a grant whose root source is a subclass binds to its PARENT class's spellcasting block, so these land in the Paladin block's prepared[]/alwaysPrepared[] and never consume preparedMax. Cleric's Life Domain Spells and Warlock's Fiend Expanded Spells (plan 11) remain text fallbacks authored before T3; reconverting them is an out-of-scope carry.",
+    "merge": {
+      "effects": [
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/protection-from-evil-and-good",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 3 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/shield-of-faith",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 3 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/aid",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 5 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/zone-of-truth",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 5 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/beacon-of-hope",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 9 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/dispel-magic",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 9 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/freedom-of-movement",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 13 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/guardian-of-faith",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 13 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/commune",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 17 } } }
+        },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/flame-strike",
+          "alwaysPrepared": true,
+          "when": { "classLevel": { "paladin": { "gte": 17 } } }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-oath-of-devotion-sacred-weapon",
+    "cite": "SRD 5.2.1, Oath of Devotion — Sacred Weapon",
+    "note": "SRD text: \"When you take the Attack action, you can expend one use of your Channel Divinity to imbue one Melee weapon that you are holding with positive energy. For 10 minutes ... you add your Charisma modifier to attack rolls you make with that weapon (minimum bonus of +1), and each time you hit with it, you cause it to deal its normal damage type or Radiant damage.\" Granted at Oath level 3. Partially expressible: action.define{kind:'free', resource:'paladin-channel-divinity'} (taken as part of the Attack action, no action of its own) is a real consumed effect. The attack bonus is NOT authored as attack.bonus: it applies only to ONE chosen held weapon for 10 minutes while the imbuement is active -- a momentary per-weapon state with no vocabulary (an unconditional attack.bonus would raise every attack permanently, actively wrong). Same posture as Rage's state-gated clauses. Description carries the rest.",
+    "merge": {
+      "effects": [
+        {
+          "type": "action.define",
+          "id": "sacred-weapon",
+          "name": "Sacred Weapon",
+          "kind": "free",
+          "description": "When you take the Attack action, expend a use of Channel Divinity to imbue one Melee weapon you hold for 10 minutes: add your Charisma modifier (minimum +1) to its attack rolls, and it can deal Radiant damage; it also sheds Bright Light in a 20-foot radius.",
+          "resource": "paladin-channel-divinity"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-oath-of-devotion-aura-of-devotion",
+    "cite": "SRD 5.2.1, Oath of Devotion — Aura of Devotion",
+    "note": "SRD text: \"You and your allies have Immunity to the Charmed condition while in your Aura of Protection. If a Charmed ally enters the aura, that condition has no effect on that ally while there.\" Granted at Oath level 7. Same finding as Aura of Courage: the self part is a condition immunity (unconsumed by derive, so authoring it would be inert) and the ally part is out of single-character scope. Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Aura of Devotion",
+          "description": "You and your allies have Immunity to the Charmed condition while in your Aura of Protection. If a Charmed ally enters the aura, that condition has no effect on that ally while there."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-oath-of-devotion-smite-of-protection",
+    "cite": "SRD 5.2.1, Oath of Devotion — Smite of Protection",
+    "note": "SRD text: \"Whenever you cast Divine Smite, you and your allies have Half Cover while in your Aura of Protection. The aura has this benefit until the start of your next turn.\" Granted at Oath level 15. Inexpressible: a cover grant triggered by casting a specific spell, lasting until a turn boundary, shared with allies (no cover effect type, no spell-cast trigger, no ally scope). Text-feature fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Smite of Protection",
+          "description": "Your magical smite now radiates protective energy. Whenever you cast Divine Smite, you and your allies have Half Cover while in your Aura of Protection. The aura has this benefit until the start of your next turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/paladin-oath-of-devotion-holy-nimbus",
+    "cite": "SRD 5.2.1, Oath of Devotion — Holy Nimbus",
+    "note": "SRD text: \"As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them ... Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot.\" Granted at Oath level 20. Partially expressible: the single long-rest use is a real resource.define ('holy-nimbus', 1, longRest) and the activation a real action.define{kind:'bonus', resource:'holy-nimbus'}. The slot-expenditure restore is not expressible (no slot-for-resource vocabulary). Holy Ward (advantage on saves vs Fiends/Undead), the aura's Radiant damage and Sunlight are active-state, creature-type-scoped or ally-scoped clauses with no correct gating (an always-on advantage.grant would be wrong), so they stay in the carried description.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "holy-nimbus",
+          "name": "Holy Nimbus",
+          "max": "1",
+          "reset": "longRest"
+        },
+        {
+          "type": "action.define",
+          "id": "holy-nimbus",
+          "name": "Holy Nimbus",
+          "kind": "bonus",
+          "description": "Imbue your Aura of Protection with holy power for 10 minutes: Advantage on saves forced by a Fiend or Undead, Radiant damage equal to your Charisma modifier plus Proficiency Bonus to enemies that start their turn in the aura, and sunlight Bright Light.",
+          "resource": "holy-nimbus"
+        }
+      ]
+    }
+  }
+]

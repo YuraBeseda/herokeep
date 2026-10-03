@@ -50,6 +50,10 @@ const MULTICLASS_GAINS: Record<
   // Monk's multiclass row grants no armor, weapon, or skill proficiencies (Monk Armor Training is
   // "None" per the vendored monk_core-traits).
   monk: { armorTraining: [], weaponProficiencies: [] },
+  // Plan 12 task 9. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
+  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
+  // Paladin's multiclass row grants Martial weapons, Light and Medium armor, and Shields -- no skills.
+  paladin: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: ['martial'] },
 };
 
 /**
