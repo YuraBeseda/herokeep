@@ -103,8 +103,31 @@ describe('class transform', () => {
       expect(bySlug(slug).multiclass?.gains, slug).toBeDefined();
     }
 
-    // Classes outside the five slice-1 classes get no `multiclass` field on the CLASS entity (the
-    // system-level `multiclass.prerequisites` map still covers all 12 — see static.test.ts).
-    expect(bySlug('druid').multiclass).toBeUndefined();
+    // Druid was the last class to gain data (plan 12 task 13): ALL 12 SRD classes now carry real
+    // multiclass prerequisites + gains on the CLASS entity (system-level map: see static.test.ts).
+    const all12 = [
+      'barbarian',
+      'bard',
+      'cleric',
+      'druid',
+      'fighter',
+      'monk',
+      'paladin',
+      'ranger',
+      'rogue',
+      'sorcerer',
+      'warlock',
+      'wizard',
+    ];
+    expect(classes.filter((c) => c.type === 'class')).toHaveLength(12);
+    for (const slug of all12) {
+      expect(bySlug(slug).multiclass?.prerequisites, slug).toBeDefined();
+      expect(bySlug(slug).multiclass?.gains, slug).toBeDefined();
+    }
+    expect(bySlug('druid').multiclass?.gains).toEqual({
+      armorTraining: ['light', 'shields'],
+      weaponProficiencies: [],
+      skillChoiceCount: 0,
+    });
   });
 });

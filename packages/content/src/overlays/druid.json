@@ -1,0 +1,308 @@
+[
+  {
+    "id": "srd-5e-2024:class/druid",
+    "cite": "SRD 5.2.1, Core Druid Traits (pk srd-2024_druid_core-traits); Spellcasting (Druid); Druid Subclass; Ability Score Improvement; Epic Boon",
+    "note": "Task 13 (phase 4 plan 12): new overlay, class 1->20, the LAST of the twelve SRD classes. Core Druid Traits (vendored srd-2024_druid_core-traits): \"Hit Point Die: D8 per Druid level\" (upstream hit_dice D8, correct as vendored); \"Saving Throw Proficiencies: Intelligence and Wisdom\" (upstream saving_throws [int, wis], correct as vendored); \"Skill Proficiencies: Choose 2: Animal Handling, Arcana, Insight, Medicine, Nature, Perception, Religion, or Survival\" (the vendored row's 'Na ture' is a PDF line-break typo) -- the transform seeds skillChoice.from with all 18 skills and count 0, so BOTH the eight-skill list and count:2 are restated (`set` replaces the whole object); \"Weapon Proficiencies: Simple weapons\"; \"Tool Proficiencies: Herbalism Kit\" -> toolProficiencies ['herbalism-kit'] (item/herbalism-kit exists; the monk/rogue toolProficiencies slug form); \"Armor Training: Light armor and Shields\" -> ['light','shields'] (NO metal restriction in the vendored 2024 text). The 2024 vendored core row has NO metal-armor taboo, so none is authored. Cantrips column (vendored srd-2024_druid_cantrips: 2 at levels 1-3, 3 at 4-9, 4 at 10-20; verified level-by-level against every vendored row): transformClasses() auto-carries it under extra['druid-cantrips'], which is NOT the key packages/engine/src/derive/spellcasting.ts reads (cantripsKnownKey('druid') = 'druid-cantrips-known'), so levels 1/4/10 author the explicit correctly-keyed extra (2/3/4) alongside the harmless unread auto key (bard/sorcerer precedent). Prepared Spells column (4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22; verified level-by-level against every vendored srd-2024_druid_prepared-spells row) is carried verbatim under extra['druid-prepared-spells'] == preparedSpellsKey('druid'): zero authoring. Spell Slots 1st-9th ride as row extras; slot rows come from the system 'full' table, cross-checked against the vendored columns by a derive-level test. Wild Shape column (see the Wild Shape entry). Druid Subclass @3 (Circle of the Land is the only SRD subclass); ASI @4/8/12/16 and Epic Boon @19 use the standard open feat pick. No vendored row is skipped: the Druid Spell List row (srd-2024_druid_druid-spell-list) is a reference list whose contents are the spell entities' own class lists.",
+    "set": {
+      "armorTraining": ["light", "shields"],
+      "weaponProficiencies": ["simple"],
+      "toolProficiencies": ["herbalism-kit"],
+      "skillChoice": {
+        "from": ["animal-handling", "arcana", "insight", "medicine", "nature", "perception", "religion", "survival"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "extra": { "druid-cantrips-known": 2 }
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/druid@3/subclass",
+            "prompt": "Druid Subclass",
+            "at": { "kind": "classLevel", "class": "druid", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["druid"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/druid@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "druid", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ],
+        "extra": { "druid-cantrips-known": 3 }
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/druid@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "druid", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 10,
+        "extra": { "druid-cantrips-known": 4 }
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/druid@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "druid", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/druid@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "druid", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/druid@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "druid", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-spellcasting",
+    "cite": "SRD 5.2.1, Spellcasting (Druid); pk srd-2024_druid_spellcasting",
+    "note": "SRD text: Wisdom is the spellcasting ability; prepared spells of level 1+ from the Druid list (count from the Prepared Spells column); \"You can use a Druidic Focus as a Spellcasting Focus\" (focus:true); full-caster slots (system 'full' table). NO ritual casting is granted by the vendored Druid text, so ritual:false. No cantripsKnown/preparedCount formulas: both counts are read from the class rows' extras (see class/druid's note), exact for all 20 levels. \"Always prepared\" spells from other features don't count against the cap (vendored text), proven by a derive-level test.",
+    "merge": {
+      "effects": [
+        {
+          "type": "spellcasting.define",
+          "class": "druid",
+          "ability": "wis",
+          "list": "druid",
+          "preparation": "prepared",
+          "slots": "full",
+          "ritual": false,
+          "focus": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-druidic",
+    "cite": "SRD 5.2.1, Druidic; pk srd-2024_druid_druidic",
+    "note": "SRD text: \"You know Druidic, the secret language of Druids. ... you always have the Speak with Animals spell prepared. You can use Druidic to leave hidden messages ...\" Granted at Druid level 1. Two real effects, both verified present: language.grant for srd-5e-2024:language/druidic (the slice-1 hand-authored language list contains it) and spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/speak-with-animals (excluded from the prepared cap). The hidden-message rules (DC 15 Intelligence (Investigation) to spot) are flavor carried in the feature's own description; no duplicate feature.text beside real effects.",
+    "merge": {
+      "effects": [
+        { "type": "language.grant", "language": "srd-5e-2024:language/druidic" },
+        { "type": "spell.grant", "spell": "srd-5e-2024:spell/speak-with-animals", "alwaysPrepared": true }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-primal-order",
+    "cite": "SRD 5.2.1, Primal Order; pk srd-2024_druid_primal-order",
+    "note": "SRD text: choose Magician (one extra Druid cantrip; bonus equal to Wisdom modifier (minimum +1) to Intelligence (Arcana or Nature) checks) or Warden (Martial weapon proficiency, Medium armor training). Granted at Druid level 1. TEXT FALLBACK + FLAG (cleric Divine Order precedent): there are no option entities for the two orders (the vendored row is one markdown blob), and every half is gated on the pick -- authoring either order's proficiencies/bonus as a standing effect would be state-wrong for the other order, and a choice no effect reads would be decorative. Flagged: slice-3 vocabulary candidate (pick-parameterised grants, shared with Cleric Divine Order).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Primal Order",
+          "description": "You have dedicated yourself to one of the following sacred roles of your choice.\n\n**Magician.** You know one extra cantrip from the Druid spell list. In addition, your mystical connection to nature gives you a bonus to your Intelligence (Arcana or Nature) checks. The bonus equals your Wisdom modifier (minimum bonus of +1).\n\n**Warden.** Trained for battle, you gain proficiency with Martial weapons and training with Medium armor."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-wild-shape",
+    "cite": "SRD 5.2.1, Wild Shape; pk srd-2024_druid_wild-shape; Wild Shape column (pk srd-2024_druid_wild-shape-uses)",
+    "note": "SRD text (abridged): \"You can use Wild Shape twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain additional uses when you reach certain Druid levels, as shown in the Wild Shape column.\" Granted at Druid level 2. max is a real stepped formula matching the vendored srd-2024_druid_wild-shape-uses column exactly (2 at levels 2-5, 3 at levels 6-16, 4 at levels 17-20; verified against every one of the 19 vendored ClassFeatureItem rows, levels 2-20, by a derive-level test): '2 + min(1, floor(classLevel(druid) / 6)) + min(1, floor(classLevel(druid) / 17))' (cleric Channel Divinity technique; the upstream column feature is mis-named 'Cantrips Known' with the id srd-2024_druid_wild-shape-uses -- the pk is the authority). reset:'shortRest' is the SAME vocabulary approximation cleric/paladin/fighter/barbarian carry for \"regain one on short rest, all on long rest\" (the reset vocabulary only expresses 'resets to max on trigger'): over-generous on a short rest, not state-wrong, flagged, not re-litigated. The define lives on THIS feature (first granted at level 2), so the pool materializes only from level 2. Wild Shape itself is a Bonus Action -> action.define{kind:'bonus', resource} so the activation spends a use. KNOWN FORMS ARE CATEGORICALLY TEXT: the pack has NO creature/monster entity type at all (ENTITY_TYPES has no such type and no Rat, Riding Horse, Spider or Wolf entity exists -- grep-verified), so there is nothing a pick could target; the Beast Shapes table (known forms 4/6/8, max CR 1/4, 1/2, 1, Fly Speed from 8), duration (half Druid level in hours), Temporary Hit Points equal to Druid level, and the while-shifted rules (stat-block replacement, no spellcasting) are a timed form state with no vocabulary and ride in the vendored feature description which every reader surfaces in full. The sibling column feature druid-wild-shape-uses stays untouched (no effects; its per-level values are read as row extras by the tests).",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "wild-shape",
+          "name": "Wild Shape",
+          "max": "2 + min(1, floor(classLevel(druid) / 6)) + min(1, floor(classLevel(druid) / 17))",
+          "reset": "shortRest"
+        },
+        {
+          "type": "action.define",
+          "id": "wild-shape",
+          "name": "Wild Shape",
+          "kind": "bonus",
+          "description": "Shape-shift into a Beast form you have learned, for a number of hours equal to half your Druid level or until you use Wild Shape again, become Incapacitated, or die; you can leave the form early as a Bonus Action. You gain Temporary Hit Points equal to your Druid level when you assume a form. (Tracked as a pool of uses; the known forms and the form rules are applied by hand.)",
+          "resource": "wild-shape"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-wild-companion",
+    "cite": "SRD 5.2.1, Wild Companion; pk srd-2024_druid_wild-companion",
+    "note": "SRD text: \"As a Magic action, you can expend a spell slot or a use of Wild Shape to cast the Find Familiar spell without Material components. When you cast the spell in this way, the familiar is Fey and disappears when you finish a Long Rest.\" Granted at Druid level 2. ENTITY-EXISTENCE CHECK: srd-5e-2024:spell/find-familiar exists. TEXT FALLBACK + FLAG, deliberately NOT a spell.grant: the feature does not make Find Familiar a prepared spell (unlike Druidic/Speak with Animals or the paladin 'always prepared' features) -- it adds a Magic-action casting route paid with a slot OR a Wild Shape use, with no Material components and a Fey/long-rest-limited familiar. An alwaysPrepared grant would put an ordinary prepared Find Familiar (with its Material component and a plain slot spend) on the sheet and claim a feature the text does not state; the alternative-cost choice (slot or Wild Shape pool) has no effect type, so linking the action to the wild-shape resource would also be wrong half the time. The text rides as feature.text. Flagged: slice-3 vocabulary candidate (alternate-cost casting routes, shared with Wild Resurgence / Nature Magician).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Wild Companion",
+          "description": "You can summon a nature spirit that assumes an animal form to aid you. As a Magic action, you can expend a spell slot or a use of Wild Shape to cast the Find Familiar spell without Material components.\n\nWhen you cast the spell in this way, the familiar is Fey and disappears when you finish a Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-wild-resurgence",
+    "cite": "SRD 5.2.1, Wild Resurgence; pk srd-2024_druid_wild-resurgence",
+    "note": "SRD text: once per turn, with no Wild Shape uses left, expend a spell slot to gain one use (no action); and once per Long Rest, expend one Wild Shape use to gain a level 1 spell slot. Granted at Druid level 5. TEXT FALLBACK + FLAG: a two-way slot <-> resource conversion (spell slot counter <-> Wild Shape counter) with once-per-turn / once-per-Long-Rest gates; no effect type converts between the two pools (same gap class as Sorcerer's slot <-> Sorcery Point conversions and Bard's Font of Inspiration).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Wild Resurgence",
+          "description": "Once on each of your turns, if you have no uses of Wild Shape left, you can give yourself one use by expending a spell slot (no action required).\n\nIn addition, you can expend one use of Wild Shape (no action required) to give yourself a level 1 spell slot, but you can't do so again until you finish a Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-elemental-fury",
+    "cite": "SRD 5.2.1, Elemental Fury; pk srd-2024_druid_elemental-fury",
+    "note": "SRD text: choose Potent Spellcasting (add Wisdom modifier to Druid cantrip damage) or Primal Strike (once per turn extra 1d8 Cold/Fire/Lightning/Thunder on a weapon or Beast-form attack hit). Granted at Druid level 7. TEXT FALLBACK + FLAG: no option entities, and each option is gated on the pick (a standing damage.bonus for a Druid who chose Primal Strike would be state-wrong); Primal Strike is also a once-per-turn, chosen-type rider with no vocabulary. Same family as Sorcerer's Elemental Affinity / Cleric's Divine Order.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Elemental Fury",
+          "description": "The might of the elements flows through you. You gain one of the following options of your choice.\n\n**Potent Spellcasting.** Add your Wisdom modifier to the damage you deal with any Druid cantrip.\n\n**Primal Strike.** Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form's attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-improved-elemental-fury",
+    "cite": "SRD 5.2.1, Improved Elemental Fury; pk srd-2024_druid_improved-elemental-fury",
+    "note": "SRD text: the chosen Elemental Fury option grows (Potent Spellcasting: Druid cantrip range +300 ft when range is 10 ft or more; Primal Strike: extra damage 2d8). Granted at Druid level 15. TEXT FALLBACK + FLAG, same reason as Elemental Fury (pick-gated, no option entities, no range-extension or once-per-turn rider vocabulary).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Improved Elemental Fury",
+          "description": "The option you chose for Elemental Fury grows more powerful, as detailed below.\n\n**Potent Spellcasting.** When you cast a Druid cantrip with a range of 10 feet or greater, the spell's range increases by 300 feet.\n\n**Primal Strike.** The extra damage of your Primal Strike increases to 2d8."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-beast-spells",
+    "cite": "SRD 5.2.1, Beast Spells; pk srd-2024_druid_beast-spells",
+    "note": "SRD text: \"While using Wild Shape, you can cast spells in Beast form, except for any spell that has a Material component with a cost specified or that consumes its Material component.\" Granted at Druid level 18. TEXT FALLBACK + FLAG: a while-shifted permission that lifts a state rule (Wild Shape's 'No Spellcasting') whose own state has no vocabulary (see Wild Shape).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Beast Spells",
+          "description": "While using Wild Shape, you can cast spells in Beast form, except for any spell that has a Material component with a cost specified or that consumes its Material component."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-archdruid",
+    "cite": "SRD 5.2.1, Archdruid; pk srd-2024_druid_archdruid",
+    "note": "SRD text: Evergreen Wild Shape (on rolling Initiative with no Wild Shape uses left, regain one), Nature Magician (convert unexpended Wild Shape uses into one spell slot, 2 spell levels per use, once per Long Rest), Longevity (aging). Granted at Druid level 20. TEXT FALLBACK + FLAG: an Initiative-triggered single-use regain and a Wild Shape-uses -> spell-slot conversion (cross-pool, once per Long Rest) have no effect types (Wild Resurgence's gap class); Longevity is flavor.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Archdruid",
+          "description": "The vitality of nature constantly blooms within you, granting you the following benefits.\n\n**Evergreen Wild Shape.** Whenever you roll Initiative and have no uses of Wild Shape left, you regain one expended use of it.\n\n**Nature Magician.** You can convert uses of Wild Shape into a spell slot (no action required). Choose a number of your unexpended uses of Wild Shape and convert them into a single spell slot, with each use contributing 2 spell levels. For example, if you convert two uses of Wild Shape, you produce a level 4 spell slot. Once you use this benefit, you can't do so again until you finish a Long Rest.\n\n**Longevity.** The primal magic that you wield causes you to age more slowly. For every ten years that pass, your body ages only one year."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-circle-of-the-land-spell-list",
+    "cite": "SRD 5.2.1, Circle of the Land Spells; pk srd-2024_druid_circle-of-the-land_spell-list",
+    "note": "SRD text: \"Whenever you finish a Long Rest, choose one type of land: arid, polar, temperate, or tropical. Consult the table below that corresponds to the chosen type; you have the spells listed for your Druid level and lower prepared.\" Four tables (levels 3/5/7/9) -- Arid: Blur, Burning Hands, Fire Bolt / Fireball / Blight / Wall of Stone; Polar: Fog Cloud, Hold Person, Ray of Frost / Sleet Storm / Ice Storm / Cone of Cold; Temperate: Misty Step, Shocking Grasp, Sleep / Lightning Bolt / Freedom of Movement / Tree Stride; Tropical: Acid Splash, Ray of Sickness, Web / Stinking Cloud / Polymorph / Insect Plague. Granted at Circle level 3 as ONE feature. STRUCTURE FINDING (the honesty call): the four lists live ONLY in the description blob -- the vendored data has NO land-type option entities and NO land-type choice -- and the land type is not a build-time pick at all but a choice RE-MADE AFTER EVERY LONG REST. The predicate vocabulary has no choice-state or rest-state predicate (only classLevel/hasFeature/hasSpell/subclass/...), so a spell.grant cannot be conditioned on 'the land type currently chosen'. The four lists have NO spell in common at ANY level (verified: 3: Blur/Burning Hands/Fire Bolt vs Fog Cloud/Hold Person/Ray of Frost vs Misty Step/Shocking Grasp/Sleep vs Acid Splash/Ray of Sickness/Web; 5: Fireball/Sleet Storm/Lightning Bolt/Stinking Cloud; 7: Blight/Ice Storm/Freedom of Movement/Polymorph; 9: Wall of Stone/Cone of Cold/Tree Stride/Insect Plague), so there is no land-type-independent subset to grant either. A union of all four lists (up to 16 always-prepared spells, 12 of them wrong for any one druid) would be state-wrong; granting one arbitrary list would be too. NOTHING IS GRANTED. TEXT + FLAG: feature.text carries the four tables verbatim; the player consults the table for their land and prepares those spells by hand. Natural Recovery's free cast of a Circle spell is correspondingly text. Flagged: slice-3 vocabulary candidate (rest-re-chosen option sets feeding spell grants; also Cleric/Warlock-style per-choice spell lists).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Circle of the Land Spells",
+          "description": "Whenever you finish a Long Rest, choose one type of land: arid, polar, temperate, or tropical. Consult the table below that corresponds to the chosen type; you have the spells listed for your Druid level and lower prepared.\n\nArid Land\nDruid level 3: Blur, Burning Hands, Fire Bolt\nDruid level 5: Fireball\nDruid level 7: Blight\nDruid level 9: Wall of Stone\n\nPolar Land\nDruid level 3: Fog Cloud, Hold Person, Ray of Frost\nDruid level 5: Sleet Storm\nDruid level 7: Ice Storm\nDruid level 9: Cone of Cold\n\nTemperate Land\nDruid level 3: Misty Step, Shocking Grasp, Sleep\nDruid level 5: Lightning Bolt\nDruid level 7: Freedom of Movement\nDruid level 9: Tree Stride\n\nTropical Land\nDruid level 3: Acid Splash, Ray of Sickness, Web\nDruid level 5: Stinking Cloud\nDruid level 7: Polymorph\nDruid level 9: Insect Plague\n\n(These spells are not granted on the sheet automatically: the list depends on a land choice you make again after every Long Rest. Prepare the spells for your current land by hand.)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-circle-of-the-land-lands-aid",
+    "cite": "SRD 5.2.1, Land's Aid; pk srd-2024_druid_circle-of-the-land_lands-aid",
+    "note": "SRD text: \"As a Magic action, you can expend a use of your Wild Shape and choose a point within 60 feet of yourself. ... 10-foot-radius Sphere ... Constitution saving throw against your spell save DC, taking 2d6 Necrotic damage on a failed save or half as much damage on a successful one. One creature of your choice in that area regains 2d6 Hit Points. The damage and healing increase by 1d6 when you reach Druid levels 10 (3d6) and 14 (4d6).\" Granted at Circle level 3. The activation is a real spend of the Wild Shape pool: action.define{kind:'action', resource:'wild-shape'} (Magic action = action kind; Divine Sense / Second Wind precedent). The area, save, and damage/healing dice (2d6, 3d6 at 10, 4d6 at 14) are play-flow text in the action description (the vendored feature description also carries them).",
+    "merge": {
+      "effects": [
+        {
+          "type": "action.define",
+          "id": "lands-aid",
+          "name": "Land's Aid",
+          "kind": "action",
+          "description": "Magic action, expending a use of Wild Shape: choose a point within 60 feet; flowers and thorns fill a 10-foot-radius Sphere there. Each creature of your choice in it makes a Constitution save against your spell save DC, taking 2d6 Necrotic damage on a failure or half as much on a success; one creature of your choice there regains 2d6 Hit Points. The damage and healing become 3d6 at Druid level 10 and 4d6 at level 14. (The use is spent from the Wild Shape pool; the effect is applied by hand.)",
+          "resource": "wild-shape"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-circle-of-the-land-natural-recovery",
+    "cite": "SRD 5.2.1, Natural Recovery; pk srd-2024_druid_circle-of-the-land_natural-recovery",
+    "note": "SRD text: cast one prepared level 1+ Circle Spell without a slot (once per Long Rest); and, after a Short Rest, recover expended spell slots with a combined level of at most half the Druid level (round up), none level 6+, once per Long Rest. Granted at Circle level 6. TEXT FALLBACK + FLAG: a capped PARTIAL slot regain with a player-chosen slot mix has no reset semantics (Sorcerer's Sorcerous Restoration / Arcane Recovery family); the free cast names Circle Spells, which are not granted (see the Circle of the Land Spells entry), so a free-cast tracker would have nothing to attach to.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Natural Recovery",
+          "description": "You can cast one of the level 1+ spells that you have prepared from your Circle Spells feature without expending a spell slot, and you must finish a Long Rest before you do so again.\n\nIn addition, when you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your Druid level (round up), and none of them can be level 6+. For example, if you're a level 6 Druid, you can recover up to three levels' worth of spell slots. You can recover a level 3 spell slot, a level 2 and a level 1 spell slot, or three level 1 spell slots. Once you recover spell slots with this feature, you can't do so again until you finish a Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-circle-of-the-land-natures-ward",
+    "cite": "SRD 5.2.1, Nature's Ward; pk srd-2024_druid_circle-of-the-land_natures-ward",
+    "note": "UPSTREAM DEFECT, LEFT UNTOUCHED + OWNER-FLAG. The vendored row (granted at Circle level 10) carries the text of the spectral-trees-and-vines Cube (Magic action, expend a Wild Shape use, 15-foot Cube within 120 ft, Half Cover, allies gain 'the current Resistance of your Nature's Ward'), which refers to a Nature's Ward resistance that no vendored row states; and the sibling row natures-sanctuary (level 14) carries a verbatim COPY of Natural Recovery's text. The vendored data therefore swaps/loses the real Ward (Poison immunity + a land-type resistance) and Sanctuary text. Overlays patch effects, not upstream text, and authoring the missing text from memory would be invented content; authoring an action at level 10 from the Cube text would also place a level-14 ability at level 10. NO EFFECTS AUTHORED for either row; both vendored descriptions are surfaced unchanged. Owner decision: correct the vendored rows upstream (or add a corrections overlay with the public SRD 5.2.1 text), after which Ward's Poisoned immunity is expressible (condition.immunity) while its land-type resistance is text for the same land-choice reason as the Circle Spells.",
+    "merge": {}
+  },
+  {
+    "id": "srd-5e-2024:feature/druid-circle-of-the-land-natures-sanctuary",
+    "cite": "SRD 5.2.1, Nature's Sanctuary; pk srd-2024_druid_circle-of-the-land_natures-sanctuary",
+    "note": "UPSTREAM DEFECT, LEFT UNTOUCHED + OWNER-FLAG, paired with Nature's Ward (see that entry): this row (granted at Circle level 14) is a verbatim copy of the Natural Recovery description in the vendored data. No effects authored (adding a free-cast pip or text on top of a mis-sourced description would compound the defect); the vendored description is surfaced unchanged.",
+    "merge": {}
+  }
+]

@@ -70,6 +70,11 @@ const MULTICLASS_GAINS: Record<
   // Sorcerer's multiclass row grants no armor, weapon, or skill proficiencies (Sorcerer Armor Training
   // is "None" per the vendored sorcerer_core-traits).
   sorcerer: { armorTraining: [], weaponProficiencies: [] },
+  // Plan 12 task 13. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
+  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
+  // Druid's multiclass row grants Light armor and Shields -- no weapons, no skills (the Herbalism Kit is
+  // a core-trait tool, not a multiclass gain, so nothing is lost to the missing tool field).
+  druid: { armorTraining: ['light', 'shields'], weaponProficiencies: [] },
 };
 
 /**

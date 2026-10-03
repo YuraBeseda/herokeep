@@ -2497,3 +2497,267 @@ describe('sorcerer integration over the real pack (task 12)', () => {
     expect(s.issues.filter((i) => i.severity === 'error')).toEqual([]);
   });
 });
+
+describe('druid and circle of the land to level 20 mechanics (task 13)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.druid].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.druid.filter((x) => features.some((f) => f.id === x.id)),
+  );
+  interface DruidShape {
+    hitDie: number;
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    toolProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount?: number } };
+    levels: { level: number; grants: { feature: string }[]; choices: { id: string; pick: unknown }[] }[];
+  }
+  const druid = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/druid') as unknown as DruidShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/${slug}`) as unknown as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('druid: core traits (d8, int/wis saves, simple weapons, light armor + shields, herbalism kit, 2 of the eight listed skills)', () => {
+    const d = druid();
+    expect(d.hitDie).toBe(8);
+    expect([...d.saves].sort()).toEqual(['int', 'wis']);
+    expect(d.armorTraining).toEqual(['light', 'shields']);
+    expect(d.weaponProficiencies).toEqual(['simple']);
+    expect(d.toolProficiencies).toEqual(['herbalism-kit']);
+    expect(d.skillChoice.count).toBe(2);
+    expect([...d.skillChoice.from].sort()).toEqual([
+      'animal-handling',
+      'arcana',
+      'insight',
+      'medicine',
+      'nature',
+      'perception',
+      'religion',
+      'survival',
+    ]);
+  });
+
+  it('druid: multiclass gains = light armor + shields (SRD-silent, owner-flagged)', () => {
+    expect(druid().multiclass.gains).toEqual({
+      armorTraining: ['light', 'shields'],
+      weaponProficiencies: [],
+      skillChoiceCount: 0,
+    });
+  });
+
+  it('druid: choices — subclass @3, ASI 4/8/12/16 + boon 19; Primal Order / Elemental Fury / Wild Shape forms are never picks', () => {
+    const choices = druid().levels.flatMap((r) => r.choices);
+    const ids = choices.map((c) => c.id);
+    expect(choices.find((c) => c.id === 'srd-5e-2024:class/druid@3/subclass')!.pick).toEqual({
+      query: { type: 'subclass', classes: ['druid'] },
+    });
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/druid@${level}/feat`);
+    expect(ids.some((id) => /order|fury|form|land/.test(id))).toBe(false);
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/druid').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/circle-of-the-land']);
+  });
+
+  it('druid: Spellcasting is a WIS full caster with prepared spells + druidic focus, no ritual casting', () => {
+    expect(feature('druid-spellcasting').effects).toEqual([
+      {
+        type: 'spellcasting.define',
+        class: 'druid',
+        ability: 'wis',
+        list: 'druid',
+        preparation: 'prepared',
+        slots: 'full',
+        ritual: false,
+        focus: true,
+      },
+    ]);
+  });
+
+  it('Wild Shape: forms are text (no beast entities of any kind exist in the pack)', () => {
+    const packEntities = featPack.entities as { id: string; type: string }[];
+    expect(packEntities.filter((e) => /\/(wolf|rat|spider|riding-horse|brown-bear)$/.test(e.id))).toEqual([]);
+    expect(feature('druid-wild-shape').effects.map((e) => e.type)).toEqual(['resource.define', 'action.define']);
+    expect(feature('druid-wild-shape-uses').effects).toEqual([]);
+  });
+
+  it('text fallbacks present for the inexpressible features; the swapped upstream rows stay untouched', () => {
+    for (const slug of [
+      'druid-primal-order',
+      'druid-wild-companion',
+      'druid-wild-resurgence',
+      'druid-elemental-fury',
+      'druid-improved-elemental-fury',
+      'druid-beast-spells',
+      'druid-archdruid',
+      'druid-circle-of-the-land-spell-list',
+      'druid-circle-of-the-land-natural-recovery',
+    ]) {
+      expect(
+        feature(slug).effects.map((e) => e.type),
+        slug,
+      ).toEqual(['feature.text']);
+    }
+    for (const slug of ['druid-circle-of-the-land-natures-ward', 'druid-circle-of-the-land-natures-sanctuary'])
+      expect(feature(slug).effects, slug).toEqual([]);
+  });
+
+  it('Circle of the Land Spells: NO spell.grant anywhere in the circle (per-land-type lists, re-chosen every Long Rest)', () => {
+    for (const f of patchedFeatures.filter((x) => x.id.includes('circle-of-the-land'))) {
+      const effs = (f as unknown as { effects: { type: string }[] }).effects;
+      expect(
+        effs.filter((e) => e.type === 'spell.grant'),
+        f.id,
+      ).toEqual([]);
+    }
+  });
+});
+
+describe('druid integration over the real pack (task 13)', () => {
+  const druidId = `${FP}:class/druid`;
+  const land = `${FP}:subclass/circle-of-the-land`;
+  const spell = (s: string) => `${FP}:spell/${s}`;
+  function druidChar(level: number, opts: { wis?: number; land?: boolean; skills?: string[] } = {}): Event[] {
+    featSeq = 0;
+    return [
+      featEv('character.created', {
+        name: 'Fern',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, ['dex:+2', 'con:+1']),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, [
+        'str:8',
+        'dex:13',
+        'con:13',
+        'int:10',
+        `wis:${opts.wis ?? 15}`,
+        'cha:10',
+      ]),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', {
+          classId: druidId,
+          level: i + 1,
+          hpRoll: 'average',
+          ...(opts.land && i + 1 === 3 ? { subclassId: land } : {}),
+        }),
+      ),
+      featDecide(`${druidId}@1/skills`, opts.skills ?? ['nature', 'perception']),
+    ];
+  }
+  const block = (level: number, opts: { land?: boolean } = {}) =>
+    sheetOf(druidChar(level, opts)).spellcasting.find((b) => b.classId === druidId)!;
+  const res = (level: number, id: string, opts: { land?: boolean } = {}) =>
+    sheetOf(druidChar(level, opts)).resources.find((r) => r.id === id);
+
+  it('saves: int + wis proficient and nothing else (derive-level)', () => {
+    const a = sheetOf(druidChar(1)).abilities;
+    expect(
+      Object.entries(a)
+        .filter(([, v]) => v.saveProficient)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['int', 'wis']);
+  });
+
+  it('armor: light + shields (no medium/heavy); weapons: simple only; herbalism kit (derive-level)', () => {
+    const p = sheetOf(druidChar(1)).proficiencies;
+    const has = (kind: string, target: string) => p.some((x) => x.kind === kind && x.target === target);
+    expect(has('armor', 'light')).toBe(true);
+    expect(has('armor', 'shields')).toBe(true);
+    for (const t of ['medium', 'heavy']) expect(has('armor', t), t).toBe(false);
+    expect(has('weapon', 'simple')).toBe(true);
+    expect(has('weapon', 'martial')).toBe(false);
+    // Tool proficiencies are class DATA only (the engine derives no tool proficiency for any class,
+    // rogue's Thieves' Tools included); the herbalism kit is pinned at the data level above.
+  });
+
+  it('class skills: two of the eight are accepted and become proficient (derive-level)', () => {
+    const s = sheetOf(druidChar(1, { skills: ['medicine', 'survival'] }));
+    expect(s.issues.filter((i) => i.code === 'derive.unknownSkill')).toEqual([]);
+    for (const k of ['medicine', 'survival']) expect(s.skills[k]!.proficiency, k).toBe('proficient');
+    expect(s.skills['stealth']!.proficiency).toBe('none');
+  });
+
+  it('full-caster slots follow the vendored columns level by level', () => {
+    const max = (l: number) => block(l).slots.map((s) => s.max);
+    expect(max(1)).toEqual([2]);
+    expect(max(3)).toEqual([4, 2]);
+    expect(max(5)).toEqual([4, 3, 2]);
+    expect(max(9)).toEqual([4, 3, 3, 3, 1]);
+    expect(max(13)).toEqual([4, 3, 3, 3, 2, 1, 1]);
+    expect(max(20)).toEqual([4, 3, 3, 3, 3, 2, 2, 1, 1]);
+  });
+
+  it('cantrips known follow the vendored Cantrips column (2@1-3, 3@4-9, 4@10-20) at every level', () => {
+    for (let l = 1; l <= 20; l++) expect(block(l).cantripsKnown, `level ${l}`).toBe(l >= 10 ? 4 : l >= 4 ? 3 : 2);
+  });
+
+  it('prepared-spell cap follows the vendored Prepared Spells column (4@1 ... 22@20)', () => {
+    const col = [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22];
+    col.forEach((n, i) => expect(block(i + 1).preparedMax, `level ${i + 1}`).toBe(n));
+  });
+
+  it('Wild Shape: formula == every vendored srd-2024_druid_wild-shape-uses row (2@2-5, 3@6-16, 4@17-20); absent at 1', () => {
+    expect(res(1, 'wild-shape')).toBeUndefined();
+    const pack = featPack.entities.find((e) => e.id === druidId) as unknown as {
+      levels: { level: number; extra: Record<string, number> }[];
+    };
+    for (let l = 2; l <= 20; l++) {
+      const vendored = pack.levels.find((r) => r.level === l)!.extra['druid-wild-shape-uses'];
+      expect(vendored, `vendored row ${l}`).toBe(l >= 17 ? 4 : l >= 6 ? 3 : 2);
+      expect(res(l, 'wild-shape')?.max.value, `level ${l}`).toBe(vendored);
+    }
+    expect(res(10, 'wild-shape')?.reset).toBe('shortRest');
+    expect(sheetOf(druidChar(2)).actions.find((a) => a.id === 'wild-shape')).toMatchObject({
+      kind: 'bonus',
+      resource: 'wild-shape',
+    });
+  });
+
+  it('Druidic: grants the Druidic language and keeps Speak with Animals always prepared (off the cap)', () => {
+    const s = sheetOf(druidChar(1));
+    expect(s.languages.map((l) => l.id)).toContain(`${FP}:language/druidic`);
+    expect(block(1).alwaysPrepared).toEqual([spell('speak-with-animals')]);
+    expect(block(1).preparedMax).toBe(4);
+  });
+
+  it('Wild Companion is text only: Find Familiar is NOT granted (the feature casts it via slot or Wild Shape, it is not prepared)', () => {
+    expect(block(2).alwaysPrepared).toEqual([spell('speak-with-animals')]);
+  });
+
+  it('Circle of the Land: no always-prepared circle spells at any level (honest: the lists depend on a per-Long-Rest land choice)', () => {
+    for (const l of [3, 5, 7, 9, 20])
+      expect(block(l, { land: true }).alwaysPrepared, `level ${l}`).toEqual([spell('speak-with-animals')]);
+  });
+
+  it("Land's Aid (3) spends a Wild Shape use as a Magic action", () => {
+    expect(sheetOf(druidChar(2, { land: true })).actions.find((a) => a.id === 'lands-aid')).toBeUndefined();
+    expect(sheetOf(druidChar(3, { land: true })).actions.find((a) => a.id === 'lands-aid')).toMatchObject({
+      kind: 'action',
+      resource: 'wild-shape',
+    });
+  });
+
+  it('Druid + Circle of the Land resolve through level 20 without breaking the sheet', () => {
+    for (const l of [1, 2, 3, 10, 20]) {
+      const s = sheetOf(druidChar(l, { land: l >= 3 }));
+      expect(
+        s.issues.filter((i) => i.severity === 'error'),
+        `level ${l}`,
+      ).toEqual([]);
+    }
+  });
+});
