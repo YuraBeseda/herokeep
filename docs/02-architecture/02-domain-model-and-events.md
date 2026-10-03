@@ -99,7 +99,7 @@ generated, e.g. quota notices — none in v1).
 | `resource.spent` / `resource.restored` | O, D | `{resourceId, count?}` | second wind, rage…; `resourceId` is a slug OR `item:<uuid>` (Phase 4: per-instance item charges, keyed by the item's own `instanceId` — colon makes it collision-safe against any slug-keyed resource) |
 | `spell.prepared` / `spell.unprepared` | O | `{spellId, classId}` | |
 | `spell.learned` / `spell.forgotten` | O | `{spellId, classId, source: levelUp \| scroll \| copy}` | spellbook / known |
-| `spell.cast` | O | `{spellId, level, slotUsed?: boolean, concentration?: boolean}` | convenience event that folds to slot + concentration |
+| `spell.cast` | O | `{spellId, level, slotUsed?: boolean, concentration?: boolean}` | convenience event that folds to slot + concentration. **`level` semantics differ per lane:** a Pact Magic cast records the spell's BASE level (the pact slot's own level is implied by the caster's pact table, and pact casts are always cast at that slot level), while a regular-slot cast records the CAST-AT level (an upcast of a level-1 spell into a level-3 slot records `3`). **Flagged future protocol candidate (no schema change in v1):** the event carries no `classId`, so for a multiclass character whose classes share a spell list (e.g. Cleric + Paladin both preparing the same spell) a cast cannot be attributed to a specific class's spellcasting block; `propose.cast` likewise takes no class/spell-ownership parameter. Adding an optional `classId` is deferred until a rule actually needs per-class attribution. |
 | `concentration.started` / `concentration.ended` | O, D | `{spellId?}` | |
 | `condition.added` / `condition.removed` | O, D | `{conditionId, source?, until?, level?}` | exhaustion uses `level` |
 | `item.added` | O, D | `{instanceId, itemId, qty, name?, custom?}` | `custom` = inline homebrew item definition (quick homebrew) |
@@ -119,7 +119,9 @@ generated, e.g. quota notices — none in v1).
 Rules the reducer applies (from the pinned core pack's `system` entity, not code):
 temp HP does not stack (keep higher); damage hits temp first; healing from 0 clears death
 saves; long rest restores HP, all slots, half hit dice (rounded down, min 1), resets
-`longRest` resources, reduces exhaustion by 1; short rest resets `shortRest` resources.
+`longRest` resources, reduces exhaustion by 1; short rest resets `shortRest` resources. A long
+rest also restores `dawn` charged items (v1 approximation; see doc 04, "Item charges and
+attunement").
 
 ## Event catalog — campaign stream
 

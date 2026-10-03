@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -6,7 +6,7 @@ number. It supplements, and never replaces, the automated gates:
 
 - `pnpm check` — format, lint, typecheck, engine + web unit tests (819 web tests as of the plan-8
   client-sync final fix wave; includes the dev-mode perf-log spec below).
-- `pnpm --filter web e2e` — Playwright against the real production build: 9 spec files, 24 tests
+- `pnpm --filter web e2e` — Playwright against the real production build: 10 spec files, 25 tests
   (offline, library/search/locale, character creation, level-up, multiclassing, play actions,
   export/import, axe accessibility).
 - `packages/engine/test/perf.test.ts` — an automated perf *tripwire* (median of 5 reduce+derive
@@ -311,6 +311,39 @@ reality-check sections 1–2 already do for install/offline.
 | --- | --- | --- | --- | --- |
 | _(e.g. Pixel 7a, Chrome)_ | | | | |
 | | | | | |
+
+---
+
+## 8b. A new slice-2 class on a real phone (Phase 4 slice 2, plan 12)
+
+**What this proves:** a class added by slice 2 plays correctly under real touch input —
+`apps/web/e2e/create-monk.spec.ts` (default project) and the slice-2 engine goldens already prove
+the logic; this is the real-device reality-check for the new content, including the two
+slice-2 UI paths (pooled multiclass slots, always-prepared spells).
+
+### Procedure
+
+1. On the installed app, create a Monk through the wizard (any species/background; standard
+   array). Confirm the class card is selectable, the six-skill pool offers exactly Acrobatics,
+   Athletics, History, Insight, Religion and Stealth for the two picks, and there is no weapon
+   mastery or fighting-style step. Equip nothing and create.
+2. On the Play tab, confirm Armor Class reads 10 + your Dexterity modifier + your Wisdom
+   modifier (Unarmored Defense), and the Focus Points / Martial Arts rows are present.
+3. Build a Paladin (or level a character into Paladin once its STR and CHA are both 13+).
+   At level 3 pick Oath of Devotion; confirm the spell block lists the oath's always-prepared
+   spells, that they cannot be unprepared, and that they never count against the prepared cap.
+4. For a multiclass caster (e.g. Cleric + Paladin), confirm the shared spell-slot pips render
+   ONCE (pooled), with per-class prepared lists still separate, at your device's real width.
+5. Add a charged magic item (e.g. a wand) to the inventory, equip or attune it, spend a charge
+   on the Play tab, then take a long rest and confirm the charge is restored (dawn items restore
+   on a long rest in v1, fully — see doc 04).
+
+### Results
+
+| Device | Date | Monk create/AC | Always-prepared (Paladin) | Pooled slots | Charge long-rest restore |
+| --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a, Chrome)_ | | | | | |
+| | | | | | |
 
 ---
 

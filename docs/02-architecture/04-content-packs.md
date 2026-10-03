@@ -326,6 +326,43 @@ un-equipping/un-attuning it removes it from `Sheet.resources`, but `facts.resour
 key is untouched and simply resumes being read on re-equip (removing the item from inventory
 entirely leaves a harmless orphaned key).
 
+**Charge parsing (phase 4 slice 2, plan 12 task 6).** The SRD pack's `item.charges` are not
+hand-authored: `packages/content/src/transform/charges.ts` derives them from each magic item's
+vendored description. `max` comes from exactly one distinct "has/have N charges" figure (N >= 1;
+dice maxes never match and are skipped). `reset` comes from the regain sentence: "regains ...
+expended charges daily at dawn" maps to `dawn`; an item with no regain sentence at all maps to
+`never`; any other regain wording is skipped rather than guessed. 43 items are mechanized (39
+`dawn`, 4 `never`), pinned by an exact manifest in `packages/content/test/charges.test.ts`.
+Two documented v1 approximations, both owner-flagged:
+
+- **Dawn on long rest.** The engine has no "dawn" trigger event, so `propose.rest`'s long-rest
+  sweep restores every `reset: 'dawn'` charged item as well as `longRest` ones (a short rest is
+  unchanged). `reset: 'never'` items are never swept; their charges are restored manually with
+  `resource.restored`.
+- **Rolled regain amounts fully restore.** The vendored regain amount ("1d6 + 4", "1d8 + 1", "all")
+  is parsed and pinned in the manifest but is NOT stored — the vocabulary is only `{ max, reset }`.
+  So a "regains 1d6 + 4 charges at dawn" item (38 of the 39 dawn items use a dice amount) is
+  restored to FULL by the long-rest sweep. This over-restores relative to the SRD text; true
+  NdM+K regain needs dice-in-rest integration and is a slice-3 carry.
+
+**Progression-driven choice counts (plan 12 task 2).** `choice.count` is `int | Formula`. An
+integer behaves exactly as before. A formula (same grammar and context as a resource max; only
+`level`, `classLevel()` and `hitDie()` are live when choices are requested, the rest evaluate to
+0) is resolved per character and floored/clamped to at least 1 (`derive/choice-count.ts`). When a
+formula count grows past an already-recorded decision (e.g. Fighter's weapon masteries, 3 → 6),
+the SAME choice id is re-offered and re-answering replaces the decision with the full set.
+Integer counts keep the historical never-re-asked behavior, so existing event logs are unchanged.
+`validatePack` validates formula counts on entity and row choices.
+
+**Always-prepared spell grants (plan 12 task 3).** `spell.grant { alwaysPrepared: true }`
+(already in the schema) is now honored: the granting class (the effect's source entity if it is a
+class, or its parent class for a subclass) gets the spell on its spellcasting block, which exposes
+`alwaysPrepared?: string[]` (absent when none) and merges those spells into `prepared`, deduped
+by spell id. Always-prepared spells do not count against `preparedMax`, and
+`propose.unprepare` refuses them with the `spell.always-prepared` code. Feat/species/item sources
+bind to no block, so the content validator reports `spell.grantUnbound` for an `alwaysPrepared`
+grant on a feat, species, background or item.
+
 `item.attunement` (optional) is `{ required: boolean, by?: Predicate }`. `by`, when present, is
 the item's own attunement-requirement predicate (e.g. "requires attunement by a Wizard") —
 evaluated at derive time, per inventory instance, against that instance's own predicate context

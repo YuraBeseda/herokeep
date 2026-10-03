@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-09-27 — NOT STARTED (owner directive: plan written after plan 11 merged @ e8d7b5e; execution awaits owner resume).**
+**STATUS: EXECUTED 2026-10-03 — all 16 tasks complete on branch `worktree-phase-4-plan12-slice-2` (merge pending).**
 
 **Goal:** Mechanize the remaining 7 SRD 5.2.1 classes (Bard, Druid, Monk, Paladin, Ranger, Rogue, Sorcerer) to level 20 with their subclasses, mechanize the 17 SRD feats and magic-item charges/attunement at scale, and retire every slice-1 carry — completing Phase 4's "all twelve classes, real data" milestone.
 

@@ -20,7 +20,7 @@ Content: `pnpm --filter @hk/content build:pack` generates the SRD 5.2.1 core pac
 
 - `pnpm --filter web start` — dev server
 - `pnpm --filter web build` — production build; `postbuild` measures the real gzipped initial bundle against a ≤600 KB budget
-- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (9 specs, 24 tests: offline, library/search/locale, character creation, level-up, multiclassing, play actions, export/import, axe) against it
+- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (10 specs, 25 tests: offline, library/search/locale, character creation (Fighter + Monk), level-up, multiclassing, play actions, export/import, axe) against it
 
 PWA: `@angular/service-worker` precaches the app shell, fonts, icon sprite, i18n JSON and the core content pack, so the app keeps working in airplane mode after a first load; updates prompt rather than auto-reload. An in-app dismissible banner on the characters list offers native install on Chromium (`beforeinstallprompt`), or an iOS "Add to Home Screen" instructions sheet (with the 7-day standalone-storage warning) on Safari, which never fires that event; the Play tab can hold a Screen Wake Lock during play (the toggle is hidden entirely where the API isn't supported). See `docs/manual-device-checklist.md` for the manual install/offline/export/perf passes this plan adds.
 
@@ -184,8 +184,39 @@ subclass. Getting there required widening the engine's own vocabulary (game rule
   fighter, pick "Multiclass into Barbarian" from the which-class picker, complete Barbarian's own
   level-1 choices, confirm the sheet shows both classes); the real-API `e2e:sync` suite's own
   character-creation helper was repaired for the new constrained weapon-mastery picker.
-- Slice 2 (remaining 7 classes, feats at scale, magic-item data at scale) and slice 3 (`.hkpack`
-  import, homebrew, pack rebase) are next; see the plan file below.
+- Slice 2 (below) completed the remaining 7 classes, feats and magic-item data; slice 3
+  (`.hkpack` import, homebrew, pack rebase) is next.
+
+### Phase 4 slice 2 — remaining seven classes, feats & magic items (complete)
+
+Bard, Druid, Monk, Paladin, Ranger, Rogue, and Sorcerer now play to level 20, each with its one
+SRD subclass — **all 12 SRD classes** are mechanized (plan 12 task reports; the ledger's
+"last of 12 classes" is Druid, task 13). As in slice 1, rules stay DATA in the packs.
+
+- **Vocabulary closed in this slice** (`docs/02-architecture/04-content-packs.md`): repeatable
+  feats stack their direct effects per occurrence; `choice.count` may be a formula (Fighter's
+  weapon-mastery count 3 → 6 now re-offers the choice as it grows); `spell.grant` with
+  `alwaysPrepared` is honored (granted spells do not count against the prepared cap and cannot be
+  unprepared); multiclass pooled spell slots render once on the sheet.
+- **Feats**: 17 SRD feats accounted for — 4 fighting styles (slice 1), 9 with real mechanics (Alert,
+  Ability Score Improvement, the seven Epic Boons), and 4 carried as whole text (Magic Initiate,
+  Savage Attacker, Skilled, Grappler) — source: plan-12 ledger, task 5.
+- **Magic items**: 43 items have parsed charges (39 reset at dawn, 4 never) and 18 carry an
+  attunement requirement predicate (12 class + 6 "Spellcaster") — source: ledger, task 6
+  and its review. Two approximations are owner-flagged: dawn charges restore on a long rest, and
+  rolled regain amounts (e.g. "1d6 + 4") restore fully (slice-3 carry: dice-in-rest).
+- **Goldens**: 24 new engine goldens (34 → 58) across the seven classes at levels 5/11/20 plus
+  three multiclass cases (Paladin 5/Cleric 3 pins the half-caster round-up combined caster level
+  of 6, slots [4,3,3]) — source: task 15 report.
+- **Performance**: the heaviest new `derive()` scenario (a level-20 Paladin) measures a
+  **0.635 ms median** (25 samples), against doc-05's <5 ms desktop / <15 ms mid-phone budget —
+  source: `packages/engine/test/golden/PERF.md` and the task 15 report. No Web Worker needed.
+- **e2e**: the offline project gained a Monk-through-the-wizard scenario (new class card, six-skill
+  pool, no mastery/fighting-style step, Unarmored Defense AC); the full offline run is 25/25 and
+  `e2e:sync` is 8/8 (run in two chunks), with no helper repairs needed. (The fighter → Paladin flow was not
+  used: Paladin's multiclass gate needs CHA 13 and the shared Fighter fixture has CHA 8.)
+- Gates at close: pack 1866 entities / 0 diagnostics, root 109 files / 1684 tests, web 134 / 1475
+  (ledger, task 15 and task 14), gzip bundle 337.3 / 600 KB (this task's build).
 
 ## Plans
 
@@ -195,4 +226,6 @@ Implementation plans live in `docs/superpowers/plans/`; the current ones are
 `2026-09-20-phase-3-campaign-server.md` (campaign backend, Phase 3 first slice),
 `2026-09-20-phase-3-campaign-client.md` (campaign client, completing Phase 3), and
 `2026-09-27-phase-4-engine-vocabulary-and-classes.md` (engine vocabulary, multiclassing, and five
-classes to 20 — Phase 4 slice 1, above).
+classes to 20 — Phase 4 slice 1, above), and
+`2026-09-27-phase-4-slice-2-remaining-classes-feats-items.md` (the remaining seven classes,
+feats, and magic items — Phase 4 slice 2, above).
