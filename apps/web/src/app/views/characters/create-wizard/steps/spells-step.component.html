@@ -53,7 +53,7 @@
                 [attr.aria-pressed]="isPrepared(id)"
                 [disabled]="isAlwaysPrepared(id)"
                 [attr.aria-describedby]="
-                  isAlwaysPrepared(id) ? 'always-prepared-reason-' + id : null
+                  isAlwaysPrepared(id) ? 'always-prepared-reason-' + classId() + '-' + id : null
                 "
                 [attr.title]="
                   isAlwaysPrepared(id) ? t('sheet.spellcasting.alwaysPreparedReason') : null
@@ -66,9 +66,11 @@
                 <span class="spells-step__always-prepared">{{
                   t('sheet.spellcasting.alwaysPrepared')
                 }}</span>
-                <span class="visually-hidden" [id]="'always-prepared-reason-' + id">{{
-                  t('sheet.spellcasting.alwaysPreparedReason')
-                }}</span>
+                <span
+                  class="visually-hidden"
+                  [id]="'always-prepared-reason-' + classId() + '-' + id"
+                  >{{ t('sheet.spellcasting.alwaysPreparedReason') }}</span
+                >
               }
             </li>
           }

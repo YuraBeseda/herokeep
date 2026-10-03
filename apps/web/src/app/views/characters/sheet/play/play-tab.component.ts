@@ -441,6 +441,9 @@ export class PlayTabComponent {
   // one resource however they arose. No multiclass rules live here: only "identical engine output
   // renders once". A pact block has an empty `slots` row and is never grouped (it renders its own
   // pact lane); a solo caster's row is unique so it stays on its own block.
+  // Value identity is safe: the engine emits identical rows only for the combined pool. In a
+  // hypothetical pack without multiclass weights two solo casters could coincidentally merge, which
+  // is cosmetic-only — `used` is a global per-level counter and spend/restore carry only `level`.
   private readonly sharedSlotKeys = computed<ReadonlySet<string>>(() => {
     const counts = new Map<string, number>();
     for (const block of this.sheet()?.spellcasting ?? []) {
