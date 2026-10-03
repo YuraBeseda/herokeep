@@ -1,8 +1,9 @@
-import type { Predicate } from '@hk/protocol';
+import type { Choice, Predicate } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import { constantPredicateContext, type PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
+import { resolveChoiceCount } from './choice-count.ts';
 import type { ChoiceRequest, Sheet } from './sheet.ts';
 
 export interface Advancement {
@@ -43,14 +44,24 @@ const byExistingFirstThenClassId = (a: Advancement, b: Advancement) =>
 /** `steps` for one class's row at `toLevel` — shared by both the "level up" and "new class" branches. */
 const rowSteps = (
   classId: string,
-  levels: { level: number; choices: { id: string; count: number }[] }[],
+  levels: { level: number; choices: Choice[] }[],
   toLevel: number,
-): ChoiceRequest[] =>
-  (levels.find((r) => r.level === toLevel)?.choices ?? []).map((c) => ({
+  facts: Facts,
+  index: ContentIndex,
+): ChoiceRequest[] => {
+  // Formula counts (plan 12 task 2) resolve as of the class having reached `toLevel`.
+  const after = {
+    classes: [
+      ...facts.classes.filter((c) => (index.resolveClassRef(c.classId) ?? c.classId) !== classId),
+      { classId, level: toLevel },
+    ],
+  };
+  return (levels.find((r) => r.level === toLevel)?.choices ?? []).map((c) => ({
     choiceId: c.id,
     ownerId: classId,
-    count: c.count,
+    count: resolveChoiceCount(c, after, index),
   }));
+};
 
 /**
  * Best-effort `PredicateContext` for evaluating `system.multiclass.prerequisites[classRef]`
@@ -119,7 +130,7 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
     advancements.push({
       classId: entry.classId,
       toLevel,
-      steps: rowSteps(entry.classId, classEntity.levels, toLevel),
+      steps: rowSteps(entry.classId, classEntity.levels, toLevel, facts, index),
       hpChoice: toLevel >= 2,
       isNewClass: false,
     });
@@ -151,7 +162,7 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
         advancements.push({
           classId,
           toLevel: 1,
-          steps: rowSteps(classId, classEntity.levels, 1),
+          steps: rowSteps(classId, classEntity.levels, 1, facts, index),
           hpChoice: false,
           isNewClass: true,
         });

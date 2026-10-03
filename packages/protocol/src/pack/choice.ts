@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ENTITY_ID_RE, EntityIdSchema, EntityTypeSchema, SLUG_RE, parseEntityId } from '../ids.ts';
 import { ShortTextSchema } from './enums.ts';
+import { FormulaSchema } from './formula.ts';
 import { ClassRefSchema, PredicateSchema } from './predicate.ts';
 
 export const CHOICE_ID_RE = new RegExp(`^(${ENTITY_ID_RE.source.slice(1, -1)})@(\\d{1,2})/([a-z0-9][a-z0-9-]*)$`);
@@ -81,7 +82,12 @@ export const ChoiceSchema = z.strictObject({
   prompt: ShortTextSchema,
   at: ChoiceAtSchema,
   pick: PickSchema,
-  count: z.int().min(1).default(1),
+  /**
+   * Picks required. An int is fixed; a formula string (plan 12 task 2) is resolved by the engine
+   * against the character (`classLevel(<class>)`, `level`) so a class choice can grow with level —
+   * e.g. fighter weapon masteries 3 -> 4 -> 5 -> 6. Additive widening: every int count is unchanged.
+   */
+  count: z.union([z.int().min(1), FormulaSchema]).default(1),
   unique: z.boolean().default(true),
   repeatableAt: z.array(z.int().min(1).max(20)).default([]),
   prerequisites: z.array(PredicateSchema).default([]),

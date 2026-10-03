@@ -5,6 +5,7 @@ import { type Diagnostic, error } from '../diagnostics.ts';
 import type { PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
+import { resolveChoiceCount } from './choice-count.ts';
 import { type Composition, compose, equippedArmor } from './composition.ts';
 import type { Sheet } from './sheet.ts';
 
@@ -425,7 +426,9 @@ export function validateSelection(
 
   const found = findChoice(index, choiceId);
   if (!found) return [error('selection.unknownChoice', `Unknown choice "${choiceId}"`, { path: choiceId })];
-  const { choice, owner } = found;
+  const { owner } = found;
+  // Plan 12 task 2: every count check below runs against the count RESOLVED for this character.
+  const choice: Choice = { ...found.choice, count: resolveChoiceCount(found.choice, facts, index) };
 
   const comp = compose(facts, index);
   const ctx = buildPredicateContext(sheet, comp, facts, index);

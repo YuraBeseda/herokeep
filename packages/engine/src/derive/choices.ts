@@ -3,10 +3,21 @@ import { occurrenceChoiceId } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import type { Facts } from '../reduce/facts.ts';
+import { decisionFallsShort, resolveChoiceCount } from './choice-count.ts';
 import type { ChoiceRequest } from './sheet.ts';
 
 export const byChoiceId = (a: ChoiceRequest, b: ChoiceRequest) =>
   a.choiceId < b.choiceId ? -1 : a.choiceId > b.choiceId ? 1 : 0;
+
+/**
+ * A choice is outstanding while it has no recorded decision — or, for a formula-count choice only
+ * (plan 12 task 2), while its recorded decision is shorter than the count the character's current
+ * levels now resolve to (the count grew; the same choice id is re-offered with the larger count).
+ */
+function isUnanswered(facts: Facts, choice: Choice, id: string, count: number): boolean {
+  const recorded = facts.decisions[id];
+  return recorded === undefined || decisionFallsShort(choice, recorded, count);
+}
 
 /** The row-gated synthetic id for a class's starting-skill decision (R5, task-13-brief.md controller ruling). */
 export const skillsChoiceId = (classId: string): string => `${classId}@1/skills`;
@@ -44,8 +55,9 @@ export function creationChoices(
   }
 
   const requests = asked
-    .filter((c) => facts.decisions[c.id] === undefined)
-    .map((c) => ({ choiceId: c.id, ownerId: owners.get(c)!.id, count: c.count }))
+    .map((c) => ({ c, count: resolveChoiceCount(c, facts, index) }))
+    .filter(({ c, count }) => isUnanswered(facts, c, c.id, count))
+    .map(({ c, count }) => ({ choiceId: c.id, ownerId: owners.get(c)!.id, count }))
     .sort(byChoiceId);
   return { requests, issues };
 }
@@ -69,7 +81,8 @@ export function levelScopedChoices(
     for (const row of owner.levels) {
       if (row.level > gateLevel) continue;
       for (const c of row.choices) {
-        if (facts.decisions[c.id] === undefined) requests.push({ choiceId: c.id, ownerId, count: c.count });
+        const count = resolveChoiceCount(c, facts, index);
+        if (isUnanswered(facts, c, c.id, count)) requests.push({ choiceId: c.id, ownerId, count });
       }
     }
   };
@@ -146,10 +159,12 @@ export function selectedEntityChoices(
       acquisitions.set(chosen.id, occurrence);
       for (const c of chosen.choices) {
         const id = occurrenceChoiceId(c.id, occurrence);
-        if (alreadyAsked.has(id) || seen.has(id) || facts.decisions[id] !== undefined) continue;
+        if (alreadyAsked.has(id) || seen.has(id)) continue;
+        const count = resolveChoiceCount(c, facts, index);
+        if (!isUnanswered(facts, c, id, count)) continue;
         if (!atIsSurfaced(c.at, facts, index)) continue;
         seen.add(id);
-        requests.push({ choiceId: id, ownerId: chosen.id, count: c.count });
+        requests.push({ choiceId: id, ownerId: chosen.id, count });
       }
     }
   }

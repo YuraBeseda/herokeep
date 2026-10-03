@@ -96,13 +96,23 @@ export function collectEntityPredicates(e: Entity): PredicateSite[] {
 const predicateFormulas = (sites: PredicateSite[]): FormulaSite[] =>
   sites.flatMap((s) => collectPredicateFormulas(s.p, s.path).map((f) => ({ ...f, allowComparison: true })));
 
+/** Formula-string `Choice.count` sites (plan 12 task 2); an int count is not a formula. */
+const choiceCountSites = (choices: Choice[], path: string): FormulaSite[] =>
+  choices.flatMap((c, i) =>
+    typeof c.count === 'string' ? [{ path: `${path}.${i}.count`, src: c.count, allowComparison: false }] : [],
+  );
+
 export function collectEntityFormulas(e: Entity): FormulaSite[] {
-  const sites: FormulaSite[] = [...predicateFormulas(entityPredicateSites(e))];
+  const sites: FormulaSite[] = [
+    ...predicateFormulas(entityPredicateSites(e)),
+    ...choiceCountSites(e.choices, 'choices'),
+  ];
   if (e.type === 'feature' && e.uses) sites.push({ path: 'uses.count', src: e.uses.count, allowComparison: false });
   if (e.type === 'item' && e.charges) sites.push({ path: 'charges.max', src: e.charges.max, allowComparison: false });
   if (e.type === 'class' || e.type === 'subclass') {
     e.levels.forEach((row, r) => {
       sites.push(...predicateFormulas(rowPredicateSites(row, `levels.${r}`)));
+      sites.push(...choiceCountSites(row.choices, `levels.${r}.choices`));
       for (const [key, value] of Object.entries(row.extra ?? {})) {
         if (typeof value === 'string' && !isTypedExtraLiteral(value))
           sites.push({ path: `levels.${r}.extra.${key}`, src: value, allowComparison: false });

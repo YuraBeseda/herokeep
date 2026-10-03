@@ -3195,9 +3195,16 @@
         },
         "count": {
           "default": 1,
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "$ref": "#/$defs/__schema36"
+            }
+          ]
         },
         "unique": {
           "default": true,

@@ -53,6 +53,28 @@ describe('ChoiceSchema', () => {
   });
 });
 
+describe('ChoiceSchema count (plan 12 task 2: progression-driven counts)', () => {
+  const base = {
+    id: 'srd-5e-2024:class/fighter@1/weapon-masteries',
+    prompt: 'Weapon Masteries',
+    at: { kind: 'classLevel', class: 'fighter', level: 1 },
+    pick: { query: { type: 'item', hasField: ['weapon.mastery'] } },
+  };
+
+  it('keeps an integer count byte-identical', () => {
+    expect(ChoiceSchema.parse({ ...base, count: 3 }).count).toBe(3);
+    expect(ChoiceSchema.safeParse({ ...base, count: 0 }).success).toBe(false);
+    expect(ChoiceSchema.safeParse({ ...base, count: 1.5 }).success).toBe(false);
+  });
+
+  it('accepts a formula-string count (resolved by the engine against the character)', () => {
+    const f = '3 + min(1, floor(classLevel(fighter) / 4))';
+    expect(ChoiceSchema.parse({ ...base, count: f }).count).toBe(f);
+    expect(ChoiceSchema.safeParse({ ...base, count: '' }).success).toBe(false);
+    expect(ChoiceSchema.safeParse({ ...base, count: 'DROP TABLE;' }).success).toBe(false);
+  });
+});
+
 describe('EntityQuerySchema hasField (ruling 4: weapon-mastery choices as real entity queries)', () => {
   it('accepts a dot-path field-presence filter, alone or combined with tags (AND semantics)', () => {
     expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['weapon.mastery'] }).success).toBe(true);

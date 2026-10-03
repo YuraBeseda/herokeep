@@ -23,6 +23,7 @@ import { deriveSpellcasting } from './spellcasting.ts';
 
 export * from './sheet.ts';
 export * from './advancement.ts';
+export { resolveChoiceCount } from './choice-count.ts';
 export * from './validation.ts';
 export * from './overrides.ts';
 export * from './encumbrance.ts';

@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { findChoice, type Diagnostic, type Sheet } from '@hk/engine';
+import { findChoice, resolveChoiceCount, type Diagnostic, type Sheet } from '@hk/engine';
 import { makeEntityId, parseChoiceId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -142,18 +142,22 @@ export class ChoiceStepComponent {
     const found = findChoice(index, id);
     if (!found) return { kind: 'unsupported' };
     const { choice } = found;
+    // A formula `count` (plan 12 task 2) is resolved here at its level-0 base: this view's `count`
+    // only drives the single-select (`=== 1`) UI toggle; the engine (validateSelection/outstanding
+    // requests) enforces the real, level-resolved count.
+    const count = resolveChoiceCount(choice, { classes: [] }, index);
     if ('query' in choice.pick) {
       return {
         kind: 'query',
         ids: index.query(choice.pick.query).map((e) => e.id),
-        count: choice.count,
+        count,
       };
     }
     if ('static' in choice.pick) {
-      return { kind: 'static', ids: [...choice.pick.static], count: choice.count };
+      return { kind: 'static', ids: [...choice.pick.static], count };
     }
     if ('literal' in choice.pick) {
-      return { kind: 'literal', count: choice.count };
+      return { kind: 'literal', count };
     }
     if ('abilities' in choice.pick) {
       return { kind: 'abilities' };
