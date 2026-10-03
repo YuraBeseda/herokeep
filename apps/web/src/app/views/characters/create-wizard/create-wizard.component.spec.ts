@@ -669,6 +669,75 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     expect([...txIds][0]).toBeDefined();
   });
 
+  // Plan 12 task 14: the generic wizard machinery handles a NEW (slice-2) class with no bespoke UI —
+  // Monk: a non-caster (no spells step), whose only level-1 choice is its skills, and whose Focus
+  // Points resource only exists from level 2 (`monk-monks-focus` is granted by the level-2 row).
+  it('creates a Monk through the generic wizard: no spells step, no Focus pips at level 1, Focus pips (2) after leveling to 2', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const MONK = 'srd-5e-2024:class/monk';
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Lin');
+    state.gender.set('feminine');
+    state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      `${SYSTEM_ID}@0/ability-scores`,
+      ['str:10', 'dex:15', 'con:13', 'int:8', 'wis:14', 'cha:12'],
+      { method: 'standardArray' },
+    );
+    state.setDecision(`${SYSTEM_ID}@0/class`, [MONK]);
+    await fixture.whenStable();
+
+    // Monk's only level-1 choice is its skills: outstanding until picked, then nothing else.
+    expect(state.outstanding().map((o) => o.choiceId)).toEqual([`${MONK}@1/skills`]);
+    state.setDecision(`${MONK}@1/skills`, ['acrobatics', 'insight']);
+    await fixture.whenStable();
+    expect(state.outstanding()).toEqual([]);
+    expect(state.invalidDecisions().size).toBe(0);
+
+    // No caster step anywhere in the derived stepper, and an empty spellcasting draft.
+    expect(state.steps().some((s) => s.kind === 'spells')).toBe(false);
+    expect(state.draftSheet()?.spellcasting).toEqual([]);
+    expect(state.draftSheet()?.resources.some((r) => r.id === 'focus-points')).toBe(false);
+
+    await advanceToReview(fixture);
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.create-wizard__create')!
+      .click();
+    for (let i = 0; i < 50 && navigateSpy.mock.calls.length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(navigateSpy).toHaveBeenCalledTimes(1);
+    const streamId = (navigateSpy.mock.calls[0]?.[0] as [string, string, string])[1];
+
+    const repo = TestBed.inject(EventsRepository);
+    const index = createContentIndex([corePack]);
+    const system = index.system();
+    const rules: SystemRules = { restRules: system.restRules, hpRules: system.hpRules };
+    const sheetOf = async () =>
+      derive(reduce(await repo.byStream(streamId), undefined, rules), index, rules);
+
+    const level1 = await sheetOf();
+    expect(level1.classes).toEqual([expect.objectContaining({ classId: MONK, level: 1 })]);
+    expect(level1.spellcasting).toEqual([]);
+    expect(level1.resources.some((r) => r.id === 'focus-points')).toBe(false);
+
+    // Level 2 (store-level, same engine path the level-up wizard commits): Focus appears, 2 points.
+    await TestBed.inject(CharacterStore).load(streamId);
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'level.gained', v: 1, payload: { classId: MONK, level: 2, hpRoll: 'average' } },
+    ]);
+    const level2 = await sheetOf();
+    expect(level2.level).toBe(2);
+    expect(level2.resources.find((r) => r.id === 'focus-points')?.max.value).toBe(2);
+  });
+
   // Whole-branch review finding 2: `create()` succeeding followed by `appendTx` failing (leadership
   // lost between the two calls, a storage error, …) must not leave a name-only stub character
   // behind — `onCreate()`'s catch now best-effort `deleteCharacter`s the id `create()` returned

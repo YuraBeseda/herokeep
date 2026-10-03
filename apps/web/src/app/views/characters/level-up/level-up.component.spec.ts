@@ -17,6 +17,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
+import { CreateWizardState } from '../create-wizard/create-wizard.state';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling), same fixture-loading
 // approach as `sheet-shell.component.spec.ts`.
@@ -363,6 +364,107 @@ describe('LevelUpComponent', () => {
 
     expect(root.querySelector('.level-up__class-picker')).toBeNull();
     expect(root.querySelector('.level-up__hp-average')).not.toBeNull();
+  });
+
+  // Plan 12 task 14: a slice-2 half-caster driven through the GENERIC level-up wizard (no bespoke
+  // UI): Paladin 2 -> 3 offers exactly one subclass (Oath of Devotion), grows the 1st-level slot
+  // row, and only the picked oath contributes its always-prepared spells.
+  it('paladin 2→3: the subclass step offers exactly Oath of Devotion; slots grow 2→3 and oath spells appear only once picked', async () => {
+    const PALADIN = 'srd-5e-2024:class/paladin';
+    const SYSTEM_ID = 'srd-5e-2024:system/5e-2024';
+    const state = TestBed.runInInjectionContext(() => new CreateWizardState());
+    state.name.set('Aldis');
+    state.gender.set('masculine');
+    state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      `${SYSTEM_ID}@0/ability-scores`,
+      ['str:15', 'dex:8', 'con:13', 'int:10', 'wis:12', 'cha:14'],
+      { method: 'standardArray' },
+    );
+    state.setDecision(`${SYSTEM_ID}@0/class`, [PALADIN]);
+    state.setDecision(`${PALADIN}@1/skills`, ['athletics', 'persuasion']);
+    state.setDecision(`${PALADIN}@1/weapon-masteries`, [
+      'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    const id = await characterStore.create(state.name().trim(), state.gender());
+    const [, ...rest] = state.buildTransaction();
+    await characterStore.appendTx(rest);
+
+    const oathSpells = [
+      'srd-5e-2024:spell/protection-from-evil-and-good',
+      'srd-5e-2024:spell/shield-of-faith',
+    ];
+    const slotTotal = () =>
+      characterStore.sheet()!.spellcasting.find((b) => b.classId === PALADIN)!.slots[0]?.max;
+    expect(slotTotal()).toBe(2); // paladin 1: two 1st-level slots (class row `paladin-slots-1st`)
+
+    await characterStore.appendTx([
+      { type: 'level.gained', v: 1, payload: { classId: PALADIN, level: 2, hpRoll: 'average' } },
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: {
+          choiceId: `${PALADIN}@2/fighting-style`,
+          selection: ['srd-5e-2024:feat/defense'],
+        },
+      },
+      { type: 'xp.awarded', v: 1, payload: { amount: 900 } },
+    ]);
+    const alwaysAt2 = characterStore
+      .sheet()!
+      .spellcasting.find((b) => b.classId === PALADIN)!.alwaysPrepared;
+    expect(alwaysAt2 ?? []).not.toEqual(expect.arrayContaining(oathSpells));
+    expect(slotTotal()).toBe(2);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+    await chooseClassIfOffered(
+      root,
+      harness.fixture,
+      charactersEn.levelUp.classPicker.levelUp
+        .replace('{class}', 'Paladin')
+        .replace('{level}', '3'),
+    );
+
+    root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+    await harness.fixture.whenStable();
+
+    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
+    await harness.fixture.whenStable();
+
+    // The subclass step: exactly one option, and it is Oath of Devotion.
+    const options = Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'));
+    expect(options).toHaveLength(1);
+    expect(root.textContent).toContain('Oath of Devotion');
+    options[0].click();
+    await harness.fixture.whenStable();
+    expect(root.textContent).not.toContain('Missing translation');
+    expect(root.textContent).not.toMatch(/characters\.[a-z]+\.[A-Za-z.]+/);
+
+    // Advance through whatever steps remain (spells/review) to Finish.
+    for (let i = 0; i < 6 && root.querySelector('.level-up__finish') === null; i++) {
+      const next = root.querySelector<HTMLButtonElement>('.level-up__next');
+      if (!next || next.disabled) break;
+      next.click();
+      await harness.fixture.whenStable();
+    }
+    const finish = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
+    expect(finish.disabled).toBe(false);
+    finish.click();
+    await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 3);
+
+    expect(characterStore.sheet()!.classes[0]).toMatchObject({
+      classId: PALADIN,
+      level: 3,
+      subclassId: 'srd-5e-2024:subclass/oath-of-devotion',
+    });
+    expect(slotTotal()).toBe(3); // `paladin-slots-1st` extra at level 3
+    const block = characterStore.sheet()!.spellcasting.find((b) => b.classId === PALADIN)!;
+    expect(block.alwaysPrepared ?? []).toEqual(expect.arrayContaining(oathSpells));
   });
 
   it("the spells step recommends 2 spells (not the creation wizard's 6)", async () => {
