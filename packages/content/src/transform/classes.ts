@@ -45,6 +45,11 @@ const MULTICLASS_GAINS: Record<
   // skill for Bard/Rogue) -- no weapons. Thieves' Tools has no `gains` field (schema carries armor,
   // weapons, skill count only), so it is not representable here; flagged.
   rogue: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
+  // Plan 12 task 8. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
+  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
+  // Monk's multiclass row grants no armor, weapon, or skill proficiencies (Monk Armor Training is
+  // "None" per the vendored monk_core-traits).
+  monk: { armorTraining: [], weaponProficiencies: [] },
 };
 
 /**

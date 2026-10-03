@@ -1069,3 +1069,216 @@ describe('rogue and thief to level 20 mechanics (task 7)', () => {
     expect(r.skillChoice.count).toBe(4);
   });
 });
+
+describe('monk and warrior of the open hand to level 20 mechanics (task 8)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.monk].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.monk.filter((x) => features.some((f) => f.id === x.id)),
+  );
+
+  interface MonkShape {
+    hitDie: number;
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount: number } };
+    levels: {
+      level: number;
+      extra?: Record<string, unknown>;
+      choices: { id: string; pick: unknown; count: number }[];
+    }[];
+  }
+  const monk = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/monk') as unknown as MonkShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/monk-${slug}`) as unknown as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('monk: core traits (d8, dex/wis saves, no armor, simple + martial light weapons, 2 skills from 6)', () => {
+    const m = monk();
+    expect(m.hitDie).toBe(8);
+    expect(m.saves).toEqual(['str', 'dex']); // upstream [dex, wis] corrected by corrections.json
+    expect(m.armorTraining).toEqual([]);
+    expect(m.weaponProficiencies).toEqual(['simple', 'hand-crossbow', 'scimitar', 'shortsword']);
+    expect(m.skillChoice.count).toBe(2);
+    expect([...m.skillChoice.from].sort()).toEqual(
+      ['acrobatics', 'athletics', 'history', 'insight', 'religion', 'stealth'].sort(),
+    );
+  });
+
+  it('monk: multiclass gains = nothing (owner-flagged, SRD-silent in the vendor)', () => {
+    expect(monk().multiclass.gains).toEqual({ armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 });
+  });
+
+  it('monk: subclass choice at 3 offers only Open Hand; ASI at 4/8/12/16 + Epic Boon at 19, none at 10', () => {
+    const rows = monk().levels;
+    const choices = rows.flatMap((r) => r.choices);
+    const ids = choices.map((c) => c.id);
+    const sub = choices.find((c) => c.id === 'srd-5e-2024:class/monk@3/subclass')!;
+    expect(sub.pick).toEqual({ query: { type: 'subclass', classes: ['monk'] } });
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/monk@${level}/feat`);
+    expect(ids).not.toContain('srd-5e-2024:class/monk@10/feat');
+    expect(ids.some((i) => i.endsWith('/weapon-masteries'))).toBe(false);
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/monk').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/warrior-of-the-open-hand']);
+  });
+
+  it('monk: Martial Arts die is display-only typed extras at all 20 levels (ruling 1)', () => {
+    const dice = monk().levels.map((r) => r.extra?.['monk-martial-arts-dice']);
+    const rep = (die: string, n: number): string[] => Array.from({ length: n }, () => die);
+    expect(dice).toEqual([...rep('1d6', 4), ...rep('1d8', 6), ...rep('1d10', 6), ...rep('1d12', 4)]);
+    expect(feature('martial-arts').effects.filter((e) => e.type !== 'feature.text')).toEqual([]);
+  });
+
+  it('monk: Focus Points resource formula reproduces the vendored column at all 20 levels; absent at level 1', () => {
+    const def = feature('monks-focus').effects.find((e) => e.type === 'resource.define') as unknown as {
+      id: string;
+      max: string;
+      reset: string;
+    };
+    expect(def).toMatchObject({ id: 'focus-points', reset: 'shortRest' });
+    expect(def.max).toBe('classLevel(monk)');
+    const column = monk().levels.map((r) => r.extra?.['monk-focus-points']);
+    expect(column[0]).toBeUndefined(); // level 1 has no Focus Points row
+    expect(column.slice(1)).toEqual(Array.from({ length: 19 }, (_, i) => i + 2));
+    // the define lives on a feature first granted at level 2, so it materializes only from level 2
+    const grantedAt = (slug: string) =>
+      monk().levels.find((r) =>
+        (r as unknown as { grants: { feature: string }[] }).grants.some(
+          (g) => g.feature === `srd-5e-2024:feature/monk-${slug}`,
+        ),
+      )!.level;
+    expect(grantedAt('monks-focus')).toBe(2);
+  });
+
+  it('monk: Unarmored Defense is ac.formula 10+DEX+WIS suppressed by armor OR a shield', () => {
+    expect(feature('unarmored-defense').effects).toContainEqual({
+      type: 'ac.formula',
+      formula: '10 + mod(dex) + mod(wis)',
+      key: 'monk-unarmored-defense',
+      when: { all: [{ armor: { category: ['none'] } }, { shield: false }] },
+    });
+  });
+
+  it('monk: Unarmored Movement is stepped speed.bonus increments reproducing the vendored column', () => {
+    const eff = feature('unarmored-movement').effects.filter((e) => e.type === 'speed.bonus') as unknown as {
+      mode: string;
+      value: number;
+      key: string;
+      when: { all: [unknown, unknown, { classLevel: { monk: { gte: number } } }] };
+    }[];
+    expect(eff).toHaveLength(5);
+    const total = (level: number) =>
+      eff.filter((e) => level >= e.when.all[2].classLevel.monk.gte).reduce((a, e) => a + e.value, 0);
+    // vendored srd-2024_monk_unarmored-movement column: none at 1, +10 (2-5), +15 (6-9), +20 (10-13), +25 (14-17), +30 (18-20)
+    const column = (l: number) => (l < 2 ? 0 : l < 6 ? 10 : l < 10 ? 15 : l < 14 ? 20 : l < 18 ? 25 : 30);
+    for (let l = 1; l <= 20; l++) expect(total(l), `level ${l}`).toBe(column(l));
+    expect(new Set(eff.map((e) => e.key)).size).toBe(5);
+    for (const e of eff) {
+      expect(e.mode).toBe('walk');
+      expect(e.when.all[0]).toEqual({ armor: { category: ['none'] } });
+      expect(e.when.all[1]).toEqual({ shield: false });
+    }
+  });
+
+  it('monk: Extra Attack and Body and Mind are real effects (extraAttack.set, +4 dex/wis capped at 25)', () => {
+    expect(feature('extra-attack').effects).toContainEqual({ type: 'extraAttack.set', count: 2 });
+    const bm = feature('body-and-mind').effects;
+    for (const ability of ['dex', 'wis']) {
+      expect(bm).toContainEqual({ type: 'ability.bonus', ability, value: 4 });
+      expect(bm).toContainEqual({ type: 'ability.max', ability, value: 25 });
+    }
+  });
+
+  it('monk: real saves effect (Disciplined Survivor) and text fallbacks for state/spend-gated features', () => {
+    expect(feature('disciplined-survivor').effects).toEqual(
+      expect.arrayContaining(
+        ['str', 'con', 'int', 'cha'].map((target) => ({
+          type: 'proficiency.grant',
+          kind: 'save',
+          target,
+          level: 'proficient',
+        })),
+      ),
+    );
+    for (const slug of [
+      'martial-arts',
+      'uncanny-metabolism',
+      'deflect-attacks',
+      'stunning-strike',
+      'slow-fall',
+      'empowered-strikes',
+      'evasion',
+      'acrobatic-movement',
+      'heightened-focus',
+      'self-restoration',
+      'deflect-energy',
+      'disciplined-survivor',
+      'perfect-focus',
+      'superior-defense',
+      'warrior-of-the-open-hand-open-hand-technique',
+      'warrior-of-the-open-hand-wholeness-of-body',
+      'warrior-of-the-open-hand-fleet-step',
+      'warrior-of-the-open-hand-quivering-palm',
+    ]) {
+      expect(
+        feature(slug).effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+  });
+});
+
+describe('monk integration over the real pack (task 8)', () => {
+  const monkId = `${FP}:class/monk`;
+  function monkChar(level: number): Event[] {
+    featSeq = 0;
+    return [
+      featEv('character.created', {
+        name: 'Lin',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, ['dex:+2', 'con:+1']),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, ['str:8', 'dex:15', 'con:14', 'int:10', 'wis:14', 'cha:12']),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', { classId: monkId, level: i + 1, hpRoll: 'average' }),
+      ),
+    ];
+  }
+
+  it('Focus Points: absent at level 1, then max == monk level', () => {
+    expect(sheetOf(monkChar(1)).resources.find((r) => r.id === 'focus-points')).toBeUndefined();
+    for (const l of [2, 3, 5, 10, 20])
+      expect(sheetOf(monkChar(l)).resources.find((r) => r.id === 'focus-points')?.max.value, `level ${l}`).toBe(l);
+  });
+
+  it('Unarmored Defense + Movement derive: AC 10+dex+wis, speed 30 + column', () => {
+    // dex 15+2 = 17 (+3), wis 14 (+2): unarmored AC = 10 + 3 + 2
+    expect(sheetOf(monkChar(1)).ac.value).toBe(15);
+    expect(sheetOf(monkChar(1)).speed['walk']!.value).toBe(30);
+    const expected: [number, number][] = [
+      [2, 40],
+      [5, 40],
+      [6, 45],
+      [10, 50],
+      [14, 55],
+      [18, 60],
+      [20, 60],
+    ];
+    for (const [l, speed] of expected) expect(sheetOf(monkChar(l)).speed['walk']!.value, `level ${l}`).toBe(speed);
+  });
+});

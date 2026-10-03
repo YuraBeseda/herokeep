@@ -1,0 +1,477 @@
+[
+  {
+    "id": "srd-5e-2024:class/monk",
+    "cite": "SRD 5.2.1, Monk Core Traits; Monk Subclass; Ability Score Improvement; Epic Boon",
+    "note": "Task 8 (phase 4 plan 12): new overlay, class 1->20. Core Traits table (vendored srd-2024_monk_core-traits): \"Hit Point Die: D8 per Monk level\" and \"Saving Throw Proficiencies: Strength and Dexterity\". The vendored CharacterClass.saving_throws ([dex, wis]) disagrees with that text; the saves correction already lives in corrections.json (layer 1, pre-existing), so no saves patch is repeated here. \"Skill Proficiencies: Choose 2: Acrobatics, Athletics, History, Insight, Religion, or Stealth\" (skillChoice count 2 over those six, replacing the placeholder 0 / full-18 list from transformClasses). \"Weapon Proficiencies: Simple weapons and Martial weapons that have the Light property\": the engine matches a weapon by category slug, item slug or tag (packages/engine/src/derive/attacks.ts isProficientWithWeapon) and has NO property-qualified category, so this is 'simple' plus the item slugs of the martial weapons in this pack that carry the Light property (verified against the built pack: hand-crossbow [ammunition, light, loading], scimitar [finesse, light], shortsword [finesse, light]). The Monk text says Light, not Light-and-melee, so the ranged hand-crossbow is included as written (Martial Arts' own 'Monk weapons' definition, by contrast, is melee-only -- that is a different, text-only concept). A future martial Light weapon in a pack would need adding here -- same vocabulary gap Rogue flagged (a property-qualified proficiency category). \"Tool Proficiencies: Choose one type of Artisan's Tools or Musical Instrument\": a player CHOICE over a tool category with no representable pick (no tool-category query), so toolProficiencies stays []; flagged. \"Armor Training: None\" -> armorTraining []. Subclass @3 offers exactly the monk subclasses (Warrior of the Open Hand is the only SRD one). ASI: feat choices at 4/8/12/16 (vendored ability-score-improvement desc: \"You gain this feature again at Monk levels 8, 12, and 16\"; verified against the vendored ClassFeatureItem rows for monk_ability-score-improvement: 4, 8, 12, 16 only) and Epic Boon @19 (vendored epic-boon, level 19) reuse the open query:{type:'feat'} shape -- Monk has NO extra ASI at 10 in the 2024 SRD. Monk has NO Weapon Mastery feature in the 2024 SRD (no srd-2024_monk_weapon-mastery ClassFeature exists), so no mastery pick. Martial Arts die (1d6 at 1-4, 1d8 at 5-10, 1d10 at 11-16, 1d12 at 17-20) already lands as the typed DiceSchema extra 'monk-martial-arts-dice' on all 20 rows via transformClasses(): display-only by ruling 1, nothing authored. The sibling column-data features (martial-arts-dice, focus-points, proficiency-bonus) are untouched per precedent. MULTICLASS gains live in transform/classes.ts MULTICLASS_GAINS (no armor, no weapons, no skills; SRD-silent in the vendor, owner-flag there).",
+    "set": {
+      "armorTraining": [],
+      "weaponProficiencies": ["simple", "hand-crossbow", "scimitar", "shortsword"],
+      "toolProficiencies": [],
+      "skillChoice": {
+        "from": ["acrobatics", "athletics", "history", "insight", "religion", "stealth"],
+        "count": 2
+      }
+    },
+    "rows": [
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/monk@3/subclass",
+            "prompt": "Monk Subclass",
+            "at": { "kind": "classLevel", "class": "monk", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["monk"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/monk@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "monk", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/monk@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "monk", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/monk@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "monk", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/monk@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "monk", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/monk@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "monk", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-martial-arts",
+    "cite": "SRD 5.2.1, Martial Arts",
+    "note": "SRD text: while unarmed or wielding only Monk weapons and not wearing armor or wielding a Shield: Bonus Unarmed Strike, Martial Arts die in place of normal damage, Dexterity for Unarmed Strike/Monk weapon attack and damage rolls (and grapple/shove DC). Granted at Monk level 1. DISPLAY-ONLY by ruling 1: the die scales via the typed extra 'monk-martial-arts-dice' (sibling column-data feature) already on every class row. The remaining clauses are gated on a compound momentary state (unarmed-or-Monk-weapons-only AND no armor AND no Shield) and a per-attack weapon-kind test (Monk weapons = Simple Melee + Martial Melee Light) for which the Sheet has no representation; the armor/shield half alone is expressible but the weapon half is not, so authoring DEX-for-attacks unconditionally would be state-wrong. Text fallback per ruling 9; flagged slice-3 candidate (a 'wielding only <weapon filter>' predicate plus an attack-ability-substitution effect).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Martial Arts",
+          "description": "Your practice of martial arts gives you mastery of combat styles that use your Unarmed Strike and Monk weapons, which are the following:\n\n- Simple Melee weapons\n- Martial Melee weapons that have the Light property\n\nYou gain the following benefits while you are unarmed or wielding only Monk weapons and you aren't wearing armor or wielding a Shield.\n\n**Bonus Unarmed Strike.** You can make an Unarmed Strike as a Bonus Action.\n\n**Martial Arts Die.** You can roll 1d6 in place of the normal damage of your Unarmed Strike or Monk weapons. This die changes as you gain Monk levels, as shown in the Martial Arts column of the Monk Features table.\n\n**Dexterous Attacks.** You can use your Dexterity modifier instead of your Strength modifier for the attack and damage rolls of your Unarmed Strikes and Monk weapons. In addition, when you use the Grapple or Shove option of your Unarmed Strike, you can use your Dexterity modifier instead of your Strength modifier to determine the save DC."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-unarmored-defense",
+    "cite": "SRD 5.2.1, Monk - Unarmored Defense",
+    "note": "SRD text: \"While you aren't wearing armor or wielding a Shield, your base Armor Class equals 10 plus your Dexterity and Wisdom modifiers.\" Granted at Monk level 1. Real ac.formula mirroring barbarian-unarmored-defense's authoring EXACTLY (formula string shape, explicit key, eagerly-evaluated score-free `when`), with ONE deliberate difference in the suppression predicate: Barbarian's text says \"While you aren't wearing any armor ... You can use a Shield and still gain this benefit\", so Barbarian's gate is armor-only ({armor:{category:['none']}}); Monk's 2024 text is suppressed by armor OR a Shield (\"aren't wearing armor or wielding a Shield\"), so the gate is all[{armor:{category:['none']}}, {shield:false}]. Verified against packages/engine/src/predicate/evaluate.ts: `armor` tests ctx.armorCategory() (currently-equipped armor only; a worn shield is never folded into it -- composition.ts equippedArmor() tracks hasShield separately) and `shield` is `ctx.hasShield() === p.shield`, so `{shield:false}` is true exactly when no shield is equipped. Both are score-free so the whole predicate evaluates at composition and the ac.formula drops out of the candidate pool the moment armor or a shield is equipped (AC reverts to the armor/10+DEX candidates; the shield's own +2 would be a separate ac.bonus anyway). A REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        {
+          "type": "ac.formula",
+          "formula": "10 + mod(dex) + mod(wis)",
+          "key": "monk-unarmored-defense",
+          "when": { "all": [{ "armor": { "category": ["none"] } }, { "shield": false }] }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-monks-focus",
+    "cite": "SRD 5.2.1, Monk's Focus",
+    "note": "SRD text (abridged): \"Your Monk level determines the number of points you have, as shown in the Focus Points column of the Monk Features table ... When you expend a Focus Point, it is unavailable until you finish a Short or Long Rest, at the end of which you regain all your expended points.\" Granted at Monk level 2. max is the closed form 'classLevel(monk)': the vendored srd-2024_monk_focus-points column (typed extra 'monk-focus-points') is 2 at level 2 rising by one each level to 20 at level 20 -- verified row-by-row (all 19 rows 2..20) in test/mechanics.test.ts; level 1 has no row. The define lives on THIS feature because it is first granted at level 2, so the resource materializes only from level 2 (no level-1 Focus Points), the same level-gating-by-feature-placement the barbarian rage define relies on. reset 'shortRest' is exact here (all expended points return on a Short OR Long Rest -- no 'regain one' approximation needed, unlike Rage). The three spend options this feature introduces (Flurry of Blows, Patient Defense, Step of the Wind) and every other Focus-spending feature (Stunning Strike, Deflect Attacks redirect, Disciplined Survivor reroll, Superior Defense, Quivering Palm) are action-economy/trigger/spend-gated play-flow with no composition-time vocabulary: kept in the already-localized feature description, which every reader surfaces in full (barbarian-rage precedent: no duplicate feature.text beside a real effect). Spend proposals are play-flow territory -> slice-3 candidates.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "focus-points",
+          "name": "Focus Points",
+          "max": "classLevel(monk)",
+          "reset": "shortRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-unarmored-movement",
+    "cite": "SRD 5.2.1, Unarmored Movement; Monk Features table",
+    "note": "SRD text: \"Your speed increases by 10 feet while you aren't wearing armor or wielding a Shield. This bonus increases when you reach certain Monk levels, as shown on the Monk Features table.\" Granted at Monk levels 2-20. EXPRESSIBILITY CHECK (brief must): the effects registry has speed.bonus{mode, value}, but `value` is a plain integer (z.int(), packages/protocol/src/pack/effects.ts) -- NOT a Formula -- so one effect cannot scale with level; and the column ('+10 ft.' ... '+30 ft.' strings, so NOT lifted into typed extras by NUMERIC_EXTRA_RE) cannot be read by an effect. It IS expressible in closed form as five stacked increments, each a speed.bonus with a distinct explicit `key` (sum-unique-key policy, packages/engine/src/derive/abilities.ts) gated by the eagerly-evaluated score-free predicate all[armor none, shield false, classLevel{monk gte N}]: +10 at 2, +5 at 6, +5 at 10, +5 at 14, +5 at 18, summing to the vendored column exactly (verified for all 20 levels: none at 1; +10 at 2-5; +15 at 6-9; +20 at 10-13; +25 at 14-17; +30 at 18-20 -- vendored srd-2024_monk_unarmored-movement rows) and verified end to end through derive() in test/mechanics.test.ts. The armor-or-shield gate is the same predicate shape as monk-unarmored-defense above. A REAL effect, not a fallback. The vertical-surface/liquid movement clause belongs to Acrobatic Movement (level 9, text).",
+    "merge": {
+      "effects": [
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 10,
+          "key": "monk-unarmored-movement-2",
+          "when": {
+            "all": [
+              { "armor": { "category": ["none"] } },
+              { "shield": false },
+              { "classLevel": { "monk": { "gte": 2 } } }
+            ]
+          }
+        },
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 5,
+          "key": "monk-unarmored-movement-6",
+          "when": {
+            "all": [
+              { "armor": { "category": ["none"] } },
+              { "shield": false },
+              { "classLevel": { "monk": { "gte": 6 } } }
+            ]
+          }
+        },
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 5,
+          "key": "monk-unarmored-movement-10",
+          "when": {
+            "all": [
+              { "armor": { "category": ["none"] } },
+              { "shield": false },
+              { "classLevel": { "monk": { "gte": 10 } } }
+            ]
+          }
+        },
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 5,
+          "key": "monk-unarmored-movement-14",
+          "when": {
+            "all": [
+              { "armor": { "category": ["none"] } },
+              { "shield": false },
+              { "classLevel": { "monk": { "gte": 14 } } }
+            ]
+          }
+        },
+        {
+          "type": "speed.bonus",
+          "mode": "walk",
+          "value": 5,
+          "key": "monk-unarmored-movement-18",
+          "when": {
+            "all": [
+              { "armor": { "category": ["none"] } },
+              { "shield": false },
+              { "classLevel": { "monk": { "gte": 18 } } }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-uncanny-metabolism",
+    "cite": "SRD 5.2.1, Uncanny Metabolism",
+    "note": "SRD text: on rolling Initiative, regain all expended Focus Points and heal Martial Arts die + Monk level; once per Long Rest. Granted at level 2. An Initiative-roll-triggered resource restoration plus a rolled heal: no 'on roll Initiative' trigger vocabulary (resource.define resets only on rest triggers) and no rolled-heal effect. Text fallback per ruling 9; flagged (same family as Persistent Rage).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Uncanny Metabolism",
+          "description": "When you roll Initiative, you can regain all expended Focus Points. When you do so, roll your Martial Arts die, and regain a number of Hit Points equal to your Monk level plus the number rolled.\n\nOnce you use this feature, you can't use it again until you finish a Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-deflect-attacks",
+    "cite": "SRD 5.2.1, Deflect Attacks",
+    "note": "SRD text: a Reaction to reduce an attack's damage by 1d10 + DEX modifier + Monk level, optionally spending 1 Focus Point to redirect on 0 damage. Granted at level 3. Reaction-triggered, rolled, damage-type-conditional, Focus-spending: no vocabulary. Text fallback per ruling 9; flagged slice-3 candidate (spend proposal).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Deflect Attacks",
+          "description": "When an attack roll hits you and its damage includes Bludgeoning, Piercing, or Slashing damage, you can take a Reaction to reduce the attack's total damage against you. The reduction equals 1d10 plus your Dexterity modifier and Monk level.\n\nIf you reduce the damage to 0, you can expend 1 Focus Point to redirect some of the attack's force. If you do so, choose a creature you can see within 5 feet of yourself if the attack was a melee attack or a creature you can see within 60 feet of yourself that isn't behind Total Cover if the attack was a ranged attack. That creature must succeed on a Dexterity saving throw or take damage equal to two rolls of your Martial Arts die plus your Dexterity modifier. The damage is the same type dealt by the attack."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-stunning-strike",
+    "cite": "SRD 5.2.1, Stunning Strike",
+    "note": "SRD text: once per turn on a hit, spend 1 Focus Point; target Constitution save or Stunned until the start of your next turn, else Speed halved and next attack against it has Advantage. Granted at levels 3 and 5 (the level-5 row is the vendored re-grant of the same feature). Hit-triggered, Focus-spending, applies a condition to a target: no vocabulary. Text fallback per ruling 9; flagged slice-3 candidate.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Stunning Strike",
+          "description": "Once per turn when you hit a creature with a Monk weapon or an Unarmed Strike, you can expend 1 Focus Point to attempt a stunning strike. The target must make a Constitution saving throw. On a failed save, the target has the Stunned condition until the start of your next turn. On a successful save, the target's Speed is halved until the start of your next turn, and the next attack roll made against the target before then has Advantage."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-slow-fall",
+    "cite": "SRD 5.2.1, Slow Fall",
+    "note": "SRD text: a Reaction when you fall to reduce fall damage by five times your Monk level. Granted at level 4. Reaction-triggered damage reduction with no fall-damage vocabulary. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Slow Fall",
+          "description": "You can take a Reaction when you fall to reduce any damage you take from the fall by an amount equal to five times your Monk level."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-extra-attack",
+    "cite": "SRD 5.2.1, Extra Attack",
+    "note": "SRD text: \"You can attack twice instead of once whenever you take the Attack action on your turn.\" Granted at Monk level 5. Identical shape to Fighter's and Barbarian's Extra Attack: extraAttack.set{count:2}. A REAL effect.",
+    "merge": {
+      "effects": [{ "type": "extraAttack.set", "count": 2 }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-empowered-strikes",
+    "cite": "SRD 5.2.1, Empowered Strikes",
+    "note": "SRD text: Unarmed Strike damage can be Force or its normal type. Granted at level 6. A per-attack damage-type choice (no damage-type-override effect; the Sheet carries no unarmed attack damage-type selection). Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Empowered Strikes",
+          "description": "Whenever you deal damage with your Unarmed Strike, it can deal your choice of Force damage or its normal damage type."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-evasion",
+    "cite": "SRD 5.2.1, Evasion",
+    "note": "SRD text: on a Dexterity save for half damage, take none on success and half on failure; not while Incapacitated. Granted at level 7. A save-outcome substitution on half-damage effects only -- no vocabulary for altering save results. Text fallback per ruling 9 (same as Rogue Evasion); flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Evasion",
+          "description": "When you're subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail.\n\nYou don't benefit from this feature if you have the Incapacitated condition."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-acrobatic-movement",
+    "cite": "SRD 5.2.1, Acrobatic Movement",
+    "note": "SRD text: while not wearing armor or wielding a Shield, move along vertical surfaces and across liquids on your turn without falling. Granted at level 9. A movement permission (no climb/water-walk vocabulary: speed.set/bonus modes are numeric speeds, and granting a climb speed would be state-wrong because the text is not a Climb Speed). Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Acrobatic Movement",
+          "description": "While you aren't wearing armor or wielding a Shield, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the movement."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-heightened-focus",
+    "cite": "SRD 5.2.1, Heightened Focus",
+    "note": "SRD text: upgrades to Flurry of Blows (three strikes), Patient Defense (temp HP) and Step of the Wind (carry a creature). Granted at level 10. Modifiers to Focus-spend options that are themselves play-flow text; nothing to compose. Text fallback per ruling 9; flagged slice-3 candidate with the spend proposals.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Heightened Focus",
+          "description": "Your Flurry of Blows, Patient Defense, and Step of the Wind gain the following benefits.\n\n**Flurry of Blows.** You can expend 1 Focus Point to use Flurry of Blows and make three Unarmed Strikes with it instead of two.\n\n**Patient Defense.** When you expend a Focus Point to use Patient Defense, you gain a number of Temporary Hit Points equal to two rolls of your Martial Arts die.\n\n**Step of the Wind.** When you expend a Focus Point to use Step of the Wind, you can choose a willing creature within 5 feet of yourself that is Large or smaller. You move the creature with you until the end of your turn. The creature's movement doesn't provoke Opportunity Attacks."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-self-restoration",
+    "cite": "SRD 5.2.1, Self-Restoration",
+    "note": "SRD text: at the end of each of your turns, remove Charmed, Frightened or Poisoned from yourself; forgoing food and drink gives no Exhaustion. Granted at level 10. Turn-end triggered condition removal plus an exhaustion exemption: no vocabulary (condition.immunity would be state-wrong -- the text removes the condition after it lands, not prevents it). Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Self-Restoration",
+          "description": "Through sheer force of will, you can remove one of the following conditions from yourself at the end of each of your turns: Charmed, Frightened, or Poisoned.\n\nIn addition, forgoing food and drink doesn't give you levels of Exhaustion."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-deflect-energy",
+    "cite": "SRD 5.2.1, Deflect Energy",
+    "note": "SRD text: Deflect Attacks now works against any damage type. Granted at level 13. A rider on a text-only feature (Deflect Attacks). Text fallback per ruling 9; flagged with Deflect Attacks.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Deflect Energy",
+          "description": "You can now use your Deflect Attacks feature against attacks that deal any damage type, not just Bludgeoning, Piercing, or Slashing."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-disciplined-survivor",
+    "cite": "SRD 5.2.1, Disciplined Survivor",
+    "note": "SRD text: \"Your physical and mental discipline grant you proficiency in all saving throws. Additionally, whenever you make a saving throw and fail, you can expend 1 Focus Point to reroll it.\" Granted at level 14. The proficiency half is a real effect: proficiency.grant{kind:'save', level:'proficient'} for the four saves the Monk does not already have (str, con, int, cha; dex and wis come from the class) -- idempotent over the class saves. The Focus-spending reroll is a trigger/spend-gated play-flow clause (no reroll vocabulary) and stays as a feature.text rider; flagged.",
+    "merge": {
+      "effects": [
+        { "type": "proficiency.grant", "kind": "save", "target": "str", "level": "proficient" },
+        { "type": "proficiency.grant", "kind": "save", "target": "con", "level": "proficient" },
+        { "type": "proficiency.grant", "kind": "save", "target": "int", "level": "proficient" },
+        { "type": "proficiency.grant", "kind": "save", "target": "cha", "level": "proficient" },
+        {
+          "type": "feature.text",
+          "name": "Disciplined Survivor",
+          "description": "Whenever you make a saving throw and fail, you can expend 1 Focus Point to reroll it, and you must use the new roll."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-perfect-focus",
+    "cite": "SRD 5.2.1, Perfect Focus",
+    "note": "SRD text: when you roll Initiative and don't use Uncanny Metabolism, regain expended Focus Points until you have 4 if you have 3 or fewer. Granted at level 15. Initiative-roll-triggered partial resource restoration: no trigger vocabulary and no 'restore up to N' reset (resource.define resets to max on rest). Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Perfect Focus",
+          "description": "When you roll Initiative and don't use Uncanny Metabolism, you regain expended Focus Points until you have 4 if you have 3 or fewer."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-superior-defense",
+    "cite": "SRD 5.2.1, Superior Defense",
+    "note": "SRD text: at the start of your turn, spend 3 Focus Points for 1 minute (or until Incapacitated) of Resistance to all damage except Force. Granted at level 18. A spend-activated, timed state: damage.resistance exists but authoring it unconditionally would be ACTIVELY WRONG (permanent resistance while not active), and there is no 'active' state in Facts (same posture as Rage's active-state clauses). Text fallback per ruling 9; flagged slice-3 candidate (spend proposal + timed state).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Superior Defense",
+          "description": "At the start of your turn, you can expend 3 Focus Points to bolster yourself against harm for 1 minute or until you have the Incapacitated condition. During that time, you have Resistance to all damage except Force damage."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-body-and-mind",
+    "cite": "SRD 5.2.1, Body and Mind",
+    "note": "SRD text: \"Your Dexterity and Wisdom scores increase by 4, to a maximum of 25.\" Granted at Monk level 20. Same verified shape as barbarian-primal-champion: ability.bonus{value:4} sums unconditionally and ability.max{value:25} uses the 'cap' policy, which only lowers the running value when exceeded and has no default 20-cap contribution elsewhere, so this is the only cap applied and correctly raises the ceiling to 25. A REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        { "type": "ability.bonus", "ability": "dex", "value": 4 },
+        { "type": "ability.bonus", "ability": "wis", "value": 4 },
+        { "type": "ability.max", "ability": "dex", "value": 25 },
+        { "type": "ability.max", "ability": "wis", "value": 25 }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/warrior-of-the-open-hand",
+    "cite": "SRD 5.2.1, Warrior of the Open Hand",
+    "note": "Subclass entity carries no overlay entry beyond this note -- its features (below) are granted via the upstream levels[] rows produced by transformClasses(), and the subclass adds no player decision at any level. The vendored Open Hand features are Open Hand Technique (3), Wholeness of Body (6), Fleet Step (11), Quivering Palm (17); every one is Focus-spend, action-economy or trigger-gated and is a text fallback with flag."
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-warrior-of-the-open-hand-open-hand-technique",
+    "cite": "SRD 5.2.1, Warrior of the Open Hand - Open Hand Technique",
+    "note": "SRD text: on a hit with a Flurry of Blows attack, impose Addle, Push or Topple. Granted at Open Hand level 3. Hit-triggered per-attack rider choosing among three save-based effects: no vocabulary. Text fallback per the fallback bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Open Hand Technique",
+          "description": "Whenever you hit a creature with an attack granted by your Flurry of Blows, you can impose one of the following effects on that target.\n\n**Addle.** The target can't make Opportunity Attacks until the start of its next turn.\n\n**Push.** The target must succeed on a Strength saving throw or be pushed up to 15 feet away from you.\n\n**Topple.** The target must succeed on a Dexterity saving throw or have the Prone condition."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-warrior-of-the-open-hand-wholeness-of-body",
+    "cite": "SRD 5.2.1, Warrior of the Open Hand - Wholeness of Body",
+    "note": "SRD text: a Bonus Action to heal Martial Arts die + WIS modifier (min 1), a number of times equal to your WIS modifier (min 1) per Long Rest. Granted at Open Hand level 6. The use pool is expressible in principle (resource.define max 'max(1, mod(wis))', longRest) but the heal itself is a rolled Bonus-Action heal and a half-authored feature (a pool with no spend flow) would mislead; kept whole as text per the fallback bar and flagged as a slice-3 candidate alongside the spend proposals.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Wholeness of Body",
+          "description": "You gain the ability to heal yourself. As a Bonus Action, you can roll your Martial Arts die. You regain a number of Hit Points equal to the number rolled plus your Wisdom modifier (minimum of 1 Hit Point regained).\n\nYou can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-warrior-of-the-open-hand-fleet-step",
+    "cite": "SRD 5.2.1, Warrior of the Open Hand - Fleet Step",
+    "note": "SRD text: when you take a Bonus Action other than Step of the Wind, you can also use Step of the Wind immediately after it. Granted at Open Hand level 11. Pure action-economy permission, no vocabulary. Text fallback per the fallback bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Fleet Step",
+          "description": "When you take a Bonus Action other than Step of the Wind, you can also use Step of the Wind immediately after that Bonus Action."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/monk-warrior-of-the-open-hand-quivering-palm",
+    "cite": "SRD 5.2.1, Warrior of the Open Hand - Quivering Palm",
+    "note": "SRD text: on an Unarmed Strike hit, spend 4 Focus Points to start day-long vibrations that can later be ended for a Constitution save against 10d12 Force damage. Granted at Open Hand level 17. Focus-spending, multi-day tracked effect on a target with a delayed save: no vocabulary. Text fallback per the fallback bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Quivering Palm",
+          "description": "You gain the ability to set up lethal vibrations in someone's body. When you hit a creature with an Unarmed Strike, you can expend 4 Focus Points to start these imperceptible vibrations, which last for a number of days equal to your Monk level. The vibrations are harmless unless you take an action to end them. Alternatively, when you take the Attack action on your turn, you can forgo one of the attacks to end the vibrations. To end them, you and the target must be on the same plane of existence. When you end them, the target must make a Constitution saving throw, taking 10d12 Force damage on a failed save or half as much damage on a successful one.\n\nYou can have only one creature under the effect of this feature at a time. You can end the vibrations harmlessly (no action required)."
+        }
+      ]
+    }
+  }
+]
