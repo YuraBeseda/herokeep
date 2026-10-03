@@ -59,6 +59,12 @@ const MULTICLASS_GAINS: Record<
   // Ranger's multiclass row grants Martial weapons, Light and Medium armor, Shields, and ONE skill
   // from the Ranger skill list (the Rogue precedent for a bonus skill).
   ranger: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: ['martial'], skillChoiceCount: 1 },
+  // Plan 12 task 11. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
+  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
+  // Bard's multiclass row grants Light armor and ONE skill of any kind (the table reserves a bonus skill
+  // for Bard/Rogue) plus one Musical Instrument -- no weapons. The instrument has no `gains` field
+  // (schema carries armor, weapons, skill count only), so it is not representable here; flagged.
+  bard: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
 };
 
 /**

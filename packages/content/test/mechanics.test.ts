@@ -1911,3 +1911,289 @@ describe('ranger integration over the real pack (task 10)', () => {
     expect(s.spellcasting.find((b) => b.classId === rangerId)!.alwaysPrepared).toEqual([spell('hunters-mark')]);
   });
 });
+
+describe('bard and college of lore to level 20 mechanics (task 11)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.bard].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedSubclasses = applyOverlays(
+    subclasses,
+    o.bard.filter((x) => subclasses.some((s) => s.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.bard.filter((x) => features.some((f) => f.id === x.id)),
+  );
+  interface BardShape {
+    hitDie: number;
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount: number } };
+    levels: { level: number; choices: { id: string; pick: unknown; count: number | string }[] }[];
+  }
+  const bard = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/bard') as unknown as BardShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/${slug}`) as unknown as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('bard: core traits (d8, dex/cha saves, light armor, simple weapons, any 3 of the 18 skills)', () => {
+    const b = bard();
+    expect(b.hitDie).toBe(8);
+    expect([...b.saves].sort()).toEqual(['cha', 'dex']);
+    expect(b.armorTraining).toEqual(['light']);
+    expect(b.weaponProficiencies).toEqual(['simple']);
+    expect(b.skillChoice.count).toBe(3);
+    expect(b.skillChoice.from).toHaveLength(18);
+  });
+
+  it('bard: multiclass gains = light armor, ONE skill (owner-flagged, SRD-silent)', () => {
+    expect(bard().multiclass.gains).toEqual({ armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 });
+  });
+
+  it('bard: choices — subclass @3, ASI 4/8/12/16 + boon 19; no expertise / jack picks', () => {
+    const choices = bard().levels.flatMap((r) => r.choices);
+    const ids = choices.map((c) => c.id);
+    expect(choices.find((c) => c.id === 'srd-5e-2024:class/bard@3/subclass')!.pick).toEqual({
+      query: { type: 'subclass', classes: ['bard'] },
+    });
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/bard@${level}/feat`);
+    expect(ids.some((id) => /expertise|jack/.test(id))).toBe(false);
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/bard').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/college-of-lore']);
+  });
+
+  it('bard: Spellcasting is a CHA full caster with prepared spells + instrument focus, no ritual casting', () => {
+    expect(feature('bard-spellcasting').effects).toEqual([
+      {
+        type: 'spellcasting.define',
+        class: 'bard',
+        ability: 'cha',
+        list: 'bard',
+        preparation: 'prepared',
+        slots: 'full',
+        ritual: false,
+        focus: true,
+      },
+    ]);
+  });
+
+  it('bard: Expertise is text-only (never a skill pick or proficiency grant — state-wrong shapes)', () => {
+    expect(feature('bard-expertise').effects.map((e) => e.type)).toEqual(['feature.text']);
+  });
+
+  it('bard: Jack of All Trades = 18 half-proficiency skill grants (one per system skill)', () => {
+    const effs = feature('bard-jack-of-all-trades').effects;
+    expect(effs.every((e) => e.type === 'proficiency.grant' && e['kind'] === 'skill' && e['level'] === 'half')).toBe(
+      true,
+    );
+    expect(effs.map((e) => e['target'] as string).sort()).toEqual([...bard().skillChoice.from].sort());
+  });
+
+  it('bard: text fallbacks present for the inexpressible features', () => {
+    for (const slug of [
+      'bard-expertise',
+      'bard-font-of-inspiration',
+      'bard-countercharm',
+      'bard-magical-secrets',
+      'bard-superior-inspiration',
+      'bard-words-of-creation',
+      'college-of-lore-cutting-words',
+      'college-of-lore-magical-discoveries',
+      'college-of-lore-peerless-skill',
+      'college-of-lore-bonus-proficiencies',
+    ]) {
+      expect(
+        feature(slug).effects.some((e) => e.type === 'feature.text' || e.type === 'action.define'),
+        slug,
+      ).toBe(true);
+    }
+  });
+
+  it('college of lore: Bonus Proficiencies is a count-3 skill-query pick on the subclass level-3 row', () => {
+    const lore = patchedSubclasses.find((s) => s.id === 'srd-5e-2024:subclass/college-of-lore') as unknown as {
+      levels: { level: number; choices: { id: string; pick: unknown; count: number }[] }[];
+    };
+    const c = lore.levels.find((r) => r.level === 3)!.choices.find((x) => x.id.endsWith('@3/bonus-proficiencies'))!;
+    expect(c.pick).toEqual({ query: { type: 'skill' } });
+    expect(c.count).toBe(3);
+  });
+});
+
+describe('bard integration over the real pack (task 11)', () => {
+  const bardId = `${FP}:class/bard`;
+  const lore = `${FP}:subclass/college-of-lore`;
+  const skill = (s: string) => `${FP}:skill/${s}`;
+  const spell = (s: string) => `${FP}:spell/${s}`;
+  function bardChar(
+    level: number,
+    opts: { cha?: number; lore?: boolean; skills?: string[]; extra?: [string, string[]][] } = {},
+  ): Event[] {
+    featSeq = 0;
+    return [
+      featEv('character.created', {
+        name: 'Lark',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, ['str:+2', 'con:+1']),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, [
+        'str:10',
+        'dex:13',
+        'con:13',
+        'int:10',
+        'wis:10',
+        `cha:${opts.cha ?? 15}`,
+      ]),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', {
+          classId: bardId,
+          level: i + 1,
+          hpRoll: 'average',
+          ...(opts.lore && i + 1 === 3 ? { subclassId: lore } : {}),
+        }),
+      ),
+      featDecide(`${bardId}@1/skills`, opts.skills ?? ['persuasion', 'performance', 'deception']),
+      ...(opts.extra ?? []).map(([id, sel]) => featDecide(id, sel)),
+    ];
+  }
+  const block = (level: number) => sheetOf(bardChar(level)).spellcasting.find((b) => b.classId === bardId)!;
+  const pool = (level: number, cha?: number) =>
+    sheetOf(bardChar(level, { cha })).resources.find((r) => r.id === 'bardic-inspiration');
+
+  it('saves: dex + cha proficient and nothing else (derive-level)', () => {
+    const a = sheetOf(bardChar(1)).abilities;
+    expect(
+      Object.entries(a)
+        .filter(([, v]) => v.saveProficient)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['cha', 'dex']);
+  });
+
+  it('armor + weapon proficiencies: light only, simple only (derive-level)', () => {
+    const p = sheetOf(bardChar(1)).proficiencies;
+    const has = (kind: string, target: string) => p.some((x) => x.kind === kind && x.target === target);
+    expect(has('armor', 'light')).toBe(true);
+    for (const t of ['medium', 'heavy', 'shields']) expect(has('armor', t), t).toBe(false);
+    expect(has('weapon', 'simple')).toBe(true);
+    expect(has('weapon', 'martial')).toBe(false);
+  });
+
+  it('class skills: any 3 of the 18 are accepted and become proficient (derive-level)', () => {
+    const s = sheetOf(bardChar(1, { skills: ['arcana', 'history', 'medicine'] }));
+    expect(s.issues.filter((i) => i.code === 'derive.unknownSkill')).toEqual([]);
+    for (const k of ['arcana', 'history', 'medicine']) expect(s.skills[k]!.proficiency, k).toBe('proficient');
+  });
+
+  it('full-caster slots follow the vendored columns level by level', () => {
+    const max = (l: number) => block(l).slots.map((s) => s.max);
+    expect(max(1)).toEqual([2]);
+    expect(max(3)).toEqual([4, 2]);
+    expect(max(5)).toEqual([4, 3, 2]);
+    expect(max(9)).toEqual([4, 3, 3, 3, 1]);
+    expect(max(13)).toEqual([4, 3, 3, 3, 2, 1, 1]);
+    expect(max(18)).toEqual([4, 3, 3, 3, 3, 1, 1, 1, 1]);
+    expect(max(20)).toEqual([4, 3, 3, 3, 3, 2, 2, 1, 1]);
+  });
+
+  it('cantrips known follow the vendored Cantrips column (2@1-3, 3@4-9, 4@10-20)', () => {
+    const col: Record<number, number> = { 1: 2, 2: 2, 3: 2, 4: 3, 5: 3, 9: 3, 10: 4, 14: 4, 20: 4 };
+    for (const [l, n] of Object.entries(col)) expect(block(Number(l)).cantripsKnown, `level ${l}`).toBe(n);
+  });
+
+  it('prepared-spell cap follows the vendored Prepared Spells column (4@1 ... 22@20)', () => {
+    const col: Record<number, number> = {
+      1: 4,
+      2: 5,
+      3: 6,
+      4: 7,
+      5: 9,
+      6: 10,
+      7: 11,
+      8: 12,
+      9: 14,
+      10: 15,
+      11: 16,
+      12: 16,
+      13: 17,
+      14: 17,
+      15: 18,
+      16: 18,
+      17: 19,
+      18: 20,
+      19: 21,
+      20: 22,
+    };
+    for (const [l, n] of Object.entries(col)) expect(block(Number(l)).preparedMax, `level ${l}`).toBe(n);
+  });
+
+  it('Bardic Inspiration: Charisma-modifier pool, min 1, long rest (reset stays longRest: Font of Inspiration is text)', () => {
+    expect(pool(1)?.max.value).toBe(2); // CHA 15 -> +2
+    expect(pool(1, 8)?.max.value).toBe(1); // negative modifier floors at 1
+    expect(pool(1, 20)?.max.value).toBe(5);
+    expect(pool(1)?.reset).toBe('longRest');
+    expect(pool(5)?.reset).toBe('longRest'); // Font of Inspiration (5) cannot change a defined reset
+    expect(sheetOf(bardChar(1)).actions.find((a) => a.id === 'bardic-inspiration')).toMatchObject({
+      kind: 'bonus',
+      resource: 'bardic-inspiration',
+    });
+  });
+
+  it('Jack of All Trades: half proficiency on non-proficient skills only, from level 2 (derive-level)', () => {
+    const at = (l: number) => sheetOf(bardChar(l));
+    expect(at(1).skills['arcana']!.proficiency).toBe('none');
+    expect(at(1).skills['arcana']!.total.value).toBe(0);
+    // level 2 (prof +2): half = 1, INT 10 -> +0
+    expect(at(2).skills['arcana']!.proficiency).toBe('half');
+    expect(at(2).skills['arcana']!.total.value).toBe(1);
+    // proficient skills stay fully proficient (CHA 15 -> +2, prof 2)
+    expect(at(2).skills['persuasion']!.proficiency).toBe('proficient');
+    expect(at(2).skills['persuasion']!.total.value).toBe(4);
+    // half rounds down at every proficiency step: +3 -> 1, +4 -> 2, +5 -> 2, +6 -> 3
+    expect(at(5).skills['arcana']!.total.value).toBe(1);
+    expect(at(9).skills['arcana']!.total.value).toBe(2);
+    expect(at(13).skills['arcana']!.total.value).toBe(2);
+    expect(at(17).skills['arcana']!.total.value).toBe(3);
+  });
+
+  it('Words of Creation (20): Power Word Heal and Power Word Kill always prepared, absent at 19', () => {
+    expect(block(19).alwaysPrepared ?? []).toEqual([]);
+    expect([...(block(20).alwaysPrepared ?? [])].sort()).toEqual([spell('power-word-heal'), spell('power-word-kill')]);
+    // always-prepared spells don't eat the prepared cap
+    expect(block(20).preparedMax).toBe(22);
+  });
+
+  it('College of Lore: Bonus Proficiencies asks for 3 skills at 3, and the picks land as proficiencies', () => {
+    const before = sheetOf(bardChar(3, { lore: true }));
+    expect(before.outstandingChoices.filter((c) => c.choiceId.endsWith('@3/bonus-proficiencies'))).toHaveLength(1);
+    const picks = ['arcana', 'history', 'medicine'];
+    const after = sheetOf(bardChar(3, { lore: true, extra: [[`${lore}@3/bonus-proficiencies`, picks.map(skill)]] }));
+    expect(after.outstandingChoices.filter((c) => c.choiceId.endsWith('@3/bonus-proficiencies'))).toEqual([]);
+    expect(after.issues.filter((i) => i.code.startsWith('selection.'))).toEqual([]);
+    for (const k of picks) expect(after.skills[k]!.proficiency, k).toBe('proficient');
+    // full proficiency beats Jack of All Trades' half
+    expect(after.skills['arcana']!.total.value).toBe(2); // INT +0, prof 2
+  });
+
+  it('Lore resolves through level 20 without breaking the sheet', () => {
+    const s = sheetOf(
+      bardChar(20, {
+        lore: true,
+        extra: [[`${lore}@3/bonus-proficiencies`, ['arcana', 'history', 'medicine'].map(skill)]],
+      }),
+    );
+    expect(s.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  });
+});
