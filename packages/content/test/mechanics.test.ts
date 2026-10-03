@@ -1113,8 +1113,12 @@ describe('monk and warrior of the open hand to level 20 mechanics (task 8)', () 
     );
   });
 
-  it('monk: multiclass gains = nothing (owner-flagged, SRD-silent in the vendor)', () => {
-    expect(monk().multiclass.gains).toEqual({ armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 });
+  it('monk: multiclass gains = simple + martial Light weapons, no armor/skills (owner-flagged, SRD-silent in the vendor)', () => {
+    expect(monk().multiclass.gains).toEqual({
+      armorTraining: [],
+      weaponProficiencies: ['simple', 'hand-crossbow', 'scimitar', 'shortsword'],
+      skillChoiceCount: 0,
+    });
   });
 
   it('monk: subclass choice at 3 offers only Open Hand; ASI at 4/8/12/16 + Epic Boon at 19, none at 10', () => {

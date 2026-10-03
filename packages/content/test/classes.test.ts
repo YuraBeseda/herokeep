@@ -124,6 +124,12 @@ describe('class transform', () => {
       expect(bySlug(slug).multiclass?.prerequisites, slug).toBeDefined();
       expect(bySlug(slug).multiclass?.gains, slug).toBeDefined();
     }
+    // Plan 12 final wave W2: the SRD 5.2.1 monk row is Simple + Martial Light weapons (never empty).
+    expect(bySlug('monk').multiclass?.gains).toEqual({
+      armorTraining: [],
+      weaponProficiencies: ['simple', 'hand-crossbow', 'scimitar', 'shortsword'],
+      skillChoiceCount: 0,
+    });
     expect(bySlug('druid').multiclass?.gains).toEqual({
       armorTraining: ['light', 'shields'],
       weaponProficiencies: [],

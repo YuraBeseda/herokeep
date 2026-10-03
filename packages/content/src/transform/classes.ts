@@ -45,11 +45,15 @@ const MULTICLASS_GAINS: Record<
   // skill for Bard/Rogue) -- no weapons. Thieves' Tools has no `gains` field (schema carries armor,
   // weapons, skill count only), so it is not representable here; flagged.
   rogue: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
-  // Plan 12 task 8. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
-  // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
-  // Monk's multiclass row grants no armor, weapon, or skill proficiencies (Monk Armor Training is
-  // "None" per the vendored monk_core-traits).
-  monk: { armorTraining: [], weaponProficiencies: [] },
+  // Plan 12 task 8, corrected in the plan-12 final wave (W2). OWNER-FLAG, 2024-SRD-silent (same
+  // posture as every entry above): the vendored multiclassing Rule is prose only; the per-class table
+  // is authored from public SRD 5.2.1 knowledge: Monk's multiclass row grants Simple weapons and
+  // Martial weapons that have the Light property -- no armor, no skills. `gains` REPLACES a later
+  // class's list (derive/index.ts `deriveProficiencies`; it is NOT intersected with the class's own),
+  // so the row is spelled in the engine's vocabulary: `simple` + the three SRD Martial Light weapons
+  // (hand crossbow, scimitar, shortsword) -- identical to Monk's own starting weapon list. A bare
+  // `martial` here would wrongly grant every martial weapon (e.g. longsword).
+  monk: { armorTraining: [], weaponProficiencies: ['simple', 'hand-crossbow', 'scimitar', 'shortsword'] },
   // Plan 12 task 9. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
   // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
   // Paladin's multiclass row grants Martial weapons, Light and Medium armor, and Shields -- no skills.

@@ -7,6 +7,7 @@ import { derive } from '../../src/derive/index.ts';
 import { emptyFacts } from '../../src/reduce/facts.ts';
 import type { SystemRules } from '../../src/reduce/facts.ts';
 import { loadFixturePack } from '../support/fixtures.ts';
+import { loadDistPack } from '../support/golden.ts';
 
 const index = createContentIndex([loadFixturePack('core-mini'), loadFixturePack('multiclass-mini')]);
 const baseFacts = () => emptyFacts('char:test');
@@ -106,5 +107,41 @@ describe('multiclass composition (ruling 7/8): Wizard-then-Fighter', () => {
     // multiclass.gains exists to restrict it.
     expect(has('armor', 'light')).toBe(true);
     expect(has('weapon', 'simple')).toBe(true);
+  });
+});
+
+/**
+ * Plan 12 final wave W2: the SRD 5.2.1 multiclassing table row for Monk is "Simple weapons and
+ * Martial weapons that have the Light property" (owner-flagged: the vendored rule is prose only —
+ * see `packages/content/src/transform/classes.ts`). A later-class Monk's `gains` must carry exactly
+ * that row in the engine's vocabulary (a category, or a specific weapon slug).
+ */
+describe('multiclass weapon gains on the real SRD pack (W2): wizard → monk', () => {
+  const srd = createContentIndex([loadDistPack('srd-5e-2024')]);
+  const facts = () => {
+    const f = baseFacts();
+    f.decisions['srd-5e-2024:system/5e-2024@0/ability-scores'] = ['str:10', 'dex:14', 'con:12', 'int:15', 'wis:13', 'cha:8'];
+    f.classes = [
+      { classId: 'srd-5e-2024:class/wizard', level: 1 },
+      { classId: 'srd-5e-2024:class/monk', level: 1 },
+    ];
+    return f;
+  };
+  const proficientWith = (itemSlug: string) => {
+    const sheet = derive(facts(), srd, { restRules: srd.system().restRules, hpRules: srd.system().hpRules });
+    const item = srd.get(`srd-5e-2024:item/${itemSlug}`);
+    if (item?.type !== 'item' || !item.weapon) throw new Error(`${itemSlug} is not a weapon item`);
+    const targets = new Set(sheet.proficiencies.filter((p) => p.kind === 'weapon').map((p) => p.target));
+    return targets.has(item.weapon.category) || targets.has(itemSlug) || item.tags.some((t) => targets.has(t));
+  };
+
+  it('is proficient with a shortsword (martial, Light — from the monk row)', () => {
+    expect(proficientWith('shortsword')).toBe(true);
+  });
+  it('is proficient with a quarterstaff (simple)', () => {
+    expect(proficientWith('quarterstaff')).toBe(true);
+  });
+  it('is NOT proficient with a longsword (martial, not Light)', () => {
+    expect(proficientWith('longsword')).toBe(false);
   });
 });
