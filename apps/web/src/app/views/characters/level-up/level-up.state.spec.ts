@@ -40,6 +40,15 @@ const BARBARIAN = 'srd-5e-2024:class/barbarian';
 const SUBCLASS_CHOICE = 'srd-5e-2024:class/fighter@3/subclass';
 const CHAMPION = 'srd-5e-2024:subclass/champion';
 const FEAT_CHOICE = 'srd-5e-2024:class/fighter@4/feat';
+// Plan 12 task 2: fighter weapon-mastery count grows 3 -> 4 at class level 4, so the SAME level-1 choice
+// is re-offered at the 3→4 level-up and must be re-answered with four weapons.
+const MASTERIES_CHOICE = 'srd-5e-2024:class/fighter@1/weapon-masteries';
+const FOUR_MASTERIES = [
+  'srd-5e-2024:item/longsword',
+  'srd-5e-2024:item/shortsword',
+  'srd-5e-2024:item/dagger',
+  'srd-5e-2024:item/handaxe',
+];
 const ASI_FEAT = 'srd-5e-2024:feat/ability-score-improvement';
 const ASI_CHOICE = 'srd-5e-2024:feat/ability-score-improvement@4/ability-scores';
 
@@ -218,8 +227,9 @@ describe('LevelUpState', () => {
     expect(characterStore.facts()?.xp).toBe(2700);
 
     const state = createState(FIGHTER);
-    expect(state.outstanding().map((r) => r.choiceId)).toEqual([FEAT_CHOICE]);
+    expect(state.outstanding().map((r) => r.choiceId)).toEqual([MASTERIES_CHOICE, FEAT_CHOICE]);
 
+    state.setDecision(MASTERIES_CHOICE, FOUR_MASTERIES);
     state.setDecision(FEAT_CHOICE, [ASI_FEAT]);
     expect(state.outstanding().map((r) => r.choiceId)).toContain(ASI_CHOICE);
     expect(state.steps().some((s) => s.choiceId === ASI_CHOICE)).toBe(true);
@@ -254,6 +264,7 @@ describe('LevelUpState', () => {
     await levelTo(300);
     await levelTo(600, (s) => s.setDecision(SUBCLASS_CHOICE, [CHAMPION]));
     await levelTo(1800, (s) => {
+      s.setDecision(MASTERIES_CHOICE, FOUR_MASTERIES);
       s.setDecision(FEAT_CHOICE, [ASI_FEAT]);
       s.setDecision(ASI_CHOICE, ['str:+2']);
     });
@@ -378,12 +389,13 @@ describe('LevelUpState', () => {
     const before = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
 
     const state = createState(FIGHTER);
+    state.setDecision(MASTERIES_CHOICE, FOUR_MASTERIES);
     state.setDecision(FEAT_CHOICE, [ASI_FEAT]);
     state.setDecision(ASI_CHOICE, ['str:+2']);
     state.chooseAverageHp();
     expect(state.complete()).toBe(true);
     const drafts = state.buildTransaction();
-    expect(drafts).toHaveLength(3);
+    expect(drafts).toHaveLength(4); // level.gained + mastery re-pick + feat decision + ability sub-choice
     await characterStore.appendTx(drafts);
     expect(characterStore.sheet()?.level).toBe(4);
     expect(characterStore.sheet()?.abilities['str']?.score.value).toBe(19);

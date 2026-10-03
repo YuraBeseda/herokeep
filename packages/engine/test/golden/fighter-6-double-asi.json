@@ -1,5 +1,6 @@
 {
   "name": "fighter-6-double-asi",
+  "note": "Plan 12 task 2 re-pin: fighter weapon-masteries count is now a classLevel formula (3 at levels 1-3, 4 at 4-9, per the vendored srd-2024_fighter_weapon-mastery-count column). This character recorded 3 masteries at level 1 and is now level 6 (count 4), so the SAME choice id is correctly re-offered with count 4; outstandingChoices gains it (sorted first by id). No other expectation moves.",
   "packs": ["dist:srd-5e-2024"],
   "events": [
     {
@@ -218,9 +219,11 @@
     "sheet.abilities[\"str\"].score.value": 19,
     "sheet.abilities[\"dex\"].score.value": 15,
     "sheet.abilities[\"dex\"].mod": 2,
-    "sheet.outstandingChoices.length": 2,
-    "sheet.outstandingChoices.0.choiceId": "srd-5e-2024:class/fighter@3/subclass",
-    "sheet.outstandingChoices.1.choiceId": "srd-5e-2024:system/5e-2024@0/class",
+    "sheet.outstandingChoices.length": 3,
+    "sheet.outstandingChoices.0.choiceId": "srd-5e-2024:class/fighter@1/weapon-masteries",
+    "sheet.outstandingChoices.0.count": 4,
+    "sheet.outstandingChoices.1.choiceId": "srd-5e-2024:class/fighter@3/subclass",
+    "sheet.outstandingChoices.2.choiceId": "srd-5e-2024:system/5e-2024@0/class",
     "sheet.issues.length": 0
   }
 }

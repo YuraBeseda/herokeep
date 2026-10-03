@@ -161,7 +161,9 @@ describe('fighter and wizard 6–20 mechanics (task 8)', () => {
     const l1 = f.levels.find((r) => r.level === 1)!;
     const masteries = l1.choices.find((c) => c.id.endsWith('/weapon-masteries'))!;
     expect(masteries.pick).toEqual({ query: { type: 'item', hasField: ['weapon.mastery'] } });
-    expect(masteries.count).toBe(3);
+    // Plan 12 task 2: the count is now a classLevel formula (3 at level 0/1; per-level rows are checked
+    // against the vendored column in fighter-mastery-count.test.ts).
+    expect(masteries.count).toMatch(/^3 \+ /);
     const style = l1.choices.find((c) => c.id.endsWith('/fighting-style')) as unknown as { repeatableAt: number[] };
     expect(style.repeatableAt).toEqual(
       Array.from({ length: 19 }, (_, i) => i + 2), // 2..20
