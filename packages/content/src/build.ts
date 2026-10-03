@@ -52,7 +52,7 @@ function composeEntities(): Entity[] {
 /**
  * Builds the complete `srd-5e-2024@0.1.0` core pack: composes every transform's entities, applies
  * the eleven overlay files in their binding order (corrections → system-choices → species →
- * backgrounds → fighting-styles → feats → barbarian → cleric → fighter → warlock → wizard) over the
+ * backgrounds → fighting-styles → feats → barbarian → cleric → fighter → warlock → wizard → rogue) over the
  * full entity array, sorts entities by id, and parses the result through `parsePack`. Deterministic:
  * the same inputs always produce byte-identical output. Throws if the composed object is not a valid
  * `Pack`.
@@ -72,6 +72,7 @@ export function buildPack(): Pack {
     overlays.fighter,
     overlays.warlock,
     overlays.wizard,
+    overlays.rogue,
   ]) {
     entities = applyOverlays(entities, layer);
   }

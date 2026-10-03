@@ -1,0 +1,385 @@
+[
+  {
+    "id": "srd-5e-2024:class/rogue",
+    "cite": "SRD 5.2.1, Rogue Core Traits; Rogue Subclass; Weapon Mastery; Ability Score Improvement; Epic Boon",
+    "note": "Task 7 (phase 4 plan 12): new overlay, class 1->20. Core Traits table (vendored srd-2024_rogue_core-traits): \"Saving Throw Proficiencies: Dexterity and Intelligence\" (upstream CharacterClass saving_throws = [dex, int], correct as vendored -- no correction needed); \"Skill Proficiencies: Choose 4: Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Persuasion, Sleight of Hand, or Stealth\"; \"Weapon Proficiencies: Simple weapons and Martial weapons that have the Finesse or Light property\"; \"Tool Proficiencies: Thieves' Tools\"; \"Armor Training: Light armor\". weaponProficiencies: the engine matches a weapon by category slug, by item slug, or by tag (packages/engine/src/derive/attacks.ts isProficientWithWeapon) and has NO property-qualified category, so \"martial weapons with Finesse or Light\" is expressed as 'simple' plus the item slugs of the martial weapons in this pack whose weapon.properties include finesse or light (verified against the built pack: hand-crossbow [light], rapier [finesse], scimitar [finesse, light], shortsword [finesse, light], whip [finesse]). A future martial weapon in a pack would need adding here -- flagged as a vocabulary gap (a property-qualified proficiency category). toolProficiencies: 'thieves-tools' (the item slug, srd-5e-2024:item/thieves-tools exists; the engine does not yet read class.toolProficiencies into Sheet.proficiencies -- pre-existing, same for every class). skillChoice.count 4 over the vendored 10-skill rogue list (replaces the placeholder 0 / full-18 list from transformClasses). MULTICLASS gains live in transform/classes.ts MULTICLASS_GAINS (cites the vendored multiclassing rule; the per-class table is SRD-silent in the vendor, owner-flag there). @1/weapon-masteries: same query-pick shape as Fighter/Barbarian; the vendored srd-2024_rogue_weapon-mastery text is \"two kinds of weapons of your choice with which you have proficiency\", a fixed count of 2 (no weapon-mastery-count column exists for Rogue -- verified, only rogue-proficiency-bonus and rogue-sneak-attack-column-data extras exist on every level row). The pick cannot be restricted to weapons the rogue is proficient with (EntityQuery has no proficiency filter), so it offers any mastery-bearing weapon; flagged, same family as Fighter's/Barbarian's weapon-kind gap. ASI: feat choices at 4/8/12/16 (vendored ability-score-improvement desc: \"You gain this feature again at Rogue levels 8, 12, and 16\") and Epic Boon @19 (vendored epic-boon, level 19) reuse the open query:{type:'feat'} shape -- Rogue has NO extra ASI at 10 in the 2024 SRD (ClassFeatureItem rows for ability-score-improvement: 4, 8, 12, 16 only). Subclass @3 offers exactly the rogue subclasses (Thief is the only SRD one). EXPERTISE is deliberately NOT a choice here -- see the rogue-expertise entry. SNEAK ATTACK dice (1d6 at levels 1-2 ... 10d6 at 19-20) already land as the typed DiceSchema extra 'rogue-sneak-attack-column-data' on all 20 rows via transformClasses(); display-only by ruling 1, nothing authored.",
+    "set": {
+      "armorTraining": ["light"],
+      "weaponProficiencies": ["simple", "hand-crossbow", "rapier", "scimitar", "shortsword", "whip"],
+      "toolProficiencies": ["thieves-tools"],
+      "skillChoice": {
+        "from": [
+          "acrobatics",
+          "athletics",
+          "deception",
+          "insight",
+          "intimidation",
+          "investigation",
+          "perception",
+          "persuasion",
+          "sleight-of-hand",
+          "stealth"
+        ],
+        "count": 4
+      }
+    },
+    "rows": [
+      {
+        "level": 1,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@1/weapon-masteries",
+            "prompt": "Weapon Masteries",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 1 },
+            "pick": { "query": { "type": "item", "hasField": ["weapon.mastery"] } },
+            "count": 2
+          }
+        ]
+      },
+      {
+        "level": 3,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@3/subclass",
+            "prompt": "Rogue Subclass",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 3 },
+            "pick": { "query": { "type": "subclass", "classes": ["rogue"] } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 4,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@4/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 4 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 8,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@8/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 8 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 12,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@12/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 12 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 16,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@16/feat",
+            "prompt": "Feat (Ability Score Improvement or other)",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 16 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      },
+      {
+        "level": 19,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@19/feat",
+            "prompt": "Feat (Epic Boon or other)",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 19 },
+            "pick": { "query": { "type": "feat" } },
+            "count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-expertise",
+    "cite": "SRD 5.2.1, Expertise",
+    "note": "SRD text: \"You gain Expertise in two of your skill proficiencies of your choice... At Rogue level 6, you gain Expertise in two more of your skill proficiencies of your choice.\" Granted at Rogue levels 1 and 6. TEXT FALLBACK + OWNER-FLAG. Registry check (ruling 5 / Task-5 carry): the effects registry DOES contain a doubling kind -- proficiency.grant{kind:'skill', level:'expertise'} (doc-04 line 128; engine modifiers.ts resolves expertise over proficient; proficiency.ts multiplies x2) -- but its `target` is a FIXED string authored in the pack, so it cannot express \"two skills of the character's choice\" (it would double one hard-coded skill for every rogue: state-wrong). The only per-selection mechanism is a skill-typed pick, and Task 5's engine change makes a skill-typed pick selection grant BASE proficiency, so authoring Expertise as a pick would GRANT proficiency (or silently fail to double) -- the forbidden shape, not authored. No choice is added. Slice-3 vocabulary candidate: a pick whose selections apply proficiency.grant{level:'expertise'} to the chosen skills (restricted to skills the character is already proficient in).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Expertise",
+          "description": "You gain Expertise in two of your skill proficiencies of your choice. Sleight of Hand and Stealth are recommended if you have proficiency in them.\n\nAt Rogue level 6, you gain Expertise in two more of your skill proficiencies of your choice."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-sneak-attack",
+    "cite": "SRD 5.2.1, Sneak Attack",
+    "note": "SRD text: \"Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack roll if you have Advantage on the roll and the attack uses a Finesse or a Ranged weapon... You don't need Advantage ... if at least one of your allies is within 5 feet of the target...\" DISPLAY-ONLY by ruling 1: the damage dice scale via the typed extra 'rogue-sneak-attack-column-data' (sibling column-data feature, 1d6..10d6) already on every class row; the conditional once-per-turn rider (advantage OR adjacent un-incapacitated ally, finesse/ranged weapon only) is a per-attack situational state the Sheet does not model, and auto-adding it to attack damage would be state-wrong (applied to every attack). Text fallback; the feature keeps its vendored description. NOTE the transform artifact: the column-data sibling (srd-2024_rogue_sneak-attack-column-data) shares the display name \"Sneak Attack\" -- not deduplicated here (barbarian/cleric precedent: no dedupe in overlays).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Sneak Attack",
+          "description": "Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack roll if you have Advantage on the roll and the attack uses a Finesse or a Ranged weapon. The extra damage's type is the same as the weapon's type.\n\nYou don't need Advantage on the attack roll if at least one of your allies is within 5 feet of the target, the ally doesn't have the Incapacitated condition, and you don't have Disadvantage on the attack roll.\n\nThe extra damage increases as you gain Rogue levels, as shown in the Sneak Attack column of the Rogue Features table."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-thieves-cant",
+    "cite": "SRD 5.2.1, Thieves' Cant",
+    "note": "SRD text: \"You know Thieves' Cant and one other language of your choice, which you choose from the language tables in 'Character Creation.'\" Granted at Rogue level 1. The fixed half is a real language.grant (srd-5e-2024:language/thieves-cant exists in the pack). The \"one other language of your choice\" half is NOT authored: language choices are unmechanized pack-wide (species.json notes the same gap: every species grants Common only) -- flagged, same vocabulary gap.",
+    "merge": {
+      "effects": [{ "type": "language.grant", "language": "srd-5e-2024:language/thieves-cant" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-weapon-mastery",
+    "cite": "SRD 5.2.1, Weapon Mastery",
+    "note": "SRD text: \"...use the mastery properties of two kinds of weapons of your choice with which you have proficiency... Whenever you finish a Long Rest, you can change the kinds of weapons you chose.\" count '2' matches the choice count at class level 1 (fixed 2 at all levels -- there is no Rogue weapon-mastery-count column; the engine's per-level extra override is simply absent so this formula is the answer at every level). The long-rest swap is not expressible (same limitation as Fighter/Barbarian). The proficiency restriction is not enforced by the pick (see the class note).",
+    "merge": {
+      "effects": [{ "type": "mastery.grant", "count": "2" }]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-cunning-action",
+    "cite": "SRD 5.2.1, Cunning Action",
+    "note": "SRD text: \"On your turn, you can take one of the following actions as a Bonus Action: Dash, Disengage, or Hide.\" Granted at level 2. Action-economy permission with no pack vocabulary (action.define shells only uses/reset of a custom ability, not a bonus-action substitution of standard actions). Text fallback per ruling 9's bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Cunning Action",
+          "description": "Your quick thinking and agility allow you to move and act quickly. On your turn, you can take one of the following actions as a Bonus Action: Dash, Disengage, or Hide."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-steady-aim",
+    "cite": "SRD 5.2.1, Steady Aim",
+    "note": "SRD text: \"As a Bonus Action, you give yourself Advantage on your next attack roll on the current turn... only if you haven't moved during this turn, and after you use it, your Speed is 0 until the end of the current turn.\" Granted at level 3. A per-turn, opt-in, movement-gated state (no \"did not move this turn\" fact, no toggle) -- an unconditional advantage.grant would be wrong. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Steady Aim",
+          "description": "As a Bonus Action, you give yourself Advantage on your next attack roll on the current turn. You can use this feature only if you haven't moved during this turn, and after you use it, your Speed is 0 until the end of the current turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-cunning-strike",
+    "cite": "SRD 5.2.1, Cunning Strike",
+    "note": "SRD text (abridged): when you deal Sneak Attack damage you may forgo Sneak Attack dice (Poison 1d6, Trip 1d6, Withdraw 1d6) to add an effect; saving-throw DC 8 + Dexterity modifier + Proficiency Bonus. Granted at level 5. A per-attack trade of dice for a saving-throw/condition rider -- no vocabulary for imposed target saves or dice-for-effect substitution. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Cunning Strike",
+          "description": "You've developed cunning ways to use your Sneak Attack. When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects. Each effect has a die cost, which is the number of Sneak Attack damage dice you must forgo to add the effect. You remove the die before rolling, and the effect occurs immediately after the attack's damage is dealt. For example, if you add the Poison effect, remove 1d6 from the Sneak Attack's damage before rolling.\n\nIf a Cunning Strike effect requires a saving throw, the DC equals 8 plus your Dexterity modifier and Proficiency Bonus.\n\n**Poison (Cost: 1d6).** You add a toxin to your strike, forcing the target to make a Constitution saving throw. On a failed save, the target has the Poisoned condition for 1 minute. At the end of each of its turns, the Poisoned target repeats the save, ending the effect on itself on a success.\n\nTo use this effect, you must have a Poisoner's Kit on your person.\n\n**Trip (Cost: 1d6).** If the target is Large or smaller, it must succeed on a Dexterity saving throw or have the Prone condition.\n\n**Withdraw (Cost: 1d6).** Immediately after the attack, you move up to half your Speed without provoking Opportunity Attacks."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-uncanny-dodge",
+    "cite": "SRD 5.2.1, Uncanny Dodge",
+    "note": "SRD text: \"When an attacker that you can see hits you with an attack roll, you can take a Reaction to halve the attack's damage against you (round down).\" Granted at level 5. A reaction triggered by being hit, halving incoming damage -- no on-hit trigger or incoming-damage-halving vocabulary (damage.resistance is a permanent per-type trait, wrong here). Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Uncanny Dodge",
+          "description": "When an attacker that you can see hits you with an attack roll, you can take a Reaction to halve the attack's damage against you (round down)."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-evasion",
+    "cite": "SRD 5.2.1, Evasion",
+    "note": "SRD text: \"When you're subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed ... and only half damage if you fail. You can't use this feature if you have the Incapacitated condition.\" Granted at level 7. A save-outcome substitution on half-damage effects only -- no vocabulary for altering save results. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Evasion",
+          "description": "You can nimbly dodge out of the way of certain dangers. When you're subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail. You can't use this feature if you have the Incapacitated condition."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-reliable-talent",
+    "cite": "SRD 5.2.1, Reliable Talent",
+    "note": "SRD text: \"Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10.\" Granted at level 7. A minimum-die-roll floor on proficient checks -- no roll-floor effect type (damage.rerollBelow exists only for damage dice). Same gap class as Champion's Survivor / Barbarian's Indomitable Might. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Reliable Talent",
+          "description": "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-improved-cunning-strike",
+    "cite": "SRD 5.2.1, Improved Cunning Strike",
+    "note": "SRD text: \"You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect.\" Granted at level 11. Strict extension of the unauthored Cunning Strike gap. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Improved Cunning Strike",
+          "description": "You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-devious-strikes",
+    "cite": "SRD 5.2.1, Devious Strikes",
+    "note": "SRD text (abridged): adds Daze (2d6), Knock Out (6d6) and Obscure (3d6) to the Cunning Strike options. Granted at level 14. Strict extension of the unauthored Cunning Strike gap. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Devious Strikes",
+          "description": "You've practiced new ways to use your Sneak Attack deviously. The following effects are now among your Cunning Strike options.\n\n**Daze (Cost: 2d6).** The target must succeed on a Constitution saving throw, or on its next turn, it can do only one of the following: move or take an action or a Bonus Action.\n\n**Knock Out (Cost: 6d6).** The target must succeed on a Constitution saving throw, or it has the Unconscious condition for 1 minute or until it takes any damage. The Unconscious target repeats the save at the end of each of its turns, ending the effect on itself on a success.\n\n**Obscure (Cost: 3d6).** The target must succeed on a Dexterity saving throw, or it has the Blinded condition until the end of its next turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-slippery-mind",
+    "cite": "SRD 5.2.1, Slippery Mind",
+    "note": "SRD text: \"You gain proficiency in Wisdom and Charisma saving throws.\" Granted at level 15. Fully expressible: two proficiency.grant{kind:'save'} effects (default level 'proficient'; save proficiency is consumed by deriveAbilities, packages/engine/src/derive/abilities.ts). A REAL effect, not a fallback.",
+    "merge": {
+      "effects": [
+        { "type": "proficiency.grant", "kind": "save", "target": "wis", "level": "proficient" },
+        { "type": "proficiency.grant", "kind": "save", "target": "cha", "level": "proficient" }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-elusive",
+    "cite": "SRD 5.2.1, Elusive",
+    "note": "SRD text: \"No attack roll can have Advantage against you unless you have the Incapacitated condition.\" Granted at level 18. The inverse of advantage.grant/disadvantage.impose: it NEGATES advantage that other creatures' attacks would have against the rogue, and the Sheet models only the character's own rolls. No vocabulary for negating incoming advantage. Text fallback per ruling 9; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Elusive",
+          "description": "You're so evasive that attackers rarely gain the upper hand against you. No attack roll can have Advantage against you unless you have the Incapacitated condition."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-stroke-of-luck",
+    "cite": "SRD 5.2.1, Stroke of Luck",
+    "note": "SRD text: \"If you fail a D20 Test, you can turn the roll into a 20. Once you use this feature, you can't use it again until you finish a Short or Long Rest.\" Granted at level 20. The uses pool is a real resource.define: max '1', reset 'shortRest' (a Short Rest restores it; a Long Rest implies one, so one trigger covers both clauses exactly -- no \"regain one\" approximation needed, unlike Rage/Second Wind). The roll-to-20 substitution itself is an outcome replacement with no vocabulary (same gap class as Reliable Talent/Survivor) and stays in the feature's own description, matching the Rage precedent of not duplicating description text into a feature.text when a real effect is authored.",
+    "merge": {
+      "effects": [
+        {
+          "type": "resource.define",
+          "id": "stroke-of-luck",
+          "name": "Stroke of Luck",
+          "max": "1",
+          "reset": "shortRest"
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:subclass/thief",
+    "cite": "SRD 5.2.1, Thief",
+    "note": "Subclass entity carries no overlay entry beyond this note -- its features (below) are granted via the upstream levels[] rows produced by transformClasses(), and the Thief adds no player decision at any level. The vendored Thief features are Fast Hands (3), Second-Story Work (3), Supreme Sneak (9), Use Magic Device (13), Thief's Reflexes (17); every one is action-economy, situational or an engine-wide limit and is a text fallback with flag."
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-thief-fast-hands",
+    "cite": "SRD 5.2.1, Thief - Fast Hands",
+    "note": "SRD text: a Bonus Action to make a Sleight of Hand check (pick a lock, disarm a trap, pick a pocket) or to take the Utilize/Magic action. Granted at Thief level 3. Pure action-economy permission, no vocabulary. Text fallback per the fallback bar; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Fast Hands",
+          "description": "As a Bonus Action, you can do one of the following.\n\n**Sleight of Hand.** Make a Dexterity (Sleight of Hand) check to pick a lock or disarm a trap with Thieves' Tools or to pick a pocket.\n\n**Use an Object.** Take the Utilize action, or take the Magic action to use a magic item that requires that action."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-thief-second-story-work",
+    "cite": "SRD 5.2.1, Thief - Second-Story Work",
+    "note": "SRD text: \"Climber. You gain a Climb Speed equal to your Speed. Jumper. You can determine your jump distance using your Dexterity rather than your Strength.\" Granted at Thief level 3. The Climb Speed clause is NOT expressible: speed.set takes a fixed integer, while this is \"equal to your Speed\" (a derived, feature-dependent value that would go stale as Speed changes); the Dexterity-for-jump clause has no vocabulary. Text fallback; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Second-Story Work",
+          "description": "You've trained to get into especially hard-to-reach places, granting you these benefits.\n\n**Climber.** You gain a Climb Speed equal to your Speed.\n\n**Jumper.** You can determine your jump distance using your Dexterity rather than your Strength."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-thief-supreme-sneak",
+    "cite": "SRD 5.2.1, Thief - Supreme Sneak",
+    "note": "SRD text: adds the Stealth Attack (Cost: 1d6) Cunning Strike option (keeps the Hide Invisible condition behind cover). Granted at Thief level 9. Extension of the unauthored Cunning Strike gap. Text fallback; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Supreme Sneak",
+          "description": "You gain the following Cunning Strike option. *Stealth Attack (Cost: 1d6).* If you have the Hide action's Invisible condition, this attack doesn't end that condition on you if you end the turn behind Three-Quarters Cover or Total Cover."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-thief-use-magic-device",
+    "cite": "SRD 5.2.1, Thief - Use Magic Device",
+    "note": "SRD text: attune to up to four magic items at once; roll 1d6 on charge expenditure (6 = no charges spent); use any Spell Scroll with an Intelligence check for higher-level spells. Granted at Thief level 13. Attunement limit is an engine-wide constant with no per-character override effect, charge-saving is a per-use die roll, and scroll use is an item-use rule -- none expressible. Text fallback; flagged (a per-character attunement-limit effect is a slice-3 vocabulary candidate).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Use Magic Device",
+          "description": "You've learned how to maximize use of magic items, granting you the following benefits.\n\n**Attunement.** You can attune to up to four magic items at once.\n\n**Charges.** Whenever you use a magic item property that expends charges, roll 1d6. On a roll of 6, you use the property without expending the charges.\n\n**Scrolls.** You can use any *Spell Scroll*, using Intelligence as your spellcasting ability for the spell. If the spell is a cantrip or a level 1 spell, you can cast it reliably. If the scroll contains a higher-level spell, you must first succeed on an Intelligence (Arcana) check (DC 10 plus the spell's level). On a successful check, you cast the spell from the scroll. On a failed check, the scroll disintegrates."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feature/rogue-thief-thiefs-reflexes",
+    "cite": "SRD 5.2.1, Thief - Thief's Reflexes",
+    "note": "SRD text: \"You can take two turns during the first round of any combat. You take your first turn at your normal Initiative and your second turn at your Initiative minus 10.\" Granted at Thief level 17. Turn-order structure, not a bonus -- no vocabulary (initiative.bonus is a flat modifier). Text fallback; flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Thief's Reflexes",
+          "description": "You are adept at laying ambushes and quickly escaping danger. You can take two turns during the first round of any combat. You take your first turn at your normal Initiative and your second turn at your Initiative minus 10."
+        }
+      ]
+    }
+  }
+]

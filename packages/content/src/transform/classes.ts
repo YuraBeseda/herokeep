@@ -29,12 +29,22 @@ const NUMERIC_EXTRA_RE = /^[+-]?\d+$/;
  * table reserves that for Bard/Rogue, neither in this slice — confirmed absent from the vendored
  * prose too), so every entry's `skillChoiceCount` is `0`.
  */
-const MULTICLASS_GAINS: Record<string, { armorTraining: string[]; weaponProficiencies: string[] }> = {
+const MULTICLASS_GAINS: Record<
+  string,
+  { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount?: number }
+> = {
   fighter: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: ['simple', 'martial'] },
   wizard: { armorTraining: [], weaponProficiencies: [] },
   barbarian: { armorTraining: ['shields'], weaponProficiencies: ['simple', 'martial'] },
   cleric: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: [] },
   warlock: { armorTraining: ['light'], weaponProficiencies: ['simple'] },
+  // Plan 12 task 7. OWNER-FLAG, 2024-SRD-silent (same as every entry above): the vendored multiclassing
+  // Rule `srd-2024_multiclassing_proficiencies` is prose only ("you gain only some of the new class's
+  // starting proficiencies"); the per-class table is authored from public SRD 5.2.1 knowledge: Rogue
+  // gains Light armor, Thieves' Tools, and ONE skill from the Rogue list (the table reserves a bonus
+  // skill for Bard/Rogue) -- no weapons. Thieves' Tools has no `gains` field (schema carries armor,
+  // weapons, skill count only), so it is not representable here; flagged.
+  rogue: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
 };
 
 /**
@@ -253,7 +263,11 @@ export function transformClasses(): { classes: Entity[]; subclasses: Entity[]; f
           ? {
               multiclass: {
                 prerequisites: MULTICLASS_PREREQUISITES[slug]!,
-                gains: { ...MULTICLASS_GAINS[slug], skillChoiceCount: 0 },
+                gains: {
+                  armorTraining: MULTICLASS_GAINS[slug].armorTraining,
+                  weaponProficiencies: MULTICLASS_GAINS[slug].weaponProficiencies,
+                  skillChoiceCount: MULTICLASS_GAINS[slug].skillChoiceCount ?? 0,
+                },
               },
             }
           : {}),

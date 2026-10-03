@@ -917,3 +917,155 @@ describe('feats (task 5): integration over the real pack', () => {
     expect(gained).toHaveLength(6);
   });
 });
+
+describe('rogue and thief to level 20 mechanics (task 7)', () => {
+  const { classes, subclasses, features } = transformClasses();
+  const o = loadOverlays();
+  const patchedClasses = applyOverlays(
+    classes,
+    [...o.corrections, ...o.rogue].filter((x) => classes.some((c) => c.id === x.id)),
+  );
+  const patchedSubclasses = applyOverlays(
+    subclasses,
+    o.rogue.filter((x) => subclasses.some((s) => s.id === x.id)),
+  );
+  const patchedFeatures = applyOverlays(
+    features,
+    o.rogue.filter((x) => features.some((f) => f.id === x.id)),
+  );
+
+  interface ClassShape {
+    saves: string[];
+    armorTraining: string[];
+    weaponProficiencies: string[];
+    toolProficiencies: string[];
+    skillChoice: { from: string[]; count: number };
+    multiclass: { gains: { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount: number } };
+    levels: {
+      level: number;
+      extra?: Record<string, unknown>;
+      choices: { id: string; pick: unknown; count: number }[];
+    }[];
+  }
+  const rogue = () => patchedClasses.find((x) => x.id === 'srd-5e-2024:class/rogue') as ClassShape;
+  const feature = (slug: string) =>
+    patchedFeatures.find((x) => x.id === `srd-5e-2024:feature/rogue-${slug}`) as {
+      effects: { type: string; [k: string]: unknown }[];
+    };
+
+  it('rogue: core traits (light armor, simple + martial finesse/light weapons, thieves tools, 4-skill choice)', () => {
+    const r = rogue();
+    expect(r.saves).toEqual(['dex', 'int']);
+    expect(r.armorTraining).toEqual(['light']);
+    expect(r.weaponProficiencies).toEqual(
+      expect.arrayContaining(['simple', 'rapier', 'scimitar', 'shortsword', 'whip', 'hand-crossbow']),
+    );
+    expect(r.weaponProficiencies).not.toContain('martial');
+    expect(r.toolProficiencies).toEqual(['thieves-tools']);
+    expect(r.skillChoice.count).toBe(4);
+    expect([...r.skillChoice.from].sort()).toEqual(
+      [
+        'acrobatics',
+        'athletics',
+        'deception',
+        'insight',
+        'intimidation',
+        'investigation',
+        'perception',
+        'persuasion',
+        'sleight-of-hand',
+        'stealth',
+      ].sort(),
+    );
+  });
+
+  it('rogue: multiclass gains = light armor + one skill (no weapons)', () => {
+    expect(rogue().multiclass.gains).toEqual({
+      armorTraining: ['light'],
+      weaponProficiencies: [],
+      skillChoiceCount: 1,
+    });
+  });
+
+  it('rogue: subclass choice at 3 offers only the rogue subclass query; ASI/feat at 4, 8, 12, 16, 19', () => {
+    const rows = rogue().levels;
+    const ids = rows.flatMap((r) => r.choices.map((c) => c.id));
+    const sub = rows.flatMap((r) => r.choices).find((c) => c.id === 'srd-5e-2024:class/rogue@3/subclass')!;
+    expect(sub.pick).toEqual({ query: { type: 'subclass', classes: ['rogue'] } });
+    expect(sub.count).toBe(1);
+    for (const level of [4, 8, 12, 16, 19])
+      expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/rogue@${level}/feat`);
+    expect(ids).not.toContain('srd-5e-2024:class/rogue@10/feat');
+    expect(
+      subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/rogue').map((s) => s.id),
+    ).toEqual(['srd-5e-2024:subclass/thief']);
+  });
+
+  it('rogue: weapon-masteries is a real query pick, count 2, with a matching mastery.grant', () => {
+    const l1 = rogue().levels.find((r) => r.level === 1)!;
+    const m = l1.choices.find((c) => c.id.endsWith('/weapon-masteries'))!;
+    expect(m.pick).toEqual({ query: { type: 'item', hasField: ['weapon.mastery'] } });
+    expect(m.count).toBe(2);
+    expect(feature('weapon-mastery').effects).toContainEqual({ type: 'mastery.grant', count: '2' });
+  });
+
+  it('rogue: Sneak Attack is display-only: typed dice extras at all 20 levels, no effect on the feature', () => {
+    const dice = rogue().levels.map((r) => r.extra?.['rogue-sneak-attack-column-data']);
+    expect(dice).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10].map((n) => `${n}d6`));
+    expect(feature('sneak-attack').effects.filter((e) => e.type !== 'feature.text')).toEqual([]);
+  });
+
+  it('rogue: Expertise is NEVER a plain skill pick (that would grant base proficiency) -- text fallback', () => {
+    const allChoices = rogue().levels.flatMap((r) => r.choices);
+    expect(allChoices.filter((c) => /expertise/i.test(c.id))).toEqual([]);
+    expect(feature('expertise').effects.some((e) => e.type === 'feature.text')).toBe(true);
+    expect(feature('expertise').effects.some((e) => e.type === 'proficiency.grant')).toBe(false);
+  });
+
+  it('rogue: real effects (Slippery Mind saves, Stroke of Luck resource, Thieves Cant language, Weapon Mastery)', () => {
+    expect(feature('slippery-mind').effects).toEqual(
+      expect.arrayContaining([
+        { type: 'proficiency.grant', kind: 'save', target: 'wis', level: 'proficient' },
+        { type: 'proficiency.grant', kind: 'save', target: 'cha', level: 'proficient' },
+      ]),
+    );
+    expect(feature('stroke-of-luck').effects).toContainEqual(
+      expect.objectContaining({ type: 'resource.define', id: 'stroke-of-luck', max: '1', reset: 'shortRest' }),
+    );
+    expect(feature('thieves-cant').effects).toContainEqual({
+      type: 'language.grant',
+      language: 'srd-5e-2024:language/thieves-cant',
+    });
+  });
+
+  it('rogue and thief: state/trigger-gated features carry a feature.text fallback', () => {
+    for (const slug of [
+      'cunning-action',
+      'cunning-strike',
+      'steady-aim',
+      'uncanny-dodge',
+      'evasion',
+      'reliable-talent',
+      'improved-cunning-strike',
+      'devious-strikes',
+      'elusive',
+      'thief-fast-hands',
+      'thief-second-story-work',
+      'thief-supreme-sneak',
+      'thief-thiefs-reflexes',
+      'thief-use-magic-device',
+    ]) {
+      expect(
+        feature(slug).effects.some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+    expect(patchedSubclasses.find((s) => s.id === 'srd-5e-2024:subclass/thief')).toBeDefined();
+  });
+
+  it('buildPack composes the rogue overlay with the rogue class mechanized', () => {
+    const pack = buildPack();
+    const r = pack.entities.find((e) => e.id === 'srd-5e-2024:class/rogue') as unknown as ClassShape;
+    expect(r.skillChoice.count).toBe(4);
+  });
+});
