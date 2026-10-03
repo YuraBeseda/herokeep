@@ -99,8 +99,10 @@ describe('applyOverlays', () => {
     expect(choice!.id).toBe('srd-5e-2024:feat/ability-score-improvement@4/ability-scores');
     expect(choice!.at).toEqual({ kind: 'level', level: 4 });
     expect(choice!.pick).toMatchObject({ abilities: { count: 1, improve: '+2' } });
-    // Every other feat is untouched by this overlay.
-    const untouched = patched.filter((f) => f.id !== 'srd-5e-2024:feat/ability-score-improvement');
+    // Only ASI and the 7 Epic Boons (plan 12 task 5, +1 max-30 pick each) carry a feat-owned choice.
+    const untouched = patched.filter(
+      (f) => f.id !== 'srd-5e-2024:feat/ability-score-improvement' && !f.id.startsWith('srd-5e-2024:feat/boon-of-'),
+    );
     for (const f of untouched) expect((f as { choices: unknown[] }).choices, f.id).toHaveLength(0);
   });
 });

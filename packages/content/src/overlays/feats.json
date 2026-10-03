@@ -1,9 +1,10 @@
 [
   {
     "id": "srd-5e-2024:feat/ability-score-improvement",
-    "cite": "SRD 5.2.1, Ability Score Improvement",
-    "note": "Feat desc: \"Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20.\" PickSchema's `abilities` variant can express only ONE `improve` grammar per choice (no either/or), and its enum has no '+1 to two abilities' shape at all (only '+1', '+2', '+2/+1', '+1/+1/+1') — so this picks the '+2' form, an exact match for the feat's first RAW option (\"increase one ability score by 2\"); the second RAW option (\"+1 to two abilities\") isn't expressible by any single choice under this schema and is dropped, per the same limitation noted on the background ability-score overlays. `at: {kind:'level', level:4}` records the earliest level either Fighter or Wizard can take this feat (both classes' `@4/feat` choice); 1b's choice-offering helpers (`derive/choices.ts`) don't yet walk a chosen feat's own `choices[]` the way they walk class/subclass level rows, so this sub-choice is reachable today only by `findChoice` resolving a decision recorded directly against its id — surfacing it as a requested/pending choice is Phase-4 scope. Since `repeatable: true` (R23), a character who takes this feat again at a later ASI level records a decision against this same choice id again; a per-instance choice id is also Phase-4 scope.",
+    "cite": "SRD 5.2.1, Ability Score Improvement; vendored Feat srd-2024_ability-score-improvement (prerequisite \"Level 4+\"), FeatBenefit srd-2024_ability-score-improvement_1 and _2",
+    "note": "Feat desc: \"Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20.\" PickSchema's `abilities` variant carries ONE `improve` grammar per choice (no either/or) and has no '+1 to two abilities' shape (only '+1', '+2', '+2/+1', '+1/+1/+1'), so the choice authors the '+2' form, an exact match for the first RAW option; the '+1/+1' alt-form is INEXPRESSIBLE and dropped (OWNER-FLAG: a player who wants +1/+1 has no way to record it; needs either/or pick vocabulary). `at: {kind:'level', level:4}` records the earliest level either Fighter or Wizard can take this feat. The sub-choice is surfaced by derive/choices.ts once per ACQUISITION: occurrence #1 keeps the authored id below verbatim; the 2nd+ time the feat is taken (it is `repeatable`) the engine derives an occurrence-scoped id (`<id>--2`, ...) and surfaces a fresh choice, each applying its own +2 (plan 11 final wave F1, plan 12 task 1). NOTE (correction): cite/note are documentation only and are stripped from built entities by merge.ts, so editing this text never changes the pack. Task 5 added the structured prerequisite \"Level 4+\" (`level >= 4`); the verbatim prerequisite text stays in the description tail.",
     "merge": {
+      "prerequisites": [{ "level": { "gte": 4 } }],
       "choices": [
         {
           "id": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores",
@@ -12,6 +13,246 @@
           "pick": { "abilities": { "count": 1, "improve": "+2" } }
         }
       ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/alert",
+    "cite": "SRD 5.2.1, Alert; FeatBenefit srd-2024_alert_1_initative-proficiency, srd-2024_alert_2_initative-proficiency",
+    "note": "Initiative Proficiency (_1): \"When you roll Initiative, you can add your Proficiency Bonus to the roll.\" -> initiative.bonus 'prof' (always-on, exact). Initiative Swap (_2): swapping initiative with a willing ally is a table interaction after the roll (no effect type) -> feature.text per ruling 9, flagged.",
+    "merge": {
+      "effects": [
+        { "type": "initiative.bonus", "value": "prof" },
+        {
+          "type": "feature.text",
+          "name": "Initiative Swap",
+          "description": "Immediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/magic-initiate",
+    "cite": "SRD 5.2.1, Magic Initiate; FeatBenefit srd-2024_magic-initiate_1 (Two Cantrips), _2 (Level One Spell), _3 (Spell Change), _4 (Repeatable)",
+    "note": "TEXT FALLBACK, whole feat (ruling 9), flagged. (1) The spell-list picks ARE schema-expressible (EntityQuerySchema has `classes` + `level`: {type:'spell', classes:['cleric','druid','wizard'], level:0}) but a chosen spell entity has NO sheet payoff: composition.ts only activates chosen feat/feature entities, and no derive module reads a spell-typed decision into known/prepared spells -- an authored choice would be a decision point with no effect (same reasoning as wizard Scholar). (2) 'Choose ONE list, take both the cantrips and the level-1 spell from it' (and a different list per repetition) is a cross-choice constraint the picks cannot express; a single three-list query would let the cantrips and spell mix lists, which RAW forbids. (3) The level-1 spell as 'always prepared + one free cast per Long Rest' needs spell.grant alwaysPrepared, which a FEAT source cannot carry (it binds no block; validation rejects it as spell.grantUnbound). (4) The casting-ability pick (Int/Wis/Cha) is a non-improvement ability pick the PickSchema has no shape for. (5) Repeatable: carries only feature.text, no non-stacking effect (Task 1 boundary p1 respected); the text card re-emits per occurrence, which is harmless duplication. Owner-flag: needs engine support for spell-typed picks (known/prepared fold) plus a feat-bindable alwaysPrepared.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Magic Initiate",
+          "description": "Two Cantrips. You learn two cantrips of your choice from the Cleric, Druid, or Wizard spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat).\n\nLevel One Spell. Choose a level 1 spell from the same list you selected for this feat's cantrips. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have.\n\nSpell Change. Whenever you gain a new level, you can replace one of the spells you chose for this feat with a different spell of the same level from the chosen spell list.\n\nRepeatable. You can take this feat more than once, but you must choose a different spell list each time."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/savage-attacker",
+    "cite": "SRD 5.2.1, Savage Attacker; FeatBenefit srd-2024_savage-attacker_1",
+    "note": "\"Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.\" A per-turn, hit-triggered roll option: no per-turn resource reset and no damage-roll-twice effect exist -> feature.text per ruling 9 (state/trigger-gated), flagged.",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Savage Attacker",
+          "description": "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/skilled",
+    "cite": "SRD 5.2.1, Skilled; FeatBenefit srd-2024_skilled_1, srd-2024_skilled_2 (Repeatable)",
+    "note": "TEXT FALLBACK (ruling 9), flagged as an ENGINE BLOCKER for the plan's 'Skilled x2 -> 6 skills' goal. \"You gain proficiency in any combination of three skills or tools of your choice.\" The skills half IS schema-expressible ({query:{type:'skill'}}, count 3; unique across acquisitions, occurrence-scoped on the 2nd) but a chosen skill entity has NO proficiency payoff: composition.ts activates only chosen feat/feature entities, and abilities.ts grants skill proficiency only from background skillProficiencies, the class `<class>@1/skills` decision and proficiency.grant effects -- nothing reads a skill-typed decision owned by a feat. Probed empirically (RED: 0 skills gained after two Skilled picks). An authored choice would let the player answer a pick that changes nothing on the sheet (state-wrong), so none is authored. The 'or tools' half additionally needs a mixed skill-or-tool pool (a query has exactly one `type`). Carry: a small engine change (grant proficiency for skill/tool-typed picks of a feat-owned choice, e.g. in derive/abilities.ts beside the class-skills binding) unlocks BOTH the choice and the 6-skill integration test (kept as it.todo in mechanics.test.ts). Repeatable: carries only feature.text, no non-stacking effect (Task 1 boundary p1 respected).",
+    "merge": {
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Skilled",
+          "description": "You gain proficiency in any combination of three skills or tools of your choice. You can take this feat more than once; note each set of proficiencies on your sheet."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/grappler",
+    "cite": "SRD 5.2.1, Grappler; Feat prerequisite \"Level 4+, Strength or Dexterity 13+\"; FeatBenefit srd-2024_grappler_1 .. _4",
+    "note": "Prerequisite -> predicates: level >= 4 AND (str >= 13 OR dex >= 13). Ability Score Increase (_1) is 'Strength OR Dexterity +1': PickSchema's `abilities` variant cannot restrict WHICH abilities are offered, so an authored pick would let any ability be raised (state-wrong, over-permissive) -> text fallback, flagged. Punch and Grab (_2), Attack Advantage (_3: advantage vs a creature Grappled by you) and Fast Wrestler (_4) are all target/attack-context gated (no per-target condition on advantage.grant) -> feature.text, flagged.",
+    "merge": {
+      "prerequisites": [
+        { "level": { "gte": 4 } },
+        { "any": [{ "ability": { "str": { "gte": 13 } } }, { "ability": { "dex": { "gte": 13 } } }] }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Grappler",
+          "description": "Ability Score Increase. Increase your Strength or Dexterity score by 1, to a maximum of 20.\n\nPunch and Grab. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.\n\nAttack Advantage. You have Advantage on attack rolls against a creature Grappled by you.\n\nFast Wrestler. You don't have to spend extra movement to move a creature Grappled by you if the creature is your size or smaller."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-combat-prowess",
+    "cite": "SRD 5.2.1, Boon of Combat Prowess; prerequisite \"Level 19+\"; FeatBenefit srd-2024_boon-of-combat-prowess_1 (ASI), _2 (Peerless Aim)",
+    "note": "ASI (_1): +1 to one ability, max 30 -> pick.abilities {count 1, max 30, improve '+1'} (exact; validation caps at 30, derive applies no 20 cap). Peerless Aim (_2): turn-gated miss-to-hit rider -> feature.text, flagged.",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-combat-prowess@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Peerless Aim",
+          "description": "When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-dimensional-travel",
+    "cite": "SRD 5.2.1, Boon of Dimensional Travel; prerequisite \"Level 19+\"; FeatBenefit srd-2024_boon-of-dimensional-travel_1 (ASI), _2 (Blink Steps)",
+    "note": "ASI -> pick.abilities (+1, max 30). Blink Steps (_2): an action-triggered teleport, no effect type -> feature.text, flagged.",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-dimensional-travel@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Blink Steps",
+          "description": "Immediately after you take the Attack action or the Magic action, you can teleport up to 30 feet to an unoccupied space you can see."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-fate",
+    "cite": "SRD 5.2.1, Boon of Fate; prerequisite \"Level 19+\"; FeatBenefit srd-2024_boon-of-fate_1 (ASI), _2 (Improve Fate)",
+    "note": "ASI -> pick.abilities (+1, max 30). Improve Fate (_2): a 2d4 roll modifier usable once per initiative/rest-reset by any creature within 60 ft. The reset is 'until you roll Initiative OR finish a Short or Long Rest' (ResetSchema has no initiative reset) and the 2d4 is a table roll -> feature.text, flagged.",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-fate@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Improve Fate",
+          "description": "When you or another creature within 60 feet of you succeeds on or fails a D20 Test, you can roll 2d4 and apply the total rolled as a bonus or penalty to the d20 roll. Once you use this benefit, you can't use it again until you roll Initiative or finish a Short or Long Rest."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-irresistible-offense",
+    "cite": "SRD 5.2.1, Boon of Irresistible Offense; prerequisite \"Level 19+\"; FeatBenefit srd-2024_boon-of-irresistible-offense_1 (ASI), _2 (Overcome Defenses), _3 (Overwhelming Strike)",
+    "note": "ASI -> pick.abilities (+1, max 30). Overcome Defenses (_2: your B/P/S damage ignores Resistance) has no ignore-resistance effect (damage.resistance is defensive only); Overwhelming Strike (_3: extra damage on a natural 20 equal to the increased ability score) is crit-triggered with a chosen-ability-dependent amount -> both feature.text, flagged.",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-irresistible-offense@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Overcome Defenses",
+          "description": "The Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance."
+        },
+        {
+          "type": "feature.text",
+          "name": "Overwhelming Strike",
+          "description": "When you roll a 20 on the d20 for an attack roll, you can deal extra damage to the target equal to the ability score increased by this feat. The extra damage's type is the same as the attack's type."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-spell-recall",
+    "cite": "SRD 5.2.1, Boon of Spell Recall; prerequisite \"Level 19+, Spellcasting Feature\"; FeatBenefit srd-2024_boon-of-spell-recall_1 (ASI), _2 (Free Casting)",
+    "note": "Prerequisite -> level >= 19 AND spellcaster (the {spellcaster:true} predicate is the faithful reading of 'Spellcasting Feature'). ASI -> pick.abilities (+1, max 30). Free Casting (_2): roll-1d4 slot refund on casting -> feature.text, flagged.",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }, { "spellcaster": true }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-spell-recall@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Free Casting",
+          "description": "Whenever you cast a spell with a level 1–4 spell slot, roll 1d4. If the number you roll is the same as the slot's level, the slot isn't expended."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-the-night-spirit",
+    "cite": "SRD 5.2.1, Boon of the Night Spirit; prerequisite \"Level 19+\"; FeatBenefit srd-2024_boon-of-the-night-spirit_1 (ASI), _2 (Merge with Shadows), _3 (Shadowy Form)",
+    "note": "ASI -> pick.abilities (+1, max 30). Merge with Shadows (_2) and Shadowy Form (_3: resistance to all damage but Psychic and Radiant) are Dim Light/Darkness state-gated (no lighting predicate; a damage.resistance would be state-wrong when lit) -> feature.text, flagged.",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-the-night-spirit@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Merge with Shadows",
+          "description": "While within Dim Light or Darkness, you can give yourself the Invisible condition as a Bonus Action. The condition ends on you immediately after you take an action, a Bonus Action, or a Reaction."
+        },
+        {
+          "type": "feature.text",
+          "name": "Shadowy Form",
+          "description": "While within Dim Light or Darkness, you have Resistance to all damage except Psychic and Radiant."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:feat/boon-of-truesight",
+    "cite": "SRD 5.2.1, Boon of Truesight; prerequisite \"Level 19+\"; FeatBenefit srd-2024_boon-of-truesight_1 (ASI), _2 (Truesight)",
+    "note": "ASI -> pick.abilities (+1, max 30). Truesight (_2): unconditional 60 ft -> sense.grant truesight 60 (exact, fully mechanized).",
+    "merge": {
+      "prerequisites": [{ "level": { "gte": 19 } }],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/boon-of-truesight@19/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 19 },
+          "pick": { "abilities": { "count": 1, "max": 30, "improve": "+1" } }
+        }
+      ],
+      "effects": [{ "type": "sense.grant", "sense": "truesight", "range": 60 }]
     }
   }
 ]

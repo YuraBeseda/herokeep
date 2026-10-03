@@ -1,3 +1,5 @@
+import { createContentIndex, derive, reduce } from '@hk/engine';
+import type { Event } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { buildPack } from '../src/build.ts';
 import { applyOverlays } from '../src/overlays/merge.ts';
@@ -741,4 +743,171 @@ describe('warlock and fiend patron to level 20 mechanics (task 11)', () => {
     expect(pack.entities.some((e) => e.id === 'srd-5e-2024:class/warlock')).toBe(true);
     expect(pack.entities.some((e) => e.id === 'srd-5e-2024:subclass/fiend-patron')).toBe(true);
   });
+});
+
+// ---- Plan 12 task 5: SRD feats at scale ---------------------------------------------------------
+
+const FP = 'srd-5e-2024';
+const featPack = buildPack();
+const featIndex = createContentIndex([featPack]);
+const featRules = { restRules: featIndex.system().restRules, hpRules: featIndex.system().hpRules };
+interface FeatShape {
+  prerequisites: unknown[];
+  effects?: { type: string; [k: string]: unknown }[];
+  choices?: { id: string; count: unknown; pick: unknown }[];
+}
+const featEntity = (slug: string) =>
+  featPack.entities.find((e) => e.id === `${FP}:feat/${slug}`) as unknown as FeatShape;
+const featEffects = (slug: string) => featEntity(slug).effects ?? [];
+
+const ALL_FEATS = [
+  'alert',
+  'magic-initiate',
+  'savage-attacker',
+  'skilled',
+  'ability-score-improvement',
+  'grappler',
+  'archery',
+  'defense',
+  'great-weapon-fighting',
+  'two-weapon-fighting',
+  'boon-of-combat-prowess',
+  'boon-of-dimensional-travel',
+  'boon-of-fate',
+  'boon-of-irresistible-offense',
+  'boon-of-spell-recall',
+  'boon-of-the-night-spirit',
+  'boon-of-truesight',
+];
+const BOONS = ALL_FEATS.filter((s) => s.startsWith('boon-'));
+
+describe('feats (task 5): every feat carries real mechanics or a ledgered text fallback', () => {
+  it.each(ALL_FEATS)('%s is not silent (effects or choices authored)', (slug) => {
+    const f = featEntity(slug);
+    expect((f.effects?.length ?? 0) + (f.choices?.length ?? 0), slug).toBeGreaterThan(0);
+  });
+
+  it('alert: initiative gains the proficiency bonus; the swap rider is text', () => {
+    expect(featEffects('alert')).toContainEqual({ type: 'initiative.bonus', value: 'prof' });
+    expect(featEffects('alert').some((e) => e.type === 'feature.text')).toBe(true);
+  });
+
+  it('boon of truesight: truesight 60 ft', () => {
+    expect(featEffects('boon-of-truesight')).toContainEqual({ type: 'sense.grant', sense: 'truesight', range: 60 });
+  });
+
+  it.each(BOONS)('%s: +1 to one ability (max 30) and a level-19 prerequisite', (slug) => {
+    const f = featEntity(slug);
+    expect(f.choices).toHaveLength(1);
+    expect(f.choices![0]!.pick).toEqual({ abilities: { count: 1, max: 30, improve: '+1' } });
+    expect(f.prerequisites).toContainEqual({ level: { gte: 19 } });
+  });
+
+  it('boon of spell recall additionally requires a spellcaster', () => {
+    expect(featEntity('boon-of-spell-recall').prerequisites).toContainEqual({ spellcaster: true });
+  });
+
+  it('level / ability prerequisites are structured predicates', () => {
+    expect(featEntity('ability-score-improvement').prerequisites).toContainEqual({ level: { gte: 4 } });
+    const grappler = featEntity('grappler').prerequisites;
+    expect(grappler).toContainEqual({ level: { gte: 4 } });
+    expect(grappler).toContainEqual({ any: [{ ability: { str: { gte: 13 } } }, { ability: { dex: { gte: 13 } } }] });
+  });
+
+  it('text-fallback feats carry feature.text with the verbatim rule text', () => {
+    for (const slug of ['magic-initiate', 'savage-attacker', 'skilled', 'grappler', 'boon-of-combat-prowess']) {
+      expect(
+        featEffects(slug).some((e) => e.type === 'feature.text'),
+        slug,
+      ).toBe(true);
+    }
+    expect(JSON.stringify(featEffects('savage-attacker'))).toContain('roll the weapon');
+  });
+
+  it('repeatable feats carry no non-stacking effect (task 1 boundary p1)', () => {
+    for (const slug of ['magic-initiate', 'skilled', 'ability-score-improvement']) {
+      for (const e of featEffects(slug)) {
+        expect(['tag.grant', 'spellcasting.define'], `${slug}:${e.type}`).not.toContain(e.type);
+      }
+    }
+  });
+});
+
+let featSeq = 0;
+const featEv = (type: string, payload: unknown): Event => {
+  featSeq += 1;
+  return {
+    id: `018f7000-0000-7000-8000-${String(featSeq).padStart(12, '0')}`,
+    stream: 'char:11111111-1111-7111-8111-111111111111',
+    seq: featSeq,
+    ts: '2026-09-27T12:00:00.000Z',
+    actor: { userId: 'u1', deviceId: 'd1', role: 'owner' },
+    type,
+    v: 1,
+    payload,
+  };
+};
+const featDecide = (choiceId: string, selection: string[]) => featEv('decision.made', { choiceId, selection });
+
+/** A Fighter `level` (standard array, Soldier) with the given extra decisions appended after levelling. */
+function featFighter(level: number, extra: [choiceId: string, selection: string[]][] = []): Event[] {
+  featSeq = 0;
+  const fighter = `${FP}:class/fighter`;
+  return [
+    featEv('character.created', {
+      name: 'Aldric',
+      system: '5e-2024',
+      corePack: { id: FP, version: '0.1.0' },
+      engineVersion: '0.1.0',
+      grammaticalGender: 'masculine',
+    }),
+    featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+    featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+    featDecide(`${FP}:background/soldier@0/ability-scores`, ['str:+2', 'con:+1']),
+    featDecide(`${FP}:system/5e-2024@0/ability-scores`, ['str:15', 'dex:14', 'con:14', 'int:10', 'wis:12', 'cha:8']),
+    ...Array.from({ length: level }, (_, i) =>
+      featEv('level.gained', { classId: fighter, level: i + 1, hpRoll: 'average' }),
+    ),
+    ...extra.map(([choiceId, selection]) => featDecide(choiceId, selection)),
+  ];
+}
+const sheetOf = (events: Event[]) => derive(reduce(events, undefined, featRules), featIndex, featRules);
+const profSkills = (events: Event[]) =>
+  Object.entries(sheetOf(events).skills)
+    .filter(([, s]) => s.proficiency !== 'none')
+    .map(([k]) => k)
+    .sort();
+
+describe('feats (task 5): integration over the real pack', () => {
+  it('alert at fighter 4: initiative = dex mod + proficiency bonus', () => {
+    const base = sheetOf(featFighter(4)).initiative.value;
+    const withAlert = sheetOf(featFighter(4, [[`${FP}:class/fighter@4/feat`, [`${FP}:feat/alert`]]]));
+    expect(withAlert.initiative.value).toBe(base + 2); // proficiency bonus at level 4
+  });
+
+  it('boon of truesight at fighter 19 grants truesight 60', () => {
+    const s = sheetOf(
+      featFighter(19, [
+        [`${FP}:class/fighter@19/feat`, [`${FP}:feat/boon-of-truesight`]],
+        [`${FP}:feat/boon-of-truesight@19/ability-score`, ['str:+1']],
+      ]),
+    );
+    expect(s.senses.find((x) => x.sense === 'truesight')?.range).toBe(60);
+  });
+
+  it('skilled taken twice (fighter 4 and 6) is accepted, surfaces no dead choice, and adds no phantom proficiency', () => {
+    const fighter = `${FP}:class/fighter`;
+    const skilled = `${FP}:feat/skilled`;
+    const events = featFighter(6, [
+      [`${fighter}@4/feat`, [skilled]],
+      [`${fighter}@6/feat`, [skilled]],
+    ]);
+    const sheet = sheetOf(events);
+    expect(sheet.outstandingChoices.filter((c) => c.ownerId === skilled)).toEqual([]);
+    expect(sheet.issues.filter((i) => i.code.startsWith('selection.'))).toEqual([]);
+    expect(profSkills(events)).toEqual(profSkills(featFighter(6)));
+  });
+
+  // BLOCKED on an engine carry (see the skilled overlay note): a skill-typed pick owned by a feat grants no proficiency.
+  it.todo('skilled taken twice (fighter 4 and 6) grants 6 distinct skill proficiencies');
 });

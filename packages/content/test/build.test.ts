@@ -67,9 +67,14 @@ describe('the srd-5e-2024 pack', () => {
     const asi = pack.entities.find((e) => e.id === 'srd-5e-2024:feat/ability-score-improvement')!;
     expect(abilitiesChoiceCount(asi)).toBe(1);
 
-    // No other entity in the built pack carries an abilities-pick choice (yet) — these five are it.
+    // The 7 Epic Boon feats each carry a +1 (max 30) abilities pick (plan 12 task 5).
+    const boons = pack.entities.filter((e) => e.id.startsWith('srd-5e-2024:feat/boon-of-'));
+    expect(boons).toHaveLength(7);
+    for (const b of boons) expect(abilitiesChoiceCount(b), b.id).toBe(1);
+
+    // No other entity in the built pack carries an abilities-pick choice (yet) — 4 backgrounds + ASI + 7 boons.
     const total = pack.entities.reduce((sum, e) => sum + abilitiesChoiceCount(e), 0);
-    expect(total).toBe(5);
+    expect(total).toBe(12);
   });
 
   it('every heavy armor item sets dexCap: 0 explicitly; medium/light armor is unaffected', () => {
