@@ -281,7 +281,14 @@ export function deriveSpellcasting(
     const eff = ae.effect;
     if (eff.type !== 'spell.grant' || !eff.alwaysPrepared) continue;
     const src = index.get(ae.source);
-    const grantingClass = src?.type === 'class' ? src.id : src?.type === 'subclass' ? src.class : undefined;
+    // A subclass's `class` may be a class REF in a third-party pack; blocks are keyed by the canonical
+    // id (`resolveClassRef`, as composition.ts resolves the same field) — never silently unbound.
+    const grantingClass =
+      src?.type === 'class'
+        ? src.id
+        : src?.type === 'subclass'
+          ? (index.resolveClassRef(src.class) ?? src.class)
+          : undefined;
     if (grantingClass === undefined) continue;
     const list = alwaysPreparedByClass.get(grantingClass) ?? [];
     if (!list.includes(eff.spell)) list.push(eff.spell);

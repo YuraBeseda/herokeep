@@ -1,5 +1,5 @@
 import { type Choice, type Entity, type EntityQuery, type Predicate, parseChoiceId } from '@hk/protocol';
-import { findChoice, splitOccurrence } from '../content/choices.ts';
+import { type ClassSkillPick, classSkillPick, findChoice, splitOccurrence } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, error } from '../diagnostics.ts';
 import type { PredicateContext } from '../predicate/context.ts';
@@ -336,13 +336,9 @@ function validateAbilityGeneration(
   return issues;
 }
 
-function validateSkillsSelection(
-  classEntity: Extract<Entity, { type: 'class' }>,
-  choiceId: string,
-  selection: string[],
-): Diagnostic[] {
+function validateSkillsSelection(pick: ClassSkillPick, choiceId: string, selection: string[]): Diagnostic[] {
   const issues: Diagnostic[] = [];
-  const { from, count } = classEntity.skillChoice;
+  const { from, count, classId } = pick;
   if (selection.length !== count) {
     issues.push(
       error('selection.count', `Expected ${count} selection(s), got ${selection.length}`, { path: choiceId }),
@@ -352,7 +348,7 @@ function validateSkillsSelection(
   for (const s of selection) {
     if (!from.includes(s)) {
       issues.push(
-        error('selection.notOffered', `"${s}" is not offered by ${classEntity.id}'s skill choice`, { path: choiceId }),
+        error('selection.notOffered', `"${s}" is not offered by ${classId}'s skill choice`, { path: choiceId }),
       );
     } else if (seen.has(s)) {
       issues.push(error('selection.duplicate', `"${s}" was selected more than once`, { path: choiceId }));
@@ -407,7 +403,8 @@ function buildPredicateContext(sheet: Sheet, comp: Composition, facts: Facts, in
 
 /**
  * Validates a proposed decision selection against its `Choice` (or, for the R5 synthetic
- * `<classId>@1/skills` decision, against the class's `skillChoice`), evaluated against the
+ * `<classId>@1/skills` decision / the W1 `<classId>@1/multiclass-skills` bonus pick, against the
+ * class's `skillChoice.from` at that pick's count — `classSkillPick`), evaluated against the
  * CURRENT sheet/facts (i.e. before this selection is committed).
  */
 export function validateSelection(
@@ -417,12 +414,8 @@ export function validateSelection(
   choiceId: string,
   selection: string[],
 ): Diagnostic[] {
-  const parsedId = parseChoiceId(choiceId);
-  if (parsedId?.slug === 'skills' && parsedId.level === 1) {
-    const classId = index.resolveClassRef(parsedId.entityId) ?? parsedId.entityId;
-    const classEntity = index.get(classId);
-    if (classEntity?.type === 'class') return validateSkillsSelection(classEntity, choiceId, selection);
-  }
+  const skillPick = classSkillPick(choiceId, index);
+  if (skillPick) return validateSkillsSelection(skillPick, choiceId, selection);
 
   const found = findChoice(index, choiceId);
   if (!found) return [error('selection.unknownChoice', `Unknown choice "${choiceId}"`, { path: choiceId })];

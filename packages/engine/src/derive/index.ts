@@ -1,6 +1,5 @@
-import { parseChoiceId } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
-import { findChoice } from '../content/choices.ts';
+import { classSkillPick, findChoice } from '../content/choices.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
 import type { PredicateContext } from '../predicate/context.ts';
@@ -32,12 +31,10 @@ export * from './encumbrance.ts';
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>
   typeof v === 'number' ? { amount: v } : { formula: v };
 
-/** True for a decision id that legitimately has no backing `Choice` entity (R5, task-13-brief.md). */
+/** True for a decision id that legitimately has no backing `Choice` entity (R5, task-13-brief.md;
+ * plan 12 final wave W1's `@1/multiclass-skills` bonus pick). */
 function isSyntheticDecision(choiceId: string, index: ContentIndex): boolean {
-  const parsed = parseChoiceId(choiceId);
-  if (parsed?.slug !== 'skills' || parsed.level !== 1) return false;
-  const classId = index.resolveClassRef(parsed.entityId) ?? parsed.entityId;
-  return index.get(classId)?.type === 'class';
+  return classSkillPick(choiceId, index) !== undefined;
 }
 
 export function outstandingChoices(facts: Facts, index: ContentIndex): ChoiceRequest[] {

@@ -27,6 +27,40 @@ export function splitOccurrence(choiceId: string): { baseId: string; occurrence:
   return occurrence >= 2 ? { baseId: m[1]!, occurrence } : { baseId: choiceId, occurrence: 1 };
 }
 
+/**
+ * Synthetic class skill picks (no backing `Choice` entity). Two shapes, both at class level 1:
+ * - `<classId>@1/skills` (R5) — the INITIAL class's starting skill pick, `skillChoice.count` of
+ *   `skillChoice.from`;
+ * - `<classId>@1/multiclass-skills` (plan 12 final wave W1) — the bonus pick a LATER class grants on
+ *   multiclass entry, `multiclass.gains.skillChoiceCount` of the SAME `skillChoice.from` list (the
+ *   vendored rule: on multiclassing "you gain only some of the new class's starting proficiencies").
+ */
+export const SKILLS_CHOICE_SLUG = 'skills';
+export const MULTICLASS_SKILLS_CHOICE_SLUG = 'multiclass-skills';
+
+/** The synthetic id for a later class's multiclass-entry bonus skill pick (see above). */
+export const multiclassSkillsChoiceId = (classId: string): string => `${classId}@1/${MULTICLASS_SKILLS_CHOICE_SLUG}`;
+
+export interface ClassSkillPick {
+  classId: string;
+  from: string[];
+  count: number;
+  multiclass: boolean;
+}
+
+/** Resolves either synthetic class skill-pick id to its class, option list and count (else undefined). */
+export function classSkillPick(choiceId: string, index: ContentIndex): ClassSkillPick | undefined {
+  const parsed = parseChoiceId(choiceId);
+  if (!parsed || parsed.level !== 1) return undefined;
+  const multiclass = parsed.slug === MULTICLASS_SKILLS_CHOICE_SLUG;
+  if (!multiclass && parsed.slug !== SKILLS_CHOICE_SLUG) return undefined;
+  const classId = index.resolveClassRef(parsed.entityId) ?? parsed.entityId;
+  const classEntity = index.get(classId);
+  if (classEntity?.type !== 'class') return undefined;
+  const count = multiclass ? (classEntity.multiclass?.gains.skillChoiceCount ?? 0) : classEntity.skillChoice.count;
+  return { classId, from: classEntity.skillChoice.from, count, multiclass };
+}
+
 function findAuthoredChoice(index: ContentIndex, choiceId: string): { owner: Entity; choice: Choice } | undefined {
   const parsed = parseChoiceId(choiceId);
   if (!parsed) return undefined;

@@ -1,5 +1,5 @@
 import type { Choice, ChoiceAt, Entity } from '@hk/protocol';
-import { occurrenceChoiceId } from '../content/choices.ts';
+import { multiclassSkillsChoiceId, occurrenceChoiceId } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import type { Facts } from '../reduce/facts.ts';
@@ -67,7 +67,8 @@ export function creationChoices(
  * whose `at` matches and that have no (valid) decision"), restricted per task-13-brief.md to what
  * 1b's content scope actually declares: each class's (and, once chosen, its subclass's) own
  * `ClassLevelRow.choices`, gated `row.level <= facts.classes[i].level`, PLUS the synthetic
- * `<classId>@1/skills` decision (R5) that has no backing `Choice` entity at all. The creation-slot
+ * `<classId>@1/skills` decision (R5) that has no backing `Choice` entity at all (for a LATER class
+ * carrying `multiclass.gains`, the `<classId>@1/multiclass-skills` bonus pick instead). The creation-slot
  * logic in `creationChoices` above is untouched — this is purely additive.
  */
 export function levelScopedChoices(
@@ -87,22 +88,29 @@ export function levelScopedChoices(
     }
   };
 
-  for (const entry of facts.classes) {
+  facts.classes.forEach((entry, i) => {
     const classId = index.resolveClassRef(entry.classId) ?? entry.classId;
     const classEntity = index.get(classId);
-    if (classEntity?.type !== 'class') continue;
+    if (classEntity?.type !== 'class') return;
     collectRows(classEntity, classId, entry.level);
 
-    const skillsId = skillsChoiceId(classId);
-    if (classEntity.skillChoice.count > 0 && facts.decisions[skillsId] === undefined) {
-      requests.push({ choiceId: skillsId, ownerId: classId, count: classEntity.skillChoice.count });
+    // Plan 12 final wave W1 (ruling 7's first-vs-later split, as `deriveProficiencies`): the INITIAL
+    // class asks its full starting-skill pick; a LATER class asks only its `multiclass.gains
+    // .skillChoiceCount` bonus pick from the same list, under its own id. Compat: a later class with
+    // no `multiclass.gains` data at all keeps its full `@1/skills` pick, exactly as before.
+    const gains = i > 0 ? classEntity.multiclass?.gains : undefined;
+    const [skillsId, count] = gains
+      ? [multiclassSkillsChoiceId(classId), gains.skillChoiceCount]
+      : [skillsChoiceId(classId), classEntity.skillChoice.count];
+    if (count > 0 && facts.decisions[skillsId] === undefined) {
+      requests.push({ choiceId: skillsId, ownerId: classId, count });
     }
 
     if (entry.subclassId !== undefined) {
       const subclassEntity = index.get(entry.subclassId);
       if (subclassEntity?.type === 'subclass') collectRows(subclassEntity, entry.subclassId, entry.level);
     }
-  }
+  });
 
   return { requests: requests.sort(byChoiceId), issues };
 }

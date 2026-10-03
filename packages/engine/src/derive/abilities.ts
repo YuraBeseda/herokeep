@@ -1,5 +1,5 @@
 import { type BackgroundEntity, type ClassEntity, type SpeciesEntity, parseEntityId } from '@hk/protocol';
-import { findChoice } from '../content/choices.ts';
+import { findChoice, multiclassSkillsChoiceId } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
@@ -88,7 +88,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
     const found = findChoice(index, choiceId);
     if (!found) continue;
     // A decided choice that selects skill entities grants proficiency in them, whoever owns the choice.
-    // (A class's `<class>@1/skills` decision is NOT an authored Choice, so `findChoice` skips it above and
+    // (A class's `<class>@1/skills` / `@1/multiclass-skills` decision is NOT an authored Choice, so `findChoice` skips it above and
     // it can never double-grant here; `union` policy dedups across any other proficiency source anyway.)
     for (const sel of facts.decisions[choiceId] ?? []) {
       const skill = index.get(sel);
@@ -210,11 +210,19 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   // A class's `skillChoice` isn't (yet) modeled as a real `Choice` entity — DEFINING the binding
   // convention here (mirrors the ability-scores decision, also defined by this task): the decision
   // for class `C`'s starting skill proficiencies lives at `<C>@1/skills`, selection = chosen slugs.
+  // Plan 12 final wave W1: a later class's multiclass-entry bonus pick (`<C>@1/multiclass-skills`,
+  // same `skillChoice.from` list) binds the same way. Both ids are read for every class: a recorded
+  // decision is always honored (a pre-W1 log that answered a later class's full `@1/skills` keeps
+  // its proficiencies); which id is OFFERED is `levelScopedChoices`' concern. `union` dedups overlap.
   for (const c of facts.classes) {
     const classId = index.resolveClassRef(c.classId) ?? c.classId;
     const classEntity = index.get(classId);
     if (classEntity?.type !== 'class') continue;
-    for (const slug of facts.decisions[`${classId}@1/skills`] ?? []) {
+    const picked = [
+      ...(facts.decisions[`${classId}@1/skills`] ?? []),
+      ...(facts.decisions[multiclassSkillsChoiceId(classId)] ?? []),
+    ];
+    for (const slug of picked) {
       if (!classEntity.skillChoice.from.includes(slug)) {
         issues.push(warning('derive.unknownSkill', `"${slug}" is not offered by ${classId}'s skill choice`));
         continue;
