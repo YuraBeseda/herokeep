@@ -91,6 +91,22 @@ export function validatePack(pack: Pack, available: Pack[]): Diagnostic[] {
         );
     }
     out.push(...validateEffects(e.effects, `${base}.effects`, e.id));
+    // An always-prepared grant binds to the GRANTING class's block (derive/spellcasting.ts), which is
+    // only resolvable when the root source is a class/subclass. Entities that are always roots of a
+    // non-class source (feat/species/background/item) would silently lose it. `feature` is exempt: it
+    // is reached through a class's grants, so its root can be a class.
+    if (e.type === 'feat' || e.type === 'species' || e.type === 'background' || e.type === 'item') {
+      e.effects.forEach((eff, k) => {
+        if (eff.type === 'spell.grant' && eff.alwaysPrepared)
+          out.push(
+            error(
+              'spell.grantUnbound',
+              `"${e.id}" is not a class or subclass, so its always-prepared spell grant binds to no spellcasting class`,
+              { path: `${base}.effects.${k}`, entityId: e.id },
+            ),
+          );
+      });
+    }
     for (const s of collectEntityFormulas(e)) {
       out.push(
         ...validateFormula(s.src, { allowComparison: s.allowComparison, path: `${base}.${s.path}`, entityId: e.id }),

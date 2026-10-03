@@ -23,6 +23,21 @@ describe('validatePack', () => {
     expect(d[0]?.entityId).toBe('homebrew-mini:species/catfolk');
   });
 
+  it('flags an alwaysPrepared spell.grant rooted on a non-class entity (spell.grantUnbound); plain grants and class roots stay legal', () => {
+    const grantOn = (type: string, alwaysPrepared: boolean) => {
+      const pack = structuredClone(core);
+      const spell = pack.entities.find((e) => e.type === 'spell')!;
+      const holder = pack.entities.find((e) => e.type === type)!;
+      holder.effects = [...holder.effects, { type: 'spell.grant', spell: spell.id, alwaysPrepared } as never];
+      return { d: validatePack(pack, []), id: holder.id };
+    };
+    const bad = grantOn('feat', true);
+    expect(codes(bad.d)).toEqual(['spell.grantUnbound']);
+    expect(bad.d[0]?.entityId).toBe(bad.id);
+    expect(grantOn('feat', false).d).toEqual([]);
+    expect(grantOn('class', true).d).toEqual([]);
+  });
+
   it('reports choice id mismatches and class row level mismatches', () => {
     const bad = structuredClone(core);
     const fighter = bad.entities.find((e) => e.id === 'core-mini:class/fighter');

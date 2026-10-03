@@ -69,6 +69,21 @@ function pactSlotFor(sheet: Sheet, level: number): { level: number; count: numbe
  * comment — not the caller's requested `level`, and silently substituting one for the other without
  * being asked would surprise a caller who explicitly asked for a specific `level`.
  */
+export function spendSlot(sheet: Sheet, level: number, opts?: { pact?: boolean }): ProposedEvent[] {
+  if (opts?.pact) {
+    const pact = pactSlotFor(sheet, level);
+    if (!pact) {
+      throw new ProposeError([error('slot.none-left', `No pact spell slot at or above level ${level} remains`)]);
+    }
+    return [mk('slot.spent', { level: pact.level, pact: true } satisfies SlotSpent)];
+  }
+  const entry = slotEntry(sheet, level);
+  if (!entry || entry.used >= entry.max) {
+    throw new ProposeError([error('slot.none-left', `No level ${level} spell slots remain`)]);
+  }
+  return [mk('slot.spent', { level } satisfies SlotSpent)];
+}
+
 /**
  * Plan 12 task 3 — drafts `spell.unprepared`, refusing (`'spell.always-prepared'`) when the spell is
  * in that class block's `alwaysPrepared` list (a `spell.grant { alwaysPrepared: true }` from the class
@@ -86,21 +101,6 @@ export function unprepare(sheet: Sheet, classId: string, spellId: string): Propo
   }
   const payload: SpellUnprepared = { spellId, classId };
   return [mk('spell.unprepared', payload)];
-}
-
-export function spendSlot(sheet: Sheet, level: number, opts?: { pact?: boolean }): ProposedEvent[] {
-  if (opts?.pact) {
-    const pact = pactSlotFor(sheet, level);
-    if (!pact) {
-      throw new ProposeError([error('slot.none-left', `No pact spell slot at or above level ${level} remains`)]);
-    }
-    return [mk('slot.spent', { level: pact.level, pact: true } satisfies SlotSpent)];
-  }
-  const entry = slotEntry(sheet, level);
-  if (!entry || entry.used >= entry.max) {
-    throw new ProposeError([error('slot.none-left', `No level ${level} spell slots remain`)]);
-  }
-  return [mk('slot.spent', { level } satisfies SlotSpent)];
 }
 
 /**
