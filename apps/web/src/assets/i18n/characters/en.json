@@ -399,6 +399,8 @@
       "cast": "Cast",
       "prepare": "Prepare",
       "unprepare": "Unprepare",
+      "alwaysPrepared": "Always prepared",
+      "alwaysPreparedReason": "Always prepared by your class, so it can't be unprepared.",
       "castDialog": {
         "title": "Cast {name}",
         "slotLabel": "Spell slot",
@@ -608,6 +610,9 @@
     },
     "attune": {
       "max": "You've reached your attunement limit."
+    },
+    "spell": {
+      "always-prepared": "That spell is always prepared and can't be unprepared."
     },
     "selection": {
       "count": "Select the required number of options.",

@@ -29,7 +29,6 @@ import {
   type RollLogged,
   type SlotRestored,
   type SpellPrepared,
-  type SpellUnprepared,
 } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -180,6 +179,7 @@ export class ItemRemoveConfirmComponent {
 const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
   'slot.none-left',
   'attune.max',
+  'spell.always-prepared',
 ]);
 
 // task-5-brief.md: only these item categories ever get an equip toggle in the inventory section —
@@ -967,18 +967,26 @@ export class PlayTabComponent {
   // (`handlers/casting.ts`) just appends to the list unconditionally. `preparedMax`
   // (`derive/spellcasting.ts`) is READ-MODEL only, so this UI is the only place the cap can ever
   // be enforced; a blocked attempt gets a toast, never a silently-dropped/ignored click.
+  //
+  // Plan 12 task 4: `block.prepared` INCLUDES always-prepared grants, which do not count against
+  // the cap (`preparedCount`), and unpreparing goes through `propose.unprepare` so the engine's own
+  // `spell.always-prepared` refusal surfaces as a toast instead of a silently-ineffective event.
+  protected isAlwaysPrepared(block: SpellcastingBlock, spellId: string): boolean {
+    return block.alwaysPrepared?.includes(spellId) ?? false;
+  }
+
+  protected preparedCount(block: SpellcastingBlock): number {
+    return block.prepared.length - (block.alwaysPrepared?.length ?? 0);
+  }
+
   protected onTogglePrepared(block: SpellcastingBlock, spellId: string): void {
     if (this.isSpellPrepared(block, spellId)) {
-      this.appendDraft([
-        {
-          type: 'spell.unprepared',
-          v: 1,
-          payload: { spellId, classId: block.classId } satisfies SpellUnprepared,
-        },
-      ]);
+      const sheet = this.sheet();
+      if (!sheet) return;
+      this.tryPropose(() => propose.unprepare(sheet, block.classId, spellId));
       return;
     }
-    if (block.preparedMax !== undefined && block.prepared.length >= block.preparedMax) {
+    if (block.preparedMax !== undefined && this.preparedCount(block) >= block.preparedMax) {
       this.toastService.show('characters.sheet.spellcasting.preparedMaxReached', {
         max: block.preparedMax,
       });

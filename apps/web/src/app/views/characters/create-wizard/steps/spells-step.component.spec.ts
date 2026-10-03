@@ -213,6 +213,71 @@ describe('SpellsStepComponent', () => {
     expect(state.draftSheet()!.spellcasting[0].prepared).toHaveLength(3);
   });
 
+  // Plan 12 task 4: `block.prepared` includes always-prepared grants, which are exempt from the cap
+  // and cannot be unprepared. No pack content grants one yet, so the block is hand-shaped through
+  // the component's own `spellcasting` override input.
+  describe('always-prepared grants', () => {
+    async function setup() {
+      const state = createWizardDraft();
+      const prepare = vi.fn();
+      const unprepare = vi.fn();
+      const fixture = TestBed.createComponent(SpellsStepComponent);
+      fixture.componentRef.setInput('prepare', prepare);
+      fixture.componentRef.setInput('unprepare', unprepare);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      for (let i = 0; i < 5; i++) {
+        selectButtons(compiled, 'spells-step__spellbook')[i].click();
+        await fixture.whenStable();
+      }
+      const base = state.draftSheet()!.spellcasting[0];
+      const [granted, ...chosen] = base.known;
+      // 1 granted + 3 chosen prepared (preparedMax 4): 3 count against the cap.
+      fixture.componentRef.setInput('spellcasting', {
+        ...base,
+        prepared: [granted, chosen[0], chosen[1], chosen[2]],
+        alwaysPrepared: [granted],
+      });
+      await fixture.whenStable();
+      return { fixture, compiled, prepare, unprepare, granted, chosen };
+    }
+    const toggles = (c: HTMLElement) =>
+      Array.from(
+        c.querySelectorAll<HTMLButtonElement>(
+          '.spells-step__prepared .spells-step__prepared-toggle',
+        ),
+      );
+
+    it('does not count the granted spell against preparedMax: a 4th chosen spell can still be prepared', async () => {
+      const { fixture, compiled, prepare, chosen } = await setup();
+
+      expect(compiled.querySelector('.spells-step__prepared .spells-step__cap-message')).toBeNull();
+      const fourth = toggles(compiled).find((b) => b.getAttribute('aria-pressed') === 'false')!;
+      fourth.click();
+      await fixture.whenStable();
+
+      expect(prepare).toHaveBeenCalledWith(chosen[3], expect.any(String));
+    });
+
+    it('disables the granted spell toggle with an accessible reason and a marker; clicking is a no-op', async () => {
+      const { fixture, compiled, unprepare } = await setup();
+      const reason = charactersEn.sheet.spellcasting.alwaysPreparedReason;
+
+      const disabled = toggles(compiled).filter((b) => b.disabled);
+      expect(disabled).toHaveLength(1);
+      const describedBy = disabled[0].getAttribute('aria-describedby')!;
+      expect(compiled.querySelector(`[id="${describedBy}"]`)?.textContent?.trim()).toBe(reason);
+      expect(disabled[0].getAttribute('title')).toBe(reason);
+      expect(disabled[0].closest('li')?.textContent).toContain(
+        charactersEn.sheet.spellcasting.alwaysPrepared,
+      );
+
+      disabled[0].click();
+      await fixture.whenStable();
+      expect(unprepare).not.toHaveBeenCalled();
+    });
+  });
+
   it('"Continue" marks the spells step done even with nothing learned yet', async () => {
     const state = createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);

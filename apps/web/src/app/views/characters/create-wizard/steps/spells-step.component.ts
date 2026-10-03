@@ -126,9 +126,19 @@ export class SpellsStepComponent {
 
   protected readonly preparedIds = computed(() => this.block()?.prepared ?? []);
   protected readonly preparedMax = computed(() => this.block()?.preparedMax ?? 0);
-  protected readonly preparedCapReached = computed(
-    () => this.preparedIds().length >= this.preparedMax(),
+  // Plan 12 task 4: `prepared` INCLUDES always-prepared grants, which neither count against
+  // `preparedMax` nor can be unprepared (engine contract, `SpellcastingBlock.alwaysPrepared`).
+  protected readonly alwaysPreparedIds = computed(() => this.block()?.alwaysPrepared ?? []);
+  protected readonly preparedCount = computed(
+    () => this.preparedIds().length - this.alwaysPreparedIds().length,
   );
+  protected readonly preparedCapReached = computed(
+    () => this.preparedCount() >= this.preparedMax(),
+  );
+
+  protected isAlwaysPrepared(id: string): boolean {
+    return this.alwaysPreparedIds().includes(id);
+  }
 
   protected spellName(id: string): string {
     return this.engineFacade.localizer().name(id);
@@ -163,6 +173,7 @@ export class SpellsStepComponent {
     const classId = this.classId();
     if (!classId) return;
     if (this.isPrepared(id)) {
+      if (this.isAlwaysPrepared(id)) return; // granted — control is disabled, never unprepared
       this.runUnprepare(id, classId);
       return;
     }

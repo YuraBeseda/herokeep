@@ -3071,7 +3071,7 @@ describe('PlayTabComponent — pooled multiclass slot row renders once (plan 12 
     expect(blocks).toHaveLength(2);
     blocks.forEach((b) => expect(b.querySelector('.play-tab__slot-row')).toBeNull());
     // The shared pool's pips reflect the engine row (level 1: 4 max, 1 used).
-    const firstRow = slotRows(compiled)[0]!;
+    const firstRow = slotRows(compiled)[0];
     expect(firstRow.querySelectorAll('.hk-pips__pip')).toHaveLength(4);
     expect(firstRow.querySelectorAll('.hk-pips__pip--filled')).toHaveLength(1);
   });
@@ -3117,5 +3117,193 @@ describe('PlayTabComponent — pooled multiclass slot row renders once (plan 12 
       compiled.querySelector('.play-tab__spellblock .play-tab__slots .play-tab__slot-row'),
     ).not.toBeNull();
     expect(slotRows(compiled)).toHaveLength(1);
+  });
+});
+
+// Plan 12 task 4 (carried from task 3's review): a granted always-prepared spell sits in
+// `prepared` but does NOT count against `preparedMax`, and can never be unprepared.
+describe('PlayTabComponent — always-prepared spells (plan 12 task 4)', () => {
+  const WIZARD_CLASS_ID = 'srd-5e-2024:class/wizard';
+  const BURNING_HANDS = 'srd-5e-2024:spell/burning-hands';
+  const MAGE_ARMOR = 'srd-5e-2024:spell/mage-armor';
+  const MAGIC_MISSILE = 'srd-5e-2024:spell/magic-missile';
+  const SHIELD_SPELL = 'srd-5e-2024:spell/shield'; // the granted one
+  const THUNDERWAVE = 'srd-5e-2024:spell/thunderwave';
+  const BANE = 'srd-5e-2024:spell/bane';
+
+  const learned = (spellId: string) => ({
+    type: 'spell.learned',
+    v: 1,
+    payload: { spellId, classId: WIZARD_CLASS_ID, source: 'levelUp' },
+  });
+  const prepared = (spellId: string) => ({
+    type: 'spell.prepared',
+    v: 1,
+    payload: { spellId, classId: WIZARD_CLASS_ID },
+  });
+
+  // Mirrors what derive does for a `spell.grant { alwaysPrepared: true }`: granted spell appended
+  // to `prepared` (and `known`) and listed in `alwaysPrepared`.
+  function grantShield(): void {
+    shapeSheet((sheet) => {
+      const [block, ...rest] = sheet.spellcasting;
+      const withShield = (list: string[]) =>
+        list.includes(SHIELD_SPELL) ? list : [...list, SHIELD_SPELL];
+      return {
+        ...sheet,
+        spellcasting: [
+          {
+            ...block,
+            known: withShield(block.known),
+            prepared: withShield(block.prepared),
+            alwaysPrepared: [SHIELD_SPELL],
+          },
+          ...rest,
+        ],
+      };
+    });
+  }
+
+  beforeEach(async () => {
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    await resetSpellDb();
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  async function pollUntil(fixture: { whenStable(): Promise<unknown> }, p: () => boolean) {
+    for (let i = 0; i < 50 && !p(); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(p()).toBe(true);
+  }
+
+  const spellRow = (c: HTMLElement, name: string): HTMLElement =>
+    Array.from(c.querySelectorAll<HTMLElement>('.play-tab__spell-lists li')).find(
+      (r) => r.querySelector('.play-tab__spell-name')?.textContent?.trim() === name,
+    )!;
+  const buttonNamed = (c: HTMLElement, text: string): HTMLButtonElement =>
+    Array.from(c.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === text,
+    )!;
+
+  it('cap math ignores the granted spell: with 3 chosen + 1 granted prepared (max 4) a 4th chosen spell can still be prepared', async () => {
+    await seedWizard('Elowen');
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx([
+      learned(BURNING_HANDS),
+      learned(MAGE_ARMOR),
+      learned(MAGIC_MISSILE),
+      learned(THUNDERWAVE),
+      prepared(BURNING_HANDS),
+      prepared(MAGE_ARMOR),
+      prepared(MAGIC_MISSILE),
+    ]);
+    grantShield();
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+    // 3 chosen + 1 granted = 4 in `prepared`, but only 3 count against preparedMax 4.
+    expect(store.sheet()!.spellcasting[0].prepared).toHaveLength(4);
+
+    const eventsBefore = store.events().length;
+    buttonNamed(spellRow(compiled, 'Thunderwave'), charactersEn.sheet.spellcasting.prepare).click();
+    await pollUntil(fixture, () => store.events().length > eventsBefore);
+
+    expect(showSpy).not.toHaveBeenCalled();
+    expect(store.events().at(-1)).toMatchObject({
+      type: 'spell.prepared',
+      payload: { spellId: THUNDERWAVE },
+    });
+  });
+
+  it('cap still blocks once the NON-granted prepared count reaches preparedMax, and the counter excludes the granted spell', async () => {
+    await seedWizard('Elowen');
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx([
+      learned(BURNING_HANDS),
+      learned(MAGE_ARMOR),
+      learned(MAGIC_MISSILE),
+      learned(THUNDERWAVE),
+      learned(BANE),
+      prepared(BURNING_HANDS),
+      prepared(MAGE_ARMOR),
+      prepared(MAGIC_MISSILE),
+      prepared(THUNDERWAVE), // 4 chosen == preparedMax
+    ]);
+    grantShield();
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const eventsBefore = store.events().length;
+
+    expect(compiled.querySelector('.play-tab__prepared-count')?.textContent?.trim()).toBe(
+      charactersEn.sheet.spellcasting.preparedOf.replace('{prepared}', '4').replace('{max}', '4'),
+    );
+    buttonNamed(spellRow(compiled, 'Bane'), charactersEn.sheet.spellcasting.prepare).click();
+    await fixture.whenStable();
+
+    expect(store.events().length).toBe(eventsBefore);
+    expect(showSpy).toHaveBeenCalledWith('characters.sheet.spellcasting.preparedMaxReached', {
+      max: 4,
+    });
+  });
+
+  it('the granted spell has a DISABLED unprepare control with an accessible reason, plus an "always prepared" marker; a chosen spell stays enabled', async () => {
+    await seedWizard('Elowen');
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx([learned(BURNING_HANDS), prepared(BURNING_HANDS)]);
+    grantShield();
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const reason = charactersEn.sheet.spellcasting.alwaysPreparedReason;
+
+    const shieldRow = spellRow(compiled, 'Shield');
+    const toggle = buttonNamed(shieldRow, charactersEn.sheet.spellcasting.unprepare);
+    expect(toggle.disabled).toBe(true);
+    const describedBy = toggle.getAttribute('aria-describedby')!;
+    expect(shieldRow.querySelector(`[id="${describedBy}"]`)?.textContent?.trim()).toBe(reason);
+    expect(toggle.getAttribute('title')).toBe(reason);
+    expect(shieldRow.textContent).toContain(charactersEn.sheet.spellcasting.alwaysPrepared);
+
+    const chosen = buttonNamed(
+      spellRow(compiled, 'Burning Hands'),
+      charactersEn.sheet.spellcasting.unprepare,
+    );
+    expect(chosen.disabled).toBe(false);
+    expect(chosen.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('a forced unprepare of the granted spell goes through propose.unprepare and surfaces its refusal as a toast, appending nothing', async () => {
+    await seedWizard('Elowen');
+    const store = TestBed.inject(CharacterStore);
+    grantShield();
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const eventsBefore = store.events().length;
+    const block = store.sheet()!.spellcasting[0];
+
+    (
+      fixture.componentInstance as unknown as {
+        onTogglePrepared(b: typeof block, id: string): void;
+      }
+    ).onTogglePrepared(block, SHIELD_SPELL);
+    await fixture.whenStable();
+
+    expect(store.events().length).toBe(eventsBefore);
+    expect(showSpy).toHaveBeenCalledWith('characters.validation.spell.always-prepared');
   });
 });

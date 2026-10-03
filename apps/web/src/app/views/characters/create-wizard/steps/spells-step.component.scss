@@ -50,6 +50,16 @@
   }
 }
 
+.spells-step__prepared-toggle:disabled {
+  cursor: not-allowed;
+}
+
+.spells-step__always-prepared {
+  margin-inline-start: var(--space-1);
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
 .spells-step__continue {
   margin-top: var(--space-3);
 }

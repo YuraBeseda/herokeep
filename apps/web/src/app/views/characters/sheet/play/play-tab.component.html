@@ -460,7 +460,7 @@
               <p class="play-tab__prepared-count">
                 {{
                   t('sheet.spellcasting.preparedOf', {
-                    prepared: block.preparedSpells.length,
+                    prepared: preparedCount(block),
                     max: block.preparedMax,
                   })
                 }}
@@ -494,7 +494,17 @@
                           type="button"
                           [variant]="isSpellPrepared(block, spell.id) ? 'primary' : 'ghost'"
                           [attr.aria-pressed]="isSpellPrepared(block, spell.id)"
-                          [disabled]="editLocked()"
+                          [disabled]="editLocked() || isAlwaysPrepared(block, spell.id)"
+                          [attr.aria-describedby]="
+                            isAlwaysPrepared(block, spell.id)
+                              ? 'always-prepared-reason-' + block.classId + '-' + spell.id
+                              : null
+                          "
+                          [attr.title]="
+                            isAlwaysPrepared(block, spell.id)
+                              ? t('sheet.spellcasting.alwaysPreparedReason')
+                              : null
+                          "
                           (click)="onTogglePrepared(block, spell.id)"
                         >
                           {{
@@ -503,6 +513,16 @@
                               : t('sheet.spellcasting.prepare')
                           }}
                         </button>
+                        @if (isAlwaysPrepared(block, spell.id)) {
+                          <hk-chip [selected]="true">{{
+                            t('sheet.spellcasting.alwaysPrepared')
+                          }}</hk-chip>
+                          <span
+                            class="visually-hidden"
+                            [id]="'always-prepared-reason-' + block.classId + '-' + spell.id"
+                            >{{ t('sheet.spellcasting.alwaysPreparedReason') }}</span
+                          >
+                        }
                       } @else {
                         <button
                           hk-button
@@ -525,6 +545,11 @@
                     @for (spell of block.preparedSpells; track spell.id) {
                       <li>
                         <span class="play-tab__spell-name">{{ spell.name }}</span>
+                        @if (isAlwaysPrepared(block, spell.id)) {
+                          <hk-chip [selected]="true">{{
+                            t('sheet.spellcasting.alwaysPrepared')
+                          }}</hk-chip>
+                        }
                         <button
                           hk-button
                           type="button"

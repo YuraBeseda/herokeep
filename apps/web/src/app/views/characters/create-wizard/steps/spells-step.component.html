@@ -39,7 +39,7 @@
         <p class="spells-step__helper">
           {{
             t('wizard.spells.preparedHelper', {
-              prepared: preparedIds().length,
+              prepared: preparedCount(),
               cap: preparedMax(),
             })
           }}
@@ -51,10 +51,25 @@
                 type="button"
                 class="spells-step__prepared-toggle"
                 [attr.aria-pressed]="isPrepared(id)"
+                [disabled]="isAlwaysPrepared(id)"
+                [attr.aria-describedby]="
+                  isAlwaysPrepared(id) ? 'always-prepared-reason-' + id : null
+                "
+                [attr.title]="
+                  isAlwaysPrepared(id) ? t('sheet.spellcasting.alwaysPreparedReason') : null
+                "
                 (click)="onTogglePrepared(id)"
               >
                 {{ spellName(id) }}
               </button>
+              @if (isAlwaysPrepared(id)) {
+                <span class="spells-step__always-prepared">{{
+                  t('sheet.spellcasting.alwaysPrepared')
+                }}</span>
+                <span class="visually-hidden" [id]="'always-prepared-reason-' + id">{{
+                  t('sheet.spellcasting.alwaysPreparedReason')
+                }}</span>
+              }
             </li>
           }
         </ul>
