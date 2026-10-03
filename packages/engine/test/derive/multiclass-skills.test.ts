@@ -98,6 +98,16 @@ describe('multiclass bonus skill pick (W1)', () => {
     expect(sheet.issues.map((i) => i.code)).toContain('derive.unknownSkill');
   });
 
+  it("backward compat: a pre-W1 log that answered a LATER class's full `<class>@1/skills` still grants those skills", () => {
+    const facts = factsWith([
+      { classId: FIGHTER, level: 1 },
+      { classId: BARD, level: 1 },
+    ]);
+    facts.decisions[`${BARD}@1/skills`] = ['arcana', 'history', 'religion'];
+    const sheet = derive(facts, srd, rules());
+    for (const s of ['arcana', 'history', 'religion']) expect(sheet.skills[s]?.proficiency, s).toBe('proficient');
+  });
+
   it('validateSelection checks the multiclass pick against the class list and gains count', () => {
     const facts = factsWith([
       { classId: FIGHTER, level: 1 },

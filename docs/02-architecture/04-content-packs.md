@@ -295,12 +295,13 @@ any class beyond the character's first). ⚠️ OWNER-FLAG, 2024-SRD-silent: `Ru
 `srd-2024_multiclassing_proficiencies` entry is prose only ("you gain only some of the new class's
 starting proficiencies, as detailed in each class's description") — no `ClassFeature` entry anywhere
 in this vendored snapshot actually details it per class. Authored from public SRD 5.2.1 knowledge
-(the 2014→2024-unchanged multiclass proficiencies table); none of the five grants a bonus skill
-choice (that's reserved for Bard/Rogue in the 2024 table, neither in this slice), so every
-`skillChoiceCount` is `0`. The other 7 classes carry no `multiclass` field on their own class entity
-at all (only the system map's entry, above) — `gains` is unauthored for them until a later slice
-needs it; `deriveProficiencies`'s documented compat fallback (absent `gains` = full proficiency list)
-already covers this correctly.
+(the 2014→2024-unchanged multiclass proficiencies table). Plan 12 authored `gains` for all 12 classes;
+Bard, Rogue and Ranger carry `skillChoiceCount: 1`, every other class `0`. Since the plan-12 final
+wave the engine consumes it: a LATER class with `gains` is offered a bonus skill choice on multiclass
+entry (synthetic `<classId>@1/multiclass-skills`, `skillChoiceCount` picks from the new class's own
+`skillChoice.from` list) instead of the full `<classId>@1/skills` creation pick, which is reserved
+for the initial class. A later class with no `gains` keeps its full pick and full proficiency list
+(`deriveProficiencies`'s documented compat fallback).
 
 Pact Magic slots (Warlock) recover on a short OR long rest — the vendored 2024 SRD's own Warlock
 feature text (`packages/content/upstream/open5e-srd-2024/ClassFeature.json`, pk
