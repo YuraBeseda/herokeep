@@ -61,13 +61,22 @@
   {
     "id": "srd-5e-2024:feat/skilled",
     "cite": "SRD 5.2.1, Skilled; FeatBenefit srd-2024_skilled_1, srd-2024_skilled_2 (Repeatable)",
-    "note": "TEXT FALLBACK (ruling 9), flagged as an ENGINE BLOCKER for the plan's 'Skilled x2 -> 6 skills' goal. \"You gain proficiency in any combination of three skills or tools of your choice.\" The skills half IS schema-expressible ({query:{type:'skill'}}, count 3; unique across acquisitions, occurrence-scoped on the 2nd) but a chosen skill entity has NO proficiency payoff: composition.ts activates only chosen feat/feature entities, and abilities.ts grants skill proficiency only from background skillProficiencies, the class `<class>@1/skills` decision and proficiency.grant effects -- nothing reads a skill-typed decision owned by a feat. Probed empirically (RED: 0 skills gained after two Skilled picks). An authored choice would let the player answer a pick that changes nothing on the sheet (state-wrong), so none is authored. The 'or tools' half additionally needs a mixed skill-or-tool pool (a query has exactly one `type`). Carry: a small engine change (grant proficiency for skill/tool-typed picks of a feat-owned choice, e.g. in derive/abilities.ts beside the class-skills binding) unlocks BOTH the choice and the 6-skill integration test (kept as it.todo in mechanics.test.ts). Repeatable: carries only feature.text, no non-stacking effect (Task 1 boundary p1 respected).",
+    "note": "\"You gain proficiency in any combination of three skills or tools of your choice.\" Skills: a count-3 skill query pick; since plan 12 task 5 fix round 1 the engine grants proficiency for any decided pick of skill entities (derive/abilities.ts), so each acquisition (occurrence-scoped `<id>--2` on the 2nd) really lands 3 proficiencies; `unique` stops a 2nd Skilled repeating a skill. OWNER-FLAG (tool gap): the 'or tools' half is NOT mechanized -- tool proficiency lives on a different derive path (index.ts proficiencies) and a query has exactly one `type`, so a mixed skill-or-tool pool is inexpressible; a feature.text carries the tool option. Repeatable: only a choice and a feature.text, no non-stacking effect (Task 1 boundary p1 respected).",
     "merge": {
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/skilled@1/skills",
+          "prompt": "Skilled: choose three skills",
+          "at": { "kind": "level", "level": 1 },
+          "pick": { "query": { "type": "skill" } },
+          "count": 3
+        }
+      ],
       "effects": [
         {
           "type": "feature.text",
-          "name": "Skilled",
-          "description": "You gain proficiency in any combination of three skills or tools of your choice. You can take this feat more than once; note each set of proficiencies on your sheet."
+          "name": "Skilled (tools)",
+          "description": "You gain proficiency in any combination of three skills or tools of your choice. The skill picks above cover skills; if you would rather take tools, note those proficiencies on your sheet."
         }
       ]
     }

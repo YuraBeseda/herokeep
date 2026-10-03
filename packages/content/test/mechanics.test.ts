@@ -895,19 +895,25 @@ describe('feats (task 5): integration over the real pack', () => {
     expect(s.senses.find((x) => x.sense === 'truesight')?.range).toBe(60);
   });
 
-  it('skilled taken twice (fighter 4 and 6) is accepted, surfaces no dead choice, and adds no phantom proficiency', () => {
+  it('skilled taken twice (fighter 4 and 6) grants 6 distinct skill proficiencies', () => {
     const fighter = `${FP}:class/fighter`;
     const skilled = `${FP}:feat/skilled`;
+    const skill = (s: string) => `${FP}:skill/${s}`;
+    const baseline = profSkills(featFighter(6));
+    // Pick skills the Soldier background does not already grant, so the delta is exactly the 6 picks.
+    const first = ['acrobatics', 'arcana', 'history'];
+    const second = ['insight', 'medicine', 'nature'];
     const events = featFighter(6, [
       [`${fighter}@4/feat`, [skilled]],
+      [`${skilled}@1/skills`, first.map(skill)],
       [`${fighter}@6/feat`, [skilled]],
+      [`${skilled}@1/skills--2`, second.map(skill)],
     ]);
     const sheet = sheetOf(events);
     expect(sheet.outstandingChoices.filter((c) => c.ownerId === skilled)).toEqual([]);
     expect(sheet.issues.filter((i) => i.code.startsWith('selection.'))).toEqual([]);
-    expect(profSkills(events)).toEqual(profSkills(featFighter(6)));
+    const gained = profSkills(events).filter((s) => !baseline.includes(s));
+    expect(gained).toEqual([...first, ...second].sort());
+    expect(gained).toHaveLength(6);
   });
-
-  // BLOCKED on an engine carry (see the skilled overlay note): a skill-typed pick owned by a feat grants no proficiency.
-  it.todo('skilled taken twice (fighter 4 and 6) grants 6 distinct skill proficiencies');
 });
