@@ -8,7 +8,13 @@ import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { type ActiveEffect, type Composition, equippedArmor, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
-import { type ProficiencyLevel, proficiencyAmount, proficiencyBonus, proficiencyLevel } from './proficiency.ts';
+import {
+  type ProficiencyLevel,
+  isProficientRank,
+  proficiencyAmount,
+  proficiencyBonus,
+  proficiencyLevel,
+} from './proficiency.ts';
 
 export interface AbilityBlock {
   score: Derived<number>;
@@ -84,20 +90,25 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   const baseScores = new Map<string, number>(abilityIds.map((id) => [id, 10]));
   let baseSelection: string[] | undefined;
   const bonusSources: { ownerId: string; selection: string[]; key?: string }[] = [];
+  // Plan 13 task 1: `requireProficient` skill-pick selections, applied only after EVERY other
+  // proficiency source below has landed (they upgrade a proficiency, never create one).
+  const upgrades: { target: string; ownerId: string; kind: 'proficient' | 'expertise' }[] = [];
   for (const choiceId of Object.keys(facts.decisions).sort()) {
     const found = findChoice(index, choiceId);
     if (!found) continue;
     // A decided choice that selects skill entities grants proficiency in them, whoever owns the choice.
     // (A class's `<class>@1/skills` / `@1/multiclass-skills` decision is NOT an authored Choice, so `findChoice` skips it above and
     // it can never double-grant here; `union` policy dedups across any other proficiency source anyway.)
+    // The rank granted is the pick's own `proficiency` (absent = 'proficient', every pre-task-1 pick).
+    const pick = found.choice.pick;
+    const kind = 'query' in pick ? (pick.proficiency ?? 'proficient') : 'proficient';
+    const upgradeOnly = 'query' in pick && pick.requireProficient === true;
     for (const sel of facts.decisions[choiceId] ?? []) {
       const skill = index.get(sel);
       if (skill?.type === 'skill') {
-        table.add(`skill.${parseEntityId(sel)?.slug ?? sel}`, {
-          source: found.owner.id,
-          kind: 'proficient',
-          policy: 'union',
-        });
+        const target = `skill.${parseEntityId(sel)?.slug ?? sel}`;
+        if (upgradeOnly) upgrades.push({ target, ownerId: found.owner.id, kind });
+        else table.add(target, { source: found.owner.id, kind, policy: 'union' });
       }
     }
     if ('abilityGeneration' in found.choice.pick) baseSelection = facts.decisions[choiceId];
@@ -240,6 +251,13 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
       table.add(`skill.${eff.target}`, { source: ae.source, feature: ae.feature, kind: eff.level, policy: 'union' });
     }
   }
+
+  // `requireProficient` selections: eligibility is judged against the table as it stands BEFORE any
+  // of them apply (order-independent), so a selection of a skill the character is not (or no
+  // longer) proficient in from another source applies nothing — validation refuses such a pick
+  // (`queryPickOptions`), and a recorded one can never mint a proficiency on its own.
+  const eligible = upgrades.filter((u) => isProficientRank(proficiencyLevel(table, u.target)));
+  for (const u of eligible) table.add(u.target, { source: u.ownerId, kind: u.kind, policy: 'union' });
 
   // ---- Re-evaluate deferred effects now that scores (and proficiency) are known ------------------
   const { category: armorCategory, hasShield } = equippedArmor(facts, index);

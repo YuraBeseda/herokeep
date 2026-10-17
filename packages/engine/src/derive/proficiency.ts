@@ -28,6 +28,11 @@ export function proficiencyLevel(table: ModifierTable, target: string): Proficie
   return 'none';
 }
 
+/** True for a FULL proficiency rank (`proficient` or `expertise`) — `half` and `none` are not. */
+export function isProficientRank(level: ProficiencyLevel | undefined): boolean {
+  return level === 'proficient' || level === 'expertise';
+}
+
 /** `prof × the level's multiplier` (doc-05: expertise x2, proficient x1, half floors 0.5x, none 0). */
 export function proficiencyAmount(level: ProficiencyLevel, prof: number): number {
   switch (level) {

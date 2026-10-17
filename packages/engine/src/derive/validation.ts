@@ -1,4 +1,12 @@
-import { type Choice, type Entity, type EntityQuery, type Predicate, parseChoiceId } from '@hk/protocol';
+import {
+  type Choice,
+  type ChoicePick,
+  type Entity,
+  type EntityQuery,
+  type Predicate,
+  parseChoiceId,
+  parseEntityId,
+} from '@hk/protocol';
 import { type ClassSkillPick, classSkillPick, findChoice, splitOccurrence } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, error } from '../diagnostics.ts';
@@ -7,6 +15,7 @@ import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { resolveChoiceCount } from './choice-count.ts';
 import { type Composition, compose, equippedArmor } from './composition.ts';
+import { isProficientRank } from './proficiency.ts';
 import type { Sheet } from './sheet.ts';
 
 const ABILITY_DELTA_RE = /^([a-z]{3}):([+-]\d+)$/;
@@ -107,9 +116,34 @@ function validateStatic(
   return issues;
 }
 
-function validateQuery(
-  pick: EntityQuery,
+/** The `query` form of `ChoicePick`. */
+export type QueryPick = Extract<ChoicePick, { query: EntityQuery }>;
+
+/**
+ * The entity ids a `query` pick OFFERS this character: every `index.query` match, narrowed — when
+ * the pick sets `requireProficient` (plan 13 task 1, e.g. an Expertise pick) — to the skills the
+ * character is currently proficient in per `sheet` (rank proficient or expertise; `half` is not
+ * proficiency). The single eligibility source for both `validateSelection` (refusal) and the UI's
+ * option list (gating), so the two can never disagree. No `sheet` means no known proficiencies: a
+ * `requireProficient` pick then offers nothing.
+ */
+export function queryPickOptions(
+  pick: QueryPick,
   index: ContentIndex,
+  sheet: Pick<Sheet, 'skills'> | undefined,
+): string[] {
+  const ids = index.query(pick.query).map((e) => e.id);
+  if (pick.requireProficient !== true) return ids;
+  return ids.filter((id) => {
+    const slug = parseEntityId(id)?.slug;
+    return slug !== undefined && isProficientRank(sheet?.skills[slug]?.proficiency);
+  });
+}
+
+function validateQuery(
+  pick: QueryPick,
+  index: ContentIndex,
+  sheet: Sheet,
   choice: Choice,
   choiceId: string,
   selection: string[],
@@ -120,7 +154,7 @@ function validateQuery(
       error('selection.count', `Expected ${choice.count} selection(s), got ${selection.length}`, { path: choiceId }),
     );
   }
-  const eligible = new Set(index.query(pick).map((e) => e.id));
+  const eligible = new Set(queryPickOptions(pick, index, sheet));
   for (const s of selection) {
     if (!index.has(s)) {
       issues.push(
@@ -436,7 +470,7 @@ export function validateSelection(
     }
     issues.push(...checkUnique(choice, choiceId, facts, selection, index));
   } else if ('query' in choice.pick) {
-    issues.push(...validateQuery(choice.pick.query, index, choice, choiceId, selection));
+    issues.push(...validateQuery(choice.pick, index, sheet, choice, choiceId, selection));
     issues.push(...validateSubclassLevel(choice, index, choiceId, selection));
     for (const s of selection) {
       const e = index.get(s);
