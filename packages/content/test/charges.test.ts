@@ -1,5 +1,5 @@
 import { createContentIndex, derive, propose, reduce } from '@hk/engine';
-import type { Event } from '@hk/protocol';
+import { RegainDiceSchema, type Event } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { buildPack } from '../src/build.ts';
 import { parseAttunementBy, parseCharges } from '../src/transform/charges.ts';
@@ -19,29 +19,32 @@ const descOf = (slug: string): string => {
 };
 
 describe('parseCharges: hand-verified charged staples', () => {
-  // [slug, max, reset, regain]  — pk = srd-2024_<slug>
-  const staples: [string, number, 'dawn' | 'never', string | null][] = [
-    ['wand-of-magic-missiles', 7, 'dawn', '1d6 + 1'], // "This wand has 7 charges … regains 1d6 + 1 expended charges daily at dawn"
-    ['wand-of-fireballs', 7, 'dawn', '1d6 + 1'],
-    ['wand-of-lightning-bolts', 7, 'dawn', '1d6 + 1'],
-    ['wand-of-paralysis', 7, 'dawn', '1d6 + 1'],
-    ['wand-of-polymorph', 7, 'dawn', '1d6 + 1'],
-    ['wand-of-secrets', 3, 'dawn', '1d3'],
-    ['wand-of-magic-detection', 3, 'dawn', '1d3'],
-    ['staff-of-fire', 10, 'dawn', '1d6 + 4'],
-    ['staff-of-healing', 10, 'dawn', '1d6 + 4'],
-    ['staff-of-power', 20, 'dawn', '2d8 + 4'],
-    ['staff-of-the-magi', 50, 'dawn', '4d6 + 2'],
-    ['ring-of-evasion', 3, 'dawn', '1d3'],
-    ['ring-of-the-ram', 3, 'dawn', '1d3'],
-    ['winged-boots', 4, 'dawn', '1d4'],
-    ['eyes-of-charming', 3, 'dawn', 'all'], // "The lenses regain all expended charges daily at dawn"
-    ['scarab-of-protection', 12, 'never', null], // "has 12 charges", no regain text at all
-    ['gem-of-brightness', 50, 'never', null],
-    ['talisman-of-pure-good', 7, 'never', null],
+  // [slug, max, reset, regain, regainDice]  — pk = srd-2024_<slug>
+  // Plan 13 task 6 re-pin (ruling 7): `regainDice` is NEW — the same already-verified regain text in
+  // `RegainDiceSchema` form (spaces dropped: "1d6 + 1" -> "1d6+1"), now carried into the pack as
+  // `charges.regain`. `null` for 'all' (full restore) and 'never'. max/reset/regain are unchanged.
+  const staples: [string, number, 'dawn' | 'never', string | null, string | null][] = [
+    ['wand-of-magic-missiles', 7, 'dawn', '1d6 + 1', '1d6+1'], // "This wand has 7 charges … regains 1d6 + 1 expended charges daily at dawn"
+    ['wand-of-fireballs', 7, 'dawn', '1d6 + 1', '1d6+1'],
+    ['wand-of-lightning-bolts', 7, 'dawn', '1d6 + 1', '1d6+1'],
+    ['wand-of-paralysis', 7, 'dawn', '1d6 + 1', '1d6+1'],
+    ['wand-of-polymorph', 7, 'dawn', '1d6 + 1', '1d6+1'],
+    ['wand-of-secrets', 3, 'dawn', '1d3', '1d3'],
+    ['wand-of-magic-detection', 3, 'dawn', '1d3', '1d3'],
+    ['staff-of-fire', 10, 'dawn', '1d6 + 4', '1d6+4'],
+    ['staff-of-healing', 10, 'dawn', '1d6 + 4', '1d6+4'],
+    ['staff-of-power', 20, 'dawn', '2d8 + 4', '2d8+4'],
+    ['staff-of-the-magi', 50, 'dawn', '4d6 + 2', '4d6+2'],
+    ['ring-of-evasion', 3, 'dawn', '1d3', '1d3'],
+    ['ring-of-the-ram', 3, 'dawn', '1d3', '1d3'],
+    ['winged-boots', 4, 'dawn', '1d4', '1d4'],
+    ['eyes-of-charming', 3, 'dawn', 'all', null], // "The lenses regain all expended charges daily at dawn"
+    ['scarab-of-protection', 12, 'never', null, null], // "has 12 charges", no regain text at all
+    ['gem-of-brightness', 50, 'never', null, null],
+    ['talisman-of-pure-good', 7, 'never', null, null],
   ];
-  it.each(staples)('%s -> max %i, reset %s', (slug, max, reset, regain) => {
-    expect(parseCharges(descOf(slug))).toEqual({ max, reset, regain });
+  it.each(staples)('%s -> max %i, reset %s', (slug, max, reset, regain, regainDice) => {
+    expect(parseCharges(descOf(slug))).toEqual({ max, reset, regain, regainDice });
   });
 });
 
@@ -66,6 +69,7 @@ describe('parseCharges: charge-prose items that must stay unmechanized', () => {
       max: 4,
       reset: 'dawn',
       regain: '1d4',
+      regainDice: '1d4', // plan 13 task 6 re-pin: the new structured form
     });
     expect(parseCharges('Regains 2 expended charges daily at dawn.')).toBeUndefined(); // no max
   });
@@ -136,6 +140,24 @@ describe('parseCharges: full-corpus manifest', () => {
     expect(records).toHaveLength(757);
     expect(parsed).toHaveLength(43);
     expect(parsed).toEqual(MANIFEST);
+  });
+
+  // Plan 13 task 6 (ruling 7): the structured `regainDice` is a mechanical respelling of the
+  // already-verified `regain` text above (MANIFEST column 4) — never an independent parse.
+  it('regainDice is the regain text in RegainDiceSchema form for every dice row (38), null otherwise', () => {
+    let dice = 0;
+    for (const r of records) {
+      const c = parseCharges(fieldStr(r.fields, 'desc', pkStr(r.pk)));
+      if (!c) continue;
+      if (c.regain === null || c.regain === 'all') {
+        expect(c.regainDice, pkStr(r.pk)).toBeNull();
+      } else {
+        dice += 1;
+        expect(c.regainDice, pkStr(r.pk)).toBe(c.regain.replace(/\s+/g, ''));
+        expect(RegainDiceSchema.safeParse(c.regainDice).success, pkStr(r.pk)).toBe(true);
+      }
+    }
+    expect(dice).toBe(38);
   });
 
   it('no parsed item states a different "N charges" max than the parsed one', () => {
@@ -245,10 +267,27 @@ describe('charged items over the real pack (derive smoke)', () => {
   const build = (extra: Raw[]): Event[] => [...base(), ...[addWand, ...extra].map((e) => ev(e.type, e.payload))];
   const equip: Raw = { type: 'item.equipped', payload: { instanceId: WAND } };
 
+  it('the pack carries charges.regain only for dice-regain items (plan 13 task 6)', () => {
+    const charged = pack.entities.flatMap((e) => (e.type === 'item' && e.charges ? [e] : []));
+    expect(charged).toHaveLength(43);
+    expect(charged.filter((e) => e.charges!.regain !== undefined)).toHaveLength(38);
+    const byId = (slug: string) => charged.find((e) => e.id === `${FP}:item/${slug}`)!.charges;
+    expect(byId('wand-of-magic-missiles')).toEqual({ max: '7', reset: 'dawn', regain: '1d6+1' });
+    expect(byId('staff-of-the-magi')).toEqual({ max: '50', reset: 'dawn', regain: '4d6+2' });
+    expect(byId('eyes-of-charming')).toEqual({ max: '3', reset: 'dawn' }); // "regain all" = full restore
+    expect(byId('scarab-of-protection')).toEqual({ max: '12', reset: 'never' });
+  });
+
   it('equipped wand materializes item:<uuid> with the parsed max; reset is dawn', () => {
     const s = sheetFor(build([equip]));
     const r = s.resources.find((x) => x.id === `item:${WAND}`);
-    expect(r).toMatchObject({ id: `item:${WAND}`, name: 'Wand of Magic Missiles', used: 0, reset: 'dawn' });
+    expect(r).toMatchObject({
+      id: `item:${WAND}`,
+      name: 'Wand of Magic Missiles',
+      used: 0,
+      reset: 'dawn',
+      regain: '1d6+1', // plan 13 task 6
+    });
     expect(r!.max.value).toBe(7);
   });
 
@@ -261,13 +300,15 @@ describe('charged items over the real pack (derive smoke)', () => {
     const s1 = sheetFor(spent);
     expect(s1.resources.find((x) => x.id === `item:${WAND}`)!.used).toBe(3);
 
-    // A short rest leaves dawn charges alone; a long rest restores them to full (v1: full restore
-    // even for rolled-regain items — generous approximation).
+    // A short rest leaves dawn charges alone. Plan 13 task 6 re-pin (ruling 7): a long rest no
+    // longer restores the wand in full — it "regains 1d6 + 1 expended charges daily at dawn"
+    // (pk srd-2024_wand-of-magic-missiles), so it restores the caller-rolled total: 3 spent − 2 = 1.
     const shortEvents = propose.rest(s1, 'short');
     expect(shortEvents.some((e) => JSON.stringify(e.payload).includes(`item:${WAND}`))).toBe(false);
-    const longEvents = propose.rest(s1, 'long');
+    const longEvents = propose.rest(s1, 'long', undefined, { [`item:${WAND}`]: 2 });
+    expect(longEvents.at(-1)!.payload).toEqual({ resourceId: `item:${WAND}`, count: 2 });
     const s2 = sheetFor([...spent, ...longEvents.map((e) => ev(e.type, e.payload))]);
-    expect(s2.resources.find((x) => x.id === `item:${WAND}`)!.used).toBe(0);
+    expect(s2.resources.find((x) => x.id === `item:${WAND}`)!.used).toBe(1);
 
     // 'never' items (e.g. Scarab of Protection) are never swept by a rest.
     const scarab = '33333333-3333-4333-8333-cccccccccccc';

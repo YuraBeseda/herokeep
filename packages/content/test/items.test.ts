@@ -95,9 +95,14 @@ describe('item transform', () => {
   }
   const magicOf = (slug: string) => byId.get(`srd-5e-2024:item/${slug}`) as unknown as MagicShape;
 
-  it('charged staples carry charges {max, reset}', () => {
-    expect(magicOf('wand-of-magic-missiles').charges).toEqual({ max: '7', reset: 'dawn' });
-    expect(magicOf('staff-of-the-magi').charges).toEqual({ max: '50', reset: 'dawn' });
+  it('charged staples carry charges {max, reset, regain?}', () => {
+    // Plan 13 task 6 re-pin (ruling 7): dice-regain items now carry `regain` — the already-verified
+    // desc text respelled ("regains 1d6 + 1 expended charges daily at dawn", pk
+    // srd-2024_wand-of-magic-missiles; "4d6 + 2", pk srd-2024_staff-of-the-magi). max/reset unchanged;
+    // 'never' items carry no regain.
+    expect(magicOf('wand-of-magic-missiles').charges).toEqual({ max: '7', reset: 'dawn', regain: '1d6+1' });
+    expect(magicOf('staff-of-the-magi').charges).toEqual({ max: '50', reset: 'dawn', regain: '4d6+2' });
+    expect(magicOf('wand-of-secrets').charges).toEqual({ max: '3', reset: 'dawn', regain: '1d3' });
     expect(magicOf('scarab-of-protection').charges).toEqual({ max: '12', reset: 'never' });
   });
 

@@ -383,7 +383,15 @@ function buildMagicItem(rec: FixtureRecord): Entity {
     ...(requiresAttunement
       ? { attunement: { required: true, ...(by?.kind === 'predicate' ? { by: by.predicate } : {}) } }
       : {}),
-    ...(charges ? { charges: { max: String(charges.max), reset: charges.reset } } : {}),
+    ...(charges
+      ? {
+          charges: {
+            max: String(charges.max),
+            reset: charges.reset,
+            ...(charges.regainDice !== null ? { regain: charges.regainDice } : {}),
+          },
+        }
+      : {}),
     ...(cost ? { cost } : {}),
     ...(weight !== undefined ? { weight } : {}),
   };

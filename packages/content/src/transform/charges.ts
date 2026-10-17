@@ -20,11 +20,17 @@ export interface ParsedCharges {
    */
   reset: 'dawn' | 'never';
   /**
-   * The regained amount ("1d6 + 1", "2", or "all"), `null` for `reset:'never'`. NOT carried into
-   * the pack — the item vocabulary is `{max, reset}` only (the engine restores a charged resource
-   * in full when its reset fires) — but pinned in the manifest so the data stays reviewable.
+   * The regained amount as written ("1d6 + 1", "2", or "all"), `null` for `reset:'never'` — pinned
+   * verbatim in the manifest so it stays reviewable against the vendored desc.
    */
   regain: string | null;
+  /**
+   * Plan 13 task 6 (ruling 7): `regain` respelled as `RegainDiceSchema` dice ("1d6 + 1" -> "1d6+1") when
+   * it IS dice — carried into the pack as `charges.regain`, so a long rest restores the rolled
+   * amount. `null` for 'all' / a flat number / 'never': those keep the full-restore form (no
+   * vendored item has a flat-number dawn regain, so full restore never over-grants one).
+   */
+  regainDice: string | null;
 }
 
 const MAX_RE = /\b(?:has|have)\s+(\d+)\s+charges\b/gi;
@@ -42,10 +48,13 @@ export function parseCharges(desc: string): ParsedCharges | undefined {
     [...desc.matchAll(DAWN_RE)].map((m) => (m[1] ? 'all' : m[2]!.replace(/\s+/g, ' ').replace(/\s*\+\s*/, ' + '))),
   );
   if (regains.size > 1) return undefined;
-  if (regains.size === 1) return { max, reset: 'dawn', regain: [...regains][0]! };
+  if (regains.size === 1) {
+    const regain = [...regains][0]!;
+    return { max, reset: 'dawn', regain, regainDice: /^\d+d\d+/.test(regain) ? regain.replace(/\s+/g, '') : null };
+  }
   // No dawn phrase: only an item with NO regain-of-charges text at all is a clean 'never'.
   if (ANY_REGAIN_RE.test(desc)) return undefined;
-  return { max, reset: 'never', regain: null };
+  return { max, reset: 'never', regain: null, regainDice: null };
 }
 
 const CLASS_SLUGS = new Set([
