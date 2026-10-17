@@ -681,6 +681,21 @@
       } @else {
         <p class="play-tab__empty">{{ t('sheet.conditions.empty') }}</p>
       }
+      @if (immunities().length > 0) {
+        <h3 class="play-tab__subtitle">{{ t('sheet.conditions.immunitiesTitle') }}</h3>
+        <ul class="play-tab__immunities">
+          @for (immunity of immunities(); track immunity.id) {
+            <li>
+              <hk-chip>{{
+                t('sheet.conditions.immunityChip', {
+                  name: immunity.name,
+                  sources: immunity.sources,
+                })
+              }}</hk-chip>
+            </li>
+          }
+        </ul>
+      }
     </hk-sheet-section>
 
     <!-- Proficiencies / senses / languages -->

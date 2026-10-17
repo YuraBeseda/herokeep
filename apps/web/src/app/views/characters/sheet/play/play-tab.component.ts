@@ -521,6 +521,17 @@ export class PlayTabComponent {
     }));
   });
 
+  // Plan 13 task 5: `sheet.immunities` (display-only, ruling 9) — each immune condition's localized
+  // name plus the localized names of the features granting it. The sheet omits the field when the
+  // character has none, so this is `[]` (and the template renders nothing) in that case.
+  protected readonly immunities = computed<{ id: string; name: string; sources: string }[]>(() =>
+    (this.sheet()?.immunities ?? []).map((i) => ({
+      id: i.condition,
+      name: this.resolveName(i.condition),
+      sources: i.sources.map((source) => this.resolveName(source)).join(', '),
+    })),
+  );
+
   // task-4-brief.md: the condition-add dialog's options — `index.system().conditions` (the
   // pack's own entity-id list, never a hardcoded set) resolved to a localized name and a
   // data-driven `levelBearing` flag. `levelBearing` reads `ConditionEntitySchema.levels`

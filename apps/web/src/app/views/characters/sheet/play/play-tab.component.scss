@@ -375,6 +375,15 @@
   gap: var(--space-1);
 }
 
+.play-tab__immunities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 .play-tab__notes-add {
   margin-bottom: var(--space-2);
 }

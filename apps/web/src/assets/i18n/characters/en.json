@@ -431,6 +431,8 @@
       "add": "Add condition",
       "remove": "Remove condition",
       "chipLabel": "{name} ({level})",
+      "immunitiesTitle": "Immunities",
+      "immunityChip": "{name} ({sources})",
       "addDialog": {
         "title": "Add condition",
         "conditionLabel": "Condition",

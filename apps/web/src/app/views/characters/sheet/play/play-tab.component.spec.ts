@@ -1344,6 +1344,38 @@ describe('PlayTabComponent — conditions and notes controls', () => {
     });
   });
 
+  // Plan 13 task 5: `sheet.immunities` (condition.immunity) renders as non-removable badges under
+  // an "Immunities" heading in the Conditions section — localized condition name plus the granting
+  // feature's name. Display-only: no heading and no list at all while the sheet has none.
+  it('renders condition immunities as badges with their granting feature (Aura of Courage, paladin 10)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(characterStore.sheet()!.immunities).toBeUndefined();
+    expect(compiled.querySelector('.play-tab__immunities')).toBeNull();
+    expect(compiled.textContent).not.toContain(charactersEn.sheet.conditions.immunitiesTitle);
+
+    await characterStore.appendTx(
+      Array.from({ length: 10 }, (_, i) => ({
+        type: 'level.gained' as const,
+        v: 1 as const,
+        payload: { classId: 'srd-5e-2024:class/paladin', level: i + 1, hpRoll: 'average' as const },
+      })),
+    );
+    await pollUntil(fixture, () => (characterStore.sheet()?.immunities?.length ?? 0) === 1);
+    await fixture.whenStable();
+
+    const badges = Array.from(compiled.querySelectorAll('.play-tab__immunities li hk-chip'), (el) =>
+      el.textContent?.trim(),
+    );
+    expect(badges).toEqual(['Frightened (Aura of Courage)']);
+    expect(compiled.querySelector('.play-tab__immunities .hk-chip__remove')).toBeNull();
+    expect(compiled.textContent).toContain(charactersEn.sheet.conditions.immunitiesTitle);
+  });
+
   it('note add/edit/remove round-trips through propose.note (each via its own dialog)', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);

@@ -431,6 +431,8 @@
       "add": "Додати стан",
       "remove": "Прибрати стан",
       "chipLabel": "{name} ({level})",
+      "immunitiesTitle": "Імунітети",
+      "immunityChip": "{name} ({sources})",
       "addDialog": {
         "title": "Додати стан",
         "conditionLabel": "Стан",

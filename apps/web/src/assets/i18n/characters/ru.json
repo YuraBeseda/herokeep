@@ -431,6 +431,8 @@
       "add": "Добавить состояние",
       "remove": "Убрать состояние",
       "chipLabel": "{name} ({level})",
+      "immunitiesTitle": "Иммунитеты",
+      "immunityChip": "{name} ({sources})",
       "addDialog": {
         "title": "Добавить состояние",
         "conditionLabel": "Состояние",
