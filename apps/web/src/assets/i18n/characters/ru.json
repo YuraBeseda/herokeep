@@ -443,6 +443,10 @@
       "entry": "{target} ({level})",
       "empty": "Нет."
     },
+    "tools": {
+      "title": "Инструменты",
+      "empty": "Нет."
+    },
     "senses": {
       "title": "Чувства",
       "entry": "{sense}: {range}",

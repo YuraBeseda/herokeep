@@ -443,6 +443,10 @@
       "entry": "{target} ({level})",
       "empty": "None."
     },
+    "tools": {
+      "title": "Tools",
+      "empty": "None."
+    },
     "senses": {
       "title": "Senses",
       "entry": "{sense}: {range}",

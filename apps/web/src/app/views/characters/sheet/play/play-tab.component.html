@@ -699,6 +699,17 @@
         <p class="play-tab__empty">{{ t('sheet.proficiencies.empty') }}</p>
       }
 
+      <h3 class="play-tab__subtitle">{{ t('sheet.tools.title') }}</h3>
+      @if (toolRows().length > 0) {
+        <ul class="play-tab__tools">
+          @for (tool of toolRows(); track tool.target) {
+            <li>{{ tool.name }}</li>
+          }
+        </ul>
+      } @else {
+        <p class="play-tab__empty">{{ t('sheet.tools.empty') }}</p>
+      }
+
       <h3 class="play-tab__subtitle">{{ t('sheet.senses.title') }}</h3>
       @if (senseRows().length > 0) {
         <ul class="play-tab__senses">

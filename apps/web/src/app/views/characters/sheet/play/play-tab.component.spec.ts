@@ -186,6 +186,59 @@ describe('PlayTabComponent', () => {
     expect(hpStats[1]).toBe('12'); // max
   });
 
+  // Plan 13 task 2: tool proficiencies get their own "Tools" list in the proficiency section, by
+  // localized item name; a tool slug with no item entity (the Soldier's generic 'gaming-set') falls
+  // back to the raw slug, like any other unresolved proficiency target. The bard's instruments come
+  // from its real `bard@1/tools` pick, recorded through the creation wizard's own transaction.
+  it('lists tool proficiencies under a Tools heading: the background tool and the bard instrument pick', async () => {
+    const state = TestBed.runInInjectionContext(() => new CreateWizardState());
+    state.name.set('Lia');
+    state.gender.set('feminine');
+    state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
+    state.setDecision('srd-5e-2024:system/5e-2024@0/background', [
+      'srd-5e-2024:background/soldier',
+    ]);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      'srd-5e-2024:system/5e-2024@0/ability-scores',
+      ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+      { method: 'standardArray' },
+    );
+    state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/bard']);
+    state.setDecision('srd-5e-2024:class/bard@1/tools', [
+      'srd-5e-2024:item/musical-instrument-lute',
+      'srd-5e-2024:item/musical-instrument-flute',
+      'srd-5e-2024:item/musical-instrument-drum',
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create(state.name(), state.gender());
+    const [, ...rest] = state.buildTransaction();
+    await characterStore.appendTx(rest);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const subtitles = Array.from(compiled.querySelectorAll('.play-tab__subtitle')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(subtitles).toContain('Tools');
+    const tools = Array.from(compiled.querySelectorAll('.play-tab__tools li')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(tools).toEqual([
+      'gaming-set',
+      'Musical Instrument, Drum',
+      'Musical Instrument, Flute',
+      'Musical Instrument, Lute',
+    ]);
+    // The general proficiency list no longer repeats the tool rows.
+    const others = Array.from(compiled.querySelectorAll('.play-tab__proficiencies li')).map(
+      (el) => el.textContent ?? '',
+    );
+    expect(others.some((text) => text.includes('gaming-set') || text.includes('lute'))).toBe(false);
+  });
+
   it("opens the AC tile's hkDerived popover listing at least 3 contributions (armor, shield, fighting style), localized", async () => {
     await seedFighter('Ivan');
 

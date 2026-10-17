@@ -553,13 +553,30 @@ export class PlayTabComponent {
     () => {
       const sheet = this.sheet();
       if (!sheet) return [];
-      return sheet.proficiencies.map((p) => ({
-        kind: p.kind,
-        target: this.resolveName(p.target),
-        level: p.level,
-      }));
+      return sheet.proficiencies
+        .filter((p) => p.kind !== 'tool')
+        .map((p) => ({
+          kind: p.kind,
+          target: this.resolveName(p.target),
+          level: p.level,
+        }));
     },
   );
+
+  // Plan 13 task 2: tool proficiencies (`kind: 'tool'` rows of the same `sheet.proficiencies`
+  // union) listed on their own. A tool target is an item SLUG (`derive/index.ts`), resolved to the
+  // pack's item entity name the same way `skillName` resolves a skill slug; a slug with no item
+  // entity (e.g. a background's generic 'gaming-set') falls back to the raw slug.
+  protected readonly toolRows = computed<{ target: string; name: string }[]>(() => {
+    const sheet = this.sheet();
+    if (!sheet) return [];
+    const index = this.engineFacade.index();
+    const localizer = this.engineFacade.localizer();
+    return sheet.proficiencies
+      .filter((p) => p.kind === 'tool')
+      .map((p) => ({ target: p.target, name: this.toolName(p.target, index, localizer) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
 
   protected readonly senseRows = computed<{ sense: string; range: number }[]>(() => {
     const sheet = this.sheet();
@@ -841,6 +858,12 @@ export class PlayTabComponent {
     const packId = parseEntityId(index.system().id)?.packId;
     const skillId = packId ? makeEntityId(packId, 'skill', slug) : undefined;
     return skillId && index.has(skillId) ? localizer.name(skillId) : slug;
+  }
+
+  private toolName(slug: string, index: ContentIndex, localizer: Localizer): string {
+    const packId = parseEntityId(index.system().id)?.packId;
+    const itemId = packId ? makeEntityId(packId, 'item', slug) : undefined;
+    return itemId && index.has(itemId) ? localizer.name(itemId) : slug;
   }
 
   private itemName(entry: InventoryRow): string {

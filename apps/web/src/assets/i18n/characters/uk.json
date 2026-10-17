@@ -443,6 +443,10 @@
       "entry": "{target} ({level})",
       "empty": "Немає."
     },
+    "tools": {
+      "title": "Інструменти",
+      "empty": "Немає."
+    },
     "senses": {
       "title": "Чуття",
       "entry": "{sense}: {range}",
