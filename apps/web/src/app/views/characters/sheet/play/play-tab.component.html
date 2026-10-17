@@ -549,6 +549,29 @@
                           <hk-chip [selected]="true">{{
                             t('sheet.spellcasting.alwaysPrepared')
                           }}</hk-chip>
+                          <!-- Plan 13 task 8 (plan-12 T9 F4): a granted spell shows its unprepare
+                               control DISABLED with the reason, never none and never a working one.
+                               Its reason id differs from the Known list's so a spell in both lists
+                               never duplicates an id. -->
+                          <button
+                            hk-button
+                            type="button"
+                            [variant]="'ghost'"
+                            [disabled]="true"
+                            [attr.aria-describedby]="
+                              'always-prepared-unprepare-reason-' + block.classId + '-' + spell.id
+                            "
+                            [attr.title]="t('sheet.spellcasting.alwaysPreparedReason')"
+                          >
+                            {{ t('sheet.spellcasting.unprepare') }}
+                          </button>
+                          <span
+                            class="visually-hidden"
+                            [id]="
+                              'always-prepared-unprepare-reason-' + block.classId + '-' + spell.id
+                            "
+                            >{{ t('sheet.spellcasting.alwaysPreparedReason') }}</span
+                          >
                         }
                         <button
                           hk-button

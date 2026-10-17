@@ -3546,17 +3546,17 @@ describe('PlayTabComponent — always-prepared spells with the real pack (plan 1
     const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
 
     // Marker visible on the granted spells (they are not in `known`, so the Prepared list shows them),
-    // with NO unprepare control anywhere in their row -- there is nothing to click.
+    // whose unprepare control is present but DISABLED (plan 13 task 8 — was "no control" here;
+    // the reason wiring is pinned in play-tab-always-prepared.spec.ts).
     for (const name of ['Divine Smite', 'Protection from Evil and Good', 'Shield of Faith']) {
       const row = spellRow(compiled, name);
       expect(row, name).toBeDefined();
       expect(row.textContent).toContain(charactersEn.sheet.spellcasting.alwaysPrepared);
-      expect(
-        Array.from(row.querySelectorAll('button')).some(
-          (b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.unprepare,
-        ),
-        name,
-      ).toBe(false);
+      const unprepare = Array.from(row.querySelectorAll('button')).filter(
+        (b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.unprepare,
+      );
+      expect(unprepare, name).toHaveLength(1);
+      expect(unprepare[0].disabled, name).toBe(true);
     }
     // A chosen spell keeps its enabled unprepare control and no marker.
     const chosen = buttonNamed(
