@@ -1,8 +1,8 @@
 [
   {
     "id": "srd-5e-2024:class/rogue",
-    "cite": "SRD 5.2.1, Rogue Core Traits; Rogue Subclass; Weapon Mastery; Ability Score Improvement; Epic Boon",
-    "note": "Task 7 (phase 4 plan 12): new overlay, class 1->20. Core Traits table (vendored srd-2024_rogue_core-traits): \"Saving Throw Proficiencies: Dexterity and Intelligence\" (upstream CharacterClass saving_throws = [dex, int], correct as vendored -- no correction needed); \"Skill Proficiencies: Choose 4: Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Persuasion, Sleight of Hand, or Stealth\"; \"Weapon Proficiencies: Simple weapons and Martial weapons that have the Finesse or Light property\"; \"Tool Proficiencies: Thieves' Tools\"; \"Armor Training: Light armor\". weaponProficiencies: the engine matches a weapon by category slug, by item slug, or by tag (packages/engine/src/derive/attacks.ts isProficientWithWeapon) and has NO property-qualified category, so \"martial weapons with Finesse or Light\" is expressed as 'simple' plus the item slugs of the martial weapons in this pack whose weapon.properties include finesse or light (verified against the built pack: hand-crossbow [light], rapier [finesse], scimitar [finesse, light], shortsword [finesse, light], whip [finesse]). A future martial weapon in a pack would need adding here -- flagged as a vocabulary gap (a property-qualified proficiency category). toolProficiencies: 'thieves-tools' (the item slug, srd-5e-2024:item/thieves-tools exists; the engine does not yet read class.toolProficiencies into Sheet.proficiencies -- pre-existing, same for every class). skillChoice.count 4 over the vendored 10-skill rogue list (replaces the placeholder 0 / full-18 list from transformClasses). MULTICLASS gains live in transform/classes.ts MULTICLASS_GAINS (cites the vendored multiclassing rule; the per-class table is SRD-silent in the vendor, owner-flag there). @1/weapon-masteries: same query-pick shape as Fighter/Barbarian; the vendored srd-2024_rogue_weapon-mastery text is \"two kinds of weapons of your choice with which you have proficiency\", a fixed count of 2 (no weapon-mastery-count column exists for Rogue -- verified, only rogue-proficiency-bonus and rogue-sneak-attack-column-data extras exist on every level row). The pick cannot be restricted to weapons the rogue is proficient with (EntityQuery has no proficiency filter), so it offers any mastery-bearing weapon; flagged, same family as Fighter's/Barbarian's weapon-kind gap. ASI: feat choices at 4/8/12/16 (vendored ability-score-improvement desc: \"You gain this feature again at Rogue levels 8, 12, and 16\") and Epic Boon @19 (vendored epic-boon, level 19) reuse the open query:{type:'feat'} shape -- Rogue has NO extra ASI at 10 in the 2024 SRD (ClassFeatureItem rows for ability-score-improvement: 4, 8, 12, 16 only). Subclass @3 offers exactly the rogue subclasses (Thief is the only SRD one). EXPERTISE is deliberately NOT a choice here -- see the rogue-expertise entry. SNEAK ATTACK dice (1d6 at levels 1-2 ... 10d6 at 19-20) already land as the typed DiceSchema extra 'rogue-sneak-attack-column-data' on all 20 rows via transformClasses(); display-only by ruling 1, nothing authored.",
+    "cite": "SRD 5.2.1, Rogue Core Traits; Expertise; Rogue Subclass; Weapon Mastery; Ability Score Improvement; Epic Boon",
+    "note": "Task 7 (phase 4 plan 12): new overlay, class 1->20. Core Traits table (vendored srd-2024_rogue_core-traits): \"Saving Throw Proficiencies: Dexterity and Intelligence\" (upstream CharacterClass saving_throws = [dex, int], correct as vendored -- no correction needed); \"Skill Proficiencies: Choose 4: Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Persuasion, Sleight of Hand, or Stealth\"; \"Weapon Proficiencies: Simple weapons and Martial weapons that have the Finesse or Light property\"; \"Tool Proficiencies: Thieves' Tools\"; \"Armor Training: Light armor\". weaponProficiencies: the engine matches a weapon by category slug, by item slug, or by tag (packages/engine/src/derive/attacks.ts isProficientWithWeapon) and has NO property-qualified category, so \"martial weapons with Finesse or Light\" is expressed as 'simple' plus the item slugs of the martial weapons in this pack whose weapon.properties include finesse or light (verified against the built pack: hand-crossbow [light], rapier [finesse], scimitar [finesse, light], shortsword [finesse, light], whip [finesse]). A future martial weapon in a pack would need adding here -- flagged as a vocabulary gap (a property-qualified proficiency category). toolProficiencies: 'thieves-tools' (the item slug, srd-5e-2024:item/thieves-tools exists; the engine does not yet read class.toolProficiencies into Sheet.proficiencies -- pre-existing, same for every class). skillChoice.count 4 over the vendored 10-skill rogue list (replaces the placeholder 0 / full-18 list from transformClasses). MULTICLASS gains live in transform/classes.ts MULTICLASS_GAINS (cites the vendored multiclassing rule; the per-class table is SRD-silent in the vendor, owner-flag there). @1/weapon-masteries: same query-pick shape as Fighter/Barbarian; the vendored srd-2024_rogue_weapon-mastery text is \"two kinds of weapons of your choice with which you have proficiency\", a fixed count of 2 (no weapon-mastery-count column exists for Rogue -- verified, only rogue-proficiency-bonus and rogue-sneak-attack-column-data extras exist on every level row). The pick cannot be restricted to weapons the rogue is proficient with (EntityQuery has no proficiency filter), so it offers any mastery-bearing weapon; flagged, same family as Fighter's/Barbarian's weapon-kind gap. ASI: feat choices at 4/8/12/16 (vendored ability-score-improvement desc: \"You gain this feature again at Rogue levels 8, 12, and 16\") and Epic Boon @19 (vendored epic-boon, level 19) reuse the open query:{type:'feat'} shape -- Rogue has NO extra ASI at 10 in the 2024 SRD (ClassFeatureItem rows for ability-score-improvement: 4, 8, 12, 16 only). Subclass @3 offers exactly the rogue subclasses (Thief is the only SRD one). EXPERTISE (plan 13 task 1): @1/expertise and @6/expertise, count 2 each -- see the rogue-expertise entry. SNEAK ATTACK dice (1d6 at levels 1-2 ... 10d6 at 19-20) already land as the typed DiceSchema extra 'rogue-sneak-attack-column-data' on all 20 rows via transformClasses(); display-only by ruling 1, nothing authored.",
     "set": {
       "armorTraining": ["light"],
       "weaponProficiencies": ["simple", "hand-crossbow", "rapier", "scimitar", "shortsword", "whip"],
@@ -33,6 +33,13 @@
             "at": { "kind": "classLevel", "class": "rogue", "level": 1 },
             "pick": { "query": { "type": "item", "hasField": ["weapon.mastery"] } },
             "count": 2
+          },
+          {
+            "id": "srd-5e-2024:class/rogue@1/expertise",
+            "prompt": "Expertise: choose two of your skill proficiencies",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 1 },
+            "pick": { "query": { "type": "skill" }, "proficiency": "expertise", "requireProficient": true },
+            "count": 2
           }
         ]
       },
@@ -57,6 +64,18 @@
             "at": { "kind": "classLevel", "class": "rogue", "level": 4 },
             "pick": { "query": { "type": "feat" } },
             "count": 1
+          }
+        ]
+      },
+      {
+        "level": 6,
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/rogue@6/expertise",
+            "prompt": "Expertise: choose two more of your skill proficiencies",
+            "at": { "kind": "classLevel", "class": "rogue", "level": 6 },
+            "pick": { "query": { "type": "skill" }, "proficiency": "expertise", "requireProficient": true },
+            "count": 2
           }
         ]
       },
@@ -113,7 +132,7 @@
   {
     "id": "srd-5e-2024:feature/rogue-expertise",
     "cite": "SRD 5.2.1, Expertise",
-    "note": "SRD text: \"You gain Expertise in two of your skill proficiencies of your choice... At Rogue level 6, you gain Expertise in two more of your skill proficiencies of your choice.\" Granted at Rogue levels 1 and 6. TEXT FALLBACK + OWNER-FLAG. Registry check (ruling 5 / Task-5 carry): the effects registry DOES contain a doubling kind -- proficiency.grant{kind:'skill', level:'expertise'} (doc-04 line 128; engine modifiers.ts resolves expertise over proficient; proficiency.ts multiplies x2) -- but its `target` is a FIXED string authored in the pack, so it cannot express \"two skills of the character's choice\" (it would double one hard-coded skill for every rogue: state-wrong). The only per-selection mechanism is a skill-typed pick, and Task 5's engine change makes a skill-typed pick selection grant BASE proficiency, so authoring Expertise as a pick would GRANT proficiency (or silently fail to double) -- the forbidden shape, not authored. No choice is added. Slice-3 vocabulary candidate: a pick whose selections apply proficiency.grant{level:'expertise'} to the chosen skills (restricted to skills the character is already proficient in).",
+    "note": "Vendored srd-2024_rogue_expertise (ClassFeatureItems srd-2024_rogue_expertise_1 level 1, srd-2024_rogue_expertise_6 level 6): \"You gain Expertise in two of your skill proficiencies of your choice. Sleight of Hand and Stealth are recommended if you have proficiency in them. At Rogue level 6, you gain Expertise in two more of your skill proficiencies of your choice.\" MECHANIZED (plan 13 task 1, retires the slice-2 text fallback): the class rows carry @1/expertise and @6/expertise, count 2 each, as skill query picks with proficiency:'expertise' + requireProficient:true -- the selected skills gain the expertise rank (x2 proficiency bonus, ranked once over proficient) and only skills the rogue is already proficient in (\"your skill proficiencies\") are offered/accepted/applied. Both picks share the slug 'expertise', so the @6 pick may not repeat an @1 selection (Choice.unique family) -- \"two MORE\". The feature.text below stays as the feature's display text (never a fixed-target proficiency.grant, which would double one hard-coded skill for every rogue). Legacy logs that never answered Expertise replay unchanged apart from the two picks surfacing as outstanding.",
     "merge": {
       "effects": [
         {

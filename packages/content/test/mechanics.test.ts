@@ -1,4 +1,4 @@
-import { createContentIndex, derive, reduce } from '@hk/engine';
+import { createContentIndex, derive, findChoice, queryPickOptions, reduce, validateSelection } from '@hk/engine';
 import type { Event } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { buildPack } from '../src/build.ts';
@@ -1015,11 +1015,17 @@ describe('rogue and thief to level 20 mechanics (task 7)', () => {
     expect(feature('sneak-attack').effects.filter((e) => e.type !== 'feature.text')).toEqual([]);
   });
 
-  it('rogue: Expertise is NEVER a plain skill pick (that would grant base proficiency) -- text fallback', () => {
+  it('rogue: Expertise = proficient-only expertise skill picks, 2 at level 1 and 2 more at level 6 (plan 13 task 1)', () => {
     const allChoices = rogue().levels.flatMap((r) => r.choices);
-    expect(allChoices.filter((c) => /expertise/i.test(c.id))).toEqual([]);
-    expect(feature('expertise').effects.some((e) => e.type === 'feature.text')).toBe(true);
-    expect(feature('expertise').effects.some((e) => e.type === 'proficiency.grant')).toBe(false);
+    const expertise = allChoices.filter((c) => /expertise/i.test(c.id));
+    expect(expertise.map((c) => [c.id, c.count])).toEqual([
+      ['srd-5e-2024:class/rogue@1/expertise', 2],
+      ['srd-5e-2024:class/rogue@6/expertise', 2],
+    ]);
+    for (const c of expertise)
+      expect(c.pick).toEqual({ query: { type: 'skill' }, proficiency: 'expertise', requireProficient: true });
+    // The feature keeps its display text; it never carries a fixed-target proficiency.grant.
+    expect(feature('expertise').effects.map((e) => e.type)).toEqual(['feature.text']);
   });
 
   it('rogue: real effects (Slippery Mind saves, Stroke of Luck resource, Thieves Cant language, Weapon Mastery)', () => {
@@ -1737,7 +1743,7 @@ describe('ranger and hunter to level 20 mechanics (task 10)', () => {
     }
   });
 
-  it('ranger: Expertise / Deft Explorer are NEVER authored as skill picks or proficiency grants (state-wrong shape)', () => {
+  it('ranger: Deft Explorer (1 @2) and Expertise (2 @9) are proficient-only expertise skill picks (plan 13 task 1)', () => {
     for (const slug of ['deft-explorer', 'expertise']) {
       expect(
         feature(slug).effects.map((e) => e.type),
@@ -1745,7 +1751,13 @@ describe('ranger and hunter to level 20 mechanics (task 10)', () => {
       ).toEqual(['feature.text']);
     }
     const choices = ranger().levels.flatMap((r) => r.choices);
-    expect(choices.some((c) => /expertise|deft/.test(c.id))).toBe(false);
+    const expertise = choices.filter((c) => /expertise|deft/.test(c.id));
+    expect(expertise.map((c) => [c.id, c.count])).toEqual([
+      ['srd-5e-2024:class/ranger@2/expertise', 1],
+      ['srd-5e-2024:class/ranger@9/expertise', 2],
+    ]);
+    for (const c of expertise)
+      expect(c.pick).toEqual({ query: { type: 'skill' }, proficiency: 'expertise', requireProficient: true });
   });
 });
 
@@ -1960,7 +1972,7 @@ describe('bard and college of lore to level 20 mechanics (task 11)', () => {
     expect(bard().multiclass.gains).toEqual({ armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 });
   });
 
-  it('bard: choices — subclass @3, ASI 4/8/12/16 + boon 19; no expertise / jack picks', () => {
+  it('bard: choices — expertise @2/@9, subclass @3, ASI 4/8/12/16 + boon 19; no jack picks', () => {
     const choices = bard().levels.flatMap((r) => r.choices);
     const ids = choices.map((c) => c.id);
     expect(choices.find((c) => c.id === 'srd-5e-2024:class/bard@3/subclass')!.pick).toEqual({
@@ -1968,7 +1980,14 @@ describe('bard and college of lore to level 20 mechanics (task 11)', () => {
     });
     for (const level of [4, 8, 12, 16, 19])
       expect(ids, `level ${level}`).toContain(`srd-5e-2024:class/bard@${level}/feat`);
-    expect(ids.some((id) => /expertise|jack/.test(id))).toBe(false);
+    expect(ids.some((id) => id.includes('jack'))).toBe(false);
+    const expertise = choices.filter((c) => c.id.includes('expertise'));
+    expect(expertise.map((c) => [c.id, c.count])).toEqual([
+      ['srd-5e-2024:class/bard@2/expertise', 2],
+      ['srd-5e-2024:class/bard@9/expertise', 2],
+    ]);
+    for (const c of expertise)
+      expect(c.pick).toEqual({ query: { type: 'skill' }, proficiency: 'expertise', requireProficient: true });
     expect(
       subclasses.filter((s) => (s as { class: string }).class === 'srd-5e-2024:class/bard').map((s) => s.id),
     ).toEqual(['srd-5e-2024:subclass/college-of-lore']);
@@ -1989,7 +2008,7 @@ describe('bard and college of lore to level 20 mechanics (task 11)', () => {
     ]);
   });
 
-  it('bard: Expertise is text-only (never a skill pick or proficiency grant — state-wrong shapes)', () => {
+  it('bard: Expertise feature keeps display text only (the mechanic is the @2/@9 picks, never a fixed proficiency.grant)', () => {
     expect(feature('bard-expertise').effects.map((e) => e.type)).toEqual(['feature.text']);
   });
 
@@ -2761,6 +2780,171 @@ describe('druid integration over the real pack (task 13)', () => {
       expect(
         s.issues.filter((i) => i.severity === 'error'),
         `level ${l}`,
+      ).toEqual([]);
+    }
+  });
+});
+
+describe('expertise retrofit over the real pack: rogue / bard / ranger (plan 13 task 1)', () => {
+  const skill = (s: string) => `${FP}:skill/${s}`;
+  const rogueId = `${FP}:class/rogue`;
+  const bardId = `${FP}:class/bard`;
+  const rangerId = `${FP}:class/ranger`;
+  interface Build {
+    classId: string;
+    scores: string[];
+    bonus: string[];
+    skills: string[];
+  }
+  // Soldier (athletics + intimidation) for every build; each class's own skill pick answered.
+  const ROGUE: Build = {
+    classId: rogueId,
+    scores: ['str:10', 'dex:15', 'con:14', 'int:12', 'wis:13', 'cha:8'],
+    bonus: ['dex:+2', 'con:+1'], // dex 17 (+3), wis 13 (+1)
+    skills: ['stealth', 'sleight-of-hand', 'perception', 'acrobatics'],
+  };
+  const BARD: Build = {
+    classId: bardId,
+    scores: ['str:10', 'dex:13', 'con:13', 'int:10', 'wis:10', 'cha:15'],
+    bonus: ['str:+2', 'con:+1'], // cha 15 (+2)
+    skills: ['persuasion', 'performance', 'deception'],
+  };
+  const RANGER: Build = {
+    classId: rangerId,
+    scores: ['str:15', 'dex:13', 'con:13', 'int:10', 'wis:14', 'cha:8'],
+    bonus: ['str:+2', 'con:+1'], // wis 14 (+2), dex 13 (+1)
+    skills: ['survival', 'perception', 'stealth'],
+  };
+  function char(b: Build, level: number, extra: [string, string[]][] = []): Event[] {
+    featSeq = 0;
+    return [
+      featEv('character.created', {
+        name: 'Vex',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/soldier`]),
+      featDecide(`${FP}:background/soldier@0/ability-scores`, b.bonus),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, b.scores),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', { classId: b.classId, level: i + 1, hpRoll: 'average' }),
+      ),
+      featDecide(`${b.classId}@1/skills`, b.skills),
+      ...extra.map(([id, sel]) => featDecide(id, sel)),
+    ];
+  }
+  const factsOf = (events: Event[]) => reduce(events, undefined, featRules);
+  const outstandingIds = (events: Event[]) => sheetOf(events).outstandingChoices.map((c) => c.choiceId);
+  const optionsFor = (events: Event[], choiceId: string) => {
+    const pick = findChoice(featIndex, choiceId)!.choice.pick;
+    if (!('query' in pick)) throw new Error(`${choiceId} is not a query pick`);
+    return queryPickOptions(pick, featIndex, sheetOf(events)).sort();
+  };
+  const refusals = (events: Event[], choiceId: string, selection: string[]) => {
+    const facts = factsOf(events);
+    return validateSelection(derive(facts, featIndex, featRules), facts, featIndex, choiceId, selection).map(
+      (d) => d.code,
+    );
+  };
+
+  it('rogue 6: both Expertise picks are outstanding until answered; answered skills total mod + 2 x prof', () => {
+    expect(outstandingIds(char(ROGUE, 6))).toEqual(
+      expect.arrayContaining([`${rogueId}@1/expertise`, `${rogueId}@6/expertise`]),
+    );
+    const events = char(ROGUE, 6, [
+      [`${rogueId}@1/expertise`, [skill('stealth'), skill('sleight-of-hand')]],
+      [`${rogueId}@6/expertise`, [skill('perception'), skill('acrobatics')]],
+    ]);
+    const s = sheetOf(events);
+    expect(s.prof).toBe(3);
+    expect([s.skills['stealth']!.proficiency, s.skills['stealth']!.total.value]).toEqual(['expertise', 3 + 6]);
+    expect(s.skills['sleight-of-hand']!.total.value).toBe(3 + 6);
+    expect([s.skills['perception']!.proficiency, s.skills['perception']!.total.value]).toEqual(['expertise', 1 + 6]);
+    expect(s.skills['athletics']!.proficiency).toBe('proficient'); // unpicked proficient skill unchanged
+    expect(s.outstandingChoices.map((c) => c.choiceId).filter((id) => id.includes('expertise'))).toEqual([]);
+  });
+
+  it('rogue: Expertise offers exactly the proficient skills; a non-proficient target and an @1 repeat are refused', () => {
+    expect(optionsFor(char(ROGUE, 1), `${rogueId}@1/expertise`)).toEqual(
+      [...ROGUE.skills, 'athletics', 'intimidation'].map(skill).sort(),
+    );
+    expect(refusals(char(ROGUE, 1), `${rogueId}@1/expertise`, [skill('arcana'), skill('stealth')])).toEqual([
+      'selection.notOffered',
+    ]);
+    expect(refusals(char(ROGUE, 1), `${rogueId}@1/expertise`, [skill('stealth'), skill('athletics')])).toEqual([]);
+    const at6 = char(ROGUE, 6, [[`${rogueId}@1/expertise`, [skill('stealth'), skill('sleight-of-hand')]]]);
+    expect(refusals(at6, `${rogueId}@6/expertise`, [skill('stealth'), skill('perception')])).toEqual([
+      'selection.duplicate',
+    ]);
+  });
+
+  it('bard 2: Jack of All Trades half-proficiency does not qualify; Expertise doubles a proficient skill', () => {
+    const events = char(BARD, 2);
+    expect(outstandingIds(events)).toContain(`${bardId}@2/expertise`);
+    expect(sheetOf(events).skills['arcana']!.proficiency).toBe('half');
+    const options = optionsFor(events, `${bardId}@2/expertise`);
+    expect(options).not.toContain(skill('arcana'));
+    expect(options).toEqual([...BARD.skills, 'athletics', 'intimidation'].map(skill).sort());
+    expect(refusals(events, `${bardId}@2/expertise`, [skill('arcana'), skill('persuasion')])).toEqual([
+      'selection.notOffered',
+    ]);
+    const s = sheetOf(char(BARD, 2, [[`${bardId}@2/expertise`, [skill('persuasion'), skill('performance')]]]));
+    expect([s.skills['persuasion']!.proficiency, s.skills['persuasion']!.total.value]).toEqual(['expertise', 2 + 4]);
+    expect(s.skills['deception']!.total.value).toBe(2 + 2);
+  });
+
+  it('ranger 9: Deft Explorer expertise (1) at 2 and Expertise (2) at 9; the @9 pick cannot repeat the @2 skill', () => {
+    expect(outstandingIds(char(RANGER, 2))).toContain(`${rangerId}@2/expertise`);
+    expect(outstandingIds(char(RANGER, 2))).not.toContain(`${rangerId}@9/expertise`);
+    const at9 = char(RANGER, 9, [[`${rangerId}@2/expertise`, [skill('survival')]]]);
+    expect(outstandingIds(at9)).toContain(`${rangerId}@9/expertise`);
+    expect(refusals(at9, `${rangerId}@9/expertise`, [skill('survival'), skill('perception')])).toEqual([
+      'selection.duplicate',
+    ]);
+    expect(refusals(at9, `${rangerId}@9/expertise`, [skill('perception'), skill('stealth')])).toEqual([]);
+    const s = sheetOf(
+      char(RANGER, 9, [
+        [`${rangerId}@2/expertise`, [skill('survival')]],
+        [`${rangerId}@9/expertise`, [skill('perception'), skill('stealth')]],
+      ]),
+    );
+    expect(s.prof).toBe(4);
+    expect([s.skills['survival']!.proficiency, s.skills['survival']!.total.value]).toEqual(['expertise', 2 + 8]);
+    expect(s.skills['stealth']!.total.value).toBe(1 + 8);
+  });
+
+  // Review Focus 2 / ruling 2: a text-era log (Expertise never answered) replays with its sheet
+  // IDENTICAL to the pre-retrofit pack's except for the new outstanding Expertise entries — never
+  // invalid, never blocked. The "pre-retrofit pack" is the real pack with the expertise picks removed.
+  it('legacy text-era logs replay identically apart from the new outstanding Expertise choices', () => {
+    const legacyPack = structuredClone(featPack);
+    for (const e of legacyPack.entities) {
+      if (e.type !== 'class') continue;
+      for (const row of e.levels)
+        row.choices = row.choices.filter((c) => !('query' in c.pick && c.pick.proficiency === 'expertise'));
+    }
+    const legacyIndex = createContentIndex([legacyPack]);
+    const cases: [Build, string[]][] = [
+      [ROGUE, [`${rogueId}@1/expertise`, `${rogueId}@6/expertise`]],
+      [BARD, [`${bardId}@2/expertise`, `${bardId}@9/expertise`]],
+      [RANGER, [`${rangerId}@2/expertise`, `${rangerId}@9/expertise`]],
+    ];
+    for (const [build, expertiseIds] of cases) {
+      const facts = factsOf(char(build, 11));
+      const now = derive(facts, featIndex, featRules);
+      const before = derive(facts, legacyIndex, featRules);
+      const added = now.outstandingChoices.filter(
+        (c) => !before.outstandingChoices.some((o) => o.choiceId === c.choiceId),
+      );
+      expect(added.map((c) => c.choiceId).sort(), build.classId).toEqual(expertiseIds);
+      const rest = now.outstandingChoices.filter((c) => !expertiseIds.includes(c.choiceId));
+      expect({ ...now, outstandingChoices: rest }, build.classId).toEqual(before);
+      expect(
+        now.issues.filter((i) => i.severity === 'error'),
+        build.classId,
       ).toEqual([]);
     }
   });
