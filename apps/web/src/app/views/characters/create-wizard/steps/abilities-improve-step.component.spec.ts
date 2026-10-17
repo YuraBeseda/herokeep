@@ -38,6 +38,8 @@ const SOLDIER_ABILITIES_CHOICE = 'srd-5e-2024:background/soldier@0/ability-score
 // The ASI general feat's own bump: improve '+2', unrestricted (feats carry no `abilityScores`
 // allow-list).
 const ASI_CHOICE = 'srd-5e-2024:feat/ability-score-improvement@4/ability-scores';
+// Grappler's +1, restricted by the pick itself (plan 13 task 3: `abilities.from: ['str', 'dex']`).
+const GRAPPLER_CHOICE = 'srd-5e-2024:feat/grappler@4/ability-score';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -158,6 +160,26 @@ describe('AbilitiesImproveStepComponent', () => {
     await fixture.whenStable();
 
     expect(state.decisions().get(ASI_CHOICE)).toEqual(['cha:+2']);
+  });
+
+  it("Grappler's restricted pick (`from: ['str', 'dex']`) offers exactly Strength and Dexterity", async () => {
+    const state = createState();
+    state.name.set('Aldric');
+
+    const fixture = TestBed.createComponent(AbilitiesImproveStepComponent);
+    fixture.componentRef.setInput('choiceId', GRAPPLER_CHOICE);
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const chipTexts = Array.from(compiled.querySelectorAll('hk-chip')).map((c) =>
+      c.textContent?.trim(),
+    );
+    expect(chipTexts).toEqual(['Strength', 'Dexterity']);
+
+    findChip(compiled, 'Dexterity').click();
+    await fixture.whenStable();
+
+    expect(state.decisions().get(GRAPPLER_CHOICE)).toEqual(['dex:+1']);
   });
 
   // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------

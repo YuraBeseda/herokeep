@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { findChoice, type Diagnostic, type Sheet } from '@hk/engine';
+import { abilitiesPickOptions, findChoice, type Diagnostic, type Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ChipComponent } from '@shared/components/chip/chip.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
@@ -82,17 +82,11 @@ export class AbilitiesImproveStepComponent {
     if (!found || !('abilities' in found.choice.pick)) return undefined;
 
     const deltas = found.choice.pick.abilities.improve.split('/').map(Number);
-    const allAbilities = index.system().abilities;
-    // `owner.abilityScores` is read HERE (a plain identifier, directly in this narrowed branch —
-    // not inside the `.filter` closure below) because TS's `in`-narrowing of a property access
-    // doesn't reliably survive into a nested closure; `allowedIds` carries the already-resolved
-    // (non-union) type into it instead.
-    const owner = found.owner;
-    const allowedIds: readonly string[] | undefined =
-      'abilityScores' in owner ? owner.abilityScores : undefined;
-    const allowedAbilities = allowedIds
-      ? allAbilities.filter((a) => allowedIds.includes(a.id))
-      : allAbilities;
+    // The engine's own offer set (plan 13 task 3): a background owner's `abilityScores` list and
+    // the pick's own `from` list (e.g. Grappler: str/dex) — the same set `validateSelection`
+    // accepts, so the chips and the refusal can never disagree.
+    const allowedIds = new Set(abilitiesPickOptions(found.choice.pick, found.owner, index));
+    const allowedAbilities = index.system().abilities.filter((a) => allowedIds.has(a.id));
     return { deltas, allowedAbilities };
   });
 
