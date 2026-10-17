@@ -16,6 +16,7 @@ import { deriveDefense } from './defense.ts';
 import { deriveEncumbrance } from './encumbrance.ts';
 import { deriveFreeCasts } from './free-casts.ts';
 import { deriveHp } from './hp.ts';
+import { deriveImmunities } from './immunities.ts';
 import { ModifierTable } from './modifiers.ts';
 import type { DeriveOverrides } from './overrides.ts';
 import { type ResourceView, deriveResources } from './resources.ts';
@@ -30,6 +31,7 @@ export * from './validation.ts';
 export * from './overrides.ts';
 export * from './encumbrance.ts';
 export type { FreeCast } from './free-casts.ts';
+export type { ConditionImmunity } from './immunities.ts';
 
 /** `{amount}` for a plain int, `{formula}` for a formula string — mirrors every other derive/*.ts helper. */
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>
@@ -272,6 +274,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   const resources = deriveResources(abilities, comp, facts, index);
   issues.push(...resources.issues);
   const free = deriveFreeCasts(abilities, index, resources.resources);
+  const immunities = deriveImmunities(abilities.effects);
   issues.push(...free.issues);
   const actions = deriveActions(comp, index);
 
@@ -367,6 +370,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     currency: { ...facts.currency },
     inspiration: facts.inspiration,
     conditions: hp.conditions,
+    ...(immunities.length > 0 ? { immunities } : {}),
     xp: facts.xp,
     grammaticalGender: facts.grammaticalGender,
     outstandingChoices: [...creation.requests, ...leveled.requests, ...selected.requests].sort(byChoiceId),

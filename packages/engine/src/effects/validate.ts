@@ -13,6 +13,8 @@ export interface FormulaSite {
   allowComparison: boolean;
   /** A choice `count` formula: restricted to the count context's symbols (formula/validate.ts). */
   countContext?: boolean;
+  /** A non-walk `speed.bonus` value: `speed(walk)` is legal here (formula/validate.ts `allowSpeed`). */
+  speedContext?: boolean;
 }
 
 /** Field names that hold a formula (or an int-or-formula value) per effect type. */
@@ -29,6 +31,7 @@ const FORMULA_FIELDS: Record<string, string[]> = {
   'skill.bonus': ['value'],
   'check.bonus': ['value'],
   'mastery.grant': ['count'],
+  'speed.bonus': ['value'],
 };
 
 const joinPath = (base: string, segments: readonly PropertyKey[]): string =>
@@ -39,7 +42,10 @@ export function collectEffectFormulas(effect: Effect, path: string): FormulaSite
   const rec = effect as unknown as Record<string, unknown>;
   for (const field of FORMULA_FIELDS[effect.type] ?? []) {
     const v = rec[field];
-    if (typeof v === 'string') sites.push({ path: `${path}.${field}`, src: v, allowComparison: false });
+    if (typeof v !== 'string') continue;
+    // Plan 13 task 5: `speed(walk)` is readable only from a non-walk speed.bonus value.
+    const speedContext = effect.type === 'speed.bonus' && effect.mode !== 'walk';
+    sites.push({ path: `${path}.${field}`, src: v, allowComparison: false, ...(speedContext && { speedContext }) });
   }
   const uses = rec['uses'] as { count?: unknown } | undefined;
   if (uses && typeof uses.count === 'string')
@@ -93,7 +99,12 @@ export function validateEffect(effect: unknown, path: string, entityId: string):
   return [
     ...(parsed.data.when ? checkPredicateShape(parsed.data.when, `${path}.when`, entityId) : []),
     ...collectEffectFormulas(parsed.data, path).flatMap((s) =>
-      validateFormula(s.src, { allowComparison: s.allowComparison, path: s.path, entityId }),
+      validateFormula(s.src, {
+        allowComparison: s.allowComparison,
+        allowSpeed: s.speedContext === true,
+        path: s.path,
+        entityId,
+      }),
     ),
   ];
 }

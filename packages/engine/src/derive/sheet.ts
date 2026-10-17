@@ -6,6 +6,7 @@ import type { AttackRow } from './attacks.ts';
 import type { Carry } from './encumbrance.ts';
 import type { FreeCast } from './free-casts.ts';
 import type { HpResult } from './hp.ts';
+import type { ConditionImmunity } from './immunities.ts';
 import type { Derived } from './modifiers.ts';
 import type { ResourceView } from './resources.ts';
 import type { SpellcastingBlock } from './spellcasting.ts';
@@ -131,6 +132,13 @@ export interface Sheet {
   currency: Facts['currency'];
   inspiration: boolean;
   conditions: HpResult['conditions'];
+  /**
+   * Plan 13 task 5 (ruling 9): the conditions the character is immune to, from `condition.immunity`
+   * effects (`derive/immunities.ts`), each with its granting features. Display-only truth — applying
+   * a condition is never gated by it. Present only when non-empty (the `freeCasts` convention), so a
+   * sheet with no immunity — every pre-task-5 golden — is unchanged.
+   */
+  immunities?: ConditionImmunity[];
   xp: number;
   grammaticalGender: Facts['grammaticalGender'];
   /** Creation-time outstanding choices PLUS every class/subclass level-row choice at or below the character's current level in that class (task-13-brief.md). */

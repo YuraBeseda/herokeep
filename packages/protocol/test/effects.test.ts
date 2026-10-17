@@ -50,6 +50,17 @@ describe('EffectSchema', () => {
     expect(action.success).toBe(false);
   });
 
+  it('speed.bonus.value: an int OR a formula (plan 13 task 5); speed.set stays int-only', () => {
+    const speed = (type: string, value: unknown) => EffectSchema.safeParse({ type, mode: 'walk', value });
+    expect(speed('speed.bonus', 10).success).toBe(true);
+    expect(speed('speed.bonus', '10 + 5 * floor((classLevel(monk) - 2) / 4)').success).toBe(true);
+    expect(speed('speed.bonus', 'speed(walk)').success).toBe(true);
+    expect(speed('speed.bonus', 1.5).success).toBe(false);
+    expect(speed('speed.bonus', 'speed(walk); drop').success).toBe(false);
+    expect(speed('speed.set', 30).success).toBe(true);
+    expect(speed('speed.set', 'speed(walk)').success).toBe(false);
+  });
+
   it('applies defaults', () => {
     const r = EffectSchema.parse({ type: 'proficiency.grant', kind: 'weapon', target: 'martial' });
     expect(r).toMatchObject({ level: 'proficient' });

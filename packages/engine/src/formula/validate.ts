@@ -5,8 +5,43 @@ import { parseFormula } from './parser.ts';
 
 export interface ValidateFormulaOptions {
   allowComparison?: boolean;
+  /** A non-walk `speed.bonus` value (plan 13 task 5): `speed(walk)` is legal there and nowhere else. */
+  allowSpeed?: boolean;
   path?: string;
   entityId?: string;
+}
+
+/** Every `speed(<mode>)` argument in the formula, in traversal order. */
+function speedReads(ast: FormulaAst, out: string[] = []): string[] {
+  switch (ast.k) {
+    case 'call':
+      if (ast.name === 'speed') out.push(ast.slug ?? '');
+      ast.args.forEach((a) => speedReads(a, out));
+      break;
+    case 'un':
+      speedReads(ast.e, out);
+      break;
+    case 'bin':
+    case 'cmp':
+      speedReads(ast.l, out);
+      speedReads(ast.r, out);
+      break;
+    default:
+      break;
+  }
+  return out;
+}
+
+/**
+ * `speed()` scoping: only `speed(walk)` (the walk Speed is resolved before every other mode, so it is
+ * the one readable value), and only where `allowSpeed` is set — elsewhere it would silently read 0.
+ */
+function speedSymbolIssue(ast: FormulaAst, allowSpeed: boolean): string | undefined {
+  const reads = speedReads(ast);
+  if (reads.length === 0) return undefined;
+  if (!allowSpeed) return 'speed() is only available in a non-walk speed.bonus value';
+  const bad = reads.find((m) => m !== 'walk');
+  return bad === undefined ? undefined : `only speed(walk) is readable, not speed(${bad})`;
 }
 
 /**
@@ -75,6 +110,8 @@ export function validateFormula(src: string, opts: ValidateFormulaOptions = {}):
     if (!opts.allowComparison && containsComparison(ast)) {
       return [error('formula.comparison', 'Comparisons are only allowed in predicate formulas', extra)];
     }
+    const speedIssue = speedSymbolIssue(ast, opts.allowSpeed === true);
+    if (speedIssue !== undefined) return [error('formula.speedSymbol', `${speedIssue} in "${src}"`, extra)];
     return [];
   } catch (e) {
     if (e instanceof FormulaError) {

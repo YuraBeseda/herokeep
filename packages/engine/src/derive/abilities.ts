@@ -399,16 +399,20 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
         source: ae.source,
         feature: ae.feature,
         kind: 'speed.bonus',
-        amount: eff.value,
+        ...amountOrFormula(eff.value),
         key: occurrenceKey(ae, eff.key),
         policy: 'sum-unique-key',
       });
     }
   }
+  // Plan 13 task 5: walk resolves FIRST, then every other mode with `speed(walk)` readable (pack
+  // validation confines `speed()` to non-walk speed.bonus values, so walk never reads itself).
+  const walk = table.resolve('speed.walk', speciesEntity?.speed ?? 0, evalFormula);
+  const speedCtx: FormulaContext = { ...formulaCtx, speed: (mode) => (mode === 'walk' ? walk.value : 0) };
+  const evalSpeedFormula = (f: string) => evalFormulaString(f, speedCtx);
   const speed: Record<string, Derived<number>> = {};
   for (const mode of [...speedModes].sort()) {
-    const base = mode === 'walk' ? (speciesEntity?.speed ?? 0) : 0;
-    speed[mode] = table.resolve(`speed.${mode}`, base, evalFormula);
+    speed[mode] = mode === 'walk' ? walk : table.resolve(`speed.${mode}`, 0, evalSpeedFormula);
   }
 
   // ---- Senses (union; same sense granted twice keeps the higher range, unions sources) ----------

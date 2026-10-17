@@ -9,6 +9,8 @@ export interface FormulaContext {
   score(ability: string): number;
   hitDie(slug: string): number;
   resource(slug: string): number;
+  /** The resolved speed of a mode — supplied ONLY while deriving non-walk speeds (`speed(walk)`); absent = 0. */
+  speed?(mode: string): number;
 }
 
 export function constantContext(): FormulaContext {
@@ -66,6 +68,8 @@ export function evaluateFormula(ast: FormulaAst, ctx: FormulaContext): number {
           return ctx.hitDie(slug);
         case 'resource':
           return ctx.resource(slug);
+        case 'speed':
+          return ctx.speed?.(slug) ?? 0;
         case 'mod':
           return ctx.mod(slug);
         case 'score':

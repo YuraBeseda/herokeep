@@ -95,7 +95,9 @@ export const EffectSchema = z.discriminatedUnion('type', [
   eff('hp.perLevel', { value: z.int() }),
   eff('hp.bonus', { value: ValueSchema }),
   eff('speed.set', { mode: SpeedModeSchema, value: z.int().min(0) }),
-  eff('speed.bonus', { mode: SpeedModeSchema, value: z.int() }),
+  // Plan 13 task 5 (additive): an int OR a formula (`ValueSchema`), e.g. Monk Unarmored Movement's
+  // one scaling row. `speed.set` stays int-only.
+  eff('speed.bonus', { mode: SpeedModeSchema, value: ValueSchema }),
   eff('sense.grant', { sense: SenseSchema, range: z.int().min(0) }),
   eff('resource.define', {
     id: SlugSchema,

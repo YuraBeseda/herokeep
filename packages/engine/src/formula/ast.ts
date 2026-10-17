@@ -1,5 +1,10 @@
 export const VARIABLES = ['level', 'prof'] as const;
-export const SLUG_CALLS = ['classLevel', 'hitDie', 'resource'] as const;
+/**
+ * `speed(<mode>)` (plan 13 task 5): the RESOLVED speed of a mode — only `speed(walk)`, and only inside
+ * a non-walk `speed.bonus` value ("a Climb Speed equal to your Speed"); `validateFormula` rejects it
+ * anywhere else (`allowSpeed`), and every other evaluation context supplies no `speed` (reads 0).
+ */
+export const SLUG_CALLS = ['classLevel', 'hitDie', 'resource', 'speed'] as const;
 export const ABILITY_CALLS = ['mod', 'score'] as const;
 export const MATH_CALLS = ['max', 'min', 'floor', 'ceil', 'abs'] as const;
 
