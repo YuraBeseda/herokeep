@@ -625,6 +625,10 @@
       "always-prepared": "That spell is always prepared and can't be unprepared.",
       "free-cast-unavailable": "That spell can't be cast without a slot that way."
     },
+    "rest": {
+      "regain-roll-missing": "No regain roll was made for a charged item. Try the rest again.",
+      "regain-roll-invalid": "A charged item's regain roll is out of range. Try the rest again."
+    },
     "selection": {
       "count": "Select the required number of options.",
       "unresolved": "One of your selections is no longer available.",

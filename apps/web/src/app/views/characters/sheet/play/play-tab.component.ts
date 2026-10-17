@@ -65,6 +65,7 @@ import {
   type DraftEvent,
 } from '@shared/stores/character.store';
 import { CampaignStore } from '@shared/stores/campaign.store';
+import { rollChargeRegains } from './charge-regain-rolls';
 import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dialog.component';
 import {
   CastDialogComponent,
@@ -183,6 +184,9 @@ const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
   // Plan 13 task 4: the free-cast lane's refusals (`propose/casting.ts`'s `castFree`).
   'resource.none-left',
   'spell.free-cast-unavailable',
+  // Plan 13 task 6: `propose.rest`'s rolled charge-regain refusals.
+  'rest.regain-roll-missing',
+  'rest.regain-roll-invalid',
 ]);
 
 // task-5-brief.md: only these item categories ever get an equip toggle in the inventory section —
@@ -911,12 +915,17 @@ export class PlayTabComponent {
     if (result?.kind !== 'short') return;
     const sheet = this.sheet();
     if (!sheet) return;
-    this.tryPropose(() => [...result.drafts, ...propose.rest(sheet, 'short')]);
+    this.tryPropose(() => [
+      ...result.drafts,
+      ...propose.rest(sheet, 'short', undefined, rollChargeRegains(sheet, cryptoRng)),
+    ]);
   }
 
   // A long rest never spends hit dice one at a time (5e regains them automatically — the
   // reducer's own `rest.taken@1` handler, `handlers/casting.ts`), so this is just a confirm dialog
-  // followed by a single `propose.rest(sheet, 'long')` call — no drafts to concatenate.
+  // followed by a single `propose.rest(sheet, 'long')` call — no drafts to concatenate. Plan 13
+  // task 6: dice-regain items (`charges.regain`) are rolled here with `cryptoRng` and passed as
+  // `regainRolls` (the engine records each total; it never rolls).
   protected async onLongRest(): Promise<void> {
     const openSheet = this.sheet();
     if (!openSheet) return;
@@ -927,7 +936,9 @@ export class PlayTabComponent {
     if (result?.kind !== 'long') return;
     const sheet = this.sheet();
     if (!sheet) return;
-    this.tryPropose(() => propose.rest(sheet, 'long'));
+    this.tryPropose(() =>
+      propose.rest(sheet, 'long', undefined, rollChargeRegains(sheet, cryptoRng)),
+    );
   }
 
   // --- Slots, resources, prepare/cast, concentration (task-3-brief.md) ------------------------

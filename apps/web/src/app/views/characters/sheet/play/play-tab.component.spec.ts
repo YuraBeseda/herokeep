@@ -2064,6 +2064,63 @@ describe('PlayTabComponent — rest controls', () => {
     ).toBe(1);
   });
 
+  // Plan 13 task 6 (ruling 7): a dice-regain charged item (SRD Wand of Magic Missiles, "regains
+  // 1d6 + 1 expended charges daily at dawn") restores the ROLLED amount on a long rest — rolled
+  // here with `cryptoRng` (the hit-die precedent), recorded as `resource.restored.count`.
+  const WAND = 'srd-5e-2024:item/wand-of-magic-missiles';
+  async function seedSpentWand(spent: number): Promise<{ store: CharacterStore; key: string }> {
+    await seedWizard('Elowen');
+    const store = TestBed.inject(CharacterStore);
+    const instanceId = '55555555-5555-4555-8555-555555555555';
+    await store.appendTx(propose.addItem(store.sheet()!, { itemId: WAND }, () => instanceId));
+    await store.appendTx(propose.equip(store.sheet()!, instanceId, true));
+    const key = `item:${instanceId}`;
+    await store.appendTx([
+      { type: 'resource.spent', v: 1, payload: { resourceId: key, count: spent } },
+    ]);
+    expect(store.sheet()!.resources.find((r) => r.id === key)).toMatchObject({
+      used: spent,
+      regain: '1d6+1',
+    });
+    return { store, key };
+  }
+
+  it('long rest: a 1d6+1 regain item restores the cryptoRng-rolled total, recorded as resource.restored.count', async () => {
+    const { store, key } = await seedSpentWand(6);
+    scriptRolls([{ value: 3, sides: 6 }]); // 3 + 1 = 4 charges regained
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    buttonNamed(fixture.nativeElement as HTMLElement, charactersEn.sheet.rest.long).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.rest.dialog.confirmLong).click();
+
+    await pollUntil(fixture, () => store.events().at(-1)?.type === 'resource.restored');
+    expect(store.events().at(-1)?.payload).toEqual({ resourceId: key, count: 4 });
+    expect(store.sheet()!.resources.find((r) => r.id === key)?.used).toBe(2);
+  });
+
+  it('long rest: a refused regain roll (missing) shows its own toast and appends nothing', async () => {
+    const { store } = await seedSpentWand(6);
+    const eventsBefore = store.events().length;
+    const realRest = propose.rest;
+    // Drop the caller's rolls to drive the engine's own `rest.regain-roll-missing` refusal.
+    vi.spyOn(propose, 'rest').mockImplementation((sheet, kind, hitDice) =>
+      realRest(sheet, kind, hitDice),
+    );
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+    buttonNamed(fixture.nativeElement as HTMLElement, charactersEn.sheet.rest.long).click();
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.rest.dialog.confirmLong).click();
+
+    await pollUntil(fixture, () => showSpy.mock.calls.length > 0);
+    expect(showSpy).toHaveBeenCalledWith('characters.validation.rest.regain-roll-missing');
+    expect(store.events().length).toBe(eventsBefore);
+  });
+
   it('cancelling the short-rest dialog appends nothing', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
