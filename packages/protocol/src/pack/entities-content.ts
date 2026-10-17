@@ -72,6 +72,15 @@ export const ItemEntitySchema = entity('item', {
     })
     .optional(),
   shield: z.strictObject({ ac: z.int().min(1) }).optional(),
-  charges: z.strictObject({ max: FormulaSchema, reset: ResetSchema }).optional(),
+  // Plan 13 task 6 (ruling 7, additive): `regain` = the dice regained when `reset` fires ("regains
+  // 1d6 + 1 expended charges daily at dawn"); absent = full restore (the pre-existing behavior).
+  // Refused on `reset:'never'` — a resource that never resets has nothing to regain on.
+  charges: z
+    .strictObject({ max: FormulaSchema, reset: ResetSchema, regain: DiceSchema.optional() })
+    .refine((c) => c.regain === undefined || c.reset !== 'never', {
+      message: "charges.regain needs a resetting item (reset is 'never')",
+      path: ['regain'],
+    })
+    .optional(),
   container: z.strictObject({ capacityLb: z.number().min(0).optional() }).optional(),
 });
