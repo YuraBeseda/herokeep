@@ -51,6 +51,17 @@ const KNOWN_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
   'selection.unknownChoice',
 ]);
 
+// Plan 13 task 8 (ruling 10): the PER-OPTION refusals `validateSelection` reports with an
+// `entityId` — an unmet entity prerequisite, or a value an earlier decision of the same choice
+// family already recorded — mapped to the scope-relative reason key the picker renders on that
+// option's gated card. Selection-level codes (count, a choice-level prerequisite) gate nothing.
+const OPTION_GATE_KEYS: Readonly<Record<string, string>> = {
+  'selection.prerequisiteFailed': 'wizard.picker.gate.prerequisiteFailed',
+  'selection.duplicate': 'wizard.picker.gate.duplicate',
+};
+
+const NO_GATES: ReadonlyMap<string, string> = new Map();
+
 /**
  * Generic engine-driven choice step (task-6-brief.md): resolves `choiceId` to its `Choice` (or,
  * for the synthetic `<classId>@1/skills` / `<classId>@1/multiclass-skills` ids, to the owning
@@ -171,6 +182,29 @@ export class ChoiceStepComponent {
       return { kind: 'abilityGeneration' };
     }
     return { kind: 'unsupported' };
+  });
+
+  /**
+   * Offer-time gating (plan 13 task 8, ruling 10): option id -> reason key for every `query`/
+   * `static` option the SAME validator that refuses a selection (`runValidate`) would refuse on its
+   * own merits. One probe call validates the whole offer set at once — `validateSelection` checks
+   * each selected entity's prerequisites and family uniqueness independently, tagging each refusal
+   * with its `entityId` — and is never committed. Gated options stay listed (disabled + reason);
+   * the selection-time refusal remains the backstop. Recomputes with the consumer's validate
+   * source (draft / live sheet), so a gate lifts as soon as the character qualifies.
+   */
+  protected readonly optionGates = computed<ReadonlyMap<string, string>>(() => {
+    const v = this.view();
+    if ((v.kind !== 'query' && v.kind !== 'static') || v.ids.length === 0) return NO_GATES;
+    const offered = new Set(v.ids);
+    const gates = new Map<string, string>();
+    for (const d of this.runValidate(this.choiceId(), v.ids)) {
+      const key = OPTION_GATE_KEYS[d.code];
+      if (d.severity === 'error' && key && d.entityId && offered.has(d.entityId)) {
+        if (!gates.has(d.entityId)) gates.set(d.entityId, key);
+      }
+    }
+    return gates;
   });
 
   protected readonly promptText = computed(

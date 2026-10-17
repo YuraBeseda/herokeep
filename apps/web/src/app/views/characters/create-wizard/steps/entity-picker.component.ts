@@ -12,7 +12,15 @@ interface EntityRow {
   readonly id: string;
   readonly name: string;
   readonly icon: string;
+  // Scope-relative i18n key of the reason this option can't be picked (see `gates`), if any.
+  readonly gate: string | undefined;
 }
+
+const NO_GATES: ReadonlyMap<string, string> = new Map();
+
+// Per-instance prefix for the gate-reason element ids (`aria-describedby` targets): several pickers
+// can render on one page (the build tab's outstanding list), each listing the same entity ids.
+let nextEntityPickerId = 0;
 
 /**
  * Card-grid picker for `query`/`static` pick forms (task-6-brief.md). A dumb, presentational
@@ -30,6 +38,12 @@ interface EntityRow {
  * exceeds it, only the first `limit` cards render, followed by a non-interactive hint row naming
  * how many more are hidden — narrowing the search below `limit` removes the hint. `undefined`
  * (the default) keeps today's unlimited behavior.
+ *
+ * `gates` (plan 13 task 8, ruling 10): option id -> scope-relative i18n key of the reason the
+ * caller's validation refuses that option. A gated card stays LISTED (discoverability) but its
+ * select button is `disabled`, with the reason rendered visibly and wired to the button via
+ * `aria-describedby` (the plan-12 always-prepared disabled-with-reason pattern); its description
+ * toggle stays usable.
  */
 @Component({
   selector: 'hk-entity-picker',
@@ -47,11 +61,13 @@ export class EntityPickerComponent {
   readonly ids = input.required<readonly string[]>();
   readonly selectedIds = input<readonly string[]>([]);
   readonly limit = input<number | undefined>(undefined);
+  readonly gates = input<ReadonlyMap<string, string>>(NO_GATES);
   readonly toggled = output<string>();
 
   // Template-facing state
   protected readonly query = signal('');
   protected readonly expandedId = signal<string | undefined>(undefined);
+  protected readonly gateIdPrefix = `hk-entity-picker-${nextEntityPickerId++}-gate-`;
 
   // `Intl.Collator` construction is the expensive part; recreate only when the locale changes
   // (mirrors `LibraryBrowseComponent`'s own `collator` computed).
@@ -64,12 +80,18 @@ export class EntityPickerComponent {
     const localizer = this.engineFacade.localizer();
     const text = this.query().trim().toLowerCase();
     const collator = this.collator();
+    const gates = this.gates();
 
     const mapped = this.ids()
       .map((id): EntityRow | undefined => {
         const entity = index.get(id);
         if (!entity) return undefined;
-        return { id, name: localizer.name(id), icon: this.engineFacade.iconFor(entity) };
+        return {
+          id,
+          name: localizer.name(id),
+          icon: this.engineFacade.iconFor(entity),
+          gate: gates.get(id),
+        };
       })
       .filter((row): row is EntityRow => row !== undefined)
       .filter((row) => !text || row.name.toLowerCase().includes(text));

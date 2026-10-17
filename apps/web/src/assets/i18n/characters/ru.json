@@ -104,7 +104,11 @@
       "valueLabel": "Значение",
       "addValue": "Добавить",
       "skillsTitle": "Выберите {count, plural, one {# навык} few {# навыка} many {# навыков} other {# навыка}} для класса {class}",
-      "more": "Ещё {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}} — уточните поиск"
+      "more": "Ещё {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}} — уточните поиск",
+      "gate": {
+        "prerequisiteFailed": "Требования не выполнены",
+        "duplicate": "Уже выбрано"
+      }
     },
     "abilityScores": {
       "method": {

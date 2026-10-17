@@ -334,6 +334,152 @@ describe('ChoiceStepComponent', () => {
     ]);
   });
 
+  // Plan 13 task 8 (ruling 10): an option the engine's own validation would refuse PER OPTION is
+  // still LISTED but visibly gated — its select button disabled, a visible reason line wired to it
+  // via `aria-describedby` — while the selection-time refusal stays the backstop. Level-ups are
+  // drafted onto the wizard state (`extraDrafts`), so the real engine derives a real level-N sheet.
+  describe('offer-time gating (plan 13 task 8)', () => {
+    const FIGHTER = 'srd-5e-2024:class/fighter';
+    const ROGUE = 'srd-5e-2024:class/rogue';
+    const FIGHTER_FEAT_CHOICE = `${FIGHTER}@4/feat`;
+    const ROGUE_EXPERTISE_6_CHOICE = `${ROGUE}@6/expertise`;
+    const levelsUpTo = (classId: string, top: number) =>
+      Array.from({ length: top - 1 }, (_, i) => ({
+        type: 'level.gained',
+        v: 1,
+        payload: { classId, level: i + 2, hpRoll: 'average' },
+      }));
+    const selectButtons = (c: HTMLElement) =>
+      Array.from(c.querySelectorAll<HTMLButtonElement>('.entity-picker__select'));
+    const nameOf = (b: HTMLButtonElement) =>
+      b.querySelector('.entity-picker__name')?.textContent?.trim() ?? '';
+    const reasonOf = (c: HTMLElement, b: HTMLButtonElement): string | undefined => {
+      const describedBy = b.getAttribute('aria-describedby');
+      return describedBy
+        ? c.querySelector(`[id="${describedBy}"]`)?.textContent?.trim()
+        : undefined;
+    };
+
+    function seedLevel4Fighter(): CreateWizardState {
+      const state = createState();
+      state.name.set('Ivan');
+      state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+      state.setDecision(
+        `${SYSTEM_ID}@0/ability-scores`,
+        ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
+        { method: 'standardArray' },
+      );
+      state.setDecision(CLASS_CHOICE, [FIGHTER]);
+      state.extraDrafts.set(levelsUpTo(FIGHTER, 4));
+      return state;
+    }
+
+    it('a level-4 fighter sees every Epic Boon LISTED but disabled with a prerequisite reason; eligible feats stay selectable', async () => {
+      const state = seedLevel4Fighter();
+      expect(state.draftSheet()?.level).toBe(4);
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', FIGHTER_FEAT_CHOICE);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const buttons = selectButtons(compiled);
+      // All 17 SRD feats are offered (the pick is `query: {type: 'feat'}`) — none hidden.
+      expect(buttons).toHaveLength(17);
+      const boons = buttons.filter((b) => nameOf(b).startsWith('Boon of'));
+      expect(boons.map(nameOf).sort()).toEqual(
+        [
+          'Boon of Combat Prowess',
+          'Boon of Dimensional Travel',
+          'Boon of Fate',
+          'Boon of Irresistible Offense',
+          'Boon of Spell Recall',
+          'Boon of the Night Spirit',
+          'Boon of Truesight',
+        ].sort(),
+      );
+      for (const boon of boons) {
+        expect(boon.disabled, nameOf(boon)).toBe(true);
+        expect(reasonOf(compiled, boon), nameOf(boon)).toBe(
+          charactersEn.wizard.picker.gate.prerequisiteFailed,
+        );
+      }
+      // Level 4 / Str 17 satisfies ASI's and Grappler's own prerequisites: not gated.
+      for (const eligible of buttons.filter((b) => !nameOf(b).startsWith('Boon of'))) {
+        expect(eligible.disabled, nameOf(eligible)).toBe(false);
+        expect(eligible.hasAttribute('aria-describedby'), nameOf(eligible)).toBe(false);
+      }
+      // Every reason id is unique in the document (one picker can't collide with itself).
+      const ids = Array.from(compiled.querySelectorAll('[id]')).map((e) => e.id);
+      expect(new Set(ids).size).toBe(ids.length);
+
+      // A gated card can't be selected through the UI...
+      boons[0].click();
+      await fixture.whenStable();
+      expect(state.decisions().get(FIGHTER_FEAT_CHOICE)).toBeUndefined();
+      // ...an eligible one can.
+      buttons.find((b) => nameOf(b) === 'Ability Score Improvement')!.click();
+      await fixture.whenStable();
+      expect(state.decisions().get(FIGHTER_FEAT_CHOICE)).toEqual([
+        'srd-5e-2024:feat/ability-score-improvement',
+      ]);
+    });
+
+    it('the engine still refuses a programmatic selection of a gated Epic Boon (backstop untouched)', async () => {
+      const state = seedLevel4Fighter();
+      const boon = 'srd-5e-2024:feat/boon-of-fate';
+      expect(state.validate(FIGHTER_FEAT_CHOICE, [boon])).toContainEqual(
+        expect.objectContaining({
+          code: 'selection.prerequisiteFailed',
+          severity: 'error',
+          entityId: boon,
+        }),
+      );
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', FIGHTER_FEAT_CHOICE);
+      await fixture.whenStable();
+      (fixture.componentInstance as unknown as { onToggle(id: string): void }).onToggle(boon);
+      await fixture.whenStable();
+
+      const diagnostics = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.choice-step__diagnostic'),
+      ).map((d) => d.textContent?.trim());
+      expect(diagnostics).toContain(charactersEn.validation.selection.prerequisiteFailed);
+    });
+
+    it('a same-family prior pick (rogue @1 expertise) is gated as already chosen in the rogue @6 expertise pick', async () => {
+      const state = createState();
+      state.name.set('Vex');
+      state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+      state.setDecision(CLASS_CHOICE, [ROGUE]);
+      state.setDecision(`${ROGUE}@1/skills`, [
+        'stealth',
+        'sleight-of-hand',
+        'perception',
+        'acrobatics',
+      ]);
+      state.setDecision(ROGUE_EXPERTISE_CHOICE, [
+        'srd-5e-2024:skill/stealth',
+        'srd-5e-2024:skill/sleight-of-hand',
+      ]);
+      state.extraDrafts.set(levelsUpTo(ROGUE, 6));
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', ROGUE_EXPERTISE_6_CHOICE);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const buttons = selectButtons(compiled);
+      const gated = buttons.filter((b) => b.disabled).map(nameOf);
+      expect(gated.sort()).toEqual(['Sleight of Hand', 'Stealth']);
+      for (const b of buttons.filter((x) => x.disabled)) {
+        expect(reasonOf(compiled, b)).toBe(charactersEn.wizard.picker.gate.duplicate);
+      }
+      expect(buttons.find((b) => nameOf(b) === 'Perception')?.disabled).toBe(false);
+    });
+  });
+
   // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------
   //
   // The reviewer's own finding: a wrapping `<fieldset disabled>` (`build-tab.component.html`) is

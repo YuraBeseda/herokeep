@@ -10,10 +10,20 @@
 
     @switch (v.kind) {
       @case ('query') {
-        <hk-entity-picker [ids]="v.ids" [selectedIds]="selection()" (toggled)="onToggle($event)" />
+        <hk-entity-picker
+          [ids]="v.ids"
+          [selectedIds]="selection()"
+          [gates]="optionGates()"
+          (toggled)="onToggle($event)"
+        />
       }
       @case ('static') {
-        <hk-entity-picker [ids]="v.ids" [selectedIds]="selection()" (toggled)="onToggle($event)" />
+        <hk-entity-picker
+          [ids]="v.ids"
+          [selectedIds]="selection()"
+          [gates]="optionGates()"
+          (toggled)="onToggle($event)"
+        />
       }
       @case ('abilityGeneration') {
         <hk-ability-scores-step

@@ -9,21 +9,27 @@
     <p class="entity-picker__empty">{{ t('wizard.picker.empty') }}</p>
   } @else {
     <ul class="entity-picker__grid">
-      @for (row of rows(); track row.id) {
+      @for (row of rows(); track row.id; let i = $index) {
         <li>
           <hk-card
             class="entity-picker__card"
             [class.entity-picker__card--selected]="isSelected(row.id)"
+            [class.entity-picker__card--gated]="!!row.gate"
           >
             <button
               type="button"
               class="entity-picker__select"
               [attr.aria-pressed]="isSelected(row.id)"
+              [disabled]="!!row.gate"
+              [attr.aria-describedby]="row.gate ? gateIdPrefix + i : null"
               (click)="onToggle(row.id)"
             >
               <hk-icon [icon]="row.icon" class="entity-picker__icon" />
               <span class="entity-picker__name">{{ row.name }}</span>
             </button>
+            @if (row.gate; as gate) {
+              <p class="entity-picker__gate" [id]="gateIdPrefix + i">{{ t(gate) }}</p>
+            }
             <button type="button" class="entity-picker__expand" (click)="onExpand(row.id, $event)">
               {{
                 expandedId() === row.id ? t('wizard.picker.collapse') : t('wizard.picker.expand')

@@ -42,6 +42,19 @@
   cursor: pointer;
 }
 
+// Plan 13 task 8: a gated option stays listed but reads as unavailable.
+.entity-picker__card--gated .entity-picker__select {
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+.entity-picker__gate {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
 .entity-picker__icon {
   font-size: 1.5rem;
 }
