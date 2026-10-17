@@ -15,6 +15,11 @@ export interface ResourceView {
   reset: string;
   display: string;
   source: string;
+  /**
+   * Plan 13 task 6 (ruling 7): the dice regained when `reset` fires (an item's `charges.regain`,
+   * e.g. `'1d6+1'`); `propose.rest` then needs the caller's rolled total. ABSENT = full restore.
+   */
+  regain?: string;
 }
 
 interface ResourceMeta {
@@ -22,6 +27,7 @@ interface ResourceMeta {
   reset: string;
   display: string;
   source: string;
+  regain?: string;
 }
 
 /**
@@ -145,6 +151,7 @@ export function deriveResources(
       // may special-case pips per item category later if that's wanted, this task doesn't invent one.
       display: 'number',
       source: item.itemId,
+      ...(entity.charges.regain !== undefined ? { regain: entity.charges.regain } : {}),
     });
   }
 
@@ -158,6 +165,7 @@ export function deriveResources(
       reset: m.reset,
       display: m.display,
       source: m.source,
+      ...(m.regain !== undefined ? { regain: m.regain } : {}),
     }));
 
   return { resources, issues };

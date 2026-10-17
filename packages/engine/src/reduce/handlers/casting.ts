@@ -22,6 +22,8 @@ import type { Handler } from '../reducer.ts';
  *   - one `resource.restored {resourceId}` (the full-restore form — no `count`) per active
  *     resource whose `resource.define reset` matches the rest kind. A long rest also restores
  *     every `shortRest`-reset resource (a long rest includes everything a short one grants).
+ *     Plan 13 task 6: a resource with rolled `regain` dice instead gets `{resourceId, count}`
+ *     carrying the caller-rolled total — the same `count` path below, no handler change.
  *
  * This handler applies ONLY the rule-scalar parts it can compute itself from `ctx.rules`
  * (`SystemRules`, the pinned core pack's `restRules`) — it never touches `resourcesUsed`; that
