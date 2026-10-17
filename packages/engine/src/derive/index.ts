@@ -19,6 +19,7 @@ import { deriveHp } from './hp.ts';
 import { deriveImmunities } from './immunities.ts';
 import { ModifierTable } from './modifiers.ts';
 import type { DeriveOverrides } from './overrides.ts';
+import { classProficiencyGrants } from './proficiency.ts';
 import { type ResourceView, deriveResources } from './resources.ts';
 import type { ChoiceRequest, Sheet } from './sheet.ts';
 import { deriveSpellcasting } from './spellcasting.ts';
@@ -89,11 +90,10 @@ function deriveInitiative(
 
 /**
  * Union (by `kind`+`target`) of armor/weapon/tool/language proficiency (controller ruling,
- * task-13-brief.md): task 9's `deriveAbilities` deliberately only tracks save/skill proficiency,
- * and task 11's `deriveAttacks` assembled weapon proficiency locally for its own toHit math — this
- * assembles the character-facing LIST from the same two sources (a class's own `armorTraining` /
- * `weaponProficiencies` fields, and any `proficiency.grant` effect of kind armor/weapon/tool/
- * language from the fully resolved, post-deferral effect list). Plan 13 task 2 adds the tool
+ * task-13-brief.md): task 9's `deriveAbilities` deliberately only tracks save/skill proficiency —
+ * this assembles the character-facing LIST from two sources (each class's `classProficiencyGrants`
+ * lists, and any `proficiency.grant` effect of kind armor/weapon/tool/language from the fully
+ * resolved, post-deferral effect list). Plan 13 task 2 adds the tool
  * sources: a class's `toolProficiencies`, a background's `toolProficiency`, and decided tool picks.
  */
 function deriveProficiencies(
@@ -116,27 +116,13 @@ function deriveProficiencies(
     if ((RANK[level] ?? 0) > (RANK[cur.level] ?? 0)) cur.level = level;
   };
 
-  // Ruling 7 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) decides which entry
-  // is "first" — the FIRST class always contributes its full armor/weapon proficiency list; any
-  // LATER class (index > 0) contributes only its `multiclass.gains` list (the SRD multiclass
-  // table: e.g. a later-class Fighter grants light/medium armor + shields + martial weapons, never
-  // heavy armor). Compat: a class with no `multiclass`/`gains` data at all (old/fixture packs that
-  // predate this ruling) falls back to its FULL list even as a later class, so untouched content
-  // keeps granting exactly what it always granted.
-  // Plan 13 task 2: tools follow the same split — `multiclass.gains` carries no tool list, so a
-  // later class with gains contributes no class tools (a gains-less later class keeps its full list).
-  facts.classes.forEach((c, i) => {
-    const classId = index.resolveClassRef(c.classId) ?? c.classId;
-    const classEntity = index.get(classId);
-    if (classEntity?.type !== 'class') return;
-    const gains = i > 0 ? classEntity.multiclass?.gains : undefined;
-    const armorTraining = gains ? gains.armorTraining : classEntity.armorTraining;
-    const weaponProficiencies = gains ? gains.weaponProficiencies : classEntity.weaponProficiencies;
-    const toolProficiencies = gains ? [] : classEntity.toolProficiencies;
-    for (const slug of armorTraining) add('armor', slug, 'proficient', classId);
-    for (const slug of weaponProficiencies) add('weapon', slug, 'proficient', classId);
-    for (const slug of toolProficiencies) add('tool', slug, 'proficient', classId);
-  });
+  // Each class's first-class-full / later-class-`multiclass.gains` split (ruling 7, plus the
+  // gains-less compat fallback) lives in ONE helper shared with `deriveAttacks` (plan 13 ruling 8).
+  for (const grant of classProficiencyGrants(facts, index)) {
+    for (const slug of grant.armorTraining) add('armor', slug, 'proficient', grant.classId);
+    for (const slug of grant.weaponProficiencies) add('weapon', slug, 'proficient', grant.classId);
+    for (const slug of grant.toolProficiencies) add('tool', slug, 'proficient', grant.classId);
+  }
 
   // Plan 13 task 2: every active background's own `toolProficiency` field.
   for (const id of comp.entities) {

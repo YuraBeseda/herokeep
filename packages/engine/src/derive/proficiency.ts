@@ -1,5 +1,43 @@
 import type { SystemEntity } from '@hk/protocol';
+import type { ContentIndex } from '../content/index.ts';
+import type { Facts } from '../reduce/facts.ts';
 import type { ModifierTable } from './modifiers.ts';
+
+/** One class's effective armor/weapon/tool proficiency contribution (see `classProficiencyGrants`). */
+export interface ClassProficiencyGrant {
+  classId: string;
+  armorTraining: string[];
+  weaponProficiencies: string[];
+  toolProficiencies: string[];
+}
+
+/**
+ * The single source of truth (plan 13 ruling 8) for what each of the character's classes
+ * contributes to armor/weapon/tool proficiency — consumed by `derive/index.ts`'s
+ * `sheet.proficiencies`. Ruling 7 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) decides
+ * which entry is "first" — the FIRST class always contributes its full lists; any LATER class
+ * (index > 0) contributes only its `multiclass.gains` lists (the pack's multiclass table data).
+ * `multiclass.gains` carries no tool list, so a later class with gains contributes no class tools
+ * (plan 13 task 2). Compat: a later class with no `multiclass`/`gains` data at all (old/fixture
+ * packs that predate ruling 7) keeps its FULL lists, so untouched content grants what it always did.
+ * A `facts.classes` entry that does not resolve to a class entity contributes nothing.
+ */
+export function classProficiencyGrants(facts: Facts, index: ContentIndex): ClassProficiencyGrant[] {
+  const grants: ClassProficiencyGrant[] = [];
+  facts.classes.forEach((c, i) => {
+    const classId = index.resolveClassRef(c.classId) ?? c.classId;
+    const classEntity = index.get(classId);
+    if (classEntity?.type !== 'class') return;
+    const gains = i > 0 ? classEntity.multiclass?.gains : undefined;
+    grants.push({
+      classId,
+      armorTraining: gains ? gains.armorTraining : classEntity.armorTraining,
+      weaponProficiencies: gains ? gains.weaponProficiencies : classEntity.weaponProficiencies,
+      toolProficiencies: gains ? [] : classEntity.toolProficiencies,
+    });
+  });
+  return grants;
+}
 
 /** A resolved proficiency level for one target (skill, save, …), 'none' meaning "not proficient". */
 export type ProficiencyLevel = 'none' | 'proficient' | 'expertise' | 'half';
