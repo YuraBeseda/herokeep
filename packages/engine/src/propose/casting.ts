@@ -1,4 +1,4 @@
-import type { SlotSpent, SpellCast, SpellUnprepared } from '@hk/protocol';
+import type { ResourceSpent, SlotSpent, SpellCast, SpellUnprepared } from '@hk/protocol';
 import type { Sheet } from '../derive/sheet.ts';
 import { error } from '../diagnostics.ts';
 import { ProposeError, type ProposedEvent } from './index.ts';
@@ -147,8 +147,9 @@ export function unprepare(sheet: Sheet, classId: string, spellId: string): Propo
 export function cast(
   sheet: Sheet,
   spellId: string,
-  opts: { level: number; useSlot?: boolean; concentration: boolean; pact?: boolean },
+  opts: { level: number; useSlot?: boolean; concentration: boolean; pact?: boolean; freeResource?: string },
 ): ProposedEvent[] {
+  if (opts.freeResource !== undefined) return castFree(sheet, spellId, opts, opts.freeResource);
   const consumesSlot = opts.useSlot !== false;
   const events: ProposedEvent[] = [];
   let pact: { level: number; count: number; used: number } | undefined;
@@ -179,4 +180,43 @@ export function cast(
   events.push(mk('spell.cast', payload));
   if (pact) events.push(mk('slot.spent', { level: pact.level, pact: true } satisfies SlotSpent));
   return events;
+}
+
+/**
+ * Plan 13 task 4 — the free-cast lane (`opts.freeResource`), a third lane beside the regular-slot and
+ * pact lanes, selected explicitly like `opts.pact`. Valid only for a `sheet.freeCasts` entry naming
+ * this spell AND this resource, at that entry's own level (SRD free casts are "without expending a
+ * spell slot" — nothing to upcast with), and not combined with another lane (`pact`, `useSlot: true`);
+ * otherwise `'spell.free-cast-unavailable'`. An exhausted counter refuses with `'resource.none-left'`.
+ *
+ * Drafts `spell.cast {slotUsed: false}` + `resource.spent {resourceId}` — the same two-event
+ * transaction shape as the pact lane, reusing existing events/reducers. `slotUsed: false` is always
+ * explicit so the reducer's default slot bump can never fire as well (no double-spend); conversely the
+ * slot lanes above never emit `resource.spent`, so a slot cast never touches the counter.
+ */
+function castFree(
+  sheet: Sheet,
+  spellId: string,
+  opts: { level: number; useSlot?: boolean; concentration: boolean; pact?: boolean },
+  resourceId: string,
+): ProposedEvent[] {
+  const entry = sheet.freeCasts?.find((f) => f.spellId === spellId && f.resourceId === resourceId);
+  if (entry?.level !== opts.level || opts.pact || opts.useSlot === true) {
+    throw new ProposeError([
+      error('spell.free-cast-unavailable', `"${spellId}" cannot be cast with "${resourceId}" at level ${opts.level}`, {
+        entityId: spellId,
+      }),
+    ]);
+  }
+  const resource = sheet.resources.find((r) => r.id === resourceId);
+  if (!resource || resource.used >= resource.max.value) {
+    throw new ProposeError([error('resource.none-left', `No uses of "${resourceId}" remain`)]);
+  }
+  const payload: SpellCast = {
+    spellId,
+    level: opts.level,
+    slotUsed: false,
+    ...(opts.concentration ? { concentration: true } : {}),
+  };
+  return [mk('spell.cast', payload), mk('resource.spent', { resourceId } satisfies ResourceSpent)];
 }

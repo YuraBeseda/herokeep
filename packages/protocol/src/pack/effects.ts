@@ -72,6 +72,15 @@ const common = {
 const eff = <T extends EffectType, S extends z.ZodRawShape>(type: T, shape: S) =>
   z.strictObject({ type: z.literal(type), ...common, ...shape });
 
+/**
+ * Plan 13 task 4 (additive): `spell.grant.uses` is either the shared inline counter (`UsesSchema`
+ * `{count, per}` — the engine materializes a resource keyed by the spell's slug) or a reference to an
+ * EXISTING resource by id (`{resource}` — the free casts spend that counter, e.g. Favored Enemy's
+ * Hunter's Mark casts, Wild Companion's Wild Shape use). Widened here only: `UsesSchema` itself (and so
+ * `action.define.uses` / `feature.uses`) is unchanged.
+ */
+export const SpellGrantUsesSchema = z.union([UsesSchema, z.strictObject({ resource: SlugSchema })]);
+
 export const EffectSchema = z.discriminatedUnion('type', [
   eff('ability.bonus', { ability: AbilityKeySchema, value: z.int() }),
   eff('ability.set', { ability: AbilityKeySchema, value: z.int().min(1).max(30), ifHigher: z.boolean().default(true) }),
@@ -110,7 +119,7 @@ export const EffectSchema = z.discriminatedUnion('type', [
   eff('spell.grant', {
     spell: EntityIdSchema,
     castingAbility: AbilityKeySchema.optional(),
-    uses: UsesSchema.optional(),
+    uses: SpellGrantUsesSchema.optional(),
     alwaysPrepared: z.boolean().default(false),
     level: z.int().min(0).max(9).optional(),
   }),

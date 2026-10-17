@@ -135,7 +135,7 @@ Every effect may carry `when: Predicate` and `source` is filled by the engine.
 | `sense.grant` | `sense: darkvision\|blindsight\|tremorsense\|truesight, range` | |
 | `resource.define` | `id, name, max (formula), reset: shortRest\|longRest\|dawn\|never, display: pips\|number` | Re-declaring an id: `max` stacks (same id keeps the highest), `name`/`display` stay first-wins, `reset` is last-wins in derive's effect order (Font of Inspiration) |
 | `spellcasting.define` | `class, ability, list (class id or explicit), preparation: prepared\|known\|spellbook\|innate, slots: full\|half\|third\|pact\|none, ritual, focus, cantripsKnown (formula), preparedCount (formula), spellsKnown (formula)` | |
-| `spell.grant` | `spell, castingAbility?, uses? {count, per}, alwaysPrepared, level?` | Magic Initiate, species spells |
+| `spell.grant` | `spell, castingAbility?, uses? {count, per} \| {resource}, alwaysPrepared, level?` | Magic Initiate, species spells; `uses` = free casts (see "Free casts") |
 | `spell.listAdd` | `class, spells[]` | subclass spell lists |
 | `damage.resistance` / `damage.immunity` / `damage.vulnerability` | `types[]` | |
 | `condition.immunity` | `conditions[]` | |
@@ -364,6 +364,18 @@ by spell id. Always-prepared spells do not count against `preparedMax`, and
 `propose.unprepare` refuses them with the `spell.always-prepared` code. Feat/species/item sources
 bind to no block, so the content validator reports `spell.grantUnbound` for an `alwaysPrepared`
 grant on a feat, species, background or item.
+
+**Free casts (plan 13 task 4).** `spell.grant.uses` is either an inline counter `{count, per}` or a
+reference `{resource}` to an existing resource id. Every active grant with `uses` adds one
+`sheet.freeCasts` entry `{spellId, resourceId, level}` (absent when none): the reference form spends
+the named resource (Favored Enemy's Hunter's Mark casts spend `favored-enemy`; Wild Companion's Find
+Familiar spends a `wild-shape` use), the inline form materializes a resource whose id is the spell's
+slug (named after the spell; a `resource.define` with that id merges with it under the rules above).
+`level` is the grant's `level`, else the spell's base level, and is the only level a free cast uses
+(no slot, so no upcast). `propose.cast(..., {freeResource})` drafts `spell.cast {slotUsed: false}` +
+`resource.spent`; it refuses `spell.free-cast-unavailable` (no such entry, another level, or combined
+with `pact`/`useSlot: true`) and `resource.none-left` (counter empty). The slot lanes never touch the
+counter. A reference to a resource the sheet lacks is not offered (`derive.freeCastResourceMissing`).
 
 `item.attunement` (optional) is `{ required: boolean, by?: Predicate }`. `by`, when present, is
 the item's own attunement-requirement predicate (e.g. "requires attunement by a Wizard") —

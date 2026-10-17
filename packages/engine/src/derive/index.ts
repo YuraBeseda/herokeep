@@ -14,6 +14,7 @@ import { byChoiceId, creationChoices, levelScopedChoices, selectedEntityChoices 
 import { type Composition, compose, equippedArmor, occurrenceKey } from './composition.ts';
 import { deriveDefense } from './defense.ts';
 import { deriveEncumbrance } from './encumbrance.ts';
+import { deriveFreeCasts } from './free-casts.ts';
 import { deriveHp } from './hp.ts';
 import { ModifierTable } from './modifiers.ts';
 import type { DeriveOverrides } from './overrides.ts';
@@ -28,6 +29,7 @@ export { resolveChoiceCount } from './choice-count.ts';
 export * from './validation.ts';
 export * from './overrides.ts';
 export * from './encumbrance.ts';
+export type { FreeCast } from './free-casts.ts';
 
 /** `{amount}` for a plain int, `{formula}` for a formula string — mirrors every other derive/*.ts helper. */
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>
@@ -269,6 +271,8 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   issues.push(...spellcasting.issues);
   const resources = deriveResources(abilities, comp, facts, index);
   issues.push(...resources.issues);
+  const free = deriveFreeCasts(abilities, index, resources.resources);
+  issues.push(...free.issues);
   const actions = deriveActions(comp, index);
 
   // Ruling 1 (phase 4, plan 11 task 5 — "encumbrance option"): computed ONLY when the caller opts
@@ -352,6 +356,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     ...(attacks.masteryCount !== undefined ? { masteryCount: attacks.masteryCount } : {}),
     spellcasting: spellcasting.blocks,
     ...(spellcasting.concentration ? { concentration: spellcasting.concentration } : {}),
+    ...(free.freeCasts.length > 0 ? { freeCasts: free.freeCasts } : {}),
     resources: resources.resources,
     actions: actions.actions,
     proficiencies,

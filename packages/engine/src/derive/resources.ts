@@ -1,3 +1,4 @@
+import { parseEntityId } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import type { Diagnostic } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
@@ -41,6 +42,8 @@ interface ResourceMeta {
  * With a single define — every resource before task 3 — first and last coincide, so nothing else
  * moves; `max` stacking is untouched. Content that relies on an override must make the overriding
  * define sort after the original (pinned per use by a content test).
+ * Plan 13 task 4: an inline `spell.grant.uses {count, per}` counts as a define of id = the spell's
+ * slug (see the loop); the reference form `{resource}` defines nothing (`derive/free-casts.ts`).
  * `used` comes straight from `facts.resourcesUsed`.
  */
 export function deriveResources(
@@ -70,20 +73,33 @@ export function deriveResources(
 
   for (const ae of abilities.effects) {
     const eff = ae.effect;
-    if (eff.type !== 'resource.define') continue;
-    table.add(`resource:${eff.id}`, {
+    let def: { id: string; name: string; max: string; reset: string; display: string; kind: string };
+    if (eff.type === 'resource.define') {
+      def = { id: eff.id, name: eff.name, max: eff.max, reset: eff.reset, display: eff.display, kind: eff.type };
+    } else if (eff.type === 'spell.grant' && eff.uses && 'count' in eff.uses) {
+      // Plan 13 task 4: an INLINE `spell.grant.uses {count, per}` materializes its own counter, keyed by
+      // the spell's slug (a slug, so `resource.spent` accepts it) and named after the spell — the same
+      // table/meta path as a define, so a define of the same id merges with it instead of duplicating.
+      // The reference form `{resource}` creates nothing here: it spends an existing resource.
+      const spell = index.get(eff.spell);
+      const id = parseEntityId(eff.spell)?.slug ?? eff.spell;
+      def = { id, name: spell?.name ?? id, max: eff.uses.count, reset: eff.uses.per, display: 'pips', kind: eff.type };
+    } else {
+      continue;
+    }
+    table.add(`resource:${def.id}`, {
       source: ae.source,
       feature: ae.feature,
-      kind: 'resource.define',
-      formula: eff.max,
-      key: eff.id,
+      kind: def.kind,
+      formula: def.max,
+      key: def.id,
       policy: 'sum-unique-key',
     });
-    const first = meta.get(eff.id);
+    const first = meta.get(def.id);
     if (first === undefined) {
-      meta.set(eff.id, { name: eff.name, reset: eff.reset, display: eff.display, source: ae.feature ?? ae.source });
+      meta.set(def.id, { name: def.name, reset: def.reset, display: def.display, source: ae.feature ?? ae.source });
     } else {
-      first.reset = eff.reset; // last define wins the reset; every other field stays first-wins
+      first.reset = def.reset; // last define wins the reset; every other field stays first-wins
     }
   }
 

@@ -50,6 +50,30 @@ export function collectEffectFormulas(effect: Effect, path: string): FormulaSite
   return sites;
 }
 
+interface SchemaIssue {
+  code: string;
+  path: PropertyKey[];
+  message: string;
+  errors?: SchemaIssue[][];
+}
+
+/**
+ * Plan 13 task 4: a union field's failure arrives as ONE `invalid_union` issue at the field itself,
+ * carrying every branch's own issues. When exactly one branch failed with strictly fewer issues than
+ * every other, that branch is what the author meant (e.g. `spell.grant.uses {count, per: 'weekly'}`
+ * is the inline form with a bad `per`, not a malformed `{resource}`), so its issues are reported at
+ * their precise paths instead. A tie keeps the union issue unchanged (e.g. int-or-formula values).
+ */
+function closestUnionBranch(issue: SchemaIssue): SchemaIssue[] {
+  if (issue.code !== 'invalid_union' || !issue.errors?.length) return [issue];
+  const sizes = issue.errors.map((branch) => branch.length);
+  const fewest = Math.min(...sizes);
+  if (fewest === 0 || sizes.filter((s) => s === fewest).length !== 1) return [issue];
+  return issue.errors[sizes.indexOf(fewest)]!.flatMap((i) =>
+    closestUnionBranch({ ...i, path: [...issue.path, ...i.path] }),
+  );
+}
+
 export function validateEffect(effect: unknown, path: string, entityId: string): Diagnostic[] {
   const type = (effect as { type?: unknown })?.type;
   if (typeof type !== 'string' || !isKnownEffectType(type)) {
@@ -62,9 +86,9 @@ export function validateEffect(effect: unknown, path: string, entityId: string):
   }
   const parsed = EffectSchema.safeParse(effect);
   if (!parsed.success) {
-    return parsed.error.issues.map((i) =>
-      error('effect.invalid', i.message, { path: joinPath(path, i.path), entityId }),
-    );
+    return (parsed.error.issues as unknown as SchemaIssue[])
+      .flatMap((i) => closestUnionBranch(i))
+      .map((i) => error('effect.invalid', i.message, { path: joinPath(path, i.path), entityId }));
   }
   return [
     ...(parsed.data.when ? checkPredicateShape(parsed.data.when, `${path}.when`, entityId) : []),

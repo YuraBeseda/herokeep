@@ -4,6 +4,7 @@ import type { AbilitiesResult, AbilityBlock } from './abilities.ts';
 import type { ActionView } from './actions.ts';
 import type { AttackRow } from './attacks.ts';
 import type { Carry } from './encumbrance.ts';
+import type { FreeCast } from './free-casts.ts';
 import type { HpResult } from './hp.ts';
 import type { Derived } from './modifiers.ts';
 import type { ResourceView } from './resources.ts';
@@ -59,6 +60,13 @@ export interface Sheet {
    * (`sheet.test.ts`) and golden fixture stays green unchanged for every non-concentrating fixture.
    */
   concentration?: { spellId: string };
+  /**
+   * Plan 13 task 4: the slot-free casting offers from `spell.grant.uses` (`derive/free-casts.ts`) —
+   * each names the spell, the resource one cast spends, and the only level it casts at.
+   * `propose.cast`'s `freeResource` lane reads it. Present only when non-empty (the `concentration`/
+   * `masteryCount` convention), so a sheet with no free casts — every pre-task-4 golden — is unchanged.
+   */
+  freeCasts?: FreeCast[];
   resources: ResourceView[];
   actions: ActionView[];
   /**

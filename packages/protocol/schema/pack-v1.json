@@ -2131,7 +2131,23 @@
                 "$ref": "#/$defs/__schema26"
               },
               "uses": {
-                "$ref": "#/$defs/__schema44"
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/__schema44"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "resource": {
+                        "$ref": "#/$defs/__schema5"
+                      }
+                    },
+                    "required": [
+                      "resource"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
               },
               "alwaysPrepared": {
                 "default": false,

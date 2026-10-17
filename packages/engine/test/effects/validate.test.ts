@@ -76,5 +76,14 @@ describe('effects', () => {
       path: 'effects.0.uses.per',
       entityId: 'core:feat/test',
     });
+
+    // Plan 13 task 4: `spell.grant.uses` is a union (inline counter | resource reference); a bad
+    // reference reports at its own field (the closest branch), not at the union.
+    const badReference = validateEffects(
+      [{ type: 'spell.grant', spell: 'core:spell/mm', uses: { resource: 'Not A Slug' } }],
+      'effects',
+      'core:feat/test',
+    );
+    expect(badReference.map((d) => [d.code, d.path])).toEqual([['effect.invalid', 'effects.0.uses.resource']]);
   });
 });
