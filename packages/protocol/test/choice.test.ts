@@ -75,6 +75,41 @@ describe('ChoiceSchema count (plan 12 task 2: progression-driven counts)', () =>
   });
 });
 
+describe('PickSchema expertise skill picks (plan 13 task 1: additive query-pick widening)', () => {
+  const base = {
+    id: 'srd-5e-2024:class/rogue@1/expertise',
+    prompt: 'Expertise',
+    at: { kind: 'classLevel', class: 'rogue', level: 1 },
+    count: 2,
+  };
+
+  it('accepts a skill query pick that grants expertise and requires current proficiency', () => {
+    const c = ChoiceSchema.parse({
+      ...base,
+      pick: { query: { type: 'skill' }, proficiency: 'expertise', requireProficient: true },
+    });
+    expect(c.pick).toEqual({ query: { type: 'skill' }, proficiency: 'expertise', requireProficient: true });
+  });
+
+  it('keeps a plain query pick byte-identical (no defaults injected for the new keys)', () => {
+    expect(ChoiceSchema.parse({ ...base, pick: { query: { type: 'skill' } } }).pick).toEqual({
+      query: { type: 'skill' },
+    });
+  });
+
+  it('rejects an unknown proficiency level and the new keys on a non-skill query', () => {
+    expect(ChoiceSchema.safeParse({ ...base, pick: { query: { type: 'skill' }, proficiency: 'half' } }).success).toBe(
+      false,
+    );
+    expect(
+      ChoiceSchema.safeParse({ ...base, pick: { query: { type: 'feat' }, proficiency: 'expertise' } }).success,
+    ).toBe(false);
+    expect(
+      ChoiceSchema.safeParse({ ...base, pick: { query: { type: 'item' }, requireProficient: true } }).success,
+    ).toBe(false);
+  });
+});
+
 describe('EntityQuerySchema hasField (ruling 4: weapon-mastery choices as real entity queries)', () => {
   it('accepts a dot-path field-presence filter, alone or combined with tags (AND semantics)', () => {
     expect(EntityQuerySchema.safeParse({ type: 'item', hasField: ['weapon.mastery'] }).success).toBe(true);

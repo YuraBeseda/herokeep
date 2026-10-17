@@ -58,9 +58,30 @@ export const EntityQuerySchema = z.strictObject({
   hasField: z.array(z.string().regex(FIELD_PATH_RE, 'Expected a dot-path like "weapon.mastery"')).optional(),
 });
 
+/**
+ * Plan 13 task 1 (expertise picks) — an additive widening of the `query` pick. A decided pick whose
+ * selections are skill entities grants a proficiency rank in them (engine `derive/abilities.ts`);
+ * these two optional keys, both legal ONLY on a `{type: 'skill'}` query, shape that grant:
+ * - `proficiency`: the rank each selected skill gains — `'proficient'` (the default when absent,
+ *   i.e. every pre-existing skill pick, unchanged) or `'expertise'` (the same rank a
+ *   `proficiency.grant{level:'expertise'}` effect applies);
+ * - `requireProficient`: the pick offers, accepts and applies ONLY skills the character is already
+ *   proficient in from some other source (rank proficient or expertise — `half` does not count).
+ * Both are `.optional()` (never `.default()`), so every existing pick parses byte-identically.
+ */
+const QueryPickSchema = z
+  .strictObject({
+    query: EntityQuerySchema,
+    proficiency: z.enum(['proficient', 'expertise']).optional(),
+    requireProficient: z.boolean().optional(),
+  })
+  .refine((p) => (p.proficiency === undefined && p.requireProficient === undefined) || p.query.type === 'skill', {
+    message: '"proficiency"/"requireProficient" apply only to a {type: "skill"} query pick',
+  });
+
 export const PickSchema = z.union([
   z.strictObject({ static: z.array(EntityIdSchema).min(1) }),
-  z.strictObject({ query: EntityQuerySchema }),
+  QueryPickSchema,
   z.strictObject({
     abilities: z.strictObject({
       count: z.int().min(1).max(6),
