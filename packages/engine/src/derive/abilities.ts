@@ -1,4 +1,11 @@
-import { type BackgroundEntity, type ClassEntity, type SpeciesEntity, parseEntityId } from '@hk/protocol';
+import {
+  type BackgroundEntity,
+  type ChoicePick,
+  type ClassEntity,
+  type Entity,
+  type SpeciesEntity,
+  parseEntityId,
+} from '@hk/protocol';
 import { findChoice, multiclassSkillsChoiceId } from '../content/choices.ts';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
@@ -57,6 +64,26 @@ function parseAbilityEntry(sel: string): { ability: string; value: number } | un
 
 const idsSorted = (items: { id: string }[]): string[] =>
   items.map((i) => i.id).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+export type AbilitiesPick = Extract<ChoicePick, { abilities: unknown }>;
+
+/**
+ * The ability ids an `abilities` pick OFFERS, in `system.abilities` order: every system ability,
+ * narrowed to the owner's own `abilityScores` list when it has one (a background, e.g. Soldier:
+ * str/dex/con) and to the pick's `from` list when it sets one (plan 13 task 3, e.g. Grappler:
+ * str/dex) — both apply when both are present. The single eligibility source for both
+ * `validateSelection` (refusal, `selection.abilityNotAllowed`) and the UI's option list, so the two
+ * can never disagree. Derive itself never filters a RECORDED selection by it (a decision is gated
+ * at the time it is made; recorded decisions keep granting).
+ */
+export function abilitiesPickOptions(pick: AbilitiesPick, owner: Entity, index: ContentIndex): string[] {
+  const ownerList: readonly string[] | undefined = 'abilityScores' in owner ? owner.abilityScores : undefined;
+  const from = pick.abilities.from;
+  return index
+    .system()
+    .abilities.map((a) => a.id)
+    .filter((id) => (ownerList === undefined || ownerList.includes(id)) && (from === undefined || from.includes(id)));
+}
 
 /** `{amount}` for a plain int, `{formula}` for a formula string — both legal for `ValueSchema` effects. */
 const amountOrFormula = (v: number | string): { amount?: number; formula?: string } =>

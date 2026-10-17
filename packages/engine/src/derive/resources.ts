@@ -31,8 +31,16 @@ interface ResourceMeta {
  * resource id) so two effects that (re-)declare the SAME resource id resolve to the higher one
  * rather than silently colliding — not exercised by any 1b fixture, but the same "highest wins"
  * shape as `hp.ts`/`defense.ts` use for their own stacking targets. The descriptive fields
- * (`name`/`reset`/`display`/`source`) are taken from the FIRST such effect encountered (in
- * `abilities.effects`'s own deterministic order), since only the numeric max is meant to stack.
+ * `name`/`display`/`source` are taken from the FIRST such effect encountered (in
+ * `abilities.effects`'s own deterministic order, i.e. composition's `source|feature|effect` sort),
+ * since only the numeric max is meant to stack.
+ *
+ * `reset` is the one exception (plan 13 task 3, "reset override at level"): it is LAST-wins in that
+ * same order, so a later-granted feature can re-declare a resource purely to change when it
+ * refreshes (SRD Font of Inspiration: Bardic Inspiration regains on a Short Rest from bard level 5).
+ * With a single define — every resource before task 3 — first and last coincide, so nothing else
+ * moves; `max` stacking is untouched. Content that relies on an override must make the overriding
+ * define sort after the original (pinned per use by a content test).
  * `used` comes straight from `facts.resourcesUsed`.
  */
 export function deriveResources(
@@ -71,8 +79,11 @@ export function deriveResources(
       key: eff.id,
       policy: 'sum-unique-key',
     });
-    if (!meta.has(eff.id)) {
+    const first = meta.get(eff.id);
+    if (first === undefined) {
       meta.set(eff.id, { name: eff.name, reset: eff.reset, display: eff.display, source: ae.feature ?? ae.source });
+    } else {
+      first.reset = eff.reset; // last define wins the reset; every other field stays first-wins
     }
   }
 

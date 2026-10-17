@@ -88,8 +88,9 @@ Entity types and their specific data (abridged; schema is authoritative):
 ```
 
 `pick` forms: `{ "static": ["id", …] }`, `{ "query": {type, tags?, level?, classes?,
-school?, hasField?} }`, `{ "abilities": { "count": 2, "max": 20, "improve": "+1|+2/+1" } }` (ASI-style
-improvements), `{ "abilityGeneration": true }` (the creation-time score assignment; the
+school?, hasField?} }`, `{ "abilities": { "count": 2, "max": 20, "improve": "+1|+2/+1", "from"?: ["str", "dex"] } }` (ASI-style
+improvements; `from` restricts the offered abilities, intersected with a background owner's
+`abilityScores`), `{ "abilityGeneration": true }` (the creation-time score assignment; the
 allowed methods and their parameters come from `system.abilityGeneration`, and the
 selection records the method, the six scores and — for `roll` — every die result),
 `{ "literal": "text" }` (names), `{ "equipmentOption": [...] }`. Selections are stored in
@@ -132,7 +133,7 @@ Every effect may carry `when: Predicate` and `source` is filled by the engine.
 | `hp.bonus` | `value` | flat |
 | `speed.set` / `speed.bonus` | `mode: walk\|fly\|swim\|climb\|burrow, value` | |
 | `sense.grant` | `sense: darkvision\|blindsight\|tremorsense\|truesight, range` | |
-| `resource.define` | `id, name, max (formula), reset: shortRest\|longRest\|dawn\|never, display: pips\|number` | |
+| `resource.define` | `id, name, max (formula), reset: shortRest\|longRest\|dawn\|never, display: pips\|number` | Re-declaring an id: `max` stacks (same id keeps the highest), `name`/`display` stay first-wins, `reset` is last-wins in derive's effect order (Font of Inspiration) |
 | `spellcasting.define` | `class, ability, list (class id or explicit), preparation: prepared\|known\|spellbook\|innate, slots: full\|half\|third\|pact\|none, ritual, focus, cantripsKnown (formula), preparedCount (formula), spellsKnown (formula)` | |
 | `spell.grant` | `spell, castingAbility?, uses? {count, per}, alwaysPrepared, level?` | Magic Initiate, species spells |
 | `spell.listAdd` | `class, spells[]` | subclass spell lists |

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ENTITY_ID_RE, EntityIdSchema, EntityTypeSchema, SLUG_RE, parseEntityId } from '../ids.ts';
 import { ShortTextSchema } from './enums.ts';
 import { FormulaSchema } from './formula.ts';
-import { ClassRefSchema, PredicateSchema } from './predicate.ts';
+import { AbilityKeySchema, ClassRefSchema, PredicateSchema } from './predicate.ts';
 
 export const CHOICE_ID_RE = new RegExp(`^(${ENTITY_ID_RE.source.slice(1, -1)})@(\\d{1,2})/([a-z0-9][a-z0-9-]*)$`);
 
@@ -87,6 +87,13 @@ export const PickSchema = z.union([
       count: z.int().min(1).max(6),
       max: z.int().min(1).max(30).default(20),
       improve: z.enum(['+1', '+2', '+2/+1', '+1/+1/+1']),
+      /**
+       * Plan 13 task 3 (restricted ability picks) — additive: when present, the pick offers,
+       * accepts and validates ONLY these abilities (e.g. Grappler's "Strength or Dexterity +1"),
+       * intersected with the owner's own `abilityScores` list where it has one (a background).
+       * `.optional()` (never `.default()`), so every existing abilities pick parses byte-identically.
+       */
+      from: z.array(AbilityKeySchema).min(1).max(6).optional(),
     }),
   }),
   z.strictObject({ abilityGeneration: z.literal(true) }),

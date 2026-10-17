@@ -75,6 +75,31 @@ describe('ChoiceSchema count (plan 12 task 2: progression-driven counts)', () =>
   });
 });
 
+describe('PickSchema restricted abilities picks (plan 13 task 3: additive `abilities.from`)', () => {
+  const base = {
+    id: 'srd-5e-2024:feat/grappler@4/ability-score',
+    prompt: 'Ability score increase',
+    at: { kind: 'level', level: 4 },
+  };
+
+  it('accepts a `from` list of ability keys', () => {
+    const c = ChoiceSchema.parse({ ...base, pick: { abilities: { count: 1, improve: '+1', from: ['str', 'dex'] } } });
+    expect(c.pick).toEqual({ abilities: { count: 1, max: 20, improve: '+1', from: ['str', 'dex'] } });
+  });
+
+  it('keeps an unrestricted abilities pick byte-identical (no `from` injected)', () => {
+    expect(ChoiceSchema.parse({ ...base, pick: { abilities: { count: 1, improve: '+1' } } }).pick).toEqual({
+      abilities: { count: 1, max: 20, improve: '+1' },
+    });
+  });
+
+  it('rejects an empty `from` and a non-ability key', () => {
+    const pick = (from: unknown) => ({ ...base, pick: { abilities: { count: 1, improve: '+1', from } } });
+    expect(ChoiceSchema.safeParse(pick([])).success).toBe(false);
+    expect(ChoiceSchema.safeParse(pick(['strength'])).success).toBe(false);
+  });
+});
+
 describe('PickSchema expertise skill picks (plan 13 task 1: additive query-pick widening)', () => {
   const base = {
     id: 'srd-5e-2024:class/rogue@1/expertise',

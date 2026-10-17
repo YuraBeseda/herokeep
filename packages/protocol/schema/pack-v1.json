@@ -3099,6 +3099,14 @@
                         "+2/+1",
                         "+1/+1/+1"
                       ]
+                    },
+                    "from": {
+                      "minItems": 1,
+                      "maxItems": 6,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema26"
+                      }
                     }
                   },
                   "required": [

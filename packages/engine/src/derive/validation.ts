@@ -13,6 +13,7 @@ import { type Diagnostic, error } from '../diagnostics.ts';
 import type { PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
+import { type AbilitiesPick, abilitiesPickOptions } from './abilities.ts';
 import { resolveChoiceCount } from './choice-count.ts';
 import { type Composition, compose, equippedArmor } from './composition.ts';
 import { isProficientRank } from './proficiency.ts';
@@ -203,7 +204,7 @@ function validateSubclassLevel(
 }
 
 function validateAbilitiesPick(
-  pick: { count: number; max: number; improve: '+1' | '+2' | '+2/+1' | '+1/+1/+1' },
+  abilitiesPick: AbilitiesPick,
   owner: Entity,
   sheet: Sheet,
   index: ContentIndex,
@@ -211,6 +212,7 @@ function validateAbilitiesPick(
   selection: string[],
 ): Diagnostic[] {
   const issues: Diagnostic[] = [];
+  const pick = abilitiesPick.abilities;
   if (selection.length !== pick.count) {
     issues.push(
       error('selection.count', `Expected ${pick.count} selection(s), got ${selection.length}`, { path: choiceId }),
@@ -230,21 +232,20 @@ function validateAbilitiesPick(
   if (issues.length > 0) return issues;
 
   // Some owners (backgrounds) restrict which abilities their choice may improve to their own
-  // `abilityScores` list (SRD e.g. Soldier: str/dex/con only). Owners without such a list (the
-  // ASI feat) stay unrestricted.
-  if ('abilityScores' in owner) {
-    const allowed = new Set<string>(owner.abilityScores);
-    for (const p of parsed) {
-      if (!allowed.has(p.ability)) {
-        issues.push(
-          error('selection.abilityNotAllowed', `"${p.ability}" is not an allowed ability for ${owner.id}`, {
-            path: choiceId,
-          }),
-        );
-      }
+  // `abilityScores` list (SRD e.g. Soldier: str/dex/con only), and a pick may restrict itself with
+  // `from` (plan 13 task 3, SRD e.g. Grappler: str/dex). Owners and picks with neither (the ASI
+  // feat) stay unrestricted. `abilitiesPickOptions` is the shared offer set the UI lists too.
+  const allowed = new Set(abilitiesPickOptions(abilitiesPick, owner, index));
+  for (const p of parsed) {
+    if (!allowed.has(p.ability)) {
+      issues.push(
+        error('selection.abilityNotAllowed', `"${p.ability}" is not an allowed ability for ${choiceId}`, {
+          path: choiceId,
+        }),
+      );
     }
-    if (issues.length > 0) return issues;
   }
+  if (issues.length > 0) return issues;
 
   const abilitiesUsed = new Set(parsed.map((p) => p.ability));
   if (abilitiesUsed.size !== parsed.length) {
@@ -478,7 +479,7 @@ export function validateSelection(
     }
     issues.push(...checkUnique(choice, choiceId, facts, selection, index));
   } else if ('abilities' in choice.pick) {
-    issues.push(...validateAbilitiesPick(choice.pick.abilities, owner, sheet, index, choiceId, selection));
+    issues.push(...validateAbilitiesPick(choice.pick, owner, sheet, index, choiceId, selection));
   } else if ('abilityGeneration' in choice.pick) {
     issues.push(...validateAbilityGeneration(index, facts, choiceId, selection));
   } else if ('literal' in choice.pick) {

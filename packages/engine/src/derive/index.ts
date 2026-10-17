@@ -23,6 +23,7 @@ import { deriveSpellcasting } from './spellcasting.ts';
 
 export * from './sheet.ts';
 export * from './advancement.ts';
+export { type AbilitiesPick, abilitiesPickOptions } from './abilities.ts';
 export { resolveChoiceCount } from './choice-count.ts';
 export * from './validation.ts';
 export * from './overrides.ts';
