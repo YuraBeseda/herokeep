@@ -2703,8 +2703,8 @@ describe('druid integration over the real pack (task 13)', () => {
     for (const t of ['medium', 'heavy']) expect(has('armor', t), t).toBe(false);
     expect(has('weapon', 'simple')).toBe(true);
     expect(has('weapon', 'martial')).toBe(false);
-    // Tool proficiencies are class DATA only (the engine derives no tool proficiency for any class,
-    // rogue's Thieves' Tools included); the herbalism kit is pinned at the data level above.
+    // Plan 13 task 2: the class's toolProficiencies now land on the sheet.
+    expect(has('tool', 'herbalism-kit')).toBe(true);
   });
 
   it('class skills: two of the eight are accepted and become proficient (derive-level)', () => {
@@ -2941,6 +2941,214 @@ describe('expertise retrofit over the real pack: rogue / bard / ranger (plan 13 
       );
       expect(added.map((c) => c.choiceId).sort(), build.classId).toEqual(expertiseIds);
       const rest = now.outstandingChoices.filter((c) => !expertiseIds.includes(c.choiceId));
+      expect({ ...now, outstandingChoices: rest }, build.classId).toEqual(before);
+      expect(
+        now.issues.filter((i) => i.severity === 'error'),
+        build.classId,
+      ).toEqual([]);
+    }
+  });
+});
+
+describe('tool proficiency choices over the real pack: monk / bard (plan 13 task 2)', () => {
+  const item = (s: string) => `${FP}:item/${s}`;
+  const monkId = `${FP}:class/monk`;
+  const bardId = `${FP}:class/bard`;
+  const rogueId = `${FP}:class/rogue`;
+  const druidId = `${FP}:class/druid`;
+  // Vendored Item.json (category "tools"): the 17 Artisan's Tools (the upstream names keep the SRD
+  // Artisan's Tools table's "(N GP)" suffix) and the 10 "Musical Instrument, X" entries.
+  const ARTISANS = [
+    'alchemists-supplies',
+    'brewers-supplies',
+    'calligraphers-supplies',
+    'carpenters-tools',
+    'cartographers-tools',
+    'cobblers-tools',
+    'cooks-utensils',
+    'glassblowers-tools',
+    'jewelers-tools',
+    'leatherworkers-tools',
+    'masons-tools',
+    'painters-supplies',
+    'potters-tools',
+    'smiths-tools',
+    'tinkers-tools',
+    'weavers-tools',
+    'woodcarvers-tools',
+  ].map(item);
+  const INSTRUMENTS = [
+    'bagpipes',
+    'drum',
+    'dulcimer',
+    'flute',
+    'horn',
+    'lute',
+    'lyre',
+    'pan-flute',
+    'shawm',
+    'viol',
+  ].map((s) => item(`musical-instrument-${s}`));
+  const classEntity = (id: string) =>
+    featPack.entities.find((e) => e.id === id) as unknown as {
+      toolProficiencies: string[];
+      levels: { level: number; choices: { id: string; count: unknown; pick: unknown }[] }[];
+    };
+  const toolChoice = (id: string) =>
+    classEntity(id)
+      .levels.flatMap((r) => r.choices.map((c) => ({ ...c, level: r.level })))
+      .filter((c) => c.id.endsWith('/tools'));
+
+  interface Build {
+    classId: string;
+    background: string;
+    bonus: string[];
+    skills: string[];
+  }
+  const MONK: Build = {
+    classId: monkId,
+    background: 'soldier',
+    bonus: ['dex:+2', 'con:+1'],
+    skills: ['acrobatics', 'insight'],
+  };
+  const BARD: Build = {
+    classId: bardId,
+    background: 'acolyte',
+    bonus: ['cha:+2', 'wis:+1'],
+    skills: ['persuasion', 'performance', 'deception'],
+  };
+  const ROGUE: Build = {
+    classId: rogueId,
+    background: 'criminal',
+    bonus: ['dex:+2', 'con:+1'],
+    skills: ['acrobatics', 'athletics', 'perception', 'insight'],
+  };
+  const DRUID: Build = {
+    classId: druidId,
+    background: 'sage',
+    bonus: ['wis:+2', 'con:+1'],
+    skills: ['medicine', 'survival'],
+  };
+  function char(b: Build, level: number, extra: [string, string[]][] = []): Event[] {
+    featSeq = 0;
+    return [
+      featEv('character.created', {
+        name: 'Vex',
+        system: '5e-2024',
+        corePack: { id: FP, version: '0.1.0' },
+        engineVersion: '0.1.0',
+        grammaticalGender: 'feminine',
+      }),
+      featDecide(`${FP}:system/5e-2024@0/species`, [`${FP}:species/human`]),
+      featDecide(`${FP}:system/5e-2024@0/background`, [`${FP}:background/${b.background}`]),
+      featDecide(`${FP}:background/${b.background}@0/ability-scores`, b.bonus),
+      featDecide(`${FP}:system/5e-2024@0/ability-scores`, ['str:10', 'dex:15', 'con:13', 'int:10', 'wis:14', 'cha:13']),
+      ...Array.from({ length: level }, (_, i) =>
+        featEv('level.gained', { classId: b.classId, level: i + 1, hpRoll: 'average' }),
+      ),
+      featDecide(`${b.classId}@1/skills`, b.skills),
+      ...extra.map(([id, sel]) => featDecide(id, sel)),
+    ];
+  }
+  const tools = (events: Event[]) =>
+    sheetOf(events)
+      .proficiencies.filter((p) => p.kind === 'tool')
+      .map((p) => [p.target, p.sources]);
+  const refusals = (events: Event[], choiceId: string, selection: string[]) => {
+    const facts = reduce(events, undefined, featRules);
+    return validateSelection(derive(facts, featIndex, featRules), facts, featIndex, choiceId, selection).map(
+      (d) => d.code,
+    );
+  };
+
+  it('monk: one static pick @1 over the 17 Artisan’s Tools + 10 Musical Instruments (no fixed tools)', () => {
+    expect(classEntity(monkId).toolProficiencies).toEqual([]);
+    const choices = toolChoice(monkId);
+    expect(choices.map((c) => [c.id, c.level, c.count])).toEqual([[`${monkId}@1/tools`, 1, 1]]);
+    expect(choices[0]!.pick).toEqual({ static: [...ARTISANS, ...INSTRUMENTS] });
+  });
+
+  it('bard: one static pick @1 of three Musical Instruments (no fixed tools)', () => {
+    expect(classEntity(bardId).toolProficiencies).toEqual([]);
+    const choices = toolChoice(bardId);
+    expect(choices.map((c) => [c.id, c.level, c.count])).toEqual([[`${bardId}@1/tools`, 1, 3]]);
+    expect(choices[0]!.pick).toEqual({ static: INSTRUMENTS });
+  });
+
+  it('every offered tool resolves to a pack item of category tool', () => {
+    for (const id of [...ARTISANS, ...INSTRUMENTS]) {
+      const e = featIndex.get(id);
+      expect(e?.type === 'item' ? e.category : undefined, id).toBe('tool');
+    }
+  });
+
+  it('monk 1: the tool pick is outstanding until answered; the chosen tool lands on the sheet', () => {
+    expect(sheetOf(char(MONK, 1)).outstandingChoices.map((c) => c.choiceId)).toContain(`${monkId}@1/tools`);
+    const events = char(MONK, 1, [[`${monkId}@1/tools`, [item('smiths-tools')]]]);
+    expect(sheetOf(events).outstandingChoices.map((c) => c.choiceId)).not.toContain(`${monkId}@1/tools`);
+    expect(tools(events)).toEqual([
+      ['gaming-set', [`${FP}:background/soldier`]],
+      ['smiths-tools', [monkId]],
+    ]);
+    expect(refusals(char(MONK, 1), `${monkId}@1/tools`, [item('musical-instrument-flute')])).toEqual([]);
+    expect(refusals(char(MONK, 1), `${monkId}@1/tools`, [item('thieves-tools')])).toEqual(['selection.notOffered']);
+  });
+
+  it('bard 1: three instruments land; a non-instrument or a repeat is refused', () => {
+    const picks = ['lute', 'flute', 'drum'].map((s) => item(`musical-instrument-${s}`));
+    const events = char(BARD, 1, [[`${bardId}@1/tools`, picks]]);
+    expect(sheetOf(events).outstandingChoices.map((c) => c.choiceId)).not.toContain(`${bardId}@1/tools`);
+    expect(tools(events)).toEqual([
+      ['calligraphers-supplies', [`${FP}:background/acolyte`]],
+      ['musical-instrument-drum', [bardId]],
+      ['musical-instrument-flute', [bardId]],
+      ['musical-instrument-lute', [bardId]],
+    ]);
+    expect(refusals(char(BARD, 1), `${bardId}@1/tools`, [...picks.slice(0, 2), item('smiths-tools')])).toEqual([
+      'selection.notOffered',
+    ]);
+    expect(refusals(char(BARD, 1), `${bardId}@1/tools`, [picks[0]!, picks[0]!, picks[1]!])).toEqual([
+      'selection.duplicate',
+    ]);
+  });
+
+  it('fixed tools need no choice: rogue + criminal merge Thieves’ Tools; druid gets the Herbalism Kit', () => {
+    const rogue = sheetOf(char(ROGUE, 1));
+    expect(rogue.outstandingChoices.some((c) => c.choiceId.endsWith('/tools'))).toBe(false);
+    expect(tools(char(ROGUE, 1))).toEqual([['thieves-tools', [`${FP}:background/criminal`, rogueId]]]);
+    expect(tools(char(DRUID, 1))).toEqual([
+      ['calligraphers-supplies', [`${FP}:background/sage`]],
+      ['herbalism-kit', [druidId]],
+    ]);
+  });
+
+  // Ruling 4: a log that never answered the new pick replays IDENTICALLY to the pre-retrofit pack
+  // (the same pack with the @1/tools picks removed) apart from the new outstanding @1/tools entry —
+  // never invalid. A fixed-tool class (rogue) gains no new choice at all.
+  it('legacy logs replay identically apart from the new outstanding tool pick (monk, bard); rogue unchanged', () => {
+    const legacyPack = structuredClone(featPack);
+    for (const e of legacyPack.entities) {
+      if (e.type !== 'class') continue;
+      for (const row of e.levels) row.choices = row.choices.filter((c) => !c.id.endsWith('/tools'));
+    }
+    const legacyIndex = createContentIndex([legacyPack]);
+    const cases: [Build, string[]][] = [
+      [MONK, [`${monkId}@1/tools`]],
+      [BARD, [`${bardId}@1/tools`]],
+      [ROGUE, []],
+    ];
+    for (const [build, toolIds] of cases) {
+      const facts = reduce(char(build, 11), undefined, featRules);
+      const now = derive(facts, featIndex, featRules);
+      const before = derive(facts, legacyIndex, featRules);
+      const added = now.outstandingChoices.filter(
+        (c) => !before.outstandingChoices.some((o) => o.choiceId === c.choiceId),
+      );
+      expect(
+        added.map((c) => c.choiceId),
+        build.classId,
+      ).toEqual(toolIds);
+      const rest = now.outstandingChoices.filter((c) => !toolIds.includes(c.choiceId));
       expect({ ...now, outstandingChoices: rest }, build.classId).toEqual(before);
       expect(
         now.issues.filter((i) => i.severity === 'error'),

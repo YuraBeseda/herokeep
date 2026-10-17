@@ -693,9 +693,14 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/class`, [MONK]);
     await fixture.whenStable();
 
-    // Monk's only level-1 choice is its skills: outstanding until picked, then nothing else.
-    expect(state.outstanding().map((o) => o.choiceId)).toEqual([`${MONK}@1/skills`]);
+    // Monk's level-1 choices are its skills and (plan 13 task 2) its one Artisan's Tools or Musical
+    // Instrument: outstanding until picked, then nothing else.
+    expect(state.outstanding().map((o) => o.choiceId)).toEqual([
+      `${MONK}@1/skills`,
+      `${MONK}@1/tools`,
+    ]);
     state.setDecision(`${MONK}@1/skills`, ['acrobatics', 'insight']);
+    state.setDecision(`${MONK}@1/tools`, ['srd-5e-2024:item/musical-instrument-flute']);
     await fixture.whenStable();
     expect(state.outstanding()).toEqual([]);
     expect(state.invalidDecisions().size).toBe(0);

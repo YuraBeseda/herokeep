@@ -2,7 +2,7 @@
   {
     "id": "srd-5e-2024:class/bard",
     "cite": "SRD 5.2.1, Core Bard Traits; Spellcasting (Bard); Expertise; Bard Subclass; Ability Score Improvement; Epic Boon",
-    "note": "Task 11 (phase 4 plan 12): new overlay, class 1->20. Core Bard Traits (vendored srd-2024_bard_core-traits): \"Hit Point Die: D8\"; \"Saving Throw Proficiencies: Dexterity and Charisma\" (upstream saving_throws [cha, dex], correct as vendored); \"Skill Proficiencies: Choose any 3 skills\" -- the transform already seeds skillChoice.from with all 18 skills (count 0 placeholder), so only count:3 changes (the full 18-slug list is restated because `set` replaces the whole object); \"Weapon Proficiencies: Simple weapons\"; \"Armor Training: Light armor\". \"Tool Proficiencies: Choose 3 Musical Instruments\" is NOT representable: ClassEntity.toolProficiencies is a fixed list of tool ids (monk precedent: no tool choice shape) -- left [], flagged for the owner (the character sheet's tools are free-noted). Cantrips column (vendored srd-2024_bard_cantrips: 2 at levels 1-3, 3 at 4-9, 4 at 10-20): transformClasses() auto-carries it under extra['bard-cantrips'], which is NOT the key packages/engine/src/derive/spellcasting.ts reads (cantripsKnownKey('bard') = 'bard-cantrips-known'), so levels 1/4/10 author the explicit correctly-keyed extra (2/3/4) alongside the harmless unread auto key (wizard precedent). bestRowExtra picks the highest row at or below the character's level, so three breakpoints cover all 20 levels. Prepared Spells column (4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22; verified level-by-level against every vendored srd-2024_bard_prepared-spells row) is carried verbatim under extra['bard-prepared-spells'] == preparedSpellsKey('bard'): zero authoring. Spell Slots 1st-9th columns ride on the rows as extras; slot rows used by derive come from the system 'full' table, cross-checked against the vendored columns by a derive-level test. Bardic Die column (D6/D8/D10/D12) rides as an untouched display-only text extra (ruling 1). Bard Subclass @3 (College of Lore is the only SRD subclass); ASI @4/8/12/16 and Epic Boon @19 use the standard open feat pick (Fighter/Wizard shape; vendored text: 'or another feat of your choice for which you qualify'). Expertise @2/@9 (plan 13 task 1): see the bard-expertise entry.",
+    "note": "Task 11 (phase 4 plan 12): new overlay, class 1->20. Core Bard Traits (vendored srd-2024_bard_core-traits): \"Hit Point Die: D8\"; \"Saving Throw Proficiencies: Dexterity and Charisma\" (upstream saving_throws [cha, dex], correct as vendored); \"Skill Proficiencies: Choose any 3 skills\" -- the transform already seeds skillChoice.from with all 18 skills (count 0 placeholder), so only count:3 changes (the full 18-slug list is restated because `set` replaces the whole object); \"Weapon Proficiencies: Simple weapons\"; \"Armor Training: Light armor\". \"Tool Proficiencies: Choose 3 Musical Instruments\" (plan 13 task 2): a player CHOICE, so toolProficiencies stays [] and the choice is the @1/tools static pick (count 3, unique) over the 10 vendored Item.json \"Musical Instrument, X\" entries (srd-2024_musical-instrument-bagpipes, _drum, _dulcimer, _flute, _horn, _lute, _lyre, _pan-flute, _shawm, _viol) -- static because the tool items carry no kind tags (monk precedent); a decided pick of tool items lands as kind 'tool' rows in Sheet.proficiencies (engine derive/index.ts). Multiclass residual: like every class-row choice it is also asked of a LATER-class bard at full count 3 (gains has no tool vocabulary to narrow it). Cantrips column (vendored srd-2024_bard_cantrips: 2 at levels 1-3, 3 at 4-9, 4 at 10-20): transformClasses() auto-carries it under extra['bard-cantrips'], which is NOT the key packages/engine/src/derive/spellcasting.ts reads (cantripsKnownKey('bard') = 'bard-cantrips-known'), so levels 1/4/10 author the explicit correctly-keyed extra (2/3/4) alongside the harmless unread auto key (wizard precedent). bestRowExtra picks the highest row at or below the character's level, so three breakpoints cover all 20 levels. Prepared Spells column (4,5,6,7,9,10,11,12,14,15,16,16,17,17,18,18,19,20,21,22; verified level-by-level against every vendored srd-2024_bard_prepared-spells row) is carried verbatim under extra['bard-prepared-spells'] == preparedSpellsKey('bard'): zero authoring. Spell Slots 1st-9th columns ride on the rows as extras; slot rows used by derive come from the system 'full' table, cross-checked against the vendored columns by a derive-level test. Bardic Die column (D6/D8/D10/D12) rides as an untouched display-only text extra (ruling 1). Bard Subclass @3 (College of Lore is the only SRD subclass); ASI @4/8/12/16 and Epic Boon @19 use the standard open feat pick (Fighter/Wizard shape; vendored text: 'or another feat of your choice for which you qualify'). Expertise @2/@9 (plan 13 task 1): see the bard-expertise entry.",
     "set": {
       "armorTraining": ["light"],
       "weaponProficiencies": ["simple"],
@@ -33,7 +33,29 @@
     "rows": [
       {
         "level": 1,
-        "extra": { "bard-cantrips-known": 2 }
+        "extra": { "bard-cantrips-known": 2 },
+        "choices": [
+          {
+            "id": "srd-5e-2024:class/bard@1/tools",
+            "prompt": "Tool Proficiencies: choose three Musical Instruments",
+            "at": { "kind": "classLevel", "class": "bard", "level": 1 },
+            "pick": {
+              "static": [
+                "srd-5e-2024:item/musical-instrument-bagpipes",
+                "srd-5e-2024:item/musical-instrument-drum",
+                "srd-5e-2024:item/musical-instrument-dulcimer",
+                "srd-5e-2024:item/musical-instrument-flute",
+                "srd-5e-2024:item/musical-instrument-horn",
+                "srd-5e-2024:item/musical-instrument-lute",
+                "srd-5e-2024:item/musical-instrument-lyre",
+                "srd-5e-2024:item/musical-instrument-pan-flute",
+                "srd-5e-2024:item/musical-instrument-shawm",
+                "srd-5e-2024:item/musical-instrument-viol"
+              ]
+            },
+            "count": 3
+          }
+        ]
       },
       {
         "level": 2,

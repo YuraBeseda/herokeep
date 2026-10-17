@@ -64,6 +64,16 @@ test.describe('character creation — Monk (slice 2)', () => {
     await test.step("class skills: Monk's own pool (Acrobatics + Stealth)", async () => {
       await page.getByRole('button', { name: 'Acrobatics', exact: true }).click();
       await page.getByRole('button', { name: 'Stealth', exact: true }).click();
+      // Plan 13 task 2: next, the Monk's one Artisan's Tools or Musical Instrument (a static pick).
+      await expect(
+        page.locator('.entity-picker__select', { hasText: 'Musical Instrument, Flute' }),
+      ).toBeVisible();
+    });
+
+    await test.step('tool proficiency: one Musical Instrument (Flute)', async () => {
+      await page
+        .locator('.entity-picker__select', { hasText: 'Musical Instrument, Flute' })
+        .click();
       // No weapon-mastery / fighting-style choice for Monk: straight on to equipment.
       await expect(page.locator('.equipment-step')).toBeVisible();
     });

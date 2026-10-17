@@ -39,6 +39,7 @@ const CLASS_CHOICE = `${SYSTEM_ID}@0/class`;
 const CLASS_SKILLS_CHOICE = 'srd-5e-2024:class/fighter@1/skills';
 const WEAPON_MASTERIES_CHOICE = 'srd-5e-2024:class/fighter@1/weapon-masteries';
 const ROGUE_EXPERTISE_CHOICE = 'srd-5e-2024:class/rogue@1/expertise';
+const BARD_TOOLS_CHOICE = 'srd-5e-2024:class/bard@1/tools';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -264,6 +265,73 @@ describe('ChoiceStepComponent', () => {
     ]);
     expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBe(0);
     expect(state.draftSheet()?.skills['stealth']?.proficiency).toBe('expertise');
+  });
+
+  // Plan 13 task 2 (ruling 5): the bard's @1/tools pick is a STATIC pick, so the step offers exactly
+  // its listed tool items (the 10 Musical Instruments) via `hk-entity-picker`, and the recorded
+  // selection lands as tool proficiencies on the draft sheet.
+  it('the bard tool pick offers exactly the ten Musical Instruments and records three', async () => {
+    const state = createState();
+    state.name.set('Lia');
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/bard']);
+
+    const fixture = TestBed.createComponent(ChoiceStepComponent);
+    fixture.componentRef.setInput('choiceId', BARD_TOOLS_CHOICE);
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const names = Array.from(compiled.querySelectorAll('.entity-picker__name')).map((n) =>
+      n.textContent?.trim(),
+    );
+    expect([...names].sort()).toEqual(
+      [
+        'Bagpipes',
+        'Drum',
+        'Dulcimer',
+        'Flute',
+        'Horn',
+        'Lute',
+        'Lyre',
+        'Pan Flute',
+        'Shawm',
+        'Viol',
+      ]
+        .map((s) => `Musical Instrument, ${s}`)
+        .sort(),
+    );
+
+    const buttons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+    );
+    const byName = (text: string) =>
+      buttons.find(
+        (b) =>
+          b.querySelector('.entity-picker__name')?.textContent?.trim() ===
+          `Musical Instrument, ${text}`,
+      )!;
+    for (const name of ['Lute', 'Flute', 'Drum']) {
+      byName(name).click();
+      await fixture.whenStable();
+    }
+
+    expect(state.decisions().get(BARD_TOOLS_CHOICE)).toEqual([
+      'srd-5e-2024:item/musical-instrument-lute',
+      'srd-5e-2024:item/musical-instrument-flute',
+      'srd-5e-2024:item/musical-instrument-drum',
+    ]);
+    expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBe(0);
+    expect(
+      state
+        .draftSheet()
+        ?.proficiencies.filter((p) => p.kind === 'tool')
+        .map((p) => p.target),
+    ).toEqual([
+      'gaming-set',
+      'musical-instrument-drum',
+      'musical-instrument-flute',
+      'musical-instrument-lute',
+    ]);
   });
 
   // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------

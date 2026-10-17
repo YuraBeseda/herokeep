@@ -398,6 +398,24 @@ describe('LevelUpComponent', () => {
     chips.find((c) => c.textContent?.trim() === 'Arcana')!.click();
     await harness.fixture.whenStable();
 
+    // Plan 13 task 2: Bard's level-1 tool pick (three Musical Instruments) is a class-row choice,
+    // so it is asked of a later-class Bard too (multiclass gains carry no tool vocabulary to narrow
+    // it — residual, see task-2-report.md). Answering the skill pick drops its step, so the stepper
+    // re-homes onto the tool pick's step.
+    expect(root.querySelector('.choice-step__title')?.textContent?.trim()).toBe(
+      'Tool Proficiencies: choose three Musical Instruments',
+    );
+    for (const name of ['Lute', 'Flute', 'Drum']) {
+      Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
+        .find(
+          (b) =>
+            b.querySelector('.entity-picker__name')?.textContent?.trim() ===
+            `Musical Instrument, ${name}`,
+        )!
+        .click();
+      await harness.fixture.whenStable();
+    }
+
     for (let i = 0; i < 5 && root.querySelector('.level-up__finish') === null; i++) {
       root.querySelector<HTMLButtonElement>('.level-up__next')?.click();
       await harness.fixture.whenStable();
