@@ -12,11 +12,17 @@ export interface CastDialogSlotOption {
    * Warlock's own pact slot level can coincide with a regular slot level on a multiclassed
    * character; both remain independently selectable). Omitted (falsy) for a regular option. */
   readonly pact?: boolean;
+  /** Plan 13 task 4: set on a free-cast option (a `sheet.freeCasts` entry) — the resource id one
+   * cast spends instead of a slot; `max`/`used` are that resource's, `level` the only level the
+   * free lane casts at. `freeLabel` is the resource's already-localized name for the option text. */
+  readonly freeResource?: string;
+  readonly freeLabel?: string;
 }
 
 export interface CastDialogResult {
   readonly level: number;
   readonly pact?: boolean;
+  readonly freeResource?: string;
 }
 
 export interface CastDialogData {
@@ -25,9 +31,9 @@ export interface CastDialogData {
   readonly spellConcentration: boolean;
   /** Slots at/above `spellLevel` that still have room, PLUS (task 12) the pact-lane option when
    * eligible — pre-filtered by the CALLER (`PlayTabComponent.onCastLeveled`), never by this
-   * component. Never includes a "no slot" option (task-3-brief.md: 1b leveled casts always
-   * consume a slot; only cantrips skip a slot, and those never open this dialog at all — R-pf3,
-   * cast directly from their own button). */
+   * component. Never includes a bare "no slot" option (task-3-brief.md: only cantrips skip a slot,
+   * and those never open this dialog at all — R-pf3, cast directly from their own button); the only
+   * slot-free options are plan 13 task 4's free-cast options, each paid by a named resource. */
   readonly availableSlots: readonly CastDialogSlotOption[];
   readonly alreadyConcentrating: boolean;
 }
@@ -78,6 +84,7 @@ export class CastDialogComponent {
     this.dialogRef.close({
       level: option.level,
       ...(option.pact ? { pact: true } : {}),
+      ...(option.freeResource !== undefined ? { freeResource: option.freeResource } : {}),
     } satisfies CastDialogResult);
   }
 }

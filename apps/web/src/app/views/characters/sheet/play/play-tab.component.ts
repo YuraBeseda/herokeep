@@ -180,6 +180,9 @@ const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
   'slot.none-left',
   'attune.max',
   'spell.always-prepared',
+  // Plan 13 task 4: the free-cast lane's refusals (`propose/casting.ts`'s `castFree`).
+  'resource.none-left',
+  'spell.free-cast-unavailable',
 ]);
 
 // task-5-brief.md: only these item categories ever get an equip toggle in the inventory section —
@@ -1054,6 +1057,10 @@ export class PlayTabComponent {
   // — NOT the pact's displayed level — the `slot.spent{level: pact.level, pact: true}` event T11
   // emits alongside `spell.cast` is what actually records the pact slot's own level; this handler
   // never invents that substitution itself, it only forwards `row.level` unchanged either way.
+  //
+  // Plan 13 task 4: one free-cast option per `sheet.freeCasts` entry for this spell whose resource
+  // still has a use (an empty counter is not offered), labelled with the resource's localized name
+  // and cast at the entry's own level; `CastDialogResult.freeResource` selects the engine's free lane.
   protected async onCastLeveled(block: SpellcastingBlock, row: SpellRow): Promise<void> {
     const regularOptions = block.slots.filter((s) => s.level >= row.level && s.used < s.max);
     const pact = block.pact;
@@ -1061,12 +1068,27 @@ export class PlayTabComponent {
       pact && pact.level >= row.level && pact.used < pact.count
         ? [{ level: pact.level, max: pact.count, used: pact.used, pact: true }]
         : [];
+    const current = this.sheet();
+    const freeOptions: CastDialogSlotOption[] = (current?.freeCasts ?? []).flatMap((free) => {
+      const resource = current?.resources.find((r) => r.id === free.resourceId);
+      return free.spellId === row.id && resource && resource.used < resource.max.value
+        ? [
+            {
+              level: free.level,
+              max: resource.max.value,
+              used: resource.used,
+              freeResource: resource.id,
+              freeLabel: this.resourceLabel(resource),
+            },
+          ]
+        : [];
+    });
     const handle = this.dialogService.open(CastDialogComponent, {
       data: {
         spellName: row.name,
         spellLevel: row.level,
         spellConcentration: row.concentration,
-        availableSlots: [...regularOptions, ...pactOptions],
+        availableSlots: [...regularOptions, ...pactOptions, ...freeOptions],
         alreadyConcentrating: this.concentration() !== undefined,
       } satisfies CastDialogData,
     });
@@ -1079,6 +1101,7 @@ export class PlayTabComponent {
         level: result.pact ? row.level : result.level,
         concentration: row.concentration,
         ...(result.pact ? { pact: true } : {}),
+        ...(result.freeResource !== undefined ? { freeResource: result.freeResource } : {}),
       }),
     );
   }

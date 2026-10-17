@@ -3521,3 +3521,162 @@ describe('PlayTabComponent — always-prepared spells with the real pack (plan 1
     expect(showSpy).toHaveBeenCalledWith('characters.validation.spell.always-prepared');
   });
 });
+
+// Plan 13 task 4: the free-cast lane (`sheet.freeCasts`) in the cast dialog, with the real pack —
+// a level-1 Ranger's Hunter's Mark (Favored Enemy: two free casts per Long Rest). Review Focus 3 at
+// the UI seam: the free option spends the counter and no slot; the slot option the slot, not the
+// counter; an empty counter is not offered.
+describe('PlayTabComponent — free-cast lane (plan 13 task 4)', () => {
+  const RANGER = 'srd-5e-2024:class/ranger';
+  const MARK = 'srd-5e-2024:spell/hunters-mark';
+  const dialog = charactersEn.sheet.spellcasting.castDialog;
+  const freeOptionText = (remaining: number) =>
+    dialog.slotOptionFree
+      .replace('{resource}', 'Favored Enemy')
+      .replace('{level}', '1')
+      .replace('{remaining}', String(remaining));
+
+  beforeEach(async () => {
+    localStorage.removeItem('hk.locale');
+    configureReal();
+    await resetSpellDb();
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    localStorage.removeItem('hk.locale');
+    TestBed.inject(HkDb).close();
+  });
+
+  async function seedRanger(): Promise<CharacterStore> {
+    const state = TestBed.runInInjectionContext(() => new CreateWizardState());
+    state.name.set('Tamsin');
+    state.gender.set('feminine');
+    state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
+    state.setDecision('srd-5e-2024:system/5e-2024@0/background', [
+      'srd-5e-2024:background/soldier',
+    ]);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      'srd-5e-2024:system/5e-2024@0/ability-scores',
+      ['str:12', 'dex:15', 'con:13', 'int:8', 'wis:14', 'cha:10'],
+      { method: 'standardArray' },
+    );
+    state.setDecision('srd-5e-2024:system/5e-2024@0/class', [RANGER]);
+    const store = TestBed.inject(CharacterStore);
+    await store.create(state.name().trim(), state.gender());
+    const [, ...rest] = state.buildTransaction();
+    await store.appendTx(rest);
+    return store;
+  }
+
+  async function openMarkDialog() {
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const row = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.play-tab__spell-lists li'),
+    ).find(
+      (r) => r.querySelector('.play-tab__spell-name')?.textContent?.trim() === "Hunter's Mark",
+    )!;
+    Array.from(row.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.cast)!
+      .click();
+    TestBed.tick();
+    return { fixture, overlay: document.querySelector<HTMLElement>('.cdk-overlay-container')! };
+  }
+
+  async function confirm(
+    fixture: { whenStable(): Promise<unknown> },
+    overlay: HTMLElement,
+    store: CharacterStore,
+  ) {
+    const before = store.events().length;
+    Array.from(overlay.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent?.trim() === dialog.confirm)!
+      .click();
+    for (let i = 0; i < 50 && store.events().length === before; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+  }
+
+  it('offers the free lane beside the slot lane; confirming it spends Favored Enemy and NO slot', async () => {
+    const store = await seedRanger();
+    expect(store.sheet()!.freeCasts).toEqual([
+      { spellId: MARK, resourceId: 'favored-enemy', level: 1 },
+    ]);
+    const { fixture, overlay } = await openMarkDialog();
+
+    const options = Array.from(overlay.querySelectorAll<HTMLOptionElement>('option'));
+    expect(options.map((o) => o.textContent?.trim())).toEqual([
+      dialog.slotOption.replace('{level}', '1').replace('{remaining}', '2'),
+      freeOptionText(2),
+    ]);
+    const select = overlay.querySelector<HTMLSelectElement>('select')!;
+    select.value = '1';
+    select.dispatchEvent(new Event('change'));
+    TestBed.tick();
+    await confirm(fixture, overlay, store);
+
+    const lastTwo = store.events().slice(-2);
+    expect(lastTwo.map((e) => e.type)).toEqual(['spell.cast', 'resource.spent']);
+    expect(lastTwo[0].payload).toEqual({
+      spellId: MARK,
+      level: 1,
+      slotUsed: false,
+      concentration: true,
+    });
+    expect(lastTwo[1].payload).toEqual({ resourceId: 'favored-enemy' });
+    expect(store.facts()!.resourcesUsed).toEqual({ 'favored-enemy': 1 });
+    expect(store.facts()!.slotsUsed).toEqual({});
+  });
+
+  it('the slot option spends the slot and NOT the counter', async () => {
+    const store = await seedRanger();
+    const { fixture, overlay } = await openMarkDialog();
+    await confirm(fixture, overlay, store); // default selection: the level-1 slot
+
+    expect(store.events().at(-1)).toMatchObject({
+      type: 'spell.cast',
+      payload: { spellId: MARK, level: 1 },
+    });
+    expect(store.facts()!.slotsUsed).toEqual({ 1: 1 });
+    expect(store.facts()!.resourcesUsed['favored-enemy'] ?? 0).toBe(0);
+  });
+
+  it('a counter emptied while the dialog is open is refused by the engine and toasted (resource.none-left)', async () => {
+    const store = await seedRanger();
+    const { fixture, overlay } = await openMarkDialog();
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const select = overlay.querySelector<HTMLSelectElement>('select')!;
+    select.value = '1'; // the free option
+    select.dispatchEvent(new Event('change'));
+    TestBed.tick();
+    await store.appendTx([
+      { type: 'resource.spent', v: 1, payload: { resourceId: 'favored-enemy', count: 2 } },
+    ]);
+    const before = store.events().length;
+
+    Array.from(overlay.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent?.trim() === dialog.confirm)!
+      .click();
+    await fixture.whenStable();
+
+    expect(store.events().length).toBe(before);
+    expect(showSpy).toHaveBeenCalledWith('characters.validation.resource.none-left');
+  });
+
+  it('an empty Favored Enemy counter is not offered', async () => {
+    const store = await seedRanger();
+    await store.appendTx([
+      { type: 'resource.spent', v: 1, payload: { resourceId: 'favored-enemy', count: 2 } },
+    ]);
+    const { overlay } = await openMarkDialog();
+
+    const texts = Array.from(overlay.querySelectorAll<HTMLOptionElement>('option')).map((o) =>
+      o.textContent?.trim(),
+    );
+    expect(texts).toEqual([dialog.slotOption.replace('{level}', '1').replace('{remaining}', '2')]);
+  });
+});

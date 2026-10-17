@@ -224,6 +224,54 @@ describe('CastDialogComponent', () => {
     expect(result).not.toHaveProperty('pact');
   });
 
+  // --- Free-cast option (plan 13, task 4) ---------------------------------------------------------
+
+  it('renders the free-cast option with its resource name, beside a regular option at the same level', () => {
+    configure();
+    open({
+      ...BASE_DATA,
+      availableSlots: [
+        { level: 1, max: 2, used: 0 },
+        { level: 1, max: 3, used: 1, freeResource: 'favored-enemy', freeLabel: 'Favored Enemy' },
+      ],
+    });
+    TestBed.tick();
+
+    const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
+    expect(options.map((o) => o.textContent?.trim())).toEqual([
+      charactersEn.sheet.spellcasting.castDialog.slotOption
+        .replace('{level}', '1')
+        .replace('{remaining}', '2'),
+      charactersEn.sheet.spellcasting.castDialog.slotOptionFree
+        .replace('{resource}', 'Favored Enemy')
+        .replace('{level}', '1')
+        .replace('{remaining}', '2'),
+    ]);
+  });
+
+  it('confirm closes with { level, freeResource } when the free-cast option is selected', async () => {
+    configure();
+    const handle = open({
+      ...BASE_DATA,
+      availableSlots: [
+        { level: 1, max: 2, used: 0 },
+        { level: 1, max: 3, used: 0, freeResource: 'favored-enemy', freeLabel: 'Favored Enemy' },
+      ],
+    });
+    TestBed.tick();
+
+    const select = document.querySelector<HTMLSelectElement>('select')!;
+    select.value = '1';
+    select.dispatchEvent(new Event('change'));
+    TestBed.tick();
+    Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm)!
+      .click();
+    TestBed.tick();
+
+    expect(await handle.closed).toEqual({ level: 1, freeResource: 'favored-enemy' });
+  });
+
   it('cancel closes the dialog with undefined', async () => {
     configure();
     const handle = open(BASE_DATA);

@@ -16,15 +16,21 @@
         @for (slot of data.availableSlots; track $index) {
           <option [value]="$index" [selected]="$index === selectedIndex()">
             {{
-              slot.pact
-                ? t('characters.sheet.spellcasting.castDialog.slotOptionPact', {
+              slot.freeResource !== undefined
+                ? t('characters.sheet.spellcasting.castDialog.slotOptionFree', {
+                    resource: slot.freeLabel,
                     level: slot.level,
                     remaining: slot.max - slot.used,
                   })
-                : t('characters.sheet.spellcasting.castDialog.slotOption', {
-                    level: slot.level,
-                    remaining: slot.max - slot.used,
-                  })
+                : slot.pact
+                  ? t('characters.sheet.spellcasting.castDialog.slotOptionPact', {
+                      level: slot.level,
+                      remaining: slot.max - slot.used,
+                    })
+                  : t('characters.sheet.spellcasting.castDialog.slotOption', {
+                      level: slot.level,
+                      remaining: slot.max - slot.used,
+                    })
             }}
           </option>
         }

@@ -406,6 +406,7 @@
         "slotLabel": "Spell slot",
         "slotOption": "Level {level} ({remaining} left)",
         "slotOptionPact": "Pact slot, level {level} ({remaining} left)",
+        "slotOptionFree": "No slot: {resource}, level {level} ({remaining} left)",
         "noSlots": "No spell slots available.",
         "replacesConcentration": "Casting this will end your current concentration.",
         "cancel": "Cancel",
@@ -615,8 +616,12 @@
     "attune": {
       "max": "You've reached your attunement limit."
     },
+    "resource": {
+      "none-left": "No uses of that resource remain."
+    },
     "spell": {
-      "always-prepared": "That spell is always prepared and can't be unprepared."
+      "always-prepared": "That spell is always prepared and can't be unprepared.",
+      "free-cast-unavailable": "That spell can't be cast without a slot that way."
     },
     "selection": {
       "count": "Select the required number of options.",
