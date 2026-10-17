@@ -123,3 +123,15 @@ describe('roll', () => {
     expect(result.dice).toEqual([{ sides: 20, value: 9, kept: true }]);
   });
 });
+
+// Plan 13 task 6: item charge regain admits d3 (`RegainDiceSchema`; e.g. Wand of Secrets "regains
+// 1d3 expended charges daily at dawn") — the caller's parse+roll path must handle it.
+describe('d3 (charge regain)', () => {
+  it('parses 1d3 and rolls faces 1..3 only', () => {
+    const spec = parseRollSpec('1d3');
+    expect(spec).toEqual({ dice: [{ n: 1, sides: 3 }], modifier: 0 });
+    expect(roll(spec, scripted([0])).total).toBe(1);
+    expect(roll(spec, scripted([faceFrac(3, 3)])).total).toBe(3);
+    expect(roll(spec, scripted([0.9999])).total).toBe(3);
+  });
+});

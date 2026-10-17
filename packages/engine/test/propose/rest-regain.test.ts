@@ -108,6 +108,13 @@ describe('propose.rest: rolled regain', () => {
     }
   });
 
+  it('accepts d3 regain dice (14 SRD items regain 1d3, e.g. Wand of Secrets): 1..3 only', () => {
+    const sheet = baseSheet({ resources: [rolledWand({ max: { value: 3, contributions: [] }, regain: '1d3' })] });
+    expect(propose.rest(sheet, 'long', undefined, { [key]: 3 }).at(-1)!.payload).toEqual({ resourceId: key, count: 3 });
+    const err = captureProposeError(() => propose.rest(sheet, 'long', undefined, { [key]: 4 }));
+    expect(err.diagnostics.map((d) => d.code)).toEqual(['rest.regain-roll-invalid']);
+  });
+
   it('resources without regain keep the byte-identical full-restore event, even if a stray roll is passed', () => {
     const plain = rolledWand({ id: 'item:11111111-1111-4111-8111-aaaaaaaaaaaa' });
     delete plain.regain;
