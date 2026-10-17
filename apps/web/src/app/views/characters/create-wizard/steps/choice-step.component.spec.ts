@@ -38,6 +38,7 @@ const SPECIES_CHOICE = `${SYSTEM_ID}@0/species`;
 const CLASS_CHOICE = `${SYSTEM_ID}@0/class`;
 const CLASS_SKILLS_CHOICE = 'srd-5e-2024:class/fighter@1/skills';
 const WEAPON_MASTERIES_CHOICE = 'srd-5e-2024:class/fighter@1/weapon-masteries';
+const ROGUE_EXPERTISE_CHOICE = 'srd-5e-2024:class/rogue@1/expertise';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -210,6 +211,59 @@ describe('ChoiceStepComponent', () => {
       'insight',
     ]);
     expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBeGreaterThan(0);
+  });
+
+  // Plan 13 task 1 (ruling 4): a `requireProficient` expertise pick (Rogue's @1/expertise) offers
+  // ONLY the skills the draft character is proficient in — the engine's `queryPickOptions`, read
+  // against the wizard's draft sheet — never every skill entity.
+  it('the rogue Expertise pick offers only the draft character’s proficient skills and records a pick', async () => {
+    const state = createState();
+    state.name.set('Vex');
+    state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+    state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/rogue']);
+    state.setDecision('srd-5e-2024:class/rogue@1/skills', [
+      'stealth',
+      'sleight-of-hand',
+      'perception',
+      'acrobatics',
+    ]);
+
+    const fixture = TestBed.createComponent(ChoiceStepComponent);
+    fixture.componentRef.setInput('choiceId', ROGUE_EXPERTISE_CHOICE);
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const names = Array.from(compiled.querySelectorAll('.entity-picker__name')).map((n) =>
+      n.textContent?.trim(),
+    );
+    // 4 rogue class skills + Soldier's Athletics and Intimidation; no unproficient skill (Arcana).
+    expect([...names].sort()).toEqual(
+      [
+        'Acrobatics',
+        'Athletics',
+        'Intimidation',
+        'Perception',
+        'Sleight of Hand',
+        'Stealth',
+      ].sort(),
+    );
+
+    const buttons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+    );
+    const byName = (text: string) =>
+      buttons.find((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() === text)!;
+    byName('Stealth').click();
+    await fixture.whenStable();
+    byName('Sleight of Hand').click();
+    await fixture.whenStable();
+
+    expect(state.decisions().get(ROGUE_EXPERTISE_CHOICE)).toEqual([
+      'srd-5e-2024:skill/stealth',
+      'srd-5e-2024:skill/sleight-of-hand',
+    ]);
+    expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBe(0);
+    expect(state.draftSheet()?.skills['stealth']?.proficiency).toBe('expertise');
   });
 
   // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------
