@@ -1,5 +1,6 @@
 {
   "name": "bard-11",
+  "note": "Plan 13 task 3 re-pin (Font of Inspiration retrofit): adds sheet.resources[0].reset. From bard level 5 the vendored srd-2024_bard_font-of-inspiration makes Bardic Inspiration regain on a Short Rest; the feature now re-declares the bardic-inspiration resource with reset shortRest and the engine takes reset last-wins per id, so the pool's reset legitimately moves longRest -> shortRest. No other expectation moves (max stays 3).",
   "packs": ["dist:srd-5e-2024"],
   "events": [
     {
@@ -322,6 +323,7 @@
     "sheet.abilities[\"dex\"].save.value": 6,
     "sheet.resources[0].id": "bardic-inspiration",
     "sheet.resources[0].max.value": 3,
+    "sheet.resources[0].reset": "shortRest",
     "sheet.spellcasting[0].slots": [
       {
         "level": 1,

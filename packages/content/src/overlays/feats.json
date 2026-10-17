@@ -84,17 +84,25 @@
   {
     "id": "srd-5e-2024:feat/grappler",
     "cite": "SRD 5.2.1, Grappler; Feat prerequisite \"Level 4+, Strength or Dexterity 13+\"; FeatBenefit srd-2024_grappler_1 .. _4",
-    "note": "Prerequisite -> predicates: level >= 4 AND (str >= 13 OR dex >= 13). Ability Score Increase (_1) is 'Strength OR Dexterity +1': PickSchema's `abilities` variant cannot restrict WHICH abilities are offered, so an authored pick would let any ability be raised (state-wrong, over-permissive) -> text fallback, flagged. Punch and Grab (_2), Attack Advantage (_3: advantage vs a creature Grappled by you) and Fast Wrestler (_4) are all target/attack-context gated (no per-target condition on advantage.grant) -> feature.text, flagged.",
+    "note": "Prerequisite -> predicates: level >= 4 AND (str >= 13 OR dex >= 13). Ability Score Increase (_1: \"Increase your Strength or Dexterity score by 1, to a maximum of 20.\") MECHANIZED (plan 13 task 3, retires the slice-2 text fallback): pick.abilities {count 1, max 20, improve '+1', from ['str', 'dex']} -- `from` restricts the offered/accepted abilities, so only Strength or Dexterity can be raised (anything else is refused with selection.abilityNotAllowed); the ASI paragraph leaves the feature.text. Punch and Grab (_2), Attack Advantage (_3: advantage vs a creature Grappled by you) and Fast Wrestler (_4) are all target/attack-context gated (no per-target condition on advantage.grant) -> feature.text, flagged.",
     "merge": {
       "prerequisites": [
         { "level": { "gte": 4 } },
         { "any": [{ "ability": { "str": { "gte": 13 } } }, { "ability": { "dex": { "gte": 13 } } }] }
       ],
+      "choices": [
+        {
+          "id": "srd-5e-2024:feat/grappler@4/ability-score",
+          "prompt": "Ability score increase",
+          "at": { "kind": "level", "level": 4 },
+          "pick": { "abilities": { "count": 1, "max": 20, "improve": "+1", "from": ["str", "dex"] } }
+        }
+      ],
       "effects": [
         {
           "type": "feature.text",
           "name": "Grappler",
-          "description": "Ability Score Increase. Increase your Strength or Dexterity score by 1, to a maximum of 20.\n\nPunch and Grab. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.\n\nAttack Advantage. You have Advantage on attack rolls against a creature Grappled by you.\n\nFast Wrestler. You don't have to spend extra movement to move a creature Grappled by you if the creature is your size or smaller."
+          "description": "Punch and Grab. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.\n\nAttack Advantage. You have Advantage on attack rolls against a creature Grappled by you.\n\nFast Wrestler. You don't have to spend extra movement to move a creature Grappled by you if the creature is your size or smaller."
         }
       ]
     }

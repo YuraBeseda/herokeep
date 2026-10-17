@@ -182,7 +182,7 @@
   {
     "id": "srd-5e-2024:feature/bard-bardic-inspiration",
     "cite": "SRD 5.2.1, Bardic Inspiration",
-    "note": "SRD text: \"You can confer a Bardic Inspiration die a number of times equal to your Charisma modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.\" Granted at Bard level 1. Fully expressible: resource.define 'bardic-inspiration' max 'max(1, mod(cha))' reset longRest plus action.define{kind:'bonus', resource}. The die size (d6, d8@5, d10@10, d12@15) is the Bardic Die column, display-only text on the class rows (ruling 1; no engine reader). RESET-BY-LEVEL FINDING: Font of Inspiration (level 5) changes the reset to Short OR Long Rest, but redefining the same resource id at a later level CANNOT change it -- packages/engine/src/derive/resources.ts stacks max via a sum-unique-key table (higher wins) but takes name/reset/display from the FIRST effect encountered (`if (!meta.has(eff.id))`), so a second define from the level-5 feature would never override the level-1 longRest. The reset therefore stays longRest at every level and Font of Inspiration is a text feature (see its entry); a character who regains uses on a short rest tracks that by hand. Flagged: slice-3 vocabulary candidate (a resource whose reset can be upgraded by a later define, or a per-level reset).",
+    "note": "SRD text: \"You can confer a Bardic Inspiration die a number of times equal to your Charisma modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.\" Granted at Bard level 1. Fully expressible: resource.define 'bardic-inspiration' max 'max(1, mod(cha))' reset longRest plus action.define{kind:'bonus', resource}. The die size (d6, d8@5, d10@10, d12@15) is the Bardic Die column, display-only text on the class rows (ruling 1; no engine reader). RESET BY LEVEL (plan 13 task 3, retires the slice-2 RESET-BY-LEVEL FINDING): Font of Inspiration (level 5) re-declares this same resource id with reset shortRest. packages/engine/src/derive/resources.ts now takes `reset` LAST-wins per id in derive's deterministic effect order (feature/bard-font-of-inspiration sorts after feature/bard-bardic-inspiration; a content test pins that), while max keeps its sum-unique-key stacking (same formula -> same value) and name/display/source stay from this, the first define. The pool is therefore longRest at bard 1-4 and shortRest from bard 5.",
     "merge": {
       "effects": [
         {
@@ -206,13 +206,20 @@
   {
     "id": "srd-5e-2024:feature/bard-font-of-inspiration",
     "cite": "SRD 5.2.1, Font of Inspiration",
-    "note": "SRD text: \"You now regain all your expended uses of Bardic Inspiration when you finish a Short or Long Rest. In addition, you can expend a spell slot (no action required) to regain one expended use of Bardic Inspiration.\" Granted at Bard level 5. TEXT FALLBACK + FLAG. Two halves, both inexpressible: (1) the short-rest reset -- see feature/bard-bardic-inspiration's RESET-BY-LEVEL FINDING (a later resource.define cannot replace the first define's reset; the resource stays longRest); (2) \"expend a spell slot to regain one use\" is a cross-pool conversion (slot counter -> resource counter) with no effect type. Text-feature fallback per ruling 9's bar.",
+    "note": "Vendored srd-2024_bard_font-of-inspiration (ClassFeature desc; ClassFeatureItem level 5): \"You now regain all your expended uses of Bardic Inspiration when you finish a Short or Long Rest. In addition, you can expend a spell slot (no action required) to regain one expended use of Bardic Inspiration.\" Two halves. (1) MECHANIZED (plan 13 task 3): a resource.define re-declaring 'bardic-inspiration' with the same name and max formula as feature/bard-bardic-inspiration and reset shortRest -- the engine takes reset last-wins per id (see that entry's RESET BY LEVEL note), so from bard level 5 the pool regains on a Short Rest (propose/rest.ts: a Long Rest restores shortRest pools too); max is unchanged. (2) TEXT + FLAG: \"expend a spell slot to regain one use\" is a cross-pool conversion (slot counter -> resource counter) with no effect type. The feature.text keeps both SRD sentences as display text; the old '(Tracked on the sheet as a Long Rest pool ...)' hand-tracking flag is removed.",
     "merge": {
       "effects": [
         {
+          "type": "resource.define",
+          "id": "bardic-inspiration",
+          "name": "Bardic Inspiration",
+          "max": "max(1, mod(cha))",
+          "reset": "shortRest"
+        },
+        {
           "type": "feature.text",
           "name": "Font of Inspiration",
-          "description": "You now regain all your expended uses of Bardic Inspiration when you finish a Short or Long Rest. (Tracked on the sheet as a Long Rest pool: reset the uses by hand after a Short Rest.)\n\nIn addition, you can expend a spell slot (no action required) to regain one expended use of Bardic Inspiration."
+          "description": "You now regain all your expended uses of Bardic Inspiration when you finish a Short or Long Rest.\n\nIn addition, you can expend a spell slot (no action required) to regain one expended use of Bardic Inspiration."
         }
       ]
     }

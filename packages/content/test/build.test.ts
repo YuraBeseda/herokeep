@@ -72,9 +72,13 @@ describe('the srd-5e-2024 pack', () => {
     expect(boons).toHaveLength(7);
     for (const b of boons) expect(abilitiesChoiceCount(b), b.id).toBe(1);
 
-    // No other entity in the built pack carries an abilities-pick choice (yet) — 4 backgrounds + ASI + 7 boons.
+    // Grappler's +1 Strength-or-Dexterity pick (plan 13 task 3, `from: ['str', 'dex']`).
+    const grappler = pack.entities.find((e) => e.id === 'srd-5e-2024:feat/grappler')!;
+    expect(abilitiesChoiceCount(grappler)).toBe(1);
+
+    // No other entity in the built pack carries an abilities-pick choice (yet) — 4 backgrounds + ASI + 7 boons + Grappler.
     const total = pack.entities.reduce((sum, e) => sum + abilitiesChoiceCount(e), 0);
-    expect(total).toBe(12);
+    expect(total).toBe(13);
   });
 
   it('every heavy armor item sets dexCap: 0 explicitly; medium/light armor is unaffected', () => {

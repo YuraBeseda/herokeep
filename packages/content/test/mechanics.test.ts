@@ -2162,12 +2162,12 @@ describe('bard integration over the real pack (task 11)', () => {
     for (const [l, n] of Object.entries(col)) expect(block(Number(l)).preparedMax, `level ${l}`).toBe(n);
   });
 
-  it('Bardic Inspiration: Charisma-modifier pool, min 1, long rest (reset stays longRest: Font of Inspiration is text)', () => {
+  it('Bardic Inspiration: Charisma-modifier pool, min 1, long rest until Font of Inspiration (5) makes it short rest', () => {
     expect(pool(1)?.max.value).toBe(2); // CHA 15 -> +2
     expect(pool(1, 8)?.max.value).toBe(1); // negative modifier floors at 1
     expect(pool(1, 20)?.max.value).toBe(5);
     expect(pool(1)?.reset).toBe('longRest');
-    expect(pool(5)?.reset).toBe('longRest'); // Font of Inspiration (5) cannot change a defined reset
+    expect(pool(5)?.reset).toBe('shortRest'); // plan 13 task 3: Font of Inspiration's define overrides the reset
     expect(sheetOf(bardChar(1)).actions.find((a) => a.id === 'bardic-inspiration')).toMatchObject({
       kind: 'bonus',
       resource: 'bardic-inspiration',
