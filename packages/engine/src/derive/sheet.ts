@@ -61,7 +61,12 @@ export interface Sheet {
   concentration?: { spellId: string };
   resources: ResourceView[];
   actions: ActionView[];
-  /** Union (by kind+target) of armor/weapon/tool/language proficiency, assembled in derive/index.ts. */
+  /**
+   * Union (by kind+target) of armor/weapon/tool/language proficiency, assembled in derive/index.ts.
+   * Plan 13 task 2: this is the tool-proficiency surface — kind 'tool' rows (target = the tool's
+   * item slug, or a class/background tool slug) come from the initial class's `toolProficiencies`,
+   * each background's `toolProficiency`, decided picks of tool items, and tool `proficiency.grant`s.
+   */
   proficiencies: { kind: string; target: string; level: string; sources: string[] }[];
   /**
    * `resolved: false` for an entry whose `itemId` no longer resolves in the content index — an

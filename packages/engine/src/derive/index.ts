@@ -1,3 +1,4 @@
+import { parseEntityId } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import { classSkillPick, findChoice } from '../content/choices.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
@@ -87,9 +88,15 @@ function deriveInitiative(
  * and task 11's `deriveAttacks` assembled weapon proficiency locally for its own toHit math — this
  * assembles the character-facing LIST from the same two sources (a class's own `armorTraining` /
  * `weaponProficiencies` fields, and any `proficiency.grant` effect of kind armor/weapon/tool/
- * language from the fully resolved, post-deferral effect list).
+ * language from the fully resolved, post-deferral effect list). Plan 13 task 2 adds the tool
+ * sources: a class's `toolProficiencies`, a background's `toolProficiency`, and decided tool picks.
  */
-function deriveProficiencies(facts: Facts, abilities: AbilitiesResult, index: ContentIndex): Sheet['proficiencies'] {
+function deriveProficiencies(
+  facts: Facts,
+  comp: Composition,
+  abilities: AbilitiesResult,
+  index: ContentIndex,
+): Sheet['proficiencies'] {
   const RANK: Record<string, number> = { expertise: 3, proficient: 2, half: 1 };
   const merged = new Map<string, { kind: string; target: string; level: string; sources: Set<string> }>();
 
@@ -111,6 +118,8 @@ function deriveProficiencies(facts: Facts, abilities: AbilitiesResult, index: Co
   // heavy armor). Compat: a class with no `multiclass`/`gains` data at all (old/fixture packs that
   // predate this ruling) falls back to its FULL list even as a later class, so untouched content
   // keeps granting exactly what it always granted.
+  // Plan 13 task 2: tools follow the same split — `multiclass.gains` carries no tool list, so a
+  // later class with gains contributes no class tools (a gains-less later class keeps its full list).
   facts.classes.forEach((c, i) => {
     const classId = index.resolveClassRef(c.classId) ?? c.classId;
     const classEntity = index.get(classId);
@@ -118,9 +127,32 @@ function deriveProficiencies(facts: Facts, abilities: AbilitiesResult, index: Co
     const gains = i > 0 ? classEntity.multiclass?.gains : undefined;
     const armorTraining = gains ? gains.armorTraining : classEntity.armorTraining;
     const weaponProficiencies = gains ? gains.weaponProficiencies : classEntity.weaponProficiencies;
+    const toolProficiencies = gains ? [] : classEntity.toolProficiencies;
     for (const slug of armorTraining) add('armor', slug, 'proficient', classId);
     for (const slug of weaponProficiencies) add('weapon', slug, 'proficient', classId);
+    for (const slug of toolProficiencies) add('tool', slug, 'proficient', classId);
   });
+
+  // Plan 13 task 2: every active background's own `toolProficiency` field.
+  for (const id of comp.entities) {
+    const bg = index.get(id);
+    if (bg?.type === 'background' && bg.toolProficiency !== undefined)
+      add('tool', bg.toolProficiency, 'proficient', bg.id);
+  }
+
+  // Plan 13 task 2: a decided pick whose selections resolve to tools (items of category 'tool')
+  // grants proficiency in them, whoever owns the choice — the tool analogue of a decided skill pick
+  // (`derive/abilities.ts`). Target = the item's slug, the same vocabulary class/background tool
+  // fields use, so one tool from several sources merges into one row.
+  for (const choiceId of Object.keys(facts.decisions).sort()) {
+    const found = findChoice(index, choiceId);
+    if (!found) continue;
+    for (const sel of facts.decisions[choiceId] ?? []) {
+      const selected = index.get(sel);
+      if (selected?.type === 'item' && selected.category === 'tool')
+        add('tool', parseEntityId(sel)?.slug ?? sel, 'proficient', found.owner.id);
+    }
+  }
 
   for (const ae of abilities.effects) {
     const eff = ae.effect;
@@ -249,7 +281,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   }
 
   const initiative = deriveInitiative(comp, abilities, resources.resources, index);
-  const proficiencies = deriveProficiencies(facts, abilities, index);
+  const proficiencies = deriveProficiencies(facts, comp, abilities, index);
 
   // `item.attunement.by` (survey fact, phase 4 plan 11 task 4): built once per `derive()` call
   // (lazily — only if at least one item actually declares `attunement.by`, since every predicate
