@@ -6,9 +6,22 @@ export const SemverSchema = z
 export const BlobHashSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 /** A pack asset hash or a bundled game-icons id (gi:<slug>). */
 export const IconRefSchema = z.union([BlobHashSchema, z.string().regex(/^gi:[a-z0-9][a-z0-9-]*$/)]);
+/** The polyhedral die set `DiceSchema` admits — the ONE list both dice patterns below derive from. */
+const POLYHEDRAL_SIDES = ['4', '6', '8', '10', '12', '20', '100'] as const;
+const dicePattern = (sides: readonly string[]) => new RegExp(`^\\d{1,2}d(${sides.join('|')})([+-]\\d{1,3})?$`);
+
 /** NdS(+/-M), e.g. 1d8, 2d6+3, 8d6 */
-export const DiceSchema = z.string().regex(/^\d{1,2}d(4|6|8|10|12|20|100)([+-]\d{1,3})?$/);
+export const DiceSchema = z.string().regex(dicePattern(POLYHEDRAL_SIDES));
 export type Dice = z.infer<typeof DiceSchema>;
+
+/**
+ * Plan 13 task 6 (ruling 7): `ItemEntitySchema.charges.regain` ONLY — `DiceSchema`'s die set plus
+ * d3. 14 vendored magic items regain "1d3 expended charges daily at dawn" (e.g. Wand of Secrets,
+ * Ring of Evasion, Cubic Gate — `MagicItem.json` pks `srd-2024_wand-of-secrets`,
+ * `srd-2024_ring-of-evasion`, `srd-2024_cubic-gate`). `DiceSchema` itself stays d3-free, so weapon
+ * damage, spell damage and hit dice still refuse it.
+ */
+export const RegainDiceSchema = z.string().regex(dicePattern(['3', ...POLYHEDRAL_SIDES]));
 
 /**
  * Ruling 6 (phase 4, plan 11 task 1): a fixed damage/roll amount with no die, e.g. a weapon's flat

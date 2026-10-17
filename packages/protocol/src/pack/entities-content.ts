@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SlugSchema } from '../ids.ts';
-import { DiceOrFlatSchema, DiceSchema } from './common.ts';
+import { DiceOrFlatSchema, DiceSchema, RegainDiceSchema } from './common.ts';
 import { entity } from './entity-base.ts';
 import { DamageTypeSchema, LongTextSchema, ResetSchema } from './enums.ts';
 import { FormulaSchema } from './formula.ts';
@@ -76,7 +76,7 @@ export const ItemEntitySchema = entity('item', {
   // 1d6 + 1 expended charges daily at dawn"); absent = full restore (the pre-existing behavior).
   // Refused on `reset:'never'` — a resource that never resets has nothing to regain on.
   charges: z
-    .strictObject({ max: FormulaSchema, reset: ResetSchema, regain: DiceSchema.optional() })
+    .strictObject({ max: FormulaSchema, reset: ResetSchema, regain: RegainDiceSchema.optional() })
     .refine((c) => c.regain === undefined || c.reset !== 'never', {
       message: "charges.regain needs a resetting item (reset is 'never')",
       path: ['regain'],
