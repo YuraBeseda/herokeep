@@ -160,10 +160,15 @@
   {
     "id": "srd-5e-2024:feature/ranger-favored-enemy",
     "cite": "SRD 5.2.1, Favored Enemy (Ranger); Favored Enemy column of the Ranger Features table",
-    "note": "SRD text: \"You always have the Hunter's Mark spell prepared. You can cast it twice without expending a spell slot, and you regain all expended uses of this ability when you finish a Long Rest. The number of times you can cast the spell without a spell slot increases when you reach certain Ranger levels, as shown in the Favored Enemy column.\" Granted at Ranger level 1. Two real effects: spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/hunters-mark (verified present in the built pack; T3 machinery -- excluded from the preparedMax cap), and resource.define 'favored-enemy' with max '2 + floor((classLevel(ranger) - 1) / 4)' which reproduces the vendored column exactly (2 at levels 1-4, 3 at 5-8, 4 at 9-12, 5 at 13-16, 6 at 17-20; verified against all 20 rows of srd-2024_ranger_favored-enemy-uses). FREE-CAST HONESTY: this resource is a TRACKING PIP ONLY. No engine mechanism links a resource to free casts of a spell (spell.grant.uses is not consumed by any reader -- same finding as Paladin's Smite / Faithful Steed): casting Hunter's Mark from the sheet still spends a slot; the user ticks the pip manually when they use a free casting. Not state-wrong (no number on the sheet is derived from it); the spend linkage is propose-flow territory.",
+    "note": "SRD text: \"You always have the Hunter's Mark spell prepared. You can cast it twice without expending a spell slot, and you regain all expended uses of this ability when you finish a Long Rest. The number of times you can cast the spell without a spell slot increases when you reach certain Ranger levels, as shown in the Favored Enemy column.\" Granted at Ranger level 1. Two real effects: spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/hunters-mark (verified present in the built pack; T3 machinery -- excluded from the preparedMax cap), and resource.define 'favored-enemy' with max '2 + floor((classLevel(ranger) - 1) / 4)' which reproduces the vendored column exactly (2 at levels 1-4, 3 at 5-8, 4 at 9-12, 5 at 13-16, 6 at 17-20; verified against all 20 rows of srd-2024_ranger_favored-enemy-uses). FREE CASTS LINKED (plan 13 task 4): the grant carries uses:{resource:'favored-enemy'}, so the sheet offers a free-cast lane for Hunter's Mark that spends one favored-enemy use and no slot (casting it with a slot spends the slot, never the counter); the lane casts at the spell's base level only (\"without expending a spell slot\" -- no slot to upcast with) and is refused once the counter is empty. The resource.define stays the one counter (same id, max and Long Rest reset), so recorded favored-enemy spends keep their meaning.",
     "merge": {
       "effects": [
-        { "type": "spell.grant", "spell": "srd-5e-2024:spell/hunters-mark", "alwaysPrepared": true },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/hunters-mark",
+          "alwaysPrepared": true,
+          "uses": { "resource": "favored-enemy" }
+        },
         {
           "type": "resource.define",
           "id": "favored-enemy",

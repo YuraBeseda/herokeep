@@ -2615,7 +2615,6 @@ describe('druid and circle of the land to level 20 mechanics (task 13)', () => {
   it('text fallbacks present for the inexpressible features; the swapped upstream rows stay untouched', () => {
     for (const slug of [
       'druid-primal-order',
-      'druid-wild-companion',
       'druid-wild-resurgence',
       'druid-elemental-fury',
       'druid-improved-elemental-fury',
@@ -2757,13 +2756,20 @@ describe('druid integration over the real pack (task 13)', () => {
     expect(block(1).preparedMax).toBe(4);
   });
 
-  it('Wild Companion is text only: Find Familiar is NOT granted (the feature casts it via slot or Wild Shape, it is not prepared)', () => {
-    expect(block(2).alwaysPrepared).toEqual([spell('speak-with-animals')]);
+  // Plan 13 task 4 retrofit: Wild Companion is now spell.grant{alwaysPrepared, uses:{resource:'wild-shape'}}
+  // (slot route = slot lane, Wild Shape route = free lane; see free-casts.test.ts).
+  it('Wild Companion (2) makes Find Familiar castable from level 2, outside the prepared cap', () => {
+    expect(block(1).alwaysPrepared).toEqual([spell('speak-with-animals')]);
+    expect(block(2).alwaysPrepared).toEqual([spell('speak-with-animals'), spell('find-familiar')]);
   });
 
   it('Circle of the Land: no always-prepared circle spells at any level (honest: the lists depend on a per-Long-Rest land choice)', () => {
     for (const l of [3, 5, 7, 9, 20])
-      expect(block(l, { land: true }).alwaysPrepared, `level ${l}`).toEqual([spell('speak-with-animals')]);
+      // Only the class's own grants (Druidic; Wild Companion since plan 13 task 4) — no circle spells.
+      expect(block(l, { land: true }).alwaysPrepared, `level ${l}`).toEqual([
+        spell('speak-with-animals'),
+        spell('find-familiar'),
+      ]);
   });
 
   it("Land's Aid (3) spends a Wild Shape use as a Magic action", () => {

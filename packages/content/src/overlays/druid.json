@@ -167,9 +167,15 @@
   {
     "id": "srd-5e-2024:feature/druid-wild-companion",
     "cite": "SRD 5.2.1, Wild Companion; pk srd-2024_druid_wild-companion",
-    "note": "SRD text: \"As a Magic action, you can expend a spell slot or a use of Wild Shape to cast the Find Familiar spell without Material components. When you cast the spell in this way, the familiar is Fey and disappears when you finish a Long Rest.\" Granted at Druid level 2. ENTITY-EXISTENCE CHECK: srd-5e-2024:spell/find-familiar exists. TEXT FALLBACK + FLAG, deliberately NOT a spell.grant: the feature does not make Find Familiar a prepared spell (unlike Druidic/Speak with Animals or the paladin 'always prepared' features) -- it adds a Magic-action casting route paid with a slot OR a Wild Shape use, with no Material components and a Fey/long-rest-limited familiar. An alwaysPrepared grant would put an ordinary prepared Find Familiar (with its Material component and a plain slot spend) on the sheet and claim a feature the text does not state; the alternative-cost choice (slot or Wild Shape pool) has no effect type, so linking the action to the wild-shape resource would also be wrong half the time. The text rides as feature.text. Flagged: slice-3 vocabulary candidate (alternate-cost casting routes, shared with Wild Resurgence / Nature Magician).",
+    "note": "SRD text: \"As a Magic action, you can expend a spell slot or a use of Wild Shape to cast the Find Familiar spell without Material components. When you cast the spell in this way, the familiar is Fey and disappears when you finish a Long Rest.\" Granted at Druid level 2 (ClassFeatureItem srd-2024_druid_wild-companion, level 2). ENTITY-EXISTENCE CHECK: srd-5e-2024:spell/find-familiar exists (level 1). MECHANIZED (plan 13 task 4, free-cast lane): spell.grant{alwaysPrepared:true, uses:{resource:'wild-shape'}} expresses both vendored payment routes -- \"expend a spell slot\" is the ordinary slot lane (Find Familiar is castable at any time, like an always-prepared spell, and does not count against the prepared cap), \"or a use of Wild Shape\" is the free lane, which spends one wild-shape use and no slot, at the spell's base level, refused when no Wild Shape use remains. Modelling deviation, stated: the text does not literally say \"prepared\"; always-prepared is the existing mechanism for \"you can always cast this spell with a slot\" and is bound to the Druid block (Wisdom). STAYS TEXT (feature.text below): the Magic-action casting time, the waived Material component, and the familiar being Fey and disappearing on a Long Rest -- no effect type alters a spell's casting time/components or a summon's properties.",
     "merge": {
       "effects": [
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/find-familiar",
+          "alwaysPrepared": true,
+          "uses": { "resource": "wild-shape" }
+        },
         {
           "type": "feature.text",
           "name": "Wild Companion",
