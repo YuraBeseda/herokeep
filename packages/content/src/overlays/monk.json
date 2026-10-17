@@ -177,71 +177,19 @@
   {
     "id": "srd-5e-2024:feature/monk-unarmored-movement",
     "cite": "SRD 5.2.1, Unarmored Movement; Monk Features table",
-    "note": "SRD text: \"Your speed increases by 10 feet while you aren't wearing armor or wielding a Shield. This bonus increases when you reach certain Monk levels, as shown on the Monk Features table.\" Granted at Monk levels 2-20. EXPRESSIBILITY CHECK (brief must): the effects registry has speed.bonus{mode, value}, but `value` is a plain integer (z.int(), packages/protocol/src/pack/effects.ts) -- NOT a Formula -- so one effect cannot scale with level; and the column ('+10 ft.' ... '+30 ft.' strings, so NOT lifted into typed extras by NUMERIC_EXTRA_RE) cannot be read by an effect. It IS expressible in closed form as five stacked increments, each a speed.bonus with a distinct explicit `key` (sum-unique-key policy, packages/engine/src/derive/abilities.ts) gated by the eagerly-evaluated score-free predicate all[armor none, shield false, classLevel{monk gte N}]: +10 at 2, +5 at 6, +5 at 10, +5 at 14, +5 at 18, summing to the vendored column exactly (verified for all 20 levels: none at 1; +10 at 2-5; +15 at 6-9; +20 at 10-13; +25 at 14-17; +30 at 18-20 -- vendored srd-2024_monk_unarmored-movement rows) and verified end to end through derive() in test/mechanics.test.ts. The armor-or-shield gate is the same predicate shape as monk-unarmored-defense above. A REAL effect, not a fallback. The vertical-surface/liquid movement clause belongs to Acrobatic Movement (level 9, text).",
+    "note": "SRD text: \"Your speed increases by 10 feet while you aren't wearing armor or wielding a Shield. This bonus increases when you reach certain Monk levels, as shown on the Monk Features table.\" Granted at Monk levels 2-20. Plan 13 task 5: ONE speed.bonus whose value is a formula (speed.bonus.value widened int -> int|Formula) reproducing the vendored column exactly -- '10 + 5 * floor((classLevel(monk) - 2) / 4)' gated all[armor none, shield false, classLevel{monk gte 2}]: +10 at 2-5, +15 at 6-9, +20 at 10-13, +25 at 14-17, +30 at 18-20 (vendored srd-2024_monk_unarmored-movement_<L> ClassFeatureItem rows; verified for all 20 levels through derive() in test/speed-and-immunities.test.ts). It replaces the plan-11 workaround of five keyed increments (+10 at 2, +5 at 6/10/14/18) with identical totals at every level. The armor-or-shield gate is the same predicate shape as monk-unarmored-defense above. The vertical-surface/liquid movement clause belongs to Acrobatic Movement (level 9, text).",
     "merge": {
       "effects": [
         {
           "type": "speed.bonus",
           "mode": "walk",
-          "value": 10,
-          "key": "monk-unarmored-movement-2",
+          "value": "10 + 5 * floor((classLevel(monk) - 2) / 4)",
+          "key": "monk-unarmored-movement",
           "when": {
             "all": [
               { "armor": { "category": ["none"] } },
               { "shield": false },
               { "classLevel": { "monk": { "gte": 2 } } }
-            ]
-          }
-        },
-        {
-          "type": "speed.bonus",
-          "mode": "walk",
-          "value": 5,
-          "key": "monk-unarmored-movement-6",
-          "when": {
-            "all": [
-              { "armor": { "category": ["none"] } },
-              { "shield": false },
-              { "classLevel": { "monk": { "gte": 6 } } }
-            ]
-          }
-        },
-        {
-          "type": "speed.bonus",
-          "mode": "walk",
-          "value": 5,
-          "key": "monk-unarmored-movement-10",
-          "when": {
-            "all": [
-              { "armor": { "category": ["none"] } },
-              { "shield": false },
-              { "classLevel": { "monk": { "gte": 10 } } }
-            ]
-          }
-        },
-        {
-          "type": "speed.bonus",
-          "mode": "walk",
-          "value": 5,
-          "key": "monk-unarmored-movement-14",
-          "when": {
-            "all": [
-              { "armor": { "category": ["none"] } },
-              { "shield": false },
-              { "classLevel": { "monk": { "gte": 14 } } }
-            ]
-          }
-        },
-        {
-          "type": "speed.bonus",
-          "mode": "walk",
-          "value": 5,
-          "key": "monk-unarmored-movement-18",
-          "when": {
-            "all": [
-              { "armor": { "category": ["none"] } },
-              { "shield": false },
-              { "classLevel": { "monk": { "gte": 18 } } }
             ]
           }
         }

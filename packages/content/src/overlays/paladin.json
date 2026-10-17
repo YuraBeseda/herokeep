@@ -269,13 +269,13 @@
   {
     "id": "srd-5e-2024:feature/paladin-aura-of-courage",
     "cite": "SRD 5.2.1, Aura of Courage",
-    "note": "SRD text: \"You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there.\" Granted at Paladin level 10. The self part is a condition immunity: condition.immunity exists in the vocabulary (and would need the same Incapacitated gate as Aura of Protection) but is NOT consumed anywhere in @hk/engine derive (verified by grep: only the refs collector reads it; no sheet field surfaces condition immunities), so authoring it would be an inert no-op rather than a mechanic. The ally part is out of single-character scope (see Aura of Protection). Text-feature fallback per ruling 9's bar; flagged -- the engine carry is a derive consumer for condition.immunity.",
+    "note": "SRD text: \"You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there.\" Granted at Paladin level 10. Plan 13 task 5: the SELF part is authored -- the Paladin is always inside their own Aura of Protection, so condition.immunity{frightened}, gated by when:{not:{condition:incapacitated}} exactly like paladin-aura-of-protection's save bonus (that aura \"is inactive while you have the Incapacitated condition\"). condition.immunity now has a derive consumer (sheet.immunities, display-only per ruling 9). The ALLY part is out of single-character scope (no effect applies to other characters' sheets) and stays in the carried description, same split as Aura of Protection; with a real effect authored, the feature.text fallback is retired (Aura of Protection precedent).",
     "merge": {
       "effects": [
         {
-          "type": "feature.text",
-          "name": "Aura of Courage",
-          "description": "You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there."
+          "type": "condition.immunity",
+          "conditions": ["srd-5e-2024:condition/frightened"],
+          "when": { "not": { "condition": "srd-5e-2024:condition/incapacitated" } }
         }
       ]
     }
@@ -416,13 +416,13 @@
   {
     "id": "srd-5e-2024:feature/paladin-oath-of-devotion-aura-of-devotion",
     "cite": "SRD 5.2.1, Oath of Devotion — Aura of Devotion",
-    "note": "SRD text: \"You and your allies have Immunity to the Charmed condition while in your Aura of Protection. If a Charmed ally enters the aura, that condition has no effect on that ally while there.\" Granted at Oath level 7. Same finding as Aura of Courage: the self part is a condition immunity (unconsumed by derive, so authoring it would be inert) and the ally part is out of single-character scope. Text-feature fallback per ruling 9's bar; flagged.",
+    "note": "SRD text: \"You and your allies have Immunity to the Charmed condition while in your Aura of Protection. If a Charmed ally enters the aura, that condition has no effect on that ally while there.\" Granted at Oath level 7. Plan 13 task 5: same split as Aura of Courage -- the SELF part is condition.immunity{charmed} gated by when:{not:{condition:incapacitated}} (Aura of Protection is inactive while Incapacitated); the ALLY part is out of single-character scope and stays in the carried description; the feature.text fallback is retired.",
     "merge": {
       "effects": [
         {
-          "type": "feature.text",
-          "name": "Aura of Devotion",
-          "description": "You and your allies have Immunity to the Charmed condition while in your Aura of Protection. If a Charmed ally enters the aura, that condition has no effect on that ally while there."
+          "type": "condition.immunity",
+          "conditions": ["srd-5e-2024:condition/charmed"],
+          "when": { "not": { "condition": "srd-5e-2024:condition/incapacitated" } }
         }
       ]
     }

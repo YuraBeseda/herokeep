@@ -1179,26 +1179,7 @@ describe('monk and warrior of the open hand to level 20 mechanics (task 8)', () 
     });
   });
 
-  it('monk: Unarmored Movement is stepped speed.bonus increments reproducing the vendored column', () => {
-    const eff = feature('unarmored-movement').effects.filter((e) => e.type === 'speed.bonus') as unknown as {
-      mode: string;
-      value: number;
-      key: string;
-      when: { all: [unknown, unknown, { classLevel: { monk: { gte: number } } }] };
-    }[];
-    expect(eff).toHaveLength(5);
-    const total = (level: number) =>
-      eff.filter((e) => level >= e.when.all[2].classLevel.monk.gte).reduce((a, e) => a + e.value, 0);
-    // vendored srd-2024_monk_unarmored-movement column: none at 1, +10 (2-5), +15 (6-9), +20 (10-13), +25 (14-17), +30 (18-20)
-    const column = (l: number) => (l < 2 ? 0 : l < 6 ? 10 : l < 10 ? 15 : l < 14 ? 20 : l < 18 ? 25 : 30);
-    for (let l = 1; l <= 20; l++) expect(total(l), `level ${l}`).toBe(column(l));
-    expect(new Set(eff.map((e) => e.key)).size).toBe(5);
-    for (const e of eff) {
-      expect(e.mode).toBe('walk');
-      expect(e.when.all[0]).toEqual({ armor: { category: ['none'] } });
-      expect(e.when.all[1]).toEqual({ shield: false });
-    }
-  });
+  // Unarmored Movement's shape + per-level column: test/speed-and-immunities.test.ts (plan 13 task 5).
 
   it('monk: Extra Attack and Body and Mind are real effects (extraAttack.set, +4 dex/wis capped at 25)', () => {
     expect(feature('extra-attack').effects).toContainEqual({ type: 'extraAttack.set', count: 2 });
@@ -1430,9 +1411,7 @@ describe('paladin and oath of devotion to level 20 mechanics (task 9)', () => {
       'fighting-style',
       'radiant-strikes',
       'restoring-touch',
-      'aura-of-courage',
       'aura-expansion',
-      'oath-of-devotion-aura-of-devotion',
       'oath-of-devotion-smite-of-protection',
     ]) {
       expect(
@@ -1440,6 +1419,8 @@ describe('paladin and oath of devotion to level 20 mechanics (task 9)', () => {
         slug,
       ).toBe(true);
     }
+    // Plan 13 task 5: Aura of Courage / Aura of Devotion's self immunity is now a real
+    // condition.immunity (test/speed-and-immunities.test.ts); the ally part stays in the description.
   });
 });
 
@@ -1729,7 +1710,6 @@ describe('ranger and hunter to level 20 mechanics (task 10)', () => {
       'precise-hunter',
       'relentless-hunter',
       'foe-slayer',
-      'roving',
       'hunter-hunters-lore',
       'hunter-hunters-prey',
       'hunter-defensive-tactics',

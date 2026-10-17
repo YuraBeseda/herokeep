@@ -240,7 +240,7 @@
   {
     "id": "srd-5e-2024:feature/ranger-roving",
     "cite": "SRD 5.2.1, Roving",
-    "note": "SRD text: \"Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed and a Swim Speed equal to your Speed.\" Granted at Ranger level 6. The walk-speed half is a real speed.bonus{mode:'walk', value:10} gated on armor category none/light/medium (Barbarian Fast Movement precedent; a shield does not suppress it). The Climb and Swim speeds are 'equal to your Speed' -- speed.set/speed.bonus take a FIXED integer, so a speed that tracks the (species-dependent, bonus-modified) walk speed cannot be expressed; a fixed 40 would be wrong for any non-30 species. Those clauses stay in the carried text; flagged.",
+    "note": "SRD text: \"Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed and a Swim Speed equal to your Speed.\" Granted at Ranger level 6. The walk-speed half is a real speed.bonus{mode:'walk', value:10} gated on armor category none/light/medium (Barbarian Fast Movement precedent; a shield does not suppress it). Plan 13 task 5: the Climb and Swim Speeds 'equal to your Speed' are speed.bonus{mode:'climb'|'swim', value:'speed(walk)'} -- the formula reads the RESOLVED walk Speed (species base plus every walk bonus, so Roving's own +10 and its Heavy-armor lapse carry through), legal only in a non-walk speed.bonus (pack validation). Keys 'climb-equal-to-speed'/'swim-equal-to-speed' so another 'equal to your Speed' grant authored with the same key keeps the max instead of summing. Every clause is now a real effect, so the feature.text fallback is retired (the carried description still shows the full text).",
     "merge": {
       "effects": [
         {
@@ -249,11 +249,8 @@
           "value": 10,
           "when": { "armor": { "category": ["none", "light", "medium"] } }
         },
-        {
-          "type": "feature.text",
-          "name": "Roving",
-          "description": "You also have a Climb Speed and a Swim Speed equal to your Speed (your Speed increases by 10 feet while you aren't wearing Heavy armor; the walking increase is applied to your Speed automatically)."
-        }
+        { "type": "speed.bonus", "mode": "climb", "value": "speed(walk)", "key": "climb-equal-to-speed" },
+        { "type": "speed.bonus", "mode": "swim", "value": "speed(walk)", "key": "swim-equal-to-speed" }
       ]
     }
   },
