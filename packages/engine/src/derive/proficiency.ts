@@ -14,7 +14,8 @@ export interface ClassProficiencyGrant {
 /**
  * The single source of truth (plan 13 ruling 8) for what each of the character's classes
  * contributes to armor/weapon/tool proficiency — consumed by `derive/index.ts`'s
- * `sheet.proficiencies`. Ruling 7 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) decides
+ * `sheet.proficiencies` AND `derive/attacks.ts`'s weapon proficiency for attack math, so the two can
+ * never disagree. Ruling 7 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) decides
  * which entry is "first" — the FIRST class always contributes its full lists; any LATER class
  * (index > 0) contributes only its `multiclass.gains` lists (the pack's multiclass table data).
  * `multiclass.gains` carries no tool list, so a later class with gains contributes no class tools

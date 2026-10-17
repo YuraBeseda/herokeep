@@ -91,9 +91,9 @@ function deriveInitiative(
 /**
  * Union (by `kind`+`target`) of armor/weapon/tool/language proficiency (controller ruling,
  * task-13-brief.md): task 9's `deriveAbilities` deliberately only tracks save/skill proficiency —
- * this assembles the character-facing LIST from two sources (each class's `classProficiencyGrants`
- * lists, and any `proficiency.grant` effect of kind armor/weapon/tool/language from the fully
- * resolved, post-deferral effect list). Plan 13 task 2 adds the tool
+ * this assembles the character-facing LIST from the same two sources `deriveAttacks` prices weapon
+ * proficiency from (each class's `classProficiencyGrants` lists, and any `proficiency.grant` effect
+ * of kind armor/weapon/tool/language from the fully resolved, post-deferral effect list). Plan 13 task 2 adds the tool
  * sources: a class's `toolProficiencies`, a background's `toolProficiency`, and decided tool picks.
  */
 function deriveProficiencies(

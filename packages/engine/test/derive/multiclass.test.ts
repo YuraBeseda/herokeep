@@ -152,3 +152,83 @@ describe('multiclass weapon gains on the real SRD pack (W2): wizard → monk', (
     expect(proficientWith('longsword')).toBe(false);
   });
 });
+
+/**
+ * Plan 13 task 7 (ruling 8): the attack line's weapon proficiency must come from the SAME
+ * per-class, gains-restricted lists as `sheet.proficiencies` (pre-existing wrong since f114f01:
+ * `derive/attacks.ts` read every class's FULL `weaponProficiencies`). SRD 5.2.1 multiclassing table:
+ * a later-class Rogue gains "Light armor, one skill of your choice, Thieves' Tools" — no weapons — so
+ * a Wizard → Rogue is NOT proficient with a Rapier (Martial), even though a first-class Rogue is.
+ */
+describe('attack proficiency follows multiclass gains (plan 13 task 7)', () => {
+  const srd = createContentIndex([loadDistPack('srd-5e-2024')]);
+  const srdRules = (): SystemRules => ({ restRules: srd.system().restRules, hpRules: srd.system().hpRules });
+  const rapierSheet = (classes: { classId: string; level: number }[]) => {
+    const f = baseFacts();
+    // dex 14 (+2) > str 10 (+0): the finesse rapier prices with dex; total level 2 => prof +2.
+    f.decisions['srd-5e-2024:system/5e-2024@0/ability-scores'] = [
+      'str:10',
+      'dex:14',
+      'con:12',
+      'int:15',
+      'wis:13',
+      'cha:8',
+    ];
+    f.classes = classes;
+    f.inventory = [{ instanceId: 'i1', itemId: 'srd-5e-2024:item/rapier', qty: 1, equipped: true, attuned: false }];
+    return derive(f, srd, srdRules());
+  };
+  const sheetProficientWithRapier = (sheet: ReturnType<typeof rapierSheet>) => {
+    const targets = new Set(sheet.proficiencies.filter((p) => p.kind === 'weapon').map((p) => p.target));
+    return targets.has('martial') || targets.has('rapier');
+  };
+
+  it('wizard → rogue: the rapier attack carries NO proficiency bonus, matching sheet.proficiencies', () => {
+    const sheet = rapierSheet([
+      { classId: 'srd-5e-2024:class/wizard', level: 1 },
+      { classId: 'srd-5e-2024:class/rogue', level: 1 },
+    ]);
+    expect(sheetProficientWithRapier(sheet)).toBe(false);
+    expect(sheet.attacks).toHaveLength(1);
+    expect(sheet.attacks[0]!.ability).toBe('dex');
+    expect(sheet.attacks[0]!.toHit.value).toBe(2); // dex +2 only — no prof (rogue gains carry no weapons)
+  });
+
+  it('rogue → wizard: rogue is the FIRST class, so its full list (rapier) still prices the attack', () => {
+    const sheet = rapierSheet([
+      { classId: 'srd-5e-2024:class/rogue', level: 1 },
+      { classId: 'srd-5e-2024:class/wizard', level: 1 },
+    ]);
+    expect(sheetProficientWithRapier(sheet)).toBe(true);
+    expect(sheet.attacks[0]!.toHit.value).toBe(4); // dex +2 + prof +2
+  });
+
+  it('single-class rogue: the rapier attack is unchanged (proficient)', () => {
+    const sheet = rapierSheet([{ classId: 'srd-5e-2024:class/rogue', level: 2 }]);
+    expect(sheetProficientWithRapier(sheet)).toBe(true);
+    expect(sheet.attacks[0]!.toHit.value).toBe(4); // dex +2 + prof +2
+  });
+
+  it('compat: a later class with NO multiclass.gains data keeps its full weapon list on the attack line', () => {
+    // core-mini alone: its fighter has no `multiclass` field (multiclass-mini is what patches gains in).
+    const legacy = createContentIndex([loadFixturePack('core-mini')]);
+    const f = baseFacts();
+    f.decisions['core-mini:system/mini@0/ability-scores'] = [
+      'str:16',
+      'dex:10',
+      'con:10',
+      'int:10',
+      'wis:10',
+      'cha:10',
+    ];
+    f.classes = [
+      { classId: druid, level: 1 },
+      { classId: fighter, level: 1 },
+    ];
+    f.inventory = [{ instanceId: 'i1', itemId: 'core-mini:item/longsword', qty: 1, equipped: true, attuned: false }];
+    const sys = legacy.system();
+    const sheet = derive(f, legacy, { restRules: sys.restRules, hpRules: sys.hpRules });
+    expect(sheet.proficiencies.some((p) => p.kind === 'weapon' && p.target === 'martial')).toBe(true);
+    expect(sheet.attacks[0]!.toHit.value).toBe(5); // str +3 + prof +2 (fighter's full list: martial)
+  });
+});

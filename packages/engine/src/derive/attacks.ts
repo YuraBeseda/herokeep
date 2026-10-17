@@ -6,6 +6,7 @@ import type { Facts } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
 import { type ActiveEffect, type Composition, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
+import { classProficiencyGrants } from './proficiency.ts';
 import { bestRowExtra } from './spellcasting.ts';
 
 export interface AttackRow {
@@ -59,23 +60,19 @@ function matchesFilter(filter: AttackFilter, weapon: Weapon): boolean {
 }
 
 /**
- * Weapon proficiency isn't assembled anywhere upstream: task-9's `deriveAbilities` deliberately
- * ignores `proficiency.grant` effects whose `kind` isn't `save`/`skill` (see that file's save/skill
- * proficiency section), so the union of "what weapon categories/kinds the character is proficient
- * with" is assembled HERE, from two sources — a class's own `weaponProficiencies` (category slugs
- * like `simple`/`martial`, or a specific weapon slug/tag for a narrower grant) and any
+ * The union of "what weapon categories/kinds the character is proficient with" for attack math,
+ * from the same two sources `sheet.proficiencies`' weapon rows come from (plan 13 ruling 8 — one
+ * source of truth, so the attack line and the proficiency list never disagree): each class's
+ * `classProficiencyGrants` weapon list (first class full, later class only its `multiclass.gains`,
+ * gains-less later class full — e.g. a Wizard → Rogue gets no Rogue weapons, so no Rapier) and any
  * `proficiency.grant { kind: 'weapon' }` effect (feats/features granting a specific weapon or
- * category). A weapon item is proficient when its `weapon.category` is in this set, OR its own
- * entity slug is, OR any of its `tags` is — the last two cover a future narrower ("proficient with
- * rapier specifically") grant that this 1b content scope doesn't exercise.
+ * category). Entries are category slugs like `simple`/`martial`, or a specific weapon slug/tag for
+ * a narrower grant. A weapon item is proficient when its `weapon.category` is in this set, OR its
+ * own entity slug is, OR any of its `tags` is.
  */
 function weaponProficiencySlugs(facts: Facts, index: ContentIndex, resolvedEffects: ActiveEffect[]): Set<string> {
   const slugs = new Set<string>();
-  for (const c of facts.classes) {
-    const classId = index.resolveClassRef(c.classId) ?? c.classId;
-    const classEntity = index.get(classId);
-    if (classEntity?.type === 'class') for (const s of classEntity.weaponProficiencies) slugs.add(s);
-  }
+  for (const grant of classProficiencyGrants(facts, index)) for (const s of grant.weaponProficiencies) slugs.add(s);
   for (const ae of resolvedEffects) {
     const eff = ae.effect;
     if (eff.type === 'proficiency.grant' && eff.kind === 'weapon') slugs.add(eff.target);
