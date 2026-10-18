@@ -100,3 +100,35 @@ img.sheet-shell__portrait {
   text-decoration: none;
   font-weight: 600;
 }
+
+/* Same warning treatment as `.campaign-edit-lock-banner`. */
+.sheet-shell__missing-packs {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.sheet-shell__missing-packs-text {
+  margin: 0;
+  color: var(--warning);
+}
+
+.sheet-shell__missing-packs-list {
+  margin: var(--space-1) 0;
+  padding-inline-start: var(--space-4);
+}
+
+.sheet-shell__missing-packs-link {
+  color: var(--accent-strong);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}

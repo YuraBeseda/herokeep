@@ -40,6 +40,28 @@
       </div>
     </header>
 
+    <!-- Plan 15 Task 4 (ruling 8): pinned packs this device does not have, on every tab. Their
+         entities resolve to nothing; derive reports those as unresolved-reference warnings. -->
+    @if (missingPins().length > 0) {
+      <div class="sheet-shell__missing-packs" role="status">
+        <p class="sheet-shell__missing-packs-text">
+          {{ t('sheet.banner.missing-packs.message', { count: missingPins().length }) }}
+        </p>
+        <ul class="sheet-shell__missing-packs-list">
+          @for (pin of missingPins(); track pin.packId) {
+            <li>
+              <code>{{
+                t('sheet.banner.missing-packs.entry', { packId: pin.packId, version: pin.version })
+              }}</code>
+            </li>
+          }
+        </ul>
+        <a class="sheet-shell__missing-packs-link" routerLink="/packs">{{
+          t('sheet.banner.missing-packs.link')
+        }}</a>
+      </div>
+    }
+
     <div class="sheet-shell__xp">
       <span class="sheet-shell__xp-current">{{ t('sheet.header.xp', { xp: xp() }) }}</span>
       <hk-number-field

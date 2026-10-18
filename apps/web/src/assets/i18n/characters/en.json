@@ -560,6 +560,13 @@
       "title": "Breakdown",
       "empty": "No modifiers.",
       "close": "Close"
+    },
+    "banner": {
+      "missing-packs": {
+        "message": "{count, plural, one {This character uses a content pack that isn't installed on this device:} other {This character uses # content packs that aren't installed on this device:}}",
+        "entry": "{packId}@{version}",
+        "link": "Manage packs"
+      }
     }
   },
   "timeline": {

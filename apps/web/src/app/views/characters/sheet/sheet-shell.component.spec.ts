@@ -23,6 +23,8 @@ import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
+import charactersRu from '../../../../assets/i18n/characters/ru.json';
+import charactersUk from '../../../../assets/i18n/characters/uk.json';
 import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { SheetShellComponent } from './sheet-shell.component';
 import { seedFighter } from './testing/character-fixtures';
@@ -396,6 +398,96 @@ describe('SheetShellComponent — per-character pack set (plan 15 Task 4)', () =
     expect(scoped.index().has(MOONKIN)).toBe(true);
     expect(scoped.localizer().name(MOONKIN)).toBe('Moonkin');
     expect(TestBed.inject(EngineFacade).index().has(MOONKIN)).toBe(false);
+  });
+
+  it('a character pinned to an uninstalled pack renders the sheet with the missing-packs banner on every tab; its references stay unresolved warnings (Review Focus 4)', async () => {
+    const id = await seedFighter('Ivan');
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: 'ghost-pack', version: '2.0.0' } },
+    ]);
+    await store.appendTx([
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: {
+          choiceId: 'srd-5e-2024:system/5e-2024@0/species',
+          selection: ['ghost-pack:species/wisp'],
+        },
+      },
+    ]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+
+    expect(root.querySelector('.sheet-shell__name')?.textContent?.trim()).toBe('Ivan');
+    const banner = root.querySelector('.sheet-shell__missing-packs');
+    expect(banner).not.toBeNull();
+    expect(banner?.getAttribute('role')).toBe('status');
+    expect(banner?.textContent).toContain(
+      "This character uses a content pack that isn't installed on this device:",
+    );
+    expect(banner?.textContent).toContain('ghost-pack@2.0.0');
+    expect(banner?.querySelector('a')?.getAttribute('href')).toBe('/packs');
+    expect(
+      store
+        .sheet()
+        ?.issues.some(
+          (d) => d.code === 'derive.unresolvedEntity' && d.entityId === 'ghost-pack:species/wisp',
+        ),
+    ).toBe(true);
+
+    await harness.navigateByUrl(`/c/${id}/build`);
+    expect(harness.routeNativeElement!.querySelector('.sheet-shell__missing-packs')).not.toBeNull();
+    await harness.navigateByUrl(`/c/${id}/timeline`);
+    expect(harness.routeNativeElement!.querySelector('.sheet-shell__missing-packs')).not.toBeNull();
+  });
+
+  it('lists every missing pin (a core at another version included) with a plural message', async () => {
+    const id = await seedFighter('Ivan');
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: 'ghost-pack', version: '2.0.0' } },
+      {
+        type: 'pack.pinned',
+        v: 1,
+        payload: { packId: corePack.id, version: '0.0.9', previous: corePack.version },
+      },
+    ]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const banner = harness.routeNativeElement!.querySelector('.sheet-shell__missing-packs');
+
+    expect(banner?.textContent).toContain(
+      "This character uses 2 content packs that aren't installed on this device:",
+    );
+    const entries = Array.from(banner?.querySelectorAll('li') ?? []).map((li) =>
+      li.textContent?.trim(),
+    );
+    expect(entries).toEqual(['ghost-pack@2.0.0', `${corePack.id}@0.0.9`]);
+    expect(
+      harness.routeNativeElement!.querySelector('.sheet-shell__name')?.textContent?.trim(),
+    ).toBe('Ivan');
+  });
+
+  it('shows no banner when every pin is installed', async () => {
+    const id = await seedFighter('Ivan');
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: sample.id, version: sample.version } },
+    ]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+
+    expect(harness.routeNativeElement!.querySelector('.sheet-shell__missing-packs')).toBeNull();
+  });
+
+  it('the banner strings exist in en, ru and uk (ICU plural)', () => {
+    for (const locale of [charactersEn, charactersRu, charactersUk]) {
+      const banner = (
+        locale.sheet as unknown as { banner?: Record<string, Record<string, string>> }
+      ).banner?.['missing-packs'];
+      expect(Object.keys(banner ?? {}).sort()).toEqual(['entry', 'link', 'message']);
+      expect(banner?.['message']).toMatch(/\{count, plural,/);
+    }
   });
 
   it('an unpinned installed pack stays invisible under the shell too', async () => {

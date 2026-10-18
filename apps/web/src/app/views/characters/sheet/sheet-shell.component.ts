@@ -71,6 +71,8 @@ export class SheetShellComponent {
   protected readonly found = this.route.snapshot.data['characterFound'] === true;
 
   protected readonly sheet = this.characterStore.sheet;
+  /** Plan 15 Task 4 (ruling 8): pins whose exact version is not installed — the banner's list. */
+  protected readonly missingPins = this.characterStore.missingPins;
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
