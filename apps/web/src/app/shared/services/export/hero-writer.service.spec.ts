@@ -1,9 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { TestBed } from '@angular/core/testing';
 import { strFromU8, unzipSync } from 'fflate';
-import { parseEvent, type Event } from '@hk/protocol';
+import { PACK_ID, PACK_VERSION } from '@hk/content/version';
+import { parseEvent, parsePack, type Event, type Pack } from '@hk/protocol';
+import { ToastService } from '@shared/components/toast/toast.service';
+import { PackLoader } from '@shared/services/engine/pack-loader';
+import { sha256Hex } from '@shared/services/images/image-pipeline.service';
+import { canonicalJson } from '@shared/services/packs/canonical-json';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
+import { PacksRepository } from '@shared/services/storage/packs.repository';
+import { PackStore } from '@shared/stores/pack.store';
 import { HeroWriterService, sanitizeHeroFileName } from './hero-writer.service';
 
 function uuid(n: number): string {
@@ -158,6 +168,146 @@ describe('HeroWriterService', () => {
     const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as { images: unknown[] };
     expect(manifest.images).toEqual([]);
     expect(Object.keys(zip).filter((k) => k.startsWith('images/'))).toEqual([]);
+  });
+});
+
+// --- Plan 15 Task 6: `.hero` bundles carry the character's pinned (non-core) content packs ------
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..');
+const fixturesDir = join(repoRoot, 'apps/web/src/testing/fixtures/packs');
+
+function readPack(path: string): Pack {
+  const result = parsePack(JSON.parse(readFileSync(path, 'utf8')));
+  if (!result.ok) throw new Error(`fixture pack at ${path} failed validation`);
+  return result.pack;
+}
+
+describe('HeroWriterService — pinned content packs (plan 15 Task 6)', () => {
+  const corePack = readPack(
+    join(repoRoot, 'packages/content/dist/packs', PACK_ID, PACK_VERSION, 'pack.json'),
+  );
+  const sample = readPack(join(fixturesDir, 'sample-content.json'));
+  const iconBytes = new Uint8Array(readFileSync(join(fixturesDir, 'sample-icon.webp')));
+  const ICON_HEX = sample.assets[0].hash.slice('sha256:'.length);
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PackLoader, useValue: { loadCore: () => Promise.resolve(corePack) } },
+        { provide: ToastService, useValue: { show: vi.fn() } },
+      ],
+    });
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.packs.clear(),
+      db.settings.clear(),
+      db.events.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+      db.blobs.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  /** The sample pack installed the way a later app start sees it: a stored row, its icon in the
+   * blob store as a pack asset, then `PackStore.init()`. */
+  async function installSample(): Promise<void> {
+    await TestBed.inject(PacksRepository).putPack(sample);
+    await TestBed.inject(BlobsRepository).put(sample.assets[0].hash, 'image/webp', iconBytes, {
+      kind: 'icon',
+      origin: 'pack',
+    });
+    await TestBed.inject(PackStore).init();
+  }
+
+  it('carries a pinned installed content pack as packs/<id>@<version>.json (canonical JSON), its assets under assets/<hex>, and a manifest packs[] row with the sha256 of those bytes', async () => {
+    await installSample();
+    await TestBed.inject(EventsRepository).append([
+      mkEvent(uuid(200), 'character.created', createdPayload('Aria')),
+      mkEvent(uuid(201), 'pack.pinned', { packId: sample.id, version: sample.version }),
+    ]);
+
+    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const zip = await unzipBlob(blob);
+
+    const path = `packs/${sample.id}@${sample.version}.json`;
+    const packEntry = zip[path];
+    expect(packEntry).toBeDefined();
+    expect(strFromU8(packEntry)).toBe(canonicalJson(sample));
+    expect(Array.from(zip[`assets/${ICON_HEX}`])).toEqual(Array.from(iconBytes));
+
+    const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as Record<string, unknown>;
+    expect(manifest['pins']).toEqual({
+      [corePack.id]: corePack.version,
+      [sample.id]: sample.version,
+    });
+    expect(manifest['packs']).toEqual([
+      { id: sample.id, version: sample.version, path, sha256: await sha256Hex(packEntry) },
+    ]);
+    // The core pack is never carried — every device ships it.
+    expect(Object.keys(zip).filter((k) => k.startsWith('packs/'))).toEqual([path]);
+  });
+
+  it('a core-only character: the manifest has NO packs key and the zip holds exactly the pre-plan-15 entries', async () => {
+    await installSample(); // installed, but this character does not pin it
+    await TestBed.inject(EventsRepository).append([
+      mkEvent(uuid(210), 'character.created', createdPayload('Core Only')),
+    ]);
+
+    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const zip = await unzipBlob(blob);
+
+    expect(Object.keys(zip).sort()).toEqual(['events.json', 'manifest.json']);
+    const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as Record<string, unknown>;
+    expect(Object.keys(manifest)).toEqual([
+      'format',
+      'kind',
+      'characterId',
+      'name',
+      'exportedAt',
+      'engineVersion',
+      'appVersion',
+      'pins',
+      'eventCount',
+      'images',
+    ]);
+  });
+
+  it('omits a pinned pack that is not installed on this device (the importer warns about it instead)', async () => {
+    await TestBed.inject(PackStore).init();
+    await TestBed.inject(EventsRepository).append([
+      mkEvent(uuid(220), 'character.created', createdPayload('Aria')),
+      mkEvent(uuid(221), 'pack.pinned', { packId: sample.id, version: sample.version }),
+    ]);
+
+    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const zip = await unzipBlob(blob);
+
+    expect(Object.keys(zip).sort()).toEqual(['events.json', 'manifest.json']);
+    const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as Record<string, unknown>;
+    expect(manifest).not.toHaveProperty('packs');
+    expect(manifest['pins']).toEqual({
+      [corePack.id]: corePack.version,
+      [sample.id]: sample.version,
+    });
+  });
+
+  it('omits a pinned pack whose asset blob is missing locally (a bundle it could not re-import)', async () => {
+    await TestBed.inject(PacksRepository).putPack(sample);
+    await TestBed.inject(PackStore).init(); // pack row only — no icon blob
+    await TestBed.inject(EventsRepository).append([
+      mkEvent(uuid(230), 'character.created', createdPayload('Aria')),
+      mkEvent(uuid(231), 'pack.pinned', { packId: sample.id, version: sample.version }),
+    ]);
+
+    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const zip = await unzipBlob(blob);
+
+    expect(Object.keys(zip).sort()).toEqual(['events.json', 'manifest.json']);
   });
 });
 
