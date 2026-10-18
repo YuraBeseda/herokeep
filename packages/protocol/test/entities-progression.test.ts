@@ -44,3 +44,28 @@ describe('ClassLevelRow.extra typed values (ruling 5)', () => {
     expect(r.success).toBe(false);
   });
 });
+
+describe('multiclass.gains.toolProficiencies (plan 14 task 1: additive later-class tool gains)', () => {
+  const withGains = (gains: Record<string, unknown>) => ({
+    ...baseClass,
+    levels: [{ level: 1 }],
+    multiclass: { prerequisites: { ability: { str: { gte: 13 } } }, gains },
+  });
+
+  it('defaults to [] when absent (every existing gains block parses unchanged otherwise)', () => {
+    const r = ClassEntitySchema.parse(withGains({ armorTraining: ['shields'], skillChoiceCount: 0 }));
+    expect(r.multiclass?.gains).toEqual({
+      armorTraining: ['shields'],
+      weaponProficiencies: [],
+      skillChoiceCount: 0,
+      toolProficiencies: [],
+    });
+  });
+
+  it('accepts a list of tool slugs and rejects a non-slug', () => {
+    expect(
+      ClassEntitySchema.parse(withGains({ toolProficiencies: ['thieves-tools'] })).multiclass?.gains,
+    ).toMatchObject({ toolProficiencies: ['thieves-tools'] });
+    expect(ClassEntitySchema.safeParse(withGains({ toolProficiencies: ["Thieves' Tools"] })).success).toBe(false);
+  });
+});

@@ -62,6 +62,18 @@ describe('PackSchema', () => {
     expect(r.pack.i18n).toEqual({});
   });
 
+  it('plan 14 task 1: an existing multiclass gains fixture parses with toolProficiencies defaulted to []', () => {
+    const r = parsePack(load('multiclass-mini'));
+    if (!r.ok) throw new Error(formatIssues(r.issues).join('\n'));
+    const wizard = r.pack.entities.find((e) => e.id === 'multiclass-mini:class/wizard');
+    expect(wizard?.type === 'class' ? wizard.multiclass?.gains : undefined).toEqual({
+      armorTraining: [],
+      weaponProficiencies: [],
+      skillChoiceCount: 0,
+      toolProficiencies: [],
+    });
+  });
+
   it('rejects entities outside the pack namespace', () => {
     const pack = load('content-mini') as { entities: { id: string }[] };
     pack.entities[0]!.id = 'core-mini:feature/cat-reflexes';

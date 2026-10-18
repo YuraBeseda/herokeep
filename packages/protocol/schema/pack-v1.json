@@ -3214,6 +3214,13 @@
           "items": {
             "$ref": "#/$defs/__schema25"
           }
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "initial",
+            "later"
+          ]
         }
       },
       "required": [
@@ -3980,12 +3987,20 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "toolProficiencies": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema5"
+              }
             }
           },
           "required": [
             "armorTraining",
             "weaponProficiencies",
-            "skillChoiceCount"
+            "skillChoiceCount",
+            "toolProficiencies"
           ],
           "additionalProperties": false
         }

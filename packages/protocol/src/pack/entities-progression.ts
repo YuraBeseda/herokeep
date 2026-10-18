@@ -46,6 +46,12 @@ export const ClassEntitySchema = entity('class', {
         armorTraining: z.array(SlugSchema).default([]),
         weaponProficiencies: z.array(SlugSchema).default([]),
         skillChoiceCount: z.int().min(0).default(0),
+        /**
+         * Plan 14 task 1 — the tool proficiencies a LATER class grants on multiclass entry (tool item
+         * slugs, the vocabulary of the class's own `toolProficiencies`), e.g. Rogue's Thieves' Tools.
+         * Additive, default `[]`: a gains block that omits it grants no class tools, as before.
+         */
+        toolProficiencies: z.array(SlugSchema).default([]),
       }),
     })
     .optional(),

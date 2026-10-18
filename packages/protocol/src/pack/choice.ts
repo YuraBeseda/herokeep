@@ -119,6 +119,16 @@ export const ChoiceSchema = z.strictObject({
   unique: z.boolean().default(true),
   repeatableAt: z.array(z.int().min(1).max(20)).default([]),
   prerequisites: z.array(PredicateSchema).default([]),
+  /**
+   * Plan 14 task 1 — "initial class" as a structural property of a class-row choice
+   * (`at.kind === 'classLevel'`): `'initial'` offers it only while its owning class is the
+   * character's FIRST class (`facts.classes[0]`), `'later'` only while it is not; absent = offered
+   * either way (every pre-existing choice). Only OFFERS depend on it: a recorded decision keeps
+   * granting regardless. A `scope` on any other `at` kind is a pack diagnostic
+   * (`choice.scopeOnNonClassChoice`). `.optional()` (never `.default()`), so every existing choice
+   * parses byte-identically.
+   */
+  scope: z.enum(['initial', 'later']).optional(),
 });
 export type Choice = z.infer<typeof ChoiceSchema>;
 export type ChoiceAt = z.infer<typeof ChoiceAtSchema>;

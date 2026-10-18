@@ -150,3 +150,26 @@ describe('EntityQuerySchema hasField (ruling 4: weapon-mastery choices as real e
     expect(EntityQuerySchema.safeParse({ type: 'item', hasField: [''] }).success).toBe(false);
   });
 });
+
+describe('ChoiceSchema scope (plan 14 task 1: additive initial/later class-choice scope)', () => {
+  const base = {
+    id: 'srd-5e-2024:class/bard@1/tools',
+    prompt: 'Tool Proficiencies',
+    at: { kind: 'classLevel', class: 'bard', level: 1 },
+    pick: { static: ['srd-5e-2024:item/musical-instrument-lute'] },
+  };
+
+  it("accepts 'initial' and 'later'", () => {
+    expect(ChoiceSchema.parse({ ...base, scope: 'initial' }).scope).toBe('initial');
+    expect(ChoiceSchema.parse({ ...base, scope: 'later' }).scope).toBe('later');
+  });
+
+  it('keeps an unscoped choice byte-identical (no scope key injected)', () => {
+    expect('scope' in ChoiceSchema.parse(base)).toBe(false);
+  });
+
+  it('rejects any other scope value', () => {
+    expect(ChoiceSchema.safeParse({ ...base, scope: 'first' }).success).toBe(false);
+    expect(ChoiceSchema.safeParse({ ...base, scope: '' }).success).toBe(false);
+  });
+});
