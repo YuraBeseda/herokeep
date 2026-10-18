@@ -75,6 +75,8 @@ const NEW_EVENT_CASES: { type: string; accept: Record<string, unknown> }[] = [
   { type: 'character.owner_transferred', accept: { toUserId: 'usr_2' } },
   { type: 'character.campaign_joined', accept: { campaignId: UUID_A } },
   { type: 'character.campaign_left', accept: { campaignId: UUID_A } },
+  // Plan 14 Task 5 (ruling 8): additive per-character rule options.
+  { type: 'character.options.set', accept: { encumbrance: 'variant' } },
   { type: 'decision.cleared', accept: { choiceId: 'core-mini:class/fighter@1/fighting-style' } },
   { type: 'level.gained', accept: { classId: 'core-mini:class/fighter', level: 1 } },
   { type: 'level.granted', accept: {} },
@@ -175,7 +177,7 @@ describe('resourceId: additive widening for item-charge keys', () => {
 // index.ts, which additionally carries the campaign-stream catalog as of plan-9 Task 1) — this
 // describe block is specifically about the Phase-1 character-stream catalog staying complete.
 describe('the complete Phase-1 character event catalog', () => {
-  const CHARACTER_EVENT_COUNT = 51; // 3 phase-1a events above + 48 NEW_EVENT_CASES
+  const CHARACTER_EVENT_COUNT = 52; // 3 phase-1a events above + 49 NEW_EVENT_CASES (plan 14 T5: +character.options.set)
 
   it('registers a payload schema for every catalog event', () => {
     expect(Object.keys(CHARACTER_EVENT_PAYLOADS)).toHaveLength(CHARACTER_EVENT_COUNT);

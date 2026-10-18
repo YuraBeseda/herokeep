@@ -33,6 +33,17 @@ export const CharacterRestoredV1 = z.strictObject({});
 export const CharacterOwnerTransferredV1 = z.strictObject({ toUserId: z.string().min(1).max(64) });
 export const CharacterCampaignJoinedV1 = z.strictObject({ campaignId: z.string().regex(UUID) });
 export const CharacterCampaignLeftV1 = z.strictObject({ campaignId: z.string().regex(UUID) });
+/**
+ * Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — per-character rule options. A strict object
+ * of OPTIONAL keys: each key present is a per-key patch (the reducer merges, last write per key
+ * wins); an empty object is a well-formed no-op; a future option is a NEW optional key (additive,
+ * never a reshape). The option only SELECTS a mode — the mode's numbers (capacity, thresholds)
+ * stay data in the system entity. A campaign house rule (`CampaignSettingsSchema.houseRules`,
+ * campaign.ts) takes precedence over this value at derive time.
+ */
+export const CharacterOptionsSetV1 = z.strictObject({
+  encumbrance: z.enum(['off', 'standard', 'variant']).optional(),
+});
 
 // --- Pack pins & builder decisions -------------------------------------------
 
@@ -247,6 +258,7 @@ export const EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'character.owner_transferred@1': CharacterOwnerTransferredV1,
   'character.campaign_joined@1': CharacterCampaignJoinedV1,
   'character.campaign_left@1': CharacterCampaignLeftV1,
+  'character.options.set@1': CharacterOptionsSetV1,
   'pack.pinned@1': PackPinnedV1,
   'decision.made@1': DecisionMadeV1,
   'decision.cleared@1': DecisionClearedV1,
@@ -348,6 +360,10 @@ export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   // O, D | {campaignId} | mirrored on campaign stream" is the textual support (see audit note).
   'character.campaign_joined': ['owner', 'dm'],
   'character.campaign_left': ['owner', 'dm'],
+  // Plan 14 Task 5 (ruling 8): a per-character preference, owner-only like `character.renamed`;
+  // a DM's table-wide say goes through the campaign's own `houseRules.encumbrance`, which wins at
+  // derive time anyway.
+  'character.options.set': ['owner'],
   // Owner-only (doc-08 §Authorization matrix: "Append owner events (... pack.pinned)"); a DM
   // effects a pin on an owner's character via `override.applied` (gated by
   // `houseRules.allowOverrides`), not by appending `pack.pinned` directly.
@@ -421,6 +437,7 @@ export type CharacterRestored = z.infer<typeof CharacterRestoredV1>;
 export type CharacterOwnerTransferred = z.infer<typeof CharacterOwnerTransferredV1>;
 export type CharacterCampaignJoined = z.infer<typeof CharacterCampaignJoinedV1>;
 export type CharacterCampaignLeft = z.infer<typeof CharacterCampaignLeftV1>;
+export type CharacterOptionsSet = z.infer<typeof CharacterOptionsSetV1>;
 export type PackPinned = z.infer<typeof PackPinnedV1>;
 export type DecisionMade = z.infer<typeof DecisionMadeV1>;
 export type DecisionCleared = z.infer<typeof DecisionClearedV1>;
