@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-10-17 — executing per the standing autonomous loop (plan 13 merged @ 7824312).**
+**STATUS: EXECUTED 2026-10-18 — all 8 tasks complete on branch `worktree-phase-4-plan14-carries` (merged head recorded at merge).**
 
 **Goal:** Retire the plan-13 carry list (later-class tool handling, Soldier gaming set, Skilled tools, cross-class Expertise eligibility, "= your Speed" items, multiclass weapon mastery, regain/provenance/seeded-count display gaps) and give solo characters per-character rule options (encumbrance) so the SRD mechanics already shipped are correct for every multiclass and background combination before the custom-pack platform (plan 15) builds on them.
 

@@ -96,6 +96,20 @@ selection records the method, the six scores and — for `roll` — every die re
 `{ "literal": "text" }` (names), `{ "equipmentOption": [...] }`. Selections are stored in
 `decision.made` events by choice id.
 
+**Choice scope (plan 14 task 1).** A class-row choice may carry `scope: "initial" | "later"`
+(optional, no default — an unscoped choice is offered exactly as before). `initial` is offered only
+when the owning class entry is the character's FIRST class (`facts.classes[0]`), `later` only when it
+is not; a subclass row follows its class entry's position. `derive/choices.ts`'s `scopeOffers` /
+`offeredRowChoices` apply it in one place for both outstanding choices and level-up advancement
+steps, and `offeredRowChoices` also hides a `later` choice once an `initial` sibling on the SAME row
+already has a recorded decision (a legacy log that answered the full pick is never offered the
+reduced one too). Only OFFERS change: a recorded decision for an out-of-scope choice still grants and
+raises no `decision.unknownChoice`. Pack validation refuses `scope` on a choice whose `at.kind` is not
+`classLevel` (`choice.scopeOnNonClassChoice`). The synthetic class skill picks (`<classId>@1/skills` /
+`<classId>@1/multiclass-skills`) have no backing `Choice` entity, so they keep their slug-based
+initial/later split as the fallback. SRD content: Bard `@1/tools` (three instruments) and Monk
+`@1/tools` are `initial`; Bard `@1/multiclass-tools` (one Musical Instrument, count 1) is `later`.
+
 **Expertise picks (plan 13 task 1).** A `{type: "skill"}` query pick may carry two optional keys
 (legal only on a skill query — a schema refine): `proficiency: "proficient" | "expertise"` (the rank a
 selected skill gets; absent = `proficient`, so every older pick is unchanged) and `requireProficient:
@@ -112,6 +126,19 @@ the web picker. A total is `mod + 2 × prof` (not 3×). SRD content: Rogue `@1/e
 share the slug `expertise`, so the existing `unique` family check refuses repeating an earlier pick
 (`selection.duplicate`). Selection values are skill entity ids (`srd-5e-2024:skill/stealth`).
 
+**Expertise across owners (plan 14 task 4).** The list is now `queryPickOptions(pick, index, sheet,
+ownerId?)`. Expertise picks apply in class order (`facts.classes[]` in the order gained, a subclass
+with its class, any non-class owner after every class), and each skill whose expertise rank came
+from a pick records that pick's owner as `sheet.skills[s].expertiseOwner` (absent for a fixed grant
+or no expertise). An expertise pick offers a skill that is ALREADY at expertise only when
+`expertiseOwner === ownerId` — the owner's own earlier pick stays visible so the draft sheet's own
+selection is not dropped; expertise from another class (or from a fixed grant) is not offered, and
+without an `ownerId` every expertise-rank skill is dropped. Validation passes the choice's owner, so
+offers and `selection.notOffered` agree: a Rogue 3 → Ranger 2 is not offered the Stealth the Rogue
+already made expert. Same-family repeats (Rogue `@1` vs `@6`) stay listed and refused as
+`selection.duplicate`, as above. A legacy log whose later class picked an already-expert skill keeps
+granting (a no-op on the rank); only that later decision reports `selection.notOffered`.
+
 `EntityQuerySchema`'s filters are AND-combined: `tags` (an entity's `tags[]` must include every
 listed tag) and `hasField` (dot-paths, e.g. `"weapon.mastery"`, that must be present on the
 candidate entity — a field-presence filter, preferred over inventing a bespoke tag taxonomy for
@@ -119,7 +146,9 @@ data the schema already models structurally). Fighter's Weapon Mastery choice, f
 real entity query rather than a `literal: "text"` placeholder:
 `{ "query": { "type": "item", "hasField": ["weapon.mastery"] } }` selects exactly the items that
 carry a weapon-mastery property. `category` (plan 14 task 2) filters items by their `category`
-(the item category enum): `{ "type": "item", "category": "tool" }` selects every tool.
+(the item category enum, one shared `ItemCategorySchema` for the entity field and the filter):
+`{ "type": "item", "category": "tool" }` selects every tool. On any non-item query `category`
+matches nothing.
 
 **Mixed-type picks (plan 14 task 2).** `{ "queries": [q1, q2, …] }` (two or more queries; mutually
 exclusive with `static` and `query`) offers the union of its queries as ONE option list — each
@@ -129,6 +158,15 @@ proficiency, a `category: "tool"` item a tool proficiency row), so one decision 
 `queryPickOptions` unions the queries for validation and the web picker alike. SRD content: the
 Skilled feat's "any combination of three skills or tools" is
 `{"queries":[{"type":"skill"},{"type":"item","category":"tool"}]}` with `count: 3`.
+Validation runs over the union: `selection.count` counts the union's selections, and
+`selection.notOffered`, `selection.duplicate` and per-entity prerequisites all apply. `queries`
+takes none of the skill-only keys (`proficiency` / `requireProficient` stay single-`query` only).
+The choice id `feat/skilled@1/skills` is unchanged, so a recorded skills-only Skilled decision
+replays identically. Related content in the same task: the Soldier background's "Choose one kind of
+Gaming Set" is no longer a generic `gaming-set` tool row but a real pick,
+`srd-5e-2024:background/soldier@0/tools` (`at: creation`, a count-1 `static` pick over the four
+`gaming-set-*` items). An existing Soldier character therefore shows one new outstanding pick until
+it is answered.
 
 ## Predicates
 
@@ -163,7 +201,7 @@ Every effect may carry `when: Predicate` and `source` is filled by the engine.
 | `spellcasting.define` | `class, ability, list (class id or explicit), preparation: prepared\|known\|spellbook\|innate, slots: full\|half\|third\|pact\|none, ritual, focus, cantripsKnown (formula), preparedCount (formula), spellsKnown (formula)` | |
 | `spell.grant` | `spell, castingAbility?, uses? {count, per} \| {resource}, alwaysPrepared, level?` | Magic Initiate, species spells; `uses` = free casts (see "Free casts") |
 | `spell.listAdd` | `class, spells[]` | subclass spell lists |
-| `damage.resistance` / `damage.immunity` / `damage.vulnerability` | `types[]` | |
+| `damage.resistance` / `damage.immunity` / `damage.vulnerability` | `types[]` | `damage.resistance` derives into `sheet.resistances` (display only; plan 14 task 3) — see "Damage resistances" |
 | `condition.immunity` | `conditions[]` | derived into `sheet.immunities` (display only; plan 13 task 5) — see "Condition immunities" |
 | `attack.bonus` / `damage.bonus` | `value (formula), filter {weapon?: melee\|ranged\|any, spell?: true}` | Archery |
 | `damage.rerollBelow` | `value, filter` | Great Weapon Fighting |
@@ -171,7 +209,7 @@ Every effect may carry `when: Predicate` and `source` is filled by the engine.
 | `advantage.grant` / `disadvantage.impose` | `on: save.<ability>\|skill.<id>\|attack\|initiative, when?` | shown on sheet as reminders; not auto-applied to rolls without the user's tap |
 | `action.define` | `id, name, kind: action\|bonus\|reaction\|free, description, uses?, resource?` | Second Wind, Action Surge |
 | `feature.text` | `name, description` | pure text |
-| `mastery.grant` | `count (formula)` | 2024 weapon mastery |
+| `mastery.grant` | `count (formula)` | 2024 weapon mastery; several active grants take the MAX count, not the sum (plan 14 task 4, owner-flag) — see "Multiclass weapon mastery" |
 | `extraAttack.set` | `count` | |
 | `item.grant` / `currency.grant` | starting equipment | applied once at the granting decision |
 | `size.set` / `type.set` / `language.grant` | | |
@@ -329,7 +367,12 @@ wave the engine consumes it: a LATER class with `gains` is offered a bonus skill
 entry (synthetic `<classId>@1/multiclass-skills`, `skillChoiceCount` picks from the new class's own
 `skillChoice.from` list) instead of the full `<classId>@1/skills` creation pick, which is reserved
 for the initial class. A later class with no `gains` keeps its full pick and full proficiency list
-(`deriveProficiencies`'s documented compat fallback).
+(`deriveProficiencies`'s documented compat fallback). Plan 14 task 1 added
+`gains.toolProficiencies` (slug list, default `[]`, emitted for all 12 classes): a later class grants
+those as `kind: 'tool'` rows. Rogue's is `["thieves-tools"]`, every other class's is empty; the
+later-class Bard's one instrument is the scoped pick `bard@1/multiclass-tools` instead (see "Choice
+scope"). Same owner-flag as the rest of `gains`: the vendored snapshot has no per-class multiclass
+rows, and these two are authored from the public SRD 5.2.1 table.
 
 Pact Magic slots (Warlock) recover on a short OR long rest — the vendored 2024 SRD's own Warlock
 feature text (`packages/content/upstream/open5e-srd-2024/ClassFeature.json`, pk
@@ -422,23 +465,38 @@ counter. A reference to a resource the sheet lacks is not offered (`derive.freeC
 
 **Tool proficiencies (plan 13 task 2).** Tool proficiencies are not a separate sheet field: they
 land in the existing `sheet.proficiencies` array as rows with `kind: 'tool'` and `target` = the
-tool item's slug (`thieves-tools`, `gaming-set`, `musical-instrument-lute`), so one tool from
+tool item's slug (`thieves-tools`, `gaming-set-dice`, `musical-instrument-lute`), so one tool from
 several sources merges into one row and consumers filter by `kind`. Sources: the INITIAL class's
-`toolProficiencies` (Rogue: Thieves' Tools; a later multiclass class contributes none, since
-`multiclass.gains` carries no tool list), every active background's `toolProficiency`, a decided
-pick whose selections are items of category `tool` (whoever owns the choice — a plain `static`
-pick over item ids; Monk `@1/tools` offers one Artisan's Tools or Musical Instrument, Bard
-`@1/tools` three Musical Instruments), and `proficiency.grant {kind: 'tool'}` effects. The play
-tab lists them under Tools in the Proficiencies section. Known residual (task 2 review): a later-class
-Bard is still offered three instruments and a later-class Monk a tool, because no "initial class"
-predicate exists yet.
+`toolProficiencies` (Rogue: Thieves' Tools), a later class's `multiclass.gains.toolProficiencies`
+(plan 14 task 1; Rogue again), every active background's `toolProficiency` (the Soldier no longer
+carries one — since plan 14 task 2 its gaming set is a pick), a decided pick whose selections are items of category
+`tool` (whoever owns the choice — a `static` pick over item ids, or a `queries` pick such as Skilled;
+Monk `@1/tools` offers one Artisan's Tools or Musical Instrument, Bard `@1/tools` three Musical
+Instruments, Soldier `@0/tools` one Gaming Set), and `proficiency.grant {kind: 'tool'}` effects. The
+play tab lists them under Tools in the Proficiencies section. ~~Known residual: a later-class Bard is
+still offered three instruments and a later-class Monk a tool.~~ *Retired by plan 14 task 1* (choice
+`scope`): a later Bard is offered one instrument, a later Monk no tool.
 
 **Multiclass attack proficiency (plan 13 task 7).** `classProficiencyGrants(facts, index)`
 (`derive/proficiency.ts`) is the one place that decides which class lists apply — the first class's
-full armor/weapon/tool lists, a later class's `multiclass.gains` (no tools), or a gains-less later
-class's full lists (compat). Both `sheet.proficiencies` and the attack table (`derive/attacks.ts`)
-read it, so an attack line can no longer be proficient when the sheet's proficiency list says it is
-not (a Wizard → Rogue no longer adds proficiency to a rapier).
+full armor/weapon/tool lists, a later class's `multiclass.gains` (tools since plan 14 task 1), or a
+gains-less later class's full lists (compat). Both `sheet.proficiencies` and the attack table
+(`derive/attacks.ts`) read it, so an attack line can no longer be proficient when the sheet's
+proficiency list says it is not (a Wizard → Rogue no longer adds proficiency to a rapier).
+
+**Multiclass weapon mastery (plan 14 task 4).** `sheet.masteryCount` is the MAX over the active
+`mastery.grant` resolved counts, not their sum, and the cap is shared: `derive/attacks.ts` collects
+every `weapon-masteries` choice in class order (each class's own and row choices through the
+scope-aware `offeredRowChoices`, then its subclass's, then any other active entity) and fills at most
+`masteryCount` slots in that order, then in recorded order within a decision. A weapon picked twice
+counts once, and only selections that resolve to an `item` entity take a slot. A selection beyond the
+cap is silently not applied — no diagnostic, because each decision is still valid against its own
+`count`. Example: Fighter 5 / Barbarian 3 → `masteryCount` 4 (the fighter row extra is 4 from fighter
+level 4; Barbarian 2), where the old sum gave 6. ⚠️ OWNER-FLAG: the vendored multiclassing rule
+(`Rule.json` pk `srd-2024_multiclassing_class-features`) names only Extra Attack, Spellcasting and
+alternative AC as special cases and never mentions mastery, so max-with-a-shared-cap is
+PHB-sourced. The later class's mastery choice is still offered when the cap is already full; its
+picks only apply up to the cap.
 
 **Speed formulas (plan 13 task 5).** `speed.bonus.value` is `int | Formula` (`speed.set` stays an
 int). A formula bonus resolves through the shared evaluator, so a scaling column becomes one row:
@@ -452,7 +510,10 @@ equal to your Speed":** author it as `speed.bonus {mode, value: "speed(walk)", k
 "<mode>-equal-to-speed"}` (Ranger Roving uses `climb-equal-to-speed` and `swim-equal-to-speed`).
 Bonuses that share a key keep only the highest (`sum-unique-key`), so two such grants on the same
 mode dedupe; a grant with a DIFFERENT key would SUM with it and double the speed. Every future
-"equal to your Speed" grant must reuse the per-mode key.
+"equal to your Speed" grant must reuse the per-mode key. Plan 14 task 3 added four more users, all
+on the same keys: Thief Second-Story Work's Climber (climb), Gloves of Swimming and Climbing (climb +
+swim), Slippers of Spider Climbing (climb) and Cloak of Arachnida (climb). A Thief wearing attuned
+Slippers, or attuned Slippers plus Cloak, still has climb = walk (30), not double.
 
 **Condition immunities (plan 13 task 5).** Active `condition.immunity` effects (after their `when`
 predicates) derive into `sheet.immunities?: {condition, sources}[]` — sorted by condition id,
@@ -461,6 +522,14 @@ blocks `condition.added`. SRD content: Paladin Aura of Courage (Frightened) and 
 (Charmed), each gated `not {condition: incapacitated}` like Aura of Protection; the "and your allies"
 half stays in the description. Berserker Mindless Rage stays text: its immunity applies "while your
 Rage is active" and no raging fact or predicate exists, so an ungated immunity would be wrong.
+
+**Damage resistances (plan 14 task 3).** Before this task `damage.resistance` had no derive consumer
+and no pack entity used it. Active `damage.resistance` effects now derive into
+`sheet.resistances?: {type, sources}[]` (`derive/resistances.ts`), mirroring `sheet.immunities`
+exactly: sorted by damage type, `sources` unique and sorted, absent when empty, display only (no
+damage math reads it; no protocol change, `Sheet` is an engine type). The play tab shows a
+Resistances heading with one badge per type after the immunity badges (plan 14 task 6), naming the
+type through the pack's `rule/damage-type-<slug>` entity. SRD content: Cloak of Arachnida (Poison).
 
 `item.attunement` (optional) is `{ required: boolean, by?: Predicate }`. `by`, when present, is
 the item's own attunement-requirement predicate (e.g. "requires attunement by a Wizard") —
@@ -474,8 +543,35 @@ optional 4th `overrides: { attunementMax?: number, encumbrance?: 'off'|'standard
 parameter (`derive/overrides.ts`'s `DeriveOverrides`) — the same override seam `encumbrance`
 below reuses; a campaign's own house-rule `attunementMax` (plan-10's edit-lock projection) is
 what the client threads through it. `Sheet.overridesProvenance` — `{ attunementMax?: 'house
-rule', encumbrance?: 'house rule' }` — records that tag per-key, only for whichever override(s)
-were actually supplied, so the sheet can show it as such.
+rule', encumbrance?: 'house rule' | 'character option' }` — records that tag per-key, only for
+whichever override(s) were actually supplied, so the sheet can show it as such (`'character option'`
+since plan 14 task 5 — see "Encumbrance" and doc 05).
+
+**Attunement gating (plan 14 task 3).** An inventory instance whose item has `attunement.required:
+true` activates its effects and grants ONLY while `attuned`; equipping it alone does nothing. Every
+other item keeps the `equipped || attuned` rule. This is one generic gate in
+`derive/composition.ts`'s inventory loop — no item is named in code. Charges are deliberately NOT
+gated: an equipped-but-unattuned charged item still materializes its `item:<instanceId>` resource
+(above). An attuned item that is not worn stays active (the old behavior, kept by the plan's ruling).
+
+**Items overlay (plan 14 task 3).** `packages/content/src/overlays/items.json` is the first overlay
+that patches item entities; it is applied last in `build.ts` and only MERGES `effects` into three
+existing items (whose upstream `effects` were `[]`), so the pack still has 1866 entities. Before it,
+0 of the 960 items carried effects. Each patch cites its vendored `MagicItem` pk:
+
+- Gloves of Swimming and Climbing (`srd-2024_gloves-of-swimming-and-climbing`): climb and swim
+  `speed(walk)` bonuses, `skill.bonus {target: 'athletics', value: 5}`, and a `feature.text`
+  restating the climb/swim-only scope. ⚠️ OWNER-FLAG: `skill.bonus` has no "checks made to climb or
+  swim" scope, so the sheet's Athletics total includes the +5 for every Athletics check.
+- Slippers of Spider Climbing (`srd-2024_slippers-of-spider-climbing`): climb `speed(walk)` and a
+  `feature.text` for the walls/ceilings and slippery-surface wording.
+- Cloak of Arachnida (`srd-2024_cloak-of-arachnida`): `damage.resistance ['poison']`, climb
+  `speed(walk)`, `spell.grant {spell: 'srd-5e-2024:spell/web', uses: {count: '1', per: 'dawn'}}` (the
+  first real inline-`uses` free cast, resource id `web`), and `feature.text` entries for Spider Climb,
+  Spider Walk and Web. ⚠️ OWNER-FLAG: `spell.grant` has no fixed-DC field, so the item's "save DC
+  13" is text only and the free cast uses the sheet's casting context; the doubled area is text too.
+
+All three require attunement, so each applies only while attuned (gate above).
 
 ## Encumbrance
 
@@ -485,7 +581,11 @@ computed ONLY when a `derive()` call opts in via `overrides.encumbrance: 'standa
 (the 4th, optional `derive()` parameter — see `packages/engine/src/derive/overrides.ts`). The
 default, `'off'` (or `overrides` omitted entirely, as every pre-phase-4 call site still does), is
 zero computation — no `Sheet.carry` field, no `Sheet.overridesProvenance.encumbrance` key — so
-every existing golden/fixture stays byte-identical.
+every existing golden/fixture stays byte-identical. Since plan 14 task 5 a character can also opt in
+by itself: the `character.options.set@1` event (doc 02) stores `facts.options.encumbrance`, and the
+mode derive uses is `overrides.encumbrance ?? facts.options.encumbrance ?? 'off'` — a campaign house
+rule (even `'off'`) beats the character option, which beats the default. Provenance and the Build
+tab's Rule options control are described in doc 05 ("Rule options").
 
 ```jsonc
 "encumbrance": {

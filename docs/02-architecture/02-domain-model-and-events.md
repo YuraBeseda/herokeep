@@ -64,6 +64,9 @@ Facts {
   inventory: [{instanceId, itemId, qty, equipped, attuned, name?, notes?, custom?}],
   currency: {cp, sp, ep, gp, pp},
   inspiration: boolean,
+  options: {encumbrance?: off | standard | variant},   // per-character rule options, from
+                                                       // character.options.set@1 (plan 14 task 5);
+                                                       // {} for every older log
   notes: [{id, title, body, updated}],
   campaignId?, ownerId,
   skipped: [{eventId, reason}],
@@ -82,6 +85,7 @@ generated, e.g. quota notices — none in v1).
 | `character.renamed` | O, D(override) | `{name}` | |
 | `character.appearance_set` | O | `{age?, height?, weight?, eyes?, hair?, skin?, description?}` | |
 | `character.gender_set` | O | `{grammaticalGender}` | text only |
+| `character.options.set` | O | `{encumbrance?: 'off' \| 'standard' \| 'variant'}` (strict object, every key optional) | per-character rule options (plan 14 task 5). The reducer needs `character.created` first, merges per key into `facts.options` (last write wins; an explicit `'off'` is stored, an empty patch keeps earlier keys). Derive uses `overrides.encumbrance ?? facts.options.encumbrance ?? 'off'`, so a campaign house rule always wins (doc 05, "Rule options"). `propose.setOptions(sheet, patch)` emits one event carrying only the changed keys, or none when nothing changes. New keys arrive as new optional fields. Additive: older logs fold to `options: {}` and derive byte-identically |
 | `character.archived` / `character.restored` | O | `{}` | soft delete |
 | `character.owner_transferred` | D, O | `{toUserId}` | claim / hand over |
 | `character.campaign_joined` / `character.campaign_left` | O, D | `{campaignId}` | mirrored on campaign stream |

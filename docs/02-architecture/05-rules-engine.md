@@ -30,6 +30,10 @@ planRebase(facts, indexOld, indexNew): RebasePlan
 
 `Sheet` is a plain JSON-serializable object; every numeric field is a `Derived<number>`:
 `{ value, contributions: [{ source: EntityRef, feature?: EntityRef, kind, amount|formula }] }`.
+Since plan 14 task 6 a resolved contribution that has a `formula` also carries its evaluated
+`amount` (`ModifierTable.resolve` stamps it on a per-call copy, evaluating each formula once; the
+stored entry is untouched, so the next resolve re-evaluates), so provenance can show the number. The
+web provenance popover shows `+10` and keeps the formula as the row's tooltip.
 
 ## Module layout
 
@@ -81,6 +85,40 @@ whose `at` matches and that have no (valid) decision. `pendingAdvancements` = le
 character may take now (XP threshold reached, or `level.granted` count > levels taken).
 The UI's wizard iterates `Advancement.steps[]`, calling `validateSelection` live, and
 finally builds one transaction (`level.gained` + `decision.made`s + HP roll/average).
+A class-row choice's `scope` (`initial` | `later`, plan 14 task 1) filters both lists by whether
+the owning class is the character's first; see doc 04, "Choice scope".
+
+## Rule options
+
+The 4th `derive()` parameter, `overrides` (`derive/overrides.ts`), carries a campaign's house rules
+(`attunementMax`, `encumbrance`). Since plan 14 task 5 a solo character can choose its own
+encumbrance mode: `character.options.set@1` folds into `facts.options` (doc 02), and the mode derive
+uses follows one precedence:
+
+```
+overrides.encumbrance  ??  facts.options.encumbrance  ??  'off'
+(campaign house rule,      (character option)             (default)
+ including 'off')
+```
+
+`Sheet.overridesProvenance.encumbrance` says where a non-default result came from:
+
+| Situation | Mode | Provenance |
+|-----------|------|------------|
+| house rule `standard`/`variant` (with or without an option) | the house rule | `'house rule'` |
+| house rule `'off'` holding back a non-off character option | off (no `Sheet.carry`) | `'house rule'` |
+| no house rule, character option `standard`/`variant` | the option | `'character option'` |
+| house rule `'off'` with no competing option; option `'off'`; neither set | off | absent |
+
+The absent row keeps every older sheet and golden byte-identical. `Sheet.options` mirrors the stored
+`facts.options` and is present only when at least one key is set; `propose.setOptions(sheet, patch)`
+diffs against it and returns one `character.options.set` with only the changed keys, or `[]` when
+nothing changes (a missing encumbrance counts as `'off'`). Capacity and thresholds stay pack data
+(`system.encumbrance`, doc 04): the engine only picks the mode. In the web app the Build tab's Rule
+options section holds the select; while a campaign house rule is in force (even `'off'`) it shows the
+house rule's value, disabled, with a "Set by your campaign's house rules." reason linked by
+`aria-describedby`. A campaign settings document always carries `encumbrance`, so inside a campaign
+the character option never applies. The timeline renders the event as one sentence per mode.
 
 ## Validation
 

@@ -265,6 +265,46 @@ reports (`task-N` below).
 - **Gates at close**: pack 1866 entities / 2,225,797 bytes / 0 diagnostics; root 123 files / 1837
   tests; web 136 files / 1497 tests (task 10); gzip bundle 339.3 / 600 KB (task 11 build).
 
+### Phase 4 slice 4 — carry retirement II & per-character rule options (complete)
+
+Plan 14 retired the plan-13 carry list and gave solo characters their own rule options. Rules stay
+DATA: each change is generic engine code plus overlay data. Sources are the plan-14 task reports
+(`task-N` below); the full reference is in `docs/02-architecture/04-content-packs.md`, doc 02 and
+doc 05.
+
+- **Initial vs later class choices** (task 1): a class-row choice can be scoped `initial` or `later`.
+  A Bard taken as a later class is offered ONE Musical Instrument (`bard@1/multiclass-tools`)
+  instead of three, a later Monk no tool, and a later Rogue gains Thieves' Tools through the new
+  `multiclass.gains.toolProficiencies`. Old logs keep every recorded pick.
+- **Mixed-type picks** (task 2): one pick can union several queries (`queries`), and an item query
+  can filter by `category`. Skilled now takes any mix of three skills or tools, and the Soldier's
+  generic "gaming set" became a real pick of one of the four Gaming Sets.
+- **Item effects & attunement** (task 3): a new items overlay gives the first magic items real
+  effects — Gloves of Swimming and Climbing, Slippers of Spider Climbing and Cloak of Arachnida (climb
+  or swim equal to your Speed, Poison resistance, a once-per-dawn Web). Items that require
+  attunement now work only while attuned (charges are not gated). The sheet gained
+  `resistances`, and Thief Second-Story Work grants its climb speed.
+- **Expertise & mastery across classes** (task 4): an expertise pick no longer offers a skill another
+  class already made expert. A multiclass character's weapon-mastery count is the highest of its
+  classes' counts, not the sum, shared across all its mastery picks (owner-flag: SRD-silent).
+- **Per-character encumbrance** (task 5): the new `character.options.set@1` event and the Build
+  tab's Rule options let a solo character choose Off / Standard / Variant encumbrance. A campaign
+  house rule always wins (the select is then disabled with a reason), and provenance says
+  `house rule` or `character option`.
+- **Display polish** (task 6): breakdown popovers show the resolved number of formula contributions,
+  timeline restores read "Restored 2 charges of <item>" or "1 use of <feature>", a pre-seeded choice
+  step shows its count message straight away, and resistances appear as badges. Mastery names stay
+  raw slugs: the pack has no mastery entities yet (owner-flag).
+- **Goldens & perf** (task 7): 9 new goldens bring the golden suite from 63 to 72 tests (71 fixtures
+  plus one spec-level pin). The heaviest scenario derives in a **0.471 ms median** against the 15 ms
+  mid-phone budget (`packages/engine/test/golden/PERF.md`).
+- **e2e** (task 8): the offline project gained a Soldier-through-the-wizard scenario: it picks
+  Playing Cards, checks the Tools list, then switches encumbrance to Variant and checks the carry line
+  (129 / 255 lb, Encumbered, Speed −10 ft.). The full offline run is 27/27, and `e2e:sync` passed 8/8
+  in one pass.
+- **Gates at close** (task 8): pack 1866 entities / 2,230,308 bytes / 0 diagnostics; root 136 files /
+  1960 tests; web 136 files / 1518 tests; goldens 72/72; gzip bundle 340.3 / 600 KB.
+
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current ones are
@@ -277,4 +317,6 @@ classes to 20 — Phase 4 slice 1, above), and
 `2026-09-27-phase-4-slice-2-remaining-classes-feats-items.md` (the remaining seven classes,
 feats, and magic items — Phase 4 slice 2, above), and
 `2026-10-03-phase-4-slice-3-vocabulary-completions-and-polish.md` (vocabulary completions and
-builder polish — Phase 4 slice 3, above).
+builder polish — Phase 4 slice 3, above), and
+`2026-10-17-phase-4-slice-4-carry-retirement-and-rule-options.md` (carry retirement and
+per-character rule options — Phase 4 slice 4, above).

@@ -398,6 +398,61 @@ other steps rely on unit specs and engine goldens (plan-13 task reports 1–10).
 
 ---
 
+## 8d. Slice-4 carries & rule options on a real phone (Phase 4 slice 4, plan 14)
+
+**What this proves:** the slice-4 builder, sheet and timeline changes behave correctly under real
+touch input at a real phone width, including the disabled Rule options select with a screen reader.
+`apps/web/e2e/create-soldier-options.spec.ts` (default project) covers step 1 and the solo half of
+step 5 automatically; the other steps rely on unit specs and engine goldens (plan-14 task reports
+1–7).
+
+### Procedure
+
+1. **Gaming-set pick** (task 2). Create a Soldier (any class). Right after the class skills, confirm
+   a "Tool proficiency: choose one kind of Gaming Set" step offers exactly four Gaming Sets (Dice,
+   Dragonchess, Playing Cards, Three-Dragon Ante). Pick one, create, and on the Play tab confirm Tools lists that set by name (not a
+   generic "gaming-set").
+2. **Skilled skills or tools** (task 2). Give a character the Skilled feat (e.g. a Fighter 4's
+   feat). Confirm its step lists skills AND tools in one list, accepts any mix of three (e.g. two
+   skills plus Smith's Tools), and the Play tab shows the skills as proficient and the tool under
+   Tools.
+3. **Later-class Bard: one instrument** (task 1). Level a non-Bard into Bard. Confirm the level-up
+   offers ONE Musical Instrument (not three), and the Play tab lists exactly that instrument under
+   Tools, sourced from Bard. A non-Monk levelling into Monk gets no tool step.
+4. **Attune Slippers → climb** (task 3). Add Slippers of Spider Climbing and equip them: the Play
+   tab shows no climb Speed tile. Attune them: a climb Speed tile equal to your walk speed appears. Un-attune:
+   it goes away. (A Thief 3+ already has the same climb speed from Second-Story Work, and attuning
+   the Slippers does NOT double it.)
+5. **Rule options + house-rule disabled state** (task 5). On a solo character's Build tab, open Rule
+   options and set Encumbrance to Variant: the Play tab's inventory now shows a carry line ("… / …
+   lb carried" plus a state). Set it back to Off: the line disappears. Then open a character that is
+   in a campaign: the select shows the campaign's house-rule value, is disabled, and the reason
+   "Set by your campaign's house rules." is shown; with TalkBack/VoiceOver, focusing the select reads
+   that reason.
+6. **Resistance badges** (tasks 3 and 6). Add and attune a Cloak of Arachnida. Confirm the Conditions
+   section shows a "Resistances" heading with a badge reading "Damage type: Poison (Cloak of
+   Arachnida)" (the type is named by the pack's damage-type rule entity); un-attune and the heading is
+   gone.
+7. **Timeline regain counts** (task 6). Spend two charges of a charged item, restore one pip from the
+   Play tab, then open the Timeline: the sentence reads "Restored 1 charge of <item>". Do the same
+   with a feature pool (e.g. Second Wind): it reads "use", not "charge". A long rest's full restore
+   keeps the plain "Restored <name>." sentence. Item names show for item charges, not `item:<id>`.
+8. **Provenance numbers** (task 6). Open the breakdown popover on a value built from a formula (the
+   climb Speed tile from step 4, or a Thief 3+'s): the row shows the NUMBER (`+30`), not
+   `speed(walk)`, and hovering/long-pressing the number reveals the formula.
+9. **Seeded count message** (task 6). Level a Fighter 3 → 4 so Weapon Masteries re-opens with the
+   three recorded weapons pre-selected: the step immediately shows "Select the required number of
+   options." until the fourth pick is made.
+
+### Results
+
+| Device | Date | Gaming set | Skilled | Later Bard | Slippers climb | Rule options | Resistances | Regain counts | Provenance | Seeded count |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | | |
+| | | | | | | | | | | |
+
+---
+
 ## 9. Known Phase-4 / backlog items
 
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file
