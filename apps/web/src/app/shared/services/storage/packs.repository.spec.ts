@@ -1,6 +1,6 @@
-import { IDBFactory } from 'fake-indexeddb';
 import { TestBed } from '@angular/core/testing';
 import type { Pack } from '@hk/protocol';
+import { HkDb } from '@shared/services/storage/dexie.db';
 import { PacksRepository } from '@shared/services/storage/packs.repository';
 
 function ruSamplePack(overrides: Partial<Pack> = {}): Pack {
@@ -24,9 +24,16 @@ function ruSamplePack(overrides: Partial<Pack> = {}): Pack {
 }
 
 describe('PacksRepository', () => {
-  // Each test gets a fresh in-memory IndexedDB so `hk-db` rows never leak between tests.
-  beforeEach(() => {
-    (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
+  // Same idiom as `blobs.repository.spec.ts`: Dexie captures fake-indexeddb's `indexedDB` once
+  // (`apps/web/src/test-setup.ts`), so swapping `globalThis.indexedDB` does not isolate anything —
+  // every spec talks to the one shared `hk-db`. Clearing the table before each test (rows other
+  // pack-writing specs left) and closing the connection after it is what isolates this file.
+  beforeEach(async () => {
+    await TestBed.inject(HkDb).packs.clear();
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
   });
 
   it('round-trips a pack through putPack/getAll', async () => {
