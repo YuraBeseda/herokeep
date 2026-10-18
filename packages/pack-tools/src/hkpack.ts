@@ -4,7 +4,7 @@ import { unzipSync, zipSync, type Zippable } from 'fflate';
 
 /**
  * `.hkpack` container helpers for `build --zip` and `validate <file.hkpack>` (plan 15 task 8; doc-04
- * В§Distribution: a ZIP of the canonical `pack.json` plus one `assets/<hash-hex>` entry per
+ * §Distribution: a ZIP of the canonical `pack.json` plus one `assets/<hash-hex>` entry per
  * `assets[]` item). The reader mirrors the web importer (`hkpack-reader.service.ts`): the same
  * `HKPACK_LIMITS` caps enforced from the central directory BEFORE inflating, and the same entry
  * filter (only `pack.json` and `assets/<64-hex>` are read; anything else is counted, never read).
@@ -22,7 +22,7 @@ export function sha256Hex(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-/** `sha256:<hex>` в†’ `assets/<hex>`. */
+/** `sha256:<hex>` → `assets/<hex>`. */
 export function assetEntryName(hash: string): string {
   return `${HKPACK_ASSET_DIR}${hash.startsWith(HASH_PREFIX) ? hash.slice(HASH_PREFIX.length) : hash}`;
 }

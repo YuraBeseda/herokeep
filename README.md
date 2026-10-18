@@ -349,8 +349,8 @@ docs 02, 07 and 09.
   `.hkpack`. Two checked-in fixtures (`apps/web/e2e/fixtures/packs/`) are guarded by a rebuild
   test.
 - **Goldens & perf** (task 8). The golden harness loads fixture content packs (`fixture:` entries).
-  Three new goldens (homebrew-pinned, pack-unpinned-unresolved, pack-updated-v2) bring the suite to
-  **77/77**. The new scenario derives in a **0.168 ms median**, and the heaviest (paladin-20) in
+  Three new golden fixtures (homebrew-pinned, pack-unpinned-unresolved, pack-updated-v2) bring the
+  suite to **77/77 golden tests** (74 fixtures, one pin test and two harness tests). The new scenario derives in a **0.168 ms median**, and the heaviest (paladin-20) in
   0.473 ms, against the 15 ms mid-phone budget (`packages/engine/test/golden/PERF.md`).
 - **e2e** (task 9). The offline project gained `custom-packs.spec.ts`, which covers:
   - import → trust → Install → a Moonkin fighter pinned in the wizard;
@@ -367,7 +367,7 @@ docs 02, 07 and 09.
   - root: 145 files / 2102 tests;
   - api Cloudflare: 8 files / 40 tests + 1 skipped;
   - web: 147 files / 1729 tests;
-  - goldens: 77/77;
+  - goldens: 77/77 tests (74 fixtures);
   - gzip bundle: 343.6 / 600 KB.
 - **Owner-flags:**
   - the container caps are this plan's choice;
