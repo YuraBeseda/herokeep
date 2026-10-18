@@ -188,3 +188,9 @@
   color: var(--text-2);
   font-size: 0.875rem;
 }
+
+.settings__manage-packs {
+  display: inline-block;
+  margin-block-start: var(--space-3);
+  margin-inline-start: var(--space-3);
+}

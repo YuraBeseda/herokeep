@@ -318,6 +318,11 @@ export const routes: Routes = [
       import('./views/library/detail/detail.component').then((m) => m.LibraryDetailComponent),
   },
   {
+    // Plan 15 Task 3: installed packs, import + trust screen, detail/remove (`packs.routes.ts`).
+    path: 'packs',
+    loadChildren: () => import('./views/packs/packs.routes').then((m) => m.PACKS_ROUTES),
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./views/settings/settings.component').then((m) => m.SettingsComponent),

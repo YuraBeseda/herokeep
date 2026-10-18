@@ -391,6 +391,18 @@ describe('SettingsComponent', () => {
     );
   });
 
+  it('the Content packs card links to the /packs screen', async () => {
+    await setup({});
+    const fixture = TestBed.createComponent(SettingsComponent);
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const link = compiled.querySelector<HTMLAnchorElement>('a.settings__manage-packs');
+    expect(link).not.toBeNull();
+    expect(link!.getAttribute('href')).toBe('/packs');
+    expect(link!.textContent?.trim()).toBe(settingsEn.packs.manage);
+  });
+
   it('storage section renders used/quota from a stubbed StoragePersistService', async () => {
     await setup({
       storage: { supported: true, estimate: { usage: 1_048_576, quota: 104_857_600 } },

@@ -1,0 +1,32 @@
+<section class="pack-detail" *transloco="let t; read: 'packs'">
+  <a class="pack-detail__back" routerLink="/packs">{{ t('detail.back') }}</a>
+
+  @if (pack(); as pack) {
+    <h1 class="pack-detail__title">{{ pack.name }}</h1>
+
+    @if (usage.hasValue()) {
+      <p class="pack-detail__used-by">{{ t('detail.used-by', { count: usage.value() }) }}</p>
+    }
+
+    @if (summary(); as summary) {
+      <app-pack-info [pack]="pack" [summary]="summary" [diagnostics]="diagnostics()" />
+    }
+
+    @if (isCore()) {
+      <p class="pack-detail__core-note">{{ t('detail.core-note') }}</p>
+    } @else {
+      <button
+        hk-button
+        [variant]="'danger'"
+        type="button"
+        class="pack-detail__remove"
+        [disabled]="removing()"
+        (click)="remove()"
+      >
+        {{ t('detail.remove') }}
+      </button>
+    }
+  } @else {
+    <p class="pack-detail__not-found">{{ t('detail.not-found') }}</p>
+  }
+</section>

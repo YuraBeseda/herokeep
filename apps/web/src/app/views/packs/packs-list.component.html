@@ -1,0 +1,92 @@
+<section class="packs-list" *transloco="let t; read: 'packs'">
+  <div class="packs-list__header">
+    <h1 class="packs-list__title">{{ t('list.title') }}</h1>
+    <div class="packs-list__actions">
+      <button
+        hk-button
+        [variant]="'primary'"
+        type="button"
+        class="packs-list__import"
+        [disabled]="importing()"
+        (click)="importInput.click()"
+      >
+        {{ t('list.import') }}
+      </button>
+      <input
+        #importInput
+        type="file"
+        class="packs-list__import-input"
+        hidden
+        [disabled]="importing()"
+        [attr.accept]="importAccept"
+        (change)="onImportFileSelected($event)"
+      />
+    </div>
+  </div>
+  <p class="packs-list__intro">{{ t('list.intro') }}</p>
+
+  @if (importDetails().length > 0) {
+    <div class="packs-list__import-details" role="status">
+      <h2 class="packs-list__details-heading">{{ t('list.import-details') }}</h2>
+      <ul class="packs-list__details-list">
+        @for (line of importDetails(); track $index) {
+          <li>
+            <code>{{ line }}</code>
+          </li>
+        }
+      </ul>
+      <button
+        hk-button
+        [variant]="'ghost'"
+        type="button"
+        class="packs-list__details-dismiss"
+        (click)="dismissImportDetails()"
+      >
+        {{ t('list.import-details-dismiss') }}
+      </button>
+    </div>
+  }
+
+  <hk-card class="packs-list__group packs-list__core">
+    <h2 class="packs-list__heading">{{ t('list.core-heading') }}</h2>
+    @if (corePack(); as core) {
+      <a class="packs-list__row" [routerLink]="['/packs', packKey(core)]">
+        <span class="packs-list__name">{{ core.name }}</span>
+        <span class="packs-list__meta">
+          <span class="packs-list__version">{{ core.version }}</span>
+          <span class="packs-list__badge">{{ t('list.core-label') }}</span>
+        </span>
+      </a>
+    }
+  </hk-card>
+
+  <hk-card class="packs-list__group packs-list__content">
+    <h2 class="packs-list__heading">{{ t('list.content-heading') }}</h2>
+    @for (pack of contentPacks(); track packKey(pack)) {
+      <a class="packs-list__row" [routerLink]="['/packs', packKey(pack)]">
+        <span class="packs-list__name">{{ pack.name }}</span>
+        <span class="packs-list__version">{{ pack.version }}</span>
+      </a>
+    } @empty {
+      <p class="packs-list__empty">{{ t('list.content-empty') }}</p>
+    }
+  </hk-card>
+
+  <hk-card class="packs-list__group packs-list__translations">
+    <h2 class="packs-list__heading">{{ t('list.translations-heading') }}</h2>
+    <div class="packs-list__chips">
+      @for (pack of translationPacks(); track packKey(pack)) {
+        <hk-chip
+          [attr.data-pack-key]="packKey(pack)"
+          [removable]="true"
+          (remove)="removeTranslation(pack)"
+        >
+          {{ packKey(pack) }}
+          <span hk-chip-remove class="visually-hidden">{{ t('list.remove-translation') }}</span>
+        </hk-chip>
+      } @empty {
+        <p class="packs-list__empty">{{ t('list.translations-empty') }}</p>
+      }
+    </div>
+  </hk-card>
+</section>

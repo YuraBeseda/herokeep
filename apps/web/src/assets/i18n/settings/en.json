@@ -26,6 +26,7 @@
   "packs": {
     "title": "Content packs",
     "core-label": "Core rules pack",
+    "manage": "Manage packs",
     "import-demo": "Import the Russian sample pack",
     "import-success": "Pack imported",
     "import-invalid": "This pack could not be imported",

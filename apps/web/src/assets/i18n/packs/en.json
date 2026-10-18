@@ -9,5 +9,81 @@
   "import-failed-asset-too-large": "An image in this pack is larger than allowed",
   "import-failed-asset-mime-mismatch": "An image in this pack is not in the format it declares",
   "import-failed-asset-hash-mismatch": "An image in this pack is damaged or was modified",
-  "import-failed-conflict": "A different pack with the same name and version is already installed"
+  "import-failed-conflict": "A different pack with the same name and version is already installed",
+  "import-failed-unknown": "This file could not be read",
+  "install-failed": "The pack could not be saved on this device",
+  "remove-success": "Pack removed",
+  "remove-failed": "The pack could not be removed",
+  "list": {
+    "title": "Packs",
+    "intro": "Content packs add new options to the builder. A pack changes nothing until you install it.",
+    "core-heading": "Core rules",
+    "core-label": "core rules",
+    "content-heading": "Content packs",
+    "content-empty": "No content packs installed yet.",
+    "translations-heading": "Translations",
+    "translations-empty": "No translation packs installed.",
+    "remove-translation": "Remove translation pack",
+    "import": "Import pack",
+    "import-details": "What went wrong",
+    "import-details-dismiss": "Dismiss"
+  },
+  "info": {
+    "version": "Version {version}",
+    "authors": "Authors",
+    "license": "License",
+    "attribution": "Attribution",
+    "entities": "Contents",
+    "overrides": "Changes to existing content",
+    "overrides-none": "This pack does not change any existing content.",
+    "assets": "Images",
+    "assets-count": "{count, plural, one {# image} other {# images}}",
+    "dependencies": "Requires",
+    "warnings": "Validation warnings",
+    "none": "—",
+    "unit": {
+      "b": "{amount} B",
+      "kb": "{amount} KB",
+      "mb": "{amount} MB"
+    }
+  },
+  "entity-type": {
+    "system": "Game systems",
+    "species": "Species",
+    "background": "Backgrounds",
+    "class": "Classes",
+    "subclass": "Subclasses",
+    "feature": "Features",
+    "feat": "Feats",
+    "spell": "Spells",
+    "item": "Items",
+    "condition": "Conditions",
+    "skill": "Skills",
+    "ability": "Abilities",
+    "language": "Languages",
+    "tool": "Tools",
+    "rule": "Rules",
+    "table": "Tables"
+  },
+  "trust": {
+    "title": "Install {name}?",
+    "intro": "Review what this pack contains before you install it.",
+    "install": "Install",
+    "cancel": "Cancel",
+    "already-installed": "This pack is already installed.",
+    "has-errors": "This pack has errors: {message}"
+  },
+  "detail": {
+    "back": "Back to packs",
+    "not-found": "This pack is not installed.",
+    "used-by": "{count, plural, =0 {Not used by any character} one {Used by # character} other {Used by # characters}}",
+    "remove": "Remove pack",
+    "core-note": "The core rules pack is built in and cannot be removed."
+  },
+  "remove-confirm": {
+    "title": "Remove {name}?",
+    "body": "{count, plural, =0 {No character uses this pack.} one {# character uses this pack. After removal it will show unresolved references until you reinstall it.} other {# characters use this pack. After removal they will show unresolved references until you reinstall it.}}",
+    "cancel": "Cancel",
+    "confirm": "Remove"
+  }
 }

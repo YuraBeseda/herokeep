@@ -72,6 +72,8 @@ describe('app routes', () => {
     '/join',
     '/library',
     '/library/goblin',
+    '/packs',
+    '/packs/srd-5e-2024@0.1.0',
     '/settings',
     '/about',
     '/login',
@@ -104,7 +106,7 @@ describe('app routes', () => {
     expect(guarded).toEqual(['register']);
   });
 
-  it('renders the shell nav with 6 routerLink anchors using the real translations', async () => {
+  it('renders the shell nav with 7 routerLink anchors using the real translations', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -112,7 +114,7 @@ describe('app routes', () => {
     // (Login / logout) in the header, outside this nav landmark, which would otherwise inflate
     // this count without actually changing the primary nav destinations this test guards.
     const links = compiled.querySelectorAll<HTMLAnchorElement>('.app-shell__nav a[routerLink]');
-    expect(links.length).toBe(6);
+    expect(links.length).toBe(7);
     // Compare against the imported JSON, not re-typed literals, so this cannot drift from the
     // real translation file — a typo'd key or an unresolved scope would render the raw key
     // string instead and fail this assertion.
@@ -122,6 +124,7 @@ describe('app routes', () => {
       shellEn.nav.characters,
       shellEn.nav.campaigns,
       shellEn.nav.library,
+      shellEn.nav.packs,
       shellEn.nav.settings,
       shellEn.nav.about,
     ]);

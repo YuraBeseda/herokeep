@@ -73,6 +73,13 @@
       >{{ t('nav.library') }}</a
     >
     <a
+      routerLink="/packs"
+      routerLinkActive="is-active"
+      [ariaCurrentWhenActive]="'page'"
+      class="app-shell__link"
+      >{{ t('nav.packs') }}</a
+    >
+    <a
       routerLink="/settings"
       routerLinkActive="is-active"
       [ariaCurrentWhenActive]="'page'"

@@ -1,0 +1,92 @@
+<div class="pack-info" *transloco="let t; read: 'packs'">
+  <p class="pack-info__version">{{ t('info.version', { version: pack().version }) }}</p>
+
+  <dl class="pack-info__facts">
+    <div class="pack-info__fact pack-info__authors">
+      <dt>{{ t('info.authors') }}</dt>
+      <dd>
+        @if (pack().authors.length > 0) {
+          {{ pack().authors.join(', ') }}
+        } @else {
+          {{ t('info.none') }}
+        }
+      </dd>
+    </div>
+    <div class="pack-info__fact pack-info__license">
+      <dt>{{ t('info.license') }}</dt>
+      <dd>{{ pack().license ?? t('info.none') }}</dd>
+    </div>
+    <div class="pack-info__fact pack-info__assets">
+      <dt>{{ t('info.assets') }}</dt>
+      <dd>
+        <span>{{ t('info.assets-count', { count: summary().assetCount }) }}</span>
+        @if (summary().assetCount > 0) {
+          <span class="pack-info__asset-size">{{
+            t('info.unit.' + assetSize().unit, { amount: assetSize().amount })
+          }}</span>
+        }
+      </dd>
+    </div>
+    <div class="pack-info__fact pack-info__dependencies">
+      <dt>{{ t('info.dependencies') }}</dt>
+      <dd>
+        @for (dep of summary().dependencies; track dep.id) {
+          <span class="pack-info__dependency"
+            ><code>{{ dep.id }}</code> {{ dep.range }}</span
+          >
+        } @empty {
+          {{ t('info.none') }}
+        }
+      </dd>
+    </div>
+  </dl>
+
+  <section class="pack-info__section pack-info__attribution">
+    <h3 class="pack-info__heading">{{ t('info.attribution') }}</h3>
+    @if (attributionHtml.value(); as html) {
+      <div class="pack-info__attribution-body" [innerHTML]="html"></div>
+    } @else if (!pack().attribution) {
+      <p>{{ t('info.none') }}</p>
+    }
+  </section>
+
+  <section class="pack-info__section pack-info__entities">
+    <h3 class="pack-info__heading">{{ t('info.entities') }}</h3>
+    <ul class="pack-info__counts">
+      @for (row of countRows(); track row.type) {
+        <li class="pack-info__count" [attr.data-type]="row.type">
+          <span>{{ t('entity-type.' + row.type) }}</span>
+          <span class="pack-info__count-value">{{ row.count }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="pack-info__section pack-info__overrides">
+    <h3 class="pack-info__heading">{{ t('info.overrides') }}</h3>
+    @if (summary().overrides.length > 0) {
+      <ul class="pack-info__list">
+        @for (target of summary().overrides; track $index) {
+          <li class="pack-info__override">
+            <code>{{ target }}</code>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p>{{ t('info.overrides-none') }}</p>
+    }
+  </section>
+
+  @if (warnings().length > 0) {
+    <section class="pack-info__section pack-info__warnings">
+      <h3 class="pack-info__heading">{{ t('info.warnings') }}</h3>
+      <ul class="pack-info__list">
+        @for (warning of warnings(); track $index) {
+          <li class="pack-info__warning">
+            <code>{{ warning.code }}</code> {{ warning.message }}
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
