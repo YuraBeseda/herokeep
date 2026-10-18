@@ -35,8 +35,13 @@ export interface AbilitiesResult {
   abilities: Record<string, AbilityBlock>;
   /** `proficiency[totalLevel - 1]`, clamped to the table's bounds. */
   prof: number;
-  /** Keyed by `system.skills` ids. */
-  skills: Record<string, { total: Derived<number>; proficiency: ProficiencyLevel }>;
+  /**
+   * Keyed by `system.skills` ids. `expertiseOwner` (plan 14 task 4, ruling 6) is present only when
+   * the skill's expertise rank came from a `requireProficient` expertise pick rather than a fixed
+   * grant: the id of the entity owning the pick that FIRST raised it (class order — see
+   * `deriveAbilities`). `queryPickOptions` offers an expertise-rank skill to that owner's picks only.
+   */
+  skills: Record<string, { total: Derived<number>; proficiency: ProficiencyLevel; expertiseOwner?: string }>;
   /** `10 + perception's total` (0 when the system declares no `perception` skill). */
   passivePerception: number;
   /** Keyed by speed mode (`walk`, `fly`, …); `walk` is always present, base from the species. */
@@ -283,8 +288,34 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   // of them apply (order-independent), so a selection of a skill the character is not (or no
   // longer) proficient in from another source applies nothing — validation refuses such a pick
   // (`queryPickOptions`), and a recorded one can never mint a proficiency on its own.
-  const eligible = upgrades.filter((u) => isProficientRank(proficiencyLevel(table, u.target)));
-  for (const u of eligible) table.add(u.target, { source: u.ownerId, kind: u.kind, policy: 'union' });
+  // Plan 14 task 4 (ruling 6): an expertise pick is additionally ineligible on a skill ANOTHER owner
+  // already raised to expertise. Ownership is attributed here, in class order (`facts.classes[]`,
+  // order gained; a subclass follows its class; any non-class owner after every class), so the
+  // EARLIER pick owns the rank: a skill already at expertise before any pick applies (a fixed grant)
+  // has no owner (no pick may take it); otherwise the first expertise pick's owner. A recorded
+  // later pick on an owned skill (a legacy log) still applies — a no-op on the rank, nothing is
+  // lost — and validation reports it (`selection.notOffered`) so the player can re-pick.
+  const classOrder = (ownerId: string): number => {
+    const owner = index.get(ownerId);
+    const classRef = owner?.type === 'class' ? owner.id : owner?.type === 'subclass' ? owner.class : undefined;
+    if (classRef === undefined) return facts.classes.length;
+    const resolved = index.resolveClassRef(classRef) ?? classRef;
+    const i = facts.classes.findIndex((c) => (index.resolveClassRef(c.classId) ?? c.classId) === resolved);
+    return i < 0 ? facts.classes.length : i;
+  };
+  const eligible = upgrades
+    .filter((u) => isProficientRank(proficiencyLevel(table, u.target)))
+    .sort((a, b) => classOrder(a.ownerId) - classOrder(b.ownerId));
+  const fixedExpertise = new Set(
+    eligible.filter((u) => proficiencyLevel(table, u.target) === 'expertise').map((u) => u.target),
+  );
+  const expertiseOwners = new Map<string, string>();
+  for (const u of eligible) {
+    if (u.kind === 'expertise' && !fixedExpertise.has(u.target) && !expertiseOwners.has(u.target)) {
+      expertiseOwners.set(u.target, u.ownerId);
+    }
+    table.add(u.target, { source: u.ownerId, kind: u.kind, policy: 'union' });
+  }
 
   // ---- Re-evaluate deferred effects now that scores (and proficiency) are known ------------------
   const { category: armorCategory, hasShield } = equippedArmor(facts, index);
@@ -372,7 +403,12 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
     const skillDef = system.skills.find((s) => s.id === skillId)!;
     const level = proficiencyLevel(table, `skill.${skillId}`);
     const base = (mods.get(skillDef.ability) ?? 0) + proficiencyAmount(level, prof);
-    skills[skillId] = { total: table.resolve(`skillTotal.${skillId}`, base, evalFormula), proficiency: level };
+    const expertiseOwner = level === 'expertise' ? expertiseOwners.get(`skill.${skillId}`) : undefined;
+    skills[skillId] = {
+      total: table.resolve(`skillTotal.${skillId}`, base, evalFormula),
+      proficiency: level,
+      ...(expertiseOwner !== undefined ? { expertiseOwner } : {}),
+    };
   }
   const passivePerception = 10 + (skills['perception']?.total.value ?? 0);
 

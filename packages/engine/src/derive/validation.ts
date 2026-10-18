@@ -140,25 +140,35 @@ export function pickQueries(pick: ChoicePick): EntityQuery[] {
  * The entity ids a query-backed pick OFFERS this character: every `index.query` match (for a
  * `queries` pick, plan 14 task 2, the union over its queries in authored order, each id once —
  * first occurrence wins), narrowed — when the pick sets `requireProficient` (plan 13 task 1, e.g.
- * an Expertise pick; only a single `query` pick can) — to the skills the
- * character is currently proficient in per `sheet` (rank proficient or expertise; `half` is not
- * proficiency). The single eligibility source for `validateSelection`'s `selection.notOffered`
- * refusal, and the UI lists the same option set. This covers eligibility only: a same-family
- * duplicate (a skill already given Expertise by an earlier pick of the same family) is still in
- * this set — validation refuses it (`selection.duplicate`) and only the web picker gates it at
- * offer time. No `sheet` means no known proficiencies: a `requireProficient` pick then offers
- * nothing.
+ * an Expertise pick; only a single `query` pick can) — to the skills the character is currently
+ * proficient in per `sheet` (rank proficient or expertise; `half` is not proficiency). Plan 14
+ * task 4 (ruling 6): an EXPERTISE pick (`proficiency: 'expertise'`) further drops a skill already at
+ * expertise rank from any owner other than `ownerId` (the entity owning the pick — `findChoice`'s
+ * `owner`): a fixed grant, or another owner's earlier pick (`sheet.skills[s].expertiseOwner`, class
+ * order) — so Rogue Expertise: Stealth is not offered to the Ranger's Deft Explorer. The pick's
+ * OWN owner stays eligible, so its recorded selection re-validates cleanly (a re-opened step, the
+ * wizard's draft re-derive). Without `ownerId` no owner is exempt: every expertise-rank skill is
+ * dropped. The single eligibility source for `validateSelection`'s `selection.notOffered` refusal,
+ * and the UI lists the same option set. A same-owner duplicate (a skill already given Expertise by
+ * an earlier pick of the same family, e.g. Rogue @1 vs @6) is still in this set — validation refuses
+ * it (`selection.duplicate`) and only the web picker gates it at offer time. No `sheet` means no
+ * known proficiencies: a `requireProficient` pick then offers nothing.
  */
 export function queryPickOptions(
   pick: QueryPick,
   index: ContentIndex,
   sheet: Pick<Sheet, 'skills'> | undefined,
+  ownerId?: string,
 ): string[] {
   const ids = [...new Set(pickQueries(pick).flatMap((q) => index.query(q).map((e) => e.id)))];
   if (!('query' in pick) || pick.requireProficient !== true) return ids;
+  const expertisePick = pick.proficiency === 'expertise';
   return ids.filter((id) => {
     const slug = parseEntityId(id)?.slug;
-    return slug !== undefined && isProficientRank(sheet?.skills[slug]?.proficiency);
+    const entry = slug !== undefined ? sheet?.skills[slug] : undefined;
+    if (!isProficientRank(entry?.proficiency)) return false;
+    if (!expertisePick || entry?.proficiency !== 'expertise') return true;
+    return ownerId !== undefined && entry.expertiseOwner === ownerId;
   });
 }
 
@@ -169,6 +179,7 @@ function validateQuery(
   choice: Choice,
   choiceId: string,
   selection: string[],
+  ownerId: string,
 ): Diagnostic[] {
   const issues: Diagnostic[] = [];
   if (selection.length !== choice.count) {
@@ -176,7 +187,7 @@ function validateQuery(
       error('selection.count', `Expected ${choice.count} selection(s), got ${selection.length}`, { path: choiceId }),
     );
   }
-  const eligible = new Set(queryPickOptions(pick, index, sheet));
+  const eligible = new Set(queryPickOptions(pick, index, sheet, ownerId));
   for (const s of selection) {
     if (!index.has(s)) {
       issues.push(
@@ -492,7 +503,7 @@ export function validateSelection(
     }
     issues.push(...checkUnique(choice, choiceId, facts, selection, index));
   } else if (isQueryPick(choice.pick)) {
-    issues.push(...validateQuery(choice.pick, index, sheet, choice, choiceId, selection));
+    issues.push(...validateQuery(choice.pick, index, sheet, choice, choiceId, selection, owner.id));
     issues.push(...validateSubclassLevel(choice, index, choiceId, selection));
     for (const s of selection) {
       const e = index.get(s);

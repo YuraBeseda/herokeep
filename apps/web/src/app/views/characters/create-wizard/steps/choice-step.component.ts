@@ -175,12 +175,18 @@ export class ChoiceStepComponent {
       // (level-up, build tab) or the creation wizard's draft sheet — read ONLY for such a pick, so an
       // ordinary query view never re-computes on every draft change. Plan 14 task 2: a `queries`
       // pick (a union of queries, e.g. Skilled's skills-or-tools) is the same view — the engine
-      // unions it into one id list and the entity picker lists any entity type by id.
+      // unions it into one id list and the entity picker lists any entity type by id. Plan 14 task 4:
+      // the choice's owner is passed so an Expertise pick drops skills ANOTHER owner already raised
+      // to expertise while its own picks stay listed (the same set validation accepts).
       const sheet =
         'query' in choice.pick && choice.pick.requireProficient
           ? (this.sheet() ?? this.state?.draftSheet())
           : undefined;
-      return { kind: 'query', ids: queryPickOptions(choice.pick, index, sheet), count };
+      return {
+        kind: 'query',
+        ids: queryPickOptions(choice.pick, index, sheet, found.owner.id),
+        count,
+      };
     }
     if ('static' in choice.pick) {
       return { kind: 'static', ids: [...choice.pick.static], count };
