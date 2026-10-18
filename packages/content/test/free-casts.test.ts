@@ -114,7 +114,7 @@ describe("Favored Enemy: free Hunter's Mark casts spend the favored-enemy counte
     expect(refusal instanceof ProposeError ? refusal.diagnostics.map((d) => d.code) : refusal).toEqual([
       'resource.none-left',
     ]);
-    const rested = sheetOf(apply(events, propose.rest(spent, 'long')));
+    const rested = sheetOf(apply(events, propose.rest(spent, 'long', undefined, {})));
     expect(used(rested, 'favored-enemy')).toBe(0);
   });
 
@@ -166,7 +166,7 @@ describe('Paladin: free Divine Smite and Find Steed casts spend their existing c
     expect(refusal instanceof ProposeError ? refusal.diagnostics.map((d) => d.code) : refusal).toEqual([
       'resource.none-left',
     ]);
-    expect(used(sheetOf(apply(once, propose.rest(spent, 'long'))), 'faithful-steed')).toBe(0);
+    expect(used(sheetOf(apply(once, propose.rest(spent, 'long', undefined, {}))), 'faithful-steed')).toBe(0);
   });
 });
 

@@ -91,12 +91,14 @@ describe('propose.rest: rolled regain', () => {
 
   it('a short rest never touches the dawn item and needs no roll', () => {
     const sheet = baseSheet({ resources: [rolledWand()] });
-    expect(propose.rest(sheet, 'short')).toEqual([{ type: 'rest.taken', v: 1, payload: { kind: 'short' } }]);
+    expect(propose.rest(sheet, 'short', undefined, {})).toEqual([
+      { type: 'rest.taken', v: 1, payload: { kind: 'short' } },
+    ]);
   });
 
   it('refuses a long rest without a roll for a dice-regain resource (no silent full restore)', () => {
     const sheet = baseSheet({ resources: [rolledWand()] });
-    const err = captureProposeError(() => propose.rest(sheet, 'long'));
+    const err = captureProposeError(() => propose.rest(sheet, 'long', undefined, {}));
     expect(err.diagnostics.map((d) => [d.code, d.entityId])).toEqual([['rest.regain-roll-missing', key]]);
   });
 

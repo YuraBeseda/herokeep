@@ -371,7 +371,8 @@ regains when its `reset` fires, validated by `RegainDiceSchema` — the `DiceSch
 only for a dice amount: 38 of the 43 charged SRD items carry `regain` (14 of them `1d3`, e.g. Wand of
 Secrets, Ring of Evasion, Cubic Gate); Eyes of Charming ("regain all") and the 4 `never` items carry
 none and keep the full restore. The sheet exposes it as `ResourceView.regain` (absent when empty).
-The CALLER rolls, as with hit dice: `propose.rest(sheet, kind, hitDice?, regainRolls?)` takes
+The CALLER rolls, as with hit dice: `propose.rest(sheet, kind, hitDice, regainRolls)` (both trailing
+parameters required — pass `undefined` / `{}` explicitly) takes
 `regainRolls[resourceId] = <rolled total>` and records it as `resource.restored {resourceId, count}`
 (no new event field; doc 02). The refusal is all-or-nothing: a missing total
 (`rest.regain-roll-missing`) or a total outside the dice's min..max or not an integer

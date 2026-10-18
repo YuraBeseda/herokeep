@@ -29,13 +29,15 @@ const mk = (type: string, payload: unknown): ProposedEvent => ({ type, v: 1, pay
  * `max(0, used − count)` floor caps the regain at max. A missing or impossible total (outside the
  * dice's min..max) refuses the whole rest (`'rest.regain-roll-missing'` / `'rest.regain-roll-invalid'`)
  * rather than silently falling back to a full restore. `regainRolls` entries for resources without
- * `regain` are ignored.
+ * `regain` are ignored. Both trailing parameters are REQUIRED (pass `undefined` / `{}` explicitly)
+ * so that every caller decides about rolled regains up front: a defaulted `{}` would turn the
+ * all-or-nothing refusal into a runtime surprise the first time a charged item is on the sheet.
  */
 export function rest(
   sheet: Sheet,
   kind: 'short' | 'long',
-  hitDice?: { classId: string; count: number }[],
-  regainRolls: Readonly<Record<string, number>> = {},
+  hitDice: { classId: string; count: number }[] | undefined,
+  regainRolls: Readonly<Record<string, number>>,
 ): ProposedEvent[] {
   const payload: RestTaken = { kind, ...(hitDice !== undefined ? { hitDiceSpent: hitDice } : {}) };
   const events: ProposedEvent[] = [mk('rest.taken', payload)];

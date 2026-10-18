@@ -303,7 +303,7 @@ describe('charged items over the real pack (derive smoke)', () => {
     // A short rest leaves dawn charges alone. Plan 13 task 6 re-pin (ruling 7): a long rest no
     // longer restores the wand in full — it "regains 1d6 + 1 expended charges daily at dawn"
     // (pk srd-2024_wand-of-magic-missiles), so it restores the caller-rolled total: 3 spent − 2 = 1.
-    const shortEvents = propose.rest(s1, 'short');
+    const shortEvents = propose.rest(s1, 'short', undefined, {});
     expect(shortEvents.some((e) => JSON.stringify(e.payload).includes(`item:${WAND}`))).toBe(false);
     const longEvents = propose.rest(s1, 'long', undefined, { [`item:${WAND}`]: 2 });
     expect(longEvents.at(-1)!.payload).toEqual({ resourceId: `item:${WAND}`, count: 2 });
@@ -318,7 +318,9 @@ describe('charged items over the real pack (derive smoke)', () => {
       ev('item.equipped', { instanceId: scarab }),
       ev('resource.spent', { resourceId: `item:${scarab}`, count: 2 }),
     ]);
-    expect(propose.rest(s3, 'long').some((e) => JSON.stringify(e.payload).includes(`item:${scarab}`))).toBe(false);
+    expect(
+      propose.rest(s3, 'long', undefined, {}).some((e) => JSON.stringify(e.payload).includes(`item:${scarab}`)),
+    ).toBe(false);
   });
 
   it('attunement.by resolves against the sheet: Holy Avenger is refused for a non-paladin', () => {
