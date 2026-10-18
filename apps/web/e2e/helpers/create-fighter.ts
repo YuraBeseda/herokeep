@@ -126,13 +126,15 @@ export async function pickSkills(page: Page): Promise<void> {
  * Gaming Set" (`srd-5e-2024:background/soldier@0/tools`, a count-1 static pick over the four Gaming
  * Set items). It is not one of the wizard's curated steps, so it sorts by choice id among the
  * remaining creation choices — `background/...` before any `class/...` choice — i.e. it is always
- * the step right after class skills. Picks Dice (count 1: resolves and auto-advances on the click),
- * then waits for that card to leave the DOM (the next step's picker rows are different entities, or
- * the next step is not a picker at all) so a caller never acts on this step's stale view. */
-export async function pickGamingSet(page: Page): Promise<void> {
-  const dice = page.locator('.entity-picker__select', { hasText: 'Gaming Set, Dice' });
-  await dice.click();
-  await dice.waitFor({ state: 'detached' });
+ * the step right after class skills. Picks `gamingSet` — Dice by default; plan 14 task 8's
+ * `create-soldier-options.spec.ts` passes another set so the sheet assertion can't be satisfied by
+ * the default — (count 1: resolves and auto-advances on the click), then waits for that card to
+ * leave the DOM (the next step's picker rows are different entities, or the next step is not a
+ * picker at all) so a caller never acts on this step's stale view. */
+export async function pickGamingSet(page: Page, gamingSet = 'Gaming Set, Dice'): Promise<void> {
+  const card = page.locator('.entity-picker__select', { hasText: gamingSet });
+  await card.click();
+  await card.waitFor({ state: 'detached' });
 }
 
 /** Step 8/9: the fighter's own two level-1 choices — Fighting Style (a `query` pick, rendered as
