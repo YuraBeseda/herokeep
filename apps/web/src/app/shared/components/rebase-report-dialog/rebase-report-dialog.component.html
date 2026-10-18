@@ -1,0 +1,61 @@
+<div class="rebase-report" *transloco="let t; read: 'characters'">
+  <h2 class="rebase-report__title" data-dialog-title>{{ heading() }}</h2>
+
+  @if (empty()) {
+    <p class="rebase-report__empty">{{ t('rebase.no-changes') }}</p>
+  }
+
+  @if (report().invalid.length > 0) {
+    <section class="rebase-report__section">
+      <h3 class="rebase-report__heading">{{ t('rebase.invalid-title') }}</h3>
+      <ul class="rebase-report__list rebase-report__invalid">
+        @for (item of report().invalid; track item.choiceId) {
+          <li class="rebase-report__invalid-item">
+            <code class="rebase-report__code">{{ item.choiceId }}</code>
+            <span class="rebase-report__reason">{{ t(reasonKey(item.reason)) }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (report().changes.length > 0) {
+    <section class="rebase-report__section">
+      <h3 class="rebase-report__heading">{{ t('rebase.changes-title') }}</h3>
+      <ul class="rebase-report__list rebase-report__changes">
+        @for (change of report().changes; track change.path) {
+          <li class="rebase-report__change">
+            {{
+              t('rebase.change', {
+                path: change.path,
+                before: display(change.before) ?? t('rebase.none'),
+                after: display(change.after) ?? t('rebase.none'),
+              })
+            }}
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <div class="rebase-report__actions">
+    <button
+      hk-button
+      [variant]="'ghost'"
+      type="button"
+      class="rebase-report__cancel"
+      (click)="onCancel()"
+    >
+      {{ t('rebase.cancel') }}
+    </button>
+    <button
+      hk-button
+      [variant]="'primary'"
+      type="button"
+      class="rebase-report__confirm"
+      (click)="onConfirm()"
+    >
+      {{ t('rebase.confirm') }}
+    </button>
+  </div>
+</div>

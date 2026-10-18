@@ -5,16 +5,24 @@ import {
   findChoice,
   outstandingChoices,
   reduce,
+  selectPackVersions,
   validateSelection,
   type ChoiceRequest,
   type Diagnostic,
   type Facts,
+  type Pins,
   type Sheet,
   type SystemRules,
 } from '@hk/engine';
-import { parseChoiceId, parseEvent, type Event, type GrammaticalGender } from '@hk/protocol';
+import {
+  parseChoiceId,
+  parseEvent,
+  type Event,
+  type GrammaticalGender,
+  type Pack,
+} from '@hk/protocol';
 import { uuidv7 } from '@shared/helpers/uuid';
-import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
 import { type DraftEvent } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 
@@ -75,9 +83,66 @@ function labelKeyFor(id: KnownStepId | 'choice'): string {
  * result is actually committed, at review time).
  */
 @Injectable()
-export class CreateWizardState {
+export class CreateWizardState implements EngineScope {
   private readonly engineFacade = inject(EngineFacade);
   private readonly packStore = inject(PackStore);
+
+  // --- Content packs (plan 15 Task 4) ------------------------------------------------------------
+  // The draft character pins the core plus the installed content packs checked on the first step
+  // (none by default). `CreateWizardComponent` provides this state as its `EngineScope`, so every
+  // step component lists, names and validates against exactly that pack set.
+
+  /** Installed content packs offered on the first step: one per pack id, the highest version. */
+  readonly installedContent: Signal<Pack[]> = computed(() => {
+    const content = this.packStore.packs().filter((p) => p.kind === 'content');
+    return [...selectPackVersions(content).selected.values()].sort((a, b) =>
+      a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+    );
+  });
+
+  /** Checked content packs: pack id → version. */
+  readonly selectedPacks = signal<ReadonlyMap<string, string>>(new Map());
+
+  /** `{ [core]: version, ...checked installed packs }` — the draft's pins (`EngineScope.pins`). */
+  readonly pins: Signal<Pins> = computed(() => {
+    const core = this.packStore.packs().find((p) => p.kind === 'core');
+    const pins: Pins = core ? { [core.id]: core.version } : {};
+    for (const pack of this.installedContent()) {
+      if (this.selectedPacks().get(pack.id) === pack.version) pins[pack.id] = pack.version;
+    }
+    return pins;
+  });
+
+  /** The draft's own content index: core + checked packs (+ their translations). */
+  private readonly draftIndex = computed(() => this.engineFacade.indexFor(this.pins()));
+
+  isPackSelected(pack: Pack): boolean {
+    return this.selectedPacks().get(pack.id) === pack.version;
+  }
+
+  togglePack(packId: string, version: string): void {
+    this.selectedPacks.update((prev) => {
+      const next = new Map(prev);
+      if (next.get(packId) === version) next.delete(packId);
+      else next.set(packId, version);
+      return next;
+    });
+  }
+
+  /** `pack.pinned` drafts for the checked packs, sorted by pack id — they follow
+   * `character.created` in the creation transaction (doc-04 §Versioning). */
+  private packPinDrafts(): DraftEvent[] {
+    const core = this.packStore.packs().find((p) => p.kind === 'core');
+    const pins = this.pins();
+    return Object.keys(pins)
+      .filter((packId) => packId !== core?.id)
+      .sort()
+      .map((packId) => ({
+        type: 'pack.pinned',
+        v: 1,
+        payload: { packId, version: pins[packId] },
+      }));
+  }
 
   readonly name = signal('');
   readonly gender = signal<GrammaticalGender>('neuter');
@@ -154,6 +219,8 @@ export class CreateWizardState {
       grammaticalGender: this.gender(),
     });
 
+    for (const draft of this.packPinDrafts()) push(draft.type, draft.v, draft.payload);
+
     const decisions = this.decisions();
     const contexts = this.decisionContexts();
     for (const [choiceId, selection] of decisions) {
@@ -192,13 +259,13 @@ export class CreateWizardState {
   readonly draftSheet: Signal<Sheet | undefined> = computed(() => {
     const facts = this.draftFacts();
     if (!facts || !this.packStore.ready()) return undefined;
-    return derive(facts, this.engineFacade.index(), this.systemRules());
+    return derive(facts, this.draftIndex(), this.systemRules());
   });
 
   readonly outstanding: Signal<ChoiceRequest[]> = computed(() => {
     const facts = this.draftFacts();
     if (!facts || !this.packStore.ready()) return [];
-    return outstandingChoices(facts, this.engineFacade.index());
+    return outstandingChoices(facts, this.draftIndex());
   });
 
   /** Auto-done rule for the 'spells' step (task-8-brief.md): `true` once at least one CANTRIP
@@ -209,7 +276,7 @@ export class CreateWizardState {
   readonly spellsAutoDone: Signal<boolean> = computed(() => {
     const block = this.draftSheet()?.spellcasting[0];
     if (!block) return false;
-    const index = this.engineFacade.index();
+    const index = this.draftIndex();
     return block.known.some((id) => {
       const entity = index.get(id);
       return entity?.type === 'spell' && entity.level === 0;
@@ -341,8 +408,9 @@ export class CreateWizardState {
     const excludeChoiceId = this.isAbilitiesPick(choiceId) ? choiceId : undefined;
     const facts = this.reduceDraft(excludeChoiceId);
     if (!facts || !this.packStore.ready()) return [];
-    const sheet = derive(facts, this.engineFacade.index(), this.systemRules());
-    return validateSelection(sheet, facts, this.engineFacade.index(), choiceId, selection);
+    const index = this.draftIndex();
+    const sheet = derive(facts, index, this.systemRules());
+    return validateSelection(sheet, facts, index, choiceId, selection);
   }
 
   /** Only an `abilities` pick (a background's own +2/+1, or — mirrored in `LevelUpState` — the ASI
@@ -357,7 +425,7 @@ export class CreateWizardState {
    * selection…`/`invalidDecisions is empty until…`/`a decided-but-invalid choice…` when this was
    * first tried unconditionally (task-13-fix-report.md). */
   private isAbilitiesPick(choiceId: string): boolean {
-    const found = findChoice(this.engineFacade.index(), choiceId);
+    const found = findChoice(this.draftIndex(), choiceId);
     return found !== undefined && 'abilities' in found.choice.pick;
   }
 
@@ -480,7 +548,8 @@ export class CreateWizardState {
     ]);
   }
 
-  /** `character.created` + `decision.made` (with contexts) per decision + `level.gained
+  /** `character.created` + one `pack.pinned` per checked content pack (plan 15 Task 4) +
+   * `decision.made` (with contexts) per decision + `level.gained
    * {classId, level:1}` (once a class is decided) + `hp.changed {delta: <derived max>, kind:
    * 'set'}` (controller ruling R11: `facts.hp.current` defaults to the literal `0` —
    * `reduce/facts.ts`'s `initialFacts` — which is correct ENGINE behavior (nothing rules-free can
@@ -509,6 +578,7 @@ export class CreateWizardState {
           grammaticalGender: this.gender(),
         },
       },
+      ...this.packPinDrafts(),
     ];
 
     const decisions = this.decisions();

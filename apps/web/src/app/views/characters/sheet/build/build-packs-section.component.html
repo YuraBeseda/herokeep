@@ -1,0 +1,51 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-sheet-section [titleKey]="'characters.sheet.build.packs.title'" class="build-packs">
+    <p class="build-packs__intro">{{ t('sheet.build.packs.intro') }}</p>
+    <ul class="build-packs__list">
+      @for (row of rows(); track row.id) {
+        <li class="build-packs__row" [attr.data-pack-id]="row.id">
+          <label class="build-packs__label">
+            <input
+              type="checkbox"
+              class="build-packs__toggle"
+              [checked]="row.enabled"
+              [disabled]="row.core || disabled() || busy()"
+              [attr.aria-describedby]="row.core ? coreReasonId : null"
+              (change)="onToggle(row, $event, t)"
+            />
+            <span class="build-packs__name">{{ row.name }}</span>
+            <span class="build-packs__version">{{
+              t('sheet.build.packs.version', { version: row.version })
+            }}</span>
+          </label>
+          @if (row.core) {
+            <p class="build-packs__note" [id]="coreReasonId">
+              {{ t('sheet.build.packs.core-reason') }}
+            </p>
+          } @else if (!row.installed) {
+            <p class="build-packs__note build-packs__note--missing">
+              {{ t('sheet.build.packs.not-installed') }}
+            </p>
+          } @else if (row.pinnedVersion) {
+            <p class="build-packs__note">
+              {{ t('sheet.build.packs.pinned-other', { version: row.pinnedVersion }) }}
+            </p>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (blocked().length > 0) {
+      <div class="build-packs__blocked" role="alert">
+        <p class="build-packs__blocked-title">{{ t('sheet.build.packs.blocked') }}</p>
+        <ul class="build-packs__blocked-list">
+          @for (d of blocked(); track $index) {
+            <li>
+              <code>{{ d.code }}</code> {{ d.message }}
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </hk-sheet-section>
+</ng-container>

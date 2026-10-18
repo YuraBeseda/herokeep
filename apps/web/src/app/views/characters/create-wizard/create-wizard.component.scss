@@ -80,3 +80,14 @@
   justify-content: space-between;
   gap: var(--space-2);
 }
+
+.create-wizard__packs-hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.create-wizard__pack-version {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}

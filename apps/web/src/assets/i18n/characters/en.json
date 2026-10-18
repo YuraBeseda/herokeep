@@ -225,6 +225,16 @@
       },
       "gender": {
         "title": "Grammatical gender"
+      },
+      "packs": {
+        "title": "Content packs",
+        "intro": "Packs this character uses. Turning one off shows what would change before anything is saved.",
+        "version": "v{version}",
+        "core-reason": "The core rules are always on.",
+        "not-installed": "Not installed on this device.",
+        "pinned-other": "This character uses v{version}, which is not installed on this device.",
+        "blocked": "This pack can't be turned off:",
+        "disable-title": "Turn off {name}?"
       }
     },
     "options": {
@@ -665,6 +675,28 @@
       "manualRange": "Each score must stay within the allowed range.",
       "rollRange": "Rolled scores must each be within 3-18.",
       "abilityGenerationInvalid": "These scores don't match any ability-generation method."
+    }
+  },
+  "create": {
+    "packs": {
+      "title": "Content packs",
+      "hint": "Optional extra content for this character. You can change this later on the Build tab.",
+      "version": "v{version}"
+    }
+  },
+  "rebase": {
+    "no-changes": "Nothing on the sheet changes.",
+    "invalid-title": "Choices that will be cleared",
+    "changes-title": "Sheet changes",
+    "change": "{path}: {before} → {after}",
+    "none": "(none)",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "reason": {
+      "choice-missing": "The choice no longer exists.",
+      "selection-missing": "The selected option is no longer available.",
+      "selection-deprecated": "The selected option was retired without a working replacement.",
+      "prerequisite-failed": "The prerequisites are no longer met."
     }
   }
 }

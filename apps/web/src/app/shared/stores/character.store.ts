@@ -794,8 +794,9 @@ export class CharacterStore {
   }
 
   /** `SystemRules` from the loaded core pack's `system` entity, or `undefined` before packs are
-   * ready (mirrors `sheet`/`outstanding`/`advancements`'s own ready gate). */
-  private systemRules(): SystemRules | undefined {
+   * ready (mirrors `sheet`/`outstanding`/`advancements`'s own ready gate). Public since plan 15
+   * Task 4: a rebase plan (`planRebase`) derives with the same rules as `sheet`. */
+  systemRules(): SystemRules | undefined {
     if (!this.packStore.ready()) return undefined;
     const system = this.engineFacade.index().system();
     return { restRules: system.restRules, hpRules: system.hpRules };

@@ -40,6 +40,28 @@
               </label>
             }
           </fieldset>
+
+          <!-- Plan 15 Task 4: only when content packs are installed; none checked by default. -->
+          @if (state.installedContent().length > 0) {
+            <fieldset class="create-wizard__field create-wizard__packs">
+              <legend>{{ t('create.packs.title') }}</legend>
+              <p class="create-wizard__packs-hint">{{ t('create.packs.hint') }}</p>
+              @for (pack of state.installedContent(); track pack.id) {
+                <label class="create-wizard__radio create-wizard__pack">
+                  <input
+                    type="checkbox"
+                    class="create-wizard__pack-toggle"
+                    [checked]="state.isPackSelected(pack)"
+                    (change)="state.togglePack(pack.id, pack.version)"
+                  />
+                  {{ pack.name }}
+                  <span class="create-wizard__pack-version">{{
+                    t('create.packs.version', { version: pack.version })
+                  }}</span>
+                </label>
+              }
+            </fieldset>
+          }
         </div>
       }
       @case ('choice') {

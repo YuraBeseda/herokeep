@@ -1,0 +1,47 @@
+:host {
+  display: block;
+}
+
+.rebase-report__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-display);
+}
+
+.rebase-report__empty {
+  margin: 0 0 var(--space-3);
+  color: var(--text-2);
+}
+
+.rebase-report__section {
+  margin-block-end: var(--space-3);
+}
+
+.rebase-report__heading {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.rebase-report__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.rebase-report__invalid-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.rebase-report__reason {
+  color: var(--text-2);
+}
+
+.rebase-report__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

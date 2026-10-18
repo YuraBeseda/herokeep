@@ -19,6 +19,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../assets/i18n/characters/uk.json';
+import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { CreateWizardComponent } from './create-wizard.component';
 import { CreateWizardState } from './create-wizard.state';
 
@@ -51,7 +52,10 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
-function configure(): { create: ReturnType<typeof vi.fn>; appendTx: ReturnType<typeof vi.fn> } {
+function configure(packs: Pack[] = [corePack]): {
+  create: ReturnType<typeof vi.fn>;
+  appendTx: ReturnType<typeof vi.fn>;
+} {
   const create = vi.fn().mockResolvedValue('char:00000000-0000-7000-8000-000000000099');
   const appendTx = vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
@@ -70,7 +74,7 @@ function configure(): { create: ReturnType<typeof vi.fn>; appendTx: ReturnType<t
       provideTranslocoMessageformat(),
       {
         provide: PackStore,
-        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        useValue: { packs: signal(packs), ready: signal(true), corePack: signal(corePack) },
       },
       { provide: CharacterStore, useValue: { create, appendTx } },
     ],
@@ -946,5 +950,113 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     const persisted = await TestBed.inject(EventsRepository).byStream(streamId);
     expect(persisted.length).toBeGreaterThan(0);
     expect(persisted.some((e) => e.type === 'character.created')).toBe(true);
+  });
+});
+
+// --- Plan 15 (phase 4 slice 5) Task 4: content packs on the first step -------------------------
+describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
+  const parsedSample = parsePack(sampleJson);
+  if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+  const sample = parsedSample.pack;
+  const root = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
+
+  const pickerNames = (fixture: { nativeElement: unknown }): string[] =>
+    Array.from(root(fixture).querySelectorAll('.entity-picker__name')).map(
+      (el) => el.textContent?.trim() ?? '',
+    );
+
+  async function openSpeciesStep(fixture: {
+    nativeElement: unknown;
+    whenStable(): Promise<unknown>;
+  }): Promise<string[]> {
+    root(fixture).querySelector<HTMLButtonElement>('.create-wizard__next')!.click();
+    await fixture.whenStable();
+    return pickerNames(fixture);
+  }
+
+  it('shows no packs checklist when no content pack is installed (the wizard is unchanged)', async () => {
+    configure();
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+
+    expect(root(fixture).querySelector('.create-wizard__packs')).toBeNull();
+  });
+
+  it('shows the installed content packs on the first step, unchecked by default', async () => {
+    configure([corePack, sample]);
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+
+    const toggles = root(fixture).querySelectorAll<HTMLInputElement>(
+      '.create-wizard__packs .create-wizard__pack-toggle',
+    );
+    expect(toggles).toHaveLength(1);
+    expect(toggles[0].checked).toBe(false);
+    expect(root(fixture).querySelector('.create-wizard__packs')?.textContent).toContain(
+      'Sample content',
+    );
+    expect(fixture.debugElement.injector.get(CreateWizardState).pins()).toEqual({
+      [corePack.id]: corePack.version,
+    });
+  });
+
+  it("checking a pack makes the draft offer that pack's species; unchecked, it is not offered", async () => {
+    configure([corePack, sample]);
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Aldric');
+    await fixture.whenStable();
+
+    const before = await openSpeciesStep(fixture);
+    expect(before).toContain('Human');
+    expect(before).not.toContain('Moonkin');
+
+    state.togglePack(sample.id, sample.version);
+    await fixture.whenStable();
+    const names = pickerNames(fixture);
+    expect(names).toContain('Moonkin');
+    expect(names).toContain('Human');
+    expect(state.pins()).toEqual({
+      [corePack.id]: corePack.version,
+      [sample.id]: sample.version,
+    });
+  });
+
+  it('creating with a checked pack commits pack.pinned right after character.created, in the same transaction', async () => {
+    const { create, appendTx } = configure([corePack, sample]);
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+
+    root(fixture).querySelector<HTMLInputElement>('.create-wizard__pack-toggle')!.click();
+    await fixture.whenStable();
+    fillValidDecisions(state);
+    state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['sample-content:species/moonkin']);
+    await fixture.whenStable();
+    await advanceToReview(fixture);
+    const button = root(fixture).querySelector<HTMLButtonElement>('.create-wizard__create');
+    expect(button?.disabled).toBe(false);
+    button!.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(appendTx).toHaveBeenCalledTimes(1));
+
+    expect(create).toHaveBeenCalledTimes(1);
+    const [drafts] = appendTx.mock.calls[0] as [{ type: string; payload: unknown }[]];
+    expect(drafts[0]).toEqual({
+      type: 'pack.pinned',
+      v: 1,
+      payload: { packId: sample.id, version: sample.version },
+    });
+    expect(drafts.filter((d) => d.type === 'pack.pinned')).toHaveLength(1);
+    expect(drafts.some((d) => d.type === 'decision.made')).toBe(true);
+    // The full creation transaction (what `buildTransaction` hands `create` + `appendTx`).
+    expect(
+      state
+        .buildTransaction()
+        .map((d) => d.type)
+        .slice(0, 2),
+    ).toEqual(['character.created', 'pack.pinned']);
   });
 });

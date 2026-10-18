@@ -22,6 +22,7 @@ import type {
   ChoiceValidateFn,
 } from '../../create-wizard/steps/choice-step-overrides';
 import { ChoiceStepComponent } from '../../create-wizard/steps/choice-step.component';
+import { BuildPacksSectionComponent } from './build-packs-section.component';
 
 /** doc-07 step 1: `accept="image/*"` WITHOUT a literal `image/heic` entry, so iOS's own picker
  * transcodes HEIC photos to JPEG before this app ever sees the file — a defense-in-depth check
@@ -107,6 +108,7 @@ const ENCUMBRANCE_OPTIONS: readonly { value: EncumbranceOption; labelKey: string
     SheetSectionComponent,
     ChoiceStepComponent,
     BlobUrlPipe,
+    BuildPacksSectionComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './build-tab.component.html',

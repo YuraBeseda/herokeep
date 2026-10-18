@@ -12,7 +12,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { StepperComponent, type HkStepperStep } from '@shared/components/stepper/stepper.component';
 import { ToastService } from '@shared/components/toast/toast.service';
-import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { EngineFacade, provideEngineScope } from '@shared/services/engine/engine.facade';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { CreateWizardState, type WizardStep } from './create-wizard.state';
 import { ChoiceStepComponent } from './steps/choice-step.component';
@@ -90,7 +90,13 @@ const ABILITY_VALUE_RE = /^([a-z]+):([+-]?\d+)$/i;
     SpellsStepComponent,
     EquipmentStepComponent,
   ],
-  providers: [CreateWizardState, provideTranslocoScope('characters')],
+  // Plan 15 Task 4: the wizard state doubles as the `EngineScope` of a component-level
+  // `EngineFacade`, so every step resolves against the draft's core + checked content packs.
+  providers: [
+    CreateWizardState,
+    provideEngineScope(CreateWizardState),
+    provideTranslocoScope('characters'),
+  ],
   templateUrl: './create-wizard.component.html',
   styleUrl: './create-wizard.component.scss',
 })
