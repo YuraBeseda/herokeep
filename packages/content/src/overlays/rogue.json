@@ -347,14 +347,15 @@
   },
   {
     "id": "srd-5e-2024:feature/rogue-thief-second-story-work",
-    "cite": "SRD 5.2.1, Thief - Second-Story Work",
-    "note": "SRD text: \"Climber. You gain a Climb Speed equal to your Speed. Jumper. You can determine your jump distance using your Dexterity rather than your Strength.\" Granted at Thief level 3. The Climb Speed clause is NOT expressible: speed.set takes a fixed integer, while this is \"equal to your Speed\" (a derived, feature-dependent value that would go stale as Speed changes); the Dexterity-for-jump clause has no vocabulary. Text fallback; flagged.",
+    "cite": "SRD 5.2.1, Thief - Second-Story Work (vendored ClassFeature srd-2024_rogue_thief_second-story-work)",
+    "note": "SRD text: \"Climber. You gain a Climb Speed equal to your Speed. Jumper. You can determine your jump distance using your Dexterity rather than your Strength.\" Granted at Thief level 3. Plan 14 task 3: Climber is now real -- speed.bonus{mode:'climb', value:'speed(walk)'} keyed 'climb-equal-to-speed' (plan-13 formula symbol and key convention, Ranger Roving precedent: the formula reads the RESOLVED walk Speed, and another 'equal to your Speed' climb source such as Slippers of Spider Climbing keeps the max instead of summing). Jumper (Dexterity instead of Strength for jump distance) still has no vocabulary: feature.text, flagged.",
     "merge": {
       "effects": [
+        { "type": "speed.bonus", "mode": "climb", "value": "speed(walk)", "key": "climb-equal-to-speed" },
         {
           "type": "feature.text",
-          "name": "Second-Story Work",
-          "description": "You've trained to get into especially hard-to-reach places, granting you these benefits.\n\n**Climber.** You gain a Climb Speed equal to your Speed.\n\n**Jumper.** You can determine your jump distance using your Dexterity rather than your Strength."
+          "name": "Jumper",
+          "description": "You can determine your jump distance using your Dexterity rather than your Strength."
         }
       ]
     }

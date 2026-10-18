@@ -17,6 +17,7 @@ import ranger from './ranger.json' with { type: 'json' };
 import bard from './bard.json' with { type: 'json' };
 import sorcerer from './sorcerer.json' with { type: 'json' };
 import druid from './druid.json' with { type: 'json' };
+import items from './items.json' with { type: 'json' };
 
 export interface Overlays {
   corrections: Overlay[];
@@ -37,10 +38,11 @@ export interface Overlays {
   bard: Overlay[];
   sorcerer: Overlay[];
   druid: Overlay[];
+  items: Overlay[];
 }
 
 /**
- * Reads and types the eleven overlay JSON files under `src/overlays/`. Each is a plain `Overlay[]`
+ * Reads and types the nineteen overlay JSON files under `src/overlays/`. Each is a plain `Overlay[]`
  * (see `merge.ts`); callers filter by which entity array they're patching (`applyOverlays` throws
  * on an overlay whose `id` matches nothing in the array it's given).
  */
@@ -64,5 +66,6 @@ export function loadOverlays(): Overlays {
     bard: bard as Overlay[],
     sorcerer: sorcerer as Overlay[],
     druid: druid as Overlay[],
+    items,
   };
 }

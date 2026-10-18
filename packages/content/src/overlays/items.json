@@ -1,0 +1,61 @@
+[
+  {
+    "id": "srd-5e-2024:item/gloves-of-swimming-and-climbing",
+    "cite": "SRD 5.2.1, Gloves of Swimming and Climbing (vendored MagicItem srd-2024_gloves-of-swimming-and-climbing, requires_attunement: true)",
+    "note": "SRD text: \"While wearing these gloves, you have a Climb Speed and a Swim Speed equal to your Speed, and you gain a +5 bonus to Strength (Athletics) checks made to climb or swim.\" Plan 14 task 3: the Climb and Swim Speeds are speed.bonus{mode:'climb'|'swim', value:'speed(walk)'} keyed 'climb-equal-to-speed'/'swim-equal-to-speed' (plan-13 convention, Ranger Roving precedent: another 'equal to your Speed' source keeps the max instead of summing). The +5 is skill.bonus{target:'athletics', value:5} per the plan's design ruling; APPROXIMATION, flagged: the vocabulary has no 'only for checks made to climb or swim' scope, so the sheet's Athletics total carries the +5 for every Athletics check -- the scoping is restated in a feature.text. The item requires attunement, so every effect is active only while attuned (engine ruling 5).",
+    "merge": {
+      "effects": [
+        { "type": "speed.bonus", "mode": "climb", "value": "speed(walk)", "key": "climb-equal-to-speed" },
+        { "type": "speed.bonus", "mode": "swim", "value": "speed(walk)", "key": "swim-equal-to-speed" },
+        { "type": "skill.bonus", "target": "athletics", "value": 5 },
+        {
+          "type": "feature.text",
+          "name": "Climbing and Swimming",
+          "description": "The +5 bonus applies only to Strength (Athletics) checks made to climb or swim."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:item/slippers-of-spider-climbing",
+    "cite": "SRD 5.2.1, Slippers of Spider Climbing (vendored MagicItem srd-2024_slippers-of-spider-climbing, requires_attunement: true)",
+    "note": "SRD text: \"While you wear these light shoes, you can move up, down, and across vertical surfaces and along ceilings, while leaving your hands free. You have a Climb Speed equal to your Speed. However, the slippers don't allow you to move this way on a slippery surface, such as one covered by ice or oil.\" Plan 14 task 3: the Climb Speed is speed.bonus{mode:'climb', value:'speed(walk)'} keyed 'climb-equal-to-speed' (plan-13 convention). Moving on walls and ceilings hands-free, and the slippery-surface exception, have no vocabulary (no surface/movement-mode rider): feature.text, flagged. Requires attunement: active only while attuned (engine ruling 5).",
+    "merge": {
+      "effects": [
+        { "type": "speed.bonus", "mode": "climb", "value": "speed(walk)", "key": "climb-equal-to-speed" },
+        {
+          "type": "feature.text",
+          "name": "Spider Climbing",
+          "description": "You can move up, down, and across vertical surfaces and along ceilings, while leaving your hands free. The slippers don't allow you to move this way on a slippery surface, such as one covered by ice or oil."
+        }
+      ]
+    }
+  },
+  {
+    "id": "srd-5e-2024:item/cloak-of-arachnida",
+    "cite": "SRD 5.2.1, Cloak of Arachnida (vendored MagicItem srd-2024_cloak-of-arachnida, requires_attunement: true)",
+    "note": "SRD text: \"While wearing it, you gain the following benefits. Poison Resistance. You have Resistance to Poison damage. Spider Climb. You have a Climb Speed equal to your Speed and can move up, down, and across vertical surfaces and along ceilings, while leaving your hands free. Spider Walk. You can't be caught in webs of any sort and can move through webs as if they were Difficult Terrain. Web. You can cast Web (save DC 13). The web created by the spell fills twice its normal area. Once used, this property can't be used again until the next dawn.\" Plan 14 task 3: Poison Resistance is damage.resistance{types:['poison']} (sheet.resistances); the Climb Speed is speed.bonus{mode:'climb', value:'speed(walk)'} keyed 'climb-equal-to-speed' (plan-13 convention); Web is spell.grant{spell:'srd-5e-2024:spell/web', uses:{count:'1', per:'dawn'}} -- the inline uses form's first real consumer: it materializes a 'web' resource (max 1, reset 'dawn', restored by a Long Rest per plan 12's dawn~longRest approximation) and a free-cast lane at the spell's base level 2. No castingAbility is authored: the item fixes the save DC at 13, and the vocabulary has no fixed-DC field (the lane's DC follows the sheet's casting context, flagged); the doubled area, wall/ceiling movement and Spider Walk have no vocabulary -> feature.text, flagged. Requires attunement: active only while attuned (engine ruling 5).",
+    "merge": {
+      "effects": [
+        { "type": "damage.resistance", "types": ["poison"] },
+        { "type": "speed.bonus", "mode": "climb", "value": "speed(walk)", "key": "climb-equal-to-speed" },
+        { "type": "spell.grant", "spell": "srd-5e-2024:spell/web", "uses": { "count": "1", "per": "dawn" } },
+        {
+          "type": "feature.text",
+          "name": "Spider Climb",
+          "description": "You can move up, down, and across vertical surfaces and along ceilings, while leaving your hands free."
+        },
+        {
+          "type": "feature.text",
+          "name": "Spider Walk",
+          "description": "You can't be caught in webs of any sort and can move through webs as if they were Difficult Terrain."
+        },
+        {
+          "type": "feature.text",
+          "name": "Web",
+          "description": "When you cast Web with the cloak, its save DC is 13 and the web created by the spell fills twice its normal area."
+        }
+      ]
+    }
+  }
+]
