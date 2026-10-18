@@ -131,6 +131,7 @@ export function createContentIndex(input: Pack[], opts: ContentIndexOptions = {}
         if (q.hasField && !q.hasField.every((p) => hasFieldPath(e, p))) return false;
         if (q.level !== undefined && !(e.type === 'spell' && e.level === q.level)) return false;
         if (q.school !== undefined && !(e.type === 'spell' && e.school === q.school)) return false;
+        if (q.category !== undefined && !(e.type === 'item' && e.category === q.category)) return false;
         if (wantClasses) {
           if (e.type === 'spell') {
             const have = e.classes.map((c) => resolveClassRef(c) ?? c);

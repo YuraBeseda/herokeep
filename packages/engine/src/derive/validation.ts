@@ -117,12 +117,30 @@ function validateStatic(
   return issues;
 }
 
-/** The `query` form of `ChoicePick`. */
-export type QueryPick = Extract<ChoicePick, { query: EntityQuery }>;
+/**
+ * The query-backed forms of `ChoicePick`: a single `query`, or (plan 14 task 2) a `queries` union of
+ * several. Both offer entities found by `index.query`; only the single form carries the skill-only
+ * `proficiency`/`requireProficient` keys.
+ */
+export type QueryPick = Extract<ChoicePick, { query: EntityQuery }> | Extract<ChoicePick, { queries: EntityQuery[] }>;
+
+/** Narrows a pick to a query-backed form (`query` or `queries`). */
+export function isQueryPick(pick: ChoicePick): pick is QueryPick {
+  return 'query' in pick || 'queries' in pick;
+}
+
+/** The entity queries behind a pick, in authored order — `[]` for a pick that is not query-backed. */
+export function pickQueries(pick: ChoicePick): EntityQuery[] {
+  if ('queries' in pick) return pick.queries;
+  if ('query' in pick) return [pick.query];
+  return [];
+}
 
 /**
- * The entity ids a `query` pick OFFERS this character: every `index.query` match, narrowed — when
- * the pick sets `requireProficient` (plan 13 task 1, e.g. an Expertise pick) — to the skills the
+ * The entity ids a query-backed pick OFFERS this character: every `index.query` match (for a
+ * `queries` pick, plan 14 task 2, the union over its queries in authored order, each id once —
+ * first occurrence wins), narrowed — when the pick sets `requireProficient` (plan 13 task 1, e.g.
+ * an Expertise pick; only a single `query` pick can) — to the skills the
  * character is currently proficient in per `sheet` (rank proficient or expertise; `half` is not
  * proficiency). The single eligibility source for `validateSelection`'s `selection.notOffered`
  * refusal, and the UI lists the same option set. This covers eligibility only: a same-family
@@ -136,8 +154,8 @@ export function queryPickOptions(
   index: ContentIndex,
   sheet: Pick<Sheet, 'skills'> | undefined,
 ): string[] {
-  const ids = index.query(pick.query).map((e) => e.id);
-  if (pick.requireProficient !== true) return ids;
+  const ids = [...new Set(pickQueries(pick).flatMap((q) => index.query(q).map((e) => e.id)))];
+  if (!('query' in pick) || pick.requireProficient !== true) return ids;
   return ids.filter((id) => {
     const slug = parseEntityId(id)?.slug;
     return slug !== undefined && isProficientRank(sheet?.skills[slug]?.proficiency);
@@ -184,7 +202,7 @@ function validateSubclassLevel(
   choiceId: string,
   selection: string[],
 ): Diagnostic[] {
-  if (!('query' in choice.pick) || choice.pick.query.type !== 'subclass') return [];
+  if (!pickQueries(choice.pick).some((q) => q.type === 'subclass')) return [];
   if (choice.at.kind !== 'classLevel') return [];
   const issues: Diagnostic[] = [];
   for (const s of selection) {
@@ -473,7 +491,7 @@ export function validateSelection(
       if (e) issues.push(...checkPrerequisites(e.prerequisites, ctx, choiceId, s));
     }
     issues.push(...checkUnique(choice, choiceId, facts, selection, index));
-  } else if ('query' in choice.pick) {
+  } else if (isQueryPick(choice.pick)) {
     issues.push(...validateQuery(choice.pick, index, sheet, choice, choiceId, selection));
     issues.push(...validateSubclassLevel(choice, index, choiceId, selection));
     for (const s of selection) {
