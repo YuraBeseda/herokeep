@@ -93,11 +93,17 @@ describe('class transform', () => {
       armorTraining: ['light', 'medium', 'shields'],
       weaponProficiencies: ['simple', 'martial'],
       skillChoiceCount: 0,
+      toolProficiencies: [],
     });
 
     const wizard = bySlug('wizard');
     expect(wizard.multiclass?.prerequisites).toEqual({ ability: { int: { gte: 13 } } });
-    expect(wizard.multiclass?.gains).toEqual({ armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 });
+    expect(wizard.multiclass?.gains).toEqual({
+      armorTraining: [],
+      weaponProficiencies: [],
+      skillChoiceCount: 0,
+      toolProficiencies: [],
+    });
 
     for (const slug of ['barbarian', 'cleric', 'warlock']) {
       expect(bySlug(slug).multiclass?.gains, slug).toBeDefined();
@@ -129,11 +135,13 @@ describe('class transform', () => {
       armorTraining: [],
       weaponProficiencies: ['simple', 'hand-crossbow', 'scimitar', 'shortsword'],
       skillChoiceCount: 0,
+      toolProficiencies: [],
     });
     expect(bySlug('druid').multiclass?.gains).toEqual({
       armorTraining: ['light', 'shields'],
       weaponProficiencies: [],
       skillChoiceCount: 0,
+      toolProficiencies: [],
     });
   });
 });

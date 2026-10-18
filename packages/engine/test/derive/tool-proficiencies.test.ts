@@ -9,8 +9,8 @@ import { loadDistPack } from '../support/golden.ts';
 
 // Plan 13 task 2: tool proficiency on the derive surface. `Sheet.proficiencies` (the kind+target
 // union of armor/weapon/tool/language) now carries kind 'tool' from (1) the INITIAL class's own
-// `toolProficiencies` (a later class contributes only its `multiclass.gains`, which carries no tool
-// list — ruling 7's restriction, same as armor/weapons), (2) every active background's
+// `toolProficiencies` (a later class contributes only its `multiclass.gains` — ruling 7's
+// restriction, same as armor/weapons; since plan 14 task 1 gains carries `toolProficiencies`), (2) every active background's
 // `toolProficiency`, and (3) any decided pick whose selections resolve to a tool (an item of
 // category 'tool') — the tool analogue of "a decided pick of skill entities grants proficiency".
 // Targets are SLUGS (the item slug; class/background tool fields already are), so the same tool
@@ -110,10 +110,11 @@ describe('tool proficiencies (derive)', () => {
     expect(tools(events(soldier, [[fighter, 1]])).map((p) => p.target)).toEqual(['gaming-set']);
   });
 
-  it('a LATER class contributes only its multiclass.gains (no tool list there), as for armor/weapons', () => {
-    // Ruling 7 restriction (deriveProficiencies): gains carries no tool list, so a fighter -> rogue
-    // multiclass does not gain the rogue's Thieves' Tools from the class (residual: needs a
-    // gains-level tool vocabulary; see task-2-report.md).
+  it('a LATER class contributes only its multiclass.gains (tools included), as for armor/weapons', () => {
+    // Ruling 7 restriction (deriveProficiencies): a later class contributes its gains lists only.
+    // Plan 14 task 1 re-pin: gains now carries `toolProficiencies` (Rogue: ['thieves-tools']), so a
+    // fighter -> rogue multiclass gains Thieves' Tools from the class — closing the residual this
+    // test used to pin (gains had no tool list, so the later rogue got none).
     expect(
       tools(
         events(soldier, [
@@ -121,7 +122,7 @@ describe('tool proficiencies (derive)', () => {
           [rogue, 1],
         ]),
       ).map((p) => p.target),
-    ).toEqual(['gaming-set']);
+    ).toEqual(['gaming-set', 'thieves-tools']);
   });
 
   it('a decided pick selecting tool items grants proficiency in them (slug targets, owner as source)', () => {

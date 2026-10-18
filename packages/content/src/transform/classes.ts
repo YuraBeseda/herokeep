@@ -31,7 +31,7 @@ const NUMERIC_EXTRA_RE = /^[+-]?\d+$/;
  */
 const MULTICLASS_GAINS: Record<
   string,
-  { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount?: number }
+  { armorTraining: string[]; weaponProficiencies: string[]; skillChoiceCount?: number; toolProficiencies?: string[] }
 > = {
   fighter: { armorTraining: ['light', 'medium', 'shields'], weaponProficiencies: ['simple', 'martial'] },
   wizard: { armorTraining: [], weaponProficiencies: [] },
@@ -42,9 +42,15 @@ const MULTICLASS_GAINS: Record<
   // Rule `srd-2024_multiclassing_proficiencies` is prose only ("you gain only some of the new class's
   // starting proficiencies"); the per-class table is authored from public SRD 5.2.1 knowledge: Rogue
   // gains Light armor, Thieves' Tools, and ONE skill from the Rogue list (the table reserves a bonus
-  // skill for Bard/Rogue) -- no weapons. Thieves' Tools has no `gains` field (schema carries armor,
-  // weapons, skill count only), so it is not representable here; flagged.
-  rogue: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
+  // skill for Bard/Rogue) -- no weapons. Plan 14 task 1: Thieves' Tools now lands via the additive
+  // `gains.toolProficiencies` (the item slug, as the class's own Core Traits `toolProficiencies`; the
+  // vendored srd-2024_rogue_core-traits row reads "Tool Proficiencies: Thieves' Tools").
+  rogue: {
+    armorTraining: ['light'],
+    weaponProficiencies: [],
+    skillChoiceCount: 1,
+    toolProficiencies: ['thieves-tools'],
+  },
   // Plan 12 task 8, corrected in the plan-12 final wave (W2). OWNER-FLAG, 2024-SRD-silent (same
   // posture as every entry above): the vendored multiclassing Rule is prose only; the per-class table
   // is authored from public SRD 5.2.1 knowledge: Monk's multiclass row grants Simple weapons and
@@ -66,8 +72,9 @@ const MULTICLASS_GAINS: Record<
   // Plan 12 task 11. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
   // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
   // Bard's multiclass row grants Light armor and ONE skill of any kind (the table reserves a bonus skill
-  // for Bard/Rogue) plus one Musical Instrument -- no weapons. The instrument has no `gains` field
-  // (schema carries armor, weapons, skill count only), so it is not representable here; flagged.
+  // for Bard/Rogue) plus one Musical Instrument -- no weapons. The instrument is a player CHOICE, not a
+  // fixed slug, so `toolProficiencies` stays [] here: plan 14 task 1 expresses it as the later-scoped
+  // `bard@1/multiclass-tools` pick (count 1) in overlays/bard.json.
   bard: { armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 },
   // Plan 12 task 12. OWNER-FLAG, 2024-SRD-silent (same posture as every entry above): the vendored
   // multiclassing Rule is prose only; the per-class table is authored from public SRD 5.2.1 knowledge:
@@ -301,6 +308,7 @@ export function transformClasses(): { classes: Entity[]; subclasses: Entity[]; f
                   armorTraining: MULTICLASS_GAINS[slug].armorTraining,
                   weaponProficiencies: MULTICLASS_GAINS[slug].weaponProficiencies,
                   skillChoiceCount: MULTICLASS_GAINS[slug].skillChoiceCount ?? 0,
+                  toolProficiencies: MULTICLASS_GAINS[slug].toolProficiencies ?? [],
                 },
               },
             }

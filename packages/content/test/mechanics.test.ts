@@ -984,6 +984,7 @@ describe('rogue and thief to level 20 mechanics (task 7)', () => {
       armorTraining: ['light'],
       weaponProficiencies: [],
       skillChoiceCount: 1,
+      toolProficiencies: ['thieves-tools'], // plan 14 task 1: later-class Thieves' Tools
     });
   });
 
@@ -1124,6 +1125,7 @@ describe('monk and warrior of the open hand to level 20 mechanics (task 8)', () 
       armorTraining: [],
       weaponProficiencies: ['simple', 'hand-crossbow', 'scimitar', 'shortsword'],
       skillChoiceCount: 0,
+      toolProficiencies: [],
     });
   });
 
@@ -1345,6 +1347,7 @@ describe('paladin and oath of devotion to level 20 mechanics (task 9)', () => {
       armorTraining: ['light', 'medium', 'shields'],
       weaponProficiencies: ['martial'],
       skillChoiceCount: 0,
+      toolProficiencies: [],
     });
   });
 
@@ -1664,6 +1667,7 @@ describe('ranger and hunter to level 20 mechanics (task 10)', () => {
       armorTraining: ['light', 'medium', 'shields'],
       weaponProficiencies: ['martial'],
       skillChoiceCount: 1,
+      toolProficiencies: [],
     });
   });
 
@@ -1949,7 +1953,12 @@ describe('bard and college of lore to level 20 mechanics (task 11)', () => {
   });
 
   it('bard: multiclass gains = light armor, ONE skill (owner-flagged, SRD-silent)', () => {
-    expect(bard().multiclass.gains).toEqual({ armorTraining: ['light'], weaponProficiencies: [], skillChoiceCount: 1 });
+    expect(bard().multiclass.gains).toEqual({
+      armorTraining: ['light'],
+      weaponProficiencies: [],
+      skillChoiceCount: 1,
+      toolProficiencies: [],
+    });
   });
 
   it('bard: choices — expertise @2/@9, subclass @3, ASI 4/8/12/16 + boon 19; no jack picks', () => {
@@ -2245,7 +2254,12 @@ describe('sorcerer and draconic sorcery to level 20 mechanics (task 12)', () => 
   });
 
   it('sorcerer: multiclass gains = none (SRD-silent, owner-flagged)', () => {
-    expect(sorc().multiclass.gains).toEqual({ armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 });
+    expect(sorc().multiclass.gains).toEqual({
+      armorTraining: [],
+      weaponProficiencies: [],
+      skillChoiceCount: 0,
+      toolProficiencies: [],
+    });
   });
 
   it('sorcerer: choices — subclass @3, ASI 4/8/12/16 + boon 19; Metamagic is never a pick', () => {
@@ -2553,6 +2567,7 @@ describe('druid and circle of the land to level 20 mechanics (task 13)', () => {
       armorTraining: ['light', 'shields'],
       weaponProficiencies: [],
       skillChoiceCount: 0,
+      toolProficiencies: [],
     });
   });
 

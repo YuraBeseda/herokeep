@@ -400,14 +400,14 @@ describe('LevelUpComponent', () => {
     chips.find((c) => c.textContent?.trim() === 'Arcana')!.click();
     await harness.fixture.whenStable();
 
-    // Plan 13 task 2: Bard's level-1 tool pick (three Musical Instruments) is a class-row choice,
-    // so it is asked of a later-class Bard too (multiclass gains carry no tool vocabulary to narrow
-    // it — residual, see task-2-report.md). Answering the skill pick drops its step, so the stepper
-    // re-homes onto the tool pick's step.
+    // Plan 14 task 1 re-pin: Bard's three-instrument `@1/tools` pick is `scope: 'initial'`, so a
+    // later-class Bard is asked the `scope: 'later'` `@1/multiclass-tools` pick instead — ONE
+    // Musical Instrument (plan 13 pinned the old residual: the full three-instrument pick).
+    // Answering the skill pick drops its step, so the stepper re-homes onto the tool pick's step.
     expect(root.querySelector('.choice-step__title')?.textContent?.trim()).toBe(
-      'Tool Proficiencies: choose three Musical Instruments',
+      'Tool Proficiency: choose one Musical Instrument',
     );
-    for (const name of ['Lute', 'Flute', 'Drum']) {
+    for (const name of ['Lute']) {
       Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
         .find(
           (b) =>
@@ -448,6 +448,12 @@ describe('LevelUpComponent', () => {
     expect(characterStore.outstanding().map((o) => o.choiceId)).not.toContain(
       `${BARD}@1/multiclass-skills`,
     );
+    expect(
+      characterStore
+        .sheet()
+        ?.proficiencies.filter((p) => p.kind === 'tool' && p.sources.includes(BARD))
+        .map((p) => p.target),
+    ).toEqual(['musical-instrument-lute']);
   });
 
   it('the barred case: a character whose OWN multiclass prerequisite fails is never offered a picker at all — the wizard opens directly on its own class', async () => {
