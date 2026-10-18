@@ -5,24 +5,29 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { reduce } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
-import { parsePack, type Event, type Pack } from '@hk/protocol';
+import { PACK_LIMITS, parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
-import { strToU8, unzipSync, zipSync } from 'fflate';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { of } from 'rxjs';
+import { ToastService } from '@shared/components/toast/toast.service';
+import { PackLoader } from '@shared/services/engine/pack-loader';
 import { IMAGE_BYTE_CAPS, sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { LeaderService } from '@shared/services/storage/leader.service';
+import { PacksRepository } from '@shared/services/storage/packs.repository';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { extensionForMime, hexOfHash, HeroWriterService } from './hero-writer.service';
 import {
   HeroImportBadEventError,
   HeroImportBadManifestError,
+  HeroImportBadPackError,
   HeroImportBadZipError,
   HeroImportHashMismatchError,
+  HeroImportPackConflictError,
   HeroImportSyncedStreamError,
   HeroReaderService,
   mergeEventsBySeq,
@@ -687,5 +692,359 @@ describe('HeroReaderService when this tab is not the leader', () => {
     const file = new File([new Uint8Array()], 'x.hero');
 
     await expect(reader.import(file)).rejects.toBeInstanceOf(CharacterStoreNotLeaderError);
+  });
+});
+
+// --- Plan 15 Task 6: bundled content packs (ruling 9 — validated silently, no trust dialog) ------
+
+describe('HeroReaderService — bundled content packs (plan 15 Task 6)', () => {
+  const fixturesDir = join(repoRoot, 'apps/web/src/testing/fixtures/packs');
+  const sample = readPack(join(fixturesDir, 'sample-content.json'));
+  const iconBytes = new Uint8Array(readFileSync(join(fixturesDir, 'sample-icon.webp')));
+  const ICON_HASH = sample.assets[0].hash;
+  const SAMPLE_KEY = `${sample.id}@${sample.version}`;
+  const PACK_PATH = `packs/${SAMPLE_KEY}.json`;
+  const SPECIES_CHOICE = `${corePack.id}:system/5e-2024@0/species`;
+  const MOONKIN = 'sample-content:species/moonkin';
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: {
+            availableLangs: ['en', 'ru', 'uk'],
+            defaultLang: 'en',
+            fallbackLang: 'en',
+            reRenderOnLangChange: true,
+            prodMode: true,
+          },
+          loader: StubLoader,
+        }),
+        { provide: PackLoader, useValue: { loadCore: () => Promise.resolve(corePack) } },
+        { provide: ToastService, useValue: { show: vi.fn() } },
+      ],
+    });
+    await clearDb(TestBed.inject(HkDb));
+    await TestBed.inject(PackStore).init();
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  /** Installs `pack` the way a later app start sees it: a stored row, then `PackStore.init()`;
+   * `withIcon` also stores the sample icon as a pack asset. */
+  async function install(pack: Pack, withIcon = true): Promise<void> {
+    await TestBed.inject(PacksRepository).putPack(pack);
+    if (withIcon) {
+      await TestBed.inject(BlobsRepository).put(ICON_HASH, 'image/webp', iconBytes, {
+        kind: 'icon',
+        origin: 'pack',
+      });
+    }
+    await TestBed.inject(PackStore).init();
+  }
+
+  /** A character pinning the sample pack (plus `extraPins`) and picking its species, exported
+   * while the sample is installed — then the character is wiped so the import is a fresh one. */
+  async function exportPinnedCharacter(extraPins: Record<string, string> = {}): Promise<Blob> {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const pinEvents = Object.entries({ [sample.id]: sample.version, ...extraPins }).map(
+      ([packId, version], i) => mkEvent(uuid(301 + i), 'pack.pinned', { packId, version }),
+    );
+    await eventsRepository.append([
+      mkEvent(uuid(300), 'character.created', createdPayload('Aria')),
+      ...pinEvents,
+      mkEvent(uuid(320), 'decision.made', { choiceId: SPECIES_CHOICE, selection: [MOONKIN] }),
+    ]);
+    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    await eventsRepository.removeStream(streamId);
+    await TestBed.inject(CharactersRepository).remove(streamId);
+    return blob;
+  }
+
+  /** Re-zips an exported bundle after `mutate` edits its entries and/or parsed manifest. */
+  async function rezip(
+    blob: Blob,
+    mutate: (
+      zip: Record<string, Uint8Array>,
+      manifest: Record<string, unknown>,
+    ) => void | Promise<void>,
+  ): Promise<File> {
+    const zip = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+    const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as Record<string, unknown>;
+    await mutate(zip, manifest);
+    zip['manifest.json'] = strToU8(JSON.stringify(manifest));
+    return new File([zipSync(zip)], 'bundle.hero', { type: 'application/zip' });
+  }
+
+  /** Swaps the carried sample pack's JSON for `raw` and re-signs the manifest row to match. */
+  function replacePack(
+    raw: unknown,
+  ): (zip: Record<string, Uint8Array>, manifest: Record<string, unknown>) => Promise<void> {
+    return async (zip, manifest) => {
+      const bytes = strToU8(JSON.stringify(raw));
+      zip[PACK_PATH] = bytes;
+      const rows = manifest['packs'] as { sha256: string }[];
+      rows[0].sha256 = await sha256Hex(bytes);
+    };
+  }
+
+  async function storedState(): Promise<Record<string, unknown>> {
+    const db = TestBed.inject(HkDb);
+    return {
+      packs: (await TestBed.inject(PacksRepository).getAll()).map((p) => `${p.id}@${p.version}`),
+      installed: TestBed.inject(PackStore)
+        .installedContent()
+        .map((p) => `${p.id}@${p.version}`),
+      blobs: await db.blobs.count(),
+      characters: await db.characters.count(),
+      events: await db.events.count(),
+    };
+  }
+
+  const nothingStored = { packs: [], installed: [], blobs: 0, characters: 0, events: 0 };
+
+  function rawSample(): Record<string, unknown> {
+    return JSON.parse(readFileSync(join(fixturesDir, 'sample-content.json'), 'utf8')) as Record<
+      string,
+      unknown
+    >;
+  }
+
+  async function exportThenUninstall(): Promise<Blob> {
+    await install(sample);
+    const blob = await exportPinnedCharacter();
+    await TestBed.inject(PackStore).removeContent(SAMPLE_KEY);
+    expect(await storedState()).toEqual(nothingStored);
+    return blob;
+  }
+
+  it('round-trip: importing on a device without the pack installs it (row + asset blob) and the character derives with it', async () => {
+    const blob = await exportThenUninstall();
+
+    const result = await TestBed.inject(HeroReaderService).import(bundleFile(blob));
+
+    expect(result).toMatchObject({ characterId: streamId, mode: 'created', imported: 3 });
+    expect(result.warnings).toEqual([]);
+    const packs = await TestBed.inject(PacksRepository).getAll();
+    expect(packs.map((p) => `${p.id}@${p.version}`)).toEqual([SAMPLE_KEY]);
+    expect(
+      TestBed.inject(PackStore)
+        .installedContent()
+        .map((p) => p.id),
+    ).toEqual([sample.id]);
+    const icon = await TestBed.inject(BlobsRepository).get(ICON_HASH);
+    expect(icon).toMatchObject({ origin: 'pack', kind: 'icon', mime: 'image/webp' });
+    expect(Array.from(icon!.bytes)).toEqual(Array.from(iconBytes));
+
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.load(streamId);
+    expect(characterStore.sheet()?.pins).toEqual({
+      [corePack.id]: corePack.version,
+      [sample.id]: sample.version,
+    });
+    const unresolved = (characterStore.sheet()?.issues ?? [])
+      .filter((d) => d.code === 'derive.unresolvedEntity')
+      .map((d) => d.entityId);
+    expect(unresolved).not.toContain(MOONKIN);
+    expect(characterStore.missingPins()).toEqual([]);
+  });
+
+  it('a character write that fails after the carried pack was installed leaves the pack installed', async () => {
+    const blob = await exportThenUninstall();
+    vi.spyOn(TestBed.inject(EventsRepository), 'replaceStream').mockRejectedValueOnce(
+      new Error('quota'),
+    );
+
+    await expect(TestBed.inject(HeroReaderService).import(bundleFile(blob))).rejects.toThrow(
+      'quota',
+    );
+
+    expect(await storedState()).toEqual({
+      ...nothingStored,
+      packs: [SAMPLE_KEY],
+      installed: [SAMPLE_KEY],
+      blobs: 1,
+    });
+  });
+
+  it('an identical pack already installed is not written a second time', async () => {
+    await install(sample);
+    const blob = await exportPinnedCharacter();
+    const putPack = vi.spyOn(TestBed.inject(PacksRepository), 'putPack');
+    const putBlob = vi.spyOn(TestBed.inject(BlobsRepository), 'put');
+
+    const result = await TestBed.inject(HeroReaderService).import(bundleFile(blob));
+
+    expect(result.mode).toBe('created');
+    expect(putPack).not.toHaveBeenCalled();
+    expect(putBlob).not.toHaveBeenCalled();
+    expect(await storedState()).toMatchObject({ packs: [SAMPLE_KEY], blobs: 1, characters: 1 });
+  });
+
+  it('a different pack installed under the same id@version is a conflict: refused, nothing stored', async () => {
+    const blob = await exportThenUninstall();
+    await install({ ...sample, name: 'Someone else’s sample' }, false);
+    const before = await storedState();
+
+    const error = await TestBed.inject(HeroReaderService)
+      .import(bundleFile(blob))
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HeroImportPackConflictError);
+    expect((error as HeroImportPackConflictError).code).toBe(
+      'characters.list.toast.import-failed-pack-conflict',
+    );
+    expect((error as HeroImportPackConflictError).packKey).toBe(SAMPLE_KEY);
+    expect(await storedState()).toEqual(before);
+    expect(before).toEqual({ ...nothingStored, packs: [SAMPLE_KEY], installed: [SAMPLE_KEY] });
+  });
+
+  it('a carried pack failing validatePack is refused as bad-pack with its diagnostics, nothing stored', async () => {
+    const blob = await exportThenUninstall();
+    const raw = rawSample();
+    raw['dependencies'] = [
+      ...(raw['dependencies'] as unknown[]),
+      { id: 'nowhere-pack', range: '^1.0.0' },
+    ];
+
+    const error = await TestBed.inject(HeroReaderService)
+      .import(await rezip(blob, replacePack(raw)))
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HeroImportBadPackError);
+    expect((error as HeroImportBadPackError).code).toBe(
+      'characters.list.toast.import-failed-bad-pack',
+    );
+    expect((error as HeroImportBadPackError).packKey).toBe(SAMPLE_KEY);
+    expect((error as HeroImportBadPackError).diagnostics.length).toBeGreaterThan(0);
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a carried pack failing the strict schema (unknown top-level key) is refused as bad-pack', async () => {
+    const blob = await exportThenUninstall();
+    const raw = rawSample();
+    raw['sneaky'] = true;
+
+    await expect(
+      TestBed.inject(HeroReaderService).import(await rezip(blob, replacePack(raw))),
+    ).rejects.toBeInstanceOf(HeroImportBadPackError);
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a carried pack whose id@version differs from its manifest row is refused as bad-pack', async () => {
+    const blob = await exportThenUninstall();
+    const raw = rawSample();
+    raw['version'] = '1.0.1';
+
+    await expect(
+      TestBed.inject(HeroReaderService).import(await rezip(blob, replacePack(raw))),
+    ).rejects.toBeInstanceOf(HeroImportBadPackError);
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a tampered pack entry (bytes no longer match the manifest sha256) is a hash mismatch, nothing stored', async () => {
+    const blob = await exportThenUninstall();
+    const tampered = await rezip(blob, (zip) => {
+      const raw = JSON.parse(strFromU8(zip[PACK_PATH])) as Record<string, unknown>;
+      raw['name'] = 'Tampered';
+      zip[PACK_PATH] = strToU8(JSON.stringify(raw));
+    });
+
+    await expect(TestBed.inject(HeroReaderService).import(tampered)).rejects.toBeInstanceOf(
+      HeroImportHashMismatchError,
+    );
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a manifest row whose pack entry is absent is refused as bad-pack', async () => {
+    const blob = await exportThenUninstall();
+    const missing = await rezip(blob, (zip) => {
+      delete zip[PACK_PATH];
+    });
+
+    await expect(TestBed.inject(HeroReaderService).import(missing)).rejects.toBeInstanceOf(
+      HeroImportBadPackError,
+    );
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a manifest row whose path is not packs/<id>@<version>.json is refused as bad-pack', async () => {
+    const blob = await exportThenUninstall();
+    const moved = await rezip(blob, (zip, manifest) => {
+      zip['elsewhere.json'] = zip[PACK_PATH];
+      delete zip[PACK_PATH];
+      (manifest['packs'] as { path: string }[])[0].path = 'elsewhere.json';
+    });
+
+    await expect(TestBed.inject(HeroReaderService).import(moved)).rejects.toBeInstanceOf(
+      HeroImportBadPackError,
+    );
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a pack entry over PACK_LIMITS.maxBytes is refused as bad-pack before it is hashed or parsed', async () => {
+    const blob = await exportThenUninstall();
+    const huge = await rezip(blob, (zip) => {
+      zip[PACK_PATH] = new Uint8Array(PACK_LIMITS.maxBytes + 1).fill(0x20);
+    });
+
+    await expect(TestBed.inject(HeroReaderService).import(huge)).rejects.toBeInstanceOf(
+      HeroImportBadPackError,
+    );
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a carried pack whose asset entry is missing is refused as bad-pack', async () => {
+    const blob = await exportThenUninstall();
+    const missing = await rezip(blob, (zip) => {
+      delete zip[`assets/${hexOfHash(ICON_HASH)}`];
+    });
+
+    await expect(TestBed.inject(HeroReaderService).import(missing)).rejects.toBeInstanceOf(
+      HeroImportBadPackError,
+    );
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('a carried pack whose asset bytes do not hash to the declared hash is a hash mismatch', async () => {
+    const blob = await exportThenUninstall();
+    const tampered = await rezip(blob, (zip) => {
+      const bytes = zip[`assets/${hexOfHash(ICON_HASH)}`].slice();
+      bytes[bytes.length - 1] ^= 0xff;
+      zip[`assets/${hexOfHash(ICON_HASH)}`] = bytes;
+    });
+
+    await expect(TestBed.inject(HeroReaderService).import(tampered)).rejects.toBeInstanceOf(
+      HeroImportHashMismatchError,
+    );
+    expect(await storedState()).toEqual(nothingStored);
+  });
+
+  it('the pin warning lists only pins the bundle did not carry and this device does not have', async () => {
+    await install(sample);
+    // `ghost-pack` is pinned but never installed, so the writer cannot carry it.
+    const blob = await exportPinnedCharacter({ 'ghost-pack': '2.0.0' });
+    await TestBed.inject(PackStore).removeContent(SAMPLE_KEY);
+
+    const result = await TestBed.inject(HeroReaderService).import(bundleFile(blob));
+
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain('ghost-pack@2.0.0');
+  });
+
+  it('a pin the bundle did not carry but this device has installed raises no warning', async () => {
+    // Exported while the sample is NOT installed: the bundle pins it without carrying it.
+    const blob = await exportPinnedCharacter();
+    const manifest = JSON.parse(
+      strFromU8(unzipSync(new Uint8Array(await blob.arrayBuffer()))['manifest.json']),
+    ) as Record<string, unknown>;
+    expect(manifest).not.toHaveProperty('packs');
+    await install(sample);
+
+    const result = await TestBed.inject(HeroReaderService).import(bundleFile(blob));
+
+    expect(result.warnings).toEqual([]);
   });
 });

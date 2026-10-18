@@ -4,6 +4,7 @@ import type { Pack } from '@hk/protocol';
 import { ToastService } from '../components/toast/toast.service';
 import { PackLoader } from '../services/engine/pack-loader';
 import type { PackImportPreview } from '../services/packs/hkpack-reader.service';
+import type { PackImportAsset } from '../services/packs/pack-assets';
 import { BlobsRepository } from '../services/storage/blobs.repository';
 import { PacksRepository } from '../services/storage/packs.repository';
 
@@ -129,11 +130,22 @@ export class PackStore {
       throw new Error('PackStore.importContent: call init() before importing packs');
     }
     if (preview.alreadyInstalled) return;
-    const key = packKey(preview.pack);
-    await this.packsRepository.putPack(preview.pack);
+    await this.installContent(preview.pack, preview.assets);
+  }
+
+  // I/O boundary: the write behind `importContent`, shared with the `.hero` importer (plan 15
+  // Task 6), which validates a carried pack itself (same checks as `HkpackReader`) and installs
+  // it without a trust dialog (ruling 9). `pack` and `assets` MUST already be fully validated —
+  // this method writes, it does not check. Same order and rollback as `importContent`.
+  async installContent(pack: Pack, assets: ReadonlyMap<string, PackImportAsset>): Promise<void> {
+    if (!this.coreState()) {
+      throw new Error('PackStore.installContent: call init() before installing packs');
+    }
+    const key = packKey(pack);
+    await this.packsRepository.putPack(pack);
     const created: string[] = [];
     try {
-      for (const [hash, asset] of preview.assets) {
+      for (const [hash, asset] of assets) {
         const existed = (await this.blobsRepository.get(hash)) !== undefined;
         await this.blobsRepository.put(hash, asset.mime, asset.bytes, {
           kind: asset.kind,
@@ -146,7 +158,7 @@ export class PackStore {
       await this.packsRepository.remove(key);
       throw error;
     }
-    this.contentState.update((packs) => [...packs.filter((p) => packKey(p) !== key), preview.pack]);
+    this.contentState.update((packs) => [...packs.filter((p) => packKey(p) !== key), pack]);
   }
 
   // I/O boundary: removes an installed content pack by its `<id>@<version>` key, plus every asset

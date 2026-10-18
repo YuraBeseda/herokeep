@@ -21,7 +21,9 @@
       "import-failed-bad-zip": "That file isn't a valid .hero bundle.",
       "import-failed-bad-manifest": "That .hero bundle's manifest is invalid.",
       "import-failed-bad-event": "That .hero bundle has an invalid event (#{index}).",
-      "import-failed-hash-mismatch": "That .hero bundle's image data doesn't match its manifest.",
+      "import-failed-hash-mismatch": "That .hero bundle's data doesn't match its manifest.",
+      "import-failed-bad-pack": "That .hero bundle carries an invalid content pack ({pack}).",
+      "import-failed-pack-conflict": "That .hero bundle carries {pack}, but a different pack with the same name and version is already installed.",
       "import-failed-synced": "Import unavailable while this character is syncing.",
       "import-failed-generic": "Couldn't import that file. Try again."
     },

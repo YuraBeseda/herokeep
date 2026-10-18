@@ -2,7 +2,6 @@ import { inject, Injectable } from '@angular/core';
 import { ENGINE_VERSION, reduce } from '@hk/engine';
 import {
   HeroBundleImageSchema,
-  HKPACK_ASSET_DIR,
   parseHeroManifest,
   type HeroBundleImage,
   type HeroBundlePack,
@@ -10,6 +9,7 @@ import {
 import { APP_VERSION } from '@app/version';
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { canonicalJson } from '@shared/services/packs/canonical-json';
+import { packAssetEntry } from '@shared/services/packs/pack-assets';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PackStore } from '@shared/stores/pack.store';
@@ -54,12 +54,6 @@ export function sanitizeHeroFileName(name: string): string {
  * entries with it; the reader looks entries up by the manifest row's own `path`. */
 export function heroPackPath(id: string, version: string): string {
   return `packs/${id}@${version}.json`;
-}
-
-/** Where a carried pack's asset lives inside a `.hero` zip: the `.hkpack` convention
- * (`assets/<hash-hex>`, no extension), shared by every carried pack (one entry per hash). */
-export function heroPackAssetPath(hash: string): string {
-  return `${HKPACK_ASSET_DIR}${hexOfHash(hash)}`;
 }
 
 export interface HeroBundleResult {
@@ -146,9 +140,10 @@ export class HeroWriterService {
     }
     for (const pack of packs) {
       files[pack.row.path] = pack.json;
-      // A hash shared by two carried packs is written once. Portrait images live under `images/`,
-      // a separate namespace, so a hash that is both an image and a pack asset appears in both.
-      for (const asset of pack.assets) files[heroPackAssetPath(asset.hash)] ??= asset.bytes;
+      // Pack assets use the `.hkpack` entry name (`assets/<hash-hex>`, no extension); a hash shared
+      // by two carried packs is written once. Portrait images live under `images/`, a separate
+      // namespace, so a hash that is both an image and a pack asset appears in both.
+      for (const asset of pack.assets) files[packAssetEntry(asset.hash)] ??= asset.bytes;
     }
     const zipped = zipSync(files);
     const blob = new Blob([zipped], { type: 'application/zip' });

@@ -1,26 +1,18 @@
 import { inject, Injectable } from '@angular/core';
 import { validatePack, type Diagnostic } from '@hk/engine';
 import {
-  AssetSchema,
   formatIssues,
-  HKPACK_ASSET_DIR,
   HKPACK_LIMITS,
   HKPACK_PACK_ENTRY,
   PACK_LIMITS,
   parsePack,
-  type Asset,
   type EntityType,
   type Pack,
 } from '@hk/protocol';
-import { sniffImageMime } from '@shared/services/blob-transfer/image-mime-sniff';
-import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { PackStore } from '@shared/stores/pack.store';
 import { canonicalJson } from './canonical-json';
+import { PACK_ASSET_BYTE_CAP, verifyPackAssets, type PackImportAsset } from './pack-assets';
 import {
-  PackImportAssetHashMismatchError,
-  PackImportAssetMimeMismatchError,
-  PackImportAssetMissingError,
-  PackImportAssetTooLargeError,
   PackImportBadSchemaError,
   PackImportBadZipError,
   PackImportConflictError,
@@ -30,13 +22,7 @@ import {
   PackImportTooLargeError,
 } from './pack-import.errors';
 
-export type AssetKind = Asset['kind'];
-
-export interface PackImportAsset {
-  readonly bytes: Uint8Array;
-  readonly kind: AssetKind;
-  readonly mime: string;
-}
+export type { AssetKind, PackImportAsset } from './pack-assets';
 
 /** Everything the trust screen shows and `PackStore.importContent` stores. Built only after every
  * check below passed; `assets` is keyed by the `sha256:<hex>` hash. */
@@ -58,10 +44,7 @@ export interface PackImportPreview {
   readonly alreadyInstalled: boolean;
 }
 
-// The per-asset cap comes from the schema itself (fail-closed to 0 should it ever lose its max).
-const ASSET_BYTE_CAP = AssetSchema.shape.size.maxValue ?? 0;
 const ASSET_ENTRY_RE = /^assets\/[0-9a-f]{64}$/;
-const HASH_PREFIX = 'sha256:';
 
 /** What the unzip step kept, plus the asset entries skipped for exceeding the per-asset cap (so
  * the asset check reports them as too large rather than missing). */
@@ -126,7 +109,7 @@ export class HkpackReader {
     const errors = diagnostics.filter((d) => d.severity === 'error');
     if (errors.length > 0) throw new PackImportInvalidError(errors);
 
-    const assets = await this.readAssets(pack, zip, oversizedAssets);
+    const assets = await verifyPackAssets(pack, zip, oversizedAssets);
 
     const canonical = canonicalJson(pack);
     const key = `${pack.id}@${pack.version}`;
@@ -192,7 +175,7 @@ export class HkpackReader {
               HKPACK_LIMITS.maxAssetBytesTotal,
             );
           }
-          if (declared > ASSET_BYTE_CAP) {
+          if (declared > PACK_ASSET_BYTE_CAP) {
             oversizedAssets.add(info.name);
             return false;
           }
@@ -229,38 +212,6 @@ export class HkpackReader {
       ]);
     }
     return result.pack;
-  }
-
-  /** Every `assets[]` entry must have its `assets/<hex>` zip entry; bytes ≤ the declared `size`
-   * (and the `AssetSchema` cap — checked BEFORE hashing, like the `.hero` reader); magic bytes
-   * must be the declared webp/jpeg/png; sha256 must equal the declared hash. */
-  private async readAssets(
-    pack: Pack,
-    zip: Record<string, Uint8Array>,
-    oversized: ReadonlySet<string>,
-  ): Promise<Map<string, PackImportAsset>> {
-    const out = new Map<string, PackImportAsset>();
-    for (const asset of pack.assets) {
-      if (out.has(asset.hash)) continue;
-      const entry = `${HKPACK_ASSET_DIR}${asset.hash.slice(HASH_PREFIX.length)}`;
-      if (oversized.has(entry)) {
-        throw new PackImportAssetTooLargeError(asset.hash, ASSET_BYTE_CAP + 1, ASSET_BYTE_CAP);
-      }
-      const bytes = zip[entry];
-      if (!bytes) throw new PackImportAssetMissingError(asset.hash);
-      const limit = Math.min(asset.size, ASSET_BYTE_CAP);
-      if (bytes.byteLength > limit) {
-        throw new PackImportAssetTooLargeError(asset.hash, bytes.byteLength, limit);
-      }
-      if (sniffImageMime(bytes) !== asset.mime) {
-        throw new PackImportAssetMimeMismatchError(asset.hash, asset.mime);
-      }
-      if ((await sha256Hex(bytes)) !== asset.hash) {
-        throw new PackImportAssetHashMismatchError(asset.hash);
-      }
-      out.set(asset.hash, { bytes, kind: asset.kind, mime: asset.mime });
-    }
-    return out;
   }
 }
 

@@ -18,8 +18,10 @@ import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import {
   HeroImportBadEventError,
   HeroImportBadManifestError,
+  HeroImportBadPackError,
   HeroImportBadZipError,
   HeroImportHashMismatchError,
+  HeroImportPackConflictError,
   HeroImportSyncedStreamError,
   HeroReaderService,
 } from '@shared/services/export/hero-reader.service';
@@ -218,6 +220,10 @@ export class CharactersListComponent {
   private importFailureToastArgs(error: unknown): [string, Record<string, unknown>?] {
     if (error instanceof HeroImportBadEventError) {
       return [error.code, { index: error.index + 1 }];
+    }
+    // Plan 15 Task 6: a carried content pack that cannot be installed names its `id@version`.
+    if (error instanceof HeroImportBadPackError || error instanceof HeroImportPackConflictError) {
+      return [error.code, { pack: error.packKey }];
     }
     if (
       error instanceof HeroImportBadZipError ||

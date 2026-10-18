@@ -8,7 +8,9 @@ import { ToastService } from '@shared/components/toast/toast.service';
 import { AuthService, type AuthStatus } from '@shared/services/auth/auth.service';
 import {
   HeroImportBadEventError,
+  HeroImportBadPackError,
   HeroImportBadZipError,
+  HeroImportPackConflictError,
   HeroReaderService,
   type ImportResult,
 } from '@shared/services/export/hero-reader.service';
@@ -435,6 +437,39 @@ describe('CharactersListComponent', () => {
     expect(showSpy).toHaveBeenCalledWith('characters.list.toast.import-failed-bad-event', {
       index: 3,
     });
+  });
+
+  it.each([
+    [
+      new HeroImportBadPackError('sample-content@1.0.0', ['x']),
+      'characters.list.toast.import-failed-bad-pack',
+    ],
+    [
+      new HeroImportPackConflictError('sample-content@1.0.0'),
+      'characters.list.toast.import-failed-pack-conflict',
+    ],
+  ])('a bundled-pack failure (%s) toasts its code with the pack id@version', async (error, key) => {
+    importFn.mockRejectedValueOnce(error);
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    const toastService = TestBed.inject(ToastService);
+    const showSpy = vi.spyOn(toastService, 'show');
+    await fixture.whenStable();
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
+    )!;
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await flushDeleteFlow(fixture);
+
+    expect(showSpy).toHaveBeenCalledWith(key, { pack: 'sample-content@1.0.0' });
+  });
+
+  it('every bundled-pack failure code resolves in en, ru and uk', () => {
+    for (const lang of [charactersEn, charactersRu, charactersUk]) {
+      const toast = (lang as { list: { toast: Record<string, string> } }).list.toast;
+      expect(toast['import-failed-bad-pack']).toContain('{pack}');
+      expect(toast['import-failed-pack-conflict']).toContain('{pack}');
+    }
   });
 
   it('an unrecognized import failure falls back to the generic failure toast', async () => {

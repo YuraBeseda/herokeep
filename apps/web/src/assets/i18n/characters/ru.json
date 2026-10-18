@@ -21,7 +21,9 @@
       "import-failed-bad-zip": "Этот файл не является допустимым набором .hero.",
       "import-failed-bad-manifest": "Манифест этого набора .hero недействителен.",
       "import-failed-bad-event": "В этом наборе .hero обнаружено недопустимое событие (№{index}).",
-      "import-failed-hash-mismatch": "Данные изображения в этом наборе .hero не совпадают с манифестом.",
+      "import-failed-hash-mismatch": "Данные в этом наборе .hero не совпадают с манифестом.",
+      "import-failed-bad-pack": "Набор .hero содержит недопустимый пакет контента ({pack}).",
+      "import-failed-pack-conflict": "Набор .hero содержит {pack}, но другой пакет с тем же именем и версией уже установлен.",
       "import-failed-synced": "Импорт недоступен, пока этот персонаж синхронизируется.",
       "import-failed-generic": "Не удалось импортировать файл. Попробуйте снова."
     },

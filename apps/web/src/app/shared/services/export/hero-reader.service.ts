@@ -1,15 +1,30 @@
 import { inject, Injectable } from '@angular/core';
-import { reduce } from '@hk/engine';
+import { reduce, validatePack, type Diagnostic } from '@hk/engine';
 import {
+  formatIssues,
   HeroBundleImageSchema,
+  HKPACK_ASSET_DIR,
+  PACK_LIMITS,
   parseEvent,
   parseHeroManifest,
+  parsePack,
   type Event,
   type HeroBundleImage,
   type HeroBundleManifest,
+  type Pack,
   type PackIssue,
 } from '@hk/protocol';
 import { IMAGE_BYTE_CAPS, sha256Hex } from '@shared/services/images/image-pipeline.service';
+import { canonicalJson } from '@shared/services/packs/canonical-json';
+import {
+  PACK_ASSET_BYTE_CAP,
+  verifyPackAssets,
+  type PackImportAsset,
+} from '@shared/services/packs/pack-assets';
+import {
+  PackImportAssetHashMismatchError,
+  PackImportError,
+} from '@shared/services/packs/pack-import.errors';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
@@ -17,7 +32,7 @@ import { LeaderService } from '@shared/services/storage/leader.service';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
-import { extensionForMime, hexOfHash } from './hero-writer.service';
+import { extensionForMime, heroPackPath, hexOfHash } from './hero-writer.service';
 
 /**
  * `.hero` import (Global Constraints, plan-6 Task 10 — BINDING semantics): every failure mode
@@ -67,14 +82,46 @@ export class HeroImportBadEventError extends Error {
   }
 }
 
+/** Plan 15 Task 6: a content pack the bundle carries (`manifest.packs[]`) cannot be installed —
+ * its entry is missing or over `PACK_LIMITS.maxBytes`, it fails the strict `PackSchema`, it is not
+ * the `id@version` its row names, `validatePack` reports errors (`diagnostics`), or one of its
+ * assets is missing / too large / not the declared image type. `packKey` is `id@version`. */
+export class HeroImportBadPackError extends Error {
+  readonly code = 'characters.list.toast.import-failed-bad-pack';
+  constructor(
+    readonly packKey: string,
+    readonly issues: readonly string[],
+    readonly diagnostics: readonly Diagnostic[] = [],
+  ) {
+    super(`Invalid bundled pack ${packKey} — ${issues.join('; ')}`);
+    this.name = 'HeroImportBadPackError';
+  }
+}
+
+/** Plan 15 Task 6: the bundle carries `packKey` (`id@version`), but this device already has a
+ * DIFFERENT pack installed under that exact `id@version` (canonical JSON differs), or the carried
+ * pack reuses the core pack's id. Same rule as the `.hkpack` importer's conflict refusal. */
+export class HeroImportPackConflictError extends Error {
+  readonly code = 'characters.list.toast.import-failed-pack-conflict';
+  constructor(readonly packKey: string) {
+    super(`A different pack ${packKey} is already installed.`);
+    this.name = 'HeroImportPackConflictError';
+  }
+}
+
 /** An `images/<hash-hex>.<ext>` entry's actual bytes don't hash to the `hash` its manifest entry
  * declares (Global Constraints' export section: "hash-verify on import"). A corrupted/tampered
  * bundle is refused outright rather than silently storing mismatched image data under a hash that
- * no longer describes it. */
+ * no longer describes it. Plan 15 Task 6 reuses it for a carried pack (`packs/<id>@<version>.json`
+ * vs its manifest row's `sha256`) and for a carried pack's asset (vs its declared hash) — `what`
+ * only shapes the developer message. */
 export class HeroImportHashMismatchError extends Error {
   readonly code = 'characters.list.toast.import-failed-hash-mismatch';
-  constructor(readonly hash: string) {
-    super(`Image bytes for ${hash} do not match the manifest's declared hash.`);
+  constructor(
+    readonly hash: string,
+    what: 'Image' | 'Pack' | 'Pack asset' = 'Image',
+  ) {
+    super(`${what} bytes for ${hash} do not match the manifest's declared hash.`);
     this.name = 'HeroImportHashMismatchError';
   }
 }
@@ -115,6 +162,36 @@ export interface ImportResult {
 
 interface ResolvedIncomingImage extends HeroBundleImage {
   readonly bytes: Uint8Array;
+}
+
+/** A carried content pack that passed every check (plan 15 Task 6); `assets` keyed by hash. */
+interface BundlePack {
+  readonly pack: Pack;
+  readonly assets: ReadonlyMap<string, PackImportAsset>;
+}
+
+/** The zip directory carried packs live in (`HeroWriterService`'s `heroPackPath`). */
+const PACK_ENTRY_DIR = 'packs/';
+
+function packKey(pack: Pack): string {
+  return `${pack.id}@${pack.version}`;
+}
+
+/** `JSON.parse` + strict `parsePack` + kind `content` for a carried pack — any failure is a
+ * `HeroImportBadPackError` for `key` (the manifest row's `id@version`). */
+function parseBundlePack(key: string, text: string): Pack {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new HeroImportBadPackError(key, ['not valid JSON']);
+  }
+  const result = parsePack(raw);
+  if (!result.ok) throw new HeroImportBadPackError(key, formatIssues(result.issues));
+  if (result.pack.kind !== 'content') {
+    throw new HeroImportBadPackError(key, ['kind: only content packs can be carried']);
+  }
+  return result.pack;
 }
 
 /**
@@ -163,6 +240,12 @@ export function mergeEventsBySeq(
  * currently has this character loaded, it is reloaded too (its own snapshot-dropped, full-replay
  * `load()` — see that method's class doc) so an open sheet reflects imported data immediately.
  *
+ * Plan 15 Task 6 (ruling 9): content packs the bundle carries (`manifest.packs[]`) go through the
+ * `.hkpack` importer's own checks (`readBundlePacks`) during that same validation phase, silently —
+ * no trust dialog. Once the character is validated too, the packs not yet installed are written
+ * through `PackStore.installContent` BEFORE the character; if the character write then fails, the
+ * packs stay installed (valid standalone content). An old bundle without `packs` imports as before.
+ *
  * `fflate` is imported LAZILY, same reasoning as `HeroWriterService.export` — this service is the
  * only thing that pulls it in besides the writer, and neither should bloat the initial bundle.
  */
@@ -181,9 +264,27 @@ export class HeroReaderService {
 
     const { unzipSync, strFromU8 } = await import('fflate');
 
+    // Plan 15 Task 6: entries a carried pack lives in (`packs/…`, `assets/…`) are capped from their
+    // central-directory sizes BEFORE inflating (pack JSON ≤ `PACK_LIMITS.maxBytes`, an asset ≤ the
+    // `AssetSchema` cap) — skipped and remembered here, refused below only if the manifest
+    // actually names them. Every other entry is read exactly as before.
+    const oversized = new Set<string>();
     let zip: Record<string, Uint8Array>;
     try {
-      zip = unzipSync(new Uint8Array(await file.arrayBuffer()));
+      zip = unzipSync(new Uint8Array(await file.arrayBuffer()), {
+        filter: (info) => {
+          const cap = info.name.startsWith(PACK_ENTRY_DIR)
+            ? PACK_LIMITS.maxBytes
+            : info.name.startsWith(HKPACK_ASSET_DIR)
+              ? PACK_ASSET_BYTE_CAP
+              : undefined;
+          if (cap !== undefined && Math.max(info.size, info.originalSize) > cap) {
+            oversized.add(info.name);
+            return false;
+          }
+          return true;
+        },
+      });
     } catch (cause) {
       throw new HeroImportBadZipError(cause);
     }
@@ -209,6 +310,7 @@ export class HeroReaderService {
 
     const warnings: string[] = [...this.pinWarnings(manifest)];
     const images = await this.readAndVerifyImages(zip, manifest, warnings);
+    const bundlePacks = await this.readBundlePacks(zip, oversized, manifest, strFromU8);
     const characterId = manifest.characterId;
 
     // Everything above is pure CPU/validation work — unzip, schema checks, SHA-256 hashing — and
@@ -233,6 +335,11 @@ export class HeroReaderService {
         throw new HeroImportSyncedStreamError();
       }
 
+      // Plan 15 Task 6: carried packs are installed FIRST (everything — pack and character — is
+      // validated by now), then the character. Should a character write below fail, the packs
+      // stay installed: each is valid, standalone content in its own right (the same thing a
+      // `.hkpack` import of it would have left), and the user can remove it from the Packs screen.
+      await this.installBundlePacks(bundlePacks);
       await this.storeImages(images);
 
       let finalEvents: Event[];
@@ -304,18 +411,154 @@ export class HeroReaderService {
     });
   }
 
-  /** Core-pack version mismatch (Global Constraints: "pins informational; core-pack version
-   * mismatch → warning entry, proceed" — packs themselves are NEVER imported in 1b). A `pins`
-   * entry for a pack this device doesn't even have installed isn't checked here at all — only the
-   * installed CORE pack's own version is compared, per the binding text. */
+  /** Pins the imported character will not find (Global Constraints: "pins informational; core-pack
+   * version mismatch → warning entry, proceed"): a core-pack version mismatch, plus (plan 15 Task
+   * 6) every non-core pin whose exact `id@version` the bundle does NOT carry and this device does
+   * not have installed — a carried pack is installed by this import, so it is never warned about.
+   * Nothing is compared before `PackStore` has loaded the core. */
   private pinWarnings(manifest: HeroBundleManifest): string[] {
     const core = this.packStore.corePack();
     if (!core) return [];
+    const warnings: string[] = [];
     const pinned = manifest.pins[core.id];
-    if (pinned === undefined || pinned === core.version) return [];
-    return [
-      `core pack version mismatch: bundle pins ${core.id}@${pinned}, this device has ${core.version} installed`,
-    ];
+    if (pinned !== undefined && pinned !== core.version) {
+      warnings.push(
+        `core pack version mismatch: bundle pins ${core.id}@${pinned}, this device has ${core.version} installed`,
+      );
+    }
+    const carried = new Set((manifest.packs ?? []).map((row) => `${row.id}@${row.version}`));
+    const installed = new Set(this.packStore.packs().map((p) => `${p.id}@${p.version}`));
+    for (const id of Object.keys(manifest.pins).sort()) {
+      if (id === core.id) continue;
+      const key = `${id}@${manifest.pins[id]}`;
+      if (carried.has(key) || installed.has(key)) continue;
+      warnings.push(
+        `pack not available: bundle pins ${key}, which it does not carry and this device does not have installed`,
+      );
+    }
+    return warnings;
+  }
+
+  /**
+   * Validates every content pack the bundle carries (`manifest.packs[]`, plan 15 ruling 9) with the
+   * `.hkpack` importer's own safety checks — silently, no trust dialog — and stores NOTHING:
+   *
+   * 1. per row: no duplicate `id@version`; `path` is exactly `packs/<id>@<version>.json`; the entry
+   *    exists and is ≤ `PACK_LIMITS.maxBytes`
+   *    (checked before hashing); its sha256 equals the row's (`HeroImportHashMismatchError`);
+   *    `parsePack` strict, kind `content`, and the `id@version` the row names — else
+   *    `HeroImportBadPackError`;
+   * 2. conflicts (`HeroImportPackConflictError`): the core pack's id, or the same `id@version`
+   *    installed with a different canonical JSON (an identical one is simply not re-installed);
+   * 3. `validatePack(pack, [core, ...installed content, ...the bundle's packs])` errors → bad-pack
+   *    with the diagnostics;
+   * 4. assets: `verifyPackAssets` (present, ≤ declared size and the cap, magic bytes, sha256).
+   */
+  private async readBundlePacks(
+    zip: Record<string, Uint8Array>,
+    oversized: ReadonlySet<string>,
+    manifest: HeroBundleManifest,
+    strFromU8: (bytes: Uint8Array) => string,
+  ): Promise<BundlePack[]> {
+    const rows = manifest.packs ?? [];
+    if (rows.length === 0) return [];
+    const all = this.packStore.packs();
+    const core = all.find((p) => p.kind === 'core');
+    if (!core) throw new Error('HeroReaderService: PackStore.init() has not loaded the core pack');
+
+    const parsed: Pack[] = [];
+    const keys = new Set<string>();
+    for (const row of rows) {
+      const key = `${row.id}@${row.version}`;
+      if (keys.has(key)) throw new HeroImportBadPackError(key, ['manifest.packs lists it twice']);
+      keys.add(key);
+      // Stricter than "the entry exists": a carried pack lives at exactly the writer's path, so a
+      // hand-edited row cannot point at `events.json`, an image, or an entry outside `packs/` (the
+      // directory whose size the unzip filter capped).
+      if (row.path !== heroPackPath(row.id, row.version)) {
+        throw new HeroImportBadPackError(key, [
+          `${row.path} is not ${heroPackPath(row.id, row.version)}`,
+        ]);
+      }
+      if (oversized.has(row.path)) {
+        throw new HeroImportBadPackError(key, [
+          `${row.path} exceeds ${PACK_LIMITS.maxBytes} bytes`,
+        ]);
+      }
+      const bytes = zip[row.path];
+      if (!bytes) throw new HeroImportBadPackError(key, [`${row.path} is not in the bundle`]);
+      if (bytes.byteLength > PACK_LIMITS.maxBytes) {
+        throw new HeroImportBadPackError(key, [
+          `${row.path} exceeds ${PACK_LIMITS.maxBytes} bytes`,
+        ]);
+      }
+      if ((await sha256Hex(bytes)) !== row.sha256) {
+        throw new HeroImportHashMismatchError(row.sha256, 'Pack');
+      }
+      const pack = parseBundlePack(key, strFromU8(bytes));
+      if (pack.id !== row.id || pack.version !== row.version) {
+        throw new HeroImportBadPackError(key, [
+          `${row.path} holds ${pack.id}@${pack.version}, not ${key}`,
+        ]);
+      }
+      parsed.push(pack);
+    }
+
+    for (const pack of parsed) this.checkConflict(pack);
+
+    const installedContent = all.filter((p) => p.kind === 'content' && !keys.has(packKey(p)));
+    const available = [core, ...installedContent, ...parsed];
+    const out: BundlePack[] = [];
+    for (const pack of parsed) {
+      const key = packKey(pack);
+      const errors = validatePack(pack, available).filter((d) => d.severity === 'error');
+      if (errors.length > 0) {
+        throw new HeroImportBadPackError(
+          key,
+          errors.map((d) => `${d.code}: ${d.message}`),
+          errors,
+        );
+      }
+      let assets: Map<string, PackImportAsset>;
+      try {
+        assets = await verifyPackAssets(pack, zip, oversized);
+      } catch (error) {
+        if (error instanceof PackImportAssetHashMismatchError) {
+          throw new HeroImportHashMismatchError(error.hash, 'Pack asset');
+        }
+        if (error instanceof PackImportError) {
+          throw new HeroImportBadPackError(key, [error.message]);
+        }
+        throw error;
+      }
+      out.push({ pack, assets });
+    }
+    return out;
+  }
+
+  /** Throws `HeroImportPackConflictError` when `pack` reuses the core id or a DIFFERENT pack is
+   * installed under its exact `id@version`; returns whether an identical one is installed. */
+  private checkConflict(pack: Pack): boolean {
+    const key = packKey(pack);
+    const all = this.packStore.packs();
+    if (all.some((p) => p.kind === 'core' && p.id === pack.id)) {
+      throw new HeroImportPackConflictError(key);
+    }
+    const existing = all.find((p) => p.kind !== 'core' && packKey(p) === key);
+    if (existing && canonicalJson(existing) !== canonicalJson(pack)) {
+      throw new HeroImportPackConflictError(key);
+    }
+    return existing !== undefined;
+  }
+
+  /** Installs the carried packs not already installed, through the same store write a `.hkpack`
+   * import uses. The conflict check is repeated first — a pack could have been installed from the
+   * Packs screen while this import was validating — so nothing is written on a late conflict. */
+  private async installBundlePacks(bundlePacks: readonly BundlePack[]): Promise<void> {
+    // Every check runs before the first write (`filter` completes first), and reflects the store
+    // as it is NOW rather than as it was during validation.
+    const pending = bundlePacks.filter((bp) => !this.checkConflict(bp.pack));
+    for (const bp of pending) await this.packStore.installContent(bp.pack, bp.assets);
   }
 
   /** Verifies every declared image's bytes actually hash to what the manifest claims (Global
