@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import {
   classSkillPick,
   findChoice,
@@ -122,6 +122,15 @@ export class ChoiceStepComponent {
    * relative to the WHATWG spec, which is why the original implementation's jsdom-only test gave
    * false confidence). */
   readonly disabled = input(false);
+  /** Plan 13 task 9: the selection this step OPENS with when it mounts for a `choiceId` (`undefined`
+   * — every pre-existing consumer — opens empty, byte-identical to before). `LevelUpComponent`
+   * passes the choice's recorded picks, so a GROWN choice re-offered with its old decision still
+   * recorded (fighter Weapon Mastery 3 -> 4) shows those picks pre-selected and the player adds
+   * only the delta. Display-only: nothing is committed until the player's own toggle, which then
+   * commits the FULL selection through the ordinary `commit` path — the same single replacing
+   * `decision.made` a hand re-pick produces. Read once per `choiceId` change (untracked), never
+   * re-applied mid-edit. */
+  readonly initialSelection = input<readonly string[] | undefined>(undefined);
 
   // Working (uncommitted-until-`commit`) UI state — always reset when `choiceId` changes (a
   // fresh mount for a different choice never inherits a stale selection/diagnostics/draft; see
@@ -221,10 +230,12 @@ export class ChoiceStepComponent {
     // same component instance across consecutive 'choice' steps (its `@switch` case doesn't
     // change), so nothing here may leak from one choice to the next; a freshly-mounted choice
     // step is guaranteed a not-yet-decided choice (see `CreateWizardState.curatedChoiceSteps`'s
-    // doc), so starting empty is always correct, never a loss of a real prior selection.
+    // doc), so starting empty is always correct, never a loss of a real prior selection — unless
+    // the consumer supplies an `initialSelection` for it (plan 13 task 9, see that input's doc).
     effect(() => {
       this.choiceId();
-      this.selection.set([]);
+      const seed = untracked(() => this.initialSelection());
+      this.selection.set(seed ? [...seed] : []);
       this.diagnostics.set([]);
       this.literalDraft.set('');
     });

@@ -338,6 +338,17 @@ export class LevelUpState {
     }
   }
 
+  /** Plan 13 task 9: the selection a choice step should OPEN with — this session's own draft
+   * decision for `choiceId` if there is one, else the LIVE character's recorded decision for it.
+   * The recorded case is the grown choice: a choice whose `count` grew at this level (fighter
+   * Weapon Mastery 3 -> 4) is re-offered with its old decision still recorded, so the step opens
+   * with those picks and the player adds only the delta. Pre-population only — the step commits
+   * the full selection through `setDecision` exactly as a hand re-pick would. `undefined` when
+   * neither exists (the step opens empty). */
+  priorSelection(choiceId: string): readonly string[] | undefined {
+    return this.decisions().get(choiceId) ?? this.characterStore.facts()?.decisions[choiceId];
+  }
+
   /** `validateSelection` over the draft sheet/facts, with `choiceId`'s OWN already-recorded
    * decision excluded from that draft first WHEN `choiceId` resolves to an `abilities` pick (see
    * `isAbilitiesPick`'s doc — mirrors `CreateWizardState.validate`'s own fix exactly, including the

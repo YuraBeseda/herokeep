@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -18,6 +19,7 @@ import { routes } from '../../../app.routes';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
 import { CreateWizardState } from '../create-wizard/create-wizard.state';
+import { LevelUpState } from './level-up.state';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling), same fixture-loading
 // approach as `sheet-shell.component.spec.ts`.
@@ -593,5 +595,116 @@ describe('LevelUpComponent', () => {
     const helper = root.querySelector('.spells-step__spellbook .spells-step__helper');
     expect(helper?.textContent).toContain('2');
     expect(helper?.textContent).not.toContain('6');
+  });
+
+  // Plan 13 task 9: fighter Weapon Mastery grows 3 -> 4 at class level 4 (plan 12 task 2), so the
+  // level-1 choice is re-offered with its 3-weapon decision still recorded. The step opens with the
+  // recorded picks pre-selected, so the player adds only the delta — and the commit is the SAME
+  // single replace-`decision.made` (full selection: prior picks in recorded order, then the new one)
+  // the pre-change hand re-pick produced. UI-level pre-population only; the event shape is unchanged.
+  it('fighter 3→4: the grown weapon-mastery re-offer pre-selects the 3 recorded picks; +1 commits the same replace-decision event as a hand re-pick', async () => {
+    const FIGHTER = 'srd-5e-2024:class/fighter';
+    const CHAMPION = 'srd-5e-2024:subclass/champion';
+    const MASTERIES = `${FIGHTER}@1/weapon-masteries`;
+    const PRIOR = [
+      'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
+    ];
+    const HANDAXE = 'srd-5e-2024:item/handaxe';
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    expect(characterStore.facts()?.decisions[MASTERIES]).toEqual(PRIOR);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+    await characterStore.appendTx([
+      { type: 'level.gained', v: 1, payload: { classId: FIGHTER, level: 2, hpRoll: 'average' } },
+    ]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 600 } }]);
+    await characterStore.appendTx([
+      {
+        type: 'level.gained',
+        v: 1,
+        payload: { classId: FIGHTER, level: 3, hpRoll: 'average', subclassId: CHAMPION },
+      },
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: { choiceId: `${FIGHTER}@3/subclass`, selection: [CHAMPION] },
+      },
+    ]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 1800 } }]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+    await chooseClassIfOffered(
+      root,
+      harness.fixture,
+      charactersEn.levelUp.classPicker.levelUp
+        .replace('{class}', 'Fighter')
+        .replace('{level}', '4'),
+    );
+    const state = harness.fixture.debugElement
+      .query(By.css('app-level-up'))
+      .injector.get(LevelUpState);
+    expect(state.outstanding().map((r) => r.choiceId)[0]).toBe(MASTERIES);
+
+    root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+    await harness.fixture.whenStable();
+    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
+    await harness.fixture.whenStable();
+
+    const selectedNames = (): string[] =>
+      Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
+        .filter((b) => b.getAttribute('aria-pressed') === 'true')
+        .map((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() ?? '');
+    expect(selectedNames()).toEqual(['Dagger', 'Longsword', 'Shortsword']);
+    // Nothing is committed by the pre-seed alone — only the player's own toggle commits.
+    expect(state.decisions().has(MASTERIES)).toBe(false);
+
+    Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
+      .find((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() === 'Handaxe')!
+      .click();
+    await harness.fixture.whenStable();
+    expect(state.outstanding().map((r) => r.choiceId)).not.toContain(MASTERIES);
+
+    state.setDecision(`${FIGHTER}@4/feat`, ['srd-5e-2024:feat/ability-score-improvement']);
+    state.setDecision('srd-5e-2024:feat/ability-score-improvement@4/ability-scores', ['str:+2']);
+    expect(state.complete()).toBe(true);
+
+    // The pre-change path: the player re-picks all four by hand (recorded order, then the new one).
+    const manual = TestBed.runInInjectionContext(() => new LevelUpState());
+    manual.chooseClass(FIGHTER);
+    manual.setDecision(MASTERIES, [...PRIOR, HANDAXE]);
+    const masteryDraft = (drafts: { type: string; payload: unknown }[]) =>
+      drafts.filter(
+        (d) =>
+          d.type === 'decision.made' && (d.payload as { choiceId?: string }).choiceId === MASTERIES,
+      );
+    expect(masteryDraft(state.buildTransaction())).toStrictEqual(
+      masteryDraft(manual.buildTransaction()),
+    );
+
+    for (let i = 0; i < 5 && root.querySelector('.level-up__finish') === null; i++) {
+      root.querySelector<HTMLButtonElement>('.level-up__next')?.click();
+      await harness.fixture.whenStable();
+    }
+    root.querySelector<HTMLButtonElement>('.level-up__finish')!.click();
+    await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 4);
+
+    const emitted = characterStore
+      .events()
+      .filter(
+        (e) =>
+          e.type === 'decision.made' && (e.payload as { choiceId?: string }).choiceId === MASTERIES,
+      );
+    expect(emitted).toHaveLength(2); // creation's 3-pick + this level-up's replacing 4-pick
+    expect(emitted[1].v).toBe(1);
+    expect(emitted[1].payload).toStrictEqual({
+      choiceId: MASTERIES,
+      selection: [...PRIOR, HANDAXE],
+    });
+    expect(characterStore.events().some((e) => e.type === 'decision.cleared')).toBe(false);
+    expect(characterStore.facts()?.decisions[MASTERIES]).toEqual([...PRIOR, HANDAXE]);
+    expect(characterStore.outstanding().map((o) => o.choiceId)).not.toContain(MASTERIES);
   });
 });

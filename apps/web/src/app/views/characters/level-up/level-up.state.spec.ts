@@ -228,8 +228,13 @@ describe('LevelUpState', () => {
 
     const state = createState(FIGHTER);
     expect(state.outstanding().map((r) => r.choiceId)).toEqual([MASTERIES_CHOICE, FEAT_CHOICE]);
+    // Plan 13 task 9: the grown choice's step opens with its RECORDED picks (seedFighter's 3);
+    // a never-decided choice opens empty.
+    expect(state.priorSelection(MASTERIES_CHOICE)).toEqual(FOUR_MASTERIES.slice(0, 3));
+    expect(state.priorSelection(FEAT_CHOICE)).toBeUndefined();
 
     state.setDecision(MASTERIES_CHOICE, FOUR_MASTERIES);
+    expect(state.priorSelection(MASTERIES_CHOICE)).toEqual(FOUR_MASTERIES); // this session's draft wins
     state.setDecision(FEAT_CHOICE, [ASI_FEAT]);
     expect(state.outstanding().map((r) => r.choiceId)).toContain(ASI_CHOICE);
     expect(state.steps().some((s) => s.choiceId === ASI_CHOICE)).toBe(true);

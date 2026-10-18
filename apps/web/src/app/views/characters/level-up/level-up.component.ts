@@ -119,6 +119,13 @@ export class LevelUpComponent {
     this.state.setDecision(choiceId, selection, context);
   };
 
+  // Plan 13 task 9: the current choice step's opening selection (see `LevelUpState.priorSelection`
+  // and `ChoiceStepComponent.initialSelection`) — pre-selects a grown choice's recorded picks.
+  protected readonly choiceSeed = computed(() => {
+    const choiceId = this.currentStep()?.choiceId;
+    return choiceId === undefined ? undefined : this.state.priorSelection(choiceId);
+  });
+
   // `hk-spells-step`'s override set (task-13-brief.md — see `spells-step.component.ts`'s class doc).
   protected readonly spellcastingBlock = computed(() => {
     const classId = this.state.advancement()?.classId;
