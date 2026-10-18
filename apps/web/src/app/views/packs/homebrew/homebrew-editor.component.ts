@@ -120,6 +120,7 @@ export class HomebrewEditorComponent {
       if (result.pending.length > 0) {
         this.toastService.show('packs.homebrew.pending', { count: result.pending.length });
       }
+      if (result.updateCheckFailed) this.toastService.show('packs.homebrew.update-check-failed');
       await this.router.navigate(['/packs/homebrew']);
     } catch (error) {
       if (error instanceof HomebrewValidationError) {

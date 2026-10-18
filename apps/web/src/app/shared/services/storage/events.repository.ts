@@ -50,6 +50,25 @@ export class EventsRepository {
     return [...committed, ...pending].map((row) => row.json);
   }
 
+  /**
+   * Every stream holding a `pack.pinned` event for `packId` (committed or pending), in one pass over
+   * the table with no per-stream fold. A SUPERSET of the streams pinning it now: a later
+   * `pack.unpinned`/`event.reverted` is not considered, so callers still `reduce` each hit. A
+   * stream without such an event cannot pin `packId` (the core pin, set by `character.created`, is
+   * the only pin without one), so callers can skip every other stream unread (plan 15 final fix
+   * wave B5, the homebrew fast-forward).
+   */
+  async streamsWithPackPinned(packId: string): Promise<Set<string>> {
+    const rows = await this.db.events
+      .filter(
+        (row) =>
+          row.json.type === 'pack.pinned' &&
+          (row.json.payload as { packId?: unknown } | null)?.packId === packId,
+      )
+      .toArray();
+    return new Set(rows.map((row) => row.stream));
+  }
+
   /** Max committed `seq` for `stream`, plus 1 — an index-only lookup on `[stream+seq]`, never a table scan. */
   async nextSeq(stream: string): Promise<number> {
     const last = await this.db.events

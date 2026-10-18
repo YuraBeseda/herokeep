@@ -495,6 +495,24 @@ describe('HomebrewEditorComponent', () => {
     expect(saveSpy).toHaveBeenCalledTimes(1);
     expect(show).toHaveBeenCalledWith('packs.homebrew.saved', { updated: 1 });
     expect(show).toHaveBeenCalledWith('packs.homebrew.pending', { count: 2 });
+    expect(show).not.toHaveBeenCalledWith('packs.homebrew.update-check-failed');
+    expect(navigate).toHaveBeenCalledWith(['/packs/homebrew']);
+  });
+
+  it('a save whose update check failed still saves, and adds the update-check note', async () => {
+    const { navigate, show } = setupEditor({ type: 'item' }, () =>
+      Promise.resolve({
+        pack: corePack,
+        diagnostics: [],
+        fastForwarded: [],
+        pending: [],
+        updateCheckFailed: true,
+      }),
+    );
+    await renderEditor();
+
+    expect(show).toHaveBeenCalledWith('packs.homebrew.saved', { updated: 0 });
+    expect(show).toHaveBeenCalledWith('packs.homebrew.update-check-failed');
     expect(navigate).toHaveBeenCalledWith(['/packs/homebrew']);
   });
 

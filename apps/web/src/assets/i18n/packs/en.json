@@ -126,6 +126,7 @@
     "saved": "{updated, plural, =0 {Saved.} one {Saved. # character updated.} other {Saved. # characters updated.}}",
     "removed": "{updated, plural, =0 {Deleted.} one {Deleted. # character updated.} other {Deleted. # characters updated.}}",
     "pending": "{count, plural, one {# character has an update to review on its Build tab.} other {# characters have an update to review on their Build tab.}}",
+    "update-check-failed": "Some characters could not be checked for this change. Open them to review the update on their Build tab.",
     "save-failed": "This entry could not be saved: the pack rejected it",
     "save-failed-unknown": "This entry could not be saved on this device",
     "remove-failed": "This entry could not be deleted",

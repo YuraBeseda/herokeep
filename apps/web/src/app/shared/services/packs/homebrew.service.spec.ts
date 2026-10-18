@@ -484,6 +484,61 @@ describe('HomebrewService', () => {
     expect(await eventsOf(ghost)).toHaveLength(head);
   });
 
+  // --- Plan 15 final fix wave B5 ---------------------------------------------------------------
+
+  it('a planner that throws after the install still reports the save, with the character pending', async () => {
+    const service = TestBed.inject(HomebrewService);
+    await service.save(SPECIES);
+    const pinned = await seedCharacter('Pinned', '0.1.0');
+    const head = (await eventsOf(pinned)).length;
+    const facade = TestBed.inject(EngineFacade);
+    const realIndexFor = facade.indexFor.bind(facade);
+    // Only the per-character planning (pins naming the homebrew pack) explodes.
+    vi.spyOn(facade, 'indexFor').mockImplementation((pins) => {
+      if (pins[LOCAL] !== undefined) throw new Error('planner exploded');
+      return realIndexFor(pins);
+    });
+
+    const result = await service.save(ITEM);
+
+    expect(result.pack.version).toBe('0.1.1');
+    expect(result.fastForwarded).toEqual([]);
+    expect(result.pending).toEqual([pinned]);
+    expect(result.updateCheckFailed).toBe(true);
+    expect(await eventsOf(pinned)).toHaveLength(head);
+    // The new version is installed; the version the pending character pins is kept.
+    expect(await storedPackKeys()).toEqual([`${LOCAL}@0.1.0`, `${LOCAL}@0.1.1`]);
+  });
+
+  it('a character scan that throws after the install still reports the save', async () => {
+    const service = TestBed.inject(HomebrewService);
+    await service.save(SPECIES);
+    await seedCharacter('Pinned', '0.1.0');
+    vi.spyOn(TestBed.inject(CharactersRepository), 'list').mockRejectedValue(new Error('idb'));
+
+    const result = await service.save(ITEM);
+
+    expect(result.pack.version).toBe('0.1.1');
+    expect(result.updateCheckFailed).toBe(true);
+    // Nothing is known about pins, so no older version is removed.
+    expect(await storedPackKeys()).toEqual([`${LOCAL}@0.1.0`, `${LOCAL}@0.1.1`]);
+  });
+
+  it('never reads the stream of a character that does not pin the homebrew pack', async () => {
+    const service = TestBed.inject(HomebrewService);
+    await service.save(SPECIES);
+    const other = await TestBed.inject(CharacterStore).create('Other', 'neuter');
+    const pinned = await seedCharacter('Pinned', '0.1.0');
+    const byStream = vi.spyOn(TestBed.inject(EventsRepository), 'byStream');
+
+    const result = await service.save(ITEM);
+
+    expect(result.fastForwarded).toEqual([pinned]);
+    expect(result.updateCheckFailed).toBe(false);
+    expect(byStream.mock.calls.map(([stream]) => stream)).not.toContain(other);
+    expect(byStream.mock.calls.map(([stream]) => stream)).toContain(pinned);
+  });
+
   it('a character in sync mode is left pending (its writes belong to the sync lane)', async () => {
     const service = TestBed.inject(HomebrewService);
     await service.save(SPECIES);

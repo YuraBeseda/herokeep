@@ -124,6 +124,7 @@ export class HomebrewListComponent {
       if (result.pending.length > 0) {
         this.toastService.show('packs.homebrew.pending', { count: result.pending.length });
       }
+      if (result.updateCheckFailed) this.toastService.show('packs.homebrew.update-check-failed');
     } catch {
       this.toastService.show('packs.homebrew.remove-failed');
     } finally {

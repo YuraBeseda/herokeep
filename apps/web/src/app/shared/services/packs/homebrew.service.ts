@@ -48,6 +48,9 @@ export interface HomebrewSaveResult {
   fastForwarded: string[];
   /** Characters pinning this device's homebrew pack that were NOT advanced — the Build tab's Update badge (T5). */
   pending: string[];
+  /** The new version IS installed, but checking or advancing some characters failed (plan 15
+   * final fix wave B5): the save still succeeded; the editor adds a note. */
+  updateCheckFailed: boolean;
 }
 
 /**
@@ -106,7 +109,10 @@ function unresolvedKeys(issues: readonly Diagnostic[]): Set<string> {
  *    throws `HomebrewValidationError` before anything is written.
  * 3. `installContent(pack, no assets)` — the new version row sits beside the previous one.
  * 4. Plan every stored character pinning this device's homebrew id (any version) while the older versions are
- *    still installed (so `current` can see the entities the character uses — see `planFor`).
+ *    still installed (so `current` can see the entities the character uses — see `planFor`). Only
+ *    streams holding a `pack.pinned` event for the id are read. From this step on the new version
+ *    is installed, so a planning failure never fails the save: the character stays pending and
+ *    `updateCheckFailed` is set (older versions are then kept).
  * 5. Commit each ready plan's `events` verbatim as ONE transaction on that character's stream
  *    (`CharacterStore.appendTxToStream`); everything else is `pending` and keeps the Update badge.
  * 6. Remove every OTHER installed homebrew version that no pending character still pins, via
@@ -225,7 +231,17 @@ export class HomebrewService {
     if (errors.length > 0) throw new HomebrewValidationError([], errors);
 
     await this.packStore.installContent(pack, new Map());
-    const { ready, pending, pinnedBy } = await this.planFastForward(pack);
+    // From here on the new version IS installed, so the save is never reported as failed (plan 15
+    // final fix wave B5): a planning failure leaves the affected characters pending (the Build
+    // tab's Update badge still offers the update) and flags `updateCheckFailed` for the editor's
+    // note. Older versions are then kept (nothing is known about who pins them).
+    let planned: Awaited<ReturnType<HomebrewService['planFastForward']>>;
+    try {
+      planned = await this.planFastForward(pack);
+    } catch {
+      return { pack, diagnostics, fastForwarded: [], pending: [], updateCheckFailed: true };
+    }
+    const { ready, pending, pinnedBy, failed } = planned;
 
     const fastForwarded: string[] = [];
     for (const character of ready) {
@@ -237,12 +253,20 @@ export class HomebrewService {
       }
     }
 
-    const stillPinned = new Set(pending.map((id) => pinnedBy.get(id)));
-    const stale = this.packStore
-      .installedContent()
-      .filter((p) => p.id === packId && p.version !== pack.version && !stillPinned.has(p.version));
-    for (const old of stale) await this.packStore.removeContent(packKey(old));
-    return { pack, diagnostics, fastForwarded, pending };
+    if (!failed) {
+      const stillPinned = new Set(pending.map((id) => pinnedBy.get(id)));
+      const stale = this.packStore
+        .installedContent()
+        .filter(
+          (p) => p.id === packId && p.version !== pack.version && !stillPinned.has(p.version),
+        );
+      try {
+        for (const old of stale) await this.packStore.removeContent(packKey(old));
+      } catch {
+        // Reclaiming old versions is housekeeping: a later save retries it.
+      }
+    }
+    return { pack, diagnostics, fastForwarded, pending, updateCheckFailed: failed };
   }
 
   /** The first save's pack shell: name in the active locale (pack data from then on). */
@@ -266,29 +290,43 @@ export class HomebrewService {
     };
   }
 
-  private async planFastForward(
-    pack: Pack,
-  ): Promise<{ ready: ReadyCharacter[]; pending: string[]; pinnedBy: Map<string, string> }> {
+  /** Plans every stored character pinning `pack.id`. Only streams holding a `pack.pinned` event
+   * for it (`EventsRepository.streamsWithPackPinned`) are read and folded; every other character
+   * is skipped unread. A character whose fold or plan throws is `pending` and sets `failed`. */
+  private async planFastForward(pack: Pack): Promise<{
+    ready: ReadyCharacter[];
+    pending: string[];
+    pinnedBy: Map<string, string>;
+    failed: boolean;
+  }> {
     const rules = this.characterStore.systemRules();
     const installed = new Set(this.packStore.packs().map(packKey));
     const ready: ReadyCharacter[] = [];
     const pending: string[] = [];
+    let failed = false;
     /** Character id → the homebrew version it pins before this save. */
     const pinnedBy = new Map<string, string>();
+    const candidates = await this.eventsRepository.streamsWithPackPinned(pack.id);
     for (const row of await this.charactersRepository.list()) {
-      const [events, snapshot] = await Promise.all([
-        this.eventsRepository.byStream(row.id),
-        this.snapshotsRepository.get(row.id),
-      ]);
-      const facts = reduce(events, snapshot, rules);
-      const pinned = facts.pins[pack.id];
-      if (pinned === undefined || pinned === pack.version) continue;
-      pinnedBy.set(row.id, pinned);
-      const planned = this.planFor(facts, pack, installed, rules, row.id);
-      if (planned) ready.push({ id: row.id, events: planned });
-      else pending.push(row.id);
+      if (!candidates.has(row.id)) continue;
+      try {
+        const [events, snapshot] = await Promise.all([
+          this.eventsRepository.byStream(row.id),
+          this.snapshotsRepository.get(row.id),
+        ]);
+        const facts = reduce(events, snapshot, rules);
+        const pinned = facts.pins[pack.id];
+        if (pinned === undefined || pinned === pack.version) continue;
+        pinnedBy.set(row.id, pinned);
+        const planned = this.planFor(facts, pack, installed, rules, row.id);
+        if (planned) ready.push({ id: row.id, events: planned });
+        else pending.push(row.id);
+      } catch {
+        failed = true;
+        pending.push(row.id);
+      }
     }
-    return { ready, pending, pinnedBy };
+    return { ready, pending, pinnedBy, failed };
   }
 
   /**

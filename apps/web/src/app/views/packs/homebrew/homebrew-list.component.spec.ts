@@ -49,12 +49,13 @@ const parsed = parsePack({
 if (!parsed.ok) throw new Error('homebrew list fixture does not parse');
 const PACK: Pack = parsed.pack;
 
-async function setup(confirm: unknown) {
+async function setup(confirm: unknown, updateCheckFailed = false) {
   const remove = vi.fn().mockResolvedValue({
     pack: PACK,
     diagnostics: [],
     fastForwarded: ['char:a'],
     pending: ['char:b'],
+    updateCheckFailed,
   });
   const open = vi.fn(() => ({ closed: Promise.resolve(confirm), close: vi.fn() }));
   const show = vi.fn();
@@ -151,5 +152,21 @@ describe('HomebrewListComponent', () => {
     expect(remove).toHaveBeenCalledWith('homebrew-aaaaaaaa:item/shell');
     expect(show).toHaveBeenCalledWith('packs.homebrew.removed', { updated: 1 });
     expect(show).toHaveBeenCalledWith('packs.homebrew.pending', { count: 1 });
+    expect(show).not.toHaveBeenCalledWith('packs.homebrew.update-check-failed');
+  });
+
+  it('a Delete whose update check failed adds the update-check note', async () => {
+    const { fixture, root, show } = await setup(true, true);
+
+    root
+      .querySelector<HTMLButtonElement>(
+        '[data-entity-id="homebrew-aaaaaaaa:item/shell"] .hb-list__delete',
+      )!
+      .click();
+    await settle(fixture);
+    await settle(fixture);
+
+    expect(show).toHaveBeenCalledWith('packs.homebrew.removed', { updated: 1 });
+    expect(show).toHaveBeenCalledWith('packs.homebrew.update-check-failed');
   });
 });
