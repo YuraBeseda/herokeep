@@ -173,3 +173,53 @@ describe('ChoiceSchema scope (plan 14 task 1: additive initial/later class-choic
     expect(ChoiceSchema.safeParse({ ...base, scope: '' }).success).toBe(false);
   });
 });
+
+describe('PickSchema mixed-type picks (plan 14 task 2: additive `queries` + `EntityQuerySchema.category`)', () => {
+  const base = {
+    id: 'srd-5e-2024:feat/skilled@1/skills',
+    prompt: 'Skilled',
+    at: { kind: 'level', level: 1 },
+    count: 3,
+  };
+  const SKILL = { type: 'skill' } as const;
+  const TOOL = { type: 'item', category: 'tool' } as const;
+
+  it('accepts a union of several queries, parsed byte-identically', () => {
+    const c = ChoiceSchema.parse({ ...base, pick: { queries: [SKILL, TOOL] } });
+    expect(c.pick).toEqual({ queries: [{ type: 'skill' }, { type: 'item', category: 'tool' }] });
+  });
+
+  it('keeps an existing single-query pick byte-identical (no `queries`/`category` injected)', () => {
+    expect(ChoiceSchema.parse({ ...base, pick: { query: { type: 'skill' } } }).pick).toEqual({
+      query: { type: 'skill' },
+    });
+  });
+
+  it('makes `queries`, `query` and `static` mutually exclusive', () => {
+    const bad = [
+      { queries: [SKILL, TOOL], query: SKILL },
+      { queries: [SKILL, TOOL], static: ['srd-5e-2024:item/gaming-set-dice'] },
+      { query: SKILL, static: ['srd-5e-2024:item/gaming-set-dice'] },
+    ];
+    for (const pick of bad) expect(ChoiceSchema.safeParse({ ...base, pick }).success, JSON.stringify(pick)).toBe(false);
+  });
+
+  it('requires at least two queries (a single query is the `query` form)', () => {
+    expect(ChoiceSchema.safeParse({ ...base, pick: { queries: [] } }).success).toBe(false);
+    expect(ChoiceSchema.safeParse({ ...base, pick: { queries: [SKILL] } }).success).toBe(false);
+  });
+
+  it('rejects the skill-only `proficiency`/`requireProficient` keys on a `queries` pick', () => {
+    expect(
+      ChoiceSchema.safeParse({ ...base, pick: { queries: [SKILL, TOOL], proficiency: 'expertise' } }).success,
+    ).toBe(false);
+  });
+
+  it('`category` accepts exactly the item category enum', () => {
+    for (const category of ['weapon', 'armor', 'shield', 'gear', 'tool', 'consumable', 'magic']) {
+      expect(EntityQuerySchema.safeParse({ type: 'item', category }).success, category).toBe(true);
+    }
+    expect(EntityQuerySchema.safeParse({ type: 'item', category: 'tools' }).success).toBe(false);
+    expect(EntityQuerySchema.safeParse({ type: 'item', category: '' }).success).toBe(false);
+  });
+});

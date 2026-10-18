@@ -212,49 +212,49 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
-            },
-            "icon": {
               "$ref": "#/$defs/__schema59"
             },
+            "icon": {
+              "$ref": "#/$defs/__schema60"
+            },
             "level": {
-              "$ref": "#/$defs/__schema61"
+              "$ref": "#/$defs/__schema62"
             },
             "school": {
               "$ref": "#/$defs/__schema5"
             },
             "castingTime": {
-              "$ref": "#/$defs/__schema62"
-            },
-            "range": {
               "$ref": "#/$defs/__schema63"
             },
-            "components": {
+            "range": {
               "$ref": "#/$defs/__schema64"
             },
-            "duration": {
+            "components": {
               "$ref": "#/$defs/__schema65"
             },
-            "concentration": {
+            "duration": {
               "$ref": "#/$defs/__schema66"
             },
-            "ritual": {
+            "concentration": {
               "$ref": "#/$defs/__schema67"
             },
-            "classes": {
+            "ritual": {
               "$ref": "#/$defs/__schema68"
             },
-            "damage": {
+            "classes": {
               "$ref": "#/$defs/__schema69"
             },
-            "save": {
-              "$ref": "#/$defs/__schema71"
+            "damage": {
+              "$ref": "#/$defs/__schema70"
             },
-            "attack": {
+            "save": {
               "$ref": "#/$defs/__schema72"
             },
-            "higherLevels": {
+            "attack": {
               "$ref": "#/$defs/__schema73"
+            },
+            "higherLevels": {
+              "$ref": "#/$defs/__schema74"
             }
           },
           "required": [
@@ -282,7 +282,7 @@
           "type": "object",
           "properties": {
             "type": {
-              "$ref": "#/$defs/__schema74"
+              "$ref": "#/$defs/__schema75"
             },
             "id": {
               "$ref": "#/$defs/__schema20"
@@ -312,13 +312,13 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
-            },
-            "icon": {
               "$ref": "#/$defs/__schema59"
             },
+            "icon": {
+              "$ref": "#/$defs/__schema60"
+            },
             "category": {
-              "$ref": "#/$defs/__schema75"
+              "$ref": "#/$defs/__schema54"
             },
             "cost": {
               "$ref": "#/$defs/__schema76"
@@ -395,10 +395,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "uses": {
               "$ref": "#/$defs/__schema87"
@@ -450,10 +450,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "category": {
               "$ref": "#/$defs/__schema89"
@@ -510,10 +510,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "size": {
               "$ref": "#/$defs/__schema5"
@@ -574,10 +574,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "abilityScores": {
               "$ref": "#/$defs/__schema94"
@@ -641,10 +641,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "hitDie": {
               "$ref": "#/$defs/__schema98"
@@ -732,10 +732,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "class": {
               "$ref": "#/$defs/__schema20"
@@ -792,10 +792,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "levels": {
               "$ref": "#/$defs/__schema112"
@@ -847,10 +847,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "ability": {
               "$ref": "#/$defs/__schema26"
@@ -903,10 +903,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "abbreviation": {
               "$ref": "#/$defs/__schema26"
@@ -959,10 +959,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "script": {
               "$ref": "#/$defs/__schema116"
@@ -1014,10 +1014,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "category": {
               "$ref": "#/$defs/__schema118"
@@ -1069,10 +1069,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             }
           },
           "required": [
@@ -1121,10 +1121,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "columns": {
               "$ref": "#/$defs/__schema121"
@@ -1181,10 +1181,10 @@
               "$ref": "#/$defs/__schema50"
             },
             "deprecated": {
-              "$ref": "#/$defs/__schema58"
+              "$ref": "#/$defs/__schema59"
             },
             "icon": {
-              "$ref": "#/$defs/__schema59"
+              "$ref": "#/$defs/__schema60"
             },
             "abilities": {
               "$ref": "#/$defs/__schema126"
@@ -3077,14 +3077,30 @@
                   "$ref": "#/$defs/__schema52"
                 },
                 "proficiency": {
-                  "$ref": "#/$defs/__schema54"
+                  "$ref": "#/$defs/__schema55"
                 },
                 "requireProficient": {
-                  "$ref": "#/$defs/__schema55"
+                  "$ref": "#/$defs/__schema56"
                 }
               },
               "required": [
                 "query"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "queries": {
+                  "minItems": 2,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema52"
+                  }
+                }
+              },
+              "required": [
+                "queries"
               ],
               "additionalProperties": false
             },
@@ -3171,7 +3187,7 @@
                   "minItems": 1,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema56"
+                    "$ref": "#/$defs/__schema57"
                   }
                 }
               },
@@ -3270,6 +3286,9 @@
             "type": "string",
             "pattern": "^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)*$"
           }
+        },
+        "category": {
+          "$ref": "#/$defs/__schema54"
         }
       },
       "required": [
@@ -3301,21 +3320,33 @@
     "__schema54": {
       "type": "string",
       "enum": [
+        "weapon",
+        "armor",
+        "shield",
+        "gear",
+        "tool",
+        "consumable",
+        "magic"
+      ]
+    },
+    "__schema55": {
+      "type": "string",
+      "enum": [
         "proficient",
         "expertise"
       ]
     },
-    "__schema55": {
+    "__schema56": {
       "type": "boolean"
     },
-    "__schema56": {
+    "__schema57": {
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema57"
+        "$ref": "#/$defs/__schema58"
       }
     },
-    "__schema57": {
+    "__schema58": {
       "type": "object",
       "properties": {
         "item": {
@@ -3334,7 +3365,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema58": {
+    "__schema59": {
       "type": "object",
       "properties": {
         "replacedBy": {
@@ -3349,10 +3380,10 @@
       ],
       "additionalProperties": false
     },
-    "__schema59": {
+    "__schema60": {
       "anyOf": [
         {
-          "$ref": "#/$defs/__schema60"
+          "$ref": "#/$defs/__schema61"
         },
         {
           "type": "string",
@@ -3360,16 +3391,16 @@
         }
       ]
     },
-    "__schema60": {
+    "__schema61": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
-    "__schema61": {
+    "__schema62": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9
     },
-    "__schema62": {
+    "__schema63": {
       "type": "object",
       "properties": {
         "value": {
@@ -3398,7 +3429,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema63": {
+    "__schema64": {
       "type": "object",
       "properties": {
         "kind": {
@@ -3424,7 +3455,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema64": {
+    "__schema65": {
       "type": "object",
       "properties": {
         "v": {
@@ -3448,7 +3479,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema65": {
+    "__schema66": {
       "type": "object",
       "properties": {
         "kind": {
@@ -3480,23 +3511,23 @@
       ],
       "additionalProperties": false
     },
-    "__schema66": {
-      "type": "boolean"
-    },
     "__schema67": {
       "type": "boolean"
     },
     "__schema68": {
+      "type": "boolean"
+    },
+    "__schema69": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema33"
       }
     },
-    "__schema69": {
+    "__schema70": {
       "type": "object",
       "properties": {
         "dice": {
-          "$ref": "#/$defs/__schema70"
+          "$ref": "#/$defs/__schema71"
         },
         "type": {
           "$ref": "#/$defs/__schema45"
@@ -3508,38 +3539,26 @@
       ],
       "additionalProperties": false
     },
-    "__schema70": {
+    "__schema71": {
       "type": "string",
       "pattern": "^\\d{1,2}d(4|6|8|10|12|20|100)([+-]\\d{1,3})?$"
     },
-    "__schema71": {
+    "__schema72": {
       "$ref": "#/$defs/__schema26"
     },
-    "__schema72": {
+    "__schema73": {
       "type": "string",
       "enum": [
         "melee",
         "ranged"
       ]
     },
-    "__schema73": {
-      "$ref": "#/$defs/__schema8"
-    },
     "__schema74": {
-      "type": "string",
-      "const": "item"
+      "$ref": "#/$defs/__schema8"
     },
     "__schema75": {
       "type": "string",
-      "enum": [
-        "weapon",
-        "armor",
-        "shield",
-        "gear",
-        "tool",
-        "consumable",
-        "magic"
-      ]
+      "const": "item"
     },
     "__schema76": {
       "type": "object",
@@ -3609,7 +3628,7 @@
         "damage": {
           "anyOf": [
             {
-              "$ref": "#/$defs/__schema70"
+              "$ref": "#/$defs/__schema71"
             },
             {
               "type": "object",
@@ -3631,7 +3650,7 @@
           "$ref": "#/$defs/__schema45"
         },
         "versatile": {
-          "$ref": "#/$defs/__schema70"
+          "$ref": "#/$defs/__schema71"
         },
         "properties": {
           "default": [],
@@ -3940,7 +3959,7 @@
                 "$ref": "#/$defs/__schema40"
               },
               {
-                "$ref": "#/$defs/__schema70"
+                "$ref": "#/$defs/__schema71"
               },
               {
                 "type": "string",
@@ -4703,7 +4722,7 @@
       "type": "object",
       "properties": {
         "hash": {
-          "$ref": "#/$defs/__schema60"
+          "$ref": "#/$defs/__schema61"
         },
         "kind": {
           "type": "string",

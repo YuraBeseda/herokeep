@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { SlugSchema } from '../ids.ts';
 import { DiceOrFlatSchema, DiceSchema, RegainDiceSchema } from './common.ts';
 import { entity } from './entity-base.ts';
-import { DamageTypeSchema, LongTextSchema, ResetSchema } from './enums.ts';
+import { DamageTypeSchema, ItemCategorySchema, LongTextSchema, ResetSchema } from './enums.ts';
 import { FormulaSchema } from './formula.ts';
 import { AbilityKeySchema, ClassRefSchema, PredicateSchema } from './predicate.ts';
 
@@ -39,7 +39,7 @@ export const SpellEntitySchema = entity('spell', {
 });
 
 export const ItemEntitySchema = entity('item', {
-  category: z.enum(['weapon', 'armor', 'shield', 'gear', 'tool', 'consumable', 'magic']),
+  category: ItemCategorySchema,
   cost: z.strictObject({ amount: z.int().min(0), currency: SlugSchema }).optional(),
   weight: z.number().min(0).optional(),
   rarity: z.enum(['common', 'uncommon', 'rare', 'veryRare', 'legendary', 'artifact']).optional(),

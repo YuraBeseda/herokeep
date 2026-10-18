@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ENTITY_ID_RE, EntityIdSchema, EntityTypeSchema, SLUG_RE, parseEntityId } from '../ids.ts';
-import { ShortTextSchema } from './enums.ts';
+import { ItemCategorySchema, ShortTextSchema } from './enums.ts';
 import { FormulaSchema } from './formula.ts';
 import { AbilityKeySchema, ClassRefSchema, PredicateSchema } from './predicate.ts';
 
@@ -56,6 +56,13 @@ export const EntityQuerySchema = z.strictObject({
    * each level (a missing intermediate object is a non-match, not an error).
    */
   hasField: z.array(z.string().regex(FIELD_PATH_RE, 'Expected a dot-path like "weapon.mastery"')).optional(),
+  /**
+   * Plan 14 task 2 — additive: an item-category filter (the item `category` enum), e.g.
+   * `{type: 'item', category: 'tool'}` selects every tool. Matches only item entities (a non-item
+   * candidate is a non-match), same as `level`/`school` match only spells. `.optional()`, so every
+   * existing query parses byte-identically.
+   */
+  category: ItemCategorySchema.optional(),
 });
 
 /**
@@ -79,9 +86,22 @@ const QueryPickSchema = z
     message: '"proficiency"/"requireProficient" apply only to a {type: "skill"} query pick',
   });
 
+/**
+ * Plan 14 task 2 (mixed-type picks) — an additive pick form: the UNION of several entity queries,
+ * deduplicated and offered as ONE option list, with the choice's `count` applying to the union —
+ * e.g. the Skilled feat's "any combination of three skills or tools" is
+ * `{queries: [{type: 'skill'}, {type: 'item', category: 'tool'}]}`. Each selection grants through
+ * the path its own entity type already uses (a skill a skill proficiency, a tool a tool
+ * proficiency), so one mixed decision may land both. At least two queries (one query is the
+ * `query` form); mutually exclusive with `static` and `query` (strict union members), and carries
+ * none of the skill-only `proficiency`/`requireProficient` keys.
+ */
+const QueriesPickSchema = z.strictObject({ queries: z.array(EntityQuerySchema).min(2) });
+
 export const PickSchema = z.union([
   z.strictObject({ static: z.array(EntityIdSchema).min(1) }),
   QueryPickSchema,
+  QueriesPickSchema,
   z.strictObject({
     abilities: z.strictObject({
       count: z.int().min(1).max(6),

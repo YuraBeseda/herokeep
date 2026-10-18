@@ -15,6 +15,11 @@ export const SlotProgressionSchema = z.enum(['full', 'half', 'third', 'pact', 'n
  *  a caster progression at all. */
 export const MulticlassProgressionSchema = z.enum(['full', 'half', 'third']);
 export const DisplaySchema = z.enum(['pips', 'number']);
+/**
+ * An item entity's `category` (`ItemEntitySchema.category`). Shared with `EntityQuerySchema.category`
+ * (plan 14 task 2) so an item query's category filter can never drift from the item enum.
+ */
+export const ItemCategorySchema = z.enum(['weapon', 'armor', 'shield', 'gear', 'tool', 'consumable', 'magic']);
 /** save.<ability> | skill.<slug> | check.<ability> | attack | initiative */
 export const RollTargetSchema = z
   .string()
