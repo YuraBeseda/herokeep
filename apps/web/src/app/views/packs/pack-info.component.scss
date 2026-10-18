@@ -1,4 +1,6 @@
-:host {
+/* `ViewEncapsulation.None` (see the component): every rule is scoped by the `app-pack-info` element
+   or a `pack-info__` class, so nothing leaks. */
+app-pack-info {
   display: block;
 }
 
@@ -51,6 +53,14 @@
 
 .pack-info__attribution-body {
   overflow-wrap: anywhere;
+
+  /* Links come from the sanitized markdown (`[innerHTML]`), which emulated encapsulation cannot
+     reach — hence None above. They keep the body text colour (text-1 clears AA on every surface)
+     and are told apart by the underline, instead of the browser's default blue. */
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
 }
 
 .pack-info__counts,

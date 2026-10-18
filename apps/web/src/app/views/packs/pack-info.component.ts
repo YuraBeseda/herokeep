@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, resource } from '@angular/core';
+import { Component, computed, inject, input, resource, ViewEncapsulation } from '@angular/core';
 import type { Diagnostic } from '@hk/engine';
 import type { Pack } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -16,6 +16,10 @@ import { entityCountRows, type PackSummary } from './pack-summary';
  * Pack-authored values (name, authors, license, ids, diagnostic codes/messages) are DATA from the
  * pack or the validator, rendered as-is; every label around them is a `packs` scope key. The
  * attribution goes through the sanitizing `MarkdownService` (ADR-008: no raw HTML).
+ *
+ * `ViewEncapsulation.None`: the attribution's links are `[innerHTML]` content, which emulated
+ * encapsulation cannot style (the repo uses no `::ng-deep`); every selector in the stylesheet is
+ * prefixed by `app-pack-info` / `pack-info__`, so nothing leaks.
  */
 @Component({
   selector: 'app-pack-info',
@@ -23,6 +27,7 @@ import { entityCountRows, type PackSummary } from './pack-summary';
   providers: [provideTranslocoScope('packs')],
   templateUrl: './pack-info.component.html',
   styleUrl: './pack-info.component.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class PackInfoComponent {
   private readonly localeService = inject(LocaleService);

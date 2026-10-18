@@ -5,6 +5,16 @@
 .pack-detail__back {
   display: inline-block;
   margin-block-end: var(--space-3);
+
+  /* Same token as Settings' in-card links (accent-strong clears AA on surface-0 and surface-1). */
+  color: var(--accent-strong);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
 }
 
 .pack-detail__title {

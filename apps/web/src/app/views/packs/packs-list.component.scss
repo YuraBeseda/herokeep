@@ -59,6 +59,14 @@
   gap: var(--space-3);
   padding-block: var(--space-2);
   color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    .packs-list__name {
+      text-decoration: underline;
+    }
+  }
 }
 
 .packs-list__name {

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
@@ -11,6 +13,15 @@ import {
 import { createWizard, prepareSpell } from './helpers/create-wizard';
 
 const SERIOUS_IMPACTS = new Set(['serious', 'critical']);
+const SAMPLE_PACK_FIXTURE = path.join(
+  __dirname,
+  '..',
+  'src',
+  'testing',
+  'fixtures',
+  'packs',
+  'sample-content.json',
+);
 
 /** Runs axe-core against the current page and fails on any serious/critical violation. */
 async function assertNoSeriousViolations(page: Page, screen: string): Promise<void> {
@@ -41,6 +52,51 @@ test.describe('accessibility (axe)', () => {
   test('settings has no serious/critical violations', async ({ page }) => {
     await page.goto('/settings');
     await assertNoSeriousViolations(page, 'settings');
+  });
+
+  // Plan 15 Task 3: the packs screens (list, core-pack detail with its rendered attribution
+  // links, and the import trust dialog — fresh and "already installed").
+
+  test('the packs list has no serious/critical violations', async ({ page }) => {
+    await page.goto('/packs');
+    await expect(page.locator('.packs-list__title')).toBeVisible();
+    await assertNoSeriousViolations(page, 'packs list');
+  });
+
+  test('the core pack detail has no serious/critical violations', async ({ page }) => {
+    await page.goto('/packs/srd-5e-2024@0.1.0');
+    await expect(page.locator('.pack-info__attribution-body a').first()).toBeVisible();
+    await assertNoSeriousViolations(page, 'pack detail — core');
+  });
+
+  test('the pack trust dialog has no serious/critical violations', async ({ page }) => {
+    // The sample content fixture as a bare pack.json: a bare JSON file cannot carry assets, so
+    // the icon and its asset entry are dropped.
+    const pack = JSON.parse(readFileSync(SAMPLE_PACK_FIXTURE, 'utf8')) as {
+      entities: Record<string, unknown>[];
+      assets: unknown[];
+    };
+    pack.assets = [];
+    for (const entity of pack.entities) delete entity['icon'];
+    const file = {
+      name: 'pack.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(pack)),
+    };
+
+    await page.goto('/packs');
+    await expect(page.locator('.packs-list__title')).toBeVisible();
+    await page.locator('.packs-list__import-input').setInputFiles(file);
+    await expect(page.locator('.pack-trust-dialog__title')).toBeVisible();
+    await assertNoSeriousViolations(page, 'pack trust dialog');
+
+    await page.locator('.pack-trust-dialog__install').click();
+    await expect(page.locator('.pack-trust-dialog__title')).toHaveCount(0);
+    await expect(page.locator('.packs-list__content .packs-list__row')).toHaveCount(1);
+
+    await page.locator('.packs-list__import-input').setInputFiles(file);
+    await expect(page.locator('.pack-trust-dialog__reason')).toBeVisible();
+    await assertNoSeriousViolations(page, 'pack trust dialog — already installed');
   });
 
   test('about has no serious/critical violations', async ({ page }) => {
