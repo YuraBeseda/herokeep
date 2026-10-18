@@ -235,6 +235,54 @@ describe('CreateWizardComponent', () => {
     expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe('Name');
   });
 
+  it('re-homes a count-2 pick answered one toggle at a time onto the next unanswered choice, not past it (rogue Expertise -> Weapon Masteries)', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const root = () => fixture.nativeElement as HTMLElement;
+    const title = () => norm(root().querySelector('.choice-step__title')?.textContent);
+    const expertise = 'srd-5e-2024:class/rogue@1/expertise';
+
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Vessa');
+    state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
+    state.setDecision('srd-5e-2024:system/5e-2024@0/background', [
+      'srd-5e-2024:background/soldier',
+    ]);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision(
+      'srd-5e-2024:system/5e-2024@0/ability-scores',
+      ['str:8', 'dex:15', 'con:13', 'int:12', 'wis:10', 'cha:14'],
+      { method: 'standardArray' },
+    );
+    state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/rogue']);
+    state.setDecision('srd-5e-2024:class/rogue@1/skills', [
+      'stealth',
+      'acrobatics',
+      'deception',
+      'sleight-of-hand',
+    ]);
+    await fixture.whenStable();
+
+    // name -> the first remaining choice step: Expertise (sorted before weapon-masteries).
+    root().querySelector<HTMLButtonElement>('.create-wizard__next')!.click();
+    await fixture.whenStable();
+    expect(title()).toContain('Expertise');
+
+    // The choice step commits per toggle: first toggle -> decided-but-invalid (count 1 of 2).
+    state.setDecision(expertise, ['srd-5e-2024:skill/stealth']);
+    await fixture.whenStable();
+    expect(title()).toContain('Expertise');
+
+    // Second toggle completes it: the step vanishes and the wizard must land on Weapon Masteries.
+    state.setDecision(expertise, [
+      'srd-5e-2024:skill/stealth',
+      'srd-5e-2024:skill/sleight-of-hand',
+    ]);
+    await fixture.whenStable();
+    expect(root().querySelector('.equipment-step')).toBeNull();
+    expect(title()).toBe('Weapon Masteries');
+  });
+
   it('the create button becomes enabled once every outstanding choice is decided, and creating navigates to /c/<id>/play', async () => {
     const fixture = TestBed.createComponent(CreateWizardComponent);
     await fixture.whenStable();

@@ -10,14 +10,15 @@ import {
 const CHARACTER_NAME = 'Vessa Quickfingers';
 
 /**
- * Task 11 (phase 4 plan 13) — the offline slice-3 e2e: a Rogue through the REAL creation wizard,
- * exercising Task 1's expertise pick end to end (`srd-5e-2024:class/rogue@1/expertise`, pick
+ * A Rogue through the REAL creation wizard (offline), exercising the expertise pick end to end
+ * (`srd-5e-2024:class/rogue@1/expertise`, pick
  * `{query:{type:'skill'}, proficiency:'expertise', requireProficient:true}`, count 2 —
- * `packages/content/src/overlays/rogue.json`) and Task 2's tool rows (Rogue's fixed
+ * `packages/content/src/overlays/rogue.json`), the wizard's step order (Weapon Masteries follows
+ * Expertise directly once Expertise resolves) and the tool proficiency rows (Rogue's fixed
  * `toolProficiencies: ['thieves-tools']` lands in `sheet.proficiencies` as a `kind:'tool'` row, which
  * the play tab's Proficiencies section lists under "Tools").
  *
- * The expertise pick's options come from the engine's `queryPickOptions` (Task 1): only skills the
+ * The expertise pick's options come from the engine's `queryPickOptions`: only skills the
  * draft character is ALREADY proficient in are offered — the 4 rogue class picks below plus the
  * Soldier's fixed Athletics and Intimidation. Perception sits in the rogue pool but is not picked
  * here, and Arcana is outside it, so neither may appear as an expertise option.
@@ -112,20 +113,14 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
       await pickCards(page, EXPERTISE_PICKS);
     });
 
-    await test.step('weapon masteries: Dagger + Shortsword', async () => {
-      // A count-2 choice that is partially answered moves from `outstanding` to
-      // `invalidDecisions`, i.e. to the END of `CreateWizardState.curatedChoiceSteps()`; when it then
-      // resolves, `reHomeActiveStep` re-homes by its (new, later) index, which can land on Equipment
-      // past the still-outstanding Weapon Masteries step. A player then uses Back — so does this test.
-      const masteriesTitle = page.locator('.choice-step__title', {
-        hasText: WEAPON_MASTERIES_TITLE,
-      });
-      const equipment = page.locator('.equipment-step');
-      await expect(masteriesTitle.or(equipment)).toBeVisible();
-      if (await equipment.isVisible()) await page.locator('.create-wizard__back').click();
-      await expect(masteriesTitle).toBeVisible();
+    await test.step('weapon masteries: Dagger + Shortsword (directly after Expertise)', async () => {
+      // Expertise is a count-2 pick committed per toggle: after its first toggle it is
+      // decided-but-invalid, and it must keep its choice-id-sorted step slot so that resolving it
+      // re-homes the wizard onto the still-outstanding Weapon Masteries step, not past it.
+      await expect(page.locator('.choice-step__title')).toHaveText(WEAPON_MASTERIES_TITLE);
+      await expect(page.locator('.equipment-step')).toHaveCount(0);
       await pickCards(page, WEAPON_MASTERY_PICKS);
-      await expect(equipment).toBeVisible();
+      await expect(page.locator('.equipment-step')).toBeVisible();
     });
 
     await test.step('equipment: nothing equipped; review is complete; create', async () => {

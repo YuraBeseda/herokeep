@@ -296,6 +296,32 @@ describe('CreateWizardState', () => {
     expect(state.steps().map((s) => s.id)).not.toContain('ability-scores');
   });
 
+  it('non-curated choice steps stay sorted by choice id while a count-2 pick is partially answered (outstanding -> invalid keeps its slot)', () => {
+    const state = createState();
+    const rogueExpertise = 'srd-5e-2024:class/rogue@1/expertise';
+    const rogueMasteries = 'srd-5e-2024:class/rogue@1/weapon-masteries';
+    state.name.set('Vessa');
+    state.setDecision(SPECIES_CHOICE, ['srd-5e-2024:species/human']);
+    state.setDecision(BACKGROUND_CHOICE, ['srd-5e-2024:background/soldier']);
+    state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/rogue']);
+    state.setDecision('srd-5e-2024:class/rogue@1/skills', [
+      'stealth',
+      'acrobatics',
+      'deception',
+      'sleight-of-hand',
+    ]);
+    const before = state.steps().map((s) => s.id);
+    expect(before.indexOf(rogueExpertise)).toBeLessThan(before.indexOf(rogueMasteries));
+
+    // One toggle of a count-2 pick: the choice is now DECIDED (no longer outstanding) but invalid
+    // (wrong count) — it must keep its choice-id-sorted slot, not migrate to the end of the block.
+    state.setDecision(rogueExpertise, ['srd-5e-2024:skill/stealth']);
+    expect(state.invalidDecisions().has(rogueExpertise)).toBe(true);
+    const during = state.steps().map((s) => s.id);
+    expect(during.indexOf(rogueExpertise)).toBeGreaterThan(-1);
+    expect(during.indexOf(rogueExpertise)).toBeLessThan(during.indexOf(rogueMasteries));
+  });
+
   it('buildTransaction appends extraDrafts last', () => {
     const state = createState();
     state.name.set('Aldric');

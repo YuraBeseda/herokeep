@@ -235,7 +235,8 @@ export class CreateWizardState {
 
   /** ORDER: 'name' → one step per outstanding-or-invalidly-decided creation choice in a stable
    * curated order (species, background, background-abilities, class, ability-scores,
-   * class-skills, then remaining sorted) → 'spells' (only when `draftSheet` has a spellcasting
+   * class-skills, then the remaining ones sorted by choice id — outstanding and invalid alike,
+   * see `curatedChoiceSteps`) → 'spells' (only when `draftSheet` has a spellcasting
    * block) → 'equipment' → 'review'. The whole middle section (every step but 'name'/'review')
    * only appears once `draftSheet` is defined — before a name is set there is nothing to decide,
    * equip, or review yet.
@@ -300,6 +301,13 @@ export class CreateWizardState {
       if (choiceId)
         steps.push({ id: knownId, labelKey: labelKeyFor(knownId), choiceId, kind: 'choice' });
     }
+    // Sorted by choice id (the same plain code-unit order `outstandingChoices` already emits):
+    // a decided-but-invalid choice — e.g. a count-2 pick after its first toggle, which the choice
+    // step commits immediately — must keep the slot it had while outstanding. Appending the
+    // invalid ids after the outstanding ones instead moved it to the END of this block, so when it
+    // then resolved `CreateWizardComponent.reHomeActiveStep` re-homed by that later ordinal and
+    // skipped any still-outstanding choice sorted after it (rogue Expertise -> Weapon Masteries).
+    rest.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     for (const choiceId of rest) {
       steps.push({ id: choiceId, labelKey: labelKeyFor('choice'), choiceId, kind: 'choice' });
     }
