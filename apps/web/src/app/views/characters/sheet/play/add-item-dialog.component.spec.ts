@@ -9,8 +9,10 @@ import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { DialogService } from '@shared/components/dialog/dialog.service';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { AddItemDialogComponent } from './add-item-dialog.component';
 
 // Real built SRD pack (same "prefer the real pack" ruling every other play-tab dialog spec
@@ -33,6 +35,9 @@ const corePack = readPack(
   join(repoRoot, 'packages/content/dist/packs', PACK_ID, PACK_VERSION, 'pack.json'),
 );
 const DAGGER_ID = 'srd-5e-2024:item/dagger';
+const parsedSample = parsePack(sampleJson);
+if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+const sample = parsedSample.pack;
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -40,7 +45,8 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
-function configure(): void {
+/** `pins` given: a loaded character pinned to them (only `facts().pins` is read by the dialog). */
+function configure(packs: Pack[] = [corePack], pins?: Record<string, string>): void {
   TestBed.configureTestingModule({
     providers: [
       provideTransloco({
@@ -51,8 +57,9 @@ function configure(): void {
       provideTranslocoScope('characters'),
       {
         provide: PackStore,
-        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        useValue: { packs: signal(packs), ready: signal(true), corePack: signal(corePack) },
       },
+      ...(pins ? [{ provide: CharacterStore, useValue: { facts: signal({ pins }) } }] : []),
     ],
   });
 }
@@ -134,5 +141,26 @@ describe('AddItemDialogComponent', () => {
     TestBed.tick();
 
     expect(await handle.closed).toBeUndefined();
+  });
+
+  // Plan 15 Task 4: the dialog renders under the root injector, so it scopes its own EngineFacade
+  // to the loaded character's pins — a pinned pack's items are addable, an unpinned one's are not.
+  it("lists the items of the character's pinned content packs", () => {
+    configure([corePack, sample], {
+      [corePack.id]: corePack.version,
+      [sample.id]: sample.version,
+    });
+    open();
+    TestBed.tick();
+
+    expect(searchAndFindCard('Moonblade', 'Moonblade Sickle')).toBeTruthy();
+  });
+
+  it('does not list the items of an installed pack the character does not pin', () => {
+    configure([corePack, sample], { [corePack.id]: corePack.version });
+    open();
+    TestBed.tick();
+
+    expect(() => searchAndFindCard('Moonblade', 'Moonblade Sickle')).toThrow();
   });
 });

@@ -4,7 +4,8 @@ import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogRef } from '@shared/components/dialog/dialog.service';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
-import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { EngineFacade, provideEngineScope } from '@shared/services/engine/engine.facade';
+import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { EntityPickerComponent } from '../../create-wizard/steps/entity-picker.component';
 
 // `hk-entity-picker`'s R3 render cap (task-6 fix round, plan 5) — same value
@@ -38,6 +39,10 @@ export interface AddItemDialogResult {
     NumberFieldComponent,
     EntityPickerComponent,
   ],
+  // Plan 15 Task 4: dialog content renders under the ROOT injector (outside the sheet shell's
+  // scope), so it scopes its own `EngineFacade` (and the embedded picker's) to the loaded
+  // character's pins — a pinned pack's items are offered, an unpinned pack's are not.
+  providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
   templateUrl: './add-item-dialog.component.html',
 })
 export class AddItemDialogComponent {
