@@ -36,7 +36,9 @@ export type DerivedContribution = DerivedValue['contributions'][number];
           ) {
             <li class="derived-popover__row">
               <span class="derived-popover__source">{{ sourceName(c) }}</span>
-              <span class="derived-popover__amount">{{ amountText(c) }}</span>
+              <span class="derived-popover__amount" [attr.title]="formulaTitle(c)">{{
+                amountText(c)
+              }}</span>
             </li>
           }
         </ul>
@@ -73,10 +75,18 @@ export class DerivedPopoverContentComponent {
     return index.has(id) ? this.engineFacade.localizer().name(id) : id;
   }
 
+  // Plan 14 Task 6 (ruling 9): the engine stamps a formula contribution's evaluated `amount` next to
+  // its kept `formula` (`ModifierTable.resolve`), so the row shows the NUMBER and the formula moves
+  // to secondary text (`formulaTitle`, the hover title). A formula with no amount (never produced by
+  // the current engine) still falls back to printing the formula rather than nothing.
   protected amountText(c: DerivedContribution): string {
-    if (c.formula !== undefined) return c.formula;
-    if (c.amount === undefined) return '';
+    if (c.amount === undefined) return c.formula ?? '';
     return c.amount > 0 ? `+${c.amount}` : `${c.amount}`;
+  }
+
+  // `null` removes the attribute entirely — a plain-amount row carries no title at all.
+  protected formulaTitle(c: DerivedContribution): string | null {
+    return c.amount !== undefined && c.formula !== undefined ? c.formula : null;
   }
 }
 

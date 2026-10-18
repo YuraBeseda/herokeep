@@ -143,6 +143,40 @@ describe('DerivedPopoverDirective', () => {
     expect(document.querySelector('hk-dialog')).toBeNull();
   });
 
+  // Plan 14 Task 6 (ruling 9): the engine stamps a formula contribution's evaluated `amount` next
+  // to the kept `formula` — the row shows the number, with the formula as secondary (title) text.
+  it('shows a formula contribution as its resolved number, with the formula as the title', async () => {
+    const formula = '10 + 5 * floor((classLevel(monk) - 2) / 4)';
+    const fixture = TestBed.createComponent(DerivedHostComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.derived.set({
+      value: 40,
+      contributions: [
+        { source: 'srd-5e-2024:feat/defense', kind: 'speed.bonus', formula, amount: 10 },
+      ],
+    });
+    await fixture.whenStable();
+
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.host-tile')!.click();
+    TestBed.tick();
+
+    const amount = document.querySelector<HTMLElement>('.derived-popover__amount')!;
+    expect(amount.textContent?.trim()).toBe('+10');
+    expect(amount.getAttribute('title')).toBe(formula);
+    expect(document.querySelector('.cdk-overlay-container')!.textContent).not.toContain('floor');
+  });
+
+  it('a plain amount carries no formula title', async () => {
+    const fixture = TestBed.createComponent(DerivedHostComponent);
+    await fixture.whenStable();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.host-tile')!.click();
+    TestBed.tick();
+
+    const amount = document.querySelector<HTMLElement>('.derived-popover__amount')!;
+    expect(amount.textContent?.trim()).toBe('+16');
+    expect(amount.hasAttribute('title')).toBe(false);
+  });
+
   it('renders an empty-state message when there are no contributions', async () => {
     const fixture = TestBed.createComponent(DerivedHostComponent);
     await fixture.whenStable();

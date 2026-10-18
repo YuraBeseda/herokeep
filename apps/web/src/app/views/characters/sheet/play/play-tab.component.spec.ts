@@ -1379,6 +1379,42 @@ describe('PlayTabComponent — conditions and notes controls', () => {
     expect(compiled.textContent).toContain(charactersEn.sheet.conditions.immunitiesTitle);
   });
 
+  // Plan 14 Task 6: `sheet.resistances` (damage.resistance, Task 3) renders beside the immunity
+  // badges — the damage type's pack `rule` entity name through the Localizer plus the granting
+  // source's name. Display-only, absent entirely while the sheet has none.
+  it('renders damage resistances as badges with their granting source (attuned Cloak of Arachnida)', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(PlayTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(characterStore.sheet()!.resistances).toBeUndefined();
+    expect(compiled.querySelector('.play-tab__resistances')).toBeNull();
+    expect(compiled.textContent).not.toContain(charactersEn.sheet.conditions.resistancesTitle);
+
+    const instanceId = '66666666-6666-4666-8666-666666666666';
+    await characterStore.appendTx([
+      {
+        type: 'item.added',
+        v: 1,
+        payload: { instanceId, itemId: 'srd-5e-2024:item/cloak-of-arachnida', qty: 1 },
+      },
+      { type: 'item.equipped', v: 1, payload: { instanceId } },
+      { type: 'item.attuned', v: 1, payload: { instanceId } },
+    ]);
+    await pollUntil(fixture, () => (characterStore.sheet()?.resistances?.length ?? 0) === 1);
+    await fixture.whenStable();
+
+    const badges = Array.from(
+      compiled.querySelectorAll('.play-tab__resistances li hk-chip'),
+      (el) => el.textContent?.trim(),
+    );
+    expect(badges).toEqual(['Damage type: Poison (Cloak of Arachnida)']);
+    expect(compiled.querySelector('.play-tab__resistances .hk-chip__remove')).toBeNull();
+    expect(compiled.textContent).toContain(charactersEn.sheet.conditions.resistancesTitle);
+  });
+
   it('note add/edit/remove round-trips through propose.note (each via its own dialog)', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);

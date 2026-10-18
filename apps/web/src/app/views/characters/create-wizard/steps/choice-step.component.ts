@@ -242,12 +242,20 @@ export class ChoiceStepComponent {
     // step is guaranteed a not-yet-decided choice (see `CreateWizardState.curatedChoiceSteps`'s
     // doc), so starting empty is always correct, never a loss of a real prior selection — unless
     // the consumer supplies an `initialSelection` for it (plan 13 task 9, see that input's doc).
+    // Plan 14 Task 6: a non-empty seed is VALIDATED on arrival (diagnostics only — nothing is
+    // committed; only the player's own toggle commits), so a grown 3-of-4 re-offer shows its
+    // `selection.count` message before the first click. `untracked`: the validate source (draft /
+    // live sheet) must never become a dependency that re-runs this reset. An empty start stays
+    // diagnostic-free — "pick N" before any input would just be noise.
     effect(() => {
-      this.choiceId();
-      const seed = untracked(() => this.initialSelection());
-      this.selection.set(seed ? [...seed] : []);
-      this.diagnostics.set([]);
-      this.literalDraft.set('');
+      const choiceId = this.choiceId();
+      untracked(() => {
+        const seed = this.initialSelection();
+        const selection = seed ? [...seed] : [];
+        this.selection.set(selection);
+        this.diagnostics.set(selection.length > 0 ? this.runValidate(choiceId, selection) : []);
+        this.literalDraft.set('');
+      });
     });
   }
 

@@ -49,9 +49,10 @@ export type RestDialogResult =
  * `hitDice` param only bookkeeps spent dice without healing (double-spend trap if both are used
  * for the same dice). So the short-rest flow here is: roll → `propose.spendHitDie` → collect,
  * repeated one die at a time, then on confirm every collected draft is handed back to
- * `PlayTabComponent`, which concatenates them with `propose.rest(sheet, 'short')` into ONE
- * `appendTx` call so the whole rest shares a single `txId` (Global Constraints: "CONCAT related
- * proposals into ONE `appendTx` call").
+ * `PlayTabComponent`, which concatenates them with
+ * `propose.rest(sheet, 'short', undefined, regainRolls)` into ONE `appendTx` call so the whole
+ * rest shares a single `txId` (Global Constraints: "CONCAT related proposals into ONE `appendTx`
+ * call").
  *
  * This makes `RestDialogComponent` the one play-tab dialog that calls a `propose.*` function
  * itself — every sibling dialog (cast/condition/note/add-item) only returns a plain decision for

@@ -425,6 +425,46 @@ describe('ChoiceStepComponent', () => {
       ]);
     });
 
+    // Plan 14 Task 6: a seeded (pre-selected) selection is validated on arrival, so a grown
+    // 3-of-4 re-offer shows its count message BEFORE the first toggle — diagnostics only, the
+    // seed alone still commits nothing.
+    it('a seeded 3-of-4 weapon-mastery selection shows the count diagnostic before any click, without committing', async () => {
+      const state = seedLevel4Fighter();
+      const seed = [
+        'srd-5e-2024:item/longsword',
+        'srd-5e-2024:item/shortsword',
+        'srd-5e-2024:item/dagger',
+      ];
+      expect(state.validate(WEAPON_MASTERIES_CHOICE, seed)).toContainEqual(
+        expect.objectContaining({ code: 'selection.count' }),
+      );
+
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('initialSelection', seed);
+      fixture.componentRef.setInput('choiceId', WEAPON_MASTERIES_CHOICE);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const pressed = selectButtons(compiled).filter(
+        (b) => b.getAttribute('aria-pressed') === 'true',
+      );
+      expect(pressed.map(nameOf).sort()).toEqual(['Dagger', 'Longsword', 'Shortsword']);
+      const diagnostics = Array.from(compiled.querySelectorAll('.choice-step__diagnostic')).map(
+        (d) => d.textContent?.trim(),
+      );
+      expect(diagnostics).toContain(charactersEn.validation.selection.count);
+      expect(state.decisions().has(WEAPON_MASTERIES_CHOICE)).toBe(false);
+    });
+
+    it('an unseeded step still opens with no diagnostics (nothing to validate yet)', async () => {
+      seedLevel4Fighter();
+      const fixture = TestBed.createComponent(ChoiceStepComponent);
+      fixture.componentRef.setInput('choiceId', WEAPON_MASTERIES_CHOICE);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBe(0);
+    });
+
     it('the engine still refuses a programmatic selection of a gated Epic Boon (backstop untouched)', async () => {
       const state = seedLevel4Fighter();
       const boon = 'srd-5e-2024:feat/boon-of-fate';

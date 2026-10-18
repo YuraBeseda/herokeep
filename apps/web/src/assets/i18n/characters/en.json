@@ -447,6 +447,8 @@
       "chipLabel": "{name} ({level})",
       "immunitiesTitle": "Immunities",
       "immunityChip": "{name} ({sources})",
+      "resistancesTitle": "Resistances",
+      "resistanceChip": "{name} ({sources})",
       "addDialog": {
         "title": "Add condition",
         "conditionLabel": "Condition",
@@ -596,7 +598,7 @@
     "slot-spent": "Spent a level {level} spell slot.",
     "slot-restored": "Restored a level {level} spell slot.",
     "resource-spent": "Spent {resourceId}.",
-    "resource-restored": "Restored {resourceId}.",
+    "resource-restored": "{restored, select, partial {Restored {count} {resourceKind, select, item {{count, plural, one {charge} other {charges}}} other {{count, plural, one {use} other {uses}}}} of {resourceId}.} other {Restored {resourceId}.}}",
     "spell-prepared": "Prepared {spellId}.",
     "spell-unprepared": "Unprepared {spellId}.",
     "spell-learned": "Learned {spellId}.",

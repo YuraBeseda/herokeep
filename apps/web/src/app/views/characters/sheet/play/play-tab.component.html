@@ -719,6 +719,21 @@
           }
         </ul>
       }
+      @if (resistances().length > 0) {
+        <h3 class="play-tab__subtitle">{{ t('sheet.conditions.resistancesTitle') }}</h3>
+        <ul class="play-tab__resistances">
+          @for (resistance of resistances(); track resistance.id) {
+            <li>
+              <hk-chip>{{
+                t('sheet.conditions.resistanceChip', {
+                  name: resistance.name,
+                  sources: resistance.sources,
+                })
+              }}</hk-chip>
+            </li>
+          }
+        </ul>
+      }
     </hk-sheet-section>
 
     <!-- Proficiencies / senses / languages -->

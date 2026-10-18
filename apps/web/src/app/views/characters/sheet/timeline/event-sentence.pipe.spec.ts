@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TestBed } from '@angular/core/testing';
-import { createContentIndex, createLocalizer, type ContentIndex, type Localizer } from '@hk/engine';
+import {
+  createContentIndex,
+  createLocalizer,
+  type ContentIndex,
+  type Localizer,
+  type Sheet,
+} from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, TranslocoService, type TranslocoLoader } from '@jsverse/transloco';
@@ -241,6 +247,123 @@ describe('EventSentencePipe', () => {
     );
     expect(sentence).toContain('стандартное');
     expect(sentence).not.toContain('standard');
+  });
+
+  // Plan 14 Task 6: a counted `resource.restored` (rolled item regain, or the play tab's one-pip
+  // restore) says how much came back, and an `item:<uuid>` resource id resolves to that inventory
+  // instance's item name from the sheet instead of leaking the raw key.
+  const WAND_INSTANCE = '55555555-5555-4555-8555-555555555555';
+  const wandSheet = {
+    resources: [
+      {
+        id: `item:${WAND_INSTANCE}`,
+        name: 'Wand of Magic Missiles',
+        max: { value: 7, contributions: [] },
+        used: 3,
+        reset: 'dawn',
+        display: 'number',
+        source: 'srd-5e-2024:item/wand-of-magic-missiles',
+      },
+      {
+        id: 'second-wind',
+        name: 'Second Wind',
+        max: { value: 2, contributions: [] },
+        used: 1,
+        reset: 'shortRest',
+        display: 'pips',
+        source: 'srd-5e-2024:feature/fighter-second-wind',
+      },
+    ],
+    inventory: [
+      {
+        instanceId: WAND_INSTANCE,
+        itemId: 'srd-5e-2024:item/wand-of-magic-missiles',
+        qty: 1,
+        equipped: true,
+        attuned: false,
+        resolved: true,
+      },
+    ],
+  } as unknown as Sheet;
+
+  it('renders a counted "resource.restored" with the item instance name from the sheet', () => {
+    const resourceId = `item:${WAND_INSTANCE}`;
+    const two = pipe.transform(
+      makeEvent('resource.restored', { resourceId, count: 2 }),
+      index,
+      localizer,
+      1,
+      undefined,
+      wandSheet,
+    );
+    expect(two).toBe('Restored 2 charges of Wand of Magic Missiles.');
+    const one = pipe.transform(
+      makeEvent('resource.restored', { resourceId, count: 1 }),
+      index,
+      localizer,
+      1,
+      undefined,
+      wandSheet,
+    );
+    expect(one).toBe('Restored 1 charge of Wand of Magic Missiles.');
+  });
+
+  it('a feature resource counts uses, and the uncounted (full-restore) form keeps its sentence', () => {
+    const one = pipe.transform(
+      makeEvent('resource.restored', { resourceId: 'second-wind', count: 1 }),
+      index,
+      localizer,
+      1,
+      undefined,
+      wandSheet,
+    );
+    expect(one).toBe('Restored 1 use of Second Wind.');
+    const full = pipe.transform(
+      makeEvent('resource.restored', { resourceId: 'second-wind' }),
+      index,
+      localizer,
+      1,
+      undefined,
+      wandSheet,
+    );
+    expect(full).toBe('Restored Second Wind.');
+  });
+
+  it('an item resource whose instance left the derived resources still names the inventory item', () => {
+    const unequipped = {
+      ...wandSheet,
+      resources: [],
+    } as unknown as Sheet;
+    const sentence = pipe.transform(
+      makeEvent('resource.spent', { resourceId: `item:${WAND_INSTANCE}` }),
+      index,
+      localizer,
+      1,
+      undefined,
+      unequipped,
+    );
+    expect(sentence).toBe('Spent Wand of Magic Missiles.');
+  });
+
+  it('without a sheet an item resource id falls back to the raw key (no crash)', () => {
+    const sentence = pipe.transform(
+      makeEvent('resource.restored', { resourceId: `item:${WAND_INSTANCE}`, count: 3 }),
+      index,
+      localizer,
+    );
+    expect(sentence).toBe(`Restored 3 charges of item:${WAND_INSTANCE}.`);
+  });
+
+  it('renders a counted "resource.restored" with ru CLDR plural forms', async () => {
+    await firstValueFrom(translocoService.load('characters/ru'));
+    translocoService.setActiveLang('ru');
+    const event = (count: number) =>
+      makeEvent('resource.restored', { resourceId: `item:${WAND_INSTANCE}`, count });
+    const few = pipe.transform(event(2), index, localizer, 1, undefined, wandSheet);
+    const many = pipe.transform(event(5), index, localizer, 1, undefined, wandSheet);
+    expect(few).toContain('2 заряда');
+    expect(many).toContain('5 зарядов');
+    expect(few).not.toContain('item:');
   });
 
   // task-14: ICU plural coverage — `hit_dice.spent` already carries full ru CLDR one/few/many

@@ -447,6 +447,8 @@
       "chipLabel": "{name} ({level})",
       "immunitiesTitle": "Імунітети",
       "immunityChip": "{name} ({sources})",
+      "resistancesTitle": "Опір",
+      "resistanceChip": "{name} ({sources})",
       "addDialog": {
         "title": "Додати стан",
         "conditionLabel": "Стан",
@@ -596,7 +598,7 @@
     "slot-spent": "Витрачено комірку заклинань {level} рівня.",
     "slot-restored": "Відновлено комірку заклинань {level} рівня.",
     "resource-spent": "Витрачено: {resourceId}.",
-    "resource-restored": "Відновлено: {resourceId}.",
+    "resource-restored": "{restored, select, partial {Відновлено ({resourceId}): {count} {resourceKind, select, item {{count, plural, one {заряд} few {заряди} many {зарядів} other {заряду}}} other {{count, plural, one {використання} few {використання} many {використань} other {використання}}}}.} other {Відновлено: {resourceId}.}}",
     "spell-prepared": "Підготовлено: {spellId}.",
     "spell-unprepared": "Скасовано підготовку: {spellId}.",
     "spell-learned": "Вивчено: {spellId}.",

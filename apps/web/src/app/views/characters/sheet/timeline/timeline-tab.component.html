@@ -25,7 +25,12 @@
               <p class="timeline-tab__sentence">
                 {{
                   row.events[0]
-                    | eventSentence: index() : localizer() : row.events.length : grammaticalGender()
+                    | eventSentence
+                      : index()
+                      : localizer()
+                      : row.events.length
+                      : grammaticalGender()
+                      : sheet()
                 }}
               </p>
               @if (isOverride(row)) {
@@ -82,7 +87,10 @@
               <ul class="timeline-tab__members">
                 @for (event of row.events; track event.id) {
                   <li class="timeline-tab__member">
-                    {{ event | eventSentence: index() : localizer() : 1 : grammaticalGender() }}
+                    {{
+                      event
+                        | eventSentence: index() : localizer() : 1 : grammaticalGender() : sheet()
+                    }}
                   </li>
                 }
               </ul>

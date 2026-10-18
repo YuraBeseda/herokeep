@@ -375,7 +375,8 @@
   gap: var(--space-1);
 }
 
-.play-tab__immunities {
+.play-tab__immunities,
+.play-tab__resistances {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);

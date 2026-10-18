@@ -1,5 +1,5 @@
 import { inject, Pipe, type PipeTransform } from '@angular/core';
-import type { ContentIndex, Localizer } from '@hk/engine';
+import type { ContentIndex, Localizer, Sheet } from '@hk/engine';
 import { EVENT_PAYLOADS, type Event, type GrammaticalGender } from '@hk/protocol';
 import { TranslocoService } from '@jsverse/transloco';
 
@@ -96,6 +96,34 @@ function resolveValue(value: unknown, index: ContentIndex, localizer: Localizer)
   return value;
 }
 
+/** The resource events whose `resourceId` names a sheet resource rather than an entity id. */
+const RESOURCE_EVENT_TYPES: ReadonlySet<string> = new Set(['resource.spent', 'resource.restored']);
+const ITEM_RESOURCE_PREFIX = 'item:';
+
+/** Plan 14 Task 6: a resource id → its display name. An entity id resolves through the Localizer
+ * as before; otherwise the sheet's `ResourceView` is looked up by id and named the way the play
+ * tab's `resourceLabel` names it (its `source` entity through the Localizer, else its baked name);
+ * an `item:<instanceId>` key whose instance no longer derives a resource (unequipped, un-attuned)
+ * falls back to that inventory instance's item name. With no sheet, or nothing found, the raw id
+ * stays — never a crash. */
+function resourceName(
+  id: string,
+  index: ContentIndex,
+  localizer: Localizer,
+  sheet: Pick<Sheet, 'resources' | 'inventory'> | undefined,
+): string {
+  if (index.has(id)) return localizer.name(id);
+  const view = sheet?.resources.find((r) => r.id === id);
+  if (view) return index.has(view.source) ? localizer.name(view.source) : view.name;
+  if (id.startsWith(ITEM_RESOURCE_PREFIX)) {
+    const instanceId = id.slice(ITEM_RESOURCE_PREFIX.length);
+    const entry = sheet?.inventory.find((e) => e.instanceId === instanceId);
+    if (entry?.itemId !== undefined && index.has(entry.itemId)) return localizer.name(entry.itemId);
+    if (entry?.name !== undefined) return entry.name;
+  }
+  return id;
+}
+
 /** Builds the named-param record a sentence's ICU template draws from: every top-level payload
  * field whose value is a string/string-array/number/boolean (id-resolved per `resolveValue`);
  * free-form maps (`decision.made`'s `context`, `item.added`'s `custom`) are deliberately excluded
@@ -109,6 +137,7 @@ function buildParams(
   rawPayload: unknown,
   index: ContentIndex,
   localizer: Localizer,
+  sheet?: Pick<Sheet, 'resources' | 'inventory'>,
 ): Record<string, unknown> {
   const payload = (rawPayload && typeof rawPayload === 'object' ? rawPayload : {}) as Record<
     string,
@@ -147,6 +176,20 @@ function buildParams(
           (typeof instanceId === 'string' ? instanceId : ''));
   }
 
+  // Plan 14 Task 6: resource sentences name the resource (see `resourceName`) and, for
+  // `resource.restored`, say how much came back. `count` is OPTIONAL (omitted = the full restore a
+  // rest records), and an ICU template can't safely reference an optional field, so the always-set
+  // `restored` ('partial' | 'full') select guards the counted branch; `resourceKind`
+  // ('item' | 'feature') picks charges vs uses.
+  if (RESOURCE_EVENT_TYPES.has(type) && typeof payload['resourceId'] === 'string') {
+    const resourceId = payload['resourceId'];
+    params['resourceId'] = resourceName(resourceId, index, localizer, sheet);
+    params['resourceKind'] = resourceId.startsWith(ITEM_RESOURCE_PREFIX) ? 'item' : 'feature';
+    if (type === 'resource.restored') {
+      params['restored'] = typeof payload['count'] === 'number' ? 'partial' : 'full';
+    }
+  }
+
   return params;
 }
 
@@ -168,14 +211,18 @@ export interface EventSentence {
  * that historical moment, per `buildParams`'s normal payload copy above), and that always wins
  * over the character's current facts — a sentence about a past event should agree with the
  * gender it recorded then, not whatever the character is set to now. Every ru/uk sentence that
- * doesn't reference `{grammaticalGender}` in its ICU template simply ignores the extra param. */
+ * doesn't reference `{grammaticalGender}` in its ICU template simply ignores the extra param.
+ *
+ * `sheet` (plan 14 Task 6, additive) is the character's CURRENT derived sheet, used only to name
+ * resource ids that aren't entity ids (`second-wind`, `item:<instanceId>`) — see `resourceName`. */
 export function sentenceOf(
   event: Event,
   index: ContentIndex,
   localizer: Localizer,
   grammaticalGender?: GrammaticalGender,
+  sheet?: Pick<Sheet, 'resources' | 'inventory'>,
 ): EventSentence {
-  const params = buildParams(event.type, event.payload, index, localizer);
+  const params = buildParams(event.type, event.payload, index, localizer, sheet);
   if (grammaticalGender !== undefined && params['grammaticalGender'] === undefined) {
     params['grammaticalGender'] = grammaticalGender;
   }
@@ -214,6 +261,9 @@ export function sentenceOf(
  * without it; only a caller that wants a gendered ICU `select` to actually render needs to pass
  * the character's `facts.grammaticalGender` (see `sentenceOf`'s doc for the payload-wins-over-it
  * precedence).
+ *
+ * `sheet` (plan 14 Task 6) is an ADDITIVE 6th argument, same posture: omitted, a resource id that
+ * isn't an entity id stays raw exactly as before.
  */
 @Pipe({ name: 'eventSentence', pure: false })
 export class EventSentencePipe implements PipeTransform {
@@ -225,8 +275,9 @@ export class EventSentencePipe implements PipeTransform {
     localizer: Localizer,
     groupSize = 1,
     grammaticalGender?: GrammaticalGender,
+    sheet?: Pick<Sheet, 'resources' | 'inventory'>,
   ): string {
-    const sentence = sentenceOf(event, index, localizer, grammaticalGender);
+    const sentence = sentenceOf(event, index, localizer, grammaticalGender, sheet);
     const key = sentence.key;
     const params = sentence.params;
     const base = this.translocoService.translate(key, params);

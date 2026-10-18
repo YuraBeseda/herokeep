@@ -536,6 +536,19 @@ export class PlayTabComponent {
     })),
   );
 
+  // Plan 14 Task 6: `sheet.resistances` (damage.resistance, Task 3 — display-only, mirrors
+  // `immunities` above). A damage type is a plain slug, named through the pack's own
+  // `rule/damage-type-<slug>` entity (see `damageTypeName`); omitted from the sheet when none.
+  protected readonly resistances = computed<{ id: string; name: string; sources: string }[]>(() => {
+    const index = this.engineFacade.index();
+    const localizer = this.engineFacade.localizer();
+    return (this.sheet()?.resistances ?? []).map((r) => ({
+      id: r.type,
+      name: this.damageTypeName(r.type, index, localizer),
+      sources: r.sources.map((source) => this.resolveName(source)).join(', '),
+    }));
+  });
+
   // task-4-brief.md: the condition-add dialog's options — `index.system().conditions` (the
   // pack's own entity-id list, never a hardcoded set) resolved to a localized name and a
   // data-driven `levelBearing` flag. `levelBearing` reads `ConditionEntitySchema.levels`
@@ -881,6 +894,15 @@ export class PlayTabComponent {
     return skillId && index.has(skillId) ? localizer.name(skillId) : slug;
   }
 
+  // A damage type (`damage.resistance.types[]`) is a plain slug; the SRD pack declares one `rule`
+  // entity per type (`rule/damage-type-<slug>`, from the vendored damage-types rules) under the
+  // system's own pack id — same resolve-else-slug convention as `skillName`/`toolName`.
+  private damageTypeName(slug: string, index: ContentIndex, localizer: Localizer): string {
+    const packId = parseEntityId(index.system().id)?.packId;
+    const ruleId = packId ? makeEntityId(packId, 'rule', `damage-type-${slug}`) : undefined;
+    return ruleId && index.has(ruleId) ? localizer.name(ruleId) : slug;
+  }
+
   private toolName(slug: string, index: ContentIndex, localizer: Localizer): string {
     const packId = parseEntityId(index.system().id)?.packId;
     const itemId = packId ? makeEntityId(packId, 'item', slug) : undefined;
@@ -898,7 +920,8 @@ export class PlayTabComponent {
   // healing is collected INSIDE `RestDialogComponent` itself, one `propose.spendHitDie` draft per
   // die the player rolls (that dialog is the one play-tab dialog allowed to call a `propose.*`
   // function directly — see its class doc for why). This handler's only job is to concatenate
-  // those collected drafts with `propose.rest(sheet, 'short')` into ONE `appendTx` call, so the
+  // those collected drafts with `propose.rest(sheet, 'short', undefined, regainRolls)` into ONE
+  // `appendTx` call (hit dice ride as drafts, so the `hitDice` argument stays undefined), so the
   // whole rest — every hit die spent plus the rest itself — shares a single `txId` in the
   // timeline. Re-reads `this.sheet()` AFTER the dialog closes for the FINAL `propose.rest` call
   // (same "never a stale pre-dialog snapshot" convention `onCastLeveled` documents) — the already-
@@ -926,9 +949,9 @@ export class PlayTabComponent {
 
   // A long rest never spends hit dice one at a time (5e regains them automatically — the
   // reducer's own `rest.taken@1` handler, `handlers/casting.ts`), so this is just a confirm dialog
-  // followed by a single `propose.rest(sheet, 'long')` call — no drafts to concatenate. Plan 13
-  // task 6: dice-regain items (`charges.regain`) are rolled here with `cryptoRng` and passed as
-  // `regainRolls` (the engine records each total; it never rolls).
+  // followed by a single `propose.rest(sheet, 'long', undefined, regainRolls)` call — no drafts to
+  // concatenate. Plan 13 task 6: dice-regain items (`charges.regain`) are rolled here with
+  // `cryptoRng` and passed as `regainRolls` (the engine records each total; it never rolls).
   protected async onLongRest(): Promise<void> {
     const openSheet = this.sheet();
     if (!openSheet) return;

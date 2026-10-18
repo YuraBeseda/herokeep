@@ -124,6 +124,9 @@ export class TimelineTabComponent {
   protected readonly index = this.engineFacade.index;
   protected readonly localizer = this.engineFacade.localizer;
   protected readonly skippedIds = this.characterStore.skippedIds;
+  // Plan 14 Task 6: the current sheet, so `EventSentencePipe` can name non-entity resource ids
+  // (`second-wind`, `item:<instanceId>`) instead of printing the raw key.
+  protected readonly sheet = this.characterStore.sheet;
   protected readonly families = TIMELINE_FAMILIES;
 
   // task-14: the character's CURRENT grammatical gender, threaded into `EventSentencePipe` so a

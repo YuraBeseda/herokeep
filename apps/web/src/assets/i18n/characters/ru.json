@@ -447,6 +447,8 @@
       "chipLabel": "{name} ({level})",
       "immunitiesTitle": "Иммунитеты",
       "immunityChip": "{name} ({sources})",
+      "resistancesTitle": "Сопротивления",
+      "resistanceChip": "{name} ({sources})",
       "addDialog": {
         "title": "Добавить состояние",
         "conditionLabel": "Состояние",
@@ -596,7 +598,7 @@
     "slot-spent": "Потрачена ячейка заклинаний {level} уровня.",
     "slot-restored": "Восстановлена ячейка заклинаний {level} уровня.",
     "resource-spent": "Потрачено: {resourceId}.",
-    "resource-restored": "Восстановлено: {resourceId}.",
+    "resource-restored": "{restored, select, partial {Восстановлено ({resourceId}): {count} {resourceKind, select, item {{count, plural, one {заряд} few {заряда} many {зарядов} other {заряда}}} other {{count, plural, one {использование} few {использования} many {использований} other {использования}}}}.} other {Восстановлено: {resourceId}.}}",
     "spell-prepared": "Подготовлено: {spellId}.",
     "spell-unprepared": "Отменена подготовка: {spellId}.",
     "spell-learned": "Выучено: {spellId}.",
