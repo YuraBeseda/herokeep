@@ -338,6 +338,26 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.success');
   });
 
+  it('toasts a warning for every pinned pack the export left out', async () => {
+    const id = await seedFighter('Ivan');
+    vi.spyOn(TestBed.inject(HeroWriterService), 'export').mockResolvedValue({
+      blob: new Blob(['zip'], { type: 'application/zip' }),
+      fileName: 'Ivan.hero',
+      warnings: [{ code: 'pack-assets-missing', pack: 'sample-content@1.0.0' }],
+    });
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+    root.querySelector<HTMLButtonElement>('.sheet-shell__export')!.click();
+    await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 1);
+
+    expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.success');
+    expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.pack-assets-missing', {
+      pack: 'sample-content@1.0.0',
+    });
+  });
+
   it('a HeroWriterService.export failure toasts characters.sheet.export.failure and re-enables the Export button', async () => {
     const id = await seedFighter('Ivan');
     const heroWriterService = TestBed.inject(HeroWriterService);

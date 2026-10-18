@@ -271,7 +271,8 @@
     "export": {
       "success": "Персонаж экспортирован.",
       "failure": "Не удалось экспортировать персонажа. Попробуйте ещё раз.",
-      "pickerDescription": "Персонаж Herokeep"
+      "pickerDescription": "Персонаж Herokeep",
+      "pack-assets-missing": "Набор {pack} не включён: на этом устройстве нет некоторых его изображений."
     },
     "portrait": {
       "alt": "Портрет {name}",

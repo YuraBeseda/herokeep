@@ -63,10 +63,12 @@ function setup(
     read?: ReturnType<typeof vi.fn>;
     content?: Pack[];
     storedPins?: Record<string, string>[];
+    removeTranslationFails?: boolean;
   } = {},
 ) {
   const translationPacks = signal<Pack[]>([RU]);
   const removeTranslation = vi.fn((key: string) => {
+    if (options.removeTranslationFails) return Promise.reject(new Error('idb'));
     translationPacks.update((packs) => packs.filter((p) => `${p.id}@${p.version}` !== key));
     return Promise.resolve();
   });
@@ -181,6 +183,20 @@ describe('PacksListComponent', () => {
 
     expect(removeTranslation).toHaveBeenCalledWith('srd-5e-2024-ru-sample@0.1.0');
     expect(root.querySelector('[data-pack-key="srd-5e-2024-ru-sample@0.1.0"]')).toBeNull();
+  });
+
+  it('a failed translation removal toasts remove-failed and keeps the chip', async () => {
+    const { show } = setup({ removeTranslationFails: true });
+    const { fixture, root } = await render();
+
+    root
+      .querySelector<HTMLElement>('[data-pack-key="srd-5e-2024-ru-sample@0.1.0"] .hk-chip__remove')!
+      .click();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(show).toHaveBeenCalledWith('packs.remove-failed');
+    expect(root.querySelector('[data-pack-key="srd-5e-2024-ru-sample@0.1.0"]')).not.toBeNull();
   });
 
   it('binds the Import button to a hidden file input accepting .hkpack and .json', async () => {

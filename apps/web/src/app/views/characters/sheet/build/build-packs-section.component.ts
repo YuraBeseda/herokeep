@@ -44,7 +44,11 @@ interface Blocked {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-const diagnosticKey = (d: Diagnostic): string => `${d.code}\u0000${d.message}`;
+/** Identity of a diagnostic across two indexes: code + path, so a message that embeds versions
+ * (which differ between `current` and `next`) does not make a known problem look new. The
+ * dependency diagnostics (`deps.*`, `packages/engine/src/content/deps.ts`) carry no `path` (the
+ * pack id is only in the message), so those fall back to the message. */
+const diagnosticKey = (d: Diagnostic): string => `${d.code}\u0000${d.path ?? d.message}`;
 
 /** The error diagnostics of `next` that `current` does not already have. */
 function introducedErrors(current: ContentIndex, next: ContentIndex): Diagnostic[] {

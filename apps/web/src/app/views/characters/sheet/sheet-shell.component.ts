@@ -208,11 +208,17 @@ export class SheetShellComponent {
 
     this.exporting.set(true);
     try {
-      const { blob, fileName } = await this.heroWriterService.export(characterId);
+      const { blob, fileName, warnings } = await this.heroWriterService.export(characterId);
       const description = t('sheet.export.pickerDescription');
       const outcome = await deliverHeroBundle(blob, fileName, description);
       if (outcome !== 'cancelled') {
         this.toastService.show('characters.sheet.export.success');
+        // Plan 15 final fix wave C1: a pinned pack the bundle could not carry.
+        for (const warning of warnings) {
+          this.toastService.show(`characters.sheet.export.${warning.code}`, {
+            pack: warning.pack,
+          });
+        }
       }
     } catch {
       this.toastService.show('characters.sheet.export.failure');

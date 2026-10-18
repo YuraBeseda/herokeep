@@ -91,7 +91,11 @@ export class PacksListComponent {
   }
 
   protected async removeTranslation(pack: Pack): Promise<void> {
-    await this.packStore.removeTranslation(packKey(pack));
+    try {
+      await this.packStore.removeTranslation(packKey(pack));
+    } catch {
+      this.toastService.show('packs.remove-failed');
+    }
   }
 
   protected async onImportFileSelected(event: Event): Promise<void> {

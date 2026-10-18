@@ -284,9 +284,10 @@ describe('HeroWriterService — pinned content packs (plan 15 Task 6)', () => {
       mkEvent(uuid(221), 'pack.pinned', { packId: sample.id, version: sample.version }),
     ]);
 
-    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const { blob, warnings } = await TestBed.inject(HeroWriterService).export(streamId);
     const zip = await unzipBlob(blob);
 
+    expect(warnings).toEqual([]); // not installed: the importer's pin warning covers it
     expect(Object.keys(zip).sort()).toEqual(['events.json', 'manifest.json']);
     const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as Record<string, unknown>;
     expect(manifest).not.toHaveProperty('packs');
@@ -304,10 +305,14 @@ describe('HeroWriterService — pinned content packs (plan 15 Task 6)', () => {
       mkEvent(uuid(231), 'pack.pinned', { packId: sample.id, version: sample.version }),
     ]);
 
-    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const { blob, warnings } = await TestBed.inject(HeroWriterService).export(streamId);
     const zip = await unzipBlob(blob);
 
     expect(Object.keys(zip).sort()).toEqual(['events.json', 'manifest.json']);
+    // Plan 15 final fix wave C1: the omission is surfaced, not silent.
+    expect(warnings).toEqual([
+      { code: 'pack-assets-missing', pack: `${sample.id}@${sample.version}` },
+    ]);
   });
 });
 

@@ -56,9 +56,19 @@ export function heroPackPath(id: string, version: string): string {
   return `packs/${id}@${version}.json`;
 }
 
+/** Something the export left out that the user should know about (plan 15 final fix wave C1):
+ * `pack-assets-missing` — the character pins `pack` (`id@version`), installed here, but some of
+ * its asset blobs are not stored locally, so it is not carried. `code` names the toast key
+ * `characters.sheet.export.<code>`. */
+export interface HeroExportWarning {
+  readonly code: 'pack-assets-missing';
+  readonly pack: string;
+}
+
 export interface HeroBundleResult {
   readonly blob: Blob;
   readonly fileName: string;
+  readonly warnings: readonly HeroExportWarning[];
 }
 
 type ResolvedImage = HeroBundleImage & { readonly bytes: Uint8Array };
@@ -103,7 +113,8 @@ export class HeroWriterService {
     const events = await this.eventsRepository.byStream(characterId);
     const facts = reduce(events);
     const images = await this.resolveImages(facts.portrait);
-    const packs = await this.resolvePacks(facts.pins);
+    const warnings: HeroExportWarning[] = [];
+    const packs = await this.resolvePacks(facts.pins, warnings);
 
     const manifest = {
       format: 1 as const,
@@ -148,16 +159,20 @@ export class HeroWriterService {
     const zipped = zipSync(files);
     const blob = new Blob([zipped], { type: 'application/zip' });
 
-    return { blob, fileName: `${sanitizeHeroFileName(facts.name)}.hero` };
+    return { blob, fileName: `${sanitizeHeroFileName(facts.name)}.hero`, warnings };
   }
 
   /**
    * The character's non-core pins (sorted by id) whose exact `id@version` is an installed content
    * pack AND whose every asset blob is present locally — anything less would build a bundle the
    * importer must refuse, so such a pack is left out (its pin then surfaces as an importer warning,
-   * exactly like a pack that is not installed at all).
+   * exactly like a pack that is not installed at all). An installed pack left out for missing
+   * assets is also reported in `warnings` (`pack-assets-missing`), since the user can fix it.
    */
-  private async resolvePacks(pins: Readonly<Record<string, string>>): Promise<ResolvedPack[]> {
+  private async resolvePacks(
+    pins: Readonly<Record<string, string>>,
+    warnings: HeroExportWarning[],
+  ): Promise<ResolvedPack[]> {
     // Read through `packs()` (core + content + translations) only, like `EngineFacade.indexFor`, so
     // every existing `PackStore` test double keeps working.
     const all = this.packStore.packs();
@@ -175,7 +190,10 @@ export class HeroWriterService {
         if (!row) break;
         assets.push({ hash: asset.hash, bytes: row.bytes });
       }
-      if (assets.length !== pack.assets.length) continue;
+      if (assets.length !== pack.assets.length) {
+        warnings.push({ code: 'pack-assets-missing', pack: `${id}@${version}` });
+        continue;
+      }
       const json = new TextEncoder().encode(canonicalJson(pack));
       const path = heroPackPath(id, version);
       resolved.push({ row: { id, version, path, sha256: await sha256Hex(json) }, json, assets });

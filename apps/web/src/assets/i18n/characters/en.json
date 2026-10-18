@@ -271,7 +271,8 @@
     "export": {
       "success": "Character exported.",
       "failure": "Couldn't export the character. Try again.",
-      "pickerDescription": "Herokeep character"
+      "pickerDescription": "Herokeep character",
+      "pack-assets-missing": "The pack {pack} was not included: some of its images are missing on this device."
     },
     "portrait": {
       "alt": "{name}'s portrait",
