@@ -5,7 +5,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { reduce } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
-import { PACK_LIMITS, parsePack, type Event, type Pack } from '@hk/protocol';
+import { HKPACK_LIMITS, PACK_LIMITS, parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { of } from 'rxjs';
@@ -22,6 +22,7 @@ import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/cha
 import { PackStore } from '@shared/stores/pack.store';
 import { extensionForMime, hexOfHash, HeroWriterService } from './hero-writer.service';
 import {
+  HERO_EVENTS_MAX_BYTES,
   HeroImportBadEventError,
   HeroImportBadManifestError,
   HeroImportBadPackError,
@@ -320,6 +321,93 @@ describe('HeroReaderService', () => {
     const file = buildZip({ 'readme.txt': strToU8('not a .hero bundle') });
 
     await expect(reader.import(file)).rejects.toBeInstanceOf(HeroImportBadZipError);
+  });
+
+  // --- Plan 15 final fix wave A1: every entry is capped from the central directory ------------
+
+  it('aborts at the entry cap on a forged zip64 directory claiming millions of entries', async () => {
+    const reader = TestBed.inject(HeroReaderService);
+    // Same 98-byte forgery as the `.hkpack` reader spec: [zip64 EOCD record (56)] [zip64 EOCD
+    // locator (20)] [EOCD (22)], the zip64 record claiming `claimed` entries at offset 0.
+    const claimed = 50_000_000;
+    const forged = new Uint8Array(56 + 20 + 22);
+    const view = new DataView(forged.buffer);
+    view.setUint32(0, 0x06064b50, true); // zip64 EOCD record signature
+    view.setUint32(32, claimed, true); // total entries
+    view.setUint32(48, 0, true); // central directory offset
+    view.setUint32(56, 0x07064b50, true); // zip64 EOCD locator signature
+    view.setUint32(56 + 8, 0, true); // offset of the zip64 EOCD record
+    view.setUint32(76, 0x06054b50, true); // EOCD signature
+    view.setUint16(76 + 8, 0xffff, true); // entry count: see zip64 record
+    const file = new File([forged], 'forged.hero');
+
+    const started = performance.now();
+    const error = await reader.import(file).catch((e: unknown) => e);
+    const elapsed = performance.now() - started;
+
+    expect(error).toBeInstanceOf(HeroImportBadZipError);
+    expect((error as { detail?: string }).detail).toBe('entries');
+    expect((error as { actual?: number }).actual).toBe(HKPACK_LIMITS.maxEntries + 1);
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it('refuses a bundle with more entries than the cap, directories included', async () => {
+    const reader = TestBed.inject(HeroReaderService);
+    const files: Record<string, Uint8Array> = {
+      'manifest.json': strToU8(JSON.stringify(minimalManifest())),
+      'events.json': strToU8('[]'),
+    };
+    for (let i = 0; i < HKPACK_LIMITS.maxEntries; i++) files[`dir${i}/`] = new Uint8Array(0);
+
+    const error = await reader.import(buildZip(files)).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HeroImportBadZipError);
+    expect((error as { detail?: string }).detail).toBe('entries');
+  });
+
+  it('refuses an events.json over the events cap before inflating it', async () => {
+    const reader = TestBed.inject(HeroReaderService);
+    // A whitespace-padded `[]`: valid JSON for an empty event list, one byte over the cap.
+    const events = new Uint8Array(HERO_EVENTS_MAX_BYTES + 1).fill(0x20);
+    events[0] = 0x5b; // [
+    events[events.length - 1] = 0x5d; // ]
+    const file = new File(
+      [
+        zipSync(
+          { 'manifest.json': strToU8(JSON.stringify(minimalManifest())), 'events.json': events },
+          { level: 1 },
+        ),
+      ],
+      'big-events.hero',
+    );
+
+    const error = await reader.import(file).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HeroImportBadZipError);
+    expect((error as { detail?: string }).detail).toBe('events-bytes');
+  });
+
+  it('refuses an images/ entry over the largest image cap before inflating it', async () => {
+    const reader = TestBed.inject(HeroReaderService);
+    const maxImageCap = Math.max(...Object.values(IMAGE_BYTE_CAPS));
+    const file = new File(
+      [
+        zipSync(
+          {
+            'manifest.json': strToU8(JSON.stringify(minimalManifest())),
+            'events.json': strToU8('[]'),
+            [`images/${'a'.repeat(64)}.webp`]: new Uint8Array(maxImageCap + 1),
+          },
+          { level: 1 },
+        ),
+      ],
+      'big-image.hero',
+    );
+
+    const error = await reader.import(file).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(HeroImportBadZipError);
+    expect((error as { detail?: string }).detail).toBe('image-bytes');
   });
 
   it('rejects a bundle whose manifest fails schema validation with HeroImportBadManifestError', async () => {

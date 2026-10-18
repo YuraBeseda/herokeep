@@ -4,6 +4,7 @@ import {
   formatIssues,
   HeroBundleImageSchema,
   HKPACK_ASSET_DIR,
+  HKPACK_LIMITS,
   PACK_LIMITS,
   parseEvent,
   parseHeroManifest,
@@ -51,6 +52,33 @@ export class HeroImportBadZipError extends Error {
     super('The selected file is not a valid .hero bundle.');
     this.name = 'HeroImportBadZipError';
     this.cause = cause;
+  }
+}
+
+/** `events.json` cap, checked from the central directory before inflation: 16 MiB is ~50,000
+ * events at a generous ~300 bytes each, far beyond any real character's history. */
+export const HERO_EVENTS_MAX_BYTES = 16 * 1024 * 1024;
+
+/** `manifest.json` cap, checked the same way: 1 MiB holds thousands of image/pack rows. */
+export const HERO_MANIFEST_MAX_BYTES = 1024 * 1024;
+
+/** The largest per-kind image cap; any `images/*` entry declaring more can never pass the
+ * per-kind check after inflation, so it is refused before. */
+const HERO_IMAGE_ENTRY_MAX_BYTES = Math.max(...Object.values(IMAGE_BYTE_CAPS));
+
+/** Plan 15 final fix wave A1: the bundle's central directory declares more entries than
+ * `HKPACK_LIMITS.maxEntries`, or an entry the reader reads declares more bytes than its cap. A
+ * subclass of `HeroImportBadZipError`, so it shares that error's toast
+ * (`characters.list.toast.import-failed-bad-zip`): the file is not an importable `.hero` bundle. */
+export class HeroImportTooLargeError extends HeroImportBadZipError {
+  constructor(
+    readonly detail: 'entries' | 'events-bytes' | 'manifest-bytes' | 'image-bytes',
+    readonly actual: number,
+    readonly limit: number,
+  ) {
+    super();
+    this.message = `The .hero bundle exceeds a size limit (${detail}: ${actual} > ${limit}).`;
+    this.name = 'HeroImportTooLargeError';
   }
 }
 
@@ -173,6 +201,9 @@ interface BundlePack {
 /** The zip directory carried packs live in (`HeroWriterService`'s `heroPackPath`). */
 const PACK_ENTRY_DIR = 'packs/';
 
+/** The zip directory character images live in (`HeroWriterService`'s `images/<hex>.<ext>`). */
+const IMAGE_ENTRY_DIR = 'images/';
+
 function packKey(pack: Pack): string {
   return `${pack.id}@${pack.version}`;
 }
@@ -264,21 +295,51 @@ export class HeroReaderService {
 
     const { unzipSync, strFromU8 } = await import('fflate');
 
-    // Plan 15 Task 6: entries a carried pack lives in (`packs/…`, `assets/…`) are capped from their
-    // central-directory sizes BEFORE inflating (pack JSON ≤ `PACK_LIMITS.maxBytes`, an asset ≤ the
-    // `AssetSchema` cap) — skipped and remembered here, refused below only if the manifest
-    // actually names them. Every other entry is read exactly as before.
+    // Every entry is checked from its central-directory sizes BEFORE inflating (fflate sizes an
+    // inflated entry's buffer from the declared `originalSize`):
+    // - every entry, directories included, counts toward `HKPACK_LIMITS.maxEntries`, and the cap
+    //   THROWS from inside the filter: fflate walks as many headers as the archive CLAIMS (a forged
+    //   zip64 record can claim 2^32), so merely returning `false` would keep the thread busy;
+    // - `manifest.json`, `events.json` and `images/*` over their caps throw
+    //   `HeroImportTooLargeError` (A1, plan 15 final fix wave);
+    // - entries a carried pack lives in (`packs/…`, `assets/…`, plan 15 Task 6) over their caps are
+    //   skipped and remembered, refused below only if the manifest actually names them;
+    // - directories and any other entry are counted but never inflated (the reader reads nothing
+    //   else).
     const oversized = new Set<string>();
+    let entries = 0;
     let zip: Record<string, Uint8Array>;
     try {
       zip = unzipSync(new Uint8Array(await file.arrayBuffer()), {
         filter: (info) => {
-          const cap = info.name.startsWith(PACK_ENTRY_DIR)
-            ? PACK_LIMITS.maxBytes
-            : info.name.startsWith(HKPACK_ASSET_DIR)
-              ? PACK_ASSET_BYTE_CAP
-              : undefined;
-          if (cap !== undefined && Math.max(info.size, info.originalSize) > cap) {
+          entries++;
+          if (entries > HKPACK_LIMITS.maxEntries) {
+            throw new HeroImportTooLargeError('entries', entries, HKPACK_LIMITS.maxEntries);
+          }
+          const declared = Math.max(info.size, info.originalSize);
+          const hardCap =
+            info.name === 'events.json'
+              ? (['events-bytes', HERO_EVENTS_MAX_BYTES] as const)
+              : info.name === 'manifest.json'
+                ? (['manifest-bytes', HERO_MANIFEST_MAX_BYTES] as const)
+                : info.name.startsWith(IMAGE_ENTRY_DIR) && !info.name.endsWith('/')
+                  ? (['image-bytes', HERO_IMAGE_ENTRY_MAX_BYTES] as const)
+                  : undefined;
+          if (hardCap) {
+            if (declared > hardCap[1]) {
+              throw new HeroImportTooLargeError(hardCap[0], declared, hardCap[1]);
+            }
+            return true;
+          }
+          const softCap = info.name.endsWith('/')
+            ? undefined
+            : info.name.startsWith(PACK_ENTRY_DIR)
+              ? PACK_LIMITS.maxBytes
+              : info.name.startsWith(HKPACK_ASSET_DIR)
+                ? PACK_ASSET_BYTE_CAP
+                : undefined;
+          if (softCap === undefined) return false; // directory or unknown entry: never read
+          if (declared > softCap) {
             oversized.add(info.name);
             return false;
           }
@@ -286,6 +347,7 @@ export class HeroReaderService {
         },
       });
     } catch (cause) {
+      if (cause instanceof HeroImportBadZipError) throw cause;
       throw new HeroImportBadZipError(cause);
     }
     const manifestBytes = zip['manifest.json'];
