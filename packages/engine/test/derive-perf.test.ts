@@ -26,6 +26,10 @@ import { loadDistPack, loadGoldens } from './support/golden.ts';
  * Plan 12 task 15: re-measured over the slice-2 goldens too — the three densest level-20 casters
  * (sorcerer: subclass HP + 4 resources; druid; paladin: 5 resources + half-caster) and the two
  * slot-lane multiclass cases — alongside the original plan-11 heaviest golden (same baseline row).
+ *
+ * Plan 13 task 10: plus the heaviest slice-3 goldens — the half+half caster multiclass with five
+ * resources, a free-cast offer and a multiclass Expertise pick (`multi-paladin5-ranger3`), and the
+ * level-11 rogue whose four Expertise picks run the post-pass upgrade (`rogue-11-expertise`).
  */
 const PERF_FIXTURES = [
   'multi-fighter1-wizard19',
@@ -34,6 +38,8 @@ const PERF_FIXTURES = [
   'paladin-20',
   'multi-paladin5-cleric3',
   'multi-sorcerer5-warlock3',
+  'multi-paladin5-ranger3',
+  'rogue-11-expertise',
 ];
 
 describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
@@ -76,7 +82,7 @@ describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
       const line =
         `- ${new Date().toISOString()}: derive-only, ${fixtureName} (${events.length} events), ` +
         `25 samples, median ${median.toFixed(3)} ms ` +
-        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-12 task-15 measurement, not the ` +
+        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-13 task-10 measurement, not the ` +
         `reduce+derive 536-event tripwire above)\n`;
       if (!existsSync(perfMdPath)) {
         writeFileSync(
