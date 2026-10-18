@@ -1,5 +1,6 @@
 {
   "name": "charged-items-and-attunement",
+  "note": "Plan 14 task 6 re-pin (resolved amounts in provenance, ruling 9): this fixture pins sheet.resources whole, which serializes each pool's max Derived<number>. ModifierTable.resolve now stamps the evaluated amount next to a kept formula, so the two formula contributions (wand-of-sparks charges formula \"3\", second-wind formula \"2\") legitimately gain amount 3 and amount 2. Every value, max and other field is unchanged (proved by the t6 before/after pinned-path diff: equal modulo amount). No other expectation moves.",
   "packs": ["core-mini"],
   "events": [
     {
@@ -135,7 +136,8 @@
               "source": "core-mini:item/wand-of-sparks",
               "kind": "item.charges",
               "formula": "3",
-              "key": "item:44444444-4444-7444-8444-444444444441"
+              "key": "item:44444444-4444-7444-8444-444444444441",
+              "amount": 3
             }
           ]
         },
@@ -155,7 +157,8 @@
               "feature": "core-mini:feature/second-wind",
               "kind": "resource.define",
               "formula": "2",
-              "key": "second-wind"
+              "key": "second-wind",
+              "amount": 2
             }
           ]
         },

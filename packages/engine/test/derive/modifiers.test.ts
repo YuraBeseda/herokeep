@@ -56,6 +56,34 @@ describe('ModifierTable', () => {
     expect(d.value).toBe(20);
   });
 
+  // Plan 14 Task 6 (ruling 9): provenance shows the number a formula contributed, so `resolve`
+  // stamps the evaluated `amount` next to the kept `formula` (evaluated once per resolve).
+  it('resolve stamps the evaluated amount on a formula contribution and keeps the formula', () => {
+    const t = new ModifierTable();
+    const formula = '10 + 5 * floor((classLevel(monk) - 2) / 4)';
+    t.add('speed.walk', { source: 'monk', kind: 'speed.bonus', formula, policy: 'sum-unique-key' });
+    t.add('speed.walk', { source: 'boots', kind: 'speed.bonus', amount: 5, policy: 'sum-unique-key' });
+    const calls: string[] = [];
+
+    const d = t.resolve('speed.walk', 30, (f) => {
+      calls.push(f);
+      return 10;
+    });
+    expect(d.value).toBe(45);
+    expect(d.contributions).toEqual([
+      { source: 'monk', kind: 'speed.bonus', formula, amount: 10 },
+      { source: 'boots', kind: 'speed.bonus', amount: 5 },
+    ]);
+    expect(calls).toEqual([formula]); // evaluated once, not once for the value and again for provenance
+  });
+
+  it('a resolved amount does not leak into the stored contribution across resolves', () => {
+    const t = new ModifierTable();
+    t.add('speed.climb', { source: 'ranger', kind: 'speed.set', formula: 'speed(walk)', policy: 'set-if-higher' });
+    expect(t.resolve('speed.climb', 0, () => 30).contributions[0]!.amount).toBe(30);
+    expect(t.resolve('speed.climb', 0, () => 35).contributions[0]!.amount).toBe(35);
+  });
+
   it('union merges per-target proficiency levels, expertise beating proficient', () => {
     const t = new ModifierTable();
     t.add('proficiency.skill.stealth', { source: 'class', kind: 'proficient', policy: 'union' });

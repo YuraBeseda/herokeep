@@ -42,10 +42,17 @@ export class ModifierTable {
   /**
    * Resolves a numeric target from `base` plus every contribution added for it. `contributions`
    * always lists every contribution considered (winners and shadowed candidates alike), so a
-   * caller can show "why" alongside the resolved `value`.
+   * caller can show "why" alongside the resolved `value`. A `formula` contribution comes back with
+   * its evaluated `amount` stamped next to the kept `formula` (plan 14 ruling 9) — each formula is
+   * evaluated exactly once per resolve, and the stamp lands on a copy, never on the stored entry.
    */
   resolve(target: string, base: number, evalFormula: (f: string) => number): Derived<number> {
-    const entries = this.byTarget.get(target) ?? [];
+    const raw = this.byTarget.get(target) ?? [];
+    const entries: Entry[] = raw.map((e) =>
+      e.contribution.amount === undefined && e.contribution.formula !== undefined && e.policy !== 'union'
+        ? { policy: e.policy, contribution: { ...e.contribution, amount: evalFormula(e.contribution.formula) } }
+        : e,
+    );
     const contributions = entries.map((e) => e.contribution);
     let value = base;
 

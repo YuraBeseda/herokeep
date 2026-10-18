@@ -50,7 +50,14 @@ describe('resource.define merge (plan 13 task 3)', () => {
         max: {
           value: 3,
           contributions: [
-            { source: 'x:class/a', feature: 'x:feature/one', kind: 'resource.define', formula: '3', key: 'pool' },
+            {
+              source: 'x:class/a',
+              feature: 'x:feature/one',
+              kind: 'resource.define',
+              formula: '3',
+              key: 'pool',
+              amount: 3, // plan 14 task 6: evaluated amount next to the kept formula
+            },
           ],
         },
         used: 0,

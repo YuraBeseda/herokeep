@@ -43,7 +43,8 @@ describe('speed.bonus with a formula value', () => {
     const walk = speedOf([ae(bonus('walk', 'prof'))])['walk']!;
     expect(walk.value).toBe(32);
     expect(walk.contributions).toEqual([
-      { source: fighter, feature: 'x:feature/one', kind: 'speed.bonus', formula: 'prof' },
+      // plan 14 task 6: the evaluated amount rides next to the kept formula (ruling 9)
+      { source: fighter, feature: 'x:feature/one', kind: 'speed.bonus', formula: 'prof', amount: 2 },
     ]);
   });
 

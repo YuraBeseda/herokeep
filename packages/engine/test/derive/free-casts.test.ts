@@ -80,7 +80,14 @@ describe('spell.grant.uses — inline form', () => {
         max: {
           value: 2,
           contributions: [
-            { source: 'x:class/a', feature: 'x:feature/one', kind: 'spell.grant', formula: 'prof', key: 'fireball' },
+            {
+              source: 'x:class/a',
+              feature: 'x:feature/one',
+              kind: 'spell.grant',
+              formula: 'prof',
+              key: 'fireball',
+              amount: 2, // plan 14 task 6: evaluated amount next to the kept formula
+            },
           ],
         },
         used: 0,
