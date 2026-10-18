@@ -16,6 +16,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { firstValueFrom, of } from 'rxjs';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
+import charactersUk from '../../../../../assets/i18n/characters/uk.json';
 import { eventFamily, EventSentencePipe, sentenceOf } from './event-sentence.pipe';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — same fixture-loading
@@ -42,6 +43,7 @@ class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
     if (langPath === 'characters/ru') return of(charactersRu);
+    if (langPath === 'characters/uk') return of(charactersUk);
     return of({});
   }
 }
@@ -247,6 +249,30 @@ describe('EventSentencePipe', () => {
     );
     expect(sentence).toContain('стандартное');
     expect(sentence).not.toContain('standard');
+  });
+
+  // Plan 14 final fix wave (ICU param safety): the `{encumbrance}` select param is ALWAYS supplied
+  // — `'other'` for an empty patch or a future option key — mirroring `resource.restored`'s
+  // always-set `restored`, so no locale's formatter ever sees a missing select argument.
+  it('always supplies the "encumbrance" param for "character.options.set" (empty / future-key payload → other)', async () => {
+    const params = (payload: unknown) =>
+      sentenceOf(makeEvent('character.options.set', payload), index, localizer).params;
+    expect(params({})['encumbrance']).toBe('other');
+    expect(params({ lighting: 'dim' })['encumbrance']).toBe('other');
+    expect(params({ encumbrance: 'variant' })['encumbrance']).toBe('variant');
+    expect(
+      pipe.transform(makeEvent('character.options.set', { lighting: 'dim' }), index, localizer),
+    ).toBe('Rule options updated.');
+    for (const [lang, generic] of [
+      ['ru', 'Опции правил обновлены.'],
+      ['uk', 'Опції правил оновлено.'],
+    ] as const) {
+      await firstValueFrom(translocoService.load(`characters/${lang}`));
+      translocoService.setActiveLang(lang);
+      expect(pipe.transform(makeEvent('character.options.set', {}), index, localizer)).toBe(
+        generic,
+      );
+    }
   });
 
   // Plan 14 Task 6: a counted `resource.restored` (rolled item regain, or the play tab's one-pip

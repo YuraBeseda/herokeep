@@ -210,6 +210,15 @@ function buildParams(
     }
   }
 
+  // Plan 14 final fix wave (ICU param safety): `character.options.set`'s sentence selects on
+  // `{encumbrance}`, but the patch's keys are all optional (an empty patch, or a future option key
+  // with no `encumbrance`), and an ICU template can't safely reference an optional field — so the
+  // param is always set, `'other'` (the generic "rule options updated" branch every locale keeps)
+  // when the payload carries no encumbrance mode. Same posture as `restored` above.
+  if (type === 'character.options.set' && typeof params['encumbrance'] !== 'string') {
+    params['encumbrance'] = 'other';
+  }
+
   return params;
 }
 

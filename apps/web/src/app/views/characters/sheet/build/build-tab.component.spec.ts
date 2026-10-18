@@ -732,4 +732,48 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
     expect(reason?.classList.contains('build-tab__options-reason')).toBe(true);
     expect(reason?.textContent?.trim()).toBe(charactersEn.sheet.options.encumbrance.houseRule);
   });
+
+  // Plan 14 final fix wave: the same house-rule override for `encumbrance: 'off'` — 'off' is a real
+  // house-rule value (not "no house rule"), so it still disables the select, shows Off, and carries
+  // the reason, even over a character whose own option is 'variant'.
+  it('a campaign house rule of "off" disables the encumbrance select, shows Off, with a described reason', async () => {
+    const characterId = await seedFighter('Ivan');
+    const campaignStore = TestBed.inject(CampaignStore);
+    const settings = fullSettings('locked');
+    await campaignStore.appendToStream(CAMPAIGN_STREAM, [
+      {
+        type: 'campaign.settings_changed',
+        v: 1,
+        payload: {
+          settings: { ...settings, houseRules: { ...settings.houseRules, encumbrance: 'off' } },
+        },
+      },
+      { type: 'member.joined', v: 1, payload: { userId: 'u1', displayName: 'Bob', role: 'dm' } },
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    characterStore.enterSyncMode(characterId);
+    await characterStore.appendTx([
+      { type: 'character.options.set', v: 1, payload: { encumbrance: 'variant' } },
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+    ]);
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const select = () =>
+      compiled.querySelector<HTMLSelectElement>('.build-tab__options-encumbrance')!;
+    await pollUntil(fixture, () => select().disabled);
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(select().value).toBe('off');
+    expect(select().selectedOptions[0]?.textContent?.trim()).toBe(
+      charactersEn.sheet.options.encumbrance.off,
+    );
+    expect(characterStore.sheet()?.overridesProvenance?.encumbrance).toBe('house rule');
+    const reasonId = select().getAttribute('aria-describedby');
+    expect(reasonId).toBeTruthy();
+    const reason = compiled.querySelector(`#${reasonId}`);
+    expect(reason?.classList.contains('build-tab__options-reason')).toBe(true);
+    expect(reason?.textContent?.trim()).toBe(charactersEn.sheet.options.encumbrance.houseRule);
+  });
 });
