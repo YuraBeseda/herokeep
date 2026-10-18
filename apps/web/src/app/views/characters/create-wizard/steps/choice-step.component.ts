@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, signal, untracked } from '@
 import {
   classSkillPick,
   findChoice,
+  isQueryPick,
   queryPickOptions,
   resolveChoiceCount,
   type Diagnostic,
@@ -167,15 +168,18 @@ export class ChoiceStepComponent {
     // only drives the single-select (`=== 1`) UI toggle; the engine (validateSelection/outstanding
     // requests) enforces the real, level-resolved count.
     const count = resolveChoiceCount(choice, { classes: [] }, index);
-    if ('query' in choice.pick) {
+    if (isQueryPick(choice.pick)) {
       // Plan 13 task 1: the engine's own offer set (`queryPickOptions`) — identical to
       // `index.query` for an ordinary pick, narrowed to the character's proficient skills for a
       // `requireProficient` one (an Expertise pick). Read against the consumer-supplied sheet
       // (level-up, build tab) or the creation wizard's draft sheet — read ONLY for such a pick, so an
-      // ordinary query view never re-computes on every draft change.
-      const sheet = choice.pick.requireProficient
-        ? (this.sheet() ?? this.state?.draftSheet())
-        : undefined;
+      // ordinary query view never re-computes on every draft change. Plan 14 task 2: a `queries`
+      // pick (a union of queries, e.g. Skilled's skills-or-tools) is the same view — the engine
+      // unions it into one id list and the entity picker lists any entity type by id.
+      const sheet =
+        'query' in choice.pick && choice.pick.requireProficient
+          ? (this.sheet() ?? this.state?.draftSheet())
+          : undefined;
       return { kind: 'query', ids: queryPickOptions(choice.pick, index, sheet), count };
     }
     if ('static' in choice.pick) {

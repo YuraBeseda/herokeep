@@ -599,3 +599,69 @@ describe('ChoiceStepComponent', () => {
     expect(improveCompiled.querySelectorAll('hk-chip').length).toBeGreaterThan(0);
   });
 });
+
+// Plan 14 task 2: a `queries` pick (the union of several entity queries — e.g. Skilled's "three
+// skills or tools") renders through the same entity picker as a single `query` pick, one mixed
+// list of the engine's offer set (`queryPickOptions`). Exercised over a clone of the real pack with
+// a `queries` pick patched onto the (otherwise unrelated) Alert feat, as the engine tests do.
+describe('ChoiceStepComponent — mixed-type queries pick', () => {
+  const MIXED_CHOICE = 'srd-5e-2024:feat/alert@1/test-mixed';
+
+  function mixedPack(): Pack {
+    const pack = structuredClone(corePack);
+    const feat = pack.entities.find((e) => e.id === 'srd-5e-2024:feat/alert') as unknown as {
+      choices: unknown[];
+    };
+    feat.choices.push({
+      id: MIXED_CHOICE,
+      prompt: 'Pick',
+      at: { kind: 'level', level: 1 },
+      pick: { queries: [{ type: 'skill' }, { type: 'item', category: 'tool' }] },
+      count: 3,
+      unique: true,
+      repeatableAt: [],
+      prerequisites: [],
+    });
+    return pack;
+  }
+
+  beforeEach(() => {
+    configure();
+    const pack = mixedPack();
+    TestBed.overrideProvider(PackStore, {
+      useValue: { packs: signal([pack]), ready: signal(true), corePack: signal(pack) },
+    });
+  });
+
+  it('lists every skill and every tool once in one picker and records a mixed selection', async () => {
+    const state = createState();
+    state.name.set('Aldric');
+
+    const fixture = TestBed.createComponent(ChoiceStepComponent);
+    fixture.componentRef.setInput('choiceId', MIXED_CHOICE);
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const skillCount = corePack.entities.filter((e) => e.type === 'skill').length;
+    const toolCount = corePack.entities.filter(
+      (e) => e.type === 'item' && e.category === 'tool',
+    ).length;
+    const buttons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+    );
+    expect(buttons.length).toBe(skillCount + toolCount);
+
+    const byName = (text: string) =>
+      buttons.find((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() === text)!;
+    for (const name of ['Athletics', 'Perception', "Smith's Tools (20 GP)"]) {
+      byName(name).click();
+      await fixture.whenStable();
+    }
+
+    expect(state.decisions().get(MIXED_CHOICE)).toEqual([
+      'srd-5e-2024:skill/athletics',
+      'srd-5e-2024:skill/perception',
+      'srd-5e-2024:item/smiths-tools',
+    ]);
+  });
+});
