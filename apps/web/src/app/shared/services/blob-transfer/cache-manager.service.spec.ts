@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { Event } from '@hk/protocol';
+import type { Event, Pack } from '@hk/protocol';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb, type CampaignRow, type CharacterRow } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
+import { PacksRepository } from '@shared/services/storage/packs.repository';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import {
   CACHE_CAP_DEFAULT_BYTES,
@@ -78,6 +79,19 @@ async function putBlob(
     pinned,
     origin,
   });
+}
+
+const SHARED_ASSET_HASH = `sha256:${'a'.repeat(64)}`;
+
+/** An installed content pack (only the fields the cache manager reads) listing `hash`. */
+function packListing(hash: string): Pack {
+  return {
+    format: 1,
+    id: 'acme-pack',
+    version: '1.0.0',
+    kind: 'content',
+    assets: [{ hash, kind: 'icon', mime: 'image/webp', size: 10 }],
+  } as unknown as Pack;
 }
 
 describe('CacheManagerService', () => {
@@ -238,6 +252,21 @@ describe('CacheManagerService', () => {
       expect(await TestBed.inject(BlobsRepository).get('pack-icon')).toBeDefined();
     });
 
+    it('never evicts a non-pack-origin blob whose hash an installed pack lists', async () => {
+      const MB = 1024 * 1024;
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      await service.setCapBytes(100 * MB);
+      // An upload that landed first keeps its origin when the pack's identical asset is installed
+      // (`BlobsRepository.put`'s preserve rule), so origin alone cannot protect it.
+      await putBlob(SHARED_ASSET_HASH, 150 * MB, false, 1, 'upload');
+      await TestBed.inject(PacksRepository).putPack(packListing(SHARED_ASSET_HASH));
+
+      await service.runLruSweep();
+
+      expect(await TestBed.inject(BlobsRepository).get(SHARED_ASSET_HASH)).toBeDefined();
+    });
+
     it('is a no-op when everything already fits under the cap', async () => {
       const service = TestBed.inject(CacheManagerService);
       await service.ready; // settle the boot-time sweep against an EMPTY table first
@@ -262,6 +291,15 @@ describe('CacheManagerService', () => {
       await service.ready;
       await service.runOrphanSweep();
       expect(await TestBed.inject(BlobsRepository).get('pack-icon')).toBeDefined();
+    });
+
+    it('keeps a non-pack-origin blob whose hash an installed pack lists', async () => {
+      await putBlob(SHARED_ASSET_HASH, 10, false, undefined, 'upload');
+      await TestBed.inject(PacksRepository).putPack(packListing(SHARED_ASSET_HASH));
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      await service.runOrphanSweep();
+      expect(await TestBed.inject(BlobsRepository).get(SHARED_ASSET_HASH)).toBeDefined();
     });
 
     it('keeps a blob referenced by a local character', async () => {

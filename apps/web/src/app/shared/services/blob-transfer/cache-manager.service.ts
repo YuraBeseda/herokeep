@@ -8,6 +8,7 @@ import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
+import { PacksRepository } from '@shared/services/storage/packs.repository';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import {
@@ -32,10 +33,16 @@ function clampCapBytes(bytes: number): number {
   return Math.min(CACHE_CAP_MAX_BYTES, Math.max(CACHE_CAP_MIN_BYTES, Math.round(bytes)));
 }
 
-/** Rows the cache sweeps may consider: everything except content-pack assets (`origin: 'pack'`),
- * whose lifecycle `PackStore` owns — see the class doc's honesty note. */
-function sweepable<T extends { origin: string }>(rows: readonly T[]): T[] {
-  return rows.filter((r) => r.origin !== 'pack');
+/** Rows the cache sweeps may consider: everything except content-pack assets — rows stored as
+ * `origin: 'pack'`, whose lifecycle `PackStore` owns, AND any row whose hash an installed pack
+ * lists (`packHashes`), whatever its origin: an upload/peer blob that arrived first keeps its
+ * origin when an identical pack asset is installed (`BlobsRepository.put`'s preserve rule), and
+ * the pack needs it just the same. See the class doc's honesty note. */
+function sweepable<T extends { hash: string; origin: string }>(
+  rows: readonly T[],
+  packHashes: ReadonlySet<string>,
+): T[] {
+  return rows.filter((r) => r.origin !== 'pack' && !packHashes.has(r.hash));
 }
 
 function toCacheable(
@@ -65,7 +72,10 @@ function toCacheable(
  * projected `party.overview_updated` thumbs). "Pack" is covered by origin instead (plan 15 Task 2):
  * installed content packs store their assets as `origin: 'pack'` blobs, and `PackStore` owns their
  * lifecycle (`removeContent` deletes the ones no other installed pack lists), so neither the LRU
- * nor the orphan sweep ever considers an `origin: 'pack'` row (`sweepable`).
+ * nor the orphan sweep ever considers an `origin: 'pack'` row (`sweepable`). Because a hash that
+ * first arrived as an upload/peer blob keeps that origin, every installed pack's asset hashes
+ * (`PacksRepository`) are ALSO referenced (pinned by `refreshPins`, kept by the orphan sweep) and
+ * excluded from the LRU sweep regardless of origin (plan 15 final fix wave A3).
  *
  * `BlobTransferService` (the other Task 13 half) calls `refreshPins()` whenever a live campaign
  * session's roster/overview data changes or a campaign session starts/stops — see that service's
@@ -79,6 +89,7 @@ export class CacheManagerService {
   private readonly eventsRepository = inject(EventsRepository);
   private readonly snapshotsRepository = inject(SnapshotsRepository);
   private readonly settingsRepository = inject(SettingsRepository);
+  private readonly packsRepository = inject(PacksRepository);
   private readonly storagePersistService = inject(StoragePersistService);
 
   private readonly capBytesState = signal(CACHE_CAP_DEFAULT_BYTES);
@@ -117,12 +128,20 @@ export class CacheManagerService {
     await this.runLruSweep();
   }
 
+  /** Every asset hash an installed (persisted) content or translation pack lists. Read from
+   * `PacksRepository` rather than `PackStore`, so a stored pack `PackStore.init()` hid from this
+   * session (e.g. a failed dependency) still keeps its assets. */
+  private async installedPackAssetHashes(): Promise<Set<string>> {
+    const packs = await this.packsRepository.getAll();
+    return new Set(packs.flatMap((pack) => pack.assets.map((asset) => asset.hash)));
+  }
+
   /** Every hash this device currently has a legitimate reason to pin OR keep during an orphan
-   * sweep — own characters' portrait thumb (+ full portrait, when a `Snapshot` is cached) and
-   * every locally-known campaign's projected party-overview thumbs. See class doc's honesty note
-   * for what this deliberately does NOT cover (pack assets). */
+   * sweep — own characters' portrait thumb (+ full portrait, when a `Snapshot` is cached), every
+   * locally-known campaign's projected party-overview thumbs, and every installed pack's asset
+   * hashes (see the class doc's honesty note). */
   private async computeReferencedHashes(): Promise<Set<string>> {
-    const hashes = new Set<string>();
+    const hashes = await this.installedPackAssetHashes();
 
     const characters = await this.charactersRepository.list();
     for (const character of characters) {
@@ -162,7 +181,8 @@ export class CacheManagerService {
    * pinned row. Safe to call any time (Settings slider change, a periodic background tick, or
    * right after a fresh blob arrives). */
   async runLruSweep(): Promise<void> {
-    const rows = sweepable(await this.blobsRepository.list());
+    const packHashes = await this.installedPackAssetHashes();
+    const rows = sweepable(await this.blobsRepository.list(), packHashes);
     const evictions = selectLruEvictions(toCacheable(rows), this.capBytesState());
     for (const hash of evictions) await this.blobsRepository.remove(hash);
   }
@@ -173,7 +193,10 @@ export class CacheManagerService {
   async runOrphanSweep(): Promise<void> {
     await this.refreshPins();
     const referenced = await this.computeReferencedHashes();
-    const rows = sweepable(await this.blobsRepository.list());
+    const rows = sweepable(
+      await this.blobsRepository.list(),
+      await this.installedPackAssetHashes(),
+    );
     const orphans = selectOrphans(toCacheable(rows), referenced);
     for (const hash of orphans) await this.blobsRepository.remove(hash);
     await this.settingsRepository.set(ORPHAN_SWEEP_LAST_RUN_KEY, Date.now());
