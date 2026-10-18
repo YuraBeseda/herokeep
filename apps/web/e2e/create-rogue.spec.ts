@@ -4,6 +4,7 @@ import {
   finishReviewAndCreate,
   nameCharacter,
   pickBackground,
+  pickGamingSet,
   pickSpecies,
 } from './helpers/create-fighter';
 
@@ -98,6 +99,10 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
       // The skills chips step resolves on the 4th pick and auto-advances; the next step renders
       // entity-picker cards whose names repeat these skills, so wait on the chips container.
       await expect(page.locator('.choice-step__chips')).toHaveCount(0);
+    });
+
+    await test.step('tool proficiency: one Gaming Set (Dice) for the Soldier background', async () => {
+      await pickGamingSet(page);
     });
 
     await test.step('Expertise: only proficient skills are offered; pick Stealth + Sleight of Hand', async () => {

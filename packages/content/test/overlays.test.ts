@@ -79,7 +79,10 @@ describe('applyOverlays', () => {
     const patched = applyOverlays(backgrounds, backgroundsOverlay);
     expect(patched).toHaveLength(4);
     for (const bg of patched) {
-      const choices = (bg as { choices: { id: string; at: { kind: string }; pick: unknown; count: number }[] }).choices;
+      const all = (bg as { choices: { id: string; at: { kind: string }; pick: unknown; count: number }[] }).choices;
+      // Plan 14 task 2: Soldier additionally carries its `@0/tools` Gaming Set pick (mixed-picks.test.ts).
+      const choices = all.filter((c) => c.id !== `${bg.id}@0/tools`);
+      expect(all.length - choices.length, bg.id).toBe(bg.id === 'srd-5e-2024:background/soldier' ? 1 : 0);
       expect(choices, bg.id).toHaveLength(1);
       const [choice] = choices;
       expect(choice!.id, bg.id).toBe(`${bg.id}@0/ability-scores`);

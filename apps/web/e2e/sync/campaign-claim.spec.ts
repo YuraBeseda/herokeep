@@ -7,6 +7,7 @@ import {
   pickBackground,
   pickClass,
   pickFightingStyleAndWeaponMasteries,
+  pickGamingSet,
   pickSkills,
   pickSpecies,
 } from '../helpers/create-fighter';
@@ -44,6 +45,7 @@ async function createPregenAtCurrentLocation(page: Page, name: string): Promise<
   await pickClass(page);
   await assignStandardArray(page);
   await pickSkills(page);
+  await pickGamingSet(page);
   await pickFightingStyleAndWeaponMasteries(page);
   await equipGear(page);
 

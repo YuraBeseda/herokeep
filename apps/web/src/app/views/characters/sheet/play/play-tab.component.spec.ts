@@ -187,9 +187,9 @@ describe('PlayTabComponent', () => {
   });
 
   // Plan 13 task 2: tool proficiencies get their own "Tools" list in the proficiency section, by
-  // localized item name; a tool slug with no item entity (the Soldier's generic 'gaming-set') falls
-  // back to the raw slug, like any other unresolved proficiency target. The bard's instruments come
-  // from its real `bard@1/tools` pick, recorded through the creation wizard's own transaction.
+  // localized item name. The Soldier's Gaming Set comes from its real `soldier@0/tools` pick (plan 14
+  // task 2 — it was a generic, unresolvable 'gaming-set' slug before) and the bard's instruments from
+  // its real `bard@1/tools` pick, both recorded through the creation wizard's own transaction.
   it('lists tool proficiencies under a Tools heading: the background tool and the bard instrument pick', async () => {
     const state = TestBed.runInInjectionContext(() => new CreateWizardState());
     state.name.set('Lia');
@@ -204,6 +204,9 @@ describe('PlayTabComponent', () => {
       ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
       { method: 'standardArray' },
     );
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision('srd-5e-2024:system/5e-2024@0/class', ['srd-5e-2024:class/bard']);
     state.setDecision('srd-5e-2024:class/bard@1/tools', [
       'srd-5e-2024:item/musical-instrument-lute',
@@ -227,7 +230,7 @@ describe('PlayTabComponent', () => {
       el.textContent?.trim(),
     );
     expect(tools).toEqual([
-      'gaming-set',
+      'Gaming Set, Dice',
       'Musical Instrument, Drum',
       'Musical Instrument, Flute',
       'Musical Instrument, Lute',
@@ -236,7 +239,7 @@ describe('PlayTabComponent', () => {
     const others = Array.from(compiled.querySelectorAll('.play-tab__proficiencies li')).map(
       (el) => el.textContent ?? '',
     );
-    expect(others.some((text) => text.includes('gaming-set') || text.includes('lute'))).toBe(false);
+    expect(others.some((text) => text.includes('Gaming Set') || text.includes('lute'))).toBe(false);
   });
 
   it("opens the AC tile's hkDerived popover listing at least 3 contributions (armor, shield, fighting style), localized", async () => {

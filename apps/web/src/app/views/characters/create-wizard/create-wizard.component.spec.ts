@@ -126,6 +126,7 @@ function fillValidDecisions(state: CreateWizardState): void {
   state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['srd-5e-2024:species/human']);
   state.setDecision('srd-5e-2024:system/5e-2024@0/background', ['srd-5e-2024:background/soldier']);
   state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+  state.setDecision('srd-5e-2024:background/soldier@0/tools', ['srd-5e-2024:item/gaming-set-dice']);
   state.setDecision(
     'srd-5e-2024:system/5e-2024@0/ability-scores',
     ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -249,6 +250,9 @@ describe('CreateWizardComponent', () => {
       'srd-5e-2024:background/soldier',
     ]);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       'srd-5e-2024:system/5e-2024@0/ability-scores',
       ['str:8', 'dex:15', 'con:13', 'int:12', 'wis:10', 'cha:14'],
@@ -300,6 +304,9 @@ describe('CreateWizardComponent', () => {
       'srd-5e-2024:background/soldier',
     ]);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       'srd-5e-2024:system/5e-2024@0/ability-scores',
       ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -418,6 +425,9 @@ describe('CreateWizardComponent', () => {
       'srd-5e-2024:background/soldier',
     ]);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     // costs: 15 -> 9 (x5) + 8 -> 0 = 45, against a 27-point budget — over budget.
     state.setDecision(
       'srd-5e-2024:system/5e-2024@0/ability-scores',
@@ -484,6 +494,9 @@ describe('CreateWizardComponent', () => {
       'srd-5e-2024:background/soldier',
     ]);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       'srd-5e-2024:system/5e-2024@0/ability-scores',
       ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -636,6 +649,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
     state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       `${SYSTEM_ID}@0/ability-scores`,
       ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -733,6 +749,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
     state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       `${SYSTEM_ID}@0/ability-scores`,
       ['str:10', 'dex:15', 'con:13', 'int:8', 'wis:14', 'cha:12'],
@@ -811,6 +830,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
     state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       `${SYSTEM_ID}@0/ability-scores`,
       ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -878,6 +900,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
     state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       `${SYSTEM_ID}@0/ability-scores`,
       ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],

@@ -815,7 +815,8 @@ describe('feats (task 5): every feat carries real mechanics or a ledgered text f
   });
 
   it('text-fallback feats carry feature.text with the verbatim rule text', () => {
-    for (const slug of ['magic-initiate', 'savage-attacker', 'skilled', 'grappler', 'boon-of-combat-prowess']) {
+    // Plan 14 task 2: Skilled's tools half is now a mixed `queries` pick (mixed-picks.test.ts) — no text left.
+    for (const slug of ['magic-initiate', 'savage-attacker', 'grappler', 'boon-of-combat-prowess']) {
       expect(
         featEffects(slug).some((e) => e.type === 'feature.text'),
         slug,
@@ -3087,10 +3088,9 @@ describe('tool proficiency choices over the real pack: monk / bard (plan 13 task
     expect(sheetOf(char(MONK, 1)).outstandingChoices.map((c) => c.choiceId)).toContain(`${monkId}@1/tools`);
     const events = char(MONK, 1, [[`${monkId}@1/tools`, [item('smiths-tools')]]]);
     expect(sheetOf(events).outstandingChoices.map((c) => c.choiceId)).not.toContain(`${monkId}@1/tools`);
-    expect(tools(events)).toEqual([
-      ['gaming-set', [`${FP}:background/soldier`]],
-      ['smiths-tools', [monkId]],
-    ]);
+    // Plan 14 task 2: the Soldier background no longer carries a generic 'gaming-set' row (its
+    // Gaming Set is the undecided `soldier@0/tools` pick here), so the monk's pick is the only tool.
+    expect(tools(events)).toEqual([['smiths-tools', [monkId]]]);
     expect(refusals(char(MONK, 1), `${monkId}@1/tools`, [item('musical-instrument-flute')])).toEqual([]);
     expect(refusals(char(MONK, 1), `${monkId}@1/tools`, [item('thieves-tools')])).toEqual(['selection.notOffered']);
   });

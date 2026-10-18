@@ -12,6 +12,10 @@ import { LevelUpState } from '../../level-up/level-up.state';
 // as `create-wizard.component.spec.ts`'s `configureReal()`.
 
 const SYSTEM_ID = 'srd-5e-2024:system/5e-2024';
+// Plan 14 task 2: the Soldier background's Tool Proficiency is a creation pick ("Choose one kind of
+// Gaming Set"), so a complete seeded Soldier decides it too.
+const SOLDIER_TOOLS = 'srd-5e-2024:background/soldier@0/tools';
+const SOLDIER_GAMING_SET = 'srd-5e-2024:item/gaming-set-dice';
 
 async function persist(state: CreateWizardState): Promise<string> {
   const characterStore = TestBed.inject(CharacterStore);
@@ -45,6 +49,7 @@ export async function seedFighter(
   state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
   state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
   state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+  state.setDecision(SOLDIER_TOOLS, [SOLDIER_GAMING_SET]);
   state.setDecision(
     `${SYSTEM_ID}@0/ability-scores`,
     ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -87,6 +92,7 @@ export async function seedWizard(name = 'Elowen'): Promise<string> {
   state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
   state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
   state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+  state.setDecision(SOLDIER_TOOLS, [SOLDIER_GAMING_SET]);
   state.setDecision(
     `${SYSTEM_ID}@0/ability-scores`,
     ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'],
@@ -112,6 +118,7 @@ export async function seedWarlock(name = 'Kaelen'): Promise<string> {
   state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
   state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
   state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+  state.setDecision(SOLDIER_TOOLS, [SOLDIER_GAMING_SET]);
   state.setDecision(
     `${SYSTEM_ID}@0/ability-scores`,
     ['str:10', 'dex:13', 'con:14', 'int:8', 'wis:12', 'cha:15'],

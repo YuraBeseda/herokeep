@@ -81,6 +81,9 @@ function events(background: string, classes: [string, number][], extra: [string,
       bgSlug === 'soldier' ? ['str:+2', 'con:+1'] : ['dex:+2', 'con:+1'],
     ),
     decide(`${P}:system/5e-2024@0/ability-scores`, ['str:15', 'dex:14', 'con:14', 'int:10', 'wis:13', 'cha:8']),
+    // Plan 14 task 2: Soldier's Gaming Set is a background pick (`@0/tools`), no longer a generic
+    // 'gaming-set-dice' field — decided here so a Soldier still lands its (now real) background tool row.
+    ...(bgSlug === 'soldier' ? [decide(`${P}:background/soldier@0/tools`, [item('gaming-set-dice')])] : []),
     ...classes.flatMap(([classId, levels]) =>
       Array.from({ length: levels }, (_, i) => ev('level.gained', { classId, level: i + 1, hpRoll: 'average' })),
     ),
@@ -94,10 +97,10 @@ const tools = (evs: Event[]) => sheetOf(evs).proficiencies.filter((p) => p.kind 
 describe('tool proficiencies (derive)', () => {
   it("lists a class's fixed tools and the background's tool, each with its source", () => {
     expect(tools(events(soldier, [[rogue, 1]]))).toEqual([
-      { kind: 'tool', target: 'gaming-set', level: 'proficient', sources: [soldier] },
+      { kind: 'tool', target: 'gaming-set-dice', level: 'proficient', sources: [soldier] },
       { kind: 'tool', target: 'thieves-tools', level: 'proficient', sources: [rogue] },
     ]);
-    expect(tools(events(soldier, [[druid, 1]])).map((p) => p.target)).toEqual(['gaming-set', 'herbalism-kit']);
+    expect(tools(events(soldier, [[druid, 1]])).map((p) => p.target)).toEqual(['gaming-set-dice', 'herbalism-kit']);
   });
 
   it('merges the same tool from class and background into one row with both sources', () => {
@@ -107,7 +110,7 @@ describe('tool proficiencies (derive)', () => {
   });
 
   it('a class with no fixed tools contributes none (only the background tool lands)', () => {
-    expect(tools(events(soldier, [[fighter, 1]])).map((p) => p.target)).toEqual(['gaming-set']);
+    expect(tools(events(soldier, [[fighter, 1]])).map((p) => p.target)).toEqual(['gaming-set-dice']);
   });
 
   it('a LATER class contributes only its multiclass.gains (tools included), as for armor/weapons', () => {
@@ -122,7 +125,7 @@ describe('tool proficiencies (derive)', () => {
           [rogue, 1],
         ]),
       ).map((p) => p.target),
-    ).toEqual(['gaming-set', 'thieves-tools']);
+    ).toEqual(['gaming-set-dice', 'thieves-tools']);
   });
 
   it('a decided pick selecting tool items grants proficiency in them (slug targets, owner as source)', () => {
@@ -137,7 +140,7 @@ describe('tool proficiencies (derive)', () => {
       ),
     );
     expect(t).toEqual([
-      { kind: 'tool', target: 'gaming-set', level: 'proficient', sources: [soldier] },
+      { kind: 'tool', target: 'gaming-set-dice', level: 'proficient', sources: [soldier] },
       { kind: 'tool', target: 'musical-instrument-lute', level: 'proficient', sources: [alert] },
       { kind: 'tool', target: 'thieves-tools', level: 'proficient', sources: [alert] },
     ]);
@@ -152,7 +155,7 @@ describe('tool proficiencies (derive)', () => {
         [pickId, [item('longsword'), item('thieves-tools')]],
       ],
     );
-    expect(tools(evs).map((p) => p.target)).toEqual(['gaming-set', 'thieves-tools']);
+    expect(tools(evs).map((p) => p.target)).toEqual(['gaming-set-dice', 'thieves-tools']);
     expect(sheetOf(evs).proficiencies.some((p) => p.target === 'longsword')).toBe(false);
   });
 

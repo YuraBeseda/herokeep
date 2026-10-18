@@ -584,7 +584,8 @@ export class PlayTabComponent {
   // Plan 13 task 2: tool proficiencies (`kind: 'tool'` rows of the same `sheet.proficiencies`
   // union) listed on their own. A tool target is an item SLUG (`derive/index.ts`), resolved to the
   // pack's item entity name the same way `skillName` resolves a skill slug; a slug with no item
-  // entity (e.g. a background's generic 'gaming-set') falls back to the raw slug.
+  // entity (none in the SRD pack since plan 14 task 2 retired Soldier's generic 'gaming-set') falls
+  // back to the raw slug.
   protected readonly toolRows = computed<{ target: string; name: string }[]>(() => {
     const sheet = this.sheet();
     if (!sheet) return [];

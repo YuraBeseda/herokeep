@@ -327,7 +327,7 @@ describe('ChoiceStepComponent', () => {
         ?.proficiencies.filter((p) => p.kind === 'tool')
         .map((p) => p.target),
     ).toEqual([
-      'gaming-set',
+      // Plan 14 task 2: no generic Soldier 'gaming-set' row (its `@0/tools` pick is undecided here).
       'musical-instrument-drum',
       'musical-instrument-flute',
       'musical-instrument-lute',

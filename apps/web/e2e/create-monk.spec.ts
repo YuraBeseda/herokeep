@@ -4,6 +4,7 @@ import {
   finishReviewAndCreate,
   nameCharacter,
   pickBackground,
+  pickGamingSet,
   pickSpecies,
 } from './helpers/create-fighter';
 
@@ -64,6 +65,8 @@ test.describe('character creation — Monk (slice 2)', () => {
     await test.step("class skills: Monk's own pool (Acrobatics + Stealth)", async () => {
       await page.getByRole('button', { name: 'Acrobatics', exact: true }).click();
       await page.getByRole('button', { name: 'Stealth', exact: true }).click();
+      // Plan 14 task 2: the Soldier background's one Gaming Set comes first (sorted by choice id).
+      await pickGamingSet(page);
       // Plan 13 task 2: next, the Monk's one Artisan's Tools or Musical Instrument (a static pick).
       await expect(
         page.locator('.entity-picker__select', { hasText: 'Musical Instrument, Flute' }),

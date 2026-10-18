@@ -8,6 +8,7 @@ import {
   pickBackground,
   pickClass,
   pickFightingStyleAndWeaponMasteries,
+  pickGamingSet,
   pickSkills,
   pickSpecies,
 } from './helpers/create-fighter';
@@ -58,6 +59,10 @@ test.describe('character creation — golden path', () => {
 
     await test.step('skills: Athletics + Perception', async () => {
       await pickSkills(page);
+    });
+
+    await test.step('tool proficiency: one Gaming Set (Dice) for the Soldier background', async () => {
+      await pickGamingSet(page);
     });
 
     await test.step('fighting style (Defense) and weapon masteries (3-weapon query pick)', async () => {

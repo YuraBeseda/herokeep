@@ -61,22 +61,15 @@
   {
     "id": "srd-5e-2024:feat/skilled",
     "cite": "SRD 5.2.1, Skilled; FeatBenefit srd-2024_skilled_1, srd-2024_skilled_2 (Repeatable)",
-    "note": "\"You gain proficiency in any combination of three skills or tools of your choice.\" Skills: a count-3 skill query pick; since plan 12 task 5 fix round 1 the engine grants proficiency for any decided pick of skill entities (derive/abilities.ts), so each acquisition (occurrence-scoped `<id>--2` on the 2nd) really lands 3 proficiencies; `unique` stops a 2nd Skilled repeating a skill. OWNER-FLAG (tool gap): the 'or tools' half is NOT mechanized -- tool proficiency lives on a different derive path (index.ts proficiencies) and a query has exactly one `type`, so a mixed skill-or-tool pool is inexpressible; a feature.text carries the tool option. Repeatable: only a choice and a feature.text, no non-stacking effect (Task 1 boundary p1 respected).",
+    "note": "\"You gain proficiency in any combination of three skills or tools of your choice.\" MECHANIZED as ONE count-3 mixed-type pick (plan 14 task 2, retires the plan-12 'Skilled (tools)' text fallback and its owner-flag): `queries` unions a {type: 'skill'} query with an {type: 'item', category: 'tool'} query into one option list of every skill and every tool item, and the count applies to the union, so any combination (3 skills, 2 skills + 1 tool, ..., 3 tools) is one decision. Each selection grants through the path its entity type already uses: a skill a skill proficiency (derive/abilities.ts), a tool item a tool proficiency row (derive/index.ts). The choice id stays `@1/skills`, so every recorded skills-only decision replays and keeps granting unchanged; each acquisition (occurrence-scoped `<id>--2` on the 2nd) really lands 3 proficiencies; `unique` stops a 2nd Skilled repeating a pick. Repeatable: only a choice, no non-stacking effect (Task 1 boundary p1 respected).",
     "merge": {
       "choices": [
         {
           "id": "srd-5e-2024:feat/skilled@1/skills",
-          "prompt": "Skilled: choose three skills",
+          "prompt": "Skilled: choose three skills or tools",
           "at": { "kind": "level", "level": 1 },
-          "pick": { "query": { "type": "skill" } },
+          "pick": { "queries": [{ "type": "skill" }, { "type": "item", "category": "tool" }] },
           "count": 3
-        }
-      ],
-      "effects": [
-        {
-          "type": "feature.text",
-          "name": "Skilled (tools)",
-          "description": "You gain proficiency in any combination of three skills or tools of your choice. The skill picks above cover skills; if you would rather take tools, note those proficiencies on your sheet."
         }
       ]
     }

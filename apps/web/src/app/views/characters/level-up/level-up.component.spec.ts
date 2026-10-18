@@ -359,6 +359,9 @@ describe('LevelUpComponent', () => {
     state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
     state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     // cha 13 clears Bard's own multiclass prerequisite.
     state.setDecision(
       `${SYSTEM_ID}@0/ability-scores`,
@@ -486,6 +489,9 @@ describe('LevelUpComponent', () => {
     state.setDecision(`${SYSTEM_ID}@0/species`, ['srd-5e-2024:species/human']);
     state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
     state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
     state.setDecision(
       `${SYSTEM_ID}@0/ability-scores`,
       ['str:15', 'dex:8', 'con:13', 'int:10', 'wis:12', 'cha:14'],

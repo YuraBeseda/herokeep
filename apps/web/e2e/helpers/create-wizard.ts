@@ -5,6 +5,7 @@ import {
   finishReviewAndCreate,
   nameCharacter,
   pickBackground,
+  pickGamingSet,
   pickSpecies,
 } from './create-fighter';
 
@@ -60,6 +61,7 @@ export async function createWizard(page: Page, name: string): Promise<string> {
 
   await page.getByRole('button', { name: 'Arcana', exact: true }).click();
   await page.getByRole('button', { name: 'History', exact: true }).click();
+  await pickGamingSet(page);
 
   await expect(page.locator('.spells-step__spellbook')).toBeVisible();
   const spellbookSearch = page.locator('.spells-step__spellbook').getByRole('searchbox');

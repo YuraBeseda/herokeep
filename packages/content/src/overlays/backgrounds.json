@@ -46,8 +46,8 @@
   },
   {
     "id": "srd-5e-2024:background/soldier",
-    "cite": "SRD 5.2.1, Soldier — Ability Scores",
-    "note": "BackgroundBenefit desc: \"Strength, Dexterity, Constitution\" — matches BACKGROUND_TABLE.soldier.abilityScores. Same '+2/+1' dominant-form encoding and same schema limitations as the acolyte overlay above.",
+    "cite": "SRD 5.2.1, Soldier — Ability Scores; Tool Proficiency (BackgroundBenefit srd-2024_soldier_tool-proficiencies)",
+    "note": "BackgroundBenefit desc: \"Strength, Dexterity, Constitution\" — matches BACKGROUND_TABLE.soldier.abilityScores. Same '+2/+1' dominant-form encoding and same schema limitations as the acolyte overlay above. Tool Proficiency (plan 14 task 2): \"Choose one kind of Gaming Set\" -> a count-1 creation pick `@0/tools` over the four Gaming Set items (dice, dragonchess, playing cards, three-dragon ante — every pack item of category tool named Gaming Set); a decided tool pick grants the chosen set's tool proficiency row (derive/index.ts). It replaces the generic 'gaming-set' toolProficiency slug the transform used to emit, which matched no item entity (a raw 'gaming-set' sheet row). A background choice: no `scope` (scope is for class-row choices only).",
     "merge": {
       "choices": [
         {
@@ -55,6 +55,20 @@
           "prompt": "Ability score improvement",
           "at": { "kind": "creation" },
           "pick": { "abilities": { "count": 2, "improve": "+2/+1" } }
+        },
+        {
+          "id": "srd-5e-2024:background/soldier@0/tools",
+          "prompt": "Tool proficiency: choose one kind of Gaming Set",
+          "at": { "kind": "creation" },
+          "pick": {
+            "static": [
+              "srd-5e-2024:item/gaming-set-dice",
+              "srd-5e-2024:item/gaming-set-dragonchess",
+              "srd-5e-2024:item/gaming-set-playing-cards",
+              "srd-5e-2024:item/gaming-set-three-dragon-ante"
+            ]
+          },
+          "count": 1
         }
       ]
     }

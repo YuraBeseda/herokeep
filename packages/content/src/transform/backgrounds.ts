@@ -8,7 +8,8 @@ type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 interface BackgroundRow {
   abilityScores: AbilityKey[];
   skillProficiencies: string[];
-  toolProficiency: string;
+  /** A fixed tool (an item slug); absent when the benefit is a choice (an overlay pick instead). */
+  toolProficiency?: string;
   originFeat: string;
 }
 
@@ -18,8 +19,11 @@ interface BackgroundRow {
  * Feat with no Cleric/Wizard variant, so both acolyte and sage point `originFeat` at it (R10) — the
  * upstream benefit desc names "Magic Initiate (Cleric)"/"Magic Initiate (Wizard)" respectively, but
  * only one Feat record exists to reference. `toolProficiency` slugs verified against the benefit
- * text: acolyte/sage -> "Calligrapher's Supplies", criminal -> "Thieves' Tools", soldier -> "Choose
- * one kind of Gaming Set".
+ * text: acolyte/sage -> "Calligrapher's Supplies", criminal -> "Thieves' Tools". Soldier's benefit
+ * (srd-2024_soldier_tool-proficiencies) is a CHOICE — "Choose one kind of Gaming Set" — so it has no
+ * fixed `toolProficiency` (plan 14 task 2 retired the generic 'gaming-set' slug, which matched no
+ * item entity); the `soldier@0/tools` pick over the four Gaming Set items lives in
+ * `overlays/backgrounds.json`.
  */
 const BACKGROUND_TABLE: Record<string, BackgroundRow> = {
   acolyte: {
@@ -43,7 +47,6 @@ const BACKGROUND_TABLE: Record<string, BackgroundRow> = {
   soldier: {
     abilityScores: ['str', 'dex', 'con'],
     skillProficiencies: ['athletics', 'intimidation'],
-    toolProficiency: 'gaming-set',
     originFeat: 'savage-attacker',
   },
 };
@@ -92,7 +95,7 @@ export function transformBackgrounds(): Entity[] {
       abilityScores: row.abilityScores,
       originFeat: featId(row.originFeat),
       skillProficiencies: row.skillProficiencies,
-      toolProficiency: row.toolProficiency,
+      ...(row.toolProficiency !== undefined ? { toolProficiency: row.toolProficiency } : {}),
     };
   });
 }
