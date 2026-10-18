@@ -2104,9 +2104,10 @@ describe('PlayTabComponent — rest controls', () => {
     const { store } = await seedSpentWand(6);
     const eventsBefore = store.events().length;
     const realRest = propose.rest;
-    // Drop the caller's rolls to drive the engine's own `rest.regain-roll-missing` refusal.
+    // Drop the caller's rolls (an explicit empty map) to drive the engine's own
+    // `rest.regain-roll-missing` refusal.
     vi.spyOn(propose, 'rest').mockImplementation((sheet, kind, hitDice) =>
-      realRest(sheet, kind, hitDice),
+      realRest(sheet, kind, hitDice, {}),
     );
 
     const fixture = TestBed.createComponent(PlayTabComponent);
