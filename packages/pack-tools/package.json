@@ -24,6 +24,7 @@
   "dependencies": {
     "@hk/engine": "workspace:*",
     "@hk/protocol": "workspace:*",
+    "fflate": "0.8.3",
     "yaml": "catalog:"
   }
 }

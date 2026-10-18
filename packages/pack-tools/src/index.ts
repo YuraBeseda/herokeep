@@ -5,3 +5,4 @@ export * from './commands/build.ts';
 export * from './canonical.ts';
 export * from './commands/diff.ts';
 export * from './commands/i18n-extract.ts';
+export * from './hkpack.ts';

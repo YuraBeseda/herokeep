@@ -8,8 +8,9 @@ import type { CommandResult } from './result.ts';
 
 const USAGE = [
   'herokeep-pack <command> [options]',
-  '  validate <pack.json|yaml> [--packs <dir>]',
-  '  build <dir> [--out <file>] [--packs <dir>]',
+  '  validate <pack.json|yaml|file.hkpack> [--packs <dir>]',
+  '  build <dir> [--out <file>] [--packs <dir>] [--zip]',
+  '      --zip: also write <id>-<version>.hkpack (canonical pack.json + assets/) beside the output',
   '  diff <a> <b>',
   '  i18n extract <pack> --locale <xx> [--out <file>]',
 ].join('\n');
@@ -30,7 +31,7 @@ export function main(argv: string[]): CommandResult {
     if (command === 'build') {
       const { values, positionals } = parseArgs({
         args: rest,
-        options: { out: { type: 'string' }, packs: { type: 'string' } },
+        options: { out: { type: 'string' }, packs: { type: 'string' }, zip: { type: 'boolean' } },
         allowPositionals: true,
       });
       const dir = positionals[0];
@@ -39,6 +40,7 @@ export function main(argv: string[]): CommandResult {
         dir,
         ...(values.out !== undefined && { out: values.out }),
         ...(values.packs !== undefined && { packsDir: values.packs }),
+        ...(values.zip === true && { zip: true }),
       });
     }
     if (command === 'diff') {

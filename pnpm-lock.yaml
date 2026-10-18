@@ -254,6 +254,9 @@ importers:
       '@hk/protocol':
         specifier: workspace:*
         version: link:../protocol
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
