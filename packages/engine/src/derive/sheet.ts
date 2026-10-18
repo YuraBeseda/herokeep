@@ -7,6 +7,7 @@ import type { Carry } from './encumbrance.ts';
 import type { FreeCast } from './free-casts.ts';
 import type { HpResult } from './hp.ts';
 import type { ConditionImmunity } from './immunities.ts';
+import type { DamageResistance } from './resistances.ts';
 import type { Derived } from './modifiers.ts';
 import type { ResourceView } from './resources.ts';
 import type { SpellcastingBlock } from './spellcasting.ts';
@@ -139,6 +140,12 @@ export interface Sheet {
    * sheet with no immunity — every pre-task-5 golden — is unchanged.
    */
   immunities?: ConditionImmunity[];
+  /**
+   * Plan 14 task 3: the damage types the character has Resistance to, from `damage.resistance`
+   * effects (`derive/resistances.ts`), each with its granting features. Display-only, same posture
+   * and present-only-when-non-empty convention as `immunities`.
+   */
+  resistances?: DamageResistance[];
   xp: number;
   grammaticalGender: Facts['grammaticalGender'];
   /** Creation-time outstanding choices PLUS every class/subclass level-row choice at or below the character's current level in that class (task-13-brief.md). */
