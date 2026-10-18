@@ -49,8 +49,8 @@ function pinsKey(pins: Pins): string {
 describe('per-character content index (pins + roots)', () => {
   const goldens = loadGoldens();
 
-  it('covers every golden fixture', () => {
-    expect(goldens.length).toBeGreaterThanOrEqual(71);
+  it('covers every golden fixture (71 fixtures; the golden suite is 72 tests with its pin test)', () => {
+    expect(goldens).toHaveLength(71);
   });
 
   it.each(goldens.map((fx) => [fx.name, fx] as const))(
@@ -128,6 +128,19 @@ describe('pinnedRoots', () => {
     const sampleRu = { ...coreMiniRu, id: 'sample-ru', translates: { id: sample.id, range: '^1' } } as Pack;
     const pins: Pins = { [coreMini.id]: coreMini.version };
     expect(pinnedRoots([coreMini, coreMiniRu, sample, sampleRu], pins)).toEqual([coreMini.id, coreMiniRu.id]);
+  });
+
+  it('orders the pinned ids by id, so the index never depends on pin insertion order', () => {
+    const a = pinnedRoots([coreMini, coreMiniRu, homebrew], {
+      [homebrew.id]: homebrew.version,
+      [coreMini.id]: coreMini.version,
+    });
+    const b = pinnedRoots([coreMini, coreMiniRu, homebrew], {
+      [coreMini.id]: coreMini.version,
+      [homebrew.id]: homebrew.version,
+    });
+    expect(a).toEqual([coreMini.id, homebrew.id, coreMiniRu.id]);
+    expect(b).toEqual(a);
   });
 
   it('keeps a pin to a pack that is not installed as a root (the index reports it as missing)', () => {

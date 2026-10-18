@@ -33,7 +33,8 @@ export function selectPackVersions(
 }
 
 /**
- * The `roots` for a per-character content index (plan 15): every pinned pack id, then every
+ * The `roots` for a per-character content index (plan 15): every pinned pack id (sorted, so the
+ * index never depends on pin insertion order), then every
  * translation pack among `packs` whose `translates.id` is a pinned pack or one of their
  * (transitive) dependencies, sorted by id. `resolveDependencyOrder` walks from a translation to the
  * pack it translates, but never the other way, so a root set of pinned content ids alone would
@@ -58,7 +59,7 @@ export function pinnedRoots(packs: Pack[], pins: Pins): string[] {
     .map((p) => p.id)
     .filter((id) => !(id in pins))
     .sort();
-  return [...Object.keys(pins), ...translations];
+  return [...Object.keys(pins).sort(), ...translations];
 }
 
 export function resolveDependencyOrder(
