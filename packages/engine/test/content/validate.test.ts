@@ -76,7 +76,7 @@ describe('validatePack', () => {
     if (fighter?.type !== 'class') throw new Error();
     fighter.multiclass = {
       prerequisites: { hasFeat: 'core-mini:feat/nope' },
-      gains: { armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0 },
+      gains: { armorTraining: [], weaponProficiencies: [], skillChoiceCount: 0, toolProficiencies: [] },
     };
     const d = validatePack(bad, []);
     expect(codes(d)).toEqual(['ref.missing']);

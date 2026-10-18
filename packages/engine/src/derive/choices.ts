@@ -19,6 +19,17 @@ function isUnanswered(facts: Facts, choice: Choice, id: string, count: number): 
   return recorded === undefined || decisionFallsShort(choice, recorded, count);
 }
 
+/**
+ * Plan 14 task 1: whether a class-row choice is OFFERED given whether its owning class is the
+ * character's initial class (`facts.classes[0]`). `scope: 'initial'` → initial class only,
+ * `'later'` → any later class only, absent (or a non-`classLevel` choice, a pack diagnostic) →
+ * either. Offers only: a recorded decision on an out-of-scope choice still resolves and grants.
+ */
+export function scopeOffers(choice: Choice, initialClass: boolean): boolean {
+  if (choice.scope === undefined || choice.at.kind !== 'classLevel') return true;
+  return choice.scope === 'initial' ? initialClass : !initialClass;
+}
+
 /** The row-gated synthetic id for a class's starting-skill decision (R5, task-13-brief.md controller ruling). */
 export const skillsChoiceId = (classId: string): string => `${classId}@1/skills`;
 
@@ -69,7 +80,11 @@ export function creationChoices(
  * `ClassLevelRow.choices`, gated `row.level <= facts.classes[i].level`, PLUS the synthetic
  * `<classId>@1/skills` decision (R5) that has no backing `Choice` entity at all (for a LATER class
  * carrying `multiclass.gains`, the `<classId>@1/multiclass-skills` bonus pick instead). The creation-slot
- * logic in `creationChoices` above is untouched — this is purely additive.
+ * logic in `creationChoices` above is untouched — this is purely additive. Plan 14 task 1: an authored
+ * row choice carrying `scope` is offered only to the initial class (`'initial'`) or only to a later
+ * class (`'later'`) — see `scopeOffers`; a subclass row follows its class entry's position. The two
+ * synthetic skill picks have no authored `Choice` to carry a `scope`, so their initial/later split
+ * stays the slug-based one below (the fallback).
  */
 export function levelScopedChoices(
   facts: Facts,
@@ -78,10 +93,16 @@ export function levelScopedChoices(
   const issues: Diagnostic[] = [];
   const requests: ChoiceRequest[] = [];
 
-  const collectRows = (owner: Extract<Entity, { type: 'class' | 'subclass' }>, ownerId: string, gateLevel: number) => {
+  const collectRows = (
+    owner: Extract<Entity, { type: 'class' | 'subclass' }>,
+    ownerId: string,
+    gateLevel: number,
+    initialClass: boolean,
+  ) => {
     for (const row of owner.levels) {
       if (row.level > gateLevel) continue;
       for (const c of row.choices) {
+        if (!scopeOffers(c, initialClass)) continue;
         const count = resolveChoiceCount(c, facts, index);
         if (isUnanswered(facts, c, c.id, count)) requests.push({ choiceId: c.id, ownerId, count });
       }
@@ -92,7 +113,7 @@ export function levelScopedChoices(
     const classId = index.resolveClassRef(entry.classId) ?? entry.classId;
     const classEntity = index.get(classId);
     if (classEntity?.type !== 'class') return;
-    collectRows(classEntity, classId, entry.level);
+    collectRows(classEntity, classId, entry.level, i === 0);
 
     // Plan 12 final wave W1 (ruling 7's first-vs-later split, as `deriveProficiencies`): the INITIAL
     // class asks its full starting-skill pick; a LATER class asks only its `multiclass.gains
@@ -108,7 +129,7 @@ export function levelScopedChoices(
 
     if (entry.subclassId !== undefined) {
       const subclassEntity = index.get(entry.subclassId);
-      if (subclassEntity?.type === 'subclass') collectRows(subclassEntity, entry.subclassId, entry.level);
+      if (subclassEntity?.type === 'subclass') collectRows(subclassEntity, entry.subclassId, entry.level, i === 0);
     }
   });
 

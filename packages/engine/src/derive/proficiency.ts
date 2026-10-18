@@ -19,9 +19,9 @@ export interface ClassProficiencyGrant {
  * `sheet.proficiencies` AND `derive/attacks.ts`'s weapon proficiency for attack math, so the two can
  * never disagree. Ruling 7 (phase 4, plan 11 task 2): `facts.classes[]` order (order gained) decides
  * which entry is "first" — the FIRST class always contributes its full lists; any LATER class
- * (index > 0) contributes only its `multiclass.gains` lists (the pack's multiclass table data).
- * `multiclass.gains` carries no tool list, so a later class with gains contributes no class tools
- * (plan 13 task 2). Compat: a later class with no `multiclass`/`gains` data at all (old/fixture
+ * (index > 0) contributes only its `multiclass.gains` lists (the pack's multiclass table data),
+ * tools included since plan 14 task 1 (`gains.toolProficiencies`, default `[]` — e.g. Rogue's
+ * Thieves' Tools). Compat: a later class with no `multiclass`/`gains` data at all (old/fixture
  * packs that predate ruling 7) keeps its FULL lists, so untouched content grants what it always did.
  * A `facts.classes` entry that does not resolve to a class entity contributes nothing.
  */
@@ -36,7 +36,7 @@ export function classProficiencyGrants(facts: Facts, index: ContentIndex): Class
       classId,
       armorTraining: gains ? gains.armorTraining : classEntity.armorTraining,
       weaponProficiencies: gains ? gains.weaponProficiencies : classEntity.weaponProficiencies,
-      toolProficiencies: gains ? [] : classEntity.toolProficiencies,
+      toolProficiencies: gains ? gains.toolProficiencies : classEntity.toolProficiencies,
     });
   });
   return grants;

@@ -26,6 +26,15 @@ function choiceDiagnostics(
         entityId: owner.id,
       }),
     );
+  // Plan 14 task 1: `scope` (initial/later class) is meaningful only on a class-row choice.
+  if (c.scope !== undefined && c.at.kind !== 'classLevel')
+    out.push(
+      error(
+        'choice.scopeOnNonClassChoice',
+        `Choice "${c.id}" has scope "${c.scope}" but is not a class-level choice (at.kind "${c.at.kind}")`,
+        { path: `${path}.scope`, entityId: owner.id },
+      ),
+    );
   if (c.at.kind === 'classLevel') {
     if (!resolveClass(c.at.class))
       out.push(
