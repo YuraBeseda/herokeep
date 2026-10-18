@@ -99,7 +99,8 @@ export function equippedArmor(facts: Facts, index: ContentIndex): { category: Ar
  *
  * Roots (see task-8-brief.md's "Composition algorithm"): the system's creation-slot decisions
  * (species, background), `facts.classes` (class + subclass), every other decision selection that
- * resolves to a feat/feature entity, and equipped/attuned inventory items. From each root, `grants[]`
+ * resolves to a feat/feature entity, and equipped/attuned inventory items (attuned only, for an item
+ * whose entity declares `attunement.required`). From each root, `grants[]`
  * is walked recursively (class/subclass `levels[]` rows are an additional grant source, gated on
  * `row.level <= classLevels[classId]`, and a background's `originFeat` is an additional implicit
  * grant, root = the background); a grant activates its feature only while its own `when` predicate
@@ -249,8 +250,14 @@ export function compose(facts: Facts, index: ContentIndex): Composition {
     if (c.subclassId !== undefined) activateRoot(c.subclassId);
   }
 
+  // Plan 14 task 3 (ruling 5): an item whose pack entity declares `attunement.required` activates its
+  // effects/grants only while ATTUNED (wearing it is not enough); any other item keeps activating on
+  // `equipped || attuned`. Charges are a separate path (`derive/resources.ts`) and stay ungated.
   for (const item of facts.inventory) {
-    if (!(item.equipped || item.attuned) || item.itemId === undefined) continue;
+    if (item.itemId === undefined) continue;
+    const entity = index.get(item.itemId);
+    const needsAttunement = entity?.type === 'item' && entity.attunement?.required === true;
+    if (!(needsAttunement ? item.attuned : item.equipped || item.attuned)) continue;
     activateRoot(item.itemId);
   }
 

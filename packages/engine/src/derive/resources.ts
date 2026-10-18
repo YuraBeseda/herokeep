@@ -110,10 +110,10 @@ export function deriveResources(
   }
 
   // Ruling 3 (phase 4, plan 11 task 4 — "item charges = per-instance resources"): one ResourceView
-  // per ACTIVE (equipped OR attuned — composition.ts:228's own activation gate, re-checked per
-  // INSTANCE here rather than read off `comp.entities`, since `Composition.entities` is deduplicated
-  // by entity id and would wrongly report a second, inactive instance of the same item type as
-  // active) inventory item whose entity declares `charges`, keyed `item:<instanceId>` — never
+  // per ACTIVE (equipped OR attuned, checked per INSTANCE here rather than read off
+  // `comp.entities`, since `Composition.entities` is deduplicated by entity id and would wrongly
+  // report a second, inactive instance of the same item type as active) inventory item whose entity
+  // declares `charges`, keyed `item:<instanceId>` — never
   // `item:<itemId>`, so two instances of the same item type never collide. The key can never collide
   // with a `resource.define` id either: `item:` contains a colon, which no `SlugSchema` value (every
   // `resource.define.id` to date) can ever contain. Reuses the SAME `table`/`meta`/`resourcesUsed`
@@ -128,6 +128,9 @@ export function deriveResources(
   // removed from inventory entirely, its `resourcesUsed` entry has no consumer left to reference it
   // and lingers forever — acceptable for v1 (a few stray keys in a JSON blob, not a correctness bug);
   // an eventual orphan-sweep belongs with any future general facts-pruning backlog item, not this task.
+  //
+  // Plan 14 task 3 (ruling 5): composition.ts now activates an attunement-required item's
+  // EFFECTS/GRANTS only while attuned; charges deliberately keep this looser equipped-or-attuned gate.
   for (const item of facts.inventory) {
     if (!(item.equipped || item.attuned) || item.itemId === undefined) continue;
     const entity = index.get(item.itemId);
