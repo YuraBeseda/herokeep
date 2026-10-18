@@ -1,0 +1,286 @@
+<form class="hb-form" novalidate (ngSubmit)="submit()" *transloco="let t; read: 'packs'">
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.name') }}</span>
+    <input
+      type="text"
+      class="hb-form__name"
+      maxlength="200"
+      [value]="name()"
+      [attr.aria-invalid]="shown('name') ? 'true' : null"
+      [attr.aria-describedby]="shown('name') ? errorId('name') : null"
+      (input)="name.set($any($event.target).value)"
+    />
+  </label>
+  @if (shown('name'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('name')">{{ t(key) }}</p>
+  }
+
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.item.category') }}</span>
+    <select class="hb-form__category" (change)="setCategory($any($event.target).value)">
+      @for (value of categories; track value) {
+        <option [value]="value" [selected]="value === category()">
+          {{ t('homebrew.enum.category.' + value) }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <div class="hb-form__row">
+    <label class="hb-form__field">
+      <span>{{ t('homebrew.field.item.rarity') }}</span>
+      <select class="hb-form__rarity" (change)="setRarity($any($event.target).value)">
+        <option value="" [selected]="rarity() === ''">
+          {{ t('homebrew.field.item.rarity-none') }}
+        </option>
+        @for (value of rarities; track value) {
+          <option [value]="value" [selected]="value === rarity()">
+            {{ t('homebrew.enum.rarity.' + value) }}
+          </option>
+        }
+      </select>
+    </label>
+    <hk-number-field
+      class="hb-form__weight"
+      [labelKey]="'packs.homebrew.field.item.weight'"
+      [min]="0"
+      [ngModel]="weight()"
+      [ngModelOptions]="{ standalone: true }"
+      (ngModelChange)="weight.set($event)"
+    />
+  </div>
+  @if (shown('weight'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('weight')">{{ t(key) }}</p>
+  }
+
+  <label class="hb-form__check">
+    <input
+      type="checkbox"
+      class="hb-form__attunement"
+      [checked]="attunement()"
+      (change)="attunement.set($any($event.target).checked)"
+    />
+    <span>{{ t('homebrew.field.item.attunement') }}</span>
+  </label>
+
+  @switch (category()) {
+    @case ('weapon') {
+      <fieldset class="hb-form__group">
+        <legend>{{ t('homebrew.field.item.weapon-heading') }}</legend>
+        <div class="hb-form__row">
+          <label class="hb-form__field">
+            <span>{{ t('homebrew.field.item.weapon-kind') }}</span>
+            <select
+              class="hb-form__weapon-kind"
+              (change)="setWeaponKind($any($event.target).value)"
+            >
+              @for (value of weaponKinds; track value) {
+                <option [value]="value" [selected]="value === weaponKind()">
+                  {{ t('homebrew.enum.weapon-kind.' + value) }}
+                </option>
+              }
+            </select>
+          </label>
+          <label class="hb-form__field">
+            <span>{{ t('homebrew.field.item.weapon-category') }}</span>
+            <select
+              class="hb-form__weapon-category"
+              (change)="setWeaponCategory($any($event.target).value)"
+            >
+              @for (value of weaponCategories; track value) {
+                <option [value]="value" [selected]="value === weaponCategory()">
+                  {{ t('homebrew.enum.weapon-category.' + value) }}
+                </option>
+              }
+            </select>
+          </label>
+        </div>
+        <div class="hb-form__row">
+          <label class="hb-form__field">
+            <span>{{ t('homebrew.field.item.damage') }}</span>
+            <input
+              type="text"
+              class="hb-form__damage"
+              maxlength="12"
+              [value]="damage()"
+              [attr.aria-invalid]="shown('damage') ? 'true' : null"
+              [attr.aria-describedby]="shown('damage') ? errorId('damage') : null"
+              (input)="damage.set($any($event.target).value)"
+            />
+          </label>
+          <label class="hb-form__field">
+            <span>{{ t('homebrew.field.item.damage-type') }}</span>
+            <select
+              class="hb-form__damage-type"
+              (change)="damageType.set($any($event.target).value)"
+            >
+              @for (value of vocabulary().damageTypes; track value) {
+                <option [value]="value" [selected]="value === damageType()">{{ value }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        @if (shown('damage'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('damage')">{{ t(key) }}</p>
+        }
+        @if (shown('damageType'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('damageType')">{{ t(key) }}</p>
+        }
+
+        <fieldset class="hb-form__checks">
+          <legend>{{ t('homebrew.field.item.properties') }}</legend>
+          @for (value of vocabulary().weaponProperties; track value) {
+            <label class="hb-form__check">
+              <input
+                type="checkbox"
+                class="hb-form__property"
+                [attr.data-property]="value"
+                [checked]="properties().includes(value)"
+                (change)="toggleProperty(value, $any($event.target).checked)"
+              />
+              <span>{{ value }}</span>
+            </label>
+          }
+        </fieldset>
+
+        <label class="hb-form__field">
+          <span>{{ t('homebrew.field.item.mastery') }}</span>
+          <select class="hb-form__mastery" (change)="mastery.set($any($event.target).value)">
+            <option value="" [selected]="mastery() === ''">
+              {{ t('homebrew.field.item.mastery-none') }}
+            </option>
+            @for (value of vocabulary().masteries; track value) {
+              <option [value]="value" [selected]="value === mastery()">{{ value }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="hb-form__row">
+          <hk-number-field
+            class="hb-form__range-normal"
+            [labelKey]="'packs.homebrew.field.item.range-normal'"
+            [min]="1"
+            [step]="1"
+            [ngModel]="rangeNormal()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="rangeNormal.set($event)"
+          />
+          <hk-number-field
+            class="hb-form__range-long"
+            [labelKey]="'packs.homebrew.field.item.range-long'"
+            [min]="1"
+            [step]="1"
+            [ngModel]="rangeLong()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="rangeLong.set($event)"
+          />
+        </div>
+        @if (shown('range'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('range')">{{ t(key) }}</p>
+        }
+      </fieldset>
+    }
+    @case ('armor') {
+      <fieldset class="hb-form__group">
+        <legend>{{ t('homebrew.field.item.armor-heading') }}</legend>
+        <label class="hb-form__field">
+          <span>{{ t('homebrew.field.item.armor-category') }}</span>
+          <select
+            class="hb-form__armor-category"
+            (change)="setArmorCategory($any($event.target).value)"
+          >
+            @for (value of armorCategories; track value) {
+              <option [value]="value" [selected]="value === armorCategory()">
+                {{ t('homebrew.enum.armor-category.' + value) }}
+              </option>
+            }
+          </select>
+        </label>
+        <div class="hb-form__row">
+          <hk-number-field
+            class="hb-form__ac"
+            [labelKey]="'packs.homebrew.field.item.ac'"
+            [min]="10"
+            [max]="20"
+            [step]="1"
+            [ngModel]="ac()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="ac.set($event)"
+          />
+          <hk-number-field
+            class="hb-form__dex-cap"
+            [labelKey]="'packs.homebrew.field.item.dex-cap'"
+            [min]="0"
+            [step]="1"
+            [ngModel]="dexCap()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="dexCap.set($event)"
+          />
+          <hk-number-field
+            class="hb-form__strength"
+            [labelKey]="'packs.homebrew.field.item.strength'"
+            [min]="1"
+            [step]="1"
+            [ngModel]="strength()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="strength.set($event)"
+          />
+        </div>
+        @if (shown('ac'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('ac')">{{ t(key) }}</p>
+        }
+        @if (shown('dexCap'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('dexCap')">{{ t(key) }}</p>
+        }
+        @if (shown('strength'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('strength')">{{ t(key) }}</p>
+        }
+        <label class="hb-form__check">
+          <input
+            type="checkbox"
+            class="hb-form__stealth"
+            [checked]="stealthDisadvantage()"
+            (change)="stealthDisadvantage.set($any($event.target).checked)"
+          />
+          <span>{{ t('homebrew.field.item.stealth') }}</span>
+        </label>
+      </fieldset>
+    }
+    @case ('shield') {
+      <fieldset class="hb-form__group">
+        <legend>{{ t('homebrew.field.item.shield-heading') }}</legend>
+        <hk-number-field
+          class="hb-form__shield-ac"
+          [labelKey]="'packs.homebrew.field.item.shield-ac'"
+          [min]="1"
+          [step]="1"
+          [ngModel]="shieldAc()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="shieldAc.set($event)"
+        />
+        @if (shown('shieldAc'); as key) {
+          <p class="hb-form__error" role="alert" [id]="errorId('shieldAc')">{{ t(key) }}</p>
+        }
+      </fieldset>
+    }
+  }
+
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.description') }}</span>
+    <textarea
+      class="hb-form__description"
+      rows="6"
+      [value]="description()"
+      (input)="description.set($any($event.target).value)"
+    ></textarea>
+  </label>
+
+  <div class="hb-form__actions">
+    <button hk-button type="button" [variant]="'ghost'" class="hb-form__cancel" (click)="cancel()">
+      {{ t('homebrew.field.cancel') }}
+    </button>
+    <button hk-button type="submit" class="hb-form__save" [disabled]="busy()">
+      {{ t('homebrew.field.save') }}
+    </button>
+  </div>
+</form>

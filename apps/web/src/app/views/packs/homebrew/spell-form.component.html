@@ -1,0 +1,248 @@
+<form class="hb-form" novalidate (ngSubmit)="submit()" *transloco="let t; read: 'packs'">
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.name') }}</span>
+    <input
+      type="text"
+      class="hb-form__name"
+      maxlength="200"
+      [value]="name()"
+      [attr.aria-invalid]="shown('name') ? 'true' : null"
+      [attr.aria-describedby]="shown('name') ? errorId('name') : null"
+      (input)="name.set($any($event.target).value)"
+    />
+  </label>
+  @if (shown('name'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('name')">{{ t(key) }}</p>
+  }
+
+  <div class="hb-form__row">
+    <hk-number-field
+      class="hb-form__level"
+      [labelKey]="'packs.homebrew.field.spell.level'"
+      [min]="0"
+      [max]="9"
+      [step]="1"
+      [ngModel]="level()"
+      [ngModelOptions]="{ standalone: true }"
+      (ngModelChange)="level.set($event)"
+    />
+    <label class="hb-form__field">
+      <span>{{ t('homebrew.field.spell.school') }}</span>
+      <select class="hb-form__school" (change)="school.set($any($event.target).value)">
+        @for (value of vocabulary().schools; track value) {
+          <option [value]="value" [selected]="value === school()">{{ value }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  @if (shown('level'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('level')">{{ t(key) }}</p>
+  }
+  @if (shown('school'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('school')">{{ t(key) }}</p>
+  }
+
+  <div class="hb-form__row">
+    <hk-number-field
+      class="hb-form__casting-value"
+      [labelKey]="'packs.homebrew.field.spell.casting-value'"
+      [min]="1"
+      [step]="1"
+      [ngModel]="castingValue()"
+      [ngModelOptions]="{ standalone: true }"
+      (ngModelChange)="castingValue.set($event)"
+    />
+    <label class="hb-form__field">
+      <span>{{ t('homebrew.field.spell.casting-unit') }}</span>
+      <select class="hb-form__casting-unit" (change)="setCastingUnit($any($event.target).value)">
+        @for (value of timeUnits; track value) {
+          <option [value]="value" [selected]="value === castingUnit()">
+            {{ t('homebrew.enum.time-unit.' + value) }}
+          </option>
+        }
+      </select>
+    </label>
+  </div>
+  @if (shown('castingValue'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('castingValue')">{{ t(key) }}</p>
+  }
+
+  <div class="hb-form__row">
+    <label class="hb-form__field">
+      <span>{{ t('homebrew.field.spell.range-kind') }}</span>
+      <select class="hb-form__range-kind" (change)="setRangeKind($any($event.target).value)">
+        @for (value of rangeKinds; track value) {
+          <option [value]="value" [selected]="value === rangeKind()">
+            {{ t('homebrew.enum.range-kind.' + value) }}
+          </option>
+        }
+      </select>
+    </label>
+    @if (needsDistance()) {
+      <hk-number-field
+        class="hb-form__range-distance"
+        [labelKey]="'packs.homebrew.field.spell.range-distance'"
+        [min]="1"
+        [step]="1"
+        [ngModel]="rangeDistance()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="rangeDistance.set($event)"
+      />
+    }
+  </div>
+  @if (shown('rangeDistance'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('rangeDistance')">{{ t(key) }}</p>
+  }
+
+  <fieldset class="hb-form__checks">
+    <legend>{{ t('homebrew.field.spell.components') }}</legend>
+    <label class="hb-form__check">
+      <input
+        type="checkbox"
+        class="hb-form__v"
+        [checked]="verbal()"
+        (change)="verbal.set($any($event.target).checked)"
+      />
+      <span>{{ t('homebrew.field.spell.v') }}</span>
+    </label>
+    <label class="hb-form__check">
+      <input
+        type="checkbox"
+        class="hb-form__s"
+        [checked]="somatic()"
+        (change)="somatic.set($any($event.target).checked)"
+      />
+      <span>{{ t('homebrew.field.spell.s') }}</span>
+    </label>
+    <label class="hb-form__check">
+      <input
+        type="checkbox"
+        class="hb-form__m"
+        [checked]="material()"
+        (change)="material.set($any($event.target).checked)"
+      />
+      <span>{{ t('homebrew.field.spell.m') }}</span>
+    </label>
+  </fieldset>
+  @if (material()) {
+    <label class="hb-form__field">
+      <span>{{ t('homebrew.field.spell.material-text') }}</span>
+      <input
+        type="text"
+        class="hb-form__material-text"
+        maxlength="500"
+        [value]="materialText()"
+        (input)="materialText.set($any($event.target).value)"
+      />
+    </label>
+  }
+
+  <div class="hb-form__row">
+    <label class="hb-form__field">
+      <span>{{ t('homebrew.field.spell.duration-kind') }}</span>
+      <select class="hb-form__duration-kind" (change)="setDurationKind($any($event.target).value)">
+        @for (value of durationKinds; track value) {
+          <option [value]="value" [selected]="value === durationKind()">
+            {{ t('homebrew.enum.duration-kind.' + value) }}
+          </option>
+        }
+      </select>
+    </label>
+    @if (durationKind() === 'time') {
+      <hk-number-field
+        class="hb-form__duration-value"
+        [labelKey]="'packs.homebrew.field.spell.duration-value'"
+        [min]="1"
+        [step]="1"
+        [ngModel]="durationValue()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="durationValue.set($event)"
+      />
+      <label class="hb-form__field">
+        <span>{{ t('homebrew.field.spell.duration-unit') }}</span>
+        <select
+          class="hb-form__duration-unit"
+          (change)="setDurationUnit($any($event.target).value)"
+        >
+          @for (value of durationUnits; track value) {
+            <option [value]="value" [selected]="value === durationUnit()">
+              {{ t('homebrew.enum.duration-unit.' + value) }}
+            </option>
+          }
+        </select>
+      </label>
+    }
+  </div>
+  @if (shown('durationValue'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('durationValue')">{{ t(key) }}</p>
+  }
+
+  <label class="hb-form__check">
+    <input
+      type="checkbox"
+      class="hb-form__concentration"
+      [checked]="concentration()"
+      (change)="concentration.set($any($event.target).checked)"
+    />
+    <span>{{ t('homebrew.field.spell.concentration') }}</span>
+  </label>
+  <label class="hb-form__check">
+    <input
+      type="checkbox"
+      class="hb-form__ritual"
+      [checked]="ritual()"
+      (change)="ritual.set($any($event.target).checked)"
+    />
+    <span>{{ t('homebrew.field.spell.ritual') }}</span>
+  </label>
+
+  <fieldset
+    class="hb-form__checks hb-form__classes"
+    [attr.aria-describedby]="shown('classes') ? errorId('classes') : null"
+  >
+    <legend>{{ t('homebrew.field.spell.classes') }}</legend>
+    @for (option of vocabulary().classes; track option.slug) {
+      <label class="hb-form__check">
+        <input
+          type="checkbox"
+          class="hb-form__class"
+          [attr.data-class]="option.slug"
+          [checked]="classes().includes(option.slug)"
+          (change)="toggleClass(option.slug, $any($event.target).checked)"
+        />
+        <span>{{ option.name }}</span>
+      </label>
+    }
+  </fieldset>
+  @if (shown('classes'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('classes')">{{ t(key) }}</p>
+  }
+
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.description') }}</span>
+    <textarea
+      class="hb-form__description"
+      rows="6"
+      [value]="description()"
+      (input)="description.set($any($event.target).value)"
+    ></textarea>
+  </label>
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.spell.higher-levels') }}</span>
+    <textarea
+      class="hb-form__higher-levels"
+      rows="3"
+      [value]="higherLevels()"
+      (input)="higherLevels.set($any($event.target).value)"
+    ></textarea>
+  </label>
+
+  <div class="hb-form__actions">
+    <button hk-button type="button" [variant]="'ghost'" class="hb-form__cancel" (click)="cancel()">
+      {{ t('homebrew.field.cancel') }}
+    </button>
+    <button hk-button type="submit" class="hb-form__save" [disabled]="busy()">
+      {{ t('homebrew.field.save') }}
+    </button>
+  </div>
+</form>

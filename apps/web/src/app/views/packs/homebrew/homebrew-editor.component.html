@@ -1,0 +1,73 @@
+<section class="hb-editor" *transloco="let t; read: 'packs'">
+  <a class="hb-editor__back" routerLink="/packs/homebrew">{{ t('homebrew.back-to-list') }}</a>
+
+  @if (notFound()) {
+    <p class="hb-editor__not-found" role="status">{{ t('homebrew.not-found') }}</p>
+  } @else {
+    @let formType = type()!;
+    <h1 class="hb-editor__title">
+      {{ editing() ? t('homebrew.edit-title.' + formType) : t('homebrew.new.' + formType) }}
+    </h1>
+
+    @if (failure(); as refused) {
+      <div class="hb-editor__failure" role="alert">
+        <h2 class="hb-editor__failure-heading">{{ t('homebrew.errors.heading') }}</h2>
+        @if (refused.issues.length > 0) {
+          <p>{{ t('homebrew.errors.issues') }}</p>
+          <ul class="hb-editor__issues">
+            @for (line of refused.issues; track $index) {
+              <li>
+                <code>{{ line }}</code>
+              </li>
+            }
+          </ul>
+        }
+        @if (refused.diagnostics.length > 0) {
+          <ul class="hb-editor__diagnostics">
+            @for (diagnostic of refused.diagnostics; track $index) {
+              <li>
+                {{ t(diagnosticLabel(diagnostic)) }}
+                <code>{{ diagnostic.code }}</code>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    @switch (formType) {
+      @case ('item') {
+        <app-homebrew-item-form
+          [entity]="asItem(entity())"
+          [busy]="busy()"
+          (submitted)="onSubmitted($event)"
+          (cancelled)="onCancelled()"
+        />
+      }
+      @case ('spell') {
+        <app-homebrew-spell-form
+          [entity]="asSpell(entity())"
+          [busy]="busy()"
+          (submitted)="onSubmitted($event)"
+          (cancelled)="onCancelled()"
+        />
+      }
+      @case ('feat') {
+        <app-homebrew-feat-form
+          [entity]="asFeat(entity())"
+          [busy]="busy()"
+          (submitted)="onSubmitted($event)"
+          (cancelled)="onCancelled()"
+        />
+      }
+      @case ('species') {
+        <app-homebrew-species-form
+          [entity]="asSpecies(entity())"
+          [busy]="busy()"
+          (submitted)="onSubmitted($event)"
+          (cancelled)="onCancelled()"
+        />
+      }
+    }
+  }
+</section>

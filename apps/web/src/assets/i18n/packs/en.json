@@ -88,6 +88,202 @@
   },
   "update-available": "Update available",
   "homebrew": {
-    "pack-name": "My homebrew"
+    "pack-name": "My homebrew",
+    "open": "Homebrew",
+    "title": "Homebrew",
+    "intro": "Create your own items, spells, feats and species. They are kept in a local content pack named homebrew; a character sees them once it uses that pack (Build tab → Content packs).",
+    "back": "Back to packs",
+    "back-to-list": "Back to homebrew",
+    "version": "Pack version {version}",
+    "empty": "Nothing here yet.",
+    "new-label": "Create homebrew",
+    "new": {
+      "item": "New item",
+      "spell": "New spell",
+      "feat": "New feat",
+      "species": "New species"
+    },
+    "edit-title": {
+      "item": "Edit item",
+      "spell": "Edit spell",
+      "feat": "Edit feat",
+      "species": "Edit species"
+    },
+    "edit": "Edit",
+    "edit-label": "Edit {name}",
+    "delete": "Delete",
+    "delete-label": "Delete {name}",
+    "delete-confirm": {
+      "title": "Delete {name}?",
+      "body": "Characters that use it keep it until you review the update offered on their Build tab.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "not-found": "This homebrew entry does not exist.",
+    "saved": "{updated, plural, =0 {Saved.} one {Saved. # character updated.} other {Saved. # characters updated.}}",
+    "removed": "{updated, plural, =0 {Deleted.} one {Deleted. # character updated.} other {Deleted. # characters updated.}}",
+    "pending": "{count, plural, one {# character has an update to review on its Build tab.} other {# characters have an update to review on their Build tab.}}",
+    "save-failed": "This entry could not be saved: the pack rejected it",
+    "save-failed-unknown": "This entry could not be saved on this device",
+    "remove-failed": "This entry could not be deleted",
+    "errors": {
+      "heading": "Why it was not saved",
+      "issues": "The entry does not match the pack format:"
+    },
+    "validation": {
+      "generic": "The pack validator rejected this entry.",
+      "ref": {
+        "missing": "It refers to content that does not exist."
+      },
+      "entity": {
+        "descriptionTooLong": "The description is too long."
+      },
+      "pack": {
+        "tooLarge": "The homebrew pack is too large."
+      }
+    },
+    "field": {
+      "name": "Name",
+      "description": "Description (Markdown)",
+      "required": "This field is required.",
+      "positive-number": "Enter a whole number of 1 or more.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "item": {
+        "category": "Category",
+        "rarity": "Rarity",
+        "rarity-none": "None",
+        "weight": "Weight (lb)",
+        "weight-invalid": "Weight cannot be negative.",
+        "attunement": "Requires attunement",
+        "weapon-heading": "Weapon",
+        "weapon-kind": "Melee or ranged",
+        "weapon-category": "Weapon category",
+        "damage": "Damage dice (for example 1d8)",
+        "damage-invalid": "Use dice like 1d8 or 2d6+1.",
+        "damage-type": "Damage type",
+        "properties": "Properties",
+        "mastery": "Mastery",
+        "mastery-none": "None",
+        "range-normal": "Normal range (ft)",
+        "range-long": "Long range (ft)",
+        "range-invalid": "Enter both ranges; the long range must be at least the normal range.",
+        "armor-heading": "Armor",
+        "armor-category": "Armor category",
+        "ac": "Armor Class",
+        "ac-invalid": "Armor Class must be a whole number from 10 to 20.",
+        "dex-cap": "Dexterity bonus cap (empty for none)",
+        "strength": "Strength required (empty for none)",
+        "stealth": "Disadvantage on Stealth checks",
+        "shield-heading": "Shield",
+        "shield-ac": "Armor Class bonus",
+        "whole-number": "Enter a whole number in the allowed range."
+      },
+      "spell": {
+        "level": "Level (0 is a cantrip)",
+        "level-invalid": "The level must be a whole number from 0 to 9.",
+        "school": "School",
+        "casting-value": "Casting time",
+        "casting-unit": "Casting time unit",
+        "range-kind": "Range",
+        "range-distance": "Distance",
+        "components": "Components",
+        "v": "Verbal",
+        "s": "Somatic",
+        "m": "Material",
+        "material-text": "Materials",
+        "duration-kind": "Duration",
+        "duration-value": "Duration amount",
+        "duration-unit": "Duration unit",
+        "concentration": "Concentration",
+        "ritual": "Ritual",
+        "classes": "Class spell lists",
+        "classes-required": "Pick at least one class.",
+        "higher-levels": "Using a higher-level slot (Markdown)"
+      },
+      "feat": {
+        "category": "Category",
+        "repeatable": "Can be taken more than once",
+        "benefit": "Benefit (Markdown)",
+        "benefit-hint": "The sheet shows this text as the feat's benefit."
+      },
+      "species": {
+        "size": "Size",
+        "speed": "Walking speed (ft)",
+        "creature-type": "Creature type",
+        "traits": "Traits",
+        "trait-name": "Trait name",
+        "trait-text": "Trait text",
+        "trait-incomplete": "Give the trait a name and a text, or remove it.",
+        "add-trait": "Add trait",
+        "remove-trait": "Remove trait"
+      }
+    },
+    "enum": {
+      "category": {
+        "weapon": "Weapon",
+        "armor": "Armor",
+        "shield": "Shield",
+        "gear": "Gear",
+        "tool": "Tool",
+        "consumable": "Consumable",
+        "magic": "Magic item"
+      },
+      "rarity": {
+        "common": "Common",
+        "uncommon": "Uncommon",
+        "rare": "Rare",
+        "veryRare": "Very rare",
+        "legendary": "Legendary",
+        "artifact": "Artifact"
+      },
+      "weapon-kind": {
+        "melee": "Melee",
+        "ranged": "Ranged"
+      },
+      "weapon-category": {
+        "simple": "Simple",
+        "martial": "Martial"
+      },
+      "armor-category": {
+        "light": "Light",
+        "medium": "Medium",
+        "heavy": "Heavy"
+      },
+      "time-unit": {
+        "action": "Action",
+        "bonus": "Bonus action",
+        "reaction": "Reaction",
+        "minute": "Minute",
+        "hour": "Hour"
+      },
+      "range-kind": {
+        "self": "Self",
+        "touch": "Touch",
+        "feet": "Feet",
+        "miles": "Miles",
+        "sight": "Sight",
+        "unlimited": "Unlimited",
+        "special": "Special"
+      },
+      "duration-kind": {
+        "instantaneous": "Instantaneous",
+        "time": "Timed",
+        "untilDispelled": "Until dispelled",
+        "special": "Special"
+      },
+      "duration-unit": {
+        "round": "Round",
+        "minute": "Minute",
+        "hour": "Hour",
+        "day": "Day"
+      },
+      "feat-category": {
+        "origin": "Origin",
+        "general": "General",
+        "fightingStyle": "Fighting style",
+        "epicBoon": "Epic boon"
+      }
+    }
   }
 }

@@ -1,0 +1,68 @@
+<form
+  class="hb-form"
+  novalidate
+  (submit)="$event.preventDefault(); submit()"
+  *transloco="let t; read: 'packs'"
+>
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.name') }}</span>
+    <input
+      type="text"
+      class="hb-form__name"
+      maxlength="200"
+      [value]="name()"
+      [attr.aria-invalid]="shown('name') ? 'true' : null"
+      [attr.aria-describedby]="shown('name') ? errorId('name') : null"
+      (input)="name.set($any($event.target).value)"
+    />
+  </label>
+  @if (shown('name'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('name')">{{ t(key) }}</p>
+  }
+
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.feat.category') }}</span>
+    <select class="hb-form__category" (change)="setCategory($any($event.target).value)">
+      @for (value of categories; track value) {
+        <option [value]="value" [selected]="value === category()">
+          {{ t('homebrew.enum.feat-category.' + value) }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <label class="hb-form__check">
+    <input
+      type="checkbox"
+      class="hb-form__repeatable"
+      [checked]="repeatable()"
+      (change)="repeatable.set($any($event.target).checked)"
+    />
+    <span>{{ t('homebrew.field.feat.repeatable') }}</span>
+  </label>
+
+  <label class="hb-form__field">
+    <span>{{ t('homebrew.field.feat.benefit') }}</span>
+    <textarea
+      class="hb-form__description"
+      rows="8"
+      [value]="description()"
+      [attr.aria-invalid]="shown('description') ? 'true' : null"
+      [attr.aria-describedby]="shown('description') ? errorId('description') : null"
+      (input)="description.set($any($event.target).value)"
+    ></textarea>
+  </label>
+  @if (shown('description'); as key) {
+    <p class="hb-form__error" role="alert" [id]="errorId('description')">{{ t(key) }}</p>
+  }
+  <p class="hb-form__hint">{{ t('homebrew.field.feat.benefit-hint') }}</p>
+
+  <div class="hb-form__actions">
+    <button hk-button type="button" [variant]="'ghost'" class="hb-form__cancel" (click)="cancel()">
+      {{ t('homebrew.field.cancel') }}
+    </button>
+    <button hk-button type="submit" class="hb-form__save" [disabled]="busy()">
+      {{ t('homebrew.field.save') }}
+    </button>
+  </div>
+</form>

@@ -154,8 +154,16 @@ describe('HomebrewService', () => {
     await TestBed.inject(PackStore).init();
   });
 
-  afterEach(() => {
-    TestBed.inject(HkDb).close();
+  afterEach(async () => {
+    // Leave the shared fake IndexedDB as found: spec files share it within a worker.
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.packs.clear(),
+      db.events.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+    db.close();
   });
 
   it('first save creates homebrew@0.1.0 with the core system slug, a caret dependency on the core and the locale name', async () => {

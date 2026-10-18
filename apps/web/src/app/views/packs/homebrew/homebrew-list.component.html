@@ -1,0 +1,53 @@
+<section class="hb-list" *transloco="let t; read: 'packs'">
+  <a class="hb-list__back" routerLink="/packs">{{ t('homebrew.back') }}</a>
+  <h1 class="hb-list__title">{{ t('homebrew.title') }}</h1>
+  <p class="hb-list__intro">{{ t('homebrew.intro') }}</p>
+  @if (pack(); as current) {
+    <p class="hb-list__version">{{ t('homebrew.version', { version: current.version }) }}</p>
+  }
+
+  <nav class="hb-list__new" [attr.aria-label]="t('homebrew.new-label')">
+    @for (type of types; track type) {
+      <a
+        class="hb-list__new-link"
+        [attr.data-type]="type"
+        [routerLink]="['/packs/homebrew/new', type]"
+      >
+        {{ t('homebrew.new.' + type) }}
+      </a>
+    }
+  </nav>
+
+  @for (group of groups(); track group.type) {
+    <hk-card class="hb-list__group" [attr.data-type]="group.type">
+      <h2 class="hb-list__heading">{{ t('entity-type.' + group.type) }}</h2>
+      @for (entity of group.entities; track entity.id) {
+        <div class="hb-list__row" [attr.data-entity-id]="entity.id">
+          <span class="hb-list__name">{{ entity.name }}</span>
+          <span class="hb-list__actions">
+            <a
+              class="hb-list__edit"
+              [routerLink]="['/packs/homebrew/edit', group.type, slugOf(entity)]"
+              [attr.aria-label]="t('homebrew.edit-label', { name: entity.name })"
+            >
+              {{ t('homebrew.edit') }}
+            </a>
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              class="hb-list__delete"
+              [disabled]="removing() !== null"
+              [attr.aria-label]="t('homebrew.delete-label', { name: entity.name })"
+              (click)="remove(entity)"
+            >
+              {{ t('homebrew.delete') }}
+            </button>
+          </span>
+        </div>
+      } @empty {
+        <p class="hb-list__empty">{{ t('homebrew.empty') }}</p>
+      }
+    </hk-card>
+  }
+</section>

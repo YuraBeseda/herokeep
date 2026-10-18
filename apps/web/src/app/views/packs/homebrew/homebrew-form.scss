@@ -1,0 +1,128 @@
+:host {
+  display: block;
+}
+
+.hb-form {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 40rem;
+}
+
+.hb-form__field {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+
+  input,
+  select,
+  textarea {
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: var(--space-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-s);
+    background: var(--surface-1);
+    color: var(--text-1);
+    font: inherit;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.hb-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.hb-form__group,
+.hb-form__checks {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+
+  legend {
+    padding-inline: var(--space-1);
+    font-weight: 600;
+  }
+}
+
+.hb-form__checks {
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2);
+}
+
+.hb-form__check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+
+  input {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+}
+
+.hb-form__trait {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+}
+
+.hb-form__error {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.hb-form__hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.hb-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.hb-editor {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hb-editor__back {
+  color: var(--accent);
+}
+
+.hb-editor__title {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.hb-editor__failure {
+  padding: var(--space-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-m);
+  overflow-wrap: anywhere;
+
+  p,
+  ul {
+    margin: 0 0 var(--space-2);
+  }
+}
+
+.hb-editor__failure-heading {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
