@@ -171,10 +171,15 @@
   {
     "id": "srd-5e-2024:feature/paladin-paladins-smite",
     "cite": "SRD 5.2.1, Paladin's Smite",
-    "note": "SRD text: \"You always have the Divine Smite spell prepared. In addition, you can cast it without expending a spell slot, but you must finish a Long Rest before you can cast it in this way again.\" Granted at Paladin level 2. Divine Smite is a SPELL in 2024 (srd-5e-2024:spell/divine-smite, on the Paladin list), so no damage mechanization lives here. Two real effects: spell.grant{alwaysPrepared:true} (T3 machinery: appears in the Paladin block's prepared[]/alwaysPrepared[] and is excluded from the preparedMax cap) and a resource.define 'paladins-smite' (1 use, longRest) tracking the free cast. spell.grant.uses is deliberately NOT used: nothing in the engine consumes it (verified: no reader outside the hasSpell predicate and refs collector), so the free cast is tracked by the explicit resource pip instead.",
+    "note": "SRD text: \"You always have the Divine Smite spell prepared. In addition, you can cast it without expending a spell slot, but you must finish a Long Rest before you can cast it in this way again.\" Granted at Paladin level 2. Divine Smite is a SPELL in 2024 (srd-5e-2024:spell/divine-smite, on the Paladin list), so no damage mechanization lives here. Two real effects: spell.grant{alwaysPrepared:true} (T3 machinery: appears in the Paladin block's prepared[]/alwaysPrepared[] and is excluded from the preparedMax cap) and a resource.define 'paladins-smite' (1 use, longRest) tracking the free cast. FREE CAST LINKED (plan 13 final fix wave, the Favored Enemy / Hunter's Mark shape from task 4): the grant carries uses:{resource:'paladins-smite'}, so the sheet offers a free-cast lane for Divine Smite that spends the one paladins-smite use and no slot (casting it with a slot spends the slot, never the counter); the lane casts at the spell's base level only (no slot to upcast with) and is refused once the counter is empty. The resource.define stays the one counter (same id, max and Long Rest reset), so recorded paladins-smite spends keep their meaning.",
     "merge": {
       "effects": [
-        { "type": "spell.grant", "spell": "srd-5e-2024:spell/divine-smite", "alwaysPrepared": true },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/divine-smite",
+          "alwaysPrepared": true,
+          "uses": { "resource": "paladins-smite" }
+        },
         {
           "type": "resource.define",
           "id": "paladins-smite",
@@ -237,10 +242,15 @@
   {
     "id": "srd-5e-2024:feature/paladin-faithful-steed",
     "cite": "SRD 5.2.1, Faithful Steed",
-    "note": "SRD text: \"You always have the Find Steed spell prepared. You can also cast the spell once without expending a spell slot, and you regain the ability to do so when you finish a Long Rest.\" Granted at Paladin level 5. Same shape as Paladin's Smite: spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/find-steed plus a 'faithful-steed' resource.define (1, longRest) for the free cast.",
+    "note": "SRD text: \"You always have the Find Steed spell prepared. You can also cast the spell once without expending a spell slot, and you regain the ability to do so when you finish a Long Rest.\" Granted at Paladin level 5. Same shape as Paladin's Smite: spell.grant{alwaysPrepared:true} for srd-5e-2024:spell/find-steed plus a 'faithful-steed' resource.define (1, longRest) for the free cast. FREE CAST LINKED (plan 13 final fix wave): the grant carries uses:{resource:'faithful-steed'} -- a free-cast lane for Find Steed at its base level (2) that spends the faithful-steed use and no slot, refused once spent, restored by a Long Rest.",
     "merge": {
       "effects": [
-        { "type": "spell.grant", "spell": "srd-5e-2024:spell/find-steed", "alwaysPrepared": true },
+        {
+          "type": "spell.grant",
+          "spell": "srd-5e-2024:spell/find-steed",
+          "alwaysPrepared": true,
+          "uses": { "resource": "faithful-steed" }
+        },
         {
           "type": "resource.define",
           "id": "faithful-steed",

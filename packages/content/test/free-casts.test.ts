@@ -124,6 +124,52 @@ describe("Favored Enemy: free Hunter's Mark casts spend the favored-enemy counte
   });
 });
 
+// Final fix wave (plan 13): the two Paladin free casts get the Hunter's Mark shape.
+// - Paladin's Smite (vendored ClassFeature srd-2024_paladin_paladins-smite; ClassFeatureItem level 2):
+//   "You always have the *Divine Smite* spell prepared. In addition, you can cast it without expending a
+//   spell slot, but you must finish a Long Rest before you can cast it in this way again."
+// - Faithful Steed (vendored ClassFeature srd-2024_paladin_faithful-steed; ClassFeatureItem level 5):
+//   "You always have the *Find Steed* spell prepared. You can also cast the spell once without expending
+//   a spell slot, and you regain the ability to do so when you finish a Long Rest."
+// Both grants name their EXISTING one-use Long Rest resource (paladins-smite / faithful-steed).
+describe('Paladin: free Divine Smite and Find Steed casts spend their existing counters', () => {
+  const paladinId = `${FP}:class/paladin`;
+  const smite = `${FP}:spell/divine-smite`;
+  const steed = `${FP}:spell/find-steed`;
+
+  it('paladin 2 offers Divine Smite; paladin 5 offers Divine Smite and Find Steed, each at its base level', () => {
+    expect(index.get(smite)).toMatchObject({ type: 'spell', level: 1 });
+    expect(index.get(steed)).toMatchObject({ type: 'spell', level: 2 });
+    expect(sheetOf(char(paladinId, 1)).freeCasts).toBeUndefined();
+    expect(sheetOf(char(paladinId, 2)).freeCasts).toEqual([{ spellId: smite, resourceId: 'paladins-smite', level: 1 }]);
+    // Effect order (the grants' features sort faithful-steed before paladins-smite).
+    expect(sheetOf(char(paladinId, 5)).freeCasts).toEqual([
+      { spellId: steed, resourceId: 'faithful-steed', level: 2 },
+      { spellId: smite, resourceId: 'paladins-smite', level: 1 },
+    ]);
+  });
+
+  it('a free Find Steed spends faithful-steed and no slot; a second free cast is refused until a Long Rest', () => {
+    const base = char(paladinId, 5);
+    const once = apply(
+      base,
+      propose.cast(sheetOf(base), steed, { level: 2, concentration: false, freeResource: 'faithful-steed' }),
+    );
+    const spent = sheetOf(once);
+    expect([used(spent, 'faithful-steed'), slotUsed(spent, 2)]).toEqual([1, 0]);
+    let refusal: unknown;
+    try {
+      propose.cast(spent, steed, { level: 2, concentration: false, freeResource: 'faithful-steed' });
+    } catch (e) {
+      refusal = e;
+    }
+    expect(refusal instanceof ProposeError ? refusal.diagnostics.map((d) => d.code) : refusal).toEqual([
+      'resource.none-left',
+    ]);
+    expect(used(sheetOf(apply(once, propose.rest(spent, 'long'))), 'faithful-steed')).toBe(0);
+  });
+});
+
 describe('Wild Companion: Find Familiar via a spell slot or a Wild Shape use', () => {
   const block = (level: number) => sheetOf(char(druidId, level)).spellcasting.find((b) => b.classId === druidId)!;
 

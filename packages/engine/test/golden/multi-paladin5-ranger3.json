@@ -1,5 +1,6 @@
 {
   "name": "multi-paladin5-ranger3",
+  "note": "Plan 13 final fix wave re-pin (Paladin free casts): adds two sheet.freeCasts entries. The vendored srd-2024_paladin_paladins-smite (level 2) and srd-2024_paladin_faithful-steed (level 5) let a Paladin cast Divine Smite / Find Steed once without a spell slot per Long Rest; their spell.grant effects now carry uses:{resource} naming the EXISTING paladins-smite / faithful-steed resources (the Hunter's Mark shape from task 4), so a paladin 5 legitimately gains those two free-cast lanes (effect order: faithful-steed, paladins-smite, then the ranger's favored-enemy). No other expectation moves (same resources, maxes and resets).",
   "packs": ["dist:srd-5e-2024"],
   "events": [
     {
@@ -364,6 +365,16 @@
     "sheet.skills[\"insight\"].proficiency": "proficient",
     "sheet.skills[\"insight\"].total.value": 4,
     "sheet.freeCasts": [
+      {
+        "spellId": "srd-5e-2024:spell/find-steed",
+        "resourceId": "faithful-steed",
+        "level": 2
+      },
+      {
+        "spellId": "srd-5e-2024:spell/divine-smite",
+        "resourceId": "paladins-smite",
+        "level": 1
+      },
       {
         "spellId": "srd-5e-2024:spell/hunters-mark",
         "resourceId": "favored-enemy",
