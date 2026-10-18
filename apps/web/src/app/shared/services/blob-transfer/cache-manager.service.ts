@@ -32,6 +32,12 @@ function clampCapBytes(bytes: number): number {
   return Math.min(CACHE_CAP_MAX_BYTES, Math.max(CACHE_CAP_MIN_BYTES, Math.round(bytes)));
 }
 
+/** Rows the cache sweeps may consider: everything except content-pack assets (`origin: 'pack'`),
+ * whose lifecycle `PackStore` owns — see the class doc's honesty note. */
+function sweepable<T extends { origin: string }>(rows: readonly T[]): T[] {
+  return rows.filter((r) => r.origin !== 'pack');
+}
+
 function toCacheable(
   rows: readonly { hash: string; size: number; pinned: boolean; lastUsedAt: number }[],
 ): CacheableBlob[] {
@@ -56,11 +62,10 @@ function toCacheable(
  * HONESTY NOTE on the reference scan: doc-07 says orphans are "not referenced by any local stream
  * OR PACK". This class's `computeReferencedHashes` covers "local stream" (own characters' portrait
  * thumb + full portrait when a `Snapshot` happens to be cached, and every locally-known campaign's
- * projected `party.overview_updated` thumbs) but NOT "pack" — no content pack in this codebase
- * currently references a hash in the `blobs` table via any implemented pipeline (ADR-008: the
- * server never stores pack ASSETS at all, and no client-side pack-asset-into-`blobs`-table pipeline
- * exists yet), so this is a real but currently-inert gap, flagged rather than silently assumed
- * complete.
+ * projected `party.overview_updated` thumbs). "Pack" is covered by origin instead (plan 15 Task 2):
+ * installed content packs store their assets as `origin: 'pack'` blobs, and `PackStore` owns their
+ * lifecycle (`removeContent` deletes the ones no other installed pack lists), so neither the LRU
+ * nor the orphan sweep ever considers an `origin: 'pack'` row (`sweepable`).
  *
  * `BlobTransferService` (the other Task 13 half) calls `refreshPins()` whenever a live campaign
  * session's roster/overview data changes or a campaign session starts/stops — see that service's
@@ -157,7 +162,7 @@ export class CacheManagerService {
    * pinned row. Safe to call any time (Settings slider change, a periodic background tick, or
    * right after a fresh blob arrives). */
   async runLruSweep(): Promise<void> {
-    const rows = await this.blobsRepository.list();
+    const rows = sweepable(await this.blobsRepository.list());
     const evictions = selectLruEvictions(toCacheable(rows), this.capBytesState());
     for (const hash of evictions) await this.blobsRepository.remove(hash);
   }
@@ -168,7 +173,7 @@ export class CacheManagerService {
   async runOrphanSweep(): Promise<void> {
     await this.refreshPins();
     const referenced = await this.computeReferencedHashes();
-    const rows = await this.blobsRepository.list();
+    const rows = sweepable(await this.blobsRepository.list());
     const orphans = selectOrphans(toCacheable(rows), referenced);
     for (const hash of orphans) await this.blobsRepository.remove(hash);
     await this.settingsRepository.set(ORPHAN_SWEEP_LAST_RUN_KEY, Date.now());

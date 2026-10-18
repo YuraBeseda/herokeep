@@ -47,7 +47,10 @@ export class BlobsRepository {
    * (`origin: 'upload'`) landing on a hash that happens to collide with one this device already
    * has from a peer (`origin: 'peer'`) must not flip it back to `'upload'`. A NEW hash with no
    * `meta.origin` still defaults to `'upload'` (the only origin any pre-Task-13 caller ever
-   * produced), unchanged. */
+   * produced), unchanged.
+   *
+   * Plan 15 Task 2: `PackStore.importContent` writes content-pack assets through this same method
+   * with `meta.origin: 'pack'` and the asset's `kind` (no signature change was needed). */
   async put(
     hash: string,
     mime: string,

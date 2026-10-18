@@ -3,6 +3,8 @@ import { validatePack, type Diagnostic } from '@hk/engine';
 import type { Pack } from '@hk/protocol';
 import { ToastService } from '../components/toast/toast.service';
 import { PackLoader } from '../services/engine/pack-loader';
+import type { PackImportPreview } from '../services/packs/hkpack-reader.service';
+import { BlobsRepository } from '../services/storage/blobs.repository';
 import { PacksRepository } from '../services/storage/packs.repository';
 
 function packKey(pack: Pack): string {
@@ -20,6 +22,7 @@ function packKey(pack: Pack): string {
 export class PackStore {
   private readonly packLoader = inject(PackLoader);
   private readonly packsRepository = inject(PacksRepository);
+  private readonly blobsRepository = inject(BlobsRepository);
   private readonly toastService = inject(ToastService);
 
   // Properties
@@ -113,5 +116,59 @@ export class PackStore {
   async removeTranslation(key: string): Promise<void> {
     await this.packsRepository.remove(key);
     this.translationsState.update((packs) => packs.filter((p) => packKey(p) !== key));
+  }
+
+  // I/O boundary: installs a content pack the `HkpackReader` already fully validated (the reader
+  // stores nothing; this is the only write). The pack row goes first — if it fails, nothing else is
+  // written. Each asset then lands in the blob store as `origin: 'pack'` (a hash the device already
+  // holds keeps its own origin/pin — `BlobsRepository.put`'s preserve rule). Should an asset write
+  // fail, the pack row and every blob this call newly created are removed again before rethrowing,
+  // so a half-installed pack never survives. An `alreadyInstalled` preview is a no-op.
+  async importContent(preview: PackImportPreview): Promise<void> {
+    if (!this.coreState()) {
+      throw new Error('PackStore.importContent: call init() before importing packs');
+    }
+    if (preview.alreadyInstalled) return;
+    const key = packKey(preview.pack);
+    await this.packsRepository.putPack(preview.pack);
+    const created: string[] = [];
+    try {
+      for (const [hash, asset] of preview.assets) {
+        const existed = (await this.blobsRepository.get(hash)) !== undefined;
+        await this.blobsRepository.put(hash, asset.mime, asset.bytes, {
+          kind: asset.kind,
+          origin: 'pack',
+        });
+        if (!existed) created.push(hash);
+      }
+    } catch (error) {
+      for (const hash of created) await this.blobsRepository.remove(hash);
+      await this.packsRepository.remove(key);
+      throw error;
+    }
+    this.contentState.update((packs) => [...packs.filter((p) => packKey(p) !== key), preview.pack]);
+  }
+
+  // I/O boundary: removes an installed content pack by its `<id>@<version>` key, plus every asset
+  // blob it listed that no other installed pack lists. Only blobs whose origin is `'pack'` are
+  // deleted — a hash that first arrived as an upload/peer/import blob belongs to that owner.
+  async removeContent(key: string): Promise<void> {
+    const pack =
+      this.contentState().find((p) => packKey(p) === key) ??
+      (await this.packsRepository.getAll()).find((p) => packKey(p) === key);
+    await this.packsRepository.remove(key);
+    const remaining = this.contentState().filter((p) => packKey(p) !== key);
+    const core = this.coreState();
+    const stillListed = new Set(
+      [...(core ? [core] : []), ...remaining, ...this.translationsState()].flatMap((p) =>
+        p.assets.map((a) => a.hash),
+      ),
+    );
+    for (const asset of pack?.assets ?? []) {
+      if (stillListed.has(asset.hash)) continue;
+      const row = await this.blobsRepository.get(asset.hash);
+      if (row?.origin === 'pack') await this.blobsRepository.remove(asset.hash);
+    }
+    this.contentState.set(remaining);
   }
 }

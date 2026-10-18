@@ -64,6 +64,7 @@ async function putBlob(
   size: number,
   pinned = false,
   lastUsedAt?: number,
+  origin: 'upload' | 'pack' = 'upload',
 ): Promise<void> {
   const db = TestBed.inject(HkDb);
   const now = Date.now();
@@ -75,7 +76,7 @@ async function putBlob(
     addedAt: now,
     lastUsedAt: lastUsedAt ?? now,
     pinned,
-    origin: 'upload',
+    origin,
   });
 }
 
@@ -225,6 +226,18 @@ describe('CacheManagerService', () => {
       expect(await TestBed.inject(BlobsRepository).get('unpinned')).toBeUndefined();
     });
 
+    it('never evicts a content-pack asset (origin "pack"): PackStore owns its lifecycle', async () => {
+      const MB = 1024 * 1024;
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      await service.setCapBytes(100 * MB);
+      await putBlob('pack-icon', 150 * MB, false, 1, 'pack'); // oldest AND over the cap alone
+
+      await service.runLruSweep();
+
+      expect(await TestBed.inject(BlobsRepository).get('pack-icon')).toBeDefined();
+    });
+
     it('is a no-op when everything already fits under the cap', async () => {
       const service = TestBed.inject(CacheManagerService);
       await service.ready; // settle the boot-time sweep against an EMPTY table first
@@ -241,6 +254,14 @@ describe('CacheManagerService', () => {
       await service.ready;
       await service.runOrphanSweep();
       expect(await TestBed.inject(BlobsRepository).get('orphan')).toBeUndefined();
+    });
+
+    it('keeps an unreferenced content-pack asset (origin "pack")', async () => {
+      await putBlob('pack-icon', 10, false, undefined, 'pack');
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      await service.runOrphanSweep();
+      expect(await TestBed.inject(BlobsRepository).get('pack-icon')).toBeDefined();
     });
 
     it('keeps a blob referenced by a local character', async () => {
