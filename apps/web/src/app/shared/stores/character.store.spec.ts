@@ -15,6 +15,7 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import { PackStore } from '@shared/stores/pack.store';
+import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
 import { seedFighter } from '../../views/characters/sheet/testing/character-fixtures';
 import { CharacterStore, CharacterStoreNotLeaderError, SyncGapError } from './character.store';
 
@@ -1012,5 +1013,112 @@ describe('CharacterStore', () => {
       expect(store.sheet()?.overridesProvenance?.attunementMax).toBe('house rule');
       expect(store.sheet()?.overridesProvenance?.encumbrance).toBe('house rule');
     });
+  });
+});
+
+// --- Plan 15 (phase 4 slice 5) Task 4: per-character pack set --------------------------------
+describe('CharacterStore — per-character pack pins (plan 15 Task 4)', () => {
+  const parsedSample = parsePack(sampleJson);
+  if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+  const sample = parsedSample.pack;
+  const SPECIES_CHOICE = 'srd-5e-2024:system/5e-2024@0/species';
+  const MOONKIN = 'sample-content:species/moonkin';
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: {
+            availableLangs: ['en', 'ru', 'uk'],
+            defaultLang: 'en',
+            fallbackLang: 'en',
+            reRenderOnLangChange: true,
+            prodMode: true,
+          },
+          loader: StubLoader,
+        }),
+        {
+          provide: PackStore,
+          useValue: {
+            packs: signal([corePack, sample]),
+            ready: signal(true),
+            corePack: signal(corePack),
+          },
+        },
+        {
+          provide: StoragePersistService,
+          useValue: { requestPersist: vi.fn().mockResolvedValue(true) },
+        },
+      ],
+    });
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.packs.clear(),
+      db.settings.clear(),
+      db.events.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+      db.blobs.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    removeLocks();
+    TestBed.inject(HkDb).close();
+  });
+
+  const unresolved = (store: CharacterStore): unknown[] =>
+    (store.sheet()?.issues ?? [])
+      .filter((d) => d.code === 'derive.unresolvedEntity')
+      .map((d) => d.entityId);
+
+  it('derives against the pinned packs only: the installed sample species resolves only once the character pins its pack', async () => {
+    const store = TestBed.inject(CharacterStore);
+    await store.create('Aria', 'feminine');
+    await store.appendTx([
+      { type: 'decision.made', v: 1, payload: { choiceId: SPECIES_CHOICE, selection: [MOONKIN] } },
+    ]);
+
+    // Installed but NOT pinned: the character does not see the pack.
+    expect(unresolved(store)).toContain(MOONKIN);
+
+    await store.appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: sample.id, version: sample.version } },
+    ]);
+    expect(store.sheet()?.pins).toEqual({
+      [corePack.id]: corePack.version,
+      [sample.id]: sample.version,
+    });
+    expect(unresolved(store)).not.toContain(MOONKIN);
+  });
+
+  it('missingPins lists pins whose id@version is not installed (a core version mismatch included), never installed ones', async () => {
+    const store = TestBed.inject(CharacterStore);
+    await store.create('Aria', 'feminine');
+    expect(store.missingPins()).toEqual([]);
+
+    await store.appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: sample.id, version: sample.version } },
+    ]);
+    expect(store.missingPins()).toEqual([]);
+
+    await store.appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: 'ghost-pack', version: '2.0.0' } },
+    ]);
+    expect(store.missingPins()).toEqual([{ packId: 'ghost-pack', version: '2.0.0' }]);
+
+    await store.appendTx([
+      {
+        type: 'pack.pinned',
+        v: 1,
+        payload: { packId: corePack.id, version: '0.0.9', previous: corePack.version },
+      },
+    ]);
+    expect(store.missingPins()).toEqual([
+      { packId: 'ghost-pack', version: '2.0.0' },
+      { packId: corePack.id, version: '0.0.9' },
+    ]);
+    // The sheet still derives against the installed core.
+    expect(store.sheet()?.name).toBe('Aria');
   });
 });

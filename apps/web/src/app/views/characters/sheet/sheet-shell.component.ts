@@ -10,10 +10,11 @@ import { CampaignChipComponent } from '@shared/components/campaign-chip/campaign
 import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
-import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { EngineFacade, provideEngineScope } from '@shared/services/engine/engine.facade';
 import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
 import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
+import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { filter, map } from 'rxjs';
 
@@ -44,7 +45,13 @@ type TabId = (typeof TAB_IDS)[number];
     BlobUrlPipe,
     CampaignChipComponent,
   ],
-  providers: [provideTranslocoScope('characters')],
+  // Plan 15 Task 4: a component-level `EngineFacade` scoped to the loaded character's pins — every
+  // tab and level-up (routed children) names and lists against the character's own pack set.
+  providers: [
+    provideTranslocoScope('characters'),
+    CharacterEngineScope,
+    provideEngineScope(CharacterEngineScope),
+  ],
   templateUrl: './sheet-shell.component.html',
   styleUrl: './sheet-shell.component.scss',
 })

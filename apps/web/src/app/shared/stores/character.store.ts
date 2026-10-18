@@ -7,6 +7,7 @@ import {
   reduce,
   type Advancement,
   type ChoiceRequest,
+  type ContentIndex,
   type DeriveOverrides,
   type Facts,
   type ProposedEvent,
@@ -190,24 +191,51 @@ export class CharacterStore {
     this.events,
   );
 
+  /** Plan 15 Task 4: the loaded character's OWN content index — `EngineFacade.indexFor(facts.
+   * pins)`, i.e. the core plus exactly the pack versions this character pins (doc-04
+   * §Versioning). An installed pack the character does not pin is invisible to it; a pinned pack
+   * that is not installed simply resolves nothing (derive reports unresolved references, and
+   * `missingPins` lists it). `undefined` until packs are ready AND facts are loaded/created. */
+  readonly index: Signal<ContentIndex | undefined> = computed(() => {
+    const facts = this.factsState();
+    if (!facts || !this.packStore.ready()) return undefined;
+    return this.engineFacade.indexFor(facts.pins);
+  });
+
+  /** Plan 15 Task 4 (ruling 8): pins whose exact `id@version` is not installed, sorted by pack id —
+   * a pack removed from this device, one the character came with from elsewhere, or a core pinned
+   * at a version other than the shipped one. `[]` until packs are ready. */
+  readonly missingPins: Signal<{ packId: string; version: string }[]> = computed(() => {
+    const facts = this.factsState();
+    if (!facts || !this.packStore.ready()) return [];
+    const installed = new Set(this.packStore.packs().map((p) => `${p.id}@${p.version}`));
+    return Object.keys(facts.pins)
+      .sort()
+      .map((packId) => ({ packId, version: facts.pins[packId] }))
+      .filter(({ packId, version }) => !installed.has(`${packId}@${version}`));
+  });
+
   /** `undefined` until packs are ready AND a character's facts have been loaded/created. */
   readonly sheet: Signal<Sheet | undefined> = computed(() => {
     const facts = this.factsState();
-    if (!facts || !this.packStore.ready()) return undefined;
-    return derive(facts, this.engineFacade.index(), this.systemRules(), this.campaignOverrides());
+    const index = this.index();
+    if (!facts || !index) return undefined;
+    return derive(facts, index, this.systemRules(), this.campaignOverrides());
   });
 
   readonly outstanding: Signal<ChoiceRequest[]> = computed(() => {
     const facts = this.factsState();
-    if (!facts || !this.packStore.ready()) return [];
-    return outstandingChoices(facts, this.engineFacade.index());
+    const index = this.index();
+    if (!facts || !index) return [];
+    return outstandingChoices(facts, index);
   });
 
   readonly advancements: Signal<Advancement[]> = computed(() => {
     const facts = this.factsState();
     const sheet = this.sheet();
-    if (!facts || !sheet) return [];
-    return pendingAdvancements(sheet, facts, this.engineFacade.index());
+    const index = this.index();
+    if (!facts || !sheet || !index) return [];
+    return pendingAdvancements(sheet, facts, index);
   });
 
   /** Event ids the reducer skipped while folding `events` into `facts` (`facts.skipped`,
@@ -726,7 +754,7 @@ export class CharacterStore {
     const rules = this.systemRules();
     const start = devMode ? performance.now() : 0;
     const facts = reduce(events, snapshot, rules);
-    if (devMode) derive(facts, this.engineFacade.index(), rules);
+    if (devMode) derive(facts, this.engineFacade.indexFor(facts.pins), rules);
 
     this.streamIdState.set(characterId);
     this.eventsState.set(events);

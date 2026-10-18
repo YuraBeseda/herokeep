@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -13,6 +14,7 @@ import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
@@ -21,6 +23,8 @@ import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
+import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
+import { SheetShellComponent } from './sheet-shell.component';
 import { seedFighter } from './testing/character-fixtures';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling), same fixture-loading
@@ -67,7 +71,7 @@ async function pollUntil(
   expect(predicate()).toBe(true);
 }
 
-function configureReal(): void {
+function configureReal(packs: Pack[] = [corePack]): void {
   TestBed.configureTestingModule({
     providers: [
       provideRouter(routes),
@@ -84,7 +88,7 @@ function configureReal(): void {
       provideTranslocoMessageformat(),
       {
         provide: PackStore,
-        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        useValue: { packs: signal(packs), ready: signal(true), corePack: signal(corePack) },
       },
       {
         provide: StoragePersistService,
@@ -352,5 +356,54 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     // left stuck disabled after a failed export.
     await harness.fixture.whenStable();
     expect(exportButton.disabled).toBe(false);
+  });
+});
+
+// --- Plan 15 (phase 4 slice 5) Task 4: per-character pack set ---------------------------------
+describe('SheetShellComponent — per-character pack set (plan 15 Task 4)', () => {
+  const parsedSample = parsePack(sampleJson);
+  if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+  const sample = parsedSample.pack;
+  const MOONKIN = 'sample-content:species/moonkin';
+
+  beforeEach(async () => {
+    configureReal([corePack, sample]);
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+      db.blobs.clear(),
+      db.campaigns.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  it("scopes the EngineFacade under the shell to the character's pins: a pinned, installed pack's entities resolve there, never in the root index", async () => {
+    const id = await seedFighter('Ivan');
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: sample.id, version: sample.version } },
+    ]);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const shell = harness.fixture.debugElement.query(By.directive(SheetShellComponent));
+    const scoped = shell.injector.get(EngineFacade);
+
+    expect(scoped.index().has(MOONKIN)).toBe(true);
+    expect(scoped.localizer().name(MOONKIN)).toBe('Moonkin');
+    expect(TestBed.inject(EngineFacade).index().has(MOONKIN)).toBe(false);
+  });
+
+  it('an unpinned installed pack stays invisible under the shell too', async () => {
+    const id = await seedFighter('Ivan');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const shell = harness.fixture.debugElement.query(By.directive(SheetShellComponent));
+
+    expect(shell.injector.get(EngineFacade).index().has(MOONKIN)).toBe(false);
   });
 });
