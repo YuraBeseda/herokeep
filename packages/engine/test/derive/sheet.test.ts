@@ -184,6 +184,7 @@ describe('derive: Sheet assembly', () => {
         'level',
         'classes',
         'pins',
+        'corePackId',
         'abilities',
         'prof',
         'skills',

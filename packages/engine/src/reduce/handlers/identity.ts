@@ -9,6 +9,7 @@ import {
   type NoteRemoved,
   type NoteUpdated,
   type PackPinned,
+  type PackUnpinned,
   type PortraitSet,
 } from '@hk/protocol';
 import { type Facts, type NoteEntry, requireCreated } from '../facts.ts';
@@ -35,6 +36,17 @@ export const HANDLERS: Record<string, Handler> = {
   'pack.pinned@1': (f, e) => {
     const p = e.payload as PackPinned;
     return { ...f, pins: { ...f.pins, [p.packId]: p.version } };
+  },
+
+  // Plan 15 (phase 4 slice 5) Task 1, ruling 3: the opt-out. Like `pack.pinned` it never refuses:
+  // an id that is not pinned is a plain no-op (not a skip). Refusing the CORE pack is a proposal
+  // concern (`propose.unpinPack`), never the reducer's — events are facts.
+  'pack.unpinned@1': (f, e) => {
+    const p = e.payload as PackUnpinned;
+    if (!Object.hasOwn(f.pins, p.packId)) return f;
+    const pins = { ...f.pins };
+    delete pins[p.packId];
+    return { ...f, pins };
   },
 
   // `decision.made@1` lives in handlers/leveling.ts (next to level.gained); decision.cleared

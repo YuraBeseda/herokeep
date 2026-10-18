@@ -343,6 +343,8 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     overridesProvenance.encumbrance = 'character option';
   }
   const hasOverridesProvenance = Object.keys(overridesProvenance).length > 0;
+  // Plan 15 Task 1: the core pack is a structural fact of the INDEX (`Pack.kind`), not of the log.
+  const corePackId = index.packs().find((p) => p.kind === 'core')?.id;
 
   return {
     name: facts.name,
@@ -350,6 +352,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     level: comp.totalLevel,
     classes,
     pins: { ...facts.pins },
+    ...(corePackId !== undefined ? { corePackId } : {}),
     abilities: abilities.abilities,
     prof: abilities.prof,
     skills: abilities.skills,

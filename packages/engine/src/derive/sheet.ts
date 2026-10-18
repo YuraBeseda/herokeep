@@ -28,7 +28,16 @@ export interface Sheet {
   system: string;
   level: number;
   classes: { classId: string; level: number; subclassId?: string }[];
+  /** A copy of `Facts.pins` (pack id → pinned version) — the character's enabled pack set. */
   pins: Record<string, string>;
+  /**
+   * Plan 15 (phase 4 slice 5) Task 1: the id of the `kind: 'core'` pack in the content index this
+   * sheet was derived with (`Facts` records the core only as one more `pins` key). `propose.unpinPack`
+   * reads it to refuse unpinning the core; `planRebase` to never draft a core `pack.unpinned`.
+   * Absent only for an index without a core pack (derive needs the core's `system` entity, so in
+   * practice it is always present).
+   */
+  corePackId?: string;
   abilities: Record<string, AbilityBlock>;
   prof: number;
   skills: AbilitiesResult['skills'];
