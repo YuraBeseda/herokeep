@@ -2,6 +2,7 @@ import type { Choice, Pack } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { createContentIndex } from '../../src/content/index.ts';
 import { validatePack } from '../../src/content/validate.ts';
+import { pendingAdvancements } from '../../src/derive/advancement.ts';
 import { derive, outstandingChoices } from '../../src/derive/index.ts';
 import { emptyFacts } from '../../src/reduce/facts.ts';
 import { loadFixturePack } from '../support/fixtures.ts';
@@ -22,10 +23,10 @@ const FIGHTER = 'core-mini:class/fighter';
 const DRUID = 'core-mini:class/druid';
 const WIZARD = 'multiclass-mini:class/wizard';
 
-const scoped = (classSlug: string, owner: string, slug: string, scope?: 'initial' | 'later'): Choice => ({
-  id: `${owner}@1/${slug}`,
+const scoped = (classSlug: string, owner: string, slug: string, scope?: 'initial' | 'later', level = 1): Choice => ({
+  id: `${owner}@${level}/${slug}`,
   prompt: slug,
-  at: { kind: 'classLevel', class: classSlug, level: 1 },
+  at: { kind: 'classLevel', class: classSlug, level },
   pick: { literal: 'text' },
   count: 1,
   unique: true,
@@ -44,6 +45,18 @@ function packs(): Pack[] {
     scoped('druid', DRUID, 'only-later', 'later'),
     scoped('druid', DRUID, 'either'),
   );
+  // Fix round 1: the same trio on a new level-2 row, for level-up advancement steps (core-mini's
+  // XP table stops at level 5, so the row must be reachable by a two-class character below that).
+  if (druid.levels[1]?.level !== 5) throw new Error('fixture drift');
+  druid.levels.splice(1, 0, {
+    level: 2,
+    grants: [],
+    choices: [
+      scoped('druid', DRUID, 'only-initial', 'initial', 2),
+      scoped('druid', DRUID, 'only-later', 'later', 2),
+      scoped('druid', DRUID, 'either', undefined, 2),
+    ],
+  });
   const wizard = mc.entities.find((e) => e.id === WIZARD);
   if (wizard?.type !== 'class' || !wizard.multiclass) throw new Error('fixture drift');
   wizard.multiclass.gains = { ...wizard.multiclass.gains, skillChoiceCount: 1, toolProficiencies: ['thieves-tools'] };
@@ -155,5 +168,56 @@ describe('pack validation: scope only on class-row choices (plan 14 task 1)', ()
     if (fighter?.type !== 'class') throw new Error('fixture drift');
     (fighter.levels[0]!.choices[0] as Choice & { scope?: string }).scope = 'later';
     expect(validatePack(pack, [])).toEqual([]);
+  });
+});
+
+describe('fix round 1: an answered initial-scoped sibling suppresses the later-scoped choice', () => {
+  it('a later class whose initial-scoped row choice already has a (legacy) decision is not offered the later-scoped sibling', () => {
+    const facts = factsWith([
+      { classId: FIGHTER, level: 1 },
+      { classId: DRUID, level: 1 },
+    ]);
+    facts.decisions[`${DRUID}@1/only-initial`] = ['legacy answer'];
+    const ids = outstandingChoices(facts, index).map((r) => r.choiceId);
+    expect(ids).not.toContain(`${DRUID}@1/only-later`);
+    expect(ids).not.toContain(`${DRUID}@1/only-initial`);
+    expect(ids).toContain(`${DRUID}@1/either`);
+  });
+});
+
+describe('fix round 1: level-up advancement steps honor scope', () => {
+  const stepsFor = (classes: { classId: string; level: number }[], decisions: Record<string, string[]> = {}) => {
+    const facts = factsWith(classes);
+    Object.assign(facts.decisions, decisions);
+    facts.xp = 10_000_000;
+    const sheet = derive(facts, index);
+    return pendingAdvancements(sheet, facts, index)
+      .find((a) => a.classId === DRUID)
+      ?.steps.map((s) => s.choiceId);
+  };
+
+  it('the initial class levelling into a row is asked its initial-scoped and unscoped choices only', () => {
+    expect(stepsFor([{ classId: DRUID, level: 1 }])).toEqual([`${DRUID}@2/only-initial`, `${DRUID}@2/either`]);
+  });
+
+  it('a later class levelling into a row is asked its later-scoped and unscoped choices only', () => {
+    expect(
+      stepsFor([
+        { classId: FIGHTER, level: 1 },
+        { classId: DRUID, level: 1 },
+      ]),
+    ).toEqual([`${DRUID}@2/only-later`, `${DRUID}@2/either`]);
+  });
+
+  it('a later class whose initial-scoped sibling is already answered is not asked the later-scoped one', () => {
+    expect(
+      stepsFor(
+        [
+          { classId: FIGHTER, level: 1 },
+          { classId: DRUID, level: 1 },
+        ],
+        { [`${DRUID}@2/only-initial`]: ['legacy answer'] },
+      ),
+    ).toEqual([`${DRUID}@2/either`]);
   });
 });

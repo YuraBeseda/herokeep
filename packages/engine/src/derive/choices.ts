@@ -30,6 +30,23 @@ export function scopeOffers(choice: Choice, initialClass: boolean): boolean {
   return choice.scope === 'initial' ? initialClass : !initialClass;
 }
 
+/**
+ * The choices of ONE class/subclass row that are offered (outstanding requests and level-up
+ * advancement steps alike): `scopeOffers` per choice, plus plan 14 task 1 fix round 1's
+ * suppression — a `'later'`-scoped choice is not offered while an `'initial'`-scoped choice on the
+ * SAME row already has a recorded decision (a legacy log that answered the initial pick for a later
+ * class keeps granting that answer; the later pick would duplicate it).
+ */
+export function offeredRowChoices(
+  choices: readonly Choice[],
+  initialClass: boolean,
+  decisions: Readonly<Record<string, readonly string[]>>,
+): Choice[] {
+  const isScoped = (c: Choice, scope: 'initial' | 'later') => c.scope === scope && c.at.kind === 'classLevel';
+  const initialAnswered = choices.some((c) => isScoped(c, 'initial') && decisions[c.id] !== undefined);
+  return choices.filter((c) => scopeOffers(c, initialClass) && !(initialAnswered && isScoped(c, 'later')));
+}
+
 /** The row-gated synthetic id for a class's starting-skill decision (R5, task-13-brief.md controller ruling). */
 export const skillsChoiceId = (classId: string): string => `${classId}@1/skills`;
 
@@ -101,8 +118,7 @@ export function levelScopedChoices(
   ) => {
     for (const row of owner.levels) {
       if (row.level > gateLevel) continue;
-      for (const c of row.choices) {
-        if (!scopeOffers(c, initialClass)) continue;
+      for (const c of offeredRowChoices(row.choices, initialClass, facts.decisions)) {
         const count = resolveChoiceCount(c, facts, index);
         if (isUnanswered(facts, c, c.id, count)) requests.push({ choiceId: c.id, ownerId, count });
       }

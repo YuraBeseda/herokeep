@@ -4,6 +4,7 @@ import { constantPredicateContext, type PredicateContext } from '../predicate/co
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { resolveChoiceCount } from './choice-count.ts';
+import { offeredRowChoices } from './choices.ts';
 import type { ChoiceRequest, Sheet } from './sheet.ts';
 
 export interface Advancement {
@@ -41,11 +42,16 @@ const byClassId = (a: Advancement, b: Advancement) => (a.classId < b.classId ? -
 const byExistingFirstThenClassId = (a: Advancement, b: Advancement) =>
   a.isNewClass === b.isNewClass ? byClassId(a, b) : a.isNewClass ? 1 : -1;
 
-/** `steps` for one class's row at `toLevel` — shared by both the "level up" and "new class" branches. */
+/**
+ * `steps` for one class's row at `toLevel` — shared by both the "level up" and "new class" branches.
+ * Plan 14 task 1 (fix round 1): only the row's OFFERED choices (`offeredRowChoices`) — `initialClass`
+ * is true only for the character's first class; a brand-new class is never the initial one.
+ */
 const rowSteps = (
   classId: string,
   levels: { level: number; choices: Choice[] }[],
   toLevel: number,
+  initialClass: boolean,
   facts: Facts,
   index: ContentIndex,
 ): ChoiceRequest[] => {
@@ -56,7 +62,8 @@ const rowSteps = (
       { classId, level: toLevel },
     ],
   };
-  return (levels.find((r) => r.level === toLevel)?.choices ?? []).map((c) => ({
+  const row = levels.find((r) => r.level === toLevel)?.choices ?? [];
+  return offeredRowChoices(row, initialClass, facts.decisions).map((c) => ({
     choiceId: c.id,
     ownerId: classId,
     count: resolveChoiceCount(c, after, index),
@@ -123,14 +130,18 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
   if (threshold === undefined || facts.xp < threshold) return [];
 
   const advancements: Advancement[] = [];
+  // Plan 14 task 1: the initial class is `facts.classes[0]` (order gained), as in `levelScopedChoices`.
+  const resolve = (ref: string) => index.resolveClassRef(ref) ?? ref;
+  const firstClassId = facts.classes[0] !== undefined ? resolve(facts.classes[0].classId) : undefined;
   for (const entry of sheet.classes) {
     const classEntity = index.get(entry.classId);
     if (classEntity?.type !== 'class') continue;
     const toLevel = entry.level + 1;
+    const initialClass = resolve(entry.classId) === firstClassId;
     advancements.push({
       classId: entry.classId,
       toLevel,
-      steps: rowSteps(entry.classId, classEntity.levels, toLevel, facts, index),
+      steps: rowSteps(entry.classId, classEntity.levels, toLevel, initialClass, facts, index),
       hpChoice: toLevel >= 2,
       isNewClass: false,
     });
@@ -162,7 +173,7 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
         advancements.push({
           classId,
           toLevel: 1,
-          steps: rowSteps(classId, classEntity.levels, 1, facts, index),
+          steps: rowSteps(classId, classEntity.levels, 1, false, facts, index),
           hpChoice: false,
           isNewClass: true,
         });

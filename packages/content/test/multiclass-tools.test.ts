@@ -1,4 +1,11 @@
-import { createContentIndex, derive, outstandingChoices, reduce, validateSelection } from '@hk/engine';
+import {
+  createContentIndex,
+  derive,
+  outstandingChoices,
+  pendingAdvancements,
+  reduce,
+  validateSelection,
+} from '@hk/engine';
 import type { Event } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { buildPack } from '../src/build.ts';
@@ -187,5 +194,28 @@ describe('class tool choices are scoped to the initial / a later class (plan 14 
       'thieves-tools',
     ]);
     expect(sheet.issues.map((i) => i.code)).not.toContain('decision.unknownChoice');
+  });
+});
+
+describe('fix round 1: offers for legacy logs and level-up steps (plan 14 task 1)', () => {
+  it('legacy replay: a later-class bard that answered @1/tools is not offered @1/multiclass-tools (no 4th instrument)', () => {
+    const legacy = char(
+      [
+        [ROGUE, 3],
+        [BARD, 2],
+      ],
+      [[BARD_TOOLS, [instrument('lute'), instrument('flute'), instrument('drum')]]],
+    );
+    expect(toolChoices(legacy)).toEqual([]);
+  });
+
+  it('level-up: a new-class bard is asked @1/multiclass-tools (1) only; a new-class monk is asked no tool pick', () => {
+    const facts = factsOf(char([[ROGUE, 3]]));
+    facts.xp = 10_000_000;
+    const adv = pendingAdvancements(derive(facts, index, rules), facts, index);
+    const steps = (classId: string) =>
+      adv.find((a) => a.classId === classId && a.isNewClass)?.steps.filter((s) => s.choiceId.endsWith('tools'));
+    expect(steps(BARD)).toEqual([{ choiceId: BARD_MC_TOOLS, ownerId: BARD, count: 1 }]);
+    expect(steps(MONK)).toEqual([]);
   });
 });
