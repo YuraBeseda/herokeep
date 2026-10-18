@@ -32,6 +32,35 @@ export function selectPackVersions(
   return { selected, diagnostics };
 }
 
+/**
+ * The `roots` for a per-character content index (plan 15): every pinned pack id, then every
+ * translation pack among `packs` whose `translates.id` is a pinned pack or one of their
+ * (transitive) dependencies, sorted by id. `resolveDependencyOrder` walks from a translation to the
+ * pack it translates, but never the other way, so a root set of pinned content ids alone would
+ * leave their translations out of the index.
+ *
+ * Dependencies are followed through the versions `selectPackVersions(packs, pins)` selects. A pin
+ * whose pack is not in `packs` stays a root, so the index reports it (`deps.missing` or
+ * `deps.pinMissing`) instead of silently dropping it.
+ */
+export function pinnedRoots(packs: Pack[], pins: Pins): string[] {
+  const { selected } = selectPackVersions(packs, pins);
+  const reached = new Set<string>();
+  const pending = Object.keys(pins);
+  while (pending.length > 0) {
+    const id = pending.pop()!;
+    if (reached.has(id)) continue;
+    reached.add(id);
+    for (const dep of selected.get(id)?.dependencies ?? []) pending.push(dep.id);
+  }
+  const translations = [...selected.values()]
+    .filter((p) => p.kind === 'translation' && p.translates !== undefined && reached.has(p.translates.id))
+    .map((p) => p.id)
+    .filter((id) => !(id in pins))
+    .sort();
+  return [...Object.keys(pins), ...translations];
+}
+
 export function resolveDependencyOrder(
   selected: Map<string, Pack>,
   roots: string[],
