@@ -7,6 +7,7 @@ import { HKPACK_LIMITS, parsePack, type Pack } from '@hk/protocol';
 import { strToU8, zipSync } from 'fflate';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { PackLoader } from '@shared/services/engine/pack-loader';
+import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { HkpackReader } from '@shared/services/packs/hkpack-reader.service';
 import { PackImportError } from '@shared/services/packs/pack-import.errors';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
@@ -294,6 +295,41 @@ describe('PackStore content packs', () => {
 
     expect(await db.packs.count()).toBe(0);
     expect(await db.blobs.count()).toBe(0);
+    expect(store.installedContent()).toEqual([]);
+  });
+
+  it('importContent() removes the blobs it already created when a LATER asset write fails', async () => {
+    const { store, reader, db } = await configureReal();
+    // A second, distinct webp asset: same RIFF/WEBP header, one payload byte flipped.
+    const secondBytes = iconBytes.slice();
+    secondBytes[secondBytes.length - 1] = secondBytes[secondBytes.length - 1] ^ 0xff;
+    const secondHash = await sha256Hex(secondBytes);
+    const raw = sample();
+    raw['assets'] = [
+      ...(raw['assets'] as unknown[]),
+      { hash: secondHash, kind: 'token', mime: 'image/webp', size: secondBytes.byteLength },
+    ];
+    const preview = await reader.read(
+      hkpack(raw, {
+        [ICON_ENTRY]: iconBytes,
+        [`assets/${secondHash.slice('sha256:'.length)}`]: secondBytes,
+      }),
+    );
+    expect(preview.assets.size).toBe(2);
+    const blobs = TestBed.inject(BlobsRepository);
+    const realPut = blobs.put.bind(blobs);
+    let calls = 0;
+    vi.spyOn(blobs, 'put').mockImplementation((...args: Parameters<BlobsRepository['put']>) => {
+      calls++;
+      return calls === 2 ? Promise.reject(new Error('quota')) : realPut(...args);
+    });
+
+    await expect(store.importContent(preview)).rejects.toThrow('quota');
+
+    expect(calls).toBe(2);
+    expect(await db.blobs.get(ICON_HASH)).toBeUndefined();
+    expect(await db.blobs.count()).toBe(0);
+    expect(await db.packs.count()).toBe(0);
     expect(store.installedContent()).toEqual([]);
   });
 

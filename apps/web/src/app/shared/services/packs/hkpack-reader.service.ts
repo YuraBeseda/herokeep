@@ -24,6 +24,7 @@ import {
   PackImportBadSchemaError,
   PackImportBadZipError,
   PackImportConflictError,
+  PackImportError,
   PackImportInvalidError,
   PackImportMissingPackJsonError,
   PackImportTooLargeError,
@@ -62,8 +63,8 @@ const ASSET_BYTE_CAP = AssetSchema.shape.size.maxValue ?? 0;
 const ASSET_ENTRY_RE = /^assets\/[0-9a-f]{64}$/;
 const HASH_PREFIX = 'sha256:';
 
-/** What the unzip step kept, plus every cap it saw exceeded while scanning the central
- * directory (the filter cannot throw cleanly through fflate, so it records and skips). */
+/** What the unzip step kept, plus the asset entries skipped for exceeding the per-asset cap (so
+ * the asset check reports them as too large rather than missing). */
 interface UnzipScan {
   readonly files: Record<string, Uint8Array>;
   readonly oversizedAssets: ReadonlySet<string>;
@@ -155,45 +156,41 @@ export class HkpackReader {
    * each entry's central-directory sizes before it is inflated (fflate sizes an inflated entry's
    * buffer from its declared `originalSize`, so the declared size bounds memory; a stored entry
    * is bounded by the zip's own size, which was capped already). Actual byte lengths are checked
-   * again after unzip by the asset/pack.json checks. */
+   * again after unzip by the asset/pack.json checks.
+   *
+   * A container cap THROWS from inside the filter (a plain synchronous callback) and the catch
+   * below rethrows it untouched: fflate walks as many central-directory headers as the archive
+   * CLAIMS (a forged zip64 record can claim 2^32), so merely returning `false` would keep the main
+   * thread busy for minutes. Directory entries count toward the entry cap too. */
   private async unzip(bytes: Uint8Array): Promise<UnzipScan> {
     const { unzipSync } = await import('fflate');
     let entries = 0;
     let assetBytesTotal = 0;
-    let overLimit: PackImportTooLargeError | undefined;
     const oversizedAssets = new Set<string>();
     let files: Record<string, Uint8Array>;
     try {
       files = unzipSync(bytes, {
         filter: (info) => {
-          if (info.name.endsWith('/')) return false; // directory entry, no content
           entries++;
-          if (overLimit) return false;
           if (entries > HKPACK_LIMITS.maxEntries) {
-            overLimit = new PackImportTooLargeError('entries', entries, HKPACK_LIMITS.maxEntries);
-            return false;
+            throw new PackImportTooLargeError('entries', entries, HKPACK_LIMITS.maxEntries);
           }
+          if (info.name.endsWith('/')) return false; // directory entry: counted, no content
           const declared = Math.max(info.size, info.originalSize);
           if (info.name === HKPACK_PACK_ENTRY) {
             if (declared > PACK_LIMITS.maxBytes) {
-              overLimit = new PackImportTooLargeError(
-                'pack-json-bytes',
-                declared,
-                PACK_LIMITS.maxBytes,
-              );
-              return false;
+              throw new PackImportTooLargeError('pack-json-bytes', declared, PACK_LIMITS.maxBytes);
             }
             return true;
           }
           if (!ASSET_ENTRY_RE.test(info.name)) return false; // unknown entry: counted, never read
           assetBytesTotal += declared;
           if (assetBytesTotal > HKPACK_LIMITS.maxAssetBytesTotal) {
-            overLimit = new PackImportTooLargeError(
+            throw new PackImportTooLargeError(
               'asset-bytes-total',
               assetBytesTotal,
               HKPACK_LIMITS.maxAssetBytesTotal,
             );
-            return false;
           }
           if (declared > ASSET_BYTE_CAP) {
             oversizedAssets.add(info.name);
@@ -203,9 +200,9 @@ export class HkpackReader {
         },
       });
     } catch (cause) {
+      if (cause instanceof PackImportError) throw cause;
       throw new PackImportBadZipError(cause);
     }
-    if (overLimit) throw overLimit;
     const packJson = files[HKPACK_PACK_ENTRY];
     if (packJson && packJson.byteLength > PACK_LIMITS.maxBytes) {
       throw new PackImportTooLargeError(

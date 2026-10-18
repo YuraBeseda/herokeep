@@ -194,6 +194,45 @@ describe('HkpackReader.read', () => {
     expect((error as PackImportTooLargeError).detail).toBe('entries');
   });
 
+  it('counts directory entries toward the entry cap', async () => {
+    const { reader } = await setup();
+    const assets: Record<string, Uint8Array> = { [ICON_ENTRY]: iconBytes };
+    for (let i = 0; i < HKPACK_LIMITS.maxEntries; i++) assets[`dir${i}/`] = new Uint8Array(0);
+
+    const error = await reader.read(hkpack(sample(), assets)).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(PackImportTooLargeError);
+    expect((error as PackImportTooLargeError).detail).toBe('entries');
+  });
+
+  it('aborts at the entry cap on a forged zip64 directory claiming millions of entries', async () => {
+    const { reader } = await setup();
+    // 98 bytes: [zip64 EOCD record (56)] [zip64 EOCD locator (20)] [EOCD (22)]. The EOCD's 0xffff
+    // count defers to the zip64 record, which claims `claimed` entries starting at offset 0 — fflate
+    // walks that many (garbage) central-directory headers unless the filter stops it.
+    const claimed = 50_000_000;
+    const forged = new Uint8Array(56 + 20 + 22);
+    const view = new DataView(forged.buffer);
+    view.setUint32(0, 0x06064b50, true); // zip64 EOCD record signature
+    view.setUint32(32, claimed, true); // total entries
+    view.setUint32(48, 0, true); // central directory offset
+    view.setUint32(56, 0x07064b50, true); // zip64 EOCD locator signature
+    view.setUint32(56 + 8, 0, true); // offset of the zip64 EOCD record
+    view.setUint32(76, 0x06054b50, true); // EOCD signature
+    view.setUint16(76 + 8, 0xffff, true); // entry count: see zip64 record
+    const file = new File([forged], 'forged.hkpack');
+
+    const started = performance.now();
+    const error = await reader.read(file).catch((e: unknown) => e);
+    const elapsed = performance.now() - started;
+
+    expect(error).toBeInstanceOf(PackImportTooLargeError);
+    expect((error as PackImportTooLargeError).detail).toBe('entries');
+    // The filter throws at entry maxEntries + 1; walking the claimed 50M headers takes seconds.
+    expect((error as PackImportTooLargeError).actual).toBe(HKPACK_LIMITS.maxEntries + 1);
+    expect(elapsed).toBeLessThan(500);
+  });
+
   it('refuses a zip whose asset entries total more than maxAssetBytesTotal', async () => {
     const { reader } = await setup();
     const chunk = new Uint8Array(400 * 1024);
