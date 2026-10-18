@@ -88,7 +88,7 @@ Entity types and their specific data (abridged; schema is authoritative):
 ```
 
 `pick` forms: `{ "static": ["id", …] }`, `{ "query": {type, tags?, level?, classes?,
-school?, hasField?} }`, `{ "abilities": { "count": 2, "max": 20, "improve": "+1|+2/+1", "from"?: ["str", "dex"] } }` (ASI-style
+school?, hasField?, category?} }`, `{ "queries": [query, query, …] }` (mixed-type picks, below), `{ "abilities": { "count": 2, "max": 20, "improve": "+1|+2/+1", "from"?: ["str", "dex"] } }` (ASI-style
 improvements; `from` restricts the offered abilities, intersected with a background owner's
 `abilityScores`), `{ "abilityGeneration": true }` (the creation-time score assignment; the
 allowed methods and their parameters come from `system.abilityGeneration`, and the
@@ -118,7 +118,17 @@ candidate entity — a field-presence filter, preferred over inventing a bespoke
 data the schema already models structurally). Fighter's Weapon Mastery choice, for example, is a
 real entity query rather than a `literal: "text"` placeholder:
 `{ "query": { "type": "item", "hasField": ["weapon.mastery"] } }` selects exactly the items that
-carry a weapon-mastery property.
+carry a weapon-mastery property. `category` (plan 14 task 2) filters items by their `category`
+(the item category enum): `{ "type": "item", "category": "tool" }` selects every tool.
+
+**Mixed-type picks (plan 14 task 2).** `{ "queries": [q1, q2, …] }` (two or more queries; mutually
+exclusive with `static` and `query`) offers the union of its queries as ONE option list — each
+entity once, in authored query order — and the choice's `count` applies to that union. Each
+selection grants through the path its own entity type already uses (a skill entity a skill
+proficiency, a `category: "tool"` item a tool proficiency row), so one decision may grant both.
+`queryPickOptions` unions the queries for validation and the web picker alike. SRD content: the
+Skilled feat's "any combination of three skills or tools" is
+`{"queries":[{"type":"skill"},{"type":"item","category":"tool"}]}` with `count: 3`.
 
 ## Predicates
 
