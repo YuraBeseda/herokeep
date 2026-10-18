@@ -43,7 +43,9 @@ let nextEntityPickerId = 0;
  * caller's validation refuses that option. A gated card stays LISTED (discoverability) but its
  * select button is `disabled`, with the reason rendered visibly and wired to the button via
  * `aria-describedby` (the plan-12 always-prepared disabled-with-reason pattern); its description
- * toggle stays usable.
+ * toggle stays usable. A gated card that is already SELECTED (e.g. a pre-seeded pick the current
+ * validation now refuses) keeps its select button enabled — the gate only blocks ADDING an option,
+ * never undoing a pick — and still shows its reason.
  */
 @Component({
   selector: 'hk-entity-picker',

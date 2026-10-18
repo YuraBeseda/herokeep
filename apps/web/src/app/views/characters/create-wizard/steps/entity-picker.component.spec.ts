@@ -51,6 +51,7 @@ class StubLoader implements TranslocoLoader {
       [ids]="ids()"
       [selectedIds]="selectedIds()"
       [limit]="limit()"
+      [gates]="gates()"
       (toggled)="onToggle($event)"
     />
   `,
@@ -59,6 +60,7 @@ class HostComponent {
   readonly ids = signal<readonly string[]>([]);
   readonly selectedIds = signal<readonly string[]>([]);
   readonly limit = signal<number | undefined>(undefined);
+  readonly gates = signal<ReadonlyMap<string, string>>(new Map());
   readonly toggled: string[] = [];
 
   onToggle(id: string): void {
@@ -133,6 +135,37 @@ describe('EntityPickerComponent', () => {
     );
     const button = humanRow?.querySelector('.entity-picker__select');
     expect(button?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('a gated card is disabled unless it is selected: a selected gated card stays deselectable', async () => {
+    const humanId = speciesIds.find((id) => id.endsWith('/human'))!;
+    const elfId = speciesIds.find((id) => id.endsWith('/elf'))!;
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.ids.set(speciesIds);
+    fixture.componentInstance.selectedIds.set([humanId]);
+    fixture.componentInstance.gates.set(
+      new Map([
+        [humanId, 'wizard.picker.gate.duplicate'],
+        [elfId, 'wizard.picker.gate.duplicate'],
+      ]),
+    );
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const buttonFor = (name: string) =>
+      Array.from(compiled.querySelectorAll('.entity-picker__card'))
+        .find((card) => card.querySelector('.entity-picker__name')?.textContent?.trim() === name)
+        ?.querySelector<HTMLButtonElement>('.entity-picker__select');
+
+    // Gated and NOT selected: refused, as before.
+    expect(buttonFor('Elf')?.disabled).toBe(true);
+    // Gated but selected: still pressed, and still clickable so the pick can be undone.
+    const human = buttonFor('Human')!;
+    expect(human.getAttribute('aria-pressed')).toBe('true');
+    expect(human.disabled).toBe(false);
+    human.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.toggled).toEqual([humanId]);
   });
 
   it('filters cards by the search field text', async () => {

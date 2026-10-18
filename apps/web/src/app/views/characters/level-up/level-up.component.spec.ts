@@ -707,4 +707,97 @@ describe('LevelUpComponent', () => {
     expect(characterStore.facts()?.decisions[MASTERIES]).toEqual([...PRIOR, HANDAXE]);
     expect(characterStore.outstanding().map((o) => o.choiceId)).not.toContain(MASTERIES);
   });
+
+  // Final fix wave (plan 13): the deselect half of task 9's pre-seed. A pre-selected grown pick can
+  // be toggled OFF (a selected card is never disabled, even when gated), the step keeps the reduced
+  // selection with the count diagnostic (no re-seed on the next change detection), and the invalid
+  // count is never committed as an event.
+  it('fighter 3→4: a pre-seeded grown weapon-mastery pick can be toggled off; the 2 remaining picks show the count diagnostic and nothing is committed', async () => {
+    const FIGHTER = 'srd-5e-2024:class/fighter';
+    const CHAMPION = 'srd-5e-2024:subclass/champion';
+    const MASTERIES = `${FIGHTER}@1/weapon-masteries`;
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
+    await characterStore.appendTx([
+      { type: 'level.gained', v: 1, payload: { classId: FIGHTER, level: 2, hpRoll: 'average' } },
+    ]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 600 } }]);
+    await characterStore.appendTx([
+      {
+        type: 'level.gained',
+        v: 1,
+        payload: { classId: FIGHTER, level: 3, hpRoll: 'average', subclassId: CHAMPION },
+      },
+      {
+        type: 'decision.made',
+        v: 1,
+        payload: { choiceId: `${FIGHTER}@3/subclass`, selection: [CHAMPION] },
+      },
+    ]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 1800 } }]);
+    const masteryEvents = () =>
+      characterStore
+        .events()
+        .filter(
+          (e) =>
+            e.type === 'decision.made' &&
+            (e.payload as { choiceId?: string }).choiceId === MASTERIES,
+        ).length;
+    expect(masteryEvents()).toBe(1);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+    await chooseClassIfOffered(
+      root,
+      harness.fixture,
+      charactersEn.levelUp.classPicker.levelUp
+        .replace('{class}', 'Fighter')
+        .replace('{level}', '4'),
+    );
+    const state = harness.fixture.debugElement
+      .query(By.css('app-level-up'))
+      .injector.get(LevelUpState);
+    root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+    await harness.fixture.whenStable();
+    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
+    await harness.fixture.whenStable();
+
+    const buttons = () =>
+      Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'));
+    const nameOf = (b: HTMLButtonElement) =>
+      b.querySelector('.entity-picker__name')?.textContent?.trim() ?? '';
+    const selectedNames = (): string[] =>
+      buttons()
+        .filter((b) => b.getAttribute('aria-pressed') === 'true')
+        .map(nameOf);
+    expect(selectedNames()).toEqual(['Dagger', 'Longsword', 'Shortsword']);
+
+    const longsword = buttons().find((b) => nameOf(b) === 'Longsword')!;
+    expect(longsword.disabled).toBe(false);
+    longsword.click();
+    await harness.fixture.whenStable();
+    expect(selectedNames()).toEqual(['Dagger', 'Shortsword']);
+    const diagnostics = () =>
+      Array.from(root.querySelectorAll('.choice-step__diagnostic')).map((el) =>
+        el.textContent?.trim(),
+      );
+    expect(diagnostics()).toContain(charactersEn.validation.selection.count);
+
+    // No re-seed: another change-detection pass keeps the player's reduced selection.
+    harness.fixture.detectChanges();
+    await harness.fixture.whenStable();
+    expect(selectedNames()).toEqual(['Dagger', 'Shortsword']);
+
+    // The invalid count is a draft only: the level-up stays incomplete (Finish unavailable) and
+    // no decision event reaches the character's log.
+    expect(state.invalidDecisions().has(MASTERIES)).toBe(true);
+    expect(state.complete()).toBe(false);
+    expect(masteryEvents()).toBe(1);
+    expect(characterStore.facts()?.decisions[MASTERIES]).toEqual([
+      'srd-5e-2024:item/longsword',
+      'srd-5e-2024:item/shortsword',
+      'srd-5e-2024:item/dagger',
+    ]);
+  });
 });
