@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, viewChild, type ElementRef } from '@angular/core';
-import { validateSelection } from '@hk/engine';
+import { propose, validateSelection, type CharacterOptions } from '@hk/engine';
 import { LongTextSchema, ShortTextSchema, type GrammaticalGender } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -69,6 +69,17 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
   { value: 'neuter', labelKey: 'wizard.name.genderNeuter' },
 ];
 
+type EncumbranceOption = NonNullable<CharacterOptions['encumbrance']>;
+
+// Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — the per-character encumbrance select. Static
+// keys (same keys-manager reason as `APPEARANCE_FIELDS` above); NEW `characters.sheet.options.*`
+// keys whose wording mirrors the campaign settings' own `settings.houseRules.encumbrance.*`.
+const ENCUMBRANCE_OPTIONS: readonly { value: EncumbranceOption; labelKey: string }[] = [
+  { value: 'off', labelKey: 'sheet.options.encumbrance.off' },
+  { value: 'standard', labelKey: 'sheet.options.encumbrance.standard' },
+  { value: 'variant', labelKey: 'sheet.options.encumbrance.variant' },
+];
+
 /**
  * `/c/:id/build` — the sheet's Build tab (plan-5 task-11-brief.md): outstanding-choice re-entry
  * (reusing the wizard's own `hk-choice-step` against the LIVE character via
@@ -80,7 +91,8 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
  * only what the user has actually typed, falling back to the live `CharacterStore` value until
  * then, so the displayed value always round-trips back to whatever was actually committed.
  *
- * `decision.made`/`character.renamed`/`character.appearance_set`/`character.gender_set` are each
+ * `decision.made`/`character.renamed`/`character.appearance_set`/`character.gender_set`/
+ * `character.options.set` (plan 14 Task 5, via `propose.setOptions`) are each
  * appended as their OWN single-event `appendTx` call the moment a form commits — there is no draft
  * layer on this tab (unlike the wizard's `CreateWizardState`): `CharacterStore.sheet`/`facts` are
  * already the live, authoritative read model, so every field here re-derives from them directly.
@@ -216,6 +228,30 @@ export class BuildTabComponent {
     void this.characterStore.appendTx([
       { type: 'character.gender_set', v: 1, payload: { grammaticalGender: value } },
     ]);
+  }
+
+  // --- Rule options (plan 14 Task 5, design ruling 8) ----------------------------------------
+  // The character's own `character.options.set@1` (stored on `sheet().options`, absent = 'off').
+  // A campaign house rule — `CharacterStore.campaignOverrides().encumbrance`, any defined value,
+  // even 'off' — wins over it in `derive()`; the select then SHOWS that effective value, disabled,
+  // pointing (`aria-describedby`) at a visible reason (plan 13's disabled-with-reason pattern).
+
+  protected readonly encumbranceOptions = ENCUMBRANCE_OPTIONS;
+  protected readonly encumbranceReasonId = 'build-tab-options-encumbrance-reason';
+  protected readonly encumbranceHouseRule = computed<EncumbranceOption | undefined>(
+    () => this.characterStore.campaignOverrides().encumbrance,
+  );
+  protected readonly encumbranceValue = computed<EncumbranceOption>(
+    () => this.encumbranceHouseRule() ?? this.sheet()?.options?.encumbrance ?? 'off',
+  );
+
+  protected onEncumbranceChange(value: string): void {
+    const sheet = this.sheet();
+    const option = ENCUMBRANCE_OPTIONS.find((o) => o.value === value);
+    if (!sheet || !option || this.encumbranceHouseRule() !== undefined || this.editLocked()) return;
+    const drafts = propose.setOptions(sheet, { encumbrance: option.value });
+    if (drafts.length === 0) return;
+    void this.characterStore.appendTx(drafts);
   }
 
   // --- Portrait (plan-6 Task 8) -----------------------------------------------------------------

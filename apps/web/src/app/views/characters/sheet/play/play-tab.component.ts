@@ -665,6 +665,8 @@ export class PlayTabComponent {
   // state}`) is present ONLY when `derive()` was called with `overrides.encumbrance: 'standard' |
   // 'variant'` for THIS character — a campaign house rule (`CharacterStore`'s own `campaignOverrides`
   // wiring, task 12) or, for a solo character, never at all (engine default `'off'`, no computation).
+  // Plan 14 Task 5 (ruling 8): ALSO when the character's own `character.options.set@1` (Build tab →
+  // Options) selected a mode and no campaign house rule overrides it.
   // Absent, not a zeroed struct, when inactive — the template gates the whole block on this.
   protected readonly carry = computed<Sheet['carry']>(() => this.sheet()?.carry);
 

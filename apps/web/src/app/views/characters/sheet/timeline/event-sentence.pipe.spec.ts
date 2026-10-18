@@ -207,6 +207,42 @@ describe('EventSentencePipe', () => {
     expect(sentence.params['grammaticalGender']).toBe('feminine');
   });
 
+  // Plan 14 (phase 4 slice 4) Task 5, ruling 8: `character.options.set` gets its own sentence
+  // (`characters.timeline.character-options-set`), ICU-`select`ing the optional `encumbrance` enum
+  // — and an empty patch (no `encumbrance` key at all) still renders, via the `other` branch,
+  // rather than throwing on a missing ICU param.
+  it('renders a "character.options.set" sentence per encumbrance mode, and a generic one for an empty patch', () => {
+    const variant = pipe.transform(
+      makeEvent('character.options.set', { encumbrance: 'variant' }),
+      index,
+      localizer,
+    );
+    expect(variant).toBe('Encumbrance set to variant (encumbered tiers).');
+    const off = pipe.transform(
+      makeEvent('character.options.set', { encumbrance: 'off' }),
+      index,
+      localizer,
+    );
+    expect(off).toBe('Encumbrance turned off.');
+    const empty = pipe.transform(makeEvent('character.options.set', {}), index, localizer);
+    expect(empty).toBe('Rule options updated.');
+    expect(sentenceOf(makeEvent('character.options.set', {}), index, localizer).key).toBe(
+      'characters.timeline.character-options-set',
+    );
+  });
+
+  it('renders a "character.options.set" sentence in ru via ICU select, not the raw "standard" token', async () => {
+    await firstValueFrom(translocoService.load('characters/ru'));
+    translocoService.setActiveLang('ru');
+    const sentence = pipe.transform(
+      makeEvent('character.options.set', { encumbrance: 'standard' }),
+      index,
+      localizer,
+    );
+    expect(sentence).toContain('стандартное');
+    expect(sentence).not.toContain('standard');
+  });
+
   // task-14: ICU plural coverage — `hit_dice.spent` already carries full ru CLDR one/few/many
   // forms («кость»/«кости»/«костей»); this locks that in with a real spec instead of relying on
   // eyeballing the JSON.

@@ -227,6 +227,16 @@
         "title": "Grammatical gender"
       }
     },
+    "options": {
+      "title": "Rule options",
+      "encumbrance": {
+        "label": "Encumbrance",
+        "off": "Off",
+        "standard": "Standard",
+        "variant": "Variant (encumbered tiers)",
+        "houseRule": "Set by your campaign's house rules."
+      }
+    },
     "notFound": {
       "title": "Character not found",
       "body": "This character doesn't exist, or couldn't be loaded on this device."
@@ -571,6 +581,7 @@
     "character-owner-transferred": "Ownership transferred.",
     "character-campaign-joined": "Joined a campaign.",
     "character-campaign-left": "Left a campaign.",
+    "character-options-set": "{encumbrance, select, off {Encumbrance turned off.} standard {Encumbrance set to standard.} variant {Encumbrance set to variant (encumbered tiers).} other {Rule options updated.}}",
     "pack-pinned": "Pinned {packId} v{version}.",
     "decision-made": "Decided: {selection}.",
     "decision-cleared": "Cleared a choice.",

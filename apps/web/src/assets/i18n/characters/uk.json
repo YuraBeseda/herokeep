@@ -227,6 +227,16 @@
         "title": "Граматичний рід"
       }
     },
+    "options": {
+      "title": "Опції правил",
+      "encumbrance": {
+        "label": "Перевантаження",
+        "off": "Вимкнено",
+        "standard": "Стандартне",
+        "variant": "Варіативне (за рівнями)",
+        "houseRule": "Визначається домашніми правилами кампанії."
+      }
+    },
     "notFound": {
       "title": "Персонажа не знайдено",
       "body": "Цей персонаж не існує або не вдалося завантажити його на цьому пристрої."
@@ -571,6 +581,7 @@
     "character-owner-transferred": "Власника змінено.",
     "character-campaign-joined": "Приєднався до кампанії.",
     "character-campaign-left": "Покинув кампанію.",
+    "character-options-set": "{encumbrance, select, off {Облік перевантаження вимкнено.} standard {Перевантаження: стандартне правило.} variant {Перевантаження: варіативне правило (за рівнями).} other {Опції правил оновлено.}}",
     "pack-pinned": "Закріплено {packId} v{version}.",
     "decision-made": "Обрано: {selection}.",
     "decision-cleared": "Вибір очищено.",

@@ -217,6 +217,57 @@ describe('BuildTabComponent', () => {
     expect(lastEvent.type).toBe('character.renamed');
   });
 
+  // Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — per-character rule options.
+  it('the Options section shows the encumbrance select at its current value ("off" by default), enabled, with no house-rule reason', async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const select = compiled.querySelector<HTMLSelectElement>('.build-tab__options-encumbrance');
+    expect(select).not.toBeNull();
+    expect(select!.value).toBe('off');
+    expect(select!.disabled).toBe(false);
+    expect(select!.getAttribute('aria-describedby')).toBeNull();
+    expect(compiled.querySelector('.build-tab__options-reason')).toBeNull();
+    expect(Array.from(select!.options).map((o) => o.value)).toEqual(['off', 'standard', 'variant']);
+    expect(Array.from(select!.options).map((o) => o.textContent?.trim())).toEqual([
+      charactersEn.sheet.options.encumbrance.off,
+      charactersEn.sheet.options.encumbrance.standard,
+      charactersEn.sheet.options.encumbrance.variant,
+    ]);
+  });
+
+  it('changing the encumbrance select commits exactly one character.options.set and the sheet gains carry', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const before = characterStore.events().length;
+
+    const select = compiled.querySelector<HTMLSelectElement>('.build-tab__options-encumbrance')!;
+    select.value = 'variant';
+    select.dispatchEvent(new Event('change'));
+    await pollUntil(fixture, () => characterStore.sheet()?.carry?.mode === 'variant');
+
+    const added = characterStore.events().slice(before);
+    expect(added.map((e) => e.type)).toEqual(['character.options.set']);
+    expect(added[0]?.payload).toEqual({ encumbrance: 'variant' });
+    expect(characterStore.sheet()?.overridesProvenance).toEqual({
+      encumbrance: 'character option',
+    });
+    expect(select.value).toBe('variant');
+
+    // Re-selecting the value already in force commits nothing (propose.setOptions no-op).
+    select.dispatchEvent(new Event('change'));
+    for (let i = 0; i < 5; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+    expect(characterStore.events().length).toBe(before + 1);
+  });
+
   it('the appearance form only includes dirty fields in its committed payload', async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
@@ -644,5 +695,41 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
     expect(compiled.querySelector<HTMLButtonElement>('.build-tab__portrait-upload')!.disabled).toBe(
       false,
     );
+  });
+
+  // Plan 14 Task 5 (ruling 8): the campaign's `houseRules.encumbrance` wins over the character's
+  // own option — the select shows the house-rule value as effective, disabled, and points
+  // (`aria-describedby`) at a visible reason. The DM-exempt setup keeps the edit lock out of the
+  // picture, so the disable here is the house rule's alone.
+  it('a campaign house rule shows its value in the encumbrance select, disabled, with a described reason', async () => {
+    const characterId = await seedFighter('Ivan');
+    const campaignStore = TestBed.inject(CampaignStore);
+    await campaignStore.appendToStream(CAMPAIGN_STREAM, [
+      { type: 'campaign.settings_changed', v: 1, payload: { settings: fullSettings('locked') } },
+      { type: 'member.joined', v: 1, payload: { userId: 'u1', displayName: 'Bob', role: 'dm' } },
+    ]);
+    const characterStore = TestBed.inject(CharacterStore);
+    characterStore.enterSyncMode(characterId);
+    await characterStore.appendTx([
+      { type: 'character.options.set', v: 1, payload: { encumbrance: 'variant' } },
+      { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+    ]);
+
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const select = () =>
+      compiled.querySelector<HTMLSelectElement>('.build-tab__options-encumbrance')!;
+    await pollUntil(fixture, () => select().disabled);
+
+    expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    // fullSettings() authors houseRules.encumbrance 'standard' — it beats the stored 'variant'.
+    expect(select().value).toBe('standard');
+    expect(characterStore.sheet()?.overridesProvenance?.encumbrance).toBe('house rule');
+    const reasonId = select().getAttribute('aria-describedby');
+    expect(reasonId).toBeTruthy();
+    const reason = compiled.querySelector(`#${reasonId}`);
+    expect(reason?.classList.contains('build-tab__options-reason')).toBe(true);
+    expect(reason?.textContent?.trim()).toBe(charactersEn.sheet.options.encumbrance.houseRule);
   });
 });

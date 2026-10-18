@@ -179,9 +179,16 @@ export class CharacterStore {
    * plan-10 established). `{}` (engine defaults) for a solo character — see
    * `campaignDeriveOverridesFromState`'s own doc. Root-lifetime (this store is `providedIn: 'root'`
    * and never destroyed), reactive to `this.events` alone (a fresh `character.campaign_joined`
-   * commit, or `load()` switching to a different character stream) plus its own bounded poll. */
-  private readonly campaignOverrides: Signal<DeriveOverrides> =
-    this.campaignEditLockService.overridesFor(this.events);
+   * commit, or `load()` switching to a different character stream) plus its own bounded poll.
+   *
+   * Plan 14 (phase 4 slice 4) Task 5, design ruling 8: PUBLIC (read-only) so the Build tab's
+   * Options section can tell when a campaign house rule is in force (a defined `encumbrance` here —
+   * even `'off'` — beats the character's own `facts.options`, see `derive()`'s precedence) and show
+   * the per-character select disabled with a reason. The character option itself needs no extra
+   * plumbing: `sheet` below already hands `derive()` the full `facts`, `facts.options` included. */
+  readonly campaignOverrides: Signal<DeriveOverrides> = this.campaignEditLockService.overridesFor(
+    this.events,
+  );
 
   /** `undefined` until packs are ready AND a character's facts have been loaded/created. */
   readonly sheet: Signal<Sheet | undefined> = computed(() => {

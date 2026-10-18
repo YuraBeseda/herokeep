@@ -168,5 +168,35 @@
         }
       </fieldset>
     </hk-sheet-section>
+
+    <!-- Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — per-character rule options. A campaign
+         house rule in force wins: the select shows its value, disabled, described by the reason. -->
+    <hk-sheet-section [titleKey]="'characters.sheet.options.title'" class="build-tab__section">
+      <div class="build-tab__field build-tab__options">
+        <label for="build-tab-options-encumbrance">{{
+          t('sheet.options.encumbrance.label')
+        }}</label>
+        <select
+          id="build-tab-options-encumbrance"
+          class="build-tab__input build-tab__options-encumbrance"
+          [disabled]="encumbranceHouseRule() !== undefined || editLocked()"
+          [attr.aria-describedby]="
+            encumbranceHouseRule() !== undefined ? encumbranceReasonId : null
+          "
+          (change)="onEncumbranceChange($any($event.target).value)"
+        >
+          @for (option of encumbranceOptions; track option.value) {
+            <option [value]="option.value" [selected]="option.value === encumbranceValue()">
+              {{ t(option.labelKey) }}
+            </option>
+          }
+        </select>
+        @if (encumbranceHouseRule() !== undefined) {
+          <p class="build-tab__options-reason" [id]="encumbranceReasonId">
+            {{ t('sheet.options.encumbrance.houseRule') }}
+          </p>
+        }
+      </div>
+    </hk-sheet-section>
   </div>
 }
