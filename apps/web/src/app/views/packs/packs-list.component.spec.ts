@@ -296,5 +296,12 @@ describe('PacksListComponent', () => {
       );
       expect(badgeOf(root, 'sample-content@1.0.0')).toBeNull();
     });
+
+    it('does not mark the core when a stored character pins a NEWER core (no downgrade)', async () => {
+      setup({ storedPins: [{ [CORE.id]: '0.2.0' }] });
+      const { root } = await renderSettled();
+
+      expect(root.querySelector('.packs-list__update')).toBeNull();
+    });
   });
 });

@@ -426,6 +426,37 @@ describe('BuildPacksSectionComponent — update flow (plan 15 Task 5)', () => {
     expect(blocked.textContent).toContain('deps.pinMissing');
   });
 
+  it('an error already present before the update (an uninstalled pinned pack) does not block it', async () => {
+    const { open } = await setup([corePack, sample, sample11], false);
+    await pinSample();
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: 'ghost-pack', version: '1.0.0' } },
+    ]);
+    const fixture = TestBed.createComponent(BuildPacksSectionComponent);
+    await fixture.whenStable();
+    expect(store.index()?.diagnostics.some((d) => d.severity === 'error')).toBe(true);
+
+    updateButton(fixture, sample.id)!.click();
+    await settle(fixture, () => open.mock.calls.length === 1);
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.build-packs__blocked'),
+    ).toBeNull();
+  });
+
+  it('a pinned core NEWER than the shipped one shows no update (no downgrade)', async () => {
+    await setup([corePack, sample]);
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: corePack.id, version: '9.0.0' } },
+    ]);
+    const fixture = TestBed.createComponent(BuildPacksSectionComponent);
+    await fixture.whenStable();
+
+    expect(badge(fixture, corePack.id)).toBeNull();
+    expect(updateButton(fixture, corePack.id)).toBeNull();
+  });
+
   it('the core update opens a validation-only report and Confirm pins the shipped core', async () => {
     const { open } = await setup([corePack, sample], true);
     const store = TestBed.inject(CharacterStore);

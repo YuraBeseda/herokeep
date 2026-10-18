@@ -74,7 +74,20 @@ describe('updatesFor (plan 15 Task 5)', () => {
     expect(updatesFor({ a: '1.0.0' }, installed, CORE)).toEqual([]);
   });
 
-  it('the core: an update to the shipped version when the pinned core differs (ruling 6)', () => {
+  it('the core: no update (no downgrade) when the pinned core is NEWER than the shipped one', () => {
+    expect(updatesFor({ [CORE.id]: '0.2.0' }, [CORE_PACK], CORE)).toEqual([]);
+    expect(updatesFor({ [CORE.id]: '0.2.0-beta.1' }, [CORE_PACK], CORE)).toEqual([]);
+  });
+
+  it('a malformed pinned version yields no update and never throws', () => {
+    const installed = [CORE_PACK, mkPack('a', '2.0.0')];
+    expect(() =>
+      updatesFor({ [CORE.id]: 'not-a-version', a: 'v1?' }, installed, CORE),
+    ).not.toThrow();
+    expect(updatesFor({ [CORE.id]: 'not-a-version', a: 'v1?' }, installed, CORE)).toEqual([]);
+  });
+
+  it('the core: an update to the shipped version when the pinned core is older (ruling 6)', () => {
     expect(updatesFor({ [CORE.id]: '0.0.9' }, [CORE_PACK], CORE)).toEqual([
       { packId: CORE.id, from: '0.0.9', to: '0.1.0', kind: 'core' },
     ]);

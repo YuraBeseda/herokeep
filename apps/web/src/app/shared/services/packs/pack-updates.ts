@@ -10,7 +10,7 @@ export interface PackUpdate {
   /** The version the update pins. */
   readonly to: string;
   /**
-   * `'core'`: the pinned core differs from the core this app ships (plan ruling 6). The old core is
+   * `'core'`: the pinned core is older than the core this app ships (plan ruling 6). The old core is
    * not kept on the device, so the update is reported validation-only (no sheet diff).
    */
   readonly kind: 'content' | 'core';
@@ -27,8 +27,11 @@ const byPackId = (a: PackUpdate, b: PackUpdate): number =>
  *   prerelease ranks below its release and above the previous release (`1.0.0 < 1.1.0-beta.1 <
  *   1.1.0`), so it is offered like any other higher version. The pinned version itself need not be
  *   installed.
- * - Core: an update to `shippedCore.version` whenever the pinned core version differs from it
- *   (the app serves only the shipped core).
+ * - Core: an update to `shippedCore.version` only when it is strictly NEWER than the pinned core
+ *   (the app serves only the shipped core). A pinned core newer than the shipped one (a character
+ *   made on a newer app) gets no update: that would be a downgrade; the missing-pack banner reports
+ *   the mismatch instead.
+ * - A pin that is not valid semver gets no update (never throws).
  *
  * Pure and deterministic; sorted by `packId`.
  */
@@ -39,8 +42,11 @@ export function updatesFor(
 ): PackUpdate[] {
   const updates: PackUpdate[] = [];
   for (const [packId, from] of Object.entries(pins)) {
+    // A malformed pin (not valid semver) has no "newer"; it must never throw here.
+    if (semver.valid(from) === null) continue;
     if (packId === shippedCore.id) {
-      if (from !== shippedCore.version) {
+      // Only an OLDER pinned core updates; a newer one (made on a newer app) would be a downgrade.
+      if (semver.gt(shippedCore.version, from)) {
         updates.push({ packId, from, to: shippedCore.version, kind: 'core' });
       }
       continue;
