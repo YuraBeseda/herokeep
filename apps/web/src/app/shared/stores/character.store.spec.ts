@@ -1122,3 +1122,71 @@ describe('CharacterStore — per-character pack pins (plan 15 Task 4)', () => {
     expect(store.sheet()?.name).toBe('Aria');
   });
 });
+
+// --- Plan 15 Task 7: appending to a stored (not necessarily loaded) stream -----------------------
+describe('CharacterStore.appendTxToStream (plan 15 Task 7)', () => {
+  const pin = (version: string) => ({
+    type: 'pack.pinned' as const,
+    v: 1 as const,
+    payload: { packId: 'homebrew', version },
+  });
+
+  beforeEach(async () => {
+    configure();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.packs.clear(),
+      db.settings.clear(),
+      db.events.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+      db.blobs.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    removeLocks();
+    TestBed.inject(HkDb).close();
+  });
+
+  it('appends one transaction to a stored stream that is NOT loaded, without touching the loaded one', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const other = await store.create('Bryn', 'masculine');
+    const loaded = await store.create('Aria', 'feminine');
+    const loadedEvents = store.events();
+
+    await store.appendTxToStream(other, [pin('0.1.0'), pin('0.1.1')]);
+
+    const events = await TestBed.inject(EventsRepository).byStream(other);
+    expect(events.map((e) => [e.type, e.seq])).toEqual([
+      ['character.created', 1],
+      ['pack.pinned', 2],
+      ['pack.pinned', 3],
+    ]);
+    expect(events[1].txId).toBeDefined();
+    expect(events[1].txId).toBe(events[2].txId);
+    expect(store.streamId()).toBe(loaded);
+    expect(store.events()).toBe(loadedEvents);
+    expect((await TestBed.inject(CharactersRepository).get(other))?.name).toBe('Bryn');
+  });
+
+  it('refreshes the live facts when the target stream is the loaded one', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const id = await store.create('Aria', 'feminine');
+
+    await store.appendTxToStream(id, [pin('0.1.0')]);
+
+    expect(store.facts()?.pins['homebrew']).toBe('0.1.0');
+    expect(store.events().map((e) => e.type)).toEqual(['character.created', 'pack.pinned']);
+  });
+
+  it('refuses a stream in sync mode and an unknown stream, writing nothing', async () => {
+    const store = TestBed.inject(CharacterStore);
+    const id = await store.create('Aria', 'feminine');
+    store.enterSyncMode(id);
+
+    await expect(store.appendTxToStream(id, [pin('0.1.0')])).rejects.toThrow(/sync/);
+    await expect(store.appendTxToStream('char:missing', [pin('0.1.0')])).rejects.toThrow(/unknown/);
+    expect(await TestBed.inject(EventsRepository).byStream(id)).toHaveLength(1);
+  });
+});

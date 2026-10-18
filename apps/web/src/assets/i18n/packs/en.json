@@ -86,5 +86,8 @@
     "cancel": "Cancel",
     "confirm": "Remove"
   },
-  "update-available": "Update available"
+  "update-available": "Update available",
+  "homebrew": {
+    "pack-name": "My homebrew"
+  }
 }

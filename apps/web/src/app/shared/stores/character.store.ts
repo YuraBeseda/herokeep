@@ -387,6 +387,49 @@ export class CharacterStore {
     });
   }
 
+  /**
+   * Plan 15 Task 7 (homebrew fast-forward): envelopes and appends `drafts` as ONE transaction to
+   * the stored stream `streamId` — which need NOT be the loaded one — on the committed lane, then
+   * re-reduces it from storage (`refreshFromStorage`: the Library index row always, the live
+   * `events`/`facts` signals only when `streamId` is the loaded stream). Serialized through the
+   * same queue as every other mutation, so it never interleaves with `appendTx`/`revert`/`load`.
+   *
+   * Refuses (throws, nothing written) a stream in sync mode — its writes must go through the
+   * pending lane and `onLocalAppend`, which only `appendTx` on the LOADED stream provides — and a
+   * stream with no Library row. `event.reverted` drafts are refused exactly as in `appendTx`.
+   */
+  async appendTxToStream(streamId: string, drafts: ProposedEvent[] | DraftEvent[]): Promise<void> {
+    this.assertLeader();
+    if (drafts.length === 0) return;
+    if (drafts.some((d) => d.type === 'event.reverted')) {
+      throw new Error(
+        'CharacterStore.appendTxToStream: an "event.reverted" draft must go through revert()',
+      );
+    }
+
+    return this.enqueue(async () => {
+      if (this.syncModeStreams.has(streamId)) {
+        throw new Error(`CharacterStore.appendTxToStream: stream ${streamId} is in sync mode`);
+      }
+      if (!(await this.charactersRepository.get(streamId))) {
+        throw new Error(`CharacterStore.appendTxToStream: unknown stream ${streamId}`);
+      }
+      const txId = drafts.length > 1 ? uuidv7() : undefined;
+      const actor = await this.actor();
+      let seq = await this.eventsRepository.nextSeq(streamId);
+      const events: Event[] = [];
+      for (const draft of drafts) {
+        const raw = this.envelope(streamId, actor, draft.type, draft.v, draft.payload, {
+          seq: seq++,
+          txId,
+        });
+        events.push(this.validate(raw, draft.type, draft.v));
+      }
+      await this.eventsRepository.append(events);
+      await this.refreshFromStorage(streamId);
+    });
+  }
+
   /** Appends an `event.reverted` targeting `target.eventId` or every event sharing `target.txId`,
    * drops the stream's cached snapshot (it may hide the reverted target — see class doc), and
    * fully replays from `EventsRepository.byStream` so `facts`/`sheet` land back where they'd be
