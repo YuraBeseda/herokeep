@@ -1,9 +1,18 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import charactersEn from '../../../assets/i18n/characters/en.json';
-import { EngineFacade } from '../services/engine/engine.facade';
+import { PACK_ID, PACK_VERSION } from '@hk/content/version';
+import { parsePack, type Pack } from '@hk/protocol';
+import { EngineFacade, provideEngineScope } from '../services/engine/engine.facade';
+import { CharacterEngineScope } from '../stores/character-engine-scope';
+import { CharacterStore } from '../stores/character.store';
+import { PackStore } from '../stores/pack.store';
+import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
 import { DerivedPopoverDirective, type DerivedValue } from './derived-popover.directive';
 
 class StubLoader implements TranslocoLoader {
@@ -189,5 +198,80 @@ describe('DerivedPopoverDirective', () => {
 
     expect(document.querySelector('.derived-popover__empty')).not.toBeNull();
     expect(document.querySelector('.derived-popover__row')).toBeNull();
+  });
+});
+
+// --- Plan 15 Task 4 fix round 1: the popover opens through `DialogService`, whose dialog content
+// must resolve against the OPENER's pack set (the sheet's `EngineScope`), not the core-only root.
+const parsedSample = parsePack(sampleJson);
+if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+const sample = parsedSample.pack;
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..', '..');
+const parsedCore = parsePack(
+  JSON.parse(
+    readFileSync(
+      join(repoRoot, 'packages/content/dist/packs', PACK_ID, PACK_VERSION, 'pack.json'),
+      'utf8',
+    ),
+  ) as unknown,
+);
+if (!parsedCore.ok) throw new Error('core pack failed validation');
+const corePack: Pack = parsedCore.pack;
+
+@Component({
+  selector: 'app-scoped-derived-host',
+  imports: [DerivedPopoverDirective],
+  providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
+  template: `<div class="host-tile" hkDerived [hkDerivedBreakdown]="derived">{{ label }}</div>`,
+})
+class ScopedDerivedHostComponent {
+  protected readonly label = 'AC 13';
+  readonly derived: DerivedValue = {
+    value: 13,
+    contributions: [{ source: 'sample-content:feat/lunar-insight', kind: 'ac.bonus', amount: 3 }],
+  };
+}
+
+describe('DerivedPopoverDirective — opened inside a character scope (plan 15 Task 4)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: { availableLangs: ['en'], defaultLang: 'en', prodMode: true },
+          loader: StubLoader,
+        }),
+        {
+          provide: PackStore,
+          useValue: { packs: signal([corePack, sample]), ready: signal(true) },
+        },
+        {
+          provide: CharacterStore,
+          useValue: {
+            facts: signal({
+              pins: { [corePack.id]: corePack.version, [sample.id]: sample.version },
+            }),
+          },
+        },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+  });
+
+  it("names a contribution from a pinned pack (the opener's scope), not its raw id", async () => {
+    const fixture = TestBed.createComponent(ScopedDerivedHostComponent);
+    await fixture.whenStable();
+
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.host-tile')!.click();
+    await fixture.whenStable();
+
+    const popover = document.querySelector('.derived-popover__list');
+    expect(popover?.textContent).toContain('Lunar Insight');
+    expect(popover?.textContent).not.toContain('sample-content:feat/lunar-insight');
+    expect(TestBed.inject(EngineFacade).index().has('sample-content:feat/lunar-insight')).toBe(
+      false,
+    );
   });
 });

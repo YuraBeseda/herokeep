@@ -105,10 +105,14 @@ export class MarkdownService {
   private markedPromise?: Promise<Marked>;
   private dompurifyPromise?: Promise<DOMPurifyInstance>;
 
-  async render(markdown: string): Promise<SafeHtml> {
+  /** `localizer` resolves `[[id]]` cross-links. This service is root-provided, so it only knows
+   * the root (core + translations) localizer: a caller rendering for a character passes its own
+   * scoped `EngineFacade.localizer()` so a pinned pack's entities resolve (plan 15 Task 4). */
+  async render(markdown: string, localizer?: Localizer): Promise<SafeHtml> {
+    const resolver = localizer ?? this.engineFacade.localizer();
     const [marked, DOMPurify] = await Promise.all([this.loadMarked(), this.loadDompurify()]);
 
-    const withCrossLinks = resolveCrossLinks(markdown, this.engineFacade.localizer());
+    const withCrossLinks = resolveCrossLinks(markdown, resolver);
     const rawHtml = await marked.parse(withCrossLinks);
     const sanitized = DOMPurify.sanitize(rawHtml, { ALLOWED_TAGS, ALLOWED_ATTR });
     const finalHtml = postProcessLinks(sanitized);

@@ -22,6 +22,7 @@ import type { Entity, Pack } from '@hk/protocol';
 // the barrel re-exports `buildPack`/`writePack` from a Node-only, build-time module graph
 // (`node:fs`, `import.meta.url`-based fixture paths) that has no business in a browser bundle.
 import iconsMapJson from '@hk/content/icons';
+import { DialogService } from '../../components/dialog/dialog.service';
 import { LocaleService } from '../i18n/locale.service';
 import { PackStore } from '../../stores/pack.store';
 
@@ -111,6 +112,15 @@ function pinsKey(pins: Pins): string {
  *   `EngineScope` pins instead and delegates `indexFor`/localizers to the root, so the memo is
  *   shared. Everything rendered under the sheet shell or the create wizard therefore names, lists
  *   and validates against the character's own pack set without knowing about pins.
+ *
+ * SCOPING RULE — scoping follows the ELEMENT injector tree only:
+ * - components and directives rendered under a `provideEngineScope` host (routed children
+ *   included) see the scoped facade;
+ * - dialogs see it because `provideEngineScope` also provides a component-level `DialogService`
+ *   whose dialog content injectors are parented to the opener;
+ * - ROOT services (`MarkdownService`, `CharacterStore`, …) only ever see this root instance — a
+ *   caller working for a character passes its own index/localizer explicitly
+ *   (`MarkdownService.render(markdown, localizer)`), or uses `indexFor(pins)` directly.
  *
  * The app ships exactly one core: a pin of the core id at another version resolves against the
  * installed core (as the single global index always did), so such a character still derives. The
@@ -216,7 +226,12 @@ export class EngineFacade {
   }
 }
 
-/** Component-level providers that scope `EngineFacade` to `scope`'s pins (see `EngineScope`). */
+/**
+ * Component-level providers that scope `EngineFacade` to `scope`'s pins (see `EngineScope`), plus
+ * a component-level `DialogService`: its `inject(Injector)` is then this component's element
+ * injector, so every dialog opened from inside the subtree gets a content injector parented to the
+ * OPENER and resolves the scoped facade (the provenance popover, add-item, …) instead of the root.
+ */
 export function provideEngineScope(scope: Type<EngineScope>): Provider[] {
-  return [EngineFacade, { provide: EngineScope, useExisting: scope }];
+  return [EngineFacade, { provide: EngineScope, useExisting: scope }, DialogService];
 }

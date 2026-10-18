@@ -724,7 +724,7 @@ export class PlayTabComponent {
     loader: ({ params }): Promise<SafeHtml | undefined> => {
       const action = this.actions().find((a) => a.id === params);
       return action?.description
-        ? this.markdownService.render(action.description)
+        ? this.markdownService.render(action.description, this.engineFacade.localizer())
         : Promise.resolve(undefined);
     },
   });

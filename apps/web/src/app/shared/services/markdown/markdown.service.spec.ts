@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal } from '@angular/core';
+import { Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { SafeHtml } from '@angular/platform-browser';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
+import { EngineFacade, EngineScope } from '@shared/services/engine/engine.facade';
 import { PackStore } from '@shared/stores/pack.store';
+import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { MarkdownService } from './markdown.service';
 
 // Mirrors the `readPack`/stub-store pattern from `engine.facade.spec.ts` — the `pretest` script
@@ -144,5 +146,41 @@ describe('MarkdownService', () => {
     expect(html).toContain('<h2>Top</h2>');
     expect(html).toContain('<h3>Sub</h3>');
     expect(html).not.toContain('<h1>');
+  });
+});
+
+// --- Plan 15 Task 4 fix round 1: `MarkdownService` is root-provided, so a caller rendering for a
+// character passes ITS (scoped) localizer; the default stays the root (core-only) one.
+describe('MarkdownService — cross-links resolve against the caller localizer (plan 15 Task 4)', () => {
+  const parsedSample = parsePack(sampleJson);
+  if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+  const sample = parsedSample.pack;
+  const MOONKIN = 'sample-content:species/moonkin';
+
+  it("a cross-link to a pinned pack's entity renders its name and its data-entity-id link", async () => {
+    seedStore([corePack, sample]);
+    const pins = signal({ [corePack.id]: corePack.version, [sample.id]: sample.version });
+    const scoped = Injector.create({
+      providers: [EngineFacade, { provide: EngineScope, useValue: { pins } }],
+      parent: TestBed.inject(Injector),
+    }).get(EngineFacade);
+    const localizer = scoped.localizer();
+
+    const html = htmlOf(
+      await TestBed.inject(MarkdownService).render(`See [[${MOONKIN}]].`, localizer),
+    );
+
+    const anchor = new DOMParser().parseFromString(html, 'text/html').querySelector('a');
+    expect(anchor?.textContent).toBe('Moonkin');
+    expect(anchor?.getAttribute('data-entity-id')).toBe(MOONKIN);
+  });
+
+  it('without a localizer it still resolves against the root (core-only) index', async () => {
+    seedStore([corePack, sample]);
+
+    const html = htmlOf(await TestBed.inject(MarkdownService).render(`See [[${MOONKIN}]].`));
+
+    const anchor = new DOMParser().parseFromString(html, 'text/html').querySelector('a');
+    expect(anchor?.textContent).toBe(MOONKIN);
   });
 });

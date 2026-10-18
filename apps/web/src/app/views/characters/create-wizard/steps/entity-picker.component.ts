@@ -124,7 +124,9 @@ export class EntityPickerComponent {
     loader: ({ params }): Promise<SafeHtml | undefined> => {
       if (!params) return Promise.resolve(undefined);
       const description = this.engineFacade.localizer().text(params, 'description').text;
-      return description ? this.markdownService.render(description) : Promise.resolve(undefined);
+      return description
+        ? this.markdownService.render(description, this.engineFacade.localizer())
+        : Promise.resolve(undefined);
     },
   });
 

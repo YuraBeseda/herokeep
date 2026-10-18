@@ -8,8 +8,12 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { provideEngineScope } from '@shared/services/engine/engine.facade';
+import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { EntityPickerComponent } from './entity-picker.component';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — `pretest`
@@ -232,5 +236,78 @@ describe('EntityPickerComponent', () => {
 
     expect(compiled.querySelectorAll('.entity-picker__card').length).toBe(matchCount);
     expect(compiled.querySelector('.entity-picker__more')).toBeNull();
+  });
+});
+
+// --- Plan 15 Task 4 fix round 1: an expanded card's description renders its `[[id]]` cross-links
+// against the picker's (scoped) pack set — `MarkdownService` is root-provided, so the picker
+// passes its own localizer.
+describe('EntityPickerComponent — cross-links inside a character scope (plan 15 Task 4)', () => {
+  const MOONKIN = 'sample-content:species/moonkin';
+  const LUNAR = 'sample-content:feat/lunar-insight';
+
+  @Component({
+    selector: 'app-scoped-picker-host',
+    imports: [EntityPickerComponent],
+    providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
+    template: `<hk-entity-picker [ids]="ids" />`,
+  })
+  class ScopedHostComponent {
+    readonly ids = [MOONKIN];
+  }
+
+  beforeEach(() => {
+    const parsed = parsePack(sampleJson);
+    if (!parsed.ok) throw new Error('sample-content.json fixture no longer parses');
+    // The moonkin's description gains a cross-link to the pack's own feat.
+    const sample: Pack = {
+      ...parsed.pack,
+      entities: parsed.pack.entities.map((e) =>
+        e.id === MOONKIN ? { ...e, description: `Kin of [[${LUNAR}]].` } : e,
+      ),
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: { availableLangs: ['en'], defaultLang: 'en', prodMode: true },
+          loader: StubLoader,
+        }),
+        provideTranslocoMessageformat(),
+        {
+          provide: PackStore,
+          useValue: {
+            packs: signal([corePack, sample]),
+            ready: signal(true),
+            corePack: signal(corePack),
+          },
+        },
+        {
+          provide: CharacterStore,
+          useValue: {
+            facts: signal({
+              pins: { [corePack.id]: corePack.version, [sample.id]: sample.version },
+            }),
+          },
+        },
+      ],
+    });
+  });
+
+  it("names a cross-linked entity of the character's pinned pack in the expanded description", async () => {
+    const fixture = TestBed.createComponent(ScopedHostComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('.entity-picker__name')?.textContent?.trim()).toBe('Moonkin');
+
+    root.querySelector<HTMLButtonElement>('.entity-picker__expand')!.click();
+    for (let i = 0; i < 20 && !root.querySelector('.entity-picker__description a'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+    }
+
+    const anchor = root.querySelector('.entity-picker__description a');
+    expect(anchor?.textContent).toBe('Lunar Insight');
+    expect(anchor?.getAttribute('data-entity-id')).toBe(LUNAR);
   });
 });
