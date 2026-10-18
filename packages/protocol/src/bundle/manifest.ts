@@ -46,6 +46,17 @@ export const HeroBundleImageSchema = z.strictObject({
 });
 export type HeroBundleImage = z.infer<typeof HeroBundleImageSchema>;
 
+/** Plan 15 Task 1 (design ruling 9): one non-core pinned pack carried inside the bundle at `path`
+ * (`packs/<id>@<version>.json`, canonical JSON). `sha256` uses the SAME `sha256:<64hex>` form as
+ * `images[].hash` (`BlobHashSchema`) so the reader verifies both with one helper. */
+export const HeroBundlePackSchema = z.strictObject({
+  id: PackIdSchema,
+  version: SemverSchema,
+  path: z.string().min(1).max(256),
+  sha256: BlobHashSchema,
+});
+export type HeroBundlePack = z.infer<typeof HeroBundlePackSchema>;
+
 export const HeroBundleManifestSchema = z.strictObject({
   format: z.literal(1),
   kind: z.literal('hero'),
@@ -57,6 +68,9 @@ export const HeroBundleManifestSchema = z.strictObject({
   pins: z.record(PackIdSchema, SemverSchema),
   eventCount: z.int().min(0),
   images: z.array(HeroBundleImageSchema),
+  /** Additive (plan 15 Task 1): absent in every bundle written before slice 5 — those parse and
+   * import exactly as before. */
+  packs: z.array(HeroBundlePackSchema).optional(),
 });
 export type HeroBundleManifest = z.infer<typeof HeroBundleManifestSchema>;
 

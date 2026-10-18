@@ -91,4 +91,42 @@ describe('parseHeroManifest', () => {
     });
     expect(gifMime.ok).toBe(false);
   });
+
+  // Plan 15 Task 1 (ruling 9): additive `packs?` — every non-core pinned pack carried in the
+  // bundle as `packs/<id>@<version>.json`. `sha256` uses the same `sha256:<64hex>` form as
+  // `images[].hash` (BlobHashSchema).
+  describe('packs? (additive)', () => {
+    const packEntry = {
+      id: 'homebrew',
+      version: '0.1.3',
+      path: 'packs/homebrew@0.1.3.json',
+      sha256: `sha256:${'a'.repeat(64)}`,
+    };
+
+    it('parses an old manifest without packs unchanged', () => {
+      const result = parseHeroManifest(validManifest);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.manifest).toEqual(validManifest);
+        expect('packs' in result.manifest).toBe(false);
+      }
+    });
+
+    it('accepts packs entries (and an empty list)', () => {
+      const withPacks = parseHeroManifest({ ...validManifest, packs: [packEntry] });
+      expect(withPacks.ok, JSON.stringify(withPacks)).toBe(true);
+      if (withPacks.ok) expect(withPacks.manifest.packs).toEqual([packEntry]);
+      expect(parseHeroManifest({ ...validManifest, packs: [] }).ok).toBe(true);
+    });
+
+    it('rejects a bad sha256, a bare hex sha256, a bad id/version and an extra key', () => {
+      const bad = (patch: Record<string, unknown>) =>
+        parseHeroManifest({ ...validManifest, packs: [{ ...packEntry, ...patch }] }).ok;
+      expect(bad({ sha256: 'not-a-hash' })).toBe(false);
+      expect(bad({ sha256: 'a'.repeat(64) })).toBe(false);
+      expect(bad({ id: 'Bad Id' })).toBe(false);
+      expect(bad({ version: 'v1' })).toBe(false);
+      expect(bad({ extra: true })).toBe(false);
+    });
+  });
 });

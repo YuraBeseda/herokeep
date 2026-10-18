@@ -52,6 +52,12 @@ export const PackPinnedV1 = z.strictObject({
   version: SemverSchema,
   previous: SemverSchema.optional(),
 });
+/**
+ * Plan 15 (phase 4 slice 5) Task 1, design ruling 3 — the additive opt-out from a pinned content
+ * pack. The reducer deletes `pins[packId]` (an unknown id is a no-op; reducers never refuse); the
+ * core pack cannot be unpinned, which `propose.unpinPack` enforces before the event exists.
+ */
+export const PackUnpinnedV1 = z.strictObject({ packId: PackIdSchema });
 export const DecisionMadeV1 = z.strictObject({
   choiceId: ChoiceIdSchema,
   selection: z.array(z.string().min(1).max(200)).max(20),
@@ -260,6 +266,7 @@ export const EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'character.campaign_left@1': CharacterCampaignLeftV1,
   'character.options.set@1': CharacterOptionsSetV1,
   'pack.pinned@1': PackPinnedV1,
+  'pack.unpinned@1': PackUnpinnedV1,
   'decision.made@1': DecisionMadeV1,
   'decision.cleared@1': DecisionClearedV1,
   'level.gained@1': LevelGainedV1,
@@ -368,6 +375,8 @@ export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   // effects a pin on an owner's character via `override.applied` (gated by
   // `houseRules.allowOverrides`), not by appending `pack.pinned` directly.
   'pack.pinned': ['owner'],
+  // Plan 15 Task 1 (ruling 3): the opt-out mirrors the opt-in — owner-only.
+  'pack.unpinned': ['owner'],
   'decision.made': ['owner'],
   'decision.cleared': ['owner'],
   'level.gained': ['owner'],
@@ -439,6 +448,7 @@ export type CharacterCampaignJoined = z.infer<typeof CharacterCampaignJoinedV1>;
 export type CharacterCampaignLeft = z.infer<typeof CharacterCampaignLeftV1>;
 export type CharacterOptionsSet = z.infer<typeof CharacterOptionsSetV1>;
 export type PackPinned = z.infer<typeof PackPinnedV1>;
+export type PackUnpinned = z.infer<typeof PackUnpinnedV1>;
 export type DecisionMade = z.infer<typeof DecisionMadeV1>;
 export type DecisionCleared = z.infer<typeof DecisionClearedV1>;
 export type LevelGained = z.infer<typeof LevelGainedV1>;
