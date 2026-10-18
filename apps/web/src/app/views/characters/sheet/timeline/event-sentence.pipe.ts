@@ -98,7 +98,27 @@ function resolveValue(value: unknown, index: ContentIndex, localizer: Localizer)
 
 /** The resource events whose `resourceId` names a sheet resource rather than an entity id. */
 const RESOURCE_EVENT_TYPES: ReadonlySet<string> = new Set(['resource.spent', 'resource.restored']);
+/** The engine's id namespace for per-instance item charge pools: `derive/resources.ts` mints
+ * `item:<instanceId>` for every charged item (protocol `ResourceKeySchema`'s `item:<uuid>` arm; a
+ * colon can never appear in a slug-shaped feature resource id). Used ONLY as the fallback for a
+ * resource that is no longer on the sheet (instance removed / unequipped) — while it is on the
+ * sheet, `resourceKind` reads the resource's own data instead. */
 const ITEM_RESOURCE_PREFIX = 'item:';
+/** `derive/resources.ts`'s contribution kind for a pool whose max comes from an item's `charges`. */
+const ITEM_CHARGES_KIND = 'item.charges';
+
+/** Fix round 1: charges vs uses, from DATA when possible — a sheet resource whose max is fed by an
+ * `item.charges` contribution counts charges, any other sheet resource counts uses. Only a
+ * resource absent from the sheet falls back to the engine's `item:` id-namespace convention. */
+function resourceKind(
+  id: string,
+  sheet: Pick<Sheet, 'resources' | 'inventory'> | undefined,
+): 'item' | 'feature' {
+  const view = sheet?.resources.find((r) => r.id === id);
+  if (view)
+    return view.max.contributions.some((c) => c.kind === ITEM_CHARGES_KIND) ? 'item' : 'feature';
+  return id.startsWith(ITEM_RESOURCE_PREFIX) ? 'item' : 'feature';
+}
 
 /** Plan 14 Task 6: a resource id → its display name. An entity id resolves through the Localizer
  * as before; otherwise the sheet's `ResourceView` is looked up by id and named the way the play
@@ -184,7 +204,7 @@ function buildParams(
   if (RESOURCE_EVENT_TYPES.has(type) && typeof payload['resourceId'] === 'string') {
     const resourceId = payload['resourceId'];
     params['resourceId'] = resourceName(resourceId, index, localizer, sheet);
-    params['resourceKind'] = resourceId.startsWith(ITEM_RESOURCE_PREFIX) ? 'item' : 'feature';
+    params['resourceKind'] = resourceKind(resourceId, sheet);
     if (type === 'resource.restored') {
       params['restored'] = typeof payload['count'] === 'number' ? 'partial' : 'full';
     }

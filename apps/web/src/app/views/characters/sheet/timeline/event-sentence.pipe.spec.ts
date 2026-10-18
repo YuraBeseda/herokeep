@@ -258,7 +258,18 @@ describe('EventSentencePipe', () => {
       {
         id: `item:${WAND_INSTANCE}`,
         name: 'Wand of Magic Missiles',
-        max: { value: 7, contributions: [] },
+        max: {
+          value: 7,
+          contributions: [
+            {
+              source: 'srd-5e-2024:item/wand-of-magic-missiles',
+              kind: 'item.charges',
+              formula: '7',
+              key: `item:${WAND_INSTANCE}`,
+              amount: 7,
+            },
+          ],
+        },
         used: 3,
         reset: 'dawn',
         display: 'number',
@@ -267,7 +278,19 @@ describe('EventSentencePipe', () => {
       {
         id: 'second-wind',
         name: 'Second Wind',
-        max: { value: 2, contributions: [] },
+        max: {
+          value: 2,
+          contributions: [
+            {
+              source: 'srd-5e-2024:class/fighter',
+              feature: 'srd-5e-2024:feature/fighter-second-wind',
+              kind: 'resource.define',
+              formula: '2',
+              key: 'second-wind',
+              amount: 2,
+            },
+          ],
+        },
         used: 1,
         reset: 'shortRest',
         display: 'pips',
@@ -343,6 +366,56 @@ describe('EventSentencePipe', () => {
       unequipped,
     );
     expect(sentence).toBe('Spent Wand of Magic Missiles.');
+  });
+
+  // Fix round 1: charges vs uses is decided from the sheet's DATA when the resource is on it — a
+  // pool whose max comes from an item's `charges` (`item.charges` contribution) counts charges —
+  // never from the id's spelling; the `item:` prefix is only the fallback once it left the sheet.
+  it('decides charges vs uses from the sheet resource, not from the id prefix', () => {
+    const sheet = {
+      resources: [
+        {
+          id: 'staff-pool',
+          name: 'Staff Pool',
+          max: {
+            value: 4,
+            contributions: [
+              { source: 'srd-5e-2024:item/staff', kind: 'item.charges', formula: '4', amount: 4 },
+            ],
+          },
+          used: 2,
+          reset: 'dawn',
+          display: 'number',
+          source: 'x:item/staff',
+        },
+        {
+          id: `item:${WAND_INSTANCE}`,
+          name: 'Odd Pool',
+          max: {
+            value: 1,
+            contributions: [
+              { source: 'x:feature/odd', kind: 'resource.define', formula: '1', amount: 1 },
+            ],
+          },
+          used: 1,
+          reset: 'longRest',
+          display: 'pips',
+          source: 'x:feature/odd',
+        },
+      ],
+      inventory: [],
+    } as unknown as Sheet;
+    const restore = (resourceId: string) =>
+      pipe.transform(
+        makeEvent('resource.restored', { resourceId, count: 2 }),
+        index,
+        localizer,
+        1,
+        undefined,
+        sheet,
+      );
+    expect(restore('staff-pool')).toBe('Restored 2 charges of Staff Pool.');
+    expect(restore(`item:${WAND_INSTANCE}`)).toBe('Restored 2 uses of Odd Pool.');
   });
 
   it('without a sheet an item resource id falls back to the raw key (no crash)', () => {
