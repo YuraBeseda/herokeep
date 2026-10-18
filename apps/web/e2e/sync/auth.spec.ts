@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { createFighter } from '../helpers/create-fighter';
 import {
@@ -11,6 +12,8 @@ import {
   uniqueUsername,
   waitForCharacterInList,
 } from './helpers';
+
+const SAMPLE_HKPACK = path.join(__dirname, '..', 'fixtures', 'packs', 'sample-content.hkpack');
 
 /**
  * task-11-brief.md scenarios (a) and (b): real registration against the Node API adapter behind
@@ -85,10 +88,22 @@ test.describe('auth: register, recovery codes, and cross-device visibility', () 
     const username = uniqueUsername('restore');
     const characterName = 'Aldric Sync Restore';
 
-    await test.step('device A: register, create the fighter, reload to upload it', async () => {
+    await test.step('device A: register, create the fighter, pin a content pack, reload to upload it', async () => {
       await registerToCodesStep(page, username, 'Device A');
       await confirmRecoveryCodesAndContinue(page);
-      await createFighter(page, characterName);
+      const characterId = await createFighter(page, characterName);
+      // Plan 15 task 9: pins are events and sync; installed packs are device-local and do not.
+      // Device A installs the checked-in sample pack and pins it on the Build tab.
+      await page.goto('/packs');
+      await page.locator('.packs-list__import-input').setInputFiles(SAMPLE_HKPACK);
+      await page.locator('.pack-trust-dialog__install').click();
+      await expect(page.locator('.pack-trust-dialog')).toHaveCount(0);
+      await page.goto(`/c/${characterId}/build`);
+      const pin = page.locator(
+        '.build-packs__row[data-pack-id="sample-content"] .build-packs__toggle',
+      );
+      await pin.click();
+      await expect(pin).toBeChecked();
       await page.reload();
       await page.goto('/characters');
       await expect(syncBadgeForName(page, characterName)).toHaveAttribute(
@@ -111,6 +126,10 @@ test.describe('auth: register, recovery codes, and cross-device visibility', () 
         await expect(acValueLocator(pageB)).toHaveText('19');
         await expect(hpValueLocator(pageB, 'Current')).toHaveText('12');
         await expect(hpValueLocator(pageB, 'Max')).toHaveText('12');
+        // The pin synced, the pack did not: device B never installed sample-content.
+        await expect(pageB.locator('.sheet-shell__missing-packs')).toContainText(
+          'sample-content@1.0.0',
+        );
       } finally {
         await contextB.close();
       }
