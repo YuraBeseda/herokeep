@@ -106,7 +106,10 @@ describe('EntityQuery.category (item category filter)', () => {
     expect(index.query({ type: 'item', category: 'tool' }).map((e) => e.id)).not.toContain(item('longsword'));
   });
 
-  it('matches no non-item entity', () => {
+  it('matches no non-item entity (a hand-built query that bypasses the schema)', () => {
+    // The pack schema now REJECTS `category` on a non-item query (protocol choice.test.ts, plan 14
+    // final fix wave); `index.query` takes the typed query without parsing it, so this pins the
+    // engine's defensive non-match for a query built in code rather than loaded from a pack.
     expect(index.query({ type: 'skill', category: 'tool' })).toEqual([]);
   });
 });

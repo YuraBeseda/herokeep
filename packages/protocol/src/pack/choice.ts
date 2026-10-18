@@ -41,29 +41,35 @@ export const ChoiceAtSchema = z.union([
  */
 export const FIELD_PATH_RE = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)*$/;
 
-export const EntityQuerySchema = z.strictObject({
-  type: EntityTypeSchema,
-  tags: z.array(z.string().min(1).max(64)).optional(),
-  level: z.int().min(0).max(9).optional(),
-  classes: z.array(ClassRefSchema).optional(),
-  school: z.string().regex(SLUG_RE).optional(),
-  /**
-   * Ruling 4: dot-paths into the candidate entity that must be present (defined) for a match — AND
-   * semantics, same as `tags`. Chosen over inventing a tag taxonomy for e.g. weapon-mastery choices:
-   * `{type: 'item', hasField: ['weapon.mastery']}` selects exactly the items with a mastery property,
-   * without every weapon needing a hand-authored `weapon-mastery` tag. The engine evaluator walks
-   * each path against the raw candidate entity object, segment by segment, testing `!== undefined` at
-   * each level (a missing intermediate object is a non-match, not an error).
-   */
-  hasField: z.array(z.string().regex(FIELD_PATH_RE, 'Expected a dot-path like "weapon.mastery"')).optional(),
-  /**
-   * Plan 14 task 2 — additive: an item-category filter (the item `category` enum), e.g.
-   * `{type: 'item', category: 'tool'}` selects every tool. Matches only item entities (a non-item
-   * candidate is a non-match), same as `level`/`school` match only spells. `.optional()`, so every
-   * existing query parses byte-identically.
-   */
-  category: ItemCategorySchema.optional(),
-});
+export const EntityQuerySchema = z
+  .strictObject({
+    type: EntityTypeSchema,
+    tags: z.array(z.string().min(1).max(64)).optional(),
+    level: z.int().min(0).max(9).optional(),
+    classes: z.array(ClassRefSchema).optional(),
+    school: z.string().regex(SLUG_RE).optional(),
+    /**
+     * Ruling 4: dot-paths into the candidate entity that must be present (defined) for a match — AND
+     * semantics, same as `tags`. Chosen over inventing a tag taxonomy for e.g. weapon-mastery choices:
+     * `{type: 'item', hasField: ['weapon.mastery']}` selects exactly the items with a mastery property,
+     * without every weapon needing a hand-authored `weapon-mastery` tag. The engine evaluator walks
+     * each path against the raw candidate entity object, segment by segment, testing `!== undefined` at
+     * each level (a missing intermediate object is a non-match, not an error).
+     */
+    hasField: z.array(z.string().regex(FIELD_PATH_RE, 'Expected a dot-path like "weapon.mastery"')).optional(),
+    /**
+     * Plan 14 task 2 — additive: an item-category filter (the item `category` enum), e.g.
+     * `{type: 'item', category: 'tool'}` selects every tool. Matches only item entities (a non-item
+     * candidate is a non-match), same as `level`/`school` match only spells. `.optional()`, so every
+     * existing query parses byte-identically. Legal ONLY on a `{type: 'item'}` query (the refine
+     * below, plan 14 final fix wave — additive validation mirroring `QueryPickSchema`'s skill-only
+     * keys): on any other type it could only ever match nothing, so it is an authoring error.
+     */
+    category: ItemCategorySchema.optional(),
+  })
+  .refine((q) => q.category === undefined || q.type === 'item', {
+    message: '"category" applies only to a {type: "item"} query',
+  });
 
 /**
  * Plan 13 task 1 (expertise picks) — an additive widening of the `query` pick. A decided pick whose

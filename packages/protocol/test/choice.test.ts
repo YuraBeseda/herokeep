@@ -222,4 +222,18 @@ describe('PickSchema mixed-type picks (plan 14 task 2: additive `queries` + `Ent
     expect(EntityQuerySchema.safeParse({ type: 'item', category: 'tools' }).success).toBe(false);
     expect(EntityQuerySchema.safeParse({ type: 'item', category: '' }).success).toBe(false);
   });
+
+  it('rejects `category` on a non-item query with a clear message (plan 14 final fix wave)', () => {
+    const r = EntityQuerySchema.safeParse({ type: 'skill', category: 'tool' });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => i.message)).toEqual(['"category" applies only to a {type: "item"} query']);
+    // The same refine guards both pick forms that embed a query.
+    expect(ChoiceSchema.safeParse({ ...base, pick: { query: { type: 'skill', category: 'tool' } } }).success).toBe(
+      false,
+    );
+    expect(
+      ChoiceSchema.safeParse({ ...base, pick: { queries: [SKILL, { type: 'feat', category: 'tool' }] } }).success,
+    ).toBe(false);
+    expect(ChoiceSchema.safeParse({ ...base, pick: { queries: [SKILL, TOOL] } }).success).toBe(true);
+  });
 });
