@@ -96,7 +96,7 @@ generated, e.g. quota notices — none in v1).
 | `death_save.recorded` | O, D | `{result: success \| failure \| critSuccess \| critFailure}` | reset by heal/stabilize |
 | `stabilized` | O, D | `{}` | |
 | `slot.spent` / `slot.restored` | O | `{level, pact?: boolean, count?}` | |
-| `resource.spent` / `resource.restored` | O, D | `{resourceId, count?}` | second wind, rage…; `resourceId` is a slug OR `item:<uuid>` (Phase 4: per-instance item charges, keyed by the item's own `instanceId` — colon makes it collision-safe against any slug-keyed resource) |
+| `resource.spent` / `resource.restored` | O, D | `{resourceId, count?}` | second wind, rage…; `resourceId` is a slug OR `item:<uuid>` (Phase 4: per-instance item charges, keyed by the item's own `instanceId` — colon makes it collision-safe against any slug-keyed resource). `resource.restored` without `count` restores the resource fully; with `count` it restores that many, capped at full (`used = max(0, used − count)`). **Recorded-roll regain (plan 13 task 6):** a charged item with `regain` dice gets `resource.restored@1 {resourceId, count: <rolled total>}` from the rest proposal — the caller rolls, the event records only the total (no dice, no faces, no new field or version), so replay re-reads the recorded number and never re-rolls: the log alone reproduces `used`. Additive: older logs, with or without `count`, replay unchanged |
 | `spell.prepared` / `spell.unprepared` | O | `{spellId, classId}` | |
 | `spell.learned` / `spell.forgotten` | O | `{spellId, classId, source: levelUp \| scroll \| copy}` | spellbook / known |
 | `spell.cast` | O | `{spellId, level, slotUsed?: boolean, concentration?: boolean}` | convenience event that folds to slot + concentration. **`level` semantics differ per lane:** a Pact Magic cast records the spell's BASE level (the pact slot's own level is implied by the caster's pact table, and pact casts are always cast at that slot level), while a regular-slot cast records the CAST-AT level (an upcast of a level-1 spell into a level-3 slot records `3`). A free cast (plan 13 task 4, `spell.grant.uses`) records `slotUsed: false` at the grant's level and travels with a `resource.spent` for its counter in the same transaction. **Flagged future protocol candidate (no schema change in v1):** the event carries no `classId`, so for a multiclass character whose classes share a spell list (e.g. Cleric + Paladin both preparing the same spell) a cast cannot be attributed to a specific class's spellcasting block; `propose.cast` likewise takes no class/spell-ownership parameter. Adding an optional `classId` is deferred until a rule actually needs per-class attribution. |
@@ -121,7 +121,11 @@ temp HP does not stack (keep higher); damage hits temp first; healing from 0 cle
 saves; long rest restores HP, all slots, half hit dice (rounded down, min 1), resets
 `longRest` resources, reduces exhaustion by 1; short rest resets `shortRest` resources. A long
 rest also restores `dawn` charged items (v1 approximation; see doc 04, "Item charges and
-attunement").
+attunement"). Resource resets are not reducer rules: they arrive as the rest proposal's
+`resource.restored` events in the same transaction — the full-restore form, or (plan 13 task 6)
+the `count` form carrying a caller-rolled regain total for an item with `regain` dice. A missing or
+impossible total refuses the whole rest proposal, so no event is written (doc 04, "Rolled charge
+regain").
 
 ## Event catalog — campaign stream
 

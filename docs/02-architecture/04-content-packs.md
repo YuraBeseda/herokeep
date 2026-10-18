@@ -96,6 +96,22 @@ selection records the method, the six scores and — for `roll` — every die re
 `{ "literal": "text" }` (names), `{ "equipmentOption": [...] }`. Selections are stored in
 `decision.made` events by choice id.
 
+**Expertise picks (plan 13 task 1).** A `{type: "skill"}` query pick may carry two optional keys
+(legal only on a skill query — a schema refine): `proficiency: "proficient" | "expertise"` (the rank a
+selected skill gets; absent = `proficient`, so every older pick is unchanged) and `requireProficient:
+true` (offer only skills the character already has at a FULL rank — `proficient` or `expertise`;
+`half` does not count). Selections of a `requireProficient` pick apply after every other proficiency
+source (background, class skills, plain picks, `proficiency.grant`), so an expertise pick upgrades a
+skill and never creates proficiency: a recorded selection of a skill the character is not proficient
+in grants nothing. The engine's `queryPickOptions(pick, index, sheet)` is the single list of eligible
+options, used both by validation (a target outside it is refused as `selection.notOffered`) and by
+the web picker. A total is `mod + 2 × prof` (not 3×). SRD content: Rogue `@1/expertise` and
+`@6/expertise` (2 each), Bard `@2/expertise` and `@9/expertise` (2 each), Ranger `@2/expertise`
+(Deft Explorer, 1) and `@9/expertise` (2), all with
+`{"query":{"type":"skill"},"proficiency":"expertise","requireProficient":true}`. A class's two picks
+share the slug `expertise`, so the existing `unique` family check refuses repeating an earlier pick
+(`selection.duplicate`). Selection values are skill entity ids (`srd-5e-2024:skill/stealth`).
+
 `EntityQuerySchema`'s filters are AND-combined: `tags` (an entity's `tags[]` must include every
 listed tag) and `hasField` (dot-paths, e.g. `"weapon.mastery"`, that must be present on the
 candidate entity — a field-presence filter, preferred over inventing a bespoke tag taxonomy for
@@ -126,19 +142,19 @@ Every effect may carry `when: Predicate` and `source` is filled by the engine.
 | `ability.bonus` | `ability, value` | stacking key defaults to source feature |
 | `ability.set` | `ability, value, ifHigher: true` | Gauntlets of Ogre Power |
 | `ability.max` | `ability, value` | raises the 20 cap |
-| `proficiency.grant` | `kind: skill\|save\|armor\|weapon\|tool\|language, target, level: proficient\|expertise\|half` | `target` may be a category (`martial`) |
+| `proficiency.grant` | `kind: skill\|save\|armor\|weapon\|tool\|language, target, level: proficient\|expertise\|half` | `target` may be a category (`martial`); tool proficiencies land as `kind: 'tool'` rows (see "Tool proficiencies") |
 | `ac.formula` | `formula, key` | candidates; engine takes the max |
 | `ac.bonus` | `value, key?, when?` | shields, Defense, rings |
 | `hp.perLevel` | `value` | Tough-style |
 | `hp.bonus` | `value` | flat |
-| `speed.set` / `speed.bonus` | `mode: walk\|fly\|swim\|climb\|burrow, value` | |
+| `speed.set` / `speed.bonus` | `mode: walk\|fly\|swim\|climb\|burrow, value, key?` | `speed.set` value is an int; `speed.bonus` value is an int OR a formula (plan 13 task 5), and a non-walk bonus may read `speed(walk)` — see "Speed formulas" |
 | `sense.grant` | `sense: darkvision\|blindsight\|tremorsense\|truesight, range` | |
-| `resource.define` | `id, name, max (formula), reset: shortRest\|longRest\|dawn\|never, display: pips\|number` | Re-declaring an id: `max` stacks (same id keeps the highest), `name`/`display` stay first-wins, `reset` is last-wins in derive's effect order (Font of Inspiration) |
+| `resource.define` | `id, name, max (formula), reset: shortRest\|longRest\|dawn\|never, display: pips\|number` | Re-declaring an id: `max` stacks (same id keeps the highest), `name`/`display`/`source` stay first-wins, `reset` is last-wins (Font of Inspiration). "First"/"last" follow composition's sort order — lexical by source entity id, then feature id — NOT the level a feature was gained at; an overriding define must sort after the original (plan 13 task 3; see `derive/resources.ts`) |
 | `spellcasting.define` | `class, ability, list (class id or explicit), preparation: prepared\|known\|spellbook\|innate, slots: full\|half\|third\|pact\|none, ritual, focus, cantripsKnown (formula), preparedCount (formula), spellsKnown (formula)` | |
 | `spell.grant` | `spell, castingAbility?, uses? {count, per} \| {resource}, alwaysPrepared, level?` | Magic Initiate, species spells; `uses` = free casts (see "Free casts") |
 | `spell.listAdd` | `class, spells[]` | subclass spell lists |
 | `damage.resistance` / `damage.immunity` / `damage.vulnerability` | `types[]` | |
-| `condition.immunity` | `conditions[]` | |
+| `condition.immunity` | `conditions[]` | derived into `sheet.immunities` (display only; plan 13 task 5) — see "Condition immunities" |
 | `attack.bonus` / `damage.bonus` | `value (formula), filter {weapon?: melee\|ranged\|any, spell?: true}` | Archery |
 | `damage.rerollBelow` | `value, filter` | Great Weapon Fighting |
 | `initiative.bonus` / `save.bonus` / `skill.bonus` / `check.bonus` | `value, target?` | |
@@ -161,12 +177,13 @@ expr   := term (('+' | '-') term)*
 term   := unary (('*' | '/') unary)*
 unary  := '-' unary | primary
 primary:= number | ident | ident '(' args ')' | '(' expr ')'
-ident  := level | prof | classLevel | mod | score | hitDie | resource | max | min | floor | ceil | abs
+ident  := level | prof | classLevel | mod | score | hitDie | resource | speed | max | min | floor | ceil | abs
 ```
 Division is integer division rounding down unless wrapped in `ceil`. Max length 256,
 depth 16. Comparisons (`>= <= > < ==`) are allowed only inside `{ "formula": … }`
 predicates. Evaluation context: `level`, `prof`, `classLevel(id)`, `mod(ab)`,
-`score(ab)`, `hitDie(classId)`, `resource(id)`.
+`score(ab)`, `hitDie(classId)`, `resource(id)`, and — only in a non-walk `speed.bonus` value —
+`speed(walk)` (plan 13 task 5; see "Speed formulas").
 
 ## Dice values
 
@@ -315,7 +332,8 @@ like `resource.restored` is emitted per active resource today.
 ## Item charges and attunement
 
 `item.charges` (optional; phase 4, plan 11 task 4) is `{ max: Formula, reset:
-shortRest|longRest|dawn|never }` — the same formula grammar every other resource max uses
+shortRest|longRest|dawn|never, regain?: RegainDice }` (`regain`: plan 13 task 6, see "Rolled
+charge regain" below) — the same formula grammar every other resource max uses
 (`level`, `prof`, `classLevel(id)`, `mod(ab)`, `score(ab)`, `hitDie(classId)`, `resource(id)`).
 `@hk/engine`'s `deriveResources` materializes one resource per ACTIVE (equipped OR attuned)
 inventory instance whose item declares `charges`, keyed `item:<instanceId>` — never
@@ -335,17 +353,31 @@ dice maxes never match and are skipped). `reset` comes from the regain sentence:
 expended charges daily at dawn" maps to `dawn`; an item with no regain sentence at all maps to
 `never`; any other regain wording is skipped rather than guessed. 43 items are mechanized (39
 `dawn`, 4 `never`), pinned by an exact manifest in `packages/content/test/charges.test.ts`.
-Two documented v1 approximations, both owner-flagged:
+Slice 2 shipped two documented v1 approximations, both owner-flagged (the second is retired by
+plan 13 task 6):
 
 - **Dawn on long rest.** The engine has no "dawn" trigger event, so `propose.rest`'s long-rest
   sweep restores every `reset: 'dawn'` charged item as well as `longRest` ones (a short rest is
   unchanged). `reset: 'never'` items are never swept; their charges are restored manually with
   `resource.restored`.
-- **Rolled regain amounts fully restore.** The vendored regain amount ("1d6 + 4", "1d8 + 1", "all")
-  is parsed and pinned in the manifest but is NOT stored — the vocabulary is only `{ max, reset }`.
-  So a "regains 1d6 + 4 charges at dawn" item (38 of the 39 dawn items use a dice amount) is
-  restored to FULL by the long-rest sweep. This over-restores relative to the SRD text; true
-  NdM+K regain needs dice-in-rest integration and is a slice-3 carry.
+- ~~**Rolled regain amounts fully restore.**~~ *Retired by plan 13 task 6.* In slice 2 the
+  vendored regain amount ("1d6 + 4", "all") was parsed but not stored, so a "regains 1d6 + 4
+  charges at dawn" item was restored to FULL by the long-rest sweep. See "Rolled charge regain".
+
+**Rolled charge regain (plan 13 task 6).** `item.charges.regain` (optional) is the dice an item
+regains when its `reset` fires, validated by `RegainDiceSchema` — the `DiceSchema` pattern plus `d3`
+(both built from one shared list of die sides; `DiceSchema` itself is unchanged and still refuses
+`d3`). A schema refine refuses `regain` on a `reset: 'never'` item. The content transform emits it
+only for a dice amount: 38 of the 43 charged SRD items carry `regain` (14 of them `1d3`, e.g. Wand of
+Secrets, Ring of Evasion, Cubic Gate); Eyes of Charming ("regain all") and the 4 `never` items carry
+none and keep the full restore. The sheet exposes it as `ResourceView.regain` (absent when empty).
+The CALLER rolls, as with hit dice: `propose.rest(sheet, kind, hitDice?, regainRolls?)` takes
+`regainRolls[resourceId] = <rolled total>` and records it as `resource.restored {resourceId, count}`
+(no new event field; doc 02). The refusal is all-or-nothing: a missing total
+(`rest.regain-roll-missing`) or a total outside the dice's min..max or not an integer
+(`rest.regain-roll-invalid`) refuses the WHOLE rest — never a silent full restore. Resources
+without `regain` keep the byte-identical full-restore event. The web app rolls every `regain`
+resource with the same `roll(parseRollSpec(...), cryptoRng)` path the hit-die roll uses.
 
 **Progression-driven choice counts (plan 12 task 2).** `choice.count` is `int | Formula`. An
 integer behaves exactly as before. A formula (same grammar and context as a resource max; only
@@ -376,6 +408,48 @@ slug (named after the spell; a `resource.define` with that id merges with it und
 `resource.spent`; it refuses `spell.free-cast-unavailable` (no such entry, another level, or combined
 with `pact`/`useSlot: true`) and `resource.none-left` (counter empty). The slot lanes never touch the
 counter. A reference to a resource the sheet lacks is not offered (`derive.freeCastResourceMissing`).
+
+**Tool proficiencies (plan 13 task 2).** Tool proficiencies are not a separate sheet field: they
+land in the existing `sheet.proficiencies` array as rows with `kind: 'tool'` and `target` = the
+tool item's slug (`thieves-tools`, `gaming-set`, `musical-instrument-lute`), so one tool from
+several sources merges into one row and consumers filter by `kind`. Sources: the INITIAL class's
+`toolProficiencies` (Rogue: Thieves' Tools; a later multiclass class contributes none, since
+`multiclass.gains` carries no tool list), every active background's `toolProficiency`, a decided
+pick whose selections are items of category `tool` (whoever owns the choice — a plain `static`
+pick over item ids; Monk `@1/tools` offers one Artisan's Tools or Musical Instrument, Bard
+`@1/tools` three Musical Instruments), and `proficiency.grant {kind: 'tool'}` effects. The play
+tab lists them under Tools in the Proficiencies section. Known residual (task 2 review): a later-class
+Bard is still offered three instruments and a later-class Monk a tool, because no "initial class"
+predicate exists yet.
+
+**Multiclass attack proficiency (plan 13 task 7).** `classProficiencyGrants(facts, index)`
+(`derive/proficiency.ts`) is the one place that decides which class lists apply — the first class's
+full armor/weapon/tool lists, a later class's `multiclass.gains` (no tools), or a gains-less later
+class's full lists (compat). Both `sheet.proficiencies` and the attack table (`derive/attacks.ts`)
+read it, so an attack line can no longer be proficient when the sheet's proficiency list says it is
+not (a Wizard → Rogue no longer adds proficiency to a rapier).
+
+**Speed formulas (plan 13 task 5).** `speed.bonus.value` is `int | Formula` (`speed.set` stays an
+int). A formula bonus resolves through the shared evaluator, so a scaling column becomes one row:
+Monk Unarmored Movement is `10 + 5 * floor((classLevel(monk) - 2) / 4)` gated on no armor, no
+shield, Monk level 2+. A NON-walk `speed.bonus` value may also read `speed(walk)`: derive resolves
+walk first (after all walk bonuses have been added), then every other mode with `speed(walk)` bound
+to that value. Pack validation (`formula.speedSymbol`) refuses `speed()` anywhere else — in a walk
+bonus or in any other formula — and refuses any argument but `walk`, so a mode can
+never read itself or chain through another mode (no cycles). **Key convention for "a <mode> Speed
+equal to your Speed":** author it as `speed.bonus {mode, value: "speed(walk)", key:
+"<mode>-equal-to-speed"}` (Ranger Roving uses `climb-equal-to-speed` and `swim-equal-to-speed`).
+Bonuses that share a key keep only the highest (`sum-unique-key`), so two such grants on the same
+mode dedupe; a grant with a DIFFERENT key would SUM with it and double the speed. Every future
+"equal to your Speed" grant must reuse the per-mode key.
+
+**Condition immunities (plan 13 task 5).** Active `condition.immunity` effects (after their `when`
+predicates) derive into `sheet.immunities?: {condition, sources}[]` — sorted by condition id,
+`sources` = the granting features, unique and sorted; absent when empty. It is display-only: nothing
+blocks `condition.added`. SRD content: Paladin Aura of Courage (Frightened) and Aura of Devotion
+(Charmed), each gated `not {condition: incapacitated}` like Aura of Protection; the "and your allies"
+half stays in the description. Berserker Mindless Rage stays text: its immunity applies "while your
+Rage is active" and no raging fact or predicate exists, so an ungated immunity would be wrong.
 
 `item.attunement` (optional) is `{ required: boolean, by?: Predicate }`. `by`, when present, is
 the item's own attunement-requirement predicate (e.g. "requires attunement by a Wizard") —

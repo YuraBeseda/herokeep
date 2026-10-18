@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-10-03 — NOT STARTED (owner directive: plan written after plan 12 merged @ 5d02e05; execution awaits owner resume).**
+**STATUS: EXECUTED 2026-10-17 — all 11 tasks complete on branch `worktree-phase-4-plan13-vocabulary` (merged head: see git history — recorded at merge).**
 
 **Goal:** Retire the slice-2 carry list: close the engine-vocabulary gaps that forced text fallbacks (expertise picks, tool proficiencies, reset overrides, free-cast linkage, restricted ability picks, scaling speed), fix the two known pre-existing derive wrongs (attacks.ts multiclass gains, condition immunity display), convert the affected class/feat features from text to mechanics, and ship the deferred UX/golden hardeners — completing Phase 4's "every expressible SRD rule is mechanized" bar.
 

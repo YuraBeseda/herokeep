@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12) + slice 3 (plan 13)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -6,8 +6,8 @@ number. It supplements, and never replaces, the automated gates:
 
 - `pnpm check` — format, lint, typecheck, engine + web unit tests (819 web tests as of the plan-8
   client-sync final fix wave; includes the dev-mode perf-log spec below).
-- `pnpm --filter web e2e` — Playwright against the real production build: 10 spec files, 25 tests
-  (offline, library/search/locale, character creation, level-up, multiclassing, play actions,
+- `pnpm --filter web e2e` — Playwright against the real production build: 11 spec files, 26 tests
+  (offline, library/search/locale, character creation (Fighter, Monk, Rogue with Expertise), level-up, multiclassing, play actions,
   export/import, axe accessibility).
 - `packages/engine/test/perf.test.ts` — an automated perf *tripwire* (median of 5 reduce+derive
   runs over an extended fixture, budget 150 ms — generous CI headroom, not the real-device number).
@@ -336,7 +336,8 @@ slice-2 UI paths (pooled multiclass slots, always-prepared spells).
    ONCE (pooled), with per-class prepared lists still separate, at your device's real width.
 5. Add a charged magic item (e.g. a wand) to the inventory, equip or attune it, spend a charge
    on the Play tab, then take a long rest and confirm the charge is restored (dawn items restore
-   on a long rest in v1, fully — see doc 04).
+   on a long rest in v1; since slice 3 an item with regain dice restores a ROLLED amount rather
+   than fully — see section 8c, step 6, and doc 04).
 
 ### Results
 
@@ -344,6 +345,56 @@ slice-2 UI paths (pooled multiclass slots, always-prepared spells).
 | --- | --- | --- | --- | --- | --- |
 | _(e.g. Pixel 7a, Chrome)_ | | | | | |
 | | | | | | |
+
+---
+
+## 8c. Slice-3 builder & play behaviors on a real phone (Phase 4 slice 3, plan 13)
+
+**What this proves:** the new slice-3 UI paths behave correctly under real touch input and at a
+real phone width, including the disabled-with-reason controls with a screen reader.
+`apps/web/e2e/create-rogue.spec.ts` (default project) covers step 1 and step 2 automatically; the
+other steps rely on unit specs and engine goldens (plan-13 task reports 1–10).
+
+### Procedure
+
+1. **Expertise pick** (task 1). Create a Rogue (any species; Soldier background; standard array).
+   After the four class skills, confirm the Expertise step lists ONLY your proficient skills (the four
+   class picks plus the background's), with no others. Pick two, create, and on the Play tab confirm each
+   expertise skill shows an "Expertise" chip and a bonus of ability modifier + twice the proficiency
+   bonus.
+2. **Tool proficiencies** (task 2). On the same Rogue's Play tab, open Proficiencies and confirm
+   "Thieves' Tools" is listed under Tools (with the background's tool). Create a Monk or a Bard and
+   confirm its tool step (one tool for the Monk, three instruments for the Bard) shows up under Tools too.
+3. **Offer-time gating** (task 8). Level a character to 4 and open the feat picker (or the Rogue's
+   level-6 Expertise step). Confirm an option you do not qualify for, or one you already picked at
+   level 1, stays LISTED but its select button is disabled, with a visible reason ("Prerequisites not met"
+   / "Already chosen"). With TalkBack/VoiceOver, confirm focusing the disabled card reads the
+   reason. The card's description toggle must still open.
+4. **Pre-seeded re-pick** (task 9). Level a Fighter from 3 to 4. When Weapon Masteries is
+   offered again (count 3 → 4), confirm the three recorded weapons are already selected and one
+   more tap completes the step. Nothing should need re-picking.
+5. **Free-cast lane** (task 4). On a Ranger (level 1+), cast Hunter's Mark. Confirm the cast dialog
+   offers a free option labelled with the Favored Enemy resource beside the slot options. Casting
+   through it spends a Favored Enemy pip and no slot. When the pips run out, the free option is no
+   longer offered. A Druid 2+ sees the same thing for Find Familiar, paid with a Wild Shape use.
+6. **Rolled regain on rest** (task 6). Equip a wand with regain dice (e.g. Wand of Magic Missiles,
+   1d6+1), spend several charges, take a long rest, and confirm the charges come back by a rolled
+   amount (capped at the max), not always fully. Repeat a few times: the amount should vary.
+7. **Immunity badges** (task 5). On a Paladin 10+ (Aura of Courage), confirm the Conditions
+   section shows an "Immunities" heading with a "Frightened (Aura of Courage)" badge. An Oath of
+   Devotion Paladin 7+ also shows "Charmed (Aura of Devotion)". The badges cannot be removed, and
+   the heading is absent for a character with no immunities.
+8. **Disabled unprepare** (task 8). On a character with always-prepared spells (e.g. a Paladin's
+   Divine Smite or Oath spells), confirm each always-prepared row in the Prepared list has an
+   Unprepare button that is disabled, with the always-prepared reason as its tooltip and its
+   screen-reader description.
+
+### Results
+
+| Device | Date | Expertise | Tools | Gating/reasons | Pre-seed | Free cast | Rolled regain | Immunities | Disabled unprepare |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | |
+| | | | | | | | | | |
 
 ---
 

@@ -20,7 +20,7 @@ Content: `pnpm --filter @hk/content build:pack` generates the SRD 5.2.1 core pac
 
 - `pnpm --filter web start` — dev server
 - `pnpm --filter web build` — production build; `postbuild` measures the real gzipped initial bundle against a ≤600 KB budget
-- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (10 specs, 25 tests: offline, library/search/locale, character creation (Fighter + Monk), level-up, multiclassing, play actions, export/import, axe) against it
+- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (11 specs, 26 tests: offline, library/search/locale, character creation (Fighter + Monk + Rogue with Expertise), level-up, multiclassing, play actions, export/import, axe) against it
 
 PWA: `@angular/service-worker` precaches the app shell, fonts, icon sprite, i18n JSON and the core content pack, so the app keeps working in airplane mode after a first load; updates prompt rather than auto-reload. An in-app dismissible banner on the characters list offers native install on Chromium (`beforeinstallprompt`), or an iOS "Add to Home Screen" instructions sheet (with the 7-day standalone-storage warning) on Safari, which never fires that event; the Play tab can hold a Screen Wake Lock during play (the toggle is hidden entirely where the API isn't supported). See `docs/manual-device-checklist.md` for the manual install/offline/export/perf passes this plan adds.
 
@@ -218,6 +218,53 @@ SRD subclass — **all 12 SRD classes** are mechanized (plan 12 task reports; th
 - Gates at close: pack 1866 entities / 0 diagnostics, root 109 files / 1684 tests, web 134 / 1475
   (ledger, task 15 and task 14), gzip bundle 337.3 / 600 KB (this task's build).
 
+### Phase 4 slice 3 — vocabulary completions & polish (complete)
+
+Plan 13 closed the slice-2 carries that needed new engine vocabulary, plus a round of builder
+polish. Rules stay DATA: each mechanism is generic engine code, and the SRD numbers live in the
+overlays. `.hkpack` import, homebrew and pack rebase are still ahead. Sources are the plan-13 task
+reports (`task-N` below).
+
+- **Expertise** (task 1): a skill query pick can grant `expertise` and offer only skills the
+  character is already proficient in (`requireProficient`). Rogue gets 2 at level 1 and 2 at 6, Bard
+  2 at 2 and 2 at 9, Ranger 1 at 2 (Deft Explorer) and 2 at 9. The total doubles the proficiency
+  bonus, and an expertise pick never creates proficiency.
+- **Tool proficiencies** (task 2): tools land in `sheet.proficiencies` as `kind: 'tool'` rows
+  (Rogue's Thieves' Tools, background tools, the Monk's one-tool and the Bard's three-instrument
+  picks). The play tab lists them under Tools.
+- **Resource reset override and restricted ability picks** (task 3): a re-declared resource takes
+  its `reset` from the last define in composition sort order (lexical by source, then feature — not
+  by level), so Font of Inspiration makes Bardic Inspiration a Short Rest pool from bard level 5. An
+  `abilities` pick can list its allowed abilities (`from`), so Grappler's +1 offers only STR or DEX.
+- **Free casts** (task 4): `spell.grant.uses` can point at an existing resource. Favored Enemy's
+  Hunter's Mark casts spend `favored-enemy`, and Wild Companion's Find Familiar spends a Wild Shape
+  use. The cast dialog offers a free option next to the slot options.
+- **Scaling speed and immunities** (task 5): `speed.bonus` takes a formula (Monk Unarmored Movement
+  is one row). A non-walk bonus can read `speed(walk)`, so Ranger Roving gives climb and swim speeds
+  equal to the walk speed. `condition.immunity` now feeds `sheet.immunities`, shown as badges for
+  Paladin Aura of Courage and Aura of Devotion. Mindless Rage stays text, because there is no
+  raging state to gate it on.
+- **Rolled charge regain** (task 6): this retires slice 2's "rolled regain restores fully"
+  approximation. 38 of the 43 charged items now carry `charges.regain` dice (14 of them roll 1d3).
+  The long rest rolls them and records each total as `resource.restored.count`, and replay never
+  re-rolls.
+- **Multiclass attack fix** (task 7): attack proficiency now uses the same per-class lists as
+  `sheet.proficiencies`. A Wizard → Rogue's rapier no longer adds proficiency.
+- **Builder polish** (tasks 8–9): picker options that fail a prerequisite, or repeat an earlier pick,
+  stay listed but are disabled with a visible reason. Always-prepared spells show a disabled
+  Unprepare button. A grown choice (e.g. Fighter weapon masteries 3 → 4) re-opens with the recorded
+  picks pre-selected, and the event it records is unchanged.
+- **Goldens & perf** (task 10): 5 new goldens bring the golden suite from 58 to 63 tests
+  (62 fixtures plus one spec-level pin): Paladin 5/Ranger 3 (combined caster level 5, slots
+  4/3/2), Ranger 5/Warlock 3, Rogue 11 with Expertise, and two play cycles (Bard 6, Ranger 5).
+  The heaviest new scenario derives in a **0.326 ms median**, against the 15 ms mid-phone budget
+  (`packages/engine/test/golden/PERF.md`).
+- **e2e** (task 11): the offline project gained a Rogue-through-the-wizard scenario. It checks that
+  Expertise offers only proficient skills, that the sheet shows the doubled bonus, and that Thieves'
+  Tools is listed. The full offline run is 26/26, and `e2e:sync` passed 8/8 in one unchunked pass.
+- **Gates at close**: pack 1866 entities / 2,225,797 bytes / 0 diagnostics; root 123 files / 1837
+  tests; web 136 files / 1497 tests (task 10); gzip bundle 339.3 / 600 KB (task 11 build).
+
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current ones are
@@ -228,4 +275,6 @@ Implementation plans live in `docs/superpowers/plans/`; the current ones are
 `2026-09-27-phase-4-engine-vocabulary-and-classes.md` (engine vocabulary, multiclassing, and five
 classes to 20 — Phase 4 slice 1, above), and
 `2026-09-27-phase-4-slice-2-remaining-classes-feats-items.md` (the remaining seven classes,
-feats, and magic items — Phase 4 slice 2, above).
+feats, and magic items — Phase 4 slice 2, above), and
+`2026-10-03-phase-4-slice-3-vocabulary-completions-and-polish.md` (vocabulary completions and
+builder polish — Phase 4 slice 3, above).
