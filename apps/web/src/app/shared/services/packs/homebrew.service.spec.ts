@@ -3,12 +3,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { propose, type Sheet } from '@hk/engine';
+import { planRebase, propose, reduce, type Sheet } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parseEntityId, parsePack, type Entity, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { uuidv7 } from '@shared/helpers/uuid';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { PackLoader } from '@shared/services/engine/pack-loader';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
@@ -304,7 +305,27 @@ describe('HomebrewService', () => {
         ['pack.pinned', { packId: HOMEBREW_PACK_ID, version: '0.1.2', previous: '0.1.1' }],
       ]);
     }
-    expect(await storedPackKeys()).toEqual(['homebrew@0.1.2']);
+    // The version the pending character pins stays installed, so its Update report (Task 5)
+    // still sees the deleted species and lists the decision as invalid.
+    expect(await storedPackKeys()).toEqual(['homebrew@0.1.1', 'homebrew@0.1.2']);
+    const facade = TestBed.inject(EngineFacade);
+    const ariaFacts = reduce(await eventsOf(aria));
+    const nextPins = { ...ariaFacts.pins, [HOMEBREW_PACK_ID]: '0.1.2' };
+    const report = planRebase(
+      ariaFacts,
+      facade.indexFor(ariaFacts.pins),
+      facade.indexFor(nextPins),
+      nextPins,
+    );
+    expect(report.invalid).toEqual([
+      { choiceId: SPECIES_CHOICE, selection: [SPECIES.id], reason: 'selection-missing' },
+    ]);
+
+    // Once the player confirmed that update, the next save reclaims the old version.
+    await TestBed.inject(CharacterStore).appendTxToStream(aria, report.events);
+    const later = await service.save(SPELL);
+    expect(later.pending).toEqual([]);
+    expect(await storedPackKeys()).toEqual(['homebrew@0.1.3']);
   });
 
   it('deleting an item a character holds leaves that character pending (no new unresolved references are auto-applied)', async () => {

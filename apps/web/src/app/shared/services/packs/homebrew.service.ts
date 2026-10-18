@@ -101,13 +101,20 @@ function unresolvedKeys(issues: readonly Diagnostic[]): Set<string> {
  * 2. `parsePack` the whole pack, then `validatePack(pack, [core, ...other content])`. A failure
  *    throws `HomebrewValidationError` before anything is written.
  * 3. `installContent(pack, no assets)` — the new version row sits beside the previous one.
- * 4. Plan every stored character pinning `homebrew` (any version) while the previous version is
+ * 4. Plan every stored character pinning `homebrew` (any version) while the older versions are
  *    still installed (so `current` can see the entities the character uses — see `planFor`).
- * 5. Remove the previous version's row via `PackStore.removeContent` (which also reclaims any of its
- *    asset blobs no remaining pack lists — homebrew lists none today), so only the latest homebrew
- *    version stays installed.
- * 6. Commit each ready plan's `events` verbatim as ONE transaction on that character's stream
+ * 5. Commit each ready plan's `events` verbatim as ONE transaction on that character's stream
  *    (`CharacterStore.appendTxToStream`); everything else is `pending` and keeps the Update badge.
+ * 6. Remove every OTHER installed homebrew version that no pending character still pins, via
+ *    `PackStore.removeContent` (row plus any of its asset blobs no remaining pack lists — homebrew
+ *    lists none today). Normally that is just the previous version, so only the latest stays.
+ *
+ *    Deviation from "keep only the latest version" (stated in the task-7 report): a version a
+ *    PENDING character still pins is kept until no character pins it. Removing it would blind the
+ *    player's update report — `planRebase` skips decisions that are already invalid under
+ *    `current`, and with the old version gone every decision on a homebrew entity would look
+ *    already invalid, so a deleted species/feat would never be listed — and would also raise the
+ *    missing-pack banner. A later save reclaims it once the player has updated.
  */
 @Injectable({ providedIn: 'root' })
 export class HomebrewService {
@@ -200,10 +207,7 @@ export class HomebrewService {
     if (errors.length > 0) throw new HomebrewValidationError([], errors);
 
     await this.packStore.installContent(pack, new Map());
-    const { ready, pending } = await this.planFastForward(pack);
-    if (previous && packKey(previous) !== packKey(pack)) {
-      await this.packStore.removeContent(packKey(previous));
-    }
+    const { ready, pending, pinnedBy } = await this.planFastForward(pack);
 
     const fastForwarded: string[] = [];
     for (const character of ready) {
@@ -214,6 +218,15 @@ export class HomebrewService {
         pending.push(character.id); // e.g. entered sync mode meanwhile: the badge still offers it
       }
     }
+
+    const stillPinned = new Set(pending.map((id) => pinnedBy.get(id)));
+    const stale = this.packStore
+      .installedContent()
+      .filter(
+        (p) =>
+          p.id === HOMEBREW_PACK_ID && p.version !== pack.version && !stillPinned.has(p.version),
+      );
+    for (const old of stale) await this.packStore.removeContent(packKey(old));
     return { pack, diagnostics, fastForwarded, pending };
   }
 
@@ -238,11 +251,13 @@ export class HomebrewService {
 
   private async planFastForward(
     pack: Pack,
-  ): Promise<{ ready: ReadyCharacter[]; pending: string[] }> {
+  ): Promise<{ ready: ReadyCharacter[]; pending: string[]; pinnedBy: Map<string, string> }> {
     const rules = this.characterStore.systemRules();
     const installed = new Set(this.packStore.packs().map(packKey));
     const ready: ReadyCharacter[] = [];
     const pending: string[] = [];
+    /** Character id → the homebrew version it pins before this save. */
+    const pinnedBy = new Map<string, string>();
     for (const row of await this.charactersRepository.list()) {
       const [events, snapshot] = await Promise.all([
         this.eventsRepository.byStream(row.id),
@@ -251,11 +266,12 @@ export class HomebrewService {
       const facts = reduce(events, snapshot, rules);
       const pinned = facts.pins[HOMEBREW_PACK_ID];
       if (pinned === undefined || pinned === pack.version) continue;
+      pinnedBy.set(row.id, pinned);
       const planned = this.planFor(facts, pack.version, installed, rules, row.id);
       if (planned) ready.push({ id: row.id, events: planned });
       else pending.push(row.id);
     }
-    return { ready, pending };
+    return { ready, pending, pinnedBy };
   }
 
   /**
