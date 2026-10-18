@@ -108,6 +108,34 @@ describe('multiclass bonus skill pick (W1)', () => {
     for (const s of ['arcana', 'history', 'religion']) expect(sheet.skills[s]?.proficiency, s).toBe('proficient');
   });
 
+  // Plan 13 task 9 — accepted behavior (plan-12 ledger ruling: recorded decisions keep granting;
+  // only offers change). A legacy log that ANSWERED a later class's full `<class>@1/skills` pick
+  // (recorded before the gains restriction existed) keeps granting those skills, AND the W1 gains
+  // bonus pick (`<class>@1/multiclass-skills`) is ALSO offered and, once answered, granted — the two
+  // STACK (here 3 + 1 bard skills). Pinned as documented behavior, not a bug: changing either side
+  // would alter what an existing event log replays to.
+  it('accepted legacy stacking: an answered later-class full `@1/skills` pick AND the gains bonus pick both grant', () => {
+    const facts = factsWith([
+      { classId: FIGHTER, level: 1 },
+      { classId: BARD, level: 1 },
+    ]);
+    facts.decisions[`${BARD}@1/skills`] = ['arcana', 'history', 'religion'];
+
+    // The bonus pick is still offered alongside the answered legacy full pick.
+    const requests = outstandingChoices(facts, srd);
+    expect(requests).toContainEqual({ choiceId: `${BARD}@1/multiclass-skills`, ownerId: BARD, count: 1 });
+    expect(requests.map((r) => r.choiceId)).not.toContain(`${BARD}@1/skills`);
+    const before = derive(facts, srd, rules());
+    expect(validateSelection(before, facts, srd, `${BARD}@1/multiclass-skills`, ['persuasion'])).toEqual([]);
+
+    facts.decisions[`${BARD}@1/multiclass-skills`] = ['persuasion'];
+    const sheet = derive(facts, srd, rules());
+    for (const s of ['arcana', 'history', 'religion', 'persuasion'])
+      expect(sheet.skills[s]?.proficiency, s).toBe('proficient');
+    expect(sheet.outstandingChoices.map((r) => r.choiceId)).not.toContain(`${BARD}@1/multiclass-skills`);
+    expect(sheet.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  });
+
   it('validateSelection checks the multiclass pick against the class list and gains count', () => {
     const facts = factsWith([
       { classId: FIGHTER, level: 1 },
