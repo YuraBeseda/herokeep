@@ -8,6 +8,7 @@ import { ChipComponent } from '@shared/components/chip/chip.component';
 import { DialogService } from '@shared/components/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { HkpackReader } from '@shared/services/packs/hkpack-reader.service';
+import { HomebrewIdService, isHomebrewPackId } from '@shared/services/packs/homebrew-id';
 import { updatesFor } from '@shared/services/packs/pack-updates';
 import {
   PackImportBadSchemaError,
@@ -53,6 +54,7 @@ export class PacksListComponent {
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly packUsageService = inject(PackUsageService);
+  private readonly homebrewIdService = inject(HomebrewIdService);
 
   protected readonly importAccept = IMPORT_ACCEPT;
   protected readonly corePack = this.packStore.corePack;
@@ -81,6 +83,12 @@ export class PacksListComponent {
     }
     return keys;
   });
+
+  /** Another device's homebrew pack (a `homebrew-<hex>` id that is not this device's line, e.g.
+   * carried in by a `.hero`): an ordinary content pack, hinted so it is not mistaken for ours. */
+  protected isOtherDeviceHomebrew(pack: Pack): boolean {
+    return isHomebrewPackId(pack.id) && pack.id !== this.homebrewIdService.id();
+  }
 
   protected async removeTranslation(pack: Pack): Promise<void> {
     await this.packStore.removeTranslation(packKey(pack));

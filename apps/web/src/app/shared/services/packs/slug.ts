@@ -1,5 +1,5 @@
 /**
- * Entity slugs for the local `homebrew` pack (plan 15 ruling 10): the ASCII slug of the name the
+ * Entity slugs for the device's local `homebrew-<hex>` pack (plan 15 ruling 10): the ASCII slug of the name the
  * user typed — lowercase `[a-z0-9-]`, which `SLUG_RE` accepts — with Cyrillic transliterated.
  *
  * OWNER-FLAG (ruling 10): the transliteration table below is a convenience, not a standard. It is

@@ -13,11 +13,7 @@ import {
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
-import {
-  HOMEBREW_PACK_ID,
-  HomebrewService,
-  HomebrewValidationError,
-} from '@shared/services/packs/homebrew.service';
+import { HomebrewService, HomebrewValidationError } from '@shared/services/packs/homebrew.service';
 import { isHomebrewFormType, type HomebrewFormType } from './entity-form.helpers';
 import { FeatFormComponent } from './feat-form.component';
 import { ItemFormComponent } from './item-form.component';
@@ -80,8 +76,9 @@ export class HomebrewEditorComponent {
   protected readonly entity = computed<Entity | undefined>(() => {
     const type = this.type();
     const slug = this.slug();
-    if (!type || slug === null) return undefined;
-    const id = makeEntityId(HOMEBREW_PACK_ID, type, slug);
+    const packId = this.homebrewService.packId();
+    if (!type || slug === null || packId === null) return undefined;
+    const id = makeEntityId(packId, type, slug);
     return this.homebrewService.pack()?.entities.find((e) => e.id === id);
   });
   protected readonly editing = computed(() => this.slug() !== null);

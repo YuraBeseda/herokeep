@@ -12,6 +12,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
+import { HomebrewIdService } from '@shared/services/packs/homebrew-id';
 import { HomebrewService, HomebrewValidationError } from '@shared/services/packs/homebrew.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { PackStore } from '@shared/stores/pack.store';
@@ -32,6 +33,8 @@ const corePack: Pack = (() => {
 })();
 
 const hb = packsEn.homebrew;
+/** This device's homebrew pack id (stubbed `HomebrewIdService`). */
+const LOCAL = 'homebrew-aaaaaaaa';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -74,6 +77,10 @@ function configure(extra: unknown[] = []) {
         useValue: { requestPersist: vi.fn().mockResolvedValue(true) },
       },
       { provide: ToastService, useValue: { show } },
+      {
+        provide: HomebrewIdService,
+        useValue: { id: signal(LOCAL), ensure: () => Promise.resolve(LOCAL) },
+      },
       ...(extra as never[]),
     ],
   });
@@ -171,7 +178,7 @@ describe('ItemFormComponent', () => {
     expect(emitted).toHaveLength(1);
     const item = emitted[0];
     expect(item).toMatchObject({
-      id: 'homebrew:item/coral-knife',
+      id: 'homebrew-aaaaaaaa:item/coral-knife',
       type: 'item',
       name: 'Coral Knife',
       category: 'weapon',
@@ -201,7 +208,7 @@ describe('ItemFormComponent', () => {
     const { installContent } = configure();
     const armor = {
       type: 'item',
-      id: 'homebrew:item/shell-mail',
+      id: 'homebrew-aaaaaaaa:item/shell-mail',
       name: 'Shell Mail',
       tags: [],
       prerequisites: [],
@@ -237,7 +244,7 @@ describe('SpellFormComponent', () => {
     expect(emitted).toHaveLength(1);
     const spell = emitted[0];
     expect(spell).toMatchObject({
-      id: 'homebrew:spell/ognennyy-shar',
+      id: 'homebrew-aaaaaaaa:spell/ognennyy-shar',
       type: 'spell',
       level: 0,
       castingTime: { value: 1, unit: 'action' },
@@ -264,7 +271,7 @@ describe('SpellFormComponent', () => {
     configure();
     const spell = {
       type: 'spell',
-      id: 'homebrew:spell/glimmer',
+      id: 'homebrew-aaaaaaaa:spell/glimmer',
       name: 'Glimmer',
       tags: [],
       prerequisites: [],
@@ -305,7 +312,7 @@ describe('FeatFormComponent', () => {
 
     const feat = emitted[0];
     expect(feat).toMatchObject({
-      id: 'homebrew:feat/tide-reader',
+      id: 'homebrew-aaaaaaaa:feat/tide-reader',
       type: 'feat',
       category: 'origin',
       repeatable: false,
@@ -334,7 +341,7 @@ describe('FeatFormComponent', () => {
     configure();
     const feat = {
       type: 'feat',
-      id: 'homebrew:feat/lucky-shell',
+      id: 'homebrew-aaaaaaaa:feat/lucky-shell',
       name: 'Lucky Shell',
       description: 'Once per day, reroll.',
       tags: [],
@@ -371,7 +378,7 @@ describe('SpeciesFormComponent', () => {
 
     const species = emitted[0];
     expect(species).toMatchObject({
-      id: 'homebrew:species/tidekin',
+      id: 'homebrew-aaaaaaaa:species/tidekin',
       type: 'species',
       speed: 30,
       effects: [
@@ -395,7 +402,7 @@ describe('SpeciesFormComponent', () => {
     configure();
     const species = {
       type: 'species',
-      id: 'homebrew:species/moss-folk',
+      id: 'homebrew-aaaaaaaa:species/moss-folk',
       name: 'Moss Folk',
       tags: [],
       prerequisites: [],
@@ -424,8 +431,9 @@ describe('HomebrewEditorComponent', () => {
         provide: HomebrewService,
         useValue: {
           pack: signal<Pack | null>(null),
+          packId: signal(LOCAL),
           save: saveSpy,
-          newEntityId: (name: string, t: string) => `homebrew:${t}/${name.toLowerCase()}`,
+          newEntityId: (name: string, t: string) => `${LOCAL}:${t}/${name.toLowerCase()}`,
         },
       },
     ]);

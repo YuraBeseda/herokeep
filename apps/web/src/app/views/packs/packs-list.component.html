@@ -71,6 +71,9 @@
         <span class="packs-list__name">{{ pack.name }}</span>
         <span class="packs-list__meta">
           <span class="packs-list__version">{{ pack.version }}</span>
+          @if (isOtherDeviceHomebrew(pack)) {
+            <span class="packs-list__other-device">{{ t('list.other-device-homebrew') }}</span>
+          }
           @if (updateTargets().has(packKey(pack))) {
             <span class="packs-list__update">{{ t('update-available') }}</span>
           }

@@ -30,10 +30,10 @@ import { LocaleService } from '../i18n/locale.service';
 import { CharactersRepository } from '../storage/characters.repository';
 import { EventsRepository } from '../storage/events.repository';
 import { SnapshotsRepository } from '../storage/snapshots.repository';
+import { HomebrewIdService } from './homebrew-id';
 import { slugify, uniqueSlug } from './slug';
 
-/** The id of the one local, user-authored content pack (plan 15 ruling 10). */
-export const HOMEBREW_PACK_ID = 'homebrew';
+export { HOMEBREW_PACK_PREFIX, isHomebrewPackId } from './homebrew-id';
 /** The version of the first homebrew save; every later save bumps PATCH. */
 export const HOMEBREW_FIRST_VERSION = '0.1.0';
 /** Scope-relative i18n key of the pack's name (resolved once, at creation, in the active locale). */
@@ -44,9 +44,9 @@ export interface HomebrewSaveResult {
   pack: Pack;
   /** Non-error `validatePack` diagnostics of the saved pack (errors refuse the save). */
   diagnostics: Diagnostic[];
-  /** Characters whose `homebrew` pin was advanced silently, in one transaction each. */
+  /** Characters whose pin of this device's homebrew pack was advanced silently, in one transaction each. */
   fastForwarded: string[];
-  /** Characters pinning `homebrew` that were NOT advanced — the Build tab's Update badge (T5). */
+  /** Characters pinning this device's homebrew pack that were NOT advanced — the Build tab's Update badge (T5). */
   pending: string[];
 }
 
@@ -89,8 +89,12 @@ function unresolvedKeys(issues: readonly Diagnostic[]): Set<string> {
 
 /**
  * Quick homebrew (plan 15 Task 7, ruling 10): the user's items/spells/feats/species live in ONE
- * ordinary local content pack, `homebrew` — pack JSON validated by the same schema and validator
- * as any imported pack, installed through `PackStore.installContent`.
+ * ordinary local content pack per DEVICE, `homebrew-<8 hex>` (`HomebrewIdService`, fix round 1) —
+ * pack JSON validated by the same schema and validator as any imported pack, installed through
+ * `PackStore.installContent`. Only this device's id is ever resolved, edited or cleaned up: another
+ * device's homebrew pack (from a `.hero`) is an ordinary installed content pack under its own id.
+ * A plain `homebrew` pack left by this branch's pre-fix commits (dev data only, never released)
+ * is ignored — no migration.
  *
  * Save / remove (serialized, one at a time):
  * 1. Build the next pack: replace-or-add (or drop) the entity in the latest installed homebrew
@@ -101,7 +105,7 @@ function unresolvedKeys(issues: readonly Diagnostic[]): Set<string> {
  * 2. `parsePack` the whole pack, then `validatePack(pack, [core, ...other content])`. A failure
  *    throws `HomebrewValidationError` before anything is written.
  * 3. `installContent(pack, no assets)` — the new version row sits beside the previous one.
- * 4. Plan every stored character pinning `homebrew` (any version) while the older versions are
+ * 4. Plan every stored character pinning this device's homebrew id (any version) while the older versions are
  *    still installed (so `current` can see the entities the character uses — see `planFor`).
  * 5. Commit each ready plan's `events` verbatim as ONE transaction on that character's stream
  *    (`CharacterStore.appendTxToStream`); everything else is `pending` and keeps the Update badge.
@@ -126,14 +130,20 @@ export class HomebrewService {
   private readonly snapshotsRepository = inject(SnapshotsRepository);
   private readonly translocoService = inject(TranslocoService);
   private readonly localeService = inject(LocaleService);
+  private readonly homebrewIds = inject(HomebrewIdService);
 
   private queue: Promise<unknown> = Promise.resolve();
 
-  /** The latest installed homebrew version (highest semver), or `null` before the first save. */
+  /** This device's homebrew pack id (`null` until settings were read). */
+  readonly packId: Signal<string | null> = this.homebrewIds.id;
+
+  /** This device's latest installed homebrew version (highest semver), or `null` before the
+   * first save. Never another device's homebrew pack. */
   readonly pack: Signal<Pack | null> = computed(() => {
+    const id = this.packId();
     let latest: Pack | null = null;
     for (const pack of this.packStore.installedContent()) {
-      if (pack.id !== HOMEBREW_PACK_ID) continue;
+      if (id === null || pack.id !== id) continue;
       if (!latest || semver.gt(pack.version, latest.version)) latest = pack;
     }
     return latest;
@@ -149,9 +159,16 @@ export class HomebrewService {
     return uniqueSlug(slugify(name), taken, type);
   }
 
-  /** `homebrew:<type>/<slugFor(name, type)>` — the id a NEW entity gets. */
+  /** Resolves once this device's homebrew pack id is known (`packId()` set). */
+  async ready(): Promise<void> {
+    await this.homebrewIds.ensure();
+  }
+
+  /** `<packId>:<type>/<slugFor(name, type)>` — the id a NEW entity gets. Throws before `ready()`. */
   newEntityId(name: string, type: EntityType): string {
-    return makeEntityId(HOMEBREW_PACK_ID, type, this.slugFor(name, type));
+    const packId = this.packId();
+    if (packId === null) throw new Error('HomebrewService.newEntityId: pack id not loaded yet');
+    return makeEntityId(packId, type, this.slugFor(name, type));
   }
 
   /** Adds `entity`, or replaces the entity with the same id. See the class doc. */
@@ -186,11 +203,12 @@ export class HomebrewService {
   private async commit(edit: (entities: Entity[]) => Entity[]): Promise<HomebrewSaveResult> {
     const core = this.packStore.corePack();
     if (!core) throw new Error('HomebrewService: the core pack is not loaded');
+    const packId = await this.homebrewIds.ensure();
     const previous = this.pack();
     const entities = edit(previous ? [...previous.entities] : []);
 
     const candidate = {
-      ...(previous ?? (await this.freshPack())),
+      ...(previous ?? (await this.freshPack(packId))),
       version: previous
         ? (semver.inc(previous.version, 'patch') ?? HOMEBREW_FIRST_VERSION)
         : HOMEBREW_FIRST_VERSION,
@@ -201,7 +219,7 @@ export class HomebrewService {
     const parsed = parsePack(candidate);
     if (!parsed.ok) throw new HomebrewValidationError(formatIssues(parsed.issues), []);
     const pack = parsed.pack;
-    const others = this.packStore.installedContent().filter((p) => p.id !== HOMEBREW_PACK_ID);
+    const others = this.packStore.installedContent().filter((p) => p.id !== packId);
     const diagnostics = validatePack(pack, [core, ...others]);
     const errors = diagnostics.filter((d) => d.severity === 'error');
     if (errors.length > 0) throw new HomebrewValidationError([], errors);
@@ -222,22 +240,21 @@ export class HomebrewService {
     const stillPinned = new Set(pending.map((id) => pinnedBy.get(id)));
     const stale = this.packStore
       .installedContent()
-      .filter(
-        (p) =>
-          p.id === HOMEBREW_PACK_ID && p.version !== pack.version && !stillPinned.has(p.version),
-      );
+      .filter((p) => p.id === packId && p.version !== pack.version && !stillPinned.has(p.version));
     for (const old of stale) await this.packStore.removeContent(packKey(old));
     return { pack, diagnostics, fastForwarded, pending };
   }
 
   /** The first save's pack shell: name in the active locale (pack data from then on). */
-  private async freshPack(): Promise<Omit<Pack, 'version' | 'system' | 'dependencies'>> {
+  private async freshPack(
+    packId: string,
+  ): Promise<Omit<Pack, 'version' | 'system' | 'dependencies'>> {
     const name = await firstValueFrom(
       this.translocoService.selectTranslate<string>(PACK_NAME_KEY, {}, 'packs'),
     );
     return {
       format: 1,
-      id: HOMEBREW_PACK_ID,
+      id: packId,
       kind: 'content',
       name,
       authors: [],
@@ -264,10 +281,10 @@ export class HomebrewService {
         this.snapshotsRepository.get(row.id),
       ]);
       const facts = reduce(events, snapshot, rules);
-      const pinned = facts.pins[HOMEBREW_PACK_ID];
+      const pinned = facts.pins[pack.id];
       if (pinned === undefined || pinned === pack.version) continue;
       pinnedBy.set(row.id, pinned);
-      const planned = this.planFor(facts, pack.version, installed, rules, row.id);
+      const planned = this.planFor(facts, pack, installed, rules, row.id);
       if (planned) ready.push({ id: row.id, events: planned });
       else pending.push(row.id);
     }
@@ -275,7 +292,7 @@ export class HomebrewService {
   }
 
   /**
-   * The events that advance `facts`' homebrew pin to `version`, or `undefined` when the update
+   * The events that advance `facts`' pin of `pack.id` to `pack.version`, or `undefined` when the update
    * must wait for the player (the Build tab's Update badge and report, Task 5):
    * - the stream is in sync mode (its writes belong to the sync lane — `appendTx` on the loaded
    *   stream — and a campaign edit lock may apply);
@@ -290,15 +307,15 @@ export class HomebrewService {
    */
   private planFor(
     facts: Facts,
-    version: string,
+    pack: Pack,
     installed: ReadonlySet<string>,
     rules: SystemRules | undefined,
     streamId: string,
   ): ProposedEvent[] | undefined {
     if (this.characterStore.isSyncMode(streamId)) return undefined;
-    const pinned = facts.pins[HOMEBREW_PACK_ID];
-    if (!installed.has(`${HOMEBREW_PACK_ID}@${pinned}`)) return undefined;
-    const nextPins: Pins = { ...facts.pins, [HOMEBREW_PACK_ID]: version };
+    const pinned = facts.pins[pack.id];
+    if (!installed.has(`${pack.id}@${pinned}`)) return undefined;
+    const nextPins: Pins = { ...facts.pins, [pack.id]: pack.version };
     const next = this.engineFacade.indexFor(nextPins);
     if (next.diagnostics.some((d) => d.severity === 'error')) return undefined;
     const current = this.engineFacade.indexFor(facts.pins);

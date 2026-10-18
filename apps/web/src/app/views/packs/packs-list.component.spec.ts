@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { DialogService } from '@shared/components/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { HkpackReader, type PackImportPreview } from '@shared/services/packs/hkpack-reader.service';
+import { HomebrewIdService } from '@shared/services/packs/homebrew-id';
 import {
   PackImportBadSchemaError,
   PackImportInvalidError,
@@ -46,6 +47,8 @@ function mkPack(overrides: Partial<Pack>): Pack {
 }
 
 const CORE = mkPack({ id: 'srd-5e-2024', version: '0.1.0', name: 'SRD 5.2.1' });
+/** This device's homebrew pack id (stubbed `HomebrewIdService`). */
+const LOCAL_HOMEBREW = 'homebrew-aaaaaaaa';
 const SAMPLE = mkPack({ id: 'sample-content', version: '1.0.0', name: 'Sample content' });
 const RU = mkPack({
   id: 'srd-5e-2024-ru-sample',
@@ -99,6 +102,7 @@ function setup(
       { provide: DialogService, useValue: { open } },
       { provide: ToastService, useValue: { show } },
       { provide: PackUsageService, useValue: { pinSets } },
+      { provide: HomebrewIdService, useValue: { id: signal<string | null>(LOCAL_HOMEBREW) } },
     ],
   });
 
@@ -125,6 +129,21 @@ async function selectFile(
 }
 
 describe('PacksListComponent', () => {
+  it("hints that another device's homebrew pack came from another device (never this device's own)", async () => {
+    const homebrew = (id: string) =>
+      ({ ...SAMPLE, id, name: 'My homebrew', entities: [], assets: [] }) as Pack;
+    setup({ content: [SAMPLE, homebrew(LOCAL_HOMEBREW), homebrew('homebrew-bbbbbbbb')] });
+    const { root } = await render();
+
+    const rowOf = (key: string) =>
+      root.querySelector<HTMLElement>(`.packs-list__content a[href="/packs/${key}"]`)!;
+    const hint = (key: string) =>
+      rowOf(key).querySelector('.packs-list__other-device')?.textContent?.trim();
+    expect(hint('homebrew-bbbbbbbb@1.0.0')).toBe(packsEn.list['other-device-homebrew']);
+    expect(hint(`${LOCAL_HOMEBREW}@1.0.0`)).toBeUndefined();
+    expect(hint('sample-content@1.0.0')).toBeUndefined();
+  });
+
   it('renders the translated title (the packs scope is loaded, not the raw key)', async () => {
     setup();
     const { root } = await render();

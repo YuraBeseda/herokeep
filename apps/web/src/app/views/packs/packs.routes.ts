@@ -6,7 +6,7 @@ import type { Routes } from '@angular/router';
  *
  * Static paths must come BEFORE `:key`, which matches any single segment. Plan 15 Task 7: the
  * quick-homebrew screens are routes (not dialogs) — the list at `homebrew`, a form at
- * `homebrew/new/:type` and `homebrew/edit/:type/:slug` (type and slug of a `homebrew:<type>/<slug>`
+ * `homebrew/new/:type` and `homebrew/edit/:type/:slug` (type and slug of a `<homebrew pack id>:<type>/<slug>`
  * id, so no encoded `:`/`/` in the URL) — each lazily loaded.
  */
 export const PACKS_ROUTES: Routes = [

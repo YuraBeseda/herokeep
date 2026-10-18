@@ -26,7 +26,8 @@
     "remove-translation": "Видалити пакет перекладу",
     "import": "Імпортувати пакет",
     "import-details": "Що пішло не так",
-    "import-details-dismiss": "Сховати"
+    "import-details-dismiss": "Сховати",
+    "other-device-homebrew": "З іншого пристрою"
   },
   "info": {
     "version": "Версія {version}",

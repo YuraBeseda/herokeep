@@ -20,7 +20,7 @@ class StubLoader implements TranslocoLoader {
 const base = { tags: [], prerequisites: [], effects: [], grants: [], choices: [] };
 const parsed = parsePack({
   format: 1,
-  id: 'homebrew',
+  id: 'homebrew-aaaaaaaa',
   version: '0.1.3',
   kind: 'content',
   system: '5e-2024',
@@ -30,15 +30,15 @@ const parsed = parsePack({
     {
       ...base,
       type: 'item',
-      id: 'homebrew:item/coral-knife',
+      id: 'homebrew-aaaaaaaa:item/coral-knife',
       name: 'Coral Knife',
       category: 'gear',
     },
-    { ...base, type: 'item', id: 'homebrew:item/shell', name: 'Shell', category: 'gear' },
+    { ...base, type: 'item', id: 'homebrew-aaaaaaaa:item/shell', name: 'Shell', category: 'gear' },
     {
       ...base,
       type: 'species',
-      id: 'homebrew:species/tidekin',
+      id: 'homebrew-aaaaaaaa:species/tidekin',
       name: 'Tidekin',
       size: 'medium',
       speed: 30,
@@ -127,7 +127,9 @@ describe('HomebrewListComponent', () => {
     const { fixture, root, open, remove } = await setup(false);
 
     root
-      .querySelector<HTMLButtonElement>('[data-entity-id="homebrew:item/shell"] .hb-list__delete')!
+      .querySelector<HTMLButtonElement>(
+        '[data-entity-id="homebrew-aaaaaaaa:item/shell"] .hb-list__delete',
+      )!
       .click();
     await settle(fixture);
 
@@ -139,12 +141,14 @@ describe('HomebrewListComponent', () => {
     const { fixture, root, remove, show } = await setup(true);
 
     root
-      .querySelector<HTMLButtonElement>('[data-entity-id="homebrew:item/shell"] .hb-list__delete')!
+      .querySelector<HTMLButtonElement>(
+        '[data-entity-id="homebrew-aaaaaaaa:item/shell"] .hb-list__delete',
+      )!
       .click();
     await settle(fixture);
     await settle(fixture);
 
-    expect(remove).toHaveBeenCalledWith('homebrew:item/shell');
+    expect(remove).toHaveBeenCalledWith('homebrew-aaaaaaaa:item/shell');
     expect(show).toHaveBeenCalledWith('packs.homebrew.removed', { updated: 1 });
     expect(show).toHaveBeenCalledWith('packs.homebrew.pending', { count: 1 });
   });

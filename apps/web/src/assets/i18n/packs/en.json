@@ -26,7 +26,8 @@
     "remove-translation": "Remove translation pack",
     "import": "Import pack",
     "import-details": "What went wrong",
-    "import-details-dismiss": "Dismiss"
+    "import-details-dismiss": "Dismiss",
+    "other-device-homebrew": "From another device"
   },
   "info": {
     "version": "Version {version}",

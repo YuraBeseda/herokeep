@@ -26,7 +26,8 @@
     "remove-translation": "Удалить набор перевода",
     "import": "Импортировать набор",
     "import-details": "Что пошло не так",
-    "import-details-dismiss": "Скрыть"
+    "import-details-dismiss": "Скрыть",
+    "other-device-homebrew": "С другого устройства"
   },
   "info": {
     "version": "Версия {version}",
