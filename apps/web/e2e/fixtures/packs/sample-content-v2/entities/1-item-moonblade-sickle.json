@@ -1,0 +1,30 @@
+{
+  "type": "item",
+  "id": "sample-content:item/moonblade-sickle",
+  "name": "Moonblade Sickle",
+  "description": "A crescent blade forged from pale silver.",
+  "icon": "sha256:86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65",
+  "tags": [],
+  "prerequisites": [],
+  "effects": [],
+  "grants": [],
+  "choices": [],
+  "category": "weapon",
+  "cost": {
+    "amount": 5,
+    "currency": "gp"
+  },
+  "weight": 2,
+  "weapon": {
+    "kind": "melee",
+    "category": "simple",
+    "damage": "1d6",
+    "damageType": "slashing",
+    "properties": ["light"],
+    "mastery": "nick"
+  },
+  "deprecated": {
+    "replacedBy": "sample-content:item/moonsilver-sickle",
+    "since": "1.1.0"
+  }
+}

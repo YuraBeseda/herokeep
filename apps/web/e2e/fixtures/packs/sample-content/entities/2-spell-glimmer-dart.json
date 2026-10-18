@@ -1,0 +1,32 @@
+{
+  "type": "spell",
+  "id": "sample-content:spell/glimmer-dart",
+  "name": "Glimmer Dart",
+  "description": "A dart of silver light streaks toward a creature you can see within range.",
+  "tags": [],
+  "prerequisites": [],
+  "effects": [],
+  "grants": [],
+  "choices": [],
+  "level": 1,
+  "school": "evocation",
+  "castingTime": {
+    "value": 1,
+    "unit": "action"
+  },
+  "range": {
+    "kind": "feet",
+    "distance": 60
+  },
+  "components": {
+    "v": true,
+    "s": true,
+    "m": false
+  },
+  "duration": {
+    "kind": "instantaneous"
+  },
+  "concentration": false,
+  "ritual": false,
+  "classes": ["wizard"]
+}

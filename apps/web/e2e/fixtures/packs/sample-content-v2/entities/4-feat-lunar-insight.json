@@ -1,0 +1,19 @@
+{
+  "type": "feat",
+  "id": "sample-content:feat/lunar-insight",
+  "name": "Lunar Insight",
+  "description": "You can read the phases of the moon to recall forgotten lore.",
+  "tags": [],
+  "prerequisites": [],
+  "effects": [
+    {
+      "type": "feature.text",
+      "name": "Lunar Insight",
+      "description": "You can read the phases of the moon to recall forgotten lore."
+    }
+  ],
+  "grants": [],
+  "choices": [],
+  "category": "general",
+  "repeatable": false
+}

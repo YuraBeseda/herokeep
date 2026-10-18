@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "id": "sample-content",
+  "version": "1.0.0",
+  "kind": "content",
+  "system": "5e-2024",
+  "name": "Sample content",
+  "description": "A small third-party content pack used by tests: one weapon, one spell, one feat and one species.",
+  "authors": ["Herokeep test fixtures"],
+  "license": "CC-BY-4.0",
+  "attribution": "Herokeep sample content pack (test fixture).",
+  "dependencies": [
+    {
+      "id": "srd-5e-2024",
+      "range": "^0.1.0"
+    }
+  ],
+  "locale": "en",
+  "overrides": [],
+  "assets": [
+    {
+      "hash": "sha256:86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65",
+      "kind": "icon",
+      "mime": "image/webp",
+      "size": 34
+    }
+  ],
+  "i18n": {}
+}

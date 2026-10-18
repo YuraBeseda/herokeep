@@ -1,0 +1,20 @@
+{
+  "type": "species",
+  "id": "sample-content:species/moonkin",
+  "name": "Moonkin",
+  "description": "Moonkin are small folk who wander by the light of the moon.",
+  "tags": [],
+  "prerequisites": [],
+  "effects": [
+    {
+      "type": "feature.text",
+      "name": "Moonlit Step",
+      "description": "In dim light you can move quietly without trying."
+    }
+  ],
+  "grants": [],
+  "choices": [],
+  "size": "small",
+  "speed": 30,
+  "creatureType": "humanoid"
+}
