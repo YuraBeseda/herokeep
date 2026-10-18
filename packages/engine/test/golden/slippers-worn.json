@@ -1,6 +1,6 @@
 {
   "name": "slippers-worn",
-  "note": "Plan 14 task 7 (slice 4 goldens), pair with slippers-attuned: a Human Soldier Fighter 1 wears Slippers of Spider Climbing and a Cloak of Arachnida (real item.added + item.equipped events) WITHOUT attuning either. Both require attunement (vendored MagicItem srd-2024_slippers-of-spider-climbing / srd-2024_cloak-of-arachnida, requires_attunement: true), so neither item's effects are active (plan 14 task 3 attunement gate): the speed block is walk only, and no Web resource exists (only the fighter's Second Wind).",
+  "note": "Plan 14 task 7 (slice 4 goldens), pair with slippers-attuned: a Human Soldier Fighter 1 wears Slippers of Spider Climbing and a Cloak of Arachnida (real item.added + item.equipped events) WITHOUT attuning either. Both require attunement (vendored MagicItem srd-2024_slippers-of-spider-climbing / srd-2024_cloak-of-arachnida, requires_attunement: true), so neither item's effects are active (plan 14 task 3 attunement gate): the speed block is walk only, and no Web resource exists (only the fighter's Second Wind). Plan 14 final fix wave: `absent` also pins that the unattuned Cloak contributes neither its poison resistance nor its Web free cast — sheet.resistances and sheet.freeCasts are not present at all (slippers-attuned pins both once attuned).",
   "packs": ["dist:srd-5e-2024"],
   "events": [
     {
@@ -133,5 +133,6 @@
     "sheet.speed": { "walk": { "value": 30, "contributions": [] } },
     "sheet.resources.length": 1,
     "sheet.resources[0].id": "second-wind"
-  }
+  },
+  "absent": ["sheet.resistances", "sheet.freeCasts"]
 }

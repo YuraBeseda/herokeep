@@ -11,6 +11,12 @@ export interface GoldenFixture {
   packs: string[];
   events: Event[];
   expect: Record<string, unknown>;
+  /**
+   * Plan 14 final fix wave: paths that must NOT exist (resolve to `undefined`). JSON has no
+   * `undefined`, so an absence that no parent whole-object pin can carry (e.g. an optional
+   * top-level `sheet.*` key) is listed here; a present value fails `toEqual` with that value shown.
+   */
+  absent?: string[];
 }
 
 const goldenDir = new URL('../golden/', import.meta.url);
@@ -91,5 +97,11 @@ export function runGolden(fx: GoldenFixture): { actual: Record<string, unknown>;
   const root = { facts, sheet: derive(facts, index, rules) };
   const actual: Record<string, unknown> = {};
   for (const path of Object.keys(fx.expect)) actual[path] = getPath(root, path);
-  return { actual, expected: fx.expect };
+  const expected: Record<string, unknown> = { ...fx.expect };
+  for (const path of fx.absent ?? []) {
+    if (path in fx.expect) throw new Error(`${fx.name}: "${path}" is both expected and absent`);
+    actual[path] = getPath(root, path);
+    expected[path] = undefined;
+  }
+  return { actual, expected };
 }

@@ -980,7 +980,7 @@ describe('rogue and thief to level 20 mechanics (task 7)', () => {
     );
   });
 
-  it('rogue: multiclass gains = light armor + one skill (no weapons)', () => {
+  it("rogue: multiclass gains = light armor + one skill + Thieves' Tools (no weapons)", () => {
     expect(rogue().multiclass.gains).toEqual({
       armorTraining: ['light'],
       weaponProficiencies: [],

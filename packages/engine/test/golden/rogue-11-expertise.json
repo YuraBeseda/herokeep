@@ -1,6 +1,6 @@
 {
   "name": "rogue-11-expertise",
-  "note": "plan-14 task 2: Soldier generic gaming-set row replaced by the @0/tools pick. The Soldier background no longer emits the generic 'gaming-set' toolProficiency slug (vendored srd-2024_soldier_tool-proficiencies is a choice, \"Choose one kind of Gaming Set\"; this character never decided the new soldier@0/tools pick), so its tool row at sheet.proficiencies[1] is gone and the rogue's thieves-tools row shifts from [2] to [1], unchanged. No other expectation moves (before/after derive diff over all goldens: t2-golden-diff.txt).",
+  "note": "plan-14 task 2: Soldier generic gaming-set row replaced by the @0/tools pick. The Soldier background no longer emits the generic 'gaming-set' toolProficiency slug (vendored srd-2024_soldier_tool-proficiencies is a choice, \"Choose one kind of Gaming Set\"; this character never decided the new soldier@0/tools pick), so its tool row at sheet.proficiencies[1] is gone and the rogue's thieves-tools row shifts from [2] to [1], unchanged. No other expectation moves (verified by a scripted before/after derive diff over all goldens in plan 14 task 2, commit 6d85d4c 'test(engine): re-pin soldier goldens').",
   "packs": ["dist:srd-5e-2024"],
   "events": [
     {
