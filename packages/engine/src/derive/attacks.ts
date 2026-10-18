@@ -1,4 +1,4 @@
-import { type Effect, type ItemEntity, parseChoiceId, parseEntityId } from '@hk/protocol';
+import { type Choice, type Effect, type Entity, type ItemEntity, parseChoiceId, parseEntityId } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import type { Diagnostic } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
@@ -6,6 +6,7 @@ import type { Facts } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
 import { type ActiveEffect, type Composition, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
+import { offeredRowChoices } from './choices.ts';
 import { classProficiencyGrants } from './proficiency.ts';
 import { bestRowExtra } from './spellcasting.ts';
 
@@ -94,28 +95,43 @@ function pickAbility(weapon: Weapon, mod: (ability: string) => number): string {
   return 'str';
 }
 
+const MASTERY_SLUG = 'weapon-masteries';
+const isMasteryChoice = (c: Choice): boolean => parseChoiceId(c.id)?.slug === MASTERY_SLUG;
+
 /**
- * Finds the real id of the character's weapon-mastery choice, if any of their active entities
- * declares one — searched by choice-id SLUG (`weapon-masteries`, matching the SRD pack's own
- * `<classId>@1/weapon-masteries`), not by reconstructing the id from a hardcoded class/level, since
- * a future class or subclass could declare its own mastery choice at a different level. Mirrors
- * `content/choices.ts`'s `findChoice` traversal (top-level `choices` + per-level-row `choices` for
- * class/subclass entities), but scans every active entity instead of resolving one known id.
+ * The real ids of EVERY weapon-mastery choice the character's entities declare, in class order
+ * (plan 14 task 4, ruling 7 — the order selections fill `masteryCount`'s slots): searched by
+ * choice-id SLUG (`weapon-masteries`, matching the SRD pack's own `<classId>@1/weapon-masteries`),
+ * not by reconstructing the id from a hardcoded class/level, since a future class or subclass could
+ * declare its own mastery choice at a different level. Each `facts.classes[]` entry (order gained)
+ * contributes its class's top-level and per-level-row choices, then its subclass's; row choices go
+ * through `offeredRowChoices`, the same scope-aware filter that offers them (plan 14 task 1), so a
+ * `later`-scoped choice is never honored for the initial class. Any other active entity (a feat, a
+ * species, …) follows, in composition order, with its top-level choices.
  */
-function findMasteryChoiceId(comp: Composition, index: ContentIndex): string | undefined {
-  for (const id of comp.entities) {
-    const entity = index.get(id);
-    if (!entity) continue;
-    const direct = entity.choices.find((c) => parseChoiceId(c.id)?.slug === 'weapon-masteries');
-    if (direct) return direct.id;
+function masteryChoiceIds(facts: Facts, comp: Composition, index: ContentIndex): string[] {
+  const ids: string[] = [];
+  const fromEntity = (entity: Entity, initialClass: boolean) => {
+    for (const c of entity.choices) if (isMasteryChoice(c)) ids.push(c.id);
     if (entity.type === 'class' || entity.type === 'subclass') {
       for (const row of entity.levels) {
-        const found = row.choices.find((c) => parseChoiceId(c.id)?.slug === 'weapon-masteries');
-        if (found) return found.id;
+        for (const c of offeredRowChoices(row.choices, initialClass, facts.decisions)) {
+          if (isMasteryChoice(c)) ids.push(c.id);
+        }
       }
     }
+  };
+  facts.classes.forEach((entry, i) => {
+    const classEntity = index.get(index.resolveClassRef(entry.classId) ?? entry.classId);
+    if (classEntity?.type === 'class') fromEntity(classEntity, i === 0);
+    const subclassEntity = entry.subclassId !== undefined ? index.get(entry.subclassId) : undefined;
+    if (subclassEntity?.type === 'subclass') fromEntity(subclassEntity, i === 0);
+  });
+  for (const id of comp.entities) {
+    const entity = index.get(id);
+    if (entity && entity.type !== 'class' && entity.type !== 'subclass') fromEntity(entity, false);
   }
-  return undefined;
+  return [...new Set(ids)];
 }
 
 /**
@@ -174,17 +190,6 @@ export function deriveAttacks(
   const mod = (ability: string) => abilities.abilities[ability]?.mod ?? 0;
 
   const profSlugs = weaponProficiencySlugs(facts, index, abilities.effects);
-  const masteryChoiceId = findMasteryChoiceId(comp, index);
-  // Selections are always compared as opaque strings against real entity ids (never re-derived from
-  // the choice's `pick` shape) — this is why consumption here needs zero change whether the choice
-  // is today's `literal: 'text'` placeholder or T8's future `query` pick, AND why an old character's
-  // plan-5 literal-text decision (e.g. a recorded mastery-property name like "sap") is automatically
-  // inert rather than crashing (backward tolerance, phase 4 plan 11 task 6): a legacy literal never
-  // equals a real `item:` entity id, so `.has(entity.id)` below simply never matches it — the row's
-  // `mastery` stays `undefined`, exactly as if nothing had been selected yet. Events are immutable,
-  // so this fallback-by-construction (not a special-cased branch) is what makes an old decision safe
-  // to replay forever without a reducer/schema migration.
-  const masterySelections = new Set(masteryChoiceId ? (facts.decisions[masteryChoiceId] ?? []) : []);
 
   let attacksPerAction = 1;
   for (const ae of abilities.effects) {
@@ -206,17 +211,41 @@ export function deriveAttacks(
   };
   const evalFormula = (f: string) => evalFormulaString(f, formulaCtx);
 
-  // Count from the typed extra column (phase 4 plan 11 task 6): sums every active `mastery.grant`
-  // effect's resolved count (multiple only for a future multiclass mastery-granting combo — out of
-  // this task's authored scope, but not unsafe to sum). `undefined` (not `0`) when no such effect is
-  // active at all, so `hasMasteryGrant` below and `Sheet.masteryCount`'s presence gate stay identical.
+  // Count from the typed extra column (phase 4 plan 11 task 6). `undefined` (not `0`) when no
+  // `mastery.grant` effect is active at all, so `hasMasteryGrant` below and `Sheet.masteryCount`'s
+  // presence gate stay identical.
+  // OWNER-FLAG (plan 14 task 4, ruling 7, PHB-sourced): the vendored multiclassing rules
+  // (srd-2024_multiclassing_class-features) are SILENT on Weapon Mastery. Ruling: the count is the
+  // MAX over the active `mastery.grant` effects' resolved counts — a Fighter 5 / Barbarian 3 knows 4
+  // (max(4, 2)), not 6 — and it caps the selections of ALL `weapon-masteries` choices together,
+  // honored in class order below. A single mastery class has one grant, so its count is unchanged.
   let masteryCount: number | undefined;
   for (const ae of abilities.effects) {
     if (ae.effect.type !== 'mastery.grant') continue;
     const contribution = resolveMasteryCount(ae.effect.count, ae.source, comp, index, evalFormula);
-    masteryCount = (masteryCount ?? 0) + contribution;
+    masteryCount = Math.max(masteryCount ?? contribution, contribution);
   }
   const hasMasteryGrant = masteryCount !== undefined;
+
+  // Selections are always compared as opaque strings against real entity ids (never re-derived from
+  // the choice's `pick` shape) — this is why consumption here needs zero change whether the choice
+  // is a `literal: 'text'` placeholder or a `query` pick, AND why an old character's plan-5
+  // literal-text decision (e.g. a recorded mastery-property name like "sap") is automatically inert
+  // rather than crashing (backward tolerance, phase 4 plan 11 task 6): a legacy literal never
+  // resolves to an `item` entity, so it neither fills a slot nor matches a row's `entity.id` below.
+  // Events are immutable, so this fallback-by-construction (not a special-cased branch) is what makes
+  // an old decision safe to replay forever without a reducer/schema migration.
+  // Plan 14 task 4 (ruling 7): every mastery choice's selections, in class order (each decision in
+  // its recorded order; a weapon chosen twice counts once), fill at most `masteryCount` slots. A
+  // selection beyond the cap is silently not applied — no diagnostic: each choice's decision is
+  // individually valid against its own count (`validateSelection`).
+  const masterySelections = new Set<string>();
+  for (const choiceId of masteryChoiceIds(facts, comp, index)) {
+    for (const sel of facts.decisions[choiceId] ?? []) {
+      if (masterySelections.size >= (masteryCount ?? 0)) break;
+      if (index.get(sel)?.type === 'item') masterySelections.add(sel);
+    }
+  }
 
   const attacks: AttackRow[] = [];
   for (const inv of facts.inventory) {

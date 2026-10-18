@@ -48,6 +48,8 @@ export interface Sheet {
    * currently knows. Present ONLY while at least one `mastery.grant` effect is active (mirrors
    * `carry`/`concentration`'s "absent, not merely `undefined`, when irrelevant" convention), so every
    * pre-task-6 golden/fixture without an active mastery-granting class stays byte-identical.
+   * Plan 14 task 4 (ruling 7, owner-flag): with several mastery-granting classes it is the MAX of
+   * their counts, shared by every `weapon-masteries` choice (honored in class order up to it).
    */
   masteryCount?: number;
   spellcasting: SpellcastingBlock[];
