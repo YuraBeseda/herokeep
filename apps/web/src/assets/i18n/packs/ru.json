@@ -1,0 +1,13 @@
+{
+  "import-success": "Набор установлен",
+  "import-failed-too-large": "Этот набор слишком большой для импорта",
+  "import-failed-bad-zip": "Этот файл не является корректным архивом .hkpack",
+  "import-failed-missing-pack-json": "В этом архиве нет файла pack.json",
+  "import-failed-bad-schema": "Файл pack.json этого набора не является корректным набором контента",
+  "import-failed-invalid": "В этом наборе есть ошибки, его нельзя установить",
+  "import-failed-asset-missing": "В файле нет изображения, указанного в наборе",
+  "import-failed-asset-too-large": "Изображение в этом наборе больше допустимого размера",
+  "import-failed-asset-mime-mismatch": "Изображение в этом наборе не соответствует заявленному формату",
+  "import-failed-asset-hash-mismatch": "Изображение в этом наборе повреждено или изменено",
+  "import-failed-conflict": "Другой набор с тем же именем и версией уже установлен"
+}

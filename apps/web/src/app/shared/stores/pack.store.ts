@@ -11,8 +11,9 @@ function packKey(pack: Pack): string {
 
 /**
  * Installed packs: the core content pack (fetched from the static `/packs/**` asset, never
- * persisted — it ships with the app/service-worker cache) plus user-imported translation packs
- * (persisted in Dexie via `PacksRepository`). Call `init()` once, from the app root
+ * persisted — it ships with the app/service-worker cache) plus user-imported content packs
+ * (plan 15: `.hkpack`/`pack.json` via `HkpackReader`, assets in the blob store with
+ * `origin: 'pack'`) and translation packs (both persisted in Dexie via `PacksRepository`). Call `init()` once, from the app root
  * (`provideAppInitializer`) — see `engine.facade.ts` for why.
  */
 @Injectable({ providedIn: 'root' })
@@ -23,18 +24,25 @@ export class PackStore {
 
   // Properties
   private readonly coreState = signal<Pack | undefined>(undefined);
+  private readonly contentState = signal<Pack[]>([]);
   private readonly translationsState = signal<Pack[]>([]);
   private readonly readyState = signal(false);
   private readonly coreLoadFailedState = signal(false);
 
   readonly corePack: Signal<Pack | undefined> = this.coreState.asReadonly();
+  readonly installedContent: Signal<Pack[]> = this.contentState.asReadonly();
   readonly translationPacks: Signal<Pack[]> = this.translationsState.asReadonly();
   readonly ready: Signal<boolean> = this.readyState.asReadonly();
   readonly coreLoadFailed: Signal<boolean> = this.coreLoadFailedState.asReadonly();
   readonly packs = computed<Pack[]>(() => {
     const core = this.coreState();
-    return core ? [core, ...this.translationsState()] : [];
+    return core ? [core, ...this.contentState(), ...this.translationsState()] : [];
   });
+  /** Every installed `id@version` (core, content, translations) — what a character's pins are
+   * compared against (missing-pack banner, plan 15 ruling 8). */
+  readonly installed = computed<{ id: string; version: string }[]>(() =>
+    this.packs().map((pack) => ({ id: pack.id, version: pack.version })),
+  );
 
   // I/O boundary: fetches the core pack asset and reads persisted translation packs from Dexie.
   // Never rejects, so `provideAppInitializer` always resolves and the shell always renders:
@@ -45,7 +53,9 @@ export class PackStore {
   // re-validated against the freshly loaded core pack (a service-worker update may have shipped
   // one a stored translation no longer matches) and dropped, silently, on failure — the same bar
   // `importTranslation` already holds them to, just re-checked on every load instead of trusted
-  // forever from import time.
+  // forever from import time. Persisted content packs get the same re-check against the core plus
+  // the other content packs (their possible dependencies), but only ERROR diagnostics drop one —
+  // the importer accepts warnings too. Unknown kinds are dropped.
   async init(): Promise<void> {
     let core: Pack;
     try {
@@ -63,6 +73,7 @@ export class PackStore {
       this.toastService.show('settings.packs.translations-load-failed');
     }
     const translations = stored.filter((pack) => pack.kind === 'translation');
+    const content = stored.filter((pack) => pack.kind === 'content');
     const survivesValidation = (pack: Pack): boolean => {
       try {
         return validatePack(pack, [core]).length === 0;
@@ -70,6 +81,14 @@ export class PackStore {
         return false; // structurally corrupted row — same outcome as failed validation: drop it
       }
     };
+    const contentSurvives = (pack: Pack): boolean => {
+      try {
+        return !validatePack(pack, [core, ...content]).some((d) => d.severity === 'error');
+      } catch {
+        return false;
+      }
+    };
+    this.contentState.set(content.filter(contentSurvives));
     this.translationsState.set(translations.filter(survivesValidation));
     this.readyState.set(true);
   }

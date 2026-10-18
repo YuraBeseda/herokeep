@@ -1,0 +1,13 @@
+{
+  "import-success": "Пакет встановлено",
+  "import-failed-too-large": "Цей пакет завеликий для імпорту",
+  "import-failed-bad-zip": "Цей файл не є коректним архівом .hkpack",
+  "import-failed-missing-pack-json": "У цьому архіві немає файлу pack.json",
+  "import-failed-bad-schema": "Файл pack.json цього пакета не є коректним пакетом вмісту",
+  "import-failed-invalid": "У цьому пакеті є помилки, його не можна встановити",
+  "import-failed-asset-missing": "У файлі немає зображення, зазначеного в пакеті",
+  "import-failed-asset-too-large": "Зображення в цьому пакеті більше за допустимий розмір",
+  "import-failed-asset-mime-mismatch": "Зображення в цьому пакеті не відповідає заявленому формату",
+  "import-failed-asset-hash-mismatch": "Зображення в цьому пакеті пошкоджене або змінене",
+  "import-failed-conflict": "Інший пакет із тією самою назвою та версією вже встановлено"
+}

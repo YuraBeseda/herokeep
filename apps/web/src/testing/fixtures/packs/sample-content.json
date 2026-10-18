@@ -1,0 +1,108 @@
+{
+  "format": 1,
+  "id": "sample-content",
+  "version": "1.0.0",
+  "kind": "content",
+  "system": "5e-2024",
+  "name": "Sample content",
+  "description": "A small third-party content pack used by tests: one weapon, one spell, one feat and one species.",
+  "authors": ["Herokeep test fixtures"],
+  "license": "CC-BY-4.0",
+  "attribution": "Herokeep sample content pack (test fixture).",
+  "dependencies": [{ "id": "srd-5e-2024", "range": "^0.1.0" }],
+  "locale": "en",
+  "entities": [
+    {
+      "type": "item",
+      "id": "sample-content:item/moonblade-sickle",
+      "name": "Moonblade Sickle",
+      "description": "A crescent blade forged from pale silver.",
+      "icon": "sha256:86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65",
+      "tags": [],
+      "prerequisites": [],
+      "effects": [],
+      "grants": [],
+      "choices": [],
+      "category": "weapon",
+      "cost": { "amount": 5, "currency": "gp" },
+      "weight": 2,
+      "weapon": {
+        "kind": "melee",
+        "category": "simple",
+        "damage": "1d6",
+        "damageType": "slashing",
+        "properties": ["light"],
+        "mastery": "nick"
+      }
+    },
+    {
+      "type": "spell",
+      "id": "sample-content:spell/glimmer-dart",
+      "name": "Glimmer Dart",
+      "description": "A dart of silver light streaks toward a creature you can see within range.",
+      "tags": [],
+      "prerequisites": [],
+      "effects": [],
+      "grants": [],
+      "choices": [],
+      "level": 1,
+      "school": "evocation",
+      "castingTime": { "value": 1, "unit": "action" },
+      "range": { "kind": "feet", "distance": 60 },
+      "components": { "v": true, "s": true, "m": false },
+      "duration": { "kind": "instantaneous" },
+      "concentration": false,
+      "ritual": false,
+      "classes": ["wizard"]
+    },
+    {
+      "type": "feat",
+      "id": "sample-content:feat/lunar-insight",
+      "name": "Lunar Insight",
+      "description": "You can read the phases of the moon to recall forgotten lore.",
+      "tags": [],
+      "prerequisites": [],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Lunar Insight",
+          "description": "You can read the phases of the moon to recall forgotten lore."
+        }
+      ],
+      "grants": [],
+      "choices": [],
+      "category": "general",
+      "repeatable": false
+    },
+    {
+      "type": "species",
+      "id": "sample-content:species/moonkin",
+      "name": "Moonkin",
+      "description": "Moonkin are small folk who wander by the light of the moon.",
+      "tags": [],
+      "prerequisites": [],
+      "effects": [
+        {
+          "type": "feature.text",
+          "name": "Moonlit Step",
+          "description": "In dim light you can move quietly without trying."
+        }
+      ],
+      "grants": [],
+      "choices": [],
+      "size": "small",
+      "speed": 30,
+      "creatureType": "humanoid"
+    }
+  ],
+  "overrides": [],
+  "assets": [
+    {
+      "hash": "sha256:86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65",
+      "kind": "icon",
+      "mime": "image/webp",
+      "size": 34
+    }
+  ],
+  "i18n": {}
+}

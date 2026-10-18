@@ -1,0 +1,13 @@
+{
+  "import-success": "Pack installed",
+  "import-failed-too-large": "This pack is too large to import",
+  "import-failed-bad-zip": "This file is not a valid .hkpack archive",
+  "import-failed-missing-pack-json": "This archive has no pack.json",
+  "import-failed-bad-schema": "This pack's pack.json is not a valid content pack",
+  "import-failed-invalid": "This pack has errors and cannot be installed",
+  "import-failed-asset-missing": "An image listed by this pack is missing from the file",
+  "import-failed-asset-too-large": "An image in this pack is larger than allowed",
+  "import-failed-asset-mime-mismatch": "An image in this pack is not in the format it declares",
+  "import-failed-asset-hash-mismatch": "An image in this pack is damaged or was modified",
+  "import-failed-conflict": "A different pack with the same name and version is already installed"
+}
