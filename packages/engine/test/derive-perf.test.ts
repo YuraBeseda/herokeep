@@ -30,6 +30,11 @@ import { loadDistPack, loadGoldens } from './support/golden.ts';
  * Plan 13 task 10: plus the heaviest slice-3 goldens — the half+half caster multiclass with five
  * resources, a free-cast offer and a multiclass Expertise pick (`multi-paladin5-ranger3`), and the
  * level-11 rogue whose four Expertise picks run the post-pass upgrade (`rogue-11-expertise`).
+ *
+ * Plan 14 task 7: plus the heaviest slice-4 goldens — the 8-level Fighter/Barbarian with five
+ * equipped weapons and two mastery choices sharing one cap (`multi-fighter5-barbarian3-mastery`),
+ * the Rogue/Bard whose scope-aware rows, tool picks and two-owner Expertise all run
+ * (`multi-rogue3-bard2-tools`), and the double attunement-gated item character (`slippers-attuned`).
  */
 const PERF_FIXTURES = [
   'multi-fighter1-wizard19',
@@ -40,6 +45,9 @@ const PERF_FIXTURES = [
   'multi-sorcerer5-warlock3',
   'multi-paladin5-ranger3',
   'rogue-11-expertise',
+  'multi-fighter5-barbarian3-mastery',
+  'multi-rogue3-bard2-tools',
+  'slippers-attuned',
 ];
 
 describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
@@ -82,7 +90,7 @@ describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
       const line =
         `- ${new Date().toISOString()}: derive-only, ${fixtureName} (${events.length} events), ` +
         `25 samples, median ${median.toFixed(3)} ms ` +
-        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-13 task-10 measurement, not the ` +
+        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-14 task-7 measurement, not the ` +
         `reduce+derive 536-event tripwire above)\n`;
       if (!existsSync(perfMdPath)) {
         writeFileSync(

@@ -1,0 +1,275 @@
+{
+  "name": "multi-rogue3-bard2-tools",
+  "note": "Plan 14 task 7 (slice 4 goldens): a Rogue 3 (Thief) -> Bard 2 whose later Bard answers the scope:'later' srd-5e-2024:class/bard@1/multiclass-tools pick with ONE Musical Instrument (plan 14 task 1; vendored Rule srd-2024_multiclassing_proficiencies: a later class grants only some starting proficiencies; the one-instrument Bard row is the MULTICLASS_GAINS owner-flag). The scope:'initial' bard@1/tools (3 instruments) is never offered, so with every other pick answered outstandingChoices is empty; the tool rows are Thieves' Tools (Rogue, the initial class's own list), the Soldier gaming set picked through background/soldier@0/tools (task 2) and the one Bard instrument.",
+  "packs": ["dist:srd-5e-2024"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000000001",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 1,
+      "ts": "2026-10-18T12:00:01.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Wren",
+        "system": "5e-2024",
+        "corePack": { "id": "srd-5e-2024", "version": "0.1.0" },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000002",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 2,
+      "ts": "2026-10-18T12:00:02.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/species", "selection": ["srd-5e-2024:species/human"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000003",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 3,
+      "ts": "2026-10-18T12:00:03.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000004",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 4,
+      "ts": "2026-10-18T12:00:04.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:background/soldier@0/ability-scores", "selection": ["dex:+2", "con:+1"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000005",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 5,
+      "ts": "2026-10-18T12:00:05.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["dex:15", "cha:14", "con:13", "wis:12", "int:10", "str:8"],
+        "context": { "method": "standardArray" }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000006",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 6,
+      "ts": "2026-10-18T12:00:06.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/class", "selection": ["srd-5e-2024:class/rogue"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000007",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 7,
+      "ts": "2026-10-18T12:00:07.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/soldier@0/tools",
+        "selection": ["srd-5e-2024:item/gaming-set-playing-cards"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000008",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 8,
+      "ts": "2026-10-18T12:00:08.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/rogue", "level": 1 }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000009",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 9,
+      "ts": "2026-10-18T12:00:09.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/rogue@1/skills",
+        "selection": ["acrobatics", "stealth", "perception", "sleight-of-hand"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000a",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 10,
+      "ts": "2026-10-18T12:00:10.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/rogue@1/weapon-masteries",
+        "selection": ["srd-5e-2024:item/dagger", "srd-5e-2024:item/shortsword"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000b",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 11,
+      "ts": "2026-10-18T12:00:11.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/rogue@1/expertise",
+        "selection": ["srd-5e-2024:skill/stealth", "srd-5e-2024:skill/sleight-of-hand"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000c",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 12,
+      "ts": "2026-10-18T12:00:12.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/rogue", "level": 2, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000d",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 13,
+      "ts": "2026-10-18T12:00:13.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/rogue",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/thief"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000e",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 14,
+      "ts": "2026-10-18T12:00:14.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:class/rogue@3/subclass", "selection": ["srd-5e-2024:subclass/thief"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-00000000000f",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 15,
+      "ts": "2026-10-18T12:00:15.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/bard", "level": 1 }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000010",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 16,
+      "ts": "2026-10-18T12:00:16.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:class/bard@1/multiclass-skills", "selection": ["performance"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000011",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 17,
+      "ts": "2026-10-18T12:00:17.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/bard@1/multiclass-tools",
+        "selection": ["srd-5e-2024:item/musical-instrument-lute"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000012",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 18,
+      "ts": "2026-10-18T12:00:18.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/bard", "level": 2, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000013",
+      "stream": "char:51111111-1111-7111-8111-111111111111",
+      "seq": 19,
+      "ts": "2026-10-18T12:00:19.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/bard@2/expertise",
+        "selection": ["srd-5e-2024:skill/performance", "srd-5e-2024:skill/acrobatics"]
+      }
+    }
+  ],
+  "expect": {
+    "sheet.level": 5,
+    "sheet.prof": 3,
+    "sheet.hp.max.value": 38,
+    "sheet.classes[0].classId": "srd-5e-2024:class/rogue",
+    "sheet.classes[1].classId": "srd-5e-2024:class/bard",
+    "sheet.classes[1].level": 2,
+    "facts.decisions[\"srd-5e-2024:class/bard@1/multiclass-tools\"]": ["srd-5e-2024:item/musical-instrument-lute"],
+    "sheet.outstandingChoices": [],
+    "sheet.proficiencies": [
+      {
+        "kind": "armor",
+        "target": "light",
+        "level": "proficient",
+        "sources": ["srd-5e-2024:class/bard", "srd-5e-2024:class/rogue"]
+      },
+      {
+        "kind": "tool",
+        "target": "gaming-set-playing-cards",
+        "level": "proficient",
+        "sources": ["srd-5e-2024:background/soldier"]
+      },
+      {
+        "kind": "tool",
+        "target": "musical-instrument-lute",
+        "level": "proficient",
+        "sources": ["srd-5e-2024:class/bard"]
+      },
+      { "kind": "tool", "target": "thieves-tools", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] },
+      { "kind": "weapon", "target": "hand-crossbow", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] },
+      { "kind": "weapon", "target": "rapier", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] },
+      { "kind": "weapon", "target": "scimitar", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] },
+      { "kind": "weapon", "target": "shortsword", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] },
+      { "kind": "weapon", "target": "simple", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] },
+      { "kind": "weapon", "target": "whip", "level": "proficient", "sources": ["srd-5e-2024:class/rogue"] }
+    ],
+    "sheet.skills[\"performance\"].proficiency": "expertise",
+    "sheet.skills[\"performance\"].total.value": 8,
+    "sheet.skills[\"performance\"].expertiseOwner": "srd-5e-2024:class/bard",
+    "sheet.skills[\"stealth\"].total.value": 9,
+    "sheet.skills[\"stealth\"].expertiseOwner": "srd-5e-2024:class/rogue"
+  }
+}

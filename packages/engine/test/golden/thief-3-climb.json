@@ -1,0 +1,136 @@
+{
+  "name": "thief-3-climb",
+  "note": "Plan 14 task 7 (slice 4 goldens): a Human Rogue 3 (Thief) gains a Climb Speed equal to its Speed from Second-Story Work (plan 14 task 3; vendored ClassFeature srd-2024_rogue_thief_second-story-work: \"Climber. You gain a Climb Speed equal to your Speed.\"). The climb row is the speed.bonus formula speed(walk), resolved after walk.",
+  "packs": ["dist:srd-5e-2024"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000000001",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 1,
+      "ts": "2026-10-18T12:00:01.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Moth",
+        "system": "5e-2024",
+        "corePack": { "id": "srd-5e-2024", "version": "0.1.0" },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "neuter"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000002",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 2,
+      "ts": "2026-10-18T12:00:02.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/species", "selection": ["srd-5e-2024:species/human"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000003",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 3,
+      "ts": "2026-10-18T12:00:03.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000004",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 4,
+      "ts": "2026-10-18T12:00:04.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:background/soldier@0/ability-scores", "selection": ["dex:+2", "con:+1"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000005",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 5,
+      "ts": "2026-10-18T12:00:05.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["dex:15", "cha:14", "con:13", "wis:12", "int:10", "str:8"],
+        "context": { "method": "standardArray" }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000006",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 6,
+      "ts": "2026-10-18T12:00:06.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/rogue", "level": 1 }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000007",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 7,
+      "ts": "2026-10-18T12:00:07.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/rogue@1/skills",
+        "selection": ["acrobatics", "stealth", "perception", "investigation"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000008",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 8,
+      "ts": "2026-10-18T12:00:08.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/rogue", "level": 2, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000000009",
+      "stream": "char:54444444-4444-7444-8444-444444444444",
+      "seq": 9,
+      "ts": "2026-10-18T12:00:09.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/rogue",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/thief"
+      }
+    }
+  ],
+  "expect": {
+    "sheet.level": 3,
+    "sheet.classes[0].subclassId": "srd-5e-2024:subclass/thief",
+    "sheet.speed.walk": { "value": 30, "contributions": [] },
+    "sheet.speed.climb": {
+      "value": 30,
+      "contributions": [
+        {
+          "source": "srd-5e-2024:subclass/thief",
+          "feature": "srd-5e-2024:feature/rogue-thief-second-story-work",
+          "kind": "speed.bonus",
+          "formula": "speed(walk)",
+          "key": "climb-equal-to-speed",
+          "amount": 30
+        }
+      ]
+    }
+  }
+}

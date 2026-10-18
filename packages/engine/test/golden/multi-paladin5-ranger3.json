@@ -1,6 +1,6 @@
 {
   "name": "multi-paladin5-ranger3",
-  "note": "Plan 13 final fix wave re-pin (Paladin free casts): adds two sheet.freeCasts entries. The vendored srd-2024_paladin_paladins-smite (level 2) and srd-2024_paladin_faithful-steed (level 5) let a Paladin cast Divine Smite / Find Steed once without a spell slot per Long Rest; their spell.grant effects now carry uses:{resource} naming the EXISTING paladins-smite / faithful-steed resources (the Hunter's Mark shape from task 4), so a paladin 5 legitimately gains those two free-cast lanes (effect order: faithful-steed, paladins-smite, then the ranger's favored-enemy). No other expectation moves (same resources, maxes and resets).",
+  "note": "Plan 14 task 7 pin (task 4 ruling 7, multiclass weapon mastery; OWNER-FLAG, PHB-sourced since the vendored Rule srd-2024_multiclassing_class-features is silent on Weapon Mastery): sheet.masteryCount is now pinned at 2. Paladin and Ranger each grant 2 masteries; plan 14 task 4 changed the multiclass count from the SUM of the class counts (2 + 2 = 4, the value this fixture derived but never pinned) to their MAX (max(2, 2) = 2), so the value legitimately moved 4 -> 2. Earlier note: Plan 13 final fix wave re-pin (Paladin free casts): adds two sheet.freeCasts entries. The vendored srd-2024_paladin_paladins-smite (level 2) and srd-2024_paladin_faithful-steed (level 5) let a Paladin cast Divine Smite / Find Steed once without a spell slot per Long Rest; their spell.grant effects now carry uses:{resource} naming the EXISTING paladins-smite / faithful-steed resources (the Hunter's Mark shape from task 4), so a paladin 5 legitimately gains those two free-cast lanes (effect order: faithful-steed, paladins-smite, then the ranger's favored-enemy). No other expectation moves (same resources, maxes and resets).",
   "packs": ["dist:srd-5e-2024"],
   "events": [
     {
@@ -318,6 +318,7 @@
     "sheet.classes[1].level": 3,
     "sheet.hp.max.value": 68,
     "sheet.prof": 3,
+    "sheet.masteryCount": 2,
     "sheet.abilities[\"wis\"].save.value": 4,
     "sheet.abilities[\"str\"].save.value": 3,
     "sheet.spellcasting[0].classId": "srd-5e-2024:class/paladin",
