@@ -7,8 +7,8 @@ import type { Carry } from './encumbrance.ts';
 import type { FreeCast } from './free-casts.ts';
 import type { HpResult } from './hp.ts';
 import type { ConditionImmunity } from './immunities.ts';
-import type { DamageResistance } from './resistances.ts';
 import type { Derived } from './modifiers.ts';
+import type { DamageResistance } from './resistances.ts';
 import type { ResourceView } from './resources.ts';
 import type { SpellcastingBlock } from './spellcasting.ts';
 

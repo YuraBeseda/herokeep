@@ -240,9 +240,11 @@ export function deriveAttacks(
   // selection beyond the cap is silently not applied — no diagnostic: each choice's decision is
   // individually valid against its own count (`validateSelection`).
   const masterySelections = new Set<string>();
+  const masteryCap = masteryCount ?? 0;
   for (const choiceId of masteryChoiceIds(facts, comp, index)) {
+    if (masterySelections.size >= masteryCap) break;
     for (const sel of facts.decisions[choiceId] ?? []) {
-      if (masterySelections.size >= (masteryCount ?? 0)) break;
+      if (masterySelections.size >= masteryCap) break;
       if (index.get(sel)?.type === 'item') masterySelections.add(sel);
     }
   }

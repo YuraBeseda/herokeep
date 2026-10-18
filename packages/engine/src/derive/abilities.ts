@@ -40,6 +40,10 @@ export interface AbilitiesResult {
    * the skill's expertise rank came from a `requireProficient` expertise pick rather than a fixed
    * grant: the id of the entity owning the pick that FIRST raised it (class order — see
    * `deriveAbilities`). `queryPickOptions` offers an expertise-rank skill to that owner's picks only.
+   * Legacy blame follows CLASS order, not pick (event) order: when a legacy log recorded expertise
+   * on the same skill from two owners, the owner whose class comes first in `facts.classes` is the
+   * `expertiseOwner` even if the other owner's decision was recorded earlier — so the later-class
+   * pick is the one `validateSelection` re-flags (`selection.notOffered`).
    */
   skills: Record<string, { total: Derived<number>; proficiency: ProficiencyLevel; expertiseOwner?: string }>;
   /** `10 + perception's total` (0 when the system declares no `perception` skill). */
@@ -309,6 +313,7 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   const fixedExpertise = new Set(
     eligible.filter((u) => proficiencyLevel(table, u.target) === 'expertise').map((u) => u.target),
   );
+  // `expertiseOwner`: first owner in CLASS order (the sort above), not pick order — see `AbilitiesResult.skills`.
   const expertiseOwners = new Map<string, string>();
   for (const u of eligible) {
     if (u.kind === 'expertise' && !fixedExpertise.has(u.target) && !expertiseOwners.has(u.target)) {

@@ -2841,9 +2841,10 @@ describe('expertise retrofit over the real pack: rogue / bard / ranger (plan 13 
   const factsOf = (events: Event[]) => reduce(events, undefined, featRules);
   const outstandingIds = (events: Event[]) => sheetOf(events).outstandingChoices.map((c) => c.choiceId);
   const optionsFor = (events: Event[], choiceId: string) => {
-    const pick = findChoice(featIndex, choiceId)!.choice.pick;
+    const { owner, choice } = findChoice(featIndex, choiceId)!;
+    const pick = choice.pick;
     if (!('query' in pick)) throw new Error(`${choiceId} is not a query pick`);
-    return queryPickOptions(pick, featIndex, sheetOf(events)).sort();
+    return queryPickOptions(pick, featIndex, sheetOf(events), owner.id).sort();
   };
   const refusals = (events: Event[], choiceId: string, selection: string[]) => {
     const facts = factsOf(events);

@@ -94,7 +94,7 @@ describe('Skilled: three skills or tools in any combination (srd-2024_skilled_1)
 
   it('offers every skill and every tool item exactly once', () => {
     const { choice } = choiceOf(skilled, SKILLED_PICK);
-    const ids = queryPickOptions(choice!.pick as Parameters<typeof queryPickOptions>[0], index, undefined);
+    const ids = queryPickOptions(choice!.pick as Parameters<typeof queryPickOptions>[0], index, undefined, skilled);
     expect(allSkills).toHaveLength(18);
     expect(allTools.length).toBeGreaterThan(0);
     expect([...ids].sort()).toEqual([...allSkills, ...allTools].sort());

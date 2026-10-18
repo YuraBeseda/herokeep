@@ -83,11 +83,13 @@ describe('expertise eligibility across owners (plan 14 task 4, ruling 6)', () =>
     );
   });
 
-  it('without an owner, every expertise-rank skill is excluded (no pick is exempt)', () => {
+  it('the owner id decides the exemption: the expertise-rank skills stay eligible only for their own owner', () => {
     const sheet = sheetOf(events());
-    const ids = queryPickOptions(pickOf(rangerExpertise), index, sheet);
-    expect(ids).not.toContain(skill('stealth'));
-    expect(ids).not.toContain(skill('perception'));
+    // ownerId is required (plan 14 final fix wave): passed the rogue (the owner of Stealth/Perception
+    // expertise), the same offer keeps them; passed the ranger (test above), they are dropped.
+    const ids = queryPickOptions(pickOf(rangerExpertise), index, sheet, rogue);
+    expect(ids).toContain(skill('stealth'));
+    expect(ids).toContain(skill('perception'));
     expect(ids).toContain(skill('acrobatics'));
   });
 

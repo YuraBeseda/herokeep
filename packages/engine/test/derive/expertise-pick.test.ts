@@ -108,13 +108,14 @@ describe('expertise skill pick: application (derive)', () => {
 describe('expertise skill pick: offer gating + refusal (Review Focus 1)', () => {
   const facts = factsOf(events([]));
   const sheet = derive(facts, index, rules);
-  const pick = findChoice(index, pickId)!.choice.pick;
+  const { owner, choice } = findChoice(index, pickId)!;
+  const pick = choice.pick;
 
   it('offers only the skills the character is currently proficient in', () => {
     if (!('query' in pick)) throw new Error('expected a query pick');
-    expect(queryPickOptions(pick, index, sheet).sort()).toEqual([skill('athletics'), skill('intimidation')]);
+    expect(queryPickOptions(pick, index, sheet, owner.id).sort()).toEqual([skill('athletics'), skill('intimidation')]);
     // With no sheet to read proficiency from, a requireProficient pick offers nothing.
-    expect(queryPickOptions(pick, index, undefined)).toEqual([]);
+    expect(queryPickOptions(pick, index, undefined, owner.id)).toEqual([]);
   });
 
   it('refuses a non-proficient target with selection.notOffered', () => {
@@ -127,6 +128,8 @@ describe('expertise skill pick: offer gating + refusal (Review Focus 1)', () => 
   });
 
   it('leaves a plain skill query pick ungated (every skill offered)', () => {
-    expect(queryPickOptions({ query: { type: 'skill' } }, index, sheet)).toHaveLength(index.system().skills.length);
+    expect(queryPickOptions({ query: { type: 'skill' } }, index, sheet, owner.id)).toHaveLength(
+      index.system().skills.length,
+    );
   });
 });

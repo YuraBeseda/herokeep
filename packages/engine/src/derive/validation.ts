@@ -147,8 +147,8 @@ export function pickQueries(pick: ChoicePick): EntityQuery[] {
  * `owner`): a fixed grant, or another owner's earlier pick (`sheet.skills[s].expertiseOwner`, class
  * order) — so Rogue Expertise: Stealth is not offered to the Ranger's Deft Explorer. The pick's
  * OWN owner stays eligible, so its recorded selection re-validates cleanly (a re-opened step, the
- * wizard's draft re-derive). Without `ownerId` no owner is exempt: every expertise-rank skill is
- * dropped. The single eligibility source for `validateSelection`'s `selection.notOffered` refusal,
+ * wizard's draft re-derive). `ownerId` is REQUIRED (plan 14 final fix wave): an optional owner
+ * silently hid every expertise-rank skill, the caller's own picks included. The single eligibility source for `validateSelection`'s `selection.notOffered` refusal,
  * and the UI lists the same option set. A same-owner duplicate (a skill already given Expertise by
  * an earlier pick of the same family, e.g. Rogue @1 vs @6) is still in this set — validation refuses
  * it (`selection.duplicate`) and only the web picker gates it at offer time. No `sheet` means no
@@ -158,7 +158,7 @@ export function queryPickOptions(
   pick: QueryPick,
   index: ContentIndex,
   sheet: Pick<Sheet, 'skills'> | undefined,
-  ownerId?: string,
+  ownerId: string,
 ): string[] {
   const ids = [...new Set(pickQueries(pick).flatMap((q) => index.query(q).map((e) => e.id)))];
   if (!('query' in pick) || pick.requireProficient !== true) return ids;
@@ -168,7 +168,7 @@ export function queryPickOptions(
     const entry = slug !== undefined ? sheet?.skills[slug] : undefined;
     if (!isProficientRank(entry?.proficiency)) return false;
     if (!expertisePick || entry?.proficiency !== 'expertise') return true;
-    return ownerId !== undefined && entry.expertiseOwner === ownerId;
+    return entry.expertiseOwner === ownerId;
   });
 }
 
@@ -473,6 +473,12 @@ function buildPredicateContext(sheet: Sheet, comp: Composition, facts: Facts, in
  * `<classId>@1/skills` decision / the W1 `<classId>@1/multiclass-skills` bonus pick, against the
  * class's `skillChoice.from` at that pick's count — `classSkillPick`), evaluated against the
  * CURRENT sheet/facts (i.e. before this selection is committed).
+ *
+ * It does NOT check `Choice.scope` (plan 14 task 1): `scope` gates OFFERS only (outstanding
+ * choices, the pickers the web lists), never a selection — so a hand-built decision on a
+ * `scope: 'later'` choice of the character's FIRST class (`facts.classes[0]`), or an `'initial'`
+ * one of a later class, is accepted here. The web only ever offers in-scope choices and re-validates
+ * a decision when it is edited; a recorded out-of-scope decision keeps granting (events immutable).
  */
 export function validateSelection(
   sheet: Sheet,

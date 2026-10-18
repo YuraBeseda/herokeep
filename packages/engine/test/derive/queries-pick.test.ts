@@ -115,14 +115,14 @@ describe('queries pick (union of entity queries)', () => {
   const pickOf = (pick: unknown) => pick as Parameters<typeof queryPickOptions>[0];
 
   it('offers every skill and every tool, each exactly once, as one list', () => {
-    const ids = queryPickOptions(pickOf(SKILL_OR_TOOL), index, undefined);
+    const ids = queryPickOptions(pickOf(SKILL_OR_TOOL), index, undefined, alert);
     expect(allSkills).toHaveLength(18);
     expect(ids).toEqual([...allSkills, ...allTools]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('dedups an entity matched by more than one query', () => {
-    expect(queryPickOptions(pickOf(OVERLAPPING), index, undefined)).toEqual(allTools);
+    expect(queryPickOptions(pickOf(OVERLAPPING), index, undefined, alert)).toEqual(allTools);
   });
 
   it('counts the selection over the union and refuses anything outside it', () => {
