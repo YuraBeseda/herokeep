@@ -50,10 +50,15 @@ describe('per-character content index (pins + roots)', () => {
   // Core-only goldens: Task 8's content-pack goldens (`fixture:` packs) are excluded — they pin
   // and unpin `sample-content` themselves and the golden suite already derives them against the
   // per-character pinned index.
-  const goldens = loadGoldens().filter((fx) => !fx.packs.some((p) => p.startsWith(FIXTURE_PREFIX)));
+  const all = loadGoldens();
+  const goldens = all.filter((fx) => !fx.packs.some((p) => p.startsWith(FIXTURE_PREFIX)));
 
-  it('covers every core-only golden fixture (71 fixtures)', () => {
-    expect(goldens).toHaveLength(71);
+  it('covers every core-only golden fixture (never fewer than the 71 pre-plan-15 ones)', () => {
+    // Derived, not hardcoded: a new core-only golden is covered without editing this test, and
+    // only the content-pack goldens are left out.
+    const withFixturePacks = all.filter((fx) => fx.packs.some((p) => p.startsWith(FIXTURE_PREFIX)));
+    expect(goldens.length + withFixturePacks.length).toBe(all.length);
+    expect(goldens.length).toBeGreaterThanOrEqual(71);
   });
 
   it.each(goldens.map((fx) => [fx.name, fx] as const))(

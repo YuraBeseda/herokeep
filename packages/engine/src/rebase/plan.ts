@@ -174,14 +174,22 @@ export function planRebase(
     events.push({ type: 'decision.cleared', v: 1, payload });
   }
 
-  // The facts the committed events produce (mirrors the pack.pinned / pack.unpinned /
-  // decision.made / decision.cleared handlers), so `changes` is exactly what Confirm yields.
+  // The facts the committed events produce, rebuilt by hand (mirrors the pack.pinned /
+  // pack.unpinned / decision.made / decision.cleared handlers), so `changes` is exactly what
+  // Confirm yields. `test/rebase/plan.test.ts` ("replaying facts + plan events against next…")
+  // pins this mirror: it reduces log + `events` and checks that derive equals these facts' sheet,
+  // so a handler change that this block does not follow fails there. Migrated decisions keep
+  // their recorded context (re-emitted above); cleared ones lose it, as `decision.cleared` does.
   const pins = { ...facts.pins, ...nextPins };
   for (const packId of unpinned) delete pins[packId];
   const decisions = { ...facts.decisions };
+  const decisionContexts = { ...facts.decisionContexts };
   for (const [choiceId, selection] of migrated) decisions[choiceId] = [...selection];
-  for (const { choiceId } of invalid) delete decisions[choiceId];
-  const afterSheet = derive({ ...facts, pins, decisions }, next, rules);
+  for (const { choiceId } of invalid) {
+    delete decisions[choiceId];
+    delete decisionContexts[choiceId];
+  }
+  const afterSheet = derive({ ...facts, pins, decisions, decisionContexts }, next, rules);
 
   return { changes: diffSheets(beforeSheet, afterSheet), invalid, migrations, events };
 }

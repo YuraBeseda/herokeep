@@ -66,7 +66,10 @@ const baseLog = (giftPick: string, version: string, extra: { charm?: boolean; tr
     ['decision.made', { choiceId: GIFT, selection: [giftPick], context: GIFT_CONTEXT }],
   ];
   if (extra.charm !== false)
-    events.push(['decision.made', { choiceId: CHARM, selection: ['rebase-mini:feat/keen-eye'] }]);
+    events.push([
+      'decision.made',
+      { choiceId: CHARM, selection: ['rebase-mini:feat/keen-eye'], context: GIFT_CONTEXT },
+    ]);
   if (extra.trick !== false)
     events.push(['decision.made', { choiceId: TRICK, selection: ['rebase-mini:feat/nimble'] }]);
   return events.map(([type, payload], i) => ev(i + 1, type as string, payload));
@@ -169,6 +172,7 @@ describe('planRebase v1 → v2', () => {
     expect(replayed.decisions[GIFT]).toEqual(['rebase-mini:feat/luck']);
     expect(replayed.decisionContexts[GIFT]).toEqual(GIFT_CONTEXT);
     expect(replayed.decisions[CHARM]).toBeUndefined();
+    expect(replayed.decisionContexts[CHARM]).toBeUndefined(); // cleared with its decision (plan.ts mirrors this)
     expect(replayed.decisions[TRICK]).toBeUndefined();
 
     const sheet = derive(replayed, next, rules);
