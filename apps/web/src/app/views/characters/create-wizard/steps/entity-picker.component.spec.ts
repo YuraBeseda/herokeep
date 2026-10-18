@@ -8,7 +8,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
-import { provideEngineScope } from '@shared/services/engine/engine.facade';
+import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';

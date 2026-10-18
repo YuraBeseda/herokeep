@@ -4,7 +4,8 @@ import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogRef } from '@shared/components/dialog/dialog.service';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
-import { EngineFacade, provideEngineScope } from '@shared/services/engine/engine.facade';
+import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { EntityPickerComponent } from '../../create-wizard/steps/entity-picker.component';
 

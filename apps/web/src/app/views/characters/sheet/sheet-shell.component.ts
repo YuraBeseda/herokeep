@@ -10,7 +10,8 @@ import { CampaignChipComponent } from '@shared/components/campaign-chip/campaign
 import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
-import { EngineFacade, provideEngineScope } from '@shared/services/engine/engine.facade';
+import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
 import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';

@@ -1,12 +1,4 @@
-import {
-  computed,
-  inject,
-  Injectable,
-  Injector,
-  type Provider,
-  type Signal,
-  type Type,
-} from '@angular/core';
+import { computed, inject, Injectable, Injector, type Signal } from '@angular/core';
 import {
   createContentIndex,
   createLocalizer,
@@ -22,7 +14,6 @@ import type { Entity, Pack } from '@hk/protocol';
 // the barrel re-exports `buildPack`/`writePack` from a Node-only, build-time module graph
 // (`node:fs`, `import.meta.url`-based fixture paths) that has no business in a browser bundle.
 import iconsMapJson from '@hk/content/icons';
-import { DialogService } from '../../components/dialog/dialog.service';
 import { LocaleService } from '../i18n/locale.service';
 import { PackStore } from '../../stores/pack.store';
 
@@ -70,7 +61,8 @@ function categoryKey(entity: Entity): string | undefined {
 
 /**
  * The pin set a component-scoped `EngineFacade` resolves `index()`/`localizer()` against (plan 15
- * Task 4). Provided next to a component-level `EngineFacade` by `provideEngineScope`: the sheet
+ * Task 4). Provided next to a component-level `EngineFacade` by `provideEngineScope`
+ * (`engine-scope.providers.ts`): the sheet
  * shell scopes it to the loaded character's `facts.pins`, the create wizard to the draft's core +
  * selected packs. `undefined` pins fall back to the core-only index.
  */
@@ -224,14 +216,4 @@ export class EngineFacade {
     }
     return this.scope;
   }
-}
-
-/**
- * Component-level providers that scope `EngineFacade` to `scope`'s pins (see `EngineScope`), plus
- * a component-level `DialogService`: its `inject(Injector)` is then this component's element
- * injector, so every dialog opened from inside the subtree gets a content injector parented to the
- * OPENER and resolves the scoped facade (the provenance popover, add-item, …) instead of the root.
- */
-export function provideEngineScope(scope: Type<EngineScope>): Provider[] {
-  return [EngineFacade, { provide: EngineScope, useExisting: scope }, DialogService];
 }
