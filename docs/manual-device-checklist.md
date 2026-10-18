@@ -458,10 +458,13 @@ step 5 automatically; the other steps rely on unit specs and engine goldens (pla
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file
 again, but worth knowing about while doing manual passes:
 
-- **Weapon-mastery freeform typo trap** (plan-5 ruling R4): the Attacks table's Mastery column
-  (`attack.mastery` in `play-tab.component.html`) renders whatever free text was entered for that
-  weapon during the build flow — there is no controlled vocabulary or spell-check. A typo there
-  will silently display as typed; it's not validated against the SRD's actual mastery list.
+- **Weapon-mastery picks are real weapon picks** (plan 11 task 6; multiclass cap plan 14 task 4):
+  the old plan-5 freeform mastery text is gone. Each `weapon-masteries` choice is an entity pick
+  over the weapons that have a mastery property, and the Attacks table's Mastery column
+  (`attack.mastery` in `play-tab.component.html`) shows that weapon's own SRD mastery property —
+  only for an equipped weapon that was picked. With two mastery classes, the count is the larger
+  class count (not the sum), and picks past it are not applied. A legacy free-text mastery
+  decision from an old character is inert: it shows nothing and does not crash.
 - **Resource/action names depend on the pack providing a resolvable source entity**: play-tab
   resource/action rows call `localizer.name(view.source)` when the `source` entity resolves against
   the loaded pack, and otherwise fall back to `view.name` — which is a baked **English** string

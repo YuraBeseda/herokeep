@@ -63,7 +63,7 @@ Entity types and their specific data (abridged; schema is authoritative):
 | `feature` | text + `effects` + `choices` + `uses?` (`resource.define` shorthand) |
 | `feat` | `category` (origin/general/fightingStyle/epicBoon), `repeatable`, prerequisites, effects, choices |
 | `spell` | `level`, `school`, `castingTime`, `range`, `components {v,s,m,materialText}`, `duration`, `concentration`, `ritual`, `classes[]`, `damage?`, `save?`, `attack?`, `higherLevels?`, `effects?` (for spells that grant static effects while active, e.g. Mage Armor) |
-| `item` | `category` (weapon/armor/shield/gear/tool/consumable/magic), `cost`, `weight`, `rarity?`, `attunement?`, `weapon? {damage, type, properties[], mastery, range}`, `armor? {ac, dexCap, strength, stealthDisadvantage}`, `charges?`, `effects[]` (while equipped/attuned), `container?` |
+| `item` | `category` (weapon/armor/shield/gear/tool/consumable/magic), `cost`, `weight`, `rarity?`, `attunement?`, `weapon? {damage, type, properties[], mastery, range}`, `armor? {ac, dexCap, strength, stealthDisadvantage}`, `charges?`, `effects[]` (while equipped or attuned; an item with `attunement.required` only while attuned — see "Attunement gating" below), `container?` |
 | `condition` | `effects[]`, `levels?` (exhaustion) |
 | `skill`, `ability`, `language`, `tool`, `rule`, `table` | descriptive/lookup data |
 
