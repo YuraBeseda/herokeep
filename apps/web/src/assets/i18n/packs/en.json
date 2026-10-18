@@ -14,6 +14,7 @@
   "install-failed": "The pack could not be saved on this device",
   "remove-success": "Pack removed",
   "remove-failed": "The pack could not be removed",
+  "remove-failed-dependents": "Other installed packs depend on this pack. Remove them first.",
   "list": {
     "title": "Packs",
     "intro": "Content packs add new options to the builder. A pack changes nothing until you install it.",
@@ -79,6 +80,7 @@
     "not-found": "This pack is not installed.",
     "used-by": "{count, plural, =0 {Not used by any character} one {Used by # character} other {Used by # characters}}",
     "remove": "Remove pack",
+    "dependents": "{count, plural, one {# installed pack depends on this pack. Remove it first.} other {# installed packs depend on this pack. Remove them first.}}",
     "core-note": "The core rules pack is built in and cannot be removed."
   },
   "remove-confirm": {

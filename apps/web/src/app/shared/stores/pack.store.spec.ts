@@ -9,11 +9,14 @@ import { ToastService } from '@shared/components/toast/toast.service';
 import { PackLoader } from '@shared/services/engine/pack-loader';
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { HkpackReader } from '@shared/services/packs/hkpack-reader.service';
-import { PackImportError } from '@shared/services/packs/pack-import.errors';
+import {
+  PackImportConflictError,
+  PackImportError,
+} from '@shared/services/packs/pack-import.errors';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { PacksRepository } from '@shared/services/storage/packs.repository';
-import { PackStore } from './pack.store';
+import { PackRemoveDependentsError, PackStore } from './pack.store';
 
 function corePack(overrides: Partial<Pack> = {}): Pack {
   return {
@@ -190,6 +193,22 @@ function iconOnlyPack(): Record<string, unknown> {
   };
 }
 
+/** A content pack (no entities, no assets) that depends on the sample pack. */
+function dependentPack(): Record<string, unknown> {
+  return {
+    format: 1,
+    id: 'sample-addon',
+    version: '1.0.0',
+    kind: 'content',
+    system: realCore.system,
+    name: 'Sample add-on',
+    dependencies: [
+      { id: 'srd-5e-2024', range: '^0.1.0' },
+      { id: 'sample-content', range: '^1.0.0' },
+    ],
+  };
+}
+
 function hkpack(
   packJson: unknown,
   assets: Record<string, Uint8Array> = { [ICON_ENTRY]: iconBytes },
@@ -363,6 +382,81 @@ describe('PackStore content packs', () => {
     await store.removeContent('sample-content@1.0.0');
 
     expect((await db.blobs.get(ICON_HASH))?.origin).toBe('upload');
+  });
+
+  // --- Plan 15 final fix wave A4: write-time conflict re-check --------------------------------
+
+  it('importContent() refuses a preview whose id@version was installed with different content after it was read', async () => {
+    const { store, reader } = await configureReal();
+    const edited = sample();
+    edited['name'] = 'Sample content (edited)';
+    const first = await reader.read(hkpack(sample()));
+    const second = await reader.read(hkpack(edited)); // read before `first` is installed
+    expect(second.alreadyInstalled).toBe(false);
+    await store.importContent(first);
+
+    const error = await store.importContent(second).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(PackImportConflictError);
+    expect((error as PackImportConflictError).code).toBe('packs.import-failed-conflict');
+    const stored = await TestBed.inject(PacksRepository).getAll();
+    expect(stored.map((p) => p.name)).toEqual([first.pack.name]);
+    expect(store.installedContent().map((p) => p.name)).toEqual([first.pack.name]);
+  });
+
+  it('importContent() of an identical id@version installed after it was read is a no-op', async () => {
+    const { store, reader } = await configureReal();
+    const first = await reader.read(hkpack(sample()));
+    const second = await reader.read(hkpack(sample()));
+    await store.importContent(first);
+    const putPack = vi.spyOn(TestBed.inject(PacksRepository), 'putPack');
+
+    await store.importContent(second);
+
+    expect(putPack).not.toHaveBeenCalled();
+    expect(store.installedContent()).toHaveLength(1);
+  });
+
+  it('importContent() lets only one of two concurrent conflicting installs win', async () => {
+    const { store, reader } = await configureReal();
+    const edited = sample();
+    edited['name'] = 'Sample content (edited)';
+    const first = await reader.read(hkpack(sample()));
+    const second = await reader.read(hkpack(edited));
+
+    const results = await Promise.allSettled([
+      store.importContent(first),
+      store.importContent(second),
+    ]);
+
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'rejected']);
+    expect((results[1] as PromiseRejectedResult).reason).toBeInstanceOf(PackImportConflictError);
+    const stored = await TestBed.inject(PacksRepository).getAll();
+    expect(stored.map((p) => p.name)).toEqual([first.pack.name]);
+  });
+
+  // --- Plan 15 final fix wave B6: removal refuses while dependents exist ----------------------
+
+  it('removeContent() refuses while another installed pack depends on the pack', async () => {
+    const { store, reader, db } = await configureReal();
+    await store.importContent(await reader.read(hkpack(sample())));
+    await store.importContent(await reader.read(hkpack(dependentPack(), {})));
+
+    expect(store.dependentsOf('sample-content@1.0.0').map((p) => p.id)).toEqual(['sample-addon']);
+    const error = await store.removeContent('sample-content@1.0.0').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(PackRemoveDependentsError);
+    expect((error as PackRemoveDependentsError).code).toBe('packs.remove-failed-dependents');
+    expect((error as PackRemoveDependentsError).dependents).toEqual(['sample-addon@1.0.0']);
+    expect(await db.packs.count()).toBe(2);
+    expect(await db.blobs.get(ICON_HASH)).toBeDefined();
+    expect(store.installedContent().map((p) => p.id)).toEqual(['sample-content', 'sample-addon']);
+
+    // Removing the dependent first unblocks it.
+    expect(store.dependentsOf('sample-addon@1.0.0')).toEqual([]);
+    await store.removeContent('sample-addon@1.0.0');
+    await store.removeContent('sample-content@1.0.0');
+    expect(await db.packs.count()).toBe(0);
   });
 
   // Review Focus 2: a malformed import stores NOTHING.

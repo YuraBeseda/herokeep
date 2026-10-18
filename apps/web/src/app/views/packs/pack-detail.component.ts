@@ -8,7 +8,7 @@ import { map } from 'rxjs';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
-import { PackStore } from '@shared/stores/pack.store';
+import { PackRemoveDependentsError, PackStore } from '@shared/stores/pack.store';
 import { PackInfoComponent } from './pack-info.component';
 import { packKey, summarizePack } from './pack-summary';
 import { PackUsageService } from './pack-usage.service';
@@ -144,11 +144,20 @@ export class PackDetailComponent {
     loader: ({ params }) => this.packUsageService.countPinning(params.id, params.version),
   });
 
+  /** Installed content packs that need this one (`PackStore.dependentsOf`): Remove stays disabled
+   * until they are removed (plan 15 final fix wave B6). */
+  protected readonly dependents = computed<Pack[]>(() => {
+    const pack = this.pack();
+    if (!pack || this.isCore()) return [];
+    this.packStore.installedContent(); // re-run when the installed set changes
+    return this.packStore.dependentsOf(packKey(pack));
+  });
+
   protected readonly removing = signal(false);
 
   protected async remove(): Promise<void> {
     const pack = this.pack();
-    if (!pack || this.isCore() || this.removing()) return;
+    if (!pack || this.isCore() || this.removing() || this.dependents().length > 0) return;
 
     this.removing.set(true);
     try {
@@ -164,8 +173,10 @@ export class PackDetailComponent {
       await this.packStore.removeContent(packKey(pack));
       this.toastService.show('packs.remove-success');
       await this.router.navigate(['/packs']);
-    } catch {
-      this.toastService.show('packs.remove-failed');
+    } catch (error) {
+      this.toastService.show(
+        error instanceof PackRemoveDependentsError ? error.code : 'packs.remove-failed',
+      );
     } finally {
       this.removing.set(false);
     }

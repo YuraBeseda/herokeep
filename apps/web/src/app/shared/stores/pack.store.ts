@@ -1,15 +1,31 @@
 import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
 import { validatePack, type Diagnostic } from '@hk/engine';
 import type { Pack } from '@hk/protocol';
+import semver from 'semver';
 import { ToastService } from '../components/toast/toast.service';
 import { PackLoader } from '../services/engine/pack-loader';
+import { canonicalJson } from '../services/packs/canonical-json';
 import type { PackImportPreview } from '../services/packs/hkpack-reader.service';
 import type { PackImportAsset } from '../services/packs/pack-assets';
+import { PackImportConflictError } from '../services/packs/pack-import.errors';
 import { BlobsRepository } from '../services/storage/blobs.repository';
 import { PacksRepository } from '../services/storage/packs.repository';
 
 function packKey(pack: Pack): string {
   return `${pack.id}@${pack.version}`;
+}
+
+/** `removeContent` refused: other installed content packs (`dependents`, `id@version` keys) need
+ * the pack. The user removes them first (plan 15 final fix wave B6). `code` is the toast key. */
+export class PackRemoveDependentsError extends Error {
+  readonly code = 'packs.remove-failed-dependents';
+  constructor(
+    readonly key: string,
+    readonly dependents: readonly string[],
+  ) {
+    super(`${key} is required by ${dependents.join(', ')}`);
+    this.name = 'PackRemoveDependentsError';
+  }
 }
 
 /**
@@ -119,18 +135,46 @@ export class PackStore {
     this.translationsState.update((packs) => packs.filter((p) => packKey(p) !== key));
   }
 
+  /** Serializes every content-pack write (`importContent`, `installContent`, `removeContent`), so
+   * a write-time check (conflict, dependents) and the write it guards never interleave with
+   * another one. */
+  private writeQueue: Promise<unknown> = Promise.resolve();
+
+  private exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.writeQueue.then(fn, fn);
+    this.writeQueue = run.catch(() => undefined);
+    return run;
+  }
+
   // I/O boundary: installs a content pack the `HkpackReader` already fully validated (the reader
   // stores nothing; this is the only write). The pack row goes first — if it fails, nothing else is
   // written. Each asset then lands in the blob store as `origin: 'pack'` (a hash the device already
   // holds keeps its own origin/pin — `BlobsRepository.put`'s preserve rule). Should an asset write
   // fail, the pack row and every blob this call newly created are removed again before rethrowing,
   // so a half-installed pack never survives. An `alreadyInstalled` preview is a no-op.
+  //
+  // The reader's conflict check is repeated right before the write (plan 15 final fix wave A4, the
+  // `.hero` importer's rule): two trust dialogs can be open for the same `id@version`, so a pack
+  // installed after this preview was read throws `PackImportConflictError` when its canonical JSON
+  // differs (or it reuses the core id), and makes this a no-op when it is identical.
   async importContent(preview: PackImportPreview): Promise<void> {
-    if (!this.coreState()) {
+    const core = this.coreState();
+    if (!core) {
       throw new Error('PackStore.importContent: call init() before importing packs');
     }
     if (preview.alreadyInstalled) return;
-    await this.installContent(preview.pack, preview.assets);
+    await this.exclusive(async () => {
+      const key = packKey(preview.pack);
+      if (preview.pack.id === core.id) throw new PackImportConflictError(key);
+      const existing = this.contentState().find((p) => packKey(p) === key);
+      if (existing) {
+        if (canonicalJson(existing) !== canonicalJson(preview.pack)) {
+          throw new PackImportConflictError(key);
+        }
+        return;
+      }
+      await this.writeContent(preview.pack, preview.assets);
+    });
   }
 
   // I/O boundary: the write behind `importContent`, shared with the `.hero` importer (plan 15
@@ -141,6 +185,13 @@ export class PackStore {
     if (!this.coreState()) {
       throw new Error('PackStore.installContent: call init() before installing packs');
     }
+    await this.exclusive(() => this.writeContent(pack, assets));
+  }
+
+  private async writeContent(
+    pack: Pack,
+    assets: ReadonlyMap<string, PackImportAsset>,
+  ): Promise<void> {
     const key = packKey(pack);
     await this.packsRepository.putPack(pack);
     const created: string[] = [];
@@ -161,10 +212,44 @@ export class PackStore {
     this.contentState.update((packs) => [...packs.filter((p) => packKey(p) !== key), pack]);
   }
 
+  /** The other installed content packs that would lose a dependency if `key` were removed: a pack
+   * listing a dependency on its id whose range the version selected now satisfies but the version
+   * selected without it does not (the engine selects the highest installed version of an id —
+   * `selectPackVersions`). Removing an older version while a newer one stays never strands
+   * anything. Without this, `init()` would silently hide such a pack on the next load. */
+  dependentsOf(key: string): Pack[] {
+    const content = this.contentState();
+    const target = content.find((p) => packKey(p) === key);
+    if (!target) return [];
+    const remaining = content.filter((p) => p !== target);
+    const selected = (packs: readonly Pack[]): string | undefined =>
+      packs
+        .filter((p) => p.id === target.id)
+        .map((p) => p.version)
+        .sort(semver.rcompare)[0];
+    const before = selected(content);
+    const after = selected(remaining);
+    const satisfied = (version: string | undefined, range: string): boolean =>
+      version !== undefined && semver.satisfies(version, range);
+    return remaining.filter((p) =>
+      p.dependencies.some(
+        (d) => d.id === target.id && satisfied(before, d.range) && !satisfied(after, d.range),
+      ),
+    );
+  }
+
   // I/O boundary: removes an installed content pack by its `<id>@<version>` key, plus every asset
   // blob it listed that no other installed pack lists. Only blobs whose origin is `'pack'` are
   // deleted — a hash that first arrived as an upload/peer/import blob belongs to that owner.
+  // Refuses with `PackRemoveDependentsError` while `dependentsOf(key)` is non-empty (plan 15 final
+  // fix wave B6): the user removes the dependents first.
   async removeContent(key: string): Promise<void> {
+    await this.exclusive(() => this.deleteContent(key));
+  }
+
+  private async deleteContent(key: string): Promise<void> {
+    const dependents = this.dependentsOf(key);
+    if (dependents.length > 0) throw new PackRemoveDependentsError(key, dependents.map(packKey));
     const pack =
       this.contentState().find((p) => packKey(p) === key) ??
       (await this.packsRepository.getAll()).find((p) => packKey(p) === key);

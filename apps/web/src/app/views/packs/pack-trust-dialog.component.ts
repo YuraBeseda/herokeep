@@ -4,6 +4,7 @@ import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import type { PackImportPreview } from '@shared/services/packs/hkpack-reader.service';
+import { PackImportConflictError } from '@shared/services/packs/pack-import.errors';
 import { PackStore } from '@shared/stores/pack.store';
 import { PackInfoComponent } from './pack-info.component';
 
@@ -54,8 +55,11 @@ export class PackTrustDialogComponent {
       await this.packStore.importContent(this.preview);
       this.toastService.show('packs.import-success');
       this.dialogRef.close(true);
-    } catch {
-      this.toastService.show('packs.install-failed');
+    } catch (error) {
+      // A write-time conflict (`PackStore.importContent`'s re-check) carries its own toast key.
+      this.toastService.show(
+        error instanceof PackImportConflictError ? error.code : 'packs.install-failed',
+      );
     } finally {
       this.installing.set(false);
     }

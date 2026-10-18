@@ -10,6 +10,7 @@ import { ToastService } from '@shared/components/toast/toast.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import type { PackImportPreview } from '@shared/services/packs/hkpack-reader.service';
+import { PackImportConflictError } from '@shared/services/packs/pack-import.errors';
 import { PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
 import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
@@ -186,6 +187,20 @@ describe('PackTrustDialogComponent', () => {
     await fixture.whenStable();
 
     expect(show).toHaveBeenCalledWith('packs.install-failed');
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('a write-time conflict toasts the conflict refusal and keeps the dialog open', async () => {
+    const importContent = vi
+      .fn()
+      .mockRejectedValue(new PackImportConflictError('sample-content@1.0.0'));
+    const { close, show } = setup(mkPreview(), { importContent });
+    const { fixture, root } = await renderDialog();
+
+    root.querySelector<HTMLButtonElement>('.pack-trust-dialog__install')!.click();
+    await fixture.whenStable();
+
+    expect(show).toHaveBeenCalledWith('packs.import-failed-conflict');
     expect(close).not.toHaveBeenCalled();
   });
 

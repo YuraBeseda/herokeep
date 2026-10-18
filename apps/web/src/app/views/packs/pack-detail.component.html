@@ -15,12 +15,22 @@
     @if (isCore()) {
       <p class="pack-detail__core-note">{{ t('detail.core-note') }}</p>
     } @else {
+      @if (dependents().length > 0) {
+        <p class="pack-detail__dependents">
+          {{ t('detail.dependents', { count: dependents().length }) }}
+        </p>
+        <ul class="pack-detail__dependents-list">
+          @for (dependent of dependents(); track dependent.id + '@' + dependent.version) {
+            <li class="pack-detail__dependent">{{ dependent.name }} {{ dependent.version }}</li>
+          }
+        </ul>
+      }
       <button
         hk-button
         [variant]="'danger'"
         type="button"
         class="pack-detail__remove"
-        [disabled]="removing()"
+        [disabled]="removing() || dependents().length > 0"
         (click)="remove()"
       >
         {{ t('detail.remove') }}

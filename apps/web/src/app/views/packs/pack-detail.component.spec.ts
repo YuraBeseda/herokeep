@@ -12,7 +12,7 @@ import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
-import { PackStore } from '@shared/stores/pack.store';
+import { PackRemoveDependentsError, PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
 import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
 import { PackDetailComponent, PackRemoveConfirmComponent } from './pack-detail.component';
@@ -81,8 +81,15 @@ const pinSample = (stream: string) => [
   mkEvent(stream, 'pack.pinned', { packId: 'sample-content', version: '1.0.0' }),
 ];
 
-async function setup(key: string, options: { confirm?: unknown } = {}) {
-  const removeContent = vi.fn().mockResolvedValue(undefined);
+async function setup(
+  key: string,
+  options: { confirm?: unknown; dependents?: Pack[]; removeError?: unknown } = {},
+) {
+  const removeContent =
+    options.removeError === undefined
+      ? vi.fn().mockResolvedValue(undefined)
+      : vi.fn().mockRejectedValue(options.removeError);
+  const dependentsOf = vi.fn(() => options.dependents ?? []);
   const open = vi.fn(() => ({ closed: Promise.resolve(options.confirm), close: vi.fn() }));
   const show = vi.fn();
   const paramMap = convertToParamMap({ key });
@@ -108,6 +115,7 @@ async function setup(key: string, options: { confirm?: unknown } = {}) {
           corePack: signal<Pack | undefined>(CORE),
           installedContent: signal<Pack[]>([samplePack()]),
           removeContent,
+          dependentsOf,
         },
       },
       { provide: DialogService, useValue: { open } },
@@ -188,6 +196,44 @@ describe('PackDetailComponent', () => {
     await fixture.whenStable();
 
     expect(removeContent).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('lists the installed packs that depend on it and disables Remove', async () => {
+    const addon = {
+      ...samplePack(),
+      id: 'sample-addon',
+      name: 'Sample add-on',
+      dependencies: [{ id: 'sample-content', range: '^1.0.0' }],
+    } as Pack;
+    const { removeContent } = await setup(SAMPLE_KEY, { confirm: true, dependents: [addon] });
+    const { fixture, root } = await render();
+
+    expect(root.querySelector('.pack-detail__dependents')?.textContent?.trim()).toBe(
+      '1 installed pack depends on this pack. Remove it first.',
+    );
+    expect(
+      [...root.querySelectorAll('.pack-detail__dependent')].map((li) => li.textContent?.trim()),
+    ).toEqual(['Sample add-on 1.0.0']);
+    const remove = root.querySelector<HTMLButtonElement>('.pack-detail__remove')!;
+    expect(remove.disabled).toBe(true);
+    remove.click();
+    await fixture.whenStable();
+    expect(removeContent).not.toHaveBeenCalled();
+  });
+
+  it('a removal the store refuses for dependents shows the dependents toast', async () => {
+    const { show, navigate } = await setup(SAMPLE_KEY, {
+      confirm: true,
+      removeError: new PackRemoveDependentsError(SAMPLE_KEY, ['sample-addon@1.0.0']),
+    });
+    const { fixture, root } = await render();
+
+    root.querySelector<HTMLButtonElement>('.pack-detail__remove')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(show).toHaveBeenCalledWith('packs.remove-failed-dependents');
     expect(navigate).not.toHaveBeenCalled();
   });
 
