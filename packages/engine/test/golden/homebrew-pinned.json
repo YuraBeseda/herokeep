@@ -1,0 +1,265 @@
+{
+  "name": "homebrew-pinned",
+  "note": "Plan 15 task 8: a Fighter 1 (Moonkin from the third-party sample-content pack, Soldier) whose log pins sample-content@1.0.0 after character.created and holds the pack's Moonblade Sickle (simple melee, 1d6 slashing, light, mastery nick) equipped and chosen as a weapon mastery. Hand table: STR 15+2 = 17 (+3), DEX 13 (+1), CON 14+1 = 15 (+2), prof +2; sickle to-hit = STR 3 + prof 2 = +5 (simple weapon, Fighter proficient), damage 1d6 + 3 slashing, mastery nick (in the weapon-masteries decision, masteryCount 3 at Fighter 1); HP 10 + 2 = 12; AC 10 + DEX 1 = 11 (no armor, so Defense adds nothing); walk speed 30 from the pack species. Size is not a Sheet field, so the species is pinned through its speed and the resolved composition.",
+  "packs": ["dist:srd-5e-2024", "fixture:sample-content"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000001501",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 1,
+      "ts": "2026-10-18T12:00:01.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Selene",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001502",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 2,
+      "ts": "2026-10-18T12:00:02.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "pack.pinned",
+      "v": 1,
+      "payload": {
+        "packId": "sample-content",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001503",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 3,
+      "ts": "2026-10-18T12:00:03.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["sample-content:species/moonkin"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001504",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 4,
+      "ts": "2026-10-18T12:00:04.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001505",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 5,
+      "ts": "2026-10-18T12:00:05.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/soldier@0/ability-scores",
+        "selection": ["str:+2", "con:+1"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001506",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 6,
+      "ts": "2026-10-18T12:00:06.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["str:15", "dex:13", "con:14", "int:10", "wis:12", "cha:8"],
+        "context": {
+          "method": "standardArray"
+        }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001507",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 7,
+      "ts": "2026-10-18T12:00:07.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001508",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 8,
+      "ts": "2026-10-18T12:00:08.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/skills",
+        "selection": ["athletics", "perception"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001509",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 9,
+      "ts": "2026-10-18T12:00:09.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/fighting-style",
+        "selection": ["srd-5e-2024:feat/defense"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001510",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 10,
+      "ts": "2026-10-18T12:00:10.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/weapon-masteries",
+        "selection": [
+          "sample-content:item/moonblade-sickle",
+          "srd-5e-2024:item/longsword",
+          "srd-5e-2024:item/greatsword"
+        ]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001511",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 11,
+      "ts": "2026-10-18T12:00:11.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "15151515-1515-7151-8151-1515151515a1",
+        "itemId": "sample-content:item/moonblade-sickle",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001512",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 12,
+      "ts": "2026-10-18T12:00:12.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": {
+        "instanceId": "15151515-1515-7151-8151-1515151515a1"
+      }
+    }
+  ],
+  "expect": {
+    "facts.pins": {
+      "srd-5e-2024": "0.1.0",
+      "sample-content": "1.0.0"
+    },
+    "sheet.pins": {
+      "srd-5e-2024": "0.1.0",
+      "sample-content": "1.0.0"
+    },
+    "sheet.corePackId": "srd-5e-2024",
+    "sheet.level": 1,
+    "sheet.prof": 2,
+    "sheet.abilities[\"str\"].score.value": 17,
+    "sheet.hp.max.value": 12,
+    "sheet.ac.value": 11,
+    "sheet.speed.walk.value": 30,
+    "sheet.masteryCount": 3,
+    "sheet.inventory[0].resolved": true,
+    "sheet.attacks.length": 1,
+    "sheet.attacks[0]": {
+      "instanceId": "15151515-1515-7151-8151-1515151515a1",
+      "itemId": "sample-content:item/moonblade-sickle",
+      "name": "sample-content:item/moonblade-sickle",
+      "toHit": {
+        "value": 5,
+        "contributions": []
+      },
+      "damage": {
+        "dice": "1d6",
+        "bonus": {
+          "value": 3,
+          "contributions": []
+        },
+        "type": "slashing"
+      },
+      "properties": ["light"],
+      "mastery": "nick",
+      "ability": "str"
+    },
+    "sheet.issues": []
+  }
+}

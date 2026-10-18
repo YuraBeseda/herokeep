@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { type Pack, type Event, parseEvent, parsePack } from '@hk/protocol';
-import { createContentIndex } from '../../src/content/index.ts';
+import { pinnedRoots } from '../../src/content/deps.ts';
+import { type ContentIndex, createContentIndex } from '../../src/content/index.ts';
 import { derive } from '../../src/derive/index.ts';
-import type { SystemRules } from '../../src/reduce/facts.ts';
+import type { Facts, SystemRules } from '../../src/reduce/facts.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
-import { loadFixturePack } from './fixtures.ts';
+import { loadEngineFixturePack, loadFixturePack } from './fixtures.ts';
 
 export interface GoldenFixture {
   name: string;
@@ -52,8 +53,19 @@ export function loadDistPack(packId: string): Pack {
   return r.pack;
 }
 
-function loadPack(name: string): Pack {
-  return name.startsWith(DIST_PREFIX) ? loadDistPack(name.slice(DIST_PREFIX.length)) : loadFixturePack(name);
+/**
+ * Plan 15 task 8: `packs: ["fixture:<name>"]` loads an engine fixture content pack
+ * (`packages/engine/test/fixtures/packs/<name>.json`, e.g. the third-party `sample-content`) beside
+ * the `dist:` core. A golden that lists one derives against the per-character index (see
+ * `runGolden`); goldens without one keep the original path untouched.
+ */
+export const FIXTURE_PREFIX = 'fixture:';
+
+/** Resolves one `packs` entry: `dist:<id>`, `fixture:<name>`, or a bare protocol fixture name. */
+export function loadGoldenPack(name: string): Pack {
+  if (name.startsWith(DIST_PREFIX)) return loadDistPack(name.slice(DIST_PREFIX.length));
+  if (name.startsWith(FIXTURE_PREFIX)) return loadEngineFixturePack(name.slice(FIXTURE_PREFIX.length));
+  return loadFixturePack(name);
 }
 
 export function loadGoldens(): GoldenFixture[] {
@@ -76,10 +88,22 @@ export function getPath(root: unknown, path: string): unknown {
   return cur;
 }
 
-export function runGolden(fx: GoldenFixture): { actual: Record<string, unknown>; expected: Record<string, unknown> } {
-  const packs = fx.packs.map(loadPack);
-  const index = createContentIndex(packs);
-  if (index.diagnostics.length > 0) throw new Error(`${fx.name}: ${JSON.stringify(index.diagnostics)}`);
+/** The reduced facts plus the index and rules a golden derives with (shared with `derive-perf`). */
+export function prepareGolden(fx: GoldenFixture): {
+  facts: Facts;
+  index: ContentIndex;
+  rules: SystemRules | undefined;
+  events: number;
+} {
+  const packs = fx.packs.map(loadGoldenPack);
+  // Plan 15 task 8: a golden listing a `fixture:` content pack derives against the per-character
+  // index, exactly as the web's `EngineFacade.indexFor(facts.pins)` builds it — so the packs its
+  // log pins (and unpins) decide what resolves. The core-only index below still supplies the
+  // system rules (the `system` entity lives in the core). Every other golden keeps the original
+  // whole-list index path, untouched.
+  const usesFixtureContent = fx.packs.some((p) => p.startsWith(FIXTURE_PREFIX));
+  const baseIndex = createContentIndex(usesFixtureContent ? packs.filter((p) => p.kind === 'core') : packs);
+  if (baseIndex.diagnostics.length > 0) throw new Error(`${fx.name}: ${JSON.stringify(baseIndex.diagnostics)}`);
   const events = fx.events.map((e) => {
     const r = parseEvent(e);
     if (!r.ok) throw new Error(`${fx.name}: bad event ${JSON.stringify(r.issues)}`);
@@ -91,9 +115,18 @@ export function runGolden(fx: GoldenFixture): { actual: Record<string, unknown>;
   // so their existing goldens (which assert the `derive.noSystemRules` warning) stay unchanged.
   const usesDistPack = fx.packs.some((p) => p.startsWith(DIST_PREFIX));
   const rules: SystemRules | undefined = usesDistPack
-    ? { restRules: index.system().restRules, hpRules: index.system().hpRules }
+    ? { restRules: baseIndex.system().restRules, hpRules: baseIndex.system().hpRules }
     : undefined;
   const facts = reduce(events, undefined, rules);
+  const index = usesFixtureContent
+    ? createContentIndex(packs, { pins: facts.pins, roots: pinnedRoots(packs, facts.pins) })
+    : baseIndex;
+  if (index.diagnostics.length > 0) throw new Error(`${fx.name}: ${JSON.stringify(index.diagnostics)}`);
+  return { facts, index, rules, events: events.length };
+}
+
+export function runGolden(fx: GoldenFixture): { actual: Record<string, unknown>; expected: Record<string, unknown> } {
+  const { facts, index, rules } = prepareGolden(fx);
   const root = { facts, sheet: derive(facts, index, rules) };
   const actual: Record<string, unknown> = {};
   for (const path of Object.keys(fx.expect)) actual[path] = getPath(root, path);

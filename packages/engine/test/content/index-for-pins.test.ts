@@ -6,7 +6,7 @@ import { derive } from '../../src/derive/index.ts';
 import type { SystemRules } from '../../src/reduce/facts.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
 import { loadEngineFixturePack, loadFixturePack } from '../support/fixtures.ts';
-import { DIST_PREFIX, loadDistPack, loadGoldens } from '../support/golden.ts';
+import { DIST_PREFIX, FIXTURE_PREFIX, loadDistPack, loadGoldens } from '../support/golden.ts';
 
 /**
  * Plan 15 Review Focus 1: the web app derives each character against `createContentIndex(all
@@ -47,9 +47,12 @@ function pinsKey(pins: Pins): string {
 }
 
 describe('per-character content index (pins + roots)', () => {
-  const goldens = loadGoldens();
+  // Core-only goldens: Task 8's content-pack goldens (`fixture:` packs) are excluded — they pin
+  // and unpin `sample-content` themselves and the golden suite already derives them against the
+  // per-character pinned index.
+  const goldens = loadGoldens().filter((fx) => !fx.packs.some((p) => p.startsWith(FIXTURE_PREFIX)));
 
-  it('covers every golden fixture (71 fixtures; the golden suite is 72 tests with its pin test)', () => {
+  it('covers every core-only golden fixture (71 fixtures)', () => {
     expect(goldens).toHaveLength(71);
   });
 

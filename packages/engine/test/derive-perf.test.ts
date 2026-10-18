@@ -1,11 +1,7 @@
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseEvent } from '@hk/protocol';
-import { createContentIndex } from '../src/content/index.ts';
 import { derive } from '../src/derive/index.ts';
-import type { SystemRules } from '../src/reduce/facts.ts';
-import { reduce } from '../src/reduce/reducer.ts';
-import { loadDistPack, loadGoldens } from './support/golden.ts';
+import { loadGoldens, prepareGolden } from './support/golden.ts';
 
 /**
  * Task 13 (phase 4 plan 11), ruling 10: measure `derive()` ALONE (not `reduce`+`derive` — that's
@@ -35,6 +31,10 @@ import { loadDistPack, loadGoldens } from './support/golden.ts';
  * equipped weapons and two mastery choices sharing one cap (`multi-fighter5-barbarian3-mastery`),
  * the Rogue/Bard whose scope-aware rows, tool picks and two-owner Expertise all run
  * (`multi-rogue3-bard2-tools`), and the double attunement-gated item character (`slippers-attuned`).
+ *
+ * Plan 15 task 8: plus the heaviest content-pack golden — two versions of the third-party
+ * `sample-content` pack listed, the 1.1.0 pin, a migrated mastery decision and two pack weapons
+ * equipped (`pack-updated-v2`), derived against the per-character pinned index.
  */
 const PERF_FIXTURES = [
   'multi-fighter1-wizard19',
@@ -48,6 +48,7 @@ const PERF_FIXTURES = [
   'multi-fighter5-barbarian3-mastery',
   'multi-rogue3-bard2-tools',
   'slippers-attuned',
+  'pack-updated-v2',
 ];
 
 describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
@@ -55,20 +56,12 @@ describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
     const fixture = loadGoldens().find((f) => f.name === fixtureName);
     if (!fixture) throw new Error(`${fixtureName} golden fixture not found`);
 
-    const events = fixture.events.map((e) => {
-      const r = parseEvent(e);
-      if (!r.ok) throw new Error(`bad fixture event: ${JSON.stringify(r.issues)}`);
-      return r.event;
-    });
-
-    const pack = loadDistPack('srd-5e-2024');
-    const index = createContentIndex([pack]);
-    if (index.diagnostics.length > 0) throw new Error(JSON.stringify(index.diagnostics));
-    const rules: SystemRules = { restRules: index.system().restRules, hpRules: index.system().hpRules };
-
     // `reduce` runs ONCE, outside the timing loop — only `derive` itself is priced, matching
     // doc-05's own "`derive` of a level-20 character" framing (not a combined reduce+derive cost).
-    const facts = reduce(events, undefined, rules);
+    // Plan 15 task 8: the index and rules are the golden harness's own (`prepareGolden`) — for a
+    // `dist:`-only golden that is the same core-only index as before; a `fixture:` content-pack
+    // golden gets the per-character pinned index the web derives with.
+    const { facts, index, rules, events } = prepareGolden(fixture);
 
     const samples: number[] = [];
     for (let run = 0; run < 25; run++) {
@@ -80,7 +73,7 @@ describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
     const median = samples[Math.floor(samples.length / 2)]!;
 
     console.info(
-      `[derive-perf] ${fixtureName} (${events.length} events): ` +
+      `[derive-perf] ${fixtureName} (${events} events): ` +
         `samples(ms)=${samples.map((s) => s.toFixed(3)).join(', ')} median=${median.toFixed(3)}ms ` +
         `(doc-05 budget: <5ms desktop / <15ms mid phone)`,
     );
@@ -88,7 +81,7 @@ describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
     if (process.env['HK_RECORD_PERF'] === '1') {
       const perfMdPath = new URL('golden/PERF.md', import.meta.url);
       const line =
-        `- ${new Date().toISOString()}: derive-only, ${fixtureName} (${events.length} events), ` +
+        `- ${new Date().toISOString()}: derive-only, ${fixtureName} (${events} events), ` +
         `25 samples, median ${median.toFixed(3)} ms ` +
         `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-14 task-7 measurement, not the ` +
         `reduce+derive 536-event tripwire above)\n`;

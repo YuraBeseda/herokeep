@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createContentIndex } from '../src/content/index.ts';
 import { outstandingChoices } from '../src/derive/index.ts';
 import { reduce } from '../src/reduce/reducer.ts';
-import { loadDistPack, loadGoldens, runGolden } from './support/golden.ts';
+import { loadDistPack, loadGoldenPack, loadGoldens, runGolden } from './support/golden.ts';
 
 describe('golden characters', () => {
   for (const fx of loadGoldens()) {
@@ -33,5 +33,32 @@ describe('golden characters', () => {
     expect(skillPicks).toEqual([
       { choiceId: 'srd-5e-2024:class/bard@1/multiclass-skills', ownerId: 'srd-5e-2024:class/bard', count: 1 },
     ]);
+  });
+});
+
+// Plan 15 task 8: `packs` entries may name an engine fixture content pack (`fixture:<name>` →
+// `test/fixtures/packs/<name>.json`); such fixtures derive against the per-character index the web
+// builds (`createContentIndex(packs, { pins, roots: pinnedRoots(packs, pins) })`).
+describe('golden harness: fixture content packs', () => {
+  it('loads fixture:<name> from packages/engine/test/fixtures/packs/', () => {
+    const pack = loadGoldenPack('fixture:sample-content');
+    expect([pack.id, pack.version, pack.kind]).toEqual(['sample-content', '1.0.0', 'content']);
+    expect(loadGoldenPack('fixture:sample-content-v2').version).toBe('1.1.0');
+  });
+
+  it('scopes the index to the character pins: a listed but unpinned pack does not resolve', () => {
+    const fx = loadGoldens().find((g) => g.name === 'homebrew-pinned');
+    expect(fx).toBeDefined();
+    const withoutPin = {
+      ...fx!,
+      events: fx!.events.filter((e) => e.type !== 'pack.pinned').map((e, i) => ({ ...e, seq: i + 1 })),
+      expect: { 'sheet.speed.walk.value': 30, 'sheet.attacks.length': 1, 'sheet.inventory[0].resolved': true },
+      absent: [],
+    };
+    expect(runGolden(withoutPin).actual).toEqual({
+      'sheet.speed.walk.value': 0,
+      'sheet.attacks.length': 0,
+      'sheet.inventory[0].resolved': false,
+    });
   });
 });

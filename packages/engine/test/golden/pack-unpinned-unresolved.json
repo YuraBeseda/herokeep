@@ -1,0 +1,270 @@
+{
+  "name": "pack-unpinned-unresolved",
+  "note": "Plan 15 task 8: homebrew-pinned's log followed by pack.unpinned@1 sample-content. The per-character index drops the pack, so the species and the held weapon no longer resolve: walk speed falls to the 0 base (no species), the sickle is an unresolved inventory row with no attack row and no mastery, and derive reports three warnings: derive.unresolvedEntity for the species (a creation-slot composition root), derive.unresolvedEntity for the sickle (an equipped item is a composition root too, composition.ts) and derive.unresolvedItem for the sickle inventory row. Everything from the core still derives: level 1, HP 12, STR 17, masteryCount 3.",
+  "packs": ["dist:srd-5e-2024", "fixture:sample-content"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000001501",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 1,
+      "ts": "2026-10-18T12:00:01.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Selene",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001502",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 2,
+      "ts": "2026-10-18T12:00:02.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "pack.pinned",
+      "v": 1,
+      "payload": {
+        "packId": "sample-content",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001503",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 3,
+      "ts": "2026-10-18T12:00:03.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["sample-content:species/moonkin"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001504",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 4,
+      "ts": "2026-10-18T12:00:04.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001505",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 5,
+      "ts": "2026-10-18T12:00:05.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:background/soldier@0/ability-scores",
+        "selection": ["str:+2", "con:+1"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001506",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 6,
+      "ts": "2026-10-18T12:00:06.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["str:15", "dex:13", "con:14", "int:10", "wis:12", "cha:8"],
+        "context": {
+          "method": "standardArray"
+        }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001507",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 7,
+      "ts": "2026-10-18T12:00:07.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001508",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 8,
+      "ts": "2026-10-18T12:00:08.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/skills",
+        "selection": ["athletics", "perception"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001509",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 9,
+      "ts": "2026-10-18T12:00:09.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/fighting-style",
+        "selection": ["srd-5e-2024:feat/defense"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001510",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 10,
+      "ts": "2026-10-18T12:00:10.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/weapon-masteries",
+        "selection": [
+          "sample-content:item/moonblade-sickle",
+          "srd-5e-2024:item/longsword",
+          "srd-5e-2024:item/greatsword"
+        ]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001511",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 11,
+      "ts": "2026-10-18T12:00:11.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "15151515-1515-7151-8151-1515151515a1",
+        "itemId": "sample-content:item/moonblade-sickle",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001512",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 12,
+      "ts": "2026-10-18T12:00:12.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": {
+        "instanceId": "15151515-1515-7151-8151-1515151515a1"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001513",
+      "stream": "char:15151515-1515-7151-8151-151515151515",
+      "seq": 13,
+      "ts": "2026-10-18T12:00:13.000Z",
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
+      "type": "pack.unpinned",
+      "v": 1,
+      "payload": {
+        "packId": "sample-content"
+      }
+    }
+  ],
+  "expect": {
+    "facts.pins": {
+      "srd-5e-2024": "0.1.0"
+    },
+    "sheet.pins": {
+      "srd-5e-2024": "0.1.0"
+    },
+    "sheet.level": 1,
+    "sheet.hp.max.value": 12,
+    "sheet.abilities[\"str\"].score.value": 17,
+    "sheet.speed.walk.value": 0,
+    "sheet.masteryCount": 3,
+    "sheet.inventory[0].resolved": false,
+    "sheet.attacks.length": 0,
+    "sheet.issues.length": 3,
+    "sheet.issues[0].severity": "warning",
+    "sheet.issues[0].code": "derive.unresolvedEntity",
+    "sheet.issues[0].entityId": "sample-content:species/moonkin",
+    "sheet.issues[1].severity": "warning",
+    "sheet.issues[1].code": "derive.unresolvedEntity",
+    "sheet.issues[1].entityId": "sample-content:item/moonblade-sickle",
+    "sheet.issues[2].severity": "warning",
+    "sheet.issues[2].code": "derive.unresolvedItem",
+    "sheet.issues[2].entityId": "sample-content:item/moonblade-sickle",
+    "facts.decisions[\"srd-5e-2024:class/fighter@1/weapon-masteries\"]": [
+      "sample-content:item/moonblade-sickle",
+      "srd-5e-2024:item/longsword",
+      "srd-5e-2024:item/greatsword"
+    ]
+  }
+}
