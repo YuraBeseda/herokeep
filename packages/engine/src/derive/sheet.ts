@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../diagnostics.ts';
-import type { Facts, InventoryEntry } from '../reduce/facts.ts';
+import type { CharacterOptions, Facts, InventoryEntry } from '../reduce/facts.ts';
 import type { AbilitiesResult, AbilityBlock } from './abilities.ts';
 import type { ActionView } from './actions.ts';
 import type { AttackRow } from './attacks.ts';
@@ -114,8 +114,19 @@ export interface Sheet {
    * `'house rule'` is the literal provenance tag task 12's UI shows next to an overridden value (the
    * plan's own wording). `encumbrance` is listed on the type now (task 5 extends this object, not a
    * new one) but is never set by this task — task 4 doesn't compute or read encumbrance at all.
+   * Plan 14 Task 5 (ruling 8) widens `encumbrance` with `'character option'`: the mode came from
+   * the character's own `character.options.set@1`, not a campaign (precedence in derive/index.ts).
+   * The key is now also present when no `overrides` were passed but a character option is on.
    */
-  overridesProvenance?: { attunementMax?: 'house rule'; encumbrance?: 'house rule' };
+  overridesProvenance?: { attunementMax?: 'house rule'; encumbrance?: 'house rule' | 'character option' };
+  /**
+   * Plan 14 (phase 4 slice 4) Task 5, design ruling 8: the character's own stored rule options
+   * (`Facts.options`, from `character.options.set@1`) — present ONLY when at least one is set, so
+   * every legacy character/golden stays byte-identical. This is the STORED preference, not the
+   * effective mode (a campaign house rule may override it; read `carry`/`overridesProvenance` for
+   * what is in force). `propose.setOptions` diffs a patch against it.
+   */
+  options?: CharacterOptions;
   /**
    * Ruling 1 (phase 4, plan 11 task 5 — "encumbrance option"): present ONLY when `derive()`'s
    * `overrides.encumbrance` is `'standard'` or `'variant'` for THIS call (never for `'off'`/absent,

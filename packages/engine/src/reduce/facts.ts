@@ -1,4 +1,4 @@
-import type { SystemEntity } from '@hk/protocol';
+import type { CharacterOptionsSet, SystemEntity } from '@hk/protocol';
 
 /**
  * Death-save cap (3 successes = stable, 3 failures = dead) — a doc-02 ENGINE-CONTRACT rule
@@ -47,6 +47,13 @@ export interface NoteEntry {
   body: string;
 }
 
+/**
+ * Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — per-character rule options, folded from
+ * `character.options.set@1` (handlers/identity.ts merges per key, last write wins). The shape IS the
+ * event payload's (every key optional), so a future option is additive on both sides.
+ */
+export type CharacterOptions = CharacterOptionsSet;
+
 export interface Facts {
   streamId: string;
   created: boolean;
@@ -55,6 +62,8 @@ export interface Facts {
   system: string;
   grammaticalGender: 'masculine' | 'feminine' | 'neuter';
   appearance: Record<string, string>;
+  /** Ruling 8 (plan 14 T5): `{}` for every legacy log; read by `derive` BELOW any caller override. */
+  options: CharacterOptions;
   portrait?: { hash: string; thumbHash: string };
   createdWith: { engineVersion: string };
   pins: Record<string, string>;
@@ -119,6 +128,7 @@ export function emptyFacts(streamId: string): Facts {
     system: '',
     grammaticalGender: 'neuter',
     appearance: {},
+    options: {},
     createdWith: { engineVersion: '' },
     pins: {},
     decisions: {},

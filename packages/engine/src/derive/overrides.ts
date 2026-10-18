@@ -12,6 +12,10 @@
  *   today) but not yet READ by any derive step; task 5 (encumbrance math) is its consumer. The field
  *   lives on this shared type now specifically so task 5 extends the SAME `DeriveOverrides` instead
  *   of reshaping `derive()`'s signature again.
+ * - Plan 14 (phase 4 slice 4) Task 5, design ruling 8: a value here is the CAMPAIGN house rule and
+ *   wins over the character's own `facts.options` (`character.options.set@1`), which in turn wins
+ *   over the default `'off'`. An explicit `encumbrance: 'off'` here is a decision too (it holds a
+ *   character option off); omit the key to let the character option through.
  */
 export interface DeriveOverrides {
   attunementMax?: number;

@@ -2,6 +2,7 @@ import {
   type CharacterAppearanceSet,
   type CharacterCreated,
   type CharacterGenderSet,
+  type CharacterOptionsSet,
   type CharacterRenamed,
   type DecisionCleared,
   type NoteAdded,
@@ -10,7 +11,7 @@ import {
   type PackPinned,
   type PortraitSet,
 } from '@hk/protocol';
-import { type NoteEntry, requireCreated } from '../facts.ts';
+import { type Facts, type NoteEntry, requireCreated } from '../facts.ts';
 import type { Handler } from '../reducer.ts';
 
 /** These events describe multiplayer/campaign concepts that don't apply to a solo character. */
@@ -70,6 +71,18 @@ export const HANDLERS: Record<string, Handler> = {
   'character.gender_set@1': (f, e) => {
     const p = e.payload as CharacterGenderSet;
     return requireCreated(f) ?? { ...f, grammaticalGender: p.grammaticalGender };
+  },
+
+  // Plan 14 (phase 4 slice 4) Task 5, ruling 8: per-key merge, last write per key wins. An
+  // explicit `'off'` is RECORDED (a choice, not a deletion). `f.options ?? {}` tolerates a facts
+  // snapshot cached before this field existed (same ENGINE_VERSION, so `reduce` resumes it).
+  'character.options.set@1': (f, e) => {
+    const p = e.payload as CharacterOptionsSet;
+    const skip = requireCreated(f);
+    if (skip) return skip;
+    const options = { ...(f.options as Facts['options'] | undefined) };
+    if (p.encumbrance !== undefined) options.encumbrance = p.encumbrance;
+    return { ...f, options };
   },
 
   'character.archived@1': (f) => requireCreated(f) ?? { ...f, archived: true },

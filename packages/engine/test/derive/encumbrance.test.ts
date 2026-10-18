@@ -287,3 +287,77 @@ describe('resolveCarryState (pure)', () => {
     expect(withHighLoad.carry?.state).toBe('heavilyEncumbered');
   });
 });
+
+/**
+ * Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — per-character option precedence:
+ * explicit `overrides` (the campaign house rule) > `facts.options` > default `'off'`. Provenance
+ * tells the two apart: `'house rule'` when the campaign decided, `'character option'` when the
+ * character's own `character.options.set@1` did. The thresholds stay DATA (core-mini's system
+ * entity, documented at the top of this file) — the option only selects the mode.
+ */
+describe('derive: per-character encumbrance option (facts.options) precedence', () => {
+  it('options variant alone → Sheet.carry with the variant thresholds, provenance "character option"', () => {
+    const facts = baseFacts();
+    facts.options = { encumbrance: 'variant' };
+    facts.inventory = [{ instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }]; // 55
+    const sheet = derive(facts, index);
+
+    expect(sheet.carry).toEqual({ mode: 'variant', capacity: 150, load: 55, state: 'encumbered' });
+    expect(sheet.overridesProvenance).toEqual({ encumbrance: 'character option' });
+  });
+
+  it('options standard alone → standard carry, provenance "character option"', () => {
+    const facts = baseFacts();
+    facts.options = { encumbrance: 'standard' };
+    facts.inventory = [{ instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }]; // 55
+    const sheet = derive(facts, index, undefined, {});
+
+    expect(sheet.carry).toEqual({ mode: 'standard', capacity: 150, load: 55, state: 'normal' });
+    expect(sheet.overridesProvenance).toEqual({ encumbrance: 'character option' });
+  });
+
+  it('overrides "off" (house rule) beats options "variant": no carry, provenance "house rule"', () => {
+    const facts = baseFacts();
+    facts.options = { encumbrance: 'variant' };
+    facts.inventory = [{ instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }];
+    const sheet = derive(facts, index, undefined, { encumbrance: 'off' });
+
+    expect('carry' in sheet).toBe(false);
+    expect(sheet.overridesProvenance).toEqual({ encumbrance: 'house rule' });
+  });
+
+  it('overrides "standard" beats options "variant": standard carry, provenance "house rule"', () => {
+    const facts = baseFacts();
+    facts.options = { encumbrance: 'variant' };
+    facts.inventory = [{ instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }]; // 55
+    const sheet = derive(facts, index, undefined, { encumbrance: 'standard' });
+
+    expect(sheet.carry).toEqual({ mode: 'standard', capacity: 150, load: 55, state: 'normal' });
+    expect(sheet.overridesProvenance).toEqual({ encumbrance: 'house rule' });
+  });
+
+  it('options "off" explicitly: same as absent — no carry, no provenance', () => {
+    const facts = baseFacts();
+    facts.options = { encumbrance: 'off' };
+    const sheet = derive(facts, index);
+
+    expect('carry' in sheet).toBe(false);
+    expect(sheet.overridesProvenance).toBeUndefined();
+  });
+
+  it('neither overrides nor options: no carry, no provenance (solo default stays off)', () => {
+    const facts = baseFacts();
+    facts.inventory = [{ instanceId: 'i1', itemId: chainMail, qty: 1, equipped: true, attuned: false }];
+    const sheet = derive(facts, index);
+
+    expect('carry' in sheet).toBe(false);
+    expect(sheet.overridesProvenance).toBeUndefined();
+    expect('options' in sheet).toBe(false);
+  });
+
+  it('surfaces the stored options on the Sheet only when at least one is set', () => {
+    const facts = baseFacts();
+    facts.options = { encumbrance: 'variant' };
+    expect(derive(facts, index, undefined, { encumbrance: 'off' }).options).toEqual({ encumbrance: 'variant' });
+  });
+});

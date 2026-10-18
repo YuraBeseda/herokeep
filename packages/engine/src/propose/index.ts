@@ -2,6 +2,7 @@ import type { Diagnostic } from '../diagnostics.ts';
 import * as casting from './casting.ts';
 import * as items from './items.ts';
 import * as notes from './notes.ts';
+import * as options from './options.ts';
 import * as restFamily from './rest.ts';
 import * as vitals from './vitals.ts';
 
@@ -51,4 +52,5 @@ export const propose = {
   condition: vitals.condition,
   inspiration: vitals.inspiration,
   note: notes.note,
+  setOptions: options.setOptions,
 };

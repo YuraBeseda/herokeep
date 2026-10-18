@@ -271,9 +271,17 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   // Ruling 1 (phase 4, plan 11 task 5 — "encumbrance option"): computed ONLY when the caller opts
   // in via `overrides.encumbrance` — 'off' (the default, including `overrides` omitted entirely)
   // is zero computation, so every pre-task-5 call site/golden stays byte-identical.
+  //
+  // Plan 14 (phase 4 slice 4) Task 5, design ruling 8 — precedence: an explicit
+  // `overrides.encumbrance` (the campaign house rule, even `'off'`) > the character's own
+  // `facts.options.encumbrance` (`character.options.set@1`) > the default `'off'`. The option only
+  // SELECTS the mode; every number stays data in the system entity. `facts.options` may be absent
+  // on a facts snapshot cached before the field existed — treated as `{}`.
+  const characterOptions = (facts.options as Facts['options'] | undefined) ?? {};
+  const encumbranceMode = overrides?.encumbrance ?? characterOptions.encumbrance ?? 'off';
   let carry: Sheet['carry'];
-  if (overrides?.encumbrance !== undefined && overrides.encumbrance !== 'off') {
-    const encumbrance = deriveEncumbrance(overrides.encumbrance, abilities, comp, facts, index, resources.resources);
+  if (encumbranceMode !== 'off') {
+    const encumbrance = deriveEncumbrance(encumbranceMode, abilities, comp, facts, index, resources.resources);
     issues.push(...encumbrance.issues);
     carry = encumbrance.carry;
   }
@@ -324,8 +332,16 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   // sheet.test.ts assertion and every prior golden stay unaffected when neither is supplied).
   const overridesProvenance: NonNullable<Sheet['overridesProvenance']> = {};
   if (overrides?.attunementMax !== undefined) overridesProvenance.attunementMax = 'house rule';
-  if (overrides?.encumbrance !== undefined && overrides.encumbrance !== 'off')
-    overridesProvenance.encumbrance = 'house rule';
+  // Ruling 8 (plan 14 T5): `'house rule'` whenever the campaign's value decided something — it
+  // switched encumbrance on, OR it held a character option that would otherwise have switched it on
+  // back to `'off'`; `'character option'` when only the character's own option switched it on. A
+  // house-rule `'off'` with no competing option still records nothing (pre-T5 byte-stable).
+  const optionMode = characterOptions.encumbrance ?? 'off';
+  if (overrides?.encumbrance !== undefined) {
+    if (overrides.encumbrance !== 'off' || optionMode !== 'off') overridesProvenance.encumbrance = 'house rule';
+  } else if (optionMode !== 'off') {
+    overridesProvenance.encumbrance = 'character option';
+  }
   const hasOverridesProvenance = Object.keys(overridesProvenance).length > 0;
 
   return {
@@ -357,6 +373,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
     ...(carry ? { carry } : {}),
     attunementMax: overrides?.attunementMax ?? index.system().attunementMax,
     ...(hasOverridesProvenance ? { overridesProvenance } : {}),
+    ...(Object.keys(characterOptions).length > 0 ? { options: { ...characterOptions } } : {}),
     currency: { ...facts.currency },
     inspiration: facts.inspiration,
     conditions: hp.conditions,
