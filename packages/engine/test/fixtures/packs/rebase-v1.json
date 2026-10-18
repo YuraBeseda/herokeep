@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "id": "rebase-mini",
+  "version": "1.0.0",
+  "kind": "content",
+  "system": "mini",
+  "name": "Rebase mini v1 (test)",
+  "dependencies": [{ "id": "core-mini", "range": "^1" }],
+  "entities": [
+    {
+      "id": "rebase-mini:feature/sprite-step",
+      "type": "feature",
+      "name": "Sprite Step",
+      "effects": [{ "type": "speed.bonus", "mode": "walk", "value": 5 }]
+    },
+    {
+      "id": "rebase-mini:feat/old-luck",
+      "type": "feat",
+      "name": "Old Luck",
+      "category": "origin",
+      "effects": [{ "type": "initiative.bonus", "value": 1 }]
+    },
+    {
+      "id": "rebase-mini:feat/keen-eye",
+      "type": "feat",
+      "name": "Keen Eye",
+      "category": "origin"
+    },
+    {
+      "id": "rebase-mini:feat/nimble",
+      "type": "feat",
+      "name": "Nimble",
+      "category": "general",
+      "prerequisites": [{ "ability": { "dex": { "gte": 8 } } }]
+    },
+    {
+      "id": "rebase-mini:species/sprite",
+      "type": "species",
+      "name": "Sprite",
+      "size": "small",
+      "speed": 30,
+      "creatureType": "fey",
+      "grants": [{ "feature": "rebase-mini:feature/sprite-step" }],
+      "choices": [
+        {
+          "id": "rebase-mini:species/sprite@0/gift",
+          "prompt": "Sprite gift",
+          "at": { "kind": "creation" },
+          "pick": { "static": ["rebase-mini:feat/old-luck", "rebase-mini:feat/keen-eye"] }
+        },
+        {
+          "id": "rebase-mini:species/sprite@0/charm",
+          "prompt": "Sprite charm",
+          "at": { "kind": "creation" },
+          "pick": { "static": ["rebase-mini:feat/keen-eye"] }
+        },
+        {
+          "id": "rebase-mini:species/sprite@0/trick",
+          "prompt": "Sprite trick",
+          "at": { "kind": "creation" },
+          "pick": { "static": ["rebase-mini:feat/nimble"] }
+        }
+      ]
+    }
+  ]
+}

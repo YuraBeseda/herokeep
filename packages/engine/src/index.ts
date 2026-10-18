@@ -26,3 +26,4 @@ export * from './derive/index.ts';
 export * from './dice/parse.ts';
 export * from './dice/roll.ts';
 export * from './propose/index.ts';
+export * from './rebase/index.ts';

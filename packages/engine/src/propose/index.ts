@@ -3,6 +3,7 @@ import * as casting from './casting.ts';
 import * as items from './items.ts';
 import * as notes from './notes.ts';
 import * as options from './options.ts';
+import * as packs from './packs.ts';
 import * as restFamily from './rest.ts';
 import * as vitals from './vitals.ts';
 
@@ -53,4 +54,6 @@ export const propose = {
   inspiration: vitals.inspiration,
   note: notes.note,
   setOptions: options.setOptions,
+  pinPack: packs.pinPack,
+  unpinPack: packs.unpinPack,
 };
