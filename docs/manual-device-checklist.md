@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12) + slice 3 (plan 13)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12) + slice 3 (plan 13) + slice 4 (plan 14) + slice 5 (plan 15)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -6,9 +6,10 @@ number. It supplements, and never replaces, the automated gates:
 
 - `pnpm check` — format, lint, typecheck, engine + web unit tests (819 web tests as of the plan-8
   client-sync final fix wave; includes the dev-mode perf-log spec below).
-- `pnpm --filter web e2e` — Playwright against the real production build: 11 spec files, 26 tests
-  (offline, library/search/locale, character creation (Fighter, Monk, Rogue with Expertise), level-up, multiclassing, play actions,
-  export/import, axe accessibility).
+- `pnpm --filter web e2e` — Playwright against the real production build: 13 spec files, 31 tests
+  as of plan 15 (offline, library/search/locale, character creation (Fighter, Monk, Rogue with
+  Expertise, Soldier options), level-up, multiclassing, play actions, export/import, custom content
+  packs, axe accessibility).
 - `packages/engine/test/perf.test.ts` — an automated perf *tripwire* (median of 5 reduce+derive
   runs over an extended fixture, budget 150 ms — generous CI headroom, not the real-device number).
   This is the "automated proxy" the plan's Global Constraints refer to; the device numbers below
@@ -450,6 +451,75 @@ step 5 automatically; the other steps rely on unit specs and engine goldens (pla
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | | |
 | | | | | | | | | | | |
+
+---
+
+## 8e. Custom content packs on a real phone (Phase 4 slice 5, plan 15)
+
+**What this proves:** importing a pack from the phone's own file picker, the trust screen, pinning
+and updating packs, the rebase report, the homebrew forms, and `.hero` bundles that carry packs.
+Everything runs under real touch input, at real phone width, with a screen reader.
+
+`apps/web/e2e/custom-packs.spec.ts` (default project) automates the desktop path of steps 1–7.
+`e2e/sync/auth.spec.ts`'s restore scenario automates the missing-pack banner on a second device.
+This pass covers what those cannot: the native file picker, a real download and share, and a
+second real device. Fixtures: copy `apps/web/e2e/fixtures/packs/sample-content.hkpack` and
+`sample-content-v2.hkpack` to the phone first.
+
+### Procedure
+
+1. **Import + trust screen** (tasks 2–3).
+   - Open Packs from the nav, tap Import, and pick `sample-content.hkpack` in the native picker.
+   - The trust screen shows "Install Sample content?", 1 image, a dependency on `srd-5e-2024
+     ^0.1.0`, the attribution, entity counts (1 each of item, spell, feat and species), and "This
+     pack does not change any existing content." under overrides.
+   - With TalkBack/VoiceOver, focus stays inside the dialog and its title is announced.
+   - Install: the pack appears under Content.
+   - Re-import the same file: Install is disabled, with "This pack is already installed."
+2. **Pin in the wizard** (task 4). Start a new character.
+   - The name step lists "Content packs", with Sample content unchecked. Check it.
+   - Moonkin is offered as a species, and Moonblade Sickle among the Weapon Masteries.
+   - Create the character, then open the Timeline: it shows "Pinned Sample content v1.0.0."
+3. **Pin/unpin on the Build tab** (tasks 4–5).
+   - Build → Content packs: the core row is checked and disabled, and its reason ("The core rules
+     are always on.") is read out.
+   - Uncheck Sample content: a report opens, listing the choices that would be cleared (the Moonkin
+     species, and the Moonblade Sickle mastery if you picked it).
+   - Cancel: the box goes back to checked and nothing changes.
+4. **Update report** (task 5).
+   - Import `sample-content-v2.hkpack`. On `/packs`, the 1.1.0 row shows "Update available".
+   - In the character's Build tab, the row reads "Update available: v1.0.0 → v1.1.0". Tap Update.
+   - The report lists "Weapon Masteries: Moonblade Sickle → Moonsilver Sickle" under "Choices moved
+     to a replacement". Confirm.
+   - The Timeline reads "Updated Sample content v1.0.0 → v1.1.0."
+5. **Missing-pack banner** (task 4). Remove Sample content 1.1.0 from its detail page.
+   - The detail page shows "Used by 1 character" before you confirm.
+   - The character's sheet now shows the warning banner listing `sample-content@1.1.0`, with a
+     "Manage packs" link. The banner is on every tab.
+6. **Homebrew forms** (task 7).
+   - Packs → Homebrew → New item. Save with an empty name: the error is announced and
+     `aria-invalid` is set. Then save "Starlit Lantern".
+   - Do the same with a spell (pick at least one class), a feat, and a species with one trait.
+     Russian or Ukrainian names give readable slugs.
+   - Pin "My homebrew" on a character's Build tab: the item appears in Play → Add from library.
+   - Edit the item's name: the pinned character fast-forwards silently, and the toast says "1
+     character updated".
+7. **`.hero` with packs** (task 6).
+   - Export a character that pins Sample content and homebrew.
+   - Remove Sample content on the phone, then import the `.hero` from the characters list.
+   - The pack is back under Content, and the sheet shows no banner.
+   - Also import the `.hero` on a second device that never had the pack: the pack installs there
+     too.
+8. **Other-device homebrew hint** (task 7 fix round). On that second device, `/packs` lists the
+   first device's homebrew pack with "From another device". Its own "My homebrew" (after one save
+   there) is a separate row without the hint.
+
+### Results
+
+| Device | Date | Import + trust | Wizard pin | Pin/unpin | Update report | Missing banner | Homebrew forms | `.hero` packs | Other-device hint |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | |
+| | | | | | | | | | |
 
 ---
 

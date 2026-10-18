@@ -30,7 +30,7 @@ apps/web/src/
     characters/        list; create-wizard/; sheet/ (play, build, timeline, override); level-up/
     campaigns/         list; create; lobby (join code/QR); party; settings; log; packs
     library/           browse + search + entity detail
-    packs/             installed, import, quick-homebrew (item/spell/feature forms)
+    packs/             installed list, import + trust dialog, detail/remove, homebrew/ (item/spell/feat/species forms) — lazy (plan 15)
     settings/          appearance, language, storage, account, about/attribution
   assets/i18n/<scope>/<locale>.json, assets/icons/sprite.svg, assets/fonts/
   styles/              tokens.scss (from @hk/ui-tokens), base.scss, typography.scss, layers.scss, utilities.scss
@@ -46,7 +46,7 @@ Rule: a component lives under the view that uses it; on the second consumer it m
 | Store | Holds | Source |
 |-------|-------|--------|
 | `AuthStore` | user, session status, devices | api |
-| `PackStore` | installed packs by (id, version), enabled sets, content index cache | Dexie + static assets |
+| `PackStore` | `corePack`, `installedContent`, `translationPacks`, `packs` (all three), `installed` (`id@version` list); writes via `importContent`/`installContent`/`removeContent`/`importTranslation`/`removeTranslation`. "Enabled" = pinned per character (`facts.pins`); the per-pin-set index cache lives in `EngineFacade.indexFor` | Dexie + static assets |
 | `StreamReplica<T>` | committed events, pending events, `facts` (computed), `lastSeq` | Dexie + sync client |
 | `CharacterStore` | `replica` + `sheet = computed(() => derive(facts(), index(), opts()))`, outstanding choices, issues | engine |
 | `CampaignStore` | campaign replica, settings, members, party overview, roll log | engine + sync |
@@ -58,6 +58,44 @@ Rule: a component lives under the view that uses it; on the second consumer it m
 (persist, socket sends). No NgRx. Components read signals and call store methods that
 build events via `engine.propose*` and hand them to the replica (`replica.append(events)`
 → local apply + persist + send).
+
+### Engine scoping (plan 15)
+
+Each character derives against its own pinned pack set, so there is no single global content
+index (doc 04, "Per-character content index"). The scoping rules, from task 4:
+
+- **Root facade.** `EngineFacade.index()`/`localizer()` on the root injector cover the core plus
+  its translations. Library browse/detail, pack info, and the campaign party views use them.
+- **Character index.** `CharacterStore.index` = `indexFor(facts.pins)`. `CharacterStore.missingPins`
+  lists pins with no installed `id@version`; the sheet shell shows them in the missing-pack banner.
+- **Scope providers.** `provideEngineScope(scope)` (`shared/services/engine/engine-scope.providers.ts`)
+  provides a component-level `EngineFacade` resolved against `scope.pins`, plus a component-level
+  `DialogService`.
+  - The sheet shell provides `CharacterEngineScope`, which covers every tab and level-up.
+  - The creation wizard provides `CreateWizardState`, and the add-item dialog provides its own
+    scope.
+  - Scoping follows the element injector tree. Routed children see the scope.
+  - Dialogs opened from inside a scope get a content injector parented to the opener, so they see
+    the scope too. This covers the provenance popover, the add-item dialog, and the rebase report.
+- **Root services.** `MarkdownService`, `CharacterStore` and the other root services see only the
+  root facade. Callers pass a localizer (`MarkdownService.render(markdown, localizer?)`) or use
+  `indexFor(pins)`.
+- **Known gap.** The DM party view still uses the root index for members' characters (task 4,
+  concern 1).
+
+### Packs route (plan 15)
+
+`/packs` loads `views/packs/packs.routes.ts` lazily. It has a nav entry, and Settings links to it.
+
+| Route | Shows |
+| --- | --- |
+| `/packs` | The core, content and translation groups. Import opens the hidden `.hkpack`/`.json` input, then `HkpackReader`, then the trust dialog. Content rows show "Update available" and "From another device" badges. |
+| `/packs/:key` | Detail: the same info as the trust dialog, plus "Used by N characters" and Remove (not offered for the core). The count is a `reduce` fold over stored event logs, in `PackUsageService`. |
+| `/packs/homebrew` | The homebrew list. |
+| `/packs/homebrew/new/:type`, `/packs/homebrew/edit/:type/:slug` | The homebrew forms. |
+
+Task 3 added axe e2e checks for the list, the core detail, and the trust dialog. Task 9 added an
+end-to-end flow (`e2e/custom-packs.spec.ts`).
 
 ## Routing
 

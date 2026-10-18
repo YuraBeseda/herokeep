@@ -29,6 +29,8 @@ Format version `format: 1`.
 
 Distribution: a pack is either a single `pack.json` or a `.hkpack` ZIP (`pack.json` +
 `assets/<hash>`). Core packs are served as static assets; others are imported by users.
+The import pipeline, its container caps and error codes, per-character pinning, updates, the
+homebrew pack and `.hero` carriage are described in "Custom pack platform (plan 15)" below.
 
 ## Entity
 
@@ -670,6 +672,9 @@ Keys are entity ids without the pack prefix plus a field path; nested feature te
   whose `choiceId` no longer exists, whose selection is missing/deprecated, or whose
   prerequisites now fail; (4) present a report; (5) on confirm, emit one transaction:
   `pack.pinned` + `decision.cleared`/`decision.made` fix-ups.
+- Implementation (plan 15): steps 1–3 are the pure engine function `planRebase`, step 4 the web
+  `RebaseReportDialogComponent`, step 5 a single `appendTx(plan.events)`. See "Rebase
+  implementation" below for the two rulings that refine step 3.
 
 ## Validation levels
 
@@ -684,4 +689,262 @@ Keys are entity ids without the pack prefix plus a field path; nested feature te
 `pack-tools build ./my-pack/` accepts YAML or JSON per entity in folders by type, merges
 into one `pack.json`, validates, and optionally zips assets. `pack-tools diff a b` prints a
 human-readable change list used to write release notes. The Phase 7 GUI editor produces
-the same files.
+the same files. `build --zip` and `validate <file>.hkpack` are described under ".hkpack build
+and validate" below.
+
+## Custom pack platform (plan 15)
+
+Plan 15 (Phase 4 slice 5) made third-party and homebrew content packs work end to end. Sources:
+the plan-15 task reports (`task-N`) and the commits named in each paragraph. The plan is
+`docs/superpowers/plans/2026-10-18-phase-4-slice-5-custom-pack-platform.md`.
+
+### Import pipeline, caps and error codes
+
+`HkpackReader.read(file)` (`apps/web/src/app/shared/services/packs/hkpack-reader.service.ts`,
+task 2, commits 5a05772, ce4dd43) returns a `PackImportPreview` and **stores nothing**. A file
+whose name ends in `.json` is read as a bare `pack.json`. Anything else is unzipped as a
+`.hkpack`. The checks run in this order, and the first failure refuses the import:
+
+1. **File size.** A `.hkpack` must be ≤ `HKPACK_LIMITS.maxZipBytes`. A bare JSON file must be ≤
+   `PACK_LIMITS.maxBytes`.
+2. **Unzip** (lazy `import('fflate')`). The container caps are checked inside the fflate `filter`
+   against each entry's central-directory sizes, BEFORE anything is inflated, and the first cap
+   hit throws out of the walk:
+   - entry count ≤ 2001, directory entries included;
+   - `pack.json` ≤ 5 MiB;
+   - total asset bytes ≤ 64 MiB.
+
+   A forged zip64 directory that claims millions of entries therefore stops at entry 2002 (task 2
+   fix round). Only `pack.json` and `assets/<64-hex>` are inflated.
+3. **`pack.json` present.**
+4. **Schema.** `JSON.parse`, then strict `parsePack`, then `kind === 'content'`. Other kinds are
+   refused as bad-schema.
+5. **Semantics.** `validatePack(pack, [core, ...installed content])`. Error diagnostics refuse the
+   import; warnings travel on the preview.
+6. **Assets** (the shared `verifyPackAssets`, `services/packs/pack-assets.ts`, task 6). Each
+   listed asset must be:
+   - present in the zip;
+   - ≤ min(declared size, the `AssetSchema` cap);
+   - of the declared mime, sniffed from its magic bytes;
+   - of the declared sha256.
+7. **Conflict.** A different canonical JSON already installed under the same `id@version` is
+   refused, and so is any reuse of the core pack's id. An identical one sets `alreadyInstalled`.
+
+The constants live in `packages/protocol/src/bundle/hkpack.ts` (task 1, commit 1b380d5):
+`HKPACK_PACK_ENTRY = 'pack.json'`, `HKPACK_ASSET_DIR = 'assets/'` and
+`HKPACK_LIMITS = {maxEntries: 2001, maxAssetBytesTotal: 64 MiB, maxZipBytes: 72 MiB}`.
+
+Each refusal is a `PackImportError` subclass whose `code` is an i18n key in the `packs` scope
+(×3):
+
+| Code | Refused because |
+| --- | --- |
+| `packs.import-failed-too-large` | a container cap was hit (`detail`: `zip-bytes`, `entries`, `pack-json-bytes` or `asset-bytes-total`) |
+| `packs.import-failed-bad-zip` | the file is not a readable zip |
+| `packs.import-failed-missing-pack-json` | the zip has no `pack.json` |
+| `packs.import-failed-bad-schema` | the schema or the kind check failed (issues listed on `/packs`) |
+| `packs.import-failed-invalid` | `validatePack` returned errors (diagnostics listed on `/packs`) |
+| `packs.import-failed-asset-missing` | a listed asset is not in the zip (also any bare `pack.json` that lists assets) |
+| `packs.import-failed-asset-too-large` | an asset exceeds its declared size or the schema cap |
+| `packs.import-failed-asset-mime-mismatch` | the magic bytes do not match the declared mime (task 2 addition) |
+| `packs.import-failed-asset-hash-mismatch` | the sha256 does not match |
+| `packs.import-failed-conflict` | see step 7 |
+| `packs.import-failed-unknown` | anything else (task 3) |
+
+The trust screen (`PackTrustDialogComponent`, task 3, commit dadaa67) is the ADR-008 enable
+screen. It shows the version, authors, license, asset count and size, dependencies, the
+attribution (sanitized markdown), entity counts by type, override targets (or "changes nothing")
+and warnings. Install calls `PackStore.importContent(preview)`.
+
+`importContent` → `installContent(pack, assets)` (tasks 2 and 6) writes the pack row first, then
+each asset as a `BlobRow` with `origin: 'pack'`. If any write fails, it rolls back what it wrote.
+The cache manager's LRU and orphan sweeps skip `origin: 'pack'` rows, because the pack store owns
+their lifecycle (task 2, deviation 5). `removeContent(key)` deletes the row and every asset blob
+that no remaining installed pack lists and whose origin is `pack`.
+
+### Installed vs pinned
+
+A pack is **installed** on a device: a `packs` row, listed in `PackStore.installedContent`, and
+re-validated against the core and the other content packs at every `init()`. Installed packs do
+not sync.
+
+A pack is **pinned** by a character, through `facts.pins` (`pack.pinned@1` / `pack.unpinned@1`).
+Pins are events, so they sync. Only the pinned packs take part in that character's derive.
+`sheet.pins` copies them, and `sheet.corePackId` names the index's `kind: 'core'` pack (task 1).
+The core pin can never be dropped: `propose.unpinPack` refuses it (`pack.unpinCore`), and
+`planRebase` never drafts it. "Enabled" in doc 09's `PackStore` row means pinned per character
+(plan ruling 3).
+
+A pin with no matching installed `id@version` is listed by `CharacterStore.missingPins`. It shows
+as the sheet's missing-pack banner, which links to `/packs` (task 4). Its entities derive as
+unresolved warnings, never errors: the `pack-unpinned-unresolved` golden pins this (task 8).
+
+### Per-character content index: `indexFor` and `pinnedRoots`
+
+`pinnedRoots(packs, pins)` (`packages/engine/src/content/deps.ts`; task 4, commits 2769f4c and
+aab3605) returns the roots of a character's index:
+- the pinned ids, sorted by id;
+- then, sorted by id, every translation pack that translates a pinned pack or one of their
+  transitive dependencies.
+
+A pin whose pack is not installed stays a root. The index then reports it (`deps.missing` /
+`deps.pinMissing`) rather than dropping it silently.
+
+`EngineFacade.indexFor(pins)` = `createContentIndex(packStore.packs(), {pins, roots:
+pinnedRoots(packs, pins)})`. It is memoized by the sorted `id@version` list, capped at 32 entries,
+and dropped whenever `packStore.packs()` changes. Two more rules apply:
+- A core pin at another version resolves against the installed core, because old core versions
+  are not retained (see the owner-flags).
+- `index()` on the root facade is `indexFor({core})`, i.e. core plus its translations. The
+  Library and the root `MarkdownService` therefore show only the core.
+
+The golden harness uses the same roots for its `fixture:` goldens (task 8). A replay test derives
+every core-only golden byte-identically under the per-character index (task 4).
+
+### Rebase implementation
+
+`planRebase(facts, current, next, nextPins, rules?) → {changes, invalid, migrations, events}`
+(`packages/engine/src/rebase/plan.ts`, task 1, commit 60debb3) is pure and deterministic. It maps
+to the steps in "Versioning and rebase" above:
+
+- **Steps 1–2.** The caller passes `current` = `indexFor(pins)` and `next` = `indexFor(nextPins)`.
+  The Build tab first refuses a change whose `next` index has error diagnostics that `current`
+  does not have, so pre-existing errors never block an update (tasks 4 and 5).
+- **Step 3, migrations.** Each selected id that `next` marks `deprecated.replacedBy` is replaced,
+  following chains transitively and safely against cycles. If the migrated selection validates,
+  each replacement becomes a `Migration`. If it does not, the decision is invalid with
+  `selection-deprecated`.
+- **Step 3, invalid decisions.** Each decision is re-validated with `validateSelection` against
+  `next`, the way it was validated at pick time (without itself). The reasons are, in priority
+  order: `choice-missing`, `selection-missing`, `prerequisite-failed`.
+- **Ruling: decisions that were already invalid under `current` are not reported.** The update
+  did not cause them, and reporting them would block the homebrew fast-forward forever.
+- **Ruling: `changes` compares the sheet now with the sheet AFTER the plan is applied.** That is,
+  facts with the new pins, the migrations applied and the invalid decisions cleared, derived
+  against `next`. The report is exactly what Confirm produces, and a test pins
+  `changes == diffSheets(derive(facts, current), derive(replayed, next))`. `diffSheets` diffs
+  leaves only and excludes `contributions`, `sources` and `issues`.
+- **Step 4.** `RebaseReportDialogComponent` (tasks 4 and 5, commit 9bd808e) groups the changes by
+  top-level sheet key. It lists invalid decisions with their localized prompt, reason and cleared
+  names, and migrations as "prompt: from → to". It acts on Confirm or Cancel exactly once, and
+  Escape cancels.
+- **Step 5.** `events` are ordered `pack.pinned` (sorted by id, with `previous`), then
+  `pack.unpinned` (never the core), then `decision.made` for each migrated decision (one per
+  decision, keeping its original `context`), then `decision.cleared` for each invalid decision.
+  Confirm appends them in ONE transaction. Cancel, Escape or the backdrop appends nothing.
+
+**Updates** (task 5, commits 7e5f77f and 10e054b). `updatesFor(pins, installed, shippedCore)`
+offers, per pinned content pack, the highest installed version strictly above the pin (semver
+precedence, so prereleases count). It offers a **core** update only when the shipped core is
+strictly NEWER than the pinned one: the amended ruling 6 means a newer pinned core gets no badge.
+A malformed pin gets no update. The Build tab's Packs section shows "Update available: vX → vY"
+with an Update button. `/packs` badges the highest installed version a stored character could
+move to. A core update opens the report in validation-only mode, because the previous core is not
+on the device and only the choices are re-checked. The timeline reads "Updated <pack> vX → vY."
+or "Pinned …" / "Unpinned …".
+
+### Homebrew pack
+
+Quick homebrew (task 7, commits bb95fb2, a9c231d, b0a51a4 and 1e76090) is an ordinary content
+pack authored on the device.
+
+**Identity and versions**
+- The pack id is device-unique: `homebrew-<8 hex>`, generated with the app's crypto RNG and
+  stored in settings under `homebrewPackId`. Another device's homebrew pack therefore installs
+  beside the local one and is marked "From another device" on `/packs`.
+- Every save writes a new version: 0.1.0 first, then a PATCH bump.
+- `system` is read from the core's system entity (`5e-2024`), and `dependencies` is
+  `[{id: core, range: ^<core version>}]`. The pack name is the locale's "My homebrew".
+
+**Forms**
+- Four lazy routes: `/packs/homebrew` (list), `/packs/homebrew/new/:type` and
+  `/packs/homebrew/edit/:type/:slug`, for item, spell, feat and species.
+- Mechanics are text-only (`feature.text`), apart from the structural fields: weapon and armor
+  stats, spell fields, size, speed.
+- Open vocabularies (damage types, weapon properties, schools, classes, …) are harvested from the
+  installed core, never listed in TypeScript.
+- Slugs come from `slugify` with a Russian/Ukrainian transliteration table, plus per-type
+  collision suffixes.
+
+**Saving**
+- `parsePack` plus `validatePack` must pass, or nothing is written.
+
+**Fast-forward**
+- Each stored character pinning an older version of this device's homebrew pack is moved
+  silently: `plan.events` are appended in one transaction per character (`appendTxToStream`).
+- A character stays **pending** (no event) when:
+  - its stream is in sync mode;
+  - its pinned version is not installed;
+  - the next index has any error;
+  - the plan has invalid decisions;
+  - the update would add a new `derive.unresolved*` issue, for example a held item that was
+    deleted.
+- An older version is kept while a pending character still pins it, so that character's Build-tab
+  report can still list what changed (deviation 1).
+- Measured: 363–431 ms for 20 level-20 golden-log characters (task 7 fix round).
+
+### `.hero` bundles carry pinned packs
+
+The writer (task 6, commits a1531ce and b6d6a4e) adds every non-core pin whose exact
+`id@version` is installed and whose asset blobs are all present locally. Each one becomes:
+- `packs/<id>@<version>.json`: canonical JSON;
+- `assets/<hex>`: its assets, de-duplicated;
+- a manifest row `packs[] {id, version, path, sha256}` (doc 02).
+
+A core-only character omits `packs` entirely.
+
+The reader validates everything before storing anything:
+1. Each pack's `path` must equal `packs/<id>@<version>.json`, its size is capped, and its sha256
+   must match.
+2. Strict `parsePack`, kind `content`, with `id@version` matching the row.
+3. Conflict check: the core id, or a different JSON under the same `id@version` →
+   `characters.list.toast.import-failed-pack-conflict`.
+4. `validatePack` against the core, the installed packs and the bundle's own packs, plus
+   `verifyPackAssets`. A failure → `import-failed-bad-pack` (or `import-failed-hash-mismatch` for
+   a sha256 mismatch).
+
+It then installs the missing packs through `installContent` before writing the character. Packs
+stay installed if the character write later fails. The pin warning lists only pins that are
+neither carried nor installed.
+
+### `.hkpack` build and validate
+
+`herokeep-pack build <dir> --zip` (task 8, commit 21158eb) writes `<id>-<version>.hkpack` beside
+the output. The zip contains the canonical `pack.json`, which is the same bytes as the written
+`pack.json` under `--zip`, plus `assets/<hex>`.
+- **Determinism:** entries are in code-unit name order, deflate level 9, a fixed 1980-01-01 local
+  mtime, `os: 0`, no extra fields. A rebuild reproduces the bytes.
+- **Asset errors:** an asset file no `assets[]` entry lists is an error (`asset.unlisted`), and so
+  are a missing, oversized or wrong-hash asset. On any error, or any `validatePack` error, nothing
+  is written.
+
+`validate <file>.hkpack` applies the same `HKPACK_LIMITS` from the central directory. It does not
+sniff magic bytes: a wrong-mime asset passes the CLI and is refused at import.
+
+The checked-in e2e fixtures are built this way (commit 046be5a):
+- `apps/web/e2e/fixtures/packs/sample-content.hkpack` (1.0.0);
+- `sample-content-v2.hkpack` (1.1.0, which renames the weapon with `deprecated.replacedBy`);
+- `build.ts`, which regenerates both;
+- the guard test `packages/pack-tools/test/fixture-packs.test.ts`.
+
+### Owner-flags (plan 15)
+
+- **Container caps are this plan's choice** (ruling 1/2). ADR-008 caps the pack JSON and each
+  asset but sets no container totals, so the 2001 entries / 64 MiB / 72 MiB values are the plan's
+  choice.
+- **Old core versions are not retained** (ruling 6, amended). A core update is validation-only:
+  no sheet diff is possible without the previous core.
+- **No campaign pack relay yet** (ruling 12). `pack.enabled@1` carries `{packId, version, sha256}`
+  only. The Durable Object stores no pack JSON, and the relay of pack JSON and assets to members
+  is a later slice (doc 07, "Pack assets").
+- **Homebrew does not merge across devices** (task 7 fix round). Each device authors its own
+  `homebrew-<hex>` line, and a `.hero` from another device installs that device's line beside
+  yours.
+- **The transliteration table is a convenience, not a standard** (ruling 10).
+- **A rebase migrates decisions, not inventory item ids** (task 8). After the v2 update, the old
+  Moonblade Sickle instance still resolves (v2 keeps the deprecated entity) but loses its mastery,
+  because the migrated decision now names the Moonsilver Sickle. A v3 that dropped the deprecated
+  entity would leave that inventory row unresolved. The `pack-updated-v2` golden and
+  `apps/web/e2e/custom-packs.spec.ts` both pin today's behavior.
+- **Sharing an installed pack as a `.hkpack` from the device is not built.** It is not on the
+  roadmap line.

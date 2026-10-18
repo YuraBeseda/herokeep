@@ -74,10 +74,20 @@ image arrives.
 
 ## Pack assets
 
-Content packs list assets by hash; a `.hkpack` ZIP carries them. Enabling a pack in a
-campaign announces its assets (`pack.enabled` payload includes the manifest) so the DM's
-device (which imported the pack) becomes their holder. The DO never stores pack assets;
-it stores only the pack's JSON (ADR-008).
+Content packs list assets by hash; a `.hkpack` ZIP carries them. On import, each asset is
+verified (size, magic-byte mime, sha256) and stored locally as a blob row with
+`origin: 'pack'`. The cache manager's LRU and orphan sweeps never evict such rows: the pack store
+owns them, and removing the pack deletes the asset blobs that no other installed pack lists
+(plan 15 task 2). A `.hero` export carries a pinned pack's assets as `assets/<hex>` (plan 15
+task 6).
+
+**Corrected (plan 15 owner-flag):** an earlier version of this section said `pack.enabled`
+carries the pack manifest and the DO stores the pack's JSON. Neither is built. `pack.enabled@1`
+carries only `{packId, version, sha256}` (`packages/protocol/src/events/campaign.ts`). The
+campaign actor records that triple in its meta list and stores no pack JSON
+(`apps/api/src/core/streams/campaign-actor.ts`, the `pack.enabled` case). Relaying a pack's JSON
+and assets from the DM's device to members is a later slice. Until then, every member installs
+the pack on their own device. The DO never stores pack assets (ADR-008).
 
 ## Export
 

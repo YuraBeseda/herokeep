@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-10-18 — executing per the standing autonomous loop (plan 14 merged @ 7a07ee1).**
+**STATUS: EXECUTED 2026-10-18 — all 9 tasks complete on branch `worktree-phase-4-plan15-packs` (merged head recorded at merge).**
 
 **Goal:** Ship the remaining Phase 4 roadmap deliverable — custom content packs end to end: import a `.hkpack` or `pack.json` with full validation and a trust screen, pin packs per character (the content index becomes per-character), update a pinned pack through the documented rebase flow with a report, carry non-core packs inside `.hero` bundles, author quick homebrew (item, spell, feat, species) as a local content pack, and build `.hkpack` files with pack-tools.
 

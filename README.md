@@ -20,7 +20,7 @@ Content: `pnpm --filter @hk/content build:pack` generates the SRD 5.2.1 core pac
 
 - `pnpm --filter web start` — dev server
 - `pnpm --filter web build` — production build; `postbuild` measures the real gzipped initial bundle against a ≤600 KB budget
-- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (11 specs, 26 tests: offline, library/search/locale, character creation (Fighter + Monk + Rogue with Expertise), level-up, multiclassing, play actions, export/import, axe) against it
+- `pnpm --filter web e2e` — builds production, then runs the Playwright suite (13 specs, 31 tests as of plan 15: offline, library/search/locale, character creation (Fighter + Monk + Rogue with Expertise + Soldier options), level-up, multiclassing, play actions, export/import, custom content packs, axe) against it
 
 PWA: `@angular/service-worker` precaches the app shell, fonts, icon sprite, i18n JSON and the core content pack, so the app keeps working in airplane mode after a first load; updates prompt rather than auto-reload. An in-app dismissible banner on the characters list offers native install on Chromium (`beforeinstallprompt`), or an iOS "Add to Home Screen" instructions sheet (with the 7-day standalone-storage warning) on Safari, which never fires that event; the Play tab can hold a Screen Wake Lock during play (the toggle is hidden entirely where the API isn't supported). See `docs/manual-device-checklist.md` for the manual install/offline/export/perf passes this plan adds.
 
@@ -305,6 +305,79 @@ doc 05.
 - **Gates at close** (task 8): pack 1866 entities / 2,230,308 bytes / 0 diagnostics; root 136 files /
   1960 tests; web 136 files / 1518 tests; goldens 72/72; gzip bundle 340.3 / 600 KB.
 
+### Phase 4 slice 5 — custom pack platform (complete)
+
+Plan 15 adds third-party and homebrew content packs, end to end. All of it is generic mechanism,
+with no new core content. Sources are the plan-15 task reports (`task-N` below). The full
+reference is "Custom pack platform (plan 15)" in `docs/02-architecture/04-content-packs.md`, plus
+docs 02, 07 and 09.
+
+- **Import with a trust screen** (tasks 2–3). `/packs` imports a `.hkpack` (zip) or a bare
+  `pack.json`.
+  - Everything is checked before anything is stored: container caps from the zip's central
+    directory (2001 entries, 64 MiB of assets, a 72 MiB zip), the strict schema, `validatePack`,
+    and each asset's size, magic-byte mime and sha256.
+  - The trust screen then lists authors, license, dependencies, attribution, entity counts,
+    overrides and warnings before Install.
+  - Pack assets are stored as `origin: 'pack'` blobs, which the cache sweeps never evict.
+  - Refusals map to 11 `packs.import-failed-*` codes.
+- **Packs are pinned per character** (tasks 1 and 4). Each character derives against its own pins
+  (`EngineFacade.indexFor`, engine `pinnedRoots`), so an installed pack only changes the characters
+  that pin it.
+  - The creation wizard lists installed packs to pin.
+  - The Build tab can pin and unpin them.
+  - A pin with no installed pack shows a missing-pack banner.
+  - The new `pack.unpinned@1` event is owner-only, and its reducer never refuses.
+- **Updates with a rebase report** (tasks 1 and 5). The engine's pure `planRebase` lists:
+  - the sheet changes, compared against the sheet AFTER the update;
+  - the decisions the update invalidates (decisions that were already invalid are not listed);
+  - the `deprecated.replacedBy` migrations.
+
+  Confirm writes one transaction: `pack.pinned` → `pack.unpinned` → `decision.made` →
+  `decision.cleared`. The Build tab and `/packs` show "Update available". A core update is
+  validation-only, and is offered only when the shipped core is newer.
+
+- **Homebrew** (task 7). `/packs/homebrew` has item, spell, feat and species forms. They author a
+  device-unique `homebrew-<8 hex>` content pack, starting at 0.1.0 with a PATCH bump per save.
+  - Characters that pin it fast-forward silently, unless the update would invalidate or unresolve
+    something; those stay pending.
+  - Measured: 363–431 ms for 20 level-20 characters.
+- **`.hero` carries packs** (task 6). An export bundles every installed, non-core pinned pack as
+  `packs/<id>@<version>.json` plus its assets. Import validates them all first, then installs any
+  that are missing.
+- **pack-tools** (task 8). `build --zip` writes a deterministic `.hkpack`, and `validate` accepts
+  `.hkpack`. Two checked-in fixtures (`apps/web/e2e/fixtures/packs/`) are guarded by a rebuild
+  test.
+- **Goldens & perf** (task 8). The golden harness loads fixture content packs (`fixture:` entries).
+  Three new goldens (homebrew-pinned, pack-unpinned-unresolved, pack-updated-v2) bring the suite to
+  **77/77**. The new scenario derives in a **0.168 ms median**, and the heaviest (paladin-20) in
+  0.473 ms, against the 15 ms mid-phone budget (`packages/engine/test/golden/PERF.md`).
+- **e2e** (task 9). The offline project gained `custom-packs.spec.ts`, which covers:
+  - import → trust → Install → a Moonkin fighter pinned in the wizard;
+  - the pack weapon's attack row;
+  - the v2 update through the report (the masteries decision migrates);
+  - a pinned homebrew item in the add-item picker;
+  - a `.hero` round trip that reinstalls the removed pack.
+
+  The full offline run is **31/31**. The `e2e:sync` restore scenario now also checks that a pin
+  syncs without its pack, showing the banner on the new device, and it passed **8/8** in one pass.
+
+- **Gates at close** (task 9):
+  - pack: 1866 entities / 2,230,308 bytes / 0 diagnostics;
+  - root: 145 files / 2102 tests;
+  - api Cloudflare: 8 files / 40 tests + 1 skipped;
+  - web: 147 files / 1729 tests;
+  - goldens: 77/77;
+  - gzip bundle: 343.6 / 600 KB.
+- **Owner-flags:**
+  - the container caps are this plan's choice;
+  - old core versions are not retained;
+  - the campaign pack relay is not built (`pack.enabled@1` carries `{packId, version, sha256}`
+    only);
+  - homebrew does not merge across devices;
+  - the transliteration table is a convenience;
+  - a rebase migrates decisions, not inventory item ids.
+
 ## Plans
 
 Implementation plans live in `docs/superpowers/plans/`; the current ones are
@@ -319,4 +392,6 @@ feats, and magic items — Phase 4 slice 2, above), and
 `2026-10-03-phase-4-slice-3-vocabulary-completions-and-polish.md` (vocabulary completions and
 builder polish — Phase 4 slice 3, above), and
 `2026-10-17-phase-4-slice-4-carry-retirement-and-rule-options.md` (carry retirement and
-per-character rule options — Phase 4 slice 4, above).
+per-character rule options — Phase 4 slice 4, above), and
+`2026-10-18-phase-4-slice-5-custom-pack-platform.md` (custom pack platform — Phase 4 slice 5,
+above).

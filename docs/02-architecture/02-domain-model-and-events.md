@@ -89,7 +89,8 @@ generated, e.g. quota notices — none in v1).
 | `character.archived` / `character.restored` | O | `{}` | soft delete |
 | `character.owner_transferred` | D, O | `{toUserId}` | claim / hand over |
 | `character.campaign_joined` / `character.campaign_left` | O, D | `{campaignId}` | mirrored on campaign stream |
-| `pack.pinned` | O, D | `{packId, version, previous?}` | rebase commits this |
+| `pack.pinned` | O, D | `{packId, version, previous?}` | rebase commits this; the wizard emits one per checked content pack, sorted by id, as the first drafts of the creation transaction that follows `character.created` (shared `txId` with the decisions, level, and HP drafts; plan 15 task 4) |
+| `pack.unpinned` | O | `{packId}` (strict) | plan 15 task 1. The reducer deletes `pins[packId]` and never refuses: an id that is not pinned leaves facts unchanged, with no skip entry. Refusing to drop the core pin is the proposal's job (`propose.unpinPack` throws `pack.unpinCore`). Additive: older logs never contain it |
 | `decision.made` | O | `{choiceId, selection: string[], context?}` | the builder's atom; for ability-score generation `context` holds `{method: standardArray \| pointBuy \| manual \| roll, scores, rolls?: [[d,d,d,d]…]}` so the timeline can show the dice |
 | `decision.cleared` | O | `{choiceId}` | rare; used by rebase |
 | `level.gained` | O | `{classId, level, hpRoll?: number \| "average", subclassId?}` | inside a `txId` with its decisions |
@@ -131,6 +132,37 @@ the `count` form carrying a caller-rolled regain total for an item with `regain`
 impossible total refuses the whole rest proposal, so no event is written (doc 04, "Rolled charge
 regain").
 
+### Rebase transaction (plan 15)
+
+Pinning, unpinning, or updating a content pack writes ONE transaction, which shares a `txId`. Its
+events come from the engine's `planRebase(...).events` (doc 04, "Rebase implementation"), always
+in this order:
+
+1. `pack.pinned {packId, version, previous?}`, one per changed or new pin, sorted by `packId`;
+2. `pack.unpinned {packId}`, one per dropped pin (never the core);
+3. `decision.made {choiceId, selection, context?}`, one per decision whose selection moved to a
+   `deprecated.replacedBy` replacement, keeping the original `context`;
+4. `decision.cleared {choiceId}`, one per decision the new pack set invalidates.
+
+A plain pin (`propose.pinPack`) is a one-event transaction. Confirming the Build tab's report
+appends the plan exactly. The homebrew fast-forward appends the same events per character with
+`CharacterStore.appendTxToStream` (plan 15 task 7). No new event type carries the report:
+replaying the log reproduces the result.
+
+### `.hero` bundle manifest
+
+`HeroBundleManifestSchema` (`packages/protocol/src/bundle/manifest.ts`) describes the
+`manifest.json` of a `.hero` export. Plan 15 task 1 added the optional
+`packs?: [{id, version, path, sha256}]`:
+- `path` is `packs/<id>@<version>.json`, at most 256 characters; the reader requires exactly that
+  form;
+- `sha256` uses the `sha256:<64 hex>` blob-hash form;
+- the pack's assets travel as `assets/<hex>`.
+
+The writer omits the key for a core-only character, so older bundles and older readers see no
+change (plan 15 task 6). Events and bundle manifests are not part of the generated pack JSON
+Schema.
+
 ## Event catalog — campaign stream
 
 Actor: **D** DM, **M** member (any role), **S** system.
@@ -142,7 +174,7 @@ Actor: **D** DM, **M** member (any role), **S** system.
 | `campaign.settings_changed` | D | `{settings}` (full document, see below) |
 | `campaign.join_code_rotated` | D | `{joinCode}` (also updates D1) |
 | `campaign.archived` | D | `{}` |
-| `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}` (JSON stored in DO `packs`) |
+| `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}`. The campaign actor keeps only this list in its `packs` meta (for the non-core pack quota). No pack JSON is stored: the DO's `packs` table and `StreamStore.putPack` exist, but nothing writes them yet. The pack relay to members is a later slice (plan 15 owner-flag, doc 07 "Pack assets") |
 | `member.joined` / `member.left` / `member.removed` | M / D | `{userId, displayName, role}` |
 | `member.renamed` | M | `{displayName}` |
 | `campaign.character_joined` / `campaign.character_left` | M, D | `{characterId, ownerId, name}` |
