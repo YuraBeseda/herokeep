@@ -124,9 +124,12 @@ export type QueryPick = Extract<ChoicePick, { query: EntityQuery }>;
  * The entity ids a `query` pick OFFERS this character: every `index.query` match, narrowed — when
  * the pick sets `requireProficient` (plan 13 task 1, e.g. an Expertise pick) — to the skills the
  * character is currently proficient in per `sheet` (rank proficient or expertise; `half` is not
- * proficiency). The single eligibility source for both `validateSelection` (refusal) and the UI's
- * option list (gating), so the two can never disagree. No `sheet` means no known proficiencies: a
- * `requireProficient` pick then offers nothing.
+ * proficiency). The single eligibility source for `validateSelection`'s `selection.notOffered`
+ * refusal, and the UI lists the same option set. This covers eligibility only: a same-family
+ * duplicate (a skill already given Expertise by an earlier pick of the same family) is still in
+ * this set — validation refuses it (`selection.duplicate`) and only the web picker gates it at
+ * offer time. No `sheet` means no known proficiencies: a `requireProficient` pick then offers
+ * nothing.
  */
 export function queryPickOptions(
   pick: QueryPick,

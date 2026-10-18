@@ -5,6 +5,8 @@ import type { ModifierTable } from './modifiers.ts';
 
 /** One class's effective armor/weapon/tool proficiency contribution (see `classProficiencyGrants`). */
 export interface ClassProficiencyGrant {
+  /** The RESOLVED class entity id (`index.resolveClassRef`), not necessarily the id recorded in
+   * `facts.classes[]`: a bare class slug there (e.g. `fighter`) resolves to its full entity id. */
   classId: string;
   armorTraining: string[];
   weaponProficiencies: string[];

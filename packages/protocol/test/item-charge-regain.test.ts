@@ -4,8 +4,9 @@ import { EntitySchema } from '../src/pack/entity.ts';
 
 // Plan 13 task 6 (ruling 7, controller-approved additive touch): `item.charges.regain` — the dice
 // an item regains when its reset fires ("regains 1d6 + 1 expended charges daily at dawn"). Absent =
-// the pre-existing full-restore behavior. Dice only (`DiceSchema`); refused on `reset:'never'`,
-// since a resource that never resets can never regain anything.
+// the pre-existing full-restore behavior. Dice only (`RegainDiceSchema`: the `DiceSchema` dice plus
+// `d3`, which regain amounts such as "1d3" need); refused on `reset:'never'`, since a resource that
+// never resets can never regain anything.
 
 const wand = (charges: unknown) => ({
   id: 'srd-5e-2024:item/wand-of-magic-missiles',
