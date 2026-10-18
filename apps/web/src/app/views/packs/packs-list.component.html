@@ -55,6 +55,9 @@
         <span class="packs-list__meta">
           <span class="packs-list__version">{{ core.version }}</span>
           <span class="packs-list__badge">{{ t('list.core-label') }}</span>
+          @if (updateTargets().has(packKey(core))) {
+            <span class="packs-list__update">{{ t('update-available') }}</span>
+          }
         </span>
       </a>
     }
@@ -65,7 +68,12 @@
     @for (pack of contentPacks(); track packKey(pack)) {
       <a class="packs-list__row" [routerLink]="['/packs', packKey(pack)]">
         <span class="packs-list__name">{{ pack.name }}</span>
-        <span class="packs-list__version">{{ pack.version }}</span>
+        <span class="packs-list__meta">
+          <span class="packs-list__version">{{ pack.version }}</span>
+          @if (updateTargets().has(packKey(pack))) {
+            <span class="packs-list__update">{{ t('update-available') }}</span>
+          }
+        </span>
       </a>
     } @empty {
       <p class="packs-list__empty">{{ t('list.content-empty') }}</p>

@@ -17,6 +17,7 @@ import { firstValueFrom, of } from 'rxjs';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../../assets/i18n/characters/uk.json';
+import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { eventFamily, EventSentencePipe, sentenceOf } from './event-sentence.pipe';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — same fixture-loading
@@ -478,5 +479,89 @@ describe('EventSentencePipe', () => {
     expect(one).toContain('1 кость');
     expect(few).toContain('2 кости');
     expect(many).toContain('5 костей');
+  });
+
+  describe('pack pins (plan 15 Task 5)', () => {
+    const parsed = parsePack(sampleJson);
+    if (!parsed.ok) throw new Error('sample-content.json fixture no longer parses');
+    const sample = parsed.pack;
+    const pinned = (payload: Record<string, string>) => makeEvent('pack.pinned', payload);
+    let withSample: ContentIndex;
+    let withSampleLocalizer: Localizer;
+
+    beforeEach(() => {
+      withSample = createContentIndex([corePack, sample]);
+      withSampleLocalizer = createLocalizer(withSample, 'en');
+    });
+
+    it('"pack.pinned" without previous: Pinned <pack name> <version>', () => {
+      const event = pinned({ packId: sample.id, version: '1.0.0' });
+      expect(pipe.transform(event, withSample, withSampleLocalizer)).toBe(
+        'Pinned Sample content v1.0.0.',
+      );
+      expect(sentenceOf(event, withSample, withSampleLocalizer).params).toMatchObject({
+        packName: 'Sample content',
+        pinKind: 'pin',
+      });
+    });
+
+    it('"pack.pinned" with previous: Updated <pack name> <previous> → <version>', () => {
+      const event = pinned({ packId: sample.id, version: '1.1.0', previous: '1.0.0' });
+      expect(pipe.transform(event, withSample, withSampleLocalizer)).toBe(
+        'Updated Sample content v1.0.0 → v1.1.0.',
+      );
+      expect(sentenceOf(event, withSample, withSampleLocalizer).params['pinKind']).toBe('update');
+    });
+
+    it('a pack that is not in the character index is named by its raw id', () => {
+      expect(
+        pipe.transform(pinned({ packId: sample.id, version: '1.0.0' }), index, localizer),
+      ).toBe('Pinned sample-content v1.0.0.');
+      expect(
+        pipe.transform(makeEvent('pack.unpinned', { packId: sample.id }), index, localizer),
+      ).toBe('Unpinned sample-content.');
+    });
+
+    it('an unpinned pack that is still installed is named from the installed packs', () => {
+      const event = makeEvent('pack.unpinned', { packId: sample.id });
+      expect(pipe.transform(event, index, localizer, 1, undefined, undefined, [sample])).toBe(
+        'Unpinned Sample content.',
+      );
+    });
+
+    it('"pack.unpinned": Unpinned <pack name>', () => {
+      const event = makeEvent('pack.unpinned', { packId: sample.id });
+      expect(sentenceOf(event, withSample, withSampleLocalizer).key).toBe(
+        'characters.timeline.pack-unpinned',
+      );
+      expect(pipe.transform(event, withSample, withSampleLocalizer)).toBe(
+        'Unpinned Sample content.',
+      );
+    });
+
+    it('renders pinned / updated / unpinned in ru and uk', async () => {
+      const expected = {
+        ru: [
+          'Закреплён Sample content v1.0.0.',
+          'Обновлён Sample content: v1.0.0 → v1.1.0.',
+          'Откреплён Sample content.',
+        ],
+        uk: [
+          'Закріплено Sample content v1.0.0.',
+          'Оновлено Sample content: v1.0.0 → v1.1.0.',
+          'Відкріплено Sample content.',
+        ],
+      } as const;
+      for (const lang of ['ru', 'uk'] as const) {
+        await firstValueFrom(translocoService.load(`characters/${lang}`));
+        translocoService.setActiveLang(lang);
+        const sentences = [
+          pinned({ packId: sample.id, version: '1.0.0' }),
+          pinned({ packId: sample.id, version: '1.1.0', previous: '1.0.0' }),
+          makeEvent('pack.unpinned', { packId: sample.id }),
+        ].map((event) => pipe.transform(event, withSample, withSampleLocalizer));
+        expect(sentences).toEqual(expected[lang]);
+      }
+    });
   });
 });

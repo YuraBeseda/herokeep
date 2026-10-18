@@ -16,6 +16,7 @@ import {
 import { PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
 import { PackTrustDialogComponent } from './pack-trust-dialog.component';
+import { PackUsageService } from './pack-usage.service';
 import { PacksListComponent } from './packs-list.component';
 
 class StubLoader implements TranslocoLoader {
@@ -54,7 +55,13 @@ const RU = mkPack({
   locale: 'ru',
 });
 
-function setup(options: { read?: ReturnType<typeof vi.fn> } = {}) {
+function setup(
+  options: {
+    read?: ReturnType<typeof vi.fn>;
+    content?: Pack[];
+    storedPins?: Record<string, string>[];
+  } = {},
+) {
   const translationPacks = signal<Pack[]>([RU]);
   const removeTranslation = vi.fn((key: string) => {
     translationPacks.update((packs) => packs.filter((p) => `${p.id}@${p.version}` !== key));
@@ -63,6 +70,7 @@ function setup(options: { read?: ReturnType<typeof vi.fn> } = {}) {
   const read = options.read ?? vi.fn();
   const open = vi.fn(() => ({ closed: Promise.resolve(undefined), close: vi.fn() }));
   const show = vi.fn();
+  const pinSets = vi.fn(() => Promise.resolve(options.storedPins ?? []));
 
   TestBed.configureTestingModule({
     providers: [
@@ -82,7 +90,7 @@ function setup(options: { read?: ReturnType<typeof vi.fn> } = {}) {
         provide: PackStore,
         useValue: {
           corePack: signal<Pack | undefined>(CORE),
-          installedContent: signal<Pack[]>([SAMPLE]),
+          installedContent: signal<Pack[]>(options.content ?? [SAMPLE]),
           translationPacks,
           removeTranslation,
         },
@@ -90,10 +98,11 @@ function setup(options: { read?: ReturnType<typeof vi.fn> } = {}) {
       { provide: HkpackReader, useValue: { read } },
       { provide: DialogService, useValue: { open } },
       { provide: ToastService, useValue: { show } },
+      { provide: PackUsageService, useValue: { pinSets } },
     ],
   });
 
-  return { read, open, show, removeTranslation };
+  return { read, open, show, removeTranslation, pinSets };
 }
 
 async function render() {
@@ -237,5 +246,55 @@ describe('PacksListComponent', () => {
 
     expect(show).toHaveBeenCalledWith('packs.import-failed-unknown');
     expect(root.querySelector('.packs-list__import-details')).toBeNull();
+  });
+
+  describe('"Update available" badge (plan 15 Task 5)', () => {
+    const SAMPLE_11 = mkPack({ id: 'sample-content', version: '1.1.0', name: 'Sample content' });
+
+    /** The resource behind the badge reads the stored characters asynchronously. */
+    async function renderSettled() {
+      const rendered = await render();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await rendered.fixture.whenStable();
+      return rendered;
+    }
+
+    const badgeOf = (root: HTMLElement, key: string) =>
+      root.querySelector(`a[href="/packs/${key}"] .packs-list__update`);
+
+    it('marks the newest installed version when a stored character pins an older one', async () => {
+      const { pinSets } = setup({
+        content: [SAMPLE, SAMPLE_11],
+        storedPins: [{ [CORE.id]: CORE.version, [SAMPLE.id]: '1.0.0' }],
+      });
+      const { root } = await renderSettled();
+
+      expect(pinSets).toHaveBeenCalled();
+      expect(badgeOf(root, 'sample-content@1.1.0')?.textContent?.trim()).toBe(
+        packsEn['update-available'],
+      );
+      expect(badgeOf(root, 'sample-content@1.0.0')).toBeNull();
+      expect(badgeOf(root, 'srd-5e-2024@0.1.0')).toBeNull();
+    });
+
+    it('shows no badge when every stored character pins the newest installed version', async () => {
+      setup({
+        content: [SAMPLE, SAMPLE_11],
+        storedPins: [{ [CORE.id]: CORE.version, [SAMPLE.id]: '1.1.0' }, { [CORE.id]: '0.1.0' }],
+      });
+      const { root } = await renderSettled();
+
+      expect(root.querySelector('.packs-list__update')).toBeNull();
+    });
+
+    it('marks the core when a stored character pins another core version', async () => {
+      setup({ storedPins: [{ [CORE.id]: '0.0.9' }] });
+      const { root } = await renderSettled();
+
+      expect(badgeOf(root, 'srd-5e-2024@0.1.0')?.textContent?.trim()).toBe(
+        packsEn['update-available'],
+      );
+      expect(badgeOf(root, 'sample-content@1.0.0')).toBeNull();
+    });
   });
 });

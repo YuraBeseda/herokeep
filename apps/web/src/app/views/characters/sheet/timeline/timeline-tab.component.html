@@ -31,6 +31,7 @@
                       : row.events.length
                       : grammaticalGender()
                       : sheet()
+                      : installedPacks()
                 }}
               </p>
               @if (isOverride(row)) {
@@ -89,7 +90,13 @@
                   <li class="timeline-tab__member">
                     {{
                       event
-                        | eventSentence: index() : localizer() : 1 : grammaticalGender() : sheet()
+                        | eventSentence
+                          : index()
+                          : localizer()
+                          : 1
+                          : grammaticalGender()
+                          : sheet()
+                          : installedPacks()
                     }}
                   </li>
                 }

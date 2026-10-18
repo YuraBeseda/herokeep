@@ -1,6 +1,6 @@
 import { inject, Pipe, type PipeTransform } from '@angular/core';
 import type { ContentIndex, Localizer, Sheet } from '@hk/engine';
-import { EVENT_PAYLOADS, type Event, type GrammaticalGender } from '@hk/protocol';
+import { EVENT_PAYLOADS, type Event, type GrammaticalGender, type Pack } from '@hk/protocol';
 import { TranslocoService } from '@jsverse/transloco';
 
 /** Timeline filter-chip families (task-12-brief.md: "filter chips by family
@@ -96,6 +96,9 @@ function resolveValue(value: unknown, index: ContentIndex, localizer: Localizer)
   return value;
 }
 
+/** The pack pin events whose `packId` is named through the character's index (plan 15 Task 5). */
+const PACK_EVENT_TYPES: ReadonlySet<string> = new Set(['pack.pinned', 'pack.unpinned']);
+
 /** The resource events whose `resourceId` names a sheet resource rather than an entity id. */
 const RESOURCE_EVENT_TYPES: ReadonlySet<string> = new Set(['resource.spent', 'resource.restored']);
 /** The engine's id namespace for per-instance item charge pools: `derive/resources.ts` mints
@@ -158,6 +161,7 @@ function buildParams(
   index: ContentIndex,
   localizer: Localizer,
   sheet?: Pick<Sheet, 'resources' | 'inventory'>,
+  installedPacks?: readonly Pick<Pack, 'id' | 'name'>[],
 ): Record<string, unknown> {
   const payload = (rawPayload && typeof rawPayload === 'object' ? rawPayload : {}) as Record<
     string,
@@ -219,6 +223,22 @@ function buildParams(
     params['encumbrance'] = 'other';
   }
 
+  // Plan 15 Task 5: pack pin sentences name the pack. A pack's `name` is pack data, read from the
+  // character's own index when the pack is in it (pinned and installed), else from the installed
+  // packs (an unpinned pack is no longer in the character's index), else the raw id. The
+  // always-set `pinKind` select ('update' | 'pin') guards the optional `previous` (same ICU param
+  // safety posture as `restored`/`encumbrance` above).
+  if (PACK_EVENT_TYPES.has(type) && typeof payload['packId'] === 'string') {
+    const packId = payload['packId'];
+    const named =
+      index.packs().find((pack) => pack.id === packId) ??
+      installedPacks?.find((pack) => pack.id === packId);
+    params['packName'] = named?.name ?? packId;
+    if (type === 'pack.pinned') {
+      params['pinKind'] = typeof payload['previous'] === 'string' ? 'update' : 'pin';
+    }
+  }
+
   return params;
 }
 
@@ -243,15 +263,19 @@ export interface EventSentence {
  * doesn't reference `{grammaticalGender}` in its ICU template simply ignores the extra param.
  *
  * `sheet` (plan 14 Task 6, additive) is the character's CURRENT derived sheet, used only to name
- * resource ids that aren't entity ids (`second-wind`, `item:<instanceId>`) — see `resourceName`. */
+ * resource ids that aren't entity ids (`second-wind`, `item:<instanceId>`) — see `resourceName`.
+ *
+ * `installedPacks` (plan 15 Task 5, additive) names a pack pin event's pack when the character's
+ * index no longer holds it (after `pack.unpinned`). */
 export function sentenceOf(
   event: Event,
   index: ContentIndex,
   localizer: Localizer,
   grammaticalGender?: GrammaticalGender,
   sheet?: Pick<Sheet, 'resources' | 'inventory'>,
+  installedPacks?: readonly Pick<Pack, 'id' | 'name'>[],
 ): EventSentence {
-  const params = buildParams(event.type, event.payload, index, localizer, sheet);
+  const params = buildParams(event.type, event.payload, index, localizer, sheet, installedPacks);
   if (grammaticalGender !== undefined && params['grammaticalGender'] === undefined) {
     params['grammaticalGender'] = grammaticalGender;
   }
@@ -293,6 +317,9 @@ export function sentenceOf(
  *
  * `sheet` (plan 14 Task 6) is an ADDITIVE 6th argument, same posture: omitted, a resource id that
  * isn't an entity id stays raw exactly as before.
+ *
+ * `installedPacks` (plan 15 Task 5) is an ADDITIVE 7th argument, same posture: omitted, a pack that
+ * is not in `index` is named by its raw id.
  */
 @Pipe({ name: 'eventSentence', pure: false })
 export class EventSentencePipe implements PipeTransform {
@@ -305,8 +332,9 @@ export class EventSentencePipe implements PipeTransform {
     groupSize = 1,
     grammaticalGender?: GrammaticalGender,
     sheet?: Pick<Sheet, 'resources' | 'inventory'>,
+    installedPacks?: readonly Pick<Pack, 'id' | 'name'>[],
   ): string {
-    const sentence = sentenceOf(event, index, localizer, grammaticalGender, sheet);
+    const sentence = sentenceOf(event, index, localizer, grammaticalGender, sheet, installedPacks);
     const key = sentence.key;
     const params = sentence.params;
     const base = this.translocoService.translate(key, params);

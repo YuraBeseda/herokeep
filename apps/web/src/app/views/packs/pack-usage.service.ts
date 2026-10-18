@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { reduce } from '@hk/engine';
+import { reduce, type Pins } from '@hk/engine';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
@@ -21,16 +21,25 @@ export class PackUsageService {
   private readonly snapshotsRepository = inject(SnapshotsRepository);
 
   async countPinning(packId: string, version: string): Promise<number> {
+    const pinSets = await this.pinSets();
+    return pinSets.filter((pins) => pins[packId] === version).length;
+  }
+
+  /**
+   * Every stored character's `facts.pins`, in Library order (plan 15 Task 5: the `/packs`
+   * "Update available" badge). Cost: one `byStream` + one snapshot read and one `reduce` per
+   * stored character — the same fold `countPinning` always did; nothing is derived.
+   */
+  async pinSets(): Promise<Pins[]> {
     const rows = await this.charactersRepository.list();
-    const pinned = await Promise.all(
+    return Promise.all(
       rows.map(async (row) => {
         const [events, snapshot] = await Promise.all([
           this.eventsRepository.byStream(row.id),
           this.snapshotsRepository.get(row.id),
         ]);
-        return reduce(events, snapshot).pins[packId] === version;
+        return reduce(events, snapshot).pins;
       }),
     );
-    return pinned.filter(Boolean).length;
   }
 }

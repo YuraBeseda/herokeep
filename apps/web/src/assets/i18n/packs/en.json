@@ -85,5 +85,6 @@
     "body": "{count, plural, =0 {No character uses this pack.} one {# character uses this pack. After removal it will show unresolved references until you reinstall it.} other {# characters use this pack. After removal they will show unresolved references until you reinstall it.}}",
     "cancel": "Cancel",
     "confirm": "Remove"
-  }
+  },
+  "update-available": "Update available"
 }

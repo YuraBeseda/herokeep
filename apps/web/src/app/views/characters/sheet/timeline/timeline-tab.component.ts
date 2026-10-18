@@ -8,6 +8,7 @@ import { ChipComponent } from '@shared/components/chip/chip.component';
 import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
+import { PackStore } from '@shared/stores/pack.store';
 import {
   eventFamily,
   EventSentencePipe,
@@ -120,6 +121,7 @@ export class TimelineTabComponent {
   private readonly characterStore = inject(CharacterStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly dialogService = inject(DialogService);
+  private readonly packStore = inject(PackStore);
 
   protected readonly index = this.engineFacade.index;
   protected readonly localizer = this.engineFacade.localizer;
@@ -127,6 +129,8 @@ export class TimelineTabComponent {
   // Plan 14 Task 6: the current sheet, so `EventSentencePipe` can name non-entity resource ids
   // (`second-wind`, `item:<instanceId>`) instead of printing the raw key.
   protected readonly sheet = this.characterStore.sheet;
+  // Plan 15 Task 5: names a pack pin event's pack once the character no longer pins it.
+  protected readonly installedPacks = this.packStore.packs;
   protected readonly families = TIMELINE_FAMILIES;
 
   // task-14: the character's CURRENT grammatical gender, threaded into `EventSentencePipe` so a
