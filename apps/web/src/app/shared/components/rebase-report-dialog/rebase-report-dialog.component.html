@@ -1,42 +1,90 @@
 <div class="rebase-report" *transloco="let t; read: 'characters'">
   <h2 class="rebase-report__title" data-dialog-title>{{ heading() }}</h2>
 
-  @if (empty()) {
-    <p class="rebase-report__empty">{{ t('rebase.no-changes') }}</p>
+  @if (validation()) {
+    <p class="rebase-report__validation-note">{{ t('rebase.validation-only') }}</p>
   }
 
-  @if (report().invalid.length > 0) {
+  @if (empty()) {
+    <p class="rebase-report__empty">
+      {{ validation() ? t('rebase.validation-ok') : t('rebase.no-changes') }}
+    </p>
+  }
+
+  @if (invalidRows().length > 0) {
     <section class="rebase-report__section">
       <h3 class="rebase-report__heading">{{ t('rebase.invalid-title') }}</h3>
       <ul class="rebase-report__list rebase-report__invalid">
-        @for (item of report().invalid; track item.choiceId) {
+        @for (item of invalidRows(); track item.choiceId) {
           <li class="rebase-report__invalid-item">
-            <code class="rebase-report__code">{{ item.choiceId }}</code>
-            <span class="rebase-report__reason">{{ t(reasonKey(item.reason)) }}</span>
+            <span class="rebase-report__prompt">{{ item.prompt }}</span>
+            <span class="rebase-report__reason">{{ t(item.reasonKey) }}</span>
+            <span class="rebase-report__selection">{{
+              t('rebase.selection', { names: item.names })
+            }}</span>
           </li>
         }
       </ul>
     </section>
   }
 
-  @if (report().changes.length > 0) {
+  @if (migrationRows().length > 0) {
     <section class="rebase-report__section">
-      <h3 class="rebase-report__heading">{{ t('rebase.changes-title') }}</h3>
-      <ul class="rebase-report__list rebase-report__changes">
-        @for (change of report().changes; track change.path) {
-          <li class="rebase-report__change">
-            {{
-              t('rebase.change', {
-                path: change.path,
-                before: display(change.before) ?? t('rebase.none'),
-                after: display(change.after) ?? t('rebase.none'),
-              })
-            }}
+      <h3 class="rebase-report__heading">{{ t('rebase.migrations-title') }}</h3>
+      <ul class="rebase-report__list rebase-report__migrations">
+        @for (item of migrationRows(); track item.id) {
+          <li class="rebase-report__migration">
+            {{ t('rebase.migration', { prompt: item.prompt, from: item.from, to: item.to }) }}
           </li>
         }
       </ul>
     </section>
   }
+
+  @if (groups().length > 0) {
+    <section class="rebase-report__section">
+      <h3 class="rebase-report__heading">{{ t('rebase.changes-title') }}</h3>
+      <div class="rebase-report__changes">
+        @for (group of groups(); track group.key) {
+          <div class="rebase-report__group">
+            <h4 class="rebase-report__group-key">
+              <code>{{ group.key }}</code>
+            </h4>
+            <ul class="rebase-report__list">
+              @for (row of group.rows; track row.path) {
+                <li class="rebase-report__change">
+                  <code class="rebase-report__path">{{ row.path }}</code>
+                  <ng-container
+                    [ngTemplateOutlet]="value"
+                    [ngTemplateOutletContext]="{ $implicit: row.before }"
+                  />
+                  <span class="rebase-report__arrow">{{ t('rebase.arrow') }}</span>
+                  <ng-container
+                    [ngTemplateOutlet]="value"
+                    [ngTemplateOutletContext]="{ $implicit: row.after }"
+                  />
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <ng-template #value let-v>
+    @switch (v.kind) {
+      @case ('code') {
+        <code class="rebase-report__value">{{ v.text }}</code>
+      }
+      @case ('inline') {
+        <span class="rebase-report__value">{{ v.text }}</span>
+      }
+      @default {
+        <span class="rebase-report__value rebase-report__value--none">{{ t('rebase.none') }}</span>
+      }
+    }
+  </ng-template>
 
   <div class="rebase-report__actions">
     <button
@@ -44,6 +92,7 @@
       [variant]="'ghost'"
       type="button"
       class="rebase-report__cancel"
+      [disabled]="settled()"
       (click)="onCancel()"
     >
       {{ t('rebase.cancel') }}
@@ -53,6 +102,7 @@
       [variant]="'primary'"
       type="button"
       class="rebase-report__confirm"
+      [disabled]="settled()"
       (click)="onConfirm()"
     >
       {{ t('rebase.confirm') }}

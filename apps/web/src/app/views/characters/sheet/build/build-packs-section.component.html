@@ -31,15 +31,41 @@
               {{ t('sheet.build.packs.pinned-other', { version: row.pinnedVersion }) }}
             </p>
           }
+          @if (row.update; as update) {
+            <div class="build-packs__update-row">
+              <span class="build-packs__update-badge">{{
+                t('sheet.build.packs.update-available', { from: update.from, to: update.to })
+              }}</span>
+              <button
+                hk-button
+                [variant]="'ghost'"
+                type="button"
+                class="build-packs__update"
+                [disabled]="disabled() || busy()"
+                [attr.aria-label]="
+                  t('sheet.build.packs.update-label', { name: row.name, to: update.to })
+                "
+                (click)="onUpdate(row, t)"
+              >
+                {{ t('sheet.build.packs.update') }}
+              </button>
+            </div>
+          }
         </li>
       }
     </ul>
 
-    @if (blocked().length > 0) {
+    @if (blocked(); as blocked) {
       <div class="build-packs__blocked" role="alert">
-        <p class="build-packs__blocked-title">{{ t('sheet.build.packs.blocked') }}</p>
+        <p class="build-packs__blocked-title">
+          @if (blocked.change === 'update') {
+            {{ t('sheet.build.packs.update-blocked') }}
+          } @else {
+            {{ t('sheet.build.packs.blocked') }}
+          }
+        </p>
         <ul class="build-packs__blocked-list">
-          @for (d of blocked(); track $index) {
+          @for (d of blocked.diagnostics; track $index) {
             <li>
               <code>{{ d.code }}</code> {{ d.message }}
             </li>

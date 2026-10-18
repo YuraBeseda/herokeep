@@ -7,6 +7,13 @@
   font-family: var(--font-display);
 }
 
+.rebase-report__validation-note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-m);
+}
+
 .rebase-report__empty {
   margin: 0 0 var(--space-3);
   color: var(--text-2);
@@ -36,8 +43,48 @@
   gap: var(--space-2);
 }
 
-.rebase-report__reason {
+.rebase-report__prompt {
+  font-weight: 600;
+}
+
+.rebase-report__reason,
+.rebase-report__selection {
   color: var(--text-2);
+}
+
+.rebase-report__selection {
+  flex-basis: 100%;
+}
+
+.rebase-report__group + .rebase-report__group {
+  margin-block-start: var(--space-2);
+}
+
+.rebase-report__group-key {
+  margin: 0 0 var(--space-1);
+  font-size: 0.875rem;
+}
+
+.rebase-report__change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+
+.rebase-report__path {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.rebase-report__value {
+  font-weight: 600;
+}
+
+.rebase-report__value--none,
+.rebase-report__arrow {
+  color: var(--text-2);
+  font-weight: 400;
 }
 
 .rebase-report__actions {

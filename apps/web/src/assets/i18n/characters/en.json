@@ -228,13 +228,18 @@
       },
       "packs": {
         "title": "Content packs",
-        "intro": "Packs this character uses. Turning one off shows what would change before anything is saved.",
+        "intro": "Packs this character uses. Turning one off or updating it shows what would change before anything is saved.",
         "version": "v{version}",
         "core-reason": "The core rules are always on.",
         "not-installed": "Not installed on this device.",
         "pinned-other": "This character uses v{version}, which is not installed on this device.",
         "blocked": "This pack can't be turned off:",
-        "disable-title": "Turn off {name}?"
+        "disable-title": "Turn off {name}?",
+        "update-available": "Update available: v{from} → v{to}",
+        "update": "Update",
+        "update-label": "Update {name} to v{to}",
+        "update-title": "Update {name} v{from} → v{to}?",
+        "update-blocked": "This update can't be applied:"
       }
     },
     "options": {
@@ -696,7 +701,6 @@
     "no-changes": "Nothing on the sheet changes.",
     "invalid-title": "Choices that will be cleared",
     "changes-title": "Sheet changes",
-    "change": "{path}: {before} → {after}",
     "none": "(none)",
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -705,6 +709,12 @@
       "selection-missing": "The selected option is no longer available.",
       "selection-deprecated": "The selected option was retired without a working replacement.",
       "prerequisite-failed": "The prerequisites are no longer met."
-    }
+    },
+    "arrow": "→",
+    "migrations-title": "Choices moved to a replacement",
+    "migration": "{prompt}: {from} → {to}",
+    "selection": "Selected: {names}",
+    "validation-only": "The previous version of this pack is not available on this device, so the sheet can't be compared. This report only checks the character's choices against the new version.",
+    "validation-ok": "Every choice is still valid."
   }
 }

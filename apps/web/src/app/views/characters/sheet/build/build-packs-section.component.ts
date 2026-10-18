@@ -1,6 +1,14 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { planRebase, propose, selectPackVersions, type Diagnostic, type Pins } from '@hk/engine';
+import {
+  planRebase,
+  propose,
+  selectPackVersions,
+  type ContentIndex,
+  type Diagnostic,
+  type Pins,
+} from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogService } from '@shared/components/dialog/dialog.service';
 import {
   RebaseReportDialogComponent,
@@ -8,6 +16,7 @@ import {
 } from '@shared/components/rebase-report-dialog/rebase-report-dialog.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { updatesFor, type PackUpdate } from '@shared/services/packs/pack-updates';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 
@@ -25,9 +34,23 @@ export interface PackRow {
   readonly enabled: boolean;
   /** The pinned version, when it differs from `version` (that exact version is not installed). */
   readonly pinnedVersion?: string;
+  /** A newer version this character can move to (`updatesFor`). */
+  readonly update?: PackUpdate;
+}
+
+/** Errors that stopped the last change, and which change it was (picks the heading). */
+interface Blocked {
+  readonly change: 'disable' | 'update';
+  readonly diagnostics: readonly Diagnostic[];
 }
 
 const diagnosticKey = (d: Diagnostic): string => `${d.code}\u0000${d.message}`;
+
+/** The error diagnostics of `next` that `current` does not already have. */
+function introducedErrors(current: ContentIndex, next: ContentIndex): Diagnostic[] {
+  const before = new Set(current.diagnostics.map(diagnosticKey));
+  return next.diagnostics.filter((d) => d.severity === 'error' && !before.has(diagnosticKey(d)));
+}
 
 /**
  * Plan 15 Task 4 — the Build tab's "Content packs" section: which packs this character uses
@@ -42,10 +65,16 @@ const diagnosticKey = (d: Diagnostic): string => `${d.code}\u0000${d.message}`;
  *   opens the rebase report; Confirm appends `plan.events` as ONE transaction, Cancel appends
  *   nothing. When the next index has errors the current one does not (an unresolved dependency),
  *   the diagnostics are shown instead of a plan.
+ * - Update (plan 15 Task 5): a row whose pinned version has a newer installed one (`updatesFor`)
+ *   shows "Update available" and an Update button. The plan moves that one pin
+ *   (`planRebase(facts, current, indexFor(nextPins), nextPins, rules)`) and the same report opens;
+ *   Confirm appends `plan.events` as ONE transaction, Cancel nothing. The core update (plan ruling
+ *   6) is validation-only: the current index already resolves the shipped core (the old one is not
+ *   on this device), so the plan's only sheet change is the pin itself and the report says so.
  */
 @Component({
   selector: 'app-build-packs-section',
-  imports: [TranslocoDirective, SheetSectionComponent],
+  imports: [TranslocoDirective, ButtonComponent, SheetSectionComponent],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './build-packs-section.component.html',
   styleUrl: './build-packs-section.component.scss',
@@ -62,8 +91,17 @@ export class BuildPacksSectionComponent {
 
   protected readonly coreReasonId = 'build-packs-core-reason';
   protected readonly busy = signal(false);
-  /** Errors that blocked the last OFF toggle (shown instead of a rebase report). */
-  protected readonly blocked = signal<readonly Diagnostic[]>([]);
+  /** Errors that blocked the last OFF toggle or Update (shown instead of a rebase report). */
+  protected readonly blocked = signal<Blocked | undefined>(undefined);
+
+  /** Available updates by pack id, for the character's pins. */
+  private readonly updates = computed<ReadonlyMap<string, PackUpdate>>(() => {
+    const pins = this.characterStore.facts()?.pins ?? {};
+    const packs = this.packStore.packs();
+    const core = packs.find((p) => p.kind === 'core');
+    if (!core) return new Map();
+    return new Map(updatesFor(pins, packs, core).map((u) => [u.packId, u]));
+  });
 
   protected readonly rows = computed<PackRow[]>(() => {
     const pins = this.characterStore.facts()?.pins ?? {};
@@ -111,7 +149,11 @@ export class BuildPacksSectionComponent {
         enabled: true,
       });
     }
-    return rows;
+    const updates = this.updates();
+    return rows.map((row) => {
+      const update = updates.get(row.id);
+      return update ? { ...row, update } : row;
+    });
   });
 
   protected async onToggle(row: PackRow, event: Event, t: TranslateFn): Promise<void> {
@@ -121,11 +163,24 @@ export class BuildPacksSectionComponent {
     control.checked = row.enabled;
     if (row.core || this.disabled() || this.busy()) return;
 
-    this.blocked.set([]);
+    this.blocked.set(undefined);
     this.busy.set(true);
     try {
       if (row.enabled) await this.disable(row, t);
       else await this.enable(row);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async onUpdate(row: PackRow, t: TranslateFn): Promise<void> {
+    const update = row.update;
+    if (!update || this.disabled() || this.busy()) return;
+
+    this.blocked.set(undefined);
+    this.busy.set(true);
+    try {
+      await this.applyUpdate(row, update, t);
     } finally {
       this.busy.set(false);
     }
@@ -148,23 +203,56 @@ export class BuildPacksSectionComponent {
     const next = this.engineFacade.indexFor(nextPins);
 
     // Only errors this change introduces block it — a pin that was already unresolved stays so.
-    const before = new Set(current.diagnostics.map(diagnosticKey));
-    const introduced = next.diagnostics.filter(
-      (d) => d.severity === 'error' && !before.has(diagnosticKey(d)),
-    );
+    const introduced = introducedErrors(current, next);
     if (introduced.length > 0) {
-      this.blocked.set(introduced);
+      this.blocked.set({ change: 'disable', diagnostics: introduced });
       return;
     }
 
     const plan = planRebase(facts, current, next, nextPins, this.characterStore.systemRules());
-    const data: RebaseReportDialogData = {
+    await this.report({
       plan,
       title: t('sheet.build.packs.disable-title', { name: row.name }),
-    };
+      nextIndex: next,
+      currentIndex: current,
+    });
+  }
+
+  private async applyUpdate(row: PackRow, update: PackUpdate, t: TranslateFn): Promise<void> {
+    const facts = this.characterStore.facts();
+    const current = this.characterStore.index();
+    if (!facts || !current) return;
+
+    const nextPins: Pins = { ...facts.pins, [update.packId]: update.to };
+    const next = this.engineFacade.indexFor(nextPins);
+
+    // Same rule as turning a pack off: an error the update introduces (a dependency it breaks, a
+    // pin it cannot resolve) is shown instead of a plan.
+    const introduced = introducedErrors(current, next);
+    if (introduced.length > 0) {
+      this.blocked.set({ change: 'update', diagnostics: introduced });
+      return;
+    }
+
+    const plan = planRebase(facts, current, next, nextPins, this.characterStore.systemRules());
+    await this.report({
+      plan,
+      title: t('sheet.build.packs.update-title', {
+        name: row.name,
+        from: update.from,
+        to: update.to,
+      }),
+      nextIndex: next,
+      currentIndex: current,
+      validationOnly: update.kind === 'core',
+    });
+  }
+
+  /** Opens the rebase report; only Confirm (`true`) appends `plan.events`, as ONE transaction. */
+  private async report(data: RebaseReportDialogData): Promise<void> {
     const confirmed = await this.dialogService.open(RebaseReportDialogComponent, { data }).closed;
-    if (confirmed === true && plan.events.length > 0) {
-      await this.characterStore.appendTx(plan.events);
+    if (confirmed === true && data.plan.events.length > 0) {
+      await this.characterStore.appendTx(data.plan.events);
     }
   }
 }
