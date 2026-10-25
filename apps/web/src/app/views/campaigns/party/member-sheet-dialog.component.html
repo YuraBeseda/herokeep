@@ -33,7 +33,25 @@
         {{ t('memberSheet.error', { name: data.name }) }}
       </p>
     }
-    @case ('ready') {
+    @default {
+      <!-- 'ready' or 'warning' (plan 16 Task 5, ruling 6): a derived sheet; a warning lists the
+           member's packs this device lacks, whose references below stay raw ids. -->
+      @if (status() === 'warning') {
+        <div class="member-sheet-dialog__missing-packs" role="status">
+          <p class="member-sheet-dialog__missing-packs-text">
+            {{ t('memberSheet.missingPacks.message', { count: missingPins().length }) }}
+          </p>
+          <ul class="member-sheet-dialog__missing-packs-list">
+            @for (pin of missingPins(); track pin.packId) {
+              <li>
+                <code>{{
+                  t('memberSheet.missingPacks.entry', { packId: pin.packId, version: pin.version })
+                }}</code>
+              </li>
+            }
+          </ul>
+        </div>
+      }
       @if (sheet(); as s) {
         <div class="member-sheet-dialog__body">
           <!-- HP + death saves -->

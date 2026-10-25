@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal } from '@angular/core';
+import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type CampaignSettings, type Event, type Pack } from '@hk/protocol';
@@ -11,11 +11,14 @@ import { StoragePersistService } from '@shared/services/pwa/storage-persist.serv
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { seedFighter } from '../../../views/characters/sheet/testing/character-fixtures';
 import {
   ForeignCharacterSession,
   type ForeignCharacterCampaignPort,
+  type ForeignCharacterPackPort,
   type ForeignCharacterSyncPort,
 } from './foreign-character-session';
 
@@ -40,6 +43,11 @@ function readPack(path: string): Pack {
 const corePack = readPack(
   join(repoRoot, 'packages/content/dist/packs', PACK_ID, PACK_VERSION, 'pack.json'),
 );
+const parsedSample = parsePack(sampleJson);
+if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+const sample = parsedSample.pack;
+const MOONKIN = 'sample-content:species/moonkin';
+const SPECIES_CHOICE = 'srd-5e-2024:system/5e-2024@0/species';
 
 class StubLoader implements TranslocoLoader {
   getTranslation() {
@@ -93,10 +101,13 @@ class FakeSyncPort implements ForeignCharacterSyncPort {
 describe('ForeignCharacterSession', () => {
   const campaignId = '00000000-0000-4000-8000-0000000000c1';
   let sync: FakeSyncPort;
-  let packStore: { corePack: () => Pack | undefined };
+  let packStore: ForeignCharacterPackPort;
   let engineFacade: EngineFacade;
+  /** The packs installed on the viewing (DM) device — the real `EngineFacade` reads them too. */
+  let packsState: WritableSignal<Pack[]>;
 
   beforeEach(async () => {
+    packsState = signal<Pack[]>([corePack]);
     TestBed.configureTestingModule({
       providers: [
         provideTransloco({
@@ -111,7 +122,7 @@ describe('ForeignCharacterSession', () => {
         }),
         {
           provide: PackStore,
-          useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+          useValue: { packs: packsState, ready: signal(true), corePack: signal(corePack) },
         },
         {
           provide: StoragePersistService,
@@ -130,7 +141,7 @@ describe('ForeignCharacterSession', () => {
     ]);
 
     sync = new FakeSyncPort();
-    packStore = { corePack: () => corePack };
+    packStore = { corePack: () => corePack, packs: () => packsState() };
     engineFacade = TestBed.inject(EngineFacade);
   });
 
@@ -142,7 +153,7 @@ describe('ForeignCharacterSession', () => {
     characterId: string,
     opts: {
       timeoutMs?: number;
-      packStoreOverride?: { corePack: () => Pack | undefined };
+      packStoreOverride?: ForeignCharacterPackPort;
       campaignEvents?: ForeignCharacterCampaignPort;
       overridesPollMs?: number;
       setIntervalFn?: (cb: () => void, ms: number) => ReturnType<typeof setInterval>;
@@ -370,7 +381,7 @@ describe('ForeignCharacterSession', () => {
     const events = await TestBed.inject(EventsRepository).byStream(streamId);
     const mismatchedCore = { ...corePack, version: '999.0.0' };
     const session = makeSession(bareCharacterId(streamId), {
-      packStoreOverride: { corePack: () => mismatchedCore },
+      packStoreOverride: { corePack: () => mismatchedCore, packs: () => [mismatchedCore] },
     });
     session.start();
 
@@ -383,12 +394,92 @@ describe('ForeignCharacterSession', () => {
     const streamId = await seedFighter('Ivan');
     const events = await TestBed.inject(EventsRepository).byStream(streamId);
     const session = makeSession(bareCharacterId(streamId), {
-      packStoreOverride: { corePack: () => undefined },
+      packStoreOverride: { corePack: () => undefined, packs: () => [] },
     });
     session.start();
 
     expect(() => sync.emit(campaignId, streamId, events)).not.toThrow();
     expect(session.status()).toBe('error');
+  });
+
+  // --- The member's own pack set (plan 16 Task 5, ruling 6) ------------------------------------
+  describe("the member's pinned packs (plan 16 Task 5, ruling 6)", () => {
+    /** A member fighter who pins the sample pack and picked its Moonkin species. Seeded on this
+     * device's own store, so the sample pack must be installed while seeding. */
+    async function seedMoonkinMember(): Promise<{ streamId: string; events: Event[] }> {
+      const streamId = await seedFighter('Ivan');
+      await TestBed.inject(CharacterStore).appendTx([
+        { type: 'pack.pinned', v: 1, payload: { packId: sample.id, version: sample.version } },
+        {
+          type: 'decision.made',
+          v: 1,
+          payload: { choiceId: SPECIES_CHOICE, selection: [MOONKIN] },
+        },
+      ]);
+      return { streamId, events: await TestBed.inject(EventsRepository).byStream(streamId) };
+    }
+
+    const unresolvedMoonkin = (session: ForeignCharacterSession) =>
+      session
+        .sheet()
+        ?.issues.some((d) => d.code === 'derive.unresolvedEntity' && d.entityId === MOONKIN);
+
+    it("derives with the member's pins: a pinned pack installed on this device resolves (the species), status 'ready'", async () => {
+      packsState.set([corePack, sample]);
+      const { streamId, events } = await seedMoonkinMember();
+      const session = makeSession(bareCharacterId(streamId));
+      session.start();
+
+      sync.emit(campaignId, streamId, events);
+
+      expect(session.status()).toBe('ready');
+      expect(session.missingPins()).toEqual([]);
+      expect(session.sheet()?.pins[sample.id]).toBe(sample.version);
+      expect(unresolvedMoonkin(session)).toBe(false);
+    });
+
+    it("a pinned pack this device lacks -> status 'warning' listing it, the sheet still derives with the reference unresolved, no throw (Review Focus 3)", async () => {
+      const { streamId, events } = await seedMoonkinMember();
+      const session = makeSession(bareCharacterId(streamId));
+      session.start();
+
+      expect(() => sync.emit(campaignId, streamId, events)).not.toThrow();
+
+      expect(session.status()).toBe('warning');
+      expect(session.missingPins()).toEqual([{ packId: sample.id, version: sample.version }]);
+      expect(session.sheet()?.ac.value).toBe(19);
+      expect(unresolvedMoonkin(session)).toBe(true);
+    });
+
+    it("a member pinned to a pack this device holds only at another version is 'warning' too", async () => {
+      packsState.set([corePack, sample]);
+      const { streamId, events } = await seedMoonkinMember();
+      packsState.set([corePack, { ...sample, version: '2.0.0' }]);
+      const session = makeSession(bareCharacterId(streamId));
+      session.start();
+
+      sync.emit(campaignId, streamId, events);
+
+      expect(session.status()).toBe('warning');
+      expect(session.missingPins()).toEqual([{ packId: sample.id, version: sample.version }]);
+    });
+
+    it('a later frame re-derives a warning session (a warning is a rendered sheet, not a dead end)', async () => {
+      const { streamId, events } = await seedMoonkinMember();
+      const session = makeSession(bareCharacterId(streamId));
+      session.start();
+      sync.emit(campaignId, streamId, events);
+      expect(session.status()).toBe('warning');
+
+      await TestBed.inject(CharacterStore).appendTx([
+        { type: 'hp.changed', v: 1, payload: { kind: 'temp', delta: 4 } },
+      ]);
+      const all = await TestBed.inject(EventsRepository).byStream(streamId);
+      sync.emit(campaignId, streamId, all.slice(events.length));
+
+      expect(session.status()).toBe('warning');
+      expect(session.sheet()?.hp.temp).toBe(4);
+    });
   });
 
   it("ignores an events frame addressed to a DIFFERENT stream than this session's own", async () => {
@@ -530,6 +621,32 @@ describe('ForeignCharacterSession', () => {
 
       expect(session.sheet()?.attunementMax).toBe(7);
       expect(session.sheet()?.carry?.mode).toBe('variant');
+    });
+
+    it("a house-rule change re-derives a 'warning' session too (plan 16 Task 5: a member pack missing here)", async () => {
+      const streamId = await seedFighter('Ivan');
+      await TestBed.inject(CharacterStore).appendTx([
+        { type: 'pack.pinned', v: 1, payload: { packId: 'ghost-pack', version: '2.0.0' } },
+      ]);
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      const campaignPort = new FakeCampaignPort();
+      campaignPort.events = [settingsChangedEvent(campaignStream, settingsWith('off', 3))];
+
+      const session = makeSession(bareCharacterId(streamId), {
+        campaignEvents: campaignPort,
+        overridesPollMs: 15,
+      });
+      session.start();
+      sync.emit(campaignId, streamId, events);
+      await Promise.resolve();
+      expect(session.status()).toBe('warning');
+      expect(session.sheet()?.attunementMax).toBe(3);
+
+      campaignPort.events = [settingsChangedEvent(campaignStream, settingsWith('variant', 7))];
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      expect(session.status()).toBe('warning');
+      expect(session.sheet()?.attunementMax).toBe(7);
     });
 
     it("a failed overrides fetch is best-effort — it never flips a still-'loading' session toward 'error'", async () => {

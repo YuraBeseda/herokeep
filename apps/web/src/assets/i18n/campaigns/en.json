@@ -384,6 +384,10 @@
     "loading": "Loading {name}'s sheet…",
     "unauthorized": "Couldn't load {name}'s sheet. You may no longer have permission to view it.",
     "error": "Couldn't display {name}'s sheet right now.",
+    "missingPacks": {
+      "message": "{count, plural, one {This character uses a content pack that isn't installed on this device:} other {This character uses # content packs that aren't installed on this device:}}",
+      "entry": "{packId}@{version}"
+    },
     "close": "Close",
     "level": "Level {level}",
     "hpTitle": "HP",

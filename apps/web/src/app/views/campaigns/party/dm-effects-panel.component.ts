@@ -88,6 +88,13 @@ interface ActiveConditionRow {
  * no caveat and keeps the plain success message. A REJECT is unaffected either way (still the
  * plain `dmEffects.status.failed`) — the caveat is specifically about a MISLEADING SUCCESS, not
  * failure, which is already accurate.
+ *
+ * ## Names (plan 16 Task 5, design ruling 6)
+ *
+ * Condition names — the picker's options and the remove chips — resolve through the injected
+ * `EngineFacade`. Mounted in `MemberSheetDialogComponent`, that is the dialog's facade scoped to
+ * the selected member's own pins (so a condition from the member's pack is named, and one from a
+ * pack this device lacks shows its raw id); on the party card it is the root facade (core).
  */
 @Component({
   selector: 'app-dm-effects-panel',

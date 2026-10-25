@@ -39,6 +39,27 @@
   color: var(--danger);
 }
 
+/* Plan 16 Task 5: the frame of the missing-packs banner of the sheet shell. */
+.member-sheet-dialog__missing-packs {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.member-sheet-dialog__missing-packs-text {
+  margin: 0;
+  color: var(--warning);
+}
+
+.member-sheet-dialog__missing-packs-list {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: var(--space-4);
+}
+
 .member-sheet-dialog__body {
   display: flex;
   flex-direction: column;

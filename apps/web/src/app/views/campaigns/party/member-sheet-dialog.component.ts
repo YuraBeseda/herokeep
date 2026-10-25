@@ -14,7 +14,8 @@ import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-se
 import { StatTileComponent } from '@shared/components/stat-tile/stat-tile.component';
 import { ForeignCharacterSession } from '@shared/services/campaigns/foreign-character-session';
 import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
-import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { PackStore } from '@shared/stores/pack.store';
@@ -93,6 +94,16 @@ interface SpellRow {
  * resolution finding). The panel writes via `CampaignStore.gatewayAppend` directly (injected by
  * itself, not through this dialog) — the existing doc-03 gateway-forwarding path, unaffected by
  * this dialog's own read-only `ForeignCharacterSession` viewer.
+ *
+ * ## The member's pack set (plan 16 Task 5, design ruling 6)
+ *
+ * The session derives with the member's own pins, and this dialog is the `EngineScope` of a
+ * component-level `EngineFacade` (`provideEngineScope`, the sheet shell's pattern) whose pins are
+ * the derived sheet's (`sheet().pins`; core-only until a sheet exists). Every name this dialog
+ * resolves — and every name the DM effects panel mounted here resolves (its conditions), and the
+ * condition picker it opens — therefore comes from the member's index; the party card's panel
+ * keeps the root (core) facade. A `'warning'` status renders the sheet with the member's packs this
+ * device lacks listed above it; their references show as raw ids, as on a member's own device.
  */
 @Component({
   selector: 'app-member-sheet-dialog',
@@ -107,11 +118,11 @@ interface SpellRow {
     SheetSectionComponent,
     StatTileComponent,
   ],
-  providers: [provideTranslocoScope('campaigns')],
+  providers: [provideTranslocoScope('campaigns'), provideEngineScope(MemberSheetDialogComponent)],
   templateUrl: './member-sheet-dialog.component.html',
   styleUrl: './member-sheet-dialog.component.scss',
 })
-export class MemberSheetDialogComponent {
+export class MemberSheetDialogComponent implements EngineScope {
   protected readonly data = inject<MemberSheetDialogData>(DIALOG_DATA);
   private readonly dialogRef = inject(DialogRef);
   private readonly router = inject(Router);
@@ -129,14 +140,18 @@ export class MemberSheetDialogComponent {
     campaignId: this.data.campaignId,
     characterId: this.data.characterId,
     sync: this.syncService,
-    packStore: { corePack: () => this.packStore.corePack() },
-    engineFacade: { index: () => this.engineFacade.index() },
+    packStore: { corePack: () => this.packStore.corePack(), packs: () => this.packStore.packs() },
+    engineFacade: { indexFor: (pins) => this.engineFacade.indexFor(pins) },
     campaignEvents: { byStream: (streamId) => this.eventsRepository.byStream(streamId) },
   });
 
   protected readonly status = this.session.status;
   protected readonly sheet = this.session.sheet;
+  protected readonly missingPins = this.session.missingPins;
   protected readonly maxDeathSaves = DEATH_SAVE_MAX;
+
+  /** `EngineScope` (class doc's "The member's pack set"): the pins the shown sheet derives with. */
+  readonly pins = computed(() => this.sheet()?.pins);
 
   protected readonly levelClassLine = computed(() => {
     const sheet = this.sheet();

@@ -4,6 +4,7 @@ import {
   reduce,
   type ContentIndex,
   type DeriveOverrides,
+  type Pins,
   type Sheet,
   type SystemRules,
 } from '@hk/engine';
@@ -72,6 +73,17 @@ import { projectCampaign } from './campaign-projection';
  * (never a thrown exception bubbling out of a `registerForeignEventsConsumer` callback) whenever it
  * doesn't match, or `packStore.corePack()` isn't loaded at all.
  *
+ * ## The member's pack set (plan 16 Task 5, design ruling 6)
+ *
+ * The sheet derives against the member's OWN pins — `engineFacade.indexFor(facts.pins)`, the same
+ * per-character index `CharacterStore.index` gives the member on their device — reduced and derived
+ * with the core's system rules, as `CharacterStore` does. A non-core pin whose exact `id@version`
+ * this device does not have resolves nothing: the sheet still derives (its references come out
+ * unresolved, as on any device missing a pin), `missingPins` lists the pins and `status` is
+ * `'warning'` instead of `'ready'`. Only the core mismatch above is an `'error'`. The session
+ * re-derives on frames and house-rule ticks only, so a pack installed while the drill-in is open
+ * shows up on the next frame.
+ *
  * ## House-rule overrides (phase 4, plan 11, task 12, ruling 1 — "DM drill-in should reflect the
  * same house rules")
  *
@@ -87,15 +99,24 @@ import { projectCampaign } from './campaign-projection';
  * manages its own timers manually (the `timeoutMs` arm/disarm above). Best-effort: a failed fetch
  * (offline, a transient storage error) leaves whatever overrides this session already had — same
  * fail-open posture `campaignDeriveOverridesFromState` itself already applies for a campaign with
- * no settings document yet. Only re-derives (`recompute()`) when this session is ALREADY `'ready'`
- * — never lets an overrides-poll tick prematurely flip a still-`'loading'`/`'unauthorized'` session
- * (no character frames yet at all would make `recompute()`'s own pack-mismatch guard misfire).
+ * no settings document yet. Only re-derives (`recompute()`) when this session ALREADY has a sheet
+ * (`'ready'`/`'warning'`) — never lets an overrides-poll tick prematurely flip a still-
+ * `'loading'`/`'unauthorized'` session (no character frames yet at all would make `recompute()`'s
+ * own pack-mismatch guard misfire).
  * `campaignEvents` omitted entirely (every pre-task-12 caller) is byte-identical to before this
  * task — `overrides` stays `{}`, `derive()`'s 4th argument is simply omitted, same as omitting it
  * always was.
  */
 
-export type ForeignCharacterStatus = 'loading' | 'ready' | 'unauthorized' | 'error';
+/** `'warning'` is a derived sheet like `'ready'`, with `missingPins` listing the member's packs
+ * this device lacks (class doc's "The member's pack set"). */
+export type ForeignCharacterStatus = 'loading' | 'ready' | 'warning' | 'unauthorized' | 'error';
+
+/** One of the member's pins this device does not have at that exact version. */
+export interface MissingPin {
+  readonly packId: string;
+  readonly version: string;
+}
 
 /** The narrow slice of `SyncService` this session actually calls. A real `SyncService` satisfies
  * this structurally — the opening component passes it in directly, no adapter needed. */
@@ -108,15 +129,19 @@ export interface ForeignCharacterSyncPort {
   unsubscribeForeignStream(campaignId: string, stream: string): void;
 }
 
-/** The narrow slice of `PackStore` this session reads — just the loaded core pack, to check the
- * pins match (see class doc's "Pack mismatch" section). */
+/** The narrow slice of `PackStore` this session reads — the loaded core pack, to check the pins
+ * match (see class doc's "Pack mismatch" section), and every installed pack, to list the member's
+ * pins this device lacks ("The member's pack set"). */
 export interface ForeignCharacterPackPort {
   corePack(): Pack | undefined;
+  packs(): readonly Pack[];
 }
 
-/** The narrow slice of `EngineFacade` this session reads — the content index `derive()` needs. */
+/** The narrow slice of `EngineFacade` this session reads — the content index for a pin set
+ * (`EngineFacade.indexFor`): the member's own pins for `derive()`, the core's for the system
+ * rules. */
 export interface ForeignCharacterEnginePort {
-  index(): ContentIndex;
+  indexFor(pins: Pins): ContentIndex;
 }
 
 /** The narrow slice of `EventsRepository` this session reads for house-rule overrides (task 12,
@@ -187,8 +212,13 @@ export class ForeignCharacterSession {
   private readonly statusState = signal<ForeignCharacterStatus>('loading');
   private readonly sheetState = signal<Sheet | undefined>(undefined);
 
+  private readonly missingPinsState = signal<readonly MissingPin[]>([]);
+
   readonly status: Signal<ForeignCharacterStatus> = this.statusState.asReadonly();
   readonly sheet: Signal<Sheet | undefined> = this.sheetState.asReadonly();
+  /** The member's non-core pins whose exact `id@version` this device does not have, sorted by pack
+   * id — what a `'warning'` status lists (class doc's "The member's pack set"). `[]` otherwise. */
+  readonly missingPins: Signal<readonly MissingPin[]> = this.missingPinsState.asReadonly();
 
   constructor(options: ForeignCharacterSessionOptions) {
     this.campaignId = options.campaignId;
@@ -248,10 +278,10 @@ export class ForeignCharacterSession {
 
   /** Class doc's "House-rule overrides" section. Best-effort: a failed fetch leaves `this.overrides`
    * exactly as it was (never regresses to `{}` on a transient error). Only re-derives when this
-   * session is ALREADY `'ready'` — an overrides tick that lands before the first real character
-   * frame ever arrives must never itself flip `'loading'`/`'unauthorized'` toward `'error'` (there
-   * would be no `facts`/`corePack` context yet for `recompute()`'s own pack-mismatch guard to judge
-   * honestly). */
+   * session ALREADY has a sheet (`'ready'`/`'warning'`) — an overrides tick that lands before the
+   * first real character frame ever arrives must never itself flip `'loading'`/`'unauthorized'`
+   * toward `'error'` (there would be no `facts`/`corePack` context yet for `recompute()`'s own
+   * pack-mismatch guard to judge honestly). */
   private async refreshOverrides(): Promise<void> {
     if (!this.campaignEvents || this.stopped) return;
     let next: DeriveOverrides;
@@ -263,7 +293,8 @@ export class ForeignCharacterSession {
     }
     if (this.stopped) return;
     this.overrides = next;
-    if (this.statusState() === 'ready') this.recompute();
+    const status = this.statusState();
+    if (status === 'ready' || status === 'warning') this.recompute();
   }
 
   private armTimeout(): void {
@@ -326,10 +357,6 @@ export class ForeignCharacterSession {
   }
 
   private recompute(): void {
-    const index = this.engineFacade.index();
-    const rules = this.systemRules(index);
-    const facts = reduce(this.accumulated, undefined, rules);
-
     const core = this.packStore.corePack();
     // Two separate checks (not one combined `||` condition) — class doc's "Pack mismatch" section:
     // no core pack loaded at all is one failure mode, a version mismatch against a LOADED core is
@@ -338,25 +365,39 @@ export class ForeignCharacterSession {
     // core?.version` would wrongly evaluate `undefined !== undefined` -> `false` — i.e. "no
     // mismatch" — for the very case (`core` undefined) this guard exists to catch).
     if (core === undefined) {
-      this.sheetState.set(undefined);
-      this.statusState.set('error');
+      this.fail();
       return;
     }
+    // Reduce and derive with the core's system rules — `CharacterStore.systemRules()`'s own source.
+    const rules = this.systemRules(this.engineFacade.indexFor({ [core.id]: core.version }));
+    const facts = reduce(this.accumulated, undefined, rules);
     if (facts.pins[core.id] !== core.version) {
-      this.sheetState.set(undefined);
-      this.statusState.set('error');
+      this.fail();
       return;
     }
 
+    const installed = new Set(this.packStore.packs().map((p) => `${p.id}@${p.version}`));
+    const missing = Object.keys(facts.pins)
+      .filter((packId) => packId !== core.id)
+      .sort()
+      .map((packId) => ({ packId, version: facts.pins[packId] }))
+      .filter(({ packId, version }) => !installed.has(`${packId}@${version}`));
+
     try {
-      const sheet = derive(facts, index, rules, this.overrides);
+      const sheet = derive(facts, this.engineFacade.indexFor(facts.pins), rules, this.overrides);
       this.sheetState.set(sheet);
-      this.statusState.set('ready');
+      this.missingPinsState.set(missing);
+      this.statusState.set(missing.length > 0 ? 'warning' : 'ready');
     } catch {
       // Never let a derive-time throw escape this callback (task-9-brief.md: "no crash").
-      this.sheetState.set(undefined);
-      this.statusState.set('error');
+      this.fail();
     }
+  }
+
+  private fail(): void {
+    this.sheetState.set(undefined);
+    this.missingPinsState.set([]);
+    this.statusState.set('error');
   }
 
   private systemRules(index: ContentIndex): SystemRules {

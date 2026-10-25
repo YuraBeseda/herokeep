@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal } from '@angular/core';
+import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -14,8 +14,12 @@ import { StoragePersistService } from '@shared/services/pwa/storage-persist.serv
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { SyncService } from '@shared/services/sync/sync.service';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import campaignsRu from '../../../../assets/i18n/campaigns/ru.json';
+import campaignsUk from '../../../../assets/i18n/campaigns/uk.json';
+import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { seedFighter } from '../../characters/sheet/testing/character-fixtures';
 import {
   MemberSheetDialogComponent,
@@ -39,6 +43,30 @@ function readPack(path: string): Pack {
 const corePack = readPack(
   join(repoRoot, 'packages/content/dist/packs', PACK_ID, PACK_VERSION, 'pack.json'),
 );
+
+const MOONSTRUCK = 'sample-content:condition/moonstruck';
+const SICKLE = 'sample-content:item/moonblade-sickle';
+
+/** The sample content pack plus one condition, so a member's pack can name a condition chip. */
+const parsedMemberPack = parsePack({
+  ...sampleJson,
+  entities: [
+    ...sampleJson.entities,
+    {
+      type: 'condition',
+      id: MOONSTRUCK,
+      name: 'Moonstruck',
+      description: 'Bathed in moonlight.',
+      tags: [],
+      prerequisites: [],
+      effects: [],
+      grants: [],
+      choices: [],
+    },
+  ],
+});
+if (!parsedMemberPack.ok) throw new Error('the member pack fixture no longer parses');
+const memberPack = parsedMemberPack.pack;
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -89,9 +117,15 @@ class FakeRouter {
   }
 }
 
-function configure(): { sync: FakeSyncService; router: FakeRouter } {
+function configure(): {
+  sync: FakeSyncService;
+  router: FakeRouter;
+  packs: WritableSignal<Pack[]>;
+} {
   const sync = new FakeSyncService();
   const router = new FakeRouter();
+  // The packs installed on the DM's device (the real `EngineFacade` reads them).
+  const packs = signal<Pack[]>([corePack]);
   TestBed.configureTestingModule({
     providers: [
       provideTransloco({
@@ -102,7 +136,7 @@ function configure(): { sync: FakeSyncService; router: FakeRouter } {
       provideTranslocoScope('campaigns'),
       {
         provide: PackStore,
-        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        useValue: { packs, ready: signal(true), corePack: signal(corePack) },
       },
       {
         provide: StoragePersistService,
@@ -112,7 +146,7 @@ function configure(): { sync: FakeSyncService; router: FakeRouter } {
       { provide: Router, useValue: router },
     ],
   });
-  return { sync, router };
+  return { sync, router, packs };
 }
 
 function openDialog(data: MemberSheetDialogData) {
@@ -124,9 +158,10 @@ describe('MemberSheetDialogComponent', () => {
   const campaignId = '00000000-0000-4000-8000-0000000000c1';
   let sync: FakeSyncService;
   let router: FakeRouter;
+  let packs: WritableSignal<Pack[]>;
 
   beforeEach(async () => {
-    ({ sync, router } = configure());
+    ({ sync, router, packs } = configure());
     const db = TestBed.inject(HkDb);
     await Promise.all([
       db.events.clear(),
@@ -276,5 +311,101 @@ describe('MemberSheetDialogComponent', () => {
 
     expect(sync.unsubscribeCalls).toEqual([]);
     expect(document.querySelector('[role="dialog"]')).toBeTruthy();
+  });
+
+  // --- plan 16 Task 5, ruling 6: the member's own pack set ---------------------------------------
+  describe("the member's pinned packs (plan 16 Task 5, ruling 6)", () => {
+    /** A member fighter who pins `memberPack`, is Moonstruck and carries its Moonblade Sickle —
+     * every one of those references lives in the member's pack, none in the core. */
+    async function seedMember(): Promise<{ characterId: string; events: Event[] }> {
+      const streamId = await seedFighter('Ivan');
+      await TestBed.inject(CharacterStore).appendTx([
+        {
+          type: 'pack.pinned',
+          v: 1,
+          payload: { packId: memberPack.id, version: memberPack.version },
+        },
+        { type: 'condition.added', v: 1, payload: { conditionId: MOONSTRUCK } },
+        {
+          type: 'item.added',
+          v: 1,
+          payload: { instanceId: '44444444-4444-4444-8444-444444444444', itemId: SICKLE, qty: 1 },
+        },
+      ]);
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      return { characterId: streamId.slice('char:'.length), events };
+    }
+
+    async function openWith(member: { characterId: string; events: Event[] }): Promise<void> {
+      openDialog({ campaignId, characterId: member.characterId, name: 'Ivan' });
+      TestBed.tick();
+      sync.emit(campaignId, `char:${member.characterId}`, member.events);
+      TestBed.tick();
+      await Promise.resolve();
+      TestBed.tick();
+    }
+
+    const text = (selector: string): string[] =>
+      Array.from(document.querySelectorAll(selector)).map((el) => el.textContent?.trim() ?? '');
+
+    function expandDmPanel(): HTMLElement {
+      const panel = document.querySelector<HTMLElement>('app-dm-effects-panel')!;
+      panel.querySelector<HTMLButtonElement>('.dm-effects-panel__toggle')?.click();
+      TestBed.tick();
+      return panel;
+    }
+
+    it("names come from the member's index when this device has their pack — the sheet's chips and inventory, and the DM panel's conditions", async () => {
+      packs.set([corePack, memberPack]);
+      const member = await seedMember();
+
+      await openWith(member);
+
+      expect(document.querySelector('.member-sheet-dialog__missing-packs')).toBeNull();
+      expect(text('.member-sheet-dialog__conditions hk-chip')).toEqual(['Moonstruck']);
+      expect(text('.member-sheet-dialog__inventory li')).toContain('Moonblade Sickle × 1');
+      const panel = expandDmPanel();
+      expect(
+        Array.from(panel.querySelectorAll('.dm-effects-panel__conditions hk-chip')).map((el) =>
+          el.textContent?.trim(),
+        ),
+      ).toEqual([expect.stringContaining('Moonstruck')]);
+    });
+
+    it('Review Focus 3: a pinned pack the DM device lacks — the sheet renders with a warning listing it, unresolved references as chips, no exception', async () => {
+      const member = await seedMember();
+      packs.set([corePack]);
+
+      await openWith(member);
+
+      const warning = document.querySelector('.member-sheet-dialog__missing-packs');
+      expect(warning).not.toBeNull();
+      expect(warning?.getAttribute('role')).toBe('status');
+      expect(warning?.textContent).toContain(
+        "This character uses a content pack that isn't installed on this device:",
+      );
+      expect(text('.member-sheet-dialog__missing-packs li')).toEqual([
+        `${memberPack.id}@${memberPack.version}`,
+      ]);
+      // The sheet itself still renders, its pack references as their raw ids.
+      expect(text('.hk-stat-tile__value')).toContain('19');
+      expect(text('.member-sheet-dialog__conditions hk-chip')).toEqual([MOONSTRUCK]);
+      expect(text('.member-sheet-dialog__inventory li')).toContain(`${SICKLE} × 1`);
+      const panel = expandDmPanel();
+      expect(
+        Array.from(panel.querySelectorAll('.dm-effects-panel__conditions hk-chip')).map((el) =>
+          el.textContent?.trim(),
+        ),
+      ).toEqual([expect.stringContaining(MOONSTRUCK)]);
+    });
+
+    it('the warning strings exist in en, ru and uk (ICU plural)', () => {
+      for (const locale of [campaignsEn, campaignsRu, campaignsUk]) {
+        const strings = (locale.memberSheet as unknown as { missingPacks?: Record<string, string> })
+          .missingPacks;
+        expect(Object.keys(strings ?? {}).sort()).toEqual(['entry', 'message']);
+        expect(strings?.['message']).toMatch(/\{count, plural,/);
+      }
+    });
   });
 });
