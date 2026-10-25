@@ -1,7 +1,8 @@
 {
   "name": "mastery-sum-rule",
-  "note": "Plan 16 task 7 (slice 6 goldens): ruling 9's 'sum' combine rule, pinned through pack data. The log is multi-fighter5-barbarian3-mastery's log (Fighter 5 Champion -> Barbarian 3 Berserker, the same decisions and the same five equipped weapons), with one difference: seq 2 pins the engine fixture pack mastery-sum-house-rule 1.0.0. That pack has no entities. Its one override replaces the core system's /multiclass/masteryCount ('max' in packages/content/src/static/system.ts) with 'sum', so the per-character index's system() combines the mastery.grant counts by adding them (derive/attacks.ts masteryCap). The 'max' result for the same log stays pinned by multi-fighter5-barbarian3-mastery and is not repeated here. Hand table (SRD data): the fighter-weapon-mastery-count row extra is 4 at fighter level 5 (3 at levels 1-3, 4 from level 4); the barbarian-weapon-mastery-count row extra is 2 at barbarian level 3 (2 at levels 1-3). So masteryCount = 4 + 2 = 6 (max would be 4). The cap is shared and filled in class order. The Fighter's three recorded picks (longsword sap, greatsword graze, warhammer push; its 4th slot was never re-picked) fill slots 1-3. The Barbarian's two picks fill slots 4-5: handaxe vex and greataxe cleave. Under 'max' the greataxe pick is over the cap; here it is honoured, so the greataxe row gains mastery cleave and one slot stays free. Unchanged by the rule: level 8, prof +3; STR 15 + Soldier 2 + fighter 4 ASI 2 = 19 (+4); HP 71 = fighter 10+2, 4 x (6+2), then barbarian 3 x (7+2); Extra Attack 2. Greataxe: to-hit 4+3 = +7, damage 1d12 + 4 slashing.",
-  "packs": ["dist:srd-5e-2024", "fixture:mastery-sum-house-rule"],
+  "note": "Plan 16 task 7 (slice 6 goldens): ruling 9's 'sum' combine rule, read from system data. The log is multi-fighter5-barbarian3-mastery's log: Fighter 5 Champion -> Barbarian 3 Berserker, the same decisions and the same five equipped weapons, under a new stream. The one difference is the golden's systemPatch. The harness deep-merges it into the core pack's system entity before the index is built, the same as Task 6's indexWithRule in test/derive/mastery-multiclass.test.ts. Only a kind: core pack may change the system entity (docs/02-architecture/04-content-packs.md, Overrides), so this golden stands for a core pack whose system says multiclass.masteryCount 'sum'. The SRD system says 'max' (packages/content/src/static/system.ts). derive/attacks.ts masteryCap then adds the mastery.grant counts. The 'max' result for the same log stays pinned by multi-fighter5-barbarian3-mastery and is not repeated here. Hand table (SRD data): the fighter-weapon-mastery-count row extra is 4 at fighter level 5 (3 at levels 1-3, 4 from level 4); the barbarian-weapon-mastery-count row extra is 2 at barbarian level 3 (2 at levels 1-3). So masteryCount = 4 + 2 = 6 (max would be 4). The cap is shared and filled in class order. The Fighter's three recorded picks (longsword sap, greatsword graze, warhammer push; its 4th slot was never re-picked) fill slots 1-3. The Barbarian's two picks fill slots 4-5: handaxe vex and greataxe cleave. Under 'max' the greataxe pick is over the cap; here it is honoured, so the greataxe row gains mastery cleave and one slot stays free. Unchanged by the rule: level 8, prof +3; STR 15 + Soldier 2 + fighter 4 ASI 2 = 19 (+4); HP 71 = fighter 10+2, 4 x (6+2), then barbarian 3 x (7+2); Extra Attack 2. Greataxe: to-hit 4+3 = +7, damage 1d12 + 4 slashing.",
+  "packs": ["dist:srd-5e-2024"],
+  "systemPatch": { "multiclass": { "masteryCount": "sum" } },
   "events": [
     {
       "id": "018f7000-0000-7000-8000-000000001601",
@@ -25,9 +26,9 @@
       "seq": 2,
       "ts": "2026-10-25T12:00:02.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
-      "type": "pack.pinned",
+      "type": "decision.made",
       "v": 1,
-      "payload": { "packId": "mastery-sum-house-rule", "version": "1.0.0" }
+      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/species", "selection": ["srd-5e-2024:species/human"] }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001603",
@@ -37,7 +38,10 @@
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/species", "selection": ["srd-5e-2024:species/human"] }
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001604",
@@ -47,26 +51,13 @@
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
-      "payload": {
-        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
-        "selection": ["srd-5e-2024:background/soldier"]
-      }
+      "payload": { "choiceId": "srd-5e-2024:background/soldier@0/ability-scores", "selection": ["str:+2", "con:+1"] }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001605",
       "stream": "char:59999999-9999-7999-8999-999999999999",
       "seq": 5,
       "ts": "2026-10-25T12:00:05.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
-      "type": "decision.made",
-      "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:background/soldier@0/ability-scores", "selection": ["str:+2", "con:+1"] }
-    },
-    {
-      "id": "018f7000-0000-7000-8000-000000001606",
-      "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 6,
-      "ts": "2026-10-25T12:00:06.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
@@ -77,14 +68,24 @@
       }
     },
     {
+      "id": "018f7000-0000-7000-8000-000000001606",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 6,
+      "ts": "2026-10-25T12:00:06.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 1 }
+    },
+    {
       "id": "018f7000-0000-7000-8000-000000001607",
       "stream": "char:59999999-9999-7999-8999-999999999999",
       "seq": 7,
       "ts": "2026-10-25T12:00:07.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
-      "type": "level.gained",
+      "type": "decision.made",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 1 }
+      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/skills", "selection": ["perception", "survival"] }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001608",
@@ -94,7 +95,7 @@
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/skills", "selection": ["perception", "survival"] }
+      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/fighting-style", "selection": ["srd-5e-2024:feat/defense"] }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001609",
@@ -104,26 +105,16 @@
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/fighting-style", "selection": ["srd-5e-2024:feat/defense"] }
-    },
-    {
-      "id": "018f7000-0000-7000-8000-000000001610",
-      "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 10,
-      "ts": "2026-10-25T12:00:10.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
-      "type": "decision.made",
-      "v": 1,
       "payload": {
         "choiceId": "srd-5e-2024:class/fighter@1/weapon-masteries",
         "selection": ["srd-5e-2024:item/longsword", "srd-5e-2024:item/greatsword", "srd-5e-2024:item/warhammer"]
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001611",
+      "id": "018f7000-0000-7000-8000-000000001610",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 11,
-      "ts": "2026-10-25T12:00:11.000Z",
+      "seq": 10,
+      "ts": "2026-10-25T12:00:10.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.added",
       "v": 1,
@@ -134,20 +125,20 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001612",
+      "id": "018f7000-0000-7000-8000-000000001611",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 12,
-      "ts": "2026-10-25T12:00:12.000Z",
+      "seq": 11,
+      "ts": "2026-10-25T12:00:11.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.equipped",
       "v": 1,
       "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a1" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001613",
+      "id": "018f7000-0000-7000-8000-000000001612",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 13,
-      "ts": "2026-10-25T12:00:13.000Z",
+      "seq": 12,
+      "ts": "2026-10-25T12:00:12.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.added",
       "v": 1,
@@ -158,20 +149,20 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001614",
+      "id": "018f7000-0000-7000-8000-000000001613",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 14,
-      "ts": "2026-10-25T12:00:14.000Z",
+      "seq": 13,
+      "ts": "2026-10-25T12:00:13.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.equipped",
       "v": 1,
       "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a2" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001615",
+      "id": "018f7000-0000-7000-8000-000000001614",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 15,
-      "ts": "2026-10-25T12:00:15.000Z",
+      "seq": 14,
+      "ts": "2026-10-25T12:00:14.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.added",
       "v": 1,
@@ -182,20 +173,20 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001616",
+      "id": "018f7000-0000-7000-8000-000000001615",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 16,
-      "ts": "2026-10-25T12:00:16.000Z",
+      "seq": 15,
+      "ts": "2026-10-25T12:00:15.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.equipped",
       "v": 1,
       "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a3" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001617",
+      "id": "018f7000-0000-7000-8000-000000001616",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 17,
-      "ts": "2026-10-25T12:00:17.000Z",
+      "seq": 16,
+      "ts": "2026-10-25T12:00:16.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.added",
       "v": 1,
@@ -206,20 +197,20 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001618",
+      "id": "018f7000-0000-7000-8000-000000001617",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 18,
-      "ts": "2026-10-25T12:00:18.000Z",
+      "seq": 17,
+      "ts": "2026-10-25T12:00:17.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.equipped",
       "v": 1,
       "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a4" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001619",
+      "id": "018f7000-0000-7000-8000-000000001618",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 19,
-      "ts": "2026-10-25T12:00:19.000Z",
+      "seq": 18,
+      "ts": "2026-10-25T12:00:18.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.added",
       "v": 1,
@@ -230,30 +221,30 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001620",
+      "id": "018f7000-0000-7000-8000-000000001619",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 20,
-      "ts": "2026-10-25T12:00:20.000Z",
+      "seq": 19,
+      "ts": "2026-10-25T12:00:19.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "item.equipped",
       "v": 1,
       "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a5" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001621",
+      "id": "018f7000-0000-7000-8000-000000001620",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 21,
-      "ts": "2026-10-25T12:00:21.000Z",
+      "seq": 20,
+      "ts": "2026-10-25T12:00:20.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "level.gained",
       "v": 1,
       "payload": { "classId": "srd-5e-2024:class/fighter", "level": 2, "hpRoll": "average" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001622",
+      "id": "018f7000-0000-7000-8000-000000001621",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 22,
-      "ts": "2026-10-25T12:00:22.000Z",
+      "seq": 21,
+      "ts": "2026-10-25T12:00:21.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "level.gained",
       "v": 1,
@@ -265,20 +256,20 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001623",
+      "id": "018f7000-0000-7000-8000-000000001622",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 23,
-      "ts": "2026-10-25T12:00:23.000Z",
+      "seq": 22,
+      "ts": "2026-10-25T12:00:22.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "level.gained",
       "v": 1,
       "payload": { "classId": "srd-5e-2024:class/fighter", "level": 4, "hpRoll": "average" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001624",
+      "id": "018f7000-0000-7000-8000-000000001623",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 24,
-      "ts": "2026-10-25T12:00:24.000Z",
+      "seq": 23,
+      "ts": "2026-10-25T12:00:23.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
@@ -288,14 +279,24 @@
       }
     },
     {
+      "id": "018f7000-0000-7000-8000-000000001624",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 24,
+      "ts": "2026-10-25T12:00:24.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores", "selection": ["str:+2"] }
+    },
+    {
       "id": "018f7000-0000-7000-8000-000000001625",
       "stream": "char:59999999-9999-7999-8999-999999999999",
       "seq": 25,
       "ts": "2026-10-25T12:00:25.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
-      "type": "decision.made",
+      "type": "level.gained",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores", "selection": ["str:+2"] }
+      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 5, "hpRoll": "average" }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001626",
@@ -305,23 +306,13 @@
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 5, "hpRoll": "average" }
+      "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 1 }
     },
     {
       "id": "018f7000-0000-7000-8000-000000001627",
       "stream": "char:59999999-9999-7999-8999-999999999999",
       "seq": 27,
       "ts": "2026-10-25T12:00:27.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
-      "type": "level.gained",
-      "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 1 }
-    },
-    {
-      "id": "018f7000-0000-7000-8000-000000001628",
-      "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 28,
-      "ts": "2026-10-25T12:00:28.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "decision.made",
       "v": 1,
@@ -331,20 +322,20 @@
       }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001629",
+      "id": "018f7000-0000-7000-8000-000000001628",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 29,
-      "ts": "2026-10-25T12:00:29.000Z",
+      "seq": 28,
+      "ts": "2026-10-25T12:00:28.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "level.gained",
       "v": 1,
       "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 2, "hpRoll": "average" }
     },
     {
-      "id": "018f7000-0000-7000-8000-000000001630",
+      "id": "018f7000-0000-7000-8000-000000001629",
       "stream": "char:59999999-9999-7999-8999-999999999999",
-      "seq": 30,
-      "ts": "2026-10-25T12:00:30.000Z",
+      "seq": 29,
+      "ts": "2026-10-25T12:00:29.000Z",
       "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
       "type": "level.gained",
       "v": 1,
@@ -357,8 +348,6 @@
     }
   ],
   "expect": {
-    "facts.pins": { "srd-5e-2024": "0.1.0", "mastery-sum-house-rule": "1.0.0" },
-    "sheet.pins": { "srd-5e-2024": "0.1.0", "mastery-sum-house-rule": "1.0.0" },
     "sheet.level": 8,
     "sheet.prof": 3,
     "sheet.hp.max.value": 71,

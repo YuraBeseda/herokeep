@@ -38,8 +38,8 @@ import { loadGoldens, prepareGolden } from './support/golden.ts';
  *
  * Plan 16 task 7: plus both slice-6 goldens: the campaign member whose pin moved a held pack item to
  * its replacement (`campaign-pack-member`, per-character index over two sample-content versions),
- * and the Fighter/Barbarian whose house-rule pack overrides the core system's mastery combine rule
- * to 'sum' (`mastery-sum-rule`, the override applied while the per-character index is built).
+ * and the Fighter/Barbarian derived under a core system whose mastery combine rule is 'sum'
+ * (`mastery-sum-rule`, the golden's `systemPatch`).
  */
 const PERF_FIXTURES = [
   'multi-fighter1-wizard19',

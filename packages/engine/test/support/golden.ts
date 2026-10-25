@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { type Pack, type Event, parseEvent, parsePack } from '@hk/protocol';
+import { type Pack, type Event, EntitySchema, parseEvent, parsePack } from '@hk/protocol';
 import { pinnedRoots } from '../../src/content/deps.ts';
 import { type ContentIndex, createContentIndex } from '../../src/content/index.ts';
 import { derive } from '../../src/derive/index.ts';
@@ -18,6 +18,16 @@ export interface GoldenFixture {
    * top-level `sheet.*` key) is listed here; a present value fails `toEqual` with that value shown.
    */
   absent?: string[];
+  /**
+   * Plan 16 task 7: a partial `system` entity deep-merged into the CORE pack's system entity before
+   * any index is built, for a golden that needs system data the shipped core does not carry (e.g.
+   * `{ "multiclass": { "masteryCount": "sum" } }`). Objects merge key by key; arrays and scalars
+   * replace. The result is revalidated with the strict entity schema, so a misspelt key fails the
+   * golden. It stands for a different core pack: only a `kind: core` pack may change the `system`
+   * entity (docs/02-architecture/04-content-packs.md, Overrides), so a content-pack override is not
+   * a valid way to do this.
+   */
+  systemPatch?: Record<string, unknown>;
 }
 
 const goldenDir = new URL('../golden/', import.meta.url);
@@ -88,6 +98,37 @@ export function getPath(root: unknown, path: string): unknown {
   return cur;
 }
 
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** `systemPatch`'s merge: objects merge key by key; anything else (arrays included) replaces. */
+function deepMerge(base: unknown, patch: unknown): unknown {
+  if (!isPlainObject(base) || !isPlainObject(patch)) return structuredClone(patch);
+  const merged: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(patch)) merged[key] = deepMerge(base[key], value);
+  return merged;
+}
+
+/** Plan 16 task 7: the golden's packs with `fx.systemPatch` merged into the core's system entity. */
+function applySystemPatch(fx: GoldenFixture, packs: Pack[]): Pack[] {
+  const patch = fx.systemPatch;
+  if (patch === undefined) return packs;
+  let patched = 0;
+  const result = packs.map((pack) => {
+    if (pack.kind !== 'core') return pack;
+    const entities = pack.entities.map((e) => {
+      if (e.type !== 'system') return e;
+      const r = EntitySchema.safeParse(deepMerge(e, patch));
+      if (!r.success) throw new Error(`${fx.name}: systemPatch makes an invalid system entity (${r.error.message})`);
+      patched++;
+      return r.data;
+    });
+    return { ...pack, entities };
+  });
+  if (patched !== 1) throw new Error(`${fx.name}: systemPatch needs exactly one core system entity (found ${patched})`);
+  return result;
+}
+
 /** The reduced facts plus the index and rules a golden derives with (shared with `derive-perf`). */
 export function prepareGolden(fx: GoldenFixture): {
   facts: Facts;
@@ -95,7 +136,9 @@ export function prepareGolden(fx: GoldenFixture): {
   rules: SystemRules | undefined;
   events: number;
 } {
-  const packs = fx.packs.map(loadGoldenPack);
+  // Plan 16 task 7: `systemPatch` is merged before either index below is built, so both the
+  // derive index and the system rules read the patched entity.
+  const packs = applySystemPatch(fx, fx.packs.map(loadGoldenPack));
   // Plan 15 task 8: a golden listing a `fixture:` content pack derives against the per-character
   // index, exactly as the web's `EngineFacade.indexFor(facts.pins)` builds it — so the packs its
   // log pins (and unpins) decide what resolves. The core-only index below still supplies the
