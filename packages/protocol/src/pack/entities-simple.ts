@@ -139,7 +139,18 @@ export const SystemEntitySchema = entity('system', {
         .optional(),
     })
     .optional(),
-  multiclass: z.strictObject({ prerequisites: z.record(ClassRefSchema, PredicateSchema) }).optional(),
+  multiclass: z
+    .strictObject({
+      prerequisites: z.record(ClassRefSchema, PredicateSchema),
+      /**
+       * Plan 16 Task 6 (ruling 9): how a multiclass character's Weapon Mastery counts combine across
+       * the active `mastery.grant` effects — `'max'` (the highest count; the engine's default when
+       * absent) or `'sum'` (every count added). One shared cap for every `weapon-masteries` choice;
+       * the rule is pack data so a system can choose either without an engine change.
+       */
+      masteryCount: z.enum(['max', 'sum']).optional(),
+    })
+    .optional(),
   abilityGeneration: z.strictObject({
     standardArray: z.array(z.int().min(1).max(30)).min(1),
     pointBuy: z.strictObject({

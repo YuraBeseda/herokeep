@@ -264,6 +264,29 @@ describe('simple entity schemas', () => {
     expect(negativeSpeedPenalty.success).toBe(false);
   });
 
+  // Plan 16 Task 6 (ruling 9): the multiclass Weapon Mastery combine rule is pack DATA —
+  // `multiclass.masteryCount` 'max' | 'sum', optional (the engine defaults an absent value to 'max').
+  it('system entity: multiclass.masteryCount accepts max and sum, is optional, refuses anything else', () => {
+    const tables = { xp: [0], proficiency: [2], spellSlots: { full: [[2]] } };
+    const prerequisites = { fighter: { ability: { str: { gte: 13 } } } };
+    for (const masteryCount of ['max', 'sum']) {
+      const r = SystemEntitySchema.safeParse({ ...baseSystem, tables, multiclass: { prerequisites, masteryCount } });
+      expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
+      expect(r.data?.multiclass?.masteryCount).toBe(masteryCount);
+    }
+
+    const absent = SystemEntitySchema.safeParse({ ...baseSystem, tables, multiclass: { prerequisites } });
+    expect(absent.success, JSON.stringify(absent.error?.issues)).toBe(true);
+    expect(absent.data?.multiclass).toEqual({ prerequisites });
+
+    const other = SystemEntitySchema.safeParse({
+      ...baseSystem,
+      tables,
+      multiclass: { prerequisites, masteryCount: 'min' },
+    });
+    expect(other.success).toBe(false);
+  });
+
   it('accepts minimal valid instances of each simple type', () => {
     const ok = (
       schema: { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown } } },

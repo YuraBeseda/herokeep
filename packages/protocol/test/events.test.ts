@@ -175,6 +175,36 @@ describe('resourceId: additive widening for item-charge keys', () => {
   });
 });
 
+// Plan 16 Task 6 (ruling 7): `item.updated@1` additively carries an optional `itemId` — the rebase
+// planner's inventory item-id migration (`deprecated.replacedBy`). Every pre-existing payload
+// (no `itemId`) still parses unchanged; the new field is an entity id like `item.added`'s.
+describe('item.updated: additive itemId (inventory item-id migration)', () => {
+  const UUID_D = '44444444-5555-4666-8777-888888888888';
+
+  it('accepts an itemId alongside the instanceId', () => {
+    const r = parseEvent({
+      ...base,
+      type: 'item.updated',
+      payload: { instanceId: UUID_D, itemId: 'sample-content:item/moonsilver-sickle' },
+    });
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+  });
+
+  it('still accepts a legacy payload without itemId', () => {
+    const r = parseEvent({ ...base, type: 'item.updated', payload: { instanceId: UUID_D, notes: 'chipped' } });
+    expect(r.ok, JSON.stringify(r)).toBe(true);
+  });
+
+  it('rejects an itemId that is not an entity id', () => {
+    const r = parseEvent({
+      ...base,
+      type: 'item.updated',
+      payload: { instanceId: UUID_D, itemId: 'moonsilver-sickle' },
+    });
+    expect(r.ok).toBe(false);
+  });
+});
+
 // Scoped to character.ts's OWN registries (not the merged `EVENT_PAYLOADS`/`EVENT_ACTORS` from
 // index.ts, which additionally carries the campaign-stream catalog as of plan-9 Task 1) — this
 // describe block is specifically about the Phase-1 character-stream catalog staying complete.

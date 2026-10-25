@@ -4546,6 +4546,13 @@
           "additionalProperties": {
             "$ref": "#/$defs/__schema25"
           }
+        },
+        "masteryCount": {
+          "type": "string",
+          "enum": [
+            "max",
+            "sum"
+          ]
         }
       },
       "required": [

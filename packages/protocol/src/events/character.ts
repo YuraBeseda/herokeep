@@ -187,6 +187,12 @@ export const ItemAttunedV1 = z.strictObject({ instanceId: z.string().regex(UUID)
 export const ItemUnattunedV1 = z.strictObject({ instanceId: z.string().regex(UUID) });
 export const ItemUpdatedV1 = z.strictObject({
   instanceId: z.string().regex(UUID),
+  /**
+   * Plan 16 Task 6 (ruling 7, additive): the entry's pack item id moves to this one — emitted by the
+   * rebase planner when `next` marks the old id `deprecated.replacedBy` (the inventory analogue of
+   * a migrated decision). Absent on every pre-existing `item.updated`, which replays unchanged.
+   */
+  itemId: EntityIdSchema.optional(),
   name: ShortTextSchema.optional(),
   notes: ShortTextSchema.optional(),
   qty: z.int().min(1).optional(),
