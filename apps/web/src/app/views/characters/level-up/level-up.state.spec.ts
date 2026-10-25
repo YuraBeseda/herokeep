@@ -434,28 +434,15 @@ describe('LevelUpState', () => {
     expect(state.advancement()?.isNewClass).toBe(true);
     expect(state.advancement()?.hpChoice).toBe(false); // a brand-new class's level 1 never rolls
     // Plan 12 final wave W1: Barbarian's multiclass row grants no skill pick (gains
-    // .skillChoiceCount 0), so weapon masteries is its only level-1 choice as a later class.
-    expect(state.outstanding().map((o) => o.choiceId)).toEqual([
-      'srd-5e-2024:class/barbarian@1/weapon-masteries',
-    ]);
-    state.setDecision('srd-5e-2024:class/barbarian@1/weapon-masteries', [
-      'srd-5e-2024:item/battleaxe',
-      'srd-5e-2024:item/blowgun',
-    ]);
+    // .skillChoiceCount 0). Plan 16 task 6 (ruling 10) re-pin: nor is its weapon-masteries pick
+    // offered — the Fighter's 3 recorded masteries already fill the shared cap (max(3, 2) = 3), so
+    // a later-class Barbarian is offered 0 and its level 1 asks nothing.
     expect(state.outstanding()).toEqual([]);
     expect(state.complete()).toBe(true);
 
     const drafts = state.buildTransaction();
     expect(drafts).toEqual([
       { type: 'level.gained', v: 1, payload: { classId: BARBARIAN, level: 1 } },
-      {
-        type: 'decision.made',
-        v: 1,
-        payload: {
-          choiceId: 'srd-5e-2024:class/barbarian@1/weapon-masteries',
-          selection: ['srd-5e-2024:item/battleaxe', 'srd-5e-2024:item/blowgun'],
-        },
-      },
     ]);
 
     await characterStore.appendTx(drafts);
@@ -464,11 +451,11 @@ describe('LevelUpState', () => {
       { classId: BARBARIAN, level: 1 },
     ]);
 
+    // A one-event transaction carries no `txId` (`appendTx`), so the undo targets the event itself.
     const lastEvent = characterStore.events().at(-1)!;
-    expect(lastEvent.txId).toBeDefined();
-    const lastTx = characterStore.events().slice(-drafts.length);
-    expect(new Set(lastTx.map((e) => e.txId)).size).toBe(1);
-    await characterStore.revert({ txId: lastEvent.txId });
+    expect(lastEvent.type).toBe('level.gained');
+    expect(lastEvent.txId).toBeUndefined();
+    await characterStore.revert({ eventId: lastEvent.id });
 
     const after = JSON.parse(JSON.stringify(characterStore.sheet())) as unknown;
     expect(after).toEqual(before);

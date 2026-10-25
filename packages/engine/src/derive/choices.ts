@@ -3,7 +3,8 @@ import { multiclassSkillsChoiceId, occurrenceChoiceId } from '../content/choices
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import type { Facts } from '../reduce/facts.ts';
-import { decisionFallsShort, resolveChoiceCount } from './choice-count.ts';
+import { choiceCountOverride, decisionFallsShort, offeredChoiceCount, resolveChoiceCount } from './choice-count.ts';
+import type { Composition } from './composition.ts';
 import type { ChoiceRequest } from './sheet.ts';
 
 export const byChoiceId = (a: ChoiceRequest, b: ChoiceRequest) =>
@@ -30,21 +31,37 @@ export function scopeOffers(choice: Choice, initialClass: boolean): boolean {
   return choice.scope === 'initial' ? initialClass : !initialClass;
 }
 
+/** What `offeredRowChoices` needs to consult `choiceCountOverride` (plan 16 ruling 10). */
+export interface OfferState {
+  facts: Facts;
+  comp: Composition;
+  index: ContentIndex;
+}
+
 /**
  * The choices of ONE class/subclass row that are offered (outstanding requests and level-up
  * advancement steps alike): `scopeOffers` per choice, plus plan 14 task 1 fix round 1's
  * suppression — a `'later'`-scoped choice is not offered while an `'initial'`-scoped choice on the
  * SAME row already has a recorded decision (a legacy log that answered the initial pick for a later
- * class keeps granting that answer; the later pick would duplicate it).
+ * class keeps granting that answer; the later pick would duplicate it). With `offer` (plan 16
+ * ruling 10), a choice whose `choiceCountOverride` is 0 is not offered either (e.g. a later class's
+ * weapon masteries once the shared cap is full); without it — the mastery arithmetic's own walk —
+ * only the scope filter applies.
  */
 export function offeredRowChoices(
   choices: readonly Choice[],
   initialClass: boolean,
   decisions: Readonly<Record<string, readonly string[]>>,
+  offer?: OfferState,
 ): Choice[] {
   const isScoped = (c: Choice, scope: 'initial' | 'later') => c.scope === scope && c.at.kind === 'classLevel';
   const initialAnswered = choices.some((c) => isScoped(c, 'initial') && decisions[c.id] !== undefined);
-  return choices.filter((c) => scopeOffers(c, initialClass) && !(initialAnswered && isScoped(c, 'later')));
+  return choices.filter(
+    (c) =>
+      scopeOffers(c, initialClass) &&
+      !(initialAnswered && isScoped(c, 'later')) &&
+      (offer === undefined || choiceCountOverride(c, offer.facts, offer.comp, offer.index) !== 0),
+  );
 }
 
 /** The row-gated synthetic id for a class's starting-skill decision (R5, task-13-brief.md controller ruling). */
@@ -101,14 +118,18 @@ export function creationChoices(
  * row choice carrying `scope` is offered only to the initial class (`'initial'`) or only to a later
  * class (`'later'`) — see `scopeOffers`; a subclass row follows its class entry's position. The two
  * synthetic skill picks have no authored `Choice` to carry a `scope`, so their initial/later split
- * stays the slug-based one below (the fallback).
+ * stays the slug-based one below (the fallback). Plan 16 ruling 10: a row choice's count is its
+ * OFFERED count (`offeredChoiceCount` — `choiceCountOverride`, e.g. a later class's share of the
+ * weapon-mastery cap), and a choice offered at 0 is not asked (`offeredRowChoices`).
  */
 export function levelScopedChoices(
   facts: Facts,
   index: ContentIndex,
+  comp: Composition,
 ): { requests: ChoiceRequest[]; issues: Diagnostic[] } {
   const issues: Diagnostic[] = [];
   const requests: ChoiceRequest[] = [];
+  const offer: OfferState = { facts, comp, index };
 
   const collectRows = (
     owner: Extract<Entity, { type: 'class' | 'subclass' }>,
@@ -118,8 +139,8 @@ export function levelScopedChoices(
   ) => {
     for (const row of owner.levels) {
       if (row.level > gateLevel) continue;
-      for (const c of offeredRowChoices(row.choices, initialClass, facts.decisions)) {
-        const count = resolveChoiceCount(c, facts, index);
+      for (const c of offeredRowChoices(row.choices, initialClass, facts.decisions, offer)) {
+        const count = offeredChoiceCount(c, facts, comp, index);
         if (isUnanswered(facts, c, c.id, count)) requests.push({ choiceId: c.id, ownerId, count });
       }
     }

@@ -3,8 +3,9 @@ import type { ContentIndex } from '../content/index.ts';
 import { constantPredicateContext, type PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
-import { resolveChoiceCount } from './choice-count.ts';
+import { offeredChoiceCount } from './choice-count.ts';
 import { offeredRowChoices } from './choices.ts';
+import { compose } from './composition.ts';
 import type { ChoiceRequest, Sheet } from './sheet.ts';
 
 export interface Advancement {
@@ -46,6 +47,8 @@ const byExistingFirstThenClassId = (a: Advancement, b: Advancement) =>
  * `steps` for one class's row at `toLevel` — shared by both the "level up" and "new class" branches.
  * Plan 14 task 1 (fix round 1): only the row's OFFERED choices (`offeredRowChoices`) — `initialClass`
  * is true only for the character's first class; a brand-new class is never the initial one.
+ * Plan 16 ruling 10: counts are OFFERED counts (`offeredChoiceCount`), and a choice offered at 0 is
+ * no step at all — both judged against the character AS OF the level being taken.
  */
 const rowSteps = (
   classId: string,
@@ -55,20 +58,32 @@ const rowSteps = (
   facts: Facts,
   index: ContentIndex,
 ): ChoiceRequest[] => {
-  // Formula counts (plan 12 task 2) resolve as of the class having reached `toLevel`.
-  const after = {
-    classes: [
-      ...facts.classes.filter((c) => (index.resolveClassRef(c.classId) ?? c.classId) !== classId),
-      { classId, level: toLevel },
-    ],
-  };
   const row = levels.find((r) => r.level === toLevel)?.choices ?? [];
-  return offeredRowChoices(row, initialClass, facts.decisions).map((c) => ({
+  if (row.length === 0) return [];
+  const after = afterLevelUp(facts, classId, toLevel, index);
+  const comp = compose(after, index);
+  return offeredRowChoices(row, initialClass, facts.decisions, { facts: after, comp, index }).map((c) => ({
     choiceId: c.id,
     ownerId: classId,
-    count: resolveChoiceCount(c, after, index),
+    count: offeredChoiceCount(c, after, comp, index),
   }));
 };
+
+/**
+ * The character as of `classId` having reached `toLevel`: formula counts (plan 12 task 2) resolve
+ * against it, and (plan 16 ruling 10) so does `choiceCountOverride`. The class keeps its position in
+ * `classes` (order gained decides which class is "earlier" for the shared weapon-mastery cap); a
+ * class not yet taken is appended last.
+ */
+function afterLevelUp(facts: Facts, classId: string, toLevel: number, index: ContentIndex): Facts {
+  const isTarget = (ref: string) => (index.resolveClassRef(ref) ?? ref) === classId;
+  const at = facts.classes.findIndex((c) => isTarget(c.classId));
+  const classes =
+    at === -1
+      ? [...facts.classes, { classId, level: toLevel }]
+      : facts.classes.flatMap((c, i) => (i === at ? [{ ...c, level: toLevel }] : isTarget(c.classId) ? [] : [c]));
+  return { ...facts, classes };
+}
 
 /**
  * Best-effort `PredicateContext` for evaluating `system.multiclass.prerequisites[classRef]`

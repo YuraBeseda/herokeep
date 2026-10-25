@@ -48,7 +48,7 @@ function isSyntheticDecision(choiceId: string, index: ContentIndex): boolean {
 
 export function outstandingChoices(facts: Facts, index: ContentIndex): ChoiceRequest[] {
   const creation = creationChoices(facts, index);
-  const leveled = levelScopedChoices(facts, index);
+  const leveled = levelScopedChoices(facts, index, compose(facts, index));
   const asked = new Set([...creation.requests, ...leveled.requests].map((r) => r.choiceId));
   const selected = selectedEntityChoices(facts, index, asked);
   return [...creation.requests, ...leveled.requests, ...selected.requests].sort(byChoiceId);
@@ -240,14 +240,16 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
       issues.push(warning('decision.unknownChoice', `Decision for unknown choice "${choiceId}"`));
   }
 
+  // Composed first: plan 16 ruling 10's offered counts (`levelScopedChoices`) read it. Composition
+  // never reads the outstanding choices, so the order is free; the issue order stays as before.
+  const comp = compose(facts, index);
   const creation = creationChoices(facts, index);
-  const leveled = levelScopedChoices(facts, index);
+  const leveled = levelScopedChoices(facts, index, comp);
   issues.push(...creation.issues, ...leveled.issues);
   const askedChoiceIds = new Set([...creation.requests, ...leveled.requests].map((r) => r.choiceId));
   const selected = selectedEntityChoices(facts, index, askedChoiceIds);
   issues.push(...selected.issues);
 
-  const comp = compose(facts, index);
   issues.push(...comp.issues);
 
   const abilities = deriveAbilities(facts, comp, index);

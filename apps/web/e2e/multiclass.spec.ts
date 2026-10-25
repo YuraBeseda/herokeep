@@ -17,15 +17,16 @@ const CHARACTER_NAME = 'Aldric Multiclass';
  * fixed).
  *
  * A brand-new class's level 1 never asks for HP (`Advancement.hpChoice` is always `false` for an
- * `isNewClass` pick — `level-up.state.ts`'s own `steps()` doc) — so this flow skips straight from
- * the class picker into Barbarian's own level-1 choice: `@1/weapon-masteries` (a real `count: 2`
- * query pick, same shape as Fighter's own `count: 3` pick since task 8). Plan 12 final wave W1
- * wired `multiclass.gains.skillChoiceCount`: a later class no longer gets its full `@1/skills`
- * creation pick, and Barbarian's multiclass row grants no bonus skill (only Bard/Rogue/Ranger do,
- * via `@1/multiclass-skills`) — so no skill chips render here at all.
+ * `isNewClass` pick — `level-up.state.ts`'s own `steps()` doc). Plan 12 final wave W1 wired
+ * `multiclass.gains.skillChoiceCount`: a later class no longer gets its full `@1/skills` creation
+ * pick, and Barbarian's multiclass row grants no bonus skill (only Bard/Rogue/Ranger do, via
+ * `@1/multiclass-skills`). Plan 16 task 6 (ruling 10) re-pin: nor is Barbarian's
+ * `@1/weapon-masteries` pick offered any more — the Fighter's 3 masteries already fill the shared
+ * weapon-mastery cap (max(3, 2) = 3), so a later-class Barbarian is offered 0 — so this flow goes
+ * straight from the class picker to a complete Review.
  */
 test.describe('level up — multiclassing into a second class', () => {
-  test('leveling a fighter offers a which-class picker; multiclassing into Barbarian skips HP, completes its new-class level-1 choice, and the sheet shows both classes', async ({
+  test('leveling a fighter offers a which-class picker; multiclassing into Barbarian skips HP, asks nothing once the shared mastery cap is full, and the sheet shows both classes', async ({
     page,
   }) => {
     await test.step('create the fighter-1 character', async () => {
@@ -52,22 +53,13 @@ test.describe('level up — multiclassing into a second class', () => {
       ).toBeVisible();
     });
 
-    await test.step('choosing Barbarian skips the HP step and lands on its own first level-1 choice', async () => {
+    await test.step('choosing Barbarian skips the HP step and asks no level-1 choice (no skill pick; the shared mastery cap is full)', async () => {
       await page.getByRole('button', { name: 'Multiclass into Barbarian', exact: true }).click();
       await expect(page.locator('.level-up__class-picker')).toHaveCount(0);
       await expect(page.locator('.level-up__hp-average')).toHaveCount(0);
-      await expect(page.locator('.choice-step__title')).toBeVisible();
-    });
-
-    await test.step("Barbarian's own level-1 choice: weapon masteries (no multiclass skill pick)", async () => {
-      await expect(page.locator('.entity-picker')).toBeVisible();
-      await expect(page.locator('.choice-step__chips')).toHaveCount(0);
-      // "Wait for the just-acted-on element to leave the DOM" — the same `ChoiceStepComponent`/
-      // `reHomeActiveStep` auto-advance race `create-fighter.ts`'s own module doc explains.
-      await page.getByRole('button', { name: 'Handaxe', exact: true }).click();
-      const javelin = page.getByRole('button', { name: 'Javelin', exact: true });
-      await javelin.click();
-      await javelin.waitFor({ state: 'detached' });
+      await expect(page.locator('.level-up__review')).toBeVisible();
+      await expect(page.locator('.choice-step__title')).toHaveCount(0);
+      await expect(page.locator('.entity-picker')).toHaveCount(0);
     });
 
     await test.step('review shows complete (no HP roll was ever required); finish', async () => {

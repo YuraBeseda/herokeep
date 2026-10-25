@@ -14,7 +14,7 @@ import type { PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { type AbilitiesPick, abilitiesPickOptions } from './abilities.ts';
-import { resolveChoiceCount } from './choice-count.ts';
+import { offeredChoiceCount } from './choice-count.ts';
 import { type Composition, compose, equippedArmor } from './composition.ts';
 import { isProficientRank } from './proficiency.ts';
 import type { Sheet } from './sheet.ts';
@@ -471,9 +471,9 @@ function buildPredicateContext(sheet: Sheet, comp: Composition, facts: Facts, in
 /**
  * Plan 16 Task 6 (ruling 8): the most selections `validateSelection` accepts for `choiceId` on this
  * character — the count each pick kind's own `selection.count` check uses: a class skill pick's
- * count, an `abilities` pick's `abilities.count`, otherwise the choice's count resolved for this
- * character. `undefined` for an unknown choice, and for an `abilityGeneration` pick (one score per
- * ability — its length is not a pick count).
+ * count, an `abilities` pick's `abilities.count`, otherwise the choice's offered count for this
+ * character (`offeredChoiceCount`). `undefined` for an unknown choice, and for an
+ * `abilityGeneration` pick (one score per ability — its length is not a pick count).
  */
 export function selectionCountOf(facts: Facts, index: ContentIndex, choiceId: string): number | undefined {
   const skillPick = classSkillPick(choiceId, index);
@@ -483,7 +483,7 @@ export function selectionCountOf(facts: Facts, index: ContentIndex, choiceId: st
   const { pick } = found.choice;
   if ('abilityGeneration' in pick) return undefined;
   if ('abilities' in pick) return pick.abilities.count;
-  return resolveChoiceCount(found.choice, facts, index);
+  return offeredChoiceCount(found.choice, facts, compose(facts, index), index);
 }
 
 /**
@@ -511,10 +511,12 @@ export function validateSelection(
   const found = findChoice(index, choiceId);
   if (!found) return [error('selection.unknownChoice', `Unknown choice "${choiceId}"`, { path: choiceId })];
   const { owner } = found;
-  // Plan 12 task 2: every count check below runs against the count RESOLVED for this character.
-  const choice: Choice = { ...found.choice, count: resolveChoiceCount(found.choice, facts, index) };
-
   const comp = compose(facts, index);
+  // Plan 12 task 2: every count check below runs against the count RESOLVED for this character —
+  // plan 16 ruling 10: the count it is OFFERED at (`choiceCountOverride`, e.g. a later class's share
+  // of the shared weapon-mastery cap).
+  const choice: Choice = { ...found.choice, count: offeredChoiceCount(found.choice, facts, comp, index) };
+
   const ctx = buildPredicateContext(sheet, comp, facts, index);
 
   const issues: Diagnostic[] = [...checkPrerequisites(choice.prerequisites, ctx, choiceId)];

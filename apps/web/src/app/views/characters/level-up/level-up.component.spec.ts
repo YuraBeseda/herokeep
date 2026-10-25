@@ -291,36 +291,19 @@ describe('LevelUpComponent', () => {
     expect(root.querySelector('.level-up__hp-roll')).toBeNull();
     expect(root.querySelector('.level-up')).not.toBeNull();
 
-    // Fix round 1 (reviewer HIGH finding): `reHomeActiveStep`'s old "vanished, not found ->
-    // land on the LAST step" fallback wrongly fired here too, since `previousSteps` was still
-    // `[]` (the picker's own gate) on the very first effect run after a class is picked — this
-    // landed the wizard on REVIEW with Barbarian's real level-1 choices (then skills + weapon
-    // masteries; weapon masteries only since W1) skipped entirely, `Finish` disabled, no
-    // explanation. The fix lands on the FIRST step of a genuinely fresh (grown-from-empty) list
-    // instead. This assertion is the reviewer's own exact repro: the first outstanding CHOICE
-    // step is active, not Review.
-    expect(root.querySelector('.level-up__review')).toBeNull();
-    // Plan 12 final wave W1: Barbarian's multiclass row grants no skill (gains.skillChoiceCount 0),
-    // so its full `@1/skills` creation pick is no longer offered — weapon masteries is the only
-    // level-1 choice, and no skill chips render.
-    expect(root.querySelectorAll('.choice-step__chips hk-chip').length).toBe(0);
-
-    // Drive the flow THROUGH Barbarian's real level-1 choice (no conditional guard around the
-    // load-bearing assertions below — fix round 1, MEDIUM finding: the previous version's
-    // `if (finishButton && !finishButton.disabled)` silently skipped its own commit assertion
-    // whenever the choices weren't actually resolved).
-    const masteryButtons = Array.from(
-      root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
-    );
-    expect(masteryButtons.length).toBeGreaterThan(1); // the weapon-masteries choice step now shows
-    masteryButtons[0].click();
-    await harness.fixture.whenStable();
-    masteryButtons[1].click();
-    await harness.fixture.whenStable();
+    // Plan 16 task 6 (ruling 10) re-pin: Barbarian's multiclass row grants no skill (plan 12 final
+    // wave W1, gains.skillChoiceCount 0), and its `@1/weapon-masteries` pick is no longer offered
+    // either — the Fighter's 3 recorded masteries already fill the shared cap (max(3, 2) = 3), so
+    // Barbarian is offered 0 and level 1 asks nothing: the wizard opens on Review with Finish
+    // enabled. (Fix round 1's "a fresh step list lands on its FIRST step, not Review" regression
+    // keeps its coverage in the fighter → bard test below, whose first step is a real choice.)
+    expect(root.querySelector('.choice-step__chips hk-chip')).toBeNull();
+    expect(root.querySelector('.entity-picker__select')).toBeNull();
+    expect(root.querySelector('.level-up__review')).not.toBeNull();
 
     const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
     expect(finishButton).not.toBeNull();
-    expect(finishButton.disabled).toBe(false); // genuinely enabled, not skipped
+    expect(finishButton.disabled).toBe(false);
     finishButton.click();
 
     // `seedFighter` itself already committed a `level.gained{classId: fighter}` at creation —
@@ -350,6 +333,17 @@ describe('LevelUpComponent', () => {
         expect.objectContaining({ classId: 'srd-5e-2024:class/barbarian', level: 1 }),
       ]),
     );
+    expect(
+      characterStore
+        .events()
+        .some(
+          (e) =>
+            e.type === 'decision.made' &&
+            (e.payload as { choiceId?: string }).choiceId ===
+              'srd-5e-2024:class/barbarian@1/weapon-masteries',
+        ),
+    ).toBe(false);
+    expect(characterStore.outstanding()).toEqual([]);
   });
 
   // Plan 12 final wave W1: `multiclass.gains.skillChoiceCount` is wired — a fighter multiclassing
