@@ -23,6 +23,7 @@ import type {
   RollLogged,
   SessionEnded,
   SessionStarted,
+  WelcomeMsg,
 } from '@hk/protocol';
 
 /**
@@ -78,6 +79,33 @@ export interface RosterEntry {
 export interface EnabledPack {
   version: string;
   sha256: string;
+}
+
+/**
+ * [plan-16 Task 2, ruling 3] A campaign stream's enabled-pack set as a `welcome` frame reported it:
+ * the server's packs as of `headSeq`, the stream head that same frame reported. It is the INITIAL
+ * enabled set `projectCampaign` folds onto — a device whose log has not caught up yet still knows
+ * which packs the campaign uses. A committed `pack.enabled`/`pack.disabled` at or before `headSeq`
+ * is already reflected in it and is skipped; one after it (or still pending) wins over it.
+ */
+export interface PackSeed {
+  readonly headSeq: number;
+  readonly packs: ReadonlyMap<string, EnabledPack>;
+}
+
+/** Builds the `PackSeed` from `welcome.packs` and the stream's `headSeq` in the same frame. A pack
+ * without a `sha256` (a server from before plan 16) makes the whole seed unusable — the installer
+ * could not verify it — so there is no seed and the folded events alone decide. */
+export function seedPacks(welcome: {
+  readonly headSeq: number;
+  readonly packs: NonNullable<WelcomeMsg['packs']>;
+}): PackSeed | undefined {
+  const packs = new Map<string, EnabledPack>();
+  for (const { id, version, sha256 } of welcome.packs) {
+    if (sha256 === undefined) return undefined;
+    packs.set(id, { version, sha256 });
+  }
+  return { headSeq: welcome.headSeq, packs };
 }
 
 /** A DM note row, keyed by `id` in `CampaignState.dmNotes`. `dm.note_updated` replaces the row
@@ -170,8 +198,11 @@ function orderEvents(events: readonly Event[]): Event[] {
  * `events` array always yields an equal (deep) result, the input array is never mutated, and no
  * clock/RNG/locale is consulted. Unknown or future event types are skipped silently (forward
  * compatibility — the same tolerance the engine reducer applies to unhandled types).
+ *
+ * `seed` (plan 16, `PackSeed`) starts `packs` from a `welcome`'s enabled set; it affects nothing
+ * else.
  */
-export function projectCampaign(events: readonly Event[]): CampaignState {
+export function projectCampaign(events: readonly Event[], seed?: PackSeed): CampaignState {
   const state = emptyState();
   // Local mutable working copies of the Map-shaped fields — the function's OUTPUT is what must be
   // deterministic and side-effect-free, not every intermediate step; cloning every collection on
@@ -180,6 +211,9 @@ export function projectCampaign(events: readonly Event[]): CampaignState {
   const members = state.members;
   const roster = state.roster;
   const packs = state.packs;
+  for (const [packId, pack] of seed?.packs ?? []) packs.set(packId, { ...pack });
+  const seededAlready = (e: Event): boolean =>
+    seed !== undefined && e.seq !== undefined && e.seq <= seed.headSeq;
   const overviews = state.overviews;
   const dmNotes = state.dmNotes;
   const log = state.log;
@@ -219,11 +253,13 @@ export function projectCampaign(events: readonly Event[]): CampaignState {
         break;
       }
       case 'pack.enabled': {
+        if (seededAlready(e)) break;
         const p = e.payload as PackEnabled;
         packs.set(p.packId, { version: p.version, sha256: p.sha256 });
         break;
       }
       case 'pack.disabled': {
+        if (seededAlready(e)) break;
         const p = e.payload as PackDisabled;
         packs.delete(p.packId);
         break;

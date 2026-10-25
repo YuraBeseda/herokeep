@@ -9,6 +9,7 @@ import {
   type NoticeMsg,
   type RejectCode,
   type ServerMessage,
+  type WelcomeMsg,
 } from '@hk/protocol';
 import { APP_VERSION } from '@app/version';
 import { uuidv7 } from '@shared/helpers/uuid';
@@ -179,6 +180,11 @@ export interface StreamSyncSessionOptions {
   /** [plan-10 Task 1] A presence roster — a standalone `members` frame, OR `welcome.members` when
    * the server includes an initial one. See class doc's "Campaign-capable plumbing" section. */
   onMembers?: (members: MembersMsg['members']) => void;
+  /** [plan-16 Task 2, ruling 3] A campaign stream's `welcome.packs` (its enabled packs) with the
+   * `headSeq` the same frame reports for this session's stream — the seed of the campaign
+   * projection's enabled set. Fires before any later frame is handled; not fired for a `welcome`
+   * without `packs` (a character stream). */
+  onWelcomePacks?: (packs: NonNullable<WelcomeMsg['packs']>, headSeq: number) => void;
   /** [plan-10 Task 1] An `events` frame addressed to a stream OTHER than this session's own —
    * see class doc. Fires INSTEAD of the normal `applyServerCommit` path (which only ever runs for
    * this session's own `streamId`). */
@@ -272,6 +278,8 @@ export class StreamSyncSession {
   private readonly onBye: ((reason: string) => void) | undefined;
   private readonly onDivergence: (() => void) | undefined;
   private readonly onMembers: ((members: MembersMsg['members']) => void) | undefined;
+  private readonly onWelcomePacks:
+    ((packs: NonNullable<WelcomeMsg['packs']>, headSeq: number) => void) | undefined;
   private readonly onForeignEvents: ((stream: string, events: Event[]) => void) | undefined;
   private readonly onBinaryFrame: ((bytes: Uint8Array) => void) | undefined;
   private readonly onNotice: ((notice: NoticeMsg) => void) | undefined;
@@ -327,6 +335,7 @@ export class StreamSyncSession {
     this.onBye = options.onBye;
     this.onDivergence = options.onDivergence;
     this.onMembers = options.onMembers;
+    this.onWelcomePacks = options.onWelcomePacks;
     this.onForeignEvents = options.onForeignEvents;
     this.onBinaryFrame = options.onBinaryFrame;
     this.onNotice = options.onNotice;
@@ -527,6 +536,8 @@ export class StreamSyncSession {
     if (message.members) this.onMembers?.(message.members);
 
     const headSeq = streamWelcome?.headSeq ?? 0;
+    // [plan-16 Task 2] A campaign's enabled packs seed its projection — see `onWelcomePacks`.
+    if (message.packs) this.onWelcomePacks?.(message.packs, headSeq);
     const rows = await this.eventsRepository.byStream(this.streamId);
     const committed = rows.filter((e) => e.seq !== undefined);
     const localHead = committed.length > 0 ? (committed[committed.length - 1].seq ?? 0) : 0;

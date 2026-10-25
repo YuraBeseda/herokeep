@@ -69,26 +69,41 @@ export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<
 
   const response = await apiFetch(path, { ...init, headers });
 
-  if (!response.ok) {
-    let code: string | undefined;
-    let message = response.statusText || 'Request failed';
-    try {
-      const body = (await response.json()) as { error?: string; message?: string };
-      if (typeof body.error === 'string') {
-        code = body.error;
-      }
-      if (typeof body.message === 'string') {
-        message = body.message;
-      }
-    } catch {
-      // Non-JSON error body (e.g. an intermediary proxy's HTML page) — keep the defaults above.
-    }
-    throw new ApiError(response.status, code, message);
-  }
+  if (!response.ok) throw await apiErrorFrom(response);
 
   if (response.status === 204) {
     return undefined as T;
   }
 
   return (await response.json()) as T;
+}
+
+/** Raw-bytes convenience over `apiFetch` (plan 16: a campaign pack body, whose exact bytes are
+ * hashed — never re-serialized): resolves with the body bytes on a 2xx response, otherwise throws
+ * the same `ApiError` `apiJson` would. A network-level failure from `apiFetch` propagates
+ * unchanged. */
+export async function apiBytes(path: string, init: RequestInit = {}): Promise<Uint8Array> {
+  const response = await apiFetch(path, init);
+  if (!response.ok) throw await apiErrorFrom(response);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/** Builds the `ApiError` for a non-2xx `response` from the server's `{error, message}` body,
+ * falling back to `response.statusText` when the body isn't JSON (a proxy/edge failure never
+ * reaches the app's own error handler). */
+async function apiErrorFrom(response: Response): Promise<ApiError> {
+  let code: string | undefined;
+  let message = response.statusText || 'Request failed';
+  try {
+    const body = (await response.json()) as { error?: string; message?: string };
+    if (typeof body.error === 'string') {
+      code = body.error;
+    }
+    if (typeof body.message === 'string') {
+      message = body.message;
+    }
+  } catch {
+    // Non-JSON error body (e.g. an intermediary proxy's HTML page) — keep the defaults above.
+  }
+  return new ApiError(response.status, code, message);
 }

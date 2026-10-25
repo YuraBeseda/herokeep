@@ -10,7 +10,12 @@ import {
 import { uuidv7 } from '../helpers/uuid';
 import { apiJson } from '../services/api/api-fetch';
 import { AuthService } from '../services/auth/auth.service';
-import { projectCampaign, type CampaignState } from '../services/campaigns/campaign-projection';
+import {
+  projectCampaign,
+  type CampaignState,
+  type EnabledPack,
+  type PackSeed,
+} from '../services/campaigns/campaign-projection';
 import { CampaignsRepository } from '../services/storage/campaigns.repository';
 import type { CampaignRow } from '../services/storage/dexie.db';
 import { EventsRepository } from '../services/storage/events.repository';
@@ -187,6 +192,18 @@ function toStreamId(campaignId: string): string {
   return `camp:${campaignId}`;
 }
 
+function sameEnabledPacks(
+  a: ReadonlyMap<string, EnabledPack> | undefined,
+  b: ReadonlyMap<string, EnabledPack>,
+): boolean {
+  if (a?.size !== b.size) return false;
+  for (const [packId, pack] of b) {
+    const other = a.get(packId);
+    if (other?.version !== pack.version || other.sha256 !== pack.sha256) return false;
+  }
+  return true;
+}
+
 function toBareId(streamId: string): string {
   return streamId.startsWith('camp:') ? streamId.slice('camp:'.length) : streamId;
 }
@@ -303,6 +320,12 @@ export class CampaignStore {
   private readonly stateState = signal<CampaignState | null>(null);
   private readonly eventsState = signal<Event[]>([]);
   private readonly roleState = signal<MembershipRole | undefined>(undefined);
+  // [plan-16 Task 2] Per campaign stream: the `welcome.packs` seed (`applyPackSeed`) every
+  // re-projection of that stream folds over, and the resulting enabled set (keyed by bare id).
+  private readonly packSeeds = new Map<string, PackSeed>();
+  private readonly enabledPacksState = signal<
+    ReadonlyMap<string, ReadonlyMap<string, EnabledPack>>
+  >(new Map());
 
   private deviceIdPromise: Promise<string> | undefined;
   private gatewayPort: CampaignGatewayPort | undefined;
@@ -343,6 +366,12 @@ export class CampaignStore {
    * `CampaignsRepository` row on a plain `open()` of an already-known campaign — see class doc's
    * `upsertCampaignRow` note for the one defensive fallback case. */
   readonly role: Signal<MembershipRole | undefined> = this.roleState.asReadonly();
+  /** [plan-16 Task 2] Every campaign this store has projected (opened, or touched by a sync session
+   * — not only the open one) → its enabled content packs (`CampaignState.packs`: `welcome.packs`
+   * seed + folded `pack.enabled`/`pack.disabled`), keyed by BARE campaign id. What
+   * `CampaignPacksService` installs from. */
+  readonly enabledPacks: Signal<ReadonlyMap<string, ReadonlyMap<string, EnabledPack>>> =
+    this.enabledPacksState.asReadonly();
 
   constructor() {
     // Fire-and-forget, same posture as `CharacterStore`'s constructor — `LeaderService.acquire()`
@@ -366,13 +395,14 @@ export class CampaignStore {
       this.eventsRepository.byStream(streamId),
       this.campaignsRepository.get(toBareId(streamId)),
     ]);
-    const state = projectCampaign(events);
+    const state = projectCampaign(events, this.packSeeds.get(streamId));
 
     this.streamIdState.set(streamId);
     this.eventsState.set(events);
     this.stateState.set(state);
     this.roleState.set(row?.role);
     this.loadedState.set(true);
+    this.publishEnabledPacks(streamId, state.packs);
 
     await this.upsertCampaignRow(streamId, events, state);
   }
@@ -670,6 +700,22 @@ export class CampaignStore {
   setGateway(port: CampaignGatewayPort | undefined): void {
     this.gatewayPort = port;
     if (port === undefined) this.failAllGatewayWaiters();
+  }
+
+  // --- welcome pack seed (plan 16 Task 2, ruling 3) ---------------------------------------------
+
+  /** Records `streamId`'s `welcome.packs` seed (`seedPacks(...)`; `undefined` drops any earlier
+   * seed — a server without pack digests) and re-projects that stream. The seed stands for the
+   * enabled set as of its `headSeq`: a folded `pack.enabled`/`pack.disabled` committed AFTER it (or
+   * still pending) wins, one at or before it never overrides it (`projectCampaign`'s own doc). It
+   * is kept in memory only — every later `welcome` (each reconnect) replaces it. */
+  async applyPackSeed(streamId: string, seed: PackSeed | undefined): Promise<void> {
+    this.assertLeader();
+    return this.runExclusive(async () => {
+      if (seed === undefined) this.packSeeds.delete(streamId);
+      else this.packSeeds.set(streamId, seed);
+      await this.refreshState(streamId);
+    });
   }
 
   // --- StreamSyncSessionStorePort (mirrors CharacterStore's implementation of the same shape) ----
@@ -985,8 +1031,9 @@ export class CampaignStore {
    * discipline `CharacterStore.refreshFromStorage` keeps. */
   private async refreshState(streamId: string): Promise<void> {
     const events = await this.eventsRepository.byStream(streamId);
-    const state = projectCampaign(events);
+    const state = projectCampaign(events, this.packSeeds.get(streamId));
     await this.upsertCampaignRow(streamId, events, state);
+    this.publishEnabledPacks(streamId, state.packs);
 
     if (this.streamIdState() !== streamId) return;
     this.eventsState.set(events);
@@ -1030,6 +1077,17 @@ export class CampaignStore {
       updatedAt: Date.now(),
     };
     await this.campaignsRepository.put(row);
+  }
+
+  /** Publishes `streamId`'s freshly projected enabled set into `enabledPacks` — only when it actually
+   * changed, so a re-projection that leaves it as it was never re-triggers its consumers. */
+  private publishEnabledPacks(streamId: string, packs: ReadonlyMap<string, EnabledPack>): void {
+    const campaignId = toBareId(streamId);
+    const current = this.enabledPacksState();
+    if (sameEnabledPacks(current.get(campaignId), packs)) return;
+    const next = new Map(current);
+    next.set(campaignId, new Map(packs));
+    this.enabledPacksState.set(next);
   }
 
   private notifyLocalAppend(streamId: string, events: Event[]): void {

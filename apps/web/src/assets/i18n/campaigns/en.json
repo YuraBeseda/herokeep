@@ -8,6 +8,11 @@
   "removed": {
     "toast": "You've been removed from this campaign."
   },
+  "packs": {
+    "installed": "Installed the campaign pack {name}",
+    "install-failed-unavailable": "The campaign's copy of this pack could not be downloaded",
+    "enable-failed": "The server stored a different copy of this pack, so it was not enabled"
+  },
   "edit": {
     "locked": "This campaign locks sheet edits outside a live session. Ask your DM to start a session, or wait for one — you can still roll dice and chat.",
     "dmApprovalV1": "This campaign requires DM approval to edit outside a session. Approval requests aren't available in this app yet — ask your DM to start a session, or wait for one. You can still roll dice and chat."

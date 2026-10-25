@@ -1,5 +1,5 @@
 import type { Event } from '@hk/protocol';
-import { type CampaignState, projectCampaign } from './campaign-projection';
+import { type CampaignState, projectCampaign, seedPacks } from './campaign-projection';
 
 const STREAM = 'camp:00000000-0000-4000-8000-000000000001';
 
@@ -165,6 +165,126 @@ describe('projectCampaign', () => {
         version: '2.0.0',
         sha256: 'b'.repeat(64),
       });
+    });
+  });
+
+  describe('packs seeded from welcome (plan 16 ruling 3)', () => {
+    const A = 'a'.repeat(64);
+    const B = 'b'.repeat(64);
+    const C = 'c'.repeat(64);
+
+    function enabled(packId: string, version: string, sha256: string, seq?: number): Event {
+      return mkEvent('pack.enabled', { packId, version, sha256 }, seq !== undefined ? { seq } : {});
+    }
+
+    function disabled(packId: string, version: string, sha256: string, seq?: number): Event {
+      return mkEvent(
+        'pack.disabled',
+        { packId, version, sha256 },
+        seq !== undefined ? { seq } : {},
+      );
+    }
+
+    it('seedPacks keys the welcome packs by id, as of the stream head the welcome reported', () => {
+      const seed = seedPacks({
+        headSeq: 5,
+        packs: [
+          { id: 'homebrew-pack', version: '2.0.0', sha256: B },
+          { id: 'other-pack', version: '1.0.0', sha256: A },
+        ],
+      });
+
+      expect(seed).toEqual({
+        headSeq: 5,
+        packs: new Map([
+          ['homebrew-pack', { version: '2.0.0', sha256: B }],
+          ['other-pack', { version: '1.0.0', sha256: A }],
+        ]),
+      });
+    });
+
+    it('seedPacks gives no seed when a welcome pack carries no sha256 (a pre-plan-16 server)', () => {
+      expect(
+        seedPacks({ headSeq: 5, packs: [{ id: 'homebrew-pack', version: '2.0.0' }] }),
+      ).toBeUndefined();
+    });
+
+    it('the seed is the enabled set when no pack event has been folded yet', () => {
+      const seed = seedPacks({
+        headSeq: 3,
+        packs: [{ id: 'homebrew-pack', version: '1.0.0', sha256: A }],
+      });
+
+      const state = projectCampaign([], seed);
+
+      expect(state.packs).toEqual(new Map([['homebrew-pack', { version: '1.0.0', sha256: A }]]));
+    });
+
+    it('a committed pack event at or before the seed head never overrides the seed', () => {
+      // The local log is behind the server: it has the v1 enable and an old disable of another
+      // pack, but not the v2 enable the welcome already reflects.
+      const seed = seedPacks({
+        headSeq: 9,
+        packs: [
+          { id: 'homebrew-pack', version: '2.0.0', sha256: B },
+          { id: 'other-pack', version: '1.0.0', sha256: A },
+        ],
+      });
+      const events = [
+        enabled('homebrew-pack', '1.0.0', A, 4),
+        disabled('other-pack', '1.0.0', A, 9),
+      ];
+
+      const state = projectCampaign(events, seed);
+
+      expect(state.packs).toEqual(
+        new Map([
+          ['homebrew-pack', { version: '2.0.0', sha256: B }],
+          ['other-pack', { version: '1.0.0', sha256: A }],
+        ]),
+      );
+    });
+
+    it('a committed pack event after the seed head wins over the seed', () => {
+      const seed = seedPacks({
+        headSeq: 9,
+        packs: [
+          { id: 'homebrew-pack', version: '2.0.0', sha256: B },
+          { id: 'other-pack', version: '1.0.0', sha256: A },
+        ],
+      });
+      const events = [
+        enabled('homebrew-pack', '3.0.0', C, 10),
+        disabled('other-pack', '1.0.0', A, 11),
+      ];
+
+      const state = projectCampaign(events, seed);
+
+      expect(state.packs).toEqual(new Map([['homebrew-pack', { version: '3.0.0', sha256: C }]]));
+    });
+
+    it('a pending pack event wins over the seed', () => {
+      const seed = seedPacks({
+        headSeq: 9,
+        packs: [{ id: 'homebrew-pack', version: '2.0.0', sha256: B }],
+      });
+
+      const state = projectCampaign([disabled('homebrew-pack', '2.0.0', B)], seed);
+
+      expect(state.packs.size).toBe(0);
+    });
+
+    it('the seed never touches anything but packs', () => {
+      const seed = seedPacks({ headSeq: 1, packs: [] });
+      const events = [
+        mkEvent(
+          'campaign.created',
+          { name: 'Camp', system: 'sys', corePack: { id: 'srd-5e-2024', version: '1.0.0' } },
+          { seq: 1 },
+        ),
+      ];
+
+      expect(projectCampaign(events, seed)).toEqual(projectCampaign(events));
     });
   });
 

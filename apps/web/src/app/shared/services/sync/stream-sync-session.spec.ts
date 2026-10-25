@@ -587,6 +587,66 @@ describe('StreamSyncSession', () => {
     session.stop();
   });
 
+  it('onWelcomePacks forwards welcome.packs with this stream’s headSeq from the same frame (plan 16 ruling 3)', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onWelcomePacks = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onWelcomePacks });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    const packs = [{ id: 'homebrew-pack', version: '1.0.0', sha256: 'a'.repeat(64) }];
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        {
+          id: 'camp:11111111-1111-4111-8111-111111111111',
+          headSeq: 99,
+          quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 },
+        },
+        { id: streamId, headSeq: 7, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+      packs,
+    });
+    await flush();
+
+    expect(onWelcomePacks).toHaveBeenCalledTimes(1);
+    expect(onWelcomePacks).toHaveBeenCalledWith(packs, 7);
+    session.stop();
+  });
+
+  it('a welcome with no packs field does not fire onWelcomePacks', async () => {
+    const streamId = await store.create('Aria', 'feminine');
+    store.enterSyncMode(streamId);
+    const onWelcomePacks = vi.fn();
+
+    const { session, Factory } = newSession(streamId, { onWelcomePacks });
+    await session.start();
+    await flush();
+    const ws = Factory.instances[0];
+    ws.emitOpen();
+    await flush();
+
+    ws.emitMessage({
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: new Date().toISOString(),
+      streams: [
+        { id: streamId, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 100, eventCount: 0 } },
+      ],
+    });
+    await flush();
+
+    expect(onWelcomePacks).not.toHaveBeenCalled();
+    session.stop();
+  });
+
   it('onForeignEvents fires (instead of applyServerCommit) for an events frame addressed to a DIFFERENT stream than this session owns — the gateway-forwarded-character-event case (doc-03)', async () => {
     const streamId = await store.create('Aria', 'feminine');
     store.enterSyncMode(streamId);

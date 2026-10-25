@@ -21,6 +21,7 @@ import { uuidv7 } from '@shared/helpers/uuid';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { ApiError, apiJson } from '@shared/services/api/api-fetch';
 import { AuthService, type AuthStatus } from '@shared/services/auth/auth.service';
+import { seedPacks } from '@shared/services/campaigns/campaign-projection';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
@@ -1023,6 +1024,13 @@ export class SyncService {
           const next = new Map(current);
           next.set(campaignId, members);
           return next;
+        });
+      },
+      // [plan-16 Task 2, ruling 3] `welcome.packs` seeds the campaign's enabled-pack projection.
+      onWelcomePacks: (packs, headSeq) => {
+        this.campaignStore.applyPackSeed(streamId, seedPacks({ packs, headSeq })).catch(() => {
+          // Lost leadership (this session is being torn down anyway) or a storage failure — the
+          // next `welcome` (every reconnect) seeds again.
         });
       },
       onForeignEvents: (stream, events) => {

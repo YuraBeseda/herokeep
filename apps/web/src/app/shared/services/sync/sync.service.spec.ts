@@ -1064,6 +1064,43 @@ describe('SyncService', () => {
       expect(sync.membersFor(campaignId)()).toEqual(updatedMembers);
     });
 
+    it('welcome.packs seeds the campaign’s enabled packs in CampaignStore (plan 16 ruling 3)', async () => {
+      const campaignId = '00000000-0000-4000-8000-0000000000c9';
+      const streamId = `camp:${campaignId}`;
+      await TestBed.inject(CampaignsRepository).put({
+        id: campaignId,
+        name: 'X',
+        system: 'srd-5e-2024',
+        role: 'player',
+        lastSeq: 0,
+        updatedAt: 1,
+      });
+
+      globalThis.fetch = routedFetch({
+        '/api/characters': () => jsonResponse(200, []),
+        '/api/campaigns': () => jsonResponse(200, []),
+      });
+
+      leaderState.set(true);
+      TestBed.inject(SyncService);
+      statusState.set('authed');
+      TestBed.tick();
+      await flush();
+
+      const socket = FakeWebSocket.instances.find((s) => s.url === `ws://test/${streamId}`)!;
+      socket.emitOpen();
+      await flush();
+      socket.emitMessage({
+        ...campaignWelcome(streamId, 3),
+        packs: [{ id: 'homebrew-pack', version: '1.0.0', sha256: 'a'.repeat(64) }],
+      } as ServerMessage);
+      await flush();
+
+      expect(TestBed.inject(CampaignStore).enabledPacks().get(campaignId)).toEqual(
+        new Map([['homebrew-pack', { version: '1.0.0', sha256: 'a'.repeat(64) }]]),
+      );
+    });
+
     it("bye 'campaign.member_removed': closes the session, drops the CampaignsRepository row (events stay), toasts, and navigates away from a /g/<id> route", async () => {
       const campaignId = '00000000-0000-4000-8000-0000000000c4';
       const streamId = `camp:${campaignId}`;

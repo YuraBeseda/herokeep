@@ -14,6 +14,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { routes } from './app.routes';
 import { BlobTransferService } from './shared/services/blob-transfer/blob-transfer.service';
 import { CacheManagerService } from './shared/services/blob-transfer/cache-manager.service';
+import { CampaignPacksService } from './shared/services/campaigns/campaign-packs.service';
 import { PartyOverviewPublisherService } from './shared/services/campaigns/party-overview-publisher.service';
 import { AuthService } from './shared/services/auth/auth.service';
 import { TranslocoHttpLoader } from './shared/services/i18n/transloco.loader';
@@ -86,6 +87,11 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       inject(BlobTransferService);
+    }),
+    // `CampaignPacksService` (plan-16 Task 2): same reasoning — its constructor effect installs a
+    // live campaign's enabled packs on a member's device, whatever screen is open.
+    provideAppInitializer(() => {
+      inject(CampaignPacksService);
     }),
     // Registered in every build (including dev serve) but only *enabled* outside dev mode — `ng
     // serve` has no `ngsw-worker.js` to fetch, and a stale cached dev bundle would be actively

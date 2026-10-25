@@ -2,6 +2,7 @@ import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { Event, Pack } from '@hk/protocol';
 import { AuthService, type AuthUser } from '../services/auth/auth.service';
+import { seedPacks } from '../services/campaigns/campaign-projection';
 import { CampaignsRepository } from '../services/storage/campaigns.repository';
 import { HkDb } from '../services/storage/dexie.db';
 import { EventsRepository } from '../services/storage/events.repository';
@@ -228,6 +229,92 @@ describe('CampaignStore', () => {
       '11111111-1111-1111-1111-111111111111',
     );
     expect(row?.role).toBe('player');
+  });
+
+  // --- enabled packs (plan 16 Task 2) --------------------------------------------------------------
+
+  describe('enabledPacks / applyPackSeed', () => {
+    const A = 'a'.repeat(64);
+    const B = 'b'.repeat(64);
+    const C = 'c'.repeat(64);
+
+    function packEnabled(
+      streamId: string,
+      id: string,
+      version: string,
+      sha256: string,
+      seq: number,
+    ): Event {
+      return campaignEvent(
+        streamId,
+        id,
+        'pack.enabled',
+        1,
+        { packId: 'homebrew-pack', version, sha256 },
+        DM_ACTOR,
+        seq,
+      );
+    }
+
+    it('a welcome seed becomes the campaign’s enabled set (state().packs and enabledPacks())', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const campaignId = '21111111-1111-4111-8111-111111111111';
+      const streamId = `camp:${campaignId}`;
+      await store.open(streamId);
+
+      await store.applyPackSeed(
+        streamId,
+        seedPacks({ headSeq: 4, packs: [{ id: 'homebrew-pack', version: '2.0.0', sha256: B }] }),
+      );
+
+      const expected = new Map([['homebrew-pack', { version: '2.0.0', sha256: B }]]);
+      expect(store.state()?.packs).toEqual(expected);
+      expect(store.enabledPacks().get(campaignId)).toEqual(expected);
+    });
+
+    it('a committed pack event after the seed head wins over the seed; one at or before it does not', async () => {
+      const store = TestBed.inject(CampaignStore);
+      const campaignId = '21111111-1111-4111-8111-111111111112';
+      const streamId = `camp:${campaignId}`;
+      await store.open(streamId);
+      await store.applyPackSeed(
+        streamId,
+        seedPacks({ headSeq: 2, packs: [{ id: 'homebrew-pack', version: '2.0.0', sha256: B }] }),
+      );
+
+      await store.applyServerCommit(streamId, [
+        packEnabled(streamId, '20000000-0000-4000-8000-000000000001', '1.0.0', A, 1),
+      ]);
+      expect(store.enabledPacks().get(campaignId)?.get('homebrew-pack')).toEqual({
+        version: '2.0.0',
+        sha256: B,
+      });
+
+      await store.applyServerCommit(streamId, [
+        packEnabled(streamId, '20000000-0000-4000-8000-000000000002', '3.0.0', C, 3),
+      ]);
+      expect(store.enabledPacks().get(campaignId)?.get('homebrew-pack')).toEqual({
+        version: '3.0.0',
+        sha256: C,
+      });
+      expect(store.state()?.packs.get('homebrew-pack')).toEqual({ version: '3.0.0', sha256: C });
+    });
+
+    it('tracks every campaign stream it writes, not only the open one', async () => {
+      const store = TestBed.inject(CampaignStore);
+      await store.open('camp:21111111-1111-4111-8111-111111111113');
+      const otherId = '21111111-1111-4111-8111-111111111114';
+      const otherStream = `camp:${otherId}`;
+
+      await store.applyServerCommit(otherStream, [
+        packEnabled(otherStream, '20000000-0000-4000-8000-000000000003', '1.0.0', A, 1),
+      ]);
+
+      expect(store.enabledPacks().get(otherId)).toEqual(
+        new Map([['homebrew-pack', { version: '1.0.0', sha256: A }]]),
+      );
+      expect(store.state()?.packs.size).toBe(0);
+    });
   });
 
   // --- create ----------------------------------------------------------------------------------

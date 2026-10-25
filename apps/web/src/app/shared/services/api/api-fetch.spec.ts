@@ -1,4 +1,4 @@
-import { apiFetch, apiJson, ApiError } from './api-fetch';
+import { apiBytes, apiFetch, apiJson, ApiError } from './api-fetch';
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -138,5 +138,38 @@ describe('apiJson', () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(apiJson('/api/me')).rejects.toMatchObject({ status: 0, code: 'network_error' });
+  });
+});
+
+describe('apiBytes', () => {
+  const originalFetch = globalThis.fetch;
+  let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn<typeof fetch>();
+    globalThis.fetch = fetchMock;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('resolves with the exact body bytes of a 2xx response', async () => {
+    const body = new TextEncoder().encode('{"b":1,"a":"é"}');
+    fetchMock.mockResolvedValue(new Response(body, { status: 200 }));
+
+    const bytes = await apiBytes('/api/campaigns/c/packs/p/1.0.0');
+
+    expect(Array.from(bytes)).toEqual(Array.from(body));
+  });
+
+  it('maps a non-2xx response onto ApiError exactly like apiJson', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(404, { error: 'not_found', message: 'No such pack' }));
+
+    await expect(apiBytes('/api/campaigns/c/packs/p/1.0.0')).rejects.toMatchObject({
+      status: 404,
+      code: 'not_found',
+      message: 'No such pack',
+    });
   });
 });
