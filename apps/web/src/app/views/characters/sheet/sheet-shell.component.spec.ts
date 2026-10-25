@@ -90,7 +90,13 @@ function configureReal(packs: Pack[] = [corePack]): void {
       provideTranslocoMessageformat(),
       {
         provide: PackStore,
-        useValue: { packs: signal(packs), ready: signal(true), corePack: signal(corePack) },
+        useValue: {
+          packs: signal(packs),
+          // Plan 16 Task 5: the campaign packs banner brings in `CampaignPacksService`.
+          installedContent: signal(packs.filter((p) => p.kind === 'content')),
+          ready: signal(true),
+          corePack: signal(corePack),
+        },
       },
       {
         provide: StoragePersistService,
@@ -508,6 +514,16 @@ describe('SheetShellComponent — per-character pack set (plan 15 Task 4)', () =
       expect(Object.keys(banner ?? {}).sort()).toEqual(['entry', 'link', 'message']);
       expect(banner?.['message']).toMatch(/\{count, plural,/);
     }
+  });
+
+  it('mounts the campaign packs banner (plan 16 Task 5), which stays empty without a live linked campaign', async () => {
+    const id = await seedFighter('Ivan');
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+
+    expect(root.querySelector('app-campaign-packs-banner')).not.toBeNull();
+    expect(root.querySelector('.campaign-packs-banner')).toBeNull();
   });
 
   it('an unpinned installed pack stays invisible under the shell too', async () => {

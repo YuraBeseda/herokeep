@@ -574,6 +574,13 @@
         "message": "{count, plural, one {This character uses a content pack that isn't installed on this device:} other {This character uses # content packs that aren't installed on this device:}}",
         "entry": "{packId}@{version}",
         "link": "Manage packs"
+      },
+      "campaign-packs": {
+        "message": "{count, plural, one {Your campaign uses a content pack this character doesn't use yet:} other {Your campaign uses # content packs this character doesn't use yet:}}",
+        "entry": "{name} v{version}",
+        "installing": "{name} (installing…)",
+        "pin": "Pin campaign packs",
+        "report-title": "Pin campaign packs?"
       }
     }
   },

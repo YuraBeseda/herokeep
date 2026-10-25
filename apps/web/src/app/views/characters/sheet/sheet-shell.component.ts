@@ -18,6 +18,7 @@ import { PlaceholderService, type Monogram } from '@shared/services/images/place
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { filter, map } from 'rxjs';
+import { CampaignPacksBannerComponent } from './campaign-packs-banner.component';
 
 const TAB_IDS = ['play', 'build', 'timeline'] as const;
 type TabId = (typeof TAB_IDS)[number];
@@ -45,6 +46,7 @@ type TabId = (typeof TAB_IDS)[number];
     ButtonComponent,
     BlobUrlPipe,
     CampaignChipComponent,
+    CampaignPacksBannerComponent,
   ],
   // Plan 15 Task 4: a component-level `EngineFacade` scoped to the loaded character's pins — every
   // tab and level-up (routed children) names and lists against the character's own pack set.

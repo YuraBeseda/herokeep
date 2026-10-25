@@ -65,7 +65,14 @@ function configureReal(): void {
       provideTranslocoMessageformat(),
       {
         provide: PackStore,
-        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+        useValue: {
+          packs: signal([corePack]),
+          // Plan 16 Task 5: the sheet shell's campaign packs banner brings in
+          // `CampaignPacksService`, which reads the installed content packs.
+          installedContent: signal([]),
+          ready: signal(true),
+          corePack: signal(corePack),
+        },
       },
       {
         provide: StoragePersistService,
