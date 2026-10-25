@@ -48,14 +48,28 @@ type CampaignStreamStub = ReturnType<Env['CAMPAIGN_STREAM']['get']>;
  * (see this file's header comment on why separate calls are safe) — its `attachment` closure is
  * OUR test's own state, entirely independent of whichever DO instance a given call happens to run
  * against. */
-function makeFakeWebSocket(buffer: FrameBuffer<ServerMessage>): {
+function makeFakeWebSocket(
+  buffer: FrameBuffer<ServerMessage>,
+  binaryBuffer: FrameBuffer<Uint8Array>,
+): {
   ws: WebSocket;
   setAttachment: (value: unknown) => void;
 } {
   let attachment: unknown = null;
   const ws = {
     readyState: 1,
-    send: (data: string) => buffer.push(JSON.parse(data) as ServerMessage),
+    // [plan-16 Task 1] A relayed `blob.chunk` arrives as bytes (`HibernatingConnections.sendBinary`)
+    // — copied into the binary buffer rather than JSON-parsed.
+    send: (data: string | ArrayBuffer | ArrayBufferView) => {
+      if (typeof data === 'string') {
+        buffer.push(JSON.parse(data) as ServerMessage);
+        return;
+      }
+      const bytes = ArrayBuffer.isView(data)
+        ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+        : new Uint8Array(data);
+      binaryBuffer.push(new Uint8Array(bytes));
+    },
     close: () => undefined,
     serializeAttachment: (value: unknown) => {
       attachment = value;
@@ -67,13 +81,15 @@ function makeFakeWebSocket(buffer: FrameBuffer<ServerMessage>): {
 
 class CloudflareStreamDriver implements StreamDriver {
   private readonly buffer: FrameBuffer<ServerMessage>;
+  private readonly binaryBuffer: FrameBuffer<Uint8Array>;
   private readonly fakeWs: WebSocket;
   private readonly stub: CharacterStreamStub | CampaignStreamStub;
 
   constructor(stub: CharacterStreamStub | CampaignStreamStub, attachment: ConnAttachment) {
     this.stub = stub;
     this.buffer = new FrameBuffer<ServerMessage>();
-    const fake = makeFakeWebSocket(this.buffer);
+    this.binaryBuffer = new FrameBuffer<Uint8Array>();
+    const fake = makeFakeWebSocket(this.buffer, this.binaryBuffer);
     this.fakeWs = fake.ws;
     fake.setAttachment(attachment);
   }
@@ -93,6 +109,20 @@ class CloudflareStreamDriver implements StreamDriver {
 
   collect(stop: (frames: readonly ServerMessage[]) => boolean, timeoutMs?: number): Promise<readonly ServerMessage[]> {
     return this.buffer.collect(stop, timeoutMs);
+  }
+
+  /** [plan-16 Task 1] Same one-`runInDurableObject`-per-frame shape as `send`, through the DO's
+   * binary `webSocketMessage` branch (an `ArrayBuffer` message). */
+  async sendBinary(bytes: Uint8Array): Promise<void> {
+    const ws = this.fakeWs;
+    const message = bytes.slice().buffer;
+    await runInDurableObject(this.stub as CharacterStreamStub, async (instance) => {
+      await instance.webSocketMessage!(ws, message);
+    });
+  }
+
+  collectBinary(stop: (frames: readonly Uint8Array[]) => boolean, timeoutMs?: number): Promise<readonly Uint8Array[]> {
+    return this.binaryBuffer.collect(stop, timeoutMs);
   }
 
   close(): void {

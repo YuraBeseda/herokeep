@@ -50,6 +50,7 @@ import type {
   ServerMessage,
   WelcomeMsg,
 } from '@hk/protocol';
+import { buildBlobChunkFrame, hashPrefixOf } from '../helpers/blob-frames.ts';
 
 // --- driver surface (implemented once per runner; scenarios never see an adapter-specific type) --
 
@@ -80,6 +81,12 @@ export interface StreamDriver {
    * than rejects: the scenario's own assertion against a possibly-incomplete result is what
    * surfaces a failure, never a hung test. */
   collect(stop: (frames: readonly ServerMessage[]) => boolean, timeoutMs?: number): Promise<readonly ServerMessage[]>;
+  /** [plan-16 Task 1] Sends one BINARY client->server frame (doc-07's `blob.chunk`) — same
+   * "resolves once processed server-side" contract as `send`. */
+  sendBinary(bytes: Uint8Array): Promise<void>;
+  /** [plan-16 Task 1] `collect`'s contract over the BINARY frames this connection has received
+   * (a relayed `blob.chunk`), kept apart from the JSON frames `collect` sees. */
+  collectBinary(stop: (frames: readonly Uint8Array[]) => boolean, timeoutMs?: number): Promise<readonly Uint8Array[]>;
   /** Closes the underlying connection (Node: a real WS close; Cloudflare: a no-op — there is no
    * real socket to close under the mocked-pair fallback). */
   close(): void;
@@ -421,7 +428,12 @@ function isEventsFor(msg: ServerMessage, streamId: string): msg is EventsMsg {
   return msg.t === 'events' && msg.stream === streamId;
 }
 
-async function sendHello(stream: StreamDriver, streamId: string, lastSeq: number): Promise<{ rid: string }> {
+async function sendHello(
+  stream: StreamDriver,
+  streamId: string,
+  lastSeq: number,
+  have: readonly string[] = [],
+): Promise<{ rid: string }> {
   const rid = crypto.randomUUID();
   await stream.send({
     t: 'hello',
@@ -429,7 +441,7 @@ async function sendHello(stream: StreamDriver, streamId: string, lastSeq: number
     proto: 1,
     app: 'conformance',
     streams: [{ id: streamId, lastSeq }],
-    have: [],
+    have: [...have],
     pending: [],
   });
   return { rid };
@@ -1202,6 +1214,164 @@ async function campaignPresenceAndByeScenario(driver: ConformanceDriver): Promis
   memberStream.close();
 }
 
+// --- campaign pack relay (plan-16 Task 1) -----------------------------------------------------
+
+/** A minimal schema-valid content pack, ALREADY in canonical NORMALIZED form (sorted keys, no
+ * whitespace, every `PackSchema`-defaulted field spelled out) — the only form
+ * `PUT /api/campaigns/:id/packs/:packId/:version` accepts. */
+function conformancePackJson(packId: string, version: string): string {
+  return (
+    `{"assets":[],"authors":[],"dependencies":[],"entities":[],"format":1,"i18n":{},"id":"${packId}",` +
+    `"kind":"content","locale":"en","name":"Conformance Pack","overrides":[],"system":"conformance",` +
+    `"version":"${version}"}`
+  );
+}
+
+/** DM uploads a pack body; asserts 200 and returns the server's `{sha256}` (bare hex). */
+async function putPackHttp(
+  driver: ConformanceDriver,
+  dm: Session,
+  campaignId: string,
+  packId: string,
+  version: string,
+): Promise<string> {
+  const res = await driver.fetch(`/api/campaigns/${campaignId}/packs/${packId}/${version}`, {
+    method: 'PUT',
+    headers: { ...XRW, cookie: dm.cookie },
+    body: conformancePackJson(packId, version),
+  });
+  expect(res.status, `PUT pack body ${packId}@${version}`).toBe(200);
+  const { sha256 } = (await res.json()) as { sha256: string };
+  expect(sha256, 'bare 64-hex sha256').toMatch(/^[0-9a-f]{64}$/);
+  return sha256;
+}
+
+function packEnabledEvent(streamId: string, packId: string, version: string, sha256: string): Event {
+  return campaignEvent(streamId, 'pack.enabled', 1, { packId, version, sha256 }, 'ignored-by-server', 'dm');
+}
+
+/** ADR-008 ("a campaign's DO stores the JSON of every non-core pack it has enabled so joiners can
+ * fetch them without the DM online") end to end, on both adapters: the DM uploads a body over HTTP,
+ * `pack.enabled` is accepted only against that stored body, a member fetches the identical bytes
+ * and sees the enabled set (with sha256) in `welcome`, a `pack.enabled` with no body is refused
+ * `packMissing`, the 7th DISTINCT pack is refused `quota` while a version change of an enabled one
+ * is accepted, and `pack.disabled` deletes the stored body. */
+async function campaignPackRoundTripScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'PackRelayDm');
+  const member = await registerAndLogin(driver, 'PackRelayMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  expect((await joinCampaignHttp(driver, member, created.joinCode)).status).toBe(200);
+
+  const sha0 = await putPackHttp(driver, dm, campaignId, 'relay-pack-0', '1.0.0');
+  const dmStream = await driver.openStream({ streamId, session: dm, role: 'dm' });
+  const enabled = await appendAndWait(dmStream, [packEnabledEvent(streamId, 'relay-pack-0', '1.0.0', sha0)]);
+  expect(enabled.rejected, 'pack.enabled against the stored body is accepted').toEqual([]);
+
+  const fetched = await driver.fetch(`/api/campaigns/${campaignId}/packs/relay-pack-0/1.0.0`, {
+    headers: { cookie: member.cookie },
+  });
+  expect(fetched.status, 'a member fetches the stored body').toBe(200);
+  expect(fetched.headers.get('etag')).toBe(`"${sha0}"`);
+  expect(await fetched.text(), 'the exact bytes the DM uploaded').toBe(conformancePackJson('relay-pack-0', '1.0.0'));
+
+  const memberStream = await driver.openStream({ streamId, session: member, role: 'member' });
+  const { rid } = await sendHello(memberStream, streamId, 0);
+  const helloFrames = await memberStream.collect((buf) => buf.some((f) => isWelcomeFor(f, rid)));
+  const welcome = helloFrames.find((f): f is WelcomeMsg => isWelcomeFor(f, rid));
+  expect(welcome?.packs, 'welcome carries the enabled set with sha256').toEqual([
+    { id: 'relay-pack-0', version: '1.0.0', sha256: sha0 },
+  ]);
+  memberStream.close();
+
+  const missing = await appendAndWait(dmStream, [
+    packEnabledEvent(streamId, 'never-uploaded', '1.0.0', '0'.repeat(64)),
+  ]);
+  expect(missing.acked, 'pack.enabled without a stored body is never acked').toEqual([]);
+  expect(missing.rejected[0]?.code).toBe('invalid');
+  expect(missing.rejected[0]?.message).toMatch(/^event\.packMissing:/);
+
+  for (let i = 1; i < 6; i += 1) {
+    const sha = await putPackHttp(driver, dm, campaignId, `relay-pack-${i}`, '1.0.0');
+    const outcome = await appendAndWait(dmStream, [packEnabledEvent(streamId, `relay-pack-${i}`, '1.0.0', sha)]);
+    expect(outcome.rejected, `distinct pack #${i + 1} of 6`).toEqual([]);
+  }
+  const sha6 = await putPackHttp(driver, dm, campaignId, 'relay-pack-6', '1.0.0');
+  const seventh = await appendAndWait(dmStream, [packEnabledEvent(streamId, 'relay-pack-6', '1.0.0', sha6)]);
+  expect(seventh.acked, 'the 7th distinct non-core pack is never acked').toEqual([]);
+  expect(seventh.rejected[0]?.code).toBe('quota');
+
+  const sha0v2 = await putPackHttp(driver, dm, campaignId, 'relay-pack-0', '2.0.0');
+  const versionChange = await appendAndWait(dmStream, [packEnabledEvent(streamId, 'relay-pack-0', '2.0.0', sha0v2)]);
+  expect(versionChange.rejected, 'a version change of an enabled pack counts once and is accepted').toEqual([]);
+
+  const disabled = await appendAndWait(dmStream, [
+    campaignEvent(
+      streamId,
+      'pack.disabled',
+      1,
+      { packId: 'relay-pack-0', version: '2.0.0', sha256: sha0v2 },
+      'ignored-by-server',
+      'dm',
+    ),
+  ]);
+  expect(disabled.rejected).toEqual([]);
+  const gone = await driver.fetch(`/api/campaigns/${campaignId}/packs/relay-pack-0/2.0.0`, {
+    headers: { cookie: member.cookie },
+  });
+  expect(gone.status, 'pack.disabled deletes the stored body').toBe(404);
+  dmStream.close();
+}
+
+/** doc-10 §Portability tests names "blob relay forwarding" among the conformance scenarios (doc-07
+ * §Blob transfer protocol): a holder announces a hash, a requester's `blob.request` reaches the
+ * holder as `blob.pull {hash, to}`, and the holder's binary `blob.chunk` is forwarded to the
+ * requester byte for byte. Every frame here goes to a connection the relay holds DIRECTLY (its own
+ * holder/requester map, never `Connections.all()`/`byTag()`), so the Cloudflare mocked-pair driver
+ * can observe it too — unlike presence/bye (this file's header comment). */
+async function blobRelayForwardingScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'BlobRelayDm');
+  const member = await registerAndLogin(driver, 'BlobRelayMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  expect((await joinCampaignHttp(driver, member, created.joinCode)).status).toBe(200);
+
+  const hash = `sha256:${'ab'.repeat(32)}`;
+  const holder = await driver.openStream({ streamId, session: dm, role: 'dm' });
+  // `hello.have` IS the holder announcement (doc-07: "on connect ... blob.have {hashes}"). Waiting
+  // for `welcome` matters on Node: `send()` resolves once the frame is FLUSHED, not processed, so a
+  // bare `blob.have` could be overtaken by the requester's `blob.request` on its own socket. The
+  // stream's single-writer lock is still held for the rest of this `hello` (which registers the
+  // holder) when `welcome` goes out, so a request sent after it is processed after registration.
+  const { rid: holderRid } = await sendHello(holder, streamId, 0, [hash]);
+  await holder.collect((buf) => buf.some((f) => isWelcomeFor(f, holderRid)));
+
+  const requester = await driver.openStream({ streamId, session: member, role: 'member' });
+  await requester.send({ t: 'blob.request', rid: crypto.randomUUID(), hash });
+
+  const holderFrames = await holder.collect((buf) => buf.some((f) => f.t === 'blob.pull'));
+  const pull = holderFrames.find((f) => f.t === 'blob.pull');
+  expect(pull?.t === 'blob.pull' ? pull.hash : undefined, 'the holder is asked for the requested hash').toBe(hash);
+  const to = pull?.t === 'blob.pull' ? Number(pull.to) : Number.NaN;
+  expect(Number.isInteger(to), 'blob.pull names the requester by relay connection id').toBe(true);
+
+  const chunk = buildBlobChunkFrame({
+    index: 0,
+    total: 1,
+    to,
+    hashPrefix: hashPrefixOf(hash),
+    payload: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+  });
+  await holder.sendBinary(chunk);
+  const received = await requester.collectBinary((buf) => buf.length >= 1);
+  expect(received, 'exactly one chunk reaches the requester').toHaveLength(1);
+  expect([...(received[0] ?? [])], 'forwarded byte for byte').toEqual([...chunk]);
+  holder.close();
+  requester.close();
+}
+
 export const scenarios: readonly Scenario[] = [
   {
     name: 'auth lifecycle: register -> salt -> login -> wrong-verifier 401 -> reset -> lockout',
@@ -1245,5 +1415,15 @@ export const scenarios: readonly Scenario[] = [
     name: 'campaign gap (c): live presence carries the resolved display name; bye on removal (Node-only — see header comment)',
     run: campaignPresenceAndByeScenario,
     adapters: ['node'],
+  },
+
+  // --- campaign pack relay (plan-16 Task 1) -------------------------------------------------
+  {
+    name: 'campaign pack relay: DM PUT -> pack.enabled verified -> member GET + welcome sha256 -> packMissing / 7th-pack quota / version change / disable deletes',
+    run: campaignPackRoundTripScenario,
+  },
+  {
+    name: 'blob relay forwarding: holder announces, requester gets blob.pull routed, chunk forwarded byte for byte',
+    run: blobRelayForwardingScenario,
   },
 ];

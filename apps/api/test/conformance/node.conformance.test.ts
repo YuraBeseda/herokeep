@@ -50,6 +50,8 @@ afterEach(async () => {
 
 class NodeStreamDriver implements StreamDriver {
   private readonly buffer = new FrameBuffer<ServerMessage>();
+  /** [plan-16 Task 1] Binary frames (a relayed `blob.chunk`) — kept apart from JSON frames. */
+  private readonly binaryBuffer = new FrameBuffer<Uint8Array>();
   private readonly ws: WsClient;
   private readonly ready: Promise<void>;
 
@@ -59,8 +61,12 @@ class NodeStreamDriver implements StreamDriver {
       this.ws.on('open', () => resolve());
       this.ws.on('error', (err) => reject(err));
     });
-    this.ws.on('message', (data) => {
-      const msg = JSON.parse(rawDataToString(data)) as ServerMessage;
+    this.ws.on('message', (data, isBinary) => {
+      if (isBinary) {
+        this.binaryBuffer.push(new Uint8Array(rawDataToBuffer(data)));
+        return;
+      }
+      const msg = JSON.parse(rawDataToBuffer(data).toString('utf8')) as ServerMessage;
       this.buffer.push(msg);
     });
   }
@@ -80,16 +86,26 @@ class NodeStreamDriver implements StreamDriver {
     return this.buffer.collect(stop, timeoutMs);
   }
 
+  async sendBinary(bytes: Uint8Array): Promise<void> {
+    await this.ready;
+    await new Promise<void>((resolve, reject) => {
+      this.ws.send(bytes, { binary: true }, (err) => (err ? reject(err) : resolve()));
+    });
+  }
+
+  collectBinary(stop: (frames: readonly Uint8Array[]) => boolean, timeoutMs?: number): Promise<readonly Uint8Array[]> {
+    return this.binaryBuffer.collect(stop, timeoutMs);
+  }
+
   close(): void {
     this.ws.close();
   }
 }
 
-function rawDataToString(data: string | Buffer | ArrayBuffer | Buffer[]): string {
-  if (typeof data === 'string') return data;
-  if (Buffer.isBuffer(data)) return data.toString('utf8');
-  if (Array.isArray(data)) return Buffer.concat(data).toString('utf8');
-  return Buffer.from(data).toString('utf8');
+function rawDataToBuffer(data: Buffer | ArrayBuffer | Buffer[]): Buffer {
+  if (Buffer.isBuffer(data)) return data;
+  if (Array.isArray(data)) return Buffer.concat(data);
+  return Buffer.from(data);
 }
 
 function makeDriver(): ConformanceDriver {
