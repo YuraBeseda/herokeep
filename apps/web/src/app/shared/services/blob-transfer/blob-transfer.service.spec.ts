@@ -1,24 +1,36 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { signal, type Signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import type { Event, MembersMsg } from '@hk/protocol';
+import { parsePack, type Event, type MembersMsg, type Pack } from '@hk/protocol';
+import { seedPacks } from '@shared/services/campaigns/campaign-projection';
+import { PackLoader } from '@shared/services/engine/pack-loader';
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
+import type { PackImportAsset } from '@shared/services/packs/pack-assets';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb, type CampaignRow, type CharacterRow } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
+import { LeaderService } from '@shared/services/storage/leader.service';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import type { SyncStateValue } from '@shared/services/sync/sync.service';
 import { SyncService } from '@shared/services/sync/sync.service';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { CharacterStore } from '@shared/stores/character.store';
+import { PackStore } from '@shared/stores/pack.store';
 import { encodeBlobChunkFrame } from './blob-chunk-codec';
 import {
   BLOB_IDLE_SCHEDULER,
   BLOB_LOCAL_APPEND_DEBOUNCE_MS,
   BLOB_REQUEST_TIMEOUT_MS,
   BlobTransferService,
+  MAX_ANNOUNCE_HASHES,
   type BlobIdleScheduler,
 } from './blob-transfer.service';
+import { CACHE_CAP_MIN_BYTES, CacheManagerService } from './cache-manager.service';
+import { putBlob } from './testing/blob-cache-fixtures';
 
 // --- fake SyncService — the real one needs a full socket harness (sync.service.spec.ts); this
 // task only needs to verify BlobTransferService calls the RIGHT methods with the RIGHT arguments
@@ -163,7 +175,11 @@ async function waitPastLocalAppendDebounce(): Promise<void> {
 // --- idle scheduler test double — a MANUALLY-DRAINED queue (never auto-runs synchronously) so a
 // self-rearming loop (the DM super-peer tick) can never spin the test runner forever. -----------
 
-function makeIdleScheduler(): { scheduler: BlobIdleScheduler; runNext: () => boolean } {
+function makeIdleScheduler(): {
+  scheduler: BlobIdleScheduler;
+  runNext: () => boolean;
+  pending: () => number;
+} {
   const queue: (() => void)[] = [];
   return {
     scheduler: (fn) => queue.push(fn),
@@ -173,6 +189,7 @@ function makeIdleScheduler(): { scheduler: BlobIdleScheduler; runNext: () => boo
       fn();
       return true;
     },
+    pending: () => queue.length,
   };
 }
 
@@ -255,6 +272,77 @@ async function putBlobBytes(hash: string, bytes: Uint8Array): Promise<void> {
   await TestBed.inject(BlobsRepository).put(hash, 'image/webp', bytes);
 }
 
+// --- plan-16 Task 4: content pack fixtures (pack assets over the relay) -------------------------
+
+const fixturesDir = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  '..',
+  'testing',
+  'fixtures',
+  'packs',
+);
+
+function readPack(path: string): Pack {
+  const result = parsePack(JSON.parse(readFileSync(path, 'utf8')) as unknown);
+  if (!result.ok) throw new Error(`fixture pack at ${path} failed validation`);
+  return result.pack;
+}
+
+/** Plan 15's sample content pack: one `icon` asset, whose bytes are `sample-icon.webp`. */
+const SAMPLE_PACK = readPack(join(fixturesDir, 'sample-content.json'));
+const [SAMPLE_ICON] = SAMPLE_PACK.assets;
+const SAMPLE_ICON_BYTES = new Uint8Array(readFileSync(join(fixturesDir, 'sample-icon.webp')));
+/** The icon as a `.hkpack` import hands it to `PackStore.installContent` (the DM's copy). */
+const SAMPLE_ICON_ASSETS: ReadonlyMap<string, PackImportAsset> = new Map([
+  [SAMPLE_ICON.hash, { bytes: SAMPLE_ICON_BYTES, kind: SAMPLE_ICON.kind, mime: SAMPLE_ICON.mime }],
+]);
+
+/** Only what `PackStore.init()`/`installContent` read from a core pack: neither validates anything
+ * while no content pack is stored yet, and every test below installs AFTER `init()`. */
+const CORE_STUB: Pack = {
+  format: 1,
+  id: 'srd-5e-2024',
+  version: '0.1.0',
+  kind: 'core',
+  name: 'SRD core',
+  authors: [],
+  dependencies: [],
+  locale: 'en',
+  entities: [],
+  overrides: [],
+  assets: [],
+  i18n: {},
+};
+
+/** `pack.enabled@1` on the campaign stream — what the DM appends and every member folds. */
+function mkPackEnabledEvent(pack: Pack, version = pack.version): Event {
+  const id = `00000000-0000-4000-8000-${String(nextEventId++).padStart(12, '0')}`;
+  return {
+    id,
+    stream: CAMPAIGN_STREAM,
+    ts: '2026-09-26T00:00:00.000Z',
+    actor: { userId: 'usr_dm', deviceId: 'dev_1', role: 'dm' },
+    type: 'pack.enabled',
+    v: 1,
+    payload: { packId: pack.id, version, sha256: 'c'.repeat(64) },
+  };
+}
+
+/** Installs `pack` on this device. With `assets`: the way the DM's `.hkpack` import holds it (asset
+ * blobs stored `origin: 'pack'`). Without: the way a member's campaign auto-install holds it
+ * (`CampaignPacksService` calls `installContent(pack, new Map())` — the assets are the relay's). */
+async function installPack(
+  pack: Pack,
+  assets: ReadonlyMap<string, PackImportAsset> = new Map(),
+): Promise<void> {
+  const packStore = TestBed.inject(PackStore);
+  if (!packStore.ready()) await packStore.init();
+  await packStore.installContent(pack, assets);
+}
+
 /** The CHARACTER-stream half of a campaign link (`character.campaign_joined@1`) —
  * `campaignIdOfCharacter` (`character-campaign-link.ts`) reads exactly this shape off
  * `CharacterStore.events()`; task-16's own re-announce hook (`BlobTransferService`'s
@@ -296,6 +384,7 @@ describe('BlobTransferService', () => {
         { provide: BLOB_IDLE_SCHEDULER, useValue: idle.scheduler },
         { provide: BLOB_REQUEST_TIMEOUT_MS, useValue: requestTimeoutMs },
         { provide: BLOB_LOCAL_APPEND_DEBOUNCE_MS, useValue: LOCAL_APPEND_DEBOUNCE_MS },
+        { provide: PackLoader, useValue: { loadCore: () => Promise.resolve(CORE_STUB) } },
       ],
     });
 
@@ -717,6 +806,235 @@ describe('BlobTransferService', () => {
     expect(idle.runNext()).toBe(true); // the P3 idle callback
     await flush();
     expect(idle.runNext()).toBe(false); // nothing else was ever scheduled
+  });
+
+  // --- P3 content pack assets (plan 16 Task 4, design ruling 5) -----------------------------------
+
+  describe('P3 content pack assets', () => {
+    /** Drains the connect sequence's idle callback — pack assets are P3 — and lets it settle. */
+    async function runIdleP3(): Promise<void> {
+      expect(idle.runNext()).toBe(true);
+      await flush();
+    }
+
+    function requestedHashes(): string[] {
+      return fakeSync.sendBlobRequest.mock.calls.map((c) => c[2]);
+    }
+
+    function announcedHashes(): string[] {
+      return fakeSync.sendBlobHave.mock.calls.flatMap((c) => c[1]);
+    }
+
+    it("wants an enabled, locally installed pack's icon whose blob is absent — at P3 (idle), not on connect", async () => {
+      await installPack(SAMPLE_PACK); // a member's auto-install: no asset bytes
+      await TestBed.inject(EventsRepository).append([mkPackEnabledEvent(SAMPLE_PACK)]);
+
+      await connectCampaign();
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+
+      await runIdleP3();
+      expect(requestedHashes()).toEqual([SAMPLE_ICON.hash]);
+    });
+
+    it('does not want a pack icon this device already holds — it announces it, after the portraits', async () => {
+      const thumb = 'sha256:' + 'a1'.repeat(32);
+      await TestBed.inject(CharactersRepository).put(mkCharacterRow({ portraitThumbHash: thumb }));
+      await putBlobBytes(thumb, new Uint8Array([1]));
+      await installPack(SAMPLE_PACK, SAMPLE_ICON_ASSETS); // the DM's `.hkpack` copy
+      await TestBed.inject(EventsRepository).append([
+        mkJoinedEvent(CHARACTER_ID),
+        mkPackEnabledEvent(SAMPLE_PACK),
+      ]);
+
+      await connectCampaign();
+      await runIdleP3();
+
+      expect(fakeSync.sendBlobHave).toHaveBeenCalledWith(CAMPAIGN_ID, [thumb, SAMPLE_ICON.hash]);
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+    });
+
+    it('ignores packs installed locally but NOT enabled for this campaign — never requested, never announced', async () => {
+      const heldHash = 'sha256:' + 'b2'.repeat(32);
+      const heldPack: Pack = {
+        ...SAMPLE_PACK,
+        id: 'held-pack',
+        assets: [{ ...SAMPLE_ICON, hash: heldHash }],
+      };
+      await installPack(SAMPLE_PACK); // its icon absent
+      await installPack(
+        heldPack,
+        new Map([[heldHash, { bytes: new Uint8Array([1]), kind: 'icon', mime: 'image/webp' }]]),
+      );
+
+      await connectCampaign();
+      await runIdleP3();
+
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+      expect(fakeSync.sendBlobHave).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pack the campaign enables but this device has not installed', async () => {
+      await TestBed.inject(EventsRepository).append([mkPackEnabledEvent(SAMPLE_PACK)]);
+
+      await connectCampaign();
+      await runIdleP3();
+
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+    });
+
+    it('ignores an installed pack whose version is not the enabled one', async () => {
+      await installPack(SAMPLE_PACK);
+      await TestBed.inject(EventsRepository).append([mkPackEnabledEvent(SAMPLE_PACK, '2.0.0')]);
+
+      await connectCampaign();
+      await runIdleP3();
+
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+    });
+
+    it("reads CampaignStore's enabled set — a welcome seed counts before any pack.enabled reaches the local log", async () => {
+      await installPack(SAMPLE_PACK);
+      await TestBed.inject(LeaderService).acquire();
+      await TestBed.inject(CampaignStore).applyPackSeed(
+        CAMPAIGN_STREAM,
+        seedPacks({
+          headSeq: 0,
+          packs: [{ id: SAMPLE_PACK.id, version: SAMPLE_PACK.version, sha256: 'c'.repeat(64) }],
+        }),
+      );
+
+      await connectCampaign();
+      await runIdleP3();
+
+      expect(requestedHashes()).toEqual([SAMPLE_ICON.hash]);
+    });
+
+    it(`caps blob.have at ${MAX_ANNOUNCE_HASHES}: every held portrait first, then the held pack assets that still fit`, async () => {
+      const PARTY_COUNT = MAX_ANNOUNCE_HASHES - 2;
+      const PACK_ASSET_COUNT = 5; // 3 of them past the cap
+      const events: Event[] = [];
+      const partyHashes: string[] = [];
+      for (let i = 0; i < PARTY_COUNT; i++) {
+        const characterId = `00000000-0000-4000-8000-0002${String(i).padStart(8, '0')}`;
+        const hash = `sha256:party${i.toString(16).padStart(4, '0')}${'0'.repeat(55)}`;
+        partyHashes.push(hash);
+        events.push(mkOverviewEvent(characterId, hash));
+      }
+      const assetHashes = Array.from(
+        { length: PACK_ASSET_COUNT },
+        (_, i) => `sha256:asset${i}${'0'.repeat(58)}`,
+      );
+      const bigPack: Pack = {
+        ...SAMPLE_PACK,
+        id: 'big-pack',
+        assets: assetHashes.map((hash) => ({ ...SAMPLE_ICON, hash })),
+      };
+      await installPack(
+        bigPack,
+        new Map<string, PackImportAsset>(
+          assetHashes.map((hash) => [
+            hash,
+            { bytes: new Uint8Array([1]), kind: 'icon', mime: 'image/webp' },
+          ]),
+        ),
+      );
+      events.push(mkPackEnabledEvent(bigPack));
+      await TestBed.inject(EventsRepository).append(events);
+      await Promise.all(partyHashes.map((h) => putBlobBytes(h, new Uint8Array([1]))));
+
+      await connectCampaign();
+      // Same real-tick polling as the plan-10 cap test above: ~515 Dexie reads precede the announce.
+      const deadline = Date.now() + 10_000;
+      while (fakeSync.sendBlobHave.mock.calls.length === 0 && Date.now() < deadline) {
+        await tick();
+      }
+
+      expect(announcedHashes()).toEqual([...partyHashes, ...assetHashes.slice(0, 2)]);
+      // The rest of the sequence (~510 more reads) must finish before `afterEach` closes the
+      // database: its last step queues the idle P3 callback.
+      await vi.waitFor(() => expect(idle.pending()).toBe(1), { timeout: 10_000 });
+    }, 20_000);
+
+    // The ordinary member path: `CampaignPacksService` fetches and installs an enabled pack only
+    // once `welcome`/the folded `pack.enabled` reveal it — after the campaign socket opened and the
+    // connect sequence already ran without it (or mid-session, when the DM enables a pack).
+    it('re-runs the connect sequence (debounced) when an enabled pack finishes installing after connect', async () => {
+      await TestBed.inject(PackStore).init();
+      await TestBed.inject(EventsRepository).append([mkPackEnabledEvent(SAMPLE_PACK)]);
+      await connectCampaign();
+      await runIdleP3();
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+
+      await installPack(SAMPLE_PACK);
+      await flush();
+      await waitPastLocalAppendDebounce();
+      await runIdleP3();
+
+      expect(requestedHashes()).toEqual([SAMPLE_ICON.hash]);
+    });
+
+    // Review Focus 5 (plan 16): a member receives a pack's icon through the relay from the DM
+    // holder within the connect sequence, the blob is stored `origin: 'peer'`, and neither cache
+    // sweep ever evicts it. Two devices in turn over the fake socket: the DM's device serves the
+    // icon's `blob.chunk` frames; the member's device (a fresh database) receives those frames.
+    it('Review Focus 5: the DM holder serves the icon, the member verifies and stores it origin "peer", and neither sweep evicts it', async () => {
+      expect(await sha256Hex(SAMPLE_ICON_BYTES)).toBe(SAMPLE_ICON.hash); // fixture sanity
+
+      // The DM's device: imported the pack (its icon stored `origin: 'pack'`) and enabled it.
+      await installPack(SAMPLE_PACK, SAMPLE_ICON_ASSETS);
+      await TestBed.inject(EventsRepository).append([mkPackEnabledEvent(SAMPLE_PACK)]);
+      await connectCampaign('dm');
+      expect(announcedHashes()).toContain(SAMPLE_ICON.hash);
+
+      fakeSync.emitBlobPull(CAMPAIGN_ID, SAMPLE_ICON.hash, '7');
+      await flush();
+      const frames = fakeSync.sendBlobChunk.mock.calls.map((c) => c[1]);
+      expect(frames.length).toBeGreaterThan(0);
+
+      // Switch devices once nothing of the DM's is still reading: its cache boot work settled, its
+      // connect sequence ran to its end (the idle P3 callback is queued), nothing requested.
+      await TestBed.inject(CacheManagerService).ready;
+      await vi.waitFor(() => expect(idle.pending()).toBe(1));
+      expect(fakeSync.sendBlobRequest).not.toHaveBeenCalled();
+      TestBed.inject(HkDb).close();
+      TestBed.resetTestingModule();
+      await setup();
+
+      // The member's device: the pack auto-installed without its assets.
+      await installPack(SAMPLE_PACK);
+      await TestBed.inject(EventsRepository).append([mkPackEnabledEvent(SAMPLE_PACK)]);
+      await connectCampaign('player');
+      await runIdleP3();
+      expect(requestedHashes()).toEqual([SAMPLE_ICON.hash]);
+
+      for (const frame of frames) fakeSync.emitBinary(CAMPAIGN_ID, frame);
+      await flush();
+
+      const blobs = TestBed.inject(BlobsRepository);
+      const row = await blobs.get(SAMPLE_ICON.hash);
+      expect(row?.origin).toBe('peer');
+      expect(row?.kind).toBe('icon');
+      expect(row?.mime).toBe('image/webp');
+      expect(Array.from(row?.bytes ?? [])).toEqual(Array.from(SAMPLE_ICON_BYTES));
+      expect(fakeSync.sendBlobHave).toHaveBeenLastCalledWith(CAMPAIGN_ID, [SAMPLE_ICON.hash]);
+
+      // Neither sweep evicts it. Unpinned and the least recently used row, it would be the LRU's
+      // first pick if the installed pack's listing did not protect it.
+      const cache = TestBed.inject(CacheManagerService);
+      await cache.ready;
+      await TestBed.inject(HkDb).blobs.update(SAMPLE_ICON.hash, { pinned: false, lastUsedAt: 1 });
+      const filler = 'sha256:' + 'f1'.repeat(32);
+      await putBlob(filler, CACHE_CAP_MIN_BYTES + 1, false, 2); // over the cap on its own
+      await cache.setCapBytes(CACHE_CAP_MIN_BYTES); // runs the LRU sweep
+      expect(await blobs.get(filler)).toBeUndefined();
+      expect(await blobs.get(SAMPLE_ICON.hash)).toBeDefined();
+
+      const orphan = 'sha256:' + 'f2'.repeat(32);
+      await putBlob(orphan, 10);
+      await cache.runOrphanSweep();
+      expect(await blobs.get(orphan)).toBeUndefined();
+      expect((await blobs.get(SAMPLE_ICON.hash))?.origin).toBe('peer');
+    });
   });
 });
 

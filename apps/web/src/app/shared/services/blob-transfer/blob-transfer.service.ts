@@ -6,9 +6,10 @@ import {
   Injector,
   type EffectRef,
 } from '@angular/core';
+import type { Pack } from '@hk/protocol';
 import { uuidv7 } from '@shared/helpers/uuid';
 import { campaignIdOfCharacter } from '@shared/services/campaigns/character-campaign-link';
-import { projectCampaign } from '@shared/services/campaigns/campaign-projection';
+import { projectCampaign, type EnabledPack } from '@shared/services/campaigns/campaign-projection';
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { Backoff } from '@shared/services/sync/backoff';
 import { SyncService } from '@shared/services/sync/sync.service';
@@ -20,6 +21,7 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { CharacterStore } from '@shared/stores/character.store';
+import { PackStore } from '@shared/stores/pack.store';
 import { CacheManagerService } from './cache-manager.service';
 import { prioritizeAnnounceHashes } from './blob-cache-policy';
 import {
@@ -122,11 +124,35 @@ interface WantedTiers {
   readonly p1: WantedHash[];
   readonly p2: WantedHash[];
   readonly p3: WantedHash[];
+  /** P3's content-pack half (`enabledPackAssets`) — kept apart from `p3` because the announce cap
+   * ranks every portrait hash (P1–P3) before any pack asset. */
+  readonly p3PackAssets: WantedHash[];
   readonly isDm: boolean;
 }
 
 function bareCharacterId(streamId: string): string {
   return streamId.startsWith('char:') ? streamId.slice('char:'.length) : streamId;
+}
+
+/** [plan-16 Task 4, design ruling 5] The P3 pack-asset tier: every asset (`kind` from the pack's
+ * own asset entry) of each pack the campaign enables (`enabled`, keyed by pack id) that this device
+ * has installed at exactly the enabled version (`installed`, `PackStore.installedContent`), in
+ * enabled-then-asset order, one entry per hash (two packs may list the same bytes). Held or not —
+ * the caller splits it into announced (held) and requested (missing) like every other tier. */
+function enabledPackAssets(
+  enabled: ReadonlyMap<string, EnabledPack>,
+  installed: readonly Pack[],
+): WantedHash[] {
+  const wanted = new Map<string, WantedHash>();
+  for (const [packId, entry] of enabled) {
+    const pack = installed.find((p) => p.id === packId && p.version === entry.version);
+    for (const asset of pack?.assets ?? []) {
+      if (!wanted.has(asset.hash)) {
+        wanted.set(asset.hash, { hash: asset.hash, tier: 3, kind: asset.kind });
+      }
+    }
+  }
+  return [...wanted.values()];
 }
 
 function concatBytes(parts: readonly Uint8Array[]): Uint8Array {
@@ -164,11 +190,15 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
  * - "Token" is not a separately-stored hash anywhere in this codebase — `ImagePipelineService`'s
  *   own doc: a token is byte-identical to its thumb (same box, same cap), so `tokenHash ===
  *   thumbHash` always. P1's "thumb + token" therefore collapses to ONE hash per own character.
- * - Equipped-item/prepared-spell icons have NO hash surface in `Facts`/`CharacterRow` at all — that
- *   would require resolving enabled content packs' own asset manifests against a character's
- *   equipped/prepared entity ids, which is FULL-mode roster/pack-asset territory outside what a
- *   campaign's `CampaignState` (this task's actual scope) exposes. NOT implemented — a real,
- *   documented v1 gap, not a silent omission.
+ * - Equipped-item/prepared-spell icons are not resolved per character — `Facts`/`CharacterRow` have
+ *   no hash surface for them. Pack icons travel as a whole instead (plan 16 Task 4, design ruling
+ *   5): every asset of every content pack the campaign enables AND this device has installed at
+ *   that version (`enabledPackAssets`) is a P3 hash — a superset of doc-07's P1 "equipped/prepared
+ *   icons", fetched at lower priority. The enabled set is `CampaignStore.enabledPacks` (the set
+ *   `CampaignPacksService` auto-installs from: `welcome.packs` seed + folded pack events), or this
+ *   campaign's own folded `state.packs` before that store has projected it. A member's campaign
+ *   install stores the pack JSON only, so the bytes come from peers that hold them (the DM, who
+ *   imported the `.hkpack`, at least); the server stores no pack assets (doc-07, relay only).
  * - The campaign settings document (`CampaignSettingsSchema`, `@hk/protocol`) has NO banner field
  *   at all. P2's "campaign banner" has nothing to prefetch in v1 — also not implemented.
  * - "Full portrait" (P3) is available ONLY for a device's OWN characters, and only when that
@@ -178,11 +208,16 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
  * So in this implementation: **P1** = own characters' portrait thumb (immediate, on connect).
  * **P2** = OTHER roster members' `party.overview_updated` thumb (`CampaignState.overviews`,
  * doc-07's own "Announced" hashes source), right after P1. **P3** = own characters' FULL portrait
- * hash (from a cached `Snapshot`, when one exists), idle. **P4** (DM only) = the SAME sources as
- * P1–P3, re-scanned CONTINUOUSLY on every idle tick — "every announced blob" reduces to "every
- * `portraitThumb`/own-portrait hash this state can see", scanned repeatedly rather than once, since
- * no broader "announced" hash source (full-mode roster subscriptions, pack assets) exists at this
- * task's boundary.
+ * hash (from a cached `Snapshot`, when one exists), then the enabled, installed packs' assets,
+ * idle. **P4** (DM only) = the SAME sources as P1–P3, re-scanned CONTINUOUSLY on every idle tick —
+ * "every announced blob" reduces to "every `portraitThumb`/own-portrait/enabled-pack-asset hash
+ * this state can see", scanned repeatedly rather than once, since no broader "announced" hash
+ * source (full-mode roster subscriptions) exists at this task's boundary.
+ *
+ * `blob.have` announces the HELD hashes of the same tiers under `MAX_ANNOUNCE_HASHES`: every
+ * portrait hash (P1–P3) first, then pack assets in whatever room is left. Received pack assets are
+ * verified and stored `origin: 'peer'` like any other blob; `CacheManagerService` keeps every hash
+ * an installed pack lists out of both sweeps, whatever its origin.
  *
  * ## Codec pinning
  *
@@ -233,6 +268,7 @@ export class BlobTransferService {
   private readonly injector = inject(Injector);
   private readonly characterStore = inject(CharacterStore);
   private readonly campaignStore = inject(CampaignStore);
+  private readonly packStore = inject(PackStore);
 
   private readonly watchers = new Map<string, CampaignWatcher>();
   /** [final review wave, finding 3] Per-campaignId debounce timers for
@@ -293,6 +329,26 @@ export class BlobTransferService {
     // immediate — since it fires once per real reconnect transition, never once per local commit.
     this.characterStore.onLocalAppend((streamId) => this.onCharacterLocalAppend(streamId));
     this.campaignStore.onLocalAppend((streamId) => this.onCampaignLocalAppend(streamId));
+
+    // [plan-16 Task 4] The P3 pack-asset tier is "enabled for the campaign AND installed here", and
+    // the ordinary member path installs an enabled pack only AFTER the campaign socket opened
+    // (`CampaignPacksService` fetches the body once `welcome`/the folded `pack.enabled` reveal it)
+    // — so the connect sequence's own first pass usually ran without it, and nothing else re-runs
+    // it for a pack enabled by the DM mid-session (a server commit, not a local append). Either
+    // input changing re-runs every watched campaign's connect sequence through the same trailing
+    // debounce as the two hooks above. The first run only records the inputs (nothing changed yet).
+    let packInputsSeen = false;
+    effect(() => {
+      this.packStore.installedContent();
+      this.campaignStore.enabledPacks();
+      if (!packInputsSeen) {
+        packInputsSeen = true;
+        return;
+      }
+      for (const campaignId of this.watchers.keys()) {
+        this.scheduleDebouncedConnectSequence(campaignId);
+      }
+    });
   }
 
   private onCharacterLocalAppend(streamId: string): void {
@@ -457,7 +513,10 @@ export class BlobTransferService {
       p2.push({ hash: overview.portraitThumb, tier: 2, kind: 'thumb' });
     }
 
-    return { p1, p2, p3, isDm };
+    const enabled = this.campaignStore.enabledPacks().get(campaignId) ?? state.packs;
+    const p3PackAssets = enabledPackAssets(enabled, this.packStore.installedContent());
+
+    return { p1, p2, p3, p3PackAssets, isDm };
   }
 
   // --- connect sequence (P1 → P2 immediately, P3 idle, P4 DM-only continuous) -------------------
@@ -480,17 +539,21 @@ export class BlobTransferService {
     // still groups by each row's actual `pinned` flag on top of this (own AND already-pinned
     // party hashes both win), but ordering own tiers first here means a cap-triggering slice
     // never drops an own hash purely for being positioned after a large party roster.
-    const relevant = [...wanted.p1, ...wanted.p3, ...wanted.p2];
-    const relevantRows = await Promise.all(relevant.map((w) => this.blobsRepository.get(w.hash)));
-    const heldEntries: { hash: string; pinned: boolean }[] = [];
-    for (let i = 0; i < relevant.length; i++) {
-      const row = relevantRows[i];
-      if (row) heldEntries.push({ hash: relevant[i].hash, pinned: row.pinned });
-    }
+    //
+    // [plan-16 Task 4] Pack assets are capped SEPARATELY, after the portraits: they only get the
+    // room every held portrait hash leaves (design ruling 5 — six packs of ~150 assets fit).
+    const [heldPortraits, heldPackAssets] = await Promise.all([
+      this.heldEntries([...wanted.p1, ...wanted.p3, ...wanted.p2]),
+      this.heldEntries(wanted.p3PackAssets),
+    ]);
     // [fix round 1, Minor] Explicitly enforced client-side, prioritizing pinned (own/current-
     // campaign) hashes first — see `MAX_ANNOUNCE_HASHES`'s own doc comment.
-    const held = prioritizeAnnounceHashes(heldEntries, MAX_ANNOUNCE_HASHES);
-    this.announceHave(campaignId, held);
+    const portraits = prioritizeAnnounceHashes(heldPortraits, MAX_ANNOUNCE_HASHES);
+    const packAssets = prioritizeAnnounceHashes(
+      heldPackAssets,
+      MAX_ANNOUNCE_HASHES - portraits.length,
+    );
+    this.announceHave(campaignId, [...portraits, ...packAssets]);
 
     await this.enqueueMissing(watcher, wanted.p1);
     this.pump(campaignId);
@@ -501,7 +564,7 @@ export class BlobTransferService {
       void (async () => {
         const stillWatching = this.watchers.get(campaignId);
         if (!stillWatching) return;
-        await this.enqueueMissing(stillWatching, wanted.p3);
+        await this.enqueueMissing(stillWatching, [...wanted.p3, ...wanted.p3PackAssets]);
         this.pump(campaignId);
         if (wanted.isDm) this.startDmSuperPeerLoop(campaignId);
       })();
@@ -528,8 +591,27 @@ export class BlobTransferService {
     const watcher = this.watchers.get(campaignId);
     if (!watcher) return;
     const wanted = await this.computeWantedForCampaign(campaignId);
-    await this.enqueueMissing(watcher, [...wanted.p1, ...wanted.p2, ...wanted.p3]);
+    await this.enqueueMissing(watcher, [
+      ...wanted.p1,
+      ...wanted.p2,
+      ...wanted.p3,
+      ...wanted.p3PackAssets,
+    ]);
     this.pump(campaignId);
+  }
+
+  /** The `wanted` hashes this device holds, each with its row's `pinned` flag — the input
+   * `prioritizeAnnounceHashes` ranks. Reads run in parallel (see `runConnectSequence`). */
+  private async heldEntries(
+    wanted: readonly WantedHash[],
+  ): Promise<{ hash: string; pinned: boolean }[]> {
+    const rows = await Promise.all(wanted.map((w) => this.blobsRepository.get(w.hash)));
+    const held: { hash: string; pinned: boolean }[] = [];
+    for (let i = 0; i < wanted.length; i++) {
+      const row = rows[i];
+      if (row) held.push({ hash: wanted[i].hash, pinned: row.pinned });
+    }
+    return held;
   }
 
   private async enqueueMissing(
