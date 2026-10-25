@@ -9,6 +9,7 @@
   "import-failed-asset-too-large": "An image in this pack is larger than allowed",
   "import-failed-asset-mime-mismatch": "An image in this pack is not in the format it declares",
   "import-failed-asset-hash-mismatch": "An image in this pack is damaged or was modified",
+  "import-failed-hash-mismatch": "This pack is damaged or was modified",
   "import-failed-conflict": "A different pack with the same name and version is already installed",
   "import-failed-unknown": "This file could not be read",
   "install-failed": "The pack could not be saved on this device",

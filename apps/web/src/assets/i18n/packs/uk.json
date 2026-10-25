@@ -9,6 +9,7 @@
   "import-failed-asset-too-large": "Зображення в цьому пакеті більше за допустимий розмір",
   "import-failed-asset-mime-mismatch": "Зображення в цьому пакеті не відповідає заявленому формату",
   "import-failed-asset-hash-mismatch": "Зображення в цьому пакеті пошкоджене або змінене",
+  "import-failed-hash-mismatch": "Цей пакет пошкоджено або змінено",
   "import-failed-conflict": "Інший пакет із тією самою назвою та версією вже встановлено",
   "import-failed-unknown": "Не вдалося прочитати цей файл",
   "install-failed": "Не вдалося зберегти пакет на цьому пристрої",

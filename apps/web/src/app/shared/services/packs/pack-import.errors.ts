@@ -115,6 +115,16 @@ export class PackImportAssetHashMismatchError extends PackImportError {
   }
 }
 
+/** A pack JSON fetched or carried from elsewhere (a campaign's stored body, a `.hero` bundle's
+ * carried pack) does not hash to the sha256 its source declared — tampered with, or stale.
+ * `expected` is the digest as the source gave it (bare hex or `sha256:<hex>`). */
+export class PackImportHashMismatchError extends PackImportError {
+  constructor(readonly expected: string) {
+    super('packs.import-failed-hash-mismatch', `Pack bytes do not match the declared ${expected}.`);
+    this.name = 'PackImportHashMismatchError';
+  }
+}
+
 /** The same `id@version` is already installed with a different canonical JSON, or the pack
  * reuses the core pack's id. */
 export class PackImportConflictError extends PackImportError {

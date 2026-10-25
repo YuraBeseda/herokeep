@@ -1,14 +1,12 @@
 import { inject, Injectable } from '@angular/core';
-import { reduce, validatePack, type Diagnostic } from '@hk/engine';
+import { reduce, type Diagnostic } from '@hk/engine';
 import {
-  formatIssues,
   HeroBundleImageSchema,
   HKPACK_ASSET_DIR,
   HKPACK_LIMITS,
   PACK_LIMITS,
   parseEvent,
   parseHeroManifest,
-  parsePack,
   type Event,
   type HeroBundleImage,
   type HeroBundleManifest,
@@ -16,7 +14,6 @@ import {
   type PackIssue,
 } from '@hk/protocol';
 import { IMAGE_BYTE_CAPS, sha256Hex } from '@shared/services/images/image-pipeline.service';
-import { canonicalJson } from '@shared/services/packs/canonical-json';
 import {
   PACK_ASSET_BYTE_CAP,
   verifyPackAssets,
@@ -24,8 +21,17 @@ import {
 } from '@shared/services/packs/pack-assets';
 import {
   PackImportAssetHashMismatchError,
+  PackImportBadSchemaError,
+  PackImportConflictError,
   PackImportError,
+  PackImportHashMismatchError,
+  PackImportInvalidError,
 } from '@shared/services/packs/pack-import.errors';
+import {
+  assertPackValid,
+  checkPackConflict,
+  parseExternalPack,
+} from '@shared/services/packs/pack-validate';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
@@ -208,21 +214,29 @@ function packKey(pack: Pack): string {
   return `${pack.id}@${pack.version}`;
 }
 
-/** `JSON.parse` + strict `parsePack` + kind `content` for a carried pack — any failure is a
- * `HeroImportBadPackError` for `key` (the manifest row's `id@version`). */
-function parseBundlePack(key: string, text: string): Pack {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw new HeroImportBadPackError(key, ['not valid JSON']);
+/** A refusal of the shared external-pack checks (`pack-validate.ts`, `verifyPackAssets` — both
+ * speak `PackImport*Error`) as this importer's own error for the carried pack `key` (the manifest
+ * row's `id@version`), whose `code` `CharactersListComponent` maps to a toast. Anything else is
+ * returned unchanged. */
+function toHeroPackError(key: string, error: unknown): unknown {
+  if (error instanceof PackImportHashMismatchError) {
+    return new HeroImportHashMismatchError(error.expected, 'Pack');
   }
-  const result = parsePack(raw);
-  if (!result.ok) throw new HeroImportBadPackError(key, formatIssues(result.issues));
-  if (result.pack.kind !== 'content') {
-    throw new HeroImportBadPackError(key, ['kind: only content packs can be carried']);
+  if (error instanceof PackImportAssetHashMismatchError) {
+    return new HeroImportHashMismatchError(error.hash, 'Pack asset');
   }
-  return result.pack;
+  if (error instanceof PackImportConflictError) return new HeroImportPackConflictError(key);
+  if (error instanceof PackImportInvalidError) {
+    return new HeroImportBadPackError(
+      key,
+      error.diagnostics.map((d) => `${d.code}: ${d.message}`),
+      error.diagnostics,
+    );
+  }
+  if (error instanceof PackImportBadSchemaError)
+    return new HeroImportBadPackError(key, error.issues);
+  if (error instanceof PackImportError) return new HeroImportBadPackError(key, [error.message]);
+  return error;
 }
 
 /**
@@ -372,7 +386,7 @@ export class HeroReaderService {
 
     const warnings: string[] = [...this.pinWarnings(manifest)];
     const images = await this.readAndVerifyImages(zip, manifest, warnings);
-    const bundlePacks = await this.readBundlePacks(zip, oversized, manifest, strFromU8);
+    const bundlePacks = await this.readBundlePacks(zip, oversized, manifest);
     const characterId = manifest.characterId;
 
     // Everything above is pure CPU/validation work — unzip, schema checks, SHA-256 hashing — and
@@ -503,24 +517,27 @@ export class HeroReaderService {
 
   /**
    * Validates every content pack the bundle carries (`manifest.packs[]`, plan 15 ruling 9) with the
-   * `.hkpack` importer's own safety checks — silently, no trust dialog — and stores NOTHING:
+   * shared external-pack checks (`pack-validate.ts`, the same ones a campaign's pack goes through)
+   * — silently, no trust dialog — and stores NOTHING:
    *
-   * 1. per row: no duplicate `id@version`; `path` is exactly `packs/<id>@<version>.json`; the entry
-   *    exists and is ≤ `PACK_LIMITS.maxBytes`
-   *    (checked before hashing); its sha256 equals the row's (`HeroImportHashMismatchError`);
-   *    `parsePack` strict, kind `content`, and the `id@version` the row names — else
-   *    `HeroImportBadPackError`;
-   * 2. conflicts (`HeroImportPackConflictError`): the core pack's id, or the same `id@version`
-   *    installed with a different canonical JSON (an identical one is simply not re-installed);
-   * 3. `validatePack(pack, [core, ...installed content, ...the bundle's packs])` errors → bad-pack
-   *    with the diagnostics;
-   * 4. assets: `verifyPackAssets` (present, ≤ declared size and the cap, magic bytes, sha256).
+   * 1. per row, the bundle's own structure: no duplicate `id@version`; `path` is exactly
+   *    `packs/<id>@<version>.json`; the entry exists and was not skipped by the unzip size filter;
+   *    then `parseExternalPack` (≤ `PACK_LIMITS.maxBytes` before hashing, sha256 equals the row's,
+   *    strict `parsePack`, kind `content`, the `id@version` the row names);
+   * 2. `checkPackConflict` for every carried pack against what is installed (an identical one is
+   *    simply not re-installed);
+   * 3. per pack, `assertPackValid` against `[core, ...installed content, ...the bundle's packs]`
+   *    — every carried pack is parsed first because one may depend on another — then its assets
+   *    (`verifyPackAssets`: present, ≤ declared size and the cap, magic bytes, sha256).
+   *
+   * The shared checks' `PackImport*Error`s surface as this importer's errors (`toHeroPackError`):
+   * a hash mismatch as `HeroImportHashMismatchError`, a conflict as `HeroImportPackConflictError`,
+   * anything else as `HeroImportBadPackError` (with the diagnostics for a `validatePack` failure).
    */
   private async readBundlePacks(
     zip: Record<string, Uint8Array>,
     oversized: ReadonlySet<string>,
     manifest: HeroBundleManifest,
-    strFromU8: (bytes: Uint8Array) => string,
   ): Promise<BundlePack[]> {
     const rows = manifest.packs ?? [];
     if (rows.length === 0) return [];
@@ -549,21 +566,11 @@ export class HeroReaderService {
       }
       const bytes = zip[row.path];
       if (!bytes) throw new HeroImportBadPackError(key, [`${row.path} is not in the bundle`]);
-      if (bytes.byteLength > PACK_LIMITS.maxBytes) {
-        throw new HeroImportBadPackError(key, [
-          `${row.path} exceeds ${PACK_LIMITS.maxBytes} bytes`,
-        ]);
+      try {
+        parsed.push(await parseExternalPack(bytes, row));
+      } catch (error) {
+        throw toHeroPackError(key, error);
       }
-      if ((await sha256Hex(bytes)) !== row.sha256) {
-        throw new HeroImportHashMismatchError(row.sha256, 'Pack');
-      }
-      const pack = parseBundlePack(key, strFromU8(bytes));
-      if (pack.id !== row.id || pack.version !== row.version) {
-        throw new HeroImportBadPackError(key, [
-          `${row.path} holds ${pack.id}@${pack.version}, not ${key}`,
-        ]);
-      }
-      parsed.push(pack);
     }
 
     for (const pack of parsed) this.checkConflict(pack);
@@ -572,45 +579,24 @@ export class HeroReaderService {
     const available = [core, ...installedContent, ...parsed];
     const out: BundlePack[] = [];
     for (const pack of parsed) {
-      const key = packKey(pack);
-      const errors = validatePack(pack, available).filter((d) => d.severity === 'error');
-      if (errors.length > 0) {
-        throw new HeroImportBadPackError(
-          key,
-          errors.map((d) => `${d.code}: ${d.message}`),
-          errors,
-        );
-      }
-      let assets: Map<string, PackImportAsset>;
       try {
-        assets = await verifyPackAssets(pack, zip, oversized);
+        assertPackValid(pack, available);
+        out.push({ pack, assets: await verifyPackAssets(pack, zip, oversized) });
       } catch (error) {
-        if (error instanceof PackImportAssetHashMismatchError) {
-          throw new HeroImportHashMismatchError(error.hash, 'Pack asset');
-        }
-        if (error instanceof PackImportError) {
-          throw new HeroImportBadPackError(key, [error.message]);
-        }
-        throw error;
+        throw toHeroPackError(packKey(pack), error);
       }
-      out.push({ pack, assets });
     }
     return out;
   }
 
-  /** Throws `HeroImportPackConflictError` when `pack` reuses the core id or a DIFFERENT pack is
-   * installed under its exact `id@version`; returns whether an identical one is installed. */
+  /** `checkPackConflict` against what is installed right now, as `HeroImportPackConflictError`;
+   * returns whether an identical pack is installed. */
   private checkConflict(pack: Pack): boolean {
-    const key = packKey(pack);
-    const all = this.packStore.packs();
-    if (all.some((p) => p.kind === 'core' && p.id === pack.id)) {
-      throw new HeroImportPackConflictError(key);
+    try {
+      return checkPackConflict(pack, this.packStore.packs());
+    } catch (error) {
+      throw toHeroPackError(packKey(pack), error);
     }
-    const existing = all.find((p) => p.kind !== 'core' && packKey(p) === key);
-    if (existing && canonicalJson(existing) !== canonicalJson(pack)) {
-      throw new HeroImportPackConflictError(key);
-    }
-    return existing !== undefined;
   }
 
   /** Installs the carried packs not already installed, through the same store write a `.hkpack`

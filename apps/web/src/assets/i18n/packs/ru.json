@@ -9,6 +9,7 @@
   "import-failed-asset-too-large": "Изображение в этом наборе больше допустимого размера",
   "import-failed-asset-mime-mismatch": "Изображение в этом наборе не соответствует заявленному формату",
   "import-failed-asset-hash-mismatch": "Изображение в этом наборе повреждено или изменено",
+  "import-failed-hash-mismatch": "Этот набор повреждён или изменён",
   "import-failed-conflict": "Другой набор с тем же именем и версией уже установлен",
   "import-failed-unknown": "Не удалось прочитать этот файл",
   "install-failed": "Не удалось сохранить набор на этом устройстве",

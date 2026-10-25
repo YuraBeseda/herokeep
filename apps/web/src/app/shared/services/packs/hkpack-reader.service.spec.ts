@@ -21,6 +21,7 @@ import {
   PackImportBadSchemaError,
   PackImportBadZipError,
   PackImportConflictError,
+  PackImportHashMismatchError,
   PackImportInvalidError,
   PackImportMissingPackJsonError,
   PackImportTooLargeError,
@@ -412,6 +413,7 @@ describe('pack import error codes', () => {
       new PackImportAssetMimeMismatchError(ICON_HASH, 'image/png'),
       new PackImportAssetHashMismatchError(ICON_HASH),
       new PackImportConflictError('x@1.0.0'),
+      new PackImportHashMismatchError('0'.repeat(64)),
     ];
     for (const lang of ['en', 'ru', 'uk']) {
       const strings = JSON.parse(
