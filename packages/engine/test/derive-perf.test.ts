@@ -35,6 +35,11 @@ import { loadGoldens, prepareGolden } from './support/golden.ts';
  * Plan 15 task 8: plus the heaviest content-pack golden — two versions of the third-party
  * `sample-content` pack listed, the 1.1.0 pin, a migrated mastery decision and two pack weapons
  * equipped (`pack-updated-v2`), derived against the per-character pinned index.
+ *
+ * Plan 16 task 7: plus both slice-6 goldens: the campaign member whose pin moved a held pack item to
+ * its replacement (`campaign-pack-member`, per-character index over two sample-content versions),
+ * and the Fighter/Barbarian whose house-rule pack overrides the core system's mastery combine rule
+ * to 'sum' (`mastery-sum-rule`, the override applied while the per-character index is built).
  */
 const PERF_FIXTURES = [
   'multi-fighter1-wizard19',
@@ -49,6 +54,8 @@ const PERF_FIXTURES = [
   'multi-rogue3-bard2-tools',
   'slippers-attuned',
   'pack-updated-v2',
+  'campaign-pack-member',
+  'mastery-sum-rule',
 ];
 
 describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
@@ -83,7 +90,7 @@ describe.each(PERF_FIXTURES)('derive-only perf (%s)', (fixtureName) => {
       const line =
         `- ${new Date().toISOString()}: derive-only, ${fixtureName} (${events} events), ` +
         `25 samples, median ${median.toFixed(3)} ms ` +
-        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-14 task-7 measurement, not the ` +
+        `(doc-05 budget: <5ms desktop / <15ms mid phone; plan-16 task-7 measurement, not the ` +
         `reduce+derive 536-event tripwire above)\n`;
       if (!existsSync(perfMdPath)) {
         writeFileSync(

@@ -1,0 +1,388 @@
+{
+  "name": "mastery-sum-rule",
+  "note": "Plan 16 task 7 (slice 6 goldens): ruling 9's 'sum' combine rule, pinned through pack data. The log is multi-fighter5-barbarian3-mastery's log (Fighter 5 Champion -> Barbarian 3 Berserker, the same decisions and the same five equipped weapons), with one difference: seq 2 pins the engine fixture pack mastery-sum-house-rule 1.0.0. That pack has no entities. Its one override replaces the core system's /multiclass/masteryCount ('max' in packages/content/src/static/system.ts) with 'sum', so the per-character index's system() combines the mastery.grant counts by adding them (derive/attacks.ts masteryCap). The 'max' result for the same log stays pinned by multi-fighter5-barbarian3-mastery and is not repeated here. Hand table (SRD data): the fighter-weapon-mastery-count row extra is 4 at fighter level 5 (3 at levels 1-3, 4 from level 4); the barbarian-weapon-mastery-count row extra is 2 at barbarian level 3 (2 at levels 1-3). So masteryCount = 4 + 2 = 6 (max would be 4). The cap is shared and filled in class order. The Fighter's three recorded picks (longsword sap, greatsword graze, warhammer push; its 4th slot was never re-picked) fill slots 1-3. The Barbarian's two picks fill slots 4-5: handaxe vex and greataxe cleave. Under 'max' the greataxe pick is over the cap; here it is honoured, so the greataxe row gains mastery cleave and one slot stays free. Unchanged by the rule: level 8, prof +3; STR 15 + Soldier 2 + fighter 4 ASI 2 = 19 (+4); HP 71 = fighter 10+2, 4 x (6+2), then barbarian 3 x (7+2); Extra Attack 2. Greataxe: to-hit 4+3 = +7, damage 1d12 + 4 slashing.",
+  "packs": ["dist:srd-5e-2024", "fixture:mastery-sum-house-rule"],
+  "events": [
+    {
+      "id": "018f7000-0000-7000-8000-000000001601",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 1,
+      "ts": "2026-10-25T12:00:01.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Hrolf",
+        "system": "5e-2024",
+        "corePack": { "id": "srd-5e-2024", "version": "0.1.0" },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "masculine"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001602",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 2,
+      "ts": "2026-10-25T12:00:02.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "pack.pinned",
+      "v": 1,
+      "payload": { "packId": "mastery-sum-house-rule", "version": "1.0.0" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001603",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 3,
+      "ts": "2026-10-25T12:00:03.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/species", "selection": ["srd-5e-2024:species/human"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001604",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 4,
+      "ts": "2026-10-25T12:00:04.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/background",
+        "selection": ["srd-5e-2024:background/soldier"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001605",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 5,
+      "ts": "2026-10-25T12:00:05.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:background/soldier@0/ability-scores", "selection": ["str:+2", "con:+1"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001606",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 6,
+      "ts": "2026-10-25T12:00:06.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
+        "selection": ["str:15", "con:14", "dex:13", "wis:12", "int:10", "cha:8"],
+        "context": { "method": "standardArray" }
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001607",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 7,
+      "ts": "2026-10-25T12:00:07.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 1 }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001608",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 8,
+      "ts": "2026-10-25T12:00:08.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/skills", "selection": ["perception", "survival"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001609",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 9,
+      "ts": "2026-10-25T12:00:09.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/fighting-style", "selection": ["srd-5e-2024:feat/defense"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001610",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 10,
+      "ts": "2026-10-25T12:00:10.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/weapon-masteries",
+        "selection": ["srd-5e-2024:item/longsword", "srd-5e-2024:item/greatsword", "srd-5e-2024:item/warhammer"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001611",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 11,
+      "ts": "2026-10-25T12:00:11.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "59999999-9999-7999-8999-9999999999a1",
+        "itemId": "srd-5e-2024:item/longsword",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001612",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 12,
+      "ts": "2026-10-25T12:00:12.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a1" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001613",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 13,
+      "ts": "2026-10-25T12:00:13.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "59999999-9999-7999-8999-9999999999a2",
+        "itemId": "srd-5e-2024:item/greatsword",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001614",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 14,
+      "ts": "2026-10-25T12:00:14.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a2" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001615",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 15,
+      "ts": "2026-10-25T12:00:15.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "59999999-9999-7999-8999-9999999999a3",
+        "itemId": "srd-5e-2024:item/warhammer",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001616",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 16,
+      "ts": "2026-10-25T12:00:16.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a3" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001617",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 17,
+      "ts": "2026-10-25T12:00:17.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "59999999-9999-7999-8999-9999999999a4",
+        "itemId": "srd-5e-2024:item/handaxe",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001618",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 18,
+      "ts": "2026-10-25T12:00:18.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a4" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001619",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 19,
+      "ts": "2026-10-25T12:00:19.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.added",
+      "v": 1,
+      "payload": {
+        "instanceId": "59999999-9999-7999-8999-9999999999a5",
+        "itemId": "srd-5e-2024:item/greataxe",
+        "qty": 1
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001620",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 20,
+      "ts": "2026-10-25T12:00:20.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "item.equipped",
+      "v": 1,
+      "payload": { "instanceId": "59999999-9999-7999-8999-9999999999a5" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001621",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 21,
+      "ts": "2026-10-25T12:00:21.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 2, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001622",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 22,
+      "ts": "2026-10-25T12:00:22.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/champion"
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001623",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 23,
+      "ts": "2026-10-25T12:00:23.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 4, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001624",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 24,
+      "ts": "2026-10-25T12:00:24.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@4/feat",
+        "selection": ["srd-5e-2024:feat/ability-score-improvement"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001625",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 25,
+      "ts": "2026-10-25T12:00:25.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": { "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores", "selection": ["str:+2"] }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001626",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 26,
+      "ts": "2026-10-25T12:00:26.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 5, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001627",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 27,
+      "ts": "2026-10-25T12:00:27.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 1 }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001628",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 28,
+      "ts": "2026-10-25T12:00:28.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "decision.made",
+      "v": 1,
+      "payload": {
+        "choiceId": "srd-5e-2024:class/barbarian@1/weapon-masteries",
+        "selection": ["srd-5e-2024:item/handaxe", "srd-5e-2024:item/greataxe"]
+      }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001629",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 29,
+      "ts": "2026-10-25T12:00:29.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 2, "hpRoll": "average" }
+    },
+    {
+      "id": "018f7000-0000-7000-8000-000000001630",
+      "stream": "char:59999999-9999-7999-8999-999999999999",
+      "seq": 30,
+      "ts": "2026-10-25T12:00:30.000Z",
+      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "type": "level.gained",
+      "v": 1,
+      "payload": {
+        "classId": "srd-5e-2024:class/barbarian",
+        "level": 3,
+        "hpRoll": "average",
+        "subclassId": "srd-5e-2024:subclass/path-of-the-berserker"
+      }
+    }
+  ],
+  "expect": {
+    "facts.pins": { "srd-5e-2024": "0.1.0", "mastery-sum-house-rule": "1.0.0" },
+    "sheet.pins": { "srd-5e-2024": "0.1.0", "mastery-sum-house-rule": "1.0.0" },
+    "sheet.level": 8,
+    "sheet.prof": 3,
+    "sheet.hp.max.value": 71,
+    "sheet.abilities[\"str\"].score.value": 19,
+    "sheet.attacksPerAction": 2,
+    "sheet.masteryCount": 6,
+    "sheet.attacks.length": 5,
+    "sheet.attacks[0].itemId": "srd-5e-2024:item/longsword",
+    "sheet.attacks[0].mastery": "sap",
+    "sheet.attacks[1].itemId": "srd-5e-2024:item/greatsword",
+    "sheet.attacks[1].mastery": "graze",
+    "sheet.attacks[2].itemId": "srd-5e-2024:item/warhammer",
+    "sheet.attacks[2].mastery": "push",
+    "sheet.attacks[3].itemId": "srd-5e-2024:item/handaxe",
+    "sheet.attacks[3].mastery": "vex",
+    "sheet.attacks[4]": {
+      "instanceId": "59999999-9999-7999-8999-9999999999a5",
+      "itemId": "srd-5e-2024:item/greataxe",
+      "name": "srd-5e-2024:item/greataxe",
+      "toHit": { "value": 7, "contributions": [] },
+      "damage": { "dice": "1d12", "bonus": { "value": 4, "contributions": [] }, "type": "slashing" },
+      "properties": ["heavy", "two-handed"],
+      "mastery": "cleave",
+      "ability": "str"
+    }
+  }
+}

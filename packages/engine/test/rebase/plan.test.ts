@@ -531,3 +531,41 @@ describe('planRebase over the pack-updated-v2 golden (plan 16 ruling 7)', () => 
     expect(actual).toEqual(expected);
   });
 });
+
+/**
+ * Plan 16 Task 7: the `campaign-pack-member` golden's campaign pin (seq 15-17, one transaction) is
+ * exactly what `planRebase` produces when the sheet banner pins the campaign's sample-content 1.1.0
+ * on a character that pins no version of it: `pack.pinned` without `previous`, the weapon-masteries
+ * decision moved to the replacement, and the held sickle's `item.updated` (ruling 7). The plan has a
+ * migration row, so the banner takes the report path, and Confirm commits these same events.
+ */
+describe('planRebase over the campaign-pack-member golden (plan 16, campaign banner pin)', () => {
+  it('its campaign pin transaction is the plan’s events, in order', () => {
+    const golden = loadGoldens().find((g) => g.name === 'campaign-pack-member')!;
+    const packs = golden.packs.map(loadGoldenPack);
+    const indexAt = (pins: Pins) => createContentIndex(packs, { pins, roots: pinnedRoots(packs, pins) });
+    const system = createContentIndex(packs.filter((p) => p.kind === 'core')).system();
+    const rules: SystemRules = { restRules: system.restRules, hpRules: system.hpRules };
+    const events = golden.events.map((e) => {
+      const r = parseEvent(e);
+      if (!r.ok) throw new Error(JSON.stringify(r.issues));
+      return r.event;
+    });
+    const at = events.findIndex((e) => e.txId !== undefined);
+    const facts = reduce(events.slice(0, at), undefined, rules);
+    expect(Object.hasOwn(facts.pins, 'sample-content')).toBe(false);
+    const nextPins = { ...facts.pins, 'sample-content': '1.1.0' };
+    const plan = planRebase(facts, indexAt(facts.pins), indexAt(nextPins), nextPins, rules);
+
+    expect(plan.invalid).toEqual([]);
+    expect(plan.migrations).toEqual([
+      {
+        choiceId: 'srd-5e-2024:class/fighter@1/weapon-masteries',
+        from: 'sample-content:item/moonblade-sickle',
+        to: 'sample-content:item/moonsilver-sickle',
+      },
+    ]);
+    const tx = events.filter((e) => e.txId === events[at]!.txId).map(({ type, v, payload }) => ({ type, v, payload }));
+    expect(tx).toEqual(plan.events);
+  });
+});
