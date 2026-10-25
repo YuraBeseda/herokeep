@@ -18,10 +18,15 @@
  * ## Why a separate sub-app, mounted BEFORE `createCampaignRoutes`
  * `createCampaignRoutes` applies a 64 KB `bodyLimit` to every `/api/campaigns/*` request. Hono runs
  * matching handlers in registration order and stops at the first one that answers, so this
- * sub-app — registered first, with its own 5 MiB limit scoped to `/:campaignId/packs/*` — answers
- * pack requests before the campaigns sub-app's middleware ever runs (`core/app.ts`).
+ * sub-app — registered first, with its own 5 MiB limit on the PUT — answers pack requests before
+ * the campaigns sub-app's middleware ever runs (`core/app.ts`).
+ *
+ * ## Order inside the PUT: nothing is buffered before auth and the DM check (fix round 1)
+ * XRW gate → `requireAuth` → DM check + path validation → `bodyLimit` → handler. `bodyLimit` reads
+ * a chunked body (no Content-Length) in full, up to the limit, before calling `next()`; running
+ * it last means only the authenticated DM can make the server hold up to 5 MiB.
  */
-import { Hono } from 'hono';
+import { Hono, type MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { PackIdSchema, SemverSchema, parsePack } from '@hk/protocol';
 import { requireAuth, type AuthEnv } from '../auth/middleware.ts';
@@ -75,28 +80,33 @@ export function createCampaignPackRoutes(deps: CampaignsDeps) {
   const app = new Hono<AuthEnv>();
   installErrorHandler(app);
 
+  // Header-only gates first: neither reads the body.
   app.use('/:campaignId/packs/*', requireXRequestedWith());
-  app.use(
-    '/:campaignId/packs/*',
-    bodyLimit({
-      maxSize: CAMPAIGN_PACK_BYTES_MAX,
-      onError: (c) => c.json({ error: 'payload_too_large', message: 'Pack body too large' }, 413),
-    }),
-  );
   app.use('/:campaignId/packs/*', requireAuth(deps));
 
-  app.put('/:campaignId/packs/:packId/:version', async (c) => {
-    const user = c.get('user');
-    const campaignId = c.req.param('campaignId');
-    const packId = c.req.param('packId');
-    const version = c.req.param('version');
-
+  /** [fix round 1] The PUT's DM check and path validation, as middleware that runs BEFORE the body
+   * limit below. Hono's `bodyLimit` reads a body that has no Content-Length (a chunked upload) in
+   * full, up to `maxSize`, before it calls `next()` — so it must come after these checks, or any
+   * caller (even unauthenticated) could make the server buffer up to 5 MiB per request. */
+  const requireDmUpload: MiddlewareHandler<AuthEnv> = async (c, next) => {
     // The D1 index row's `dmId` — the authority every DM-only campaign route uses (written with
     // the same `campaign.created` the stream's `meta.dmId` comes from). An unknown campaign gets
     // the same 403 as a non-DM, never revealing whether the id exists.
-    const campaign = await findCampaignById(deps.db, campaignId);
-    if (campaign?.dmId !== user.userId) throw forbidden('Only the campaign DM may upload pack bodies');
-    assertPackPath(packId, version);
+    const campaign = await findCampaignById(deps.db, c.req.param('campaignId') ?? '');
+    if (campaign?.dmId !== c.get('user').userId) throw forbidden('Only the campaign DM may upload pack bodies');
+    assertPackPath(c.req.param('packId') ?? '', c.req.param('version') ?? '');
+    await next();
+  };
+
+  const packBodyLimit = bodyLimit({
+    maxSize: CAMPAIGN_PACK_BYTES_MAX,
+    onError: (c) => c.json({ error: 'payload_too_large', message: 'Pack body too large' }, 413),
+  });
+
+  app.put('/:campaignId/packs/:packId/:version', requireDmUpload, packBodyLimit, async (c) => {
+    const campaignId = c.req.param('campaignId');
+    const packId = c.req.param('packId');
+    const version = c.req.param('version');
 
     const bytes = new Uint8Array(await c.req.arrayBuffer());
     let text: string;

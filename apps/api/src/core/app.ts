@@ -46,7 +46,8 @@ export function createApp(ports: AppPorts): Hono {
   app.route('/api/characters', createCharacterRoutes(ports));
   // [plan-16 Task 1] BEFORE the campaigns sub-app: its `/api/campaigns/*` middleware caps every
   // body at 64 KB, and Hono runs matching handlers in registration order — the pack routes (own
-  // 5 MiB limit, scoped to `/:campaignId/packs/*`) answer first (`routes/campaign-packs.ts`).
+  // 5 MiB limit on the PUT, applied after auth and the DM check) answer first
+  // (`routes/campaign-packs.ts`).
   app.route('/api/campaigns', createCampaignPackRoutes(ports));
   app.route('/api/campaigns', createCampaignRoutes(ports));
   app.route('/api/health', createHealthRoutes());

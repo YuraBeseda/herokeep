@@ -160,6 +160,45 @@ function getPack(
   return app.request(`/api/campaigns/${campaignId}/packs/${packId}/${version}`, { headers: { cookie, ...headers } });
 }
 
+/** A request body with NO Content-Length (a chunked upload), 64 KiB per chunk up to `totalBytes`.
+ * `highWaterMark: 0` means nothing is pulled until someone actually reads the body, so `pulled()`
+ * is exactly the number of bytes the server consumed. */
+function trackedStream(totalBytes: number): { stream: ReadableStream<Uint8Array>; pulled: () => number } {
+  let sent = 0;
+  const stream = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        if (sent >= totalBytes) {
+          controller.close();
+          return;
+        }
+        const size = Math.min(64 * 1024, totalBytes - sent);
+        controller.enqueue(new Uint8Array(size).fill(0x20));
+        sent += size;
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  return { stream, pulled: () => sent };
+}
+
+function putPackStream(
+  cookie: string | undefined,
+  campaignId: string,
+  packId: string,
+  version: string,
+  body: ReadableStream<Uint8Array>,
+) {
+  const request = new Request(`http://localhost/api/campaigns/${campaignId}/packs/${packId}/${version}`, {
+    method: 'PUT',
+    headers: cookie === undefined ? XRW : { ...XRW, cookie },
+    body,
+    duplex: 'half',
+  });
+  expect(request.headers.get('content-length'), 'a chunked upload carries no Content-Length').toBeNull();
+  return app.request(request);
+}
+
 interface Fixture {
   readonly dm: string;
   readonly member: string;
@@ -217,6 +256,38 @@ describe('PUT /api/campaigns/:campaignId/packs/:packId/:version', () => {
     const { dm, campaignId } = await seed();
     const res = await putPack(dm, campaignId, 'homebrew-pack', '1.0.0', 'x'.repeat(CAMPAIGN_PACK_BYTES_MAX + 1));
     expect(res.status).toBe(413);
+  });
+
+  // [fix round 1] Authentication and the DM check run BEFORE the 5 MiB body limit, so nobody but
+  // the DM can make the server buffer a pack upload. A chunked body (no Content-Length) is the
+  // case that matters: Hono's `bodyLimit` reads such a body in full (up to the limit) before it
+  // calls `next()`, so if it ran first it would buffer up to 5 MiB for any caller.
+  it('refuses a member’s oversized upload with 403 (not 413): the DM check runs before the body limit', async () => {
+    const { member, campaignId } = await seed();
+    const res = await putPack(member, campaignId, 'homebrew-pack', '1.0.0', 'x'.repeat(CAMPAIGN_PACK_BYTES_MAX + 1));
+    expect(res.status).toBe(403);
+  });
+
+  it('reads no byte of a chunked upload from an unauthenticated caller (401) or a non-DM (403)', async () => {
+    const { member, stranger, campaignId } = await seed();
+    for (const [label, cookie, status] of [
+      ['unauthenticated', undefined, 401],
+      ['member', member, 403],
+      ['non-member', stranger, 403],
+    ] as const) {
+      const body = trackedStream(CAMPAIGN_PACK_BYTES_MAX + 1);
+      const res = await putPackStream(cookie, campaignId, 'homebrew-pack', '1.0.0', body.stream);
+      expect(res.status, label).toBe(status);
+      expect(body.pulled(), `${label}: bytes read from the request body`).toBe(0);
+    }
+  });
+
+  it('still answers 413 to the DM for a chunked upload over 5 MiB', async () => {
+    const { dm, campaignId } = await seed();
+    const body = trackedStream(CAMPAIGN_PACK_BYTES_MAX + 64 * 1024);
+    const res = await putPackStream(dm, campaignId, 'homebrew-pack', '1.0.0', body.stream);
+    expect(res.status).toBe(413);
+    expect((await getPack(dm, campaignId, 'homebrew-pack', '1.0.0')).status).toBe(404);
   });
 
   it('answers 400 for a body that is valid JSON but not canonical (whitespace or unsorted keys)', async () => {
