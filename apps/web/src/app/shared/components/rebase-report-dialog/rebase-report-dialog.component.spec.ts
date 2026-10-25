@@ -174,6 +174,24 @@ describe('RebaseReportDialogComponent (plan 15 Tasks 4–5)', () => {
     expect(text(items[1].querySelector('.rebase-report__selection'))).toBe('Selected: Moonkin');
   });
 
+  // Plan 16 Task 6 (ruling 8): the one reason the plan reports without clearing the decision.
+  it('labels a count-reduced decision as kept for the player to trim', async () => {
+    const plan: RebasePlan = {
+      ...EMPTY,
+      invalid: [
+        { choiceId: SPECIES_CHOICE, selection: [MOONKIN, GLIMMER], reason: 'count-reduced' },
+      ],
+    };
+    const { root } = await render({ plan, title: 'T', nextIndex: next });
+    const item = root.querySelector('.rebase-report__invalid-item')!;
+    expect(text(item.querySelector('.rebase-report__reason'))).toBe(
+      'Fewer picks are allowed now. This choice is kept: remove the extra picks yourself.',
+    );
+    expect(text(item.querySelector('.rebase-report__selection'))).toBe(
+      'Selected: Moonkin, Glimmer Dart',
+    );
+  });
+
   it('without a next index, prompts and selections fall back to the raw ids', async () => {
     const { root } = await render({ plan: PLAN, title: 'T' });
     const item = root.querySelectorAll('.rebase-report__invalid-item')[1];
@@ -349,6 +367,7 @@ describe('RebaseReportDialogComponent (plan 15 Tasks 4–5)', () => {
         'no-changes',
         'none',
         'reason.choice-missing',
+        'reason.count-reduced',
         'reason.prerequisite-failed',
         'reason.selection-deprecated',
         'reason.selection-missing',

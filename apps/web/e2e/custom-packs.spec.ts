@@ -23,9 +23,9 @@ import {
  *
  * `sample-content-v2.hkpack` keeps `item/moonblade-sickle` (marked `deprecated.replacedBy
  * item/moonsilver-sickle`) and adds the renamed weapon. The rebase migrates the Weapon Masteries
- * DECISION to the new id; the inventory row keeps the old item id (plan 15 task 8 owner-flag,
- * pinned by the `pack-updated-v2` golden). So after the update the old sickle still resolves and
- * still attacks, but without its mastery, and a freshly added Moonsilver Sickle attacks WITH it.
+ * DECISION to the new id and (plan 16 task 6, ruling 7) the inventory row's item id with it
+ * (`item.updated {instanceId, itemId}`, pinned by the `pack-updated-v2` golden). So after the
+ * update the sickle picked up before it is the Moonsilver Sickle and keeps attacking with its mastery.
  */
 
 const V1_HKPACK = path.join(__dirname, 'fixtures', 'packs', 'sample-content.hkpack');
@@ -214,13 +214,12 @@ test.describe('custom content packs', () => {
       await expect(row.locator('.build-packs__version')).toContainText('1.1.0');
     });
 
-    await test.step('after the update: the decision names the renamed weapon; the inventory row keeps the old id', async () => {
+    await test.step('after the update: the decision and the inventory row both name the renamed weapon', async () => {
       await openTab(page, 'Play');
-      // The deprecated entity is still in v2, so the old inventory row still resolves and attacks,
-      // but the migrated mastery decision no longer names it (task 8 owner-flag).
-      await expect(attackRow(page, 'Moonblade Sickle').locator('td').nth(3)).toHaveText('');
-      await addFromLibrary(page, 'Moonsilver', 'Moonsilver Sickle');
-      await equip(page, 'Moonsilver Sickle');
+      // Plan 16 task 6 (ruling 7): the rebase moved the inventory row to the replacement item too,
+      // so the equipped sickle is now the Moonsilver Sickle and its mastery follows the decision.
+      await expect(attackRow(page, 'Moonblade Sickle')).toHaveCount(0);
+      await expect(attackRow(page, 'Moonsilver Sickle')).toHaveCount(1);
       await expect(attackRow(page, 'Moonsilver Sickle').locator('td').nth(3)).toHaveText('nick');
       await openTab(page, 'Timeline');
       await expect(page.locator('.timeline-tab')).toContainText(

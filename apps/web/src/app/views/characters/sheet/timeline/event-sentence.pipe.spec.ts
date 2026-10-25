@@ -564,4 +564,61 @@ describe('EventSentencePipe', () => {
       }
     });
   });
+
+  // Plan 16 Task 6 (ruling 7): a pack update moves an inventory entry to the replacement item with
+  // `item.updated {instanceId, itemId}`; the sentence names that item.
+  describe('item.updated with an itemId (plan 16 Task 6)', () => {
+    const parsed = parsePack(sampleJson);
+    if (!parsed.ok) throw new Error('sample-content.json fixture no longer parses');
+    const sample = parsed.pack;
+    const SICKLE = 'sample-content:item/moonblade-sickle';
+    const INSTANCE = '15151515-1515-4151-8151-1515151515a1';
+    let withSample: ContentIndex;
+    let withSampleLocalizer: Localizer;
+
+    beforeEach(() => {
+      withSample = createContentIndex([corePack, sample]);
+      withSampleLocalizer = createLocalizer(withSample, 'en');
+    });
+
+    it('names the replacement item; an update without itemId keeps the details sentence', () => {
+      const replaced = makeEvent('item.updated', { instanceId: INSTANCE, itemId: SICKLE });
+      expect(pipe.transform(replaced, withSample, withSampleLocalizer)).toBe(
+        'Replaced an item with Moonblade Sickle.',
+      );
+      expect(sentenceOf(replaced, withSample, withSampleLocalizer).params).toMatchObject({
+        itemChange: 'item',
+        itemName: 'Moonblade Sickle',
+      });
+
+      const details = makeEvent('item.updated', { instanceId: INSTANCE, notes: 'chipped' });
+      expect(pipe.transform(details, withSample, withSampleLocalizer)).toBe(
+        "Updated an item's details.",
+      );
+      expect(sentenceOf(details, withSample, withSampleLocalizer).params['itemChange']).toBe(
+        'details',
+      );
+    });
+
+    it('an itemId the index does not know stays raw', () => {
+      const event = makeEvent('item.updated', { instanceId: INSTANCE, itemId: SICKLE });
+      expect(pipe.transform(event, index, localizer)).toBe(`Replaced an item with ${SICKLE}.`);
+    });
+
+    it('renders both forms in ru and uk', async () => {
+      const expected = {
+        ru: ['Предмет заменён на Moonblade Sickle.', 'Обновлены данные предмета.'],
+        uk: ['Предмет замінено на Moonblade Sickle.', 'Оновлено дані предмета.'],
+      } as const;
+      for (const lang of ['ru', 'uk'] as const) {
+        await firstValueFrom(translocoService.load(`characters/${lang}`));
+        translocoService.setActiveLang(lang);
+        const sentences = [
+          makeEvent('item.updated', { instanceId: INSTANCE, itemId: SICKLE }),
+          makeEvent('item.updated', { instanceId: INSTANCE, qty: 2 }),
+        ].map((event) => pipe.transform(event, withSample, withSampleLocalizer));
+        expect(sentences).toEqual(expected[lang]);
+      }
+    });
+  });
 });

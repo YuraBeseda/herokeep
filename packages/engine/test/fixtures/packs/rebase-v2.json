@@ -35,6 +35,36 @@
       "category": "origin"
     },
     {
+      "id": "rebase-mini:item/old-lantern",
+      "type": "item",
+      "name": "Old Lantern",
+      "category": "gear",
+      "weight": 2,
+      "deprecated": { "replacedBy": "rebase-mini:item/lantern", "since": "1.1.0" }
+    },
+    {
+      "id": "rebase-mini:item/lantern",
+      "type": "item",
+      "name": "Lantern",
+      "category": "gear",
+      "weight": 2,
+      "deprecated": { "replacedBy": "rebase-mini:item/hooded-lantern", "since": "1.1.0" }
+    },
+    {
+      "id": "rebase-mini:item/hooded-lantern",
+      "type": "item",
+      "name": "Hooded Lantern",
+      "category": "gear",
+      "weight": 2
+    },
+    {
+      "id": "rebase-mini:item/rope",
+      "type": "item",
+      "name": "Rope",
+      "category": "gear",
+      "weight": 5
+    },
+    {
       "id": "rebase-mini:feat/nimble",
       "type": "feat",
       "name": "Nimble",

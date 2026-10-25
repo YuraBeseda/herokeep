@@ -647,7 +647,7 @@
     "item-unequipped": "Unequipped an item.",
     "item-attuned": "Attuned to an item.",
     "item-unattuned": "Ended attunement with an item.",
-    "item-updated": "Updated an item's details.",
+    "item-updated": "{itemChange, select, item {Replaced an item with {itemName}.} other {Updated an item's details.}}",
     "currency-changed": "Currency updated.",
     "rest-taken": "{kind, select, short {Took a short rest.} long {Took a long rest.} other {Took a rest.}}",
     "inspiration-changed": "{value, select, true {Gained} other {Lost}} inspiration.",
@@ -718,7 +718,8 @@
       "choice-missing": "The choice no longer exists.",
       "selection-missing": "The selected option is no longer available.",
       "selection-deprecated": "The selected option was retired without a working replacement.",
-      "prerequisite-failed": "The prerequisites are no longer met."
+      "prerequisite-failed": "The prerequisites are no longer met.",
+      "count-reduced": "Fewer picks are allowed now. This choice is kept: remove the extra picks yourself."
     },
     "arrow": "→",
     "migrations-title": "Choices moved to a replacement",

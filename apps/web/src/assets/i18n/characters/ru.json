@@ -647,7 +647,7 @@
     "item-unequipped": "Предмет снят.",
     "item-attuned": "Настроен на предмет.",
     "item-unattuned": "Настройка на предмет отменена.",
-    "item-updated": "Обновлены данные предмета.",
+    "item-updated": "{itemChange, select, item {Предмет заменён на {itemName}.} other {Обновлены данные предмета.}}",
     "currency-changed": "Валюта обновлена.",
     "rest-taken": "{kind, select, short {Взят короткий отдых.} long {Взят продолжительный отдых.} other {Взят отдых.}}",
     "inspiration-changed": "{value, select, true {Получено} other {Потеряно}} вдохновение.",
@@ -718,7 +718,8 @@
       "choice-missing": "Этого выбора больше нет.",
       "selection-missing": "Выбранный вариант больше недоступен.",
       "selection-deprecated": "Выбранный вариант упразднён, а подходящей замены нет.",
-      "prerequisite-failed": "Требования больше не выполняются."
+      "prerequisite-failed": "Требования больше не выполняются.",
+      "count-reduced": "Теперь можно выбрать меньше вариантов. Выбор сохранён: уберите лишние сами."
     },
     "arrow": "→",
     "migrations-title": "Выборы, перенесённые на замену",

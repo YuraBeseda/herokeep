@@ -241,6 +241,36 @@ describe('item.updated', () => {
     const f = reduce([created, ...setup, ev(3, 'item.updated', { instanceId: ghost, name: 'nope' })]);
     expect(f.inventory).toEqual([{ instanceId: sword, qty: 1, equipped: false, attuned: false }]);
   });
+
+  // Plan 16 Task 6 (ruling 7): the rebase planner's inventory item-id migration.
+  it('an itemId moves the entry to that pack item, keeping every other field', () => {
+    const setup = [
+      ev(2, 'item.added', { instanceId: sword, itemId: longsword, qty: 2, name: 'Heirloom' }),
+      ev(3, 'item.equipped', { instanceId: sword }),
+      ev(4, 'item.updated', { instanceId: sword, itemId: 'core-mini:item/greatsword' }),
+    ];
+    const f = reduce([created, ...setup]);
+    expect(f.skipped).toEqual([]);
+    expect(f.inventory).toEqual([
+      {
+        instanceId: sword,
+        itemId: 'core-mini:item/greatsword',
+        qty: 2,
+        equipped: true,
+        attuned: false,
+        name: 'Heirloom',
+      },
+    ]);
+  });
+
+  it('an itemId on a fully custom entry gives it a pack item id', () => {
+    const setup = [
+      ev(2, 'item.added', { instanceId: ring, qty: 1, name: 'Odd ring' }),
+      ev(3, 'item.updated', { instanceId: ring, itemId: 'core-mini:item/ring' }),
+    ];
+    const f = reduce([created, ...setup]);
+    expect(f.inventory[0]).toMatchObject({ itemId: 'core-mini:item/ring', name: 'Odd ring' });
+  });
 });
 
 describe('currency.changed', () => {

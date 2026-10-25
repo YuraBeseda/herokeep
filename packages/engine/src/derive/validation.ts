@@ -469,6 +469,24 @@ function buildPredicateContext(sheet: Sheet, comp: Composition, facts: Facts, in
 }
 
 /**
+ * Plan 16 Task 6 (ruling 8): the most selections `validateSelection` accepts for `choiceId` on this
+ * character — the count each pick kind's own `selection.count` check uses: a class skill pick's
+ * count, an `abilities` pick's `abilities.count`, otherwise the choice's count resolved for this
+ * character. `undefined` for an unknown choice, and for an `abilityGeneration` pick (one score per
+ * ability — its length is not a pick count).
+ */
+export function selectionCountOf(facts: Facts, index: ContentIndex, choiceId: string): number | undefined {
+  const skillPick = classSkillPick(choiceId, index);
+  if (skillPick) return skillPick.count;
+  const found = findChoice(index, choiceId);
+  if (!found) return undefined;
+  const { pick } = found.choice;
+  if ('abilityGeneration' in pick) return undefined;
+  if ('abilities' in pick) return pick.abilities.count;
+  return resolveChoiceCount(found.choice, facts, index);
+}
+
+/**
  * Validates a proposed decision selection against its `Choice` (or, for the R5 synthetic
  * `<classId>@1/skills` decision / the W1 `<classId>@1/multiclass-skills` bonus pick, against the
  * class's `skillChoice.from` at that pick's count — `classSkillPick`), evaluated against the

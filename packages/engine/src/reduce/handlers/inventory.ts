@@ -94,7 +94,9 @@ export const HANDLERS: Record<string, Handler> = {
   },
 
   // Merges only the fields the payload provides (the `note.updated@1` idiom, handlers/identity.ts)
-  // — an unknown instanceId is a silent no-op, not a skip.
+  // — an unknown instanceId is a silent no-op, not a skip. `itemId` (plan 16 task 6, additive) is
+  // the rebase planner's inventory item-id migration; a payload without it (every pre-plan-16 log)
+  // replays exactly as before.
   'item.updated@1': (f, e) => {
     const p = e.payload as ItemUpdated;
     const skip = requireCreated(f);
@@ -103,6 +105,7 @@ export const HANDLERS: Record<string, Handler> = {
       i.instanceId === p.instanceId
         ? {
             ...i,
+            ...(p.itemId !== undefined ? { itemId: p.itemId } : {}),
             ...(p.name !== undefined ? { name: p.name } : {}),
             ...(p.notes !== undefined ? { notes: p.notes } : {}),
             ...(p.qty !== undefined ? { qty: p.qty } : {}),

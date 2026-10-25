@@ -200,6 +200,16 @@ function buildParams(
           (typeof instanceId === 'string' ? instanceId : ''));
   }
 
+  // Plan 16 Task 6 (ruling 7): an `item.updated` carrying an `itemId` is a pack update moving the
+  // entry to its replacement item. `itemId` is optional, so the always-set `itemChange` select
+  // ('item' | 'details') guards the sentence that names it (same ICU param safety posture as
+  // `restored`/`pinKind`), and `itemName` is always set too.
+  if (type === 'item.updated') {
+    const itemId = payload['itemId'];
+    params['itemChange'] = typeof itemId === 'string' ? 'item' : 'details';
+    params['itemName'] = typeof itemId === 'string' ? resolveValue(itemId, index, localizer) : '';
+  }
+
   // Plan 14 Task 6: resource sentences name the resource (see `resourceName`) and, for
   // `resource.restored`, say how much came back. `count` is OPTIONAL (omitted = the full restore a
   // rest records), and an ICU template can't safely reference an optional field, so the always-set

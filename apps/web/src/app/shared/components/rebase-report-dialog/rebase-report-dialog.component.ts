@@ -67,6 +67,8 @@ const REASON_KEYS: Readonly<Record<InvalidDecision['reason'], string>> = {
   'selection-missing': 'rebase.reason.selection-missing',
   'selection-deprecated': 'rebase.reason.selection-deprecated',
   'prerequisite-failed': 'rebase.reason.prerequisite-failed',
+  // Plan 16 Task 6 (ruling 8): reported, not cleared — the label says the player trims it.
+  'count-reduced': 'rebase.reason.count-reduced',
 };
 
 const EMPTY_PLAN: RebasePlan = { changes: [], invalid: [], migrations: [], events: [] };

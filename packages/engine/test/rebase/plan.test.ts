@@ -1,7 +1,7 @@
-import type { Event, Pack } from '@hk/protocol';
+import { type Event, type Pack, type PackPinned, parseEvent } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { type ContentIndex, createContentIndex } from '../../src/content/index.ts';
-import type { Pins } from '../../src/content/deps.ts';
+import { type Pins, pinnedRoots } from '../../src/content/deps.ts';
 import { validatePack } from '../../src/content/validate.ts';
 import * as engine from '../../src/index.ts';
 import { hasErrors } from '../../src/diagnostics.ts';
@@ -13,12 +13,15 @@ import { diffSheets } from '../../src/rebase/sheet-diff.ts';
 import type { Facts, SystemRules } from '../../src/reduce/facts.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
 import { loadEngineFixturePack, loadFixturePack } from '../support/fixtures.ts';
+import { type GoldenFixture, loadGoldenPack, loadGoldens, runGolden } from '../support/golden.ts';
 
 /**
  * Plan 15 (phase 4 slice 5) Task 1, ruling 5 / Review Focus 3 — `planRebase` over the rebase-mini
  * pair (1.0.0 → 1.1.0): v2 deprecates `feat/old-luck` in favour of `feat/luck` (migration), drops
  * the `charm` choice (choice-missing), raises `feat/nimble`'s dex prerequisite 8 → 18
  * (prerequisite-failed), and raises `feature/sprite-step`'s walk bonus 5 → 10 (a value change).
+ * Plan 16 Task 6 (ruling 7): v2 also deprecates `item/old-lantern` → `item/lantern` →
+ * `item/hooded-lantern` (a two-step `replacedBy` chain) and keeps `item/rope` as it was.
  */
 const core = loadFixturePack('core-mini');
 const v1 = loadEngineFixturePack('rebase-v1');
@@ -273,5 +276,245 @@ describe('planRebase v1 → v2', () => {
     const b = planRebase(facts, current, next, nextPins, rules);
     expect(a).toEqual(b);
     expect(facts).toEqual(before);
+  });
+});
+
+// --- Plan 16 Task 6 ----------------------------------------------------------------------------
+
+const OLD_LANTERN = 'rebase-mini:item/old-lantern';
+const HOODED_LANTERN = 'rebase-mini:item/hooded-lantern';
+const ROPE = 'rebase-mini:item/rope';
+const LANTERN_INSTANCE = '018f6d2e-7b1a-7c3d-9e4f-0000000000a1';
+const ROPE_INSTANCE = '018f6d2e-7b1a-7c3d-9e4f-0000000000a2';
+const TRINKET_INSTANCE = '018f6d2e-7b1a-7c3d-9e4f-0000000000a3';
+
+/** The v1 log plus a deprecated lantern, a rope that stays, and a fully custom trinket. */
+const inventoryLog = (): Event[] => {
+  const log = v1Log();
+  const items: [string, unknown][] = [
+    ['item.added', { instanceId: LANTERN_INSTANCE, itemId: OLD_LANTERN, qty: 1 }],
+    ['item.added', { instanceId: ROPE_INSTANCE, itemId: ROPE, qty: 1 }],
+    ['item.added', { instanceId: TRINKET_INSTANCE, qty: 1, name: 'Trinket' }],
+  ];
+  return [...log, ...items.map(([type, payload], i) => ev(log.length + i + 1, type, payload))];
+};
+
+const LANTERN_MIGRATION: ProposedEvent = {
+  type: 'item.updated',
+  v: 1,
+  payload: { instanceId: LANTERN_INSTANCE, itemId: HOODED_LANTERN },
+};
+
+describe('planRebase: inventory item-id migration (plan 16 ruling 7)', () => {
+  it('emits item.updated for a deprecated inventory item (chain-walked), after decision.made and before decision.cleared', () => {
+    const { current, next, nextPins, rules } = setup();
+    const plan = planRebase(reduce(inventoryLog()), current, next, nextPins, rules);
+    expect(plan.events).toEqual([...MIGRATION_EVENTS.slice(0, 2), LANTERN_MIGRATION, ...MIGRATION_EVENTS.slice(2)]);
+    // `migrations` stays the decisions' list (the report's "moved to a replacement" rows).
+    expect(plan.migrations).toEqual([
+      { choiceId: GIFT, from: 'rebase-mini:feat/old-luck', to: 'rebase-mini:feat/luck' },
+    ]);
+  });
+
+  it('replaying facts + plan events resolves the new item id, and changes are exactly that replay', () => {
+    const { current, next, nextPins, rules } = setup();
+    const log = inventoryLog();
+    const plan = planRebase(reduce(log), current, next, nextPins, rules);
+    const replayed = reduce(commit(log, plan.events));
+
+    expect(replayed.skipped).toEqual([]);
+    expect(replayed.inventory.map((i) => i.itemId)).toEqual([HOODED_LANTERN, ROPE, undefined]);
+    const sheet = derive(replayed, next, rules);
+    expect(sheet.inventory.map((i) => i.resolved)).toEqual([true, true, true]);
+    expect(sheet.issues.map((d) => d.code)).not.toContain('derive.unresolvedItem');
+
+    // The planner's hand-rebuilt after-facts mirror the item.updated handler.
+    expect(plan.changes).toEqual(diffSheets(derive(reduce(log), current, rules), sheet));
+    expect(plan.changes).toContainEqual({ path: 'inventory[0].itemId', before: OLD_LANTERN, after: HOODED_LANTERN });
+
+    // ...and a second rebase of the migrated character to the same pins is empty.
+    expect(planRebase(replayed, next, next, nextPins, rules)).toEqual({
+      changes: [],
+      invalid: [],
+      migrations: [],
+      events: [],
+    });
+  });
+
+  it('Review Focus 4: a log rebased before plan 16 (decision migrated, item not) derives as before', () => {
+    const { current, next, nextPins, rules } = setup();
+    const log = inventoryLog();
+    // The plan-15 planner committed exactly MIGRATION_EVENTS: no item.updated.
+    const legacy = reduce(commit(log, MIGRATION_EVENTS));
+    const legacySheet = derive(legacy, next, rules);
+    expect(legacy.inventory[0]?.itemId).toBe(OLD_LANTERN);
+    expect(legacySheet.inventory[0]).toMatchObject({ itemId: OLD_LANTERN, resolved: true });
+
+    // The same issues and the same values as the migrated character, but for the item id.
+    const plan = planRebase(reduce(log), current, next, nextPins, rules);
+    const migratedSheet = derive(reduce(commit(log, plan.events)), next, rules);
+    expect(legacySheet.issues).toEqual(migratedSheet.issues);
+    expect(diffSheets(legacySheet, migratedSheet)).toEqual([
+      { path: 'inventory[0].itemId', before: OLD_LANTERN, after: HOODED_LANTERN },
+    ]);
+  });
+});
+
+describe('planRebase: count-reduced (plan 16 ruling 8)', () => {
+  const KEEN = 'rebase-mini:feat/keen-eye';
+  const BRIGHT = 'rebase-mini:feat/bright-eye';
+
+  /** `pack` with a Bright Eye feat and a `charm` choice of `count` picks from Keen Eye / Bright Eye. */
+  const withCharm = (pack: Pack, count: number): Pack => {
+    const p = structuredClone(pack);
+    p.entities.push({ ...structuredClone(p.entities.find((e) => e.id === KEEN)!), id: BRIGHT, name: 'Bright Eye' });
+    const sprite = p.entities.find((e) => e.id === 'rebase-mini:species/sprite')!;
+    const charm = structuredClone(v1.entities.find((e) => e.id === sprite.id)!.choices.find((c) => c.id === CHARM)!);
+    sprite.choices = [
+      ...sprite.choices.filter((c) => c.id !== CHARM),
+      { ...charm, count, pick: { static: [KEEN, BRIGHT] } },
+    ];
+    return p;
+  };
+
+  const rebaseWithCharm = (v1Count: number, v2Count: number, charm: string[]) => {
+    const log = [
+      ...baseLog('rebase-mini:feat/old-luck', '1.0.0', { charm: false }),
+      ev(7, 'decision.made', { choiceId: CHARM, selection: charm, context: GIFT_CONTEXT }),
+    ];
+    const packs = [core, withCharm(v1, v1Count), withCharm(v2, v2Count)];
+    const facts = reduce(log);
+    const current = indexFor(facts.pins, packs);
+    const nextPins = { ...facts.pins, 'rebase-mini': '1.1.0' };
+    const next = indexFor(nextPins, packs);
+    const rules = rulesOf(current);
+    return { log, current, next, rules, plan: planRebase(facts, current, next, nextPins, rules) };
+  };
+
+  it('a selection longer than the new count is reported count-reduced and NOT cleared', () => {
+    const { plan: p } = rebaseWithCharm(2, 1, [KEEN, BRIGHT]);
+    expect(p.invalid).toEqual([
+      { choiceId: CHARM, selection: [KEEN, BRIGHT], reason: 'count-reduced' },
+      { choiceId: TRICK, selection: ['rebase-mini:feat/nimble'], reason: 'prerequisite-failed' },
+    ]);
+    expect(p.events).toEqual([
+      MIGRATION_EVENTS[0],
+      MIGRATION_EVENTS[1],
+      { type: 'decision.cleared', v: 1, payload: { choiceId: TRICK } },
+    ]);
+  });
+
+  it('replaying keeps the over-count decision for the player to trim; changes are exactly that replay', () => {
+    const { log, current, next, rules, plan: p } = rebaseWithCharm(2, 1, [KEEN, BRIGHT]);
+    const replayed = reduce(commit(log, p.events));
+    expect(replayed.decisions[CHARM]).toEqual([KEEN, BRIGHT]);
+    expect(replayed.decisionContexts[CHARM]).toEqual(GIFT_CONTEXT);
+    expect(p.changes).toEqual(diffSheets(derive(reduce(log), current, rules), derive(replayed, next, rules)));
+  });
+
+  it('a grown count is a re-offer, not an invalidation', () => {
+    expect(rebaseWithCharm(1, 2, [KEEN]).plan.invalid.map((i) => i.choiceId)).toEqual([TRICK]);
+  });
+
+  it('a selection that already exceeded the count before the update is not the update’s doing', () => {
+    expect(rebaseWithCharm(1, 1, [KEEN, BRIGHT]).plan.invalid.map((i) => i.choiceId)).toEqual([TRICK]);
+  });
+
+  it('a deprecated selection whose choice count also shrank is migrated and reported count-reduced, never cleared', () => {
+    const withGiftCount = (pack: Pack, count: number): Pack => {
+      const p = structuredClone(pack);
+      p.entities.find((e) => e.id === 'rebase-mini:species/sprite')!.choices.find((c) => c.id === GIFT)!.count = count;
+      return p;
+    };
+    const selection = ['rebase-mini:feat/old-luck', KEEN];
+    const log = [
+      ...baseLog('rebase-mini:feat/old-luck', '1.0.0', { charm: false }),
+      ev(7, 'decision.made', { choiceId: GIFT, selection, context: GIFT_CONTEXT }),
+    ];
+    const packs = [core, withGiftCount(v1, 2), withGiftCount(v2, 1)];
+    const facts = reduce(log);
+    const current = indexFor(facts.pins, packs);
+    const nextPins = { ...facts.pins, 'rebase-mini': '1.1.0' };
+    const p = planRebase(facts, current, indexFor(nextPins, packs), nextPins, rulesOf(current));
+
+    expect(p.migrations).toEqual([{ choiceId: GIFT, from: 'rebase-mini:feat/old-luck', to: 'rebase-mini:feat/luck' }]);
+    expect(p.invalid).toContainEqual({ choiceId: GIFT, selection, reason: 'count-reduced' });
+    expect(p.events).toContainEqual({
+      type: 'decision.made',
+      v: 1,
+      payload: { choiceId: GIFT, selection: ['rebase-mini:feat/luck', KEEN], context: GIFT_CONTEXT },
+    });
+    expect(p.events).not.toContainEqual({ type: 'decision.cleared', v: 1, payload: { choiceId: GIFT } });
+  });
+});
+
+/**
+ * Plan 16 Task 6 (ruling 7): the `pack-updated-v2` golden's update events (seq 13-15) are exactly
+ * what `planRebase` commits for its sample-content 1.0.0 → 1.1.0 update — now including the
+ * sickle's `item.updated`. Review Focus 4: the same log WITHOUT that event (what the plan-15
+ * planner committed) still derives exactly as the golden pinned it before plan 16.
+ */
+describe('planRebase over the pack-updated-v2 golden (plan 16 ruling 7)', () => {
+  const golden = loadGoldens().find((g) => g.name === 'pack-updated-v2')!;
+  const SICKLE_INSTANCE = '15151515-1515-7151-8151-1515151515a1';
+  const MOONBLADE = 'sample-content:item/moonblade-sickle';
+  const MOONSILVER = 'sample-content:item/moonsilver-sickle';
+
+  it('its update events are the plan’s events, in order', () => {
+    const packs = golden.packs.map(loadGoldenPack);
+    const indexAt = (pins: Pins) => createContentIndex(packs, { pins, roots: pinnedRoots(packs, pins) });
+    const system = createContentIndex(packs.filter((p) => p.kind === 'core')).system();
+    const rules: SystemRules = { restRules: system.restRules, hpRules: system.hpRules };
+    const events = golden.events.map((e) => {
+      const r = parseEvent(e);
+      if (!r.ok) throw new Error(JSON.stringify(r.issues));
+      return r.event;
+    });
+    const at = events.findIndex((e) => e.type === 'pack.pinned' && (e.payload as PackPinned).previous !== undefined);
+    const facts = reduce(events.slice(0, at), undefined, rules);
+    const nextPins = { ...facts.pins, 'sample-content': '1.1.0' };
+    const plan = planRebase(facts, indexAt(facts.pins), indexAt(nextPins), nextPins, rules);
+
+    expect(plan.events.map((e) => e.type)).toEqual(['pack.pinned', 'decision.made', 'item.updated']);
+    expect(plan.events[2]).toEqual({
+      type: 'item.updated',
+      v: 1,
+      payload: { instanceId: SICKLE_INSTANCE, itemId: MOONSILVER },
+    });
+    const committed = events.slice(at, at + plan.events.length).map(({ type, v, payload }) => ({ type, v, payload }));
+    expect(committed).toEqual(plan.events);
+  });
+
+  it('Review Focus 4: the log without the item.updated derives exactly as pinned before plan 16', () => {
+    const legacy: GoldenFixture = {
+      ...golden,
+      events: golden.events
+        .filter((e) => !(e.type === 'item.updated' && (e.payload as { itemId?: string }).itemId !== undefined))
+        .map((e, i) => ({ ...e, seq: i + 1 })),
+      // The golden's pre-plan-16 expectations: the old inventory row keeps its deprecated id, still
+      // resolves and attacks, but has no mastery (the migrated decision names the new id).
+      expect: {
+        'sheet.inventory[0].itemId': MOONBLADE,
+        'sheet.inventory[0].resolved': true,
+        'sheet.inventory[1].resolved': true,
+        'sheet.attacks.length': 2,
+        'sheet.attacks[0]': {
+          instanceId: SICKLE_INSTANCE,
+          itemId: MOONBLADE,
+          name: MOONBLADE,
+          toHit: { value: 5, contributions: [] },
+          damage: { dice: '1d6', bonus: { value: 3, contributions: [] }, type: 'slashing' },
+          properties: ['light'],
+          ability: 'str',
+        },
+        'sheet.attacks[1].itemId': MOONSILVER,
+        'sheet.attacks[1].mastery': 'nick',
+        'sheet.issues': [],
+      },
+      absent: ['sheet.attacks[0].mastery'],
+    };
+    expect(legacy.events).toHaveLength(golden.events.length - 1);
+    const { actual, expected } = runGolden(legacy);
+    expect(actual).toEqual(expected);
   });
 });

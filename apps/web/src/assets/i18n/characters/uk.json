@@ -647,7 +647,7 @@
     "item-unequipped": "Предмет знято.",
     "item-attuned": "Налаштовано на предмет.",
     "item-unattuned": "Налаштування на предмет скасовано.",
-    "item-updated": "Оновлено дані предмета.",
+    "item-updated": "{itemChange, select, item {Предмет замінено на {itemName}.} other {Оновлено дані предмета.}}",
     "currency-changed": "Валюту оновлено.",
     "rest-taken": "{kind, select, short {Взято короткий відпочинок.} long {Взято тривалий відпочинок.} other {Взято відпочинок.}}",
     "inspiration-changed": "{value, select, true {Отримано} other {Втрачено}} натхнення.",
@@ -718,7 +718,8 @@
       "choice-missing": "Цього вибору більше немає.",
       "selection-missing": "Вибраний варіант більше недоступний.",
       "selection-deprecated": "Вибраний варіант скасовано, а відповідної заміни немає.",
-      "prerequisite-failed": "Вимоги більше не виконуються."
+      "prerequisite-failed": "Вимоги більше не виконуються.",
+      "count-reduced": "Тепер можна обрати менше варіантів. Вибір збережено: приберіть зайві самостійно."
     },
     "arrow": "→",
     "migrations-title": "Вибори, перенесені на заміну",

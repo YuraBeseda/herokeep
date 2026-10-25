@@ -27,6 +27,20 @@
       "category": "origin"
     },
     {
+      "id": "rebase-mini:item/old-lantern",
+      "type": "item",
+      "name": "Old Lantern",
+      "category": "gear",
+      "weight": 2
+    },
+    {
+      "id": "rebase-mini:item/rope",
+      "type": "item",
+      "name": "Rope",
+      "category": "gear",
+      "weight": 5
+    },
+    {
       "id": "rebase-mini:feat/nimble",
       "type": "feat",
       "name": "Nimble",
