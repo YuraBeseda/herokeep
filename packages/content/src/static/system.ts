@@ -308,7 +308,14 @@ export function systemEntity(): Entity {
     // Ruling 2 / T2 carry: the gating authority for `advancement.ts`'s `pendingAdvancements` — see
     // `MULTICLASS_PREREQUISITES`'s doc comment above for citations and the OWNER-FLAG dual-ability
     // classes.
-    multiclass: { prerequisites: MULTICLASS_PREREQUISITES },
+    // Plan 16 ruling 9 — `masteryCount`: how several classes' Weapon Mastery counts combine into the
+    // one cap every `weapon-masteries` choice shares (engine: derive/attacks.ts `masteryCap`).
+    // OWNER-FLAG (PHB-sourced, SRD-silent): the vendored multiclassing rules
+    // (`srd-2024_multiclassing_class-features`, Rule.json) name only Extra Attack, Spellcasting and
+    // Unarmored Defense. The 2024 Player's Handbook's multiclassing rules have Weapon Mastery use the
+    // HIGHEST count among your classes, not the sum — a Fighter 5 / Barbarian 3 knows 4 (max(4, 2)),
+    // not 6 — hence 'max' (also the engine's default when a pack leaves it out).
+    multiclass: { prerequisites: MULTICLASS_PREREQUISITES, masteryCount: 'max' },
     // T5 carry (phase 4 plan 11 task 7): real carry-capacity data for the SRD pack. BOTH `standard`
     // and `variant` are OWNER-FLAG, SRD-silent (T5's report verified the vendored 2024 snapshot has
     // no numeric carrying-capacity/encumbrance text anywhere — `Rule.json`'s own "Interacting with

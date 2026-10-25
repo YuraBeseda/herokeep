@@ -100,6 +100,12 @@ describe('system entity', () => {
     });
   });
 
+  it("multiclass.masteryCount is 'max' (plan 16 ruling 9: SRD-silent, OWNER-FLAGGED from the PHB 2024)", () => {
+    // The vendored `srd-2024_multiclassing_class-features` passage names only Extra Attack,
+    // Spellcasting and Unarmored Defense — Weapon Mastery's multiclass combine rule is pack data.
+    expect(sys.multiclass?.masteryCount).toBe('max');
+  });
+
   it('encumbrance carries standard and variant carry-capacity data (T5 carry, SRD-silent, OWNER-FLAGGED)', () => {
     expect(sys.encumbrance?.standard?.capacity).toBe('score(str) * 15');
     expect(sys.encumbrance?.variant?.capacity).toBe('score(str) * 15');
