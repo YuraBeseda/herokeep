@@ -37,10 +37,16 @@
   overflow-wrap: anywhere;
 }
 
-.rebase-report__invalid-item {
+.rebase-report__invalid-item,
+.rebase-report__trim-item {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.rebase-report__hint {
+  margin: 0 0 var(--space-2);
+  color: var(--text-2);
 }
 
 .rebase-report__prompt {
@@ -48,11 +54,13 @@
 }
 
 .rebase-report__reason,
-.rebase-report__selection {
+.rebase-report__selection,
+.rebase-report__moved {
   color: var(--text-2);
 }
 
-.rebase-report__selection {
+.rebase-report__selection,
+.rebase-report__moved {
   flex-basis: 100%;
 }
 

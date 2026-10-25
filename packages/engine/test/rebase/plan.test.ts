@@ -8,7 +8,7 @@ import { hasErrors } from '../../src/diagnostics.ts';
 import { derive } from '../../src/derive/index.ts';
 import { validateSelection } from '../../src/derive/validation.ts';
 import type { ProposedEvent } from '../../src/propose/index.ts';
-import { planRebase } from '../../src/rebase/plan.ts';
+import { clearsDecision, planRebase } from '../../src/rebase/plan.ts';
 import { diffSheets } from '../../src/rebase/sheet-diff.ts';
 import type { Facts, SystemRules } from '../../src/reduce/facts.ts';
 import { reduce } from '../../src/reduce/reducer.ts';
@@ -390,6 +390,19 @@ describe('planRebase: count-reduced (plan 16 ruling 8)', () => {
     const rules = rulesOf(current);
     return { log, current, next, rules, plan: planRebase(facts, current, next, nextPins, rules) };
   };
+
+  it('clearsDecision: every reason clears the decision except count-reduced (exported for the report)', () => {
+    expect(engine.clearsDecision).toBe(clearsDecision);
+    expect(clearsDecision('count-reduced')).toBe(false);
+    for (const reason of [
+      'choice-missing',
+      'selection-missing',
+      'selection-deprecated',
+      'prerequisite-failed',
+    ] as const) {
+      expect(clearsDecision(reason)).toBe(true);
+    }
+  });
 
   it('a selection longer than the new count is reported count-reduced and NOT cleared', () => {
     const { plan: p } = rebaseWithCharm(2, 1, [KEEN, BRIGHT]);

@@ -710,6 +710,8 @@
   "rebase": {
     "no-changes": "Nothing on the sheet changes.",
     "invalid-title": "Choices that will be cleared",
+    "trim-title": "Choices to trim",
+    "trim-hint": "Confirm keeps these choices as they are; trim them yourself afterwards.",
     "changes-title": "Sheet changes",
     "none": "(none)",
     "confirm": "Confirm",
@@ -724,6 +726,7 @@
     "arrow": "→",
     "migrations-title": "Choices moved to a replacement",
     "migration": "{prompt}: {from} → {to}",
+    "moved": "Moved to a replacement: {from} → {to}",
     "selection": "Selected: {names}",
     "validation-only": "The previous version of this pack is not available on this device, so the sheet can't be compared. This report only checks the character's choices against the new version.",
     "validation-ok": "Every choice is still valid."

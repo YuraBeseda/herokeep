@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import {
+  clearsDecision,
   createLocalizer,
   findChoice,
   type ContentIndex,
@@ -54,6 +55,11 @@ interface InvalidRow {
   readonly reasonKey: string;
 }
 
+/** A kept decision's row: its selection as Confirm leaves it, plus any of its moves (`from → to`). */
+interface TrimRow extends InvalidRow {
+  readonly moves: readonly { readonly id: string; readonly from: string; readonly to: string }[];
+}
+
 interface MigrationRow {
   readonly id: string;
   readonly prompt: string;
@@ -96,7 +102,13 @@ export function reportValue(value: unknown): ReportValue {
  * - **Changes**, grouped by top-level sheet key (`attacks`, `skills`, `speeds`, …): path, before,
  *   after. Hidden in validation-only mode (the core update; the old core is not on the device), which
  *   shows a note saying so instead.
- * - **Invalidated decisions**: the choice's prompt, the reason, and the cleared selection's names.
+ * - **Choices that will be cleared**: each invalid decision `clearsDecision(reason)` clears — the
+ *   choice's prompt, the reason, and the cleared selection's names.
+ * - **Choices to trim** (plan 16 Task 6 fix round 1): each invalid decision Confirm KEEPS
+ *   (`clearsDecision` false — `'count-reduced'`), with a note that the player fixes it afterwards.
+ *   Precedence: a decision that is both migrated and kept is listed ONCE, here — it is the one
+ *   that still needs the player — with its selection as Confirm leaves it (moved) and a
+ *   "Moved to a replacement" line per move; its moves are left out of the Migrations section.
  * - **Migrations**: `from → to` for each selection moved to its `deprecated.replacedBy`.
  *
  * Names resolve through the next index, then the current one, else stay raw ids (pack data, shown
@@ -162,28 +174,54 @@ export class RebaseReportDialogComponent {
     return [...groups].map(([key, rows]) => ({ key, rows }));
   });
 
+  /** Invalid decisions Confirm clears (`decision.cleared`). */
   protected readonly invalidRows = computed<InvalidRow[]>(() =>
-    this.report().invalid.map((item) => ({
-      choiceId: item.choiceId,
-      prompt: this.promptOf(item.choiceId),
-      names: item.selection.map((id) => this.nameOf(id)).join(', '),
-      reasonKey: REASON_KEYS[item.reason],
-    })),
+    this.report()
+      .invalid.filter((item) => clearsDecision(item.reason))
+      .map((item) => ({
+        choiceId: item.choiceId,
+        prompt: this.promptOf(item.choiceId),
+        names: item.selection.map((id) => this.nameOf(id)).join(', '),
+        reasonKey: REASON_KEYS[item.reason],
+      })),
   );
 
-  protected readonly migrationRows = computed<MigrationRow[]>(() =>
-    this.report().migrations.map((m) => ({
-      id: `${m.choiceId}\u0000${m.from}`,
-      prompt: this.promptOf(m.choiceId),
-      from: this.nameOf(m.from),
-      to: this.nameOf(m.to),
-    })),
-  );
+  /** Invalid decisions Confirm keeps for the player to fix, each with its own moves folded in. */
+  protected readonly trimRows = computed<TrimRow[]>(() => {
+    const { invalid, migrations } = this.report();
+    return invalid
+      .filter((item) => !clearsDecision(item.reason))
+      .map((item) => {
+        const own = migrations.filter((m) => m.choiceId === item.choiceId);
+        const kept = item.selection.map((id) => own.find((m) => m.from === id)?.to ?? id);
+        return {
+          choiceId: item.choiceId,
+          prompt: this.promptOf(item.choiceId),
+          names: kept.map((id) => this.nameOf(id)).join(', '),
+          reasonKey: REASON_KEYS[item.reason],
+          moves: own.map((m) => ({ id: m.from, from: this.nameOf(m.from), to: this.nameOf(m.to) })),
+        };
+      });
+  });
+
+  /** Moves of decisions that are not listed under "Choices to trim" (precedence: see class doc). */
+  protected readonly migrationRows = computed<MigrationRow[]>(() => {
+    const trimmed = new Set(this.trimRows().map((row) => row.choiceId));
+    return this.report()
+      .migrations.filter((m) => !trimmed.has(m.choiceId))
+      .map((m) => ({
+        id: `${m.choiceId}\u0000${m.from}`,
+        prompt: this.promptOf(m.choiceId),
+        from: this.nameOf(m.from),
+        to: this.nameOf(m.to),
+      }));
+  });
 
   protected readonly empty = computed(
     () =>
       this.groups().length === 0 &&
       this.invalidRows().length === 0 &&
+      this.trimRows().length === 0 &&
       this.migrationRows().length === 0,
   );
 

@@ -28,6 +28,29 @@
     </section>
   }
 
+  @if (trimRows().length > 0) {
+    <section class="rebase-report__section">
+      <h3 class="rebase-report__heading">{{ t('rebase.trim-title') }}</h3>
+      <p class="rebase-report__hint">{{ t('rebase.trim-hint') }}</p>
+      <ul class="rebase-report__list rebase-report__trim">
+        @for (item of trimRows(); track item.choiceId) {
+          <li class="rebase-report__trim-item">
+            <span class="rebase-report__prompt">{{ item.prompt }}</span>
+            <span class="rebase-report__reason">{{ t(item.reasonKey) }}</span>
+            <span class="rebase-report__selection">{{
+              t('rebase.selection', { names: item.names })
+            }}</span>
+            @for (move of item.moves; track move.id) {
+              <span class="rebase-report__moved">{{
+                t('rebase.moved', { from: move.from, to: move.to })
+              }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (migrationRows().length > 0) {
     <section class="rebase-report__section">
       <h3 class="rebase-report__heading">{{ t('rebase.migrations-title') }}</h3>

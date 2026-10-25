@@ -56,8 +56,14 @@ const REASON_BY_CODE: Readonly<Record<string, Reason>> = {
 /** Most severe first: a decision that is also broken otherwise is cleared, not merely trimmed. */
 const REASON_ORDER: readonly Reason[] = ['choice-missing', 'selection-missing', 'prerequisite-failed', 'count-reduced'];
 
-/** Plan 16 ruling 8: the one reason the plan reports without clearing the decision. */
-const clears = (reason: Reason): boolean => reason !== 'count-reduced';
+/**
+ * Whether `planRebase` clears a decision reported with `reason` (a `decision.cleared` event). Plan 16
+ * ruling 8: `'count-reduced'` is the one reason reported WITHOUT clearing — Confirm keeps the decision
+ * and the player trims it. The rebase report sections its rows by this.
+ */
+export function clearsDecision(reason: InvalidDecision['reason']): boolean {
+  return reason !== 'count-reduced';
+}
 
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -154,7 +160,7 @@ export function planRebase(
     let reason: Reason | undefined;
     if (hasReplacement && choiceExists) {
       const migratedReason = classify(facts, next, rules, choiceId, replaced);
-      const migrates = migratedReason === undefined || !clears(migratedReason);
+      const migrates = migratedReason === undefined || !clearsDecision(migratedReason);
       if (migrates) {
         replaced.forEach((to, i) => {
           if (to !== selection[i]) migrations.push({ choiceId, from: selection[i]!, to });
@@ -176,7 +182,7 @@ export function planRebase(
     const to = entry.itemId !== undefined ? replacementOf(next, entry.itemId) : undefined;
     if (to !== undefined) itemMigrations.push({ instanceId: entry.instanceId, itemId: to });
   }
-  const cleared = invalid.filter((i) => clears(i.reason));
+  const cleared = invalid.filter((i) => clearsDecision(i.reason));
 
   const events: ProposedEvent[] = [];
   for (const packId of Object.keys(nextPins).sort(byCodeUnit)) {

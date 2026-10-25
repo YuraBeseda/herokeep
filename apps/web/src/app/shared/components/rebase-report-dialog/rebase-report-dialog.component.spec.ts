@@ -183,13 +183,70 @@ describe('RebaseReportDialogComponent (plan 15 Tasks 4–5)', () => {
       ],
     };
     const { root } = await render({ plan, title: 'T', nextIndex: next });
-    const item = root.querySelector('.rebase-report__invalid-item')!;
+    const item = root.querySelector('.rebase-report__trim-item')!;
     expect(text(item.querySelector('.rebase-report__reason'))).toBe(
       'Fewer picks are allowed now. This choice is kept: remove the extra picks yourself.',
     );
     expect(text(item.querySelector('.rebase-report__selection'))).toBe(
       'Selected: Moonkin, Glimmer Dart',
     );
+  });
+
+  // Plan 16 Task 6 fix round 1: what Confirm does to a choice decides its section — a kept one
+  // (`clearsDecision(reason)` false) is never listed under "Choices that will be cleared".
+  it('lists kept (count-reduced) decisions in their own "Choices to trim" section, apart from the cleared ones', async () => {
+    const plan: RebasePlan = {
+      ...EMPTY,
+      invalid: [
+        { choiceId: FEAT_CHOICE, selection: [LUNAR], reason: 'choice-missing' },
+        { choiceId: SPECIES_CHOICE, selection: [MOONKIN, GLIMMER], reason: 'count-reduced' },
+      ],
+    };
+    const { root } = await render({ plan, title: 'T', nextIndex: next });
+
+    const cleared = root.querySelector('.rebase-report__invalid')!.closest('section')!;
+    expect(text(cleared.querySelector('.rebase-report__heading'))).toBe(
+      'Choices that will be cleared',
+    );
+    const clearedItems = Array.from(cleared.querySelectorAll('li'));
+    expect(clearedItems.map((li) => text(li.querySelector('.rebase-report__prompt')))).toEqual([
+      FEAT_CHOICE,
+    ]);
+
+    const trim = root.querySelector('.rebase-report__trim')!.closest('section')!;
+    expect(text(trim.querySelector('.rebase-report__heading'))).toBe('Choices to trim');
+    expect(text(trim.querySelector('.rebase-report__hint'))).toBe(charactersEn.rebase['trim-hint']);
+    const trimItems = Array.from(trim.querySelectorAll('li'));
+    expect(trimItems.map((li) => text(li.querySelector('.rebase-report__prompt')))).toEqual([
+      'Species',
+    ]);
+  });
+
+  it('lists a decision that is both migrated and count-reduced once, under "Choices to trim", with its move and its kept selection', async () => {
+    const plan: RebasePlan = {
+      ...EMPTY,
+      invalid: [{ choiceId: SPECIES_CHOICE, selection: [GLIMMER, LUNAR], reason: 'count-reduced' }],
+      migrations: [
+        { choiceId: SPECIES_CHOICE, from: GLIMMER, to: MOONKIN },
+        { choiceId: FEAT_CHOICE, from: LUNAR, to: GLIMMER },
+      ],
+    };
+    const { root } = await render({ plan, title: 'T', nextIndex: next });
+
+    // Only the other choice's move stays in "Choices moved to a replacement".
+    expect(Array.from(root.querySelectorAll('.rebase-report__migration')).map(text)).toEqual([
+      `${FEAT_CHOICE}: Lunar Insight → Glimmer Dart`,
+    ]);
+    const items = Array.from(root.querySelectorAll('.rebase-report__trim-item'));
+    expect(items).toHaveLength(1);
+    // The selection as Confirm leaves it (moved), and the move itself.
+    expect(text(items[0].querySelector('.rebase-report__selection'))).toBe(
+      'Selected: Moonkin, Lunar Insight',
+    );
+    expect(Array.from(items[0].querySelectorAll('.rebase-report__moved')).map(text)).toEqual([
+      'Moved to a replacement: Glimmer Dart → Moonkin',
+    ]);
+    expect(root.querySelector('.rebase-report__invalid')).toBeNull();
   });
 
   it('without a next index, prompts and selections fall back to the raw ids', async () => {
@@ -364,6 +421,7 @@ describe('RebaseReportDialogComponent (plan 15 Tasks 4–5)', () => {
         'invalid-title',
         'migration',
         'migrations-title',
+        'moved',
         'no-changes',
         'none',
         'reason.choice-missing',
@@ -372,6 +430,8 @@ describe('RebaseReportDialogComponent (plan 15 Tasks 4–5)', () => {
         'reason.selection-deprecated',
         'reason.selection-missing',
         'selection',
+        'trim-hint',
+        'trim-title',
         'validation-ok',
         'validation-only',
       ].sort(),
