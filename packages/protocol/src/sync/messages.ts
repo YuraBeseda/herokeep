@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PackSha256Schema } from '../events/campaign.ts';
 import { EventEnvelopeSchema, StreamIdSchema, UUID } from '../events/envelope.ts';
 import { PackIdSchema } from '../ids.ts';
 import { BlobHashSchema, SemverSchema } from '../pack/common.ts';
@@ -78,9 +79,14 @@ const MemberSchema = z.strictObject({
 // elaborating the shape. We use the same {id, version} pin shape already used for
 // corePack/pack.pinned (events/character.ts), since welcome.packs communicates which content
 // packs the stream's committed events reference.
+// [plan-16 Task 1] `sha256` (additive, optional): a campaign stream's welcome carries its enabled
+// non-core packs with the bare-hex digest of the stored body (`pack.enabled@1`'s own
+// `PackSha256Schema`), so a member can tell whether its installed copy is the one the DM enabled
+// before fetching `GET /api/campaigns/:id/packs/:packId/:version`.
 const WelcomePackSchema = z.strictObject({
   id: PackIdSchema,
   version: SemverSchema,
+  sha256: PackSha256Schema.optional(),
 });
 
 // --- client -> server --------------------------------------------------------

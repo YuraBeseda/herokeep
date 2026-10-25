@@ -162,6 +162,30 @@ describe('server -> client messages', () => {
     expect(WelcomeMsgSchema.safeParse({ ...welcome, extra: 1 }).success).toBe(false);
   });
 
+  it('welcome.packs: an optional bare-hex sha256 per pack (plan-16 campaign pack relay), additive', () => {
+    const base = {
+      t: 'welcome',
+      rid: 'r1',
+      serverTime: '2026-10-18T12:00:00.000Z',
+      streams: [{ id: stream, headSeq: 0, quota: { bytesUsed: 0, bytesMax: 1000, eventCount: 0 } }],
+    };
+    const sha256 = 'ab'.repeat(32);
+    const withSha = WelcomeMsgSchema.safeParse({ ...base, packs: [{ id: 'homebrew-pack', version: '1.0.0', sha256 }] });
+    expect(withSha.success, JSON.stringify(withSha.success ? withSha.data : withSha.error.issues)).toBe(true);
+    // still optional: the pre-plan-16 {id, version} shape keeps parsing
+    expect(WelcomeMsgSchema.safeParse({ ...base, packs: [{ id: 'homebrew-pack', version: '1.0.0' }] }).success).toBe(
+      true,
+    );
+    // bare 64-hex only (PackSha256Schema) — never BlobHashSchema's `sha256:` prefix, never uppercase
+    for (const bad of [`sha256:${sha256}`, sha256.toUpperCase(), 'ab'.repeat(31)]) {
+      expect(
+        WelcomeMsgSchema.safeParse({ ...base, packs: [{ id: 'homebrew-pack', version: '1.0.0', sha256: bad }] })
+          .success,
+        bad,
+      ).toBe(false);
+    }
+  });
+
   it('events: stream + events[]', () => {
     expect(EventsMsgSchema.safeParse({ t: 'events', stream, events: [event({ seq: 1 })] }).success).toBe(true);
   });
