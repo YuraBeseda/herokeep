@@ -70,6 +70,47 @@ const strict: Pack = {
   ],
 };
 
+/** Plan 16 Task 6 fix round 1 (ruling 7 on the banner path): a pack whose 2.0.0 deprecates the
+ * item its 1.0.0 shipped, naming a replacement. A character still holding the old item (pinned
+ * 1.0.0 once, then unpinned it) has it migrated when the campaign's 2.0.0 is pinned. */
+const OLD_RELIC = 'relics:item/old-relic';
+const NEW_RELIC = 'relics:item/new-relic';
+const RELIC_INSTANCE = '00000000-0000-4000-8000-0000000000c1';
+const relicItem = (
+  id: string,
+  name: string,
+  deprecated?: { replacedBy: string; since: string },
+): Pack['entities'][number] => ({
+  type: 'item',
+  id,
+  name,
+  tags: [],
+  prerequisites: [],
+  effects: [],
+  grants: [],
+  choices: [],
+  category: 'gear',
+  weight: 1,
+  ...(deprecated ? { deprecated } : {}),
+});
+const relicsV1: Pack = {
+  ...sample,
+  id: 'relics',
+  name: 'Relics',
+  version: '1.0.0',
+  entities: [relicItem(OLD_RELIC, 'Old Relic')],
+  assets: [],
+  overrides: [],
+};
+const relicsV2: Pack = {
+  ...relicsV1,
+  version: '2.0.0',
+  entities: [
+    relicItem(OLD_RELIC, 'Old Relic', { replacedBy: NEW_RELIC, since: '2.0.0' }),
+    relicItem(NEW_RELIC, 'New Relic'),
+  ],
+};
+
 const CAMPAIGN_ID = '00000000-0000-4000-8000-0000000000ab';
 const FIGHTING_STYLE = 'srd-5e-2024:class/fighter@1/fighting-style';
 const SHA = 'a'.repeat(64);
@@ -246,6 +287,42 @@ describe('CampaignPacksBannerComponent (plan 16 Task 5, ruling 4)', () => {
     expect(open).not.toHaveBeenCalled();
     expect(store.index()?.has('sample-content:species/moonkin')).toBe(true);
     await settle(fixture, () => banner(fixture) === null);
+  });
+
+  it('the no-report pin path commits plan.events: a held item the pinned version deprecates is migrated to its replacement (ruling 7)', async () => {
+    const { open, enabled, status } = await setup([corePack, sample, relicsV1, relicsV2]);
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx([
+      { type: 'pack.pinned', v: 1, payload: { packId: 'relics', version: '1.0.0' } },
+    ]);
+    await store.appendTx([
+      {
+        type: 'item.added',
+        v: 1,
+        payload: { instanceId: RELIC_INSTANCE, itemId: OLD_RELIC, qty: 1 },
+      },
+    ]);
+    await store.appendTx([{ type: 'pack.unpinned', v: 1, payload: { packId: 'relics' } }]);
+    await joinCampaign();
+    enabled.set(enabledSet(relicsV2));
+    status.set(installed(relicsV2));
+    const fixture = await render();
+    const before = (await events()).length;
+
+    pinButton(fixture).click();
+    await settle(fixture, () => store.facts()?.pins['relics'] === '2.0.0');
+
+    // No decision breaks and no decision moves, so no report opens — yet the plan's events (not a
+    // bare pack.pinned) are what lands, in one transaction.
+    expect(open).not.toHaveBeenCalled();
+    const appended = (await events()).slice(before);
+    expect(appended.map((e) => e.type)).toEqual(['pack.pinned', 'item.updated']);
+    expect(appended[0]?.payload).toEqual({ packId: 'relics', version: '2.0.0' });
+    expect(appended[1]?.payload).toEqual({ instanceId: RELIC_INSTANCE, itemId: NEW_RELIC });
+    expect(appended[1]?.txId).toBe(appended[0]?.txId);
+    expect(store.facts()?.inventory.find((e) => e.instanceId === RELIC_INSTANCE)?.itemId).toBe(
+      NEW_RELIC,
+    );
   });
 
   it('shows no banner when the character is not linked to a campaign', async () => {

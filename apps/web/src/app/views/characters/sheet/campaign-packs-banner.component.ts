@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, type Signal } from '@angular/core';
-import { planRebase, propose, type Pins } from '@hk/engine';
+import { planRebase, type Pins } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogService } from '@shared/components/dialog/dialog.service';
@@ -44,10 +44,11 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
  *   offered — the campaign settings packs section shows its error.
  * - A pack the character already pins at ANY version is not offered: moving a pin to the campaign's
  *   version is an update, which members make on the Build tab (plan ruling 11).
- * - "Pin campaign packs" pins every installed offer in ONE transaction. It is the Build tab's pin
- *   path: `propose.pinPack` per pack, appended with `CharacterStore.appendTx`, gated by the same
- *   campaign edit lock. When `planRebase` says the new pins break recorded decisions (an override
- *   that removes an option) or migrate them, the rebase report opens instead, exactly as for the
+ * - "Pin campaign packs" pins every installed offer in ONE transaction, planned with `planRebase`
+ *   and gated by the same campaign edit lock as the Build tab. When the plan reports nothing (no
+ *   recorded decision breaks or moves), its `plan.events` are appended straight away: the
+ *   `pack.pinned` events plus any `item.updated` that moves a held item off an entity the new
+ *   version deprecates (plan 16 ruling 7). Otherwise the rebase report opens, exactly as for the
  *   Build tab's turn-off/update; only Confirm commits `plan.events`.
  *
  * Nothing is forced and nothing is remembered: the banner is there while the condition holds.
@@ -129,9 +130,8 @@ export class CampaignPacksBannerComponent {
 
   private async pin(offers: readonly CampaignPackOffer[], t: TranslateFn): Promise<void> {
     const facts = this.characterStore.facts();
-    const sheet = this.characterStore.sheet();
     const current = this.characterStore.index();
-    if (!facts || !sheet || !current) return;
+    if (!facts || !current) return;
 
     const nextPins: Pins = { ...facts.pins };
     for (const offer of offers) nextPins[offer.packId] = offer.version;
@@ -139,10 +139,9 @@ export class CampaignPacksBannerComponent {
     const plan = planRebase(facts, current, next, nextPins, this.characterStore.systemRules());
 
     if (plan.invalid.length === 0 && plan.migrations.length === 0) {
-      const drafts = offers.flatMap((offer) =>
-        propose.pinPack(sheet, { packId: offer.packId, version: offer.version }),
-      );
-      if (drafts.length > 0) await this.characterStore.appendTx(drafts);
+      // Nothing to report — but the plan's events, not bare pins: item migrations (ruling 7) are
+      // not report rows and must still land.
+      if (plan.events.length > 0) await this.characterStore.appendTx(plan.events);
       return;
     }
 
