@@ -20,9 +20,10 @@ import { CampaignStore, CampaignStoreNotLeaderError } from '@shared/stores/campa
 import { PackStore } from '@shared/stores/pack.store';
 import type { EnabledPack } from './campaign-projection';
 
-/** Where one campaign pack stands on THIS device: present (`installed`), not yet present
- * (`installing` — fetching, or waiting for the campaign's live session), or refused (`error`, with
- * the i18n key of the reason). */
+/** Where one campaign pack stands on THIS device: present (`installed` — a local copy whose
+ * canonical sha256 IS the campaign's digest), not yet present (`installing` — fetching, waiting for
+ * the campaign's live session, or the local copy not hashed yet), or refused (`error`, with the i18n
+ * key of the reason — including a local copy of the same id@version that is a different pack). */
 export type CampaignPackInstallStatus =
   | { readonly state: 'installed' }
   | { readonly state: 'installing' }
@@ -59,6 +60,12 @@ interface InstallRecord {
 
 const INSTALLED: CampaignPackInstallStatus = { state: 'installed' };
 const INSTALLING: CampaignPackInstallStatus = { state: 'installing' };
+/** A local copy of the enabled id@version that is a different pack — the code
+ * `PackImportConflictError` carries, so it reads the same as the refused install would. */
+const LOCAL_CONFLICT: CampaignPackInstallStatus = {
+  state: 'error',
+  code: 'packs.import-failed-conflict',
+};
 
 /**
  * [plan 16 Task 2] The campaign side of content packs (ADR-008: a campaign's stream stores the JSON
@@ -101,6 +108,11 @@ export class CampaignPacksService {
     string,
     Signal<ReadonlyMap<string, CampaignPackInstallStatus>>
   >();
+  // The bare canonical sha256 of each installed content pack (by object — `PackStore` keeps the
+  // same object while the pack stays installed), so a status never calls a different local copy of
+  // the same id@version "installed". Hashed once per pack, on every tab.
+  private readonly digestCache = new WeakMap<Pack, Promise<string>>();
+  private readonly localDigests = signal<ReadonlyMap<Pack, string>>(new Map());
 
   /** Every enabled campaign pack whose install was refused, keyed by `campaignPackKey`, → the i18n
    * key of the reason (`packs.import-failed-*`, `campaigns.packs.install-failed-unavailable`,
@@ -124,6 +136,10 @@ export class CampaignPacksService {
       this.packStore.installedContent();
       this.packStore.ready();
       untracked(() => this.reconcile());
+    });
+    effect(() => {
+      const content = this.packStore.installedContent();
+      untracked(() => void this.hashInstalled(content));
     });
   }
 
@@ -190,22 +206,52 @@ export class CampaignPacksService {
     await this.runInstall(campaignId, packId, entry);
   }
 
+  /** A running or refused attempt for the current entry speaks for itself; otherwise (no attempt on
+   * this tab — offline campaign, non-leader tab, refusal forgotten — or one that installed) the
+   * local copy decides: `installed` only when its canonical sha256 is the entry's. */
   private computeStatus(campaignId: string): ReadonlyMap<string, CampaignPackInstallStatus> {
     const entries = this.campaignStore.enabledPacks().get(campaignId);
     const records = this.records();
     const installed = this.packStore.installedContent();
+    const digests = this.localDigests();
     const status = new Map<string, CampaignPackInstallStatus>();
     for (const [packId, entry] of entries ?? []) {
       const record = records.get(campaignPackKey(campaignId, packId));
       if (record !== undefined && matches(record, entry) && record.status.state !== 'installed') {
         status.set(packId, record.status);
-      } else if (installed.some((p) => p.id === packId && p.version === entry.version)) {
-        status.set(packId, INSTALLED);
-      } else {
-        status.set(packId, INSTALLING);
+        continue;
       }
+      const local = installed.find((p) => p.id === packId && p.version === entry.version);
+      status.set(packId, localStatus(local, entry, digests));
     }
     return status;
+  }
+
+  private async hashInstalled(content: readonly Pack[]): Promise<void> {
+    const digests = await Promise.all(
+      content.map(async (pack) => [pack, await this.digestOf(pack)] as const),
+    );
+    // A newer list is being hashed by the effect's next run.
+    if (this.packStore.installedContent() !== content) return;
+    this.localDigests.set(new Map(digests));
+  }
+
+  private digestOf(pack: Pack): Promise<string> {
+    let digest = this.digestCache.get(pack);
+    if (digest === undefined) {
+      digest = bareSha256(new TextEncoder().encode(canonicalJson(pack)));
+      this.digestCache.set(pack, digest);
+    }
+    return digest;
+  }
+
+  /** Makes `pack`'s digest visible to `installStatus` now, without waiting for `hashInstalled`. */
+  private async noteDigest(pack: Pack): Promise<string> {
+    const digest = await this.digestOf(pack);
+    if (this.localDigests().get(pack) !== digest) {
+      this.localDigests.update((current) => new Map(current).set(pack, digest));
+    }
+    return digest;
   }
 
   /** Starts an install for every enabled pack of every live campaign that is neither running nor
@@ -273,10 +319,7 @@ export class CampaignPacksService {
     const local = this.packStore
       .installedContent()
       .find((p) => p.id === packId && p.version === entry.version);
-    if (local !== undefined) {
-      const localSha = await bareSha256(new TextEncoder().encode(canonicalJson(local)));
-      if (localSha === entry.sha256) return;
-    }
+    if (local !== undefined && (await this.noteDigest(local)) === entry.sha256) return;
 
     const bytes = await apiBytes(packBodyPath(campaignId, packId, entry.version));
     const { pack } = await validateExternalPack(
@@ -287,12 +330,25 @@ export class CampaignPacksService {
     // Another campaign may have installed the same pack while this body was in flight.
     if (checkPackConflict(pack, this.packStore.packs())) return;
     await this.packStore.installContent(pack, new Map());
+    await this.noteDigest(pack);
     this.toast.show('campaigns.packs.installed', { name: pack.name });
   }
 
   private setRecord(key: string, record: InstallRecord): void {
     this.records.update((current) => new Map(current).set(key, record));
   }
+}
+
+/** The status the local copy of an enabled pack gives on its own: none yet (or not hashed yet) →
+ * `installing`; the campaign's exact pack → `installed`; anything else → a conflict. */
+function localStatus(
+  local: Pack | undefined,
+  entry: EnabledPack,
+  digests: ReadonlyMap<Pack, string>,
+): CampaignPackInstallStatus {
+  const digest = local === undefined ? undefined : digests.get(local);
+  if (digest === undefined) return INSTALLING;
+  return digest === entry.sha256 ? INSTALLED : LOCAL_CONFLICT;
 }
 
 function matches(record: InstallRecord, entry: EnabledPack | undefined): boolean {

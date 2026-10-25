@@ -463,6 +463,66 @@ describe('CampaignPacksService', () => {
     });
   });
 
+  // --- status without an install record (fix round 1) -------------------------------------------------
+
+  describe('installStatus without an install record', () => {
+    const conflict = { state: 'error', code: 'packs.import-failed-conflict' };
+
+    async function installOther(): Promise<void> {
+      const other: Pack = { ...sample, name: 'Someone else’s sample' };
+      await TestBed.inject(PackStore).installContent(other, new Map());
+    }
+
+    it('a conflicting local pack (same id@version, other sha) is never "installed" — offline campaign', async () => {
+      await installOther();
+      TestBed.inject(CampaignPacksService);
+      campaigns.setEnabled(CAMPAIGN, { [sample.id]: await enabledEntry(sample) });
+
+      await settle();
+
+      expect(statusOf(sample.id)).toEqual(conflict);
+      expect(gets()).toEqual([]);
+    });
+
+    it('a conflicting local pack is never "installed" — non-leader tab with a live campaign', async () => {
+      leaderState.set(false);
+      await installOther();
+      TestBed.inject(CampaignPacksService);
+      campaigns.setEnabled(CAMPAIGN, { [sample.id]: await enabledEntry(sample) });
+      sync.live.set(new Set([CAMPAIGN]));
+
+      await settle();
+
+      expect(statusOf(sample.id)).toEqual(conflict);
+      expect(gets()).toEqual([]);
+    });
+
+    it('a refused conflict stays reported after its campaign goes offline (error record cleared)', async () => {
+      await installOther();
+      serve(sample);
+      TestBed.inject(CampaignPacksService);
+      campaigns.setEnabled(CAMPAIGN, { [sample.id]: await enabledEntry(sample) });
+      sync.live.set(new Set([CAMPAIGN]));
+      await waitFor(() => statusOf(sample.id)?.state === 'error');
+
+      sync.live.set(new Set());
+      await settle();
+
+      expect(statusOf(sample.id)).toEqual(conflict);
+    });
+
+    it('an identical local pack is "installed" without any record (offline campaign)', async () => {
+      await TestBed.inject(PackStore).installContent(sample, new Map());
+      TestBed.inject(CampaignPacksService);
+      campaigns.setEnabled(CAMPAIGN, { [sample.id]: await enabledEntry(sample) });
+
+      await waitFor(() => statusOf(sample.id)?.state === 'installed');
+
+      expect(statusOf(sample.id)).toEqual({ state: 'installed' });
+      expect(gets()).toEqual([]);
+    });
+  });
+
   it('every message code it surfaces has an en/ru/uk string', () => {
     const keys = [
       'campaigns.packs.installed',
