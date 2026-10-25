@@ -113,27 +113,43 @@ describe('SqliteFileStreamStore', () => {
     expect(await store.findByIds([])).toEqual([]);
   });
 
-  it('putPack/getPack/listPacks round-trip, scoped per stream', async () => {
+  it('putPack/getPack/listPacks round-trip the json text verbatim, scoped per stream', async () => {
     const storeA = new SqliteFileStreamStore(db, STREAM_A);
     const storeB = new SqliteFileStreamStore(db, STREAM_B);
 
-    await storeA.putPack('srd-5e-2024', '1.0.0', { entities: [] });
+    // [plan-16 Task 1] stored exactly as received — the campaign pack relay hashes these bytes.
+    await storeA.putPack('srd-5e-2024', '1.0.0', '{"entities":[]}');
     expect(await storeA.getPack('srd-5e-2024')).toEqual({
       id: 'srd-5e-2024',
       version: '1.0.0',
-      json: { entities: [] },
+      json: '{"entities":[]}',
     });
     expect(await storeB.getPack('srd-5e-2024')).toBeUndefined();
 
-    await storeA.putPack('srd-5e-2024', '1.1.0', { entities: ['a'] });
+    await storeA.putPack('srd-5e-2024', '1.1.0', '{"entities":["a"]}');
     expect(await storeA.getPack('srd-5e-2024')).toEqual({
       id: 'srd-5e-2024',
       version: '1.1.0',
-      json: { entities: ['a'] },
+      json: '{"entities":["a"]}',
     });
 
-    await storeA.putPack('homebrew', '0.1.0', {});
+    await storeA.putPack('homebrew', '0.1.0', '{}');
     expect(await storeA.listPacks()).toHaveLength(2);
+  });
+
+  it('deletePack removes one pack row for this stream only', async () => {
+    const storeA = new SqliteFileStreamStore(db, STREAM_A);
+    const storeB = new SqliteFileStreamStore(db, STREAM_B);
+    await storeA.putPack('homebrew', '1.0.0', '{"a":1}');
+    await storeA.putPack('other', '1.0.0', '{"b":2}');
+    await storeB.putPack('homebrew', '2.0.0', '{"c":3}');
+
+    await storeA.deletePack('homebrew');
+    await storeA.deletePack('never-stored'); // a no-op, not an error
+
+    expect(await storeA.getPack('homebrew')).toBeUndefined();
+    expect(await storeA.getPack('other')).toEqual({ id: 'other', version: '1.0.0', json: '{"b":2}' });
+    expect(await storeB.getPack('homebrew')).toEqual({ id: 'homebrew', version: '2.0.0', json: '{"c":3}' });
   });
 
   it('deleteAll wipes events, meta and packs for this stream only', async () => {
@@ -141,7 +157,7 @@ describe('SqliteFileStreamStore', () => {
     const storeB = new SqliteFileStreamStore(db, STREAM_B);
     await storeA.append([makeEvent(STREAM_A)]);
     await storeA.setMeta('bytes_used', '10');
-    await storeA.putPack('p', '1.0.0', {});
+    await storeA.putPack('p', '1.0.0', '{}');
     await storeB.append([makeEvent(STREAM_B)]);
 
     await storeA.deleteAll();
@@ -158,7 +174,7 @@ describe('SqliteFileStreamStore', () => {
     const events = [makeEvent(STREAM_A), makeEvent(STREAM_A)];
     await store.append(events);
     await store.setMeta('bytes_used', '999');
-    await store.putPack('srd-5e-2024', '1.0.0', { ok: true });
+    await store.putPack('srd-5e-2024', '1.0.0', '{"ok":true}');
     db.close();
     expect(existsSync(dbPath)).toBe(true);
 
@@ -174,7 +190,7 @@ describe('SqliteFileStreamStore', () => {
     expect(await reopenedStore.getPack('srd-5e-2024')).toEqual({
       id: 'srd-5e-2024',
       version: '1.0.0',
-      json: { ok: true },
+      json: '{"ok":true}',
     });
 
     reopened.close();

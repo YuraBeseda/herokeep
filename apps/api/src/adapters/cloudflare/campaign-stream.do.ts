@@ -48,7 +48,7 @@ import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 // `campaign-permissions.ts`'s own header comment; `adapters/node/stream-host.ts` makes the same
 // choice for the same reason.
 import * as campaignPermissions from '../../core/campaign-permissions.ts';
-import type { AppendResult } from '../../ports/stream.ts';
+import type { AppendResult, PackPutOutcome, StoredPack } from '../../ports/stream.ts';
 import type { Rpc, RpcAppendOutcome, RpcEventMatch } from '../../ports/infra.ts';
 import { DoSqlStreamStore } from './store.sqlite-do.ts';
 import { HibernatingConnections, type HibernationHost } from './connections.do.ts';
@@ -338,6 +338,21 @@ export class CampaignStreamDO extends DurableObject<Env> {
   async closeConnectionsForUser(streamId: string, userId: string, reason: string): Promise<void> {
     const actor = await this.ensureActor(streamId);
     actor.byeCloseUser(userId, reason);
+  }
+
+  /** [plan-16 Task 1] `StreamHandle.putPack`'s Cloudflare target (`worker.ts`'s
+   * `CloudflareStreamHost.get` calls it by name for a `camp:` id) — the pack body lands in THIS
+   * DO's own SQLite, the store `CampaignActor.refusePackEnabled` verifies `pack.enabled` against.
+   * Pack ASSETS never come here. */
+  async putPack(streamId: string, id: string, version: string, json: string): Promise<PackPutOutcome> {
+    const actor = await this.ensureActor(streamId);
+    return actor.putPackBody(id, version, json);
+  }
+
+  /** [plan-16 Task 1] `StreamHandle.getPack`'s Cloudflare target. */
+  async getPack(streamId: string, id: string): Promise<StoredPack | undefined> {
+    const actor = await this.ensureActor(streamId);
+    return actor.getPackBody(id);
   }
 }
 

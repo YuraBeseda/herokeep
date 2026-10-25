@@ -80,17 +80,32 @@ export const USER_CHARACTER_COUNT_MAX = 50;
 export const USER_QUOTA_BYTES_MAX = 10 * 1024 * 1024; // 10 MB
 
 /**
- * doc-08 "Campaign stream" row: "20 MB events; 12 members; 6 non-core packs × 5 MB". This module
- * only ever covers the BYTES half of that row (mirroring the character-stream row's own scoping
- * comment above) — the 12-member and 6-pack counts are per-append COUNT checks against
- * `CampaignActor`'s own event-sourced `meta.members`/`meta.packs`, not a byte/event-count
- * projection this generic module can express, so `CampaignActor` enforces those two itself
- * (task-5-report.md's "quota-machinery extension design" write-up). Campaign streams have no
- * stated per-stream EVENT-COUNT cap (unlike character streams' 20,000) — modeled as
- * `Number.POSITIVE_INFINITY` in `CAMPAIGN_QUOTA_LIMITS` below so `checkAppend`'s event-count
- * branch can never trip for a campaign stream, without needing a second code path.
+ * doc-08 "Campaign stream" row: "20 MB events; 12 members; 6 non-core packs × 5 MB". Every part of
+ * that row is enforced, in three places:
+ *   - the 20 MB of EVENTS is this module's generic byte projection (`CAMPAIGN_QUOTA_LIMITS` below,
+ *     mirroring the character-stream row's own scoping comment above);
+ *   - the 12 members and the 6 non-core packs are per-append COUNT checks against `CampaignActor`'s
+ *     own event-sourced `meta.members`/`meta.packs` (6 DISTINCT `packId`s — a new version of an
+ *     enabled pack replaces it, plan-16 ruling 2), which this generic module cannot express;
+ *   - the "× 5 MB" pack BODIES (ADR-008: the campaign stores the JSON of every non-core pack it has
+ *     enabled) are bounded per body by `CAMPAIGN_PACK_BYTES_MAX` at `PUT /api/campaigns/:id/packs/
+ *     :packId/:version` (`routes/campaign-packs.ts`) and in total by `CAMPAIGN_PACK_BYTES_TOTAL_MAX`
+ *     (`CampaignActor.putPackBody`) — separate from, never counted against, the 20 MB of events.
+ * Campaign streams have no stated per-stream EVENT-COUNT cap (unlike character streams' 20,000) —
+ * modeled as `Number.POSITIVE_INFINITY` in `CAMPAIGN_QUOTA_LIMITS` below so `checkAppend`'s
+ * event-count branch can never trip for a campaign stream, without needing a second code path.
  */
 export const CAMPAIGN_BYTES_MAX = 20 * 1024 * 1024; // 20 MB
+
+/** doc-08 "Campaign stream" row's "× 5 MB" (and "Pack JSON | 5 MB"; the same figure as
+ * `@hk/protocol`'s `PACK_LIMITS.maxBytes`): the most one stored pack body may weigh, enforced as the
+ * upload route's request-body limit before the body is read in full. */
+export const CAMPAIGN_PACK_BYTES_MAX = 5 * 1024 * 1024;
+
+/** All pack bodies one campaign stores, together: 6 non-core packs × 5 MB = 30 MiB. Checked on
+ * every upload (a body uploaded but never enabled still occupies storage until replaced or
+ * disabled), with a replaced `packId`'s old body counted out first. */
+export const CAMPAIGN_PACK_BYTES_TOTAL_MAX = 6 * CAMPAIGN_PACK_BYTES_MAX;
 
 /** doc-08 "Campaign stream" row's member-count half: 12 members max. Enforced by `CampaignActor`
  * itself (this module has no notion of "members" — a campaign-specific meta concept) and, per the
@@ -98,9 +113,11 @@ export const CAMPAIGN_BYTES_MAX = 20 * 1024 * 1024; // 20 MB
  * is defense-in-depth (cheap: one `meta.members.size` read already in hand for the append). */
 export const CAMPAIGN_MEMBER_MAX = 12;
 
-/** doc-08 "Campaign stream" row's non-core-pack half: 6 packs max (the core pack named by
- * `campaign.created.corePack` is tracked in the settings document, never via `pack.enabled`, so
- * every `pack.enabled` this module/`CampaignActor` ever counts is non-core by construction). */
+/** doc-08 "Campaign stream" row's non-core-pack half: 6 DISTINCT `packId`s max — one version per
+ * `packId`, so a `pack.enabled` for a new version of an already-enabled pack counts once (the core
+ * pack named by `campaign.created.corePack` is tracked in the settings document, never via
+ * `pack.enabled`, so every `pack.enabled` this module/`CampaignActor` ever counts is non-core by
+ * construction). */
 export const CAMPAIGN_NON_CORE_PACK_MAX = 6;
 
 /** The per-stream counters `StreamActor` reads from/writes to `StreamStore.getMeta`/`setMeta`. */

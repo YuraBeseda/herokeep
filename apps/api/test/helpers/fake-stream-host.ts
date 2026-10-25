@@ -10,7 +10,7 @@
  * semantics).
  */
 import type { Actor, Event } from '@hk/protocol';
-import type { AppendResult, StreamHandle, StreamHost } from '../../src/ports/stream.ts';
+import type { AppendResult, PackPutOutcome, StoredPack, StreamHandle, StreamHost } from '../../src/ports/stream.ts';
 import { FakeStreamStore } from './fake-stream-store.ts';
 
 export class FakeStreamHost implements StreamHost {
@@ -40,6 +40,13 @@ export class FakeStreamHost implements StreamHost {
       // stance this file's header comment already documents for `append`/`read`/`head`/`notify` —
       // no character-route test bye-closes anything through this fake.
       closeConnectionsForUser: (): Promise<void> => Promise.resolve(),
+      // [plan-16 Task 1] Same thin pass-through stance — no quota logic here (that lives in
+      // `CampaignActor.putPackBody`, exercised by the real-host route tests).
+      putPack: async (id: string, version: string, json: string): Promise<PackPutOutcome> => {
+        await store.putPack(id, version, json);
+        return 'stored';
+      },
+      getPack: (id: string): Promise<StoredPack | undefined> => store.getPack(id),
     };
   }
 

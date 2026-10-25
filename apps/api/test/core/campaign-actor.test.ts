@@ -11,8 +11,15 @@
 import type { Event, HelloMsg, SubscribeMsg, UnsubscribeMsg } from '@hk/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as campaignPermissions from '../../src/core/campaign-permissions.ts';
+import { sha256Hex } from '../../src/core/crypto.ts';
 import { uuidv7 } from '../../src/core/ids.ts';
-import { CAMPAIGN_MEMBER_MAX, CAMPAIGN_NON_CORE_PACK_MAX, CAMPAIGN_QUOTA_LIMITS } from '../../src/core/quotas.ts';
+import {
+  CAMPAIGN_MEMBER_MAX,
+  CAMPAIGN_NON_CORE_PACK_MAX,
+  CAMPAIGN_PACK_BYTES_MAX,
+  CAMPAIGN_PACK_BYTES_TOTAL_MAX,
+  CAMPAIGN_QUOTA_LIMITS,
+} from '../../src/core/quotas.ts';
 import { campaignQuotas, CampaignActor, type CampaignActorDeps } from '../../src/core/streams/campaign-actor.ts';
 import { FakeConnections } from '../helpers/fake-connections.ts';
 import { actorTarget, FakeRpc } from '../helpers/fake-rpc.ts';
@@ -96,6 +103,19 @@ let system: ReturnType<typeof makeSystem>;
 beforeEach(() => {
   system = makeSystem();
 });
+
+/** [plan-16 Task 1] Stores a pack BODY straight on `store` (what `PUT /api/campaigns/:id/packs/
+ * :packId/:version` leaves behind — that route's own validation is `routes/campaign-packs.test.ts`'s
+ * job), returning the bare-hex sha256 a matching `pack.enabled` must carry. */
+async function storePackBody(
+  store: FakeStreamStore,
+  packId: string,
+  version: string,
+  json = `{"id":"${packId}","version":"${version}"}`,
+): Promise<string> {
+  await store.putPack(packId, version, json);
+  return sha256Hex(json);
+}
 
 /**
  * [plan-9 Task 6, extended fix round 1] Registers a `char:<characterId>` target on `system.rpc`
@@ -265,19 +285,19 @@ describe('meta maintenance', () => {
 
   it('pack.enabled adds to packs (idempotent for a repeat) and pack.disabled removes', async () => {
     await system.actor.append([makeCreated()], dmActor());
-    const packEvent = () =>
-      makeEvent('pack.enabled', { packId: 'homebrew-pack', version: '1.0.0', sha256: '0'.repeat(64) }, dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-pack', '1.0.0');
+    const packEvent = () => makeEvent('pack.enabled', { packId: 'homebrew-pack', version: '1.0.0', sha256 }, dmActor());
 
     await system.actor.append([packEvent()], dmActor());
     let meta = await system.actor.getCampaignMeta();
-    expect(meta.packs).toEqual([{ packId: 'homebrew-pack', version: '1.0.0', sha256: '0'.repeat(64) }]);
+    expect(meta.packs).toEqual([{ packId: 'homebrew-pack', version: '1.0.0', sha256 }]);
 
     await system.actor.append([packEvent()], dmActor()); // repeat — idempotent, no growth
     meta = await system.actor.getCampaignMeta();
     expect(meta.packs).toHaveLength(1);
 
     await system.actor.append(
-      [makeEvent('pack.disabled', { packId: 'homebrew-pack', version: '1.0.0', sha256: '0'.repeat(64) }, dmActor())],
+      [makeEvent('pack.disabled', { packId: 'homebrew-pack', version: '1.0.0', sha256 }, dmActor())],
       dmActor(),
     );
     meta = await system.actor.getCampaignMeta();
@@ -602,9 +622,10 @@ describe('campaign quotas', () => {
       sha256: '0'.repeat(64),
     }));
     await system.store.setMeta('packs', JSON.stringify(existingPacks));
+    const sha256 = await storePackBody(system.store, 'one-too-many', '1.0.0');
 
     const outcome = await system.actor.append(
-      [makeEvent('pack.enabled', { packId: 'one-too-many', version: '1.0.0', sha256: '1'.repeat(64) }, dmActor())],
+      [makeEvent('pack.enabled', { packId: 'one-too-many', version: '1.0.0', sha256 }, dmActor())],
       dmActor(),
     );
     expect(outcome.acked).toEqual([]);
@@ -613,18 +634,138 @@ describe('campaign quotas', () => {
 
   it('does not count re-enabling an EXISTING pack against the 6-pack cap', async () => {
     await system.actor.append([makeCreated()], dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-0', '1.0.0');
     const existingPacks = Array.from({ length: CAMPAIGN_NON_CORE_PACK_MAX }, (_, i) => ({
       packId: `homebrew-${i}`,
       version: '1.0.0',
-      sha256: '0'.repeat(64),
+      sha256: i === 0 ? sha256 : '0'.repeat(64),
     }));
     await system.store.setMeta('packs', JSON.stringify(existingPacks));
 
     const outcome = await system.actor.append(
-      [makeEvent('pack.enabled', { packId: 'homebrew-0', version: '1.0.0', sha256: '0'.repeat(64) }, dmActor())],
+      [makeEvent('pack.enabled', { packId: 'homebrew-0', version: '1.0.0', sha256 }, dmActor())],
       dmActor(),
     );
     expect(outcome.rejected).toEqual([]);
+  });
+});
+
+describe('pack bodies: pack.enabled verification, distinct-id quota, disable cleanup, welcome (plan-16 Task 1)', () => {
+  function packEnabled(packId: string, version: string, sha256: string): Event {
+    return makeEvent('pack.enabled', { packId, version, sha256 }, dmActor());
+  }
+
+  function expectPackMissing(outcome: { acked: unknown[]; rejected: { code: string; message: string }[] }): void {
+    expect(outcome.acked).toEqual([]);
+    expect(outcome.rejected).toHaveLength(1);
+    // `packMissing` rides the protocol's closed `RejectCodeSchema` as `invalid` (a missing
+    // precondition, same family as the mirror-verify rejection) with the `event.packMissing`
+    // message key — see `CampaignActor.append`'s pack.enabled branch.
+    expect(outcome.rejected[0]?.code).toBe('invalid');
+    expect(outcome.rejected[0]?.message).toMatch(/^event\.packMissing:/);
+  }
+
+  it('rejects pack.enabled when no body is stored for that packId (packMissing); meta untouched', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const outcome = await system.actor.append([packEnabled('homebrew-pack', '1.0.0', '0'.repeat(64))], dmActor());
+    expectPackMissing(outcome);
+    expect((await system.actor.getCampaignMeta()).packs).toEqual([]);
+  });
+
+  it('rejects pack.enabled whose sha256 does not match the stored body (packMissing)', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-pack', '1.0.0');
+    const wrongSha = `${sha256.startsWith('a') ? 'b' : 'a'}${sha256.slice(1)}`;
+    expectPackMissing(await system.actor.append([packEnabled('homebrew-pack', '1.0.0', wrongSha)], dmActor()));
+  });
+
+  it('rejects pack.enabled naming a version other than the stored body’s (packMissing)', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-pack', '1.0.0');
+    expectPackMissing(await system.actor.append([packEnabled('homebrew-pack', '1.1.0', sha256)], dmActor()));
+  });
+
+  it('accepts pack.enabled whose (packId, version, sha256) matches the stored body', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-pack', '1.0.0');
+    const outcome = await system.actor.append([packEnabled('homebrew-pack', '1.0.0', sha256)], dmActor());
+    expect(outcome.rejected).toEqual([]);
+    expect(outcome.acked).toHaveLength(1);
+  });
+
+  it('counts DISTINCT packIds: a 7th id is rejected quota, a version change of an enabled id is accepted and replaces its entry', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    for (let i = 0; i < CAMPAIGN_NON_CORE_PACK_MAX; i += 1) {
+      const sha256 = await storePackBody(system.store, `homebrew-${i}`, '1.0.0');
+      const outcome = await system.actor.append([packEnabled(`homebrew-${i}`, '1.0.0', sha256)], dmActor());
+      expect(outcome.rejected, `pack #${i + 1} within the cap`).toEqual([]);
+    }
+
+    const seventhSha = await storePackBody(system.store, 'one-too-many', '1.0.0');
+    const seventh = await system.actor.append([packEnabled('one-too-many', '1.0.0', seventhSha)], dmActor());
+    expect(seventh.acked).toEqual([]);
+    expect(seventh.rejected[0]).toMatchObject({ code: 'quota' });
+
+    const v2Sha = await storePackBody(system.store, 'homebrew-0', '2.0.0', '{"id":"homebrew-0","version":"2.0.0"}');
+    const versionChange = await system.actor.append([packEnabled('homebrew-0', '2.0.0', v2Sha)], dmActor());
+    expect(versionChange.rejected, 'a version change of an already-enabled packId counts once').toEqual([]);
+
+    const meta = await system.actor.getCampaignMeta();
+    expect(meta.packs).toHaveLength(CAMPAIGN_NON_CORE_PACK_MAX);
+    expect(meta.packs.filter((p) => p.packId === 'homebrew-0')).toEqual([
+      { packId: 'homebrew-0', version: '2.0.0', sha256: v2Sha },
+    ]);
+  });
+
+  it('pack.disabled removes the entry by packId (ignoring version) and deletes the stored body', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-pack', '1.0.0');
+    await system.actor.append([packEnabled('homebrew-pack', '1.0.0', sha256)], dmActor());
+
+    const outcome = await system.actor.append(
+      [makeEvent('pack.disabled', { packId: 'homebrew-pack', version: '9.9.9', sha256: '0'.repeat(64) }, dmActor())],
+      dmActor(),
+    );
+    expect(outcome.rejected).toEqual([]);
+    expect((await system.actor.getCampaignMeta()).packs).toEqual([]);
+    expect(await system.store.getPack('homebrew-pack')).toBeUndefined();
+  });
+
+  it('welcome carries the enabled set, each pack with its sha256', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    const sha256 = await storePackBody(system.store, 'homebrew-pack', '1.0.0');
+    await system.actor.append([packEnabled('homebrew-pack', '1.0.0', sha256)], dmActor());
+
+    const conn = system.connections.accept({}, { userId: DM_ID, role: 'dm', subs: [] });
+    await system.actor.hello(conn, {
+      t: 'hello',
+      rid: 'r-packs',
+      proto: 1,
+      app: '1.0.0',
+      streams: [{ id: STREAM_ID, lastSeq: 0 }],
+      have: [],
+      pending: [],
+    });
+    const welcome = system.connections.framesFor(conn).find((f) => f.t === 'welcome');
+    expect(welcome?.t === 'welcome' ? welcome.packs : undefined).toEqual([
+      { id: 'homebrew-pack', version: '1.0.0', sha256 },
+    ]);
+  });
+
+  it('putPackBody stores the json verbatim and refuses a body that would push the campaign past the 30 MiB total', async () => {
+    const big = (fill: string) => fill.repeat(CAMPAIGN_PACK_BYTES_MAX);
+    for (let i = 0; i < CAMPAIGN_PACK_BYTES_TOTAL_MAX / CAMPAIGN_PACK_BYTES_MAX; i += 1) {
+      expect(await system.actor.putPackBody(`homebrew-${i}`, '1.0.0', big(String(i)))).toBe('stored');
+    }
+    expect(await system.actor.putPackBody('one-byte-over', '1.0.0', 'x')).toBe('quota_exceeded');
+    expect(await system.store.getPack('one-byte-over')).toBeUndefined();
+    // Replacing an already-stored packId counts its OLD body out first (one version per packId).
+    expect(await system.actor.putPackBody('homebrew-0', '2.0.0', big('y'))).toBe('stored');
+    expect(await system.actor.getPackBody('homebrew-0')).toEqual({
+      id: 'homebrew-0',
+      version: '2.0.0',
+      json: big('y'),
+    });
   });
 });
 

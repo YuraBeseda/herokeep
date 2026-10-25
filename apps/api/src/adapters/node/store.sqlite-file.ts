@@ -183,32 +183,36 @@ export class SqliteFileStreamStore implements StreamStore {
     return Promise.resolve(row ? rowToEvent(row) : undefined);
   }
 
-  putPack(id: string, version: string, json: unknown): Promise<void> {
+  /** `json` is stored as the exact text received (`ports/stream.ts`'s `putPack` contract) — the
+   * campaign pack relay hashes these bytes. Keyed `(stream_id, id)`, so two campaigns storing the
+   * same `packId` never collide. */
+  putPack(id: string, version: string, json: string): Promise<void> {
     this.db
       .prepare(
         `INSERT INTO packs (stream_id, id, version, json) VALUES (?, ?, ?, ?)
          ON CONFLICT (stream_id, id) DO UPDATE SET version = excluded.version, json = excluded.json`,
       )
-      .run(this.streamId, id, version, JSON.stringify(json));
+      .run(this.streamId, id, version, json);
     return Promise.resolve();
   }
 
   getPack(id: string): Promise<StoredPack | undefined> {
     const row = this.db
       .prepare('SELECT id, version, json FROM packs WHERE stream_id = ? AND id = ?')
-      .get(this.streamId, id) as { id: string; version: string; json: string } | undefined;
-    return Promise.resolve(
-      row ? { id: row.id, version: row.version, json: JSON.parse(row.json) as unknown } : undefined,
-    );
+      .get(this.streamId, id) as StoredPack | undefined;
+    return Promise.resolve(row ? { id: row.id, version: row.version, json: row.json } : undefined);
   }
 
   listPacks(): Promise<StoredPack[]> {
-    const rows = this.db.prepare('SELECT id, version, json FROM packs WHERE stream_id = ?').all(this.streamId) as {
-      id: string;
-      version: string;
-      json: string;
-    }[];
-    return Promise.resolve(rows.map((r) => ({ id: r.id, version: r.version, json: JSON.parse(r.json) as unknown })));
+    const rows = this.db
+      .prepare('SELECT id, version, json FROM packs WHERE stream_id = ?')
+      .all(this.streamId) as StoredPack[];
+    return Promise.resolve(rows.map((r) => ({ id: r.id, version: r.version, json: r.json })));
+  }
+
+  deletePack(id: string): Promise<void> {
+    this.db.prepare('DELETE FROM packs WHERE stream_id = ? AND id = ?').run(this.streamId, id);
+    return Promise.resolve();
   }
 
   /** `ports/stream.ts`'s hard-delete extension (Task 6): wipes every row this streamId owns

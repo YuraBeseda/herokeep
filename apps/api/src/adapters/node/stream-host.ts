@@ -39,7 +39,7 @@ import * as permissions from '../../core/permissions.ts';
 import * as campaignPermissions from '../../core/campaign-permissions.ts';
 import * as quotas from '../../core/quotas.ts';
 import type { Rpc, RpcAppendOutcome, RpcEventMatch } from '../../ports/infra.ts';
-import type { AppendResult, StreamHandle, StreamHost } from '../../ports/stream.ts';
+import type { AppendResult, PackPutOutcome, StoredPack, StreamHandle, StreamHost } from '../../ports/stream.ts';
 import { SqliteFileStreamStore } from './store.sqlite-file.ts';
 import { WsConnections } from './connections.ws.ts';
 
@@ -171,6 +171,20 @@ export class NodeStreamHost implements StreamHost {
       // apply).
       closeConnectionsForUser: (userId: string, reason: string): Promise<void> =>
         Promise.resolve(runtime.actor.byeCloseUser(userId, reason)),
+      // [plan-16 Task 1] Campaign pack bodies — straight into THIS runtime's actor/store, the same
+      // instance `CampaignActor.refusePackEnabled` verifies `pack.enabled` against. The write takes
+      // the stream's lock (it must not interleave with an append's verify/meta-hook sequence); the
+      // read is unlocked, like `read`/`head` above.
+      putPack: (id: string, version: string, json: string): Promise<PackPutOutcome> => {
+        const actor = runtime.actor;
+        if (!(actor instanceof CampaignActor)) return Promise.reject(new Error(`${streamId} holds no pack bodies`));
+        return runtime.withLock(() => actor.putPackBody(id, version, json));
+      },
+      getPack: (id: string): Promise<StoredPack | undefined> => {
+        const actor = runtime.actor;
+        if (!(actor instanceof CampaignActor)) return Promise.reject(new Error(`${streamId} holds no pack bodies`));
+        return actor.getPackBody(id);
+      },
     };
   }
 

@@ -23,6 +23,7 @@ import {
   type HelloMsg,
   type NoticeMsg,
   type RejectCode,
+  type WelcomeMsg,
   parseClientMessage,
 } from '@hk/protocol';
 import type { Conn, Connections } from '../../ports/connections.ts';
@@ -617,12 +618,14 @@ export class StreamActor {
     const head = await this.store.head();
     const meta = await this.readMeta();
     const quota = this.quotas.quotaFor(meta);
+    const extras = await this.welcomeExtras();
 
     this.connections.send(conn, {
       t: 'welcome',
       rid: msg.rid,
       serverTime: new Date().toISOString(),
       streams: [{ id: this.streamId, headSeq: head, quota }],
+      ...extras,
     });
 
     const ref = msg.streams.find((s) => s.id === this.streamId);
@@ -830,6 +833,13 @@ export class StreamActor {
    * subclass gets both read paths filtered identically for free by overriding this one method. */
   protected filterForConnection(events: Event[], _conn: Conn): Event[] {
     return events;
+  }
+
+  /** [plan-16 Task 1] Optional `welcome` fields a subclass adds (doc-03's welcome row lists
+   * `packs`) — none on a character stream; `CampaignActor` overrides this to carry its enabled
+   * non-core packs. Same "protected hook, base default unchanged" shape as `filterForConnection`. */
+  protected welcomeExtras(): Promise<Pick<WelcomeMsg, 'packs'>> {
+    return Promise.resolve({});
   }
 
   private async readMeta(): Promise<quotasModule.StreamMetaSnapshot> {

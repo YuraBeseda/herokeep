@@ -40,9 +40,12 @@ import {
   parseClientMessage,
   type SubscribeMsg,
   type UnsubscribeMsg,
+  type WelcomeMsg,
 } from '@hk/protocol';
 import type { Conn } from '../../ports/connections.ts';
 import type { RpcAppendOutcome } from '../../ports/infra.ts';
+import type { PackPutOutcome, StoredPack } from '../../ports/stream.ts';
+import { sha256Hex } from '../crypto.ts';
 import * as quotasModule from '../quotas.ts';
 import { BlobRelay } from './blob-relay.ts';
 import {
@@ -100,8 +103,11 @@ export interface CampaignMeta {
   readonly members: ReadonlyMap<string, { readonly displayName: string; readonly role: MembershipRole }>;
   /** `characterId -> ownerId`, from `campaign.character_joined`/`campaign.character_left`. */
   readonly characters: ReadonlyMap<string, string>;
-  /** Pins CURRENTLY enabled via `pack.enabled`/`pack.disabled` — see `applyMetaHooks`'s
-   * `pack.enabled` case for why the pack JSON body itself is not handled here. */
+  /** Non-core packs CURRENTLY enabled via `pack.enabled`/`pack.disabled` — one entry per `packId`
+   * (a new version replaces the entry; plan-16 ruling 2). [plan-16 Task 1] This list, not the
+   * settings document's `CampaignSettings.packs`, is the campaign's enabled set: each entry's pack
+   * BODY is stored on this stream (`StreamStore.putPack`, uploaded through `PUT /api/campaigns/:id/
+   * packs/:packId/:version` before `pack.enabled` may commit) and `welcome.packs` reports it. */
   readonly packs: readonly { readonly packId: string; readonly version: string; readonly sha256: string }[];
 }
 
@@ -119,6 +125,10 @@ export interface CampaignMeta {
 function defaultSettings(system: string): CampaignSettings {
   return {
     system,
+    // [plan-16 Task 1] `CampaignSettings.packs` is SUPERSEDED by the `pack.enabled`/`pack.disabled`
+    // events (`CampaignMeta.packs` — the stored, sha256-verified enabled set `welcome.packs`
+    // reports). The field stays in the immutable protocol and is seeded empty here; nothing reads
+    // it for the enabled set.
     packs: [],
     houseRules: {
       strictValidation: true,
@@ -188,9 +198,10 @@ export class CampaignActor extends StreamActor {
    * `super.append`, so a refused event never reaches schema validation/dedupe/quota at all; (1b)
    * [plan-9 Task 6] cross-stream MIRROR VERIFICATION for `campaign.character_joined`/`_left`
    * (`verifyCharacterMirror`); (2) the two per-append COUNT quotas (`member.joined` at 12,
-   * `pack.enabled` at 6) that `quotas.ts`'s generic byte/event-count machinery cannot express (see
-   * `quotas.ts`'s `CAMPAIGN_BYTES_MAX` doc comment); (3) meta maintenance from whatever
-   * `super.append` actually committed.
+   * `pack.enabled` at 6 distinct `packId`s) that `quotas.ts`'s generic byte/event-count machinery
+   * cannot express (see `quotas.ts`'s `CAMPAIGN_BYTES_MAX` doc comment), plus [plan-16 Task 1]
+   * `pack.enabled`'s stored-body verification (`refusePackEnabled`); (3) meta maintenance from
+   * whatever `super.append` actually committed.
    *
    * IMPORTANT ordering note: steps (1)/(2) run against events whose `payload` has NOT yet been
    * schema-validated (that happens inside `super.append`'s stage 1) — `refineAppendPermission`
@@ -218,7 +229,7 @@ export class CampaignActor extends StreamActor {
     const passed: Event[] = [];
     const preRejected: RejectResult[] = [...routingRejected];
     let membersCount = meta.members.size;
-    let packsCount = meta.packs.length;
+    const enabledPackIds = new Set(meta.packs.map((p) => p.packId));
 
     for (const event of localEvents) {
       const refusal = this.refineAppendPermission(event, actor, meta);
@@ -256,21 +267,11 @@ export class CampaignActor extends StreamActor {
       }
 
       if (event.type === 'pack.enabled') {
-        const packId = readStringField(event.payload, 'packId');
-        const version = readStringField(event.payload, 'version');
-        const exists =
-          packId !== undefined &&
-          version !== undefined &&
-          meta.packs.some((p) => p.packId === packId && p.version === version);
-        if (!exists && packsCount >= quotasModule.CAMPAIGN_NON_CORE_PACK_MAX) {
-          preRejected.push({
-            id: event.id,
-            code: 'quota',
-            message: `event.quota: campaign already has the maximum of ${quotasModule.CAMPAIGN_NON_CORE_PACK_MAX} non-core packs`,
-          });
+        const refusal = await this.refusePackEnabled(event, enabledPackIds);
+        if (refusal) {
+          preRejected.push({ id: event.id, ...refusal });
           continue;
         }
-        if (!exists) packsCount += 1;
       }
 
       passed.push(event);
@@ -558,6 +559,54 @@ export class CampaignActor extends StreamActor {
   }
 
   /**
+   * [plan-16 Task 1] `pack.enabled`'s two pre-append checks (plan-16 rulings 1-2), run in this order
+   * (the cheap count first, so a 7th pack is reported `quota` whether or not its body is stored):
+   *
+   *   (a) QUOTA — at most `CAMPAIGN_NON_CORE_PACK_MAX` DISTINCT `packId`s. A `packId` already in
+   *       `enabledPackIds` (enabled before this append, or earlier in this same batch) is a VERSION
+   *       CHANGE and counts once. A `pack.disabled` earlier in the same batch does not free a slot
+   *       here (conservative — the client can send the swap as two appends).
+   *   (b) `packMissing` — truth lives in the event, the BODY must already be stored: the stream's
+   *       stored pack for `packId` must exist, carry exactly this `version`, and hash (sha256 over
+   *       its stored text) to this event's `sha256`. Otherwise a member could be told to install a
+   *       pack nobody can fetch. Rejected with the protocol's closed `RejectCodeSchema`'s `invalid`
+   *       (a missing precondition — same family as `verifyCharacterMirror`'s rejection) and the
+   *       `event.packMissing` message key that names the reason.
+   *
+   * A payload whose three fields are not all readable strings falls through untouched — schema
+   * validation inside `super.append` reports it (`invalid`), same stance as `readStringField`'s
+   * other callers. On a pass, `packId` joins `enabledPackIds` (the batch's running set).
+   */
+  private async refusePackEnabled(
+    event: Event,
+    enabledPackIds: Set<string>,
+  ): Promise<Omit<RejectResult, 'id'> | undefined> {
+    const packId = readStringField(event.payload, 'packId');
+    const version = readStringField(event.payload, 'version');
+    const sha256 = readStringField(event.payload, 'sha256');
+    if (packId === undefined || version === undefined || sha256 === undefined) return undefined;
+
+    if (!enabledPackIds.has(packId) && enabledPackIds.size >= quotasModule.CAMPAIGN_NON_CORE_PACK_MAX) {
+      return {
+        code: 'quota',
+        message: `event.quota: campaign already has the maximum of ${quotasModule.CAMPAIGN_NON_CORE_PACK_MAX} non-core packs`,
+      };
+    }
+
+    const stored = await this.store.getPack(packId);
+    const verified = stored?.version === version && (await sha256Hex(stored.json)) === sha256;
+    if (!verified) {
+      return {
+        code: 'invalid',
+        message: `event.packMissing: pack.enabled ${packId}@${version} requires its body to be uploaded first (PUT /api/campaigns/:id/packs/${packId}/${version}) with a matching sha256`,
+      };
+    }
+
+    enabledPackIds.add(packId);
+    return undefined;
+  }
+
+  /**
    * Per-append permission refinements the static `EVENT_ACTORS` table (`campaign-permissions.ts`)
    * cannot express — task-5-brief item 2, each bullet implemented as its own guard:
    *
@@ -729,6 +778,33 @@ export class CampaignActor extends StreamActor {
   }
 
   /**
+   * [plan-16 Task 1] Stores a campaign pack BODY (`PUT /api/campaigns/:id/packs/:packId/:version`,
+   * `core/routes/campaign-packs.ts`, reaches this through `StreamHandle.putPack` — the SAME store
+   * instance `refusePackEnabled` reads). The route already did the DM check, the strict
+   * `parsePack`, the canonical-form check and the per-body `CAMPAIGN_PACK_BYTES_MAX` bound; this
+   * enforces only the campaign-wide `CAMPAIGN_PACK_BYTES_TOTAL_MAX` (bytes of every stored body,
+   * the one being REPLACED — same `packId`, one version per packId — excluded). `json` is stored
+   * as the exact text received; the event's `sha256` is verified against it later.
+   *
+   * Reads every stored body to total them (≤ 6 × 5 MiB by construction) — acceptable at this
+   * scale; a per-row `bytes` column would avoid it if the caps ever grow.
+   */
+  async putPackBody(packId: string, version: string, json: string): Promise<PackPutOutcome> {
+    const encoder = new TextEncoder();
+    const others = (await this.store.listPacks()).filter((p) => p.id !== packId);
+    let total = encoder.encode(json).length;
+    for (const pack of others) total += encoder.encode(pack.json).length;
+    if (total > quotasModule.CAMPAIGN_PACK_BYTES_TOTAL_MAX) return 'quota_exceeded';
+    await this.store.putPack(packId, version, json);
+    return 'stored';
+  }
+
+  /** [plan-16 Task 1] The stored body for `packId` (any version — the route compares it to the URL's). */
+  getPackBody(packId: string): Promise<StoredPack | undefined> {
+    return this.store.getPack(packId);
+  }
+
+  /**
    * Sets `dmId`/`settings`/`members`/`characters`/`packs` from the events this append just
    * committed (design ruling 3's event families, one `switch` case each). Reads the CURRENT meta
    * once, mutates plain `Map`/array copies across every acked event in this batch, then writes
@@ -751,6 +827,7 @@ export class CampaignActor extends StreamActor {
     let membersDirty = false;
     let charactersDirty = false;
     let packsDirty = false;
+    const disabledPackIds = new Set<string>();
 
     for (const event of events) {
       if (!ackedIds.has(event.id)) continue;
@@ -813,27 +890,29 @@ export class CampaignActor extends StreamActor {
           break;
         }
         case 'pack.enabled': {
+          // [plan-16 Task 1] One entry per `packId` (ruling 2): a new version REPLACES the entry.
+          // The pack BODY was already stored by `PUT /api/campaigns/:id/packs/...` (one row per
+          // `packId`, so that upload already replaced any older version's body) and verified
+          // against this event's `sha256` before it could commit (`refusePackEnabled`).
           const payload = event.payload as PackEnabled;
-          if (!packs.some((p) => p.packId === payload.packId && p.version === payload.version)) {
-            packs.push({ packId: payload.packId, version: payload.version, sha256: payload.sha256 });
-            packsDirty = true;
-          }
-          // The pack JSON BODY itself (`StreamStore.putPack`) is NOT written here: this event's
-          // payload only ever carries `{packId, version, sha256}` (Task 1's flag: `sha256` is
-          // bare hex, not `BlobHashSchema`'s `sha256:<hex>` form) — never the pack document. A DM
-          // device holds the actual pack asset (doc-07); wiring an upload path that calls
-          // `putPack` with the real JSON is T4/T6's job. Only this meta LIST entry (for the
-          // ≤6-non-core-packs quota above and a future `welcome.packs` frame) is maintained here.
+          const entry = { packId: payload.packId, version: payload.version, sha256: payload.sha256 };
+          const index = packs.findIndex((p) => p.packId === payload.packId);
+          if (index === -1) packs.push(entry);
+          else packs[index] = entry;
+          packsDirty = true;
+          disabledPackIds.delete(payload.packId); // re-enabled later in this batch — keep its body
           break;
         }
         case 'pack.disabled': {
+          // [plan-16 Task 1] By `packId` alone — the version is ignored (one version per packId) —
+          // and the stored body goes too (after this loop, unless re-enabled later in the batch).
           const payload = event.payload as PackDisabled;
-          const next = packs.filter((p) => !(p.packId === payload.packId && p.version === payload.version));
-          if (next.length !== packs.length) {
-            packs.length = 0;
-            packs.push(...next);
+          const index = packs.findIndex((p) => p.packId === payload.packId);
+          if (index !== -1) {
+            packs.splice(index, 1);
             packsDirty = true;
           }
+          disabledPackIds.add(payload.packId);
           break;
         }
         default:
@@ -849,7 +928,18 @@ export class CampaignActor extends StreamActor {
     if (charactersDirty)
       writes.push(this.store.setMeta(META_KEY_CHARACTERS, JSON.stringify(Object.fromEntries(characters))));
     if (packsDirty) writes.push(this.store.setMeta(META_KEY_PACKS, JSON.stringify(packs)));
+    for (const packId of disabledPackIds) writes.push(this.store.deletePack(packId));
     await Promise.all(writes);
+  }
+
+  /**
+   * [plan-16 Task 1] `welcome.packs` — the campaign's enabled non-core packs (`meta.packs`, one
+   * entry per packId) with each body's bare-hex `sha256`, so a connecting client can fetch any
+   * body it lacks (`GET /api/campaigns/:id/packs/:packId/:version`) and verify it.
+   */
+  protected override async welcomeExtras(): Promise<Pick<WelcomeMsg, 'packs'>> {
+    const meta = await this.getCampaignMeta();
+    return { packs: meta.packs.map(({ packId, version, sha256 }) => ({ id: packId, version, sha256 })) };
   }
 
   /**

@@ -59,7 +59,26 @@ export interface StreamHandle {
    * stream-type-agnostic — a future character-stream caller would work identically.
    */
   closeConnectionsForUser(userId: string, reason: string): Promise<void>;
+  /**
+   * [plan-16 Task 1] Stores a non-core pack BODY on a CAMPAIGN stream (ADR-008: "a campaign's DO
+   * stores the JSON of every non-core pack it has enabled ... so joiners can fetch them without the
+   * DM online") — `core/routes/campaign-packs.ts`'s `PUT` is the only caller, after it has already
+   * bounded, parsed and canonical-checked `json`. Reached through the handle (not a bare
+   * `StreamStore` call) for the same reason `deleteAll` is: the write must land on the SAME store
+   * instance, under the SAME single-writer guarantee, that the stream's own actor reads when it
+   * verifies `pack.enabled` (Node: the runtime's lock; Cloudflare: an RPC into the campaign's DO).
+   * One body per `packId` — a new version replaces the old one. `'quota_exceeded'` when storing it
+   * would push the campaign's pack bodies past `CAMPAIGN_PACK_BYTES_TOTAL_MAX` (nothing is stored).
+   * Rejects for a `char:` stream: only campaigns hold pack bodies.
+   */
+  putPack(id: string, version: string, json: string): Promise<PackPutOutcome>;
+  /** [plan-16 Task 1] The stored pack body for `id` on a CAMPAIGN stream (any version), exactly as
+   * `putPack` received it — `core/routes/campaign-packs.ts`'s `GET`. Rejects for a `char:` stream. */
+  getPack(id: string): Promise<StoredPack | undefined>;
 }
+
+/** [plan-16 Task 1] `StreamHandle.putPack`'s outcome — see that method's doc comment. */
+export type PackPutOutcome = 'stored' | 'quota_exceeded';
 
 /** Addresses a stream by id, returning (creating, on first access) its single-writer handle. */
 export interface StreamHost {
@@ -73,7 +92,9 @@ export type StoredEvent = Event;
 export interface StoredPack {
   readonly id: string;
   readonly version: string;
-  readonly json: unknown;
+  /** [plan-16 Task 1] The pack JSON TEXT exactly as `putPack` received it — never re-serialized,
+   * because the campaign pack relay hashes these bytes (`pack.enabled.sha256`, the `GET` ETag). */
+  readonly json: string;
 }
 
 /**
@@ -130,12 +151,17 @@ export interface StreamStore {
    * (a stream's event count is quota-bounded), though an index is a reasonable future perf task.
    */
   findAnyByTxId(txId: string): Promise<StoredEvent | undefined>;
-  /** Caches a content pack's pinned JSON alongside the stream (offline/local read path). */
-  putPack(id: string, version: string, json: unknown): Promise<void>;
-  /** Reads a previously cached pack pin, if any. */
+  /** Stores a content pack's JSON alongside the stream, one row per `id` (a new `version` replaces
+   * the old row). [plan-16 Task 1] `json` is stored as the exact text received — never parsed or
+   * re-serialized — so its sha256 stays the one the campaign pack relay verified. */
+  putPack(id: string, version: string, json: string): Promise<void>;
+  /** Reads a previously stored pack, if any. */
   getPack(id: string): Promise<StoredPack | undefined>;
-  /** Lists every pack pinned to this stream. */
+  /** Lists every pack stored on this stream. */
   listPacks(): Promise<StoredPack[]>;
+  /** [plan-16 Task 1] Removes the stored pack for `id` (a no-op if none) — `pack.disabled`'s
+   * cleanup in `CampaignActor.applyMetaHooks`. */
+  deletePack(id: string): Promise<void>;
   /**
    * Irrecoverably wipes every event, meta key, and cached pack for this stream — the storage-
    * level half of Task 6's hard-delete design (see `StreamHandle.deleteAll`'s doc comment for

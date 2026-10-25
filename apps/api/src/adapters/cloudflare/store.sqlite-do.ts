@@ -170,13 +170,15 @@ export class DoSqlStreamStore implements StreamStore {
     return Promise.resolve(rows[0] ? rowToEvent(this.streamId, rows[0]) : undefined);
   }
 
-  putPack(id: string, version: string, json: unknown): Promise<void> {
+  /** `json` is stored as the exact text received (`ports/stream.ts`'s `putPack` contract) — the
+   * campaign pack relay hashes these bytes. */
+  putPack(id: string, version: string, json: string): Promise<void> {
     this.storage.sql.exec(
       `INSERT INTO packs (id, version, json) VALUES (?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET version = excluded.version, json = excluded.json`,
       id,
       version,
-      JSON.stringify(json),
+      json,
     );
     return Promise.resolve();
   }
@@ -189,18 +191,19 @@ export class DoSqlStreamStore implements StreamStore {
       ),
     ];
     const row = rows[0];
-    return Promise.resolve(
-      row ? { id: row.id, version: row.version, json: JSON.parse(row.json) as unknown } : undefined,
-    );
+    return Promise.resolve(row ? { id: row.id, version: row.version, json: row.json } : undefined);
   }
 
   listPacks(): Promise<StoredPack[]> {
     const rows = [
       ...this.storage.sql.exec<{ id: string; version: string; json: string }>('SELECT id, version, json FROM packs'),
     ];
-    return Promise.resolve(
-      rows.map((row) => ({ id: row.id, version: row.version, json: JSON.parse(row.json) as unknown })),
-    );
+    return Promise.resolve(rows.map((row) => ({ id: row.id, version: row.version, json: row.json })));
+  }
+
+  deletePack(id: string): Promise<void> {
+    this.storage.sql.exec('DELETE FROM packs WHERE id = ?', id);
+    return Promise.resolve();
   }
 
   /** `ports/stream.ts`'s hard-delete contract ("the whole stream or nothing"): `storage.deleteAll()`

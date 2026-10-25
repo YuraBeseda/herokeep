@@ -30,7 +30,15 @@ import type {
   WsUpgrade,
   WsUpgradeContext,
 } from '../../ports/infra.ts';
-import type { AppendResult, MaintenanceStreams, StreamHandle, StreamHost, StreamUsage } from '../../ports/stream.ts';
+import type {
+  AppendResult,
+  MaintenanceStreams,
+  PackPutOutcome,
+  StoredPack,
+  StreamHandle,
+  StreamHost,
+  StreamUsage,
+} from '../../ports/stream.ts';
 import { BindingsConfig, assertConfigured } from './config.bindings.ts';
 import { openAccountsDb } from './db.d1.ts';
 import { CampaignStreamDO } from './campaign-stream.do.ts';
@@ -75,6 +83,14 @@ interface CharacterStreamStub {
    * caller reaches; `character-stream.do.ts`'s is contract-completion only, same stance as that
    * file's own `notify` method). */
   closeConnectionsForUser(streamId: string, userId: string, reason: string): Promise<void>;
+}
+
+/** [plan-16 Task 1] `CampaignStreamDO`'s OWN pack-body RPC methods (`StreamHandle.putPack`/
+ * `getPack`) — campaign-only, so they live on this narrower interface rather than the shared one
+ * above; `CloudflareStreamHost.get` casts to it only for a `camp:` id. */
+interface CampaignStreamStub extends CharacterStreamStub {
+  putPack(streamId: string, id: string, version: string, json: string): Promise<PackPutOutcome>;
+  getPack(streamId: string, id: string): Promise<StoredPack | undefined>;
 }
 
 /** The minimal `DurableObjectNamespace` surface `streamNamespaceFor` needs — both
@@ -163,6 +179,14 @@ class CloudflareStreamHost implements StreamHost {
       notify: (fromStream, events) => stub.notify(streamId, fromStream, events),
       deleteAll: () => stub.deleteAll(streamId),
       closeConnectionsForUser: (userId, reason) => stub.closeConnectionsForUser(streamId, userId, reason),
+      putPack: (id, version, json) =>
+        streamId.startsWith('camp:')
+          ? (stub as CampaignStreamStub).putPack(streamId, id, version, json)
+          : Promise.reject(new Error(`${streamId} holds no pack bodies`)),
+      getPack: (id) =>
+        streamId.startsWith('camp:')
+          ? (stub as CampaignStreamStub).getPack(streamId, id)
+          : Promise.reject(new Error(`${streamId} holds no pack bodies`)),
     };
   }
 }

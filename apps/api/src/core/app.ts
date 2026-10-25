@@ -18,6 +18,7 @@ import { createAuthRoutes } from './routes/auth.ts';
 import { createMeRoutes } from './routes/me.ts';
 import { createCharacterRoutes, type CharactersDeps } from './routes/characters.ts';
 import { createCampaignRoutes, type CampaignsDeps } from './routes/campaigns.ts';
+import { createCampaignPackRoutes } from './routes/campaign-packs.ts';
 import { createHealthRoutes } from './routes/health.ts';
 import { securityHeaders } from './http/security-headers.ts';
 import { installErrorHandler } from './http/error-handler.ts';
@@ -43,6 +44,10 @@ export function createApp(ports: AppPorts): Hono {
   app.route('/api/auth', createAuthRoutes(ports));
   app.route('/api/me', createMeRoutes(ports));
   app.route('/api/characters', createCharacterRoutes(ports));
+  // [plan-16 Task 1] BEFORE the campaigns sub-app: its `/api/campaigns/*` middleware caps every
+  // body at 64 KB, and Hono runs matching handlers in registration order — the pack routes (own
+  // 5 MiB limit, scoped to `/:campaignId/packs/*`) answer first (`routes/campaign-packs.ts`).
+  app.route('/api/campaigns', createCampaignPackRoutes(ports));
   app.route('/api/campaigns', createCampaignRoutes(ports));
   app.route('/api/health', createHealthRoutes());
 

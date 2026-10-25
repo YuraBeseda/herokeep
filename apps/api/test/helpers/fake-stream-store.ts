@@ -51,7 +51,7 @@ export class FakeStreamStore implements StreamStore {
     return Promise.resolve(this.events.find((e) => e.txId === txId));
   }
 
-  putPack(id: string, version: string, json: unknown): Promise<void> {
+  putPack(id: string, version: string, json: string): Promise<void> {
     this.packs.set(id, { id, version, json });
     return Promise.resolve();
   }
@@ -62,6 +62,11 @@ export class FakeStreamStore implements StreamStore {
 
   listPacks(): Promise<StoredPack[]> {
     return Promise.resolve([...this.packs.values()]);
+  }
+
+  deletePack(id: string): Promise<void> {
+    this.packs.delete(id);
+    return Promise.resolve();
   }
 
   /** Task 6's hard-delete surface (`ports/stream.ts`'s `StreamStore.deleteAll` doc comment) —

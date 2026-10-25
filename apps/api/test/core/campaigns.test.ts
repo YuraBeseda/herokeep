@@ -81,6 +81,9 @@ class CampaignActorStreamHost implements StreamHost {
       // code path, not a hand-rolled test-only imitation of it.
       closeConnectionsForUser: (userId: string, reason: string): Promise<void> =>
         Promise.resolve(actor.byeCloseUser(userId, reason)),
+      // [plan-16 Task 1] Same "the genuine actor code path" stance as `closeConnectionsForUser`.
+      putPack: (id, version, json) => actor.putPackBody(id, version, json),
+      getPack: (id) => actor.getPackBody(id),
     };
   }
 
