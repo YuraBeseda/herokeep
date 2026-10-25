@@ -1,0 +1,120 @@
+<div class="campaign-packs" *transloco="let t; read: 'campaigns'">
+  <h3 class="campaign-packs__title">{{ t('settings.packs.title') }}</h3>
+
+  @if (isDm()) {
+    @if (!canEdit()) {
+      <p class="campaign-packs__notice" role="status">{{ t('not-leader') }}</p>
+    }
+    <p class="campaign-packs__quota">
+      {{ t('settings.packs.quota', { count: enabledCount(), max: maxPacks }) }}
+    </p>
+
+    @if (dmRows().length === 0) {
+      <p class="campaign-packs__empty">{{ t('settings.packs.empty') }}</p>
+    } @else {
+      <ul class="campaign-packs__list">
+        @for (row of dmRows(); track row.packId) {
+          <li
+            class="campaign-packs__row"
+            [attr.data-pack-id]="row.packId"
+            [attr.aria-busy]="busyPackId() === row.packId ? 'true' : null"
+          >
+            <div class="campaign-packs__info">
+              <span class="campaign-packs__name" [id]="nameId(row.packId)">{{ row.name }}</span>
+              <span class="campaign-packs__version">
+                {{
+                  row.enabled
+                    ? t('settings.packs.enabledVersion', { version: row.enabled.version })
+                    : t('settings.packs.version', { version: row.local?.version })
+                }}
+              </span>
+            </div>
+            <div class="campaign-packs__actions">
+              @if (row.enabled) {
+                @if (row.update; as update) {
+                  <button
+                    hk-button
+                    type="button"
+                    class="campaign-packs__update"
+                    [variant]="'primary'"
+                    [attr.aria-describedby]="nameId(row.packId)"
+                    [disabled]="!canEdit() || busyPackId() !== null"
+                    (click)="updateVersion(update)"
+                  >
+                    {{ t('settings.packs.update', { version: update.version }) }}
+                  </button>
+                }
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'ghost'"
+                  [attr.aria-describedby]="nameId(row.packId)"
+                  [disabled]="!canEdit() || busyPackId() !== null"
+                  (click)="disable(row.packId)"
+                >
+                  {{ t('settings.packs.disable') }}
+                </button>
+              } @else {
+                @if (row.local; as local) {
+                  <button
+                    hk-button
+                    type="button"
+                    [variant]="'primary'"
+                    [attr.aria-describedby]="nameId(row.packId)"
+                    [disabled]="!canEdit() || busyPackId() !== null || quotaFull()"
+                    (click)="enable(local)"
+                  >
+                    {{ t('settings.packs.enable') }}
+                  </button>
+                }
+              }
+            </div>
+            @if (busyPackId() === row.packId) {
+              <span class="campaign-packs__busy" role="status">{{ t('settings.packs.busy') }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    @if (memberRows().length === 0) {
+      <p class="campaign-packs__empty">{{ t('settings.packs.noneEnabled') }}</p>
+    } @else {
+      <!-- Refusal codes are full keys from the packs and campaigns scopes, so they render through an
+           un-prefixed translate function. -->
+      <ul class="campaign-packs__list" *transloco="let tk">
+        @for (row of memberRows(); track row.packId) {
+          <li class="campaign-packs__row" [attr.data-pack-id]="row.packId">
+            <div class="campaign-packs__info">
+              <span class="campaign-packs__name" [id]="nameId(row.packId)">{{ row.name }}</span>
+              <span class="campaign-packs__version">
+                {{ t('settings.packs.version', { version: row.version }) }}
+              </span>
+            </div>
+            <div class="campaign-packs__actions">
+              @if (row.errorCode; as code) {
+                <span class="campaign-packs__status campaign-packs__status--error">{{
+                  tk(code)
+                }}</span>
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'ghost'"
+                  [attr.aria-describedby]="nameId(row.packId)"
+                  [disabled]="!isLeader() || retryingPackId() !== null"
+                  (click)="retry(row.packId)"
+                >
+                  {{ t('settings.packs.retry') }}
+                </button>
+              } @else {
+                <span class="campaign-packs__status">{{
+                  t('settings.packs.status.' + row.state)
+                }}</span>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

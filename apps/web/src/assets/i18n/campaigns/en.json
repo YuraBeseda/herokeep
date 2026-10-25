@@ -200,6 +200,29 @@
       "attunementMax": "Attunement limit",
       "startingLevel": "Starting level"
     },
+    "packs": {
+      "title": "Content packs",
+      "quota": "{count} / {max} packs enabled",
+      "empty": "No content packs on this device yet. Import one on the Packs screen to share it with this campaign.",
+      "noneEnabled": "This campaign has no content packs enabled.",
+      "version": "Version {version}",
+      "enabledVersion": "Enabled for the campaign: version {version}",
+      "enable": "Enable",
+      "disable": "Disable",
+      "update": "Update campaign version to {version}",
+      "busy": "Updating the campaign…",
+      "retry": "Retry",
+      "status": {
+        "installed": "Installed",
+        "installing": "Installing…"
+      },
+      "toast": {
+        "quota": "This campaign's pack storage is full. Disable a pack before enabling another.",
+        "tooLarge": "This pack is too large to share with the campaign.",
+        "enableFailed": "Couldn't enable the pack. Try again.",
+        "disableFailed": "Couldn't disable the pack. Try again."
+      }
+    },
     "visibility": {
       "title": "Visibility",
       "partySheets": {

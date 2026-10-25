@@ -29,6 +29,12 @@ export type CampaignPackInstallStatus =
   | { readonly state: 'installing' }
   | { readonly state: 'error'; readonly code: string };
 
+/** How many distinct non-core packs one campaign may enable — a mirror of the server's
+ * `CAMPAIGN_NON_CORE_PACK_MAX` (`apps/api/src/core/quotas.ts`, doc-08's campaign quota row), which
+ * the web app cannot import. The server enforces it; the settings screen shows it (`n / 6`) and
+ * stops offering Enable at the limit. Keep the two in step. */
+export const CAMPAIGN_NON_CORE_PACK_MAX = 6;
+
 /** The key `installErrors` uses for one campaign's pack. */
 export function campaignPackKey(campaignId: string, packId: string): string {
   return `${campaignId}/${packId}`;

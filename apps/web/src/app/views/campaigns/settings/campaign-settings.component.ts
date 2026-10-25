@@ -14,6 +14,7 @@ import {
   CampaignStoreNotLeaderError,
 } from '@shared/stores/campaign.store';
 import { CampaignExportDialogComponent } from './campaign-export-dialog.component';
+import { CampaignPacksSectionComponent } from './campaign-packs-section.component';
 
 /** doc-02 §"Campaign settings document"'s own example values — the ONLY defaults that document
  * pins explicitly (`attunementMax: 3`, `startingLevel: 1`); the remaining enum defaults
@@ -25,6 +26,9 @@ import { CampaignExportDialogComponent } from './campaign-export-dialog.componen
 function defaultCampaignSettings(system: string): CampaignSettings {
   return {
     system,
+    // Superseded (plan-16 ruling 1): a campaign's enabled content packs are the `pack.enabled` /
+    // `pack.disabled` events (`CampaignPacksSectionComponent`), never this field. The protocol is
+    // immutable, so it stays in the document — this screen only carries it through unchanged.
     packs: [],
     houseRules: {
       strictValidation: true,
@@ -67,10 +71,21 @@ type Join = CampaignSettings['join'];
  * chance of clobbering an in-progress edit with a same-tick echo of the DM's own prior save).
  * `save()` resets `draft` to `null` afterward so the form resumes tracking the just-appended
  * (already locally applied) document.
+ *
+ * The "Content packs" section after House rules is NOT part of this document (its `packs` field is
+ * superseded by the pack events, plan-16 ruling 1): `CampaignPacksSectionComponent` acts on its
+ * own, per pack, through `CampaignPacksService`, under the same `isDm && isLeader` edit lock.
  */
 @Component({
   selector: 'app-campaign-settings',
-  imports: [TranslocoDirective, ButtonComponent, ChipComponent, NumberFieldComponent, FormsModule],
+  imports: [
+    TranslocoDirective,
+    ButtonComponent,
+    ChipComponent,
+    NumberFieldComponent,
+    FormsModule,
+    CampaignPacksSectionComponent,
+  ],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './campaign-settings.component.html',
   styleUrl: './campaign-settings.component.scss',
