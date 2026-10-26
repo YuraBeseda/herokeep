@@ -47,7 +47,9 @@ must resolve to `undefined` (plan 14). `systemPatch` (plan 16) is deep-merged in
 `system` entity and revalidated with the strict schema before the index is built
 (`golden.ts:104-128`): objects merge key by key, arrays and scalars replace. It stands for a
 different core pack (e.g. `{ "multiclass": { "masteryCount": "sum" } }` in
-`mastery-sum-rule.json`), because only a `kind: core` pack may change `system`.
+`mastery-sum-rule.json`), because the documented rule is that only a `kind: core` pack may change
+`system`. That rule is not enforced yet (owner-flag in `04-content-packs.md` "Overrides"); the
+harness follows it so goldens do not depend on the gap.
 
 ## Determinism check
 

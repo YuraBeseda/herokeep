@@ -89,7 +89,7 @@ pack, so a member can fetch it without the DM online:
 - The DM uploads the canonical JSON with `PUT /api/campaigns/:id/packs/:packId/:version` before
   appending `pack.enabled@1`. The actor refuses the event unless a stored body with that version
   and sha256 exists (`apps/api/src/core/streams/campaign-actor.ts:580-603`); members fetch it with
-  `GET` on the same path (`apps/api/src/core/routes/campaign-packs.ts:144-159`). Routes, the
+  `GET` on the same path (`apps/api/src/core/routes/campaign-packs.ts:151-166`). Routes, the
   `packMissing` convention and `welcome.packs` are in `03-sync-protocol.md` §Campaign packs.
 - Members install the body automatically after validating it like a `.hero` bundle pack, with no
   assets (`apps/web/src/app/shared/services/campaigns/campaign-packs.service.ts:324-340`).

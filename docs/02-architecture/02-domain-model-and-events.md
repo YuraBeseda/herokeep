@@ -187,7 +187,7 @@ Actor: **D** DM, **M** member (any role), **S** system.
 | `campaign.settings_changed` | D | `{settings}` (full document, see below) |
 | `campaign.join_code_rotated` | D | `{joinCode}` (also updates D1) |
 | `campaign.archived` | D | `{}` |
-| `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}` (bare hex). Since plan 16 the pack JSON is stored on the campaign stream: the DM uploads it first (`PUT /api/campaigns/:id/packs/:packId/:version`), and `pack.enabled` is accepted only when a stored body with that version and sha256 exists. One version per `packId` (a new version is a version change); `pack.disabled` matches by `packId` and deletes the body (`apps/api/src/core/streams/campaign-actor.ts:580-603`, `:892-931`). Members install the enabled packs automatically (doc 03 §Campaign packs, doc 04 "Campaign packs") |
+| `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}` (bare hex). Since plan 16 the pack JSON is stored on the campaign stream: the DM uploads it first (`PUT /api/campaigns/:id/packs/:packId/:version`), and `pack.enabled` is accepted only when a stored body with that version and sha256 exists. One version per `packId` (a new version is a version change); `pack.disabled` matches by `packId` and deletes the body (`apps/api/src/core/streams/campaign-actor.ts:580-603`, `:903-942`). Members install the enabled packs automatically (doc 03 §Campaign packs, doc 04 "Campaign packs") |
 | `member.joined` / `member.left` / `member.removed` | M / D | `{userId, displayName, role}` |
 | `member.renamed` | M | `{displayName}` |
 | `campaign.character_joined` / `campaign.character_left` | M, D | `{characterId, ownerId, name}` |

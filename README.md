@@ -394,6 +394,11 @@ device. Sources are the plan-16 task reports (`task-N` below). The full referenc
     it is rejected with code `invalid` and a message starting `event.packMissing:`.
   - `welcome.packs` lists the enabled set with each pack's sha256.
   - Quotas: 6 distinct non-core packs, one version each, and 30 MiB of stored bodies in total.
+    Past 6 enabled packs, a body for a new `packId` is refused at upload (409), so nothing is
+    left stored that the DM cannot free.
+  - Only `kind: content` packs are accepted, the only kind a member installs (400 otherwise).
+  - On Cloudflare a body is stored in chunks of at most 1 MiB, because DO SQLite caps one value
+    at 2 MB; a ~2.6 MB body round-trips on both adapters.
   - Both adapters run the round trip in the conformance suite.
 - **Members install automatically** (task 2). A member's device fetches each enabled pack,
   validates it like a `.hero` bundle pack, installs it and toasts. Removing the pack while the
@@ -439,6 +444,14 @@ device. Sources are the plan-16 task reports (`task-N` below). The full referenc
 - **Fixed in this slice.** The DM's party View sheet dialog never opened in a production build.
   This dated from plan 10: `ForeignCharacterSession` called detached browser timers, which threw
   `TypeError: Illegal invocation`. Fixed in 7916354, with a unit test.
+- **Final fix wave** (after the whole-branch review):
+  - the Cloudflare store chunks pack bodies, so the 5 MiB per-body cap holds there too (a body
+    over 2 MB used to fail with an opaque 500);
+  - the PUT refuses non-content kinds and a 7th distinct `packId` (see the server bullet above);
+  - "Pin campaign packs" is disabled on a non-leader tab, with the reason, and a failed pin shows
+    a toast instead of an unhandled rejection;
+  - gates after the wave: root 146 files / 2169 tests; api Node 25 / 424; api Cloudflare 9 files
+    / 47 tests and 1 skipped; web 150 / 1859.
 - **Gates at close** (tasks 7–8):
   - pack: 1866 entities / 2,230,339 bytes / 0 diagnostics;
   - root: 146 files / 2165 tests;
@@ -460,7 +473,21 @@ device. Sources are the plan-16 task reports (`task-N` below). The full referenc
     measured 348.4 kB in task 3;
   - the party-sheets default disagrees. The server defaults to `full`; the web treats
     never-saved settings as "Overview only", so the DM's View sheet stays hidden until the DM
-    saves Full sheets.
+    saves Full sheets;
+  - release note: members on a pre-slice-6 build must reload once after the DM enables a pack.
+    The old client's strict `welcome` schema refuses the new `packs[].sha256`, so it reconnects
+    until it updates (doc 03 §Campaign packs, "Compatibility").
+- **Backlog from the final review:**
+  - the rebase report does not show inventory item migrations; the player learns of them from
+    the timeline;
+  - the initial class's mastery offer never shrinks when a later class raises the cap, so both
+    re-offers are outstanding at once and the second answer is silently over-cap;
+  - "Installing…" is shown for an enabled pack while the campaign is offline or on a non-leader
+    tab;
+  - the DM super-peer idle tick does one Dexie `get` per enabled-pack asset, with no minimum
+    interval;
+  - three `canonicalJson` copies (pack-tools, web, api) carry the bytes-equality contract; move
+    one into `@hk/protocol` on the next protocol touch.
 
 **Phase 4 is complete (2026-10-25).** All 12 SRD classes play to 20, with multiclassing, feats,
 magic items, weapon mastery, encumbrance, custom and homebrew packs with update/rebase, and
