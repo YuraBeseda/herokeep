@@ -1324,6 +1324,100 @@ async function campaignPackRoundTripScenario(driver: ConformanceDriver): Promise
   dmStream.close();
 }
 
+/** Sorted-key compact `JSON.stringify` — the canonical form the pack PUT accepts, built here
+ * independently of the route's own twin. */
+function canonicalJsonForTest(value: unknown): string {
+  const sortKeys = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(sortKeys);
+    if (v && typeof v === 'object') {
+      const record = v as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.keys(record)
+          .sort()
+          .map((k) => [k, sortKeys(record[k])]),
+      );
+    }
+    return v;
+  };
+  return JSON.stringify(sortKeys(value));
+}
+
+/** Cloudflare's SQLite-backed Durable Objects cap one string/BLOB/row at 2 MB
+ * (developers.cloudflare.com/durable-objects/platform/limits). */
+const DO_SQLITE_VALUE_MAX_BYTES = 2 * 1024 * 1024;
+
+/** A schema-valid canonical content pack of roughly 2.6 MB — above the DO SQLite value cap, below
+ * the 5 MiB per-body cap. Padded through translation strings (each value ≤ 20 KiB code units)
+ * of mixed 1/2/4-byte UTF-8 text, so a byte-level chunk boundary is likely to fall inside a
+ * multi-byte character. */
+function largeConformancePackJson(packId: string, version: string): string {
+  const text = 'Пакет 🐉 dragon '.repeat(1200);
+  const strings: Record<string, { description: string }> = {};
+  for (let i = 0; i < 95; i += 1) strings[`feat/big-${String(i).padStart(3, '0')}`] = { description: text };
+  return canonicalJsonForTest({
+    assets: [],
+    authors: [],
+    dependencies: [],
+    entities: [],
+    format: 1,
+    i18n: { ru: strings },
+    id: packId,
+    kind: 'content',
+    locale: 'en',
+    name: 'Large Conformance Pack',
+    overrides: [],
+    system: 'conformance',
+    version,
+  });
+}
+
+/** [plan-16 final fix wave, F1] The ≤ 5 MiB per-body contract (ADR-008, doc-08) holds on every
+ * adapter, including Cloudflare's 2 MB-per-value DO SQLite: a ~2.6 MB canonical body is stored,
+ * `pack.enabled` verifies against it, and a member's GET returns it byte for byte; a body of
+ * 5 MiB + 1 is still refused 413. */
+async function campaignLargePackBodyScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'LargePackDm');
+  const member = await registerAndLogin(driver, 'LargePackMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  expect((await joinCampaignHttp(driver, member, created.joinCode)).status).toBe(200);
+
+  const json = largeConformancePackJson('large-pack', '1.0.0');
+  const bytes = new TextEncoder().encode(json);
+  expect(bytes.length, 'the body is above the DO SQLite 2 MB value cap').toBeGreaterThan(DO_SQLITE_VALUE_MAX_BYTES);
+  expect(bytes.length, 'the body is within the 5 MiB per-body cap').toBeLessThan(5 * 1024 * 1024);
+
+  const put = await driver.fetch(`/api/campaigns/${campaignId}/packs/large-pack/1.0.0`, {
+    method: 'PUT',
+    headers: { ...XRW, cookie: dm.cookie },
+    body: json,
+  });
+  expect(put.status, 'PUT of a ~2.6 MB canonical body').toBe(200);
+  const { sha256 } = (await put.json()) as { sha256: string };
+
+  const dmStream = await driver.openStream({ streamId, session: dm, role: 'dm' });
+  const enabled = await appendAndWait(dmStream, [packEnabledEvent(streamId, 'large-pack', '1.0.0', sha256)]);
+  expect(enabled.rejected, 'pack.enabled verifies against the reassembled body').toEqual([]);
+  dmStream.close();
+
+  const fetched = await driver.fetch(`/api/campaigns/${campaignId}/packs/large-pack/1.0.0`, {
+    headers: { cookie: member.cookie },
+  });
+  expect(fetched.status, 'a member fetches the large body').toBe(200);
+  expect(fetched.headers.get('etag')).toBe(`"${sha256}"`);
+  const fetchedBytes = new Uint8Array(await fetched.arrayBuffer());
+  expect(fetchedBytes.length, 'same byte length').toBe(bytes.length);
+  expect(new TextDecoder().decode(fetchedBytes) === json, 'byte-identical body').toBe(true);
+
+  const tooLarge = await driver.fetch(`/api/campaigns/${campaignId}/packs/too-large/1.0.0`, {
+    method: 'PUT',
+    headers: { ...XRW, cookie: dm.cookie },
+    body: 'x'.repeat(5 * 1024 * 1024 + 1),
+  });
+  expect(tooLarge.status, '5 MiB + 1 is still refused').toBe(413);
+}
+
 /** doc-10 §Portability tests names "blob relay forwarding" among the conformance scenarios (doc-07
  * §Blob transfer protocol): a holder announces a hash, a requester's `blob.request` reaches the
  * holder as `blob.pull {hash, to}`, and the holder's binary `blob.chunk` is forwarded to the
@@ -1421,6 +1515,10 @@ export const scenarios: readonly Scenario[] = [
   {
     name: 'campaign pack relay: DM PUT -> pack.enabled verified -> member GET + welcome sha256 -> packMissing / 7th-pack quota / version change / disable deletes',
     run: campaignPackRoundTripScenario,
+  },
+  {
+    name: 'campaign pack relay: a ~2.6 MB body (above the DO SQLite 2 MB value cap) round-trips byte for byte; 5 MiB + 1 is 413',
+    run: campaignLargePackBodyScenario,
   },
   {
     name: 'blob relay forwarding: holder announces, requester gets blob.pull routed, chunk forwarded byte for byte',

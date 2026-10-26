@@ -9,10 +9,12 @@
  * SQLite database — per stream), so a `stream_id` column would be redundant: every row in THIS
  * store's tables belongs to exactly one stream by construction, not by a `WHERE stream_id = ?`
  * filter. This is the doc-02-vs-Node mapping obligation (c) asks to be documented, recorded here
- * at the one place it actually matters (the schema itself).
+ * at the one place it actually matters (the schema itself). One deliberate departure: a pack body
+ * is split over `pack_chunks` rows under its `packs` row (`PACK_CHUNK_BYTES` below), because DO
+ * SQLite caps a single value at 2 MB and a pack body may be up to 5 MiB.
  *
  * `DurableObjectStorage.transactionSync` (not a bare sequence of `sql.exec` calls) wraps every
- * multi-statement write (`append`, `deleteAll`) — SQLite-backed DO storage does not implicitly
+ * multi-statement write (`append`, `putPack`, `deletePack`) — SQLite-backed DO storage does not implicitly
  * transaction multiple `sql.exec` calls together the way Node's `better-sqlite3` wraps a whole
  * `db.transaction(fn)` callback; `transactionSync`'s callback is Cloudflare's equivalent
  * synchronous-transaction primitive (`ports/stream.ts`'s `StreamStore.append` contract: "commits
@@ -45,9 +47,107 @@ function ensureSchema(storage: DurableObjectStorage): void {
     CREATE TABLE IF NOT EXISTS packs (
       id TEXT PRIMARY KEY,
       version TEXT NOT NULL,
-      json TEXT NOT NULL
+      bytes INTEGER NOT NULL,
+      chunks INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS pack_chunks (
+      id TEXT NOT NULL,
+      idx INTEGER NOT NULL,
+      chunk BLOB NOT NULL,
+      PRIMARY KEY (id, idx)
     );
   `);
+  migrateLegacyPacks(storage);
+}
+
+/**
+ * [plan-16 final fix wave, F1] Cloudflare's SQLite-backed Durable Objects cap one string, BLOB or
+ * row at 2 MB (developers.cloudflare.com/durable-objects/platform/limits; a bigger bound value
+ * throws `SQLITE_TOOBIG`), while a campaign pack body may be up to `CAMPAIGN_PACK_BYTES_MAX`
+ * (5 MiB). So a body is stored as its UTF-8 bytes split into `pack_chunks` rows of at most this
+ * size, under one `packs` row carrying `version`, the total `bytes` and the `chunks` count. The
+ * split is by BYTES (BLOB rows), not by string index, so a chunk boundary may fall inside a
+ * multi-byte character or a surrogate pair: the bytes are concatenated before decoding.
+ */
+const PACK_CHUNK_BYTES = 1024 * 1024;
+
+/** The pre-chunking shape, `packs(id, version, json TEXT)` (doc-02's original table, unchanged
+ * until plan 16's final fix wave), rewritten into the chunked shape once. Detected by its `json`
+ * column (`PRAGMA table_info` is one of the PRAGMAs DO SQLite allows; `user_version` is not, so
+ * there is no schema-version counter to read instead). Each legacy body was one TEXT value, so it
+ * is necessarily under the 2 MB cap and safe to read in one row. */
+function migrateLegacyPacks(storage: DurableObjectStorage): void {
+  const columns = [...storage.sql.exec<{ name: string }>('PRAGMA table_info(packs)')].map((c) => c.name);
+  if (!columns.includes('json')) return;
+  storage.transactionSync(() => {
+    const legacy = [
+      ...storage.sql.exec<{ id: string; version: string; json: string }>('SELECT id, version, json FROM packs'),
+    ];
+    storage.sql.exec(`
+      DROP TABLE packs;
+      CREATE TABLE packs (
+        id TEXT PRIMARY KEY,
+        version TEXT NOT NULL,
+        bytes INTEGER NOT NULL,
+        chunks INTEGER NOT NULL
+      );
+    `);
+    for (const row of legacy) writePackRows(storage, row.id, row.version, row.json);
+  });
+}
+
+/** Replaces `id`'s `packs` row and every one of its `pack_chunks` rows. The caller wraps it in
+ * `transactionSync`, so a reader never sees a half-written body. */
+function writePackRows(storage: DurableObjectStorage, id: string, version: string, json: string): void {
+  const bytes = new TextEncoder().encode(json);
+  const chunks = Math.ceil(bytes.length / PACK_CHUNK_BYTES);
+  storage.sql.exec('DELETE FROM pack_chunks WHERE id = ?', id);
+  for (let idx = 0; idx < chunks; idx += 1) {
+    const chunk = bytes.slice(idx * PACK_CHUNK_BYTES, (idx + 1) * PACK_CHUNK_BYTES);
+    storage.sql.exec('INSERT INTO pack_chunks (id, idx, chunk) VALUES (?, ?, ?)', id, idx, chunk.buffer);
+  }
+  storage.sql.exec(
+    `INSERT INTO packs (id, version, bytes, chunks) VALUES (?, ?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET version = excluded.version, bytes = excluded.bytes, chunks = excluded.chunks`,
+    id,
+    version,
+    bytes.length,
+    chunks,
+  );
+}
+
+interface PackRow extends Record<string, SqlStorageValue> {
+  readonly id: string;
+  readonly version: string;
+  readonly bytes: number;
+  readonly chunks: number;
+}
+
+/** Reassembles one stored body. `ignoreBOM: true` keeps a leading U+FEFF as text (the route
+ * decodes the same way), so the result is exactly the string `putPack` received. A row whose
+ * chunks do not add up is storage corruption, never silently served. */
+function readPackBody(storage: DurableObjectStorage, row: PackRow): StoredPack {
+  const parts = [
+    ...storage.sql.exec<{ chunk: ArrayBuffer }>('SELECT chunk FROM pack_chunks WHERE id = ? ORDER BY idx', row.id),
+  ];
+  const bytes = new Uint8Array(row.bytes);
+  let offset = 0;
+  for (const part of parts) {
+    const chunk = new Uint8Array(part.chunk);
+    if (offset + chunk.length > bytes.length) break;
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  if (parts.length !== row.chunks || offset !== row.bytes) {
+    throw new Error(
+      `DoSqlStreamStore: pack ${row.id} is corrupt (${parts.length}/${row.chunks} chunks, ${offset}/${row.bytes} bytes)`,
+    );
+  }
+  return {
+    id: row.id,
+    version: row.version,
+    json: new TextDecoder('utf-8', { fatal: false, ignoreBOM: true }).decode(bytes),
+  };
 }
 
 interface EventRow extends Record<string, SqlStorageValue> {
@@ -171,38 +271,32 @@ export class DoSqlStreamStore implements StreamStore {
   }
 
   /** `json` is stored as the exact text received (`ports/stream.ts`'s `putPack` contract) — the
-   * campaign pack relay hashes these bytes. */
+   * campaign pack relay hashes these bytes. Chunked (`PACK_CHUNK_BYTES`) so a body above the DO
+   * SQLite 2 MB value cap fits; the header row and every chunk are replaced in one transaction.
+   * The route only ever passes text decoded from valid UTF-8, so the UTF-8 round trip is exact. */
   putPack(id: string, version: string, json: string): Promise<void> {
-    this.storage.sql.exec(
-      `INSERT INTO packs (id, version, json) VALUES (?, ?, ?)
-       ON CONFLICT (id) DO UPDATE SET version = excluded.version, json = excluded.json`,
-      id,
-      version,
-      json,
-    );
+    this.storage.transactionSync(() => {
+      writePackRows(this.storage, id, version, json);
+    });
     return Promise.resolve();
   }
 
   getPack(id: string): Promise<StoredPack | undefined> {
-    const rows = [
-      ...this.storage.sql.exec<{ id: string; version: string; json: string }>(
-        'SELECT id, version, json FROM packs WHERE id = ?',
-        id,
-      ),
-    ];
+    const rows = [...this.storage.sql.exec<PackRow>('SELECT id, version, bytes, chunks FROM packs WHERE id = ?', id)];
     const row = rows[0];
-    return Promise.resolve(row ? { id: row.id, version: row.version, json: row.json } : undefined);
+    return Promise.resolve(row ? readPackBody(this.storage, row) : undefined);
   }
 
   listPacks(): Promise<StoredPack[]> {
-    const rows = [
-      ...this.storage.sql.exec<{ id: string; version: string; json: string }>('SELECT id, version, json FROM packs'),
-    ];
-    return Promise.resolve(rows.map((row) => ({ id: row.id, version: row.version, json: row.json })));
+    const rows = [...this.storage.sql.exec<PackRow>('SELECT id, version, bytes, chunks FROM packs')];
+    return Promise.resolve(rows.map((row) => readPackBody(this.storage, row)));
   }
 
   deletePack(id: string): Promise<void> {
-    this.storage.sql.exec('DELETE FROM packs WHERE id = ?', id);
+    this.storage.transactionSync(() => {
+      this.storage.sql.exec('DELETE FROM pack_chunks WHERE id = ?', id);
+      this.storage.sql.exec('DELETE FROM packs WHERE id = ?', id);
+    });
     return Promise.resolve();
   }
 

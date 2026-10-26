@@ -43,6 +43,13 @@ meta(key PK, value)            -- owner, campaign, pins, bytes_used, subscribers
 packs(id, version, json)       -- CampaignStream only: enabled non-core packs
 ```
 
+On Cloudflare the pack body is not one `json` value: DO SQLite caps a string, BLOB or row at
+2 MB and a body may be up to 5 MiB, so the store keeps `packs(id, version, bytes, chunks)` plus
+`pack_chunks(id, idx, chunk BLOB)` rows of at most 1 MiB, written and replaced in one
+transaction and joined back into the exact text on read
+(`apps/api/src/adapters/cloudflare/store.sqlite-do.ts`). The Node file store keeps one `json`
+column.
+
 ## Character facts (client-side, derived by the reducer)
 
 ```
