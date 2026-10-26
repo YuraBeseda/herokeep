@@ -4,6 +4,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogService } from '@shared/components/dialog/dialog.service';
 import { RebaseReportDialogComponent } from '@shared/components/rebase-report-dialog/rebase-report-dialog.component';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';
 import {
   CampaignPacksService,
@@ -11,12 +12,16 @@ import {
 } from '@shared/services/campaigns/campaign-packs.service';
 import { campaignIdOfCharacter } from '@shared/services/campaigns/character-campaign-link';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { LeaderService } from '@shared/services/storage/leader.service';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
-import { CharacterStore } from '@shared/stores/character.store';
+import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
+
+/** Toasted when pinning fails for any reason other than lost leadership. */
+const PIN_FAILED_KEY = 'characters.sheet.banner.campaign-packs.pin-failed';
 
 /** One enabled campaign pack the character does not pin. */
 export interface CampaignPackOffer {
@@ -50,6 +55,9 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
  *   `pack.pinned` events plus any `item.updated` that moves a held item off an entity the new
  *   version deprecates (plan 16 ruling 7). Otherwise the rebase report opens, exactly as for the
  *   Build tab's turn-off/update; only Confirm commits `plan.events`.
+ * - The action is disabled on a tab that is not the character-data writer (`LeaderService`), with
+ *   the reason shown; a failed pin (leadership lost mid-way, a storage error) commits nothing and
+ *   shows a toast.
  *
  * Nothing is forced and nothing is remembered: the banner is there while the condition holds.
  * Renders nothing otherwise (solo character, campaign offline, everything pinned).
@@ -69,6 +77,8 @@ export class CampaignPacksBannerComponent {
   private readonly packStore = inject(PackStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly dialogService = inject(DialogService);
+  private readonly leaderService = inject(LeaderService);
+  private readonly toastService = inject(ToastService);
 
   private readonly editLock = inject(CampaignEditLockService).editLockFor(
     this.characterStore.events,
@@ -114,8 +124,12 @@ export class CampaignPacksBannerComponent {
 
   private readonly pinnable = computed(() => this.offers().filter((o) => o.state === 'installed'));
 
+  /** Only the writer tab may append character events (`CharacterStore.appendTx`); another tab
+   * shows the reason instead, as the campaign settings packs section does. */
+  protected readonly isLeader = this.leaderService.isLeader;
+
   protected readonly canPin = computed(
-    () => this.pinnable().length > 0 && !this.busy() && !this.editLocked(),
+    () => this.pinnable().length > 0 && !this.busy() && !this.editLocked() && this.isLeader(),
   );
 
   protected async onPin(t: TranslateFn): Promise<void> {
@@ -123,6 +137,12 @@ export class CampaignPacksBannerComponent {
     this.busy.set(true);
     try {
       await this.pin(this.pinnable(), t);
+    } catch (error) {
+      // Leadership can still move between the check above and the write; a storage failure has
+      // no key of its own. Nothing was committed either way (one transaction).
+      this.toastService.show(
+        error instanceof CharacterStoreNotLeaderError ? error.code : PIN_FAILED_KEY,
+      );
     } finally {
       this.busy.set(false);
     }

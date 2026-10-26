@@ -18,6 +18,9 @@
         }
       }
     </ul>
+    @if (!isLeader()) {
+      <p class="campaign-packs-banner__notice">{{ t('not-leader') }}</p>
+    }
     <button
       hk-button
       type="button"

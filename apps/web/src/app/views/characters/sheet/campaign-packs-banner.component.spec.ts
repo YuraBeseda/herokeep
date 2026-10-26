@@ -10,6 +10,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { DialogService } from '@shared/components/dialog/dialog.service';
+import { ToastService } from '@shared/components/toast/toast.service';
 import {
   RebaseReportDialogComponent,
   type RebaseReportDialogData,
@@ -26,9 +27,10 @@ import type { EnabledPack } from '@shared/services/campaigns/campaign-projection
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
+import { LeaderService } from '@shared/services/storage/leader.service';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
-import { CharacterStore } from '@shared/stores/character.store';
+import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
@@ -476,6 +478,43 @@ describe('CampaignPacksBannerComponent (plan 16 Task 5, ruling 4)', () => {
     expect(banner(fixture)).not.toBeNull();
   });
 
+  // [final fix wave, F9] Only the leader tab may write character events (`CharacterStore.appendTx`
+  // throws `CharacterStoreNotLeaderError` elsewhere): the action is disabled there, with the reason.
+  it('disables the action on a tab that is not the writer and says why', async () => {
+    await setup();
+    await joinCampaign();
+    TestBed.inject(LeaderService).release();
+    const fixture = await render();
+
+    expect(pinButton(fixture).disabled).toBe(true);
+    expect(
+      banner(fixture)?.querySelector('.campaign-packs-banner__notice')?.textContent?.trim(),
+    ).toBe(charactersEn['not-leader']);
+  });
+
+  it('a failed pin shows a toast (not-leader text for a lost leadership, a generic one otherwise) and re-enables the action', async () => {
+    await setup();
+    await joinCampaign();
+    const fixture = await render();
+    const store = TestBed.inject(CharacterStore);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show').mockImplementation(() => undefined);
+    const append = vi.spyOn(store, 'appendTx');
+
+    append.mockRejectedValueOnce(new CharacterStoreNotLeaderError());
+    pinButton(fixture).click();
+    await settle(fixture, () => show.mock.calls.length === 1);
+    expect(show).toHaveBeenLastCalledWith('characters.not-leader');
+
+    append.mockRejectedValueOnce(new Error('QuotaExceededError'));
+    await settle(fixture, () => !pinButton(fixture).disabled);
+    pinButton(fixture).click();
+    await settle(fixture, () => show.mock.calls.length === 2);
+    expect(show).toHaveBeenLastCalledWith('characters.sheet.banner.campaign-packs.pin-failed');
+
+    await settle(fixture, () => !pinButton(fixture).disabled);
+    expect(store.facts()?.pins[sample.id]).toBeUndefined();
+  });
+
   it('the banner strings exist in en, ru and uk (ICU plural)', () => {
     for (const locale of [charactersEn, charactersRu, charactersUk]) {
       const strings = (
@@ -486,6 +525,7 @@ describe('CampaignPacksBannerComponent (plan 16 Task 5, ruling 4)', () => {
         'installing',
         'message',
         'pin',
+        'pin-failed',
         'report-title',
       ]);
       expect(strings?.['message']).toMatch(/\{count, plural,/);

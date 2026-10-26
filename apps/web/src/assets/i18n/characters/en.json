@@ -580,6 +580,7 @@
         "entry": "{name} v{version}",
         "installing": "{name} (installing…)",
         "pin": "Pin campaign packs",
+        "pin-failed": "Couldn't pin the campaign packs. Try again.",
         "report-title": "Pin campaign packs?"
       }
     }
