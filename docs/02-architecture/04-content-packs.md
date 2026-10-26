@@ -57,7 +57,7 @@ Entity types and their specific data (abridged; schema is authoritative):
 
 | Type | Specific data |
 |------|---------------|
-| `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `encumbrance?` (`standard`/`variant` carry-capacity data — see below), `multiclass` prerequisites, `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
+| `system` | `abilities[]`, `skills[{id, ability}]`, `saves[]`, `compositionSlots[{id, entityType, count, at}]`, `restTypes[]`, `tables` (`xp`, `proficiency`, `spellSlots` by caster type — `full\|half\|third\|pact\|none`; `multiclassSlots?` — see below), `currencies[]`, `damageTypes[]`, `sizes[]`, `conditions[]`, `restRules`, `hpRules`, `attunementMax`, `encumbrance?` (`standard`/`variant` carry-capacity data — see below), `multiclass` (`prerequisites`; `masteryCount?: 'max' \| 'sum'`, how several classes' Weapon Mastery counts combine — see "Multiclass weapon mastery" below), `abilityGeneration` (`standardArray: [15,14,13,12,10,8]`, `pointBuy: {budget: 27, min: 8, max: 15, costs: {…}}`, `roll: "4d6kh3"`, `manual: {min: 3, max: 18}`; a campaign's house rules may restrict which methods are offered) |
 | `species` | `size`, `speed`, `creatureType`, `lifespan?`; traits as `grants` |
 | `background` | `abilityScores[]` (2024: the three abilities the player may raise), `originFeat`, `skillProficiencies[]`, `toolProficiency`, `equipment` option |
 | `class` | `hitDie`, `primaryAbility[]`, `saves[]`, `armorTraining[]`, `weaponProficiencies[]`, `toolProficiencies`, `skillChoice {from[], count}`, `startingEquipment[]` options, `spellcasting?` (effect), `levels[{level, grants[], choices[], spellSlots?, extra: {…}}]` — `extra`'s values are int, formula, dice roll (e.g. Rage Damage `"1d6"`) or short plain text (e.g. an ordinal column). `extra`'s plain-text values (`ExtraTextSchema`) are MECHANICAL NOTATION — table-column values like dice or ordinal labels, not display prose — so they are exempt from the Localizer; display prose for a feature belongs in that feature's (already-localized) `description`, not in an `extra` column. `extra` is also the mechanism for STEPPED per-level tables that don't fit one formula (one `extra` entry per level-with-a-change, keyed `"<classSlug>-<fact>"`, e.g. `"wizard-cantrips-known"`/`"fighter-weapon-mastery-count"`): `@hk/engine`'s `bestRowExtra` (`derive/spellcasting.ts`) takes the HIGHEST such row at or below the character's level, resolving it through the formula grammar if the row's own value is itself a formula string. `spellcasting.define`'s `cantripsKnown`/`preparedCount` formulas and `mastery.grant`'s `count` formula (effects table below) are each read ONLY as a fallback, when no matching row-extra exists for that class/key at or below the current level — a row always wins over the flat formula once one is authored. Other `class`-level fields: `subclassLevel`, `multiclass {prereq, gains}` |
@@ -486,8 +486,13 @@ gains-less later class's full lists (compat). Both `sheet.proficiencies` and the
 (`derive/attacks.ts`) read it, so an attack line can no longer be proficient when the sheet's
 proficiency list says it is not (a Wizard → Rogue no longer adds proficiency to a rapier).
 
-**Multiclass weapon mastery (plan 14 task 4).** `sheet.masteryCount` is the MAX over the active
-`mastery.grant` resolved counts, not their sum, and the cap is shared: `derive/attacks.ts` collects
+**Multiclass weapon mastery (plan 14 task 4; combine rule as data and shared-cap offers, plan 16
+task 6).** `sheet.masteryCount` combines the active `mastery.grant` resolved counts by the system
+entity's `multiclass.masteryCount` rule: `'max'` (the highest count; the default when the field is
+absent) or `'sum'` (`packages/protocol/src/pack/entities-simple.ts:151`,
+`packages/engine/src/derive/attacks.ts:216-222`). The SRD core sets `'max'`
+(`packages/content/src/static/system.ts:311-318`, with the owner-flag below), and the
+`mastery-sum-rule` golden pins `'sum'`. The cap is shared: `derive/attacks.ts` collects
 every `weapon-masteries` choice in class order (each class's own and row choices through the
 scope-aware `offeredRowChoices`, then its subclass's, then any other active entity) and fills at most
 `masteryCount` slots in that order, then in recorded order within a decision. A weapon picked twice
@@ -497,8 +502,14 @@ cap is silently not applied — no diagnostic, because each decision is still va
 level 4; Barbarian 2), where the old sum gave 6. ⚠️ OWNER-FLAG: the vendored multiclassing rule
 (`Rule.json` pk `srd-2024_multiclassing_class-features`) names only Extra Attack, Spellcasting and
 alternative AC as special cases and never mentions mastery, so max-with-a-shared-cap is
-PHB-sourced. The later class's mastery choice is still offered when the cap is already full; its
-picks only apply up to the cap.
+PHB-sourced. **Offers are shared-cap aware (plan 16 ruling 10).** A later class's
+`weapon-masteries` choice is offered `min(its own count, max(0, cap − masteries the earlier
+classes' honoured picks already take))`, and a count of 0 means the choice is not offered and not
+required for level-up — a Fighter 1 with three masteries who multiclasses into Barbarian is asked
+nothing (`masteryOfferCount`, `derive/attacks.ts:256`, consulted through the one engine hook
+`choiceCountOverride`, `derive/choice-count.ts:18`, by `offeredRowChoices` and
+`validateSelection`). Granting never reads the hook: a recorded decision still fills slots up to
+the cap exactly as before.
 
 **Speed formulas (plan 13 task 5).** `speed.bonus.value` is `int | Formula` (`speed.set` stays an
 int). A formula bonus resolves through the shared evaluator, so a scaling column becomes one row:
@@ -650,6 +661,12 @@ threshold; `Sheet.speed` itself is untouched by encumbrance in this phase.
 ```
 JSON Patch, applied at content-index build time; every override is listed on the pack's
 enable screen. A pack may not override the `system` entity except via `kind: core`.
+⚠️ OWNER-FLAG (plan 16 task 7): this rule is documented but **not yet enforced**. `PackSchema`'s
+refinement only refuses a content pack that DEFINES a system entity or an override that targets
+the pack's own entities (`packages/protocol/src/pack/pack.ts:73-100`), and `createContentIndex`
+applies any override, a `system` target included (`packages/engine/src/content/index.ts:74`).
+Enforcing it is a protocol/engine change for a later plan; the engine's own goldens patch the core
+system through the harness's `systemPatch` field instead (`packages/engine/test/support/golden.ts:30`).
 
 ## Translation packs
 
@@ -671,7 +688,8 @@ Keys are entity ids without the pack prefix plus a field path; nested feature te
   the old pins and with the new pins; (3) diff Sheets (derived values) and list decisions
   whose `choiceId` no longer exists, whose selection is missing/deprecated, or whose
   prerequisites now fail; (4) present a report; (5) on confirm, emit one transaction:
-  `pack.pinned` + `decision.cleared`/`decision.made` fix-ups.
+  `pack.pinned` + `decision.cleared`/`decision.made` fix-ups, plus (plan 16) `item.updated
+  {instanceId, itemId}` for each held item whose id the new version deprecates.
 - Implementation (plan 15): steps 1–3 are the pure engine function `planRebase`, step 4 the web
   `RebaseReportDialogComponent`, step 5 a single `appendTx(plan.events)`. See "Rebase
   implementation" below for the two rulings that refine step 3.
@@ -814,9 +832,22 @@ to the steps in "Versioning and rebase" above:
   following chains transitively and safely against cycles. If the migrated selection validates,
   each replacement becomes a `Migration`. If it does not, the decision is invalid with
   `selection-deprecated`.
+- **Step 3, inventory migrations (plan 16 ruling 7).** Each `facts.inventory` entry whose
+  `itemId` resolves in `next` to a `deprecated.replacedBy` chain (walked like decisions) gets an
+  `item.updated@1 {instanceId, itemId: <replacement>}`. `ItemUpdatedV1.itemId?` is additive
+  (`packages/protocol/src/events/character.ts:188-195`); the reducer sets the entry's `itemId` and
+  keeps every other field (`packages/engine/src/reduce/handlers/inventory.ts:97-108`). A legacy
+  log without the event derives exactly as before. The `pack-updated-v2` golden was re-pinned
+  (the sickle regains its mastery) and `campaign-pack-member` pins the campaign-banner path.
 - **Step 3, invalid decisions.** Each decision is re-validated with `validateSelection` against
   `next`, the way it was validated at pick time (without itself). The reasons are, in priority
-  order: `choice-missing`, `selection-missing`, `prerequisite-failed`.
+  order: `choice-missing`, `selection-missing`, `prerequisite-failed`, and (plan 16 ruling 8)
+  `count-reduced`: the selection is longer than the choice's count under `next`
+  (`selectionCountOf`, `packages/engine/src/derive/validation.ts:478`). `count-reduced` is the one
+  reason **reported but never cleared** — Confirm keeps the decision and the player trims it
+  (`clearsDecision`, `packages/engine/src/rebase/plan.ts:64-66`). The report dialog lists those
+  rows under their own heading, "Choices to trim", apart from "Choices that will be cleared"
+  (`apps/web/src/app/shared/components/rebase-report-dialog/rebase-report-dialog.component.ts:180-193`).
 - **Ruling: decisions that were already invalid under `current` are not reported.** The update
   did not cause them, and reporting them would block the homebrew fast-forward forever.
 - **Ruling: `changes` compares the sheet now with the sheet AFTER the plan is applied.** That is,
@@ -830,8 +861,10 @@ to the steps in "Versioning and rebase" above:
   Escape cancels.
 - **Step 5.** `events` are ordered `pack.pinned` (sorted by id, with `previous`), then
   `pack.unpinned` (never the core), then `decision.made` for each migrated decision (one per
-  decision, keeping its original `context`), then `decision.cleared` for each invalid decision.
-  Confirm appends them in ONE transaction. Cancel, Escape or the backdrop appends nothing.
+  decision, keeping its original `context`), then `item.updated` for each migrated inventory entry
+  (plan 16), then `decision.cleared` for each invalid decision except `count-reduced` ones
+  (`plan.ts:207`). Confirm appends them in ONE transaction. Cancel, Escape or the backdrop appends
+  nothing.
 
 **Updates** (task 5, commits 7e5f77f and 10e054b). `updatesFor(pins, installed, shippedCore)`
 offers, per pinned content pack, the highest installed version strictly above the pin (semver
@@ -934,17 +967,66 @@ The checked-in e2e fixtures are built this way (commit 046be5a):
   choice.
 - **Old core versions are not retained** (ruling 6, amended). A core update is validation-only:
   no sheet diff is possible without the previous core.
-- **No campaign pack relay yet** (ruling 12). `pack.enabled@1` carries `{packId, version, sha256}`
-  only. The Durable Object stores no pack JSON, and the relay of pack JSON and assets to members
-  is a later slice (doc 07, "Pack assets").
+- ~~**No campaign pack relay yet** (ruling 12).~~ Resolved in plan 16: the campaign's DO stores
+  the enabled packs' JSON and the assets ride the blob relay — see "Campaign packs (plan 16)"
+  below.
 - **Homebrew does not merge across devices** (task 7 fix round). Each device authors its own
   `homebrew-<hex>` line, and a `.hero` from another device installs that device's line beside
   yours.
 - **The transliteration table is a convenience, not a standard** (ruling 10).
-- **A rebase migrates decisions, not inventory item ids** (task 8). After the v2 update, the old
-  Moonblade Sickle instance still resolves (v2 keeps the deprecated entity) but loses its mastery,
-  because the migrated decision now names the Moonsilver Sickle. A v3 that dropped the deprecated
-  entity would leave that inventory row unresolved. The `pack-updated-v2` golden and
-  `apps/web/e2e/custom-packs.spec.ts` both pin today's behavior.
+- ~~**A rebase migrates decisions, not inventory item ids** (task 8).~~ Resolved in plan 16
+  (ruling 7): the rebase also emits `item.updated {instanceId, itemId}`, so after the v2 update the
+  held sickle IS the Moonsilver Sickle and keeps its mastery (the re-pinned `pack-updated-v2`
+  golden and `apps/web/e2e/custom-packs.spec.ts`).
 - **Sharing an installed pack as a `.hkpack` from the device is not built.** It is not on the
   roadmap line.
+
+## Campaign packs (plan 16)
+
+A DM shares installed content packs with a campaign; members' devices install them, and each
+character pins them by its player's choice. The wire contract (routes, `welcome.packs`, the
+`packMissing` convention) is in `03-sync-protocol.md` §Campaign packs; asset transport in
+`07-images-and-blobs.md` §Pack assets.
+
+1. **Enable (DM).** The campaign settings' Content packs section lists this device's installed
+   content packs, homebrew excluded, at their highest installed version
+   (`apps/web/src/app/views/campaigns/settings/campaign-packs-section.component.ts:114-119`).
+   Enable uploads the canonical JSON, checks the returned sha256, then appends `pack.enabled@1`
+   (`apps/web/src/app/shared/services/campaigns/campaign-packs.service.ts:158-172`); a newer local
+   version offers "Update campaign version", and Disable appends `pack.disabled@1` (`:180-191`).
+   The quota reads `n / 6`. One version per pack id per campaign.
+2. **Install (every member device).** For each enabled pack the device lacks, the body is fetched
+   and validated exactly like a `.hero` bundle pack — size, sha256 of the exact bytes against the
+   event, strict `parsePack`, kind `content`, the conflict rule, `validatePack` — and only then
+   installed through `PackStore.installContent` (`validateExternalPack`,
+   `apps/web/src/app/shared/services/packs/pack-validate.ts:54`; `campaign-packs.service.ts:324-340`).
+   Nothing is stored on failure; the member's settings section shows the refusal with Retry.
+3. **Pin (the player).** A sheet banner on every character linked to the campaign offers the
+   enabled packs it does not pin yet. "Pin campaign packs" plans with `planRebase` and commits
+   `plan.events` in one transaction — opening the rebase report first when a decision breaks or
+   migrates — so inventory item ids migrate too
+   (`apps/web/src/app/views/characters/sheet/campaign-packs-banner.component.ts:93`, `:139-157`).
+   Pinning is never forced, and a pack already pinned at another version is not re-offered:
+   updates go through the member's own Build tab.
+4. **DM view.** The party view's member sheet derives against the MEMBER's pins
+   (`indexFor(facts.pins)`); a pinned pack the DM's device lacks gives a `'warning'` status with
+   the missing list, and its references stay raw ids, never an error
+   (`apps/web/src/app/shared/services/campaigns/foreign-character-session.ts:375-393`).
+5. **Disable.** Members' enabled lists empty live; installed packs and existing pins stay.
+
+Plan 16 also fixed a pre-existing bug (from plan 10) that broke the DM's "View sheet" dialog in
+production builds: `ForeignCharacterSession` called the browser's timers with the wrong receiver
+(commit 7916354). The `campaign-packs` e2e:sync scenario now opens that dialog.
+
+### Owner-flags (plan 16)
+
+- **No push of pack UPDATES to members' characters** (ruling 11): the campaign only changes the
+  enabled version; each member updates through their own Build tab.
+- **Auto-install by design:** a member cannot keep a campaign's enabled pack off the device
+  without leaving the campaign.
+- **The Build tab's turn-on pins without `planRebase`** (latent): re-enabling a pack whose newer
+  version deprecates an item the character holds does not migrate that item (the campaign banner
+  does plan).
+- **"No `system` override except via `kind: core`" is not enforced** (see "Overrides").
+- **`masteryCount: 'max'`** in the SRD core is PHB-sourced; the SRD is silent (see "Multiclass
+  weapon mastery").

@@ -1,4 +1,4 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12) + slice 3 (plan 13) + slice 4 (plan 14) + slice 5 (plan 15)
+# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12) + slice 3 (plan 13) + slice 4 (plan 14) + slice 5 (plan 15) + slice 6 (plan 16)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
 offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
@@ -15,7 +15,8 @@ number. It supplements, and never replaces, the automated gates:
   This is the "automated proxy" the plan's Global Constraints refer to; the device numbers below
   are the actual measurement it stands in for.
 - `pnpm --filter web e2e:sync` — a second Playwright project against a real Node API adapter
-  (register/login/recover, cross-device restore, live two-context sync, device revocation). It
+  (register/login/recover, cross-device restore, live two-context sync, device revocation, and
+  since plan 16 campaign packs; 9 tests). It
   proves the same protocol section 6 below walks through by hand, but as two browser contexts on
   one machine — not two real devices on real Wi‑Fi, which is what section 6 is for.
 
@@ -523,6 +524,70 @@ second real device. Fixtures: copy `apps/web/e2e/fixtures/packs/sample-content.h
 
 ---
 
+## 8f. Campaign packs between two real devices (Phase 4 slice 6, plan 16)
+
+**What this proves:** a DM enables a content pack for a campaign, and it reaches a member's phone
+over real Wi‑Fi, with no file transfer. The pack JSON comes from the server. Its icon comes over
+the blob relay from a device that holds it. The member pins the pack from the sheet, the DM's
+party view resolves the member's pack items, and a disable reaches the member live.
+
+`apps/web/e2e/sync/campaign-packs.spec.ts` (`e2e:sync`) automates the desktop path of steps 1, 2, 4, 5 and 6
+with two browser contexts on one machine. This pass covers what it cannot: two real devices, a
+real screen reader, and the pack icon's bytes actually relaying. Use the LAN dev server and the two
+signed-in phones from section 7, with phone A as the DM. Copy
+`apps/web/e2e/fixtures/packs/sample-content.hkpack` to phone A only; phone B must not have the
+pack.
+
+### Procedure
+
+1. **DM enables the pack** (tasks 1 and 3).
+   - On phone A, import `sample-content.hkpack` (section 8e, step 1).
+   - Open the campaign's **Settings**. Set **Party sheets** to **Full sheets** and **Save**: the
+     DM's **View sheet** needs it, and a never-saved campaign shows **Overview only**.
+   - Under **Content packs**, the quota reads "0 / 6 packs enabled". Tap **Enable** on Sample
+     content.
+   - The row reads "Enabled for the campaign: version 1.0.0", and the quota reads "1 / 6 packs
+     enabled".
+   - With TalkBack/VoiceOver, the "Updating the campaign…" status is announced while the request
+     runs.
+2. **Member device installs it** (task 2).
+   - On phone B, join the campaign (section 7, step 1), or open it if already joined.
+   - Within a few seconds a toast reads "Installed the campaign pack Sample content".
+   - **Packs** lists Sample content 1.0.0, and the campaign's **Settings** shows the row as
+     "Installed", with no Enable or Disable.
+3. **The pack icon relays** (task 4). No screen draws a pack's `sha256:` icon yet: entity icons
+   resolve only `gi:` sprite ids (`apps/web/src/app/shared/services/engine/engine.facade.ts:174-181`).
+   So check the relay in remote devtools (Android: `chrome://inspect` from a desktop Chrome).
+   - Keep phone A online, with the campaign open.
+   - On phone B, in IndexedDB, the `blobs` table gains a row whose hash is the Moonblade Sickle's
+     icon (`sha256:86be52bd…`), with `origin: 'peer'`, within a few seconds of the install.
+   - Skip this step on a device you cannot inspect.
+4. **Pin from the sheet** (task 5).
+   - On phone B, link a character to the campaign and open its sheet.
+   - A banner reads "Your campaign uses a content pack this character doesn't use yet: Sample
+     content v1.0.0", with **Pin campaign packs**. It is announced as a status.
+   - Tap **Pin campaign packs**. The banner goes away, Build → Content packs shows Sample content
+     checked, and the Timeline shows "Pinned Sample content v1.0.0."
+   - Play → Add from library now finds **Moonblade Sickle**. Add it.
+5. **DM sees the member's pack items** (task 5).
+   - On phone A, open **Party** and tap **View sheet** on phone B's character.
+   - The inventory lists "Moonblade Sickle × 1", with no missing-pack warning.
+6. **DM disables the pack** (tasks 2–3).
+   - On phone A, in **Settings**, tap **Disable**: the quota reads "0 / 6 packs enabled".
+   - On phone B, with campaign Settings open and no reload, the section reads "This campaign has
+     no content packs enabled." within a few seconds.
+   - The character keeps its pin (Build → Content packs is still checked) and still shows the
+     sickle. Packs still lists 1.0.0.
+
+### Results
+
+| Devices (A / B) | Date | Enable + quota | Auto-install | Icon relay (devtools) | Banner pin | DM View sheet | Live disable |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| _(e.g. Pixel 7a / iPhone 13, Safari)_ | | | | | | | |
+| | | | | | | | |
+
+---
+
 ## 9. Known Phase-4 / backlog items
 
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file
@@ -533,7 +598,9 @@ again, but worth knowing about while doing manual passes:
   over the weapons that have a mastery property, and the Attacks table's Mastery column
   (`attack.mastery` in `play-tab.component.html`) shows that weapon's own SRD mastery property —
   only for an equipped weapon that was picked. With two mastery classes, the count is the larger
-  class count (not the sum), and picks past it are not applied. A legacy free-text mastery
+  class count (not the sum), and picks past it are not applied. Since plan 16 the combine rule is
+  data (`system.multiclass.masteryCount`, `max` in the SRD), and a later class offers only the
+  slots the earlier classes left, never more than its own count. A legacy free-text mastery
   decision from an old character is inert: it shows nothing and does not crash.
 - **Resource/action names depend on the pack providing a resolvable source entity**: play-tab
   resource/action rows call `localizer.name(view.source)` when the `source` entity resolves against

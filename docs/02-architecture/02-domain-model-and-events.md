@@ -111,7 +111,7 @@ generated, e.g. quota notices — none in v1).
 | `item.removed` | O, D | `{instanceId, qty?}` | |
 | `item.equipped` / `item.unequipped` | O | `{instanceId, slot?}` | |
 | `item.attuned` / `item.unattuned` | O | `{instanceId}` | max 3 enforced by UI, not reducer |
-| `item.updated` | O | `{instanceId, name?, notes?, qty?}` | |
+| `item.updated` | O | `{instanceId, itemId?, name?, notes?, qty?}` | `itemId?` (plan 16, additive): the entry's pack item id moves to this one, every other field kept — the rebase's inventory migration (`packages/protocol/src/events/character.ts:188-195`, `packages/engine/src/reduce/handlers/inventory.ts:97-108`). Logs without it replay unchanged |
 | `currency.changed` | O, D | `{cp?, sp?, ep?, gp?, pp?}` | deltas |
 | `rest.taken` | O | `{kind: short \| long, hitDiceSpent?: [...]}` | reducer applies the system's rest rules from the pinned core pack |
 | `inspiration.changed` | O, D | `{value: boolean}` | |
@@ -142,10 +142,16 @@ in this order:
 2. `pack.unpinned {packId}`, one per dropped pin (never the core);
 3. `decision.made {choiceId, selection, context?}`, one per decision whose selection moved to a
    `deprecated.replacedBy` replacement, keeping the original `context`;
-4. `decision.cleared {choiceId}`, one per decision the new pack set invalidates.
+4. `item.updated {instanceId, itemId}` (plan 16), one per held inventory entry whose item the new
+   pack set marks `deprecated.replacedBy` — the inventory analogue of step 3;
+5. `decision.cleared {choiceId}`, one per decision the new pack set invalidates — except a
+   `count-reduced` one (plan 16: the decision now holds more picks than the choice's count). That
+   one is reported but kept; the player trims it afterwards
+   (`packages/engine/src/rebase/plan.ts:64-66`, `:207`).
 
 A plain pin (`propose.pinPack`) is a one-event transaction. Confirming the Build tab's report
-appends the plan exactly. The homebrew fast-forward appends the same events per character with
+appends the plan exactly; so does the campaign sheet banner's "Pin campaign packs" (plan 16). The
+homebrew fast-forward appends the same events per character with
 `CharacterStore.appendTxToStream` (plan 15 task 7). No new event type carries the report:
 replaying the log reproduces the result.
 
@@ -174,7 +180,7 @@ Actor: **D** DM, **M** member (any role), **S** system.
 | `campaign.settings_changed` | D | `{settings}` (full document, see below) |
 | `campaign.join_code_rotated` | D | `{joinCode}` (also updates D1) |
 | `campaign.archived` | D | `{}` |
-| `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}`. The campaign actor keeps only this list in its `packs` meta (for the non-core pack quota). No pack JSON is stored: the DO's `packs` table and `StreamStore.putPack` exist, but nothing writes them yet. The pack relay to members is a later slice (plan 15 owner-flag, doc 07 "Pack assets") |
+| `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}` (bare hex). Since plan 16 the pack JSON is stored on the campaign stream: the DM uploads it first (`PUT /api/campaigns/:id/packs/:packId/:version`), and `pack.enabled` is accepted only when a stored body with that version and sha256 exists. One version per `packId` (a new version is a version change); `pack.disabled` matches by `packId` and deletes the body (`apps/api/src/core/streams/campaign-actor.ts:580-603`, `:892-931`). Members install the enabled packs automatically (doc 03 §Campaign packs, doc 04 "Campaign packs") |
 | `member.joined` / `member.left` / `member.removed` | M / D | `{userId, displayName, role}` |
 | `member.renamed` | M | `{displayName}` |
 | `campaign.character_joined` / `campaign.character_left` | M, D | `{characterId, ownerId, name}` |

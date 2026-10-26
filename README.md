@@ -373,10 +373,99 @@ docs 02, 07 and 09.
   - the container caps are this plan's choice;
   - old core versions are not retained;
   - the campaign pack relay is not built (`pack.enabled@1` carries `{packId, version, sha256}`
-    only);
+    only) — resolved in slice 6;
   - homebrew does not merge across devices;
   - the transliteration table is a convenience;
-  - a rebase migrates decisions, not inventory item ids.
+  - a rebase migrates decisions, not inventory item ids — resolved in slice 6 (`item.updated.itemId`).
+
+### Phase 4 slice 6 — campaign pack relay (complete)
+
+Plan 16 lets a DM enable a third-party content pack for a campaign and have it reach every member's
+device. Sources are the plan-16 task reports (`task-N` below). The full reference is "Campaign packs
+(plan 16)" in `docs/02-architecture/04-content-packs.md` and `03-sync-protocol.md`, plus docs 02,
+07, 08 and 10.
+
+- **The server stores enabled pack JSON** (task 1, ADR-008).
+  - `PUT /api/campaigns/:id/packs/:packId/:version` is DM-only. Auth and the DM check run before
+    the 5 MiB body limit, so no body byte is buffered for anyone else. The route takes canonical
+    JSON only and answers `{sha256}`.
+  - `GET` on the same path serves any member, with an ETag.
+  - `pack.enabled@1` commits only when a stored body with that version and sha256 exists. Otherwise
+    it is rejected with code `invalid` and a message starting `event.packMissing:`.
+  - `welcome.packs` lists the enabled set with each pack's sha256.
+  - Quotas: 6 distinct non-core packs, one version each, and 30 MiB of stored bodies in total.
+  - Both adapters run the round trip in the conformance suite.
+- **Members install automatically** (task 2). A member's device fetches each enabled pack,
+  validates it like a `.hero` bundle pack, installs it and toasts. Removing the pack while the
+  campaign still enables it reinstalls it.
+- **Campaign settings → Content packs** (task 3). The DM sees one row per installed content pack
+  (homebrew excluded), with Enable, Disable and "Update campaign version to Y". It also shows a
+  "{count} / 6 packs enabled" quota. Members see each pack's install status, with Retry.
+- **Pack assets ride the blob relay** (task 4). Every asset of an installed, enabled pack is a
+  prefetch P3 want. Holders announce held pack-asset hashes within the same 512-hash cap. The
+  server never stores the bytes.
+- **Pin from the sheet; the DM sees what the member sees** (task 5).
+  - A linked character's sheet shows a "Pin campaign packs" banner for enabled packs it does not
+    pin. Pin runs `planRebase` and commits `plan.events`, opening the rebase report when a
+    decision would be invalidated or migrated.
+  - The DM's party view derives each member with that member's own pins. A pin the DM's device
+    lacks shows as a warning that lists the missing packs.
+- **Engine carries** (task 6):
+  - `item.updated@1` gains an optional `itemId`, so a rebase migrates inventory items that
+    `deprecated.replacedBy` replaces, not only decisions.
+  - A new `count-reduced` invalid reason is reported but never cleared. The rebase report shows it
+    under "Choices to trim".
+  - `system.multiclass.masteryCount: 'max' | 'sum'` makes the multiclass mastery combine rule data
+    (the SRD says `max`). A later class's mastery pick offers
+    `min(own count, cap − earlier picks)`.
+- **Goldens & perf** (task 7). Two new golden fixtures: campaign-pack-member and mastery-sum-rule.
+  The harness's new `systemPatch` field merges a partial `system` into the core pack, standing for
+  a different core. That brings the suite to **79/79 golden tests** (76 fixtures, one pin test and
+  two harness tests). Every measured derive median is under 0.5 ms
+  (`packages/engine/test/golden/PERF.md`).
+- **e2e** (task 8). `e2e:sync` gained `campaign-packs.spec.ts`:
+  - the DM imports `sample-content.hkpack`, saves Full sheets and enables the pack;
+  - an axe scan of the campaign settings screen;
+  - a member joins, the pack auto-installs, and `/packs` lists it;
+  - the member links a character and pins from the banner;
+  - the pack's weapon (Moonblade Sickle) is added on the member's sheet;
+  - the DM's View sheet shows it, with no missing packs;
+  - the DM disables the pack, and the member's settings follow live while the character keeps
+    its pin.
+
+  `e2e:sync` is **9/9** in one pass, and the offline project stays **31/31**. Shared e2e helpers
+  now live in `apps/web/e2e/helpers/` (`axe.ts`, `packs.ts`, `sheet.ts`).
+
+- **Fixed in this slice.** The DM's party View sheet dialog never opened in a production build.
+  This dated from plan 10: `ForeignCharacterSession` called detached browser timers, which threw
+  `TypeError: Illegal invocation`. Fixed in 7916354, with a unit test.
+- **Gates at close** (tasks 7–8):
+  - pack: 1866 entities / 2,230,339 bytes / 0 diagnostics;
+  - root: 146 files / 2165 tests;
+  - api Node: 25 files / 420 tests;
+  - api Cloudflare: 8 files / 42 tests + 1 skipped;
+  - web: 150 files / 1857 tests;
+  - goldens: 79/79 tests (76 fixtures);
+  - gzip bundle: the gate reports 316.1 / 600 KB, an under-count (see the owner-flags).
+- **Owner-flags:**
+  - the DM cannot push pack updates to members' characters; members update through their own
+    Build tab;
+  - pack assets stay relay-only on the server;
+  - a member cannot keep a campaign's enabled pack off the device without leaving the campaign;
+  - the Build tab's turn-on pins without `planRebase` (latent: re-enabling a pack whose newer
+    version deprecates a held item will not migrate it);
+  - the documented "a pack may not override `system` except via `kind: core`" rule is not
+    enforced;
+  - the bundle-budget gate counts only the first 10 modulepreload links. The real initial bundle
+    measured 348.4 kB in task 3;
+  - the party-sheets default disagrees. The server defaults to `full`; the web treats
+    never-saved settings as "Overview only", so the DM's View sheet stays hidden until the DM
+    saves Full sheets.
+
+**Phase 4 is complete (2026-10-25).** All 12 SRD classes play to 20, with multiclassing, feats,
+magic items, weapon mastery, encumbrance, custom and homebrew packs with update/rebase, and
+campaign packs. The roadmap row in `docs/03-roadmap/phases.md` lists the owner-flags carried into
+later phases.
 
 ## Plans
 
@@ -394,4 +483,5 @@ builder polish — Phase 4 slice 3, above), and
 `2026-10-17-phase-4-slice-4-carry-retirement-and-rule-options.md` (carry retirement and
 per-character rule options — Phase 4 slice 4, above), and
 `2026-10-18-phase-4-slice-5-custom-pack-platform.md` (custom pack platform — Phase 4 slice 5,
-above).
+above), and `2026-10-18-phase-4-slice-6-campaign-pack-relay.md` (campaign pack relay — Phase 4
+slice 6, above, completing Phase 4).

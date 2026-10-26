@@ -80,8 +80,8 @@ stored — the DM can audit if the campaign setting says so).
 | WS message | 128 KB (text), 64 KB + header (binary) | DO |
 | Character stream | 2 MB events, 20,000 events | CharacterStream `meta.bytes_used` |
 | User total | 10 MB across characters; 50 characters | D1 `users.quota_bytes_used`, checked on create and reported at 80 % |
-| Campaign stream | 20 MB events; 12 members; 6 non-core packs × 5 MB | CampaignStream |
-| Pack JSON | 5 MB; 5,000 entities | import + DO |
+| Campaign stream | 20 MB events; 12 members; 6 distinct non-core packs (one version each), each stored body ≤ 5 MiB, ≤ 30 MiB of stored pack bodies in total | CampaignStream. The pack limits are enforced since plan 16: the 6-pack cap on `pack.enabled` (`apps/api/src/core/quotas.ts:121`, `streams/campaign-actor.ts:589-592`); the 5 MiB body limit at `PUT /api/campaigns/:id/packs/:packId/:version`, applied only after auth and the DM check, so no body byte is buffered for anyone else (`quotas.ts:103`, `routes/campaign-packs.ts:85-106`); the 30 MiB total on upload, 409 `quota_exceeded` (`quotas.ts:108`, `campaign-actor.ts:792-797`) |
+| Pack JSON | 5 MB; 5,000 entities | import + DO: `PACK_LIMITS` (`packages/protocol/src/pack/pack.ts:7-9`). The entity cap is in the strict `parsePack` schema (`pack.ts:66`), run on device and at the upload route; the byte cap is the importers' size check and the upload route's body limit |
 | Images | never server-side; device caps per ADR-010 | client |
 
 Freeing space: archive → hard delete (`DELETE /api/characters/:id` with the name typed)

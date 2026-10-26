@@ -15,7 +15,7 @@ apps/api/
     core/                        runtime-agnostic (imports only ./ports and @hk/protocol)
       app.ts                     Hono app factory: createApp(ports) → routes + middleware
       auth/                      register, salt, login, logout, recover, reset, sessions, cookies
-      routes/                    me, characters, campaigns, packs, health, admin (export/import)
+      routes/                    me, characters, campaigns, campaign-packs (PUT/GET a campaign's pack bodies — `routes/campaign-packs.ts`, plan 16), health, admin (export/import)
       streams/
         stream-actor.ts          StreamActor: append pipeline (validate → permission → dedupe → seq → store → fan-out), hello/catch-up, subscriptions
         character-actor.ts       owner/DM checks, campaign notify
@@ -55,8 +55,8 @@ apps/api/
 
 | Port | Methods |
 |------|---------|
-| `StreamHost` | `get(streamId): StreamHandle` where `StreamHandle.append(events, actor)`, `.read(fromSeq, limit)`, `.head()`, `.notify(fromStream, events)`; guarantees one writer per stream at a time |
-| `StreamStore` | `append(batch) → {seq…}`, `read(fromSeq, limit)`, `head()`, `getMeta/setMeta`, `putPack/getPack/listPacks` |
+| `StreamHost` | `get(streamId): StreamHandle` where `StreamHandle.append(events, actor)`, `.read(fromSeq, limit)`, `.head()`, `.notify(fromStream, events)`, and (campaign streams only) `.putPack(id, version, json)` / `.getPack(id)` for the pack-body routes, which reach the same store the actor verifies against (`src/ports/stream.ts:74-77`); guarantees one writer per stream at a time |
+| `StreamStore` | `append(batch) → {seq…}`, `read(fromSeq, limit)`, `head()`, `getMeta/setMeta`, `putPack/getPack/listPacks/deletePack` (`src/ports/stream.ts:157-164`) |
 | `Connections` | `accept(ws, attachment)`, `all()`, `byTag(tag)`, `send(conn, frame)`, `close(conn, code, reason)`, `getAttachment/setAttachment` |
 | `Db` | a Drizzle database instance (sqlite dialect) — both drivers expose the same query API |
 | `RateLimit` | `check(scope, limit, windowMs) → {ok, retryAfterMs}` |
@@ -99,7 +99,12 @@ character events that originated on solo sockets.
 
 ### CampaignActor
 
-`meta`: `dmId`, `settings`, `members`, `characters`, `packs`. Gateway: `append` frames
+`meta`: `dmId`, `settings`, `members`, `characters`, `packs`. `packs` is the enabled set, one
+entry `{packId, version, sha256}` per `packId`: a `pack.enabled` for a new version replaces the
+entry, and `pack.disabled` removes it by `packId` and deletes the stored body
+(`src/core/streams/campaign-actor.ts:106-111`, `:892-931`). Each entry's pack JSON is stored on
+the stream (uploaded through `PUT /api/campaigns/:id/packs/:packId/:version` before
+`pack.enabled` may commit, `:580-603`) and reported in `welcome.packs` (`:940`). Gateway: `append` frames
 whose events target `char:` streams are forwarded via `Rpc` to that character's handle
 with the stamped actor; acks relayed. Blob relay: in-memory `holders: Map<hash,
 Set<connId>>`, one in-flight per requester; binary frames forwarded without parsing
@@ -149,5 +154,11 @@ client-side changes.
 ## Portability tests
 
 `test/conformance/` runs identical scenarios (auth, append/read, permissions, quotas,
-dedupe, transactions, hello/catch-up, blob relay forwarding, rate limits) against both
-adapters in CI. A change that passes on one and fails on the other blocks the merge.
+dedupe, transactions, hello/catch-up, blob relay forwarding, rate limits, the campaign pack
+relay) against both adapters in CI. A change that passes on one and fails on the other blocks
+the merge. Blob relay forwarding (holder announces, the requester's `blob.request` reaches the
+holder as `blob.pull`, the chunk arrives byte for byte) and the campaign pack round trip (DM
+upload, verified `pack.enabled`, member GET and `welcome.packs`, `packMissing`, 7th-pack quota,
+version change, disable deletes the body) are covered since plan 16
+(`test/conformance/scenarios.ts:1259`, `:1333`, listed for both adapters at `:1420-1428`); a
+few scenarios declare a single adapter (`Scenario.adapters`, e.g. presence/bye is Node-only).

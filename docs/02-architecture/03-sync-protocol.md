@@ -54,7 +54,7 @@ tabs receive events via BroadcastChannel.
 | `blob.chunk` (binary) | | forwarded chunk |
 | `blob.unavailable` | `hash` | no holder online |
 | `members` | `[{userId, displayName, role, online}]` | presence snapshot; sent on change, throttled |
-| `notice` | `level, key, params` | localized by the client (`quota.warning`, `pack.updated`) |
+| `notice` | `level, key, params` | localized by the client (`quota.warning`; the `pack.updated` key exists in the schema but is not sent — a campaign's enabled packs travel as events, see §Campaign packs) |
 | `bye` | `reason` | server closes (session expired, removed from campaign) |
 
 ## `bye` triggers (plan-9 Task 9)
@@ -94,6 +94,40 @@ still be — or become again — a campaign member; a removed, non-rejoined owne
 alone. A future client task (plan 10) should surface this: a removed member's character does not
 silently disappear from the DM's tools, and finishing the unlink after a removal is a DM action,
 not an automatic one.
+
+## Campaign packs (plan 16)
+
+A campaign's enabled content packs are campaign-stream events (`pack.enabled@1` /
+`pack.disabled@1 {packId, version, sha256}`); the pack JSON itself never travels over the
+socket. A body can reach 5 MiB while a WS frame is capped at 128 KB
+(`packages/protocol/src/sync/messages.ts:24`), so there is **no pack-fetch WebSocket message**:
+bodies move over two HTTP routes (`apps/api/src/core/routes/campaign-packs.ts`, mounted ahead of
+the campaign routes at `apps/api/src/core/app.ts:51`).
+
+| Route | Who | Semantics |
+|-------|-----|-----------|
+| `PUT /api/campaigns/:id/packs/:packId/:version` | the DM | Auth, then the DM check and path validation, run before any body byte is read; then a 5 MiB body limit (413), strict `parsePack`, id/version must match the URL, and the body must equal its canonical JSON byte for byte (400 otherwise). Stores the exact bytes in the campaign stream's store and answers `{sha256}` (bare hex); 409 `quota_exceeded` past the campaign total (`campaign-packs.ts:91-142`) |
+| `GET /api/campaigns/:id/packs/:packId/:version` | any member | The stored body, byte for byte, with `ETag: "<sha256>"`; a matching `If-None-Match` is a 304; 404 when that id@version is not stored (`campaign-packs.ts:144-159`) |
+
+- **Upload before the event.** The campaign actor accepts `pack.enabled@1` only when the stream
+  stores a body for that `packId` with the event's version, and its sha256 equals the event's
+  (`apps/api/src/core/streams/campaign-actor.ts:580-603`). One version per `packId`: enabling a
+  new version is a version change and replaces the body; `pack.disabled@1` matches by `packId`
+  and deletes the body (`campaign-actor.ts:892-931`).
+- **`packMissing` convention.** The `reject` code set above is a closed enum, so a missing or
+  mismatched body is rejected as code `invalid` with a message starting `event.packMissing:`
+  (`campaign-actor.ts:597-601`) — the same message-prefix convention as `event.txGroupInvalid`.
+  The 7th distinct `packId` is rejected `quota` (`campaign-actor.ts:589-592`).
+- **`welcome.packs`** is `[{id, version, sha256?}]` (`messages.ts:86-90`, `:176`), the campaign
+  stream's currently enabled set (`campaign-actor.ts:940`). The client seeds the campaign
+  projection with it (`apps/web/src/app/shared/services/sync/stream-sync-session.ts:540`,
+  `campaign-projection.ts:99`, `:205`); later `pack.*` events keep it current.
+- **Members install automatically.** For each enabled pack the device does not hold, the client
+  GETs the body, validates it exactly like a `.hero` bundle pack (size, sha256 of the exact bytes
+  against the event, strict parse, conflict rule, `validatePack`) and only then installs it
+  (`apps/web/src/app/shared/services/campaigns/campaign-packs.service.ts:324-340`). Pinning stays
+  the player's choice (a sheet banner offers it). Pack ASSETS ride the blob relay, see
+  `07-images-and-blobs.md` §Pack assets.
 
 ## Ordering and commit rules
 

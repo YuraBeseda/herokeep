@@ -53,7 +53,7 @@ Caps (ADR-010): icon 256² / 64 KB; portrait 1024 long edge / 400 KB; banner 160
 |----------|------|------|
 | 1 | own character's portrait thumb + token; icons of equipped items and prepared spells | immediately on connect |
 | 2 | party tokens; campaign banner | after 1 |
-| 3 | full portrait; remaining own icons | when idle (`requestIdleCallback` or 2 s after 2) |
+| 3 | full portrait; remaining own icons; every asset of the campaign's enabled packs (plan 16: pack icons travel here as a whole, including the "equipped/prepared" ones row 1 names — §Pack assets) | when idle (`requestIdleCallback` or 2 s after 2) |
 | 4 (DM only) | every announced blob in the campaign | idle, continuous (super-peer) |
 
 ## Cache management
@@ -81,13 +81,26 @@ owns them, and removing the pack deletes the asset blobs that no other installed
 (plan 15 task 2). A `.hero` export carries a pinned pack's assets as `assets/<hex>` (plan 15
 task 6).
 
-**Corrected (plan 15 owner-flag):** an earlier version of this section said `pack.enabled`
-carries the pack manifest and the DO stores the pack's JSON. Neither is built. `pack.enabled@1`
-carries only `{packId, version, sha256}` (`packages/protocol/src/events/campaign.ts`). The
-campaign actor records that triple in its meta list and stores no pack JSON
-(`apps/api/src/core/streams/campaign-actor.ts`, the `pack.enabled` case). Relaying a pack's JSON
-and assets from the DM's device to members is a later slice. Until then, every member installs
-the pack on their own device. The DO never stores pack assets (ADR-008).
+**Campaign packs (implemented in plan 16).** `pack.enabled@1` still carries only
+`{packId, version, sha256}` (`packages/protocol/src/events/campaign.ts`); the manifest is not in
+the event. Per ADR-008, the campaign's DO now **stores the pack JSON** of every enabled non-core
+pack, so a member can fetch it without the DM online:
+
+- The DM uploads the canonical JSON with `PUT /api/campaigns/:id/packs/:packId/:version` before
+  appending `pack.enabled@1`. The actor refuses the event unless a stored body with that version
+  and sha256 exists (`apps/api/src/core/streams/campaign-actor.ts:580-603`); members fetch it with
+  `GET` on the same path (`apps/api/src/core/routes/campaign-packs.ts:144-159`). Routes, the
+  `packMissing` convention and `welcome.packs` are in `03-sync-protocol.md` §Campaign packs.
+- Members install the body automatically after validating it like a `.hero` bundle pack, with no
+  assets (`apps/web/src/app/shared/services/campaigns/campaign-packs.service.ts:324-340`).
+- **Pack ASSETS are never stored by the server — relay only.** They ride the blob relay as a P3
+  tier: every asset hash of an enabled pack installed on the device at the enabled version is
+  wanted when its blob is absent (`apps/web/src/app/shared/services/blob-transfer/
+  blob-transfer.service.ts:142-151`, `:517`, `:567`). Holders (the DM's `.hkpack` copy at least)
+  announce held pack-asset hashes in `blob.have` after every held portrait hash, within the same
+  512-hash cap (`blob-transfer.service.ts:41`, `:544-557`). Received bytes are verified and
+  stored `origin: 'peer'`; the cache manager's sweeps keep any hash an installed pack lists (plan
+  15), so a relayed icon is never evicted.
 
 ## Export
 
