@@ -5,7 +5,10 @@
  * - `PUT /api/campaigns/:campaignId/packs/:packId/:version` — the DM only. The body is the pack's
  *   canonical JSON (≤ `CAMPAIGN_PACK_BYTES_MAX`): it must pass the STRICT `parsePack`, name the
  *   URL's id/version, and equal `canonicalJson(parsed)` byte for byte (sorted keys, no whitespace,
- *   every schema default spelled out — the form `pack-tools build` and the web client store). The
+ *   every schema default spelled out — the form `pack-tools build` and the web client store) and
+ *   be `kind: content` (the only kind a member installs). 409 `quota_exceeded` when the campaign
+ *   already has the maximum of distinct enabled packs and this is a new `packId`, or when the
+ *   body would push the campaign's stored total past its cap (`CampaignActor.putPackBody`). The
  *   answer is `{ sha256 }`, bare hex over the exact received bytes: the value a later
  *   `pack.enabled@1` must carry (`CampaignActor.refusePackEnabled` checks it against this body).
  * - `GET` on the same path — any member. `ETag: "<sha256>"`; a matching `If-None-Match` is a 304.
@@ -131,13 +134,17 @@ export function createCampaignPackRoutes(deps: CampaignsDeps) {
     if (parsed.pack.id !== packId || parsed.pack.version !== version) {
       throw badRequest('Pack body id/version does not match the URL');
     }
+    // [final fix wave, F3] The member-side rule (`parseExternalPack` in the web client): only a
+    // `content` pack can be installed from a campaign, so no other kind is stored.
+    if (parsed.pack.kind !== 'content') throw badRequest('Only content packs can be enabled for a campaign');
     if (canonicalJson(parsed.pack) !== text) {
       throw badRequest('Pack body must be canonical JSON (sorted keys, no whitespace, defaults spelled out)');
     }
 
     const sha256 = await sha256Hex(bytes);
     const outcome = await deps.streamHost.get(streamIdFor(campaignId)).putPack(packId, version, text);
-    if (outcome === 'quota_exceeded') throw quotaExceeded('Campaign pack storage is full');
+    if (outcome === 'quota_exceeded')
+      throw quotaExceeded('Campaign pack limit reached (distinct packs or total storage)');
     return c.json({ sha256 }, 200);
   });
 

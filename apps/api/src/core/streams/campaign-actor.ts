@@ -782,14 +782,25 @@ export class CampaignActor extends StreamActor {
    * `core/routes/campaign-packs.ts`, reaches this through `StreamHandle.putPack` — the SAME store
    * instance `refusePackEnabled` reads). The route already did the DM check, the strict
    * `parsePack`, the canonical-form check and the per-body `CAMPAIGN_PACK_BYTES_MAX` bound; this
-   * enforces only the campaign-wide `CAMPAIGN_PACK_BYTES_TOTAL_MAX` (bytes of every stored body,
-   * the one being REPLACED — same `packId`, one version per packId — excluded). `json` is stored
-   * as the exact text received; the event's `sha256` is verified against it later.
+   * enforces the campaign-wide limits, both answered `'quota_exceeded'` with nothing stored:
    *
-   * Reads every stored body to total them (≤ 6 × 5 MiB by construction) — acceptable at this
-   * scale; a per-row `bytes` column would avoid it if the caps ever grow.
+   *   (a) [final fix wave, F4] the distinct-pack count — a `packId` that is not already enabled is
+   *       refused once `CAMPAIGN_NON_CORE_PACK_MAX` distinct packs are enabled, the same rule
+   *       `refusePackEnabled` (a) applies to its `pack.enabled`. Without it the body would be
+   *       stored, its `pack.enabled` refused, and the bytes kept in the total with no way for the
+   *       DM to free them (`pack.disabled` needs an enabled pack).
+   *   (b) `CAMPAIGN_PACK_BYTES_TOTAL_MAX` (bytes of every stored body, the one being REPLACED —
+   *       same `packId`, one version per packId — excluded).
+   *
+   * `json` is stored as the exact text received; the event's `sha256` is verified against it
+   * later. Reads every stored body to total them (≤ 6 × 5 MiB by construction) — acceptable at
+   * this scale; the Cloudflare store keeps a per-pack `bytes` column that a port method could
+   * expose if the caps ever grow.
    */
   async putPackBody(packId: string, version: string, json: string): Promise<PackPutOutcome> {
+    const enabledIds = new Set((await this.getCampaignMeta()).packs.map((p) => p.packId));
+    if (!enabledIds.has(packId) && enabledIds.size >= quotasModule.CAMPAIGN_NON_CORE_PACK_MAX) return 'quota_exceeded';
+
     const encoder = new TextEncoder();
     const others = (await this.store.listPacks()).filter((p) => p.id !== packId);
     let total = encoder.encode(json).length;

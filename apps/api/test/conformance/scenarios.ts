@@ -1297,8 +1297,16 @@ async function campaignPackRoundTripScenario(driver: ConformanceDriver): Promise
     const outcome = await appendAndWait(dmStream, [packEnabledEvent(streamId, `relay-pack-${i}`, '1.0.0', sha)]);
     expect(outcome.rejected, `distinct pack #${i + 1} of 6`).toEqual([]);
   }
-  const sha6 = await putPackHttp(driver, dm, campaignId, 'relay-pack-6', '1.0.0');
-  const seventh = await appendAndWait(dmStream, [packEnabledEvent(streamId, 'relay-pack-6', '1.0.0', sha6)]);
+  // [final fix wave, F4] The 7th distinct body is refused at upload, so it never sits in storage;
+  // a `pack.enabled` for it is still refused `quota` (the count check runs first).
+  const seventhPut = await driver.fetch(`/api/campaigns/${campaignId}/packs/relay-pack-6/1.0.0`, {
+    method: 'PUT',
+    headers: { ...XRW, cookie: dm.cookie },
+    body: conformancePackJson('relay-pack-6', '1.0.0'),
+  });
+  expect(seventhPut.status, 'the 7th distinct pack body is refused at upload').toBe(409);
+  expect(((await seventhPut.json()) as { error: string }).error).toBe('quota_exceeded');
+  const seventh = await appendAndWait(dmStream, [packEnabledEvent(streamId, 'relay-pack-6', '1.0.0', '0'.repeat(64))]);
   expect(seventh.acked, 'the 7th distinct non-core pack is never acked').toEqual([]);
   expect(seventh.rejected[0]?.code).toBe('quota');
 

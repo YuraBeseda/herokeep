@@ -9,12 +9,18 @@
  */
 import type Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Event } from '@hk/protocol';
 import { NodeStreamHost } from '../../../src/adapters/node/stream-host.ts';
 import { openStreamsDb } from '../../../src/adapters/node/store.sqlite-file.ts';
 import { createApp } from '../../../src/core/app.ts';
 import { sha256Hex } from '../../../src/core/crypto.ts';
+import { findCampaignById } from '../../../src/core/db/queries.ts';
 import { uuidv7 } from '../../../src/core/ids.ts';
-import { CAMPAIGN_PACK_BYTES_MAX, CAMPAIGN_PACK_BYTES_TOTAL_MAX } from '../../../src/core/quotas.ts';
+import {
+  CAMPAIGN_NON_CORE_PACK_MAX,
+  CAMPAIGN_PACK_BYTES_MAX,
+  CAMPAIGN_PACK_BYTES_TOTAL_MAX,
+} from '../../../src/core/quotas.ts';
 import type { StaticAssets } from '../../../src/ports/infra.ts';
 import { createTestConfig, InMemoryRateLimit } from '../../helpers/fake-ports.ts';
 import { openTestDb, type TestDbHandle } from '../../helpers/test-db.ts';
@@ -25,16 +31,18 @@ const fakeStaticAssets: StaticAssets = { fetch: () => Promise.resolve(null) };
 
 let handle: TestDbHandle;
 let streamsDb: Database.Database;
+let streamHost: NodeStreamHost;
 let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
   handle = openTestDb();
   streamsDb = openStreamsDb(':memory:');
+  streamHost = new NodeStreamHost(streamsDb);
   app = createApp({
     db: handle.db,
     config: createTestConfig(),
     rateLimit: new InMemoryRateLimit(),
-    streamHost: new NodeStreamHost(streamsDb),
+    streamHost,
     wsUpgrade: { upgrade: () => Promise.resolve(new Response(null, { status: 200 })) },
     staticAssets: fakeStaticAssets,
   });
@@ -199,6 +207,27 @@ function putPackStream(
   return app.request(request);
 }
 
+/** Uploads `packId@version` as the DM, then appends `pack.enabled` on the campaign stream as the
+ * DM (the same stream handle the route stores bodies through). */
+async function enablePack(dm: string, campaignId: string, packId: string, version: string): Promise<void> {
+  const put = await putPack(dm, campaignId, packId, version, packJson(packId, version));
+  expect(put.status, `PUT ${packId}@${version}`).toBe(200);
+  const { sha256 } = (await put.json()) as { sha256: string };
+  const dmId = (await findCampaignById(handle.db, campaignId))?.dmId ?? '';
+  const streamId = `camp:${campaignId}`;
+  const event: Event = {
+    id: uuidv7(),
+    stream: streamId,
+    ts: '2026-10-25T12:00:00.000Z',
+    actor: { userId: dmId, deviceId: 'test-device', role: 'dm' },
+    type: 'pack.enabled',
+    v: 1,
+    payload: { packId, version, sha256 },
+  };
+  const result = await streamHost.get(streamId).append([event], { userId: dmId, role: 'dm' });
+  expect(result.lastSeq, `pack.enabled ${packId}@${version} committed`).toBeGreaterThan(0);
+}
+
 interface Fixture {
   readonly dm: string;
   readonly member: string;
@@ -360,6 +389,45 @@ describe('PUT /api/campaigns/:campaignId/packs/:packId/:version', () => {
     const replace = await putPack(dm, campaignId, 'pack-0', '2.0.0', paddedPackJson('pack-0', '2.0.0', perPack));
     expect(replace.status, 'a new version of a stored packId replaces its old body').toBe(200);
     expect((await getPack(dm, campaignId, 'pack-0', '1.0.0')).status, 'one version per packId').toBe(404);
+  });
+
+  // [final fix wave, F3] Members install only `kind: content` packs (`parseExternalPack`), so a
+  // stored body of any other kind could never be installed.
+  it('answers 400 bad_request for a schema-valid pack whose kind is not content, and stores nothing', async () => {
+    const { dm, campaignId } = await seed();
+    const cases: readonly [string, string][] = [
+      ['theme', packJson('other-kind', '1.0.0', { kind: 'theme' })],
+      [
+        'translation',
+        packJson('other-kind', '1.0.0', {
+          kind: 'translation',
+          locale: 'ru',
+          translates: { id: 'srd-5e-2024', range: '^1.0.0' },
+          strings: {},
+        }),
+      ],
+    ];
+    for (const [label, body] of cases) {
+      const res = await putPack(dm, campaignId, 'other-kind', '1.0.0', body);
+      expect(res.status, label).toBe(400);
+      expect(((await res.json()) as { error: string }).error, label).toBe('bad_request');
+    }
+    expect((await getPack(dm, campaignId, 'other-kind', '1.0.0')).status).toBe(404);
+  });
+
+  // [final fix wave, F4] A body whose `pack.enabled` would be refused `quota` is never stored, so
+  // it cannot sit in the 30 MiB total with no way for the DM to free it.
+  it(`refuses a NEW packId once ${CAMPAIGN_NON_CORE_PACK_MAX} distinct packs are enabled (409 quota_exceeded); a new version of an enabled one is accepted`, async () => {
+    const { dm, campaignId } = await seed();
+    for (let i = 0; i < CAMPAIGN_NON_CORE_PACK_MAX; i += 1) await enablePack(dm, campaignId, `pack-${i}`, '1.0.0');
+
+    const seventh = await putPack(dm, campaignId, 'one-too-many', '1.0.0', packJson('one-too-many', '1.0.0'));
+    expect(seventh.status).toBe(409);
+    expect(((await seventh.json()) as { error: string }).error).toBe('quota_exceeded');
+    expect((await getPack(dm, campaignId, 'one-too-many', '1.0.0')).status, 'nothing stored').toBe(404);
+
+    const versionChange = await putPack(dm, campaignId, 'pack-0', '2.0.0', packJson('pack-0', '2.0.0'));
+    expect(versionChange.status, 'an enabled packId may still change version').toBe(200);
   });
 });
 

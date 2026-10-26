@@ -767,6 +767,19 @@ describe('pack bodies: pack.enabled verification, distinct-id quota, disable cle
       json: big('y'),
     });
   });
+
+  it('[final fix wave, F4] putPackBody refuses a NEW packId once the distinct-pack cap is enabled, but stores a new version of an enabled one', async () => {
+    await system.actor.append([makeCreated()], dmActor());
+    for (let i = 0; i < CAMPAIGN_NON_CORE_PACK_MAX; i += 1) {
+      const sha256 = await storePackBody(system.store, `homebrew-${i}`, '1.0.0');
+      const outcome = await system.actor.append([packEnabled(`homebrew-${i}`, '1.0.0', sha256)], dmActor());
+      expect(outcome.rejected, `pack #${i + 1} within the cap`).toEqual([]);
+    }
+
+    expect(await system.actor.putPackBody('one-too-many', '1.0.0', '{"id":"one-too-many"}')).toBe('quota_exceeded');
+    expect(await system.store.getPack('one-too-many'), 'nothing stored').toBeUndefined();
+    expect(await system.actor.putPackBody('homebrew-0', '2.0.0', '{"id":"homebrew-0","v":2}')).toBe('stored');
+  });
 });
 
 describe('read-visibility filtering (fan-out)', () => {
