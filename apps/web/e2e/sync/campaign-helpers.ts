@@ -431,3 +431,20 @@ export async function setEditOutsideSession(
   // actually proves the save round-tripped, not just that the button re-enabled.
   await expect(chip).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
 }
+
+/** Sets `visibility.partySheets` via the settings chip row and saves (same contract as
+ * `setEditOutsideSession`). `'full'` is what gates the DM's "View sheet" drill-in on party cards
+ * (`PartyTabComponent.canDrillIn`); a campaign whose settings were never saved reads as
+ * `'overview'`. */
+export async function setPartySheets(
+  page: Page,
+  value: 'none' | 'overview' | 'full',
+): Promise<void> {
+  const label =
+    value === 'none' ? 'Hidden' : value === 'overview' ? 'Overview only' : 'Full sheets';
+  const field = page.locator('.campaign-settings__field').filter({ hasText: 'Party sheets' });
+  const chip = field.getByRole('button', { name: label, exact: true });
+  await chip.click();
+  await page.locator('.campaign-settings__save').click();
+  await expect(chip).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+}

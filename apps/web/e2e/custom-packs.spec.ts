@@ -9,6 +9,8 @@ import {
   pickGamingSet,
   pickSkills,
 } from './helpers/create-fighter';
+import { importPack } from './helpers/packs';
+import { addFromLibrary, openTab } from './helpers/sheet';
 
 /**
  * Plan 15 (Phase 4 slice 5) task 9: the custom pack platform end to end, offline, against the real
@@ -58,17 +60,6 @@ async function pickFightingStyleAndMasteries(page: Page): Promise<void> {
   }
 }
 
-async function importPack(page: Page, file: string): Promise<Locator> {
-  await page.goto('/packs');
-  await expect(page.locator('.packs-list')).toBeVisible();
-  // `setInputFiles` on the hidden input, never a click on the visible Import button (that would
-  // pop a native picker headless Chromium cannot drive) — same as `export-import.spec.ts`.
-  await page.locator('.packs-list__import-input').setInputFiles(file);
-  const dialog = page.locator('.pack-trust-dialog');
-  await expect(dialog).toBeVisible();
-  return dialog;
-}
-
 function speedTile(page: Page): Locator {
   return page
     .locator('.play-tab hk-stat-tile', { hasText: 'Speed' })
@@ -79,25 +70,10 @@ function attackRow(page: Page, weapon: string): Locator {
   return page.locator('.play-tab__attacks tbody tr', { hasText: weapon });
 }
 
-/** The Play tab's "Add from library" dialog: search, then pick. Picking closes the dialog. */
-async function addFromLibrary(page: Page, search: string, item: string): Promise<void> {
-  await page.getByRole('button', { name: 'Add from library', exact: true }).click();
-  const dialog = page.locator('hk-dialog', { has: page.locator('.add-item-dialog__title') });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('searchbox').fill(search);
-  await dialog.getByRole('button', { name: item, exact: true }).click();
-  await expect(page.locator('.add-item-dialog__title')).toHaveCount(0);
-}
-
 async function equip(page: Page, item: string): Promise<void> {
   const row = page.locator('.play-tab__inventory-item', { hasText: item });
   await row.getByRole('button', { name: 'Equip', exact: true }).click();
   await expect(row.getByRole('button', { name: 'Unequip', exact: true })).toBeVisible();
-}
-
-async function openTab(page: Page, tab: 'Play' | 'Build' | 'Timeline'): Promise<void> {
-  await page.getByRole('tab', { name: tab, exact: true }).click();
-  await expect(page.locator(`.${tab.toLowerCase()}-tab`)).toBeVisible();
 }
 
 async function removeInstalledPack(page: Page, version: string): Promise<void> {
