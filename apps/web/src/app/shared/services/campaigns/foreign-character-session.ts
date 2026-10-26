@@ -227,12 +227,15 @@ export class ForeignCharacterSession {
     this.packStore = options.packStore;
     this.engineFacade = options.engineFacade;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.setTimeoutFn = options.setTimeoutFn ?? setTimeout;
-    this.clearTimeoutFn = options.clearTimeoutFn ?? clearTimeout;
+    // Each default timer is wrapped, never stored bare: `this.setTimeoutFn(...)` calls it as a
+    // method of the session, and a browser refuses its own timers with any receiver but the
+    // global ("Illegal invocation"). Node does not check, which is why unit tests never caught it.
+    this.setTimeoutFn = options.setTimeoutFn ?? ((cb, ms) => setTimeout(cb, ms));
+    this.clearTimeoutFn = options.clearTimeoutFn ?? ((handle) => clearTimeout(handle));
     this.campaignEvents = options.campaignEvents;
     this.overridesPollMs = options.overridesPollMs ?? DEFAULT_OVERRIDES_POLL_MS;
-    this.setIntervalFn = options.setIntervalFn ?? setInterval;
-    this.clearIntervalFn = options.clearIntervalFn ?? clearInterval;
+    this.setIntervalFn = options.setIntervalFn ?? ((cb, ms) => setInterval(cb, ms));
+    this.clearIntervalFn = options.clearIntervalFn ?? ((handle) => clearInterval(handle));
   }
 
   /** Registers this session's foreign-events consumer and sends the initial `subscribe` (no

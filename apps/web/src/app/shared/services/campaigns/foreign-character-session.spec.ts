@@ -376,6 +376,55 @@ describe('ForeignCharacterSession', () => {
     expect(sync.unsubscribeCalls).toHaveLength(1);
   });
 
+  // Plan 16 Task 8 follow-up: a browser throws `TypeError: Illegal invocation` when its own timer
+  // functions run with any receiver other than the global — e.g. stored on the session and called
+  // as `this.setTimeoutFn(...)`. Node does not check, so these stubs do it the way a browser does.
+  it('the DEFAULT timers run with the global receiver (no browser "Illegal invocation")', async () => {
+    const streamId = await seedFighter('Ivan');
+    const real = { setTimeout, clearTimeout, setInterval, clearInterval };
+    const calls: string[] = [];
+    function checkReceiver(receiver: unknown, name: string): void {
+      if (receiver !== undefined && receiver !== globalThis) {
+        throw new TypeError(`Illegal invocation (${name})`);
+      }
+      calls.push(name);
+    }
+    vi.stubGlobal('setTimeout', function (this: unknown, cb: () => void, ms?: number) {
+      checkReceiver(this, 'setTimeout');
+      return real.setTimeout(cb, ms);
+    });
+    vi.stubGlobal('clearTimeout', function (this: unknown, handle?: ReturnType<typeof setTimeout>) {
+      checkReceiver(this, 'clearTimeout');
+      real.clearTimeout(handle);
+    });
+    vi.stubGlobal('setInterval', function (this: unknown, cb: () => void, ms?: number) {
+      checkReceiver(this, 'setInterval');
+      return real.setInterval(cb, ms);
+    });
+    vi.stubGlobal('clearInterval', function (this: unknown, h?: ReturnType<typeof setInterval>) {
+      checkReceiver(this, 'clearInterval');
+      real.clearInterval(h);
+    });
+
+    try {
+      // No timer options at all: the session's own defaults (arm timeout + overrides poll).
+      const session = new ForeignCharacterSession({
+        campaignId,
+        characterId: bareCharacterId(streamId),
+        sync,
+        packStore,
+        engineFacade,
+        campaignEvents: { byStream: () => Promise.resolve([]) },
+      });
+      expect(() => session.start()).not.toThrow();
+      expect(() => session.close()).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(calls).toEqual(['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval']);
+  });
+
   it('pack mismatch: a locally-loaded core pack whose version disagrees with the character\'s pinned version -> status "error", no crash', async () => {
     const streamId = await seedFighter('Ivan');
     const events = await TestBed.inject(EventsRepository).byStream(streamId);
