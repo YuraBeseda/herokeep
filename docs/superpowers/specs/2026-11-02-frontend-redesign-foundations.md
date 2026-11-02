@@ -94,7 +94,7 @@ Create → Lobby (code, copy link, QR, rotate code, members with remove) → Par
 
 - **Set:** game-icons.net (CC BY 3.0, authors credited on the About screen), one style, inlined as an SVG sprite per route group. Custom ornaments (seals, satchel, strap, frames) are drawn by us.
 - **The hint rule:** every icon-only control and every meaning-bearing glyph has `aria-label` and a tooltip (hover/focus, 300 ms) or long-press hint (touch, 400 ms). No inline legends anywhere.
-- **Icon changes from concept A:** concentration → an eye glyph (`third-eye`, violet) with the hint "Concentrating on Bless, round 3"; spell slots → wax seals embossed with the level numeral (I, II, III…) with the hint "Spell slot, level 1 — 3 of 4 left"; javelin → a thrown spear glyph (`thrown-spear` or `spear-feather`), and in general weapons use weapon glyphs, never action glyphs.
+- **Icon changes from concept A:** concentration keeps the original orb glyph (`concentration-orb`, violet; the owner tried an eye on 2026-11-02 and preferred the orb) with the hint "Concentrating on Bless, round 3"; spell slots → wax seals embossed with the level numeral (I, II, III…) with the hint "Spell slot, level 1 — 3 of 4 left"; javelin → a thrown spear glyph (`thrown-spear`), and in general weapons use weapon glyphs, never action glyphs. Individual icons are tuned in the final pass; an in-app icon picker is a Later idea.
 - **Core vocabulary (icon → hint):** home `house`; heroes `person`; campaigns `three-friends`; library `open-book`; packs `chest`; settings `cog`; account `hood`; damage `broken-heart`; heal `healing`; temp HP `heart-armor`; roll `dice-twenty-faces-twenty`; short rest `campfire`; long rest `night-sleep`; level up `upgrade`; XP `laurels`; inspiration `inspiration`; concentration `third-eye`; condition `skull`; add `plus`; remove `minus`; edit `quill`; notes `scroll-unfurled`; export `share`; import `knapsack`; search `magnifying-glass`; filter `funnel`; pin `pin`; lock `padlock`; details `info`; equip `gauntlet`; unequip `gauntlet` (outlined state); attune `gem-pendant`; use `hand-ok`; spend `coins`; cast `fire-spell-cast`; prepare `spell-book`; AC `shield`; HP `heart`; speed `running-shoe`; initiative `stopwatch`; proficiency `medal`; save `checked-shield`; disadvantage `broken-arrow`; advantage `arrow-cluster`; coins `two-coins`; weight `weight`; bag `swap-bag`; attacks `crossed-swords`; spells `spell-book`; features `laurel-crown`; timeline `hourglass`; build `anvil`; play `crossed-swords`; DM `crown`; session `candle-flame`; join `entry-door`; leave `exit-door`; QR `treasure-map`; theme `sun`/`moon`; language `conversation`; abilities: STR `muscle-up`, DEX `acrobatic`, CON `heart-inside`, INT `brain`, WIS `owl`, CHA `charm`. Classes keep the existing sprite set (barbarian, lyre, holy-symbol, oak-leaf, crossed-swords, fist, templar-shield, bowman, hood, fire-spell-cast, pentacle, wizard-staff).
 
 ## 7. Components (the library the design system documents)
@@ -109,7 +109,9 @@ Each component has states (hover, focus, active, disabled with reason, loading, 
 
 ## 8. Conditions with duration (owner fix 3)
 
-A condition chip shows icon, name and a duration badge: "3 rounds", "1 min", "until short rest", "until long rest", or no badge when indefinite. Hover/long-press shows the full hint ("Poisoned, 3 rounds left, from Giant Spider"). Tapping the chip expands it: −/+ on rounds, "End" button, "Edit". The add-condition sheet asks: condition, level (when level-bearing, capped by the pack's levels), duration type and amount, optional source note. Users decrement manually. A nice-to-have for the table: an "Advance round" button in the Conditions leaf header that decrements every round-based duration by one (flagged: it needs an event; next agent decides).
+A condition chip shows icon, name and a duration badge: "3 rounds", "1 min", "until short rest", "until long rest", or no badge when indefinite. Hover/long-press shows the full hint ("Poisoned, 3 rounds left, from Giant Spider"). Tapping the chip expands it: −/+ on rounds, "End" button, "Edit". The add-condition sheet asks: condition, level (when level-bearing, capped by the pack's levels), duration type and amount, optional source note.
+
+**Round advance (owner decision 2026-11-02): in, DM-side.** In a campaign the DM has an "Advance round" control on the Party tab (and on the Table tab's session strip) that decrements every round-based duration of every party member by one; players see their chips update. A campaign house rule "Players manage their own conditions" (default on) lets a player end or edit their own conditions, for example after drinking a potion; when the DM turns it off, only the DM can end or edit conditions on linked heroes, and the player's chips show a lock hint "Managed by your DM". A solo hero (not linked) always has both the chip controls and its own "Advance round". This needs campaign-level events and a house-rule field; the Stage B rewrite records it as a carry for the engine/protocol, not a presentation-only change.
 
 ## 9. Features by source (owner fix 4)
 
@@ -119,12 +121,16 @@ The Features leaf lists everything granted automatically, grouped by source in t
 
 Desktop: a "Continue" leaf (last opened hero: portrait, name, class and level, HP strap, campaign chip, Open button) and, when the hero is in a campaign with a live session, a "Tonight" note. Then a Heroes row (cards: portrait, name, class/level, HP, campaign), a Campaigns row (cards: name, role, members, session state), and a quick-actions strap: New hero, Join by code, Library, Import. Phone: the same, stacked. First run: the Continue leaf becomes an invitation with New hero and Join.
 
-## 11. Open calls for the owner (do not block the build)
+## 11. Owner calls (answered 2026-11-02)
 
-1. Phone fourth tab named "Hero" (abilities, skills, features) instead of "Features" — accept or rename.
-2. Class colours: tokens exist; used only to tint class icons, off by default — keep off, or on.
-3. "Advance round" button for condition durations — in, out, or Later.
-4. The roll log and notes as drawers on the sheet (not inline sections) — accept.
+1. Phone fourth tab named "Hero" (abilities, saves, skills, proficiencies, features) — **accepted**.
+2. Class colours: tokens exist, used only to tint class icons — **off for now**.
+3. "Advance round" — **in, DM-side**, with the "Players manage their own conditions" house rule (see §8).
+4. Roll log and notes as drawers on the sheet — **provisionally yes**; the owner decides on the drawer designs in the screens phase.
+
+## 11a. Later ideas (kept light; a separate board closes Stage A)
+
+Companions and familiars with mini-sheets; Druid Wild Shape switcher; DM encounter board (enemy HP, initiative, conditions; UI only, last priority); DM session screen with quick effects; loot distribution and coin split; session journal with NPC tags; quest tracker; DM shop; level-up preview; death-save screen; party inventory; DM handouts over the image relay; NPC roster; whisper to DM; printable sheet; 3D dice; an in-app icon picker so the owner can swap any icon without code; other-TTRPG theme packs (space, Call of Cthulhu).
 
 ## 12. What the builder gets after approval
 
