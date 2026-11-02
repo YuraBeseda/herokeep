@@ -2,7 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Stage A runs as a design exercise (Claude Design artifacts via the Artifact tool, `quickstart` with `intent: "design"`), gated on explicit OWNER APPROVAL; Stage B then runs with superpowers:subagent-driven-development task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-10-18 — NOT STARTED (owner directive: loop paused after plan 16 was written; this plan was added at the owner's request as the first Phase 5 plan). Stage A may start before or in parallel with plan 16 since it touches no code; Stage B starts only after the owner approves the Stage A designs.**
+**STATUS: STAGE A IN PROGRESS since 2026-11-02 (owner: "Start plan 17"; Stage A runs as an interactive brainstorm with owner checkpoints, not under the zero-questions loop). Stage B starts only after the GATE line below exists.**
+
+**Stage A progress (2026-11-02):**
+- Owner brief captured (batched questions, 18 answers): game-UI level 4.5/5 with textures; desktop → tablet → phone priority; icon-first with hints; screens may be regrouped; "Later" ideas kept light; the DM encounter board is UI-only and last priority.
+- A1 UX audit DONE: 111 screen states × en/uk × 1280/390 captured against the production build with the e2e sync setup; `inventory.md` (10 worst defects, cross-cutting DOM measurements, per-screen findings) and `actions.md` (263 controls with i18n keys) — kept in the session scratchpad `audit/`, summarised in the foundations spec and in the Stage B task rewrite at the gate.
+- A3 visual direction DECIDED: six genuinely different concepts (A Tavern Table, B Illuminated Codex, C Arcane HUD, D Woodcut Chapbook, E Pixel Tavern, F Card Table) were built on the same two pages (desktop Play sheet in en, phone Combat tab in uk) in the canvas "Herokeep UI concepts" (https://claude.ai/artifact/E4qnyAx7vou6m9xSiBbD1Y); **owner chose A** with four fixes (hover-hint rule instead of legends; eye glyph for concentration, level-numeral wax seals for spell slots, weapon glyphs for weapons; condition durations; features grouped by source). B–F were removed from the canvas.
+- A2 + A5 CHECKPOINT 2 delivered for review: foundations spec `docs/superpowers/specs/2026-11-02-frontend-redesign-foundations.md` (app map, navigation by device, Back/Next/Cancel semantics, the three-zone action strap, wizard and level-up flows, themes tavern/scroll/plain, icon vocabulary and the hint rule, component inventory, condition duration, features by source, home; four open calls in §11); canvas boards: A v2 (fixes applied), app map and navigation model, action-strap contract, home desktop/phone, phone drawer, tablet sheet; the design system artifact "Herokeep" (https://claude.ai/artifact/NQqWVahejkKzMnQV34PRWy: `tokens.json` with 141 colour tokens across tavern/scroll/plain, Forum + Alegreya type scale, spacing/radius/shadow/decoration/duration families with the current `ui-tokens` names kept as aliases; 37 components with guidelines and live previews; the icon vocabulary with its hint text; 561 contrast pairs checked).
+- A4 (every screen desktop → tablet/phone) and the "Later" ideas board follow checkpoint 2 approval.
 
 **Goal:** Replace the current "testing UI" with a complete, coherent frontend: redesigned information architecture and navigation, a compact game-like fantasy visual theme with textures, icon-first controls with hover hints so the UI works equally well in en/ru/uk, a real mobile version, verified text fit in every locale, and the accumulated UX defects fixed (buttons that move between pages, Back/Next landing on wrong pages, descriptions that do not show, the poor character-creation flow) — designed first in Claude Design and moved to code only after the owner's approval.
 
@@ -51,9 +58,9 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 
 ### Task A1: UX audit and defect catalogue
 
-- [ ] Step 1: Inventory every route/screen/dialog (from `app.routes.ts` and the views folders) with a screenshot at desktop and 390 px in en and uk (Playwright script, scratch — not committed).
-- [ ] Step 2: Catalogue defects with reproduction paths: moving buttons, Back/Next misroutes (incl. the plan-13 wizard step-order history), descriptions not shown, text overflow per locale, mobile breakage, discoverability gaps (gated options, pack features), a11y findings from the existing axe runs and the manual checklist.
-- [ ] Step 3: Publish the audit document; owner review.
+- [x] Step 1: Inventory every route/screen/dialog (from `app.routes.ts` and the views folders) with a screenshot at desktop and 390 px in en and uk (Playwright script, scratch — not committed). (2026-11-02: 111 screen states, 207 captures.)
+- [x] Step 2: Catalogue defects with reproduction paths: moving buttons, Back/Next misroutes (incl. the plan-13 wizard step-order history), descriptions not shown, text overflow per locale, mobile breakage, discoverability gaps (gated options, pack features), a11y findings from the existing axe runs and the manual checklist. (2026-11-02: `audit/inventory.md`.)
+- [x] Step 3: Publish the audit document; owner review. (Summarised to the owner 2026-11-02; the owner had already reported the UI as unusable — overlapping buttons, hidden text, no room for information — which the audit confirmed in detail.)
 
 ### Task A2: Information architecture and navigation model
 
@@ -62,8 +69,8 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 
 ### Task A3: Visual direction and token system
 
-- [ ] Step 1: Two or three visual directions (compact fantasy: parchment, arcane, dark-slate) as Claude Design boards: palette, textures, typography (Latin + Cyrillic), iconography style, density presets, motion principles; contrast tables per direction.
-- [ ] Step 2: Owner picks the direction and theme set; publish the token specification (names, scales, semantic roles) mapped onto `packages/ui-tokens`.
+- [x] Step 1: Two or three visual directions (compact fantasy: parchment, arcane, dark-slate) as Claude Design boards: palette, textures, typography (Latin + Cyrillic), iconography style, density presets, motion principles; contrast tables per direction. (2026-11-02: six directions A–F, each a full desktop sheet + uk phone board; Cyrillic coverage of every candidate font verified against Google Fonts the same day.)
+- [x] Step 2: Owner picks the direction and theme set; publish the token specification (names, scales, semantic roles) mapped onto `packages/ui-tokens`. (2026-11-02: A "Tavern Table" chosen; themes tavern / scroll / plain; token spec = the "Herokeep" design system artifact's `tokens.json`, pending owner review at checkpoint 2.)
 
 ### Task A4: Screen designs (desktop + mobile, longest-string text fit)
 
