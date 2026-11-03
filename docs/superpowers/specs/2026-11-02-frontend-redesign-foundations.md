@@ -113,6 +113,12 @@ A condition chip shows icon, name and a duration badge: "3 rounds", "1 min", "un
 
 **Round advance (owner decision 2026-11-02): in, DM-side.** In a campaign the DM has an "Advance round" control on the Party tab (and on the Table tab's session strip) that decrements every round-based duration of every party member by one; players see their chips update. A campaign house rule "Players manage their own conditions" (default on) lets a player end or edit their own conditions, for example after drinking a potion; when the DM turns it off, only the DM can end or edit conditions on linked heroes, and the player's chips show a lock hint "Managed by your DM". A solo hero (not linked) always has both the chip controls and its own "Advance round". This needs campaign-level events and a house-rule field; the Stage B rewrite records it as a carry for the engine/protocol, not a presentation-only change.
 
+## 8a. Features that grant a choice show their options (owner comment, 2026-11-03)
+
+Wherever a feature's text says "choose" (Weapon Mastery, Fighting Style, subclass, Channel Divinity options, Ability Score Improvement or feat, expertise, prepared spells), the feature carries a brass "N options" chip after its name. Hover, focus or long-press opens a parchment popover listing the options by name, each a link into the library, with a "See all in library" footer link that opens the library filtered to those entries. Applies to the library's class entries, the class picker's drawer, the description drawer and the Build tab alike; the count comes from the pack data for that character's pinned packs.
+
+Truncated text never dead-ends (same comment thread): any feature, trait or spell summary cut with "…" is a link to that entity's own library entry, and hover, focus or long-press shows a popover with the full text and an "Open entry" link. Class features (Lay on Hands, Channel Divinity…) are entries of their own in the library's "Features" type, distinct from spells.
+
 ## 9. Features by source (owner fix 4)
 
 The Features leaf lists everything granted automatically, grouped by source in this order: Class (with the level gained), Subclass, Species, Background, Feats, Chosen options (fighting style, masteries, expertise). Each row: source icon, name, level badge, details button; hover hint "From Paladin, level 3". Items and spells never appear here.
