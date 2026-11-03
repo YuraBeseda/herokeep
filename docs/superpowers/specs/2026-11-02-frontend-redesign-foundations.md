@@ -81,7 +81,7 @@ Which class (own class or multiclass options with prerequisites shown) → Hit p
 
 ### 4.3 Campaign
 
-House rules (campaign settings): attunement limit, starting level, encumbrance variant, "Players manage their own conditions" (§8), and "Starting gold instead of equipment" (default on; when off, the wizard's gold alternative is disabled with the hint "Starting gold is off in <campaign> — ask your DM"; owner comment 2026-11-03). Each house rule the wizard or sheet reads is a carry for the engine/protocol in Stage B.
+House rules (campaign settings): attunement limit, starting level, encumbrance variant, "Players manage their own conditions" (§8), "Starting gold instead of equipment" (default on; when off, the wizard's gold alternative is disabled with the hint "Starting gold is off in <campaign> — ask your DM"; owner comment 2026-11-03), and "Multiclassing" (default on; when off, the level-up flow skips the "Which class" step and continues in the hero's class, the step showing locked with the hint "Multiclassing is off in <campaign> — ask your DM"; owner comment 2026-11-03). Each house rule the wizard or sheet reads is a carry for the engine/protocol in Stage B.
 
 Create → Lobby (code, copy link, QR, rotate code, members with remove) → Party. Join: code or QR deep link → display name → pick or create a hero → Party. DM quick effects live on each party card (chip row: Damage · Heal · Temp HP · Condition · XP · Level · Item · Inspiration · Override) and open the member's sheet in a drawer. Table tab: session start/end, chat composer with visibility, roll feed. Settings: house rules, content packs (enable/disable/update), party-sheet visibility, export.
 
