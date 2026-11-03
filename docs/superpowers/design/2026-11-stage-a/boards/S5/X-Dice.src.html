@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — 3D dice</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-board" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="s5-vign" aria-hidden="true"></div>
+  <header class="s5-title"><span class="s5-tag"><i-icon name="wax-seal" size="13"></i-icon>Later idea</span><h1 class="s5-h1"><i-icon name="rolling-dices" size="24"></i-icon>3D dice</h1><span class="s5-hintG">on the Play sheet · Longsword rolled with advantage</span></header>
+
+  <!-- the sheet underneath, dimmed -->
+  <section class="hk-leaf" aria-label="Attacks, behind the overlay" style="display:flex;flex-direction:column;gap:6px;padding:12px 16px;transform:rotate(-.2deg)">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-leaf__head" style="margin:0"><h2 class="s5-h2"><i-icon name="crossed-swords" size="19"></i-icon>Attacks</h2><span class="hk-hint">Extra Attack: two per Attack action</span></div>
+    <div class="s5-atk" style="grid-template-columns:26px 150px 44px minmax(0,1fr) auto"><i-icon name="broadsword" size="18"></i-icon><span class="s5-atk__n">Longsword</span><span class="s5-atk__h">+6</span><span class="s5-atk__d"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-slashing);height:22px">1d8 + 3 slashing</span><span class="hk-chip" style="height:22px">versatile 1d10</span><span class="hk-chip" style="height:22px" title="Mastery: Sap">Sap</span></span><button class="hk-btn hk-btn--brass" type="button" style="height:28px"><i-icon name="dice-twenty-faces-twenty" size="13"></i-icon>Roll</button></div>
+    <div class="s5-atk" style="grid-template-columns:26px 150px 44px minmax(0,1fr) auto"><i-icon name="thrown-spear" size="18"></i-icon><span class="s5-atk__n">Javelin ×4</span><span class="s5-atk__h">+6</span><span class="s5-atk__d"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-piercing);height:22px">1d6 + 3 piercing</span><span class="hk-chip" style="height:22px">thrown 30/120</span></span><button class="hk-btn hk-btn--brass" type="button" style="height:28px"><i-icon name="dice-twenty-faces-twenty" size="13"></i-icon>Roll</button></div>
+    <div class="s5-atk" style="grid-template-columns:26px 150px 44px minmax(0,1fr) auto"><i-icon name="fist" size="18"></i-icon><span class="s5-atk__n">Unarmed strike</span><span class="s5-atk__h">+6</span><span class="s5-atk__d"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-bludgeoning);height:22px">4 bludgeoning</span></span><button class="hk-btn hk-btn--brass" type="button" style="height:28px"><i-icon name="dice-twenty-faces-twenty" size="13"></i-icon>Roll</button></div>
+  </section>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;flex:1 1 auto;min-height:0;align-items:stretch">
+    <section class="hk-leaf" aria-label="Spells, behind the overlay" style="display:flex;flex-direction:column;gap:6px;padding:12px 16px;transform:rotate(.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="s5-h2"><i-icon name="spell-book" size="19"></i-icon>Spells</h2><span class="hk-hint">Charisma · DC 14 · +6</span></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="I" size="24" seed="1"></x-seal><span class="s5-feat__n">Bless<span class="hk-chip hk-chip--arcane" style="height:20px"><i-icon name="concentration-orb" size="11"></i-icon>round 3</span></span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="I" size="24" seed="2"></x-seal><span class="s5-feat__n">Cure Wounds</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="I" size="24" seed="3"></x-seal><span class="s5-feat__n">Shield of Faith</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="II" size="24" seed="4"></x-seal><span class="s5-feat__n">Aid</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="II" size="24" seed="5"></x-seal><span class="s5-feat__n">Lesser Restoration</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="I" size="24" seed="6"></x-seal><span class="s5-feat__n">Divine Smite</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="I" size="24" seed="7"></x-seal><span class="s5-feat__n">Protection from Evil and Good</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="I" size="24" seed="1"></x-seal><span class="s5-feat__n">Sanctuary</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><x-seal state="full" text="II" size="24" seed="2"></x-seal><span class="s5-feat__n">Zone of Truth</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto;border-bottom:0"><x-seal state="full" text="II" size="24" seed="3"></x-seal><span class="s5-feat__n">Calm Emotions</span><button class="hk-btn hk-btn--brass" type="button" style="height:26px">Cast</button></div>
+    </section>
+    <section class="hk-leaf" aria-label="Resources, behind the overlay" style="display:flex;flex-direction:column;gap:8px;padding:12px 16px;transform:rotate(-.25deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="s5-h2"><i-icon name="laurel-crown" size="19"></i-icon>Resources</h2></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Lay on Hands</span><span class="hk-num" style="font-size:17px">18 / 25</span></div>
+      <div class="hk-gauge hk-gauge--thin" role="img" aria-label="18 of 25 points"><div class="hk-gauge__moss" style="width:72%"></div></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Channel Divinity</span><span class="hk-seal-row"><x-seal state="full" icon="holy-symbol" size="24" seed="6"></x-seal><x-seal state="full" icon="holy-symbol" size="24" seed="7"></x-seal></span></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Level 1 slots</span><span class="hk-seal-row"><x-seal state="full" text="I" size="24" seed="1"></x-seal><x-seal state="full" text="I" size="24" seed="2"></x-seal><x-seal state="full" text="I" size="24" seed="3"></x-seal><x-seal state="spent" text="I" size="24" seed="4"></x-seal></span></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Level 2 slots</span><span class="hk-seal-row"><x-seal state="full" text="II" size="24" seed="5"></x-seal><x-seal state="full" text="II" size="24" seed="6"></x-seal></span></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Wand of Magic Missiles</span><span class="hk-num" style="font-size:17px">5 / 7</span></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Paladin's Smite</span><span class="hk-seal-row"><x-seal state="full" icon="holy-symbol" size="24" seed="3"></x-seal></span></div>
+      <div class="s5-row" style="gap:8px;justify-content:space-between"><span>Hit dice</span><span class="hk-num" style="font-size:17px">4 / 5 d10</span></div>
+      <div class="hk-leaf__head" style="margin:6px 0 0"><h2 class="s5-h2"><i-icon name="skull" size="19"></i-icon>Conditions</h2></div>
+      <div class="s5-row" style="gap:8px"><span class="hk-cond" style="height:30px;padding:0 10px;font-size:14px"><i-icon name="skull" size="14"></i-icon>Poisoned<span class="hk-cond__dur" style="height:18px">3 rounds</span></span><button class="hk-btn hk-btn--ghost hk-btn--dashed" type="button"><i-icon name="plus" size="12"></i-icon>Add condition</button></div>
+      <div class="hk-leaf__head" style="margin:6px 0 0"><h2 class="s5-h2"><i-icon name="death-skull" size="19"></i-icon>Death saves</h2></div>
+      <div class="s5-row" style="gap:6px"><span class="hk-ring__i"></span><span class="hk-ring__i"></span><span class="hk-ring__i"></span><span style="width:8px"></span><span class="hk-ring__i hk-ring__i--f"></span><span class="hk-ring__i hk-ring__i--f"></span><span class="hk-ring__i hk-ring__i--f"></span></div>
+      <div class="hk-leaf__head" style="margin:6px 0 0"><h2 class="s5-h2"><i-icon name="medal" size="19"></i-icon>Skills</h2></div>
+      <div class="hk-sk"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient"></span>Athletics<span class="hk-num" style="margin-left:auto;font-size:16px">+6</span></div>
+      <div class="hk-sk"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient"></span>Insight<span class="hk-num" style="margin-left:auto;font-size:16px">+4</span></div>
+      <div class="hk-sk"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient"></span>Intimidation<span class="hk-num" style="margin-left:auto;font-size:16px">+6</span></div>
+      <div class="hk-sk"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient"></span>Persuasion<span class="hk-num" style="margin-left:auto;font-size:16px">+6</span></div>
+      <div class="hk-sk"><span class="hk-dot" role="img" aria-label="Not proficient"></span>Perception<span class="hk-num" style="margin-left:auto;font-size:16px">+1</span></div>
+    </section>
+  </div>
+
+  <!-- the overlay with the tray -->
+  <div class="hk-overlay" aria-hidden="true" style="top:62px"></div>
+  <div style="position:absolute;left:20px;right:20px;top:176px;display:flex;flex-direction:column;gap:14px;z-index:5">
+    <div class="s5-tray" role="img" aria-label="Dice tray: a d20 tumbling, showing 11; a second d20 showing 4, dropped">
+      <div class="s5-felt" style="height:250px">
+        <!-- motion ghosts, then the settling die -->
+        <x-d20 n="17" size="150" rot="-62" style="position:absolute;left:150px;top:28px;opacity:.16;filter:blur(1.5px)"></x-d20>
+        <x-d20 n="3" size="150" rot="-38" style="position:absolute;left:190px;top:40px;opacity:.34;filter:blur(.8px)"></x-d20>
+        <x-d20 n="11" size="156" rot="-14" style="position:absolute;left:230px;top:46px;filter:drop-shadow(0 8px 10px rgba(0,0,0,.65))"></x-d20>
+        <!-- the advantage pair: the lower die, dropped -->
+        <x-d20 n="4" size="112" rot="22" faded="1" style="position:absolute;left:430px;top:88px;filter:drop-shadow(0 5px 8px rgba(0,0,0,.6))"></x-d20>
+        <span class="hk-chip hk-chip--dark" style="position:absolute;left:446px;top:206px;height:24px" title="Advantage: the higher die is kept">dropped</span>
+        <span class="hk-chip hk-chip--selected" style="position:absolute;left:262px;top:212px;height:24px" title="Advantage: the higher die is kept"><i-icon name="arrow-cluster" size="12"></i-icon>kept</span>
+        <span class="hk-chip" style="position:absolute;left:14px;top:14px;height:26px" title="Advantage: the target was hit by Guiding Bolt"><i-icon name="arrow-cluster" size="13"></i-icon>Advantage</span>
+        <span class="hk-has-tip" style="position:absolute;right:14px;top:12px;display:inline-flex"><button class="hk-toggle" type="button" aria-pressed="true" aria-describedby="tip3d" style="color:var(--text-on-leather);font-size:14px"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span>3D dice</button><span class="hk-tip hk-tip--left" id="tip3d" role="tooltip" style="right:0">Settings, Appearance: dice 3D · flat · numbers only<span class="hk-tip__sub">off automatically under reduced motion; the result is the same roll</span></span></span>
+      </div>
+    </div>
+
+    <!-- the result card -->
+    <div class="hk-dialog" role="dialog" aria-labelledby="resT" style="width:100%;padding:14px 18px 14px;gap:10px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head" style="gap:12px"><i-icon name="broadsword" size="26" style="color:var(--accent-strong)"></i-icon><h2 class="hk-dialog__title" id="resT" style="font-size:22px">Longsword · to hit</h2><span class="hk-num" style="font-size:44px;line-height:1;color:var(--text-1)" title="d20 11 + 6">17</span></div>
+      <div class="s5-row" style="gap:8px"><span class="hk-plate" title="The kept d20">d20 11</span><span>+ 6</span><span class="hk-hint">Strength +3 · proficiency +3</span><span class="hk-chip" style="height:22px;margin-left:auto" title="Advantage: 11 and 4, higher kept"><i-icon name="arrow-cluster" size="12"></i-icon>11 · <s>4</s></span></div>
+      <div class="hk-rule"></div>
+      <div class="s5-row" style="gap:10px;flex-wrap:nowrap"><i-icon name="dice-eight-faces-eight" size="26" style="color:var(--accent-strong)"></i-icon><span style="font-family:var(--font-display);font-size:19px">Damage</span><span class="hk-plate" title="1d8 rolled 4">1d8 4</span><span>+ 3</span><span class="hk-num" style="font-size:26px">= 7</span><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-slashing);height:24px">slashing</span><span style="flex:1 1 auto"></span><button class="hk-btn hk-btn--parchment" type="button" title="Doubles the dice: 2d8 + 3"><i-icon name="dice-eight-faces-eight" size="13"></i-icon>Critical</button></div>
+      <div class="hk-dialog__strap hk-strap" style="margin:4px -18px -14px"><x-tex kind="leather"></x-tex><span class="hk-strap__label" style="margin-right:auto"><i-icon name="three-friends" size="14"></i-icon>posted to the Table</span><button class="hk-btn hk-btn--ghost-leather" type="button" title="Heroic inspiration: reroll the d20 and keep the new result (1 available)"><i-icon name="inspiration" size="13"></i-icon>Reroll</button><button class="hk-btn hk-btn--brass hk-focus-demo" type="button">Done</button></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

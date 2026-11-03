@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — A member's sheet in a drawer, DM (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="The Emberfall Company" live="1" chiptitle="The Emberfall Company, session live, round 3"></x-rail>
+  <x-chead name="The Emberfall Company" role="dm" tab="party" members="5" pregens="1" session="live" round="3" elapsed="1 h 12 min"></x-chead>
+
+  <main aria-hidden="true" style="z-index:1;display:flex;flex-direction:column;gap:14px;padding:18px 22px 24px;flex:1 1 auto;min-width:0">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <h2 class="h1" style="font-size:26px;line-height:30px"><i-icon name="three-friends" size="24"></i-icon>Party</h2>
+      <span class="hintG">6 at the table: 5 heroes and 1 pregen</span>
+      <span style="flex:1 1 auto"></span>
+      <span class="rounds"><i-icon name="sands-of-time" size="18"></i-icon>Round 3</span>
+      <span class="hk-btn hk-btn--l hk-btn--brass"><i-icon name="sands-of-time" size="18"></i-icon>Advance round</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start">
+      <x-pcard id="ilyana" mode="dm" sel="1" tilt="-.25deg"></x-pcard>
+      <x-pcard id="bramble" mode="dm" tilt=".2deg"></x-pcard>
+      <x-pcard id="maren" mode="dm" tilt="-.15deg"></x-pcard>
+      <x-pcard id="thorne" mode="dm" tilt=".25deg"></x-pcard>
+      <x-pcard id="oskar" mode="dm" tilt="-.3deg"></x-pcard>
+      <x-pcard id="guard" mode="dm" tilt=".2deg"></x-pcard>
+    </div>
+  </main>
+  <x-strap kind="dm" session="live" sel="Ilyana Vorn" status="DM · Ilyana Vorn selected · session live, round 3" sicon="crown"></x-strap>
+
+  <!-- dim + the wide drawer -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:5"></div>
+  <aside class="drawerW" role="dialog" aria-modal="true" aria-labelledby="dsh" style="width:1000px;gap:12px">
+    <x-tex kind="paper"></x-tex>
+    <!-- head -->
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:16px;align-items:center">
+      <x-mono text="IV" w="66" h="76" fs="28" label="Portrait placeholder, monogram IV"></x-mono>
+      <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+        <h2 class="hk-nameplate" id="dsh" style="font-size:24px;align-self:flex-start;max-width:100%">Ilyana Vorn</h2>
+        <span style="display:flex;align-items:center;gap:6px;font-size:16px"><i-icon name="templar-shield" size="15" style="color:var(--accent-strong)"></i-icon>Human · Paladin 5 · Oath of Devotion · Soldier</span>
+        <span class="hk-hint">played by Mira · online · read-only; the Override button records a DM change</span>
+      </div>
+      <div class="hk-strap" style="display:grid;grid-template-columns:auto minmax(180px,220px);gap:10px;align-items:center;padding:8px 12px">
+        <x-tex kind="leather"></x-tex>
+        <span class="hk-num" style="font-size:30px;color:var(--text-on-leather)">31 <span style="font-size:16px;color:var(--brass)">/ 44</span></span>
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:0"><div class="hk-gauge" role="img" aria-label="31 of 44 hit points, plus 5 temporary"><div class="hk-gauge__hp" style="width:70.5%"></div><div class="hk-gauge__temp" style="width:11.4%"></div></div><span class="hk-strap__label"><i-icon name="heart-armor" size="14"></i-icon>Temporary HP 5 · hit dice 4 / 5 d10</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <x-shield ac="18" w="52"></x-shield>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="hk-btn hk-btn--brass" type="button" title="Change a value on this sheet as the DM: asks for a reason, lands on Ilyana's timeline with your name"><i-icon name="quill" size="14"></i-icon>Override</button>
+          <button class="hk-btn hk-btn--leather" type="button"><i-icon name="cross-mark" size="12"></i-icon>Close</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span class="hk-chip" style="height:26px" title="Initiative +0"><i-icon name="stopwatch" size="14"></i-icon>Initiative +0</span>
+      <span class="hk-chip" style="height:26px" title="Speed 30 ft"><i-icon name="running-shoe" size="14"></i-icon>Speed 30 ft</span>
+      <span class="hk-chip" style="height:26px" title="Proficiency bonus +3"><i-icon name="medal" size="14"></i-icon>Proficiency +3</span>
+      <span class="hk-chip" style="height:26px" title="Passive perception 11"><i-icon name="eye" size="14"></i-icon>Passive perception 11</span>
+      <span class="hk-chip hk-chip--selected" style="height:26px" title="Heroic inspiration available"><i-icon name="inspiration" size="14"></i-icon>Inspiration 1</span>
+      <span class="hk-chip hk-chip--arcane" style="height:26px" title="Concentrating on Bless, round 3"><i-icon name="concentration-orb" size="14"></i-icon>Concentrating: Bless · round 3</span>
+      <span class="hk-chip" style="height:26px" title="Experience 6,500 of 14,000"><i-icon name="laurels" size="14"></i-icon>XP 6,500 / 14,000</span>
+    </div>
+    <div class="hk-banner hk-banner--info" style="padding:8px 12px">
+      <i-icon name="scroll-unfurled" size="20"></i-icon>
+      <div class="hk-banner__body"><span style="font-size:15px">Read-only view of Mira&#8217;s live sheet. Every override you apply here is written to Ilyana&#8217;s timeline as a DM override with your name and the reason; Mira sees it at once and can revert it from her Timeline tab.</span></div>
+    </div>
+
+    <!-- three columns -->
+    <div style="display:grid;grid-template-columns:300px minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start;flex:1 1 auto">
+      <!-- abilities + skills -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h3 class="hk-leaf__title" style="font-size:18px"><i-icon name="muscle-up" size="17"></i-icon>Abilities</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px">
+          <div class="abil"><x-seal state="full" text="+3" size="46" seed="1" hint="Strength modifier +3"></x-seal><span class="abil__n">Str</span><span style="display:flex;gap:3px"><span class="hk-plate" style="height:20px;font-size:14px" title="Strength score 16">16</span><span class="hk-save" style="height:20px;font-size:14px"><i-icon name="shield" size="11" hint="Saving throw +3"></i-icon>+3</span></span></div>
+          <div class="abil"><x-seal state="full" text="+0" size="46" seed="2" hint="Dexterity modifier +0"></x-seal><span class="abil__n">Dex</span><span style="display:flex;gap:3px"><span class="hk-plate" style="height:20px;font-size:14px" title="Dexterity score 10">10</span><span class="hk-save" style="height:20px;font-size:14px"><i-icon name="shield" size="11" hint="Saving throw +0"></i-icon>+0</span></span></div>
+          <div class="abil"><x-seal state="full" text="+2" size="46" seed="3" hint="Constitution modifier +2"></x-seal><span class="abil__n">Con</span><span style="display:flex;gap:3px"><span class="hk-plate" style="height:20px;font-size:14px" title="Constitution score 14">14</span><span class="hk-save" style="height:20px;font-size:14px"><i-icon name="shield" size="11" hint="Saving throw +2"></i-icon>+2</span></span></div>
+          <div class="abil"><x-seal state="full" text="−1" size="46" seed="4" hint="Intelligence modifier −1"></x-seal><span class="abil__n">Int</span><span style="display:flex;gap:3px"><span class="hk-plate" style="height:20px;font-size:14px" title="Intelligence score 8">8</span><span class="hk-save" style="height:20px;font-size:14px"><i-icon name="shield" size="11" hint="Saving throw −1"></i-icon>−1</span></span></div>
+          <div class="abil"><x-seal state="full" text="+1" size="46" seed="5" hint="Wisdom modifier +1"></x-seal><span class="abil__n">Wis</span><span style="display:flex;gap:3px"><span class="hk-plate" style="height:20px;font-size:14px" title="Wisdom score 12">12</span><span class="hk-save hk-save--prof" style="height:20px;font-size:14px"><i-icon name="shield" size="11" hint="Saving throw +4"></i-icon>+4<i-icon name="star" size="10" class="hk-star" hint="Proficient saving throw"></i-icon></span></span></div>
+          <div class="abil"><x-seal state="full" text="+3" size="46" seed="6" hint="Charisma modifier +3"></x-seal><span class="abil__n">Cha</span><span style="display:flex;gap:3px"><span class="hk-plate" style="height:20px;font-size:14px" title="Charisma score 16">16</span><span class="hk-save hk-save--prof" style="height:20px;font-size:14px"><i-icon name="shield" size="11" hint="Saving throw +6"></i-icon>+6<i-icon name="star" size="10" class="hk-star" hint="Proficient saving throw"></i-icon></span></span></div>
+        </div>
+        <h3 class="hk-leaf__title" style="font-size:18px;margin-top:4px"><i-icon name="medal" size="17"></i-icon>Skills</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px">
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient" title="Proficient"></span><span style="flex:1 1 auto">Athletics</span><b class="hk-num" style="font-size:16px">+6</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient" title="Proficient"></span><span style="flex:1 1 auto">Insight</span><b class="hk-num" style="font-size:16px">+4</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient" title="Proficient"></span><span style="flex:1 1 auto">Intimidation</span><b class="hk-num" style="font-size:16px">+6</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot hk-dot--on" role="img" aria-label="Proficient" title="Proficient"></span><span style="flex:1 1 auto">Persuasion</span><b class="hk-num" style="font-size:16px">+6</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot" role="img" aria-label="Not proficient" title="Not proficient"></span><span style="flex:1 1 auto">Perception</span><b class="hk-num" style="font-size:16px">+1</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot" role="img" aria-label="Not proficient" title="Not proficient"></span><span style="flex:1 1 auto">Religion</span><b class="hk-num" style="font-size:16px">−1</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot" role="img" aria-label="Not proficient" title="Not proficient"></span><span style="flex:1 1 auto;display:flex;align-items:center;gap:5px">Stealth<i-icon name="broken-arrow" size="14" style="color:var(--danger-strong)" hint="Disadvantage (armor)"></i-icon></span><b class="hk-num" style="font-size:16px">−1</b></div>
+          <div class="hk-sk" style="min-height:26px"><span class="hk-dot" role="img" aria-label="Not proficient" title="Not proficient"></span><span style="flex:1 1 auto">Medicine</span><b class="hk-num" style="font-size:16px">+1</b></div>
+        </div>
+        <h3 class="hk-leaf__title" style="font-size:18px;margin-top:4px"><i-icon name="skull" size="17"></i-icon>Conditions</h3>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="hk-cond" style="height:30px;padding:0 8px;font-size:14px" title="Poisoned, 3 rounds left, from Giant Spider"><i-icon name="poison-bottle" size="14"></i-icon>Poisoned<span class="hk-cond__dur" style="height:18px">3 rounds</span></span>
+          <span class="hk-cond" style="height:30px;padding:0 8px;font-size:14px" title="Frightened, indefinite"><i-icon name="terror" size="14"></i-icon>Frightened</span>
+        </div>
+      </div>
+
+      <!-- attacks, resources, slots -->
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <h3 class="hk-leaf__title" style="font-size:18px"><i-icon name="crossed-swords" size="17"></i-icon>Attacks</h3>
+        <div style="display:grid;grid-template-columns:26px minmax(0,1fr) 44px minmax(0,1fr);gap:4px 8px;align-items:center;font-size:15px">
+          <span class="hk-iring" style="width:26px;height:26px"><i-icon name="broadsword" size="15"></i-icon></span><b>Longsword</b><b class="hk-num" style="font-size:19px">+6</b><span><b class="hk-num" style="font-size:16px">1d8+3</b> <span class="hk-th">slashing · Sap</span></span>
+          <span class="hk-iring" style="width:26px;height:26px"><i-icon name="thrown-spear" size="15"></i-icon></span><b>Javelin ×4</b><b class="hk-num" style="font-size:19px">+6</b><span><b class="hk-num" style="font-size:16px">1d6+3</b> <span class="hk-th">piercing · Slow</span></span>
+          <span class="hk-iring" style="width:26px;height:26px"><i-icon name="fist" size="15"></i-icon></span><b>Unarmed strike</b><b class="hk-num" style="font-size:19px">+6</b><span><b class="hk-num" style="font-size:16px">4</b> <span class="hk-th">bludgeoning</span></span>
+        </div>
+        <h3 class="hk-leaf__title" style="font-size:18px;margin-top:4px"><i-icon name="candle-flame" size="17"></i-icon>Resources</h3>
+        <div class="ledger" style="font-size:15px;gap:5px 10px">
+          <span style="display:flex;align-items:center;gap:6px"><i-icon name="healing" size="14" style="color:var(--accent-strong)"></i-icon>Lay on Hands</span><span style="display:flex;align-items:center;gap:8px"><span class="hk-gauge" style="width:90px;height:10px"><span class="hk-gauge__brass" style="display:block;width:72%"></span></span><b class="hk-num" style="font-size:16px">18 / 25</b></span>
+          <span style="display:flex;align-items:center;gap:6px"><i-icon name="holy-symbol" size="14" style="color:var(--accent-strong)"></i-icon>Channel Divinity</span><span style="display:flex;align-items:center;gap:6px"><x-seal state="full" icon="holy-symbol" size="24" seed="2" hint="Channel Divinity use — 2 of 2 left"></x-seal><x-seal state="full" icon="holy-symbol" size="24" seed="3" hint="Channel Divinity use — 2 of 2 left"></x-seal><b class="hk-num" style="font-size:16px">2 / 2</b></span>
+          <span style="display:flex;align-items:center;gap:6px"><i-icon name="sword-brandish" size="14" style="color:var(--accent-strong)"></i-icon>Paladin&#8217;s Smite</span><span style="display:flex;align-items:center;gap:6px"><x-seal state="full" icon="sword-brandish" size="24" seed="4" hint="Paladin's Smite free cast — 1 of 1 left"></x-seal><b class="hk-num" style="font-size:16px">1 / 1</b></span>
+          <span style="display:flex;align-items:center;gap:6px"><i-icon name="crystal-wand" size="14" style="color:var(--accent-strong)"></i-icon>Wand of Magic Missiles</span><span style="display:flex;align-items:center;gap:6px"><b class="hk-num" style="font-size:16px">5 / 7</b><span class="hk-th">charges</span></span>
+        </div>
+        <h3 class="hk-leaf__title" style="font-size:18px;margin-top:4px"><i-icon name="spell-book" size="17"></i-icon>Spellcasting</h3>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="hk-chip" style="height:24px"><i-icon name="charm" size="13"></i-icon>Charisma</span><span class="hk-chip" style="height:24px">Save DC 14</span><span class="hk-chip" style="height:24px">Spell attack +6</span></div>
+        <div class="hk-lvl" style="font-size:15px"><span class="hk-seal-row"><x-seal state="full" text="I" size="24" fs="30" seed="1" hint="Spell slot, level 1 — 3 of 4 left"></x-seal><x-seal state="full" text="I" size="24" fs="30" seed="2" hint="Spell slot, level 1 — 3 of 4 left"></x-seal><x-seal state="full" text="I" size="24" fs="30" seed="3" hint="Spell slot, level 1 — 3 of 4 left"></x-seal><x-seal state="spent" text="I" size="24" fs="30" seed="4" hint="Spell slot spent, level 1 — 3 of 4 left"></x-seal></span><span class="hk-th">Level 1 slots</span><span class="hk-num" style="font-size:15px">3 / 4</span><span class="hk-lvl__rule"></span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px;font-size:14px">
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="sparkles" size="13" style="color:var(--accent-strong)"></i-icon>Bless <span class="hk-chip hk-chip--arcane" style="height:18px;font-size:12px;padding:0 5px">concentrating</span></span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="healing" size="13" style="color:var(--accent-strong)"></i-icon>Cure Wounds</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="sword-brandish" size="13" style="color:var(--accent-strong)"></i-icon>Divine Smite</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="magic-shield" size="13" style="color:var(--accent-strong)"></i-icon>Shield of Faith</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="holy-symbol" size="13" style="color:var(--accent-strong)"></i-icon>Protection from Evil and Good<i-icon name="fleur-de-lys" size="12" style="color:var(--accent-strong)" hint="Always prepared (Oath of Devotion)"></i-icon></span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="angel-wings" size="13" style="color:var(--accent-strong)"></i-icon>Sanctuary<i-icon name="fleur-de-lys" size="12" style="color:var(--accent-strong)" hint="Always prepared (Oath of Devotion)"></i-icon></span>
+        </div>
+        <div class="hk-lvl" style="font-size:15px"><span class="hk-seal-row"><x-seal state="full" text="II" size="24" fs="28" seed="5" hint="Spell slot, level 2 — 2 of 2 left"></x-seal><x-seal state="full" text="II" size="24" fs="28" seed="6" hint="Spell slot, level 2 — 2 of 2 left"></x-seal></span><span class="hk-th">Level 2 slots</span><span class="hk-num" style="font-size:15px">2 / 2</span><span class="hk-lvl__rule"></span></div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px;font-size:14px">
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="hearts" size="13" style="color:var(--accent-strong)"></i-icon>Aid</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="bandage-roll" size="13" style="color:var(--accent-strong)"></i-icon>Lesser Restoration</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="scales" size="13" style="color:var(--accent-strong)"></i-icon>Zone of Truth<i-icon name="fleur-de-lys" size="12" style="color:var(--accent-strong)" hint="Always prepared (Oath of Devotion)"></i-icon></span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="meditation" size="13" style="color:var(--accent-strong)"></i-icon>Calm Emotions<i-icon name="fleur-de-lys" size="12" style="color:var(--accent-strong)" hint="Always prepared (Oath of Devotion)"></i-icon></span>
+        </div>
+      </div>
+
+      <!-- features + bag -->
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <h3 class="hk-leaf__title" style="font-size:18px"><i-icon name="laurel-crown" size="17"></i-icon>Features</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px;font-size:14px">
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Lay on Hands</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Fighting Style: Protection</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Weapon Mastery</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Paladin&#8217;s Smite</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="holy-symbol" size="13" style="color:var(--accent-strong)"></i-icon>Channel Divinity: Sacred Weapon</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Extra Attack</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Faithful Steed</span>
+          <span style="display:flex;align-items:center;gap:5px"><i-icon name="medal" size="13" style="color:var(--accent-strong)"></i-icon>Savage Attacker <span class="hk-chip" style="height:18px;font-size:12px;padding:0 5px">feat</span></span>
+        </div>
+        <h3 class="hk-leaf__title" style="font-size:18px;margin-top:4px"><i-icon name="swap-bag" size="17"></i-icon>Bag <span class="hk-hint" style="font-weight:400">108 / 240 lb · lightly loaded</span></h3>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:1px 10px;font-size:14px;align-items:center">
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Chain mail</span><span class="hk-tagE" style="position:static;width:16px;height:16px;line-height:16px;font-size:12px" title="Equipped">E</span><span class="hk-th" style="text-align:right">55 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Shield</span><span class="hk-tagE" style="position:static;width:16px;height:16px;line-height:16px;font-size:12px" title="Equipped">E</span><span class="hk-th" style="text-align:right">6 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Longsword</span><span class="hk-tagE" style="position:static;width:16px;height:16px;line-height:16px;font-size:12px" title="Equipped">E</span><span class="hk-th" style="text-align:right">3 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Javelin ×4</span><span></span><span class="hk-th" style="text-align:right">8 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Ring of Protection <span style="color:var(--rarity-rare)">rare</span></span><span style="display:flex;align-items:center;gap:3px"><span class="hk-tagE" style="position:static;width:16px;height:16px;line-height:16px;font-size:12px" title="Equipped">E</span><span class="hk-gem hk-gem--inline" role="img" aria-label="Attuned" title="Attuned"></span></span><span class="hk-th" style="text-align:right">—</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Wand of Magic Missiles</span><span></span><span class="hk-th" style="text-align:right"><span style="color:var(--rarity-uncommon)">uncommon</span> · 5 / 7</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Potion of Healing ×2</span><span></span><span class="hk-th" style="text-align:right">1 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Holy symbol (amulet)</span><span class="hk-tagE" style="position:static;width:16px;height:16px;line-height:16px;font-size:12px" title="Equipped">E</span><span class="hk-th" style="text-align:right">1 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Healer&#8217;s kit</span><span></span><span class="hk-th" style="text-align:right">3 lb · 3 uses</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Backpack</span><span></span><span class="hk-th" style="text-align:right">5 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Bedroll</span><span></span><span class="hk-th" style="text-align:right">7 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Rations ×10</span><span></span><span class="hk-th" style="text-align:right">20 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Rope, 50 ft</span><span></span><span class="hk-th" style="text-align:right">5 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Torch ×10</span><span></span><span class="hk-th" style="text-align:right">10 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Waterskin</span><span></span><span class="hk-th" style="text-align:right">5 lb</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Dice set</span><span></span><span class="hk-th" style="text-align:right">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;margin-top:2px"><i-icon name="two-coins" size="15" style="color:var(--accent-strong)"></i-icon><span class="hk-num" style="font-size:15px">4 pp · 38 gp · 12 sp · 55 cp</span><span class="hk-hint">≈ 79 gp</span></div>
+        <div class="hk-rule" style="margin-top:auto"></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="hk-hint" style="flex:1 1 auto">Last DM override on this sheet: none this session.</span><button class="hk-btn hk-btn--leather hk-has-tip" type="button" aria-describedby="tipTl"><i-icon name="hourglass" size="14"></i-icon>Timeline<span class="hk-tip hk-tip--above hk-tip--left" id="tipTl" role="tooltip">Ilyana&#8217;s timeline, read-only<span class="hk-tip__sub">every DM override is listed there with your name and the reason</span></span></button></div>
+      </div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

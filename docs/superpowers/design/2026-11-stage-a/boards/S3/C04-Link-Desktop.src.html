@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Link a hero (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="Tombs of the Salt King" chiptitle="Tombs of the Salt King, no session"></x-rail>
+
+  <main style="z-index:1;display:flex;flex-direction:column;gap:18px;padding:24px 22px 26px;flex:1 1 auto;min-width:0">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+      <h1 class="h1"><i-icon name="wax-seal" size="28"></i-icon>Link a hero</h1>
+      <span class="hintG">Tombs of the Salt King · you joined as Dana · step 2 of 2</span>
+    </div>
+    <p style="margin:0;font-size:16px;color:var(--text-on-ground);max-width:860px;line-height:1.4">Pick one of your heroes to play in this campaign. The DM sees its overview on the Party tab and can apply damage, healing and conditions during a session; the sheet stays on your device and your account. You can swap heroes later from the Party tab.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch">
+      <!-- eligible, selected -->
+      <article class="hcard hcardSel" aria-labelledby="h1" style="transform:rotate(-.25deg)">
+        <x-tex kind="paper"></x-tex>
+        <x-mono text="BU" w="64" h="74" fs="26"></x-mono>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+          <h2 id="h1" class="hcard__t" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400">Bramble Underfoot</h2>
+          <span class="hcard__s" style="display:flex;align-items:center;gap:6px"><i-icon name="hood" size="15" style="color:var(--accent-strong)"></i-icon>Halfling · Rogue 3</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="hk-gauge" style="flex:1 1 auto;height:10px;max-width:120px"><span class="hk-gauge__hp" style="width:100%"></span></span><span class="hk-num" style="font-size:16px"><b>21</b> / 21</span></span>
+          <span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hk-chip hk-chip--moss hk-has-tip halo" tabindex="0" aria-describedby="tipSynced" style="height:28px"><i-icon name="cycle" size="13"></i-icon>synced<span class="hk-tip hk-tip--above" id="tipSynced" role="tooltip">Synced to your account a moment ago<span class="hk-tip__sub">the table can see this hero</span></span></span><span class="hk-chip" style="height:24px;font-style:italic;color:var(--text-2)">not in a campaign</span></span>
+        </div>
+        <div class="hcard__foot"><x-seal state="full" icon="check-mark" size="30" seed="2" label="Selected"></x-seal><b style="font-size:15px;flex:1 1 auto">Selected</b><button class="hk-btn hk-btn--brass" type="button"><i-icon name="wax-seal" size="14"></i-icon>Link this hero</button></div>
+      </article>
+
+      <!-- not synced -->
+      <article class="hcard" aria-labelledby="h2" style="transform:rotate(.2deg)">
+        <x-tex kind="paper"></x-tex>
+        <x-mono text="SM" w="64" h="74" fs="26"></x-mono>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+          <h2 id="h2" class="hcard__t" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400">Sister Maren</h2>
+          <span class="hcard__s" style="display:flex;align-items:center;gap:6px"><i-icon name="holy-symbol" size="15" style="color:var(--accent-strong)"></i-icon>Human · Cleric 4</span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="hk-gauge" style="flex:1 1 auto;height:10px;max-width:120px"><span class="hk-gauge__hp" style="width:87%"></span></span><span class="hk-num" style="font-size:16px"><b>27</b> / 31</span></span>
+          <span class="hk-card__gate"><i-icon name="cycle" size="14"></i-icon>Not synced yet</span>
+        </div>
+        <div class="hcard__foot" style="flex-direction:column;align-items:stretch;gap:8px">
+          <span class="hk-hint">This hero lives only on this device. Sync it to your account first so the table can see it; then it appears here as eligible.</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><button class="hk-btn hk-btn--brass" type="button" disabled="disabled" aria-disabled="true" title="Not synced yet: sync this hero first"><i-icon name="wax-seal" size="14"></i-icon>Link this hero</button><button class="hk-btn hk-btn--leather" type="button"><i-icon name="cycle" size="14"></i-icon>Manage sync</button></div>
+        </div>
+      </article>
+
+      <!-- already elsewhere -->
+      <article class="hcard hcardGated" aria-labelledby="h3" style="transform:rotate(-.15deg)">
+        <x-tex kind="paper"></x-tex>
+        <x-mono text="IV" w="64" h="74" fs="26"></x-mono>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+          <h2 id="h3" class="hcard__t" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400">Ilyana Vorn</h2>
+          <span class="hcard__s" style="display:flex;align-items:center;gap:6px"><i-icon name="templar-shield" size="15" style="color:var(--accent-strong)"></i-icon>Human · Paladin 5</span>
+          <span class="hcard__s" style="display:flex;align-items:center;gap:8px"><span class="hk-gauge" style="flex:1 1 auto;height:10px;max-width:120px"><span class="hk-gauge__hp" style="width:70.5%"></span></span><span class="hk-num" style="font-size:16px"><b>31</b> / 44</span></span>
+          <span class="hk-card__gate"><i-icon name="padlock" size="14"></i-icon>Already in another campaign</span>
+        </div>
+        <div class="hcard__foot" style="flex-direction:column;align-items:stretch;gap:8px">
+          <span class="hk-hint">Linked to <b>The Emberfall Company</b>. A hero plays at one table at a time: leave that campaign from its Settings, or pick another hero.</span>
+          <div><button class="hk-btn hk-btn--brass" type="button" disabled="disabled" aria-disabled="true" title="Already in The Emberfall Company"><i-icon name="wax-seal" size="14"></i-icon>Link this hero</button></div>
+        </div>
+      </article>
+
+      <!-- handed-over pregen -->
+      <article class="hcard" aria-labelledby="h4" style="transform:rotate(.3deg)">
+        <x-tex kind="paper"></x-tex>
+        <x-mono text="GC" w="64" h="74" fs="26"></x-mono>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+          <h2 id="h4" class="hcard__t" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400">Guard captain</h2>
+          <span class="hcard__s" style="display:flex;align-items:center;gap:6px"><i-icon name="crossed-swords" size="15" style="color:var(--accent-strong)"></i-icon>Human · Fighter 3 · pregen</span>
+          <span style="display:flex;gap:6px;flex-wrap:wrap"><span class="hk-chip hk-chip--selected" style="height:24px" title="Your DM handed this pregen to you"><i-icon name="shaking-hands" size="13"></i-icon>Handed to you</span></span>
+        </div>
+        <div class="hcard__foot" style="flex-direction:column;align-items:stretch;gap:8px">
+          <span class="hk-hint">Your DM has handed this pregen over to you. Claim it to pull it onto this device and your account, then link it here.</span>
+          <div><button class="hk-btn hk-btn--brass" type="button"><i-icon name="hand" size="14"></i-icon>Claim</button></div>
+        </div>
+      </article>
+
+      <!-- create new -->
+      <a href="#" class="hcard" style="transform:rotate(-.2deg);background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);text-decoration:none;grid-template-columns:auto minmax(0,1fr);align-content:center;min-height:170px" aria-label="Create a new hero">
+        <span class="hk-iring hk-iring--l" style="width:52px;height:52px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)"><i-icon name="plus" size="24"></i-icon></span>
+        <span style="display:flex;flex-direction:column;gap:4px"><b style="font-size:18px;color:var(--text-on-leather);font-family:Forum,serif;font-weight:400">Create a new hero</b><span style="font-size:14px;font-style:italic">the creation wizard opens at the campaign&#8217;s starting level (3); you come back here to link it</span></span>
+      </a>
+
+      <!-- skip note -->
+      <section class="hk-leaf" aria-label="Note" style="transform:rotate(.35deg);display:flex;align-items:center;gap:12px;padding:16px 18px;align-self:center"><x-tex kind="paper"></x-tex><span class="hk-iring" style="width:36px;height:36px"><i-icon name="info" size="18"></i-icon></span><span style="font-size:15px;line-height:1.35"><b>No hero ready?</b> <i>Skip for now</i> on the strap joins you without one; the Party tab reminds you to link one, and your DM can hand you a pregen.</span></section>
+    </div>
+  </main>
+
+  <x-strap kind="link" label="Link Bramble Underfoot" status="Step 2 of 2 · Link a hero" sicon="wax-seal"></x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

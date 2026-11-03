@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account — log in, create account, recovery codes, recover (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="account" lang="en"></x-rail>
+
+  <main class="s4-main" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 28px;align-items:start;max-width:1120px;width:100%;margin:0 auto;box-sizing:border-box">
+    <!-- 1. Log in, redirected, with an error -->
+    <form class="hk-leaf" aria-labelledby="loginTitle" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:12px;padding:18px 22px 0">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="hood" size="36" seed="1"></x-seal><h1 class="hk-dialog__title" id="loginTitle">Log in</h1><span class="s4-tag" style="align-self:center"><i-icon name="entry-door" size="13"></i-icon>login-redirected + login-error</span></div>
+      <div class="hk-banner hk-banner--info" role="status" style="padding:8px 10px"><i-icon name="three-friends" size="20"></i-icon><div class="hk-banner__body"><span>Log in to open <b>Campaigns</b>. You'll be taken there afterwards.</span></div></div>
+      <div class="hk-field"><label class="hk-field__label" for="lu">Username</label><input class="hk-input" id="lu" value="ilyana_v" autocomplete="username"></div>
+      <div class="hk-field"><label class="hk-field__label" for="lp">Password</label><input class="hk-input hk-input--error" id="lp" type="password" value="wrongpassword" autocomplete="current-password" aria-invalid="true" aria-describedby="lpErr"><span class="hk-field__msg hk-field__msg--error" id="lpErr"><i-icon name="hazard-sign" size="12"></i-icon>Wrong username or password. Five more tries before a short lockout.</span></div>
+      <div class="hk-field"><label class="hk-field__label" for="ld">Device name</label><input class="hk-input" id="ld" value="Yura's laptop"><span class="hk-field__msg">Shown in Settings, Devices, so you can sign this device out from another one.</span></div>
+      <div class="hk-row" style="gap:14px;justify-content:space-between"><a class="s4-link" href="#">Create an account</a><a class="s4-link" href="#">Forgot your password?</a></div>
+      <div class="hk-dialog__strap hk-strap" style="margin:4px -22px 0">
+        <x-tex kind="leather"></x-tex>
+        <span class="hk-hint" style="color:var(--text-on-leather-3);margin-right:auto">No e-mail needed</span>
+        <button class="hk-btn hk-btn--brass" type="submit"><i-icon name="entry-door" size="14"></i-icon>Log in</button>
+      </div>
+    </form>
+
+    <!-- 2. Create account with live rules -->
+    <form class="hk-leaf" aria-labelledby="regTitle" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:12px;padding:18px 22px 0">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="plus" size="36" seed="2"></x-seal><h1 class="hk-dialog__title" id="regTitle">Create an account</h1><span class="s4-tag" style="align-self:center"><i-icon name="checklist" size="13"></i-icon>register-form, rules shown first</span></div>
+      <div class="hk-field"><label class="hk-field__label" for="ru">Username</label><input class="hk-input" id="ru" value="ilyana_v" autocomplete="username" aria-describedby="ruMsg"><span class="hk-field__msg" id="ruMsg" style="display:flex;align-items:center;gap:6px"><i-icon name="check-mark" size="12" style="color:var(--success-strong)"></i-icon><span>3 to 32 letters, digits, underscores or hyphens · <b style="color:var(--success-strong)">available</b></span></span></div>
+      <div class="hk-field"><label class="hk-field__label" for="rp">Password</label><input class="hk-input" id="rp" type="password" value="emberfall-devotion-31" autocomplete="new-password" aria-describedby="rpMsg">
+        <div class="s4-strength" aria-hidden="true"><div class="hk-gauge hk-gauge--thin" style="flex:1 1 auto"><div class="hk-gauge__moss" style="width:88%"></div></div><span class="hk-has-tip" style="display:inline-flex"><b style="color:var(--success-strong)" aria-describedby="tipStr" tabindex="0">Strong</b><span class="hk-tip hk-tip--left" id="tipStr" role="tooltip">21 characters, not a common password<span class="hk-tip__sub">checked on this device; the server checks again</span></span></span></div>
+        <span class="hk-field__msg" id="rpMsg">At least 10 characters, at most 128; not your username; not a common password.</span></div>
+      <div class="hk-field"><label class="hk-field__label" for="rd">Device name</label><input class="hk-input" id="rd" value="Yura's laptop"><span class="hk-field__msg">You can rename or sign out devices later in Settings.</span></div>
+      <div class="hk-row"><a class="s4-link" href="#">Already have an account? Log in</a></div>
+      <div class="hk-dialog__strap hk-strap" style="margin:4px -22px 0">
+        <x-tex kind="leather"></x-tex>
+        <span class="hk-hint" style="color:var(--text-on-leather-3);margin-right:auto">Next: your six recovery codes</span>
+        <button class="hk-btn hk-btn--brass" type="submit"><i-icon name="plus" size="14"></i-icon>Create account</button>
+      </div>
+    </form>
+
+    <!-- 3. Recovery codes -->
+    <section class="hk-leaf" aria-labelledby="codesTitle" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:12px;padding:18px 22px 0">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="key" size="36" seed="3"></x-seal><h1 class="hk-dialog__title" id="codesTitle">Save your recovery codes</h1><span class="s4-tag" style="align-self:center"><i-icon name="key" size="13"></i-icon>register-codes</span></div>
+      <p class="s4-p">These six one-time codes are the only way back into your account if you forget your password. Save them now somewhere safe: they are shown once, and Herokeep does not keep them.</p>
+      <div class="s4-codes" role="list" aria-label="Recovery codes">
+        <span role="listitem">7KQ4-NB2X-8R3T</span><span role="listitem">M9PW-2ZHC-K4LD</span>
+        <span role="listitem">X3RA-7TVN-Q2MB</span><span role="listitem">H8ND-4KPZ-W6YF</span>
+        <span role="listitem">B2TL-9QRM-N7XK</span><span role="listitem">Z5MC-3WHD-P8RT</span>
+      </div>
+      <div class="hk-row" style="gap:8px"><button class="hk-btn hk-btn--leather" type="button"><i-icon name="files" size="14"></i-icon>Copy codes</button><button class="hk-btn hk-btn--leather" type="button"><i-icon name="save" size="14"></i-icon>Download as .txt</button><span class="hk-hint" style="margin-left:auto">Each code works once.</span></div>
+      <label class="s4-check"><input class="s4-check__in" type="checkbox" checked>I saved my recovery codes</label>
+      <div class="hk-dialog__strap hk-strap" style="margin:4px -22px 0">
+        <x-tex kind="leather"></x-tex>
+        <span class="hk-hint" style="color:var(--text-on-leather-3);margin-right:auto">Leaving without saving asks to confirm</span>
+        <button class="hk-btn hk-btn--brass hk-focus-demo" type="button"><i-icon name="check-mark" size="14"></i-icon>Continue</button>
+      </div>
+    </section>
+
+    <!-- 4. Recover -->
+    <form class="hk-leaf" aria-labelledby="recTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:12px;padding:18px 22px 0">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="anticlockwise-rotation" size="36" seed="4"></x-seal><h1 class="hk-dialog__title" id="recTitle">Recover your account</h1><span class="s4-tag" style="align-self:center"><i-icon name="key" size="13"></i-icon>recover</span></div>
+      <div class="hk-banner" role="status" style="padding:8px 10px"><i-icon name="hazard-sign" size="20"></i-icon><div class="hk-banner__body"><span>Resetting the password signs out all other devices. This one stays signed in.</span></div></div>
+      <div class="hk-field"><label class="hk-field__label" for="cu">Username</label><input class="hk-input" id="cu" value="ilyana_v" autocomplete="username"></div>
+      <div class="hk-field"><label class="hk-field__label" for="cc">Recovery code</label><input class="hk-input" id="cc" value="X3RA-7TVN-Q2MB" style="font-family:'JetBrains Mono',monospace;letter-spacing:.04em" aria-describedby="ccMsg"><span class="hk-field__msg" id="ccMsg">One of the six codes saved at registration. It is used up afterwards.</span></div>
+      <div class="hk-field"><label class="hk-field__label" for="cp">New password</label><input class="hk-input" id="cp" type="password" value="" placeholder="at least 10 characters" autocomplete="new-password" aria-describedby="cpMsg"><span class="hk-field__msg" id="cpMsg">At least 10 characters; not your username; not a common password.</span></div>
+      <div class="hk-row"><a class="s4-link" href="#">Back to log in</a></div>
+      <div class="hk-dialog__strap hk-strap" style="margin:4px -22px 0">
+        <x-tex kind="leather"></x-tex>
+        <span class="hk-hint" style="color:var(--text-on-leather-3);margin-right:auto">Enabled once every field is valid</span>
+        <button class="hk-btn hk-btn--brass" type="submit" disabled aria-disabled="true" title="Reset password: not available — enter a new password first"><i-icon name="key" size="14"></i-icon>Reset password</button>
+      </div>
+    </form>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Exit">
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button" title="Back to Settings, Account"><i-icon name="return-arrow" size="17"></i-icon>Back</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <span class="hk-hint" style="color:var(--text-on-leather-3)">The form's own strap carries its primary action</span>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Help" title="Help: accounts and recovery codes"><i-icon name="help" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="hood" size="16" style="color:var(--brass)"></i-icon>Accounts are optional: heroes always stay on this device</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

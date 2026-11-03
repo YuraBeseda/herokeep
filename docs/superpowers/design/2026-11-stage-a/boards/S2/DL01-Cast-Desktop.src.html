@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — cast dialog over the Play sheet (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;height:1000px;overflow:hidden;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(320px,340fr) minmax(0,560fr) minmax(0,460fr);gap:20px;padding:18px 18px 92px;align-items:start;flex:1 1 auto" aria-hidden="true">
+    <x-part name="folio" tab="play" tip="none"></x-part>
+    <x-part name="centre"></x-part>
+    <x-part name="right"></x-part>
+  </main>
+  <x-part name="strap" pos="abs"></x-part>
+  <div class="dim" style="z-index:7"></div>
+
+  <!-- the two cast dialogs: a slot spell that would replace concentration, and the free-cast lane -->
+  <div style="position:absolute;inset:60px 0 70px;z-index:8;display:flex;align-items:center;justify-content:center;gap:28px;padding:0 24px">
+
+    <x-dlg title="Cast Shield of Faith" icon="magic-shield" width="520px" id="castA" seed="2">
+      <div class="hk-drawer__meta" style="gap:6px">
+        <span class="chip"><x-seal state="full" text="I" size="18" fs="30" seed="1" label="Level 1"></x-seal>Level 1</span><span class="chip">Abjuration</span><span class="chip chipV"><i-icon name="concentration-orb" size="12" hint="Concentration, up to 10 minutes"></i-icon>concentration</span><span class="chip"><i-icon name="stopwatch" size="12" style="color:#8A6A2A"></i-icon>bonus action</span><span class="chip"><i-icon name="position-marker" size="12" style="color:#8A6A2A"></i-icon>60 ft</span><span class="chip"><i-icon name="hourglass" size="12" style="color:#8A6A2A"></i-icon>10 minutes</span><span class="chip" title="Verbal, somatic, material: a prayer scroll">V S M</span>
+      </div>
+      <p class="mdp">A shimmering field surrounds a creature of your choice within range, granting it a <b>+2 bonus to AC</b> for the duration.</p>
+      <div class="warn"><i-icon name="concentration-orb" size="18"></i-icon><span><b>You are concentrating on Bless</b> (round 3). Casting Shield of Faith ends Bless for everyone it touches.</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px" role="radiogroup" aria-label="Pay for the spell with">
+        <span class="th">Pay with</span>
+        <button class="lane laneOn" type="button" role="radio" aria-checked="true"><span class="iring"><i-icon name="magic-swirl" size="15"></i-icon></span><span class="laneT"><b>Spell slot, level 1</b><span class="th">3 of 4 left · the slot the spell was written for</span></span><span style="display:flex;gap:3px;align-items:center"><span style="position:relative;display:inline-flex"><x-seal state="full" text="I" size="26" fs="30" seed="1" label="Level 1 slot, chosen"></x-seal><span class="sealRing" aria-hidden="true"></span></span><x-seal state="full" text="I" size="26" fs="30" seed="2" label="Level 1 slot"></x-seal><x-seal state="full" text="I" size="26" fs="30" seed="3" label="Level 1 slot"></x-seal><x-seal state="spent" text="I" size="26" fs="30" seed="4" label="Level 1 slot, spent"></x-seal></span></button>
+        <button class="lane" type="button" role="radio" aria-checked="false"><span class="iring"><i-icon name="magic-swirl" size="15"></i-icon></span><span class="laneT"><b>Spell slot, level 2</b><span class="th">2 of 2 left · no added effect for this spell at level 2</span></span><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" text="II" size="26" fs="28" seed="5" label="Level 2 slot"></x-seal><x-seal state="full" text="II" size="26" fs="28" seed="6" label="Level 2 slot"></x-seal></span></button>
+        <button class="lane laneOff" type="button" role="radio" aria-checked="false" disabled="disabled" title="Paladin’s Smite only pays for Divine Smite"><span class="iring"><i-icon name="sword-brandish" size="15"></i-icon></span><span class="laneT"><b>Free cast — Paladin’s Smite</b><span class="th">1 of 1 left · only pays for Divine Smite</span></span><span class="lockt" style="height:auto"><i-icon name="padlock" size="13"></i-icon>not for this spell</span></button>
+        <button class="lane laneOff" type="button" role="radio" aria-checked="false" disabled="disabled" title="No pact slots: no Warlock levels"><span class="iring"><i-icon name="pentacle" size="15"></i-icon></span><span class="laneT"><b>Pact slot</b><span class="th">no Warlock levels</span></span><span class="lockt" style="height:auto"><i-icon name="padlock" size="13"></i-icon>none</span></button>
+      </div>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><span class="hint" style="color:#E0C27A">ends Bless · spends a level 1 slot</span><button class="btn btnBrass btnL" type="button"><i-icon name="magic-swirl" size="16"></i-icon>Cast Shield of Faith</button></div>
+    </x-dlg>
+
+    <x-dlg title="Cast Divine Smite" icon="sword-brandish" width="470px" id="castB" seed="5">
+      <div class="hk-drawer__meta" style="gap:6px">
+        <span class="chip"><x-seal state="full" text="I" size="18" fs="30" seed="1" label="Level 1"></x-seal>Level 1</span><span class="chip">Evocation</span><span class="chip"><i-icon name="stopwatch" size="12" style="color:#8A6A2A"></i-icon>bonus action, after a hit</span><span class="chip"><i-icon name="position-marker" size="12" style="color:#8A6A2A"></i-icon>self</span><span class="chip" title="Verbal">V</span>
+      </div>
+      <p class="mdp">The target takes an extra <b>2d8 radiant</b> damage from the hit; <b>3d8</b> if it is a Fiend or an Undead.</p>
+      <div style="display:flex;flex-direction:column;gap:6px" role="radiogroup" aria-label="Pay for the spell with">
+        <span class="th">Pay with</span>
+        <button class="lane laneOn" type="button" role="radio" aria-checked="true"><span class="iring"><i-icon name="sword-brandish" size="15"></i-icon></span><span class="laneT"><b>Free cast — Paladin’s Smite</b><span class="th">1 of 1 left · back on a long rest · 2d8</span></span><span style="position:relative;display:inline-flex"><x-seal state="full" icon="sword-brandish" size="28" seed="4" label="Free cast, chosen"></x-seal><span class="sealRing" aria-hidden="true"></span></span></button>
+        <button class="lane" type="button" role="radio" aria-checked="false"><span class="iring"><i-icon name="magic-swirl" size="15"></i-icon></span><span class="laneT"><b>Spell slot, level 1</b><span class="th">3 of 4 left · 2d8</span></span><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" text="I" size="26" fs="30" seed="1" label="Level 1 slot"></x-seal><x-seal state="full" text="I" size="26" fs="30" seed="2" label="Level 1 slot"></x-seal><x-seal state="full" text="I" size="26" fs="30" seed="3" label="Level 1 slot"></x-seal><x-seal state="spent" text="I" size="26" fs="30" seed="4" label="Level 1 slot, spent"></x-seal></span></button>
+        <button class="lane" type="button" role="radio" aria-checked="false"><span class="iring"><i-icon name="magic-swirl" size="15"></i-icon></span><span class="laneT"><b>Spell slot, level 2</b><span class="th" style="display:flex;align-items:center;gap:5px">2 of 2 left · <span class="chip chipV" style="height:18px;font-size:13px"><i-icon name="upgrade" size="10"></i-icon>upcast</span> +1d8 → 3d8</span></span><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" text="II" size="26" fs="28" seed="5" label="Level 2 slot"></x-seal><x-seal state="full" text="II" size="26" fs="28" seed="6" label="Level 2 slot"></x-seal></span></button>
+        <button class="lane laneOff" type="button" role="radio" aria-checked="false" disabled="disabled" title="No pact slots: no Warlock levels"><span class="iring"><i-icon name="pentacle" size="15"></i-icon></span><span class="laneT"><b>Pact slot</b><span class="th">no Warlock levels</span></span><span class="lockt" style="height:auto"><i-icon name="padlock" size="13"></i-icon>none</span></button>
+      </div>
+      <span class="hint" style="display:flex;align-items:center;gap:5px"><i-icon name="info" size="13" style="color:#8A6A2A"></i-icon>Not a concentration spell; Bless keeps going.</span>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL focusDemo" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><span class="hint" style="color:#E0C27A">no slot spent</span><button class="btn btnBrass btnL" type="button"><i-icon name="sword-brandish" size="16"></i-icon>Cast for free</button></div>
+    </x-dlg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

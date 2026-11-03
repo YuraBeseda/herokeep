@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — підвищення рівня, очки здоров'я (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <x-part name="pbar" title="Підвищення до 6 рівня" left="cross-mark" leftlabel="Скасувати підвищення рівня"></x-part>
+
+  <div style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+    <x-part name="pstrip" n="2" of="4" label="Очки здоров'я"></x-part>
+
+    <section class="leaf leafP" aria-label="Очки здоров'я" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:10px">
+      <x-tex kind="paper"></x-tex>
+      <div style="position:relative;display:flex;flex-direction:column;gap:4px"><h2 class="leafTitle" style="font-size:20px"><i-icon name="heart" size="19" style="color:#8A6A2A"></i-icon>Очки здоров'я за 6 рівень</h2><span class="hint hintP">Киньте 1к10 або візьміть середнє значення; +2 Статури додається в обох випадках.</span></div>
+
+      <button class="hpCard hpOn" type="button" aria-pressed="true" style="position:relative;gap:8px;padding:12px 14px;font-size:16px">
+        <span class="pickSeal" style="position:absolute"><x-seal state="full" icon="check-mark" size="32" label="Обрано" seed="4"></x-seal></span>
+        <span style="display:flex;align-items:center;gap:8px"><i-icon name="d10" size="20" style="color:#8A6A2A"></i-icon><span class="pickT" style="font-size:19px;flex:0 0 auto">Кинути 1к10</span><span class="chip chipM glyph" tabindex="0" aria-describedby="tipRolled" style="height:26px;font-size:14px;position:relative"><i-icon name="check-mark" size="11"></i-icon>кинуто<span class="tipUp" id="tipRolled" role="tooltip" style="left:auto;right:-70px;transform:none;font-size:15px;white-space:normal;width:230px">Один кидок на рівень<span class="tipSub">Кидок збережено; замість нього можна взяти середнє.</span></span></span></span>
+        <span style="display:flex;align-items:center;gap:14px"><span class="die" role="img" aria-label="Випало 7">7</span><span style="display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:baseline;gap:6px"><span class="bigN" style="font-size:38px">+9</span><span class="th" style="font-size:15px">очок здоров'я</span></span><span class="th" style="font-size:14px">Випало 7 + 2 Статура</span></span></span>
+      </button>
+      <button class="hpCard" type="button" aria-pressed="false" style="gap:8px;padding:12px 14px;font-size:16px">
+        <span style="display:flex;align-items:center;gap:8px"><i-icon name="scales" size="20" style="color:#8A6A2A"></i-icon><span class="pickT" style="font-size:19px;flex:0 0 auto">Взяти середнє</span></span>
+        <span style="display:flex;align-items:center;gap:14px"><span class="die" style="background:radial-gradient(circle at 35% 30%,#EFE4C8,#DBCCA5);color:#2B2118;box-shadow:inset 0 0 0 2px #8A6A2A" role="img" aria-label="Середнє 6">6</span><span style="display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:baseline;gap:6px"><span class="bigN" style="font-size:38px">+8</span><span class="th" style="font-size:15px">очок здоров'я</span></span><span class="th" style="font-size:14px">6 (половина к10, округлено вгору) + 2 Статура</span></span></span>
+        <span class="btn btnParch btnP" style="align-self:flex-start;height:40px"><i-icon name="scales" size="14"></i-icon>Взяти середнє</span>
+      </button>
+
+      <div class="strap" style="position:relative;display:flex;flex-direction:column;gap:8px;padding:10px 14px;color:#E9DCBB">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="vlabel"><i-icon name="heart" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> Максимум ОЗ</span><span class="vval" style="font-size:22px">44 <span style="font-size:15px;color:#C9A24E">→</span> 53</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="vlabel"><i-icon name="d10" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> Кістки хітів</span><span class="vval" style="font-size:22px">5к10 <span style="font-size:15px;color:#C9A24E">→</span> 6к10</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="vlabel"><i-icon name="health-normal" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> Поточні ОЗ</span><span class="vval" style="font-size:22px">31 <span style="font-size:15px;color:#C9A24E">→</span> 40</span></div>
+      </div>
+    </section>
+  </div>
+
+  <x-part name="pflow" next="Далі"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

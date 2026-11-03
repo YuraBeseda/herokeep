@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Гурт кампанії, Майстер (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Компанія Емберфол" action="plus" alabel="Додати заготовку персонажа"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;z-index:1">
+    <x-enc lang="uk" state="live" ctl="1"></x-enc>
+    <x-pcardp id="ilyana" mode="dm" sel="1" tip="1" tilt="-.25deg"></x-pcardp>
+    <x-pcardp id="bramble" mode="dm" tilt=".2deg"></x-pcardp>
+    <x-pcardp id="maren" mode="dm" tilt="-.15deg"></x-pcardp>
+    <x-pcardp id="thorne" mode="dm" tilt=".25deg"></x-pcardp>
+    <x-pcardp id="oskar" mode="dm" tilt="-.3deg"></x-pcardp>
+    <x-pcardp id="guard" mode="dm" tilt=".2deg"></x-pcardp>
+  </div>
+
+  <x-pstrap kind="dm"></x-pstrap>
+  <x-tabbar active="party"></x-tabbar>
+
+  <!-- quick-effects bottom sheet for the selected card -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:4;bottom:60px"></div>
+  <section class="sheetP" role="dialog" aria-modal="true" aria-labelledby="qfxp" style="bottom:60px;gap:10px">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-sheet__grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:10px"><x-mono text="ІВ" w="40" h="44" fs="17" label="Портрет, монограма ІВ"></x-mono><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto"><h2 id="qfxp" style="margin:0;font:21px/1.1 Forum,serif;font-weight:400">Іляна Ворн</h2><span class="hk-hint" style="font-size:14px">швидкі ефекти · 31 / 44 ОЗ, +5 тимч. · КБ 18</span></div><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <div role="tablist" aria-label="Ефект" style="display:flex;gap:6px;overflow:auto;padding-bottom:2px;margin:0 -14px;padding-left:14px;padding-right:14px">
+      <button class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" type="button" role="tab" aria-selected="true" style="height:44px;flex:0 0 auto"><i-icon name="broken-heart" size="15"></i-icon>Шкода</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn hk-chip--moss" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="healing" size="15"></i-icon>Лікування</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="heart-armor" size="15"></i-icon>Тимчасові ОЗ</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="skull" size="15"></i-icon>Стан</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="laurels" size="15"></i-icon>Досвід</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="upgrade" size="15"></i-icon>Рівень</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="swap-bag" size="15"></i-icon>Предмет</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="inspiration" size="15"></i-icon>Натхнення</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:44px;flex:0 0 auto"><i-icon name="quill" size="15"></i-icon>Перевизначення</button>
+    </div>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end">
+      <div class="hk-field"><label class="hk-field__label" for="dmgP" style="font-size:15px">Кількість шкоди</label><div class="hk-numfield hk-numfield--leaf hk-numfield--phone" style="grid-template-columns:44px 70px 44px"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Менше" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="dmgP" type="number" value="7" min="0"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Більше" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div>
+      <div class="hk-field"><label class="hk-field__label" for="typP" style="font-size:15px">Тип</label><input class="hk-input" id="typP" value="колючий" style="height:44px"></div>
+    </div>
+    <span class="hk-hint" style="font-size:15px">Тимчасові ОЗ (5) поглинають першими: 31 → 29 ОЗ. Запис піде на Стіл.</span>
+    <button class="hk-btn hk-btn--phone hk-btn--ember" type="button" style="justify-content:center"><i-icon name="broken-heart" size="18"></i-icon>Застосувати 7 шкоди</button>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

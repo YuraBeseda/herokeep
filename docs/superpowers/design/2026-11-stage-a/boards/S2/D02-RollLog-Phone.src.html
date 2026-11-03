@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — журнал кидків над вкладкою Бій (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <div aria-hidden="true" style="position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+    <x-part name="pcombat"></x-part>
+  </div>
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="combat"></x-part>
+  <div class="dim"></div>
+
+  <!-- bottom sheet: roll log -->
+  <section class="psheet" role="dialog" aria-modal="true" aria-labelledby="logT" style="height:690px">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <div class="grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:8px"><i-icon name="rolling-dices" size="22" style="color:#8A6A2A"></i-icon><h2 class="leafTitle" id="logT" style="font-size:22px;flex:1 1 auto">Журнал кидків</h2><button class="ico icoP icoLeaf" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <div class="seg" role="radiogroup" aria-label="Перевага для наступного кидка" style="justify-content:stretch"><button class="segB segP" type="button" role="radio" aria-checked="false" style="flex:1 1 0;justify-content:center"><i-icon name="arrow-cluster" size="15"></i-icon>Перевага</button><button class="segB segP segOn" type="button" role="radio" aria-checked="true" style="flex:1 1 0;justify-content:center">Звичайно</button><button class="segB segP" type="button" role="radio" aria-checked="false" style="flex:1 1 0;justify-content:center"><i-icon name="broken-arrow" size="15"></i-icon>Завада</button></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" role="radiogroup" aria-label="Хто побачить цей кидок"><span class="th" style="font-size:14px">Хто бачить</span><button class="chip chipBtn chipOn" type="button" role="radio" aria-checked="true" style="height:36px"><i-icon name="three-friends" size="13"></i-icon>Усі</button><span class="glyph" tabindex="0" aria-describedby="tipDm"><button class="chip chipBtn" type="button" role="radio" aria-checked="false" style="height:36px"><i-icon name="crown" size="13" style="color:#8A6A2A"></i-icon>Лише Майстер</button><span class="tip" id="tipDm" role="tooltip" style="left:-50px;transform:none;font-size:15px;white-space:normal;width:230px">Результат бачить лише Майстер<span class="tipSub">Загін бачить, що ви кинули, але не число.</span></span></span><button class="chip chipBtn" type="button" role="radio" aria-checked="false" style="height:36px"><i-icon name="padlock" size="13" style="color:#8A6A2A"></i-icon>Приватно</button></div>
+    <div style="display:flex;flex-direction:column;min-width:0;flex:1 1 auto;min-height:0;overflow:auto" aria-label="Кидки">
+      <div class="feed" style="background:rgba(232,204,124,.28);box-shadow:inset 0 0 0 1px #C9A24E;border-radius:4px;margin:0 -6px;padding:6px 6px;grid-template-columns:38px minmax(0,1fr) auto"><span class="d20 d20Nat" style="width:38px;height:38px;font-size:18px" role="img" aria-label="Природна 20">20</span><span class="feedN"><span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><b>Переконання</b><span class="chip chipOn" style="height:20px;font-size:13px"><i-icon name="star" size="11"></i-icon>природна 20</span></span><span class="feedS">20 + 6 = 26 · усі · 21:43</span></span><span class="feedT">26</span></div>
+      <div class="feed" style="grid-template-columns:38px minmax(0,1fr) auto"><span class="d20" style="width:38px;height:38px;font-size:18px">14</span><span class="feedN"><span><b>Довгий меч</b> — атака</span><span class="feedS">перевага: 14, 9 · +6 = 20 · усі · 21:41</span></span><span class="feedT">20</span></div>
+      <div class="feed" style="grid-template-columns:38px minmax(0,1fr) auto"><span class="d20" style="width:38px;height:38px;font-size:15px">к8</span><span class="feedN"><span><b>Довгий меч</b> — шкода</span><span class="feedS">1к8 (5) + 3 = 8 рубаючий · усі · 21:41</span></span><span class="feedT">8</span></div>
+      <div class="feed" style="grid-template-columns:38px minmax(0,1fr) auto"><span class="d20" style="width:38px;height:38px;font-size:18px">8</span><span class="feedN"><span><b>Статура</b> — рятівний кидок</span><span class="feedS">8 + 2 = 10 · лише Майстер · 21:39</span></span><span class="feedT">10</span></div>
+      <div class="feed" style="grid-template-columns:38px minmax(0,1fr) auto"><span class="d20 d20Fail" style="width:38px;height:38px;font-size:18px" role="img" aria-label="Природна 1">1</span><span class="feedN"><span style="display:flex;align-items:center;gap:6px"><b>Ініціатива</b><span class="chip chipE" style="height:20px;font-size:13px">природна 1</span></span><span class="feedS">1 + 0 = 1 · усі · 21:35</span></span><span class="feedT">1</span></div>
+      <div class="feed" style="grid-template-columns:38px minmax(0,1fr) auto;border-bottom:0"><span class="d20" style="width:38px;height:38px;background:radial-gradient(circle at 35% 30%,#EFE4C8,#DBCCA5);color:#8A6A2A;box-shadow:inset 0 0 0 1.5px #8A6A2A"><i-icon name="quill" size="16"></i-icon></span><span class="feedN"><span style="display:flex;align-items:center;gap:6px"><b>Розслідування</b><span class="chip" style="height:20px;font-size:13px">вручну</span></span><span class="feedS">записано вручну · приватно · 21:20</span></span><span class="feedT">14</span></div>
+    </div>
+    <div class="block" style="gap:8px;padding:10px 12px">
+      <div style="display:flex;align-items:center;gap:6px"><i-icon name="quill" size="16" style="color:#8A6A2A"></i-icon><b>Записати кидок</b></div>
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:end">
+        <div class="fld"><label class="fldL" for="tot">Підсумок</label><input class="numIn numInP" id="tot" type="number" value="14" min="0" style="width:76px"></div>
+        <div class="fld"><label class="fldL" for="kind">Тип кидка</label><span class="selBox"><select class="selIn" id="kind" style="height:44px"><option>Перевірка вручну</option><option>Рятівний кидок вручну</option><option>Атака вручну</option><option>Шкода вручну</option><option>Кидок вручну</option></select><span class="selChev"><i-icon name="card-pick" size="14"></i-icon></span></span></div>
+        <button class="ico icoP" type="button" aria-label="Записати кидок" title="Записати кидок" style="background:linear-gradient(180deg,#E8CC7C,#C9A24E 55%,#9C7A33);color:#2B2118;box-shadow:inset 0 0 0 2px #5E4418,0 2px 3px rgba(0,0,0,.6)"><i-icon name="plus" size="20"></i-icon></button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><button class="btn btnGhost btnP" type="button" style="color:#8E3220;border-color:#C98C78;height:40px" title="Видаляє 6 кидків на цьому пристрої"><i-icon name="trash-can" size="14"></i-icon>Очистити журнал</button><span class="hint hintP" style="font-size:14px;text-align:right">6 кидків на цьому пристрої</span></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

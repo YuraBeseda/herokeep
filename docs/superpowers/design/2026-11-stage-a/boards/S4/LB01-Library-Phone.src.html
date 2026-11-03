@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Бібліотека — пошук (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-phone" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Бібліотека" action="funnel" alabel="Фільтр за типом" lang="uk"></x-topbar>
+
+  <div class="s4-pbody" data-scroller="body">
+    <section class="hk-leaf hk-leaf--phone" aria-label="Пошук у бібліотеці" style="display:flex;flex-direction:column;gap:10px;transform:rotate(.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <label class="hk-search" style="height:44px"><i-icon name="magnifying-glass" size="20"></i-icon><span class="hk-sr">Пошук у бібліотеці</span><input class="hk-search__in" type="search" value="fire" aria-label="Пошук у бібліотеці"><button class="hk-ico hk-ico--leaf" type="button" aria-label="Очистити пошук" title="Очистити пошук" style="width:36px;height:36px"><i-icon name="cross-mark" size="12"></i-icon></button></label>
+      <div class="s4-chips-scroll" role="group" aria-label="Фільтр за типом">
+        <button class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" type="button" aria-pressed="true" style="height:36px;font-size:16px;flex:0 0 auto">Усі<span class="hk-btn__badge">15</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" style="height:36px;font-size:16px;flex:0 0 auto"><i-icon name="spell-book" size="15"></i-icon>Заклинання<span class="hk-btn__badge">7</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" style="height:36px;font-size:16px;flex:0 0 auto"><i-icon name="swap-bag" size="15"></i-icon>Предмети<span class="hk-btn__badge">7</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" style="height:36px;font-size:16px;flex:0 0 auto"><i-icon name="scroll-unfurled" size="15"></i-icon>Правила<span class="hk-btn__badge">1</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="Немає видів за запитом «fire»" style="height:36px;font-size:16px;flex:0 0 auto">Види<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="Немає класів за запитом «fire»" style="height:36px;font-size:16px;flex:0 0 auto">Класи<span class="hk-btn__badge">0</span></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="hk-th" style="font-size:16px" role="status"><b class="hk-num" style="font-size:19px">15</b> результатів · «fire»</span><span style="flex:1 1 auto"></span><span class="hk-hint" style="font-size:14px">за збігом</span></div>
+
+      <div role="list" aria-label="Результати" style="display:flex;flex-direction:column">
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="fire-spell-cast" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px"><b><mark class="s4-mark">Fire</mark>ball</b></span><span class="s4-res__s" style="font-size:14px">Рівень 3, evocation · 1 дія · 150 футів</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-has-tip" style="display:inline-flex"><span class="hk-chip hk-chip--dark" role="img" aria-label="Текст пакета англійською; пакет перекладу не встановлено" aria-describedby="tipEn">EN</span><span class="hk-tip hk-tip--left" id="tipEn" role="tooltip" style="white-space:normal;width:230px">Текст пакета англійською<span class="hk-tip__sub">пакет перекладу не встановлено</span></span></span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="fire-ray" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px"><mark class="s4-mark">Fire</mark> Bolt</span><span class="s4-res__s" style="font-size:14px">Замовляння, evocation · 1 дія · 120 футів</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="magic-shield" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px"><mark class="s4-mark">Fire</mark> Shield</span><span class="s4-res__s" style="font-size:14px">Рівень 4, evocation · 1 дія · на себе</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="flame" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px"><mark class="s4-mark">Fire</mark> Storm</span><span class="s4-res__s" style="font-size:14px">Рівень 7, evocation · 1 дія · 150 футів</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="burning-dot" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px">Delayed Blast <mark class="s4-mark">Fire</mark>ball</span><span class="s4-res__s" style="font-size:14px">Рівень 7, evocation · концентрація</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="sparkles" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px">Faerie <mark class="s4-mark">Fire</mark></span><span class="s4-res__s" style="font-size:14px">Рівень 1, evocation · 60 футів · концентрація</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="fire" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px">Wall of <mark class="s4-mark">Fire</mark></span><span class="s4-res__s" style="font-size:14px">Рівень 4, evocation · 120 футів · концентрація</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="flask" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px">Alchemist's <mark class="s4-mark">Fire</mark></span><span class="s4-res__s" style="font-size:14px">Спорядження · 50 зм · 1 фунт</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Предмети"><i-icon name="swap-bag" size="13"></i-icon>Предмет</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="necklace" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px">Necklace of <mark class="s4-mark">Fire</mark>balls</span><span class="s4-res__s" style="font-size:14px">Магічний предмет · рідкісний</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Предмети"><i-icon name="swap-bag" size="13"></i-icon>Предмет</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+        <a class="s4-pres" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="wizard-staff" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t" style="font-size:17px">Staff of <mark class="s4-mark">Fire</mark></span><span class="s4-res__s" style="font-size:14px">Магічний предмет · дуже рідкісний · налаштування</span></span>
+          <span class="s4-pres__pills"><span class="hk-chip" title="Предмети"><i-icon name="swap-bag" size="13"></i-icon>Предмет</span><span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span></span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <x-pstrap lang="uk" cols="1fr 1fr 44px">
+    <button class="s4-act s4-act--brass" type="button" title="Створити власний предмет, заклинання, рису або вид"><i-icon name="plus" size="20"></i-icon><span class="s4-act__t">Новий хоумбрю</span></button>
+    <button class="s4-act s4-act--leather" type="button" title="Імпортувати файл .hkpack"><i-icon name="knapsack" size="20"></i-icon><span class="s4-act__t">Імпортувати пакет</span></button>
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Ще: фільтр, пошук" title="Ще: фільтр, пошук"><i-icon name="hamburger-menu" size="22"></i-icon></button>
+  </x-pstrap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

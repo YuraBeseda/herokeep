@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — loot and coin split</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-board" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="s5-vign" aria-hidden="true"></div>
+  <header class="s5-title"><span class="s5-tag"><i-icon name="wax-seal" size="13"></i-icon>Later idea</span><h1 class="s5-h1"><i-icon name="open-treasure-chest" size="24"></i-icon>Loot and coin split</h1><span class="s5-hintG">DM · session 12</span></header>
+
+  <!-- found loot -->
+  <section class="hk-leaf" aria-labelledby="lootT" style="display:flex;flex-direction:column;gap:4px;padding:12px 16px 12px;transform:rotate(-.2deg)">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="s5-h2" id="lootT"><i-icon name="open-treasure-chest" size="19"></i-icon>Found loot</h2><span class="hk-hint">Giant Spider nest · 4 items · players see this list</span><div class="hk-leaf__actions"><button class="hk-btn hk-btn--ghost hk-btn--dashed" type="button" title="From the library or a custom item"><i-icon name="plus" size="13"></i-icon>Add item</button></div></div>
+
+    <div class="s5-item" style="grid-template-columns:32px minmax(0,1fr) auto auto"><span class="s5-ring"><i-icon name="cloak" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Cloak of Protection<span class="hk-gem hk-gem--inline" role="img" aria-label="Needs attunement" title="Needs attunement"></span></span><span class="s5-item__s"><span style="color:var(--rarity-uncommon);font-weight:700" title="Rarity: uncommon">uncommon</span>· wondrous item · +1 AC and saves</span></span><span class="s5-row" style="gap:4px;flex-wrap:nowrap" role="group" aria-label="Give to"><button class="s5-mchip" type="button" aria-pressed="false" title="Ilyana Vorn">IV</button><button class="s5-mchip" type="button" aria-pressed="false" title="Bramble Underfoot">BU</button><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Sister Maren">SM</button><button class="s5-mchip" type="button" aria-pressed="false" title="Thorne Ashvale">TA</button><button class="s5-mchip" type="button" aria-pressed="false" title="Oskar Bellow">OB</button></span><span class="s5-row" style="gap:4px;flex-wrap:nowrap"><span class="hk-chip hk-chip--moss" style="height:28px" title="In Sister Maren's bag since 21:02"><i-icon name="check-mark" size="11"></i-icon>given</span><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Take back from Sister Maren" title="Take back"><i-icon name="return-arrow" size="12"></i-icon></button></span></div>
+
+    <div class="s5-item" style="grid-template-columns:32px minmax(0,1fr) auto auto"><span class="s5-ring"><i-icon name="health-potion" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Potion of Healing<span class="hk-plate" style="height:18px;font-size:13px;padding:0 5px" title="Quantity 2">×2</span></span><span class="s5-item__s"><span style="color:var(--text-2)" title="Rarity: common">common</span>· consumable · 0.5 lb each</span></span><span class="s5-row" style="gap:4px;flex-wrap:nowrap" role="group" aria-label="Give to"><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Ilyana Vorn: 1">IV<span class="s5-mchip__q">1</span></button><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Bramble Underfoot: 1">BU<span class="s5-mchip__q">1</span></button><button class="s5-mchip" type="button" aria-pressed="false" title="Sister Maren">SM</button><button class="s5-mchip" type="button" aria-pressed="false" title="Thorne Ashvale">TA</button><button class="s5-mchip" type="button" aria-pressed="false" title="Oskar Bellow">OB</button></span><button class="hk-btn hk-btn--brass" type="button" style="height:30px" title="1 to Ilyana, 1 to Bramble"><i-icon name="hand-ok" size="13"></i-icon>Give 2</button></div>
+
+    <div class="s5-item" style="grid-template-columns:32px minmax(0,1fr) auto auto"><span class="s5-ring"><i-icon name="gems" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Pearl of Power<span class="hk-gem hk-gem--inline" role="img" aria-label="Needs attunement" title="Needs attunement"></span></span><span class="s5-item__s"><span style="color:var(--rarity-uncommon);font-weight:700" title="Rarity: uncommon">uncommon</span>· wondrous item · regain a spell slot</span></span><span class="s5-row" style="gap:4px;flex-wrap:nowrap" role="group" aria-label="Give to"><button class="s5-mchip" type="button" aria-pressed="false" title="Ilyana Vorn">IV</button><button class="s5-mchip" type="button" aria-pressed="false" title="Bramble Underfoot">BU</button><button class="s5-mchip" type="button" aria-pressed="false" title="Sister Maren">SM</button><button class="s5-mchip s5-mchip--on hk-focus-demo" type="button" aria-pressed="true" title="Thorne Ashvale">TA</button><button class="s5-mchip" type="button" aria-pressed="false" title="Oskar Bellow">OB</button></span><button class="hk-btn hk-btn--brass" type="button" style="height:30px"><i-icon name="hand-ok" size="13"></i-icon>Give</button></div>
+
+    <div class="s5-item" style="grid-template-columns:32px minmax(0,1fr) auto auto;border-bottom:0"><span class="s5-ring"><i-icon name="spyglass" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Spyglass</span><span class="s5-item__s">gear · 1 lb · worth 1,000 gp</span></span><span class="s5-row" style="gap:4px;flex-wrap:nowrap" role="group" aria-label="Give to"><button class="s5-mchip" type="button" aria-pressed="false" title="Ilyana Vorn">IV</button><button class="s5-mchip" type="button" aria-pressed="false" title="Bramble Underfoot">BU</button><button class="s5-mchip" type="button" aria-pressed="false" title="Sister Maren">SM</button><button class="s5-mchip" type="button" aria-pressed="false" title="Thorne Ashvale">TA</button><button class="s5-mchip" type="button" aria-pressed="false" title="Oskar Bellow">OB</button></span><button class="hk-btn hk-btn--brass" type="button" style="height:30px" disabled aria-disabled="true" title="Pick a hero first — unassigned loot stays in the party list, where a player can claim it"><i-icon name="hand-ok" size="13"></i-icon>Give</button></div>
+  </section>
+
+  <!-- coins -->
+  <section class="hk-leather" aria-labelledby="coinT" style="display:flex;flex-direction:column;gap:10px;padding:12px 16px 14px">
+    <x-tex kind="leather"></x-tex>
+    <div class="s5-row" style="gap:12px;flex-wrap:nowrap">
+      <h2 class="s5-h2" id="coinT" style="color:var(--brass-top);text-shadow:0 1px 1px rgba(0,0,0,.6)"><i-icon name="coins-pile" size="19" style="color:var(--brass)"></i-icon>Coins found</h2>
+      <span class="hk-hint" style="color:var(--text-on-leather-3)">≈ 123 gp</span>
+      <x-coin metal="gold" n="120" unit="gp" label="120 gold"></x-coin>
+      <x-coin metal="silver" n="35" unit="sp" label="35 silver"></x-coin>
+      <span style="flex:1 1 auto"></span>
+      <button class="hk-ico" type="button" aria-label="Edit the found coins" title="Edit"><i-icon name="quill" size="16"></i-icon></button>
+    </div>
+    <div class="s5-row" style="gap:10px;flex-wrap:nowrap">
+      <span class="hk-strap__label" style="font-size:15px"><i-icon name="three-friends" size="15"></i-icon>Share between</span>
+      <span class="s5-row" style="gap:4px;flex-wrap:nowrap" role="group" aria-label="Recipients"><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Ilyana Vorn">IV</button><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Bramble Underfoot">BU</button><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Sister Maren">SM</button><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Thorne Ashvale">TA</button><button class="s5-mchip s5-mchip--on" type="button" aria-pressed="true" title="Oskar Bellow">OB</button><button class="s5-mchip s5-mchip--off" type="button" aria-pressed="false" disabled aria-disabled="true" title="Guard captain: pregens take no share">GC</button></span>
+      <span style="flex:1 1 auto"></span>
+      <span class="hk-has-tip" style="display:inline-flex"><button class="hk-btn hk-btn--brass hk-btn--l" type="button" aria-describedby="tipSplit"><i-icon name="two-coins" size="17"></i-icon>Split evenly</button><span class="hk-tip hk-tip--above hk-tip--left" id="tipSplit" role="tooltip" style="right:0">5 heroes · 24 gp 7 sp each<span class="hk-tip__sub">nothing left over</span></span></span>
+      <button class="hk-btn hk-btn--ghost-leather hk-btn--l" type="button" title="Type a different amount per hero"><i-icon name="quill" size="15"></i-icon>Custom split</button>
+    </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start">
+    <!-- what the player sees -->
+    <section class="hk-leaf" aria-labelledby="plT" style="display:flex;flex-direction:column;gap:8px;padding:12px 16px;transform:rotate(.25deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="s5-h2" id="plT"><i-icon name="hourglass" size="18"></i-icon>On Ilyana's timeline</h2><span class="hk-hint">what Mira sees</span></div>
+      <div class="s5-entry" style="grid-template-columns:40px minmax(0,1fr)"><span class="s5-entry__t">21:06</span><p class="s5-entry__p">Received <b>Potion of Healing</b> ×1 from the DM · bag: 2 → 3</p></div>
+      <div class="s5-entry" style="grid-template-columns:40px minmax(0,1fr);border-bottom:0"><span class="s5-entry__t">21:07</span><p class="s5-entry__p">Received <b>24 gp 7 sp</b>: loot split · coins: 38 gp 12 sp → 62 gp 19 sp</p><span class="s5-entry__tags"><span class="hk-chip" style="height:22px" title="Giant Spider nest, session 12"><i-icon name="open-treasure-chest" size="12"></i-icon>loot · session 12</span></span></div>
+      <div class="hk-banner hk-banner--info" role="status" style="padding:8px 12px"><i-icon name="open-treasure-chest" size="20"></i-icon><div class="hk-banner__body"><span class="hk-banner__title" style="font-size:16px">Party loot: Spyglass</span><span style="font-size:14px">unclaimed · worth 1,000 gp</span></div><div class="hk-banner__actions"><button class="hk-btn hk-btn--brass" type="button" title="Asks the DM; lands in your bag when approved"><i-icon name="hand-ok" size="13"></i-icon>Claim</button></div></div>
+    </section>
+
+    <!-- the resulting toasts -->
+    <div class="s5-col" style="gap:10px" aria-label="Toasts">
+      <div class="hk-toast hk-toast--success" role="status" style="width:300px"><x-tex kind="paper"></x-tex><i-icon name="check-mark" size="20"></i-icon><div class="hk-toast__body"><span>Cloak of Protection given to Sister Maren</span><span class="hk-toast__sub">in her bag · needs attunement</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+      <div class="hk-toast hk-toast--success" role="status" style="width:300px"><x-tex kind="paper"></x-tex><i-icon name="two-coins" size="20"></i-icon><div class="hk-toast__body"><span>Coins split: 24 gp 7 sp to each of 5 heroes</span><span class="hk-toast__sub">posted to the Table · 21:07</span></div><button class="hk-btn hk-btn--parchment" type="button" style="height:28px" title="Takes the coins back from all five">Undo</button></div>
+      <div class="hk-toast" role="status" style="width:300px;background:var(--warning-soft);box-shadow:inset 0 0 0 1px var(--warning),4px 6px 12px rgba(10,5,2,.5)"><i-icon name="hazard-sign" size="20" style="color:var(--warning)"></i-icon><div class="hk-toast__body"><span>Bramble is offline</span><span class="hk-toast__sub">Potion of Healing and his share arrive when he syncs</span></div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

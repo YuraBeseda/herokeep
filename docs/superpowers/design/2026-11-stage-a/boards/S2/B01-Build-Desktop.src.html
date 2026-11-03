@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — hero sheet, Build tab (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(320px,340fr) minmax(0,1020fr);gap:20px;padding:18px 18px 22px;align-items:start;flex:1 1 auto">
+    <x-part name="folio" tab="build" tip="none"></x-part>
+
+    <div class="pane" style="gap:16px">
+      <!-- outstanding choices banner -->
+      <div class="warn warnW" role="status" style="align-items:center;padding:8px 14px">
+        <i-icon name="spell-book" size="20"></i-icon>
+        <span style="flex:1 1 auto;min-width:0"><b>1 choice outstanding.</b> Paladin 5 can prepare 6 spells; 5 are prepared.</span>
+        <button class="btn btnBrass" type="button"><i-icon name="spell-book" size="14"></i-icon>Prepare a spell</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;align-items:start">
+        <!-- ===== column A ===== -->
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+
+          <!-- Origin -->
+          <section class="leaf" aria-label="Origin and class" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:6px;padding-bottom:62px">
+            <x-tex kind="paper"></x-tex>
+            <h2 class="leafTitle" style="position:relative"><i-icon name="person" size="20" style="color:#8A6A2A"></i-icon>Origin and class</h2>
+            <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+              <div class="brow"><i-icon name="person" size="18"></i-icon><span class="bname"><b style="font-size:16px">Human</b><span class="th">Species · Medium · 30 ft · Resourceful, Skillful, Versatile</span></span><span class="lockt" title="Species is fixed at creation; start a new hero to change it"><i-icon name="padlock" size="13"></i-icon>fixed at creation</span></div>
+              <div class="brow rowOff"><i-icon name="path-tile" size="18"></i-icon><span class="bname"><b style="font-size:16px">No lineage</b><span class="th">Human has no lineage options</span></span><span></span></div>
+              <div class="brow"><i-icon name="templar-shield" size="18"></i-icon><span class="bname"><b style="font-size:16px">Paladin 5</b><span class="th">Class · d10 hit die · Strength and Charisma · saves Wisdom, Charisma</span></span><span class="lockt" title="Levels are added with Level up; the last one can be undone from the Timeline"><i-icon name="upgrade" size="13"></i-icon>via Level up</span></div>
+              <div class="brow"><i-icon name="holy-symbol" size="18"></i-icon><span class="bname"><b style="font-size:16px">Oath of Devotion</b><span class="th">Subclass · chosen at level 3</span></span><span class="lockt" title="Chosen at level 3 and built upon since; revert “Reached level 3” in the Timeline to pick again"><i-icon name="padlock" size="13"></i-icon>locked</span></div>
+              <div class="brow"><i-icon name="medal" size="18"></i-icon><span class="bname"><b style="font-size:16px">Soldier</b><span class="th">Background · Athletics, Intimidation · gaming set · Savage Attacker</span></span><span class="lockt" tabindex="0" aria-describedby="tipBg"><i-icon name="padlock" size="13"></i-icon>fixed at creation<span class="tipR" id="tipBg" role="tooltip">Background is fixed at creation.<span class="tipSub">Start a new hero to change it; its skills and feat stay with the hero.</span></span></span></div>
+            </div>
+          </section>
+
+          <!-- Ability scores -->
+          <section class="leaf" aria-label="Ability scores" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:8px">
+            <x-tex kind="paper"></x-tex>
+            <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="leafTitle"><i-icon name="muscle-up" size="20" style="color:#8A6A2A"></i-icon>Ability scores</h2><span class="chip" title="Method used at creation"><i-icon name="rolling-dices" size="13" style="color:#8A6A2A"></i-icon>rolled 4d6, drop lowest</span><span class="hint">bonuses are tags on the base score</span></div>
+            <div class="tbl" style="position:relative">
+              <span class="th">Ability</span><span class="th cell cellR">Base</span><span class="th cell cellR">Bonuses</span><span class="th cell cellR">Final</span><span class="th cell cellR">Modifier</span>
+              <span class="cell"><i-icon name="muscle-up" size="16" style="color:#8A6A2A"></i-icon>Strength</span><span class="cell cellR num">14</span><span class="cell cellR"><span class="bonus" title="From the Soldier background"><i-icon name="medal" size="11"></i-icon>+2</span></span><span class="cell cellR num" style="font-size:20px">16</span><span class="cell cellR num">+3</span>
+              <span class="cell"><i-icon name="acrobatic" size="16" style="color:#8A6A2A"></i-icon>Dexterity</span><span class="cell cellR num">10</span><span class="cell cellR th">—</span><span class="cell cellR num" style="font-size:20px">10</span><span class="cell cellR num">+0</span>
+              <span class="cell"><i-icon name="heart-inside" size="16" style="color:#8A6A2A"></i-icon>Constitution</span><span class="cell cellR num">13</span><span class="cell cellR"><span class="bonus" title="From the Soldier background"><i-icon name="medal" size="11"></i-icon>+1</span></span><span class="cell cellR num" style="font-size:20px">14</span><span class="cell cellR num">+2</span>
+              <span class="cell"><i-icon name="brain" size="16" style="color:#8A6A2A"></i-icon>Intelligence</span><span class="cell cellR num">8</span><span class="cell cellR th">—</span><span class="cell cellR num" style="font-size:20px">8</span><span class="cell cellR num">−1</span>
+              <span class="cell"><i-icon name="owl" size="16" style="color:#8A6A2A"></i-icon>Wisdom</span><span class="cell cellR num">12</span><span class="cell cellR th">—</span><span class="cell cellR num" style="font-size:20px">12</span><span class="cell cellR num">+1</span>
+              <span class="cell"><i-icon name="charm" size="16" style="color:#8A6A2A"></i-icon>Charisma</span><span class="cell cellR num">14</span><span class="cell cellR"><span class="bonus" title="Ability Score Improvement, level 4"><i-icon name="upgrade" size="11"></i-icon>+2</span></span><span class="cell cellR num" style="font-size:20px">16</span><span class="cell cellR num">+3</span>
+            </div>
+          </section>
+
+          <!-- Choices -->
+          <section class="leaf" aria-label="Choices made" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:6px">
+            <x-tex kind="paper"></x-tex>
+            <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="leafTitle"><i-icon name="card-pick" size="20" style="color:#8A6A2A"></i-icon>Choices made</h2><span class="hint">Re-pick where the rules allow; the lock says why not</span></div>
+            <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+              <div class="brow brow2"><span class="lvlBadge" title="Chosen at level 1">lv 1</span><span class="bname"><span class="th">Paladin skills (2)</span><span class="bval"><span class="chip">Insight</span><span class="chip">Persuasion</span></span></span><button class="rep" type="button" title="Pick 2 skills again"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Re-pick</button></div>
+              <div class="brow brow2"><span class="lvlBadge" title="Chosen at level 1">lv 1</span><span class="bname"><span class="th">Weapon masteries (2)</span><span class="bval"><span class="chip"><i-icon name="broadsword" size="12" style="color:#8A6A2A"></i-icon>Sap · Longsword</span><span class="chip"><i-icon name="thrown-spear" size="12" style="color:#8A6A2A"></i-icon>Slow · Javelin</span></span></span><button class="rep" type="button" title="Masteries can change after a long rest"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Re-pick</button></div>
+              <div class="brow brow2"><span class="lvlBadge" title="Chosen at creation">origin</span><span class="bname"><span class="th">Language (1)</span><span class="bval"><span class="chip">Celestial</span></span></span><button class="rep" type="button" title="Pick a language again"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Re-pick</button></div>
+              <div class="brow brow2"><span class="lvlBadge" title="From the Soldier background">origin</span><span class="bname"><span class="th">Gaming set (Soldier)</span><span class="bval"><span class="chip"><i-icon name="dice-six-faces-six" size="12" style="color:#8A6A2A"></i-icon>Dice set</span></span></span><button class="rep" type="button" title="Pick a gaming set again"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Re-pick</button></div>
+              <div class="brow brow2"><span class="lvlBadge" title="Chosen at level 2">lv 2</span><span class="bname"><span class="th">Fighting style</span><span class="bval"><span class="chip"><i-icon name="round-shield" size="12" style="color:#8A6A2A"></i-icon>Protection</span></span></span><button class="rep" type="button" title="Pick a fighting style again"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Re-pick</button></div>
+              <div class="brow brow2"><span class="lvlBadge" title="Chosen at level 3">lv 3</span><span class="bname"><span class="th">Paladin subclass</span><span class="bval"><span class="chip"><i-icon name="holy-symbol" size="12" style="color:#8A6A2A"></i-icon>Oath of Devotion</span></span></span><span class="lockt" title="Chosen at level 3 and built upon since; revert that level in the Timeline"><i-icon name="padlock" size="13"></i-icon>locked</span></div>
+              <div class="brow brow2"><span class="lvlBadge" title="Chosen at level 4">lv 4</span><span class="bname"><span class="th">Feat or Ability Score Improvement</span><span class="bval"><span class="chip"><i-icon name="upgrade" size="12" style="color:#8A6A2A"></i-icon>Ability Score Improvement · +2 Charisma</span></span></span><span class="lockt" title="Level 5 was built on this; revert “Reached level 5” in the Timeline first"><i-icon name="padlock" size="13"></i-icon>locked</span></div>
+              <div class="brow brow2"><span class="lvlBadge" title="From the Soldier background">origin</span><span class="bname"><span class="th">Origin feat (Soldier)</span><span class="bval"><span class="chip"><i-icon name="axe-swing" size="12" style="color:#8A6A2A"></i-icon>Savage Attacker</span></span></span><span class="lockt" title="Granted by the Soldier background, not a pick"><i-icon name="padlock" size="13"></i-icon>granted</span></div>
+              <div class="brow brow2"><span class="lvlBadge" title="Changes at any long rest">rest</span><span class="bname"><span class="th">Prepared spells (5 of 6)</span><span class="bval"><span class="chip">Bless</span><span class="chip">Cure Wounds</span><span class="chip">Shield of Faith</span><span class="chip">Aid</span><span class="chip">Lesser Restoration</span><span class="chip chipW"><i-icon name="plus" size="11"></i-icon>1 more</span></span></span><button class="rep" type="button" title="Prepared spells can change after a long rest"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Re-pick</button></div>
+              <div class="brow brow2 rowOff"><span class="lvlBadge">—</span><span class="bname"><span class="th">Expertise</span><span class="bval"><span class="hint">none for Paladin</span></span></span><span></span></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== column B ===== -->
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+
+          <!-- Proficiencies -->
+          <section class="leaf" aria-label="Proficiencies and languages" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:8px">
+            <x-tex kind="paper"></x-tex>
+            <h2 class="leafTitle" style="position:relative"><i-icon name="medal" size="20" style="color:#8A6A2A"></i-icon>Proficiencies and languages</h2>
+            <div class="kv" style="position:relative;grid-template-columns:110px minmax(0,1fr);gap:6px 12px;align-items:center">
+              <span class="th">Armor</span><span class="bval"><span class="chip"><i-icon name="leather-armor" size="12" style="color:#8A6A2A"></i-icon>Light</span><span class="chip"><i-icon name="breastplate" size="12" style="color:#8A6A2A"></i-icon>Medium</span><span class="chip"><i-icon name="chain-mail" size="12" style="color:#8A6A2A"></i-icon>Heavy</span><span class="chip"><i-icon name="round-shield" size="12" style="color:#8A6A2A"></i-icon>Shields</span></span>
+              <span class="th">Weapons</span><span class="bval"><span class="chip"><i-icon name="club" size="12" style="color:#8A6A2A"></i-icon>Simple</span><span class="chip"><i-icon name="broadsword" size="12" style="color:#8A6A2A"></i-icon>Martial</span></span>
+              <span class="th">Tools</span><span class="bval"><span class="chip"><i-icon name="dice-six-faces-six" size="12" style="color:#8A6A2A"></i-icon>Dice set</span></span>
+              <span class="th">Saving throws</span><span class="bval"><span class="chip"><i-icon name="checked-shield" size="12" style="color:#8A6A2A"></i-icon>Wisdom</span><span class="chip"><i-icon name="checked-shield" size="12" style="color:#8A6A2A"></i-icon>Charisma</span></span>
+              <span class="th">Skills</span><span class="bval"><span class="chip">Athletics</span><span class="chip">Insight</span><span class="chip">Intimidation</span><span class="chip">Persuasion</span></span>
+              <span class="th">Languages</span><span class="bval"><span class="chip"><i-icon name="conversation" size="12" style="color:#8A6A2A"></i-icon>Common</span><span class="chip"><i-icon name="conversation" size="12" style="color:#8A6A2A"></i-icon>Celestial</span></span>
+            </div>
+          </section>
+
+          <!-- Rule options -->
+          <section class="leaf" aria-label="Rule options" style="z-index:2;transform:rotate(.2deg);display:flex;flex-direction:column;gap:8px">
+            <x-tex kind="paper"></x-tex>
+            <h2 class="leafTitle" style="position:relative"><i-icon name="scales" size="20" style="color:#8A6A2A"></i-icon>Rule options</h2>
+            <div style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end">
+              <div class="fld"><label class="fldL" for="enc">Encumbrance</label><span class="selBox"><select class="selIn" id="enc" disabled="disabled" aria-describedby="tipEnc"><option>Variant (by levels)</option><option>Standard</option><option>Off</option></select><span class="selChev"><i-icon name="padlock" size="14"></i-icon></span></span></div>
+              <span class="lockt" tabindex="0" aria-describedby="tipEnc" style="height:36px"><i-icon name="flag-objective" size="14"></i-icon>campaign rule<span class="tip" id="tipEnc" role="tooltip" style="left:auto;right:0;transform:none">Set by the campaign’s house rules<span class="tipSub">The Emberfall Company · ask your DM to change it</span></span></span>
+            </div>
+          </section>
+
+          <!-- Content packs -->
+          <section class="leaf" aria-label="Content packs" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:6px">
+            <x-tex kind="paper"></x-tex>
+            <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="leafTitle"><i-icon name="stack" size="20" style="color:#8A6A2A"></i-icon>Content packs</h2><span class="hint">nothing changes without a report you confirm</span></div>
+            <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+              <div class="brow" style="grid-template-columns:26px minmax(0,1fr) auto auto;min-height:36px"><i-icon name="open-book" size="18"></i-icon><span class="bname"><b style="font-size:16px">SRD 5e 2024 <span class="chip" style="height:18px;font-size:13px;padding:0 5px;vertical-align:1px">core rules</span></b><span class="th">v0.1.0 · pinned</span></span><span class="hint">always on</span><button class="toggle tgOn" type="button" aria-pressed="true" disabled="disabled" aria-label="Core rules, always on" title="Core rules are always on"><span class="tgT"><span class="tgK"></span></span></button></div>
+              <div class="brow" style="grid-template-columns:26px minmax(0,1fr) auto auto;min-height:36px"><i-icon name="flag-objective" size="18"></i-icon><span class="bname"><b style="font-size:16px">Emberfall Company pack <span class="chip" style="height:18px;font-size:13px;padding:0 5px;vertical-align:1px">campaign</span></b><span class="th" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">v1.0.0 · pinned<span class="chip chipW" style="height:20px"><i-icon name="upgrade" size="11"></i-icon>Update available v1.0.0 → v1.1.0</span></span></span><button class="btn btnBrass" type="button" style="height:28px" aria-label="Update Emberfall Company pack to v1.1.0" title="Shows the rebase report first"><i-icon name="upgrade" size="13"></i-icon>Update</button><button class="toggle tgOn" type="button" aria-pressed="true" aria-label="Emberfall Company pack, on" title="Disable (shows what changes first)"><span class="tgT"><span class="tgK"></span></span></button></div>
+              <div class="brow" style="grid-template-columns:26px minmax(0,1fr) auto auto;min-height:36px"><i-icon name="cauldron" size="18"></i-icon><span class="bname"><b style="font-size:16px">My homebrew <span class="chip" style="height:18px;font-size:13px;padding:0 5px;vertical-align:1px">this device</span></b><span class="th">v0.3.0 · pinned</span></span><span></span><button class="toggle tgOn" type="button" aria-pressed="true" aria-label="My homebrew, on" title="Disable (shows what changes first)"><span class="tgT"><span class="tgK"></span></span></button></div>
+              <div class="brow rowOff" style="grid-template-columns:26px minmax(0,1fr) auto auto;min-height:36px"><i-icon name="chest" size="18"></i-icon><span class="bname"><b style="font-size:16px">Sample content</b><span class="th">v1.1.0 · not installed on this device</span></span><a href="#" style="font-size:14px">Manage packs</a><button class="toggle" type="button" aria-pressed="false" disabled="disabled" aria-label="Sample content, not installed" title="Install it from Packs first"><span class="tgT"><span class="tgK"></span></span></button></div>
+            </div>
+          </section>
+
+          <!-- Identity -->
+          <section class="leaf" aria-label="Name, portrait and appearance" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:10px">
+            <x-tex kind="paper"></x-tex>
+            <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="leafTitle"><i-icon name="quill" size="20" style="color:#8A6A2A"></i-icon>Identity</h2><span class="hint">name, portrait, appearance</span><span style="flex:1 1 auto"></span><span class="chip chipW" title="Edited fields are saved together"><i-icon name="quill-ink" size="12"></i-icon>unsaved changes</span><button class="btn btnBrass" type="button"><i-icon name="save" size="14"></i-icon>Save</button></div>
+            <div style="position:relative;display:grid;grid-template-columns:98px minmax(0,1fr);gap:14px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+                <div style="position:relative;width:98px;height:118px;flex:0 0 auto;border-radius:4px;padding:5px;box-sizing:border-box;background:linear-gradient(180deg,#E8CC7C 0%,#C9A24E 45%,#A98335 80%,#8A6A2A 100%);box-shadow:inset 0 1px 0 rgba(255,241,200,.7),inset 0 -1px 0 rgba(70,48,12,.7),0 2px 4px rgba(0,0,0,.6)"><div role="img" aria-label="Portrait placeholder, monogram IV" style="width:100%;height:100%;border-radius:2px;background:radial-gradient(circle at 50% 35%,#432A1A,#241710 80%);display:flex;align-items:center;justify-content:center;font-family:Forum,serif;font-size:42px;line-height:1;color:#C9A24E;box-shadow:inset 0 0 14px rgba(0,0,0,.85);letter-spacing:.04em">IV</div></div>
+                <button class="btn btnGhost" type="button" style="height:28px"><i-icon name="quill" size="13"></i-icon>Change portrait</button>
+                <button class="btn btnGhost" type="button" style="height:28px;color:#8E3220;border-color:#C98C78"><i-icon name="trash-can" size="13"></i-icon>Remove portrait</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px">
+                  <div class="fld"><label class="fldL" for="nm">Name</label><input class="in" id="nm" value="Ilyana Vorn"></div>
+                  <div class="fld"><span class="fldL" id="gl">Grammatical gender <i-icon name="conversation" size="13" style="color:#8A6A2A" hint="Used by the Ukrainian sentences on the Timeline"></i-icon></span><div style="display:flex;gap:4px;flex-wrap:wrap" role="radiogroup" aria-labelledby="gl"><button class="chip chipBtn chipOn" type="button" role="radio" aria-checked="true">feminine</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false">masculine</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false">neuter</button></div></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+                  <div class="fld"><label class="fldL" for="age">Age</label><input class="in" id="age" value="27"></div>
+                  <div class="fld"><label class="fldL" for="hgt">Height</label><input class="in" id="hgt" value="5 ft 9 in"></div>
+                  <div class="fld"><label class="fldL" for="wgt">Weight</label><input class="in" id="wgt" value="160 lb"></div>
+                  <div class="fld"><label class="fldL" for="eyes">Eyes</label><input class="in" id="eyes" value="grey"></div>
+                  <div class="fld"><label class="fldL" for="hair">Hair</label><input class="in" id="hair" value="black"></div>
+                  <div class="fld"><label class="fldL" for="skin">Skin</label><input class="in" id="skin" value="olive"></div>
+                </div>
+                <div class="fld"><label class="fldL" for="desc">Description</label><textarea class="ta" id="desc" rows="3" style="min-height:82px">A scarred veteran of the Emberfall wars. Keeps her oath-marked longsword oiled and her word kept.</textarea></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <x-part name="strap"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

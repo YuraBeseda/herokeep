@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Play sheet (tablet, 768)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div style="position:relative;width:768px;height:1024px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 90% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+
+  <!-- Brass rail at 768: the mark only, no wordmark -->
+  <header style="position:relative;z-index:3;display:flex;align-items:center;gap:14px;padding:0 14px;height:56px;background:linear-gradient(180deg,#4F3322,#3A2316);box-shadow:0 1px 0 #8A6A2A,0 3px 0 #2A1810,0 6px 14px rgba(0,0,0,.55);color:#E9DCBB;flex:0 0 auto">
+    <x-tex kind="leather"></x-tex>
+    <a href="#" style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;color:#C9A24E" aria-label="Herokeep home" title="Herokeep"><i-icon name="wax-seal" size="30"></i-icon></a>
+    <nav aria-label="App" style="position:relative;display:flex;align-items:center;gap:12px;padding:0 12px">
+      <div aria-hidden="true" style="position:absolute;left:0;right:0;top:50%;height:5px;transform:translateY(-50%);background:linear-gradient(180deg,#E8CC7C,#C9A24E 40%,#7E5F24);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.7)"></div>
+      <a class="ico" href="#" aria-label="Home" title="Home"><i-icon name="house" size="22"></i-icon></a>
+      <a class="ico icoOn" href="#" aria-current="page" aria-label="Heroes" title="Heroes"><i-icon name="person" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Campaigns" title="Campaigns" aria-describedby="tipCampaigns"><i-icon name="three-friends" size="22"></i-icon><span class="tip" id="tipCampaigns" role="tooltip">Campaigns</span></a>
+      <a class="ico" href="#" aria-label="Library" title="Library"><i-icon name="open-book" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Packs" title="Packs"><i-icon name="chest" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Settings" title="Settings"><i-icon name="cog" size="22"></i-icon></a>
+    </nav>
+    <div style="flex:1 1 auto"></div>
+    <a href="#" class="chip" style="position:relative;height:36px;font-size:15px;gap:7px;text-decoration:none;max-width:200px;overflow:hidden" title="The Emberfall Company, session live"><i-icon name="candle-flame" size="15" style="color:#B8432A"></i-icon><span style="overflow:hidden;text-overflow:ellipsis">The Emberfall Company</span></a>
+    <button class="ico" type="button" aria-label="Account" title="Account" style="position:relative"><i-icon name="hood" size="22"></i-icon></button>
+  </header>
+
+  <!-- Table: folio + leaves, two columns -->
+  <div data-scroller="body" style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:14px 14px 18px;box-sizing:border-box">
+  <main style="display:grid;grid-template-columns:296px minmax(0,1fr);gap:14px;align-items:start">
+
+    <!-- FOLIO -->
+    <aside aria-label="Character folio" style="position:relative;display:flex;flex-direction:column;gap:10px;padding:14px 14px 14px 22px;border-radius:6px 14px 14px 6px;background:linear-gradient(160deg,#5A3A26 0%,#4A2E1E 50%,#3B2416 100%);box-shadow:0 12px 26px rgba(0,0,0,.6),inset 0 0 0 1px rgba(201,162,78,.3);color:#E9DCBB;transform:rotate(-0.2deg);outline:1px dashed rgba(201,162,78,.4);outline-offset:-7px">
+      <x-tex kind="leather" style="border-radius:6px 14px 14px 6px"></x-tex>
+      <div aria-hidden="true" style="position:absolute;left:0;top:0;bottom:0;width:12px;border-radius:6px 0 0 6px;background:linear-gradient(90deg,#2E1B11,#4A2E1E);box-shadow:inset -1px 0 0 rgba(201,162,78,.35);display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:16px 0;box-sizing:border-box"><span class="rivet"></span><span class="rivet"></span><span class="rivet"></span><span class="rivet"></span></div>
+
+      <!-- identity -->
+      <div style="position:relative;display:flex;gap:10px;align-items:stretch">
+        <div class="frame" style="width:80px;height:96px;padding:4px"><div class="mono" role="img" aria-label="Portrait placeholder, monogram IV" style="font-size:34px">IV</div><span class="rivet" style="position:absolute;left:3px;top:3px;width:6px;height:6px"></span><span class="rivet" style="position:absolute;right:3px;top:3px;width:6px;height:6px"></span><span class="rivet" style="position:absolute;left:3px;bottom:3px;width:6px;height:6px"></span><span class="rivet" style="position:absolute;right:3px;bottom:3px;width:6px;height:6px"></span></div>
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 auto;justify-content:center">
+          <h1 class="nameplate" style="font-size:22px">Ilyana Vorn</h1>
+          <div style="font-size:15px;line-height:1.2;color:#F3E6C8">Human · Paladin 5</div>
+          <div style="font-size:14px;line-height:1.2;color:#E0C27A;display:flex;align-items:center;gap:5px"><i-icon name="holy-symbol" size="13"></i-icon>Oath of Devotion</div>
+          <div style="font-size:14px;line-height:1.2;color:#E0C27A;display:flex;align-items:center;gap:5px"><i-icon name="medal" size="13"></i-icon>Soldier</div>
+        </div>
+      </div>
+
+      <!-- sheet tabs + XP -->
+      <nav aria-label="Sheet" style="position:relative;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="tab tabOn" type="button" aria-current="page" style="padding:0 5px;min-height:36px;font-size:14px;gap:4px"><i-icon name="crossed-swords" size="13"></i-icon>Play</button>
+          <button class="tab" type="button" style="padding:0 5px;min-height:36px;font-size:14px;gap:4px"><i-icon name="anvil" size="13"></i-icon>Build</button>
+          <button class="tab" type="button" style="padding:0 5px;min-height:36px;font-size:14px;gap:4px"><i-icon name="hourglass" size="13"></i-icon>Timeline</button>
+          <button class="tab tabOff" type="button" disabled="disabled" style="padding:0 5px;min-height:36px;font-size:14px;gap:4px" title="Level up is not available yet"><i-icon name="padlock" size="13"></i-icon>Level up</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#E0C27A">
+          <span>XP</span>
+          <div class="gauge" style="flex:1 1 auto;height:8px;border-radius:4px"><div style="width:46.4%;height:100%;background:linear-gradient(90deg,#8A6A2A,#C9A24E);border-radius:4px"></div></div>
+          <span class="num" style="font-size:15px;color:#F3E6C8">6,500 / 14,000</span>
+        </div>
+      </nav>
+
+      <!-- HP strap -->
+      <section class="strap" aria-label="Hit points" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:8px 12px 8px 8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div aria-hidden="true" style="width:14px;height:40px;border-radius:4px;background:linear-gradient(180deg,#E8CC7C,#C9A24E 50%,#8A6A2A);box-shadow:inset 0 0 0 2px #5E4418,0 1px 2px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center"><span style="display:block;width:4px;height:22px;background:#1E110A;border-radius:2px"></span></div>
+          <div class="num" style="font-size:40px;color:#F6E8CC;display:flex;align-items:baseline;gap:4px;text-shadow:0 2px 2px rgba(0,0,0,.5)"><span>31</span><span style="font-size:20px;color:#C9A24E">/ 44</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px;font-size:14px;color:#E0C27A;line-height:1"><i-icon name="heart" size="14"></i-icon>Hit points</div>
+          <div class="gauge" title="31 of 44, plus 5 temporary"><div style="width:70.5%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></div><div style="width:11.4%;height:100%;background:repeating-linear-gradient(135deg,#E8CC7C 0 3px,#A98335 3px 6px)"></div></div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:14px;color:#E0C27A;line-height:1;white-space:nowrap"><i-icon name="heart-plus" size="14"></i-icon>Temporary HP <b class="num" style="font-size:17px;color:#F6E8CC">5</b></div>
+        </div>
+      </section>
+      <div style="position:relative;display:flex"><span class="chip chipV" role="status" style="height:28px;font-size:14px;max-width:100%;overflow:hidden" title="Concentrating on Bless, round 3"><i-icon name="eye" size="15"></i-icon><b style="white-space:nowrap">Concentrating: Bless</b><span style="opacity:.9;white-space:nowrap">round 3</span></span></div>
+
+      <!-- vitals -->
+      <section aria-label="Vitals" style="position:relative;display:flex;gap:8px;align-items:stretch">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;flex:0 0 auto;width:84px;padding-top:4px">
+          <svg viewBox="0 0 82 96" width="78" height="92" role="img" aria-label="Armor class 18"><defs><linearGradient id="shBrassT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8CC7C"/><stop offset=".5" stop-color="#C9A24E"/><stop offset="1" stop-color="#8A6A2A"/></linearGradient></defs><path d="M41 4 L75 14 V44 C75 66 58 84 41 92 C24 84 7 66 7 44 V14 Z" fill="#1A0E08" opacity=".6" transform="translate(2,3)"/><path d="M41 4 L75 14 V44 C75 66 58 84 41 92 C24 84 7 66 7 44 V14 Z" fill="url(#shBrassT)" stroke="#5E4418" stroke-width="1.5"/><path d="M41 11 L68 19 V44 C68 62 54 77 41 84 C28 77 14 62 14 44 V19 Z" fill="#2E1B11" stroke="#7E5F24" stroke-width="1"/><path d="M41 11 L68 19 V44 C68 62 54 77 41 84" fill="none" stroke="#000" stroke-width="2" opacity=".35"/><text x="41" y="51" text-anchor="middle" dominant-baseline="central" font-family="Forum, serif" font-size="40" fill="#F6E8CC">18</text></svg>
+          <span style="font-size:14px;color:#E0C27A;line-height:1">Armor class</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;flex:1 1 auto;min-width:0">
+          <div class="vplate" style="min-height:52px"><span class="vlabel">Initiative</span><span class="vval" style="font-size:20px"><i-icon name="stopwatch" size="15" style="color:#C9A24E"></i-icon>+0</span></div>
+          <div class="vplate" style="min-height:52px"><span class="vlabel">Speed</span><span class="vval" style="font-size:20px"><i-icon name="boots" size="15" style="color:#C9A24E"></i-icon>30 ft</span></div>
+          <div class="vplate" style="min-height:52px"><span class="vlabel">Proficiency</span><span class="vval" style="font-size:20px"><i-icon name="medal" size="15" style="color:#C9A24E"></i-icon>+3</span></div>
+          <div class="vplate" style="min-height:52px"><span class="vlabel">Hit dice</span><span class="vval" style="font-size:18px"><i-icon name="d10" size="15" style="color:#C9A24E"></i-icon>4 / 5 d10</span></div>
+          <div class="vplate" style="grid-column:1 / 3;min-height:40px;flex-direction:row;align-items:center;justify-content:space-between;gap:8px"><span class="vlabel">Passive perception</span><span class="vval" style="font-size:20px"><i-icon name="eye" size="15" style="color:#C9A24E"></i-icon>11</span></div>
+          <div class="vplate" style="grid-column:1 / 3;min-height:40px;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;box-shadow:inset 0 2px 4px rgba(0,0,0,.65),inset 0 0 0 1px #C9A24E,0 0 10px rgba(232,204,124,.35)"><span class="vlabel" style="display:flex;align-items:center;gap:5px"><i-icon name="inspiration" size="15" style="color:#E8CC7C;flex:0 0 auto"></i-icon>Heroic inspiration</span><span class="vval" style="font-size:15px;font-family:Alegreya,serif;font-weight:700">available (1)</span></div>
+        </div>
+      </section>
+
+      <!-- abilities -->
+      <section aria-label="Abilities and saving throws" style="position:relative;display:flex;flex-direction:column;gap:6px">
+        <h2 style="margin:0;font:17px/1 Forum,serif;font-weight:400;color:#C9A24E">Abilities</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 4px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><x-seal state="full" text="+3" size="52" label="Strength modifier +3" seed="1"></x-seal><span style="font:14px/1 Forum,serif;color:#F3E6C8">Strength</span><span style="display:flex;gap:3px"><span class="plate" title="Score 16">16</span><span class="save" title="Saving throw +3"><i-icon name="checked-shield" size="12" style="color:#C9A24E"></i-icon>+3</span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><x-seal state="full" text="+0" size="52" label="Dexterity modifier +0" seed="2"></x-seal><span style="font:14px/1 Forum,serif;color:#F3E6C8">Dexterity</span><span style="display:flex;gap:3px"><span class="plate" title="Score 10">10</span><span class="save" title="Saving throw +0"><i-icon name="checked-shield" size="12" style="color:#C9A24E"></i-icon>+0</span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><x-seal state="full" text="+2" size="52" label="Constitution modifier +2" seed="3"></x-seal><span style="font:14px/1 Forum,serif;color:#F3E6C8">Constitution</span><span style="display:flex;gap:3px"><span class="plate" title="Score 14">14</span><span class="save" title="Saving throw +2"><i-icon name="checked-shield" size="12" style="color:#C9A24E"></i-icon>+2</span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><x-seal state="full" text="−1" size="52" label="Intelligence modifier −1" seed="4"></x-seal><span style="font:14px/1 Forum,serif;color:#F3E6C8">Intelligence</span><span style="display:flex;gap:3px"><span class="plate" title="Score 8">8</span><span class="save" title="Saving throw −1"><i-icon name="checked-shield" size="12" style="color:#C9A24E"></i-icon>−1</span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><x-seal state="full" text="+1" size="52" label="Wisdom modifier +1" seed="5"></x-seal><span style="font:14px/1 Forum,serif;color:#F3E6C8">Wisdom</span><span style="display:flex;gap:3px"><span class="plate" title="Score 12">12</span><span class="save" title="Saving throw +4, proficient"><i-icon name="checked-shield" size="12" style="color:#C9A24E"></i-icon>+4<i-icon name="star" size="10" style="color:#E8CC7C"></i-icon></span></span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><x-seal state="full" text="+3" size="52" label="Charisma modifier +3" seed="6"></x-seal><span style="font:14px/1 Forum,serif;color:#F3E6C8">Charisma</span><span style="display:flex;gap:3px"><span class="plate" title="Score 16">16</span><span class="save" title="Saving throw +6, proficient"><i-icon name="checked-shield" size="12" style="color:#C9A24E"></i-icon>+6<i-icon name="star" size="10" style="color:#E8CC7C"></i-icon></span></span></div>
+        </div>
+      </section>
+
+      <!-- skills -->
+      <section aria-label="Skills" style="position:relative;display:flex;flex-direction:column;gap:4px">
+        <h2 style="margin:0;font:17px/1 Forum,serif;font-weight:400;color:#C9A24E">Skills</h2>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 10px">
+          <div class="sk" title="Athletics +6, proficient"><span class="dot dotOn"></span><span style="flex:1 1 auto;min-width:0">Athletics</span><b class="num" style="font-size:17px">+6</b></div>
+          <div class="sk" title="Insight +4, proficient"><span class="dot dotOn"></span><span style="flex:1 1 auto;min-width:0">Insight</span><b class="num" style="font-size:17px">+4</b></div>
+          <div class="sk" title="Intimidation +6, proficient"><span class="dot dotOn"></span><span style="flex:1 1 auto;min-width:0">Intimidation</span><b class="num" style="font-size:17px">+6</b></div>
+          <div class="sk" title="Persuasion +6, proficient"><span class="dot dotOn"></span><span style="flex:1 1 auto;min-width:0">Persuasion</span><b class="num" style="font-size:17px">+6</b></div>
+          <div class="sk" title="Perception +1"><span class="dot"></span><span style="flex:1 1 auto;min-width:0">Perception</span><b class="num" style="font-size:17px">+1</b></div>
+          <div class="sk" title="Religion −1"><span class="dot"></span><span style="flex:1 1 auto;min-width:0">Religion</span><b class="num" style="font-size:17px">−1</b></div>
+          <div class="sk" title="Stealth −1, disadvantage from armor"><span class="dot"></span><span style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;line-height:1.1"><span>Stealth</span><span style="font-size:14px;font-style:italic;color:#ECA98F;display:flex;align-items:center;gap:4px"><i-icon name="broken-arrow" size="12"></i-icon>disadvantage</span></span><b class="num" style="font-size:17px">−1</b></div>
+          <div class="sk" title="Medicine +1"><span class="dot"></span><span style="flex:1 1 auto;min-width:0">Medicine</span><b class="num" style="font-size:17px">+1</b></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- LEAVES: two Play sub-tabs at 768 -->
+    <div style="display:flex;flex-direction:column;gap:0;min-width:0">
+      <div role="tablist" aria-label="Play sheet sections" style="position:relative;z-index:2;display:flex;gap:4px;padding:0 10px">
+        <button class="tab tabOn tabL" type="button" role="tab" aria-selected="true"><i-icon name="crossed-swords" size="16"></i-icon>Combat</button>
+        <button class="tab tabL" type="button" role="tab" aria-selected="false"><i-icon name="spell-book" size="16"></i-icon>Spells &amp; bag</button>
+        <span style="flex:1 1 auto"></span>
+        <span class="hint" style="color:#E0C27A;align-self:center;font-size:14px">spells, slots, bag, coins and weight sit on the second tab</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0;padding-top:0">
+
+      <!-- attacks -->
+      <section class="leaf" aria-label="Attacks" style="transform:rotate(.3deg);display:flex;flex-direction:column;gap:6px;padding:14px 16px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="leafTitle" style="position:relative;font-size:20px"><i-icon name="crossed-swords" size="19" style="color:#8A6A2A"></i-icon>Attacks</h2>
+        <div style="position:relative;display:grid;grid-template-columns:28px minmax(0,1.3fr) 44px minmax(0,1fr) auto;gap:4px 8px;align-items:center">
+          <span></span><span class="th">Attack</span><span class="th">To hit</span><span class="th">Damage</span><span></span>
+          <span class="iring"><i-icon name="broadsword" size="16"></i-icon></span>
+          <b style="font-size:16px;min-width:0">Longsword</b>
+          <b class="num" style="font-size:22px">+6</b>
+          <span style="display:flex;flex-direction:column;gap:2px;line-height:1"><b class="num" style="font-size:19px">1d8+3</b><span class="th">slashing</span></span>
+          <button class="btn btnBrass focusDemo" type="button" style="height:36px" aria-label="Roll Longsword" title="Roll"><i-icon name="dice-twenty-faces-twenty" size="16"></i-icon>Roll</button>
+          <div style="grid-column:2 / 6;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip">versatile 1d10</span><span class="chip" title="Weapon mastery: Sap"><i-icon name="sword-array" size="13" style="color:#8A6A2A"></i-icon>mastery Sap</span><span class="chip chipD" title="Equipped"><i-icon name="belt-buckles" size="13"></i-icon>equipped</span></div>
+          <div class="rule" style="grid-column:1 / 6"></div>
+          <span class="iring"><i-icon name="spear-feather" size="16"></i-icon></span>
+          <b style="font-size:16px;min-width:0">Javelin ×4</b>
+          <b class="num" style="font-size:22px">+6</b>
+          <span style="display:flex;flex-direction:column;gap:2px;line-height:1"><b class="num" style="font-size:19px">1d6+3</b><span class="th">piercing</span></span>
+          <button class="btn btnBrass" type="button" style="height:36px" aria-label="Roll Javelin" title="Roll"><i-icon name="dice-twenty-faces-twenty" size="16"></i-icon>Roll</button>
+          <div style="grid-column:2 / 6;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip">thrown 30/120</span><span class="chip" title="Weapon mastery: Slow"><i-icon name="sword-array" size="13" style="color:#8A6A2A"></i-icon>mastery Slow</span></div>
+          <div class="rule" style="grid-column:1 / 6"></div>
+          <span class="iring"><i-icon name="fist" size="16"></i-icon></span>
+          <b style="font-size:16px;min-width:0">Unarmed strike</b>
+          <b class="num" style="font-size:22px">+6</b>
+          <span style="display:flex;flex-direction:column;gap:2px;line-height:1"><b class="num" style="font-size:19px">4</b><span class="th">bludgeoning</span></span>
+          <button class="btn btnBrass" type="button" style="height:36px" aria-label="Roll Unarmed strike" title="Roll"><i-icon name="dice-twenty-faces-twenty" size="16"></i-icon>Roll</button>
+        </div>
+      </section>
+
+      <!-- resources -->
+      <section class="leaf" aria-label="Resources" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:6px;padding:14px 16px 10px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="leafTitle" style="position:relative;font-size:20px"><i-icon name="candle-flame" size="19" style="color:#8A6A2A"></i-icon>Resources</h2>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px">
+          <div class="block">
+            <div style="display:flex;align-items:center;gap:6px"><span class="iring"><i-icon name="healing" size="15"></i-icon></span><b style="font-size:15px;flex:1 1 auto;min-width:0;line-height:1.1">Lay on Hands</b><button class="btn btnBrass" type="button" style="height:36px;padding:0 10px" aria-label="Spend Lay on Hands points"><i-icon name="minus" size="13"></i-icon>Spend</button></div>
+            <div class="gauge" style="height:12px"><div style="width:72%;height:100%;background:linear-gradient(180deg,#E8CC7C,#C9A24E 55%,#A98335)"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span class="num" style="font-size:17px">18 / 25 <span style="font-family:Alegreya,serif;font-size:14px;color:#5B4A36">points</span></span><span class="hint" style="display:flex;align-items:center;gap:4px" title="Recharges on a long rest"><i-icon name="night-sleep" size="14" style="color:#8A6A2A"></i-icon>long rest</span></div>
+          </div>
+          <div class="block">
+            <div style="display:flex;align-items:center;gap:6px"><span class="iring"><i-icon name="holy-symbol" size="15"></i-icon></span><b style="font-size:15px;flex:1 1 auto;min-width:0;line-height:1.1">Channel Divinity</b><button class="btn btnBrass" type="button" style="height:36px;padding:0 10px" aria-label="Use Channel Divinity"><i-icon name="check-mark" size="13"></i-icon>Use</button></div>
+            <div style="display:flex;gap:4px;align-items:center;min-height:28px"><x-seal state="full" icon="holy-symbol" size="28" label="Use available" seed="2"></x-seal><x-seal state="full" icon="holy-symbol" size="28" label="Use available" seed="3"></x-seal></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span class="num" style="font-size:17px">2 / 2</span><span class="hint" style="display:flex;align-items:center;gap:4px" title="Recharges on a short rest"><i-icon name="campfire" size="14" style="color:#8A6A2A"></i-icon>short rest</span></div>
+          </div>
+          <div class="block">
+            <div style="display:flex;align-items:center;gap:6px"><span class="iring"><i-icon name="sword-brandish" size="15"></i-icon></span><b style="font-size:15px;flex:1 1 auto;min-width:0;line-height:1.1">Paladin's Smite</b><button class="btn btnBrass" type="button" style="height:36px;padding:0 10px" aria-label="Use Paladin's Smite"><i-icon name="check-mark" size="13"></i-icon>Use</button></div>
+            <div style="display:flex;gap:4px;align-items:center;min-height:28px"><x-seal state="full" icon="sword-brandish" size="28" label="Free cast available" seed="4"></x-seal></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span class="num" style="font-size:17px">1 / 1 <span style="font-family:Alegreya,serif;font-size:14px;color:#5B4A36">free cast</span></span><span class="hint" style="display:flex;align-items:center;gap:4px" title="Recharges on a long rest"><i-icon name="night-sleep" size="14" style="color:#8A6A2A"></i-icon>long rest</span></div>
+          </div>
+          <div class="block">
+            <div style="display:flex;align-items:center;gap:6px"><span class="iring"><i-icon name="crystal-wand" size="15"></i-icon></span><b style="font-size:15px;flex:1 1 auto;min-width:0;line-height:1.1">Wand of Magic Missiles</b><button class="btn btnBrass" type="button" style="height:36px;padding:0 10px" aria-label="Use a wand charge"><i-icon name="check-mark" size="13"></i-icon>Use</button></div>
+            <div style="display:flex;gap:2px;align-items:center;min-height:28px"><x-seal state="full" icon="crystal-wand" size="24" label="Charge available" seed="1"></x-seal><x-seal state="full" icon="crystal-wand" size="24" label="Charge available" seed="2"></x-seal><x-seal state="full" icon="crystal-wand" size="24" label="Charge available" seed="3"></x-seal><x-seal state="full" icon="crystal-wand" size="24" label="Charge available" seed="4"></x-seal><x-seal state="full" icon="crystal-wand" size="24" label="Charge available" seed="5"></x-seal><x-seal state="spent" icon="crystal-wand" size="24" label="Charge spent" seed="6"></x-seal><x-seal state="spent" icon="crystal-wand" size="24" label="Charge spent" seed="7"></x-seal></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span class="num" style="font-size:17px">5 / 7 <span style="font-family:Alegreya,serif;font-size:14px;color:#5B4A36">charges</span></span><span class="hint" style="display:flex;align-items:center;gap:4px" title="Recharges at dawn"><i-icon name="sunrise" size="14" style="color:#8A6A2A"></i-icon>dawn</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- conditions + death saves -->
+      <section class="leaf" aria-label="Conditions and death saves" style="transform:rotate(.2deg);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;padding:14px 16px 10px">
+        <x-tex kind="paper"></x-tex>
+        <div style="position:relative;display:flex;flex-direction:column;gap:8px">
+          <h2 class="leafTitle" style="font-size:20px"><i-icon name="skull" size="19" style="color:#8A6A2A"></i-icon>Conditions</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span class="chip chipE" style="height:36px;padding:0 0 0 10px;font-size:15px;gap:6px" title="Poisoned, 3 rounds left, from Giant Spider"><i-icon name="poison-bottle" size="16"></i-icon>Poisoned<span class="plate" style="height:20px;font-size:14px;padding:0 5px">3 rounds</span><button class="xbtn" type="button" aria-label="End Poisoned" title="End"><span class="xbtnI"><i-icon name="cross-mark" size="12"></i-icon></span></button></span>
+            <button class="btn btnGhost" type="button" style="height:36px"><i-icon name="plus" size="14"></i-icon>Add condition</button>
+          </div>
+        </div>
+        <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+          <h2 class="leafTitle" style="font-size:20px"><i-icon name="skull-crossed-bones" size="19" style="color:#8A6A2A"></i-icon>Death saves</h2>
+          <div style="display:grid;grid-template-columns:auto repeat(3,36px);gap:0 2px;align-items:center">
+            <span style="font-size:15px">Successes</span><button class="ring" type="button" aria-label="Death save success 1" title="Mark success"><span class="ringI"></span></button><button class="ring" type="button" aria-label="Death save success 2" title="Mark success"><span class="ringI"></span></button><button class="ring" type="button" aria-label="Death save success 3" title="Mark success"><span class="ringI"></span></button>
+            <span style="font-size:15px">Failures</span><button class="ring" type="button" aria-label="Death save failure 1" title="Mark failure"><span class="ringI ringF"></span></button><button class="ring" type="button" aria-label="Death save failure 2" title="Mark failure"><span class="ringI ringF"></span></button><button class="ring" type="button" aria-label="Death save failure 3" title="Mark failure"><span class="ringI ringF"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- features, grouped by source -->
+      <section class="leaf" aria-label="Features" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:6px;padding:14px 16px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="leafTitle" style="position:relative;font-size:20px"><i-icon name="laurel-crown" size="19" style="color:#8A6A2A"></i-icon>Features</h2>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px">
+          <div class="feat" title="From Paladin, level 1"><i-icon name="templar-shield" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Lay on Hands</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">1</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Lay on Hands" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="feat" title="From Paladin, level 2"><i-icon name="templar-shield" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Fighting Style: Protection</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">2</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Fighting Style: Protection" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="feat" title="From Paladin, level 1"><i-icon name="templar-shield" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Weapon Mastery</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">1</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Weapon Mastery" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="feat" title="From Paladin, level 2"><i-icon name="templar-shield" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Paladin's Smite</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">2</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Paladin's Smite" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="feat" title="From Paladin, level 5"><i-icon name="templar-shield" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Extra Attack</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">5</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Extra Attack" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="feat" title="From Paladin, level 5"><i-icon name="templar-shield" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Faithful Steed</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">5</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Faithful Steed" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="feat" style="grid-column:1 / 3" title="From Oath of Devotion, level 3"><i-icon name="holy-symbol" size="17" style="color:#8A6A2A"></i-icon><span style="flex:1 1 auto;min-width:0">Channel Divinity: Sacred Weapon</span><span class="plate" style="height:20px;font-size:14px;padding:0 5px">3</span><a href="#" class="ico icoSm" style="width:36px;height:36px" aria-label="Details: Channel Divinity: Sacred Weapon" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+        </div>
+      </section>
+      </div>
+    </div>
+  </main>
+  </div>
+
+  <!-- ACTION STRAP at 768 -->
+  <footer class="bar" aria-label="Actions" style="z-index:4">
+    <x-tex kind="leather"></x-tex>
+    <div class="rivets" style="position:relative"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:8px;padding:6px 14px">
+      <button class="btn btnEmber" type="button" style="height:40px;padding:0 11px;font-size:15px"><i-icon name="broken-heart" size="18"></i-icon>Damage</button>
+      <button class="btn btnMoss" type="button" style="height:40px;padding:0 11px;font-size:15px"><i-icon name="healing" size="18"></i-icon>Heal</button>
+      <button class="btn btnBrass" type="button" style="height:40px;padding:0 11px;font-size:15px"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Roll</button>
+      <button class="btn btnLeather" type="button" style="height:40px;padding:0 11px;font-size:15px"><i-icon name="campfire" size="18" style="color:#E8CC7C"></i-icon>Short rest</button>
+      <button class="btn btnLeather" type="button" style="height:40px;padding:0 11px;font-size:15px"><i-icon name="night-sleep" size="18" style="color:#E8CC7C"></i-icon>Long rest</button>
+      <span class="zdiv" aria-hidden="true"></span>
+      <button class="ico" type="button" aria-label="Add condition" title="Add condition"><i-icon name="skull" size="20"></i-icon></button>
+      <button class="ico" type="button" aria-label="Notes" title="Notes"><i-icon name="scroll-unfurled" size="20"></i-icon></button>
+      <button class="ico" type="button" aria-label="Roll log" title="Roll log"><i-icon name="rolling-dices" size="20"></i-icon></button>
+      <button class="ico" type="button" aria-label="Export" title="Export"><i-icon name="share" size="20"></i-icon></button>
+      <button class="ico" type="button" aria-label="Edit or override" title="Edit or override"><i-icon name="quill" size="20"></i-icon></button>
+    </div>
+    <div class="rivets" style="position:relative"></div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

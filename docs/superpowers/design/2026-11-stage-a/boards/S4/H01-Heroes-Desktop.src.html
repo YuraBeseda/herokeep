@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Heroes — list (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="heroes" lang="en"></x-rail>
+
+  <main class="s4-main" style="gap:18px">
+    <!-- install banner (Android / Chromium: the browser offers a prompt) -->
+    <div class="hk-banner hk-banner--info" role="status" style="max-width:980px">
+      <x-tex kind="paper"></x-tex>
+      <i-icon name="smartphone" size="22"></i-icon>
+      <div class="hk-banner__body"><span class="hk-banner__title">Install Herokeep</span><span>Quick access from your home screen and play offline. Your heroes stay on this device either way.</span></div>
+      <div class="hk-banner__actions"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="cloud-download" size="14"></i-icon>Install</button><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss (asks again in 30 days)"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h1 class="s4-h1"><i-icon name="person" size="28"></i-icon>Heroes</h1>
+        <span class="s4-sub">4 heroes on this device · 3 in The Emberfall Company · all synced to your account</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px"><label class="hk-field__label" for="sort" style="color:var(--text-on-ground-2)">Sort</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="sort" style="height:32px;width:160px"><option>Last played</option><option>Name</option><option>Level</option><option>Campaign</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+    </div>
+
+    <div role="list" aria-label="Heroes" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;align-items:stretch">
+      <!-- Ilyana -->
+      <article class="s4-hero" role="listitem" style="transform:rotate(.25deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-frame" style="position:relative"><div class="hk-frame__well" role="img" aria-label="Portrait placeholder, monogram IV">IV</div><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tr"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--bl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--br"></span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0;position:relative">
+          <h2 class="s4-hero__name">Ilyana Vorn</h2>
+          <span class="s4-hero__line"><i-icon name="templar-shield" size="15"></i-icon>Human · Paladin 5</span>
+          <span class="s4-hero__line"><i-icon name="holy-symbol" size="15"></i-icon>Oath of Devotion</span>
+          <span class="s4-hero__line"><i-icon name="medal" size="15"></i-icon>Soldier</span>
+          <div class="hk-xp hk-xp--leaf" style="gap:6px"><span>XP</span><div class="hk-gauge hk-gauge--thin" style="flex:1 1 auto"><div class="hk-gauge__xp" style="width:46.4%"></div></div><span class="hk-num">6,500 / 14,000</span></div>
+        </div>
+        <div class="hk-strap" style="grid-column:1/3;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 12px 7px 10px;position:relative">
+          <x-tex kind="leather"></x-tex>
+          <div class="hk-num" style="font-size:30px;color:var(--text-on-leather);display:flex;align-items:baseline;gap:4px;position:relative"><span>31</span><span style="font-size:17px;color:var(--brass)">/ 44</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0;position:relative"><span class="hk-strap__label"><i-icon name="heart" size="14"></i-icon>Hit points · temp 5</span><div class="hk-gauge" style="height:10px" title="31 of 44, plus 5 temporary"><div class="hk-gauge__hp" style="width:70.5%"></div><div class="hk-gauge__temp" style="width:11.4%"></div></div></div>
+        </div>
+        <div class="s4-hero__foot">
+          <span class="hk-chip" title="Linked to The Emberfall Company"><i-icon name="three-friends" size="12"></i-icon>The Emberfall Company</span>
+          <span class="hk-chip hk-chip--moss" title="Synced · just now"><i-icon name="check-mark" size="11"></i-icon>synced</span>
+        </div>
+        <div class="s4-hero__acts">
+          <span class="hk-hint" style="flex:1 1 auto;white-space:nowrap">Played tonight, 20:14</span>
+          <button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="More: export, duplicate, delete" title="More: export, duplicate, delete"><i-icon name="hamburger-menu" size="14"></i-icon></button>
+          <a class="hk-btn hk-btn--brass" href="#"><i-icon name="crossed-swords" size="14"></i-icon>Open</a>
+        </div>
+      </article>
+
+      <!-- Brother Aldric -->
+      <article class="s4-hero" role="listitem" style="transform:rotate(-.25deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-frame" style="position:relative"><div class="hk-frame__well" role="img" aria-label="Portrait placeholder, monogram BA">BA</div><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tr"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--bl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--br"></span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0;position:relative">
+          <h2 class="s4-hero__name">Brother Aldric</h2>
+          <span class="s4-hero__line"><i-icon name="holy-symbol" size="15"></i-icon>Dwarf · Cleric 4</span>
+          <span class="s4-hero__line"><i-icon name="hearts" size="15"></i-icon>Life Domain</span>
+          <span class="s4-hero__line"><i-icon name="medal" size="15"></i-icon>Acolyte</span>
+          <div class="hk-xp hk-xp--leaf" style="gap:6px"><span>XP</span><div class="hk-gauge hk-gauge--thin" style="flex:1 1 auto"><div class="hk-gauge__xp" style="width:92%"></div></div><span class="hk-num">6,200 / 6,500</span></div>
+        </div>
+        <div class="hk-strap" style="grid-column:1/3;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 12px 7px 10px;position:relative">
+          <x-tex kind="leather"></x-tex>
+          <div class="hk-num" style="font-size:30px;color:var(--text-on-leather);display:flex;align-items:baseline;gap:4px;position:relative"><span>29</span><span style="font-size:17px;color:var(--brass)">/ 34</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0;position:relative"><span class="hk-strap__label"><i-icon name="heart" size="14"></i-icon>Hit points</span><div class="hk-gauge" style="height:10px" title="29 of 34"><div class="hk-gauge__hp" style="width:85%"></div></div></div>
+        </div>
+        <div class="s4-hero__foot">
+          <span class="hk-chip" title="Linked to The Emberfall Company"><i-icon name="three-friends" size="12"></i-icon>The Emberfall Company</span>
+          <span class="hk-has-tip" style="display:inline-flex"><span class="hk-chip hk-chip--warning" role="img" aria-label="2 changes waiting to sync" aria-describedby="tipSync" tabindex="0"><i-icon name="cloud-upload" size="11"></i-icon>2 pending</span><span class="hk-tip" id="tipSync" role="tooltip" style="left:0;transform:none">2 changes waiting to sync<span class="hk-tip__sub">they send when you're online</span></span></span>
+        </div>
+        <div class="s4-hero__acts">
+          <span class="hk-hint" style="flex:1 1 auto;white-space:nowrap">Played 2 days ago</span>
+          <button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="More: export, duplicate, delete" title="More: export, duplicate, delete"><i-icon name="hamburger-menu" size="14"></i-icon></button>
+          <a class="hk-btn hk-btn--brass" href="#"><i-icon name="crossed-swords" size="14"></i-icon>Open</a>
+        </div>
+      </article>
+
+      <!-- Nim Quickfoot -->
+      <article class="s4-hero" role="listitem" style="transform:rotate(.2deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-frame" style="position:relative"><div class="hk-frame__well" role="img" aria-label="Portrait placeholder, monogram NQ">NQ</div><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tr"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--bl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--br"></span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0;position:relative">
+          <h2 class="s4-hero__name">Nim Quickfoot</h2>
+          <span class="s4-hero__line"><i-icon name="hood" size="15"></i-icon>Halfling · Rogue 3</span>
+          <span class="s4-hero__line"><i-icon name="lockpicks" size="15"></i-icon>Thief</span>
+          <span class="s4-hero__line"><i-icon name="medal" size="15"></i-icon>Criminal</span>
+          <div class="hk-xp hk-xp--leaf" style="gap:6px"><span>XP</span><div class="hk-gauge hk-gauge--thin" style="flex:1 1 auto"><div class="hk-gauge__xp" style="width:40%"></div></div><span class="hk-num">1,300 / 2,700</span></div>
+        </div>
+        <div class="hk-strap" style="grid-column:1/3;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 12px 7px 10px;position:relative">
+          <x-tex kind="leather"></x-tex>
+          <div class="hk-num" style="font-size:30px;color:var(--text-on-leather);display:flex;align-items:baseline;gap:4px;position:relative"><span>21</span><span style="font-size:17px;color:var(--brass)">/ 21</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0;position:relative"><span class="hk-strap__label"><i-icon name="heart" size="14"></i-icon>Hit points · full</span><div class="hk-gauge" style="height:10px" title="21 of 21"><div class="hk-gauge__hp" style="width:100%"></div></div></div>
+        </div>
+        <div class="s4-hero__foot">
+          <span class="hk-chip" title="Not linked to a campaign"><i-icon name="house" size="12"></i-icon>Solo</span>
+          <span class="hk-chip hk-chip--moss" title="Synced · 1 week ago"><i-icon name="check-mark" size="11"></i-icon>synced</span>
+        </div>
+        <div class="s4-hero__acts">
+          <span class="hk-hint" style="flex:1 1 auto;white-space:nowrap">Played 1 week ago</span>
+          <button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="More: export, duplicate, delete" title="More: export, duplicate, delete"><i-icon name="hamburger-menu" size="14"></i-icon></button>
+          <a class="hk-btn hk-btn--brass" href="#"><i-icon name="crossed-swords" size="14"></i-icon>Open</a>
+        </div>
+      </article>
+
+      <!-- Serra Thornwood -->
+      <article class="s4-hero" role="listitem" style="transform:rotate(-.2deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-frame" style="position:relative"><div class="hk-frame__well" role="img" aria-label="Portrait placeholder, monogram ST">ST</div><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--tr"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--bl"></span><span class="hk-rivet hk-frame__rivet hk-frame__rivet--br"></span></div>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:0;position:relative">
+          <h2 class="s4-hero__name">Serra Thornwood</h2>
+          <span class="s4-hero__line"><i-icon name="bowman" size="15"></i-icon>Elf · Ranger 5</span>
+          <span class="s4-hero__line"><i-icon name="crosshair" size="15"></i-icon>Hunter</span>
+          <span class="s4-hero__line"><i-icon name="medal" size="15"></i-icon>Sage</span>
+          <div class="hk-xp hk-xp--leaf" style="gap:6px"><span>XP</span><div class="hk-gauge hk-gauge--thin" style="flex:1 1 auto"><div class="hk-gauge__xp" style="width:100%"></div></div><span class="hk-num">14,000 / 14,000</span></div>
+        </div>
+        <div class="hk-strap" style="grid-column:1/3;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 12px 7px 10px;position:relative">
+          <x-tex kind="leather"></x-tex>
+          <div class="hk-num" style="font-size:30px;color:var(--text-on-leather);display:flex;align-items:baseline;gap:4px;position:relative"><span>38</span><span style="font-size:17px;color:var(--brass)">/ 42</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0;position:relative"><span class="hk-strap__label"><i-icon name="heart" size="14"></i-icon>Hit points</span><div class="hk-gauge" style="height:10px" title="38 of 42"><div class="hk-gauge__hp" style="width:90%"></div></div></div>
+        </div>
+        <div class="s4-hero__foot">
+          <span class="hk-chip" title="Linked to The Emberfall Company"><i-icon name="three-friends" size="12"></i-icon>The Emberfall Company</span>
+          <span class="hk-chip hk-chip--arcane" title="Level up available: 14,000 XP reached"><i-icon name="upgrade" size="11"></i-icon>level up</span>
+        </div>
+        <div class="s4-hero__acts">
+          <span class="hk-hint" style="flex:1 1 auto;white-space:nowrap">Played tonight, 19:50</span>
+          <button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="More: export, duplicate, delete" title="More: export, duplicate, delete"><i-icon name="hamburger-menu" size="14"></i-icon></button>
+          <a class="hk-btn hk-btn--brass" href="#"><i-icon name="crossed-swords" size="14"></i-icon>Open</a>
+        </div>
+      </article>
+    </div>
+
+    <!-- insets: empty state and the iOS banner variant -->
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;padding-top:4px">
+      <div class="s4-inset">
+        <span class="s4-tag"><i-icon name="sunrise" size="14"></i-icon>Empty state: no heroes on this device</span>
+        <section class="hk-leaf" aria-label="No heroes yet" style="transform:rotate(-.2deg);display:flex;align-items:center;gap:16px;padding:16px 20px;width:100%">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-frame" style="position:relative;width:70px;height:84px"><div class="hk-frame__well" role="img" aria-label="Empty portrait frame" style="font-size:24px;color:var(--brass-bottom)"><i-icon name="person" size="30"></i-icon></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 auto">
+            <h2 class="s4-h2">No heroes yet</h2>
+            <p class="s4-p">Create your first hero in a few steps, or bring one back from a .hero file. Joined a campaign? Pick a pregenerated hero there.</p>
+            <div class="hk-row" style="gap:8px"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="plus" size="13"></i-icon>New hero</button><button class="hk-btn hk-btn--leather" type="button"><i-icon name="knapsack" size="13"></i-icon>Import .hero</button><a class="hk-btn hk-btn--ghost" href="#"><i-icon name="entry-door" size="13"></i-icon>Join a campaign</a></div>
+          </div>
+        </section>
+      </div>
+      <div class="s4-inset">
+        <span class="s4-tag"><i-icon name="smartphone" size="14"></i-icon>Install banner on iOS Safari: no prompt, so a how-to sheet</span>
+        <div class="hk-banner hk-banner--info" role="status">
+          <x-tex kind="paper"></x-tex>
+          <i-icon name="smartphone" size="22"></i-icon>
+          <div class="hk-banner__body"><span class="hk-banner__title">Add Herokeep to your Home Screen</span><span>Safari deletes a web app's saved data after 7 days unused. Installing protects your heroes and lets you play offline.</span></div>
+          <div class="hk-banner__actions"><button class="hk-btn hk-btn--parchment" type="button" title="Share, then Add to Home Screen, then Add"><i-icon name="help" size="14"></i-icon>How to install</button><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss (asks again in 30 days)"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button" title="Start the hero creation wizard"><i-icon name="plus" size="17"></i-icon>New hero</button>
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button" title="Import a .hero file"><i-icon name="knapsack" size="17"></i-icon>Import</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Join a campaign by code" title="Join a campaign by code"><i-icon name="entry-door" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="cloud-upload" size="16" style="color:var(--brass)"></i-icon>Synced to yura · last sync just now</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

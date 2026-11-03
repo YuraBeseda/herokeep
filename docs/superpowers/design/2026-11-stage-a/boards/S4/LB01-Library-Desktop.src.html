@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library — browse (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="library" lang="en"></x-rail>
+
+  <main class="s4-main">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h1 class="s4-h1"><i-icon name="open-book" size="28"></i-icon>Library</h1>
+        <span class="s4-sub">Every species, class, background, feat, spell, item, condition and rule from your installed packs.</span>
+      </div>
+      <span class="s4-cap"><i-icon name="chest" size="15"></i-icon>Searching 3 packs: SRD 5.2.1 (2024 rules), Emberfall Homebrew, My homebrew</span>
+    </div>
+
+    <section class="hk-leaf" aria-label="Browse the library" style="transform:rotate(.15deg);display:flex;flex-direction:column;gap:12px;padding:16px 20px 12px">
+      <x-tex kind="paper"></x-tex>
+
+      <!-- search + sort -->
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <label class="hk-search" style="flex:0 1 520px"><i-icon name="magnifying-glass" size="18"></i-icon><span class="hk-sr">Search the library</span><input class="hk-search__in" type="search" value="fire" aria-label="Search the library"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Clear search" title="Clear search"><i-icon name="cross-mark" size="11"></i-icon></button></label>
+        <span class="hk-hint">Exact and prefix matches rank first; the type chips narrow the results.</span>
+        <span style="flex:1 1 auto"></span>
+        <div style="display:flex;align-items:center;gap:8px"><label class="hk-field__label" for="sort">Sort</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="sort" style="height:32px;width:170px"><option>Best match</option><option>Name</option><option>Type, then name</option><option>Level</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+      </div>
+
+      <!-- type chips with counts -->
+      <div class="hk-row" role="group" aria-label="Filter by type" style="gap:6px">
+        <button class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" type="button" aria-pressed="true"><i-icon name="open-book" size="14"></i-icon>All<span class="hk-btn__badge">15</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No species match “fire”"><i-icon name="person" size="14"></i-icon>Species<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No classes match “fire”"><i-icon name="templar-shield" size="14"></i-icon>Classes<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No subclasses match “fire”"><i-icon name="holy-symbol" size="14"></i-icon>Subclasses<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No backgrounds match “fire”"><i-icon name="medal" size="14"></i-icon>Backgrounds<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No feats match “fire”"><i-icon name="laurel-crown" size="14"></i-icon>Feats<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false"><i-icon name="spell-book" size="14"></i-icon>Spells<span class="hk-btn__badge">7</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false"><i-icon name="swap-bag" size="14"></i-icon>Items<span class="hk-btn__badge">7</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No conditions match “fire”"><i-icon name="skull" size="14"></i-icon>Conditions<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No skills match “fire”"><i-icon name="acrobatic" size="14"></i-icon>Skills<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No languages match “fire”"><i-icon name="conversation" size="14"></i-icon>Languages<span class="hk-btn__badge">0</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false"><i-icon name="scroll-unfurled" size="14"></i-icon>Rules<span class="hk-btn__badge">1</span></button>
+        <button class="hk-chip hk-chip--l hk-chip--btn" type="button" aria-pressed="false" disabled title="No features match “fire”"><i-icon name="laurels" size="14"></i-icon>Features<span class="hk-btn__badge">0</span></button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="hk-th" style="font-size:15px" role="status"><b class="hk-num" style="font-size:18px">15</b> results for “fire” · all types · best match first</span>
+        <span style="flex:1 1 auto"></span>
+        <span class="hk-hint">Row glyphs: the type and the pack language. Hover a row for its summary.</span>
+      </div>
+
+      <!-- results -->
+      <div role="list" aria-label="Results" style="display:flex;flex-direction:column;gap:1px">
+        <a class="s4-res s4-res--hover" href="#" role="listitem" aria-describedby="tipFireball">
+          <span class="hk-iring hk-iring--l"><i-icon name="fire-spell-cast" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t"><b><mark class="s4-mark">Fire</mark>ball</b></span><span class="s4-res__s">Level 3 evocation · 1 action · 150 feet · 8d6 fire · Sorcerer, Wizard</span>
+            <span class="hk-tip" id="tipFireball" role="tooltip" style="left:0;transform:none;top:calc(100% + 8px)">Open Fireball<span class="hk-tip__sub">A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion…</span></span>
+          </span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="fire-ray" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t"><mark class="s4-mark">Fire</mark> Bolt</span><span class="s4-res__s">Cantrip, evocation · 1 action · 120 feet · 1d10 fire · Sorcerer, Wizard</span></span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="magic-shield" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t"><mark class="s4-mark">Fire</mark> Shield</span><span class="s4-res__s">Level 4 evocation · 1 action · self · 10 minutes · Druid, Sorcerer, Wizard</span></span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="flame" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t"><mark class="s4-mark">Fire</mark> Storm</span><span class="s4-res__s">Level 7 evocation · 1 action · 150 feet · 7d10 fire · Cleric, Druid, Sorcerer</span></span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="burning-dot" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Delayed Blast <mark class="s4-mark">Fire</mark>ball</span><span class="s4-res__s">Level 7 evocation · 1 action · 150 feet · 12d6 fire · concentration, 1 minute</span></span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="sparkles" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Faerie <mark class="s4-mark">Fire</mark></span><span class="s4-res__s">Level 1 evocation · 1 action · 60 feet · concentration, 1 minute · Bard, Druid</span></span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="fire" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Wall of <mark class="s4-mark">Fire</mark></span><span class="s4-res__s">Level 4 evocation · 1 action · 120 feet · 5d8 fire · concentration, 1 minute</span></span>
+          <span class="hk-chip" title="Spell"><i-icon name="spell-book" size="13"></i-icon>Spell</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="flask" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Alchemist's <mark class="s4-mark">Fire</mark></span><span class="s4-res__s">Gear · 50 gp · 1 lb</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="necklace" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Necklace of <mark class="s4-mark">Fire</mark>balls</span><span class="s4-res__s">Magic item · rare</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="wizard-staff" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Staff of <mark class="s4-mark">Fire</mark></span><span class="s4-res__s">Magic item · very rare · attunement (Druid, Sorcerer, Warlock or Wizard)</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="crystal-wand" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Wand of <mark class="s4-mark">Fire</mark>balls</span><span class="s4-res__s">Magic item · rare · 7 charges · attunement (spellcaster)</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="belt-buckles" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Belt of Giant Strength (<mark class="s4-mark">Fire</mark>)</span><span class="s4-res__s">Magic item · very rare · attunement</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="cauldron" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Brazier of Commanding <mark class="s4-mark">Fire</mark> Elementals</span><span class="s4-res__s">Magic item · rare</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="quiver" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Bullets, <mark class="s4-mark">Fire</mark>arm (10)</span><span class="s4-res__s">Gear · ammunition · 3 gp · 2 lb</span></span>
+          <span class="hk-chip" title="Item"><i-icon name="swap-bag" size="13"></i-icon>Item</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+        <a class="s4-res" href="#" role="listitem">
+          <span class="hk-iring hk-iring--l"><i-icon name="scroll-unfurled" size="19"></i-icon></span>
+          <span class="s4-res__name"><span class="s4-res__t">Damage type: <mark class="s4-mark">Fire</mark></span><span class="s4-res__s">Flames, unbearable heat</span></span>
+          <span class="hk-chip" title="Rule"><i-icon name="scroll-unfurled" size="13"></i-icon>Rule</span>
+          <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+          <span class="s4-chev" aria-hidden="true"></span>
+        </a>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding-top:4px">
+        <span class="hk-hint">End of results. Clear the search to browse all 1,866 entries by type.</span>
+        <span style="flex:1 1 auto"></span>
+        <button class="hk-btn hk-btn--ghost hk-btn--dashed" type="button"><i-icon name="cross-mark" size="12"></i-icon>Clear search</button>
+      </div>
+    </section>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button" title="Write an item, spell, feat or species of your own"><i-icon name="plus" size="17"></i-icon>New homebrew</button>
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button" title="Import an .hkpack file"><i-icon name="knapsack" size="17"></i-icon>Import pack</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Filter by type" title="Filter by type"><i-icon name="funnel" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Search" title="Search (focuses the field)"><i-icon name="magnifying-glass" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="open-book" size="16" style="color:var(--brass)"></i-icon>15 results for “fire” · 3 packs</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

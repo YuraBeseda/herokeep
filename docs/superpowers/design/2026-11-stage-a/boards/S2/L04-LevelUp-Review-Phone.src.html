@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — підвищення рівня, огляд (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <x-part name="pbar" title="Підвищення до 6 рівня" left="cross-mark" leftlabel="Скасувати підвищення рівня"></x-part>
+
+  <div style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+    <x-part name="pstrip" n="4" of="4" label="Огляд"></x-part>
+
+    <section class="leaf leafP" aria-label="Огляд" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:4px">
+      <x-tex kind="paper"></x-tex>
+      <div style="position:relative;display:flex;flex-direction:column;gap:2px"><h2 class="leafTitle" style="font-size:20px"><i-icon name="laurels" size="19" style="color:#8A6A2A"></i-icon>Отримано на 6 рівні</h2></div>
+      <div style="position:relative;display:flex;flex-direction:column">
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><x-seal state="full" icon="templar-shield" size="30" seed="3" label="Рівень класу"></x-seal><span style="display:flex;flex-direction:column;gap:2px"><b>Паладин 5 → 6</b><span class="th" style="font-size:14px">Людина · Паладин 6 · Клятва відданості</span></span><button class="ico icoP icoLeaf" type="button" aria-label="Змінити клас" title="Змінити"><i-icon name="quill" size="16"></i-icon></button></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><i-icon name="heart" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:6px"><b>Максимум ОЗ</b><span class="gval">44 → 53</span></span><span class="th" style="font-size:14px">кинуто 7 + 2 Статура · поточні 31 → 40 · кістки 5к10 → 6к10</span></span><button class="ico icoP icoLeaf" type="button" aria-label="Змінити очки здоров'я" title="Змінити"><i-icon name="quill" size="16"></i-icon></button></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><i-icon name="laurels" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>Аура захисту</b><span class="chip chipM glyph" tabindex="0" aria-describedby="tipNew" style="height:24px;font-size:14px;position:relative"><i-icon name="plus" size="11"></i-icon>нове уміння<span class="tipUp" id="tipNew" role="tooltip" style="left:auto;right:0;transform:none;font-size:15px;white-space:normal;width:230px">З'явиться у вкладці Герой, розділ Паладин</span></span></span><span class="th" style="font-size:14px">Ви й союзники в межах 10 фт додаєте +3 (Харизма) до рятівних кидків.</span></span><a href="#" class="ico icoP icoLeaf" aria-label="Деталі: Аура захисту" title="Деталі"><i-icon name="info" size="16"></i-icon></a></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><i-icon name="card-pick" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:2px"><b>Вибори класу</b><span class="th" style="font-size:14px">на 6 рівні нічого обирати</span></span><span></span></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><i-icon name="spell-book" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:6px"><b>Підготовлені заклинання</b><span class="gval">6</span></span><span class="th" style="font-size:14px">без змін · 5 обрано + 1 вільне · заклинання клятви завжди підготовлені</span></span><span></span></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><i-icon name="magic-swirl" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>Комірки заклинань</b><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" text="I" size="22" fs="30" seed="1" label="Комірка 1 рівня"></x-seal><x-seal state="full" text="I" size="22" fs="30" seed="2" label="Комірка 1 рівня"></x-seal><x-seal state="full" text="I" size="22" fs="30" seed="3" label="Комірка 1 рівня"></x-seal><x-seal state="full" text="I" size="22" fs="30" seed="4" label="Комірка 1 рівня"></x-seal><span style="width:6px"></span><x-seal state="full" text="II" size="22" fs="28" seed="5" label="Комірка 2 рівня"></x-seal><x-seal state="full" text="II" size="22" fs="28" seed="6" label="Комірка 2 рівня"></x-seal></span></span><span class="th" style="font-size:14px">без змін · 4 першого, 2 другого рівня</span></span><span></span></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px"><i-icon name="holy-symbol" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:6px"><b>Божественний канал</b><span class="gval">2</span></span><span class="th" style="font-size:14px">без змін</span></span><span></span></div>
+        <div class="gained" style="grid-template-columns:30px minmax(0,1fr) auto;min-height:48px;font-size:16px;border-bottom:0"><i-icon name="medal" size="22"></i-icon><span style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:6px"><b>Бонус майстерності</b><span class="gval">+3</span></span><span class="th" style="font-size:14px">без змін до 9 рівня</span></span><span></span></div>
+      </div>
+    </section>
+  </div>
+
+  <x-part name="pflow" next="Завершити підвищення" nexticon="laurels"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

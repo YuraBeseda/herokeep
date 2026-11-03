@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — level up, hit points (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(300px,320fr) 250px minmax(0,850fr);gap:20px;padding:18px 18px 22px;align-items:start;flex:1 1 auto">
+    <x-part name="folio" tab="levelup" tip="none" xpw="100%" xptxt="14,250 / 14,000"></x-part>
+    <x-part name="steps" cur="2" level="6" h1="Paladin 6" h2="rolled 7 + 2"></x-part>
+
+    <div class="pane" style="gap:18px">
+      <section class="leaf" aria-label="Hit points" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:12px">
+        <x-tex kind="paper"></x-tex>
+        <div style="position:relative;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h2 class="leafTitle" style="font-size:24px"><i-icon name="heart" size="22" style="color:#8A6A2A"></i-icon>Hit points for level 6</h2><span class="hint">Roll the Paladin hit die or take its average; Constitution +2 is added either way. One roll per level.</span></div>
+
+        <div style="position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <button class="hpCard hpOn" type="button" aria-pressed="true">
+            <span class="pickSeal" style="position:absolute"><x-seal state="full" icon="check-mark" size="34" label="Chosen" seed="4"></x-seal></span>
+            <span style="display:flex;align-items:center;gap:8px"><i-icon name="d10" size="20" style="color:#8A6A2A"></i-icon><span class="pickT" style="flex:0 0 auto">Roll 1d10</span><span class="chip chipM"><i-icon name="check-mark" size="11"></i-icon>rolled</span></span>
+            <span style="display:flex;align-items:center;gap:16px">
+              <span class="die" aria-label="Rolled 7" role="img">7</span>
+              <span style="display:flex;flex-direction:column;gap:4px">
+                <span style="display:flex;align-items:baseline;gap:6px"><span class="bigN">+9</span><span class="th">hit points</span></span>
+                <span class="th">7 on the die + 2 Constitution</span>
+              </span>
+            </span>
+            <span class="hint" style="display:flex;align-items:center;gap:5px"><i-icon name="padlock" size="13" style="color:#8A6A2A"></i-icon>The roll is kept; you can still take the average instead.</span>
+          </button>
+          <button class="hpCard" type="button" aria-pressed="false">
+            <span style="display:flex;align-items:center;gap:8px"><i-icon name="scales" size="20" style="color:#8A6A2A"></i-icon><span class="pickT">Take the average</span></span>
+            <span style="display:flex;align-items:center;gap:16px">
+              <span class="die" style="background:radial-gradient(circle at 35% 30%,#EFE4C8,#DBCCA5);color:#2B2118;box-shadow:inset 0 0 0 2px #8A6A2A" role="img" aria-label="Average 6">6</span>
+              <span style="display:flex;flex-direction:column;gap:4px">
+                <span style="display:flex;align-items:baseline;gap:6px"><span class="bigN">+8</span><span class="th">hit points</span></span>
+                <span class="th">6 (half of d10, rounded up) + 2 Constitution</span>
+              </span>
+            </span>
+            <span class="btn btnParch" style="align-self:flex-start;height:30px"><i-icon name="scales" size="14"></i-icon>Take average</span>
+          </button>
+        </div>
+
+        <div class="strap" style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:10px 16px;color:#E9DCBB">
+          <div style="display:flex;flex-direction:column;gap:4px"><span class="vlabel"><i-icon name="heart" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> Hit point maximum</span><span class="vval" style="font-size:24px">44 <span style="font-size:16px;color:#C9A24E">to</span> 53</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><span class="vlabel"><i-icon name="d10" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> Hit dice</span><span class="vval" style="font-size:24px">5d10 <span style="font-size:16px;color:#C9A24E">to</span> 6d10</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><span class="vlabel"><i-icon name="health-normal" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> Current hit points</span><span class="vval" style="font-size:24px">31 <span style="font-size:16px;color:#C9A24E">to</span> 40 <span class="hint" style="color:#E0C27A;font-size:14px">(gains the new 9)</span></span></div>
+        </div>
+      </section>
+
+      <section class="leaf" aria-label="What changes at level 6" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:6px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="leafTitle" style="position:relative"><i-icon name="laurels" size="20" style="color:#8A6A2A"></i-icon>Also at level 6</h2>
+        <div style="position:relative;display:flex;flex-direction:column">
+          <div class="gained"><i-icon name="laurels" size="20"></i-icon><span><b>Aura of Protection</b> — you and allies within 10 feet add +3 (Charisma) to saving throws.</span><a href="#" class="ico icoSm" aria-label="Details: Aura of Protection" title="Details"><i-icon name="info" size="14"></i-icon></a></div>
+          <div class="gained"><i-icon name="spell-book" size="20"></i-icon><span>Prepared spells stay at 6; spell slots stay at 4 level 1 and 2 level 2.</span><span></span></div>
+          <div class="gained" style="border-bottom:0"><i-icon name="card-pick" size="20"></i-icon><span>No choices to make at this level — the next step is the review.</span><span></span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <x-part name="flowstrap" next="Next" nexticon="check-mark" note="Level 5 to 6 · 14,250 XP"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

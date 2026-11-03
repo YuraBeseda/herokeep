@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Campaigns list (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="The Emberfall Company" live="1" chiptitle="The Emberfall Company, session live, round 3"></x-rail>
+
+  <main style="z-index:1;display:flex;flex-direction:column;gap:18px;padding:22px 22px 26px;flex:1 1 auto;min-width:0">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+      <h1 class="h1"><i-icon name="three-friends" size="28"></i-icon>Campaigns</h1>
+      <span class="hintG">2 campaigns: you run one and play in one</span>
+      <span style="flex:1 1 auto"></span>
+      <span class="hintG" style="display:flex;align-items:center;gap:6px"><i-icon name="entry-door" size="16" style="color:var(--brass)"></i-icon>Joining needs a code or an invite link from the DM</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 392px;gap:22px;align-items:start">
+      <!-- the list -->
+      <section aria-label="Your campaigns" style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <article class="ccard" aria-labelledby="c1" style="transform:rotate(-.2deg);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 18px;align-items:center">
+          <x-tex kind="paper"></x-tex>
+          <span class="hk-iring hk-iring--l" style="width:56px;height:56px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)" role="img" aria-label="You are the DM" title="You are the DM"><i-icon name="crown" size="28"></i-icon></span>
+          <div style="display:flex;flex-direction:column;gap:7px;min-width:0">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0"><h2 id="c1" style="margin:0;font:24px/1.1 Forum,serif;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The Emberfall Company</h2><span class="glyphBtn" tabindex="0" aria-describedby="tipSync" style="color:var(--success-strong)"><i-icon name="cycle" size="16" hint="Synced a moment ago"></i-icon><span class="hk-tip hk-tip--above" id="tipSync" role="tooltip">Synced a moment ago<span class="hk-tip__sub">this device is the campaign&#8217;s writer</span></span></span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="hk-chip hk-chip--dark" style="height:26px;font-size:14px" title="Your role: you run this campaign"><i-icon name="crown" size="14"></i-icon>DM</span>
+              <span class="hk-chip" style="height:26px;font-size:14px" title="5 members and 1 unclaimed pregen"><i-icon name="three-friends" size="14"></i-icon>5 members · 1 pregen</span>
+              <span class="hk-chip chipLive" style="height:26px;font-size:14px" title="Session in progress, round 3, 1 h 12 min elapsed"><i-icon name="candle-flame" size="13"></i-icon>Session live · round 3</span>
+            </div>
+            <div class="hk-hint" style="display:flex;align-items:center;gap:6px"><i-icon name="hourglass" size="14" style="color:var(--accent-strong)"></i-icon>Playing now: session started 1 h 12 min ago · 11 sessions so far</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <a href="#" class="hk-btn hk-btn--l hk-btn--brass hk-focus-demo" aria-label="Open The Emberfall Company" title="Opens the Party tab"><i-icon name="three-friends" size="18"></i-icon>Open</a>
+            <nav aria-label="Tabs of The Emberfall Company" style="display:flex;gap:4px">
+              <a href="#" class="hk-tab qtab" title="Party"><i-icon name="three-friends" size="13"></i-icon>Party</a>
+              <a href="#" class="hk-tab qtab" title="Table"><i-icon name="round-table" size="13"></i-icon>Table</a>
+              <a href="#" class="hk-tab qtab" title="Lobby"><i-icon name="entry-door" size="13"></i-icon>Lobby</a>
+              <a href="#" class="hk-tab qtab" title="Settings"><i-icon name="cog" size="13"></i-icon>Settings</a>
+            </nav>
+          </div>
+        </article>
+
+        <article class="ccard" aria-labelledby="c2" style="transform:rotate(.25deg);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 18px;align-items:center">
+          <x-tex kind="paper"></x-tex>
+          <span class="hk-iring hk-iring--l" style="width:56px;height:56px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)" role="img" aria-label="You are a player" title="You are a player"><i-icon name="person" size="28"></i-icon></span>
+          <div style="display:flex;flex-direction:column;gap:7px;min-width:0">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0"><h2 id="c2" style="margin:0;font:24px/1.1 Forum,serif;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tombs of the Salt King</h2><span class="glyphBtn" tabindex="0" style="color:var(--warning)"><i-icon name="cycle" size="16" hint="2 changes pending, syncing when online"></i-icon></span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="hk-chip hk-chip--dark" style="height:26px;font-size:14px" title="Your role: player, you play Sister Maren"><i-icon name="person" size="14"></i-icon>Player · Sister Maren</span>
+              <span class="hk-chip" style="height:26px;font-size:14px" title="4 members"><i-icon name="three-friends" size="14"></i-icon>4 members</span>
+              <span class="hk-chip" style="height:26px;font-size:14px;color:var(--text-2)" title="No session in progress"><i-icon name="candle-flame" size="13"></i-icon>No session</span>
+            </div>
+            <div class="hk-hint" style="display:flex;align-items:center;gap:6px"><i-icon name="hourglass" size="14" style="color:var(--accent-strong)"></i-icon>Last played 12 days ago · 4 sessions so far</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <a href="#" class="hk-btn hk-btn--l hk-btn--brass" aria-label="Open Tombs of the Salt King" title="Opens the Party tab"><i-icon name="three-friends" size="18"></i-icon>Open</a>
+            <nav aria-label="Tabs of Tombs of the Salt King" style="display:flex;gap:4px">
+              <a href="#" class="hk-tab qtab" title="Party"><i-icon name="three-friends" size="13"></i-icon>Party</a>
+              <a href="#" class="hk-tab qtab" title="Table"><i-icon name="round-table" size="13"></i-icon>Table</a>
+              <a href="#" class="hk-tab qtab" title="Lobby"><i-icon name="entry-door" size="13"></i-icon>Lobby</a>
+              <a href="#" class="hk-tab qtab" title="Settings"><i-icon name="cog" size="13"></i-icon>Settings</a>
+            </nav>
+          </div>
+        </article>
+
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+          <a href="#" class="ccard" style="transform:rotate(.15deg);flex-direction:row;align-items:center;gap:14px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);text-decoration:none;justify-content:center;min-height:84px" aria-label="New campaign: you become its DM">
+            <span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="plus" size="20"></i-icon></span>
+            <span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">New campaign</b><span style="font-size:14px;font-style:italic">you become its DM; players join by code</span></span>
+          </a>
+          <a href="#" class="ccard" style="transform:rotate(-.15deg);flex-direction:row;align-items:center;gap:14px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);text-decoration:none;justify-content:center;min-height:84px" aria-label="Join a campaign by code or QR link">
+            <span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="entry-door" size="20"></i-icon></span>
+            <span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">Join a campaign</b><span style="font-size:14px;font-style:italic">by code or by scanning the DM&#8217;s QR</span></span>
+          </a>
+        </div>
+      </section>
+
+      <!-- the empty state, drawn small beside the list -->
+      <aside aria-label="Empty state variant" style="display:flex;flex-direction:column;gap:8px">
+        <span class="hintG" style="display:flex;align-items:center;gap:6px"><span class="pdot"></span>Variant: the same screen with no campaigns yet</span>
+        <section class="hk-leaf" aria-label="No campaigns yet" style="transform:rotate(.4deg);display:flex;flex-direction:column;gap:12px;padding:18px 20px 20px">
+          <x-tex kind="paper"></x-tex>
+          <div style="display:flex;justify-content:center"><span class="hk-iring" style="width:64px;height:64px;box-shadow:inset 0 0 0 2px var(--brass),0 2px 4px rgba(0,0,0,.5)"><i-icon name="three-friends" size="34"></i-icon></span></div>
+          <h2 class="hk-leaf__title" style="justify-content:center;font-size:24px;line-height:28px">No campaigns yet</h2>
+          <p style="margin:0;text-align:center;font-size:16px;line-height:1.4">You haven&#8217;t joined or created any campaigns yet. Start one as the DM, or join a friend&#8217;s table with their code.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch">
+            <a href="#" class="hk-btn hk-btn--l hk-btn--brass" style="justify-content:center"><i-icon name="plus" size="18"></i-icon>New campaign</a>
+            <a href="#" class="hk-btn hk-btn--l hk-btn--leather" style="justify-content:center"><i-icon name="entry-door" size="18"></i-icon>Join with a code</a>
+          </div>
+          <span class="hk-hint" style="text-align:center">Ask your DM for the 8-character join code or an invite link; a QR on their Lobby tab opens the Join screen with the code filled in.</span>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <x-strap kind="list" status="The Emberfall Company is in session · round 3" sicon="candle-flame" scolor="var(--danger-on-leather)"></x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

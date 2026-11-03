@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Обліковий запис — коди відновлення (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-phone" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Створити акаунт" action="help" alabel="Довідка про акаунти" lang="uk"></x-topbar>
+
+  <div class="s4-pbody" data-scroller="body" style="justify-content:center">
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="codesTitle" style="display:flex;flex-direction:column;gap:12px;transform:rotate(.2deg);padding:14px 14px 12px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="key" size="36" seed="3"></x-seal><h1 class="hk-dialog__title" id="codesTitle" style="font-size:23px;line-height:27px">Збережіть коди відновлення</h1></div>
+      <span class="hk-hint" style="font-size:14px">Крок 2 з 2 · акаунт <b>ilyana_v</b> створено</span>
+      <p class="s4-p" style="font-size:16px">Ці шість одноразових кодів — єдиний спосіб повернутися до акаунта, якщо ви забудете пароль. Збережіть їх зараз у надійному місці — вони показуються лише один раз, і Herokeep їх не зберігає.</p>
+      <div class="s4-codes" role="list" aria-label="Коди відновлення" style="font-size:16px;gap:8px 14px;padding:12px">
+        <span role="listitem">7KQ4-NB2X-8R3T</span><span role="listitem">M9PW-2ZHC-K4LD</span>
+        <span role="listitem">X3RA-7TVN-Q2MB</span><span role="listitem">H8ND-4KPZ-W6YF</span>
+        <span role="listitem">B2TL-9QRM-N7XK</span><span role="listitem">Z5MC-3WHD-P8RT</span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px">
+        <button class="hk-btn hk-btn--leather hk-btn--phone" type="button" style="padding:0 8px"><i-icon name="files" size="14"></i-icon>Скопіювати коди</button>
+        <button class="hk-btn hk-btn--leather hk-btn--phone" type="button" style="padding:0 8px"><i-icon name="save" size="14"></i-icon>Завантажити .txt</button>
+      </div>
+      <span class="hk-hint" style="font-size:14px">Кожен код працює один раз. Скидання пароля виконає вихід з усіх інших пристроїв.</span>
+      <label class="s4-check" style="min-height:44px;font-size:16px"><input class="s4-check__in" type="checkbox" checked style="width:24px;height:24px">Я зберіг(ла) коди відновлення</label>
+    </section>
+  </div>
+
+  <x-pstrap lang="uk" cols="44px 1fr 44px">
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Назад (без збереження кодів буде запит на підтвердження)" title="Назад: без збереження кодів буде запит на підтвердження"><i-icon name="return-arrow" size="22"></i-icon></button>
+    <button class="s4-act s4-act--brass" type="button" title="Далі до героїв"><i-icon name="check-mark" size="20"></i-icon><span class="s4-act__t">Продовжити</span></button>
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Ще: довідка" title="Ще: довідка"><i-icon name="hamburger-menu" size="22"></i-icon></button>
+  </x-pstrap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

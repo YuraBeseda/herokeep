@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Campaign lobby, DM (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="The Emberfall Company" live="1" chiptitle="The Emberfall Company, session live, round 3"></x-rail>
+  <x-chead name="The Emberfall Company" role="dm" tab="lobby" members="5" pregens="1" session="live" round="3" elapsed="1 h 12 min"></x-chead>
+
+  <main style="z-index:1;display:grid;grid-template-columns:minmax(380px,440px) minmax(0,1fr);gap:22px;padding:22px 22px 26px;flex:1 1 auto;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+    <!-- join code -->
+    <section class="hk-leaf" aria-labelledby="jc" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:14px;padding:18px 20px 20px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="jc"><i-icon name="ticket" size="20"></i-icon>Join code</h2><span class="hk-chip hk-chip--moss" style="height:24px" title="Open for joining: anyone with the code can join"><i-icon name="entry-door" size="13"></i-icon>open</span></div>
+      <div style="display:flex;justify-content:center"><span class="codeplate" role="img" aria-label="Join code 91PQ-S10Q">91PQ-S10Q</span></div>
+      <div style="display:flex;justify-content:center"><x-qr size="208" seed="11"></x-qr></div>
+      <p class="hk-hint" style="text-align:center;font-size:14px">Scan with a phone camera: it opens the Join screen with the code already filled in. The code is also in the invite link.</p>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+        <button class="hk-btn hk-btn--l hk-btn--leather hk-focus-demo" type="button" style="justify-content:center"><i-icon name="files" size="18"></i-icon>Copy invite link</button>
+        <button class="hk-btn hk-btn--l hk-btn--leather" type="button" style="justify-content:center" title="Generate a new join code"><i-icon name="anticlockwise-rotation" size="18"></i-icon>New code</button>
+      </div>
+      <span class="hk-hint" style="text-align:center">New code: the old code and link stop working at once; members stay.</span>
+      <div class="hk-rule"></div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-2)"><i-icon name="crown" size="14" style="color:var(--accent-strong)"></i-icon>Only you see the code and the QR. Players get a plain members list on this tab.</div>
+    </section>
+
+    <!-- member's view, drawn small -->
+    <aside aria-label="Variant: a member's lobby" style="display:flex;flex-direction:column;gap:10px">
+      <span class="hintG" style="display:flex;align-items:center;gap:6px"><span class="pdot"></span>Variant: what a player sees on this tab</span>
+      <section class="hk-leaf" aria-label="Lobby, member view" style="transform:rotate(.5deg);display:flex;flex-direction:column;gap:8px;padding:14px 16px;font-size:14px;width:330px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" style="font-size:18px"><i-icon name="three-friends" size="18"></i-icon>Members</h2><span class="hk-hint" style="font-size:13px">5 at the table</span></div>
+        <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:14px"><i-icon name="crown" size="16"></i-icon></span><span style="display:flex;flex-direction:column"><b>Dana</b><span class="hk-hint" style="font-size:13px">runs the table</span></span><span class="hk-chip hk-chip--dark" style="height:22px;font-size:13px"><i-icon name="crown" size="12"></i-icon>DM</span></div>
+        <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:14px">M</span><span style="display:flex;flex-direction:column"><b>Mira <span class="hk-hint" style="font-size:13px">(you)</span></b><span class="hk-hint" style="font-size:13px">Ilyana Vorn</span></span><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span></div>
+        <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:14px">T</span><span style="display:flex;flex-direction:column"><b>Taras</b><span class="hk-hint" style="font-size:13px">Bramble Underfoot</span></span><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span></div>
+        <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px;border-bottom:0"><span class="avatar" style="width:32px;height:32px;font-size:14px">O</span><span style="display:flex;flex-direction:column"><b>Olena</b><span class="hk-hint" style="font-size:13px">Sister Maren</span></span><span class="onl onlOff" role="img" aria-label="Offline" title="Offline"></span></div>
+        <div class="hk-rule"></div>
+        <p class="hk-hint" style="margin:0;font-size:13px">The join code, the QR and the member actions are the DM&#8217;s. To leave the table, use Settings: Leave campaign.</p>
+      </section>
+    </aside>
+    </div>
+
+    <!-- members -->
+    <section class="hk-leaf" aria-labelledby="mem" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:6px;padding:18px 20px 16px;min-width:0">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" id="mem"><i-icon name="three-friends" size="20"></i-icon>Members</h2><span class="hk-hint">5 at the table · 4 online</span><div class="hk-leaf__actions"><span class="hk-chip" style="height:24px" title="Members with a linked hero"><i-icon name="wax-seal" size="13"></i-icon>5 heroes linked</span></div></div>
+
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto auto">
+        <span class="avatar" aria-hidden="true"><i-icon name="crown" size="20"></i-icon></span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">You</b><span class="hk-hint">run the table; no hero linked</span></div>
+        <span class="hk-chip hk-chip--dark" style="height:24px"><i-icon name="crown" size="13"></i-icon>DM</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--success-strong)"><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span>online</span>
+        <span style="width:84px"></span>
+      </div>
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto auto">
+        <span class="avatar">M</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Mira</b><span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-2)"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>plays Ilyana Vorn · Human Paladin 5</span></div>
+        <span class="hk-chip" style="height:24px"><i-icon name="person" size="13"></i-icon>Player</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--success-strong)"><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span>online</span>
+        <button class="hk-btn hk-btn--ghost" type="button" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border);width:84px" title="Remove Mira from the campaign">Remove</button>
+      </div>
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto auto">
+        <span class="avatar">T</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Taras</b><span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-2)"><i-icon name="hood" size="13" style="color:var(--accent-strong)"></i-icon>plays Bramble Underfoot · Halfling Rogue 3</span></div>
+        <span class="hk-chip" style="height:24px"><i-icon name="person" size="13"></i-icon>Player</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--success-strong)"><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span>online</span>
+        <button class="hk-btn hk-btn--ghost" type="button" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border);width:84px" title="Remove Taras from the campaign">Remove</button>
+      </div>
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto auto">
+        <span class="avatar">O</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Olena</b><span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-2)"><i-icon name="holy-symbol" size="13" style="color:var(--accent-strong)"></i-icon>plays Sister Maren · Human Cleric 4</span></div>
+        <span class="hk-chip" style="height:24px"><i-icon name="person" size="13"></i-icon>Player</span>
+        <span class="hk-has-tip halo" style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-3);min-height:28px" tabindex="0" aria-describedby="tipOff"><span class="onl onlOff" role="img" aria-label="Offline" title="Offline since 20:31"></span>offline<span class="hk-tip hk-tip--above" id="tipOff" role="tooltip">Offline since 20:31<span class="hk-tip__sub">her sheet keeps syncing when she returns</span></span></span>
+        <button class="hk-btn hk-btn--ghost" type="button" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border);width:84px" title="Remove Olena from the campaign">Remove</button>
+      </div>
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto auto">
+        <span class="avatar">Ma</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Marko</b><span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-2)"><i-icon name="bowman" size="13" style="color:var(--accent-strong)"></i-icon>plays Thorne Ashvale · Elf Ranger 4</span></div>
+        <span class="hk-chip" style="height:24px"><i-icon name="person" size="13"></i-icon>Player</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--success-strong)"><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span>online</span>
+        <button class="hk-btn hk-btn--ghost" type="button" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border);width:84px" title="Remove Marko from the campaign">Remove</button>
+      </div>
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto auto;border-bottom:0">
+        <span class="avatar">P</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Petro</b><span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-2)"><i-icon name="crossed-swords" size="13" style="color:var(--accent-strong)"></i-icon>plays Oskar Bellow · Dwarf Fighter 5</span></div>
+        <span class="hk-chip" style="height:24px"><i-icon name="person" size="13"></i-icon>Player</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--success-strong)"><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span>online</span>
+        <button class="hk-btn hk-btn--ghost" type="button" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border);width:84px" title="Remove Petro from the campaign">Remove</button>
+      </div>
+
+      <div class="hk-rule" style="margin-top:8px"></div>
+      <div class="hk-leaf__head" style="margin:6px 0 0"><h3 class="hk-leaf__title" style="font-size:18px"><i-icon name="portrait" size="18"></i-icon>Pregens</h3><span class="hk-hint">ready-made heroes you control until a player claims them</span></div>
+      <div class="mrow" style="grid-template-columns:40px minmax(0,1fr) auto auto;border-bottom:0">
+        <x-mono text="GC" w="40" h="40" fs="15" label="Portrait placeholder, monogram GC"></x-mono>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Guard captain</b><span style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-2)"><i-icon name="crossed-swords" size="13" style="color:var(--accent-strong)"></i-icon>Human Fighter 3 · unclaimed</span></div>
+        <span class="hk-chip" style="height:24px" title="Pregen: no player has claimed it yet"><i-icon name="padlock" size="13"></i-icon>unclaimed</span>
+        <button class="hk-btn hk-btn--leather" type="button" title="Give this pregen to a member"><i-icon name="shaking-hands" size="14"></i-icon>Hand over to…</button>
+      </div>
+      <div><button class="hk-btn hk-btn--ghost hk-btn--dashed" type="button" style="height:34px"><i-icon name="plus" size="14"></i-icon>Add pregen</button></div>
+    </section>
+  </main>
+
+  <x-strap kind="dm" session="live" sel="Ilyana Vorn" status="DM · 5 members · session live, round 3" sicon="crown"></x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

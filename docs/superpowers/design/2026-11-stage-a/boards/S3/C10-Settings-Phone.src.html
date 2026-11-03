@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Налаштування кампанії, Майстер (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Налаштування" action="share" alabel="Експортувати кампанію"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <div style="display:flex;align-items:center;gap:8px"><span class="hintG" style="font-size:14px;flex:1 1 auto">кожна зміна зберігається одразу</span><span class="hk-chip hk-chip--dark" role="status" style="height:28px;font-size:14px" title="Усі зміни збережено · 20:31"><i-icon name="check-mark" size="13" style="color:var(--moss-top)"></i-icon>Збережено · щойно</span></div>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="hrP" style="transform:rotate(-.15deg);display:flex;flex-direction:column;gap:0;padding:12px 14px 6px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="hk-leaf__title" id="hrP" style="font-size:19px;margin-bottom:4px"><i-icon name="scroll-unfurled" size="18"></i-icon>Домашні правила</h2>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><label for="slvlS">Початковий рівень</label><small>нові герої та заготовки починають тут</small></div><div class="hk-numfield hk-numfield--leaf hk-numfield--phone" style="grid-template-columns:44px 56px 44px"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="На рівень нижче" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="slvlS" type="number" value="3" min="1" max="20"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="На рівень вище" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div></div>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><span>Стартове золото замість спорядження</span><small>увімк.: новий герой може взяти стартове золото класу й купити спорядження в майстрі створення замість набору; вимк.: пропонується лише набір</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Стартове золото замість спорядження" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><span>Мультикласування</span><small>Коли вимкнено, підвищення рівня пропускає вибір класу і продовжує клас героя.</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Мультикласування" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><span>Гравці самі додають предмети</span><small>вимк.: предмети видає лише майстер; «Додати предмет» у гравців заблоковано</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Гравці самі додають предмети" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><label for="attnS">Ліміт налаштування на предмети</label><small>магічні предмети, на які герой налаштований одночасно</small></div><div class="hk-numfield hk-numfield--leaf hk-numfield--phone" style="grid-template-columns:44px 56px 44px"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="На один менше" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="attnS" type="number" value="3" min="0" max="10"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="На один більше" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div></div>
+      <div class="setrowP"><div class="setlab"><span id="advS">Розвиток персонажів</span><small>очки досвіду на листах або рівні за віхами</small></div><div class="seg" role="radiogroup" aria-labelledby="advS" style="display:flex;width:100%"><button class="segb segP segOn" type="button" role="radio" aria-checked="true"><i-icon name="laurels" size="14"></i-icon>Очки досвіду</button><button class="segb segP" type="button" role="radio" aria-checked="false"><i-icon name="level-end-flag" size="14"></i-icon>За віхами</button></div></div>
+      <div class="setrowP"><div class="setlab"><span id="hplS">ОЗ при підвищенні рівня</span></div><div class="seg" role="radiogroup" aria-labelledby="hplS" style="display:flex;width:100%"><button class="segb segP" type="button" role="radio" aria-checked="false">Кидок кубика</button><button class="segb segP segOn" type="button" role="radio" aria-checked="true">Середнє значення</button><button class="segb segP" type="button" role="radio" aria-checked="false">На вибір гравця</button></div></div>
+      <div class="setrowP"><div class="setlab"><span id="encS">Перевантаження</span><small>типове для столу; герой може змінити на своєму листі</small></div><div class="seg" role="radiogroup" aria-labelledby="encS" style="display:flex;width:100%"><button class="segb segP" type="button" role="radio" aria-checked="false">Вимкнено</button><button class="segb segP segOn" type="button" role="radio" aria-checked="true">Стандартне</button><button class="segb segP" type="button" role="radio" aria-checked="false">Варіативне (за рівнями)</button></div></div>
+      <div class="setrowP"><div class="setlab"><span id="eosS">Зміни поза сесією</span><small>кидати кубики й писати в чат можна будь-коли</small></div><div class="seg" role="radiogroup" aria-labelledby="eosS" style="display:flex;width:100%"><button class="segb segP segOn" type="button" role="radio" aria-checked="true">Вільно</button><button class="segb segP" type="button" role="radio" aria-checked="false">Потребує схвалення майстра</button><button class="segb segP" type="button" role="radio" aria-checked="false">Заблоковано</button></div></div>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><span>Сувора перевірка правил</span><small>вимк. — лише попередження</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Сувора перевірка правил" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><span>Дозволити ручні перевизначення</span><small>гравці можуть перевизначати значення на своїх листах із причиною</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Дозволити ручні перевизначення" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+      <div class="setrowP" style="border-bottom:0"><div class="setrowP__h"><div class="setlab"><span>Гравці керують своїми станами</span><small>увімк.: гравець може завершити чи змінити власний стан, наприклад після зілля. Вимк.: стани прив&#8217;язаних героїв завершуєте лише ви; їхні чіпи показують замок «Керує ваш майстер». «Наступний раунд» однаково зменшує всі тривалості в раундах.</small></div><button class="hk-toggle hk-focus-demo" type="button" role="switch" aria-checked="true" aria-label="Гравці керують своїми станами" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="pkP" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:0;padding:12px 14px 10px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" id="pkP" style="font-size:19px"><i-icon name="chest" size="18"></i-icon>Пакети вмісту</h2><span class="hk-has-tip haloP" tabindex="0" aria-describedby="tipQuotaP" style="display:flex;align-items:center;gap:6px;min-height:32px"><span class="hk-gauge" style="width:48px;height:10px" role="img" aria-label="Увімкнено пакетів: 1 з 6"><span class="hk-gauge__brass" style="display:block;width:16.6%"></span></span><span class="hk-hint" style="font-style:normal;font-size:14px">1 / 6</span><span class="hk-tip" id="tipQuotaP" role="tooltip" style="font-size:15px;left:auto;right:0;transform:none">Увімкнено пакетів: 1 / 6<span class="hk-tip__sub">кампанія зберігає до 6 пакетів для учасників</span></span></span></div>
+      <div class="packrow" style="grid-template-columns:32px minmax(0,1fr) auto"><span class="hk-iring" style="width:32px;height:32px"><i-icon name="open-book" size="16"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">SRD 5e 2024</b><span class="hk-hint" style="font-size:13px">Версія 0.1.0 · базові правила</span></div><span class="hk-chip hk-chip--moss" style="height:28px;font-size:14px"><i-icon name="check-mark" size="12"></i-icon>базовий</span></div>
+      <div class="packrow" style="grid-template-columns:32px minmax(0,1fr)"><span class="hk-iring" style="width:32px;height:32px"><i-icon name="chest" size="16"></i-icon></span><div style="display:flex;flex-direction:column;gap:6px;min-width:0"><b style="font-size:15px">Emberfall Homebrew</b><div style="display:flex;gap:5px;flex-wrap:wrap"><span class="hk-chip hk-chip--moss" style="height:26px;font-size:13px"><i-icon name="check-mark" size="11"></i-icon>Увімкнено · 1.2.0</span><span class="hk-chip hk-chip--warning" style="height:26px;font-size:13px" title="На цьому пристрої 1.3.0; кампанія ділиться 1.2.0"><i-icon name="upgrade" size="11"></i-icon>1.3.0 на пристрої</span></div><button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="justify-content:center;font-size:15px"><i-icon name="upgrade" size="16"></i-icon>Оновити версію в кампанії до 1.3.0</button><button class="hk-btn hk-btn--phone hk-btn--ghost" type="button" style="justify-content:center">Вимкнути</button></div></div>
+      <div class="packrow" style="grid-template-columns:32px minmax(0,1fr) auto"><span class="hk-iring" style="width:32px;height:32px"><i-icon name="spider-face" size="16"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">Salt King Bestiary</b><span class="hk-hint" style="font-size:13px">Версія 0.4.0 · не ввімкнено</span></div><button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="padding:0 12px"><i-icon name="check-mark" size="15"></i-icon>Увімкнути</button></div>
+      <div class="packrow" style="grid-template-columns:32px minmax(0,1fr) auto;border-bottom:0"><span class="hk-iring" style="width:32px;height:32px"><i-icon name="gems" size="16"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">Trinkets and Oddities</b><span class="hk-hint" style="font-size:13px">Версія 2.0.1</span></div><button class="hk-btn hk-btn--phone hk-btn--brass hk-btn--loading" type="button" aria-busy="true" style="padding:0 12px;font-size:14px"><span class="hk-spin" aria-hidden="true"></span><span class="hk-btn__label">Оновлення…</span></button></div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="visS" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:0;padding:12px 14px 6px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="hk-leaf__title" id="visS" style="font-size:19px;margin-bottom:4px"><i-icon name="eye" size="18"></i-icon>Видимість</h2>
+      <div class="setrowP"><div class="setlab"><span id="psS">Листи групи</span><small>що гравці бачать одне про одного у гурті</small></div><div class="seg" role="radiogroup" aria-labelledby="psS" style="display:flex;width:100%"><button class="segb segP" type="button" role="radio" aria-checked="false">Приховані</button><button class="segb segP" type="button" role="radio" aria-checked="false">Лише огляд</button><button class="segb segP segOn" type="button" role="radio" aria-checked="true">Повні листи</button></div></div>
+      <div class="setrowP"><div class="setlab"><span id="rvS">Видимість кидків</span></div><div class="seg" role="radiogroup" aria-labelledby="rvS" style="display:flex;width:100%"><button class="segb segP segOn" type="button" role="radio" aria-checked="true"><i-icon name="megaphone" size="14"></i-icon>Усі</button><button class="segb segP" type="button" role="radio" aria-checked="false"><i-icon name="crown" size="14"></i-icon>Лише майстер</button></div></div>
+      <div class="setrowP" style="border-bottom:0"><div class="setrowP__h"><div class="setlab"><span>Гравці можуть кидати кубики приватно</span></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Гравці можуть кидати кубики приватно" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="jnS" style="transform:rotate(.15deg);display:flex;flex-direction:column;gap:0;padding:12px 14px 6px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="hk-leaf__title" id="jnS" style="font-size:19px;margin-bottom:4px"><i-icon name="entry-door" size="18"></i-icon>Приєднання</h2>
+      <div class="setrowP"><div class="setrowP__h"><div class="setlab"><span>Відкрита для приєднання</span><small>вимк.: код перестає працювати</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Відкрита для приєднання" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+      <div class="setrowP" style="border-bottom:0"><div class="setrowP__h"><div class="setlab"><span>Новим учасникам потрібне схвалення майстра</span></div><button class="hk-toggle" type="button" role="switch" aria-checked="false" aria-label="Новим учасникам потрібне схвалення майстра" style="min-height:44px;flex:0 0 auto"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span></button></div></div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-label="Експорт, вихід, видалення" style="transform:rotate(-.15deg);display:flex;flex-direction:column;gap:10px;padding:12px 14px">
+      <x-tex kind="paper"></x-tex>
+      <button class="hk-btn hk-btn--phone hk-btn--leather" type="button" style="justify-content:center"><i-icon name="share" size="18"></i-icon>Експортувати кампанію…</button>
+      <div style="display:flex;flex-direction:column;gap:4px"><button class="hk-btn hk-btn--phone hk-btn--ghost" type="button" disabled="disabled" aria-disabled="true" style="justify-content:center" title="Ви майстер: кампанію не можна покинути — видаліть її">Покинути кампанію…</button><span class="hk-hint" style="font-size:13px;text-align:center">ви ведете цей стіл: покинути не можна, лише видалити</span></div>
+      <button class="hk-btn hk-btn--phone hk-btn--ember" type="button" style="justify-content:center"><i-icon name="trash-can" size="16"></i-icon>Видалити кампанію…</button>
+    </section>
+  </div>
+
+  <x-pstrap kind="dm"></x-pstrap>
+  <x-tabbar active="settings"></x-tabbar>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

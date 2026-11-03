@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — вкладка Білд (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <x-part name="pbar" title="Білд" left="return-arrow" leftlabel="Назад до «Ще»" right="save" rightlabel="Зберегти зміни"></x-part>
+
+  <div style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+    <div class="warn warnW" role="status" style="align-items:center;padding:8px 12px;font-size:15px"><i-icon name="spell-book" size="18"></i-icon><span style="flex:1 1 auto;min-width:0"><b>1 незавершений вибір.</b> Підготовлено 5 заклинань із 6.</span><button class="btn btnBrass btnP" type="button" style="height:40px;padding:0 12px">Обрати</button></div>
+
+    <section class="leaf leafP" aria-label="Походження та клас" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:4px;padding-bottom:74px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="person" size="17" style="color:#8A6A2A"></i-icon>Походження та клас</h2>
+      <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+        <div class="brow" style="min-height:44px;font-size:16px"><i-icon name="person" size="18"></i-icon><span class="bname"><b>Людина</b><span class="th" style="font-size:14px">Вид · середній · 30 фт</span></span><span class="lockt" title="Вид зафіксовано при створенні"><i-icon name="padlock" size="13"></i-icon></span></div>
+        <div class="brow" style="min-height:44px;font-size:16px"><i-icon name="templar-shield" size="18"></i-icon><span class="bname"><b>Паладин 5</b><span class="th" style="font-size:14px">Клас · к10 · Сила і Харизма</span></span><span class="lockt" title="Рівні додає підвищення рівня"><i-icon name="upgrade" size="13"></i-icon></span></div>
+        <div class="brow" style="min-height:44px;font-size:16px"><i-icon name="holy-symbol" size="18"></i-icon><span class="bname"><b>Клятва відданості</b><span class="th" style="font-size:14px">Підклас · обрано на 3 рівні</span></span><span class="lockt" title="Заблоковано після 3 рівня: відкотіть «Досягла 3 рівня» у Хроніці, щоб обрати знову"><i-icon name="padlock" size="13"></i-icon></span></div>
+        <div class="brow" style="min-height:44px;font-size:16px"><i-icon name="medal" size="18"></i-icon><span class="bname"><b>Солдат</b><span class="th" style="font-size:14px">Передісторія · Атлетика, Залякування</span></span><span class="lockt" tabindex="0" aria-describedby="tipBg"><i-icon name="padlock" size="13"></i-icon><span class="tipR" id="tipBg" role="tooltip" style="font-size:15px;white-space:normal;width:250px">Передісторію зафіксовано при створенні<span class="tipSub">Щоб змінити — створіть нового героя.</span></span></span></div>
+      </div>
+    </section>
+
+    <section class="leaf leafP" aria-label="Характеристики" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:6px">
+      <x-tex kind="paper"></x-tex>
+      <div style="position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h2 class="leafTitle" style="font-size:18px"><i-icon name="muscle-up" size="17" style="color:#8A6A2A"></i-icon>Характеристики</h2><span class="chip" style="height:24px;font-size:14px"><i-icon name="rolling-dices" size="12" style="color:#8A6A2A"></i-icon>кидок 4к6</span></div>
+      <div class="tbl" style="position:relative;grid-template-columns:minmax(0,1.5fr) repeat(4,minmax(0,1fr));font-size:15px">
+        <span class="th" style="font-size:13px">Характ.</span><span class="th cell cellR" style="font-size:13px">База</span><span class="th cell cellR" style="font-size:13px">Бонус</span><span class="th cell cellR" style="font-size:13px">Разом</span><span class="th cell cellR" style="font-size:13px">Мод.</span>
+        <span class="cell">Сила</span><span class="cell cellR num">14</span><span class="cell cellR"><span class="bonus" title="Від передісторії Солдат"><i-icon name="medal" size="11"></i-icon>+2</span></span><span class="cell cellR num" style="font-size:20px">16</span><span class="cell cellR num">+3</span>
+        <span class="cell">Спритність</span><span class="cell cellR num">10</span><span class="cell cellR th">—</span><span class="cell cellR num" style="font-size:20px">10</span><span class="cell cellR num">+0</span>
+        <span class="cell">Статура</span><span class="cell cellR num">13</span><span class="cell cellR"><span class="bonus" title="Від передісторії Солдат"><i-icon name="medal" size="11"></i-icon>+1</span></span><span class="cell cellR num" style="font-size:20px">14</span><span class="cell cellR num">+2</span>
+        <span class="cell">Інтелект</span><span class="cell cellR num">8</span><span class="cell cellR th">—</span><span class="cell cellR num" style="font-size:20px">8</span><span class="cell cellR num">−1</span>
+        <span class="cell">Мудрість</span><span class="cell cellR num">12</span><span class="cell cellR th">—</span><span class="cell cellR num" style="font-size:20px">12</span><span class="cell cellR num">+1</span>
+        <span class="cell">Харизма</span><span class="cell cellR num">14</span><span class="cell cellR"><span class="bonus" title="Покращення характеристик, 4 рівень"><i-icon name="upgrade" size="11"></i-icon>+2</span></span><span class="cell cellR num" style="font-size:20px">16</span><span class="cell cellR num">+3</span>
+      </div>
+    </section>
+
+    <section class="leaf leafP" aria-label="Зроблені вибори" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:4px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="card-pick" size="17" style="color:#8A6A2A"></i-icon>Зроблені вибори</h2>
+      <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+        <div class="brow brow2" style="min-height:44px;grid-template-columns:44px minmax(0,1fr) auto"><span class="lvlBadge" title="Обрано на 1 рівні">р. 1</span><span class="bname"><span class="th" style="font-size:14px">Навички паладина (2)</span><span class="bval"><span class="chip">Проникливість</span><span class="chip">Переконання</span></span></span><button class="rep" type="button" style="height:44px;width:44px;padding:0;justify-content:center" aria-label="Обрати навички знову" title="Обрати знову"><i-icon name="anticlockwise-rotation" size="16"></i-icon></button></div>
+        <div class="brow brow2" style="min-height:44px;grid-template-columns:44px minmax(0,1fr) auto"><span class="lvlBadge" title="Обрано на 1 рівні">р. 1</span><span class="bname"><span class="th" style="font-size:14px">Майстерність зброї (2)</span><span class="bval"><span class="chip">Приголомшення</span><span class="chip">Сповільнення</span></span></span><button class="rep" type="button" style="height:44px;width:44px;padding:0;justify-content:center" aria-label="Обрати майстерність знову" title="Можна змінити після довгого відпочинку"><i-icon name="anticlockwise-rotation" size="16"></i-icon></button></div>
+        <div class="brow brow2" style="min-height:44px;grid-template-columns:44px minmax(0,1fr) auto"><span class="lvlBadge" title="Обрано на 2 рівні">р. 2</span><span class="bname"><span class="th" style="font-size:14px">Бойовий стиль</span><span class="bval"><span class="chip"><i-icon name="round-shield" size="12" style="color:#8A6A2A"></i-icon>Захист</span></span></span><button class="rep" type="button" style="height:44px;width:44px;padding:0;justify-content:center" aria-label="Обрати бойовий стиль знову" title="Обрати знову"><i-icon name="anticlockwise-rotation" size="16"></i-icon></button></div>
+        <div class="brow brow2" style="min-height:44px;grid-template-columns:44px minmax(0,1fr) auto"><span class="lvlBadge" title="Обрано на 3 рівні">р. 3</span><span class="bname"><span class="th" style="font-size:14px">Підклас паладина</span><span class="bval"><span class="chip"><i-icon name="holy-symbol" size="12" style="color:#8A6A2A"></i-icon>Клятва відданості</span></span></span><span class="lockt" style="height:44px" title="Заблоковано: на цьому побудовано наступні рівні"><i-icon name="padlock" size="14"></i-icon></span></div>
+        <div class="brow brow2" style="min-height:44px;grid-template-columns:44px minmax(0,1fr) auto"><span class="lvlBadge" title="Обрано на 4 рівні">р. 4</span><span class="bname"><span class="th" style="font-size:14px">Риса або покращення характеристик</span><span class="bval"><span class="chip"><i-icon name="upgrade" size="12" style="color:#8A6A2A"></i-icon>+2 Харизма</span></span></span><span class="lockt" style="height:44px" title="Заблоковано: спершу скасуйте 5 рівень у Хроніці"><i-icon name="padlock" size="14"></i-icon></span></div>
+        <div class="brow brow2" style="min-height:44px;grid-template-columns:44px minmax(0,1fr) auto"><span class="lvlBadge" title="Змінюється на довгому відпочинку">відп.</span><span class="bname"><span class="th" style="font-size:14px">Підготовлені заклинання (5 із 6)</span><span class="bval"><span class="chip">Благословення</span><span class="chip">Лікування ран</span><span class="chip">Щит віри</span><span class="chip">Допомога</span><span class="chip">Мале відновлення</span><span class="chip chipW"><i-icon name="plus" size="11"></i-icon>ще 1</span></span></span><button class="rep" type="button" style="height:44px;width:44px;padding:0;justify-content:center" aria-label="Обрати заклинання знову" title="Можна змінити після довгого відпочинку"><i-icon name="anticlockwise-rotation" size="16"></i-icon></button></div>
+      </div>
+    </section>
+
+    <section class="leaf leafP" aria-label="Володіння та мови" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:6px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="medal" size="17" style="color:#8A6A2A"></i-icon>Володіння та мови</h2>
+      <div class="kv" style="position:relative;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;align-items:center;font-size:15px">
+        <span class="th">Обладунки</span><span class="bval"><span class="chip">Легкі</span><span class="chip">Середні</span><span class="chip">Важкі</span><span class="chip">Щити</span></span>
+        <span class="th">Зброя</span><span class="bval"><span class="chip">Проста</span><span class="chip">Військова</span></span>
+        <span class="th">Мови</span><span class="bval"><span class="chip">Загальна</span><span class="chip">Небесна</span></span>
+      </div>
+    </section>
+  </div>
+
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="more"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

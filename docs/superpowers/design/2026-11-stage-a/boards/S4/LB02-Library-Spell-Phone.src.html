@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Бібліотека — запис Fireball (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-phone" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Fireball" action="share" alabel="Скопіювати посилання" lang="uk"></x-topbar>
+
+  <div class="s4-pbody" data-scroller="body">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <a class="hk-btn hk-btn--ghost-leather hk-btn--phone" href="#" style="height:40px"><i-icon name="return-arrow" size="14"></i-icon>Назад до бібліотеки</a>
+      <span class="hk-chip hk-chip--dark" style="height:28px;font-size:14px" title="Запис відкрито з аркуша Іляни Ворн"><i-icon name="templar-shield" size="13"></i-icon>З аркуша: Іляна Ворн</span>
+    </div>
+
+    <article class="hk-leaf hk-leaf--phone" aria-labelledby="spellTitle" style="display:flex;flex-direction:column;gap:10px;transform:rotate(.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <header style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="hk-iring" style="width:44px;height:44px"><i-icon name="fire-spell-cast" size="26"></i-icon></span>
+        <h1 id="spellTitle" style="margin:0;font-family:var(--font-display);font-weight:400;font-size:28px;line-height:32px;color:var(--text-1);flex:1 1 auto;min-width:0">Fireball</h1>
+        <span class="hk-chip" title="Заклинання"><i-icon name="spell-book" size="13"></i-icon>Заклинання</span>
+        <span class="hk-chip hk-chip--dark" title="Текст пакета англійською; пакет перекладу не встановлено">EN</span>
+      </header>
+
+      <div class="hk-row" role="list" aria-label="Параметри заклинання" style="gap:6px">
+        <span class="hk-plate" role="listitem" style="height:34px;font-size:17px;padding:0 10px" title="Рівень заклинання 3">Рівень 3</span>
+        <span class="hk-chip hk-chip--l" role="listitem" style="height:34px;font-size:15px" title="Школа: evocation"><i-icon name="magic-swirl" size="14"></i-icon>evocation</span>
+        <span class="hk-chip hk-chip--l" role="listitem" style="height:34px;font-size:15px" title="Час накладання: 1 дія"><i-icon name="stopwatch" size="14"></i-icon>1 дія</span>
+        <span class="hk-chip hk-chip--l" role="listitem" style="height:34px;font-size:15px" title="Дистанція: 150 футів"><i-icon name="archery-target" size="14"></i-icon>150 футів</span>
+        <span class="hk-has-tip" role="listitem" style="display:inline-flex"><span class="hk-chip hk-chip--l hk-chip--btn" tabindex="0" aria-describedby="tipM" style="height:34px;font-size:15px"><i-icon name="talk" size="14"></i-icon>V, S, M</span><span class="hk-tip" id="tipM" role="tooltip" style="white-space:normal;width:240px;left:0;transform:none">Вербальний, соматичний, матеріальний<span class="hk-tip__sub">матеріал: a ball of bat guano and sulfur (не витрачається)</span></span></span>
+        <span class="hk-chip hk-chip--l" role="listitem" style="height:34px;font-size:15px" title="Тривалість: миттєва"><i-icon name="hourglass" size="14"></i-icon>Миттєва</span>
+        <span class="hk-chip hk-chip--l hk-chip--damage" role="listitem" style="--dmg:var(--damage-fire);height:34px;font-size:15px" title="Шкода: 8d6 fire">8d6 fire</span>
+        <span class="hk-chip hk-chip--l" role="listitem" style="height:34px;font-size:15px" title="Рятівний кидок Спритності, половина шкоди при успіху"><i-icon name="checked-shield" size="14"></i-icon>Рятівний кидок: Спритність</span>
+      </div>
+
+      <p class="s4-body" style="font-size:16px">A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one. Flammable objects in the area that aren't being worn or carried start burning.</p>
+
+      <div class="hk-block" style="gap:6px">
+        <h2 class="s4-h3"><i-icon name="upgrade" size="15"></i-icon>На вищому рівні комірки</h2>
+        <p class="s4-p" style="font-size:15px">The damage increases by 1d6 for each spell slot level above 3.</p>
+        <div class="hk-row" style="gap:6px"><span class="hk-chip" title="Комірка 4 рівня">4: 9d6</span><span class="hk-chip" title="Комірка 5 рівня">5: 10d6</span><span class="hk-chip" title="Комірка 6 рівня">6: 11d6</span><span class="hk-chip" title="Комірка 7 рівня">7: 12d6</span></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h2 class="s4-h3"><i-icon name="spell-book" size="15"></i-icon>Списки заклинань класів</h2>
+        <div class="hk-row" style="gap:6px"><a class="hk-chip hk-chip--l hk-chip--btn" href="#" style="height:36px;font-size:15px" title="Відкрити список заклинань Sorcerer"><i-icon name="fire-spell-cast" size="14"></i-icon>Sorcerer</a><a class="hk-chip hk-chip--l hk-chip--btn" href="#" style="height:36px;font-size:15px" title="Відкрити список заклинань Wizard"><i-icon name="wizard-staff" size="14"></i-icon>Wizard</a><span class="hk-chip hk-chip--l" style="height:36px;font-size:15px" title="Не потребує концентрації">без концентрації</span></div>
+      </div>
+
+      <div class="hk-rule"></div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--text-2)">
+        <span><i-icon name="chest" size="14" style="color:var(--accent-strong);vertical-align:-2px"></i-icon> Джерело: <b class="s4-ink">SRD 5.2.1 (2024 rules)</b> 0.1.0 · Wizards of the Coast · CC BY 4.0</span>
+        <span class="hk-hint">Id запису: srd-5e-2024:spell/fireball</span>
+      </div>
+    </article>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="addTitle" style="display:flex;flex-direction:column;gap:8px;transform:rotate(-.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="s4-h2" id="addTitle"><i-icon name="templar-shield" size="18"></i-icon>Іляна Ворн · Паладин 5</h2>
+      <p class="s4-p" style="font-size:15px">«Додати герою» додасть Fireball до списку заклинань Іляни як додаткове заклинання. Накласти його поки не вийде: комірки 3 рівня паладини отримують на 9 рівні.</p>
+    </section>
+  </div>
+
+  <x-pstrap lang="uk" cols="44px 1fr 44px">
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Назад до аркуша Іляни Ворн" title="Назад до аркуша Іляни Ворн"><i-icon name="return-arrow" size="22"></i-icon></button>
+    <button class="s4-act s4-act--brass" type="button" title="Додати Fireball до заклинань Іляни Ворн"><i-icon name="plus" size="20"></i-icon><span class="s4-act__t">Додати герою</span></button>
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Ще: скопіювати посилання, відкрити пакет" title="Ще: скопіювати посилання, відкрити пакет"><i-icon name="hamburger-menu" size="22"></i-icon></button>
+  </x-pstrap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

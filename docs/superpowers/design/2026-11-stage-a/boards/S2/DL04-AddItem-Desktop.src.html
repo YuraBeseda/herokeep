@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — add item dialogs (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;height:1000px;overflow:hidden;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(320px,340fr) minmax(0,560fr) minmax(0,460fr);gap:20px;padding:18px 18px 92px;align-items:start;flex:1 1 auto" aria-hidden="true">
+    <x-part name="folio" tab="play" tip="none"></x-part>
+    <x-part name="centre"></x-part>
+    <x-part name="right"></x-part>
+  </main>
+  <x-part name="strap" pos="abs"></x-part>
+  <div class="dim" style="z-index:7"></div>
+
+  <div style="position:absolute;inset:60px 0 70px;z-index:8;display:flex;align-items:center;justify-content:center;gap:22px;padding:0 20px">
+
+    <!-- ADD FROM LIBRARY (loading a new search) -->
+    <x-dlg title="Add from the library" icon="open-book" width="560px" id="addLib" seed="3">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center">
+        <label class="hk-search"><i-icon name="magnifying-glass" size="16"></i-icon><input class="hk-search__in" type="search" value="potion of h" aria-label="Search the library"><button class="ico icoSm icoLeaf" type="button" aria-label="Clear search" title="Clear search" style="width:24px;height:24px"><i-icon name="cross-mark" size="10"></i-icon></button></label>
+        <span class="hint" style="display:flex;align-items:center;gap:6px"><span class="spin" aria-hidden="true"></span>searching 960 items…</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" role="group" aria-label="Type"><button class="chip chipBtn chipOn" type="button" aria-pressed="true">All</button><button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="broadsword" size="13" style="color:#8A6A2A"></i-icon>Weapons</button><button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="chain-mail" size="13" style="color:#8A6A2A"></i-icon>Armor</button><button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="backpack" size="13" style="color:#8A6A2A"></i-icon>Gear</button><button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="hammer-nails" size="13" style="color:#8A6A2A"></i-icon>Tools</button><button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="crystal-wand" size="13" style="color:#8A6A2A"></i-icon>Magic</button><button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="health-potion" size="13" style="color:#8A6A2A"></i-icon>Consumables</button></div>
+      <div style="display:flex;flex-direction:column" aria-busy="true" aria-label="Results">
+        <div class="irow irowOn" aria-selected="true"><span class="iring"><i-icon name="health-potion" size="16"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Potion of Healing</b><span class="th">consumable · common · heals 2d4 + 2 as a bonus action</span></span><span class="th" style="white-space:nowrap">0.5 lb</span><span class="th" style="white-space:nowrap">50 gp</span><span style="display:flex;gap:4px;align-items:center"><a href="#" class="ico icoSm icoLeaf" aria-label="Details: Potion of Healing" title="Details"><i-icon name="info" size="14"></i-icon></a><span class="chip chipOn" style="height:26px"><i-icon name="check-mark" size="12"></i-icon>selected</span></span></div>
+        <div class="irow"><span class="iring"><i-icon name="round-potion" size="16"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Potion of Heroism</b><span class="th">magic · rare · 10 temporary hit points and Bless for 1 hour</span></span><span class="th" style="white-space:nowrap">—</span><span class="th" style="white-space:nowrap">—</span><span style="display:flex;gap:4px;align-items:center"><a href="#" class="ico icoSm icoLeaf" aria-label="Details: Potion of Heroism" title="Details"><i-icon name="info" size="14"></i-icon></a><button class="btn btnParch" type="button" style="height:26px"><i-icon name="plus" size="12"></i-icon>Add</button></span></div>
+        <div class="irow" style="opacity:.55"><span class="iring"><span class="skel" style="width:16px;height:16px;border-radius:50%"></span></span><span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="skel" style="width:180px"></span><span class="skel" style="width:260px;height:11px"></span></span><span class="skel" style="width:34px"></span><span class="skel" style="width:40px"></span><span class="skel" style="width:60px;height:26px;border-radius:999px"></span></div>
+        <div class="irow" style="opacity:.4;border-bottom:0"><span class="iring"><span class="skel" style="width:16px;height:16px;border-radius:50%"></span></span><span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="skel" style="width:140px"></span><span class="skel" style="width:220px;height:11px"></span></span><span class="skel" style="width:34px"></span><span class="skel" style="width:40px"></span><span class="skel" style="width:60px;height:26px;border-radius:999px"></span></div>
+      </div>
+      <span class="hint" style="display:flex;align-items:center;gap:5px"><i-icon name="info" size="13" style="color:#8A6A2A"></i-icon>Showing the first matches while the search finishes; names come from the packs this hero uses.</span>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px;gap:12px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><label class="vlabel" for="qty" style="color:#E0C27A">Quantity</label><span style="display:inline-flex;align-items:center;gap:4px"><button class="stepBtn" type="button" aria-label="One fewer" title="One fewer"><i-icon name="minus" size="12"></i-icon></button><input class="xpIn" id="qty" type="number" value="2" min="1" style="width:56px;height:36px;font-size:20px"><button class="stepBtn" type="button" aria-label="One more" title="One more"><i-icon name="plus" size="12"></i-icon></button></span><button class="btn btnBrass btnL" type="button"><i-icon name="swap-bag" size="16"></i-icon>Add 2 × Potion of Healing</button></div>
+    </x-dlg>
+
+    <!-- CUSTOM ITEM (validation error) -->
+    <x-dlg title="Custom item" icon="quill" width="430px" id="addCustom" seed="6" style="gap:10px">
+      <div class="fld"><label class="fldL" for="cname">Name</label><input class="in inErr" id="cname" value="" placeholder="e.g. Emberfall signet" aria-invalid="true" aria-describedby="cnameErr"><span class="err" id="cnameErr"><i-icon name="info" size="13"></i-icon>Enter a name, up to 200 characters.</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:end">
+        <div class="fld"><label class="fldL" for="ctype">Type</label><span class="selBox"><select class="selIn" id="ctype"><option>Gear</option><option>Weapon</option><option>Armor</option><option>Tool</option><option>Consumable</option><option>Magic item</option></select><span class="selChev"><i-icon name="card-pick" size="14"></i-icon></span></span></div>
+        <div class="fld"><label class="fldL" for="cw">Weight (lb)</label><input class="numIn" id="cw" type="number" value="0.5" min="0" step="0.5" style="width:72px"></div>
+        <div class="fld"><label class="fldL" for="cq">Quantity</label><span style="display:inline-flex;align-items:center;gap:4px"><button class="stepBtn" type="button" aria-label="One fewer" title="One fewer"><i-icon name="minus" size="12"></i-icon></button><input class="numIn" id="cq" type="number" value="1" min="1" style="width:48px"><button class="stepBtn" type="button" aria-label="One more" title="One more"><i-icon name="plus" size="12"></i-icon></button></span></div>
+      </div>
+      <!-- icon row + picker, drawn open -->
+      <div class="fld" style="gap:6px">
+        <span class="fldL" id="icoL">Icon</span>
+        <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:6px;background:linear-gradient(180deg,#E8CC7C 0%,#C9A24E 45%,#A98335 80%,#8A6A2A 100%);box-shadow:inset 0 1px 0 rgba(255,241,200,.7),inset 0 -1px 0 rgba(70,48,12,.7),0 1px 2px rgba(0,0,0,.55);color:#2B2118"><span class="slotIco" style="width:36px;height:36px"><i-icon name="ring" size="22"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">ring</b><span style="font-size:13px;color:#5E4418">game-icons · shown on the bag slot</span></span><button class="btn btnLeather" type="button" aria-expanded="true" aria-controls="icoPick" style="height:28px"><i-icon name="quill" size="13" style="color:#E8CC7C"></i-icon>Change</button></div>
+        <div id="icoPick" class="block" role="group" aria-labelledby="icoL" style="gap:8px;padding:8px 10px">
+          <label class="hk-search" style="height:32px"><i-icon name="magnifying-glass" size="15"></i-icon><input class="hk-search__in" type="search" placeholder="Search 4,000 glyphs" aria-label="Search icons" style="font-size:15px"></label>
+          <span class="th">Used by your items</span>
+          <div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px" role="radiogroup" aria-label="Icons used by your items">
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="chain-mail" title="chain-mail" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="chain-mail" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="round-shield" title="round-shield" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="round-shield" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="broadsword" title="broadsword" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="broadsword" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="thrown-spear" title="thrown-spear" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="thrown-spear" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="true" aria-label="ring, chosen" title="ring" style="width:34px;height:34px;cursor:pointer;border:0;background:linear-gradient(180deg,#E8CC7C,#C9A24E 55%,#9C7A33);color:#2B2118;box-shadow:inset 0 0 0 1.5px #5E4418,0 0 10px rgba(232,204,124,.6)"><i-icon name="ring" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="crystal-wand" title="crystal-wand" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="crystal-wand" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="health-potion" title="health-potion" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="health-potion" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="gem-pendant" title="gem-pendant" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="gem-pendant" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="medical-pack" title="medical-pack" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="medical-pack" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="backpack" title="backpack" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="backpack" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="rolled-cloth" title="rolled-cloth" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="rolled-cloth" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="bread" title="bread" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="bread" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="rope-coil" title="rope-coil" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="rope-coil" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="torch" title="torch" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="torch" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="water-flask" title="water-flask" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="water-flask" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="dice-six-faces-six" title="dice-six-faces-six" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="dice-six-faces-six" size="20"></i-icon></button>
+          </div>
+          <span class="th">Common item glyphs</span>
+          <div style="display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px" role="radiogroup" aria-label="Common item icons">
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="potion-ball" title="potion-ball" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="potion-ball" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="scroll-unfurled" title="scroll-unfurled" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="scroll-unfurled" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="key" title="key" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="key" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="lantern" title="lantern" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="lantern" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="spyglass" title="spyglass" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="spyglass" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="compass" title="compass" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="compass" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="chest" title="chest" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="chest" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="coins" title="coins" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="coins" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="cloak" title="cloak" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="cloak" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="boots" title="boots" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="boots" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="helmet" title="helmet" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="helmet" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="lockpicks" title="lockpicks" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="lockpicks" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="plain-dagger" title="plain-dagger" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="plain-dagger" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="bow-arrow" title="bow-arrow" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="bow-arrow" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="necklace" title="necklace" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="necklace" size="20"></i-icon></button>
+            <button class="slotIco" type="button" role="radio" aria-checked="false" aria-label="secret-book" title="secret-book" style="width:34px;height:34px;cursor:pointer;border:0"><i-icon name="secret-book" size="20"></i-icon></button>
+          </div>
+          <button class="btn btnGhost" type="button" style="height:40px;justify-content:flex-start;gap:10px;white-space:normal;text-align:left;line-height:1.15"><i-icon name="files" size="16"></i-icon><span><b>Upload your own</b><span class="hint" style="display:block;font-size:13px">PNG or SVG, resized on this device; never sent to the server</span></span></button>
+        </div>
+      </div>
+      <div class="fld"><label class="fldL" for="cnotes">Notes <span class="hint">shown in the bag’s details</span></label><textarea class="ta" id="cnotes" rows="2" style="min-height:58px" placeholder="What it does, where it came from"></textarea></div>
+      <div style="display:flex;align-items:center;gap:8px"><button class="toggle" type="button" aria-pressed="false"><span class="tgT"><span class="tgK"></span></span><span>Needs attunement</span></button><button class="toggle" type="button" aria-pressed="false"><span class="tgT"><span class="tgK"></span></span><span>Can be equipped</span></button></div>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><span class="hint" style="color:#ECA98F;display:flex;align-items:center;gap:4px"><i-icon name="info" size="13"></i-icon>needs a name</span><button class="btn btnBrass btnL btnOff" type="button" disabled="disabled" aria-disabled="true" title="Enter a name first"><i-icon name="plus" size="15"></i-icon>Add item</button></div>
+    </x-dlg>
+
+    <!-- variant: the campaign house rule "Players add items themselves" is off — the bag's Add item is disabled, hint on hover only -->
+    <section aria-label="Variant: the bag when the DM adds items" style="position:relative;display:flex;flex-direction:column;gap:0;width:312px;padding-top:70px;flex:0 0 auto;align-self:center;filter:drop-shadow(0 12px 26px rgba(0,0,0,.6))">
+      <svg viewBox="0 0 312 30" preserveAspectRatio="none" width="100%" height="30" aria-hidden="true" style="display:block"><path d="M95 32 C115 2 175 2 195 32" fill="none" stroke="#1E110A" stroke-width="13"/><path d="M95 32 C115 2 175 2 195 32" fill="none" stroke="#5A3A26" stroke-width="9"/><path d="M95 32 C115 2 175 2 195 32" fill="none" stroke="#C9A24E" stroke-width="1" stroke-dasharray="3 4" opacity=".55"/></svg>
+      <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;height:54px;padding:0 14px 4px;box-sizing:border-box;border-radius:16px 16px 4px 4px;background:linear-gradient(180deg,#75503A,#6A4630 55%,#5A3A26);box-shadow:inset 0 0 0 1px rgba(201,162,78,.4),inset 0 -10px 14px rgba(0,0,0,.35),0 -2px 6px rgba(0,0,0,.4);outline:1px dashed rgba(201,162,78,.45);outline-offset:-6px">
+        <x-tex kind="leather" style="border-radius:16px 16px 4px 4px"></x-tex>
+        <h2 style="position:relative;margin:0;font:21px/1 Forum,serif;font-weight:400;color:#E8CC7C;display:flex;align-items:center;gap:8px;text-shadow:0 1px 1px rgba(0,0,0,.6)"><i-icon name="swap-bag" size="20"></i-icon>Bag</h2>
+        <span class="glyph" tabindex="0" aria-describedby="tipBagOff" style="position:relative"><button class="btn btnBrass btnOff" type="button" disabled="disabled" aria-disabled="true" style="position:relative" title="Only your DM adds items in The Emberfall Company"><i-icon name="padlock" size="14"></i-icon>Add item</button><span class="tipUp" id="tipBagOff" role="tooltip" style="left:auto;right:0;transform:none;white-space:normal;width:230px;z-index:9">Only your DM adds items in The Emberfall Company<span class="tipSub">The DM grants items with “Item” on your party card.</span></span></span>
+      </div>
+      <div style="position:relative;display:flex;flex-direction:column;gap:10px;padding:22px 10px 12px;border-radius:6px 6px 24px 24px;background:linear-gradient(180deg,#4A2E1E,#3B2416 70%,#31200F);box-shadow:inset 0 0 0 1px rgba(201,162,78,.3),inset 0 -2px 0 rgba(0,0,0,.4);outline:1px dashed rgba(201,162,78,.4);outline-offset:-7px">
+        <x-tex kind="leather" style="border-radius:6px 6px 24px 24px"></x-tex>
+        <div aria-hidden="true" style="position:absolute;left:50%;top:-16px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:2">
+          <span style="display:block;width:18px;height:12px;background:linear-gradient(90deg,#4A2E1E,#6A4630,#4A2E1E);box-shadow:inset 0 0 0 1px rgba(201,162,78,.4)"></span>
+          <svg viewBox="0 0 30 30" width="30" height="30"><rect x="3" y="3" width="24" height="24" rx="4" fill="none" stroke="#C9A24E" stroke-width="4"/><rect x="3" y="3" width="24" height="24" rx="4" fill="none" stroke="#8A6A2A" stroke-width="1.2"/><path d="M15 3 V18" stroke="#E8CC7C" stroke-width="3" stroke-linecap="round"/><circle cx="15" cy="18" r="2.4" fill="#8A6A2A"/></svg>
+        </div>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px;border-radius:6px;background:#1A0E08;box-shadow:inset 0 3px 8px rgba(0,0,0,.85),inset 0 0 0 1px rgba(201,162,78,.2)">
+          <button class="slot" type="button" title="Chain mail, 55 lb, equipped" style="min-height:84px"><span class="tagE" role="img" aria-label="Equipped" title="Equipped">E</span><span class="slotIco"><i-icon name="chain-mail" size="20"></i-icon></span><span class="slotCap"><span>Chain mail</span></span></button>
+          <button class="slot" type="button" title="Shield, 6 lb, equipped" style="min-height:84px"><span class="tagE" role="img" aria-label="Equipped" title="Equipped">E</span><span class="slotIco"><i-icon name="round-shield" size="20"></i-icon></span><span class="slotCap"><span>Shield</span></span></button>
+          <button class="slot" type="button" title="Longsword, 3 lb, equipped" style="min-height:84px"><span class="tagE" role="img" aria-label="Equipped" title="Equipped">E</span><span class="slotIco"><i-icon name="broadsword" size="20"></i-icon></span><span class="slotCap"><span>Longsword</span></span></button>
+          <button class="slot" type="button" title="Javelin, 4, 8 lb" style="min-height:84px"><span class="qty">×4</span><span class="slotIco"><i-icon name="thrown-spear" size="20"></i-icon></span><span class="slotCap"><span>Javelin</span></span></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

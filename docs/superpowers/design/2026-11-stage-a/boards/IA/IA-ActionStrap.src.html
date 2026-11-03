@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — the action strap contract</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:760px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column;gap:14px;padding:24px 48px 24px;box-sizing:border-box">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+
+  <div style="position:relative;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
+    <h1 style="margin:0;font:30px/1 Forum,serif;font-weight:400;color:#E8CC7C;text-shadow:0 1px 1px rgba(0,0,0,.6)">The action strap</h1>
+    <span style="font-size:16px;font-style:italic;color:#E0C27A">one leather strap at the bottom of every screen, three zones, a given action never changes slot</span>
+  </div>
+
+  <!-- zone headers aligned to the fixed zone widths of the desktop straps below -->
+  <div style="position:relative;display:grid;grid-template-columns:160px 1fr;gap:16px">
+    <span></span>
+    <div style="display:grid;grid-template-columns:184px 576px minmax(0,1fr);gap:0;padding:0 14px;margin-bottom:24px;font-size:14px;color:#E0C27A">
+      <span style="display:flex;align-items:center;gap:6px;white-space:nowrap"><span class="plate" style="height:20px;font-size:14px;padding:0 6px">1</span>Exit, flows only</span>
+      <span style="display:flex;align-items:center;gap:6px;white-space:nowrap;padding-left:12px"><span class="plate" style="height:20px;font-size:14px;padding:0 6px">2</span>Primary, fixed order, icon and text</span>
+      <span style="display:flex;align-items:center;gap:6px;white-space:nowrap;padding-left:12px"><span class="plate" style="height:20px;font-size:14px;padding:0 6px">3</span>Secondary, icon-only with tooltips, status at the right</span>
+    </div>
+  </div>
+
+  <!-- 1. Sheet -->
+  <div style="position:relative;display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:start">
+    <div class="leaf" style="transform:rotate(-.6deg);padding:10px 12px;display:flex;flex-direction:column;gap:3px"><x-tex kind="paper"></x-tex><b style="position:relative;font:18px/1.1 Forum,serif;font-weight:400">Hero sheet</b><span class="hint" style="position:relative">Play, Build and Timeline tabs, concentrating on Bless</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="bar" style="box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,162,78,.5)">
+        <x-tex kind="leather"></x-tex>
+        <div class="rivets" style="position:relative"></div>
+        <div style="position:relative;display:grid;grid-template-columns:184px 576px minmax(0,1fr);align-items:center;padding:4px 14px;min-height:52px">
+          <div style="display:flex;align-items:center;gap:8px;min-height:40px"><span class="hint" style="color:#C9B992;opacity:.8">nothing here on the sheet</span></div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="btn btnEmber" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="broken-heart" size="18"></i-icon>Damage</button>
+            <button class="btn btnMoss" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="healing" size="18"></i-icon>Heal</button>
+            <button class="btn btnBrass" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Roll</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="campfire" size="18" style="color:#E8CC7C"></i-icon>Short rest</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="night-sleep" size="18" style="color:#E8CC7C"></i-icon>Long rest</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="ico" type="button" aria-label="Add condition" title="Add condition"><i-icon name="skull" size="20"></i-icon></button>
+            <button class="ico" type="button" aria-label="Notes" title="Notes"><i-icon name="scroll-unfurled" size="20"></i-icon></button>
+            <button class="ico" type="button" aria-label="Roll log" title="Roll log" aria-describedby="tipRollLog"><i-icon name="rolling-dices" size="20"></i-icon><span class="tip" id="tipRollLog" role="tooltip" style="top:auto;bottom:calc(100% + 10px)">Roll log</span></button>
+            <button class="ico" type="button" aria-label="Export" title="Export"><i-icon name="share" size="20"></i-icon></button>
+            <button class="ico" type="button" aria-label="Edit or override" title="Edit or override"><i-icon name="quill" size="20"></i-icon></button>
+            <span style="flex:1 1 auto"></span>
+            <span role="status" style="display:flex;align-items:center;gap:6px;font-size:14px;color:#E0C27A;white-space:nowrap" title="Concentrating on Bless, round 3"><i-icon name="eye" size="16" style="color:#B3A0E6"></i-icon>Bless, round 3</span>
+          </div>
+        </div>
+        <div class="rivets" style="position:relative"></div>
+      </div>
+      <p style="margin:0;font-size:15px;font-style:italic;color:#E0C27A;padding:0 4px">Fixed: zone 1 stays empty on every sheet tab; Damage, Heal, Roll, Short rest, Long rest keep this order on Play, Build and Timeline; the five secondaries are icon-only with tooltips, and the concentration note sits at the far right while concentrating.</p>
+    </div>
+  </div>
+
+  <!-- 2. Wizard step -->
+  <div style="position:relative;display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:start">
+    <div class="leaf" style="transform:rotate(.5deg);padding:10px 12px;display:flex;flex-direction:column;gap:3px"><x-tex kind="paper"></x-tex><b style="position:relative;font:18px/1.1 Forum,serif;font-weight:400">New hero, step 2 of 9</b><span class="hint" style="position:relative">Species: a picker with search and filters</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="bar" style="box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,162,78,.5)">
+        <x-tex kind="leather"></x-tex>
+        <div class="rivets" style="position:relative"></div>
+        <div style="position:relative;display:grid;grid-template-columns:184px 576px minmax(0,1fr);align-items:center;padding:4px 14px;min-height:52px">
+          <div style="display:flex;align-items:center;gap:8px;min-height:40px">
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px">Cancel</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px 0 10px;font-size:15px"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="btn btnBrass" type="button" style="height:40px;padding:0 10px 0 18px;font-size:15px;min-width:132px">Next<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="hint" style="color:#C9B992;opacity:.8;padding-left:6px">the only primary in a flow; it never skips an unanswered step</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="ico" type="button" aria-label="Filter" title="Filter"><i-icon name="funnel" size="20"></i-icon></button>
+            <button class="ico" type="button" aria-label="Search" title="Search"><i-icon name="magnifying-glass" size="20"></i-icon></button>
+            <span style="flex:1 1 auto"></span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#E0C27A;white-space:nowrap"><i-icon name="wax-seal" size="16"></i-icon>Step 2 of 9 · Species</span>
+          </div>
+        </div>
+        <div class="rivets" style="position:relative"></div>
+      </div>
+      <p style="margin:0;font-size:15px;font-style:italic;color:#E0C27A;padding:0 4px">Fixed: Cancel is always leftmost and Back always the second slot; Cancel asks for confirmation only if something changed; pickers add Filter and Search in zone 3 and nothing else moves.</p>
+    </div>
+  </div>
+
+  <!-- 3. Wizard review -->
+  <div style="position:relative;display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:start">
+    <div class="leaf" style="transform:rotate(-.4deg);padding:10px 12px;display:flex;flex-direction:column;gap:3px"><x-tex kind="paper"></x-tex><b style="position:relative;font:18px/1.1 Forum,serif;font-weight:400">New hero, step 9 of 9</b><span class="hint" style="position:relative">Review: every decision with an Edit link</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="bar" style="box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,162,78,.5)">
+        <x-tex kind="leather"></x-tex>
+        <div class="rivets" style="position:relative"></div>
+        <div style="position:relative;display:grid;grid-template-columns:184px 576px minmax(0,1fr);align-items:center;padding:4px 14px;min-height:52px">
+          <div style="display:flex;align-items:center;gap:8px;min-height:40px">
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px">Cancel</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px 0 10px;font-size:15px"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="btn btnBrass focusDemo" type="button" style="height:40px;padding:0 18px 0 14px;font-size:15px;min-width:132px"><i-icon name="wax-seal" size="18"></i-icon>Create hero</button>
+            <span class="hint" style="color:#C9B992;opacity:.8;padding-left:6px">the same slot as Next; on level-up it reads Finish level up</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <span class="hint" style="color:#C9B992;opacity:.8">no secondaries on the review step</span>
+            <span style="flex:1 1 auto"></span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#E0C27A;white-space:nowrap"><i-icon name="wax-seal" size="16"></i-icon>Step 9 of 9 · Review</span>
+          </div>
+        </div>
+        <div class="rivets" style="position:relative"></div>
+      </div>
+      <p style="margin:0;font-size:15px;font-style:italic;color:#E0C27A;padding:0 4px">Fixed: the Next slot now reads Create hero and has not moved; Edit links on the review page jump to a step and Next brings you back here; zone 3 may be empty but the divider stays where it is.</p>
+    </div>
+  </div>
+
+  <!-- 4. Campaign Party as DM -->
+  <div style="position:relative;display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:start">
+    <div class="leaf" style="transform:rotate(.4deg);padding:10px 12px;display:flex;flex-direction:column;gap:3px"><x-tex kind="paper"></x-tex><b style="position:relative;font:18px/1.1 Forum,serif;font-weight:400">Campaign, Party tab</b><span class="hint" style="position:relative">Tombs of the Salt King, you are the DM</span></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="bar" style="box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,162,78,.5)">
+        <x-tex kind="leather"></x-tex>
+        <div class="rivets" style="position:relative"></div>
+        <div style="position:relative;display:grid;grid-template-columns:184px 576px minmax(0,1fr);align-items:center;padding:4px 14px;min-height:52px">
+          <div style="display:flex;align-items:center;gap:8px;min-height:40px"><span class="hint" style="color:#C9B992;opacity:.8">nothing here on a campaign</span></div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="btn btnEmber" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="broken-heart" size="18"></i-icon>Damage</button>
+            <button class="btn btnMoss" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="healing" size="18"></i-icon>Heal</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="skull" size="18" style="color:#E8CC7C"></i-icon>Condition</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="laurels" size="18" style="color:#E8CC7C"></i-icon>XP</button>
+            <button class="btn btnLeather" type="button" style="height:40px;padding:0 14px;font-size:15px"><i-icon name="swap-bag" size="18" style="color:#E8CC7C"></i-icon>Item</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-left:2px solid rgba(201,162,78,.45);padding-left:12px;min-height:40px">
+            <button class="ico" type="button" aria-label="Start session" title="Start session"><i-icon name="candle-flame" size="20"></i-icon></button>
+            <button class="ico" type="button" aria-label="Export campaign" title="Export"><i-icon name="share" size="20"></i-icon></button>
+            <span style="flex:1 1 auto"></span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#E0C27A;white-space:nowrap"><i-icon name="crown" size="16"></i-icon>DM · 3 members · no session</span>
+          </div>
+        </div>
+        <div class="rivets" style="position:relative"></div>
+      </div>
+      <p style="margin:0;font-size:15px;font-style:italic;color:#E0C27A;padding:0 4px">Fixed: the DM quick effects Damage, Heal, Condition, XP, Item act on the selected party member and keep this order on Party, Table, Lobby and Settings; Session start or end and Export live in zone 3 on every campaign tab (players see zone 3 only).</p>
+    </div>
+  </div>
+
+  <!-- 5. Phone width -->
+  <div style="position:relative;display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:start">
+    <div class="leaf" style="transform:rotate(-.5deg);padding:10px 12px;display:flex;flex-direction:column;gap:3px"><x-tex kind="paper"></x-tex><b style="position:relative;font:18px/1.1 Forum,serif;font-weight:400">Hero sheet at 390</b><span class="hint" style="position:relative">the same strap on a phone, above the tab bar</span></div>
+    <div style="display:grid;grid-template-columns:390px minmax(0,1fr);gap:20px;align-items:start">
+      <div class="bar" style="box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,162,78,.5)">
+        <x-tex kind="leather"></x-tex>
+        <div class="rivets" style="position:relative"></div>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 44px;gap:6px;padding:4px 10px 6px;align-items:center">
+          <button class="act btnEmber" type="button"><i-icon name="broken-heart" size="20"></i-icon>Damage</button>
+          <button class="act btnMoss" type="button"><i-icon name="healing" size="20"></i-icon>Heal</button>
+          <button class="act btnBrass" type="button"><i-icon name="dice-twenty-faces-twenty" size="20"></i-icon>Roll</button>
+          <button class="act btnLeather" type="button" style="color:#E8CC7C"><i-icon name="campfire" size="20"></i-icon>Rest</button>
+          <button class="ico icoP" type="button" aria-label="More actions" title="More"><i-icon name="hamburger-menu" size="22"></i-icon></button>
+        </div>
+      </div>
+      <p style="margin:0;font-size:15px;font-style:italic;color:#E0C27A;padding:6px 4px 0">Fixed: at phone width zone 2 keeps its order and zone 3 collapses into one More button that opens a bottom sheet listing Add condition, Notes, Roll log, Export, Edit in the same order. Short rest and Long rest share one Rest slot that asks which, as on the concept-A phone board. Zone 1, when present, keeps Cancel and Back leftmost as icon buttons.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

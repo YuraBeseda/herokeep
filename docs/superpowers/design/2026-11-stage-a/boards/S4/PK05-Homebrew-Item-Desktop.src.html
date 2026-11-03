@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Packs — homebrew item editor (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="packs" lang="en"></x-rail>
+
+  <main class="s4-main" style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start">
+    <div class="s4-col">
+      <form class="hk-leaf" aria-labelledby="formTitle" style="transform:rotate(.12deg);display:flex;flex-direction:column;gap:14px;padding:16px 24px 18px">
+        <x-tex kind="paper"></x-tex>
+        <div style="display:flex;align-items:center;gap:10px">
+          <a class="hk-btn hk-btn--ghost" href="#"><i-icon name="return-arrow" size="14"></i-icon>Back to homebrew</a>
+          <span class="hk-hint">Packs · My homebrew · New item</span>
+        </div>
+        <header style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <span class="hk-iring" style="width:44px;height:44px"><i-icon name="swap-bag" size="24"></i-icon></span>
+          <h1 id="formTitle" style="margin:0;font-family:var(--font-display);font-weight:400;font-size:28px;line-height:32px;color:var(--text-1)">New item</h1>
+          <span class="hk-hint">Fields marked <span class="s4-req">*</span> are required. Everything else is optional and shows only when filled.</span>
+        </header>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 22px;align-items:start">
+          <!-- column 1: identity (name, icon + open picker), spanning the three rows of column 2 -->
+          <div style="grid-column:1;grid-row:1 / span 3;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div class="hk-field">
+              <label class="hk-field__label" for="name">Name <span class="s4-req">*</span></label>
+              <input class="hk-input hk-input--error" id="name" value="Ліхтар зоряного світла" aria-invalid="true" aria-describedby="nameErr nameId">
+              <span class="hk-field__msg hk-field__msg--error" id="nameErr"><i-icon name="hazard-sign" size="12"></i-icon>This name is already used in My homebrew. Choose another, or edit that item.</span>
+              <span class="hk-field__msg" id="nameId">Id: my-homebrew:item/likhtar-zorianoho-svitla <span title="Made from the name; stays the same after renaming">(made from the name)</span></span>
+            </div>
+
+            <!-- icon: a brass row with the current glyph; the picker is drawn open below it -->
+            <div class="hk-field">
+              <span class="hk-field__label" id="iconLbl">Icon</span>
+              <div class="s4-iconrow" role="group" aria-labelledby="iconLbl">
+                <span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="flask" size="24"></i-icon></span>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto"><b style="font-size:15px;line-height:1.1">flask</b><span class="s4-iconrow__sub">game-icons.net glyph · shows on the bag slot, attack row and library</span></div>
+                <button class="hk-btn hk-btn--leather" type="button" aria-expanded="true" aria-controls="iconPicker"><i-icon name="quill" size="13"></i-icon>Change icon</button>
+              </div>
+              <div class="s4-picker" id="iconPicker" role="group" aria-label="Choose an icon">
+                <label class="hk-search" style="height:34px"><i-icon name="magnifying-glass" size="16"></i-icon><span class="hk-sr">Search glyphs</span><input class="hk-search__in" type="search" placeholder="Search 365 glyphs: lantern, potion, ring…" style="font-size:15px"></label>
+                <div class="s4-pick__sec"><i-icon name="quill" size="13"></i-icon>Used in this pack<span class="hk-hint">5 glyphs · 1 uploaded image</span></div>
+                <div class="s4-pick__grid" role="group" aria-label="Glyphs already used in My homebrew">
+                  <button class="s4-tile" type="button" aria-pressed="false" title="lantern — used by Starlit Lantern (by Lorc)"><i-icon name="lantern" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="ring — used by Emberfall Signet (by Delapouite)"><i-icon name="ring" size="22"></i-icon></button>
+                  <button class="s4-tile s4-tile--on" type="button" aria-pressed="true" title="flask — the current icon; also used by Traveller's Firepot"><i-icon name="flask" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="candle-flame — used by Candlelight Ward (by Lorc)"><i-icon name="candle-flame" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="shield-bash — used by Shieldwall Veteran (by Delapouite)"><i-icon name="shield-bash" size="22"></i-icon></button>
+                  <button class="s4-tile s4-tile--img" type="button" aria-pressed="false" title="emberfall-sigil.svg — your upload, 12 Oct 2026; not used yet"><svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 7c3 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 2-7 1 2 2 3 4 3-1-2 0-5 0-7z" fill="currentColor"/></svg></button>
+                </div>
+                <div class="s4-pick__sec"><i-icon name="swap-bag" size="13"></i-icon>Common item glyphs<span class="hk-hint">weapons, armour, gear, magic</span></div>
+                <div class="s4-pick__grid" role="group" aria-label="Common item glyphs">
+                  <button class="s4-tile" type="button" aria-pressed="false" title="broadsword (by Lorc)"><i-icon name="broadsword" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="plain-dagger (by Lorc)"><i-icon name="plain-dagger" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="battle-axe (by Lorc)"><i-icon name="battle-axe" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="warhammer (by Delapouite)"><i-icon name="warhammer" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="spears (by Lorc)"><i-icon name="spears" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="bow-arrow (by Delapouite)"><i-icon name="bow-arrow" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="crossbow (by Carl Olsen)"><i-icon name="crossbow" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="sling (by Delapouite)"><i-icon name="sling" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="whip (by Lorc)"><i-icon name="whip" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="quiver (by Delapouite)"><i-icon name="quiver" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="chain-mail (by Willdabeast)"><i-icon name="chain-mail" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="breastplate (by Lorc)"><i-icon name="breastplate" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="round-shield (by Willdabeast)"><i-icon name="round-shield" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="visored-helm (by Lorc)"><i-icon name="visored-helm" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="cloak (by Lucas)"><i-icon name="cloak" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="gauntlet (by Delapouite)"><i-icon name="gauntlet" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="boots (by Lorc)"><i-icon name="boots" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="necklace (by Lucas)"><i-icon name="necklace" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="diamond-ring (by Delapouite)"><i-icon name="diamond-ring" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="gems (by Lorc)"><i-icon name="gems" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="crystal-wand (by Lorc)"><i-icon name="crystal-wand" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="wizard-staff (by Lorc)"><i-icon name="wizard-staff" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="health-potion (by Delapouite)"><i-icon name="health-potion" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="poison-bottle (by Lorc)"><i-icon name="poison-bottle" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="scroll-unfurled (by Lorc)"><i-icon name="scroll-unfurled" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="spell-book (by Delapouite)"><i-icon name="spell-book" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="torch (by Delapouite)"><i-icon name="torch" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="rope-coil (by Delapouite)"><i-icon name="rope-coil" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="backpack (by Delapouite)"><i-icon name="backpack" size="22"></i-icon></button>
+                  <button class="s4-tile" type="button" aria-pressed="false" title="key (by Lorc)"><i-icon name="key" size="22"></i-icon></button>
+                </div>
+                <div class="s4-pick__sec"><i-icon name="cloud-upload" size="13"></i-icon>Your own</div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <input class="hk-sr" type="file" id="iconFile" accept=".png,.svg,image/png,image/svg+xml">
+                  <label class="s4-tile s4-tile--up" for="iconFile" title="Upload a PNG or SVG"><i-icon name="cloud-upload" size="22"></i-icon></label>
+                  <span class="hk-hint" style="flex:1 1 auto;min-width:0">PNG or SVG up to 1 MB, resized to 128 px on this device and kept with the pack's images, so it travels with .hkpack exports and campaign shares.</span>
+                  <label class="hk-btn hk-btn--leather" for="iconFile"><i-icon name="files" size="13"></i-icon>Choose file</label>
+                </div>
+                <div class="s4-pop__foot"><span class="hk-hint" style="margin-right:auto">Hover a glyph for its name and author.</span><button class="hk-btn hk-btn--ghost" type="button">Cancel</button><button class="hk-btn hk-btn--brass" type="button"><i-icon name="check-mark" size="13"></i-icon>Use flask</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- column 2, row 1: type and rarity (the type decides which section follows) -->
+          <div style="grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+              <div class="hk-field">
+                <label class="hk-field__label" for="type">Type <span class="s4-req">*</span></label>
+                <span class="s4-sel"><select class="hk-input s4-sel__in" id="type"><option>Weapon</option><option>Armor</option><option>Shield</option><option>Gear</option><option>Tool</option><option>Consumable</option><option>Magic item</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span>
+              </div>
+              <div class="hk-field">
+                <label class="hk-field__label" for="rarity">Rarity</label>
+                <span class="s4-sel"><select class="hk-input s4-sel__in" id="rarity"><option>None</option><option>Common</option><option selected>Uncommon</option><option>Rare</option><option>Very rare</option><option>Legendary</option><option>Artifact</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- column 2, row 3: weight, cost, attunement, charges -->
+          <div style="grid-column:2;grid-row:3;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div style="display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:12px;align-items:end">
+              <div class="hk-field"><label class="hk-field__label" for="weight">Weight (lb)</label><div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 70px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One pound less" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="weight" type="number" value="2" min="0" step="0.5"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One pound more" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div>
+              <div class="hk-field"><label class="hk-field__label" for="cost">Cost</label><div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 70px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One less" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="cost" type="number" value="25" min="0"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One more" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div>
+              <div class="hk-field"><label class="hk-field__label" for="cur">Coin</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="cur"><option>cp</option><option>sp</option><option>ep</option><option selected>gp</option><option>pp</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+            </div>
+            <div class="hk-field">
+              <span class="hk-field__label">Attunement</span>
+              <button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-describedby="attHint"><span class="hk-toggle__track" aria-hidden="true"><span class="hk-toggle__knob"></span></span><span>Requires attunement</span></button>
+              <span class="hk-field__msg" id="attHint">Takes one of the hero's 3 attunement slots. Shown as a gem on the bag slot.</span>
+            </div>
+            <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start">
+              <div class="hk-field"><label class="hk-field__label" for="charges">Charges</label><div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 70px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One charge less" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="charges" type="number" value="3" min="0"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One charge more" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div>
+              <div class="hk-field"><label class="hk-field__label" for="recharge">Regains charges</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="recharge"><option>Never</option><option selected>At dawn (all)</option><option>At dawn (roll 1d3)</option><option>After a short rest</option><option>After a long rest</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span><span class="hk-field__msg">Charges show as wax seals on the sheet; a rolled regain shows its dice.</span></div>
+            </div>
+          </div>
+
+          <!-- column 2, row 2: weapon section (type = Weapon) -->
+          <fieldset style="grid-column:2;grid-row:2;border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px">
+            <legend class="s4-h3" style="padding:0;margin-bottom:2px"><i-icon name="crossed-swords" size="15"></i-icon>Weapon <span class="hk-hint">shown because the type is Weapon</span></legend>
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+              <div class="hk-field"><span class="hk-field__label">Kind</span><div class="s4-seg" role="radiogroup" aria-label="Weapon kind"><button class="s4-seg__b" type="button" role="radio" aria-checked="false"><i-icon name="broadsword" size="13"></i-icon>Melee</button><button class="s4-seg__b s4-seg__b--on" type="button" role="radio" aria-checked="true"><i-icon name="bow-arrow" size="13"></i-icon>Ranged</button></div></div>
+              <div class="hk-field"><span class="hk-field__label">Category</span><div class="s4-seg" role="radiogroup" aria-label="Weapon category"><button class="s4-seg__b s4-seg__b--on" type="button" role="radio" aria-checked="true">Simple</button><button class="s4-seg__b" type="button" role="radio" aria-checked="false">Martial</button></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px">
+              <div class="hk-field"><label class="hk-field__label" for="dice">Damage dice <span class="s4-req">*</span></label><input class="hk-input" id="dice" value="1d6" placeholder="1d8 or 2d6+1"></div>
+              <div class="hk-field"><label class="hk-field__label" for="dtype">Damage type <span class="s4-req">*</span></label><div style="display:flex;align-items:center;gap:8px"><span class="s4-sel" style="flex:1 1 auto"><select class="hk-input s4-sel__in" id="dtype"><option>Acid</option><option>Bludgeoning</option><option>Cold</option><option selected>Fire</option><option>Force</option><option>Lightning</option><option>Necrotic</option><option>Piercing</option><option>Poison</option><option>Psychic</option><option>Radiant</option><option>Slashing</option><option>Thunder</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span><span class="hk-has-tip" style="display:inline-flex"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-fire)" tabindex="0" aria-describedby="tipDmg">1d6 fire</span><span class="hk-tip hk-tip--left" id="tipDmg" role="tooltip">The damage tag as the sheet shows it<span class="hk-tip__sub">the dot is the damage-type colour; the word always stays</span></span></span></div></div>
+            </div>
+            <div class="hk-field">
+              <span class="hk-field__label">Properties</span>
+              <div class="hk-row" role="group" aria-label="Weapon properties" style="gap:6px">
+                <button class="hk-chip hk-chip--btn hk-chip--selected" type="button" aria-pressed="true" title="Thrown: can be thrown; uses the ranges below">thrown</button>
+                <button class="hk-chip hk-chip--btn hk-chip--selected" type="button" aria-pressed="true" title="Light: good for two-weapon fighting">light</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">finesse</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">versatile</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">ammunition</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">loading</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">heavy</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">reach</button>
+                <button class="hk-chip hk-chip--btn" type="button" aria-pressed="false">two-handed</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:end">
+              <div class="hk-field"><label class="hk-field__label" for="mastery">Mastery</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="mastery"><option>None</option><option>Cleave</option><option>Graze</option><option>Nick</option><option>Push</option><option>Sap</option><option selected>Slow</option><option>Topple</option><option>Vex</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+              <div class="hk-field"><label class="hk-field__label" for="rn">Normal range (ft)</label><input class="hk-input" id="rn" type="number" value="30" min="5" step="5" style="width:110px"></div>
+              <div class="hk-field"><label class="hk-field__label" for="rl">Long range (ft)</label><input class="hk-input" id="rl" type="number" value="120" min="5" step="5" style="width:110px"></div>
+            </div>
+            <span class="hk-field__msg">Ranges apply to thrown and ranged weapons; the long range is never shorter than the normal one.</span>
+          </fieldset>
+
+          <!-- description, full width -->
+          <div class="hk-field" style="grid-column:1/3;grid-row:4">
+            <label class="hk-field__label" for="desc">Description (Markdown)</label>
+            <textarea class="s4-textarea" id="desc" rows="4">A clay pot of alchemical fire with a wick of starmoss. When it hits, the flames **cling for one round**: the target takes the damage again at the end of its next turn unless it uses an action to put them out.
+
+_The light of the burning pot is dim light in a 10-foot radius._</textarea>
+            <span class="hk-field__msg">Markdown: **bold**, _italic_, lists and headings. The sheet shows this text under Details on the bag slot.</span>
+          </div>
+        </div>
+      </form>
+
+    </div>
+
+    <div class="s4-col">
+      <section class="hk-leaf" aria-labelledby="prevTitle" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2" id="prevTitle"><i-icon name="eye" size="18"></i-icon>How it reads on a sheet</h2>
+        <div class="hk-item" style="border-bottom:0">
+          <span class="hk-iring hk-iring--l"><i-icon name="flask" size="18"></i-icon></span>
+          <span class="hk-item__name"><span style="display:flex;align-items:center;gap:6px;min-width:0"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="Ліхтар зоряного світла">Ліхтар зоряного світла</b><span class="hk-gem hk-gem--inline" role="img" aria-label="Requires attunement" title="Requires attunement"></span></span><span class="hk-item__sub"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-fire)">1d6 fire</span><span>thrown 30/120</span><span>·</span><span>2 lb</span><span>·</span><span style="color:var(--rarity-uncommon)">uncommon</span></span></span>
+          <span class="hk-item__marks"><span class="hk-qty" style="position:static" title="Quantity">×1</span></span>
+          <span class="hk-seal-row" aria-label="3 of 3 charges"><x-seal state="full" icon="flask" size="24" seed="1" hint="Charge 1 of 3 left"></x-seal><x-seal state="full" icon="flask" size="24" seed="2" hint="Charge 2 of 3 left"></x-seal><x-seal state="full" icon="flask" size="24" seed="3" hint="Charge 3 of 3 left"></x-seal></span>
+        </div>
+        <div class="hk-arow" style="grid-template-columns:30px minmax(0,1.4fr) 56px minmax(0,1fr)">
+          <span class="hk-iring"><i-icon name="flask" size="15"></i-icon></span>
+          <b style="font-size:15px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="Ліхтар зоряного світла">Ліхтар зоряного світла</b>
+          <b class="hk-num" style="font-size:22px" title="To hit: Dexterity + proficiency, computed per hero">+6</b>
+          <span style="display:flex;flex-direction:column;gap:2px;line-height:1"><b class="hk-num" style="font-size:19px">1d6+3</b><span class="hk-th">fire</span></span>
+          <span class="hk-arow__tags"><span class="hk-chip">thrown 30/120</span><span class="hk-chip"><i-icon name="sword-array" size="13"></i-icon>mastery Slow</span></span>
+        </div>
+        <span class="hk-hint">Attack numbers come from the hero who equips it; this preview uses Ilyana's +3 Dexterity bonus and proficiency.</span>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="tipsTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:6px;padding:14px 16px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2" id="tipsTitle"><i-icon name="info" size="18"></i-icon>Saving</h2>
+        <div class="hk-feat" style="align-items:flex-start"><i-icon name="pin" size="16"></i-icon><span style="min-width:0">Saving bumps My homebrew to 0.2.0. Ilyana has it pinned: her Build tab will offer the update.</span></div>
+        <div class="hk-feat" style="align-items:flex-start"><i-icon name="checked-shield" size="16"></i-icon><span style="min-width:0">The entry is validated against the pack format before it is written; errors are listed next to the field.</span></div>
+        <div class="hk-feat" style="align-items:flex-start"><i-icon name="conversation" size="16"></i-icon><span style="min-width:0">Names can be in any language; the id is transliterated so it stays readable in exports.</span></div>
+      </section>
+
+      <!-- the armor fields, drawn small: shown when the type is Armor -->
+      <div class="s4-inset">
+        <span class="s4-tag" style="white-space:normal;height:auto;padding:4px 10px;line-height:1.2"><i-icon name="chain-mail" size="14"></i-icon>When the type is Armor, the Weapon section is replaced by this one</span>
+        <section class="hk-leaf" aria-label="Armor fields" style="transform:rotate(-.2deg);padding:14px 16px;width:100%;display:flex;flex-direction:column;gap:10px">
+          <x-tex kind="paper"></x-tex>
+          <h2 class="s4-h3"><i-icon name="chain-mail" size="15"></i-icon>Armor <span class="hk-hint">shown because the type is Armor</span></h2>
+          <div class="hk-field"><span class="hk-field__label">Category</span><div class="s4-seg" role="radiogroup" aria-label="Armor category"><button class="s4-seg__b" type="button" role="radio" aria-checked="false">Light</button><button class="s4-seg__b s4-seg__b--on" type="button" role="radio" aria-checked="true">Medium</button><button class="s4-seg__b" type="button" role="radio" aria-checked="false">Heavy</button></div></div>
+          <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:end">
+            <div class="hk-field"><label class="hk-field__label" for="ac">Armor class <span class="s4-req">*</span></label><div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 64px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One less" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="ac" type="number" value="14" min="10" max="20"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One more" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div>
+            <div class="hk-field"><label class="hk-field__label" for="dexcap">Dexterity bonus cap</label><input class="hk-input" id="dexcap" type="number" value="2" min="0" placeholder="empty: no cap"></div>
+          </div>
+          <div class="hk-field"><label class="hk-field__label" for="strreq">Strength required</label><input class="hk-input" id="strreq" type="number" placeholder="empty: none" min="1" style="width:160px"></div>
+          <button class="hk-toggle" type="button" role="switch" aria-checked="false" style="position:relative"><span class="hk-toggle__track" aria-hidden="true"><span class="hk-toggle__knob"></span></span><span>Disadvantage on Stealth checks</span></button>
+          <span class="hk-field__msg" style="position:relative">Armor class is a whole number from 10 to 20. A shield uses a single “Armor class bonus” field instead.</span>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Exit">
+      <button class="hk-btn hk-btn--ghost-leather hk-btn--l" type="button" title="Discard this new item"><i-icon name="cross-mark" size="13"></i-icon>Cancel</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button" title="Save the item to My homebrew"><i-icon name="save" size="17"></i-icon>Save item</button>
+      <span class="hk-hint" style="color:var(--danger-on-leather)"><i-icon name="hazard-sign" size="12" style="vertical-align:-1px"></i-icon> 1 field needs attention</span>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Markdown help" title="Markdown help"><i-icon name="help" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="quill" size="16" style="color:var(--brass)"></i-icon>Unsaved changes</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

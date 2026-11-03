@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — add condition dialog (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;height:1000px;overflow:hidden;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(320px,340fr) minmax(0,560fr) minmax(0,460fr);gap:20px;padding:18px 18px 92px;align-items:start;flex:1 1 auto" aria-hidden="true">
+    <x-part name="folio" tab="play" tip="none"></x-part>
+    <x-part name="centre"></x-part>
+    <x-part name="right"></x-part>
+  </main>
+  <x-part name="strap" active="cond" pos="abs"></x-part>
+  <div class="dim" style="z-index:7"></div>
+
+  <div style="position:absolute;inset:60px 0 70px;z-index:8;display:flex;align-items:center;justify-content:center;gap:28px;padding:0 24px">
+
+    <!-- ADD CONDITION -->
+    <x-dlg title="Add condition" icon="skull" width="600px" id="cond" seed="4">
+      <label class="hk-search"><i-icon name="magnifying-glass" size="16"></i-icon><input class="hk-search__in" type="search" placeholder="Search the 15 conditions" aria-label="Search conditions"><button class="ico icoSm icoLeaf" type="button" aria-label="Clear search" title="Clear search" style="width:24px;height:24px;visibility:hidden"><i-icon name="cross-mark" size="10"></i-icon></button></label>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px" role="radiogroup" aria-label="Condition">
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="blindfold" size="16"></i-icon>Blinded</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="charm" size="16"></i-icon>Charmed</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="hearing-disabled" size="16"></i-icon>Deafened</button>
+        <button class="pk pkOn" type="button" role="radio" aria-checked="true"><i-icon name="tired-eye" size="16"></i-icon>Exhaustion<span class="chip" style="height:18px;font-size:13px;padding:0 5px;margin-left:auto;background:rgba(43,33,24,.14);box-shadow:none">levels 1–6</span></button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="terror" size="16"></i-icon>Frightened</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="grab" size="16"></i-icon>Grappled</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="knocked-out-stars" size="16"></i-icon>Incapacitated</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="invisible" size="16"></i-icon>Invisible</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="knockout" size="16"></i-icon>Paralyzed</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="stone-block" size="16"></i-icon>Petrified</button>
+        <button class="pk" type="button" role="radio" aria-checked="false" aria-describedby="tipPsn" style="position:relative"><i-icon name="poison-bottle" size="16"></i-icon>Poisoned<span class="chip chipE" style="height:18px;font-size:13px;padding:0 5px;margin-left:auto">active</span><span class="tip" id="tipPsn" role="tooltip" style="left:0;transform:none">Already active (3 rounds)<span class="tipSub">Adding it again replaces the duration and source.</span></span></button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="falling" size="16"></i-icon>Prone</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="manacles" size="16"></i-icon>Restrained</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="star-swirl" size="16"></i-icon>Stunned</button>
+        <button class="pk" type="button" role="radio" aria-checked="false"><i-icon name="sleepy" size="16"></i-icon>Unconscious</button>
+      </div>
+      <div class="block" style="gap:4px;margin-top:4px"><span style="display:flex;align-items:center;gap:6px"><i-icon name="tired-eye" size="16" style="color:#8A6A2A"></i-icon><b>Exhaustion</b><span class="th">cumulative, level 1 to 6</span></span><span style="font-size:14px;line-height:1.35">Each level subtracts 2 × level from d20 tests and 5 ft × level from Speed. At level 6 you die. A long rest removes one level.</span></div>
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 14px;align-items:center">
+        <span class="th">Level</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button class="stepBtn" type="button" aria-label="One level lower" title="One level lower"><i-icon name="minus" size="12"></i-icon></button><b class="num" style="font-size:22px;min-width:22px;text-align:center">2</b><button class="stepBtn" type="button" aria-label="One level higher" title="One level higher (up to 6)"><i-icon name="plus" size="12"></i-icon></button><span style="display:flex;gap:3px;align-items:center;margin-left:4px"><x-seal state="full" text="1" size="22" seed="1" label="Level 1"></x-seal><x-seal state="full" text="2" size="22" seed="2" label="Level 2"></x-seal><x-seal state="spent" text="3" size="22" seed="3" label="Level 3"></x-seal><x-seal state="spent" text="4" size="22" seed="4" label="Level 4"></x-seal><x-seal state="spent" text="5" size="22" seed="5" label="Level 5"></x-seal><x-seal state="spent" text="6" size="22" seed="6" label="Level 6"></x-seal></span><span class="hint">capped at 6 by the pack</span></div>
+        <span class="th">Lasts</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" role="radiogroup" aria-label="Duration"><button class="chip chipBtn" type="button" role="radio" aria-checked="false">Rounds</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false">Minutes</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false"><i-icon name="campfire" size="13" style="color:#8A6A2A"></i-icon>Until short rest</button><button class="chip chipBtn chipOn" type="button" role="radio" aria-checked="true"><i-icon name="night-sleep" size="13"></i-icon>Until long rest</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false">Indefinite</button><span style="display:inline-flex;align-items:center;gap:6px;margin-left:6px"><input class="numIn" type="number" value="" disabled="disabled" aria-label="Amount" placeholder="—" style="width:56px"><span class="hint">amount only for rounds or minutes</span></span></div>
+        <span class="th">Source</span>
+        <div class="fld" style="flex-direction:row;align-items:center;gap:8px"><input class="in" value="Forced march through the Ashfall" aria-label="Source note" placeholder="e.g. Giant Spider"><span class="hint" style="white-space:nowrap">shown in the chip’s hint</span></div>
+      </div>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><span class="hint" style="color:#E0C27A">chip reads “Exhaustion 2 · until long rest”</span><button class="btn btnBrass btnL" type="button"><i-icon name="plus" size="15"></i-icon>Add Exhaustion 2</button></div>
+    </x-dlg>
+
+    <!-- player-locked variant -->
+    <x-dlg title="Add condition" icon="padlock" width="320px" id="condLock" seed="2" role="alertdialog" desc="condLockD">
+      <div class="warn warnW" id="condLockD" style="align-items:flex-start"><i-icon name="padlock" size="18"></i-icon><span><b>Managed by your DM.</b> The Emberfall Company has “Players manage their own conditions” switched off, so only the DM adds, edits or ends conditions on this hero.</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span class="th">Your conditions now</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="cond" style="cursor:default" title="Poisoned, 3 rounds left, from Giant Spider · managed by your DM"><i-icon name="poison-bottle" size="16"></i-icon>Poisoned<span class="dur">3 rounds</span><i-icon name="padlock" size="12" hint="Managed by your DM"></i-icon></span><span class="cond" style="cursor:default" title="Frightened, indefinite · managed by your DM"><i-icon name="terror" size="16"></i-icon>Frightened<i-icon name="padlock" size="12" hint="Managed by your DM"></i-icon></span></div>
+      </div>
+      <span class="hint" style="display:flex;align-items:center;gap:5px"><i-icon name="crown" size="13" style="color:#8A6A2A"></i-icon>Ask your DM at the table, or whisper on the campaign Table.</span>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnLeather btnL" type="button"><i-icon name="check-mark" size="14" style="color:#E8CC7C"></i-icon>Close</button></div>
+    </x-dlg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

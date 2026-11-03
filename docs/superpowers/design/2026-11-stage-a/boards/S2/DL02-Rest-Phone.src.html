@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — короткий відпочинок, аркуш (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <div aria-hidden="true" style="position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+    <x-part name="pcombat"></x-part>
+  </div>
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="combat"></x-part>
+  <div class="dim"></div>
+
+  <section class="psheet" role="dialog" aria-modal="true" aria-labelledby="restT" style="height:600px;gap:10px;padding-bottom:0">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <div class="grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:8px"><x-seal state="full" icon="campfire" size="34" seed="1"></x-seal><h2 class="leafTitle" id="restT" style="font-size:22px;flex:1 1 auto">Короткий відпочинок</h2><button class="ico icoP icoLeaf" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <div class="block" style="gap:8px;padding:10px 12px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><i-icon name="d10" size="18" style="color:#8A6A2A"></i-icon><b>Кістки хітів</b><span class="th" style="font-size:14px">залишилось 4 з 5 к10</span><span style="flex:1 1 auto"></span><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" icon="d10" size="26" seed="1" label="Кістка хітів є"></x-seal><x-seal state="full" icon="d10" size="26" seed="2" label="Кістка хітів є"></x-seal><x-seal state="full" icon="d10" size="26" seed="3" label="Кістка хітів є"></x-seal><x-seal state="full" icon="d10" size="26" seed="4" label="Кістка хітів є"></x-seal><x-seal state="spent" icon="d10" size="26" seed="5" hint="Кістку витрачено — залишилось 4 з 5"></x-seal></span></div>
+      <div style="display:flex;align-items:center;gap:8px" role="group" aria-label="Скільки кісток витратити"><span class="th" style="font-size:15px">Витратити</span><button class="stepBtn stepBtnP" type="button" aria-label="На одну менше" title="На одну менше"><i-icon name="minus" size="14"></i-icon></button><b class="num" style="font-size:24px;min-width:24px;text-align:center">1</b><button class="stepBtn stepBtnP" type="button" aria-label="На одну більше" title="На одну більше"><i-icon name="plus" size="14"></i-icon></button><span style="flex:1 1 auto"></span><span class="glyph" tabindex="0" aria-describedby="tipRoll"><button class="btn btnLeather btnP" type="button" style="padding:0 10px"><i-icon name="dice-twenty-faces-twenty" size="14" style="color:#E8CC7C"></i-icon>Кинути к10</button><span class="tipUp" id="tipRoll" role="tooltip" style="left:auto;right:0;transform:none;font-size:15px;white-space:normal;width:236px">Кидає наступну кістку, якщо витрачаєте 2 і більше<span class="tipSub">Один кидок на кістку; результат видно до підтвердження.</span></span></span></div>
+      <div style="display:flex;align-items:center;gap:12px"><span class="die" style="width:52px;height:52px;font-size:26px" role="img" aria-label="Випало 6">6</span><span style="display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:baseline;gap:6px"><span class="bigN" style="font-size:34px;color:#3B5222">+8</span><span class="th" style="font-size:15px">відновлено</span></span><span class="th" style="font-size:14px">6 на к10 + 2 Статура</span></span></div>
+    </div>
+    <div class="strap" style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;color:#E9DCBB">
+      <span class="vlabel"><i-icon name="heart" size="14" style="color:#C9A24E;vertical-align:-2px"></i-icon> ОЗ</span>
+      <div class="gauge" title="31 з 44, після відпочинку 39"><div style="width:70.5%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></div><div style="width:18.2%;height:100%;background:repeating-linear-gradient(135deg,#688444 0 3px,#3B5222 3px 6px)"></div></div>
+      <span class="vval" style="font-size:20px">31 <span style="font-size:14px;color:#C9A24E">→</span> 39 <span style="font-size:14px;color:#C9A24E">/ 44</span></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div class="gained" style="min-height:40px;grid-template-columns:26px minmax(0,1fr) auto;font-size:15px"><i-icon name="holy-symbol" size="18"></i-icon><span>Божественний канал · <b>2 з 2</b></span><span class="chip chipM" style="height:22px"><i-icon name="check-mark" size="11"></i-icon>повний</span></div>
+      <div class="gained" style="min-height:40px;grid-template-columns:26px minmax(0,1fr) auto;font-size:15px;border-bottom:0"><i-icon name="concentration-orb" size="18" style="color:#574489"></i-icon><span>Концентрація на Благословенні припиниться.</span><span></span></div>
+    </div>
+    <div class="hk-strap" style="margin:auto -14px 0;border-radius:0;display:flex;align-items:center;gap:8px;padding:8px 12px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnP" type="button" style="padding:0 12px">Скасувати</button><span style="flex:1 1 auto"></span><button class="btn btnBrass btnP" type="button" style="padding:0 12px"><i-icon name="campfire" size="16"></i-icon>Взяти короткий відпочинок</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

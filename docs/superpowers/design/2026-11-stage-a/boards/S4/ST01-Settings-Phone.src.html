@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Налаштування — оформлення (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-phone" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Налаштування" action="hood" alabel="Обліковий запис" lang="uk"></x-topbar>
+
+  <div class="s4-pbody" data-scroller="body">
+    <div class="s4-chips-scroll" role="group" aria-label="Розділи">
+      <a class="hk-chip hk-chip--l hk-chip--btn" href="#" style="height:40px;font-size:16px;flex:0 0 auto"><i-icon name="hood" size="15"></i-icon>Обліковий запис</a>
+      <a class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" href="#" aria-current="true" style="height:40px;font-size:16px;flex:0 0 auto"><i-icon name="paint-roller" size="15"></i-icon>Оформлення</a>
+      <a class="hk-chip hk-chip--l hk-chip--btn" href="#" style="height:40px;font-size:16px;flex:0 0 auto"><i-icon name="database" size="15"></i-icon>Сховище</a>
+      <a class="hk-chip hk-chip--l hk-chip--btn" href="#" style="height:40px;font-size:16px;flex:0 0 auto"><i-icon name="chest" size="15"></i-icon>Пакети контенту</a>
+      <a class="hk-chip hk-chip--l hk-chip--btn" href="#" style="height:40px;font-size:16px;flex:0 0 auto"><i-icon name="info" size="15"></i-icon>Про застосунок</a>
+    </div>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="appTitle" style="display:flex;flex-direction:column;gap:12px;transform:rotate(.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="appTitle"><i-icon name="paint-roller" size="20"></i-icon>Оформлення</h2></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <b style="font-size:16px">Тема</b>
+        <div role="radiogroup" aria-label="Тема" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+          <button class="s4-theme s4-theme--on" type="button" role="radio" aria-checked="true" style="padding:6px;gap:5px">
+            <span class="s4-theme__prev" aria-hidden="true" style="height:58px;background:#241710"><span style="position:absolute;left:0;right:0;top:0;height:10px;background:linear-gradient(180deg,#5a3a26,#3b2416);box-shadow:0 1px 0 #8a6a2a"></span><span style="position:absolute;left:6px;top:16px;width:60%;height:32px;border-radius:2px;background:#e9dcbb;transform:rotate(-1.5deg);box-shadow:2px 3px 5px rgba(0,0,0,.6)"></span><span style="position:absolute;left:0;right:0;bottom:0;height:8px;background:linear-gradient(180deg,#5a3a26,#3b2416)"></span></span>
+            <span class="s4-theme__name" style="font-size:16px;justify-content:center"><i-icon name="moon" size="14"></i-icon>Таверна</span>
+          </button>
+          <button class="s4-theme" type="button" role="radio" aria-checked="false" style="padding:6px;gap:5px">
+            <span class="s4-theme__prev" aria-hidden="true" style="height:58px;background:#d6c6a0"><span style="position:absolute;left:0;right:0;top:0;height:10px;background:linear-gradient(180deg,#5a3a26,#3b2416);box-shadow:0 1px 0 #8a6a2a"></span><span style="position:absolute;left:6px;top:16px;width:60%;height:32px;border-radius:2px;background:#f4ecd6;transform:rotate(-1.5deg);box-shadow:2px 3px 5px rgba(60,40,10,.35)"></span><span style="position:absolute;left:0;right:0;bottom:0;height:8px;background:linear-gradient(180deg,#5a3a26,#3b2416)"></span></span>
+            <span class="s4-theme__name" style="font-size:16px;justify-content:center"><i-icon name="sun" size="14"></i-icon>Сувій</span>
+          </button>
+          <button class="s4-theme hk-has-tip" type="button" role="radio" aria-checked="false" aria-describedby="tipPlain" style="padding:6px;gap:5px">
+            <span class="s4-theme__prev" aria-hidden="true" style="height:58px;background:#141210"><span style="position:absolute;left:0;right:0;top:0;height:10px;background:#2a2622;box-shadow:0 1px 0 #c9a24e"></span><span style="position:absolute;left:6px;top:16px;width:60%;height:32px;border-radius:2px;background:#fff;box-shadow:0 0 0 1px #777"></span><span style="position:absolute;left:0;right:0;bottom:0;height:8px;background:#2a2622"></span></span>
+            <span class="s4-theme__name" style="font-size:16px;justify-content:center"><i-icon name="plain-circle" size="14"></i-icon>Простий</span>
+            <span class="hk-tip hk-tip--above hk-tip--left" id="tipPlain" role="tooltip" style="white-space:normal;width:220px;text-align:left">Високий контраст, без текстур<span class="hk-tip__sub">для слабких пристроїв і читання</span></span>
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <b style="font-size:16px">Щільність</b>
+        <div class="s4-seg" role="radiogroup" aria-label="Щільність" style="align-self:flex-start"><button class="s4-seg__b s4-seg__b--phone s4-seg__b--on" type="button" role="radio" aria-checked="true"><i-icon name="contract" size="14"></i-icon>Компактна</button><button class="s4-seg__b s4-seg__b--phone" type="button" role="radio" aria-checked="false"><i-icon name="expand" size="14"></i-icon>Простора</button></div>
+        <span class="hk-hint" style="font-size:14px">Рядки 28 або 36 пікселів; кнопки не змінюються.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Анімація</b><span class="hk-hint" style="font-size:14px">Струс від шкоди, витрата печаток, спалах при підвищенні рівня.</span></div>
+        <button class="hk-toggle" type="button" role="switch" aria-checked="true" style="min-height:44px"><span class="hk-toggle__track" aria-hidden="true"><span class="hk-toggle__knob"></span></span><span>Увімк.</span></button>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Мова</b><span class="hk-hint" style="font-size:14px">Текст пакетів лишається своєю мовою, доки не встановлено пакет перекладу.</span></div>
+        <div class="hk-field"><label class="hk-sr" for="lang">Мова</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="lang" style="width:150px;height:44px"><option>English</option><option selected>Українська</option><option>Русский</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+      </div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="accTitle" style="display:flex;flex-direction:column;gap:10px;transform:rotate(-.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="accTitle"><i-icon name="hood" size="20"></i-icon>Обліковий запис</h2><span class="hk-chip hk-chip--moss" title="Ви увійшли; синхронізація працює"><i-icon name="check-mark" size="11"></i-icon>увійшли</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span class="hk-iring hk-iring--l"><i-icon name="hood" size="18"></i-icon></span><div style="min-width:0"><b style="font-size:18px;font-family:var(--font-display);font-weight:400">yura</b><div class="hk-hint" style="font-size:14px">4 персонажі · 3 пристрої</div></div></div>
+      <div class="s4-dev" style="min-height:48px"><span class="hk-iring"><i-icon name="smartphone" size="15"></i-icon></span><div style="min-width:0"><b style="font-size:16px">Pixel 8</b> <span class="hk-chip hk-chip--selected" style="height:22px;font-size:13px">Цей пристрій</span><div class="hk-hint" style="font-size:14px">Остання активність зараз</div></div></div>
+      <div class="s4-dev" style="min-height:48px;border-bottom:0"><span class="hk-iring"><i-icon name="laptop" size="15"></i-icon></span><div style="min-width:0"><b style="font-size:16px">Yura's laptop</b><div class="hk-hint" style="font-size:14px">Остання активність 2 год тому</div></div><button class="hk-btn hk-btn--ghost hk-btn--phone" type="button" title="Пристрій негайно вийде з облікового запису" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)">Відкликати</button></div>
+    </section>
+  </div>
+
+  <x-pstrap lang="uk" cols="1fr 1fr 44px">
+    <button class="s4-act s4-act--brass" type="button" title="Відкрити пакети"><i-icon name="chest" size="20"></i-icon><span class="s4-act__t">Керувати пакетами</span></button>
+    <button class="s4-act s4-act--leather" type="button" title="Вийти на цьому пристрої"><i-icon name="exit-door" size="20"></i-icon><span class="s4-act__t">Вийти</span></button>
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Ще: експорт, довідка" title="Ще: експорт, довідка"><i-icon name="hamburger-menu" size="22"></i-icon></button>
+  </x-pstrap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

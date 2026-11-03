@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Create a campaign (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns"></x-rail>
+
+  <!-- the list behind the dialog: one campaign so far -->
+  <main aria-hidden="true" style="z-index:1;display:flex;flex-direction:column;gap:18px;padding:22px 22px 26px;flex:1 1 auto;min-width:0">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+      <h1 class="h1"><i-icon name="three-friends" size="28"></i-icon>Campaigns</h1>
+      <span class="hintG">1 campaign: you play in it</span>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 392px;gap:22px;align-items:start">
+      <section style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <article class="ccard" style="transform:rotate(.25deg);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 18px;align-items:center">
+          <x-tex kind="paper"></x-tex>
+          <span class="hk-iring hk-iring--l" style="width:56px;height:56px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)"><i-icon name="person" size="28"></i-icon></span>
+          <div style="display:flex;flex-direction:column;gap:7px;min-width:0">
+            <h2 style="margin:0;font:24px/1.1 Forum,serif;font-weight:400">Tombs of the Salt King</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hk-chip hk-chip--dark" style="height:26px;font-size:14px"><i-icon name="person" size="14"></i-icon>Player · Bramble Underfoot</span><span class="hk-chip" style="height:26px;font-size:14px"><i-icon name="three-friends" size="14"></i-icon>4 members</span><span class="hk-chip" style="height:26px;font-size:14px;color:var(--text-2)"><i-icon name="candle-flame" size="13"></i-icon>No session</span></div>
+            <div class="hk-hint" style="display:flex;align-items:center;gap:6px"><i-icon name="hourglass" size="14" style="color:var(--accent-strong)"></i-icon>Last played 12 days ago · 4 sessions so far</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <span class="hk-btn hk-btn--l hk-btn--brass"><i-icon name="three-friends" size="18"></i-icon>Open</span>
+            <div style="display:flex;gap:4px"><span class="hk-tab qtab"><i-icon name="three-friends" size="13"></i-icon>Party</span><span class="hk-tab qtab"><i-icon name="round-table" size="13"></i-icon>Table</span><span class="hk-tab qtab"><i-icon name="entry-door" size="13"></i-icon>Lobby</span><span class="hk-tab qtab"><i-icon name="cog" size="13"></i-icon>Settings</span></div>
+          </div>
+        </article>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+          <span class="ccard" style="flex-direction:row;align-items:center;gap:14px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);justify-content:center;min-height:84px"><span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="plus" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">New campaign</b><span style="font-size:14px;font-style:italic">you become its DM; players join by code</span></span></span>
+          <span class="ccard" style="flex-direction:row;align-items:center;gap:14px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);justify-content:center;min-height:84px"><span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="entry-door" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">Join a campaign</b><span style="font-size:14px;font-style:italic">by code or by scanning the DM&#8217;s QR</span></span></span>
+        </div>
+      </section>
+      <div></div>
+    </div>
+  </main>
+  <x-strap kind="list"></x-strap>
+
+  <!-- overlay and the dialog -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:5"></div>
+  <div style="position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;padding:24px;pointer-events:none">
+    <div class="hk-dialog" role="dialog" aria-labelledby="dlgT" aria-modal="true" style="width:520px;pointer-events:auto;transform:rotate(-.2deg);gap:14px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="three-friends" size="36" seed="3" label="New campaign"></x-seal><h2 class="hk-dialog__title" id="dlgT">New campaign</h2><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Close" title="Close (Esc)"><i-icon name="cross-mark" size="12"></i-icon></button></div>
+      <p class="hk-hint" style="font-size:15px">You become the DM. Players join with the code on your Lobby tab; you can change everything below later in Settings.</p>
+
+      <div class="hk-field">
+        <label class="hk-field__label" for="cname">Name</label>
+        <input class="hk-input hk-focus-demo" id="cname" value="The Emberfall Company" maxlength="200" style="font-size:18px;height:40px">
+        <div style="display:flex;justify-content:space-between;gap:8px"><span class="hk-field__msg">Players see this name on their Join screen.</span><span class="hk-field__msg hk-num" style="font-style:normal">22 / 200</span></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start">
+        <div class="hk-field">
+          <label class="hk-field__label" for="slvl">Starting level</label>
+          <div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 64px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One level lower" title="−1" disabled="disabled" style="width:36px;height:36px;opacity:.5;cursor:not-allowed"><i-icon name="minus" size="14"></i-icon></button><input class="hk-numfield__in" id="slvl" type="number" value="1" min="1" max="20"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One level higher" title="+1" style="width:36px;height:36px"><i-icon name="plus" size="14"></i-icon></button></div>
+          <span class="hk-field__msg">new heroes join at this level</span>
+        </div>
+        <div class="hk-field">
+          <span class="hk-field__label" id="vislab">Party sheets</span>
+          <div class="seg" role="radiogroup" aria-labelledby="vislab">
+            <button class="segb" type="button" role="radio" aria-checked="false" title="Players see only names on the Party tab"><i-icon name="sight-disabled" size="14"></i-icon>Hidden</button>
+            <button class="segb segOn" type="button" role="radio" aria-checked="true" title="Players see HP, AC and conditions"><i-icon name="eye" size="14"></i-icon>Overview only</button>
+            <button class="segb hk-has-tip" type="button" role="radio" aria-checked="false" aria-describedby="tipFull"><i-icon name="open-book" size="14"></i-icon>Full sheets<span class="hk-tip" id="tipFull" role="tooltip">Players may open each other&#8217;s full sheets<span class="hk-tip__sub">read-only; the DM can always open them</span></span></button>
+          </div>
+          <span class="hk-field__msg">what players see of each other on the Party tab</span>
+        </div>
+      </div>
+
+      <div class="hk-dialog__strap hk-strap" style="margin-top:14px">
+        <x-tex kind="leather"></x-tex>
+        <button class="hk-btn hk-btn--l hk-btn--ghost-leather" type="button">Cancel</button>
+        <button class="hk-btn hk-btn--l hk-btn--brass" type="button"><i-icon name="wax-seal" size="18"></i-icon>Create campaign</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — вкладка Бій (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+.leaf{position:relative;background:radial-gradient(ellipse at 50% 35%,#EFE4C8 0%,#E9DCBB 55%,#DBCCA5 100%);color:#2B2118;border-radius:2px;box-shadow:inset 0 0 0 1px #CBB68C,inset 0 0 18px rgba(139,110,60,.26),4px 6px 12px rgba(10,5,2,.62),1px 1px 0 rgba(255,246,222,.45);padding:12px 12px;box-sizing:border-box}
+.leafTitle{margin:0;font-family:Forum,serif;font-weight:400;font-size:20px;line-height:1.1;color:#2B2118;display:flex;align-items:center;gap:7px}
+.hint{font-style:italic;color:#5B4A36;font-size:15px;line-height:1.2}
+.num{font-family:Forum,serif;font-variant-numeric:tabular-nums;line-height:1}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:Alegreya,serif;font-weight:700;font-size:16px;line-height:1;border:0;border-radius:999px;cursor:pointer;white-space:nowrap;text-decoration:none;box-sizing:border-box;padding:0 14px;height:44px;flex:0 0 auto}
+.btnBrass{background:linear-gradient(180deg,#E8CC7C 0%,#C9A24E 45%,#A98335 80%,#8A6A2A 100%);color:#2B2118;box-shadow:inset 0 1px 0 rgba(255,241,200,.7),inset 0 -1px 0 rgba(70,48,12,.7),0 1px 2px rgba(0,0,0,.55)}
+.btnLeather{background:linear-gradient(180deg,#5E3D28,#3E2516);color:#EADDBF;box-shadow:inset 0 0 0 1px rgba(201,162,78,.55),inset 0 1px 0 rgba(255,230,180,.12),0 1px 2px rgba(0,0,0,.5)}
+.btnEmber{background:linear-gradient(180deg,#C44D32,#A63B24 55%,#8E3220);color:#F8EEDB;box-shadow:inset 0 1px 0 rgba(255,220,200,.3),inset 0 0 0 1px rgba(70,20,10,.6),0 1px 2px rgba(0,0,0,.5)}
+.btnMoss{background:linear-gradient(180deg,#688444,#4A6530 55%,#3B5222);color:#F8EEDB;box-shadow:inset 0 1px 0 rgba(230,255,200,.25),inset 0 0 0 1px rgba(30,45,15,.6),0 1px 2px rgba(0,0,0,.5)}
+.btnGhost{background:transparent;color:#5B4A36;border:1px dashed #8A6A2A;padding:0 12px}
+.ico{position:relative;width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#5E3D28,#3B2416 72%);box-shadow:inset 0 0 0 2px #C9A24E,inset 0 0 0 3px #5E4418,0 2px 3px rgba(0,0,0,.6);color:#C9A24E;display:inline-flex;align-items:center;justify-content:center;border:0;cursor:pointer;padding:0;flex:0 0 auto}
+.btn:focus-visible,.ico:focus-visible,.tabb:focus-visible,.ring:focus-visible{outline:2px solid #F3E2A6;outline-offset:2px}
+.focusDemo{outline:2px solid #F3E2A6;outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:4px;background:#D8C8A0;color:#2B2118;font-size:16px;line-height:1;box-shadow:inset 0 0 0 1px #C0AB80;white-space:nowrap;box-sizing:border-box}
+.chipV{background:#574489;color:#F3EBD8;box-shadow:inset 0 0 0 1px #3E2F66}
+.chipE{background:#F0D9CE;color:#8E3220;box-shadow:inset 0 0 0 1px #C98C78}
+.badge{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 6px;border-radius:6px;background:linear-gradient(180deg,#5A3A26,#3B2416);box-shadow:inset 0 0 0 1px rgba(201,162,78,.45),inset 0 1px 0 rgba(255,230,180,.1),0 3px 6px rgba(0,0,0,.5);outline:1px dashed rgba(201,162,78,.4);outline-offset:-5px;min-width:0;box-sizing:border-box}
+.badgeL{font-size:14px;line-height:1;color:#E0C27A;white-space:nowrap}
+.badgeV{font-family:Forum,serif;font-size:28px;line-height:1;color:#F6E8CC;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.strap{position:relative;background:linear-gradient(180deg,#5A3A26 0%,#4A2E1E 55%,#3B2416 100%);box-shadow:inset 0 0 0 1px rgba(201,162,78,.35),0 3px 6px rgba(0,0,0,.55);border-radius:4px;outline:1px dashed rgba(201,162,78,.4);outline-offset:-5px}
+.gauge{position:relative;height:14px;border-radius:7px;background:#1E110A;box-shadow:inset 0 2px 3px rgba(0,0,0,.8),inset 0 0 0 1px rgba(201,162,78,.3);overflow:hidden;display:flex;min-width:0}
+.rivets{height:9px;background:radial-gradient(circle at 50% 50%,#EED88F 0,#C9A24E 1.7px,#7E5F24 2.7px,rgba(0,0,0,0) 3.3px) 0 0/26px 9px repeat-x;flex:0 0 auto}
+.iring{width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#5E3D28,#3B2416 75%);box-shadow:inset 0 0 0 1.5px #C9A24E,0 1px 2px rgba(0,0,0,.5);color:#E8CC7C;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.arow{display:grid;grid-template-columns:32px minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.rrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:8px 0}
+.rule{height:1px;background:linear-gradient(90deg,#CBB68C,rgba(203,182,140,.2))}
+.ring{width:44px;height:44px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.ringI{width:22px;height:22px;border-radius:50%;background:#EEE3C8;box-shadow:inset 0 0 0 2.5px #5F7A3C,inset 0 2px 3px rgba(0,0,0,.25);display:block}
+.ringF{box-shadow:inset 0 0 0 2.5px #B8432A,inset 0 2px 3px rgba(0,0,0,.25)}
+.xbtn{width:44px;height:44px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;color:#F8EEDB;flex:0 0 auto}
+.xbtnI{width:24px;height:24px;border-radius:50%;background:#8E3220;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 1px rgba(0,0,0,.4)}
+.act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:54px;border:0;border-radius:8px;font-family:Alegreya,serif;font-weight:700;font-size:14px;line-height:1;cursor:pointer;padding:0 4px;min-width:0;white-space:nowrap}
+.tabb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:100%;border:0;background:transparent;color:#C9A24E;font-family:Alegreya,serif;font-size:13px;line-height:1;cursor:pointer;padding:0 2px;min-width:0;white-space:nowrap;position:relative}
+.tabOn{color:#2B2118}
+.tabGlow{position:absolute;left:8px;right:8px;top:4px;bottom:4px;border-radius:8px;background:linear-gradient(180deg,#E8CC7C,#C9A24E 55%,#9C7A33);box-shadow:inset 0 1px 0 rgba(255,241,200,.7),0 0 10px rgba(232,204,124,.45)}
+.sv{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.svL{font-family:Forum,serif;font-size:13px;line-height:1;color:#5B4A36;letter-spacing:.04em;display:flex;align-items:center;gap:2px}
+.hpIn{width:78px;height:44px;border-radius:6px;border:1px solid #C9A24E;background:#1E110A;color:#F6E8CC;font-family:Forum,serif;font-size:26px;text-align:center;box-shadow:inset 0 2px 4px rgba(0,0,0,.8);box-sizing:border-box;padding:0;-moz-appearance:textfield}
+.hpIn:focus{outline:2px solid #F3E2A6;outline-offset:2px}
+.glyph{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.tipUp{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);background:#E9DCBB;color:#2B2118;font:15px/1 Alegreya,serif;padding:9px 12px;border-radius:4px;box-shadow:0 3px 8px rgba(0,0,0,.6),inset 0 0 0 1px #CBB68C;white-space:nowrap;z-index:6}
+.tipUp::before{content:"";position:absolute;bottom:-5px;left:50%;width:10px;height:10px;background:#E9DCBB;transform:translateX(-50%) rotate(45deg);box-shadow:1px 1px 0 #CBB68C}
+.cond{position:relative;display:inline-flex;align-items:center;gap:7px;height:44px;padding:0 12px;border:0;border-radius:6px;background:#F0D9CE;color:#8E3220;box-shadow:inset 0 0 0 1px #C98C78;font:700 16px/1 Alegreya,serif;cursor:pointer;white-space:nowrap;box-sizing:border-box}
+.dur{display:inline-flex;align-items:center;height:24px;padding:0 7px;border-radius:4px;background:#8E3220;color:#F8EEDB;font:400 15px/1 Alegreya,serif;white-space:nowrap}
+@keyframes flicker{0%{opacity:.82}50%{opacity:1}100%{opacity:.9} }
+.vign{animation:flicker 3.4s ease-in-out infinite alternate}
+</style>
+</helmet>
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+
+  <!-- folio header -->
+  <header style="position:relative;z-index:2;display:flex;flex-direction:column;gap:7px;padding:8px 14px 9px;background:linear-gradient(170deg,#5A3A26 0%,#4A2E1E 55%,#3B2416 100%);box-shadow:0 4px 12px rgba(0,0,0,.6),inset 0 -1px 0 rgba(201,162,78,.4);flex:0 0 auto;outline:1px dashed rgba(201,162,78,.35);outline-offset:-6px">
+    <x-tex kind="leather"></x-tex>
+    <div style="position:relative;display:flex;align-items:center;gap:10px">
+      <div style="width:50px;height:56px;flex:0 0 auto;border-radius:4px;padding:3px;box-sizing:border-box;background:linear-gradient(180deg,#E8CC7C 0%,#C9A24E 45%,#A98335 80%,#8A6A2A 100%);box-shadow:inset 0 1px 0 rgba(255,241,200,.7),inset 0 -1px 0 rgba(70,48,12,.7),0 2px 4px rgba(0,0,0,.6)">
+        <div role="img" aria-label="Портрет, монограма ІВ" style="width:100%;height:100%;border-radius:2px;background:radial-gradient(circle at 50% 35%,#432A1A,#241710 80%);display:flex;align-items:center;justify-content:center;font-family:Forum,serif;font-size:21px;line-height:1;color:#C9A24E;box-shadow:inset 0 0 8px rgba(0,0,0,.85)">ІВ</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 auto">
+        <h1 style="margin:0;font:24px/1.1 Forum,serif;font-weight:400;color:#F6E8CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Іляна Ворн</h1>
+        <div style="font-size:15px;line-height:1.1;color:#E0C27A;display:flex;align-items:center;gap:6px"><i-icon name="holy-symbol" size="14"></i-icon>Паладин 5</div>
+      </div>
+      <svg viewBox="0 0 82 96" width="50" height="58" role="img" aria-label="Клас броні 18" style="flex:0 0 auto"><defs><linearGradient id="shBrassP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8CC7C"/><stop offset=".5" stop-color="#C9A24E"/><stop offset="1" stop-color="#8A6A2A"/></linearGradient></defs><path d="M41 4 L75 14 V44 C75 66 58 84 41 92 C24 84 7 66 7 44 V14 Z" fill="#1A0E08" opacity=".6" transform="translate(2,3)"/><path d="M41 4 L75 14 V44 C75 66 58 84 41 92 C24 84 7 66 7 44 V14 Z" fill="url(#shBrassP)" stroke="#5E4418" stroke-width="1.5"/><path d="M41 11 L68 19 V44 C68 62 54 77 41 84 C28 77 14 62 14 44 V19 Z" fill="#2E1B11" stroke="#7E5F24" stroke-width="1"/><text x="41" y="51" text-anchor="middle" dominant-baseline="central" font-family="Forum, serif" font-size="42" fill="#F6E8CC">18</text></svg>
+    </div>
+    <div class="strap" aria-label="Очки здоров'я" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 12px 7px 8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div aria-hidden="true" style="width:14px;height:40px;border-radius:4px;background:linear-gradient(180deg,#E8CC7C,#C9A24E 50%,#8A6A2A);box-shadow:inset 0 0 0 2px #5E4418,0 1px 2px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center"><span style="display:block;width:4px;height:22px;background:#1E110A;border-radius:2px"></span></div>
+        <div class="num" style="font-size:38px;color:#F6E8CC;display:flex;align-items:baseline;gap:4px;text-shadow:0 2px 2px rgba(0,0,0,.5)"><span>31</span><span style="font-size:20px;color:#C9A24E">/ 44</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:14px;color:#E0C27A;line-height:1"><span style="display:flex;align-items:center;gap:4px"><i-icon name="heart" size="14"></i-icon>Очки здоров'я</span><span style="display:flex;align-items:center;gap:4px;white-space:nowrap"><i-icon name="heart-plus" size="14"></i-icon>Тимчасові ОЗ <b class="num" style="font-size:17px;color:#F6E8CC">5</b></span></div>
+        <div class="gauge" title="31 з 44, плюс 5 тимчасових"><div style="width:70.5%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></div><div style="width:11.4%;height:100%;background:repeating-linear-gradient(135deg,#E8CC7C 0 3px,#A98335 3px 6px)"></div></div>
+      </div>
+    </div>
+    <div style="position:relative;display:flex;align-items:center;gap:8px">
+      <span class="chip chipV" role="status" title="Концентрація: Благословення, раунд 3" style="height:30px;font-size:15px;max-width:100%;overflow:hidden"><i-icon name="concentration-orb" size="15" hint="Концентрація: Благословення, раунд 3"></i-icon><b style="white-space:nowrap">Концентрація: Благословення</b><span style="opacity:.9;white-space:nowrap">раунд 3</span></span>
+    </div>
+  </header>
+
+  <!-- scrolling body -->
+  <div data-scroller="body" style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+
+    <!-- HP controls -->
+    <section class="leaf" style="transform:rotate(.3deg);display:flex;align-items:center;gap:8px;padding:10px 12px">
+      <x-tex kind="paper"></x-tex>
+      <label for="hp" style="position:relative;flex:1 1 auto;min-width:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px"><i-icon name="heart" size="16" style="color:#8E3220"></i-icon>Очки здоров'я</label>
+      <button class="ico" type="button" aria-label="Зменшити очки здоров'я" title="Зменшити" style="position:relative"><i-icon name="minus" size="20"></i-icon></button>
+      <input class="hpIn" id="hp" type="number" value="31" min="0" max="44" style="position:relative">
+      <button class="ico" type="button" aria-label="Збільшити очки здоров'я" title="Збільшити" style="position:relative"><i-icon name="plus" size="20"></i-icon></button>
+    </section>
+
+    <!-- AC / Initiative / Speed -->
+    <section aria-label="Захист і рух" style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      <div class="badge"><span class="badgeL">Клас броні</span><span class="badgeV"><i-icon name="shield" size="20" style="color:#C9A24E"></i-icon>18</span></div>
+      <div class="badge"><span class="badgeL">Ініціатива</span><span class="badgeV"><i-icon name="stopwatch" size="20" style="color:#C9A24E"></i-icon>+0</span></div>
+      <div class="badge"><span class="badgeL">Швидкість</span><span class="badgeV"><i-icon name="boots" size="20" style="color:#C9A24E"></i-icon>30 <span style="font-size:17px;color:#E0C27A">фт</span></span></div>
+    </section>
+
+    <!-- saving throws as six tiny wax seals -->
+    <section class="leaf" aria-label="Рятівні кидки" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:6px;padding:8px 12px 7px">
+      <x-tex kind="paper"></x-tex>
+      <div style="position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:8px"><h2 class="leafTitle" style="font-size:18px"><i-icon name="shield" size="17" style="color:#8A6A2A"></i-icon>Рятівні кидки</h2></div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px">
+        <div class="sv"><x-seal state="full" text="+3" size="46" hint="Рятівний кидок Сили +3" seed="1"></x-seal><span class="svL">СИЛ</span></div>
+        <div class="sv"><x-seal state="full" text="+0" size="46" hint="Рятівний кидок Спритності +0" seed="2"></x-seal><span class="svL">СПР</span></div>
+        <div class="sv"><x-seal state="full" text="+2" size="46" hint="Рятівний кидок Статури +2" seed="3"></x-seal><span class="svL">СТА</span></div>
+        <div class="sv"><x-seal state="full" text="−1" size="46" hint="Рятівний кидок Інтелекту −1" seed="4"></x-seal><span class="svL">ІНТ</span></div>
+        <div class="sv"><span class="glyph" tabindex="0" aria-describedby="tipMdr"><x-seal state="full" text="+4" size="46" hint="Мудрість +4, майстерність" seed="5"></x-seal><span class="tipUp" id="tipMdr" role="tooltip">Мудрість +4, майстерність</span></span><span class="svL">МДР<i-icon name="star" size="11" style="color:#8A6A2A" hint="Майстерність у рятівному кидку"></i-icon></span></div>
+        <div class="sv"><x-seal state="full" text="+6" size="46" hint="Харизма +6, майстерність" seed="6"></x-seal><span class="svL">ХАР<i-icon name="star" size="11" style="color:#8A6A2A" hint="Майстерність у рятівному кидку"></i-icon></span></div>
+      </div>
+    </section>
+
+    <!-- attacks -->
+    <section class="leaf" aria-label="Атаки" data-probe="attacks" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:5px;padding:9px 12px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="crossed-swords" size="17" style="color:#8A6A2A"></i-icon>Атаки</h2>
+      <div class="arow" style="position:relative">
+        <span class="iring"><i-icon name="broadsword" size="18"></i-icon></span>
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px;line-height:1.1">Довгий меч</b><span style="font-size:15px;line-height:1.15;color:#5B4A36">1к8+3 рубаючий</span><span class="hint" style="font-size:14px">майстерність: Приголомшення</span></span>
+        <b class="num" style="font-size:24px">+6</b>
+        <button class="btn btnBrass focusDemo" type="button" aria-label="Кинути: Довгий меч" style="padding:0 12px"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Кинути</button>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="arow" style="position:relative">
+        <span class="iring"><i-icon name="thrown-spear" size="18"></i-icon></span>
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px;line-height:1.1">Дротик ×4</b><span style="font-size:15px;line-height:1.15;color:#5B4A36">1к6+3 колючий</span><span class="hint" style="font-size:14px">майстерність: Сповільнення</span></span>
+        <b class="num" style="font-size:24px">+6</b>
+        <button class="btn btnBrass" type="button" aria-label="Кинути: Дротик" style="padding:0 12px"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Кинути</button>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="arow" style="position:relative">
+        <span class="iring"><i-icon name="fist" size="18"></i-icon></span>
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px;line-height:1.1">Беззбройний удар</b><span style="font-size:15px;line-height:1.15;color:#5B4A36">4 дробильний</span></span>
+        <b class="num" style="font-size:24px">+6</b>
+        <button class="btn btnBrass" type="button" aria-label="Кинути: Беззбройний удар" style="padding:0 12px"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Кинути</button>
+      </div>
+    </section>
+
+    <!-- resources -->
+    <section class="leaf" aria-label="Ресурси" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:0;padding:10px 12px 4px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="candle-flame" size="17" style="color:#8A6A2A"></i-icon>Ресурси</h2>
+      <div class="rrow" style="position:relative">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="iring"><i-icon name="healing" size="17"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="line-height:1.1">Накладання рук</b><span class="hint" style="font-size:14px">довгий відпочинок</span></span></span>
+        <button class="btn btnBrass" type="button" aria-label="Витратити: Накладання рук"><i-icon name="minus" size="14"></i-icon>Витратити</button>
+        <span style="grid-column:1 / 3;display:flex;align-items:center;gap:10px"><span class="gauge" style="flex:1 1 auto;height:12px"><span style="display:block;width:72%;height:100%;background:linear-gradient(180deg,#E8CC7C,#C9A24E 55%,#A98335)"></span></span><span class="num" style="font-size:18px;white-space:nowrap">18 / 25 <span style="font-family:Alegreya,serif;font-size:15px;color:#5B4A36">очок</span></span></span>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="rrow" style="position:relative">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="iring"><i-icon name="holy-symbol" size="17"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="line-height:1.1">Божественний канал</b><span style="display:flex;align-items:center;gap:6px"><span style="display:flex;gap:3px"><x-seal state="full" icon="holy-symbol" size="26" label="доступно" seed="2"></x-seal><x-seal state="full" icon="holy-symbol" size="26" label="доступно" seed="3"></x-seal></span><span class="num" style="font-size:17px">2 / 2</span><span class="hint" style="font-size:14px">короткий відпочинок</span></span></span></span>
+        <button class="btn btnBrass" type="button" aria-label="Використати: Божественний канал"><i-icon name="check-mark" size="14"></i-icon>Використати</button>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="rrow" style="position:relative">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="iring"><i-icon name="sword-brandish" size="17"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="line-height:1.1">Божественна кара паладина</b><span style="display:flex;align-items:center;gap:6px"><x-seal state="full" icon="sword-brandish" size="26" label="доступно" seed="4"></x-seal><span class="num" style="font-size:17px">1 / 1</span><span class="hint" style="font-size:14px">довгий відпочинок</span></span></span></span>
+        <button class="btn btnBrass" type="button" aria-label="Використати: Божественна кара паладина"><i-icon name="check-mark" size="14"></i-icon>Використати</button>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="rrow" style="position:relative">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="iring"><i-icon name="magic-swirl" size="17"></i-icon></span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="line-height:1.1">Комірки 1 рівня</b><span style="display:flex;align-items:center;gap:6px"><span style="display:flex;gap:3px"><x-seal state="full" text="I" size="26" fs="30" hint="Комірка 1 рівня — залишилось 3 з 4" seed="1"></x-seal><x-seal state="full" text="I" size="26" fs="30" hint="Комірка 1 рівня — залишилось 3 з 4" seed="2"></x-seal><x-seal state="full" text="I" size="26" fs="30" hint="Комірка 1 рівня — залишилось 3 з 4" seed="3"></x-seal><x-seal state="spent" text="I" size="26" fs="30" hint="Комірку 1 рівня витрачено — залишилось 3 з 4" seed="4"></x-seal></span><span class="num" style="font-size:17px">3 / 4</span></span></span></span>
+        <span class="hint" style="font-size:14px;text-align:right">довгий<br>відпочинок</span>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="rrow" style="position:relative">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="iring"><i-icon name="magic-swirl" size="17"></i-icon></span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="line-height:1.1">Комірки 2 рівня</b><span style="display:flex;align-items:center;gap:6px"><span style="display:flex;gap:3px"><x-seal state="full" text="II" size="26" fs="28" hint="Комірка 2 рівня — залишилось 2 з 2" seed="5"></x-seal><x-seal state="full" text="II" size="26" fs="28" hint="Комірка 2 рівня — залишилось 2 з 2" seed="6"></x-seal></span><span class="num" style="font-size:17px">2 / 2</span></span></span></span>
+        <span class="hint" style="font-size:14px;text-align:right">довгий<br>відпочинок</span>
+      </div>
+      <div class="rule" style="position:relative"></div>
+      <div class="rrow" style="position:relative">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="iring"><i-icon name="crystal-wand" size="17"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="line-height:1.1">Жезл чарівних стріл</b><span class="hint" style="font-size:14px">світанок</span></span></span>
+        <button class="btn btnBrass" type="button" aria-label="Використати заряд жезла"><i-icon name="check-mark" size="14"></i-icon>Використати</button>
+        <span style="grid-column:1 / 3;display:flex;align-items:center;gap:10px"><span style="display:flex;gap:3px"><x-seal state="full" icon="crystal-wand" size="26" label="заряд є" seed="1"></x-seal><x-seal state="full" icon="crystal-wand" size="26" label="заряд є" seed="2"></x-seal><x-seal state="full" icon="crystal-wand" size="26" label="заряд є" seed="3"></x-seal><x-seal state="full" icon="crystal-wand" size="26" label="заряд є" seed="4"></x-seal><x-seal state="full" icon="crystal-wand" size="26" label="заряд є" seed="5"></x-seal><x-seal state="spent" icon="crystal-wand" size="26" label="заряд витрачено" seed="6"></x-seal><x-seal state="spent" icon="crystal-wand" size="26" label="заряд витрачено" seed="7"></x-seal></span><span class="num" style="font-size:18px;white-space:nowrap">5 / 7 <span style="font-family:Alegreya,serif;font-size:15px;color:#5B4A36">зарядів</span></span></span>
+      </div>
+    </section>
+
+    <!-- conditions -->
+    <section class="leaf" aria-label="Стани" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:8px;padding:10px 12px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="poison-bottle" size="17" style="color:#8A6A2A"></i-icon>Стани</h2>
+      <div style="position:relative;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="cond" type="button" aria-expanded="false" aria-label="Отруєний, залишилось 3 раунди, від Гігантського павука" title="Отруєний, залишилось 3 раунди, від Гігантського павука"><i-icon name="poison-bottle" size="18"></i-icon>Отруєний<span class="dur">3 раунди</span></button>
+        <button class="cond" type="button" aria-expanded="false" aria-label="Наляканий, без терміну" title="Наляканий, без терміну"><i-icon name="terror" size="18"></i-icon>Наляканий</button>
+        <button class="btn btnGhost" type="button"><i-icon name="plus" size="16"></i-icon>Додати стан</button>
+      </div>
+    </section>
+
+    <!-- death saves -->
+    <section class="leaf" aria-label="Рятівні кидки від смерті" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:4px;padding:10px 12px 6px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="leafTitle" style="position:relative;font-size:18px"><i-icon name="skull" size="17" style="color:#8A6A2A"></i-icon>Рятівні кидки від смерті</h2>
+      <div style="position:relative;display:grid;grid-template-columns:minmax(0,1fr) repeat(3,44px);gap:0 2px;align-items:center">
+        <span style="font-size:16px">успіхи</span><button class="ring" type="button" aria-label="Успіх 1" title="Позначити успіх"><span class="ringI"></span></button><button class="ring" type="button" aria-label="Успіх 2" title="Позначити успіх"><span class="ringI"></span></button><button class="ring" type="button" aria-label="Успіх 3" title="Позначити успіх"><span class="ringI"></span></button>
+        <span style="font-size:16px">провали</span><button class="ring" type="button" aria-label="Провал 1" title="Позначити провал"><span class="ringI ringF"></span></button><button class="ring" type="button" aria-label="Провал 2" title="Позначити провал"><span class="ringI ringF"></span></button><button class="ring" type="button" aria-label="Провал 3" title="Позначити провал"><span class="ringI ringF"></span></button>
+      </div>
+    </section>
+
+    <!-- heroic inspiration -->
+    <section class="leaf" aria-label="Героїчне натхнення" style="transform:rotate(.2deg);display:flex;align-items:center;gap:10px;padding:10px 12px">
+      <x-tex kind="paper"></x-tex>
+      <span class="iring" style="position:relative;width:40px;height:40px;box-shadow:inset 0 0 0 1.5px #C9A24E,0 0 10px rgba(232,204,124,.6)"><i-icon name="inspiration" size="22"></i-icon></span>
+      <span style="position:relative;display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0"><b style="font-size:16px;line-height:1.1">Героїчне натхнення</b><span class="hint">є (1)</span></span>
+      <button class="btn btnBrass" type="button" style="position:relative" aria-label="Використати героїчне натхнення"><i-icon name="check-mark" size="14"></i-icon>Використати</button>
+    </section>
+  </div>
+
+  <!-- action row: fixed, thumb-reachable -->
+  <div aria-label="Дії" style="position:relative;z-index:3;flex:0 0 auto;display:flex;flex-direction:column;background:linear-gradient(180deg,#5A3A26,#4A2E1E 50%,#3B2416);box-shadow:0 -4px 12px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,162,78,.5)">
+    <x-tex kind="leather"></x-tex>
+    <div class="rivets" style="position:relative"></div>
+    <div style="position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:4px 12px 6px">
+      <button class="act btnEmber" type="button"><i-icon name="health-decrease" size="20"></i-icon>Шкода</button>
+      <button class="act btnMoss" type="button"><i-icon name="health-increase" size="20"></i-icon>Лікування</button>
+      <button class="act btnBrass" type="button"><i-icon name="dice-twenty-faces-twenty" size="20"></i-icon>Кинути</button>
+      <button class="act btnLeather" type="button" style="color:#E8CC7C"><i-icon name="campfire" size="20"></i-icon>Відпочинок</button>
+    </div>
+  </div>
+
+  <!-- leather strap tab bar -->
+  <nav aria-label="Розділи аркуша" style="position:relative;z-index:3;flex:0 0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:62px;background:linear-gradient(180deg,#2E1B11,#241710);box-shadow:inset 0 2px 0 #8A6A2A,inset 0 3px 0 #3B2416">
+    <x-tex kind="leather"></x-tex>
+    <button class="tabb tabOn" type="button" aria-current="page"><span class="tabGlow" aria-hidden="true"></span><i-icon name="crossed-swords" size="24" style="position:relative"></i-icon><span style="position:relative">Бій</span></button>
+    <button class="tabb" type="button"><i-icon name="spell-book" size="24"></i-icon><span>Заклинання</span></button>
+    <button class="tabb" type="button"><i-icon name="swap-bag" size="24"></i-icon><span>Сумка</span></button>
+    <button class="tabb" type="button"><i-icon name="laurels" size="24"></i-icon><span>Здібності</span></button>
+    <button class="tabb" type="button"><i-icon name="hamburger-menu" size="24"></i-icon><span>Ще</span></button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

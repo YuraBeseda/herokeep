@@ -1,0 +1,43 @@
+<!-- @dsCard group="Sheet" height=300 subtitle="Parchment section panel with title and header actions" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Leaf — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="../../components/bundle.css">
+</head>
+<body>
+<div class="hk-stage hk-stage--row" style="align-items:stretch">
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">
+<filter id="hkWood" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.0022 0.055" numOctaves="5" seed="9" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.7 -0.55" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<filter id="hkPaper" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<filter id="hkLeather" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" seed="5" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<linearGradient id="hkShieldBrass" x1="0" y1="0" x2="0" y2="1"><stop class="hk-shield-stop1" offset="0"/><stop class="hk-shield-stop2" offset=".5"/><stop class="hk-shield-stop3" offset="1"/></linearGradient>
+</svg>
+<svg class="hk-tex hk-tex--wood" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+<div class="hk-vignette" aria-hidden="true"></div>
+<section class="hk-leaf hk-visually-tilted" aria-labelledby="leafA" style="flex:1 1 300px;transform:rotate(.35deg)">
+  <svg class="hk-tex hk-tex--paper" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+  <div class="hk-leaf__head">
+    <h2 class="hk-leaf__title" id="leafA"><svg viewBox="20 20 216 216" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M128 58c-32 0-64 16-64 37.838C64 154 96 142 96 142l-6 24h76l-6-24s32 12 32-52c0-16-32-32-64-32zm-26 38a16 16 0 0 1 16 16 16 16 0 0 1-16 16 16 16 0 0 1-16-16 16 16 0 0 1 16-16zm52 0a16 16 0 0 1 16 16 16 16 0 0 1-16 16 16 16 0 0 1-16-16 16 16 0 0 1 16-16zm-26 34l10 26h-20l10-26zm-28 51.002v17.996h56v-17.996h-56z"/></svg>Conditions</h2>
+    <div class="hk-leaf__actions">
+      <button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Advance round" title="Advance round"><svg viewBox="0 0 512 512" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M92.656 19.188v41.5h331.72v-41.5H92.655zM119.5 79.374V433.53h22.28V79.376H119.5zm46.594 0c3.212 43.324 13.312 82.022 27.78 110.906 17.685 35.304 40.845 54.75 64.064 54.75 23.218 0 46.346-19.446 64.03-54.75 14.47-28.883 24.57-67.58 27.782-110.905H166.094zm209.156 0V433.53h22.28V79.376h-22.28zm-117.313 185.22c-23.218 0-46.378 19.415-64.062 54.717-14.835 29.614-25.098 69.562-28.03 114.22H350c-2.933-44.658-13.197-84.606-28.03-114.22-17.686-35.302-40.814-54.718-64.033-54.718zM92.657 452.218v41.467h331.718V452.22H92.655z"/></svg></button>
+      <button class="hk-btn hk-btn--ghost hk-btn--dashed" type="button"><svg viewBox="20 20 216 216" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M119 64v55H64v18h55v55h18v-55h55v-18h-55V64h-18z"/></svg>Add condition</button>
+    </div>
+  </div>
+  <p style="margin:0;font-size:15px;line-height:1.4">Body text always sits on a solid leaf. The paper grain is a 7.5% overlay; it never runs under paragraphs at a higher strength.</p>
+  <div class="hk-block" style="margin-top:10px"><b style="font-size:15px">A sunken block</b><span class="hk-hint">leaf-sunken, used for resource blocks and descriptions</span></div>
+</section>
+<section class="hk-leaf hk-leaf--phone" aria-labelledby="leafB" style="width:260px;transform:rotate(-.25deg)">
+  <svg class="hk-tex hk-tex--paper" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+  <div class="hk-leaf__head">
+    <h2 class="hk-leaf__title" id="leafB"><svg viewBox="0 0 512 512" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906l200.56 200.53c-4.36 4.443-8.84 8.793-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28l-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/></svg>Атаки</h2>
+    <div class="hk-leaf__actions"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Деталі" title="Деталі"><svg viewBox="0 0 512 512" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M256 21C126.426 21 21 126.426 21 256s105.426 235 235 235 235-105.426 235-235S385.574 21 256 21zm0 36c110.118 0 199 88.882 199 199s-88.882 199-199 199S57 366.118 57 256 145.882 57 256 57zm-7.352 36.744c-8.227 0-15.317 2.976-21.27 8.928-5.776 5.952-8.665 12.955-8.665 21.008 0 8.227 2.89 15.23 8.666 21.006 5.95 5.776 13.04 8.666 21.268 8.666 8.228 0 15.23-2.89 21.006-8.666 5.777-5.777 8.666-12.78 8.666-21.006 0-8.053-2.976-15.056-8.927-21.008-5.777-5.952-12.692-8.928-20.745-8.928zm-62.757 82.453v28.096h46.215v186.13H185.89v27.833h140.22v-27.834h-45.69V176.197h-94.53z"/></svg></button></div>
+  </div>
+  <p style="margin:0;font-size:16px;line-height:1.4">Phone leaf: 12px padding, 16px body.</p>
+</section>
+</div>
+
+</body>
+</html>

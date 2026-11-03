@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — DM shop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-board" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="s5-vign" aria-hidden="true"></div>
+  <header class="s5-title"><span class="s5-tag"><i-icon name="wax-seal" size="13"></i-icon>Later idea</span><h1 class="s5-h1"><i-icon name="shop" size="24"></i-icon>DM shop</h1><span class="s5-hintG">The Emberfall Company · Table tab</span></header>
+
+  <!-- DM side -->
+  <section class="hk-leather" aria-label="Shop, DM controls" style="display:flex;align-items:center;gap:12px;padding:10px 16px">
+    <x-tex kind="leather"></x-tex>
+    <i-icon name="crown" size="20" label="DM controls" style="color:var(--brass)"></i-icon>
+    <h2 class="hk-nameplate" style="font-size:20px;padding:3px 10px">Trading post</h2>
+    <button class="hk-ico hk-ico--s" type="button" aria-label="Rename the shop" title="Rename"><i-icon name="quill" size="13"></i-icon></button>
+    <span class="hk-has-tip" style="display:inline-flex;margin-left:6px"><button class="hk-toggle" type="button" aria-pressed="true" aria-describedby="tipOpen" style="color:var(--text-on-leather)"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span>Open to party</button><span class="hk-tip" id="tipOpen" role="tooltip" style="left:0;transform:none;white-space:normal;width:290px">Members see the shop on their Table tab while it's open<span class="hk-tip__sub">prices are the pack's list prices; buying moves coins and items on the hero's sheet</span></span></span>
+    <span style="flex:1 1 auto"></span>
+    <button class="hk-btn hk-btn--ghost-leather" type="button" title="From the library or a custom item, with a price"><i-icon name="plus" size="13"></i-icon>Add item</button>
+    <button class="hk-btn hk-btn--ghost-leather" type="button" title="Buy items from heroes at half price"><i-icon name="return-arrow" size="13"></i-icon>Buy back</button>
+  </section>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 262px;gap:16px;align-items:start;flex:1 1 auto;min-height:0">
+    <!-- the shop as a player sees it -->
+    <section class="hk-leaf" aria-labelledby="shopT" style="display:flex;flex-direction:column;gap:2px;padding:12px 16px 12px;transform:rotate(-.2deg);align-self:stretch">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="s5-h2" id="shopT"><i-icon name="shop" size="19"></i-icon>Trading post</h2><span class="hk-hint">9 items · as Ilyana sees it</span><div class="hk-leaf__actions"><div class="hk-search" style="height:30px;width:150px"><i-icon name="magnifying-glass" size="14"></i-icon><input class="hk-search__in" type="search" value="" placeholder="Search" aria-label="Search the shop" style="font-size:14px"></div></div></div>
+
+      <div class="s5-item"><span class="s5-ring"><i-icon name="health-potion" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Potion of Healing</span><span class="s5-item__s">consumable · common · you carry 2</span></span><span class="s5-price" title="50 gold pieces"><i-icon name="two-coins" size="13"></i-icon>50 gp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="medical-pack" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Healer's Kit</span><span class="s5-item__s">tool · 3 lb · ten uses</span></span><span class="s5-price" title="5 gold pieces"><i-icon name="two-coins" size="13"></i-icon>5 gp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="bread" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Rations</span><span class="s5-item__s">gear · 2 lb · one day</span></span><span class="s5-price" title="5 silver pieces"><i-icon name="two-coins" size="13"></i-icon>5 sp</span><span class="s5-row" style="gap:4px;flex-wrap:nowrap"><span class="hk-numfield hk-numfield--leaf" style="grid-template-columns:26px 40px 26px;gap:2px"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="One fewer" style="width:26px;height:26px"><i-icon name="minus" size="10"></i-icon></button><label class="hk-sr" for="qRat">Quantity</label><input class="hk-numfield__in" id="qRat" type="number" value="5" min="1" style="height:28px;font-size:17px"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="One more" style="width:26px;height:26px"><i-icon name="plus" size="10"></i-icon></button></span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px" title="5 for 2 gp 5 sp"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></span></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="torch" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Torch</span><span class="s5-item__s">gear · 1 lb · burns 1 hour</span></span><span class="s5-price" title="1 copper piece"><i-icon name="two-coins" size="13"></i-icon>1 cp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="lantern" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Lantern, Hooded</span><span class="s5-item__s">gear · 2 lb · burns oil</span></span><span class="s5-price" title="5 gold pieces"><i-icon name="two-coins" size="13"></i-icon>5 gp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="rope-coil" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Rope</span><span class="s5-item__s">gear · 5 lb · 50 feet</span></span><span class="s5-price" title="1 gold piece"><i-icon name="two-coins" size="13"></i-icon>1 gp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="thrown-spear" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Javelin</span><span class="s5-item__s">weapon · 2 lb · you carry 4</span></span><span class="s5-price" title="5 silver pieces"><i-icon name="two-coins" size="13"></i-icon>5 sp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item"><span class="s5-ring"><i-icon name="chain-mail" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Chain Mail</span><span class="s5-item__s">armor · 55 lb · AC 16 · you wear one</span></span><span class="s5-price" title="75 gold pieces"><i-icon name="two-coins" size="13"></i-icon>75 gp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+      <div class="s5-item" style="border-bottom:0"><span class="s5-ring"><i-icon name="horse-head" size="17"></i-icon></span><span class="s5-item__n"><span class="s5-item__t">Warhorse</span><span class="s5-item__s">gear · trained for combat</span></span><span class="s5-price" title="400 gold pieces"><i-icon name="two-coins" size="13"></i-icon>400 gp</span><button class="hk-btn hk-btn--brass" type="button" style="height:30px;width:72px" disabled aria-disabled="true" title="Not enough coins: 400 gp needed, about 79 gp carried"><i-icon name="shopping-cart" size="13"></i-icon>Buy</button></div>
+
+      <div class="hk-lvl" style="margin-top:auto;padding-top:8px"><i-icon name="crown" size="14" style="color:var(--accent-strong)"></i-icon>Sold this session<span class="hk-lvl__rule"></span><span class="hk-hint">DM view</span></div>
+      <div class="s5-entry" style="grid-template-columns:40px minmax(0,1fr);padding:4px 0"><span class="s5-entry__t">21:12</span><p class="s5-entry__p">Potion of Healing → Ilyana Vorn · <b>50 gp</b></p></div>
+      <div class="s5-entry" style="grid-template-columns:40px minmax(0,1fr);padding:4px 0;border-bottom:0"><span class="s5-entry__t">21:09</span><p class="s5-entry__p">Rations ×5 → Bramble Underfoot · <b>2 gp 5 sp</b></p></div>
+    </section>
+
+    <div class="s5-col" style="gap:12px">
+      <!-- the hero's coins -->
+      <section class="hk-leather" aria-label="Ilyana's coins" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px">
+        <x-tex kind="leather"></x-tex>
+        <span class="hk-strap__label" style="font-size:15px"><i-icon name="coins" size="15"></i-icon>Ilyana's coins<span class="hk-num" style="margin-left:auto;font-size:17px;color:var(--text-on-leather)">≈ 79 gp</span></span>
+        <div class="s5-row" style="gap:6px;justify-content:space-between;flex-wrap:nowrap"><x-coin metal="platinum" n="4" unit="pp" label="4 platinum"></x-coin><x-coin metal="gold" n="38" unit="gp" label="38 gold"></x-coin><x-coin metal="silver" n="12" unit="sp" label="12 silver"></x-coin><x-coin metal="copper" n="55" unit="cp" label="55 copper"></x-coin></div>
+      </section>
+
+      <!-- the buy confirm -->
+      <div class="hk-dialog" role="dialog" aria-labelledby="buyT" aria-modal="true" style="width:262px;padding:14px 16px 14px;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-dialog__head"><x-seal state="full" icon="shopping-cart" size="32" label="Buy" seed="5"></x-seal><h2 class="hk-dialog__title" id="buyT" style="font-size:21px;line-height:24px">Buy Potion of Healing?</h2></div>
+        <div class="s5-row" style="gap:6px"><span class="s5-price"><i-icon name="two-coins" size="13"></i-icon>50 gp</span><span class="hk-hint">pays 4 pp + 10 gp</span></div>
+        <div class="hk-block" style="gap:3px;font-size:14px"><span class="s5-row" style="gap:6px;justify-content:space-between"><span>Coins after</span><b>0 pp · 28 gp · 12 sp · 55 cp</b></span><span class="s5-row" style="gap:6px;justify-content:space-between"><span>Bag after</span><b>Potion of Healing ×3</b></span><span class="s5-row" style="gap:6px;justify-content:space-between"><span>Weight</span><b>108 → 108.5 lb</b></span></div>
+        <div class="hk-dialog__strap hk-strap" style="margin:4px -16px -14px"><x-tex kind="leather"></x-tex><button class="hk-btn hk-btn--ghost-leather" type="button">Cancel</button><button class="hk-btn hk-btn--brass hk-focus-demo" type="button"><i-icon name="shopping-cart" size="13"></i-icon>Buy for 50 gp</button></div>
+      </div>
+
+      <!-- the result -->
+      <div class="hk-toast hk-toast--success" role="status" style="width:262px"><x-tex kind="paper"></x-tex><i-icon name="check-mark" size="20"></i-icon><div class="hk-toast__body"><span>Bought Potion of Healing · 50 gp</span><span class="hk-toast__sub">bag: ×3 · coins ≈ 29 gp · posted to the Table</span></div></div>
+      <div class="hk-toast hk-toast--error" role="alert" style="width:262px"><i-icon name="padlock" size="20"></i-icon><div class="hk-toast__body"><span>The shop closed</span><span class="hk-toast__sub">the DM closed it before your purchase went through</span></div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

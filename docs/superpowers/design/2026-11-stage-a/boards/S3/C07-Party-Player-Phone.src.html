@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Гурт кампанії, гравець (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Компанія Емберфол" action="crossed-swords" alabel="Відкрити мій лист"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;z-index:1">
+    <x-enc lang="uk" state="live" ctl="0"></x-enc>
+    <x-pcardp id="ilyana" mode="player" own="1" sel="1" open="1" tilt="-.25deg"></x-pcardp>
+    <x-pcardp id="bramble" mode="player" sheets="full" tilt=".2deg"></x-pcardp>
+    <x-pcardp id="maren" mode="player" sheets="full" tilt="-.15deg"></x-pcardp>
+    <x-pcardp id="thorne" mode="player" sheets="full" tilt=".25deg"></x-pcardp>
+    <x-pcardp id="oskar" mode="player" sheets="full" tilt="-.3deg"></x-pcardp>
+    <x-pcardp id="guard" mode="player" sheets="full" tilt=".2deg"></x-pcardp>
+
+    <section class="hk-leaf hk-leaf--phone" aria-label="Варіант: станами керує майстер" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:8px;padding:12px 14px">
+      <x-tex kind="paper"></x-tex>
+      <span class="hk-hint" style="display:flex;align-items:center;gap:6px;font-size:14px"><span class="pdot"></span>Якщо майстер вимкне «Гравці керують своїми станами»</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="hk-cond hk-has-tip haloP" style="height:36px;padding:0 10px;font-size:15px" tabindex="0" aria-describedby="tipLockP2" title="Отруєний, 3 раунди · керує ваш майстер"><i-icon name="poison-bottle" size="15"></i-icon>Отруєний<span class="hk-cond__dur">3 раунди</span><i-icon name="padlock" size="14" hint="Керує ваш майстер"></i-icon><span class="hk-tip hk-tip--above" id="tipLockP2" role="tooltip" style="font-size:15px;left:0;transform:none">Керує ваш майстер<span class="hk-tip__sub">бачите стан, але завершує його лише майстер</span></span></span></div>
+      <span style="font-size:15px;line-height:1.35">Ваші чіпи втрачають −/+ і «Завершити»; замок пояснює чому. Герой без кампанії завжди зберігає свої кнопки.</span>
+    </section>
+  </div>
+
+  <x-pstrap kind="player"></x-pstrap>
+  <x-tabbar active="party"></x-tabbar>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

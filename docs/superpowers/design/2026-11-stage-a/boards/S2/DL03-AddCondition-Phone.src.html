@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — додати стан, нижній аркуш (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <div aria-hidden="true" style="position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+    <x-part name="pcombat"></x-part>
+  </div>
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="combat"></x-part>
+  <div class="dim"></div>
+
+  <!-- bottom sheet: add condition -->
+  <section class="psheet" role="dialog" aria-modal="true" aria-labelledby="condT" style="height:760px;gap:10px;padding-bottom:0">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <div class="grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:8px"><x-seal state="full" icon="skull" size="34" seed="4"></x-seal><h2 class="leafTitle" id="condT" style="font-size:22px;flex:1 1 auto">Додати стан</h2><button class="ico icoP icoLeaf" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <label class="hk-search" style="height:44px"><i-icon name="magnifying-glass" size="18"></i-icon><input class="hk-search__in" type="search" placeholder="Пошук…" aria-label="Пошук станів"></label>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px" role="radiogroup" aria-label="Стан">
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="blindfold" size="16"></i-icon>Осліплений</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="charm" size="16"></i-icon>Зачарований</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="hearing-disabled" size="16"></i-icon>Оглухлий</button>
+      <button class="pk pkP pkOn" type="button" role="radio" aria-checked="true"><i-icon name="tired-eye" size="16"></i-icon>Виснаження<span class="chip" style="height:18px;font-size:13px;padding:0 5px;margin-left:auto;background:rgba(43,33,24,.14);box-shadow:none">1–6</span></button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="terror" size="16"></i-icon>Наляканий</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="grab" size="16"></i-icon>Схоплений</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="knocked-out-stars" size="16"></i-icon>Недієздатний</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="invisible" size="16"></i-icon>Невидимий</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="knockout" size="16"></i-icon>Паралізований</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="stone-block" size="16"></i-icon>Скам’янілий</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false" aria-describedby="tipPsn"><i-icon name="poison-bottle" size="16"></i-icon>Отруєний<span class="chip chipE" style="height:18px;font-size:13px;padding:0 5px;margin-left:auto">діє</span><span class="tipUp" id="tipPsn" role="tooltip" style="left:0;transform:none;font-size:15px;white-space:normal;width:240px">Уже діє: 3 раунди<span class="tipSub">Повторне додавання замінить тривалість і джерело.</span></span></button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="falling" size="16"></i-icon>Лежачий</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="manacles" size="16"></i-icon>Скутий</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="star-swirl" size="16"></i-icon>Приголомшений</button>
+      <button class="pk pkP" type="button" role="radio" aria-checked="false"><i-icon name="sleepy" size="16"></i-icon>Непритомний</button>
+    </div>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center">
+      <span class="th" style="font-size:15px">Рівень</span>
+      <div style="display:flex;align-items:center;gap:8px"><button class="stepBtn stepBtnP" type="button" aria-label="На рівень нижче" title="На рівень нижче"><i-icon name="minus" size="14"></i-icon></button><b class="num" style="font-size:24px;min-width:24px;text-align:center">2</b><button class="stepBtn stepBtnP" type="button" aria-label="На рівень вище" title="На рівень вище (до 6)"><i-icon name="plus" size="14"></i-icon></button><span style="display:flex;gap:3px;align-items:center;margin-left:2px"><x-seal state="full" text="1" size="22" seed="1" label="Рівень 1"></x-seal><x-seal state="full" text="2" size="22" seed="2" label="Рівень 2"></x-seal><x-seal state="spent" text="3" size="22" seed="3" label="Рівень 3"></x-seal><x-seal state="spent" text="4" size="22" seed="4" label="Рівень 4"></x-seal><x-seal state="spent" text="5" size="22" seed="5" label="Рівень 5"></x-seal><x-seal state="spent" text="6" size="22" seed="6" label="Рівень 6"></x-seal></span></div>
+      <span class="th" style="font-size:15px">Триває</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" role="radiogroup" aria-label="Тривалість"><button class="chip chipBtn" type="button" role="radio" aria-checked="false" style="height:36px">Раунди</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false" style="height:36px">Хвилини</button><button class="chip chipBtn chipOn" type="button" role="radio" aria-checked="true" style="height:36px"><i-icon name="night-sleep" size="13"></i-icon>До довгого відпочинку</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false" style="height:36px">Без терміну</button></div>
+      <span class="th" style="font-size:15px">Джерело</span>
+      <input class="in" value="Марш через Попелище" aria-label="Джерело" style="height:44px">
+    </div>
+    <div class="hk-strap" style="margin:4px -14px 0;border-radius:0;display:flex;align-items:center;gap:8px;padding:8px 12px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnP" type="button">Скасувати</button><span style="flex:1 1 auto"></span><button class="btn btnBrass btnP" type="button"><i-icon name="plus" size="16"></i-icon>Додати: Виснаження 2</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Кампанії (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Кампанії" action="plus" alabel="Нова кампанія"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <span class="hintG" style="font-size:15px">2 кампанії: одну ведете, в одній граєте</span>
+
+    <article class="ccard" aria-labelledby="pc1" style="transform:rotate(-.25deg);gap:8px;padding:14px 14px 12px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center">
+        <span class="hk-iring hk-iring--l" style="width:44px;height:44px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)" role="img" aria-label="Ви майстер" title="Ви майстер"><i-icon name="crown" size="22"></i-icon></span>
+        <h2 id="pc1" style="margin:0;font:21px/1.1 Forum,serif;font-weight:400">Компанія Емберфол</h2>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span class="hk-chip hk-chip--dark" style="height:28px;font-size:14px" title="Ваша роль: ви ведете цю кампанію"><i-icon name="crown" size="13"></i-icon>Майстер</span>
+        <span class="hk-chip" style="height:28px;font-size:14px" title="5 учасників і 1 заготовка"><i-icon name="three-friends" size="13"></i-icon>5 учасників · 1 заготовка</span>
+        <span class="hk-chip chipLive hk-has-tip haloP" tabindex="0" aria-describedby="tipLiveP" style="height:32px;font-size:14px" title="Сесія триває, сутичка 2, раунд 3, 1 год 12 хв"><i-icon name="candle-flame" size="13"></i-icon>Сесія триває<span class="hk-tip" id="tipLiveP" role="tooltip" style="font-size:15px;left:0;transform:none">Сесія триває · 1 год 12 хв<span class="hk-tip__sub">сутичка 2, раунд 3 · утримуйте, щоб побачити</span></span></span>
+      </div>
+      <span class="hk-hint" style="display:flex;align-items:center;gap:6px;font-size:14px"><i-icon name="hourglass" size="13" style="color:var(--accent-strong)"></i-icon>Зараз граєте: сесія почалася 1 год 12 хв тому · 11 сесій</span>
+      <nav aria-label="Розділи кампанії" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-top:4px">
+        <a href="#" class="hk-tab" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0"><i-icon name="three-friends" size="14"></i-icon>Гурт</a>
+        <a href="#" class="hk-tab" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0"><i-icon name="round-table" size="14"></i-icon>Стіл</a>
+        <a href="#" class="hk-tab" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0"><i-icon name="entry-door" size="14"></i-icon>Лобі</a>
+        <a href="#" class="hk-tab hk-tab--on" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0" title="Відкрити"><i-icon name="crossed-swords" size="14"></i-icon>Відкрити</a>
+      </nav>
+    </article>
+
+    <article class="ccard" aria-labelledby="pc2" style="transform:rotate(.25deg);gap:8px;padding:14px 14px 12px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center">
+        <span class="hk-iring hk-iring--l" style="width:44px;height:44px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)" role="img" aria-label="Ви гравець" title="Ви гравець"><i-icon name="person" size="22"></i-icon></span>
+        <h2 id="pc2" style="margin:0;font:21px/1.1 Forum,serif;font-weight:400">Гробниці Соляного короля</h2>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span class="hk-chip hk-chip--dark" style="height:28px;font-size:14px" title="Ваша роль: гравець, ви граєте за Брембла Андерфута"><i-icon name="person" size="13"></i-icon>Гравець · Брембл Андерфут</span>
+        <span class="hk-chip" style="height:28px;font-size:14px" title="4 учасники"><i-icon name="three-friends" size="13"></i-icon>4 учасники</span>
+        <span class="hk-chip" style="height:28px;font-size:14px;color:var(--text-2)" title="Сесія не триває"><i-icon name="candle-flame" size="13"></i-icon>Без сесії</span>
+      </div>
+      <span class="hk-hint" style="display:flex;align-items:center;gap:6px;font-size:14px"><i-icon name="hourglass" size="13" style="color:var(--accent-strong)"></i-icon>Остання гра 12 днів тому · 4 сесії</span>
+      <nav aria-label="Розділи кампанії" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding-top:4px">
+        <a href="#" class="hk-tab" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0"><i-icon name="three-friends" size="14"></i-icon>Гурт</a>
+        <a href="#" class="hk-tab" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0"><i-icon name="round-table" size="14"></i-icon>Стіл</a>
+        <a href="#" class="hk-tab" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0"><i-icon name="entry-door" size="14"></i-icon>Лобі</a>
+        <a href="#" class="hk-tab hk-tab--on" style="height:40px;border-radius:4px;font-size:15px;text-decoration:none;padding:0 6px;flex:1 1 0" title="Відкрити"><i-icon name="crossed-swords" size="14"></i-icon>Відкрити</a>
+      </nav>
+    </article>
+
+    <a href="#" class="ccard" style="transform:rotate(-.15deg);flex-direction:row;align-items:center;gap:12px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);text-decoration:none;min-height:72px;padding:12px 14px" aria-label="Приєднатися до кампанії за кодом або QR">
+      <span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="entry-door" size="20"></i-icon></span>
+      <span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">Приєднатися до кампанії</b><span style="font-size:14px;font-style:italic">за кодом або QR майстра</span></span>
+    </a>
+    <span class="hintG" style="font-size:14px;text-align:center">Запитайте у майстра 8-символьний код запрошення або посилання.</span>
+  </div>
+
+  <x-pstrap kind="list"></x-pstrap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

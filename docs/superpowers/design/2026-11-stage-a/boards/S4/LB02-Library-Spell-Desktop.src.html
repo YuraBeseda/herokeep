@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library — Fireball entry (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="library" lang="en" chip="Ilyana Vorn · Paladin 5" chipicon="templar-shield" chiptitle="Opened from Ilyana Vorn's sheet"></x-rail>
+
+  <main class="s4-main" style="display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start">
+    <!-- the entry -->
+    <article class="hk-leaf" aria-labelledby="spellTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:14px;padding:16px 24px 20px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:flex;align-items:center;gap:10px">
+        <a class="hk-btn hk-btn--ghost" href="#"><i-icon name="return-arrow" size="14"></i-icon>Back to library</a>
+        <span class="hk-hint">Library · Spells · Fireball</span>
+      </div>
+      <header style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span class="hk-iring" style="width:48px;height:48px"><i-icon name="fire-spell-cast" size="28"></i-icon></span>
+        <h1 id="spellTitle" style="margin:0;font-family:var(--font-display);font-weight:400;font-size:32px;line-height:36px;color:var(--text-1)">Fireball</h1>
+        <span class="hk-chip hk-chip--l" title="Spell"><i-icon name="spell-book" size="14"></i-icon>Spell</span>
+        <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+        <span style="flex:1 1 auto"></span>
+        <span class="hk-hint">Pack: SRD 5.2.1 (2024 rules) 0.1.0</span>
+      </header>
+
+      <!-- facts as tags -->
+      <div class="hk-row" role="list" aria-label="Spell facts" style="gap:8px">
+        <span class="hk-plate" role="listitem" style="height:30px;font-size:17px;padding:0 10px" title="Spell level 3">Level 3</span>
+        <span class="hk-chip hk-chip--l" role="listitem" title="School: evocation"><i-icon name="magic-swirl" size="14"></i-icon>Evocation</span>
+        <span class="hk-chip hk-chip--l" role="listitem" title="Casting time: 1 action"><i-icon name="stopwatch" size="14"></i-icon>1 action</span>
+        <span class="hk-chip hk-chip--l" role="listitem" title="Range: 150 feet"><i-icon name="archery-target" size="14"></i-icon>150 feet</span>
+        <span class="hk-has-tip" role="listitem" style="display:inline-flex"><span class="hk-chip hk-chip--l hk-chip--btn" tabindex="0" aria-describedby="tipM"><i-icon name="talk" size="14"></i-icon>V, S, M</span><span class="hk-tip" id="tipM" role="tooltip">Verbal, somatic, material<span class="hk-tip__sub">material: a ball of bat guano and sulfur (not consumed)</span></span></span>
+        <span class="hk-chip hk-chip--l" role="listitem" title="Duration: instantaneous"><i-icon name="hourglass" size="14"></i-icon>Instantaneous</span>
+        <span class="hk-chip hk-chip--l hk-chip--damage" role="listitem" style="--dmg:var(--damage-fire)" title="Damage: 8d6 fire">8d6 fire</span>
+        <span class="hk-chip hk-chip--l" role="listitem" title="Saving throw: Dexterity, half damage on a success"><i-icon name="checked-shield" size="14"></i-icon>Dexterity save</span>
+        <span class="hk-chip hk-chip--l" role="listitem" title="Area: 20-foot-radius sphere"><i-icon name="plain-circle" size="14"></i-icon>20-foot sphere</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <p class="s4-body">A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one. Flammable objects in the area that aren't being worn or carried start burning.</p>
+        <div class="hk-block" style="max-width:72ch">
+          <h2 class="s4-h3"><i-icon name="upgrade" size="15"></i-icon>At higher levels</h2>
+          <p class="s4-body" style="font-size:15px">The damage increases by 1d6 for each spell slot level above 3.</p>
+          <div class="hk-row" style="gap:6px"><span class="hk-chip" title="Cast with a level 4 slot">slot 4: 9d6</span><span class="hk-chip" title="Cast with a level 5 slot">slot 5: 10d6</span><span class="hk-chip" title="Cast with a level 6 slot">slot 6: 11d6</span><span class="hk-chip" title="Cast with a level 7 slot">slot 7: 12d6</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <h2 class="s4-h3"><i-icon name="spell-book" size="15"></i-icon>Spell lists</h2>
+          <div class="hk-row" style="gap:6px"><a class="hk-chip hk-chip--l hk-chip--btn" href="#" title="Open the Sorcerer spell list"><i-icon name="fire-spell-cast" size="14"></i-icon>Sorcerer</a><a class="hk-chip hk-chip--l hk-chip--btn" href="#" title="Open the Wizard spell list"><i-icon name="wizard-staff" size="14"></i-icon>Wizard</a></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <h2 class="s4-h3"><i-icon name="scroll-unfurled" size="15"></i-icon>Also</h2>
+          <div class="hk-row" style="gap:6px"><span class="hk-chip" title="Casting does not require concentration">no concentration</span><span class="hk-chip" title="Cannot be cast as a ritual">not a ritual</span><a class="hk-chip hk-chip--btn" href="#" title="Open the rule: Damage type: Fire"><i-icon name="scroll-unfurled" size="13"></i-icon>Damage type: Fire</a></div>
+        </div>
+      </div>
+
+      <div class="hk-rule"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--text-2)">
+        <i-icon name="chest" size="15" style="color:var(--accent-strong)"></i-icon>
+        <span>Source: <b class="s4-ink">SRD 5.2.1 (2024 rules)</b> 0.1.0 · Wizards of the Coast · licence CC BY 4.0</span>
+        <a class="s4-link" href="#">Pack details</a>
+        <span style="flex:1 1 auto"></span>
+        <span class="hk-hint">Entry id: srd-5e-2024:spell/fireball</span>
+      </div>
+    </article>
+
+    <!-- side column -->
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0;grid-row:span 2">
+      <section class="hk-leaf" aria-labelledby="addTitle" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2" id="addTitle"><i-icon name="templar-shield" size="18"></i-icon>Ilyana Vorn</h2>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="hk-frame hk-frame--s"><div class="hk-frame__well" role="img" aria-label="Portrait placeholder, monogram IV">IV</div></div>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:16px">Human · Paladin 5</b><span class="hk-hint">Oath of Devotion · The Emberfall Company</span></div>
+        </div>
+        <p class="s4-p">“Add to hero” puts Fireball on Ilyana's spell list as an extra spell. It won't be castable yet: Paladins get level 3 slots at level 9.</p>
+        <div class="hk-row" style="gap:6px"><span class="hk-chip" title="Ilyana's spell slots">slots: 4 × I, 2 × II</span><span class="hk-chip hk-chip--arcane" title="Spellcasting ability">Charisma · DC 14</span></div>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="relTitle" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:6px;padding:14px 16px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2" id="relTitle"><i-icon name="sparkles" size="18"></i-icon>Related</h2>
+        <a class="s4-res" href="#" style="grid-template-columns:30px minmax(0,1fr) 20px;min-height:40px;padding:3px 6px"><span class="hk-iring"><i-icon name="burning-dot" size="15"></i-icon></span><span class="s4-res__name"><span class="s4-res__t" style="font-size:15px">Delayed Blast Fireball</span><span class="s4-res__s">Level 7 evocation</span></span><span class="s4-chev" aria-hidden="true"></span></a>
+        <a class="s4-res" href="#" style="grid-template-columns:30px minmax(0,1fr) 20px;min-height:40px;padding:3px 6px"><span class="hk-iring"><i-icon name="fire-ray" size="15"></i-icon></span><span class="s4-res__name"><span class="s4-res__t" style="font-size:15px">Fire Bolt</span><span class="s4-res__s">Cantrip, evocation</span></span><span class="s4-chev" aria-hidden="true"></span></a>
+        <a class="s4-res" href="#" style="grid-template-columns:30px minmax(0,1fr) 20px;min-height:40px;padding:3px 6px"><span class="hk-iring"><i-icon name="fire" size="15"></i-icon></span><span class="s4-res__name"><span class="s4-res__t" style="font-size:15px">Wall of Fire</span><span class="s4-res__s">Level 4 evocation</span></span><span class="s4-chev" aria-hidden="true"></span></a>
+        <a class="s4-res" href="#" style="grid-template-columns:30px minmax(0,1fr) 20px;min-height:40px;padding:3px 6px"><span class="hk-iring"><i-icon name="necklace" size="15"></i-icon></span><span class="s4-res__name"><span class="s4-res__t" style="font-size:15px">Necklace of Fireballs</span><span class="s4-res__s">Magic item · rare</span></span><span class="s4-chev" aria-hidden="true"></span></a>
+        <a class="s4-res" href="#" style="grid-template-columns:30px minmax(0,1fr) 20px;min-height:40px;padding:3px 6px"><span class="hk-iring"><i-icon name="crystal-wand" size="15"></i-icon></span><span class="s4-res__name"><span class="s4-res__t" style="font-size:15px">Wand of Fireballs</span><span class="s4-res__s">Magic item · rare · 7 charges</span></span><span class="s4-chev" aria-hidden="true"></span></a>
+      </section>
+
+    </div>
+
+    <section class="hk-leaf" aria-labelledby="licTitle" style="transform:rotate(-.2deg);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:12px 24px">
+      <x-tex kind="paper"></x-tex>
+      <h2 class="s4-h2" id="licTitle"><i-icon name="wax-seal" size="18"></i-icon>Licence</h2>
+      <p class="s4-p" style="font-size:14px;color:var(--text-2)">This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, licensed under the Creative Commons Attribution 4.0 International License.</p>
+      <a class="s4-link" href="#" style="font-size:14px">creativecommons.org/licenses/by/4.0/legalcode</a>
+    </section>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Exit">
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button" title="Back to Ilyana Vorn's sheet"><i-icon name="return-arrow" size="17"></i-icon>Back</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button" title="Add Fireball to Ilyana Vorn's spells"><i-icon name="plus" size="17"></i-icon>Add to hero</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Copy link to this entry" title="Copy link to this entry"><i-icon name="share" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Open the pack" title="Open the pack: SRD 5.2.1 (2024 rules)"><i-icon name="chest" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="templar-shield" size="16" style="color:var(--brass)"></i-icon>Opened from Ilyana Vorn's sheet</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

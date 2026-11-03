@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Campaign settings, DM (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="The Emberfall Company" live="1" chiptitle="The Emberfall Company, session live, round 3"></x-rail>
+  <x-chead name="The Emberfall Company" role="dm" tab="settings" members="5" pregens="1" session="live" round="3" elapsed="1 h 12 min"></x-chead>
+
+  <main style="z-index:1;display:flex;flex-direction:column;gap:14px;padding:18px 22px 24px;flex:1 1 auto;min-width:0">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <h2 class="h1" style="font-size:26px;line-height:30px"><i-icon name="cog" size="24"></i-icon>Settings</h2>
+      <span class="hintG">every change saves as you make it and reaches the table at once</span>
+      <span style="flex:1 1 auto"></span>
+      <span class="hk-chip hk-chip--dark" role="status" style="height:28px;font-size:14px" title="All changes saved · 20:31"><i-icon name="check-mark" size="13" style="color:var(--moss-top)"></i-icon>Saved · just now</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 540px;gap:20px;align-items:start">
+      <!-- left: rules, visibility, joining -->
+      <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+        <section class="hk-leaf" aria-labelledby="hr" style="transform:rotate(-.15deg);display:flex;flex-direction:column;gap:0;padding:16px 20px 12px">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" id="hr"><i-icon name="scroll-unfurled" size="20"></i-icon>House rules</h2><span class="hk-hint">how this table plays; the engine reads these</span></div>
+
+          <div class="setrow"><div class="setlab"><label for="slvl">Starting level</label><small>new heroes and pregens start here</small></div><div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 64px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One level lower" title="−1" style="width:36px;height:36px"><i-icon name="minus" size="14"></i-icon></button><input class="hk-numfield__in" id="slvl" type="number" value="3" min="1" max="20"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One level higher" title="+1" style="width:36px;height:36px"><i-icon name="plus" size="14"></i-icon></button></div></div>
+          <div class="setrow"><div class="setlab"><span>Starting gold instead of equipment</span><small>on: a new hero may take the class&#8217;s starting gold and buy gear in the wizard instead of the equipment kit; off: the wizard offers the kit only</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Starting gold instead of equipment" style="min-height:36px"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+          <div class="setrow"><div class="setlab"><span>Multiclassing</span><small>When off, level-ups skip the class choice and continue in the hero&#8217;s class.</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Multiclassing" style="min-height:36px"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+          <div class="setrow"><div class="setlab"><span>Players add items themselves</span><small>off: only the DM grants items; players&#8217; Add item is locked</small></div><button class="hk-toggle" type="button" role="switch" aria-checked="true" aria-label="Players add items themselves" style="min-height:36px"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+          <div class="setrow"><div class="setlab"><label for="attn">Attunement limit</label><small>magic items a hero can be attuned to at once; the SRD says 3</small></div><div class="hk-numfield hk-numfield--leaf" style="grid-template-columns:36px 64px 36px"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One fewer" title="−1" style="width:36px;height:36px"><i-icon name="minus" size="14"></i-icon></button><input class="hk-numfield__in" id="attn" type="number" value="3" min="0" max="10"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One more" title="+1" style="width:36px;height:36px"><i-icon name="plus" size="14"></i-icon></button></div></div>
+          <div class="setrow"><div class="setlab"><span id="adv">Advancement</span><small>XP totals on the sheets, or levels you grant at milestones</small></div><div class="seg" role="radiogroup" aria-labelledby="adv"><button class="segb segOn" type="button" role="radio" aria-checked="true"><i-icon name="laurels" size="14"></i-icon>Experience points</button><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="level-end-flag" size="14"></i-icon>Milestone</button></div></div>
+          <div class="setrow"><div class="setlab"><span id="hpl">HP on level up</span><small>what the level-up flow offers</small></div><div class="seg" role="radiogroup" aria-labelledby="hpl"><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="dice-twenty-faces-twenty" size="14"></i-icon>Roll</button><button class="segb segOn" type="button" role="radio" aria-checked="true"><i-icon name="scales" size="14"></i-icon>Average</button><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="person" size="14"></i-icon>Player&#8217;s choice</button></div></div>
+          <div class="setrow"><div class="setlab"><span id="enc">Encumbrance</span><small>per hero on their sheet; this is the table&#8217;s default</small></div><div class="seg" role="radiogroup" aria-labelledby="enc"><button class="segb" type="button" role="radio" aria-checked="false">Off</button><button class="segb segOn" type="button" role="radio" aria-checked="true"><i-icon name="weight" size="14"></i-icon>Standard</button><button class="segb" type="button" role="radio" aria-checked="false" title="Encumbered and heavily encumbered tiers slow the hero">Variant (tiers)</button></div></div>
+          <div class="setrow"><div class="setlab"><span id="eos">Editing outside a session</span><small>sheet edits between sessions; rolls and chat are always allowed</small></div><div class="seg" role="radiogroup" aria-labelledby="eos"><button class="segb segOn" type="button" role="radio" aria-checked="true">Free</button><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="crown" size="14"></i-icon>Needs DM approval</button><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="padlock" size="14"></i-icon>Locked</button></div></div>
+          <div class="setrow"><div class="setlab"><span>Strict rule validation</span><small>off: the builder only warns about illegal choices</small></div><button class="hk-toggle" type="button" role="switch" style="min-height:36px" aria-checked="true" aria-label="Strict rule validation"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+          <div class="setrow"><div class="setlab"><span>Allow manual overrides</span><small>players may override values on their own sheets, with a reason</small></div><button class="hk-toggle" type="button" role="switch" style="min-height:36px" aria-checked="true" aria-label="Allow manual overrides"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+          <div class="setrow" style="border-bottom:0"><div class="setlab"><span>Players manage their own conditions</span><small>on: a player can end or edit their own conditions, for example after drinking a potion. Off: only you end or edit conditions on linked heroes; their chips show a &#8220;Managed by your DM&#8221; lock. Your Advance round still ticks every round-based duration either way.</small></div><button class="hk-toggle hk-focus-demo" type="button" role="switch" style="min-height:36px" aria-checked="true" aria-label="Players manage their own conditions"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+        </section>
+
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start">
+          <section class="hk-leaf" aria-labelledby="vis" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:0;padding:16px 20px 12px">
+            <x-tex kind="paper"></x-tex>
+            <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" id="vis"><i-icon name="eye" size="20"></i-icon>Visibility</h2></div>
+            <div class="setrow" style="grid-template-columns:minmax(0,1fr);gap:6px"><div class="setlab"><span id="ps">Party sheets</span><small>what players see of each other on the Party tab</small></div><div class="seg" role="radiogroup" aria-labelledby="ps" style="align-self:flex-start"><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="sight-disabled" size="14"></i-icon>Hidden</button><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="eye" size="14"></i-icon>Overview only</button><button class="segb segOn" type="button" role="radio" aria-checked="true"><i-icon name="open-book" size="14"></i-icon>Full sheets</button></div></div>
+            <div class="setrow" style="grid-template-columns:minmax(0,1fr);gap:6px"><div class="setlab"><span id="rv">Roll visibility</span><small>default for players&#8217; rolls on the Table</small></div><div class="seg" role="radiogroup" aria-labelledby="rv" style="align-self:flex-start"><button class="segb segOn" type="button" role="radio" aria-checked="true"><i-icon name="megaphone" size="14"></i-icon>Everyone</button><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="crown" size="14"></i-icon>DM only</button></div></div>
+            <div class="setrow" style="border-bottom:0"><div class="setlab"><span>Players may roll privately</span><small>a private roll shows only to the roller</small></div><button class="hk-toggle" type="button" role="switch" style="min-height:36px" aria-checked="true" aria-label="Players may roll privately"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+          </section>
+          <section class="hk-leaf" aria-labelledby="jn" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:0;padding:16px 20px 12px">
+            <x-tex kind="paper"></x-tex>
+            <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" id="jn"><i-icon name="entry-door" size="20"></i-icon>Joining</h2><span class="hk-hint">the code and QR live on the Lobby tab</span></div>
+            <div class="setrow"><div class="setlab"><span>Open for joining</span><small>off: the code stops working until you open it again</small></div><button class="hk-toggle" type="button" role="switch" style="min-height:36px" aria-checked="true" aria-label="Open for joining"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">on</span></button></div>
+            <div class="setrow" style="border-bottom:0"><div class="setlab"><span>New members need DM approval</span><small>they wait in the Lobby until you let them in</small></div><button class="hk-toggle" type="button" role="switch" style="min-height:36px" aria-checked="false" aria-label="New members need DM approval"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span><span style="font-size:14px;color:var(--text-2);width:28px">off</span></button></div>
+            <div class="hk-rule" style="margin:8px 0"></div>
+            <div class="setrow" style="border-bottom:0;min-height:0"><div class="setlab"><span>Pending approvals</span><small>none right now</small></div><span class="hk-chip" style="height:24px">0</span></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- right: packs, export, danger -->
+      <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+        <section class="hk-leaf" aria-labelledby="pk" style="transform:rotate(.15deg);display:flex;flex-direction:column;gap:0;padding:16px 20px 14px">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0 0 6px"><h2 class="hk-leaf__title" id="pk"><i-icon name="chest" size="20"></i-icon>Content packs</h2><div class="hk-leaf__actions"><span class="hk-has-tip halo" tabindex="0" aria-describedby="tipQuota" style="display:flex;align-items:center;gap:8px;min-height:28px"><span class="hk-gauge" style="width:72px;height:10px" role="img" aria-label="1 of 6 packs enabled"><span class="hk-gauge__brass" style="display:block;width:16.6%"></span></span><span class="hk-hint" style="font-style:normal">1 / 6 packs enabled</span><span class="hk-tip hk-tip--left" id="tipQuota" role="tooltip">The campaign stores up to 6 packs for its members<span class="hk-tip__sub">disable one before enabling another when it is full</span></span></span></div></div>
+          <p class="hk-hint" style="margin:0 0 4px">Packs you enable are shared with every member; their heroes can pin the campaign&#8217;s version. The SRD is always on.</p>
+
+          <div class="packrow"><span class="hk-iring" style="width:36px;height:36px"><i-icon name="open-book" size="18"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">SRD 5e 2024</b><span class="hk-hint">version 0.1.0 · core rules, always enabled</span></div><span class="hk-chip hk-chip--moss" style="height:24px"><i-icon name="check-mark" size="12"></i-icon>core</span></div>
+
+          <div class="packrow" style="grid-template-columns:36px minmax(0,1fr)"><span class="hk-iring" style="width:36px;height:36px"><i-icon name="chest" size="18"></i-icon></span><div style="display:flex;flex-direction:column;gap:6px;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:16px">Emberfall Homebrew</b><span class="hk-chip hk-chip--moss" style="height:22px"><i-icon name="check-mark" size="11"></i-icon>enabled · 1.2.0</span><span class="hk-chip hk-chip--warning" style="height:22px" title="This device has 1.3.0; the campaign still shares 1.2.0"><i-icon name="upgrade" size="11"></i-icon>1.3.0 on this device</span></div><span class="hk-hint">14 items, 6 spells, 2 feats · shared with 5 members · updating sends 1.3.0 to everyone next time they open the campaign</span><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="hk-btn hk-btn--brass" type="button" title="Members download 1.3.0 next time they open the campaign; heroes pinned to 1.2.0 get the pin banner"><i-icon name="upgrade" size="14"></i-icon>Update campaign version to 1.3.0</button><button class="hk-btn hk-btn--ghost" type="button">Disable</button></div></div></div>
+
+          <div class="packrow"><span class="hk-iring" style="width:36px;height:36px"><i-icon name="spider-face" size="18"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Salt King Bestiary</b><span class="hk-hint">version 0.4.0 · 31 creatures · not enabled for this campaign</span></div><button class="hk-btn hk-btn--brass" type="button"><i-icon name="check-mark" size="14"></i-icon>Enable</button></div>
+
+          <div class="packrow" style="border-bottom:0"><span class="hk-iring" style="width:36px;height:36px"><i-icon name="gems" size="18"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Trinkets and Oddities</b><span class="hk-hint">version 2.0.1 · 40 items</span></div><button class="hk-btn hk-btn--brass hk-btn--loading" type="button" aria-busy="true"><span class="hk-spin" aria-hidden="true"></span><span class="hk-btn__label">Updating the campaign…</span></button></div>
+
+          <div class="hk-rule" style="margin:10px 0 8px"></div>
+          <span class="hk-hint" style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span class="pdot"></span>Variant: the same section as a member sees it</span>
+          <div class="hk-block" style="gap:0;padding:4px 10px">
+            <div class="packrow" style="padding:6px 0"><span class="hk-iring" style="width:30px;height:30px"><i-icon name="chest" size="15"></i-icon></span><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><b style="font-size:15px">Emberfall Homebrew</b><span class="hk-hint" style="font-size:13px">enabled for the campaign: version 1.2.0</span></div><span class="hk-chip hk-chip--moss" style="height:24px" title="Installed on this device"><i-icon name="check-mark" size="12"></i-icon>Installed</span></div>
+            <div class="packrow" style="padding:6px 0;border-bottom:0"><span class="hk-iring" style="width:30px;height:30px"><i-icon name="gems" size="15"></i-icon></span><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><b style="font-size:15px">Trinkets and Oddities</b><span class="hk-hint" style="font-size:13px">enabled for the campaign: version 2.0.1</span></div><span class="hk-chip" style="height:24px" aria-busy="true"><span class="hk-spin" style="width:11px;height:11px;border-width:1.5px" aria-hidden="true"></span>Installing…</span></div>
+          </div>
+        </section>
+
+        <section class="hk-leaf" aria-labelledby="ex" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:8px;padding:16px 20px 16px">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="ex"><i-icon name="share" size="20"></i-icon>Export</h2></div>
+          <p style="margin:0;font-size:15px;line-height:1.4">A backup of the campaign&#8217;s own records (settings, roster, sessions and the log). Members&#8217; sheets and images stay with their owners. The same action sits on the strap on every campaign tab.</p>
+          <div><button class="hk-btn hk-btn--l hk-btn--leather" type="button"><i-icon name="share" size="18"></i-icon>Export campaign…</button></div>
+        </section>
+
+        <section class="hk-leaf" aria-labelledby="dz" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:10px;padding:16px 20px 16px">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="dz"><i-icon name="exit-door" size="20"></i-icon>Leave or delete</h2><span class="hk-hint">both ask you to confirm</span></div>
+          <div class="setrow"><div class="setlab"><span>Leave campaign</span><small>you run this table, so you can&#8217;t leave it; delete it instead, or keep it and simply stop playing</small></div><button class="hk-btn hk-btn--ghost" type="button" disabled="disabled" aria-disabled="true" title="You are the DM: a campaign can't be left by its DM">Leave campaign…</button></div>
+          <div class="setrow" style="border-bottom:0"><div class="setlab"><span>Delete campaign</span><small>removes the campaign, its log and its join code for everyone; members keep their heroes</small></div><button class="hk-btn hk-btn--ember" type="button"><i-icon name="trash-can" size="14"></i-icon>Delete campaign…</button></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <x-strap kind="dm" session="live" sel="Ilyana Vorn" tip="export" status="DM · 5 members · session live, round 3" sicon="crown"></x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

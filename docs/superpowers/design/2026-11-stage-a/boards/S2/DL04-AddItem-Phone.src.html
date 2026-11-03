@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — додати з бібліотеки, аркуш (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <div aria-hidden="true" style="position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+    <x-part name="pcombat"></x-part>
+  </div>
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="bag"></x-part>
+  <div class="dim"></div>
+
+  <section class="psheet" role="dialog" aria-modal="true" aria-labelledby="libT" style="height:760px;gap:10px;padding-bottom:0">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <div class="grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:8px"><x-seal state="full" icon="open-book" size="34" seed="3"></x-seal><h2 class="leafTitle" id="libT" style="font-size:22px;flex:1 1 auto">Додати з бібліотеки</h2><button class="ico icoP icoLeaf" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <label class="hk-search" style="height:44px"><i-icon name="magnifying-glass" size="18"></i-icon><input class="hk-search__in" type="search" value="зілля л" aria-label="Пошук у бібліотеці"><button class="ico icoSm icoLeaf" type="button" aria-label="Очистити пошук" title="Очистити пошук" style="width:30px;height:30px"><i-icon name="cross-mark" size="11"></i-icon></button></label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap" role="group" aria-label="Тип"><button class="chip chipBtn chipOn" type="button" aria-pressed="true" style="height:36px">Усе</button><button class="chip chipBtn" type="button" aria-pressed="false" style="height:36px"><i-icon name="broadsword" size="13" style="color:#8A6A2A"></i-icon>Зброя</button><button class="chip chipBtn" type="button" aria-pressed="false" style="height:36px"><i-icon name="chain-mail" size="13" style="color:#8A6A2A"></i-icon>Обладунки</button><button class="chip chipBtn" type="button" aria-pressed="false" style="height:36px"><i-icon name="backpack" size="13" style="color:#8A6A2A"></i-icon>Спорядження</button><button class="chip chipBtn" type="button" aria-pressed="false" style="height:36px"><i-icon name="crystal-wand" size="13" style="color:#8A6A2A"></i-icon>Магічні</button><button class="chip chipBtn" type="button" aria-pressed="false" style="height:36px"><i-icon name="health-potion" size="13" style="color:#8A6A2A"></i-icon>Витратні</button></div>
+    <span class="hint hintP" style="display:flex;align-items:center;gap:6px;font-size:14px"><span class="spin" aria-hidden="true"></span>пошук серед 960 предметів…</span>
+    <div style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:auto" aria-busy="true" aria-label="Результати">
+      <div class="irow irowOn" aria-selected="true" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:56px;margin:0 -6px;padding:4px 6px"><span class="iring iringP"><i-icon name="health-potion" size="16"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Зілля лікування</b><span class="th" style="font-size:14px">витратне · звичайне · 0,5 фнт · 50 зм</span></span><span style="display:flex;gap:4px;align-items:center"><span class="glyph" tabindex="0" aria-describedby="tipDet"><a href="#" class="ico icoP icoLeaf" aria-label="Деталі: Зілля лікування" title="Деталі"><i-icon name="info" size="16"></i-icon></a><span class="tip" id="tipDet" role="tooltip" style="left:auto;right:0;transform:none;font-size:15px;white-space:normal;width:200px">Деталі<span class="tipSub">Опис і властивості, як у Бібліотеці.</span></span></span><span class="chip chipOn" style="height:30px"><i-icon name="check-mark" size="12"></i-icon>обрано</span></span></div>
+      <div class="irow" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:56px"><span class="iring iringP"><i-icon name="round-potion" size="16"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Зілля героїзму</b><span class="th" style="font-size:14px">магічне · рідкісне · 10 тимчасових ОЗ на 1 годину</span></span><span style="display:flex;gap:4px;align-items:center"><a href="#" class="ico icoP icoLeaf" aria-label="Деталі: Зілля героїзму" title="Деталі"><i-icon name="info" size="16"></i-icon></a><button class="btn btnParch btnP" type="button" style="padding:0 12px"><i-icon name="plus" size="12"></i-icon>Додати</button></span></div>
+      <div class="irow" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:56px;opacity:.55"><span class="iring iringP"><span class="skel" style="width:16px;height:16px;border-radius:50%"></span></span><span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="skel" style="width:150px"></span><span class="skel" style="width:220px;height:11px"></span></span><span class="skel" style="width:44px;height:30px;border-radius:999px"></span></div>
+      <div class="irow" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:56px;opacity:.4;border-bottom:0"><span class="iring iringP"><span class="skel" style="width:16px;height:16px;border-radius:50%"></span></span><span style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="skel" style="width:120px"></span><span class="skel" style="width:190px;height:11px"></span></span><span class="skel" style="width:44px;height:30px;border-radius:999px"></span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px"><label class="th" for="qty" style="font-size:15px">Кількість</label><button class="stepBtn stepBtnP" type="button" aria-label="На один менше" title="На один менше"><i-icon name="minus" size="14"></i-icon></button><input class="numIn numInP" id="qty" type="number" value="2" min="1" style="width:64px"><button class="stepBtn stepBtnP" type="button" aria-label="На один більше" title="На один більше"><i-icon name="plus" size="14"></i-icon></button><span class="hint hintP" style="font-size:14px;margin-left:auto">1 фнт разом</span></div>
+    <div class="hk-strap" style="margin:0 -14px 0;border-radius:0;display:flex;align-items:center;gap:8px;padding:8px 12px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnP" type="button">Скасувати</button><span style="flex:1 1 auto"></span><button class="btn btnBrass btnP" type="button"><i-icon name="swap-bag" size="16"></i-icon>Додати ×2</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

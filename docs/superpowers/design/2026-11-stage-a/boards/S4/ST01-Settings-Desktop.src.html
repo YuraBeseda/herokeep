@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings — account, appearance, storage, packs, about (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="settings" lang="en"></x-rail>
+
+  <main class="s4-main" style="display:grid;grid-template-columns:230px minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start">
+    <!-- index -->
+    <nav class="hk-leaf" aria-label="Settings sections" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:8px;padding:14px 12px;position:sticky;top:18px">
+      <x-tex kind="paper"></x-tex>
+      <h1 style="margin:0 0 4px 8px;font-family:var(--font-display);font-weight:400;font-size:26px;line-height:30px;color:var(--text-1);display:flex;align-items:center;gap:8px"><i-icon name="cog" size="22" style="color:var(--accent-strong)"></i-icon>Settings</h1>
+      <div class="s4-index">
+        <a class="s4-index__a s4-index__a--on" href="#" aria-current="true"><i-icon name="hood" size="16"></i-icon>Account</a>
+        <a class="s4-index__a" href="#"><i-icon name="paint-roller" size="16"></i-icon>Appearance</a>
+        <a class="s4-index__a" href="#"><i-icon name="database" size="16"></i-icon>Storage</a>
+        <a class="s4-index__a" href="#"><i-icon name="chest" size="16"></i-icon>Content packs</a>
+        <a class="s4-index__a" href="#"><i-icon name="info" size="16"></i-icon>About &amp; licences</a>
+      </div>
+      <span class="hk-hint" style="margin:4px 8px 0">Changes apply immediately and stay on this device. Account settings follow you.</span>
+    </nav>
+
+    <!-- column A -->
+    <div class="s4-col">
+      <section class="hk-leaf" aria-labelledby="accTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:12px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="accTitle"><i-icon name="hood" size="20"></i-icon>Account</h2><span class="hk-chip hk-chip--moss" title="Signed in; sync is on"><i-icon name="check-mark" size="11"></i-icon>signed in</span></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="hk-iring" style="width:44px;height:44px"><i-icon name="hood" size="24"></i-icon></span>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:18px;font-family:var(--font-display);font-weight:400">yura</b><span class="hk-hint">4 heroes sync to this account from 3 devices. There is no e-mail: recovery codes are the only way back in.</span></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <h3 class="s4-h3" style="margin-bottom:4px"><i-icon name="laptop" size="15"></i-icon>Devices</h3>
+          <div class="s4-dev"><span class="hk-iring"><i-icon name="laptop" size="15"></i-icon></span><div style="min-width:0"><b style="font-size:16px">Yura's laptop</b> <span class="hk-chip hk-chip--selected" style="height:20px;font-size:13px" title="The device you are using now">This device</span><div class="hk-hint">active now · signed in 3 months ago</div></div><span class="hk-hint">can't revoke itself; use Log out</span></div>
+          <div class="s4-dev"><span class="hk-iring"><i-icon name="smartphone" size="15"></i-icon></span><div style="min-width:0"><b style="font-size:16px">Pixel 8</b><div class="hk-hint">last active 2 hours ago · signed in 2 months ago</div></div><span class="hk-has-tip" style="display:inline-flex"><button class="hk-btn hk-btn--ghost" type="button" aria-describedby="tipRevoke" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)"><i-icon name="exit-door" size="13"></i-icon>Revoke</button><span class="hk-tip hk-tip--left" id="tipRevoke" role="tooltip">Signs Pixel 8 out immediately<span class="hk-tip__sub">its local heroes stay until it syncs again; asks to confirm</span></span></span></div>
+          <div class="s4-dev" style="border-bottom:0"><span class="hk-iring"><i-icon name="tablet" size="15"></i-icon></span><div style="min-width:0"><b style="font-size:16px">Workshop tablet</b><div class="hk-hint">last active 3 days ago · signed in 5 weeks ago</div></div><button class="hk-btn hk-btn--ghost" type="button" title="Signs Workshop tablet out immediately; asks to confirm" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)"><i-icon name="exit-door" size="13"></i-icon>Revoke</button></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <h3 class="s4-h3"><i-icon name="cloud-upload" size="15"></i-icon>Account storage</h3>
+          <div class="s4-bar" title="28 KB of 8 MB used"><div class="s4-bar__fill" style="width:2%"></div></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span><b class="hk-num" style="font-size:16px">28 KB</b> of 8 MB · 4 heroes</span><span class="hk-hint">each hero may use up to 2 MB; portraits count</span></div>
+        </div>
+
+        <div class="hk-row" style="gap:8px;padding-top:2px">
+          <button class="hk-btn hk-btn--leather" type="button" title="Signs this device out; heroes stay on it"><i-icon name="exit-door" size="14"></i-icon>Log out</button>
+          <button class="hk-btn hk-btn--ghost" type="button" title="Ends every session of your account, including this one; asks to confirm" style="color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)"><i-icon name="exit-door" size="13"></i-icon>Log out everywhere</button>
+          <span class="hk-hint">Heroes always stay on this device.</span>
+        </div>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="stoTitle" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="stoTitle"><i-icon name="database" size="20"></i-icon>Storage</h2></div>
+        <div class="s4-bar" title="7.8 MB used: heroes 0.4 MB, packs 3.4 MB, cached images 1.1 MB, app 2.9 MB"><div class="s4-bar__fill" style="width:1%"></div><div class="s4-bar__fill2" style="width:5%"></div><div class="s4-bar__fill" style="width:2%;opacity:.6"></div></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span><b class="hk-num" style="font-size:16px">7.8 MB</b> of 4.1 GB used on this device</span><span class="hk-hint">heroes 0.4 · packs 3.4 · cached images 1.1 · app 2.9</span></div>
+        <div class="hk-block" style="flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1 1 260px;min-width:0"><b style="font-size:15px">Keep data on this device</b><span class="hk-hint">Asks the browser never to evict Herokeep's data when space runs low. Granted once, it stays.</span></div>
+          <span class="hk-chip hk-chip--moss" title="Granted on 14 Aug 2026"><i-icon name="check-mark" size="11"></i-icon>granted</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">Campaign image cache</b><span class="hk-hint">Portraits and tokens shared in campaigns are cached up to this limit; 1.1 MB in use.</span></div>
+          <div class="hk-field"><label class="hk-field__label" for="cache">Limit</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="cache" style="width:130px"><option>100 MB</option><option>250 MB</option><option selected>500 MB</option><option>1 GB</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+        </div>
+      </section>
+
+      <!-- signed-out variant, drawn small -->
+      <div class="s4-inset">
+        <span class="s4-tag"><i-icon name="hood" size="14"></i-icon>Account section when signed out</span>
+        <section class="hk-leaf" aria-label="Account, signed out" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:10px;padding:14px 18px;width:100%">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title"><i-icon name="hood" size="20"></i-icon>Account</h2><span class="hk-chip" title="Not signed in; heroes stay on this device only">this device only</span></div>
+          <p class="s4-p">Sign in to sync your heroes across devices and join campaigns from any of them. Accounts need no e-mail; keep your recovery codes.</p>
+          <div class="hk-row" style="gap:8px"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="entry-door" size="14"></i-icon>Log in</button><button class="hk-btn hk-btn--leather" type="button"><i-icon name="plus" size="14"></i-icon>Create an account</button></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- column B -->
+    <div class="s4-col">
+      <section class="hk-leaf" aria-labelledby="appTitle" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:12px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="appTitle"><i-icon name="paint-roller" size="20"></i-icon>Appearance</h2></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <h3 class="s4-h3"><i-icon name="sun" size="15"></i-icon>Theme</h3>
+          <div role="radiogroup" aria-label="Theme" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+            <button class="s4-theme s4-theme--on" type="button" role="radio" aria-checked="true" style="transform:rotate(.3deg)">
+              <span class="s4-theme__prev" aria-hidden="true" style="background:#241710"><span style="position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(180deg,#5a3a26,#3b2416);box-shadow:0 1px 0 #8a6a2a"></span><span style="position:absolute;left:10px;top:24px;width:58%;height:48px;border-radius:3px;background:#e9dcbb;transform:rotate(-1.5deg);box-shadow:3px 4px 6px rgba(0,0,0,.6)"></span><span style="position:absolute;right:10px;top:30px;width:28%;height:40px;border-radius:3px;background:linear-gradient(180deg,#5a3a26,#3b2416);box-shadow:inset 0 0 0 1px rgba(201,162,78,.6)"></span><span style="position:absolute;left:0;right:0;bottom:0;height:10px;background:linear-gradient(180deg,#5a3a26,#3b2416)"></span><span style="position:absolute;right:16px;top:6px;width:30px;height:4px;border-radius:2px;background:#c9a24e"></span></span>
+              <span class="s4-theme__name"><i-icon name="moon" size="15"></i-icon>Tavern<span style="margin-left:auto"><x-seal state="full" icon="check-mark" size="22" seed="2" hint="Selected"></x-seal></span></span>
+              <span class="s4-theme__hint">Dark oak, candlelight, parchment and brass. The default.</span>
+            </button>
+            <button class="s4-theme" type="button" role="radio" aria-checked="false" style="transform:rotate(-.2deg)">
+              <span class="s4-theme__prev" aria-hidden="true" style="background:#d6c6a0"><span style="position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(180deg,#5a3a26,#3b2416);box-shadow:0 1px 0 #8a6a2a"></span><span style="position:absolute;left:10px;top:24px;width:58%;height:48px;border-radius:3px;background:#f4ecd6;transform:rotate(-1.5deg);box-shadow:2px 3px 5px rgba(60,40,10,.35)"></span><span style="position:absolute;right:10px;top:30px;width:28%;height:40px;border-radius:3px;background:linear-gradient(180deg,#5a3a26,#3b2416);box-shadow:inset 0 0 0 1px rgba(201,162,78,.6)"></span><span style="position:absolute;left:0;right:0;bottom:0;height:10px;background:linear-gradient(180deg,#5a3a26,#3b2416)"></span><span style="position:absolute;right:16px;top:6px;width:30px;height:4px;border-radius:2px;background:#c9a24e"></span></span>
+              <span class="s4-theme__name"><i-icon name="sun" size="15"></i-icon>Scroll</span>
+              <span class="s4-theme__hint">A vellum desk by daylight: the same leaves and brass, ink text.</span>
+            </button>
+            <button class="s4-theme" type="button" role="radio" aria-checked="false" style="transform:rotate(.2deg)">
+              <span class="s4-theme__prev" aria-hidden="true" style="background:#141210"><span style="position:absolute;left:0;right:0;top:0;height:14px;background:#2a2622;box-shadow:0 1px 0 #c9a24e"></span><span style="position:absolute;left:10px;top:24px;width:58%;height:48px;border-radius:3px;background:#ffffff;box-shadow:0 0 0 1px #777"></span><span style="position:absolute;right:10px;top:30px;width:28%;height:40px;border-radius:3px;background:#2a2622;box-shadow:inset 0 0 0 1px #c9a24e"></span><span style="position:absolute;left:0;right:0;bottom:0;height:10px;background:#2a2622"></span><span style="position:absolute;right:16px;top:6px;width:30px;height:4px;border-radius:2px;background:#c9a24e"></span></span>
+              <span class="s4-theme__name"><i-icon name="plain-circle" size="15"></i-icon>Plain</span>
+              <span class="s4-theme__hint">High contrast, flat, no textures or tilt. Easiest on weak devices.</span>
+            </button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">Density</b><span class="hk-hint">Compact rows are 28 px, comfortable 36 px; picker cards grow with it. Buttons stay the same size.</span></div>
+          <div class="s4-seg" role="radiogroup" aria-label="Density"><button class="s4-seg__b s4-seg__b--on" type="button" role="radio" aria-checked="true"><i-icon name="contract" size="13"></i-icon>Compact</button><button class="s4-seg__b" type="button" role="radio" aria-checked="false"><i-icon name="expand" size="13"></i-icon>Comfortable</button></div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">Motion</b><span class="hk-hint">Damage shake, seal spend, level-up flourish, the candle flicker. Off also when your system asks for reduced motion.</span></div>
+          <button class="hk-toggle" type="button" role="switch" aria-checked="true"><span class="hk-toggle__track" aria-hidden="true"><span class="hk-toggle__knob"></span></span><span>On</span></button>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:15px">Language</b><span class="hk-hint">Pack text stays in its own language until a translation pack is installed.</span></div>
+          <div class="hk-field"><label class="hk-sr" for="lang">Language</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="lang" style="width:170px"><option selected>English</option><option>Українська</option><option>Русский</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+        </div>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="pkTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="pkTitle"><i-icon name="chest" size="20"></i-icon>Content packs</h2></div>
+        <div class="hk-feat"><i-icon name="locked-chest" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Core rules: SRD 5.2.1 (2024 rules)</span><span class="hk-plate">0.1.0</span></div>
+        <div class="hk-feat"><i-icon name="chest" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">4 content packs installed</span><span class="hk-chip hk-chip--warning" title="Sample content 1.1.0 is ready"><i-icon name="upgrade" size="11"></i-icon>1 update</span></div>
+        <div class="hk-row" style="gap:8px"><a class="hk-btn hk-btn--leather" href="#"><i-icon name="chest" size="14"></i-icon>Open packs</a><a class="hk-btn hk-btn--ghost" href="#"><i-icon name="quill" size="13"></i-icon>My homebrew</a><a class="s4-link" href="#" style="font-size:14px;margin-left:auto" title="A sample translation pack for testing">Import the sample pack (demo)</a></div>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="aboutTitle" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:8px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="aboutTitle"><i-icon name="info" size="20"></i-icon>About &amp; licences</h2><span class="hk-plate" title="Version 0.1.0 · built 2026-11-02">Herokeep 0.1.0</span></div>
+        <div class="s4-kv" style="font-size:14px">
+          <span class="s4-kv__k">SRD text</span><span class="s4-kv__v s4-wrap" style="display:block">This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, licensed under the <a class="s4-link" href="#">Creative Commons Attribution 4.0 International License</a>.</span>
+          <span class="s4-kv__k">Rules data</span><span class="s4-kv__v s4-wrap" style="display:block">Structured SRD data derived from the <a class="s4-link" href="#">Open5e project</a>.</span>
+          <span class="s4-kv__k">Icons</span><span class="s4-kv__v s4-wrap" style="display:block">Icons made by Lorc, Delapouite, Skoll, Carl Olsen, DarkZaitzev, Lucas and other contributors. Available on <a class="s4-link" href="#">game-icons.net</a> (CC BY 3.0).</span>
+          <span class="s4-kv__k">Fonts</span><span class="s4-kv__v s4-wrap" style="display:block">Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License, via Google Fonts.</span>
+          <span class="s4-kv__k">Built</span><span class="s4-kv__v">2 Nov 2026 · installed as an app · <a class="s4-link" href="#">Release notes</a></span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button" title="Open the packs screen"><i-icon name="chest" size="17"></i-icon>Manage packs</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Export all heroes as .hero files" title="Export all heroes as .hero files"><i-icon name="share" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Help" title="Help"><i-icon name="help" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="check-mark" size="16" style="color:var(--brass)"></i-icon>Changes apply immediately</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Campaign party, DM (tablet)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgT" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 92% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" compact="1"></x-rail>
+  <x-chead name="The Emberfall Company" role="dm" tab="party" members="5" pregens="1" session="live" round="3" elapsed="1 h 12 min" wrap="1"></x-chead>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 class="h1" style="font-size:24px;line-height:28px"><i-icon name="three-friends" size="22"></i-icon>Party</h2>
+      <span class="hintG" style="font-size:14px">6 at the table · tap a card&#8217;s chip</span>
+      <span style="flex:1 1 auto"></span>
+      <button class="hk-ico" type="button" aria-label="Add pregen" title="Add pregen"><i-icon name="plus" size="20"></i-icon></button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="rounds" role="status" aria-label="Encounter 2, round 3, since 20:04"><i-icon name="crossed-swords" size="18"></i-icon>Encounter 2 · Round 3<span class="hk-hint" style="color:var(--text-on-leather-3);font-family:var(--font-body);font-size:13px">since 20:04</span></span>
+      <span class="hk-has-tip"><button class="hk-btn hk-btn--l hk-btn--brass" type="button" aria-describedby="tipAdvT" style="padding:0 12px"><i-icon name="sands-of-time" size="18"></i-icon>Advance round</button><span class="hk-tip hk-tip--above" id="tipAdvT" role="tooltip" style="left:0;transform:none">Round 3 → 4: every round-based duration −1<span class="hk-tip__sub">Poisoned 3 → 2 (Ilyana); Bless and Hunter&#8217;s Mark keep running</span></span></span>
+      <button class="hk-btn hk-btn--l hk-btn--ghost-leather" type="button" title="Ends the fight; durations keep running" style="padding:0 12px"><i-icon name="level-end-flag" size="18"></i-icon>End encounter</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start">
+      <x-pcard id="ilyana" mode="dm" sel="1" tilt="-.25deg"></x-pcard>
+      <x-pcard id="bramble" mode="dm" tilt=".2deg"></x-pcard>
+      <x-pcard id="maren" mode="dm" tilt="-.15deg"></x-pcard>
+      <x-pcard id="thorne" mode="dm" tilt=".25deg"></x-pcard>
+      <x-pcard id="oskar" mode="dm" tilt="-.3deg"></x-pcard>
+      <x-pcard id="guard" mode="dm" tilt=".2deg"></x-pcard>
+    </div>
+  </div>
+
+  <x-strap kind="dm" session="live" sel="Ilyana Vorn" compact="1"></x-strap>
+
+  <!-- quick-effects bottom sheet over the grid, above the strap -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:4;bottom:70px"></div>
+  <section class="sheetP" role="dialog" aria-modal="true" aria-labelledby="qfxT" style="bottom:70px;gap:10px;padding:10px 20px 16px;font-size:15px">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-sheet__grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:12px"><x-mono text="IV" w="44" h="50" fs="19" label="Portrait placeholder, monogram IV"></x-mono><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto"><h2 id="qfxT" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400">Ilyana Vorn</h2><span class="hk-hint">quick effects · 31 / 44 HP, +5 temp · AC 18</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Close" title="Close (Esc)" style="width:36px;height:36px"><i-icon name="cross-mark" size="13"></i-icon></button></div>
+    <div role="tablist" aria-label="Effect" style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" type="button" role="tab" aria-selected="true" style="height:34px"><i-icon name="broken-heart" size="14"></i-icon>Damage</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn hk-chip--moss" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="healing" size="14"></i-icon>Heal</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="heart-armor" size="14"></i-icon>Temp HP</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="skull" size="14"></i-icon>Condition</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="laurels" size="14"></i-icon>XP</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="upgrade" size="14"></i-icon>Level</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="swap-bag" size="14"></i-icon>Item</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="inspiration" size="14"></i-icon>Inspiration</button>
+      <button class="hk-chip hk-chip--l hk-chip--btn" type="button" role="tab" aria-selected="false" style="height:34px"><i-icon name="quill" size="14"></i-icon>Override</button>
+    </div>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:end">
+      <div class="hk-field"><label class="hk-field__label" for="dmgT">Damage amount</label><div class="hk-numfield hk-numfield--leaf"><button class="hk-ico hk-ico--leaf" type="button" aria-label="Less" title="−1" style="width:36px;height:36px"><i-icon name="minus" size="14"></i-icon></button><input class="hk-numfield__in" id="dmgT" type="number" value="7" min="0"><button class="hk-ico hk-ico--leaf" type="button" aria-label="More" title="+1" style="width:36px;height:36px"><i-icon name="plus" size="14"></i-icon></button></div></div>
+      <div class="hk-field"><label class="hk-field__label" for="typT">Type</label><input class="hk-input" id="typT" value="piercing"></div>
+      <div class="hk-field"><label class="hk-field__label" for="srcT">Source (optional)</label><input class="hk-input" id="srcT" value="Giant Spider"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button class="hk-btn hk-btn--l hk-btn--ember" type="button"><i-icon name="broken-heart" size="18"></i-icon>Apply 7 damage</button>
+      <span class="hk-hint">Temporary HP (5) absorbs first: 31 → 29 HP · posted to the Table as &#8220;Ilyana took 7 damage&#8221;</span>
+      <span style="flex:1 1 auto"></span>
+      <button class="hk-btn hk-btn--leather" type="button"><i-icon name="open-book" size="14"></i-icon>Open full sheet</button>
+      <button class="hk-btn hk-btn--leather" type="button" title="Give Ilyana Vorn to another member"><i-icon name="shaking-hands" size="14"></i-icon>Hand over to…</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

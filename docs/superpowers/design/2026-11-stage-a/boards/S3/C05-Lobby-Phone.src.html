@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Лобі кампанії, Майстер (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Лобі" action="anticlockwise-rotation" alabel="Згенерувати новий код"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="jcP" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:10px;padding:14px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="jcP" style="font-size:19px"><i-icon name="ticket" size="18"></i-icon>Код запрошення</h2><span class="hk-chip hk-chip--moss" style="height:26px;font-size:14px" title="Відкрита для приєднання: кожен із кодом може приєднатися"><i-icon name="entry-door" size="13"></i-icon>відкрита</span></div>
+      <div style="display:flex;justify-content:center"><span class="codeplate" role="img" aria-label="Код запрошення 91PQ-S10Q" style="height:56px;font-size:30px;padding:0 18px;letter-spacing:.1em">91PQ-S10Q</span></div>
+      <div style="display:flex;justify-content:center"><x-qr size="172" seed="11"></x-qr></div>
+      <p class="hk-hint" style="margin:0;text-align:center;font-size:14px">Скануйте камерою: відкриється екран приєднання з уже заповненим кодом.</p>
+      <button class="hk-btn hk-btn--phone hk-btn--ghost hk-has-tip" type="button" style="justify-content:center" aria-describedby="tipRotP"><i-icon name="anticlockwise-rotation" size="18"></i-icon>Згенерувати новий код<span class="hk-tip hk-tip--above" id="tipRotP" role="tooltip" style="font-size:15px">Старий код і посилання одразу перестануть працювати<span class="hk-tip__sub">учасники залишаються · утримуйте, щоб побачити</span></span></button>
+      <button class="hk-btn hk-btn--phone hk-btn--leather hk-focus-demo" type="button" style="justify-content:center"><i-icon name="files" size="18"></i-icon>Скопіювати посилання-запрошення</button>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="memP" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:2px;padding:14px 14px 10px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" id="memP" style="font-size:19px"><i-icon name="three-friends" size="18"></i-icon>Учасники</h2><span class="hk-hint" style="font-size:14px">5 за столом · 4 онлайн</span></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px"><i-icon name="crown" size="22"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Ви</b><span class="hk-hint" style="font-size:14px;display:flex;align-items:center;gap:6px"><span class="onl onlOn" role="img" aria-label="Онлайн" title="Онлайн"></span>Майстер · без героя</span></span><span></span></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">М</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Міра</b><span class="hk-hint" style="font-size:14px;display:flex;align-items:center;gap:6px"><span class="onl onlOn" role="img" aria-label="Онлайн" title="Онлайн"></span>Гравець · Іляна Ворн</span></span><button class="hk-btn hk-btn--ghost" type="button" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)" title="Видалити Міру з кампанії">Видалити</button></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">Т</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Тарас</b><span class="hk-hint" style="font-size:14px;display:flex;align-items:center;gap:6px"><span class="onl onlOn" role="img" aria-label="Онлайн" title="Онлайн"></span>Гравець · Брембл Андерфут</span></span><button class="hk-btn hk-btn--ghost" type="button" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)" title="Видалити Тараса з кампанії">Видалити</button></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">О</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Олена</b><span class="hk-hint" style="font-size:14px;display:flex;align-items:center;gap:6px"><span class="onl onlOff" role="img" aria-label="Офлайн" title="Офлайн з 20:31"></span>Гравець · Сестра Марен · офлайн</span></span><button class="hk-btn hk-btn--ghost" type="button" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)" title="Видалити Олену з кампанії">Видалити</button></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">Ма</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Марко</b><span class="hk-hint" style="font-size:14px;display:flex;align-items:center;gap:6px"><span class="onl onlOn" role="img" aria-label="Онлайн" title="Онлайн"></span>Гравець · Торн Ешвейл</span></span><button class="hk-btn hk-btn--ghost" type="button" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)" title="Видалити Марка з кампанії">Видалити</button></div>
+      <div class="rowP" style="border-bottom:0"><span class="avatar" style="width:44px;height:44px">П</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Петро</b><span class="hk-hint" style="font-size:14px;display:flex;align-items:center;gap:6px"><span class="onl onlOn" role="img" aria-label="Онлайн" title="Онлайн"></span>Гравець · Оскар Беллоу</span></span><button class="hk-btn hk-btn--ghost" type="button" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)" title="Видалити Петра з кампанії">Видалити</button></div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="pregP" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:8px;padding:14px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" id="pregP" style="font-size:19px"><i-icon name="portrait" size="18"></i-icon>Заготовки</h2><span class="hk-hint" style="font-size:14px">поки гравець не заявить права</span></div>
+      <div class="rowP" style="border-bottom:0"><x-mono text="КВ" w="44" h="44" fs="16" label="Портрет, монограма КВ"></x-mono><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Капітан варти</b><span class="hk-hint" style="font-size:14px">Людина · Воїн 3 · не заявлено</span></span><button class="hk-btn hk-btn--phone hk-btn--leather" type="button" style="height:40px;font-size:15px" title="Передати заготовку учаснику"><i-icon name="shaking-hands" size="15"></i-icon>Передати…</button></div>
+      <button class="hk-btn hk-btn--phone hk-btn--ghost hk-btn--dashed" type="button" style="justify-content:center"><i-icon name="plus" size="16"></i-icon>Додати заготовку персонажа</button>
+    </section>
+  </div>
+
+  <x-pstrap kind="dm"></x-pstrap>
+  <x-tabbar active="lobby"></x-tabbar>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

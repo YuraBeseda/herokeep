@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — printable sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-board" data-theme="tavern" style="gap:12px">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="s5-vign" aria-hidden="true"></div>
+  <header class="s5-title"><span class="s5-tag"><i-icon name="wax-seal" size="13"></i-icon>Later idea</span><h1 class="s5-h1"><i-icon name="files" size="24"></i-icon>Printable sheet</h1><span class="s5-hintG">Export · Print preview</span></header>
+
+  <div class="s5-row" style="gap:10px;flex-wrap:nowrap">
+    <div class="s5-row" style="gap:6px;flex-wrap:nowrap" role="group" aria-label="Paper"><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" type="button" aria-pressed="true">A4</button><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--dark" type="button" aria-pressed="false">Letter</button></div>
+    <button class="hk-toggle" type="button" aria-pressed="true" style="color:var(--text-on-ground);white-space:nowrap" title="Adds a second page with spell descriptions"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span>Spells page</button>
+    <button class="hk-toggle" type="button" aria-pressed="false" style="color:var(--text-on-ground);white-space:nowrap" title="Leaves HP, slots, charges and coins empty to fill in by hand; everything else prints as on the Play sheet"><span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span>Blank boxes for pen</button>
+    <span style="flex:1 1 auto"></span>
+    <button class="hk-btn hk-btn--leather hk-btn--l" type="button" title="Saves the same pages as a PDF"><i-icon name="share" size="16"></i-icon>Save PDF</button>
+    <span class="hk-has-tip" style="display:inline-flex"><button class="hk-btn hk-btn--brass hk-btn--l" type="button" aria-describedby="tipPrint"><i-icon name="files" size="16"></i-icon>Print 2 pages</button><span class="hk-tip hk-tip--left" id="tipPrint" role="tooltip" style="right:0">Page 1: the sheet · page 2: spell descriptions<span class="hk-tip__sub">A4 portrait, black ink, no textures · the browser's print dialog</span></span></span>
+  </div>
+
+  <!-- A4 portrait, ink on paper, no textures -->
+  <div style="display:flex;justify-content:center;flex:1 1 auto;min-height:0">
+  <div class="s5-page" role="img" aria-label="Print preview, page 1 of 2: Ilyana Vorn's sheet in ink on paper" style="width:540px;height:764px;padding:20px 24px 16px">
+    <div class="s5-pg-h"><span class="s5-pg-name">Ilyana Vorn</span><span class="s5-pg-sub">Human · Paladin 5 · Oath of Devotion · Soldier</span><span class="s5-pg-sub" style="margin-left:auto">XP 6,500 / 14,000 · The Emberfall Company</span></div>
+
+    <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) 10px repeat(3,56px);gap:5px;align-items:stretch">
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Str</span><span class="s5-pg-v">16</span><span>+3 · save +3</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Dex</span><span class="s5-pg-v">10</span><span>+0 · save +0</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Con</span><span class="s5-pg-v">14</span><span>+2 · save +2</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Int</span><span class="s5-pg-v">8</span><span>−1 · save −1</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Wis</span><span class="s5-pg-v">12</span><span>+1 · save +4 ●</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Cha</span><span class="s5-pg-v">16</span><span>+3 · save +6 ●</span></div>
+      <span></span>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Armor class</span><span class="s5-pg-v">18</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Initiative</span><span class="s5-pg-v">+0</span></div>
+      <div class="s5-pg-box" style="align-items:center"><span class="s5-pg-l">Speed</span><span class="s5-pg-v">30 ft</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:5px">
+      <div class="s5-pg-box"><span class="s5-pg-l">Hit points</span><span class="s5-row" style="gap:6px;align-items:baseline"><span class="s5-pg-v">31 / 44</span><span>temp 5</span></span><span style="height:14px;border:1px solid #1b1b1b;border-radius:2px;margin-top:2px"></span></div>
+      <div class="s5-pg-box"><span class="s5-pg-l">Hit dice</span><span class="s5-pg-v">4 / 5 d10</span></div>
+      <div class="s5-pg-box"><span class="s5-pg-l">Proficiency</span><span class="s5-pg-v">+3</span></div>
+      <div class="s5-pg-box"><span class="s5-pg-l">Death saves</span><span style="display:flex;gap:3px;align-items:center;margin-top:2px">S <span class="s5-pg-ring"></span><span class="s5-pg-ring"></span><span class="s5-pg-ring"></span></span><span style="display:flex;gap:3px;align-items:center">F <span class="s5-pg-ring"></span><span class="s5-pg-ring"></span><span class="s5-pg-ring"></span></span></div>
+      <div class="s5-pg-box"><span class="s5-pg-l">Passive perception</span><span class="s5-pg-v">11</span><span>Inspiration <span class="s5-pg-chk s5-pg-chk--on"></span></span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;flex:1 1 auto;min-height:0">
+      <!-- left: skills, proficiencies, features -->
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div><div class="s5-pg-h2">Skills</div>
+          <div class="s5-pg-sk"><span class="s5-pg-dot s5-pg-dot--on"></span><span>Athletics (Str)</span><span style="text-align:right">+6</span><span class="s5-pg-dot"></span><span>Acrobatics (Dex)</span><span style="text-align:right">+0</span><span class="s5-pg-dot"></span><span>Animal Handling (Wis)</span><span style="text-align:right">+1</span><span class="s5-pg-dot"></span><span>Arcana (Int)</span><span style="text-align:right">−1</span><span class="s5-pg-dot"></span><span>Deception (Cha)</span><span style="text-align:right">+3</span><span class="s5-pg-dot"></span><span>History (Int)</span><span style="text-align:right">−1</span><span class="s5-pg-dot s5-pg-dot--on"></span><span>Insight (Wis)</span><span style="text-align:right">+4</span><span class="s5-pg-dot s5-pg-dot--on"></span><span>Intimidation (Cha)</span><span style="text-align:right">+6</span><span class="s5-pg-dot"></span><span>Investigation (Int)</span><span style="text-align:right">−1</span><span class="s5-pg-dot"></span><span>Medicine (Wis)</span><span style="text-align:right">+1</span><span class="s5-pg-dot"></span><span>Nature (Int)</span><span style="text-align:right">−1</span><span class="s5-pg-dot"></span><span>Perception (Wis)</span><span style="text-align:right">+1</span><span class="s5-pg-dot"></span><span>Performance (Cha)</span><span style="text-align:right">+3</span><span class="s5-pg-dot s5-pg-dot--on"></span><span>Persuasion (Cha)</span><span style="text-align:right">+6</span><span class="s5-pg-dot"></span><span>Religion (Int)</span><span style="text-align:right">−1</span><span class="s5-pg-dot"></span><span>Sleight of Hand (Dex)</span><span style="text-align:right">+0</span><span class="s5-pg-dot"></span><span>Stealth (Dex) ▾</span><span style="text-align:right">−1</span><span class="s5-pg-dot"></span><span>Survival (Wis)</span><span style="text-align:right">+1</span></div>
+        </div>
+        <div><div class="s5-pg-h2">Proficiencies</div><div style="font-size:9px;line-height:1.3">Armor: all armor, shields<br>Weapons: simple, martial<br>Tools: gaming set (dice)<br>Masteries: Sap (longsword), Slow (javelin)</div></div>
+        <div><div class="s5-pg-h2">Features</div><div style="font-size:9px;line-height:1.3">Lay on Hands · Spellcasting · Weapon Mastery · Fighting Style: Protection · Paladin's Smite · Channel Divinity: Sacred Weapon · Extra Attack · Faithful Steed · Sacred Weapon (Oath of Devotion) · Resourceful, Skillful, Versatile (Human) · Savage Attacker (Soldier)</div></div>
+      </div>
+
+      <!-- right: attacks, resources, spells, bag -->
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+        <div><div class="s5-pg-h2">Attacks</div>
+          <table class="s5-pg-t"><thead><tr><th>Attack</th><th>Hit</th><th>Damage</th><th>Notes</th></tr></thead><tbody>
+          <tr><td>Longsword</td><td>+6</td><td>1d8+3 slashing</td><td>versatile 1d10 · Sap · equipped</td></tr>
+          <tr><td>Javelin ×4</td><td>+6</td><td>1d6+3 piercing</td><td>thrown 30/120 · Slow</td></tr>
+          <tr><td>Unarmed strike</td><td>+6</td><td>4 bludgeoning</td><td></td></tr>
+          </tbody></table></div>
+        <div><div class="s5-pg-h2">Resources</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px 8px;font-size:9px;line-height:1.3">
+            <span>Lay on Hands <b>18 / 25</b> · long rest</span><span>Channel Divinity <span class="s5-pg-chk s5-pg-chk--on"></span> <span class="s5-pg-chk s5-pg-chk--on"></span> · short rest</span><span>Paladin's Smite <span class="s5-pg-chk s5-pg-chk--on"></span> · long rest</span>
+            <span>Slots 1 <span class="s5-pg-chk s5-pg-chk--on"></span> <span class="s5-pg-chk s5-pg-chk--on"></span> <span class="s5-pg-chk s5-pg-chk--on"></span> <span class="s5-pg-chk"></span></span><span>Slots 2 <span class="s5-pg-chk s5-pg-chk--on"></span> <span class="s5-pg-chk s5-pg-chk--on"></span></span><span>Wand of Magic Missiles <b>5 / 7</b> · dawn</span>
+          </div></div>
+        <div><div class="s5-pg-h2">Spells · Charisma · DC 14 · attack +6</div>
+          <div style="font-size:9px;line-height:1.3"><b>1</b> Bless (C) · Cure Wounds · Divine Smite · Shield of Faith · Protection from Evil and Good † · Sanctuary †<br><b>2</b> Aid · Lesser Restoration · Zone of Truth † · Calm Emotions †<br><span style="color:#444">† always prepared (Oath of Devotion) · (C) concentration · descriptions on page 2</span></div></div>
+        <div><div class="s5-pg-h2">Bag · 108 / 240 lb · lightly loaded</div>
+          <div style="columns:2;column-gap:12px;font-size:9px;line-height:1.3">Chain mail (E) 55 lb<br>Shield (E) 6 lb<br>Longsword (E) 3 lb<br>Javelin ×4 8 lb<br>Ring of Protection (E, A)<br>Wand of Magic Missiles 1 lb<br>Potion of Healing ×2 1 lb<br>Holy symbol, amulet (E) 1 lb<br>Healer's kit (3 uses) 3 lb<br>Backpack 5 lb<br>Bedroll 7 lb<br>Rations ×10 20 lb<br>Rope, 50 ft 5 lb<br>Torch ×10 10 lb<br>Waterskin 5 lb<br>Dice set</div>
+          <div style="display:flex;gap:10px;margin-top:4px;font-size:9.5px"><span>Coins:</span><b>4 pp</b><b>38 gp</b><b>12 sp</b><b>55 cp</b><span style="color:#444">≈ 79 gp</span><span style="margin-left:auto">Conditions: Poisoned (3 rounds)</span></div></div>
+        <div style="flex:1 1 auto;display:flex;flex-direction:column;min-height:0"><div class="s5-pg-h2">Notes</div><div style="flex:1 1 auto;background:repeating-linear-gradient(180deg,transparent 0 13px,#9a9a9a 13px 13.6px);min-height:40px"></div></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;border-top:.6px solid #666;padding-top:4px;font-size:8px;color:#444;margin-top:auto"><span>Herokeep · herokeep.app/c/ilyana-vorn</span><span>printed 2 Nov 2026 · page 1 of 2</span></div>
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

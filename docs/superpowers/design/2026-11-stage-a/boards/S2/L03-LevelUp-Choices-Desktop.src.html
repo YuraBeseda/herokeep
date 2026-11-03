@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — level up, feat or ability score improvement (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(300px,320fr) 250px minmax(0,850fr);gap:20px;padding:18px 18px 22px;align-items:start;flex:1 1 auto">
+    <x-part name="folio" tab="levelup" tip="none" classline="Human · Paladin 7" xpw="100%" xptxt="34,300 / 34,000" hp="52" hpmax="62" hpw="75%" tempw="8%" hd="6 / 7 d10"></x-part>
+    <x-part name="steps" cur="3" level="8" h1="Paladin 8" h2="average +8" l3="Feat or improvement" h3="+2 Strength"></x-part>
+
+    <div class="pane" style="gap:18px">
+      <div style="position:relative;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;color:#E9DCBB"><h2 style="margin:0;font:24px/1.1 Forum,serif;font-weight:400;color:#F3E6C8;display:flex;align-items:center;gap:8px"><i-icon name="upgrade" size="22" style="color:#C9A24E"></i-icon>Level 8: feat or Ability Score Improvement</h2><span class="hint" style="color:#E0C27A">one or the other; feats you already have and feats you don’t qualify for stay listed with the reason</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start">
+        <!-- ASI leaf -->
+        <section class="leaf" aria-label="Ability Score Improvement" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 0 0 1px #CBB68C,inset 0 0 24px rgba(139,110,60,.28),5px 7px 14px rgba(10,5,2,.62),0 0 0 2px #C9A24E,0 0 14px rgba(232,204,124,.5)">
+          <x-tex kind="paper"></x-tex>
+          <span class="pickSeal" style="position:absolute;top:-12px;right:-6px"><x-seal state="full" icon="check-mark" size="36" label="Chosen" seed="5"></x-seal></span>
+          <div style="position:relative;display:flex;align-items:center;gap:8px"><h2 class="leafTitle"><i-icon name="muscle-up" size="20" style="color:#8A6A2A"></i-icon>Ability Score Improvement</h2></div>
+          <p class="mdp" style="position:relative">Increase one ability score by 2, or two scores by 1 each. No score can go above 20.</p>
+          <div style="position:relative;display:flex;gap:4px" role="radiogroup" aria-label="How to split the improvement"><button class="chip chipBtn chipOn" type="button" role="radio" aria-checked="true">+2 to one</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false">+1 to two</button></div>
+          <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px">
+            <button class="sealBtn sealOn" type="button" aria-pressed="true" aria-label="Strength 16 to 18" title="Strength 16 to 18" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><span style="position:relative"><x-seal state="full" text="18" size="58" seed="1"></x-seal><span class="sealRing" aria-hidden="true"></span></span><span style="font:15px/1 Forum,serif;color:#2B2118">Strength</span><span class="th">16 → 18</span></button>
+            <button class="sealBtn" type="button" aria-pressed="false" aria-label="Dexterity 10 to 12" title="Dexterity 10 to 12" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="10" size="58" seed="2"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Dexterity</span><span class="th">10 → 12</span></button>
+            <button class="sealBtn" type="button" aria-pressed="false" aria-label="Constitution 14 to 16" title="Constitution 14 to 16" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="14" size="58" seed="3"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Constitution</span><span class="th">14 → 16</span></button>
+            <button class="sealBtn" type="button" aria-pressed="false" aria-label="Intelligence 8 to 10" title="Intelligence 8 to 10" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="8" size="58" seed="4"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Intelligence</span><span class="th">8 → 10</span></button>
+            <button class="sealBtn" type="button" aria-pressed="false" aria-label="Wisdom 12 to 14" title="Wisdom 12 to 14" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="12" size="58" seed="5"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Wisdom</span><span class="th">12 → 14</span></button>
+            <button class="sealBtn" type="button" aria-pressed="false" aria-label="Charisma 16 to 18" title="Charisma 16 to 18" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="16" size="58" seed="6"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Charisma</span><span class="th">16 → 18</span></button>
+          </div>
+          <div class="warn" style="position:relative;background:rgba(203,182,140,.3);box-shadow:inset 0 0 0 1px #CBB68C"><i-icon name="muscle-up" size="18" style="color:#8A6A2A"></i-icon><span><b>Strength 16 → 18</b>: modifier +3 → +4. Longsword to hit +6 → +7, damage 1d8+3 → 1d8+4, Athletics +6 → +7.</span></div>
+        </section>
+
+        <!-- Feat leaf -->
+        <section class="leaf" aria-label="Or take a feat" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:10px">
+          <x-tex kind="paper"></x-tex>
+          <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="leafTitle"><i-icon name="card-pick" size="20" style="color:#8A6A2A"></i-icon>Or take a feat</h2><span style="flex:1 1 auto"></span><label class="hk-search" style="width:200px"><i-icon name="magnifying-glass" size="16"></i-icon><input class="hk-search__in" type="search" placeholder="Search feats" aria-label="Search feats"></label></div>
+          <div style="position:relative;display:flex;gap:6px;flex-wrap:wrap" role="group" aria-label="Filter feats"><button class="chip chipBtn chipOn" type="button" aria-pressed="true">All</button><button class="chip chipBtn" type="button" aria-pressed="false">General</button><button class="chip chipBtn" type="button" aria-pressed="false">Origin</button><button class="chip chipBtn" type="button" aria-pressed="false">Epic boons</button><button class="chip chipBtn" type="button" aria-pressed="false">Available to you</button></div>
+          <div style="position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px">
+            <button class="pick" type="button" aria-pressed="false" style="min-height:118px"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="eye" size="18"></i-icon><span class="pickT" style="font-size:18px">Alert</span></span><span class="pickD">Add your proficiency bonus to initiative; swap initiative with a willing ally.</span><span class="pickF"><span class="chip">general</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+            <button class="pick" type="button" aria-pressed="false" style="min-height:118px"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="grab" size="18"></i-icon><span class="pickT" style="font-size:18px">Grappler</span></span><span class="pickD">+1 Strength or Dexterity; punch and grab; attack grappled creatures freely.</span><span class="pickF"><span class="tagOk"><i-icon name="check-mark" size="11"></i-icon>Strength 13</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+            <button class="pick" type="button" aria-pressed="false" style="min-height:118px"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="spell-book" size="18"></i-icon><span class="pickT" style="font-size:18px">Magic Initiate</span></span><span class="pickD">Two cantrips and a level 1 spell from the Cleric, Druid or Wizard list.</span><span class="pickF"><span class="chip">origin</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+            <button class="pick pickOff" type="button" aria-disabled="true" title="Already chosen: granted by the Soldier background" style="min-height:118px"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="axe-swing" size="18"></i-icon><span class="pickT" style="font-size:18px">Savage Attacker</span></span><span class="pickD">Once per turn, roll a weapon’s damage dice twice and use either roll.</span><span class="pickF"><span class="gateT"><i-icon name="check-mark" size="12"></i-icon>already chosen (Soldier)</span></span></button>
+            <button class="pick" type="button" aria-pressed="false" style="min-height:118px"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="medal" size="18"></i-icon><span class="pickT" style="font-size:18px">Skilled</span></span><span class="pickD">Proficiency in any three skills or tools. Repeatable.</span><span class="pickF"><span class="chip">origin</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+            <button class="pick pickOff" type="button" aria-disabled="true" aria-describedby="tipDef" style="min-height:118px;position:relative"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="round-shield" size="18"></i-icon><span class="pickT" style="font-size:18px">Defense</span></span><span class="pickD">+1 to Armor Class while wearing Light, Medium or Heavy armor.</span><span class="pickF"><span class="gateT glyph" style="position:relative"><i-icon name="padlock" size="12"></i-icon>Fighting Style feat<span class="tipUp" id="tipDef" role="tooltip" style="left:auto;right:0;transform:none">Only through the Fighting Style feature<span class="tipSub">Re-pick your fighting style on the Build tab instead.</span></span></span></span></button>
+            <button class="pick pickOff" type="button" aria-disabled="true" title="Needs level 19" style="min-height:118px"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="trophy" size="18"></i-icon><span class="pickT" style="font-size:18px">Boon of Combat Prowess</span></span><span class="pickD">+1 to an ability score, to a maximum of 30; turn a miss into a hit once per turn.</span><span class="pickF"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>level 19 · you are 8</span></span></button>
+            <div class="pick" style="cursor:default;justify-content:center;align-items:center;gap:8px;background:transparent;box-shadow:inset 0 0 0 1px #CBB68C;color:#5B4A36;text-align:center;min-height:118px"><i-icon name="info" size="18" style="color:#8A6A2A"></i-icon><span class="hint">Choosing a feat clears the improvement on the left, and the other way round.</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <x-part name="flowstrap" next="Next" nexticon="check-mark" note="Level 7 to 8 · 34,300 XP"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

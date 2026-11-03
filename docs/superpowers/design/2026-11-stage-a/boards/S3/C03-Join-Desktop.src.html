@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Join a campaign (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="The Emberfall Company" live="1" chiptitle="The Emberfall Company, session live, round 3"></x-rail>
+
+  <main style="z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 600px 380px minmax(0,1fr);gap:26px;padding:34px 22px 30px;flex:1 1 auto;align-items:start">
+    <div></div>
+    <!-- the join leaf -->
+    <section class="hk-leaf" aria-labelledby="jt" style="transform:rotate(-.25deg);display:flex;flex-direction:column;gap:16px;padding:22px 26px 24px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:flex;align-items:center;gap:12px"><span class="hk-iring" style="width:44px;height:44px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)"><i-icon name="entry-door" size="24"></i-icon></span><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><h1 id="jt" style="margin:0;font:30px/1.05 Forum,serif;font-weight:400">Join a campaign</h1><span class="hk-hint" style="font-size:15px">Step 1 of 2: the code. Next you pick or create a hero.</span></div></div>
+      <p style="margin:0;font-size:16px;line-height:1.4">Enter the 8-character code from your DM, or scan the QR on their Lobby tab. Once you join, the DM sees you in the Lobby and your hero&#8217;s overview on the Party tab; the sheet itself stays yours.</p>
+
+      <div class="hk-field">
+        <label class="hk-field__label" for="code" style="font-size:15px">Join code</label>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center">
+          <input class="hk-input" id="code" value="91PQ-S10Q" spellcheck="false" autocapitalize="characters" style="height:56px;font-family:Forum,serif;font-size:32px;letter-spacing:.14em;text-align:center;padding:0 12px">
+          <button class="hk-btn hk-btn--l hk-btn--leather hk-has-tip" type="button" aria-describedby="tipScan" style="height:56px;padding:0 16px"><i-icon name="treasure-map" size="20"></i-icon>Scan a QR<span class="hk-tip hk-tip--left hk-tip--above" id="tipScan" role="tooltip">Opens the camera; the QR fills in the code<span class="hk-tip__sub">the DM shows it on the Lobby tab</span></span></button>
+        </div>
+        <div class="slipR" style="flex-direction:row;align-items:center;gap:10px;transform:rotate(.3deg);background:var(--success-soft);box-shadow:inset 0 0 0 1px var(--success-strong)">
+          <i-icon name="check-mark" size="18" style="color:var(--success-strong);flex:0 0 auto"></i-icon>
+          <span style="font-size:15px;line-height:1.3;color:var(--success-strong)"><b>Filled in from your invite link.</b> This code opens <b>Tombs of the Salt King</b> · 4 members · open for joining.</span>
+        </div>
+      </div>
+
+      <div class="hk-field">
+        <label class="hk-field__label" for="dname" style="font-size:15px">Display name (optional)</label>
+        <input class="hk-input" id="dname" value="Dana" style="height:40px;font-size:17px">
+        <span class="hk-field__msg">how the table sees you in the Lobby and on the Table tab; your hero keeps its own name</span>
+      </div>
+
+      <div class="hk-rule"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="hk-hint">Joining as</span>
+        <span class="hk-chip" style="height:26px;font-size:14px"><i-icon name="person" size="14"></i-icon>Player</span>
+        <span class="hk-hint">· the Join button sits on the strap below, with Back</span>
+      </div>
+    </section>
+
+    <!-- small variants: code not found, joining -->
+    <aside aria-label="Variants" style="display:flex;flex-direction:column;gap:10px">
+      <span class="hintG" style="display:flex;align-items:center;gap:6px"><span class="pdot"></span>Variant: the code was not found</span>
+      <section class="hk-leaf" aria-label="Join code not found" style="transform:rotate(.4deg);display:flex;flex-direction:column;gap:10px;padding:16px 18px">
+        <x-tex kind="paper"></x-tex>
+        <label class="hk-field__label" for="code2" style="font-size:15px">Join code</label>
+        <input class="hk-input hk-input--error" id="code2" value="91PQ-S1OQ" aria-invalid="true" aria-describedby="codeErr" style="height:50px;font-family:Forum,serif;font-size:28px;letter-spacing:.14em;text-align:center">
+        <span class="hk-field__msg hk-field__msg--error" id="codeErr"><i-icon name="cross-mark" size="13"></i-icon>That join code isn&#8217;t valid.</span>
+        <span class="hk-hint">Check the letters: codes use the digit 0, never the letter O. Ask your DM for a fresh one if they rotated it.</span>
+        <div style="display:flex;align-items:center;gap:10px"><button class="hk-btn hk-btn--l hk-btn--brass" type="button" disabled="disabled" aria-disabled="true" title="Fix the join code first"><i-icon name="entry-door" size="18"></i-icon>Join</button><span class="hk-hint">fix the code first</span></div>
+      </section>
+
+      <span class="hintG" style="display:flex;align-items:center;gap:6px;margin-top:6px"><span class="pdot"></span>Variant: while joining</span>
+      <section class="hk-leaf" aria-label="Joining" style="transform:rotate(-.3deg);display:flex;align-items:center;gap:12px;padding:14px 18px">
+        <x-tex kind="paper"></x-tex>
+        <button class="hk-btn hk-btn--l hk-btn--brass hk-btn--loading" type="button" aria-busy="true"><span class="hk-spin" aria-hidden="true"></span><span class="hk-btn__label">Joining…</span></button>
+        <span class="hk-hint">checking the code and adding you to the roster</span>
+      </section>
+    </aside>
+    <div></div>
+  </main>
+
+  <x-strap kind="join" status="Step 1 of 2 · Join code" sicon="wax-seal"></x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

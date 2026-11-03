@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — Wild Shape switcher</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-board" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="s5-vign" aria-hidden="true"></div>
+  <header class="s5-title"><span class="s5-tag"><i-icon name="wax-seal" size="13"></i-icon>Later idea</span><h1 class="s5-h1"><i-icon name="bear-head" size="24"></i-icon>Wild Shape switcher</h1></header>
+
+  <!-- sheet header with the form toggle -->
+  <section class="hk-folio s5-folio" aria-label="Tamsin Oakhollow, Play sheet" style="gap:12px">
+    <x-tex kind="leather"></x-tex>
+    <div class="hk-folio__spine" aria-hidden="true"><span class="hk-rivet"></span><span class="hk-rivet"></span></div>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 14px;align-items:center">
+      <x-mono text="TO" w="50" h="56" fs="22"></x-mono>
+      <div class="s5-hero__id"><h2 class="hk-nameplate" style="font-size:22px;align-self:flex-start">Tamsin Oakhollow</h2><span class="s5-hero__line"><i-icon name="oak-leaf" size="14"></i-icon>Human · Druid 8 · Circle of the Land</span></div>
+      <div class="s5-col" style="gap:4px;align-items:flex-end">
+        <div class="s5-seg" role="group" aria-label="Form"><button class="s5-segb" type="button" aria-pressed="false" title="Your own form"><i-icon name="person" size="16"></i-icon>Druid</button><button class="s5-segb s5-segOn" type="button" aria-pressed="true" title="Wild Shape: Brown Bear · 2 of 3 uses left · lasts 4 hours · ends if Incapacitated"><i-icon name="bear-head" size="16"></i-icon>Brown Bear</button></div>
+        <span class="hk-row" style="gap:4px;font-size:13px;color:var(--text-on-leather-2)"><span>Wild Shape</span><x-seal state="spent" icon="paw" size="20" label="Wild Shape use, spent" hint="Wild Shape use — spent" seed="2"></x-seal><x-seal state="full" icon="paw" size="20" label="Wild Shape use, available" hint="Wild Shape use — available" seed="4"></x-seal><x-seal state="full" icon="paw" size="20" label="Wild Shape use, available" hint="Wild Shape use — available" seed="6"></x-seal><span title="One use returns on a short rest, all on a long rest">2 of 3 · 3 h 40 min left</span></span>
+      </div>
+    </div>
+
+    <!-- the beast's strap, separate from the druid's own hit points -->
+    <div style="display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) auto auto;gap:10px;align-items:stretch">
+      <div class="hk-strap" aria-label="Wild Shape temporary hit points" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;align-items:center;padding:6px 10px;box-shadow:var(--shadow-strap),0 0 0 2px var(--brass)"><x-tex kind="leather"></x-tex><span class="hk-num" style="font-size:26px;color:var(--text-on-leather)">8 <span style="font-size:15px;color:var(--brass)">/ 8</span></span><div class="hk-gauge" role="img" aria-label="8 of 8 temporary hit points from Wild Shape"><div class="hk-gauge__temp" style="width:100%"></div></div><span class="hk-strap__label" style="grid-column:1 / 3"><i-icon name="bear-head" size="13"></i-icon>Brown Bear · temporary HP, taken first</span></div>
+      <div class="hk-strap" aria-label="Your hit points" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;align-items:center;padding:6px 10px"><x-tex kind="leather"></x-tex><span class="hk-num" style="font-size:26px;color:var(--text-on-leather)">47 <span style="font-size:15px;color:var(--brass)">/ 59</span></span><div class="hk-gauge" role="img" aria-label="47 of 59 hit points, kept in beast form"><div class="hk-gauge__hp" style="width:80%"></div></div><span class="hk-strap__label" style="grid-column:1 / 3"><i-icon name="heart" size="13"></i-icon>Your hit points · kept</span></div>
+      <div class="s5-row" style="gap:8px;flex-wrap:nowrap"><x-shield ac="11" w="40" label="Armor class 11, the Brown Bear's (yours is 14)"></x-shield><div class="hk-vplate" style="min-height:48px"><span class="hk-vlabel">Speed</span><span class="hk-vval" style="font-size:17px"><i-icon name="running-shoe" size="14"></i-icon>40 ft</span><span class="hk-vlabel" title="Climb speed 30 feet"><i-icon name="paw-print" size="12"></i-icon>climb 30</span></div></div>
+      <span class="hk-has-tip" style="display:inline-flex;align-self:center"><button class="hk-btn hk-btn--leather hk-btn--l" type="button" aria-describedby="tipRev"><i-icon name="return-arrow" size="17"></i-icon>Revert</button><span class="hk-tip hk-tip--left" id="tipRev" role="tooltip" style="right:-2px;white-space:normal;width:270px">Leave the form early (Bonus Action)<span class="hk-tip__sub">at 0 HP you're Incapacitated, which ends the form; damage past the 8 temporary HP hits your own</span></span></span>
+    </div>
+
+    <div class="hk-tabs" role="tablist" aria-label="Sheet"><button class="hk-tab hk-tab--on" type="button" role="tab" aria-selected="true" style="flex:0 0 auto"><i-icon name="crossed-swords" size="13"></i-icon>Combat</button><button class="hk-tab hk-tab--off" type="button" role="tab" aria-selected="false" aria-disabled="true" title="No spellcasting while shape-shifted; concentration keeps running" style="flex:0 0 auto"><i-icon name="padlock" size="13"></i-icon>Spells</button><button class="hk-tab" type="button" role="tab" aria-selected="false" style="flex:0 0 auto"><i-icon name="swap-bag" size="13"></i-icon>Bag</button><button class="hk-tab" type="button" role="tab" aria-selected="false" style="flex:0 0 auto"><i-icon name="person" size="13"></i-icon>Hero</button></div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:stretch;flex:1 1 auto;min-height:0">
+    <!-- the beast's stats replace the druid's -->
+    <section class="hk-leaf s5-leaf" aria-labelledby="bbT" style="transform:rotate(-.25deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="s5-h2" id="bbT"><i-icon name="bear-head" size="19"></i-icon>Brown Bear</h2><span class="hk-chip" style="height:22px" title="Challenge rating 1: allowed from Druid level 8">CR 1</span><span class="hk-chip" style="height:22px">Large beast</span><div class="hk-leaf__actions"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Details: Brown Bear" title="Details"><i-icon name="info" size="13"></i-icon></button></div></div>
+      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px" aria-label="Abilities">
+        <div class="hk-vplate hk-vplate--on" style="min-height:44px;padding:4px 5px;align-items:center" title="Strength 19, the bear's"><span class="hk-vlabel">STR</span><span class="hk-vval" style="font-size:18px">+4</span></div>
+        <div class="hk-vplate hk-vplate--on" style="min-height:44px;padding:4px 5px;align-items:center" title="Dexterity 10, the bear's"><span class="hk-vlabel">DEX</span><span class="hk-vval" style="font-size:18px">+0</span></div>
+        <div class="hk-vplate hk-vplate--on" style="min-height:44px;padding:4px 5px;align-items:center" title="Constitution 16, the bear's"><span class="hk-vlabel">CON</span><span class="hk-vval" style="font-size:18px">+3</span></div>
+        <div class="hk-block" style="min-height:44px;padding:4px 5px;align-items:center;gap:3px;box-sizing:border-box" title="Intelligence 12, kept from the druid"><span class="hk-vlabel" style="color:var(--text-2)">INT</span><span class="hk-num" style="font-size:18px">+1</span></div>
+        <div class="hk-block" style="min-height:44px;padding:4px 5px;align-items:center;gap:3px;box-sizing:border-box" title="Wisdom 16, kept from the druid"><span class="hk-vlabel" style="color:var(--text-2)">WIS</span><span class="hk-num" style="font-size:18px">+3</span></div>
+        <div class="hk-block" style="min-height:44px;padding:4px 5px;align-items:center;gap:3px;box-sizing:border-box" title="Charisma 10, kept from the druid"><span class="hk-vlabel" style="color:var(--text-2)">CHA</span><span class="hk-num" style="font-size:18px">+0</span></div>
+      </div>
+      <div class="s5-row" style="gap:5px;flex-wrap:nowrap" aria-label="Saving throws"><i-icon name="checked-shield" size="16" label="Saving throws" style="color:var(--accent-strong);margin-right:2px"></i-icon><span class="hk-save" title="Strength save +4, the bear's"><i-icon name="muscle-up" size="12"></i-icon>+4</span><span class="hk-save" title="Dexterity save +0, the bear's"><i-icon name="acrobatic" size="12"></i-icon>+0</span><span class="hk-save" title="Constitution save +3, the bear's"><i-icon name="heart-inside" size="12"></i-icon>+3</span><span class="hk-save hk-save--prof" title="Intelligence save +4, yours, proficient"><i-icon name="brain" size="12"></i-icon>+4<i-icon name="star" size="10" class="hk-star"></i-icon></span><span class="hk-save hk-save--prof" title="Wisdom save +6, yours, proficient"><i-icon name="owl" size="12"></i-icon>+6<i-icon name="star" size="10" class="hk-star"></i-icon></span><span class="hk-save" title="Charisma save +0, yours"><i-icon name="charm" size="12"></i-icon>+0</span></div>
+      <h3 class="s5-h3"><i-icon name="crossed-swords" size="15"></i-icon>Attacks<span class="hk-chip" style="height:20px;font-size:13px" title="Multiattack: one Bite and one Claws attack per Attack action">Multiattack</span></h3>
+      <div class="s5-atk" style="grid-template-columns:26px 62px 36px minmax(0,1fr) auto"><i-icon name="wolf-head" size="18"></i-icon><span class="s5-atk__n">Bite</span><span class="s5-atk__h">+5</span><span class="s5-atk__d"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-piercing);height:22px">1d8 + 4 piercing</span></span><button class="hk-btn hk-btn--brass" type="button" style="height:28px;width:34px;padding:0" aria-label="Roll Bite" title="Roll Bite: d20 + 5"><i-icon name="dice-twenty-faces-twenty" size="15"></i-icon></button></div>
+      <div class="s5-atk" style="grid-template-columns:26px 62px 36px minmax(0,1fr) auto"><i-icon name="claws" size="18"></i-icon><span class="s5-atk__n">Claws</span><span class="s5-atk__h">+5</span><span class="s5-atk__d"><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-slashing);height:22px">2d6 + 4 slashing</span></span><button class="hk-btn hk-btn--brass" type="button" style="height:28px;width:34px;padding:0" aria-label="Roll Claws" title="Roll Claws: d20 + 5"><i-icon name="dice-twenty-faces-twenty" size="15"></i-icon></button></div>
+      <h3 class="s5-h3"><i-icon name="laurel-crown" size="15"></i-icon>Traits</h3>
+      <p class="s5-p" style="font-size:14px"><b style="font-family:var(--font-display);font-weight:400;font-size:15px">Keen Smell.</b> The bear has advantage on Wisdom (Perception) checks that rely on smell.</p>
+      <div class="s5-row" style="gap:6px"><span class="hk-chip" style="height:22px" title="Your skill and saving throw proficiencies stay; the higher modifier wins"><i-icon name="medal" size="12"></i-icon>your proficiencies kept</span><span class="hk-chip" style="height:22px" title="Worn gear merged into the form: no effect until you revert"><i-icon name="swap-bag" size="12"></i-icon>equipment merged</span><span class="hk-chip hk-chip--arcane" style="height:22px" title="Concentrating on Moonbeam: shape-shifting doesn't break it"><i-icon name="concentration-orb" size="12"></i-icon>Moonbeam kept</span><span class="hk-chip" style="height:22px" title="Passive Perception 16: your proficiency (+3) on the bear's Wisdom +1"><i-icon name="owl" size="12"></i-icon>PP 16</span></div>
+      <div class="s5-row" style="gap:8px;margin-top:auto"><span class="hk-cond" style="height:30px;padding:0 10px;font-size:14px" title="Poisoned, 2 rounds left, from Giant Spider"><i-icon name="skull" size="14"></i-icon>Poisoned<span class="hk-cond__dur" style="height:18px">2 rounds</span></span><span class="hk-hint">conditions follow you into the form</span></div>
+    </section>
+
+    <!-- known forms -->
+    <section class="hk-leaf s5-leaf" aria-labelledby="kfT" style="transform:rotate(.3deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0"><h2 class="s5-h2" id="kfT"><i-icon name="paw-print" size="19"></i-icon>Known forms</h2><span class="hk-hint">6 of 8 · max CR 1</span></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto;background:rgba(201,162,78,.16);border-radius:4px;padding:3px 4px;margin:0 -4px"><i-icon name="bear-head" size="18"></i-icon><span class="s5-feat__n">Brown Bear<span class="hk-lvlbadge" title="Challenge rating 1">CR 1</span></span><span class="hk-chip hk-chip--selected" style="height:22px"><i-icon name="check-mark" size="11"></i-icon>now</span></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><i-icon name="bear-head" size="18"></i-icon><span class="s5-feat__n">Black Bear<span class="hk-lvlbadge" title="Challenge rating 1/2">CR ½</span></span><button class="hk-btn hk-btn--parchment" type="button" style="height:26px" title="Bonus Action · uses 1 of your 2 Wild Shape uses"><i-icon name="paw" size="12"></i-icon>Shift</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><i-icon name="wolf-head" size="18"></i-icon><span class="s5-feat__n">Wolf<span class="hk-lvlbadge" title="Challenge rating 1/4">CR ¼</span></span><button class="hk-btn hk-btn--parchment" type="button" style="height:26px" title="Bonus Action · uses 1 of your 2 Wild Shape uses"><i-icon name="paw" size="12"></i-icon>Shift</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><i-icon name="horse-head" size="18"></i-icon><span class="s5-feat__n">Riding Horse<span class="hk-lvlbadge" title="Challenge rating 1/4">CR ¼</span></span><button class="hk-btn hk-btn--parchment" type="button" style="height:26px" title="Bonus Action · uses 1 of your 2 Wild Shape uses"><i-icon name="paw" size="12"></i-icon>Shift</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><i-icon name="spider-face" size="18"></i-icon><span class="s5-feat__n">Spider<span class="hk-lvlbadge" title="Challenge rating 0">CR 0</span></span><button class="hk-btn hk-btn--parchment" type="button" style="height:26px" title="Bonus Action · uses 1 of your 2 Wild Shape uses"><i-icon name="paw" size="12"></i-icon>Shift</button></div>
+      <div class="s5-feat" style="grid-template-columns:28px minmax(0,1fr) auto"><i-icon name="paw" size="18"></i-icon><span class="s5-feat__n">Rat<span class="hk-lvlbadge" title="Challenge rating 0">CR 0</span></span><button class="hk-btn hk-btn--parchment" type="button" style="height:26px" title="Bonus Action · uses 1 of your 2 Wild Shape uses"><i-icon name="paw" size="12"></i-icon>Shift</button></div>
+      <div class="s5-row" style="gap:8px;padding-top:4px"><button class="hk-btn hk-btn--ghost hk-btn--dashed" type="button" title="Beasts come from your pinned packs; 2 slots free, swap one after a long rest"><i-icon name="plus" size="13"></i-icon>Learn a form</button><span class="hk-hint">from pinned packs</span></div>
+      <div class="hk-block" style="margin-top:auto;gap:6px">
+        <span class="hk-th" style="display:flex;align-items:center;gap:6px"><i-icon name="hourglass" size="13" style="color:var(--accent-strong)"></i-icon>Form timer</span>
+        <div class="hk-gauge hk-gauge--thin" role="img" aria-label="3 hours 40 minutes of 4 hours left in this form"><div class="hk-gauge__brass" style="width:92%"></div></div>
+        <span class="hk-hint">3 h 40 min of 4 h left · half your Druid level in hours</span>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

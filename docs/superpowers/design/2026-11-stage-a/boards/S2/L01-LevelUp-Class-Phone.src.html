@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — підвищення рівня, який клас (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <x-part name="pbar" title="Підвищення до 6 рівня" left="cross-mark" leftlabel="Скасувати підвищення рівня"></x-part>
+
+  <div style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+    <div class="pstrip" role="group" aria-label="Крок 1 з 4: Який клас?">
+      <x-tex kind="leather"></x-tex>
+      <button class="ico icoP" type="button" aria-label="Усі кроки" title="Усі кроки" aria-haspopup="dialog" style="position:relative"><i-icon name="hamburger-menu" size="20"></i-icon></button>
+      <div style="position:relative;display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0"><span class="pstripC">Крок 1 з 4</span><span class="pstripL">Який клас?</span></div>
+      <div class="gauge gauge8" style="position:relative;width:80px" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-label="Крок 1 з 4"><div style="width:25%;height:100%;background:linear-gradient(90deg,#8A6A2A,#C9A24E);border-radius:4px"></div></div>
+    </div>
+
+    <button class="pick pickOn" type="button" aria-pressed="true" style="position:relative;gap:8px;padding:12px 14px">
+      <x-tex kind="paper"></x-tex>
+      <span class="pickSeal" style="position:absolute"><x-seal state="full" icon="check-mark" size="32" label="Обрано" seed="2"></x-seal></span>
+      <span class="pickH" style="position:relative"><span class="iring iringP"><i-icon name="templar-shield" size="20"></i-icon></span><span class="pickT" style="font-size:20px">Паладин, 6 рівень</span></span>
+      <span class="pickD" style="position:relative;font-size:15px;line-height:20px">Продовжити клятву. На 6 рівні: <b>Аура захисту</b> — ви й союзники в межах 10 фт додаєте +3 (Харизма) до рятівних кидків.</span>
+      <span class="pickF" style="position:relative"><span class="chip chipM" style="height:26px;font-size:15px"><i-icon name="star" size="11"></i-icon>рекомендовано</span><span class="chip" style="height:26px;font-size:15px">к10</span><span class="chip" style="height:26px;font-size:15px">6 заклинань</span></span>
+    </button>
+
+    <div class="sub" style="position:relative;color:#E0C27A;border-color:rgba(201,162,78,.45);font-size:16px"><i-icon name="card-pick" size="15" style="color:#C9A24E"></i-icon>Або другий клас (1 рівень)</div>
+
+    <div style="position:relative;display:flex;flex-direction:column;gap:8px">
+      <button class="pick" type="button" aria-pressed="false" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="barbarian" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Варвар</span><span class="tagOk" style="align-self:flex-start"><i-icon name="check-mark" size="11"></i-icon>Сила 13</span></span><span class="btn btnParch" style="position:relative;height:40px">Обрати</span></button>
+      <button class="pick" type="button" aria-pressed="false" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="lyre" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Бард</span><span class="tagOk" style="align-self:flex-start"><i-icon name="check-mark" size="11"></i-icon>Харизма 13</span></span><span class="btn btnParch" style="position:relative;height:40px">Обрати</span></button>
+      <button class="pick pickOff" type="button" aria-disabled="true" aria-describedby="tipCle" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px;position:relative"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="holy-symbol" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Клірик</span><span class="tagNo glyph" style="align-self:flex-start;position:relative"><i-icon name="cross-mark" size="10"></i-icon>Мудрість 13 · у вас 12<span class="tipUp" id="tipCle" role="tooltip" style="left:-40px;transform:none;font-size:15px;white-space:normal;width:250px">Для мультикласу потрібна Мудрість 13<span class="tipSub">Риса або покращення характеристик може її підняти.</span></span></span></span></button>
+      <button class="pick pickOff" type="button" aria-disabled="true" title="Потрібна Мудрість 13 — у вас 12" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="oak-leaf" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Друїд</span><span class="tagNo" style="align-self:flex-start"><i-icon name="cross-mark" size="10"></i-icon>Мудрість 13 · у вас 12</span></span></button>
+      <button class="pick" type="button" aria-pressed="false" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="crossed-swords" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Воїн</span><span class="tagOk" style="align-self:flex-start"><i-icon name="check-mark" size="11"></i-icon>Сила або Спритність 13</span></span><span class="btn btnParch" style="position:relative;height:40px">Обрати</span></button>
+      <button class="pick pickOff" type="button" aria-disabled="true" title="Потрібні Спритність 13 і Мудрість 13 — у вас 10 і 12" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="fist" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Монах</span><span style="display:flex;gap:4px;flex-wrap:wrap"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Спритність 13 · 10</span><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Мудрість 13 · 12</span></span></span></button>
+      <button class="pick" type="button" aria-pressed="false" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="fire-spell-cast" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Чаклун</span><span class="tagOk" style="align-self:flex-start"><i-icon name="check-mark" size="11"></i-icon>Харизма 13</span></span><span class="btn btnParch" style="position:relative;height:40px">Обрати</span></button>
+    </div>
+  </div>
+
+  <x-part name="pflow" next="Далі" backtitle="Назад до вкладки Бій"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Передати персонажа, тост і банер (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Компанія Емберфол" action="plus" alabel="Додати заготовку персонажа"></x-topbar>
+
+  <!-- toast: a full-width slip under the top bar, above the pinned banner -->
+  <div style="padding:8px 12px 0;z-index:7"><div class="hk-toast hk-toast--success" role="status" style="width:auto;padding:8px 10px;transform:rotate(-.3deg)"><x-tex kind="paper"></x-tex><i-icon name="shaking-hands" size="20"></i-icon><div class="hk-toast__body"><b style="font-size:15px">Капітан варти тепер належить Тарасу.</b><span class="hk-toast__sub" style="font-size:13px">з&#8217;явиться на його пристрої після синхронізації</span></div><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Закрити" title="Закрити" style="width:36px;height:36px"><i-icon name="cross-mark" size="12"></i-icon></button></div></div>
+  <!-- banner pinned under the top bar -->
+  <div style="padding:8px 12px 0;z-index:5">
+    <div class="hk-banner hk-banner--arcane" role="region" aria-label="Закріпити пакети кампанії" style="padding:8px 10px;gap:8px;align-items:flex-start;flex-wrap:wrap">
+      <x-tex kind="paper"></x-tex>
+      <i-icon name="pin" size="20"></i-icon>
+      <div class="hk-banner__body" style="flex:1 1 220px"><span class="hk-banner__title" style="font-size:16px">Кампанія ділиться пакетом Emberfall Homebrew 1.3.0</span><span style="font-size:14px;line-height:1.3">Лист Іляни закріплено на 1.2.0. Закріпіть версію кампанії, щоб стіл і лист збігалися.</span></div>
+      <div class="hk-banner__actions" style="width:100%;justify-content:flex-end"><button class="hk-btn hk-btn--phone hk-btn--ghost" type="button" style="height:40px">Пізніше</button><button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="height:40px"><i-icon name="pin" size="14"></i-icon>Закріпити для Іляни</button></div>
+    </div>
+  </div>
+
+  <div aria-hidden="true" style="flex:1 1 auto;min-height:0;overflow:hidden;padding:10px 12px 14px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;z-index:1">
+    <x-enc lang="uk" state="live" ctl="1"></x-enc>
+    <x-pcardp id="guard" mode="dm" sel="1" tilt="-.2deg"></x-pcardp>
+    <x-pcardp id="ilyana" mode="dm" tilt=".2deg"></x-pcardp>
+  </div>
+  <x-pstrap kind="dm"></x-pstrap>
+  <x-tabbar active="party"></x-tabbar>
+
+  <!-- hand-over bottom sheet -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:4"></div>
+  <section class="sheetP" role="dialog" aria-modal="true" aria-labelledby="hoP" style="gap:10px;padding-bottom:12px;z-index:6">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-sheet__grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:10px"><x-seal state="full" icon="shaking-hands" size="36" seed="1" label="Передати"></x-seal><h2 id="hoP" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400;flex:1 1 auto">Передати Капітана варти?</h2><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <p style="margin:0;font-size:15px;line-height:1.35">Заготовка перейде одному учаснику. Він заявить права на неї на своєму пристрої після синхронізації; до того ви керуєте нею у гурті.</p>
+    <span class="hk-field__label" id="mpP" style="font-size:15px">Передати цього персонажа:</span>
+    <div role="radiogroup" aria-labelledby="mpP" style="display:flex;flex-direction:column">
+      <label class="rowP" style="grid-template-columns:24px 40px minmax(0,1fr);min-height:48px;cursor:pointer"><input type="radio" name="handP" value="taras" checked="checked" style="width:20px;height:20px;margin:0;accent-color:#8a6a2a"><span class="avatar">Т</span><span style="display:flex;flex-direction:column"><b>Тарас</b><span class="hk-hint" style="font-size:13px">грає Брембла Андерфута · онлайн</span></span></label>
+      <label class="rowP" style="grid-template-columns:24px 40px minmax(0,1fr);min-height:48px;cursor:pointer"><input type="radio" name="handP" value="marko" style="width:20px;height:20px;margin:0;accent-color:#8a6a2a"><span class="avatar">Ма</span><span style="display:flex;flex-direction:column"><b>Марко</b><span class="hk-hint" style="font-size:13px">грає Торна Ешвейла · онлайн</span></span></label>
+      <label class="rowP" style="grid-template-columns:24px 40px minmax(0,1fr);min-height:48px;cursor:pointer"><input type="radio" name="handP" value="petro" style="width:20px;height:20px;margin:0;accent-color:#8a6a2a"><span class="avatar">П</span><span style="display:flex;flex-direction:column"><b>Петро</b><span class="hk-hint" style="font-size:13px">грає Оскара Беллоу (при смерті) · онлайн</span></span></label>
+      <label class="rowP" style="grid-template-columns:24px 40px minmax(0,1fr);min-height:48px;cursor:pointer;border-bottom:0"><input type="radio" name="handP" value="olena" style="width:20px;height:20px;margin:0;accent-color:#8a6a2a"><span class="avatar">О</span><span style="display:flex;flex-direction:column"><b>Олена</b><span class="hk-hint" style="font-size:13px">грає Сестру Марен · офлайн, заявить права пізніше</span></span></label>
+    </div>
+    <span class="hk-hint" style="font-size:14px">Тарас матиме Капітана варти як другого героя і сам обере, ким грати.</span>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding-top:2px"><button class="hk-btn hk-btn--phone hk-btn--ghost" type="button">Скасувати</button><button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="justify-content:center"><i-icon name="shaking-hands" size="16"></i-icon>Передати Тарасу</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

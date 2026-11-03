@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — підтвердження відкату, нижній аркуш (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <div aria-hidden="true" style="position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+    <x-part name="pbar" title="Хроніка" left="return-arrow" leftlabel="Назад до «Ще»"></x-part>
+    <div style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:hidden;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+      <x-part name="ptimeline" tip="none"></x-part>
+    </div>
+  </div>
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="more"></x-part>
+  <div class="dim"></div>
+
+  <section class="psheet" role="alertdialog" aria-modal="true" aria-labelledby="revT" aria-describedby="revD" style="height:330px;gap:10px;padding-bottom:0">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <div class="grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:8px"><x-seal state="full" icon="anticlockwise-rotation" size="34" seed="2"></x-seal><h2 class="leafTitle" id="revT" style="font-size:22px;flex:1 1 auto">Відкотити цю зміну?</h2><button class="ico icoP icoLeaf" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <p class="mdp" id="revD" style="font-size:16px">Героя буде перераховано так, ніби <b>«Отримано 7 шкоди від Гігантського павука»</b> не було. Пізніші події залишаться і застосуються заново.</p>
+    <div class="kv" style="grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:15px"><span class="th">Хіти</span><span>31 → <b>38</b> з 44</span><span class="th">Хроніка</span><span>рядок лишиться закресленим з позначкою «Відкочено»</span></div>
+    <div class="hk-strap" style="margin:auto -14px 0;border-radius:0;display:flex;align-items:center;gap:8px;padding:8px 12px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnP" type="button">Скасувати</button><span style="flex:1 1 auto"></span><span class="glyph" tabindex="0" aria-describedby="tipRv"><button class="btn btnEmber btnP" type="button"><i-icon name="anticlockwise-rotation" size="16"></i-icon>Відкотити</button><span class="tipUp" id="tipRv" role="tooltip" style="left:auto;right:0;transform:none;font-size:15px;white-space:normal;width:230px">Перераховує героя без цієї події<span class="tipSub">Пізніші події застосуються заново.</span></span></span></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

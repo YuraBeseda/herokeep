@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Видалити учасника (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Лобі" action="anticlockwise-rotation" alabel="Згенерувати новий код"></x-topbar>
+
+  <div aria-hidden="true" style="flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <section class="hk-leaf hk-leaf--phone" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:2px;padding:14px 14px 10px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" style="font-size:19px"><i-icon name="three-friends" size="18"></i-icon>Учасники</h2><span class="hk-hint" style="font-size:14px">5 за столом · 4 онлайн</span></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px"><i-icon name="crown" size="22"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Ви</b><span class="hk-hint" style="font-size:14px">Майстер · без героя</span></span><span></span></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">М</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Міра</b><span class="hk-hint" style="font-size:14px">Гравець · Іляна Ворн</span></span><span class="hk-btn hk-btn--ghost" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)">Видалити</span></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">Т</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Тарас</b><span class="hk-hint" style="font-size:14px">Гравець · Брембл Андерфут</span></span><span class="hk-btn hk-btn--ghost" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)">Видалити</span></div>
+      <div class="rowP" style="background:var(--leaf-sunken)"><span class="avatar" style="width:44px;height:44px">О</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Олена</b><span class="hk-hint" style="font-size:14px">Гравець · Сестра Марен · офлайн</span></span><span class="hk-btn hk-btn--ghost" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 2px var(--danger-strong)">Видалити</span></div>
+      <div class="rowP"><span class="avatar" style="width:44px;height:44px">Ма</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Марко</b><span class="hk-hint" style="font-size:14px">Гравець · Торн Ешвейл</span></span><span class="hk-btn hk-btn--ghost" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)">Видалити</span></div>
+      <div class="rowP" style="border-bottom:0"><span class="avatar" style="width:44px;height:44px">П</span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b>Петро</b><span class="hk-hint" style="font-size:14px">Гравець · Оскар Беллоу</span></span><span class="hk-btn hk-btn--ghost" style="height:40px;font-size:15px;color:var(--danger-strong);box-shadow:inset 0 0 0 1px var(--danger-border)">Видалити</span></div>
+    </section>
+  </div>
+  <x-pstrap kind="dm"></x-pstrap>
+  <x-tabbar active="lobby"></x-tabbar>
+
+  <!-- toast from the previous removal -->
+  <div class="hk-toast hk-toast--success" role="status" style="position:absolute;left:12px;right:12px;top:64px;width:auto;z-index:7;padding:8px 10px;transform:rotate(.3deg)"><x-tex kind="paper"></x-tex><i-icon name="ticket" size="20"></i-icon><div class="hk-toast__body"><b style="font-size:15px">Код запрошення оновлено.</b><span class="hk-toast__sub" style="font-size:13px">старе посилання перестало працювати; учасники залишаються</span></div><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Закрити" title="Закрити" style="width:36px;height:36px"><i-icon name="cross-mark" size="12"></i-icon></button></div>
+
+  <!-- remove-member bottom sheet -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:4"></div>
+  <section class="sheetP" role="alertdialog" aria-modal="true" aria-labelledby="rmP" aria-describedby="rmPb" style="gap:10px;padding-bottom:12px;z-index:6">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-sheet__grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:10px"><x-seal state="full" icon="exit-door" size="36" seed="3" label="Видалити"></x-seal><h2 id="rmP" style="margin:0;font:22px/1.1 Forum,serif;font-weight:400;flex:1 1 auto">Видалити Олену?</h2></div>
+    <p id="rmPb" style="margin:0;font-size:16px;line-height:1.4">Олена втратить доступ до цієї кампанії, а Сестра Марен вибуде зі складу. Лист залишається в Олени. Скасувати цю дію звідси не можна; вона зможе приєднатися знову за новим кодом.</p>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding-top:2px"><button class="hk-btn hk-btn--phone hk-btn--ghost hk-focus-demo" type="button">Скасувати</button><button class="hk-btn hk-btn--phone hk-btn--ember" type="button" style="justify-content:center"><i-icon name="exit-door" size="15"></i-icon>Видалити Олену</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

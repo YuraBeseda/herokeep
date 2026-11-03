@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Home (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div style="position:relative;width:100%;max-width:none;min-height:100vh;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+
+  <!-- Brass rail -->
+  <header style="position:relative;z-index:3;display:flex;align-items:center;gap:22px;padding:0 22px;height:60px;background:linear-gradient(180deg,#4F3322,#3A2316);box-shadow:0 1px 0 #8A6A2A,0 3px 0 #2A1810,0 6px 14px rgba(0,0,0,.55);color:#E9DCBB;flex:0 0 auto">
+    <x-tex kind="leather"></x-tex>
+    <div style="position:relative;display:flex;align-items:center;gap:8px;font-family:Forum,serif;font-size:24px;line-height:1;color:#C9A24E;letter-spacing:.02em"><i-icon name="wax-seal" size="26"></i-icon>Herokeep</div>
+    <nav aria-label="App" style="position:relative;display:flex;align-items:center;gap:14px;padding:0 14px">
+      <div aria-hidden="true" style="position:absolute;left:0;right:0;top:50%;height:5px;transform:translateY(-50%);background:linear-gradient(180deg,#E8CC7C,#C9A24E 40%,#7E5F24);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.7)"></div>
+      <a class="ico icoOn" href="#" aria-current="page" aria-label="Home" title="Home"><i-icon name="house" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Heroes" title="Heroes" aria-describedby="tipHeroes"><i-icon name="person" size="22"></i-icon><span class="tip" id="tipHeroes" role="tooltip">Heroes</span></a>
+      <a class="ico" href="#" aria-label="Campaigns" title="Campaigns"><i-icon name="three-friends" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Library" title="Library"><i-icon name="open-book" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Packs" title="Packs"><i-icon name="chest" size="22"></i-icon></a>
+      <a class="ico" href="#" aria-label="Settings" title="Settings"><i-icon name="cog" size="22"></i-icon></a>
+    </nav>
+    <div style="flex:1 1 auto"></div>
+    <a href="#" class="chip" style="position:relative;height:28px;font-size:15px;gap:7px;text-decoration:none" title="The Emberfall Company, session live"><i-icon name="candle-flame" size="15" style="color:#B8432A"></i-icon>The Emberfall Company</a>
+    <button class="ico" type="button" aria-label="Account" title="Account" style="position:relative"><i-icon name="hood" size="22"></i-icon></button>
+  </header>
+
+  <!-- Table -->
+  <main style="position:relative;z-index:1;display:flex;flex-direction:column;gap:24px;padding:24px 22px 28px;flex:1 1 auto;min-width:0">
+
+    <!-- Continue + Tonight -->
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,340px);gap:22px;align-items:stretch">
+      <section class="leaf" aria-label="Continue" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:12px;padding:16px 20px 18px">
+        <x-tex kind="paper"></x-tex>
+        <div style="position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+          <h2 class="leafTitle"><i-icon name="bookmark" size="20" style="color:#8A6A2A"></i-icon>Continue</h2>
+          <span class="hint">last opened a moment ago</span>
+        </div>
+        <div style="position:relative;display:grid;grid-template-columns:auto minmax(200px,1fr) minmax(280px,320px) auto;gap:18px;align-items:center">
+          <div class="frame" style="width:98px;height:118px"><div class="mono" role="img" aria-label="Portrait placeholder, monogram IV" style="font-size:42px">IV</div><span class="rivet" style="position:absolute;left:3px;top:3px;width:7px;height:7px"></span><span class="rivet" style="position:absolute;right:3px;top:3px;width:7px;height:7px"></span><span class="rivet" style="position:absolute;left:3px;bottom:3px;width:7px;height:7px"></span><span class="rivet" style="position:absolute;right:3px;bottom:3px;width:7px;height:7px"></span></div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <h3 class="nameplate" style="font-size:25px;align-self:flex-start;max-width:100%">Ilyana Vorn</h3>
+            <div style="font-size:17px;line-height:1.2;color:#2B2118;display:flex;align-items:center;gap:6px"><i-icon name="templar-shield" size="16" style="color:#8A6A2A"></i-icon>Human · Paladin 5</div>
+            <div style="font-size:15px;line-height:1.2;color:#5B4A36;display:flex;align-items:center;gap:6px"><i-icon name="holy-symbol" size="14" style="color:#8A6A2A"></i-icon>Oath of Devotion · Soldier</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><a href="#" class="chip chipD" style="height:26px;font-size:14px;gap:6px;text-decoration:none" title="Open The Emberfall Company"><i-icon name="three-friends" size="14"></i-icon>The Emberfall Company</a><span class="chip chipLive" style="height:26px;font-size:14px"><i-icon name="candle-flame" size="13"></i-icon>session live</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#5B4A36;padding-top:2px"><span style="display:flex;align-items:center;gap:4px"><i-icon name="laurels" size="14" style="color:#8A6A2A"></i-icon>XP</span><span class="gauge" style="flex:1 1 auto;max-width:160px;height:8px;border-radius:4px"><span style="display:block;width:46.4%;height:100%;background:linear-gradient(90deg,#8A6A2A,#C9A24E);border-radius:4px"></span></span><span class="num" style="font-size:15px;color:#2B2118">6,500 / 14,000</span></div>
+          </div>
+          <div class="strap" aria-label="Hit points" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:9px 14px 9px 10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div aria-hidden="true" style="width:16px;height:44px;border-radius:4px;background:linear-gradient(180deg,#E8CC7C,#C9A24E 50%,#8A6A2A);box-shadow:inset 0 0 0 2px #5E4418,0 1px 2px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center"><span style="display:block;width:4px;height:24px;background:#1E110A;border-radius:2px"></span></div>
+              <div class="num" style="font-size:44px;color:#F6E8CC;display:flex;align-items:baseline;gap:5px;text-shadow:0 2px 2px rgba(0,0,0,.5)"><span>31</span><span style="font-size:22px;color:#C9A24E">/ 44</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+              <div style="display:flex;align-items:center;gap:5px;font-size:14px;color:#E0C27A;line-height:1"><i-icon name="heart" size="15"></i-icon>Hit points</div>
+              <div class="gauge" title="31 of 44, plus 5 temporary"><div style="width:70.5%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></div><div style="width:11.4%;height:100%;background:repeating-linear-gradient(135deg,#E8CC7C 0 3px,#A98335 3px 6px)"></div></div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:14px;color:#E0C27A;line-height:1;white-space:nowrap"><i-icon name="heart-plus" size="15"></i-icon>Temporary HP <b class="num" style="font-size:17px;color:#F6E8CC">5</b></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch">
+            <a href="#" class="btn btnBrass focusDemo" style="height:44px;padding:0 22px;font-size:16px" aria-label="Open Ilyana Vorn"><i-icon name="crossed-swords" size="18"></i-icon>Open</a>
+            <span class="hint" style="text-align:center">opens the Play tab</span>
+          </div>
+        </div>
+        <div style="position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:4px">
+          <span class="hint">Jump to a tab</span>
+          <nav aria-label="Sheet tabs of Ilyana Vorn" style="display:flex;gap:4px;flex-wrap:wrap">
+            <a href="#" class="tab" style="flex:0 0 auto;padding:0 12px;border-radius:4px;text-decoration:none"><i-icon name="crossed-swords" size="14"></i-icon>Play</a>
+            <a href="#" class="tab" style="flex:0 0 auto;padding:0 12px;border-radius:4px;text-decoration:none"><i-icon name="anvil" size="14"></i-icon>Build</a>
+            <a href="#" class="tab" style="flex:0 0 auto;padding:0 12px;border-radius:4px;text-decoration:none"><i-icon name="hourglass" size="14"></i-icon>Timeline</a>
+            <span class="tab tabOff" style="flex:0 0 auto;padding:0 12px;border-radius:4px" title="Level up is not available yet: 6,500 of 14,000 XP"><i-icon name="padlock" size="14"></i-icon>Level up</span>
+          </nav>
+        </div>
+      </section>
+
+      <section class="leaf" aria-label="Tonight" style="transform:rotate(.45deg);display:flex;flex-direction:column;gap:10px;padding:16px 18px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="leafTitle" style="position:relative"><i-icon name="candle-flame" size="20" style="color:#B8432A"></i-icon>Tonight</h2>
+        <p style="position:relative;margin:0;font-size:16px;line-height:1.35;color:#2B2118"><b>The Emberfall Company</b> is in session: 5 members at the table, you play Ilyana Vorn.</p>
+        <div style="position:relative;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:auto">
+          <a href="#" class="btn btnLeather" style="height:36px;padding:0 14px;font-size:15px"><i-icon name="three-friends" size="16" style="color:#E8CC7C"></i-icon>Open the table</a>
+          <span class="chip chipLive" style="height:26px;font-size:14px"><i-icon name="candle-flame" size="13"></i-icon>session live</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Heroes row -->
+    <section aria-label="Heroes" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:baseline;gap:12px"><h2 class="h2"><i-icon name="person" size="20"></i-icon>Heroes</h2><span style="font-size:14px;font-style:italic;color:#E0C27A">3 heroes · the last opened comes first</span><span style="flex:1 1 auto"></span><a href="#" style="font-size:15px;color:#E8CC7C">All heroes</a></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
+        <article class="card" style="transform:rotate(-.3deg)">
+          <x-tex kind="paper"></x-tex>
+          <div style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center">
+            <div class="frame" style="width:64px;height:76px;padding:4px"><div class="mono" role="img" aria-label="Portrait placeholder, monogram IV" style="font-size:26px">IV</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+              <h3 class="nameplate" style="font-size:19px;align-self:flex-start;max-width:100%">Ilyana Vorn</h3>
+              <div style="font-size:15px;line-height:1.2;display:flex;align-items:center;gap:6px"><i-icon name="templar-shield" size="14" style="color:#8A6A2A"></i-icon>Human · Paladin 5</div>
+              <div style="display:flex;align-items:center;gap:8px"><span class="gauge" style="flex:1 1 auto;height:10px;max-width:120px"><span style="display:block;width:70.5%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></span></span><span class="num" style="font-size:16px"><b>31</b> / 44</span></div>
+            </div>
+            <a href="#" class="btn btnBrass" style="height:36px;padding:0 14px;font-size:15px" aria-label="Open Ilyana Vorn"><i-icon name="crossed-swords" size="16"></i-icon>Open</a>
+          </div>
+          <div style="position:relative;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip chipD" title="The Emberfall Company, session live"><i-icon name="three-friends" size="13"></i-icon>The Emberfall Company</span><span class="chip chipLive"><i-icon name="candle-flame" size="12"></i-icon>session live</span></div>
+        </article>
+        <article class="card" style="transform:rotate(.25deg)">
+          <x-tex kind="paper"></x-tex>
+          <div style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center">
+            <div class="frame" style="width:64px;height:76px;padding:4px"><div class="mono" role="img" aria-label="Portrait placeholder, monogram BU" style="font-size:26px">BU</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+              <h3 class="nameplate" style="font-size:19px;align-self:flex-start;max-width:100%">Bramble Underfoot</h3>
+              <div style="font-size:15px;line-height:1.2;display:flex;align-items:center;gap:6px"><i-icon name="hood" size="14" style="color:#8A6A2A"></i-icon>Halfling · Rogue 3</div>
+              <div style="display:flex;align-items:center;gap:8px"><span class="gauge" style="flex:1 1 auto;height:10px;max-width:120px"><span style="display:block;width:100%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></span></span><span class="num" style="font-size:16px"><b>21</b> / 21</span></div>
+            </div>
+            <a href="#" class="btn btnBrass" style="height:36px;padding:0 14px;font-size:15px" aria-label="Open Bramble Underfoot"><i-icon name="crossed-swords" size="16"></i-icon>Open</a>
+          </div>
+          <div style="position:relative;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip" style="font-style:italic;color:#5B4A36">not in a campaign</span></div>
+        </article>
+        <article class="card" style="transform:rotate(-.2deg)">
+          <x-tex kind="paper"></x-tex>
+          <div style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center">
+            <div class="frame" style="width:64px;height:76px;padding:4px"><div class="mono" role="img" aria-label="Portrait placeholder, monogram SM" style="font-size:26px">SM</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+              <h3 class="nameplate" style="font-size:19px;align-self:flex-start;max-width:100%">Sister Maren</h3>
+              <div style="font-size:15px;line-height:1.2;display:flex;align-items:center;gap:6px"><i-icon name="holy-symbol" size="14" style="color:#8A6A2A"></i-icon>Human · Cleric 4</div>
+              <div style="display:flex;align-items:center;gap:8px"><span class="gauge" style="flex:1 1 auto;height:10px;max-width:120px"><span style="display:block;width:87%;height:100%;background:linear-gradient(180deg,#D15A3E,#B8432A 55%,#8E3220)"></span></span><span class="num" style="font-size:16px"><b>27</b> / 31</span></div>
+            </div>
+            <a href="#" class="btn btnBrass" style="height:36px;padding:0 14px;font-size:15px" aria-label="Open Sister Maren"><i-icon name="crossed-swords" size="16"></i-icon>Open</a>
+          </div>
+          <div style="position:relative;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip chipD" title="Tombs of the Salt King, no session"><i-icon name="three-friends" size="13"></i-icon>Tombs of the Salt King</span><span class="chip">no session</span></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Campaigns row -->
+    <section aria-label="Campaigns" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:baseline;gap:12px"><h2 class="h2"><i-icon name="three-friends" size="20"></i-icon>Campaigns</h2><span style="font-size:14px;font-style:italic;color:#E0C27A">2 campaigns</span><span style="flex:1 1 auto"></span><a href="#" style="font-size:15px;color:#E8CC7C">All campaigns</a></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px">
+        <article class="card" style="transform:rotate(.2deg);flex-direction:row;align-items:center;gap:14px">
+          <x-tex kind="paper"></x-tex>
+          <span class="iring iringL" style="position:relative;width:52px;height:52px"><i-icon name="person" size="26"></i-icon></span>
+          <div style="position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 auto">
+            <h3 style="margin:0;font:20px/1.1 Forum,serif;font-weight:400;color:#2B2118">The Emberfall Company</h3>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip" title="Your role"><i-icon name="person" size="13" style="color:#8A6A2A"></i-icon>Player</span><span class="chip"><i-icon name="three-friends" size="13" style="color:#8A6A2A"></i-icon>5 members</span><span class="chip chipLive"><i-icon name="candle-flame" size="12"></i-icon>session live</span></div>
+          </div>
+          <a href="#" class="btn btnBrass" style="position:relative;height:36px;padding:0 14px;font-size:15px" aria-label="Open The Emberfall Company"><i-icon name="three-friends" size="16"></i-icon>Open</a>
+        </article>
+        <article class="card" style="transform:rotate(-.25deg);flex-direction:row;align-items:center;gap:14px">
+          <x-tex kind="paper"></x-tex>
+          <span class="iring iringL" style="position:relative;width:52px;height:52px"><i-icon name="crown" size="26"></i-icon></span>
+          <div style="position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 auto">
+            <h3 style="margin:0;font:20px/1.1 Forum,serif;font-weight:400;color:#2B2118">Tombs of the Salt King</h3>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="chip chipD" title="Your role"><i-icon name="crown" size="13"></i-icon>DM</span><span class="chip"><i-icon name="three-friends" size="13" style="color:#8A6A2A"></i-icon>3 members</span><span class="chip">no session</span></div>
+          </div>
+          <a href="#" class="btn btnBrass" style="position:relative;height:36px;padding:0 14px;font-size:15px" aria-label="Open Tombs of the Salt King"><i-icon name="three-friends" size="16"></i-icon>Open</a>
+        </article>
+        <a href="#" class="card" style="transform:rotate(.15deg);flex-direction:row;align-items:center;gap:14px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:#E0C27A;text-decoration:none;justify-content:center;min-height:96px" aria-label="Join a campaign by code or QR link">
+          <span class="iring iringL" style="position:relative"><i-icon name="entry-door" size="22"></i-icon></span>
+          <span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:#F3E6C8">Join a campaign</b><span style="font-size:14px;font-style:italic">by code or QR link</span></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Quick actions strap -->
+    <section class="strap" aria-label="Quick actions" style="display:flex;align-items:center;gap:14px;padding:14px 16px;transform:rotate(-.15deg)">
+      <x-tex kind="leather" style="border-radius:4px"></x-tex>
+      <span class="rivet" style="position:relative"></span>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;flex:1 1 auto;min-width:0">
+        <a href="#" class="qa" style="height:64px"><span class="iring iringL"><i-icon name="plus" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px"><span>New hero</span><span style="font-weight:400;font-size:14px;font-style:italic;color:#E0C27A">the creation wizard</span></span></a>
+        <a href="#" class="qa" style="height:64px"><span class="iring iringL"><i-icon name="entry-door" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px"><span>Join by code</span><span style="font-weight:400;font-size:14px;font-style:italic;color:#E0C27A">or scan a QR link</span></span></a>
+        <a href="#" class="qa" style="height:64px"><span class="iring iringL"><i-icon name="open-book" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px"><span>Library</span><span style="font-weight:400;font-size:14px;font-style:italic;color:#E0C27A">browse, search, filter</span></span></a>
+        <a href="#" class="qa" style="height:64px"><span class="iring iringL"><i-icon name="knapsack" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px"><span>Import</span><span style="font-weight:400;font-size:14px;font-style:italic;color:#E0C27A">a .hero or .hkpack file</span></span></a>
+      </div>
+      <span class="rivet" style="position:relative"></span>
+    </section>
+  </main>
+
+  <!-- ACTION STRAP: lists -> zone 2 New, Import, Join -->
+  <footer class="bar" aria-label="Actions" style="position:sticky;bottom:0;z-index:4">
+    <x-tex kind="leather"></x-tex>
+    <div class="rivets" style="position:relative"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:10px;padding:6px 22px">
+      <a href="#" class="btn btnBrass" style="height:40px;padding:0 16px;font-size:15px"><i-icon name="plus" size="18"></i-icon>New hero</a>
+      <a href="#" class="btn btnLeather" style="height:40px;padding:0 16px;font-size:15px"><i-icon name="knapsack" size="18" style="color:#E8CC7C"></i-icon>Import</a>
+      <a href="#" class="btn btnLeather" style="height:40px;padding:0 16px;font-size:15px"><i-icon name="entry-door" size="18" style="color:#E8CC7C"></i-icon>Join by code</a>
+      <span style="flex:1 1 auto"></span>
+      <span style="display:flex;align-items:center;gap:8px;font-size:14px;color:#E0C27A"><i-icon name="candle-flame" size="16" style="color:#ECA98F"></i-icon>The Emberfall Company is in session</span>
+    </div>
+    <div class="rivets" style="position:relative"></div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Приєднатися до кампанії (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Приєднатися" action="treasure-map" alabel="Сканувати QR-код"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:14px 12px 16px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <section class="hk-leaf hk-leaf--phone" aria-labelledby="jtp" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:12px;padding:16px 14px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:flex;align-items:center;gap:10px"><span class="hk-iring hk-iring--l" style="box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)"><i-icon name="entry-door" size="18"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><h1 id="jtp" style="margin:0;font:24px/1.05 Forum,serif;font-weight:400">Приєднатися до кампанії</h1><span class="hk-hint" style="font-size:14px">Крок 1 з 2: код. Далі ви оберете героя.</span></div></div>
+      <p style="margin:0;font-size:16px;line-height:1.4">Введіть 8-символьний код від майстра або відскануйте QR з його вкладки «Лобі». Майстер побачить вас у лобі та огляд вашого героя у гурті; сам лист лишається вашим.</p>
+
+      <div class="hk-field">
+        <label class="hk-field__label" for="codeP" style="font-size:15px">Код запрошення</label>
+        <input class="hk-input" id="codeP" value="91PQ-S10Q" spellcheck="false" autocapitalize="characters" style="height:56px;font-family:Forum,serif;font-size:30px;letter-spacing:.14em;text-align:center;padding:0 10px">
+        <div class="slipR" style="flex-direction:row;align-items:flex-start;gap:8px;transform:rotate(.3deg);background:var(--success-soft);box-shadow:inset 0 0 0 1px var(--success-strong)"><i-icon name="check-mark" size="18" style="color:var(--success-strong);flex:0 0 auto;margin-top:1px"></i-icon><span style="font-size:15px;line-height:1.3;color:var(--success-strong)"><b>Заповнено з посилання-запрошення.</b> Цей код відкриває <b>Гробниці Соляного короля</b> · 4 учасники · відкрита для приєднання.</span></div>
+        <span class="hk-field__msg">Запитайте у майстра 8-символьний код запрошення.</span>
+      </div>
+      <button class="hk-btn hk-btn--phone hk-btn--leather hk-has-tip" type="button" style="justify-content:center" aria-describedby="tipScanP"><i-icon name="treasure-map" size="20"></i-icon>Сканувати QR-код<span class="hk-tip hk-tip--above" id="tipScanP" role="tooltip" style="font-size:15px">Відкриває камеру; QR заповнює код<span class="hk-tip__sub">майстер показує його на вкладці «Лобі»</span></span></button>
+
+      <div class="hk-field">
+        <label class="hk-field__label" for="dnameP" style="font-size:15px">Відображуване ім'я (необов'язково)</label>
+        <input class="hk-input hk-focus-demo" id="dnameP" value="Дана" style="height:44px;font-size:17px">
+        <span class="hk-field__msg">так вас бачать у лобі та за столом; герой зберігає власне ім'я</span>
+      </div>
+      <div class="hk-rule"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="hk-hint" style="font-size:15px">Ви приєднуєтеся як</span><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="person" size="14"></i-icon>Гравець</span></div>
+    </section>
+
+    <section class="hk-leaf hk-leaf--phone" aria-label="Якщо код не підійшов" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:8px;padding:12px 14px">
+      <x-tex kind="paper"></x-tex>
+      <span class="hk-hint" style="display:flex;align-items:center;gap:6px;font-size:14px"><span class="pdot"></span>Якщо код не знайдено</span>
+      <input class="hk-input hk-input--error" value="91PQ-S1OQ" aria-invalid="true" aria-describedby="codeErrP" aria-label="Код запрошення" style="height:48px;font-family:Forum,serif;font-size:26px;letter-spacing:.14em;text-align:center">
+      <span class="hk-field__msg hk-field__msg--error" id="codeErrP" style="font-size:15px"><i-icon name="cross-mark" size="13"></i-icon>Цей код запрошення недійсний.</span>
+      <span class="hk-hint" style="font-size:14px">У кодах цифра 0, а не літера О. Якщо майстер оновив код, попросіть новий.</span>
+    </section>
+  </div>
+
+  <!-- action strap for a flow: Back, then the single primary -->
+  <div class="hk-astrap" aria-label="Дії" style="z-index:3;flex:0 0 auto">
+    <x-tex kind="leather"></x-tex>
+    <div class="hk-rivets"></div>
+    <div style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:6px 10px 8px;align-items:center">
+      <a class="hk-btn hk-btn--phone hk-btn--leather" href="#" style="padding:0 14px 0 10px"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Назад</a>
+      <button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="justify-content:center"><i-icon name="entry-door" size="18"></i-icon>Приєднатися</button>
+    </div>
+    <div class="hk-rivets"></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

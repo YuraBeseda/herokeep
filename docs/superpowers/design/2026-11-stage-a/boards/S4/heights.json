@@ -1,0 +1,14 @@
+{
+  "LB01-Library": 1182,
+  "LB02-Library-Spell": 960,
+  "LB03-Library-Class": 1222,
+  "AU01-Auth": 1114,
+  "H01-Heroes": 960,
+  "PK01-Packs": 1146,
+  "PK02-Pack-Detail": 960,
+  "PK03-Trust": 960,
+  "PK04-Homebrew": 1000,
+  "PK05-Homebrew-Item": 1160,
+  "ST01-Settings": 1126,
+  "X01-States": 960
+}

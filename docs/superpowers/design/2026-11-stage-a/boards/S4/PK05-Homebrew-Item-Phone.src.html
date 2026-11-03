@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Пакети — редактор предмета хоумбрю (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-phone" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Новий предмет" action="help" alabel="Довідка з Markdown" lang="uk"></x-topbar>
+
+  <div class="s4-pbody" data-scroller="body">
+    <form class="hk-leaf hk-leaf--phone" aria-label="Новий предмет" style="display:flex;flex-direction:column;gap:12px;transform:rotate(.15deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-field">
+        <label class="hk-field__label" for="name" style="font-size:15px">Назва <span class="s4-req">*</span></label>
+        <input class="hk-input hk-input--error" id="name" value="Ліхтар зоряного світла" aria-invalid="true" aria-describedby="nameErr nameId" style="height:44px">
+        <span class="hk-field__msg hk-field__msg--error" id="nameErr" style="font-size:15px;align-items:flex-start"><i-icon name="hazard-sign" size="12" style="flex:0 0 auto;margin-top:4px"></i-icon><span>Ця назва вже використовується в «Мій хоумбрю». Оберіть іншу або змініть той предмет.</span></span>
+        <span class="hk-field__msg" id="nameId" style="font-size:14px">Id: my-homebrew:item/likhtar-zorianoho-svitla (з назви)</span>
+      </div>
+      <div class="hk-field">
+        <span class="hk-field__label" id="iconLbl" style="font-size:15px">Іконка</span>
+        <div class="s4-iconrow" role="group" aria-labelledby="iconLbl" style="padding:5px 6px">
+          <span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="flask" size="24"></i-icon></span>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto"><b style="font-size:15px;line-height:1.1">flask</b><span class="s4-iconrow__sub">гліф game-icons.net</span></div>
+          <button class="hk-btn hk-btn--leather hk-btn--phone" type="button" aria-expanded="true" aria-controls="iconSheet" style="height:40px;padding:0 12px"><i-icon name="quill" size="13"></i-icon>Змінити</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+        <div class="hk-field"><label class="hk-field__label" for="type" style="font-size:15px">Категорія <span class="s4-req">*</span></label><span class="s4-sel"><select class="hk-input s4-sel__in" id="type" style="height:44px"><option>Зброя</option><option>Обладунок</option><option>Щит</option><option>Спорядження</option><option>Інструмент</option><option>Витратне</option><option>Магічний предмет</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+        <div class="hk-field"><label class="hk-field__label" for="rarity" style="font-size:15px">Рідкісність</label><span class="s4-sel"><select class="hk-input s4-sel__in" id="rarity" style="height:44px"><option>Немає</option><option>Звичайний</option><option selected>Незвичайний</option><option>Рідкісний</option><option>Дуже рідкісний</option><option>Легендарний</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:end">
+        <div class="hk-field"><label class="hk-field__label" for="weight" style="font-size:15px">Вага (фнт.)</label><div class="hk-numfield hk-numfield--leaf hk-numfield--phone" style="grid-template-columns:44px 64px 44px"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Менше на фунт" title="−1"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="weight" type="number" value="2" min="0" step="0.5"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Більше на фунт" title="+1"><i-icon name="plus" size="16"></i-icon></button></div></div>
+        <div class="hk-field"><label class="hk-field__label" for="cost" style="font-size:15px">Вартість</label><div style="display:flex;gap:6px"><input class="hk-input" id="cost" type="number" value="25" min="0" style="height:44px;width:84px"><span class="s4-sel" style="flex:1 1 auto"><select class="hk-input s4-sel__in" style="height:44px"><option>мм</option><option>см</option><option selected>зм</option><option>пм</option></select><span class="s4-sel__chev" aria-hidden="true"></span></span></div></div>
+      </div>
+      <div class="hk-field"><span class="hk-field__label" style="font-size:15px">Налаштування</span><button class="hk-toggle" type="button" role="switch" aria-checked="true" style="min-height:44px"><span class="hk-toggle__track" aria-hidden="true"><span class="hk-toggle__knob"></span></span><span>Потребує налаштування</span></button></div>
+    </form>
+  </div>
+
+  <x-pstrap lang="uk" cols="44px 1fr 44px">
+    <span class="hk-ico hk-ico--phone" aria-hidden="true"><i-icon name="cross-mark" size="18"></i-icon></span>
+    <span class="s4-act s4-act--brass" aria-hidden="true"><i-icon name="save" size="20"></i-icon><span class="s4-act__t">Зберегти</span></span>
+    <span class="hk-ico hk-ico--phone" aria-hidden="true"><i-icon name="hamburger-menu" size="22"></i-icon></span>
+  </x-pstrap>
+
+  <!-- icon picker as a bottom sheet (drawn open) -->
+  <div class="s4-overlay" aria-hidden="true"></div>
+  <div class="s4-sheet" id="iconSheet" role="dialog" aria-labelledby="pickTitle" aria-modal="true" style="gap:8px">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <span class="s4-sheet__grip" aria-hidden="true"></span>
+    <div class="s4-sheet__head"><i-icon name="swap-bag" size="22" style="color:var(--accent-strong)"></i-icon><h2 class="s4-sheet__title" id="pickTitle">Оберіть іконку</h2><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <label class="hk-search" style="height:44px"><i-icon name="magnifying-glass" size="18"></i-icon><span class="hk-sr">Пошук гліфів</span><input class="hk-search__in" type="search" placeholder="Пошук серед 365 гліфів…"></label>
+    <div class="s4-sheet__body" style="gap:6px">
+      <div class="s4-pick__sec" style="font-size:16px"><i-icon name="quill" size="14"></i-icon>Використано в цьому пакеті<span class="hk-hint" style="font-size:14px">5 гліфів · 1 зображення</span></div>
+      <div class="s4-pick__grid" role="group" aria-label="Гліфи, вже використані в «Мій хоумбрю»" style="grid-template-columns:repeat(7,minmax(0,1fr))">
+        <button class="s4-tile" type="button" aria-pressed="false" title="lantern — Starlit Lantern (Lorc)"><i-icon name="lantern" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="ring — Emberfall Signet (Delapouite)"><i-icon name="ring" size="24"></i-icon></button>
+        <button class="s4-tile s4-tile--on" type="button" aria-pressed="true" title="flask — поточна іконка; також у Traveller's Firepot"><i-icon name="flask" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="candle-flame — Candlelight Ward (Lorc)"><i-icon name="candle-flame" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="shield-bash — Shieldwall Veteran (Delapouite)"><i-icon name="shield-bash" size="24"></i-icon></button>
+        <button class="s4-tile s4-tile--img" type="button" aria-pressed="false" title="emberfall-sigil.svg — ваше зображення, 12 жовт. 2026; ще не використано"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 7c3 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 2-7 1 2 2 3 4 3-1-2 0-5 0-7z" fill="currentColor"/></svg></button>
+      </div>
+      <div class="s4-pick__sec" style="font-size:16px"><i-icon name="swap-bag" size="14"></i-icon>Поширені гліфи предметів</div>
+      <div class="s4-pick__grid" role="group" aria-label="Поширені гліфи предметів" style="grid-template-columns:repeat(7,minmax(0,1fr))">
+        <button class="s4-tile" type="button" aria-pressed="false" title="broadsword (Lorc)"><i-icon name="broadsword" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="plain-dagger (Lorc)"><i-icon name="plain-dagger" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="battle-axe (Lorc)"><i-icon name="battle-axe" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="bow-arrow (Delapouite)"><i-icon name="bow-arrow" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="spears (Lorc)"><i-icon name="spears" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="chain-mail (Willdabeast)"><i-icon name="chain-mail" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="round-shield (Willdabeast)"><i-icon name="round-shield" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="cloak (Lucas)"><i-icon name="cloak" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="necklace (Lucas)"><i-icon name="necklace" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="crystal-wand (Lorc)"><i-icon name="crystal-wand" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="health-potion (Delapouite)"><i-icon name="health-potion" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="scroll-unfurled (Lorc)"><i-icon name="scroll-unfurled" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="torch (Delapouite)"><i-icon name="torch" size="24"></i-icon></button>
+        <button class="s4-tile" type="button" aria-pressed="false" title="backpack (Delapouite)"><i-icon name="backpack" size="24"></i-icon></button>
+      </div>
+      <div class="s4-pick__sec" style="font-size:16px"><i-icon name="cloud-upload" size="14"></i-icon>Власна іконка</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="hk-sr" type="file" id="iconFile" accept=".png,.svg,image/png,image/svg+xml">
+        <label class="s4-tile s4-tile--up" for="iconFile" title="Завантажити PNG або SVG"><i-icon name="cloud-upload" size="22"></i-icon></label>
+        <span class="hk-hint" style="flex:1 1 auto;min-width:0;font-size:14px">PNG або SVG до 1 МБ; зменшується до 128 px на пристрої й зберігається із зображеннями пакета.</span>
+        <label class="hk-btn hk-btn--leather hk-btn--phone" for="iconFile" style="padding:0 12px"><i-icon name="files" size="13"></i-icon>Файл</label>
+      </div>
+    </div>
+    <div class="s4-sheet__strap hk-strap">
+      <x-tex kind="leather"></x-tex>
+      <button class="hk-btn hk-btn--ghost-leather hk-btn--phone" type="button">Скасувати</button>
+      <button class="hk-btn hk-btn--brass hk-btn--phone" type="button"><i-icon name="check-mark" size="14"></i-icon>Використати flask</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

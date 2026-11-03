@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Нова кампанія (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Кампанії" action="plus" alabel="Нова кампанія"></x-topbar>
+
+  <div aria-hidden="true" style="flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 12px 14px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;z-index:1">
+    <span class="hintG" style="font-size:15px">1 кампанія: ви в ній граєте</span>
+    <article class="ccard" style="transform:rotate(.25deg);gap:8px;padding:14px 14px 12px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center"><span class="hk-iring hk-iring--l" style="width:44px;height:44px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)"><i-icon name="person" size="22"></i-icon></span><h2 style="margin:0;font:21px/1.1 Forum,serif;font-weight:400">Гробниці Соляного короля</h2></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hk-chip hk-chip--dark" style="height:28px;font-size:14px"><i-icon name="person" size="13"></i-icon>Гравець · Брембл Андерфут</span><span class="hk-chip" style="height:28px;font-size:14px"><i-icon name="three-friends" size="13"></i-icon>4 учасники</span><span class="hk-chip" style="height:28px;font-size:14px;color:var(--text-2)"><i-icon name="candle-flame" size="13"></i-icon>Без сесії</span></div>
+      <span class="hk-hint" style="display:flex;align-items:center;gap:6px;font-size:14px"><i-icon name="hourglass" size="13" style="color:var(--accent-strong)"></i-icon>Остання гра 12 днів тому · 4 сесії</span>
+    </article>
+    <span class="ccard" style="flex-direction:row;align-items:center;gap:12px;background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);min-height:72px;padding:12px 14px"><span class="hk-iring hk-iring--l" style="width:40px;height:40px"><i-icon name="entry-door" size="20"></i-icon></span><span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">Приєднатися до кампанії</b><span style="font-size:14px;font-style:italic">за кодом або QR майстра</span></span></span>
+  </div>
+  <x-pstrap kind="list"></x-pstrap>
+
+  <!-- the create sheet -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:4"></div>
+  <section class="sheetP" role="dialog" aria-modal="true" aria-labelledby="crt" style="gap:12px;padding-bottom:12px">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-sheet__grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:10px"><x-seal state="full" icon="three-friends" size="36" seed="3" label="Нова кампанія"></x-seal><h2 id="crt" style="margin:0;font:23px/1.1 Forum,serif;font-weight:400;flex:1 1 auto">Нова кампанія</h2><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <p class="hk-hint" style="margin:0;font-size:15px">Ви станете майстром. Гравці приєднуються за кодом з вкладки «Лобі»; усе нижче можна змінити пізніше в налаштуваннях.</p>
+    <div class="hk-field">
+      <label class="hk-field__label" for="cnameP" style="font-size:15px">Назва</label>
+      <input class="hk-input hk-focus-demo" id="cnameP" value="Компанія Емберфол" maxlength="200" style="height:48px;font-size:18px">
+      <div style="display:flex;justify-content:space-between;gap:8px"><span class="hk-field__msg">гравці бачать її на екрані приєднання</span><span class="hk-field__msg hk-num" style="font-style:normal">17 / 200</span></div>
+    </div>
+    <div class="hk-field">
+      <label class="hk-field__label" for="slvlP" style="font-size:15px">Початковий рівень</label>
+      <div style="display:flex;align-items:center;gap:12px"><div class="hk-numfield hk-numfield--leaf hk-numfield--phone" style="grid-template-columns:44px 70px 44px"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="На рівень нижче" title="−1" disabled="disabled" style="opacity:.5;cursor:not-allowed"><i-icon name="minus" size="16"></i-icon></button><input class="hk-numfield__in" id="slvlP" type="number" value="1" min="1" max="20"><button class="hk-ico hk-ico--leaf hk-ico--phone" type="button" aria-label="На рівень вище" title="+1"><i-icon name="plus" size="16"></i-icon></button></div><span class="hk-field__msg">нові герої починають з цього рівня</span></div>
+    </div>
+    <div class="hk-field">
+      <span class="hk-field__label" id="visP" style="font-size:15px">Листи групи</span>
+      <div class="seg" role="radiogroup" aria-labelledby="visP" style="display:flex;width:100%">
+        <button class="segb segP" type="button" role="radio" aria-checked="false" title="Гравці бачать лише імена у гурті">Приховані</button>
+        <button class="segb segP segOn" type="button" role="radio" aria-checked="true" title="Гравці бачать ОЗ, КБ і стани">Лише огляд</button>
+        <button class="segb segP" type="button" role="radio" aria-checked="false" title="Гравці можуть відкривати листи одне одного (лише читання)">Повні листи</button>
+      </div>
+      <span class="hk-field__msg">що гравці бачать одне про одного у гурті</span>
+    </div>
+    <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding-top:4px">
+      <button class="hk-btn hk-btn--phone hk-btn--ghost" type="button">Скасувати</button>
+      <button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="justify-content:center"><i-icon name="wax-seal" size="18"></i-icon>Створити кампанію</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — confirm dialogs: revert, pack update report, export, delete (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;height:1000px;overflow:hidden;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(320px,340fr) minmax(0,560fr) minmax(0,460fr);gap:20px;padding:18px 18px 92px;align-items:start;flex:1 1 auto" aria-hidden="true">
+    <x-part name="folio" tab="play" tip="none"></x-part>
+    <x-part name="centre"></x-part>
+    <x-part name="right"></x-part>
+  </main>
+  <x-part name="strap" pos="abs"></x-part>
+  <div class="dim" style="z-index:7"></div>
+
+  <div style="position:absolute;inset:60px 0 70px;z-index:8;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-rows:min-content;gap:22px 26px;align-content:center;justify-items:center;padding:0 40px">
+
+    <!-- REVERT (en) + the uk twin that proves the fix -->
+    <div style="display:flex;gap:16px;align-items:flex-start;justify-self:stretch">
+      <x-dlg title="Revert this change?" icon="anticlockwise-rotation" width="380px" id="rev" seed="2" role="alertdialog" desc="revD" style="flex:1 1 auto">
+        <p id="revD">Ilyana Vorn is recomputed as if <b>“Took 7 damage from Giant Spider”</b> never happened. The events after it stay and are replayed on top.</p>
+        <div class="kv" style="grid-template-columns:auto minmax(0,1fr);gap:4px 10px"><span class="th">Hit points</span><span>31 → <b>38</b> of 44</span><span class="th">Timeline</span><span>the row stays, crossed out, with “Reverted”</span></div>
+        <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Keep it</button><span style="flex:1 1 auto"></span><button class="btn btnEmber btnL" type="button"><i-icon name="anticlockwise-rotation" size="15"></i-icon>Revert</button></div>
+      </x-dlg>
+      <div lang="uk" style="flex:0 0 250px">
+        <x-dlg title="Відкотити цю зміну?" icon="anticlockwise-rotation" width="250px" id="revUk" seed="3" role="alertdialog" desc="revUkD" closelabel="Закрити" style="padding:14px 16px 12px;gap:10px">
+          <p id="revUkD" style="font-size:14px">Героя буде перераховано так, ніби цього не було. Пізніші події залишаться.</p>
+          <span class="hint" style="font-size:13px">«Відкотити» і «Скасувати» більше не однакові.</span>
+          <div class="hk-dialog__strap hk-strap" style="margin:4px -16px -12px;padding:8px 10px;gap:6px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL" type="button" style="height:36px;font-size:15px">Скасувати</button><span style="flex:1 1 auto"></span><button class="btn btnEmber" type="button" style="height:36px;font-size:15px"><i-icon name="anticlockwise-rotation" size="14"></i-icon>Відкотити</button></div>
+        </x-dlg>
+      </div>
+    </div>
+
+    <!-- PACK UPDATE REPORT (rebase) -->
+    <x-dlg title="Update Emberfall Company pack v1.0.0 → v1.1.0?" icon="stack" width="640px" id="rebase" seed="5" style="justify-self:stretch">
+      <span class="hint">What changes on Ilyana Vorn’s sheet if this pack is updated. Nothing is saved until you confirm.</span>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 18px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span class="sub" style="font-size:16px"><i-icon name="transform" size="15" style="color:#8A6A2A"></i-icon>Choices moved to a replacement</span>
+          <div class="brow" style="grid-template-columns:22px minmax(0,1fr)"><i-icon name="round-shield" size="16"></i-icon><span class="bname"><span class="th">Fighting style</span><span>Protection → <b>Protection (revised)</b></span></span></div>
+          <div class="brow" style="grid-template-columns:22px minmax(0,1fr)"><i-icon name="thrown-spear" size="16"></i-icon><span class="bname"><span class="th">Weapon mastery</span><span>Slow · Javelin → <b>Slow · Javelin (thrown)</b></span></span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span class="sub" style="font-size:16px;color:#8E3220;border-color:#C98C78"><i-icon name="cross-mark" size="13" style="color:#8E3220"></i-icon>Choices cleared</span>
+          <div class="brow" style="grid-template-columns:22px minmax(0,1fr)"><i-icon name="conversation" size="16" style="color:#8E3220"></i-icon><span class="bname"><span class="th">Language (origin)</span><span><s>Emberfall cant</s> <span class="chip chipE" style="height:20px">option removed</span></span><span class="hint">pick a language again on the Build tab</span></span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span class="sub" style="font-size:16px"><i-icon name="scroll-unfurled" size="15" style="color:#8A6A2A"></i-icon>Sheet changes</span>
+        <div class="kv" style="grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);gap:4px 12px"><span class="th">Armor class</span><span>18 → 18 <span class="th">(no change)</span></span><span class="th">Languages</span><span>Common, <s>Emberfall cant</s></span><span class="th">Attacks</span><span>Javelin: thrown 30/120 kept</span><span class="th">Features</span><span>Protection: wording updated</span></div>
+      </div>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><span class="hint" style="color:#E0C27A">1 choice to re-pick afterwards</span><button class="btn btnBrass btnL" type="button"><i-icon name="upgrade" size="15"></i-icon>Update pack</button></div>
+    </x-dlg>
+
+    <!-- EXPORT -->
+    <x-dlg title="Export Ilyana Vorn" icon="share" width="440px" id="exp" seed="1" style="justify-self:stretch">
+      <div style="display:flex;align-items:center;gap:8px"><i-icon name="files" size="18" style="color:#8A6A2A"></i-icon><span class="chip" style="height:26px;font-size:15px">ilyana-vorn.hero</span><span class="hint">sheet, timeline, notes, portrait</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span class="th">Content packs to include</span>
+        <button class="toggle tgOn" type="button" aria-pressed="true"><span class="tgT"><span class="tgK"></span></span><span>Emberfall Company pack <span class="th">v1.0.0 · 1.2 MB</span></span></button>
+        <button class="toggle tgOn" type="button" aria-pressed="true"><span class="tgT"><span class="tgK"></span></span><span>My homebrew <span class="th">v0.3.0 · 14 KB</span></span></button>
+        <button class="toggle" type="button" aria-pressed="false" disabled="disabled" title="Core rules are never exported; every Herokeep has them" style="opacity:.6;cursor:not-allowed"><span class="tgT"><span class="tgK"></span></span><span>SRD 5e 2024 <span class="th">core rules, never included</span></span></button>
+      </div>
+      <span class="hint" style="display:flex;align-items:center;gap:5px"><i-icon name="info" size="13" style="color:#8A6A2A"></i-icon>Packs inside the file ask for trust before they install elsewhere.</span>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL" type="button"><i-icon name="cross-mark" size="14"></i-icon>Cancel</button><span style="flex:1 1 auto"></span><button class="btn btnBrass btnL" type="button"><i-icon name="share" size="15"></i-icon>Export</button></div>
+    </x-dlg>
+
+    <!-- DELETE HERO -->
+    <x-dlg title="Delete Ilyana Vorn?" icon="skull" width="440px" id="del" seed="4" role="alertdialog" desc="delD" style="justify-self:stretch">
+      <p id="delD">Her sheet, timeline and notes are removed from this device. Synced copies on other devices are removed on their next sync. The Emberfall Company loses her party card.</p>
+      <div class="warn warnE"><i-icon name="info" size="18"></i-icon><span>This can’t be undone. <b>Export</b> first if you might want her back.</span></div>
+      <div class="hk-dialog__strap hk-strap" style="margin-top:4px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnL focusDemo" type="button"><i-icon name="cross-mark" size="14"></i-icon>Keep</button><span style="flex:1 1 auto"></span><button class="btn btnEmber btnL" type="button"><i-icon name="trash-can" size="15"></i-icon>Delete hero</button></div>
+    </x-dlg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Packs — trust dialog for an .hkpack import (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="packs" lang="en"></x-rail>
+
+  <!-- the packs list beneath, dimmed and inert -->
+  <main class="s4-main" aria-hidden="true" style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start">
+    <div class="s4-col">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h1 class="s4-h1"><i-icon name="chest" size="28"></i-icon>Packs</h1>
+        <span class="s4-sub">Content packs add options to the builder and the library. A pack changes nothing until a hero pins it.</span>
+      </div>
+      <section class="hk-leaf" style="transform:rotate(.15deg);display:flex;flex-direction:column;gap:4px;padding:16px 20px 14px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head"><h2 class="hk-leaf__title"><i-icon name="chest" size="20"></i-icon>Installed packs</h2><span class="hk-hint">5 packs · 1 update available</span></div>
+        <div class="s4-group">Core rules</div>
+        <div class="s4-row"><span class="hk-iring hk-iring--l"><i-icon name="locked-chest" size="19"></i-icon></span><div style="min-width:0"><div class="s4-row__name">SRD 5.2.1 (2024 rules)<span class="hk-plate">0.1.0</span><span class="hk-chip">core rules</span><i-icon name="padlock" size="16" style="color:var(--accent-strong)"></i-icon></div><div class="s4-row__sub"><span>Wizards of the Coast · CC BY 4.0</span><span>·</span><span>1,866 entries</span><span>·</span><span>used by 4 heroes</span></div></div><div class="s4-row__acts"><span class="hk-ico hk-ico--leaf hk-ico--s"><span class="s4-chev" style="margin:0 2px 0 0"></span></span></div></div>
+        <div class="s4-group" style="padding-top:14px">Content packs</div>
+        <div class="s4-row"><span class="hk-iring hk-iring--l"><i-icon name="three-friends" size="19"></i-icon></span><div style="min-width:0"><div class="s4-row__name">Emberfall Homebrew<span class="hk-plate">1.2.0</span><span class="hk-chip hk-chip--arcane"><i-icon name="three-friends" size="12"></i-icon>Campaign: The Emberfall Company</span></div><div class="s4-row__sub"><span>The Emberfall Company (DM)</span><span>·</span><span>25 entries</span><span>·</span><span>9 images</span><span>·</span><span>used by 2 heroes</span></div></div><div class="s4-row__acts"><span class="hk-ico hk-ico--leaf hk-ico--s"><span class="s4-chev" style="margin:0 2px 0 0"></span></span></div></div>
+        <div class="s4-row"><span class="hk-iring hk-iring--l"><i-icon name="open-chest" size="19"></i-icon></span><div style="min-width:0"><div class="s4-row__name">Sample content<span class="hk-plate">1.0.0</span><span class="hk-chip hk-chip--warning"><i-icon name="upgrade" size="12"></i-icon>Update available: 1.1.0</span></div><div class="s4-row__sub"><span>Herokeep contributors · CC BY 4.0</span><span>·</span><span>4 entries</span><span>·</span><span>1 image</span><span>·</span><span>used by 1 hero</span></div></div><div class="s4-row__acts"><span class="hk-btn hk-btn--brass"><i-icon name="upgrade" size="14"></i-icon>Update</span><span class="hk-ico hk-ico--leaf hk-ico--s"><span class="s4-chev" style="margin:0 2px 0 0"></span></span></div></div>
+        <div class="s4-row"><span class="hk-iring hk-iring--l"><i-icon name="quill" size="19"></i-icon></span><div style="min-width:0"><div class="s4-row__name">My homebrew<span class="hk-plate">0.1.0</span><span class="hk-chip"><i-icon name="laptop" size="12"></i-icon>This device</span></div><div class="s4-row__sub"><span>4 entries: 3 items, 1 spell</span><span>·</span><span>used by 1 hero</span></div></div><div class="s4-row__acts"><span class="hk-btn hk-btn--leather"><i-icon name="quill" size="14"></i-icon>Edit</span><span class="hk-ico hk-ico--leaf hk-ico--s"><span class="s4-chev" style="margin:0 2px 0 0"></span></span></div></div>
+        <div class="s4-row" style="border-bottom:0"><span class="hk-iring hk-iring--l"><i-icon name="smartphone" size="19"></i-icon></span><div style="min-width:0"><div class="s4-row__name">My homebrew<span class="hk-plate">0.1.0</span><span class="hk-chip hk-chip--dark"><i-icon name="smartphone" size="12"></i-icon>From another device</span></div><div class="s4-row__sub"><span>Pixel 8</span><span>·</span><span>2 entries: 1 feat, 1 species</span><span>·</span><span>not used by any hero</span></div></div><div class="s4-row__acts"><span class="hk-ico hk-ico--leaf hk-ico--s"><span class="s4-chev" style="margin:0 2px 0 0"></span></span></div></div>
+        <div class="s4-group" style="padding-top:14px">Translations</div>
+        <div class="hk-block" style="flex-direction:row;align-items:center;gap:10px"><i-icon name="conversation" size="18" style="color:var(--accent-strong)"></i-icon><span class="hk-hint">No translation packs installed. They are .hkpack files too: import one and the library and sheets switch to its language.</span></div>
+      </section>
+    </div>
+    <div class="s4-col">
+      <section class="hk-leaf" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2"><i-icon name="knapsack" size="18"></i-icon>Import a pack</h2>
+        <div class="s4-dropzone"><i-icon name="cloud-download" size="30" style="color:var(--accent-strong)"></i-icon><b style="font-size:16px">emberfall-homebrew-1.3.0.hkpack</b><span class="hk-hint">1.2 MB · read and verified</span></div>
+      </section>
+      <section class="hk-leaf" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2"><i-icon name="quill" size="18"></i-icon>My homebrew</h2>
+        <p class="s4-p">Items, spells, feats and species you write yourself live in a pack on this device. A hero sees them once the pack is pinned on its Build tab.</p>
+        <div class="hk-row" style="gap:8px"><span class="hk-btn hk-btn--leather"><i-icon name="quill" size="14"></i-icon>Open homebrew</span><span class="hk-btn hk-btn--ghost hk-btn--dashed"><i-icon name="plus" size="12"></i-icon>New entry</span></div>
+      </section>
+      <section class="hk-leaf" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:8px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2"><i-icon name="database" size="18"></i-icon>Storage</h2>
+        <div class="s4-bar"><div class="s4-bar__fill" style="width:5%"></div><div class="s4-bar__fill2" style="width:1.6%"></div></div>
+        <div class="s4-kv" style="font-size:14px"><span class="s4-kv__k">Packs</span><span class="s4-kv__v"><b class="hk-num" style="font-size:16px">3.4 MB</b><span class="hk-hint">images 1.1 MB</span></span><span class="s4-kv__k">This device</span><span class="s4-kv__v">7.8 MB of 4.1 GB used</span></div>
+      </section>
+    </div>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <span class="hk-btn hk-btn--brass hk-btn--l" aria-hidden="true"><i-icon name="knapsack" size="17"></i-icon>Import pack</span>
+      <span class="hk-btn hk-btn--leather hk-btn--l" aria-hidden="true"><i-icon name="plus" size="17"></i-icon>New homebrew</span>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary"><span class="hk-ico" aria-hidden="true"><i-icon name="clockwise-rotation" size="20"></i-icon></span></div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="chest" size="16" style="color:var(--brass)"></i-icon>5 packs · 1 update available</span>
+  </x-strap>
+
+  <!-- overlay + trust dialog -->
+  <div class="hk-overlay" aria-hidden="true" style="z-index:5"></div>
+  <div class="hk-dialog" role="dialog" aria-labelledby="trustTitle" aria-modal="true" style="position:absolute;z-index:6;left:360px;top:96px;width:600px;gap:14px">
+    <x-tex kind="paper"></x-tex>
+    <div class="hk-dialog__head"><x-seal state="full" icon="knapsack" size="36" seed="2"></x-seal><h2 class="hk-dialog__title" id="trustTitle">Install “Emberfall Homebrew 1.3.0”?</h2><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Close" title="Close (Esc)"><i-icon name="cross-mark" size="12"></i-icon></button></div>
+    <p class="hk-hint">Review what the pack contains before it is installed. Nothing changes for your heroes until you pin the new version on their Build tab.</p>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">
+      <div class="s4-dlgkv">
+        <span class="s4-kv__k">Version</span><span class="s4-kv__v">1.3.0 <span class="hk-hint">replaces 1.2.0 for new pins</span></span>
+        <span class="s4-kv__k">Author</span><span class="s4-kv__v">The Emberfall Company (DM)</span>
+        <span class="s4-kv__k">Licence</span><span class="s4-kv__v">CC BY 4.0</span>
+        <span class="s4-kv__k">Requires</span><span class="s4-kv__v">SRD 5.2.1 (2024 rules) 0.1.0 or newer <span class="hk-chip hk-chip--moss" title="The core pack 0.1.0 is installed"><i-icon name="check-mark" size="11"></i-icon>installed</span></span>
+        <span class="s4-kv__k">Images</span><span class="s4-kv__v">9 images · 1.1 MB</span>
+        <span class="s4-kv__k">File</span><span class="s4-kv__v s4-wrap">emberfall-homebrew-1.3.0.hkpack · 1.2 MB</span>
+        <span class="s4-kv__k">Integrity</span><span class="s4-kv__v"><span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i-icon name="checked-shield" size="14" style="color:var(--success-strong)" label="Verified"></i-icon>sha256 verified</span><span class="hk-hint">matches the campaign's record</span></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 class="s4-h3"><i-icon name="stack" size="15"></i-icon>Contains · 27 entries</h3>
+        <div class="s4-type" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <span class="s4-type__i"><i-icon name="swap-bag" size="16"></i-icon>Items<span class="s4-type__n">16</span></span>
+          <span class="s4-type__i"><i-icon name="spell-book" size="16"></i-icon>Spells<span class="s4-type__n">6</span></span>
+          <span class="s4-type__i"><i-icon name="laurel-crown" size="16"></i-icon>Feats<span class="s4-type__n">2</span></span>
+          <span class="s4-type__i"><i-icon name="person" size="16"></i-icon>Species<span class="s4-type__n">1</span></span>
+          <span class="s4-type__i"><i-icon name="holy-symbol" size="16"></i-icon>Subclasses<span class="s4-type__n">1</span></span>
+          <span class="s4-type__i"><i-icon name="medal" size="16"></i-icon>Backgrounds<span class="s4-type__n">1</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hk-block" style="gap:6px">
+      <h3 class="s4-h3"><i-icon name="transform" size="15"></i-icon>What it changes</h3>
+      <div class="hk-row" style="gap:8px"><span class="hk-has-tip" style="display:inline-flex"><span class="hk-chip hk-chip--moss" tabindex="0" aria-describedby="tipOvr"><i-icon name="check-mark" size="11"></i-icon>overrides 0 existing entries</span><span class="hk-tip" id="tipOvr" role="tooltip" style="left:0;transform:none">No installed entry is replaced<span class="hk-tip__sub">every id in this pack is new; an override would list the entries it changes</span></span></span><span class="hk-chip" title="Compared with the installed 1.2.0">adds 2 items since 1.2.0</span><span class="hk-chip" title="Heroes keep 1.2.0 until you update them">2 heroes stay on 1.2.0</span></div>
+      <span class="hk-hint">Validation found no errors or warnings.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <h3 class="s4-h3"><i-icon name="wax-seal" size="15"></i-icon>Attribution</h3>
+      <p class="s4-p s4-wrap" style="font-size:14px;color:var(--text-2)">This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, licensed under the Creative Commons Attribution 4.0 International License. Homebrew entries by The Emberfall Company.</p>
+    </div>
+
+    <div class="hk-dialog__strap hk-strap">
+      <x-tex kind="leather"></x-tex>
+      <span class="hk-hint" style="color:var(--text-on-leather-3);margin-right:auto">Installs on this device only</span>
+      <button class="hk-btn hk-btn--ghost-leather" type="button">Cancel</button>
+      <button class="hk-btn hk-btn--brass hk-focus-demo" type="button"><i-icon name="cloud-download" size="14"></i-icon>Install</button>
+    </div>
+  </div>
+
+  <!-- already-installed state, drawn small -->
+  <div style="position:absolute;z-index:6;right:36px;top:96px;width:400px;display:flex;flex-direction:column;gap:8px">
+    <span class="s4-tag"><i-icon name="info" size="14"></i-icon>Same file chosen again: already installed</span>
+    <div class="hk-dialog" role="dialog" aria-labelledby="trust2Title" aria-modal="true" style="width:100%;gap:10px">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="spent" icon="knapsack" size="34" seed="4"></x-seal><h2 class="hk-dialog__title" id="trust2Title" style="font-size:22px;line-height:26px">Install “Sample content 1.0.0”?</h2></div>
+      <div class="hk-banner hk-banner--info" role="status" style="padding:8px 10px"><i-icon name="info" size="20"></i-icon><div class="hk-banner__body"><span class="hk-banner__title" style="font-size:16px">This pack is already installed.</span><span class="hk-hint">Same name, version and contents. Remove it first to reinstall.</span></div></div>
+      <div class="s4-dlgkv" style="font-size:14px">
+        <span class="s4-kv__k">Version</span><span class="s4-kv__v">1.0.0</span>
+        <span class="s4-kv__k">Author</span><span class="s4-kv__v">Herokeep contributors · CC BY 4.0</span>
+        <span class="s4-kv__k">Contains</span><span class="s4-kv__v">1 species, 1 feat, 1 spell, 1 item · 1 image</span>
+      </div>
+      <div class="hk-dialog__strap hk-strap">
+        <x-tex kind="leather"></x-tex>
+        <button class="hk-btn hk-btn--ghost-leather" type="button">Cancel</button>
+        <button class="hk-btn hk-btn--brass" type="button" disabled aria-disabled="true" title="Install: not available — this pack is already installed"><i-icon name="cloud-download" size="14"></i-icon>Install</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

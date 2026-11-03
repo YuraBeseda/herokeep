@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — підвищення рівня, риса або покращення (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <x-part name="pbar" title="Підвищення до 8 рівня" left="cross-mark" leftlabel="Скасувати підвищення рівня"></x-part>
+
+  <div style="position:relative;z-index:1;flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box">
+    <x-part name="pstrip" n="3" of="4" label="Риса або покращення"></x-part>
+
+    <section class="leaf leafP" aria-label="Покращення характеристик" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 0 0 1px #CBB68C,inset 0 0 18px rgba(139,110,60,.26),4px 6px 12px rgba(10,5,2,.62),0 0 0 2px #C9A24E,0 0 12px rgba(232,204,124,.5)">
+      <x-tex kind="paper"></x-tex>
+      <span class="pickSeal" style="position:absolute;top:-10px;right:-4px"><x-seal state="full" icon="check-mark" size="32" label="Обрано" seed="5"></x-seal></span>
+      <h2 class="leafTitle" style="position:relative;font-size:20px"><i-icon name="muscle-up" size="19" style="color:#8A6A2A"></i-icon>Покращення характеристик</h2>
+      <div style="position:relative;display:flex;gap:4px" role="radiogroup" aria-label="Як розподілити"><button class="chip chipBtn chipOn" type="button" role="radio" aria-checked="true" style="height:36px">+2 до однієї</button><button class="chip chipBtn" type="button" role="radio" aria-checked="false" style="height:36px">+1 до двох</button></div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 6px">
+        <button class="sealBtn sealOn" type="button" aria-pressed="true" aria-label="Сила 16 → 18" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><span style="position:relative"><x-seal state="full" text="18" size="56" seed="1"></x-seal><span class="sealRing" aria-hidden="true"></span></span><span style="font:15px/1 Forum,serif;color:#2B2118">Сила</span><span class="th">16 → 18</span></button>
+        <button class="sealBtn" type="button" aria-pressed="false" aria-label="Спритність 10 → 12" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="10" size="56" seed="2"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Спритність</span><span class="th">10 → 12</span></button>
+        <button class="sealBtn" type="button" aria-pressed="false" aria-label="Статура 14 → 16" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="14" size="56" seed="3"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Статура</span><span class="th">14 → 16</span></button>
+        <button class="sealBtn" type="button" aria-pressed="false" aria-label="Інтелект 8 → 10" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="8" size="56" seed="4"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Інтелект</span><span class="th">8 → 10</span></button>
+        <button class="sealBtn" type="button" aria-pressed="false" aria-label="Мудрість 12 → 14" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="12" size="56" seed="5"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Мудрість</span><span class="th">12 → 14</span></button>
+        <button class="sealBtn" type="button" aria-pressed="false" aria-label="Харизма 16 → 18" style="display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.2"><x-seal state="spent" text="16" size="56" seed="6"></x-seal><span style="font:15px/1 Forum,serif;color:#2B2118">Харизма</span><span class="th">16 → 18</span></button>
+      </div>
+      <div class="warn" style="position:relative;background:rgba(203,182,140,.3);box-shadow:inset 0 0 0 1px #CBB68C;font-size:15px"><i-icon name="muscle-up" size="18" style="color:#8A6A2A"></i-icon><span><b>Сила 16 → 18</b>: модифікатор +3 → +4. Довгий меч: атака +6 → +7, шкода 1к8+3 → 1к8+4; Атлетика +6 → +7.</span></div>
+    </section>
+
+    <div class="sub" style="position:relative;color:#E0C27A;border-color:rgba(201,162,78,.45);font-size:16px"><i-icon name="card-pick" size="15" style="color:#C9A24E"></i-icon>Або риса</div>
+    <div style="position:relative;display:flex;flex-direction:column;gap:8px">
+      <button class="pick" type="button" aria-pressed="false" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="eye" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Пильний</span><span class="th" style="font-size:14px">Бонус майстерності до ініціативи</span></span><span class="btn btnParch" style="position:relative;height:40px">Обрати</span></button>
+      <button class="pick pickOff" type="button" aria-disabled="true" title="Уже обрано: надано передісторією Солдат" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="axe-swing" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Лютий нападник</span><span class="gateT" style="font-size:14px"><i-icon name="check-mark" size="12"></i-icon>уже обрано (Солдат)</span></span></button>
+      <button class="pick pickOff" type="button" aria-disabled="true" aria-describedby="tipDef" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;min-height:60px;position:relative"><x-tex kind="paper"></x-tex><span class="iring iringP" style="position:relative"><i-icon name="round-shield" size="18"></i-icon></span><span style="position:relative;display:flex;flex-direction:column;gap:3px;flex:1 1 auto;min-width:0"><span class="pickT" style="font-size:18px">Захист</span><span class="gateT glyph" style="font-size:14px;align-self:flex-start;position:relative"><i-icon name="padlock" size="12"></i-icon>риса бойового стилю<span class="tipUp" id="tipDef" role="tooltip" style="left:0;transform:none;font-size:15px;white-space:normal;width:250px">Лише через уміння «Бойовий стиль»<span class="tipSub">Змініть бойовий стиль на вкладці Білд.</span></span></span></span></button>
+    </div>
+  </div>
+
+  <x-part name="pflow" next="Далі"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

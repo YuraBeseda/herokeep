@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Пакети — підтвердження встановлення .hkpack (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-phone" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Пакети" action="knapsack" alabel="Імпортувати пакет" lang="uk"></x-topbar>
+
+  <!-- the packs list beneath, inert -->
+  <div class="s4-pbody" data-scroller="body" aria-hidden="true">
+    <span class="hk-hint" style="color:var(--text-on-ground-2);font-size:15px">Пакет нічого не змінює, доки ви його не встановите, а персонаж не закріпить.</span>
+    <section class="hk-leaf hk-leaf--phone" style="display:flex;flex-direction:column;gap:2px;transform:rotate(.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="s4-group" style="font-size:16px">Базові правила</div>
+      <div class="s4-prow"><span class="hk-iring hk-iring--l"><i-icon name="locked-chest" size="19"></i-icon></span><div style="min-width:0"><div class="s4-prow__name">SRD 5.2.1 (2024 rules)<span class="hk-plate">0.1.0</span><span class="hk-chip">базові правила</span></div><div class="s4-prow__sub"><span>1 866 записів</span><span>·</span><span>4 персонажі</span></div></div><span class="s4-chev"></span></div>
+      <div class="s4-group" style="font-size:16px;padding-top:12px">Пакети вмісту</div>
+      <div class="s4-prow"><span class="hk-iring hk-iring--l"><i-icon name="three-friends" size="19"></i-icon></span><div style="min-width:0"><div class="s4-prow__name">Emberfall Homebrew<span class="hk-plate">1.2.0</span></div><div class="s4-prow__sub"><span class="hk-chip hk-chip--arcane"><i-icon name="three-friends" size="12"></i-icon>Компанія Емберфол</span><span>25 записів · 2 персонажі</span></div></div><span class="s4-chev"></span></div>
+      <div class="s4-prow"><span class="hk-iring hk-iring--l"><i-icon name="open-chest" size="19"></i-icon></span><div style="min-width:0"><div class="s4-prow__name">Sample content<span class="hk-plate">1.0.0</span></div><div class="s4-prow__sub"><span class="hk-chip hk-chip--warning"><i-icon name="upgrade" size="12"></i-icon>Доступне оновлення</span><span>4 записи · 1 персонаж</span></div></div><span class="s4-chev"></span></div>
+      <div class="s4-prow" style="border-bottom:0"><span class="hk-iring hk-iring--l"><i-icon name="quill" size="19"></i-icon></span><div style="min-width:0"><div class="s4-prow__name">Мій хоумбрю<span class="hk-plate">0.1.0</span></div><div class="s4-prow__sub"><span class="hk-chip"><i-icon name="smartphone" size="12"></i-icon>Цей пристрій</span><span>4 записи · 1 персонаж</span></div></div><span class="s4-chev"></span></div>
+    </section>
+  </div>
+
+  <x-pstrap lang="uk" cols="1fr 1fr 44px">
+    <span class="s4-act s4-act--brass" aria-hidden="true"><i-icon name="knapsack" size="20"></i-icon><span class="s4-act__t">Імпортувати пакет</span></span>
+    <span class="s4-act s4-act--leather" aria-hidden="true"><i-icon name="quill" size="20"></i-icon><span class="s4-act__t">Хоумбрю</span></span>
+    <span class="hk-ico hk-ico--phone" aria-hidden="true"><i-icon name="hamburger-menu" size="22"></i-icon></span>
+  </x-pstrap>
+
+  <!-- trust sheet -->
+  <div class="s4-overlay" aria-hidden="true"></div>
+  <div class="s4-sheet" role="dialog" aria-labelledby="trustTitle" aria-modal="true" style="gap:8px">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <span class="s4-sheet__grip" aria-hidden="true"></span>
+    <div class="s4-sheet__head"><x-seal state="full" icon="knapsack" size="34" seed="2"></x-seal><h2 class="s4-sheet__title" id="trustTitle" style="font-size:21px;line-height:25px">Встановити «Emberfall Homebrew 1.3.0»?</h2></div>
+    <span class="hk-hint" style="font-size:14px">Перегляньте вміст пакета перед встановленням. Персонажі залишаються на закріпленій версії, доки ви не оновите їх на вкладці «Білд».</span>
+    <div class="s4-sheet__body">
+      <div class="s4-pfact" style="font-size:15px">
+        <span class="s4-kv__k">Версія</span><span class="s4-kv__v">1.3.0 <span class="hk-hint">замінить 1.2.0 для нових закріплень</span></span>
+        <span class="s4-kv__k">Автори</span><span class="s4-kv__v">Компанія Емберфол (ведучий)</span>
+        <span class="s4-kv__k">Ліцензія</span><span class="s4-kv__v">CC BY 4.0</span>
+        <span class="s4-kv__k">Потребує</span><span class="s4-kv__v">SRD 5.2.1 (2024 rules) 0.1.0 або новіша <span class="hk-chip hk-chip--moss" title="Базовий пакет 0.1.0 встановлено"><i-icon name="check-mark" size="11"></i-icon>є</span></span>
+        <span class="s4-kv__k">Зображення</span><span class="s4-kv__v">9 зображень · 1,1 МБ</span>
+        <span class="s4-kv__k">Файл</span><span class="s4-kv__v s4-wrap">emberfall-homebrew-1.3.0.hkpack · 1,2 МБ · <span style="white-space:nowrap"><i-icon name="checked-shield" size="13" style="color:var(--success-strong);vertical-align:-2px" label="Підтверджено"></i-icon> sha256 підтверджено</span></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h3 class="s4-h3"><i-icon name="stack" size="15"></i-icon>Вміст · 27 записів</h3>
+        <div class="hk-row" style="gap:6px"><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="swap-bag" size="13"></i-icon>Предмети 16</span><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="spell-book" size="13"></i-icon>Заклинання 6</span><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="laurel-crown" size="13"></i-icon>Риси 2</span><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="person" size="13"></i-icon>Види 1</span><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="holy-symbol" size="13"></i-icon>Підкласи 1</span><span class="hk-chip" style="height:28px;font-size:15px"><i-icon name="medal" size="13"></i-icon>Передісторії 1</span></div>
+      </div>
+      <div class="hk-block" style="gap:4px">
+        <h3 class="s4-h3"><i-icon name="transform" size="15"></i-icon>Зміни наявного вмісту</h3>
+        <span style="font-size:15px"><i-icon name="check-mark" size="12" style="color:var(--success-strong);vertical-align:-1px"></i-icon> Цей пакет не змінює наявний вміст. Додає 2 предмети порівняно з 1.2.0; 2 персонажі залишаються на 1.2.0.</span>
+        <span class="hk-hint" style="font-size:14px">Перевірка не знайшла помилок чи попереджень.</span>
+      </div>
+    </div>
+    <div class="s4-sheet__strap hk-strap">
+      <x-tex kind="leather"></x-tex>
+      <span class="hk-hint" style="color:var(--text-on-leather-3);margin-right:auto;font-size:14px">Лише на цьому пристрої</span>
+      <button class="hk-btn hk-btn--ghost-leather hk-btn--phone" type="button">Скасувати</button>
+      <button class="hk-btn hk-btn--brass hk-btn--phone" type="button"><i-icon name="cloud-download" size="15"></i-icon>Встановити</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

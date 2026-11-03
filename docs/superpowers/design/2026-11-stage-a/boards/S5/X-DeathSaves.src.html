@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — death saves, full screen (phone)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-phone" data-theme="tavern" style="padding:12px 16px 16px;gap:12px">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 42% at 50% 30%,rgba(184,67,42,.42) 0%,rgba(184,67,42,.12) 45%,rgba(0,0,0,0) 72%),radial-gradient(ellipse 100% 60% at 50% 110%,rgba(0,0,0,.6) 0%,rgba(0,0,0,0) 70%)"></div>
+
+  <div style="display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px">
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Back to the sheet" title="Back to the sheet"><i-icon name="return-arrow" size="20"></i-icon></button>
+    <div class="s5-col" style="gap:2px;align-items:center"><span class="s5-tag" style="height:22px;font-size:12px"><i-icon name="wax-seal" size="12"></i-icon>Later idea · death saves</span><span style="font-family:var(--font-display);font-size:20px;line-height:1.1;color:var(--text-on-ground)">Ilyana Vorn</span></div>
+    <button class="hk-ico hk-ico--phone" type="button" aria-label="Notes" title="Notes"><i-icon name="scroll-unfurled" size="20"></i-icon></button>
+  </div>
+
+  <!-- the moment -->
+  <div class="s5-col" style="align-items:center;gap:6px;padding-top:4px">
+    <div style="position:relative;width:168px;height:168px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 50% 45%,var(--leather-highlight) 0%,var(--leather-dark) 62%,var(--ground) 100%);box-shadow:inset 0 0 0 3px var(--brass),inset 0 0 0 5px var(--brass-shadow),0 0 44px rgba(184,67,42,.55),0 6px 14px rgba(0,0,0,.7)"><i-icon name="death-skull" size="116" label="Dying" style="color:var(--ember-top);filter:drop-shadow(0 2px 2px rgba(0,0,0,.7))"></i-icon></div>
+    <span class="hk-cond" style="height:30px;padding:0 12px;font-size:15px;margin-top:4px" title="Unconscious: dropped to 0 hit points at 20:42, from Giant Spider"><i-icon name="skull" size="14"></i-icon>Unconscious</span>
+  </div>
+
+  <div class="hk-strap" aria-label="Hit points" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 12px"><x-tex kind="leather"></x-tex><span class="hk-num" style="font-size:34px;color:var(--danger-on-leather)">0 <span style="font-size:17px;color:var(--brass)">/ 44</span></span><div class="hk-gauge" role="img" aria-label="0 of 44 hit points"><div class="hk-gauge__hp" style="width:0"></div></div><span class="hk-strap__label" title="Any healing ends death saves"><i-icon name="heart" size="14"></i-icon>HP</span></div>
+
+  <!-- the seals -->
+  <section class="hk-leaf hk-leaf--phone" aria-label="Death saves" style="display:flex;flex-direction:column;gap:10px;padding:12px 14px;transform:rotate(-.3deg)">
+    <x-tex kind="paper"></x-tex>
+    <div class="s5-row" style="gap:10px;flex-wrap:nowrap"><x-d20 n="14" size="44" label="Last roll: 14" rot="-12"></x-d20><div class="s5-col" style="gap:1px;min-width:0"><span style="font-family:var(--font-display);font-size:18px;line-height:1.1">14 · success</span><span class="hk-hint" style="font-size:13px">20:43 · 10 or higher succeeds · 20 regains 1 HP</span></div></div>
+    <div class="hk-rule"></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) repeat(3,56px);gap:8px;align-items:center">
+      <span class="s5-dslabel" style="color:var(--text-1)"><i-icon name="healing" size="18" style="color:var(--success-strong)"></i-icon>Successes</span>
+      <button class="s5-dsring s5-dsring--on" type="button" aria-pressed="true" aria-label="Success 1, marked" title="Success, marked"><i-icon name="check-mark" size="24"></i-icon></button>
+      <button class="s5-dsring" type="button" aria-pressed="false" aria-label="Success 2" title="Mark a success"></button>
+      <button class="s5-dsring" type="button" aria-pressed="false" aria-label="Success 3" title="Mark a success"></button>
+      <span class="s5-dslabel" style="color:var(--text-1)"><i-icon name="broken-heart" size="18" style="color:var(--danger-strong)"></i-icon>Failures</span>
+      <button class="s5-dsring s5-dsring--f s5-dsring--on" type="button" aria-pressed="true" aria-label="Failure 1, marked" title="Failure, marked"><i-icon name="cross-mark" size="22"></i-icon></button>
+      <button class="s5-dsring s5-dsring--f s5-dsring--on" type="button" aria-pressed="true" aria-label="Failure 2, marked" title="Failure, marked"><i-icon name="cross-mark" size="22"></i-icon></button>
+      <span class="hk-has-tip" style="display:inline-flex"><button class="s5-dsring s5-dsring--f" type="button" aria-pressed="false" aria-label="Failure 3" aria-describedby="tipDie"></button><span class="hk-tip hk-tip--left" id="tipDie" role="tooltip" style="right:0">One more failure: Ilyana dies<span class="hk-tip__sub">a 1 counts as two · the sheet asks before marking</span></span></span>
+    </div>
+  </section>
+
+  <div style="margin-top:auto"></div>
+  <button class="hk-btn hk-btn--brass hk-btn--phone" type="button" style="height:56px;font-size:18px;width:100%" title="d20, no modifiers · advantage or disadvantage from your conditions applies"><i-icon name="dice-twenty-faces-twenty" size="22"></i-icon>Roll death save</button>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+    <button class="hk-btn hk-btn--leather hk-btn--phone" type="button" style="width:100%" title="Three successes, or an ally's Medicine check (DC 10): stable at 0 HP, still unconscious"><i-icon name="medical-pack" size="18"></i-icon>Stabilise</button>
+    <button class="hk-btn hk-btn--moss hk-btn--phone" type="button" style="width:100%" title="Any healing ends death saves and clears the marks"><i-icon name="healing" size="18"></i-icon>Heal</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

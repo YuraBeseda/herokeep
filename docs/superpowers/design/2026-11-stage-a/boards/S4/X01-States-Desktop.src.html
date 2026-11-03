@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>System states — not found, errors, banners, toasts, loading (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="heroes" lang="en"></x-rail>
+
+  <main class="s4-main" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 22px;align-items:start">
+    <!-- row 1: full-screen states -->
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="magnifying-glass" size="14"></i-icon>Not found (deep link to a missing hero)</span>
+      <section class="hk-leaf" aria-labelledby="nfTitle" style="transform:rotate(.25deg);display:flex;flex-direction:column;gap:10px;width:100%">
+        <x-tex kind="paper"></x-tex>
+        <div style="display:flex;align-items:center;gap:12px"><span class="hk-iring" style="width:44px;height:44px"><i-icon name="magnifying-glass" size="22"></i-icon></span><h2 class="s4-h2" id="nfTitle" style="font-size:24px;line-height:28px">Hero not found</h2></div>
+        <p class="s4-p">This hero doesn't exist or couldn't be loaded on this device. If it lives on another device, sign in there and let it sync.</p>
+        <span class="hk-hint">Link: /c/does-not-exist/play</span>
+        <div class="hk-row" style="gap:8px"><a class="hk-btn hk-btn--brass" href="#"><i-icon name="person" size="14"></i-icon>Go to heroes</a><a class="hk-btn hk-btn--leather" href="#"><i-icon name="house" size="14"></i-icon>Home</a></div>
+      </section>
+    </div>
+
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="hazard-sign" size="14"></i-icon>Core content failed to load, with retry</span>
+      <section class="hk-leaf s4-leaf--error" aria-labelledby="ceTitle" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:10px;width:100%">
+        <x-tex kind="paper"></x-tex>
+        <div style="display:flex;align-items:center;gap:12px"><span class="hk-ico hk-ico--ember" aria-hidden="true" style="width:44px;height:44px;cursor:default"><i-icon name="locked-chest" size="22"></i-icon></span><h2 class="s4-h2" id="ceTitle" style="font-size:24px;line-height:28px">Couldn't load the core rules</h2></div>
+        <p class="s4-p">The SRD pack didn't load, so sheets and the library can't resolve rules. Your heroes are safe on this device.</p>
+        <div class="hk-block" style="gap:2px"><span class="hk-hint">Details</span><span style="font-size:14px">pack srd-5e-2024@0.1.0 · fetch failed (offline?) · tried 3 times</span></div>
+        <div class="hk-row" style="gap:8px"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="clockwise-rotation" size="14"></i-icon>Try again</button><a class="hk-btn hk-btn--leather" href="#"><i-icon name="database" size="14"></i-icon>Storage settings</a></div>
+      </section>
+    </div>
+
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="hourglass" size="14"></i-icon>Loading leaf with skeleton rows</span>
+      <section class="hk-leaf" aria-busy="true" aria-labelledby="ldTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:12px;width:100%">
+        <x-tex kind="paper"></x-tex>
+        <div style="display:flex;align-items:center;gap:12px"><span class="hk-spin" style="width:22px;height:22px;border-width:3px;color:var(--accent-strong)" aria-hidden="true"></span><h2 class="s4-h2" id="ldTitle">Loading your heroes…</h2></div>
+        <div style="display:grid;grid-template-columns:50px minmax(0,1fr);gap:8px 12px;align-items:center" aria-hidden="true">
+          <span class="s4-skel" style="height:56px;border-radius:6px"></span><span style="display:flex;flex-direction:column;gap:8px"><span class="s4-skel" style="width:60%"></span><span class="s4-skel" style="width:40%"></span><span class="s4-skel" style="width:80%;height:10px"></span></span>
+          <span class="s4-skel" style="height:56px;border-radius:6px"></span><span style="display:flex;flex-direction:column;gap:8px"><span class="s4-skel" style="width:50%"></span><span class="s4-skel" style="width:35%"></span><span class="s4-skel" style="width:70%;height:10px"></span></span>
+        </div>
+        <div class="hk-row" style="gap:8px;align-items:center"><button class="hk-btn hk-btn--brass hk-btn--loading" type="button" aria-busy="true"><span class="hk-spin" aria-hidden="true"></span><span class="hk-btn__label">Saving…</span></button><span class="hk-hint">a button while its action runs: the spinner replaces the glyph</span></div>
+      </section>
+    </div>
+
+    <!-- row 2: banners -->
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="radio-tower" size="14"></i-icon>Offline banner (page top, every screen)</span>
+      <div class="hk-banner" role="status"><i-icon name="radio-tower" size="22"></i-icon><div class="hk-banner__body"><span class="hk-banner__title">You're offline</span><span>Heroes, the library and your packs work as usual. Sync and campaigns resume when you're back.</span></div><div class="hk-banner__actions"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss (returns if still offline in an hour)"><i-icon name="cross-mark" size="11"></i-icon></button></div></div>
+    </div>
+
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="upgrade" size="14"></i-icon>Update available, with Reload</span>
+      <div class="hk-banner hk-banner--info" role="status"><x-tex kind="paper"></x-tex><i-icon name="upgrade" size="22"></i-icon><div class="hk-banner__body"><span class="hk-banner__title">Herokeep 0.2.0 is ready</span><span>Reload to update; your open sheet and unsaved rolls are kept.</span></div><div class="hk-banner__actions"><button class="hk-btn hk-btn--parchment" type="button">Later</button><button class="hk-btn hk-btn--brass" type="button"><i-icon name="clockwise-rotation" size="14"></i-icon>Reload</button></div></div>
+    </div>
+
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="chest" size="14"></i-icon>Missing packs, on a hero's sheet</span>
+      <div class="hk-banner" role="status"><i-icon name="chest" size="22"></i-icon><div class="hk-banner__body"><span class="hk-banner__title">2 content packs are missing</span><span>Ilyana uses “Emberfall Homebrew 1.2” and “Sample content 1.0”; entries from them show as unknown until installed.</span></div><div class="hk-banner__actions"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="cloud-download" size="14"></i-icon>Install</button><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss for this session"><i-icon name="cross-mark" size="11"></i-icon></button></div></div>
+    </div>
+
+    <!-- row 3: campaign pin banner, toasts, strap note -->
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="three-friends" size="14"></i-icon>Campaign packs to pin (member's sheet)</span>
+      <div class="hk-banner hk-banner--arcane" role="status" style="flex-wrap:wrap"><i-icon name="three-friends" size="22"></i-icon><div class="hk-banner__body" style="flex:1 1 300px"><span class="hk-banner__title">The Emberfall Company shares 3 packs</span><span>Pin them to Ilyana so the campaign's rules apply at the table. Installed: 2 of 3; “Tasha's Options” downloads first (4.2 MB).</span></div><div class="hk-banner__actions" style="margin-left:34px"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="pin" size="14"></i-icon>Pin campaign packs</button><button class="hk-btn hk-btn--parchment" type="button">Not now</button></div></div>
+      <span class="hk-hint" style="color:var(--text-on-ground-2)">If a pin fails, the banner stays and names the pack and the reason.</span>
+    </div>
+
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="ringing-bell" size="14"></i-icon>Toasts: success, warning, error (bottom right, stack upward)</span>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;width:100%">
+        <div class="hk-toast hk-toast--success" role="status" style="width:100%"><x-tex kind="paper"></x-tex><i-icon name="check-mark" size="20"></i-icon><div class="hk-toast__body"><span>Hero created</span><span class="hk-toast__sub">Ilyana Vorn · synced to 2 devices · just now</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        <div class="hk-toast s4-toast--warning" role="status" style="width:100%"><i-icon name="hazard-sign" size="20"></i-icon><div class="hk-toast__body"><span>Pack update to review</span><span class="hk-toast__sub">Ilyana uses Emberfall Homebrew 1.2; 1.3 is installed. Review on her Build tab.</span></div><button class="hk-btn hk-btn--parchment" type="button" style="height:28px">Review</button></div>
+        <div class="hk-toast hk-toast--error" role="alert" style="width:100%"><i-icon name="radio-tower" size="20"></i-icon><div class="hk-toast__body"><span>Could not reach the server</span><span class="hk-toast__sub">your changes are kept on this device and sent later</span></div><button class="hk-btn hk-btn--parchment" type="button" style="height:28px"><i-icon name="clockwise-rotation" size="12"></i-icon>Retry</button></div>
+      </div>
+    </div>
+
+    <div class="s4-inset" style="width:100%">
+      <span class="s4-tag"><i-icon name="padlock" size="14"></i-icon>Disabled with a reason, and a focus ring</span>
+      <section class="hk-leaf" aria-label="Control states" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:10px;width:100%">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-row" style="gap:10px;align-items:center"><button class="hk-btn hk-btn--brass" type="button" disabled aria-disabled="true" title="Level up: not available, 6,500 of 14,000 XP"><i-icon name="upgrade" size="14"></i-icon>Level up</button><span class="hk-hint">not available: 6,500 of 14,000 XP</span></div>
+        <div class="hk-row" style="gap:10px;align-items:center"><button class="hk-btn hk-btn--leather hk-focus-demo" type="button"><i-icon name="knapsack" size="14"></i-icon>Import</button><span class="hk-hint">keyboard focus: the two-tone ring on every control</span></div>
+        <div class="hk-row" style="gap:10px;align-items:center"><span class="hk-has-tip" style="display:inline-flex"><span class="hk-chip hk-chip--ember" tabindex="0" aria-describedby="tipQuota"><i-icon name="hazard-sign" size="11"></i-icon>quota full</span><span class="hk-tip hk-tip--above" id="tipQuota" role="tooltip" style="left:0;transform:none">Sync rejected: the account's storage quota is full<span class="hk-tip__sub">changes stay on this device; free space in Settings, Account</span></span></span><span class="hk-chip hk-chip--warning" title="This hero is near its 2 MB storage limit"><i-icon name="weight" size="11"></i-icon>near the limit</span><span class="hk-chip hk-chip--dark" title="Not syncing: signed out"><i-icon name="cloud-upload" size="11"></i-icon>not syncing</span><span class="hk-hint">sync chips on hero cards; each explains itself on hover</span></div>
+      </section>
+    </div>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--ember hk-btn--l" type="button"><i-icon name="broken-heart" size="18"></i-icon>Damage</button>
+      <button class="hk-btn hk-btn--moss hk-btn--l" type="button"><i-icon name="healing" size="18"></i-icon>Heal</button>
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Roll</button>
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button"><i-icon name="campfire" size="18"></i-icon>Short rest</button>
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button"><i-icon name="night-sleep" size="18"></i-icon>Long rest</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Add condition" title="Add condition"><i-icon name="skull" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Notes" title="Notes"><i-icon name="scroll-unfurled" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Roll log" title="Roll log"><i-icon name="notebook" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Export" title="Export"><i-icon name="share" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Edit or override" title="Edit or override"><i-icon name="quill" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="radio-tower" size="16" style="color:var(--danger-on-leather)"></i-icon>Offline · changes kept on this device (the sheet strap's note while offline)</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — Прив'язати персонажа (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pgP" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 95% -2%,rgba(107,74,30,.7) 0%,rgba(107,74,30,.28) 40%,rgba(36,23,16,0) 72%)"></div>
+  <x-topbar title="Прив'язати персонажа" action="plus" alabel="Створити нового персонажа"></x-topbar>
+
+  <div data-scroller="body" style="flex:1 1 auto;min-height:0;overflow:auto;padding:12px 12px 14px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;z-index:1">
+    <span class="hintG" style="font-size:14px">Гробниці Соляного короля · ви приєдналися як Дана · крок 2 з 2</span>
+    <p style="margin:0;font-size:15px;line-height:1.35;color:var(--text-on-ground)">Виберіть одного зі своїх персонажів, щоб грати в цій кампанії. Майстер бачить його огляд у гурті; лист лишається вашим.</p>
+
+    <article class="cardP psel" aria-labelledby="lk1" style="transform:rotate(-.25deg);grid-template-columns:52px minmax(0,1fr) auto">
+      <x-tex kind="paper"></x-tex>
+      <x-mono text="БА" w="52" h="60" fs="21" label="Портрет, монограма БА"></x-mono>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><h3 id="lk1" style="margin:0;font:19px/1.1 Forum,serif;font-weight:400">Брембл Андерфут</h3><span style="font-size:14px;color:var(--text-2);display:flex;align-items:center;gap:5px"><i-icon name="hood" size="13" style="color:var(--accent-strong)"></i-icon>Півмірок · Пройдисвіт 3</span><span style="display:flex;align-items:center;gap:8px"><span class="hk-gauge" style="flex:1 1 auto;height:9px;max-width:110px"><span class="hk-gauge__hp" style="display:block;width:100%"></span></span><span class="hk-num" style="font-size:15px"><b>21</b> / 21</span></span></div>
+      <x-seal state="full" icon="check-mark" size="34" seed="2" label="Обрано"></x-seal>
+      <div class="cardP__w" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="hk-chip hk-chip--moss hk-has-tip haloP" tabindex="0" aria-describedby="tipSyncP" style="height:32px;font-size:15px"><i-icon name="cycle" size="13"></i-icon>синхронізовано<span class="hk-tip" id="tipSyncP" role="tooltip" style="font-size:15px;left:0;transform:none">Синхронізовано з обліковим записом щойно<span class="hk-tip__sub">стіл бачить цього героя · утримуйте, щоб побачити</span></span></span><span class="hk-chip" style="height:32px;font-size:15px;font-style:italic;color:var(--text-2)">без кампанії</span><span style="flex:1 1 auto"></span><b style="font-size:15px">обрано</b></div>
+    </article>
+
+    <article class="cardP" aria-labelledby="lk2" style="transform:rotate(.2deg);grid-template-columns:52px minmax(0,1fr)">
+      <x-tex kind="paper"></x-tex>
+      <x-mono text="СМ" w="52" h="60" fs="21" label="Портрет, монограма СМ"></x-mono>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><h3 id="lk2" style="margin:0;font:19px/1.1 Forum,serif;font-weight:400">Сестра Марен</h3><span style="font-size:14px;color:var(--text-2);display:flex;align-items:center;gap:5px"><i-icon name="holy-symbol" size="13" style="color:var(--accent-strong)"></i-icon>Людина · Клірик 4</span><span class="hk-card__gate" style="font-size:14px"><i-icon name="cycle" size="13"></i-icon>Ще не синхронізовано</span></div>
+      <div class="cardP__w" style="display:flex;flex-direction:column;gap:8px"><span class="hk-hint" style="font-size:14px">Героїня є лише на цьому пристрої. Спершу синхронізуйте її з обліковим записом, і вона з&#8217;явиться тут як доступна.</span><button class="hk-btn hk-btn--phone hk-btn--leather" type="button" style="justify-content:center"><i-icon name="cycle" size="16"></i-icon>Керування синхронізацією</button></div>
+    </article>
+
+    <article class="cardP hcardGated" aria-labelledby="lk3" style="transform:rotate(-.15deg);grid-template-columns:52px minmax(0,1fr)">
+      <x-tex kind="paper"></x-tex>
+      <x-mono text="ІВ" w="52" h="60" fs="21" label="Портрет, монограма ІВ"></x-mono>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><h3 id="lk3" class="hcard__t" style="margin:0;font:19px/1.1 Forum,serif;font-weight:400">Іляна Ворн</h3><span class="hcard__s" style="font-size:14px;color:var(--text-2);display:flex;align-items:center;gap:5px"><i-icon name="templar-shield" size="13" style="color:var(--accent-strong)"></i-icon>Людина · Паладин 5</span><span class="hk-card__gate" style="font-size:14px"><i-icon name="padlock" size="13"></i-icon>Уже в іншій кампанії</span></div>
+      <div class="cardP__w"><span class="hk-hint" style="font-size:14px">Прив&#8217;язана до «Компанії Емберфол». Герой грає за одним столом: покиньте ту кампанію в її налаштуваннях або оберіть іншого героя.</span></div>
+    </article>
+
+    <article class="cardP" aria-labelledby="lk4" style="transform:rotate(.3deg);grid-template-columns:52px minmax(0,1fr)">
+      <x-tex kind="paper"></x-tex>
+      <x-mono text="КВ" w="52" h="60" fs="21" label="Портрет, монограма КВ"></x-mono>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><h3 id="lk4" style="margin:0;font:19px/1.1 Forum,serif;font-weight:400">Капітан варти</h3><span style="font-size:14px;color:var(--text-2);display:flex;align-items:center;gap:5px"><i-icon name="crossed-swords" size="13" style="color:var(--accent-strong)"></i-icon>Людина · Воїн 3 · заготовка</span><span><span class="hk-chip hk-chip--selected" style="height:26px;font-size:14px" title="Ведучий передав цю заготовку вам"><i-icon name="shaking-hands" size="13"></i-icon>Передано вам</span></span></div>
+      <div class="cardP__w" style="display:flex;flex-direction:column;gap:8px"><span class="hk-hint" style="font-size:14px">Ведучий передав цього персонажа вам. Заявіть права, щоб отримати його на цьому пристрої, а потім прив&#8217;яжіть тут.</span><button class="hk-btn hk-btn--phone hk-btn--brass" type="button" style="justify-content:center"><i-icon name="hand" size="16"></i-icon>Заявити права</button></div>
+    </article>
+
+    <a href="#" class="cardP" style="transform:rotate(-.2deg);grid-template-columns:44px minmax(0,1fr);background:transparent;box-shadow:none;outline:1px dashed rgba(201,162,78,.55);outline-offset:-1px;color:var(--text-on-ground-2);text-decoration:none;min-height:68px" aria-label="Створити нового персонажа">
+      <span class="hk-iring hk-iring--l" style="width:44px;height:44px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5)"><i-icon name="plus" size="22"></i-icon></span>
+      <span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:16px;color:var(--text-on-leather)">Створити нового персонажа</b><span style="font-size:14px;font-style:italic">майстер створення відкриється на 3 рівні; потім повернетеся сюди</span></span>
+    </a>
+  </div>
+
+  <x-pstrap kind="link" label="Прив'язати Брембла"></x-pstrap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!-- @dsCard group="Sheet" height=300 subtitle="Leather strap: current / max, temp HP hatch, damage and heal controls" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HpGauge — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="../../components/bundle.css">
+</head>
+<body>
+<div class="hk-stage hk-stage--col" style="gap:14px">
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">
+<filter id="hkWood" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.0022 0.055" numOctaves="5" seed="9" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.7 -0.55" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<filter id="hkPaper" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<filter id="hkLeather" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" seed="5" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<linearGradient id="hkShieldBrass" x1="0" y1="0" x2="0" y2="1"><stop class="hk-shield-stop1" offset="0"/><stop class="hk-shield-stop2" offset=".5"/><stop class="hk-shield-stop3" offset="1"/></linearGradient>
+</svg>
+<svg class="hk-tex hk-tex--wood" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+<div class="hk-vignette" aria-hidden="true"></div>
+<section class="hk-strap" aria-label="Hit points" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 14px 9px 10px;width:100%;box-sizing:border-box">
+  <svg class="hk-tex hk-tex--leather" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div aria-hidden="true" style="width:16px;height:44px;border-radius:4px;background:linear-gradient(180deg,var(--brass-top),var(--brass) 50%,var(--brass-bottom));box-shadow:inset 0 0 0 2px var(--brass-shadow),0 1px 2px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center"><span style="display:block;width:4px;height:24px;background:var(--recess);border-radius:2px"></span></div>
+    <div class="hk-num" style="font-size:44px;color:var(--text-on-leather);display:flex;align-items:baseline;gap:5px"><span>31</span><span style="font-size:22px;color:var(--brass)">/ 44</span></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+    <span class="hk-strap__label"><svg viewBox="20 20 216 216" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M128 204c16-24 68-78 68-94 0-24-20-39.824-36-40-16 0-32 10-32 30 0-20-16-30-32-30-16-.176-36 16-36 40 0 16 52 70 68 94z"/></svg>Hit points</span>
+    <div class="hk-gauge" role="img" aria-label="31 of 44 hit points, plus 5 temporary"><div class="hk-gauge__hp" style="width:70.5%"></div><div class="hk-gauge__temp" style="width:11.4%"></div></div>
+    <span class="hk-strap__label" style="white-space:nowrap"><svg viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M144.1 40.28c-24.1-.1-47.24 3.34-67.2 8.33-15.97 3.99-29.92 8.98-40.69 13.88-5.21 2.36-9.66 4.78-13.2 6.95 9.88 8.36 25.58 20.31 42.11 30.76 22.13 14.1 47.08 25.4 59.08 25.4 5.2 0 11.6-2.8 18.3-8.6 6.7-5.8 13.5-14.4 19.3-24.08 9.7-16.2 16.6-35.75 18.6-49.63-12.2-1.96-24.3-3.01-36.3-3.01zm223.8 0c-12 0-24.1 1.05-36.3 3.01 2 13.88 8.9 33.43 18.6 49.63 5.8 9.68 12.6 18.28 19.3 24.08 6.7 5.8 13.1 8.6 18.3 8.6 12 0 36.9-11.3 59.1-25.4 16.5-10.45 32.2-22.4 42.1-30.76-3.6-2.17-8-4.58-13.2-6.95C465 57.6 451 52.6 435.1 48.61c-20-4.99-43.1-8.43-67.2-8.33zm-169.3 3.78c-.6 5.65-1.9 11.62-3.6 17.74 19.1 5.18 40.1 7.68 61 7.68 21 0 41.9-2.5 61-7.69-1.7-6.11-3-12.08-3.6-17.73-17.6 4.86-37.5 7.42-57.4 7.42s-39.8-2.56-57.4-7.42zm130.5 47.92L233 139.7l14.4 86.2 71.1 14.2c11.7-13.7 26.8-28.5 38.3-45.4 11-16.2 18.5-33.6 17.2-53.8-5.8-2.3-11.3-6-16.3-10.3-8.7-7.6-16.4-17.5-22.9-28.4-2-3.27-3.9-6.75-5.7-10.22zm-11.3 24.82l30 30.3.5 2.7c3 15.8-2.6 29.6-9.7 40.1-7.2 10.6-15.9 18.8-20.5 24.7l-3.5 4.3-50.5-10.3-10-59.9 57.9-28.9zm-154.6 4.8c-2.8 3.3-5.8 6.3-8.9 9-3.2 2.8-6.6 5.2-10.1 7.2-3.2 44.7-8.5 90.5-15.8 133.9 6.2-2.6 12.9-6.1 19.9-10.4 7.2-45.8 12.2-93.6 14.9-139.7zm151 17.2l-40.1 20.1 5.8 34.5 27.8 5.7c5.4-6.2 11.3-12.4 16-19.2 5.2-7.7 8.1-15.4 7.1-24.4zm59.6 62.9c-.7 1-1.4 2.1-2.1 3.1-4.3 6.2-8.9 12.1-13.5 17.7 6.8 53.2 16.5 105.2 29.1 150.3h18.5c-14.3-49.9-25-110-32-171.1zm-146 16.8c-19.6 19.4-39.2 36.8-57.9 50-19.8 14-38.4 23.9-56.1 26.3L102 371.1c13.6-3.6 33.4-12.8 55.1-26.7 28.4-18.1 60.8-43.5 92-72 8.1-7.5 16.2-15.2 24-23l-41.5-8.3zm.8 139.4L216 383.2l14.6 88.5h50.8l14.6-88.5-12.6-25.3zm-125.9 32.9l12 47.9h92.2l-8-47.9zm210.4 0l-8 47.9h92.2l12-47.9z"/></svg>Temporary HP <b class="hk-num" style="font-size:17px;color:var(--text-on-leather)">5</b></span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="hk-btn hk-btn--ember" type="button"><svg viewBox="0 0 512 512" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M373.47 25.5c-33.475-.064-67.614 13.444-94.44 43.156l37.22 145.156-33.437.032 35.343 132.093-116.718-188.375 50.03 5.375L202.5 47.312C120.437-1.43 4.756 40.396 8.5 158.156c4.402 138.44 191.196 184.6 247.406 331.625 59.376-147.035 251.26-184.33 246.656-331.624-2.564-82.042-64.6-132.532-129.093-132.656z"/></svg>Damage</button>
+    <button class="hk-btn hk-btn--moss" type="button"><svg viewBox="0 0 512 512" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M250.9 18.9c-23.9 2.99-45.3 30.65-45.3 66.99 0 19.91 6.8 37.41 16.8 49.61l12.2 14.5-18.7 3.5c-13 2.5-22.6 9.5-30.7 20.8-8.5 11.5-14.8 26.9-19.1 45.2-8 32.7-9.9 72.7-9.9 108.2h43.6l11.7 160.5c30.4 7 63.1 6.5 92.3 0l10.7-160.5H356c0-35.7-.5-76.4-7.8-109.7-3.9-17.9-10-33.7-18.2-45.1-8.2-11.1-18.5-17.8-33.3-20.1l-18.9-3 11.9-14.9c9.9-12.1 16.4-29.6 16.4-49.01 0-38.54-24-66.99-50.3-66.99h-4.9zm145 3.59v41.85h-41.8v50.16h41.8v41.6h49.9v-41.6h41.9V64.34h-41.9V22.49h-49.9zM52.92 62.89v30.58H22.39v36.63h30.53v30.4h36.4v-30.4h30.58V93.47H89.32V62.89h-36.4zM92.63 199.7v21.8H70.75v26.3h21.88v21.9h26.27v-21.9h21.8v-26.3h-21.8v-21.8H92.63zm355.07 62.4v21.8h-21.9v26.3h21.9v21.9H474v-21.9h21.8v-26.3H474v-21.8h-26.3zm-307.5 99.4v15h-15v18h15v15h18.1v-15h15v-18h-15v-15h-18.1zm230 45.8v15h-15v18h15v15h18v-15h15v-18h-15v-15h-18zM49.32 431.8v15h-15v18h15v15h18.01v-15h15v-18h-15v-15H49.32z"/></svg>Heal</button>
+  </div>
+</section>
+<div style="display:flex;gap:14px;width:100%;align-items:flex-start">
+  <section class="hk-strap" aria-label="Hit points" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;width:366px;box-sizing:border-box">
+    <svg class="hk-tex hk-tex--leather" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="hk-numfield hk-numfield--phone" style="grid-template-columns:44px 78px 44px">
+        <button class="hk-ico hk-ico--phone hk-ico--ember" type="button" aria-label="Шкода 1" title="Шкода"><svg viewBox="20 20 216 216" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M64 119v18h128v-18z"/></svg></button>
+        <label class="hk-sr" for="hpPhone">Поточні хіти</label><input class="hk-numfield__in" id="hpPhone" type="number" value="31" min="0" max="44">
+        <button class="hk-ico hk-ico--phone" type="button" aria-label="Лікування 1" title="Лікування" style="color:var(--brass-top)"><svg viewBox="20 20 216 216" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M119 64v55H64v18h55v55h18v-55h55v-18h-55V64h-18z"/></svg></button>
+      </div>
+      <div class="hk-num" style="font-size:22px;color:var(--brass)">/ 44</div>
+      <span class="hk-strap__label" style="margin-left:auto;white-space:nowrap"><svg viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M144.1 40.28c-24.1-.1-47.24 3.34-67.2 8.33-15.97 3.99-29.92 8.98-40.69 13.88-5.21 2.36-9.66 4.78-13.2 6.95 9.88 8.36 25.58 20.31 42.11 30.76 22.13 14.1 47.08 25.4 59.08 25.4 5.2 0 11.6-2.8 18.3-8.6 6.7-5.8 13.5-14.4 19.3-24.08 9.7-16.2 16.6-35.75 18.6-49.63-12.2-1.96-24.3-3.01-36.3-3.01zm223.8 0c-12 0-24.1 1.05-36.3 3.01 2 13.88 8.9 33.43 18.6 49.63 5.8 9.68 12.6 18.28 19.3 24.08 6.7 5.8 13.1 8.6 18.3 8.6 12 0 36.9-11.3 59.1-25.4 16.5-10.45 32.2-22.4 42.1-30.76-3.6-2.17-8-4.58-13.2-6.95C465 57.6 451 52.6 435.1 48.61c-20-4.99-43.1-8.43-67.2-8.33zm-169.3 3.78c-.6 5.65-1.9 11.62-3.6 17.74 19.1 5.18 40.1 7.68 61 7.68 21 0 41.9-2.5 61-7.69-1.7-6.11-3-12.08-3.6-17.73-17.6 4.86-37.5 7.42-57.4 7.42s-39.8-2.56-57.4-7.42zm130.5 47.92L233 139.7l14.4 86.2 71.1 14.2c11.7-13.7 26.8-28.5 38.3-45.4 11-16.2 18.5-33.6 17.2-53.8-5.8-2.3-11.3-6-16.3-10.3-8.7-7.6-16.4-17.5-22.9-28.4-2-3.27-3.9-6.75-5.7-10.22zm-11.3 24.82l30 30.3.5 2.7c3 15.8-2.6 29.6-9.7 40.1-7.2 10.6-15.9 18.8-20.5 24.7l-3.5 4.3-50.5-10.3-10-59.9 57.9-28.9zm-154.6 4.8c-2.8 3.3-5.8 6.3-8.9 9-3.2 2.8-6.6 5.2-10.1 7.2-3.2 44.7-8.5 90.5-15.8 133.9 6.2-2.6 12.9-6.1 19.9-10.4 7.2-45.8 12.2-93.6 14.9-139.7zm151 17.2l-40.1 20.1 5.8 34.5 27.8 5.7c5.4-6.2 11.3-12.4 16-19.2 5.2-7.7 8.1-15.4 7.1-24.4zm59.6 62.9c-.7 1-1.4 2.1-2.1 3.1-4.3 6.2-8.9 12.1-13.5 17.7 6.8 53.2 16.5 105.2 29.1 150.3h18.5c-14.3-49.9-25-110-32-171.1zm-146 16.8c-19.6 19.4-39.2 36.8-57.9 50-19.8 14-38.4 23.9-56.1 26.3L102 371.1c13.6-3.6 33.4-12.8 55.1-26.7 28.4-18.1 60.8-43.5 92-72 8.1-7.5 16.2-15.2 24-23l-41.5-8.3zm.8 139.4L216 383.2l14.6 88.5h50.8l14.6-88.5-12.6-25.3zm-125.9 32.9l12 47.9h92.2l-8-47.9zm210.4 0l-8 47.9h92.2l12-47.9z"/></svg>+5</span>
+    </div>
+    <div class="hk-gauge" role="img" aria-label="31 з 44 хітів, плюс 5 тимчасових"><div class="hk-gauge__hp" style="width:70.5%"></div><div class="hk-gauge__temp" style="width:11.4%"></div></div>
+    <span class="hk-caption">phone: the number is a field; − / + are 44px</span>
+  </section>
+  <section class="hk-strap" aria-label="Hit points" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;flex:1 1 0">
+    <svg class="hk-tex hk-tex--leather" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+    <div style="display:flex;align-items:center;gap:8px"><span class="hk-strap__label"><svg viewBox="20 20 216 216" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M128 204c16-24 68-78 68-94 0-24-20-39.824-36-40-16 0-32 10-32 30 0-20-16-30-32-30-16-.176-36 16-36 40 0 16 52 70 68 94z"/></svg>Hit points</span><span class="hk-num" style="margin-left:auto;font-size:22px;color:var(--text-on-leather)">0 <span style="font-size:15px;color:var(--brass)">/ 44</span></span></div>
+    <div class="hk-gauge" role="img" aria-label="0 of 44 hit points, unconscious"><div class="hk-gauge__hp" style="width:0"></div></div>
+    <span class="hk-dis" style="color:var(--danger-on-leather)"><svg viewBox="20 20 216 216" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M128 58c-32 0-64 16-64 37.838C64 154 96 142 96 142l-6 24h76l-6-24s32 12 32-52c0-16-32-32-64-32zm-26 38a16 16 0 0 1 16 16 16 16 0 0 1-16 16 16 16 0 0 1-16-16 16 16 0 0 1 16-16zm52 0a16 16 0 0 1 16 16 16 16 0 0 1-16 16 16 16 0 0 1-16-16 16 16 0 0 1 16-16zm-26 34l10 26h-20l10-26zm-28 51.002v17.996h56v-17.996h-56z"/></svg>at 0 HP: death saves open</span>
+  </section>
+</div>
+</div>
+
+</body>
+</html>

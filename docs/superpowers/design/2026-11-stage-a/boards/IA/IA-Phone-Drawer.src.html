@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — меню розділів відкрито (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+__HOME_BODY__
+  <!-- scrim over the home -->
+  <div aria-hidden="true" style="position:absolute;inset:0;z-index:5;background:rgba(14,8,4,.64)"></div>
+
+  <!-- the folio flap: the app drawer -->
+  <aside role="dialog" aria-modal="true" aria-label="Розділи застосунку" style="position:absolute;left:0;top:0;bottom:0;width:316px;z-index:6;display:flex;flex-direction:column;gap:6px;padding:0 22px 14px 10px;box-sizing:border-box;background:linear-gradient(160deg,#5A3A26 0%,#4A2E1E 50%,#3B2416 100%);box-shadow:10px 0 28px rgba(0,0,0,.7),inset 0 0 0 1px rgba(201,162,78,.3);border-radius:0 16px 16px 0;outline:1px dashed rgba(201,162,78,.4);outline-offset:-8px">
+    <x-tex kind="leather" style="border-radius:0 16px 16px 0"></x-tex>
+    <div aria-hidden="true" style="position:absolute;right:0;top:0;bottom:0;width:13px;border-radius:0 16px 16px 0;background:linear-gradient(90deg,#4A2E1E,#2E1B11);box-shadow:inset 1px 0 0 rgba(201,162,78,.35);display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:18px 0;box-sizing:border-box"><span class="rivet"></span><span class="rivet"></span><span class="rivet"></span><span class="rivet"></span><span class="rivet"></span></div>
+
+    <!-- header: the same control that opened the drawer closes it -->
+    <div style="position:relative;display:flex;align-items:center;gap:10px;height:56px;flex:0 0 auto">
+      <button class="ico icoP icoOn focusDemo" type="button" aria-label="Закрити меню" title="Закрити"><i-icon name="cross-mark" size="20"></i-icon></button>
+      <div style="display:flex;align-items:center;gap:8px;font-family:Forum,serif;font-size:22px;line-height:1;color:#C9A24E;letter-spacing:.02em"><i-icon name="wax-seal" size="24"></i-icon>Herokeep</div>
+    </div>
+    <div class="rivets" style="position:relative;opacity:.8"></div>
+
+    <nav aria-label="Розділи" style="position:relative;display:flex;flex-direction:column;gap:2px;padding-top:4px">
+      <a href="#" class="drow drowOn" aria-current="page"><span class="iring iringL icoOn" style="box-shadow:inset 0 0 0 2px #5E4418,0 0 10px rgba(232,204,124,.45)"><i-icon name="house" size="22"></i-icon></span><span>Головна</span></a>
+      <a href="#" class="drow"><span class="iring iringL"><i-icon name="person" size="22"></i-icon></span><span>Герої</span><span class="plate" style="margin-left:auto;height:22px;font-size:14px">3</span></a>
+      <a href="#" class="drow"><span class="iring iringL"><i-icon name="three-friends" size="22"></i-icon></span><span>Кампанії</span><span class="chip chipLive" style="margin-left:auto;height:24px;font-size:14px;padding:0 6px"><i-icon name="candle-flame" size="11"></i-icon>сесія</span></a>
+      <a href="#" class="drow"><span class="iring iringL"><i-icon name="open-book" size="22"></i-icon></span><span>Бібліотека</span></a>
+      <a href="#" class="drow"><span class="iring iringL"><i-icon name="chest" size="22"></i-icon></span><span>Набори</span></a>
+      <a href="#" class="drow"><span class="iring iringL"><i-icon name="cog" size="22"></i-icon></span><span>Налаштування</span></a>
+    </nav>
+
+    <div style="position:relative;height:1px;margin:6px 10px;background:linear-gradient(90deg,rgba(201,162,78,0),#C9A24E,rgba(201,162,78,0))"></div>
+
+    <div style="position:relative;display:flex;flex-direction:column;gap:2px">
+      <a href="#" class="drow"><span class="iring iringL"><i-icon name="hood" size="22"></i-icon></span><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span>Обліковий запис</span><span style="font-size:14px;font-style:italic;color:#E0C27A">не ввійшли · синхронізація вимкнена</span></span></a>
+      <button class="drow" type="button" aria-label="Тема: Таверна. Змінити"><span class="iring iringL"><i-icon name="moon" size="22"></i-icon></span><span>Тема</span><span class="plate" style="margin-left:auto;height:24px;font-size:15px;gap:5px"><i-icon name="candle-flame" size="13"></i-icon>Таверна</span></button>
+      <button class="drow" type="button" aria-label="Мова: Українська. Змінити"><span class="iring iringL"><i-icon name="conversation" size="22"></i-icon></span><span>Мова</span><span class="plate" style="margin-left:auto;height:24px;font-size:15px">Українська</span></button>
+    </div>
+
+    <div style="flex:1 1 auto"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:14px;font-style:italic;color:#E0C27A"><i-icon name="wax-seal" size="14"></i-icon>Herokeep · набори SRD 5.2 встановлено</div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — level up, which class (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(300px,320fr) 250px minmax(0,850fr);gap:20px;padding:18px 18px 22px;align-items:start;flex:1 1 auto">
+    <x-part name="folio" tab="levelup" tip="none" xpw="100%" xptxt="14,250 / 14,000"></x-part>
+    <x-part name="steps" cur="1" level="6" h1="Paladin 6"></x-part>
+
+    <section class="leaf pane" aria-label="Which class?" style="transform:rotate(-.2deg);gap:12px">
+      <x-tex kind="paper"></x-tex>
+      <div style="position:relative;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h2 class="leafTitle" style="font-size:24px"><i-icon name="templar-shield" size="22" style="color:#8A6A2A"></i-icon>Which class?</h2><span class="hint">Your own class is recommended. Multiclassing needs Strength 13 and Charisma 13 for Paladin (met) plus the new class’s scores.</span></div>
+
+      <!-- own class -->
+      <button class="pick pickOn" type="button" aria-pressed="true" style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px">
+        <x-tex kind="paper"></x-tex>
+        <span class="pickSeal" style="position:absolute"><x-seal state="full" icon="check-mark" size="34" label="Chosen" seed="2"></x-seal></span>
+        <span class="iring" style="position:relative;width:52px;height:52px"><i-icon name="templar-shield" size="30"></i-icon></span>
+        <span style="position:relative;display:flex;flex-direction:column;gap:5px;min-width:0">
+          <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pickT" style="flex:0 0 auto">Paladin, level 6</span><span class="chip chipM"><i-icon name="star" size="11"></i-icon>recommended</span></span>
+          <span class="pickD" style="font-size:15px;line-height:20px">Continue your oath. At level 6 you gain <b>Aura of Protection</b>: you and allies within 10 feet add your Charisma modifier (+3) to saving throws.</span>
+          <span class="pickF"><span class="chip"><i-icon name="d10" size="12" style="color:#8A6A2A"></i-icon>d10 hit die</span><span class="chip"><i-icon name="laurels" size="12" style="color:#8A6A2A"></i-icon>Aura of Protection</span><span class="chip"><i-icon name="spell-book" size="12" style="color:#8A6A2A"></i-icon>6 prepared spells</span><span class="chip"><i-icon name="magic-swirl" size="12" style="color:#8A6A2A"></i-icon>slots unchanged</span></span>
+        </span>
+        <span class="btn btnBrass" style="position:relative;height:34px"><i-icon name="check-mark" size="14"></i-icon>Chosen</span>
+      </button>
+
+      <div class="sub" style="position:relative;margin-top:4px"><i-icon name="card-pick" size="16" style="color:#8A6A2A"></i-icon>Or start a second class <span class="hint" style="font-size:14px">(level 1 in that class; your Paladin stays at 5)</span></div>
+
+      <div style="position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));gap:12px 14px">
+        <button class="pick" type="button" aria-pressed="false"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="barbarian" size="20"></i-icon><span class="pickT">Barbarian</span></span><span class="pickD">Rage, Unarmored Defense, d12 hit die.</span><span class="pickF"><span class="tagOk"><i-icon name="check-mark" size="11"></i-icon>Strength 13</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+        <button class="pick" type="button" aria-pressed="false"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="lyre" size="20"></i-icon><span class="pickT">Bard</span></span><span class="pickD">Bardic Inspiration, spellcasting, d8 hit die.</span><span class="pickF"><span class="tagOk"><i-icon name="check-mark" size="11"></i-icon>Charisma 13</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+        <button class="pick pickOff" type="button" aria-disabled="true" aria-describedby="tipCle" style="position:relative"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="holy-symbol" size="20"></i-icon><span class="pickT">Cleric</span></span><span class="pickD">Divine Order, spellcasting, d8 hit die.</span><span class="pickF"><span class="tagNo glyph" style="position:relative"><i-icon name="cross-mark" size="10"></i-icon>Wisdom 13 · you have 12<span class="tipUp" id="tipCle" role="tooltip" style="left:auto;right:0;transform:none">Needs Wisdom 13 to multiclass<span class="tipSub">Your Wisdom is 12. A feat or Ability Score Improvement can raise it.</span></span></span></span></button>
+        <button class="pick pickOff" type="button" aria-disabled="true" title="Needs Wisdom 13 — you have 12"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="oak-leaf" size="20"></i-icon><span class="pickT">Druid</span></span><span class="pickD">Druidic, Primal Order, d8 hit die.</span><span class="pickF"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Wisdom 13 · you have 12</span></span></button>
+        <button class="pick" type="button" aria-pressed="false"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="crossed-swords" size="20"></i-icon><span class="pickT">Fighter</span></span><span class="pickD">Second Wind, Fighting Style, d10 hit die.</span><span class="pickF"><span class="tagOk"><i-icon name="check-mark" size="11"></i-icon>Strength or Dexterity 13</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+        <button class="pick pickOff" type="button" aria-disabled="true" title="Needs Dexterity 13 and Wisdom 13 — you have 10 and 12"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="fist" size="20"></i-icon><span class="pickT">Monk</span></span><span class="pickD">Martial Arts, Unarmored Defense, d8 hit die.</span><span class="pickF"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Dexterity 13 · 10</span><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Wisdom 13 · 12</span></span></button>
+        <button class="pick pickOff" type="button" aria-disabled="true" title="Needs Dexterity 13 and Wisdom 13 — you have 10 and 12"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="bowman" size="20"></i-icon><span class="pickT">Ranger</span></span><span class="pickD">Favored Enemy, spellcasting, d10 hit die.</span><span class="pickF"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Dexterity 13 · 10</span><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Wisdom 13 · 12</span></span></button>
+        <button class="pick pickOff" type="button" aria-disabled="true" title="Needs Dexterity 13 — you have 10"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="hood" size="20"></i-icon><span class="pickT">Rogue</span></span><span class="pickD">Sneak Attack, Expertise, d8 hit die.</span><span class="pickF"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Dexterity 13 · you have 10</span></span></button>
+        <button class="pick" type="button" aria-pressed="false"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="fire-spell-cast" size="20"></i-icon><span class="pickT">Sorcerer</span></span><span class="pickD">Innate Sorcery, spellcasting, d6 hit die.</span><span class="pickF"><span class="tagOk"><i-icon name="check-mark" size="11"></i-icon>Charisma 13</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+        <button class="pick" type="button" aria-pressed="false"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="pentacle" size="20"></i-icon><span class="pickT">Warlock</span></span><span class="pickD">Eldritch Invocations, Pact Magic, d8 hit die.</span><span class="pickF"><span class="tagOk"><i-icon name="check-mark" size="11"></i-icon>Charisma 13</span><span style="flex:1 1 auto"></span><span class="btn btnParch" style="height:28px">Choose</span></span></button>
+        <button class="pick pickOff" type="button" aria-disabled="true" title="Needs Intelligence 13 — you have 8"><x-tex kind="paper"></x-tex><span class="pickH"><i-icon name="wizard-staff" size="20"></i-icon><span class="pickT">Wizard</span></span><span class="pickD">Arcane Recovery, Ritual Adept, d6 hit die.</span><span class="pickF"><span class="tagNo"><i-icon name="cross-mark" size="10"></i-icon>Intelligence 13 · you have 8</span></span></button>
+        <div class="pick" style="cursor:default;justify-content:center;align-items:center;gap:8px;background:transparent;box-shadow:inset 0 0 0 1px #CBB68C;color:#5B4A36;text-align:center"><i-icon name="info" size="18" style="color:#8A6A2A"></i-icon><span class="hint">Classes that need a score you lack stay listed; the reason shows on hover.</span></div>
+      </div>
+    </section>
+
+    <!-- variant: the campaign house rule "Multiclassing" is off — the class step is decided and locked, the flow opens on Hit points -->
+    <div aria-label="Variant: multiclassing off in the campaign" style="grid-column:2 / 4;display:grid;grid-template-columns:250px minmax(0,1fr);gap:20px;align-items:start;margin-top:6px">
+      <x-part name="steps" cur="2" level="6" h1="Paladin 6" lock1="yes"></x-part>
+      <section class="leaf pane" aria-label="Hit points" style="transform:rotate(.2deg);gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <div style="position:relative;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h2 class="leafTitle" style="font-size:24px"><i-icon name="heart" size="22" style="color:#8A6A2A"></i-icon>Hit points for level 6</h2><span class="hint">Roll the Paladin hit die or take its average; Constitution +2 is added either way.</span></div>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+          <button class="hpCard" type="button" aria-pressed="false" style="gap:6px;padding:12px 14px">
+            <span style="display:flex;align-items:center;gap:8px"><i-icon name="d10" size="20" style="color:#8A6A2A"></i-icon><span class="pickT" style="flex:0 0 auto">Roll 1d10</span></span>
+            <span style="display:flex;align-items:center;gap:14px"><span class="die" style="background:radial-gradient(circle at 35% 30%,#4A2E1E,#241710 75%);color:#C9A24E;font-size:22px" role="img" aria-label="Not rolled yet">?</span><span style="display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:baseline;gap:6px"><span class="bigN" style="font-size:34px;color:#5B4A36">+3</span><span class="th">to</span><span class="bigN" style="font-size:34px;color:#5B4A36">+12</span></span><span class="th">1d10 + 2 Constitution · one roll per level</span></span></span>
+            <span class="btn btnBrass" style="align-self:flex-start;height:30px"><i-icon name="dice-twenty-faces-twenty" size="14"></i-icon>Roll</span>
+          </button>
+          <button class="hpCard" type="button" aria-pressed="false" style="gap:6px;padding:12px 14px">
+            <span style="display:flex;align-items:center;gap:8px"><i-icon name="scales" size="20" style="color:#8A6A2A"></i-icon><span class="pickT" style="flex:0 0 auto">Take the average</span></span>
+            <span style="display:flex;align-items:center;gap:14px"><span class="die" style="background:radial-gradient(circle at 35% 30%,#EFE4C8,#DBCCA5);color:#2B2118;box-shadow:inset 0 0 0 2px #8A6A2A;font-size:26px" role="img" aria-label="Average 6">6</span><span style="display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:baseline;gap:6px"><span class="bigN" style="font-size:34px">+8</span><span class="th">hit points</span></span><span class="th">6 (half of d10, rounded up) + 2 Constitution</span></span></span>
+            <span class="btn btnParch" style="align-self:flex-start;height:30px"><i-icon name="scales" size="14"></i-icon>Take average</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <x-part name="flowstrap" next="Next" nexticon="check-mark" note="Level 5 to 6 · 14,250 XP" backtitle="Back to the Play tab"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

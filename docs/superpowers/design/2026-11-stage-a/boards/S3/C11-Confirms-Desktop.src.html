@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Campaign confirms, toasts and banners (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern" style="padding:28px 40px 36px;gap:18px">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+
+  <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
+    <h1 class="h1"><i-icon name="wax-seal" size="28"></i-icon>Campaign confirms, toasts and banners</h1>
+    <span class="hintG">every destructive verb keeps its text and a consequence; toasts stack top-right under the rail and never cover a control</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start">
+    <!-- hand over -->
+    <div class="hk-dialog" role="dialog" aria-labelledby="d1" aria-modal="true" style="width:auto;transform:rotate(-.25deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-dialog__head"><x-seal state="full" icon="shaking-hands" size="34" seed="1" label="Hand over"></x-seal><h2 class="hk-dialog__title" id="d1">Hand over Guard captain?</h2><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Close" title="Close (Esc)"><i-icon name="cross-mark" size="12"></i-icon></button></div>
+      <p>Give this pregen to one member. They claim it on their device on their next sync; until then you still control it on the Party tab.</p>
+      <div class="hk-field"><span class="hk-field__label" id="mp">Give this character to:</span>
+        <div role="radiogroup" aria-labelledby="mp" style="display:flex;flex-direction:column;gap:2px">
+          <label class="rowP" style="grid-template-columns:24px 32px minmax(0,1fr);min-height:40px;cursor:pointer"><input type="radio" name="hand" value="taras" checked="checked" style="width:18px;height:18px;margin:0;accent-color:#8a6a2a"><span class="avatar" style="width:32px;height:32px;font-size:13px">T</span><span style="display:flex;flex-direction:column"><b>Taras</b><span class="hk-hint" style="font-size:13px">plays Bramble Underfoot · online</span></span></label>
+          <label class="rowP" style="grid-template-columns:24px 32px minmax(0,1fr);min-height:40px;cursor:pointer"><input type="radio" name="hand" value="marko" style="width:18px;height:18px;margin:0;accent-color:#8a6a2a"><span class="avatar" style="width:32px;height:32px;font-size:13px">Ma</span><span style="display:flex;flex-direction:column"><b>Marko</b><span class="hk-hint" style="font-size:13px">plays Thorne Ashvale · online</span></span></label>
+          <label class="rowP" style="grid-template-columns:24px 32px minmax(0,1fr);min-height:40px;cursor:pointer"><input type="radio" name="hand" value="petro" style="width:18px;height:18px;margin:0;accent-color:#8a6a2a"><span class="avatar" style="width:32px;height:32px;font-size:13px">P</span><span style="display:flex;flex-direction:column"><b>Petro</b><span class="hk-hint" style="font-size:13px">plays Oskar Bellow (dying) · online</span></span></label>
+          <label class="rowP" style="grid-template-columns:24px 32px minmax(0,1fr);min-height:40px;cursor:pointer;border-bottom:0"><input type="radio" name="hand" value="olena" style="width:18px;height:18px;margin:0;accent-color:#8a6a2a"><span class="avatar" style="width:32px;height:32px;font-size:13px">O</span><span style="display:flex;flex-direction:column"><b>Olena</b><span class="hk-hint" style="font-size:13px">plays Sister Maren · offline, claims when back</span></span></label>
+        </div>
+      </div>
+      <span class="hk-hint">Taras will own Guard captain as a second hero and choose which one to play.</span>
+      <div class="hk-dialog__strap hk-strap"><x-tex kind="leather"></x-tex><button class="hk-btn hk-btn--ghost-leather" type="button">Cancel</button><button class="hk-btn hk-btn--brass" type="button"><i-icon name="shaking-hands" size="14"></i-icon>Hand over to Taras</button></div>
+    </div>
+
+    <!-- unlink + remove stacked -->
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div class="hk-dialog" role="alertdialog" aria-labelledby="d2" aria-describedby="d2b" aria-modal="true" style="width:auto;transform:rotate(.2deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-dialog__head"><x-seal state="full" icon="broken-arrow" size="34" seed="2" label="Unlink"></x-seal><h2 class="hk-dialog__title" id="d2">Unlink Oskar Bellow?</h2></div>
+        <p id="d2b">Petro has left this campaign. Unlinking removes Oskar Bellow from the active roster; Petro keeps the sheet and can rejoin with a new join code later.</p>
+        <div class="hk-dialog__strap hk-strap"><x-tex kind="leather"></x-tex><button class="hk-btn hk-btn--ghost-leather" type="button">Cancel</button><button class="hk-btn hk-btn--ember" type="button"><i-icon name="broken-arrow" size="13"></i-icon>Unlink hero</button></div>
+      </div>
+      <div class="hk-dialog" role="alertdialog" aria-labelledby="d3" aria-describedby="d3b" aria-modal="true" style="width:auto;transform:rotate(-.2deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-dialog__head"><x-seal state="full" icon="exit-door" size="34" seed="3" label="Remove"></x-seal><h2 class="hk-dialog__title" id="d3">Remove Olena?</h2></div>
+        <p id="d3b">Olena will lose access to this campaign and Sister Maren leaves the roster. Olena keeps the sheet. This can&#8217;t be undone from here; she can rejoin with a new join code.</p>
+        <div class="hk-dialog__strap hk-strap"><x-tex kind="leather"></x-tex><button class="hk-btn hk-btn--ghost-leather hk-focus-demo" type="button">Cancel</button><button class="hk-btn hk-btn--ember" type="button"><i-icon name="exit-door" size="13"></i-icon>Remove Olena</button></div>
+      </div>
+    </div>
+
+    <!-- leave + export stacked -->
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <div class="hk-dialog" role="alertdialog" aria-labelledby="d4" aria-describedby="d4b" aria-modal="true" style="width:auto;transform:rotate(.25deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-dialog__head"><x-seal state="full" icon="exit-door" size="34" seed="4" label="Leave"></x-seal><h2 class="hk-dialog__title" id="d4">Leave this campaign?</h2></div>
+        <p id="d4b">Ilyana Vorn will be removed from The Emberfall Company&#8217;s roster; her sheet stays with you. You can rejoin later with a new join code.</p>
+        <span class="hk-hint">as a player, from Settings</span>
+        <div class="hk-dialog__strap hk-strap"><x-tex kind="leather"></x-tex><button class="hk-btn hk-btn--ghost-leather" type="button">Cancel</button><button class="hk-btn hk-btn--ember" type="button"><i-icon name="exit-door" size="13"></i-icon>Leave campaign</button></div>
+      </div>
+      <div class="hk-dialog" role="dialog" aria-labelledby="d5" aria-describedby="d5b" aria-modal="true" style="width:auto;transform:rotate(-.15deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-dialog__head"><x-seal state="full" icon="share" size="34" seed="5" label="Export"></x-seal><h2 class="hk-dialog__title" id="d5">Export campaign data</h2><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Close" title="Close (Esc)"><i-icon name="cross-mark" size="12"></i-icon></button></div>
+        <p id="d5b">Downloads a backup of this campaign&#8217;s own records (settings, roster, sessions and the log). It doesn&#8217;t include any member&#8217;s character sheet, which stays private to them, or any images. This file can&#8217;t be imported back into Herokeep yet; keep it as a backup.</p>
+        <span class="hk-chip" style="height:24px;align-self:flex-start"><i-icon name="save" size="12"></i-icon>the-emberfall-company.hkcampaign · about 180 KB</span>
+        <div class="hk-dialog__strap hk-strap"><x-tex kind="leather"></x-tex><button class="hk-btn hk-btn--ghost-leather" type="button">Close</button><button class="hk-btn hk-btn--brass" type="button"><i-icon name="share" size="14"></i-icon>Export</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- toasts and banners -->
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start">
+    <section aria-label="Toasts" style="display:flex;flex-direction:column;gap:10px">
+      <h2 class="h2g"><i-icon name="ringing-bell" size="20"></i-icon>Toasts</h2>
+      <span class="hintG">a parchment slip top-right under the rail; auto-hides in 6 s, stays while hovered; never over the strap or a form</span>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+        <div class="hk-toast hk-toast--success" role="status" style="width:auto"><x-tex kind="paper"></x-tex><i-icon name="entry-door" size="22"></i-icon><div class="hk-toast__body"><b>You joined The Emberfall Company</b><span class="hk-toast__sub">next: link a hero, or skip for now</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        <div class="hk-toast hk-toast--error" role="alert" style="width:auto"><x-tex kind="paper"></x-tex><i-icon name="exit-door" size="22"></i-icon><div class="hk-toast__body"><b>You&#8217;ve been removed from this campaign.</b><span class="hk-toast__sub">your hero keeps its sheet</span><span><a href="#" class="hk-btn hk-btn--ghost" style="height:28px;font-size:14px">Back to campaigns</a></span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        <div class="hk-toast hk-toast--success" role="status" style="width:auto"><x-tex kind="paper"></x-tex><i-icon name="chest" size="22"></i-icon><div class="hk-toast__body"><b>Installed the campaign pack Emberfall Homebrew</b><span class="hk-toast__sub">version 1.3.0 · pinned to Ilyana Vorn</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        <div class="hk-toast" role="status" style="width:auto"><x-tex kind="paper"></x-tex><i-icon name="cycle" size="22"></i-icon><div class="hk-toast__body"><b>Reconnected to the table</b><span class="hk-toast__sub">re-sharing the 3 images you hold with the party</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        <div class="hk-toast hk-toast--success" role="status" style="width:auto"><x-tex kind="paper"></x-tex><i-icon name="check-mark" size="22"></i-icon><div class="hk-toast__body"><b>Campaign settings saved.</b></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+        <div class="hk-toast" role="status" style="width:auto"><x-tex kind="paper"></x-tex><i-icon name="ticket" size="22"></i-icon><div class="hk-toast__body"><b>Join code updated.</b><span class="hk-toast__sub">the old link stops working; members stay</span></div><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Dismiss" title="Dismiss"><i-icon name="cross-mark" size="11"></i-icon></button></div>
+      </div>
+      <div class="hk-strap" style="display:flex;align-items:center;gap:12px;padding:10px 14px;margin-top:4px">
+        <x-tex kind="leather" style="border-radius:4px"></x-tex>
+        <i-icon name="cycle" size="18" style="color:var(--brass)"></i-icon>
+        <span style="font-size:15px;line-height:1.35;color:var(--text-on-leather)"><b>The old &#8220;blob.resend-have&#8221; toast</b> was a relay notice asking clients to re-announce the images they hold after a reconnect. It is not news for a person: it becomes the quiet &#8220;Reconnected&#8221; slip above, shown once, and the strap&#8217;s status reads <i style="color:var(--text-on-leather-2)">re-sharing 3 images</i> while it runs. Nothing ever floats over the strap or a Save button.</span>
+      </div>
+    </section>
+
+    <section aria-label="Banners" style="display:flex;flex-direction:column;gap:10px">
+      <h2 class="h2g"><i-icon name="flag-objective" size="20"></i-icon>Banners</h2>
+      <span class="hintG">pinned under the campaign header until acted on; one action is primary, dismiss is always there</span>
+      <div class="hk-banner hk-banner--arcane" role="region" aria-label="Pin campaign packs">
+        <x-tex kind="paper"></x-tex>
+        <i-icon name="pin" size="24"></i-icon>
+        <div class="hk-banner__body"><span class="hk-banner__title">This campaign now shares Emberfall Homebrew 1.3.0</span><span style="font-size:14px">Ilyana Vorn&#8217;s sheet is pinned to 1.2.0. Pin her to the campaign&#8217;s version so the table and her sheet agree; 2 items change, nothing is removed.</span></div>
+        <div class="hk-banner__actions"><button class="hk-btn hk-btn--brass hk-has-tip" type="button" aria-describedby="tipPin"><i-icon name="pin" size="13"></i-icon>Pin to Ilyana<span class="hk-tip hk-tip--left" id="tipPin" role="tooltip">Her sheet re-reads its items from 1.3.0<span class="hk-tip__sub">reversible from her Content packs section</span></span></button><button class="hk-btn hk-btn--ghost" type="button">Later</button></div>
+      </div>
+      <div class="hk-banner" role="region" aria-label="Pin failed">
+        <x-tex kind="paper"></x-tex>
+        <i-icon name="cross-mark" size="22"></i-icon>
+        <div class="hk-banner__body"><span class="hk-banner__title">Couldn&#8217;t pin Emberfall Homebrew 1.3.0 to Ilyana Vorn</span><span style="font-size:14px">The campaign&#8217;s copy of this pack could not be downloaded. Her sheet keeps using 1.2.0.</span></div>
+        <div class="hk-banner__actions"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="cycle" size="13"></i-icon>Retry</button><button class="hk-btn hk-btn--ghost" type="button">Later</button></div>
+      </div>
+      <div class="hk-banner hk-banner--info" role="region" aria-label="No hero linked">
+        <x-tex kind="paper"></x-tex>
+        <i-icon name="wax-seal" size="22"></i-icon>
+        <div class="hk-banner__body"><span class="hk-banner__title">You don&#8217;t have a hero in this campaign yet</span><span style="font-size:14px">Link one of yours, create a new one at level 3, or ask the DM for a pregen.</span></div>
+        <div class="hk-banner__actions"><button class="hk-btn hk-btn--brass" type="button"><i-icon name="wax-seal" size="13"></i-icon>Link a hero</button></div>
+      </div>
+      <div class="hk-banner" role="region" aria-label="Another tab is syncing">
+        <x-tex kind="paper"></x-tex>
+        <i-icon name="files" size="22"></i-icon>
+        <div class="hk-banner__body"><span class="hk-banner__title">Another tab is syncing this campaign</span><span style="font-size:14px">This view won&#8217;t update live until you switch to it.</span></div>
+        <div class="hk-banner__actions"><button class="hk-btn hk-btn--leather" type="button">Use this tab</button></div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

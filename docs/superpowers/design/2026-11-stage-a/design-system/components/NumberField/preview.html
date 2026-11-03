@@ -1,0 +1,36 @@
+<!-- @dsCard group="Fields" height=360 subtitle="− / + around a Forum numeral well; on leaf and on leather; text field, error, select" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NumberField — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="../../components/bundle.css">
+</head>
+<body>
+<div class="hk-stage hk-stage--col" style="gap:14px">
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">
+<filter id="hkWood" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.0022 0.055" numOctaves="5" seed="9" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.7 -0.55" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<filter id="hkPaper" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<filter id="hkLeather" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="3" seed="5" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+<linearGradient id="hkShieldBrass" x1="0" y1="0" x2="0" y2="1"><stop class="hk-shield-stop1" offset="0"/><stop class="hk-shield-stop2" offset=".5"/><stop class="hk-shield-stop3" offset="1"/></linearGradient>
+</svg>
+<svg class="hk-tex hk-tex--wood" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+<div class="hk-vignette" aria-hidden="true"></div>
+<section class="hk-leaf" style="width:100%;display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap">
+  <svg class="hk-tex hk-tex--paper" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+  <div class="hk-field"><label class="hk-field__label" for="nfA">Rounds</label><div class="hk-numfield hk-numfield--leaf"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One fewer" title="−1"><svg viewBox="20 20 216 216" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M64 119v18h128v-18z"/></svg></button><input class="hk-numfield__in" id="nfA" type="number" value="3" min="0" max="99"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One more" title="+1"><svg viewBox="20 20 216 216" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M119 64v55H64v18h55v55h18v-55h55v-18h-55V64h-18z"/></svg></button></div></div>
+  <div class="hk-field"><label class="hk-field__label" for="nfB">Gold</label><div class="hk-numfield hk-numfield--leaf"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One fewer" title="−1"><svg viewBox="20 20 216 216" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M64 119v18h128v-18z"/></svg></button><input class="hk-numfield__in hk-focus-demo" id="nfB" type="number" value="38" min="0"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One more" title="+1"><svg viewBox="20 20 216 216" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M119 64v55H64v18h55v55h18v-55h55v-18h-55V64h-18z"/></svg></button></div></div>
+  <div class="hk-field"><label class="hk-field__label" for="nfC">Level</label><div class="hk-numfield hk-numfield--leaf"><button class="hk-ico hk-ico--leaf" type="button" aria-label="One fewer" title="−1"><svg viewBox="20 20 216 216" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M64 119v18h128v-18z"/></svg></button><input class="hk-numfield__in" id="nfC" type="number" value="6" min="1" max="6"><button class="hk-ico hk-ico--leaf" type="button" disabled aria-label="One more (at the pack's maximum)" title="Exhaustion caps at 6"><svg viewBox="20 20 216 216" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M119 64v55H64v18h55v55h18v-55h55v-18h-55V64h-18z"/></svg></button></div><span class="hk-field__msg">capped by the pack</span></div>
+  <div class="hk-field" style="flex:1 1 180px"><label class="hk-field__label" for="tfA">Hero name</label><input class="hk-input" id="tfA" placeholder="Ilyana Vorn"></div>
+  <div class="hk-field" style="flex:1 1 180px"><label class="hk-field__label" for="tfB">Join code</label><input class="hk-input hk-input--error" id="tfB" value="EMB-RF4L" aria-invalid="true" aria-describedby="tfBerr"><span class="hk-field__msg hk-field__msg--error" id="tfBerr"><svg viewBox="0 0 512 512" width="11" height="11" aria-hidden="true"><path fill="currentColor" d="M105.367 18.328c23.14 15.444 46.098 31.27 68.55 47.572-45.055-20.895-94.51-35.918-149.37-44.246 46.697 26.72 91.596 55.58 135.705 85.524-37.203-18.033-77.48-32.22-121.602-41.37 58.218 34.322 109.368 72.465 154.71 114.206C136.02 227.227 86.295 284.717 45.79 354.18c27.11-24.29 54.91-47.545 82.868-70.68C81.942 339.36 45.05 405.01 20.2 482.135c20.36-24.62 40.988-48.203 61.905-70.817 44.7-67.485 89.567-147.11 148.856-170.418-29.61 30.708-63.36 75.164-98.25 118.145 40.99-40.437 83.09-77.46 126.415-111.512 61.598 70.49 110.757 149.38 152.145 235.873-6.738-44.794-16.796-87.384-30.03-127.666l46.444 65.53s-26.037-72.69-43.66-101.987c40.76 55.91 78.208 114.428 112.328 175.205-18.674-89.454-50.512-169.772-98.893-238.224 34.906 34.69 68.637 71.1 100.93 109.045C465.048 288.827 423.58 221.82 372.214 167c40.224-25.887 81.48-49.73 123.863-71.783-32.025 5.56-62.49 12.92-92.006 21.934 21.836-16.173 44.41-32.124 67.024-47.523-37.987 11.91-74.633 25.775-109.067 41.433 42.668-27.673 86.32-53.668 131.004-78.602h-.003c-67.47 18.055-130.83 42.19-188.998 73.548-56.294-41.79-122.01-71.787-198.663-87.68z"/></svg>No campaign with this code</span></div>
+</section>
+<div class="hk-strap" style="display:flex;gap:18px;align-items:flex-end;padding:12px 14px;width:100%;box-sizing:border-box">
+  <svg class="hk-tex hk-tex--leather" aria-hidden="true"><rect width="100%" height="100%"/></svg>
+  <div class="hk-field hk-field--leather"><label class="hk-field__label" for="nfD">Поточні хіти</label><div class="hk-numfield hk-numfield--phone"><button class="hk-ico hk-ico--phone hk-ico--ember" type="button" aria-label="Шкода 1" title="−1"><svg viewBox="20 20 216 216" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M64 119v18h128v-18z"/></svg></button><input class="hk-numfield__in" id="nfD" type="number" value="31" min="0" max="44"><button class="hk-ico hk-ico--phone" type="button" aria-label="Лікування 1" title="+1" style="color:var(--brass-top)"><svg viewBox="20 20 216 216" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M119 64v55H64v18h55v55h18v-55h55v-18h-55V64h-18z"/></svg></button></div></div>
+  <span class="hk-caption">on leather (phone HP): 44px controls, 26px numeral</span>
+</div>
+</div>
+
+</body>
+</html>

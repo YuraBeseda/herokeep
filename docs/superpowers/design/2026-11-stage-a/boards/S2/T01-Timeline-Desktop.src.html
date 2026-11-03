@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — hero sheet, Timeline tab (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:100%;max-width:none;min-height:100vh;box-sizing:border-box;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:15px;line-height:1.3;display:flex;flex-direction:column">
+  <x-part name="wood"></x-part>
+  <x-part name="rail"></x-part>
+
+  <main style="position:relative;z-index:1;display:grid;grid-template-columns:minmax(320px,340fr) minmax(0,1020fr);gap:20px;padding:18px 18px 22px;align-items:start;flex:1 1 auto">
+    <x-part name="folio" tab="timeline" tip="none"></x-part>
+
+    <section class="leaf pane" aria-label="Timeline" style="transform:rotate(.2deg);gap:4px;padding-bottom:20px">
+      <x-tex kind="paper"></x-tex>
+      <div style="position:relative;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 class="leafTitle"><i-icon name="hourglass" size="22" style="color:#8A6A2A"></i-icon>Timeline</h2>
+        <span class="hint">every change, as a sentence; Revert recomputes the hero as if it never happened</span>
+        <span style="flex:1 1 auto"></span>
+        <label class="hk-search" style="width:240px"><i-icon name="magnifying-glass" size="16"></i-icon><input class="hk-search__in" type="search" placeholder="Search events" aria-label="Search events"></label>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0 4px" role="group" aria-label="Filter events">
+        <button class="chip chipBtn chipOn" type="button" aria-pressed="true"><i-icon name="hourglass" size="13"></i-icon>All</button>
+        <button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="crossed-swords" size="13" style="color:#8A6A2A"></i-icon>Play</button>
+        <button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="anvil" size="13" style="color:#8A6A2A"></i-icon>Build</button>
+        <button class="chip chipBtn" type="button" aria-pressed="false"><i-icon name="stack" size="13" style="color:#8A6A2A"></i-icon>Packs</button>
+        <span style="flex:1 1 auto"></span>
+        <button class="toggle tgOn" type="button" aria-pressed="true"><span class="tgT"><span class="tgK"></span></span><span class="hint" style="font-style:normal">Show reverted</span></button>
+      </div>
+
+      <!-- Tonight -->
+      <div class="day" style="position:relative"><i-icon name="candle-flame" size="18" style="color:#8A6A2A"></i-icon>Tonight · Session 7<span class="lvlRule"></span><span class="th">Sunday 2 Nov 2026</span></div>
+      <div style="position:relative;display:flex;flex-direction:column">
+        <div class="tl"><i-icon name="fire-spell-cast" size="20" style="color:#574489" hint="Play · spell"></i-icon><span>Cast <b>Bless</b> with a level 1 slot and started concentrating on it.</span><span class="tlTime">21:42</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="broken-heart" size="20" style="color:#8E3220" hint="Play · hit points"></i-icon><span>Took <b>7 damage</b> from Giant Spider (38 → 31).</span><span class="tlTime">21:40</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="skull" size="20" style="color:#8E3220" hint="Play · condition"></i-icon><span>Gained the <b>Poisoned</b> condition for 3 rounds, from Giant Spider.</span><span class="tlTime">21:38</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="campfire" size="20" style="color:#8A6A2A" hint="Play · rest"></i-icon><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Took a <b>short rest</b>: spent 1 hit die and healed 8.</span><button class="exp" type="button" aria-expanded="true" aria-label="Hide 3 events" title="Hide 3 events"><i-icon name="minus" size="12"></i-icon></button><span class="hint">3 events</span></span><span class="tlTime">21:10</span><button class="rep" type="button" title="Reverts the rest and its 3 events"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl tlSub"><i-icon name="d10" size="18" style="color:#8A6A2A" hint="Play · hit dice"></i-icon><span>Spent 1 hit die (Paladin d10): rolled 6 + 2.</span><span class="tlTime">21:10</span><span></span></div>
+        <div class="tl tlSub"><i-icon name="healing" size="18" style="color:#3B5222" hint="Play · hit points"></i-icon><span>Healed 8 (23 → 31).</span><span class="tlTime">21:10</span><span></span></div>
+        <div class="tl tlSub"><i-icon name="holy-symbol" size="18" style="color:#8A6A2A" hint="Play · resource"></i-icon><span>Channel Divinity restored (2 of 2).</span><span class="tlTime">21:10</span><span></span></div>
+        <div class="tl"><i-icon name="heart-plus" size="20" style="color:#8A6A2A" hint="Play · hit points"></i-icon><span>Gained <b>5 temporary hit points</b>.</span><span class="tlTime">20:55</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+      </div>
+
+      <!-- Session 6 -->
+      <div class="day" style="position:relative"><i-icon name="candle-flame" size="18" style="color:#8A6A2A"></i-icon>Session 6<span class="lvlRule"></span><span class="th">Sunday 26 Oct 2026</span></div>
+      <div style="position:relative;display:flex;flex-direction:column">
+        <div class="tl"><i-icon name="laurels" size="20" style="color:#8A6A2A" hint="Play · experience"></i-icon><span>Awarded <b>500 XP</b> (6,000 → 6,500).</span><span class="tlTime">23:05</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="swap-bag" size="20" style="color:#8A6A2A" hint="Play · bag"></i-icon><span>Added <b>Potion of Healing</b> ×2 to the bag.</span><span class="tlTime">22:48</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="scroll-unfurled" size="20" style="color:#8A6A2A" hint="Play · note"></i-icon><span>Added the note <b>“Debts and favours”</b>.</span><span class="tlTime">22:10</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="two-coins" size="20" style="color:#8A6A2A" hint="Play · coins"></i-icon><span>Coins updated: <b>+38 gp</b>, −12 sp.</span><span class="tlTime">21:30</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="broken-heart" size="20" style="color:#645238" hint="Play · hit points, reverted"></i-icon><span class="tlRev">Took 12 damage from Cultist (40 → 28).</span><span class="tlTime">20:12</span><span class="chip glyph" tabindex="0" aria-describedby="tipRev" style="position:relative"><i-icon name="anticlockwise-rotation" size="12" style="color:#8A6A2A"></i-icon>Reverted 20:14<span class="tipUp" id="tipRev" role="tooltip" style="left:auto;right:0;transform:none">Reverted at 20:14<span class="tipSub">The hero was recomputed without it; hidden when “Show reverted” is off.</span></span></span></div>
+      </div>
+
+      <!-- Between sessions -->
+      <div class="day" style="position:relative"><i-icon name="moon" size="18" style="color:#8A6A2A"></i-icon>Between sessions<span class="lvlRule"></span><span class="th">Sunday 19 Oct 2026</span></div>
+      <div style="position:relative;display:flex;flex-direction:column">
+        <div class="tl"><i-icon name="stack" size="20" style="color:#8A6A2A" hint="Packs · update"></i-icon><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Updated <b>Emberfall Company pack</b> v0.9.0 → v1.0.0; 2 choices moved to a replacement.</span><button class="exp" type="button" aria-expanded="false" aria-label="Show 2 events" title="Show 2 events"><i-icon name="plus" size="12"></i-icon></button><span class="hint">2 events</span></span><span class="tlTime">18:02</span><button class="rep" type="button" title="Reverts the update and its 2 events"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="quill" size="20" style="color:#8A6A2A" hint="Build · manual change"></i-icon><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Override: <b>Armor class</b> set to 18 — “Ring of Protection counted twice”.</span><span class="chip chipW" style="height:20px"><i-icon name="quill" size="11"></i-icon>manual change</span></span><span class="tlTime">17:40</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="anvil" size="20" style="color:#8A6A2A" hint="Build · choice"></i-icon><span>Re-picked <b>prepared spells</b>: Shield of Faith in, Heroism out.</span><span class="tlTime">17:31</span><button class="rep" type="button" title="Revert: recompute the hero as if this never happened"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+      </div>
+
+      <!-- Creation -->
+      <div class="day" style="position:relative"><i-icon name="wax-seal" size="18" style="color:#8A6A2A"></i-icon>Creation and levels<span class="lvlRule"></span><span class="th">13 Sep – 5 Oct 2026</span></div>
+      <div style="position:relative;display:flex;flex-direction:column">
+        <div class="tl"><i-icon name="upgrade" size="20" style="color:#8A6A2A" hint="Build · level"></i-icon><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Reached <b>level 5</b> in Paladin: +10 hit points, Extra Attack, Faithful Steed.</span><button class="exp" type="button" aria-expanded="false" aria-label="Show 4 events" title="Show 4 events"><i-icon name="plus" size="12"></i-icon></button><span class="hint">4 events</span></span><span class="tlTime">5 Oct</span><button class="rep" type="button" title="Reverts the level and its 4 events"><i-icon name="anticlockwise-rotation" size="13"></i-icon>Revert</button></div>
+        <div class="tl"><i-icon name="upgrade" size="20" style="color:#8A6A2A" hint="Build · level"></i-icon><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Reached <b>level 4</b> in Paladin: Ability Score Improvement, +2 Charisma.</span><button class="exp" type="button" aria-expanded="false" aria-label="Show 3 events" title="Show 3 events"><i-icon name="plus" size="12"></i-icon></button><span class="hint">3 events</span></span><span class="tlTime">28 Sep</span><span class="lockt" title="Level 5 was built on this; revert level 5 first"><i-icon name="padlock" size="13"></i-icon>revert level 5 first</span></div>
+        <div class="tl"><i-icon name="wax-seal" size="20" style="color:#8A6A2A" hint="Build · creation"></i-icon><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span><b>Ilyana Vorn</b> was created: Human, Soldier, Paladin 1.</span><button class="exp" type="button" aria-expanded="false" aria-label="Show 15 events" title="Show 15 events"><i-icon name="plus" size="12"></i-icon></button><span class="hint">15 events</span></span><span class="tlTime">13 Sep</span><span class="lockt" title="Creation can’t be reverted; delete the hero instead"><i-icon name="padlock" size="13"></i-icon>can’t revert</span></div>
+      </div>
+    </section>
+  </main>
+
+  <x-part name="strap"></x-part>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

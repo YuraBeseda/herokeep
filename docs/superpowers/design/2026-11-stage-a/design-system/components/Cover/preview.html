@@ -1,0 +1,69 @@
+<!-- @dsCard height=300 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cover — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="../../components/bundle.css">
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 300" width="480" height="300">
+<!--
+  blocks      leather 176×300 bled off the top and right edge, first in the box (the folio, the largest) · leaf 144×232 tilted, the parchment that carries everything · brass 48×300 rail slab between them · ember 56×56 disc once (it only ever means HP and damage) · arcane 24×24 disc once (concentration) — about 40% of 960×300
+  arrangement one tall leather slab with a leaf and a brass rail as satellites, the leaf tilted by leaf-tilt, bottoms clear of the name's zone (everything right of x=480)
+  pattern     wax-seal discs, from "controls are brass, leather and wax" and "the signature element is the wax seal": fourteen discs at a space-6 pitch in two columns down the leather, radius half of space-5 (12px), the three nearest the leaf cooled to wax-spent; a dot grid of brass rivets at a space-5 pitch down the rail
+  scales      sides in space-2 multiples (176, 144, 232, 48, 56, 24); gutters space-4; seal pitch space-6, rivet pitch space-5; leaf corners radius-leaf, slab corners radius-frame, discs rx = half the side
+-->
+<rect class="leather blk" x="304" y="-16" width="192" height="332"/>
+<rect class="brass bar" x="240" y="-16" width="48" height="332"/>
+<g class="rivets">
+<circle cx="264" cy="24" r="4"/><circle cx="264" cy="48" r="4"/><circle cx="264" cy="72" r="4"/><circle cx="264" cy="96" r="4"/><circle cx="264" cy="120" r="4"/><circle cx="264" cy="144" r="4"/><circle cx="264" cy="168" r="4"/><circle cx="264" cy="192" r="4"/><circle cx="264" cy="216" r="4"/><circle cx="264" cy="240" r="4"/><circle cx="264" cy="264" r="4"/><circle cx="264" cy="288" r="4"/>
+</g>
+<g class="seals">
+<circle cx="360" cy="32" r="12"/><circle cx="424" cy="32" r="12"/>
+<circle cx="360" cy="64" r="12"/><circle cx="424" cy="64" r="12"/>
+<circle cx="360" cy="96" r="12"/><circle cx="424" cy="96" r="12"/>
+<circle cx="360" cy="128" r="12"/><circle cx="424" cy="128" r="12"/>
+<circle cx="360" cy="160" r="12"/><circle cx="424" cy="160" r="12"/>
+<circle cx="424" cy="192" r="12"/>
+<circle class="spent" cx="360" cy="192" r="12"/><circle class="spent" cx="360" cy="224" r="12"/><circle class="spent" cx="424" cy="224" r="12"/>
+</g>
+<g transform="rotate(-2 112 184)">
+<rect class="leaf blk-leaf" x="40" y="68" width="144" height="232"/>
+</g>
+<circle class="ember" cx="56" cy="40" r="28"/>
+<circle class="arcane" cx="112" cy="28" r="12"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Herokeep</h1>
+<p class="tag">Your sheet, as a folio on a tavern table.</p>
+</div>
+</div>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--ground); color:var(--text-on-ground); font-family:var(--font-body); overflow:hidden; }
+  .cover { position:relative; height:300px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:300px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:300px; }
+  .leather { fill:var(--leather); }
+  .brass { fill:var(--brass); }
+  .leaf { fill:var(--leaf); }
+  .ember { fill:var(--ember); }
+  .arcane { fill:var(--arcane); }
+  .rivets circle { fill:var(--brass-top); }
+  .seals circle { fill:var(--wax); }
+  .seals circle.spent { fill:var(--wax-spent); }
+  .blk { rx:var(--radius-frame); }
+  .blk-leaf { rx:var(--radius-leaf); }
+  .bar { rx:0; }
+  .words { position:absolute; left:var(--space-6); bottom:var(--space-6); max-width:440px; }
+  .name { margin:0; font-family:var(--font-display); font-weight:400; font-size:100px; line-height:.9; letter-spacing:.01em; color:var(--text-on-ground); }
+  .tag { margin:var(--space-2) 0 0 4px; font-size:14px; line-height:20px; color:var(--text-on-ground-2); font-style:italic; }
+</style>
+
+</body>
+</html>

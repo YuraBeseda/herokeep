@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Таверна — накласти заклинання, аркуш (телефон)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+body{margin:0}
+a{color:#7a5a1e}a:hover{color:#4d3812}
+__CSS__
+</style>
+</helmet>
+<div data-theme="tavern" style="position:relative;width:390px;height:844px;overflow:hidden;background:#241710;color:#E9DCBB;font-family:Alegreya,Georgia,serif;font-size:16px;line-height:1.3;display:flex;flex-direction:column;box-sizing:border-box">
+  <x-part name="pwood"></x-part>
+  <div aria-hidden="true" style="position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+    <x-part name="pcombat"></x-part>
+  </div>
+  <x-part name="pactions"></x-part>
+  <x-part name="ptabs" active="combat"></x-part>
+  <div class="dim"></div>
+
+  <section class="psheet" role="dialog" aria-modal="true" aria-labelledby="castT" style="height:640px;gap:10px;padding-bottom:0">
+    <x-tex kind="paper" style="border-radius:14px 14px 0 0"></x-tex>
+    <div class="grip" aria-hidden="true"></div>
+    <div style="display:flex;align-items:center;gap:8px"><x-seal state="full" icon="sword-brandish" size="34" seed="5"></x-seal><h2 class="leafTitle" id="castT" style="font-size:22px;flex:1 1 auto">Накласти: Божественна кара</h2><button class="ico icoP icoLeaf" type="button" aria-label="Закрити" title="Закрити"><i-icon name="cross-mark" size="14"></i-icon></button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="chip" style="height:26px;font-size:14px"><x-seal state="full" text="I" size="16" fs="30" seed="1" label="1 рівень"></x-seal>1 рівень</span><span class="chip" style="height:26px;font-size:14px">Викликання</span><span class="chip" style="height:26px;font-size:14px"><i-icon name="stopwatch" size="12" style="color:#8A6A2A"></i-icon>бонусна дія після влучання</span><span class="chip" style="height:26px;font-size:14px"><i-icon name="position-marker" size="12" style="color:#8A6A2A"></i-icon>на себе</span>
+    </div>
+    <p class="mdp" style="font-size:15px">Ціль отримує додатково <b>2к8 променевої</b> шкоди від влучання; <b>3к8</b> — проти Нечисті чи Нежиті.</p>
+    <div style="display:flex;flex-direction:column;gap:6px" role="radiogroup" aria-label="Комірка заклинання">
+      <span class="th" style="font-size:14px">Комірка заклинання</span>
+      <button class="lane laneOn" type="button" role="radio" aria-checked="true" style="min-height:52px;grid-template-columns:32px minmax(0,1fr) auto;font-size:16px"><span class="iring iringP"><i-icon name="sword-brandish" size="16"></i-icon></span><span class="laneT"><b>Без комірки: Божественна кара паладина</b><span class="th" style="font-size:14px">залишилось 1 з 1 · 2к8</span></span><span style="position:relative;display:inline-flex"><x-seal state="full" icon="sword-brandish" size="28" seed="4" label="Вільне накладання, обрано"></x-seal><span class="sealRing" aria-hidden="true"></span></span></button>
+      <button class="lane" type="button" role="radio" aria-checked="false" style="min-height:52px;grid-template-columns:32px minmax(0,1fr) auto;font-size:16px"><span class="iring iringP"><i-icon name="magic-swirl" size="16"></i-icon></span><span class="laneT"><b>1 рівень (залишилось 3)</b><span class="th" style="font-size:14px">2к8</span></span><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" text="I" size="24" fs="30" seed="1" label="Комірка 1 рівня"></x-seal><x-seal state="full" text="I" size="24" fs="30" seed="2" label="Комірка 1 рівня"></x-seal><x-seal state="full" text="I" size="24" fs="30" seed="3" label="Комірка 1 рівня"></x-seal><x-seal state="spent" text="I" size="24" fs="30" seed="4" label="Комірку витрачено"></x-seal></span></button>
+      <button class="lane" type="button" role="radio" aria-checked="false" style="min-height:52px;grid-template-columns:32px minmax(0,1fr) auto;font-size:16px;position:relative"><span class="iring iringP"><i-icon name="magic-swirl" size="16"></i-icon></span><span class="laneT"><b>2 рівень (залишилось 2)</b><span class="th" style="font-size:14px;display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span class="chip chipV glyph" tabindex="0" aria-describedby="tipUp2" style="height:20px;font-size:13px;position:relative"><i-icon name="upgrade" size="10"></i-icon>підвищена<span class="tipUp" id="tipUp2" role="tooltip" style="left:0;transform:none;font-size:15px;white-space:normal;width:240px">Підвищена комірка: +1к8 за кожен рівень вище 1</span></span>+1к8 → 3к8</span></span><span style="display:flex;gap:3px;align-items:center"><x-seal state="full" text="II" size="24" fs="28" seed="5" label="Комірка 2 рівня"></x-seal><x-seal state="full" text="II" size="24" fs="28" seed="6" label="Комірка 2 рівня"></x-seal></span></button>
+      <button class="lane laneOff" type="button" role="radio" aria-checked="false" disabled="disabled" title="Немає комірок Угоди: немає рівнів чорнокнижника" style="min-height:52px;grid-template-columns:32px minmax(0,1fr) auto;font-size:16px"><span class="iring iringP"><i-icon name="pentacle" size="16"></i-icon></span><span class="laneT"><b>Комірка Угоди</b><span class="th" style="font-size:14px">немає рівнів чорнокнижника</span></span><span class="lockt" style="height:auto"><i-icon name="padlock" size="14"></i-icon></span></button>
+    </div>
+    <span class="hint hintP" style="display:flex;align-items:center;gap:5px;font-size:14px"><i-icon name="info" size="13" style="color:#8A6A2A"></i-icon>Без концентрації; Благословення триває.</span>
+    <div class="hk-strap" style="margin:auto -14px 0;border-radius:0;display:flex;align-items:center;gap:8px;padding:8px 12px"><x-tex kind="leather"></x-tex><button class="btn btnGhostL btnP" type="button">Скасувати</button><span style="flex:1 1 auto"></span><span class="hint" style="color:#E0C27A;font-size:14px">комірку не витрачено</span><button class="btn btnBrass btnP" type="button"><i-icon name="sword-brandish" size="16"></i-icon>Накласти</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

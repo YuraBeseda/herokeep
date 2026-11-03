@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tavern Table — Campaign table: session, rolls and chat (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap">
+<style>
+__CSS__
+</style>
+</helmet>
+<div class="pg" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="vign" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 62% 58% at 88% -4%,rgba(107,74,30,.72) 0%,rgba(107,74,30,.3) 38%,rgba(36,23,16,0) 72%),radial-gradient(ellipse 70% 60% at 6% 104%,rgba(0,0,0,.42) 0%,rgba(0,0,0,0) 70%)"></div>
+  <x-rail active="campaigns" chip="The Emberfall Company" live="1" chiptitle="The Emberfall Company, session live, round 3"></x-rail>
+  <x-chead name="The Emberfall Company" role="dm" tab="table" members="5" pregens="1" session="live" round="3" elapsed="1 h 12 min"></x-chead>
+
+  <main style="z-index:1;display:flex;flex-direction:column;gap:16px;padding:18px 22px 24px;flex:1 1 auto;min-width:0">
+    <!-- session strip -->
+    <section class="hk-strap" aria-label="Session" style="display:flex;align-items:center;gap:14px;padding:10px 16px;flex-wrap:wrap">
+      <x-tex kind="leather" style="border-radius:4px"></x-tex>
+      <span class="hk-iring" style="width:40px;height:40px;box-shadow:inset 0 0 0 2px var(--brass),0 1px 2px rgba(0,0,0,.5);color:var(--danger-on-leather)"><i-icon name="candle-flame" size="22"></i-icon></span>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-family:var(--font-display);font-weight:400;font-size:20px;color:var(--text-on-leather)">Session in progress — Session 12</b><span style="font-size:14px;color:var(--text-on-leather-2);display:flex;align-items:center;gap:6px"><i-icon name="hourglass" size="14" style="color:var(--brass)"></i-icon>started 19:48 · 1 h 12 min · 4 online</span></div>
+      <span style="flex:1 1 auto"></span>
+      <span class="rounds" role="status" aria-label="Encounter 2, round 3, since 20:04"><i-icon name="crossed-swords" size="18"></i-icon>Encounter 2 · Round 3<span class="hk-hint" style="color:var(--text-on-leather-3);font-family:var(--font-body);font-size:13px">since 20:04</span></span>
+      <button class="hk-btn hk-btn--l hk-btn--brass" type="button" title="Round 3 → 4: every round-based duration −1 for everyone"><i-icon name="sands-of-time" size="18"></i-icon>Advance round</button>
+      <button class="hk-btn hk-btn--l hk-btn--ghost-leather hk-has-tip" type="button" aria-describedby="tipEndEnc"><i-icon name="level-end-flag" size="18"></i-icon>End encounter<span class="hk-tip" id="tipEndEnc" role="tooltip">Ends the fight; durations keep running<span class="hk-tip__sub">the next Start encounter begins round 1 of encounter 3</span></span></button>
+      <span class="hk-astrap__divider" aria-hidden="true" style="margin-left:0"></span>
+      <button class="hk-btn hk-btn--l hk-btn--ghost-leather" type="button" style="color:var(--danger-on-leather);box-shadow:inset 0 0 0 1px var(--danger-on-leather)" title="Ends Session 12 for everyone; the log keeps it"><i-icon name="candle-flame" size="18"></i-icon>End session</button>
+    </section>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start">
+      <!-- the feed + composer -->
+      <section class="hk-leaf" aria-label="Table feed" style="transform:rotate(-.15deg);display:flex;flex-direction:column;gap:6px;padding:16px 20px 16px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0 0 2px"><h2 class="hk-leaf__title"><i-icon name="round-table" size="20"></i-icon>Table</h2><span class="hk-hint">rolls, chat and what happened, oldest first</span><div class="hk-leaf__actions"><span class="hk-chip" style="height:24px" title="Rolls are visible to everyone unless marked"><i-icon name="megaphone" size="13"></i-icon>rolls: everyone</span><span class="hk-chip" style="height:24px" title="Players may roll privately"><i-icon name="padlock" size="13"></i-icon>private rolls allowed</span></div></div>
+
+        <div class="feSys">Session started — Session 12 · 19:48</div>
+        <div class="fe"><span class="feT">19:50</span><span class="avatar" style="width:32px;height:32px;font-size:13px">M</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span><span class="feA">Mira</span> <span class="hk-hint">plays Ilyana Vorn</span></span><span style="font-size:15px">Sorry I&#8217;m late, the kettle fought back. Ilyana is ready at the gate.</span></div></div>
+        <div class="feSys">Encounter 1 started · 19:51</div>
+        <div class="fe"><span class="feT">19:53</span><span class="avatar" style="width:32px;height:32px;font-size:13px">Ma</span><div class="slipR" style="transform:rotate(.2deg)"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="feA">Thorne Ashvale</span><span class="hk-hint">Marko · Initiative</span><span style="flex:1 1 auto"></span><span class="hk-chip" style="height:22px" title="Everyone at the table sees this roll"><i-icon name="megaphone" size="12"></i-icon>everyone</span></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="dice" title="d20 result">14</span><span class="hk-th">+ 3</span><span class="hk-th">=</span><span class="dice diceB" title="Total">17</span></div></div></div>
+        <div class="feSys">Encounter 1 ended · 19:58</div>
+        <div class="fe"><span class="feT">20:01</span><span class="avatar" style="width:32px;height:32px"><i-icon name="crown" size="16"></i-icon></span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span><span class="feA">You</span> <span class="hk-hint">DM</span></span><span style="font-size:15px">The gate is clear. Beyond it a stair spirals down into ember-light, and something skitters in the dark above you.</span></div></div>
+        <div class="feSys">Encounter 2 started · 20:04</div>
+        <div class="feSys">Round 1 · 20:04</div>
+        <div class="fe"><span class="feT">20:05</span><span class="avatar" style="width:32px;height:32px;font-size:13px">M</span><div class="slipR" style="transform:rotate(-.2deg)"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="feA">Ilyana Vorn</span><span class="hk-hint">Mira · Longsword attack, then damage</span><span style="flex:1 1 auto"></span><span class="hk-chip" style="height:22px" title="Everyone at the table sees this roll"><i-icon name="megaphone" size="12"></i-icon>everyone</span></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><i-icon name="broadsword" size="16" style="color:var(--accent-strong)"></i-icon><span class="dice" title="d20 result">17</span><span class="hk-th">+ 6</span><span class="hk-th">=</span><span class="dice diceB" title="To hit">23</span><span class="hk-chip hk-chip--moss" style="height:22px"><i-icon name="check-mark" size="11"></i-icon>hit</span><span style="width:8px"></span><span class="dice" title="d8 result">5</span><span class="hk-th">+ 3</span><span class="hk-th">=</span><span class="dice diceB" title="Damage">8</span><span class="hk-chip hk-chip--damage" style="--dmg:var(--damage-slashing);height:22px">slashing</span></div></div></div>
+        <div class="fe"><span class="feT">20:07</span><span class="avatar" style="width:32px;height:32px"><i-icon name="crown" size="16"></i-icon></span><div class="slipR slipDM" style="transform:rotate(.15deg)"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="feA" style="color:var(--text-on-leather)">Giant Spider</span><span class="hk-hint" style="color:var(--text-on-leather-3)">you · Bite against Ilyana (AC 18)</span><span style="flex:1 1 auto"></span><span class="hk-chip hk-chip--dark hk-has-tip halo" tabindex="0" aria-describedby="tipDm" style="height:28px"><i-icon name="crown" size="12"></i-icon>DM only<span class="hk-tip hk-tip--above hk-tip--left" id="tipDm" role="tooltip">Only you see this roll<span class="hk-tip__sub">players see nothing, not even that you rolled</span></span></span></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="dice diceD" title="d20 result">12</span><span class="hk-th" style="color:var(--text-on-leather-2)">+ 5</span><span class="hk-th" style="color:var(--text-on-leather-2)">=</span><span class="dice diceB" title="To hit">17</span><span class="hk-chip hk-chip--ember" style="height:22px"><i-icon name="cross-mark" size="10"></i-icon>miss</span><span style="width:8px"></span><span class="hk-hint" style="color:var(--text-on-leather-3)">second bite: 19 + 5 = 24, hit · 1d8 + 3 = 7 piercing · Con save DC 11 failed</span></div></div></div>
+        <div class="feSys">Ilyana took 7 damage from Giant Spider · Poisoned, 3 rounds · 20:09</div>
+        <div class="fe"><span class="feT">20:10</span><span class="avatar" style="width:32px;height:32px;font-size:13px">T</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;align-items:center;gap:8px"><span class="feA">Taras</span> <span class="hk-hint">plays Bramble Underfoot</span><span class="hk-chip hk-chip--dark" style="height:20px;font-size:13px" title="Only you and Taras see this message"><i-icon name="crown" size="11"></i-icon>DM only</span></span><span style="font-size:15px">Can Bramble slip behind the pillar before the spider notices? I want to hide.</span></div></div>
+        <div class="feSys">Round 2 · 20:11</div>
+        <div class="fe"><span class="feT">20:12</span><span class="avatar" style="width:32px;height:32px;font-size:13px">M</span><div class="slipR" style="transform:rotate(-.15deg)"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="feA">Ilyana Vorn</span><span class="hk-hint">Mira · cast Bless</span><span style="flex:1 1 auto"></span><span class="hk-chip hk-chip--arcane" style="height:22px" title="Concentrating on Bless since round 3"><i-icon name="concentration-orb" size="12"></i-icon>concentrating</span></div><span style="font-size:14px">Level 1 slot spent (3 of 4 left) · Bless on Ilyana, Bramble and Oskar · 1 minute</span></div></div>
+        <div class="feSys">Round 3 · 20:12</div>
+
+        <!-- composer -->
+        <div class="hk-rule" style="margin-top:6px"></div>
+        <form style="display:flex;flex-direction:column;gap:8px;margin:0;min-width:0" aria-label="Message the table">
+          <label for="msg" class="hk-field__label">Message</label>
+          <textarea class="ta" id="msg" rows="2" placeholder="Say something to the table, or describe what happens…"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0">
+            <div class="seg" role="radiogroup" aria-label="Who can see this message">
+              <button class="segb segOn" type="button" role="radio" aria-checked="true" title="Everyone at the table sees it"><i-icon name="megaphone" size="14"></i-icon>Everyone</button>
+              <button class="segb" type="button" role="radio" aria-checked="false" title="Only you and the DM see it (as the DM: a note only you see)"><i-icon name="crown" size="14"></i-icon>DM only</button>
+              <button class="segb" type="button" role="radio" aria-checked="false" title="Only you see it: a private note in the log"><i-icon name="padlock" size="14"></i-icon>Private</button>
+            </div>
+            <span class="hk-hint" style="flex:1 1 160px;min-width:0">Everyone at the table sees it</span>
+            <span class="hk-hint hk-num" style="font-style:normal" title="2,048 bytes per message">0 / 2048</span>
+            <button class="hk-btn hk-btn--leather" type="button" style="height:36px" title="Roll dice to the table"><i-icon name="dice-twenty-faces-twenty" size="16"></i-icon>Roll</button>
+            <button class="hk-btn hk-btn--brass" type="submit" style="height:36px" disabled="disabled" aria-disabled="true" title="Type a message first"><i-icon name="paper-plane" size="16"></i-icon>Send</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- who is at the table -->
+      <aside style="display:flex;flex-direction:column;gap:16px">
+        <section class="hk-leaf" aria-label="At the table" style="transform:rotate(.3deg);display:flex;flex-direction:column;gap:4px;padding:14px 16px">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="hk-leaf__title" style="font-size:18px"><i-icon name="three-friends" size="18"></i-icon>At the table</h2><span class="hk-hint">4 online</span></div>
+          <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:13px">M</span><span style="display:flex;flex-direction:column"><b>Mira</b><span class="hk-hint" style="font-size:13px">Ilyana Vorn · 31 / 44</span></span><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span></div>
+          <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:13px">T</span><span style="display:flex;flex-direction:column"><b>Taras</b><span class="hk-hint" style="font-size:13px">Bramble Underfoot · 14 / 21</span></span><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span></div>
+          <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:13px">O</span><span style="display:flex;flex-direction:column"><b>Olena</b><span class="hk-hint" style="font-size:13px">Sister Maren · 27 / 31</span></span><span class="onl onlOff" role="img" aria-label="Offline" title="Offline since 20:31"></span></div>
+          <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px"><span class="avatar" style="width:32px;height:32px;font-size:13px">Ma</span><span style="display:flex;flex-direction:column"><b>Marko</b><span class="hk-hint" style="font-size:13px">Thorne Ashvale · 30 / 36</span></span><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span></div>
+          <div class="rowP" style="grid-template-columns:32px minmax(0,1fr) auto;min-height:40px;border-bottom:0"><span class="avatar" style="width:32px;height:32px;font-size:13px">P</span><span style="display:flex;flex-direction:column"><b>Petro</b><span class="hk-hint" style="font-size:13px;color:var(--danger-strong)">Oskar Bellow · 0 / 52, dying</span></span><span class="onl onlOn" role="img" aria-label="Online" title="Online"></span></div>
+        </section>
+        <section class="hk-leaf" aria-label="Roll for the table" style="transform:rotate(-.35deg);display:flex;flex-direction:column;gap:8px;padding:14px 16px">
+          <x-tex kind="paper"></x-tex>
+          <div class="hk-leaf__head" style="margin:0"><h2 class="hk-leaf__title" style="font-size:18px"><i-icon name="dice-twenty-faces-twenty" size="18"></i-icon>Quick roll</h2><span class="hk-hint">DM dice, DM only by default</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="hk-btn hk-btn--leather" type="button" style="height:34px;padding:0 10px"><i-icon name="d4" size="14"></i-icon>d4</button>
+            <button class="hk-btn hk-btn--leather" type="button" style="height:34px;padding:0 10px"><i-icon name="dice-six-faces-six" size="14"></i-icon>d6</button>
+            <button class="hk-btn hk-btn--leather" type="button" style="height:34px;padding:0 10px"><i-icon name="perspective-dice-six-faces-random" size="14"></i-icon>d8</button>
+            <button class="hk-btn hk-btn--leather" type="button" style="height:34px;padding:0 10px"><i-icon name="d10" size="14"></i-icon>d10</button>
+            <button class="hk-btn hk-btn--leather" type="button" style="height:34px;padding:0 10px"><i-icon name="d12" size="14"></i-icon>d12</button>
+            <button class="hk-btn hk-btn--brass" type="button" style="height:34px;padding:0 10px"><i-icon name="dice-twenty-faces-twenty" size="14"></i-icon>d20</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px"><label class="hk-field__label" for="formula" style="flex:0 0 auto">Formula</label><input class="hk-input" id="formula" value="2d6+4" style="height:36px;flex:1 1 auto;min-width:0;font-family:var(--font-display);font-size:17px"><button class="hk-btn hk-btn--brass" type="button" style="height:36px"><i-icon name="dice-twenty-faces-twenty" size="14"></i-icon>Roll</button></div>
+          <div class="seg" role="radiogroup" aria-label="Who sees DM rolls" style="align-self:flex-start"><button class="segb" type="button" role="radio" aria-checked="false"><i-icon name="megaphone" size="13"></i-icon>Everyone</button><button class="segb segOn" type="button" role="radio" aria-checked="true"><i-icon name="crown" size="13"></i-icon>DM only</button></div>
+        </section>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span class="hintG" style="display:flex;align-items:center;gap:6px"><span class="pdot"></span>Variant: the encounter plate between fights</span>
+          <div class="hk-strap" style="display:flex;align-items:center;gap:10px;padding:10px 12px;flex-wrap:wrap">
+            <x-tex kind="leather" style="border-radius:4px"></x-tex>
+            <span class="rounds" role="status" aria-label="No encounter" style="color:var(--text-on-leather-3)"><i-icon name="crossed-swords" size="18" style="color:var(--text-on-leather-3)"></i-icon>No encounter</span>
+            <button class="hk-btn hk-btn--l hk-btn--brass" type="button" title="Begins encounter 3 at round 1; round-based durations start ticking with Advance round"><i-icon name="crossed-swords" size="18"></i-icon>Start encounter</button>
+          </div>
+          <span class="hintG">Dialogue between fights needs no rounds; Advance round and End encounter appear only while a fight runs.</span>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <x-strap kind="dm" session="live" sel="Ilyana Vorn" status="DM · Ilyana Vorn selected · session live, round 3" sicon="crown"></x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

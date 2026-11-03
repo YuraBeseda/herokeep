@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library — Paladin class entry (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S4_CSS__
+</style>
+</helmet>
+<div class="s4-root" data-theme="tavern">
+  <x-tex kind="wood"></x-tex>
+  <div class="vign s4-vign" aria-hidden="true"></div>
+  <x-rail active="library" lang="en"></x-rail>
+
+  <main class="s4-main" style="display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start">
+    <article class="hk-leaf" aria-labelledby="classTitle" style="transform:rotate(.15deg);display:flex;flex-direction:column;gap:14px;padding:16px 24px 18px">
+      <x-tex kind="paper"></x-tex>
+      <div style="display:flex;align-items:center;gap:10px">
+        <a class="hk-btn hk-btn--ghost" href="#"><i-icon name="return-arrow" size="14"></i-icon>Back to library</a>
+        <span class="hk-hint">Library · Classes · Paladin</span>
+      </div>
+      <header style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span class="hk-iring" style="width:48px;height:48px"><i-icon name="templar-shield" size="28"></i-icon></span>
+        <h1 id="classTitle" style="margin:0;font-family:var(--font-display);font-weight:400;font-size:32px;line-height:36px;color:var(--text-1)">Paladin</h1>
+        <span class="hk-chip hk-chip--l" title="Class"><i-icon name="templar-shield" size="14"></i-icon>Class</span>
+        <span class="hk-chip hk-chip--dark" title="Text from the pack, in English (no translation pack installed)">EN</span>
+        <span style="flex:1 1 auto"></span>
+        <span class="hk-hint">Pack: SRD 5.2.1 (2024 rules) 0.1.0</span>
+      </header>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start">
+        <!-- core traits -->
+        <div class="hk-block" style="gap:8px">
+          <h2 class="s4-h3"><i-icon name="medal" size="15"></i-icon>Core traits</h2>
+          <div class="s4-kv">
+            <span class="s4-kv__k">Primary ability</span><span class="s4-kv__v"><span class="hk-chip"><i-icon name="muscle-up" size="12"></i-icon>Strength</span><span class="hk-chip"><i-icon name="charm" size="12"></i-icon>Charisma</span></span>
+            <span class="s4-kv__k">Hit die</span><span class="s4-kv__v"><b class="hk-num" style="font-size:18px">d10</b><span class="hk-hint">per Paladin level</span></span>
+            <span class="s4-kv__k">Saving throws</span><span class="s4-kv__v"><span class="hk-chip"><i-icon name="checked-shield" size="12"></i-icon>Charisma</span><span class="hk-chip"><i-icon name="checked-shield" size="12"></i-icon>Wisdom</span></span>
+            <span class="s4-kv__k">Skills</span><span class="s4-kv__v">Choose 2: Athletics, Insight, Intimidation, Medicine, Persuasion, Religion</span>
+            <span class="s4-kv__k">Weapons</span><span class="s4-kv__v">Simple and martial</span>
+            <span class="s4-kv__k">Armor training</span><span class="s4-kv__v">Light, medium, heavy, shields</span>
+            <span class="s4-kv__k">Subclass</span><span class="s4-kv__v">Chosen at level 3</span>
+            <span class="s4-kv__k">Multiclass</span><span class="s4-kv__v">Strength 13 and Charisma 13 · gains light and medium armor, shields, martial weapons</span>
+          </div>
+        </div>
+        <!-- level-1 features: real first sentences from the pack -->
+        <div style="display:flex;flex-direction:column;gap:8px;position:relative">
+          <h2 class="s4-h3" style="white-space:nowrap"><i-icon name="laurels" size="15"></i-icon>What a Paladin does from level 1</h2>
+          <span class="hk-hint" style="margin-top:-4px">Names open the feature's entry; “…” shows the full text on hover; a brass chip lists a choice's options.</span>
+
+          <!-- Lay On Hands: name links to its Features entry; the truncated text has a full-text popover (drawn open, to the left) -->
+          <div class="hk-feat" style="align-items:flex-start;gap:10px;position:relative">
+            <i-icon name="healing" size="18"></i-icon>
+            <span style="min-width:0"><a class="s4-featlink" href="#" aria-describedby="popLoH"><b>Lay On Hands.</b></a> <span class="s4-muted">Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you finish a Long Rest…</span></span>
+            <div class="s4-pop" id="popLoH" role="dialog" aria-label="Lay On Hands, full text" style="right:calc(100% + 16px);top:-30px;width:404px">
+              <span class="s4-pop__arrow" aria-hidden="true" style="right:-6px;top:40px;box-shadow:1px -1px 0 var(--leaf-edge)"></span>
+              <div class="s4-pop__head"><i-icon name="healing" size="18"></i-icon>Lay On Hands<span class="hk-lvlbadge" title="Level 1">lv 1</span><span class="hk-hint" style="margin-left:auto">From Paladin, level 1</span></div>
+              <p>Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you finish a Long Rest. With that pool, you can restore a total number of Hit Points equal to five times your Paladin level.</p>
+              <p>As a Bonus Action, you can touch a creature (which could be yourself) and draw power from the pool of healing to restore a number of Hit Points to that creature, up to the maximum amount remaining in the pool.</p>
+              <p>You can also expend 5 Hit Points from the pool of healing power to remove the Poisoned condition from the creature; those points don't also restore Hit Points to the creature.</p>
+              <div class="s4-pop__foot"><a class="hk-btn hk-btn--leather" href="#"><i-icon name="open-book" size="13"></i-icon>Open entry</a><span class="hk-hint">Library · Features · Lay On Hands · a class feature, not a spell</span></div>
+            </div>
+          </div>
+
+          <!-- Weapon Mastery: a choice, so an options chip with the options popover (drawn open, below) -->
+          <div class="hk-feat" style="align-items:flex-start;gap:10px;position:relative">
+            <i-icon name="sword-array" size="18"></i-icon>
+            <span style="min-width:0"><a class="s4-featlink" href="#" title="Open the entry: Weapon Mastery"><b>Weapon Mastery.</b></a><button class="s4-opt s4-opt--focus" type="button" aria-haspopup="dialog" aria-expanded="true" aria-controls="popWM" title="Choose 2 of 38 weapons with a mastery property">38 options</button> <span class="s4-muted">Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Longswords and Javelins…</span></span>
+            <div class="s4-pop" id="popWM" role="dialog" aria-label="Weapon Mastery options" style="left:-8px;top:calc(100% + 12px);width:556px">
+              <span class="s4-pop__arrow" aria-hidden="true" style="left:236px;top:-6px;box-shadow:-1px -1px 0 var(--leaf-edge)"></span>
+              <div class="s4-pop__head"><i-icon name="sword-array" size="18"></i-icon>Weapon Mastery<span class="hk-plate" style="height:20px;font-size:14px" title="Pick two">choose 2</span><span class="hk-hint" style="margin-left:auto">38 weapons qualify</span></div>
+              <span class="hk-hint">Paladins are proficient with simple and martial weapons, so every weapon with a mastery property is open to them. The pair can change after a long rest.</span>
+              <div class="s4-pop__grid" role="list" aria-label="Weapons with a mastery property">
+                <a class="s4-pop__a" href="#" role="listitem">Battleaxe <span class="s4-pop__m">· Topple</span></a><a class="s4-pop__a" href="#" role="listitem">Blowgun <span class="s4-pop__m">· Vex</span></a><a class="s4-pop__a" href="#" role="listitem">Club <span class="s4-pop__m">· Slow</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Dagger <span class="s4-pop__m">· Nick</span></a><a class="s4-pop__a" href="#" role="listitem">Dart <span class="s4-pop__m">· Vex</span></a><a class="s4-pop__a" href="#" role="listitem">Flail <span class="s4-pop__m">· Sap</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Glaive <span class="s4-pop__m">· Graze</span></a><a class="s4-pop__a" href="#" role="listitem">Greataxe <span class="s4-pop__m">· Cleave</span></a><a class="s4-pop__a" href="#" role="listitem">Greatclub <span class="s4-pop__m">· Push</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Greatsword <span class="s4-pop__m">· Graze</span></a><a class="s4-pop__a" href="#" role="listitem">Halberd <span class="s4-pop__m">· Cleave</span></a><a class="s4-pop__a" href="#" role="listitem">Hand Crossbow <span class="s4-pop__m">· Vex</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Handaxe <span class="s4-pop__m">· Vex</span></a><a class="s4-pop__a" href="#" role="listitem">Heavy Crossbow <span class="s4-pop__m">· Push</span></a><a class="s4-pop__a" href="#" role="listitem">Javelin <span class="s4-pop__m">· Slow</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Lance <span class="s4-pop__m">· Topple</span></a><a class="s4-pop__a" href="#" role="listitem">Light Crossbow <span class="s4-pop__m">· Slow</span></a><a class="s4-pop__a" href="#" role="listitem">Light Hammer <span class="s4-pop__m">· Nick</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Longbow <span class="s4-pop__m">· Slow</span></a><a class="s4-pop__a" href="#" role="listitem">Longsword <span class="s4-pop__m">· Sap</span></a><a class="s4-pop__a" href="#" role="listitem">Mace <span class="s4-pop__m">· Sap</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Maul <span class="s4-pop__m">· Topple</span></a><a class="s4-pop__a" href="#" role="listitem">Morningstar <span class="s4-pop__m">· Sap</span></a><a class="s4-pop__a" href="#" role="listitem">Musket <span class="s4-pop__m">· Slow</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Pike <span class="s4-pop__m">· Push</span></a><a class="s4-pop__a" href="#" role="listitem">Pistol <span class="s4-pop__m">· Vex</span></a><a class="s4-pop__a" href="#" role="listitem">Quarterstaff <span class="s4-pop__m">· Topple</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Rapier <span class="s4-pop__m">· Vex</span></a><a class="s4-pop__a" href="#" role="listitem">Scimitar <span class="s4-pop__m">· Nick</span></a><a class="s4-pop__a" href="#" role="listitem">Shortbow <span class="s4-pop__m">· Vex</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Shortsword <span class="s4-pop__m">· Vex</span></a><a class="s4-pop__a" href="#" role="listitem">Sickle <span class="s4-pop__m">· Nick</span></a><a class="s4-pop__a" href="#" role="listitem">Sling <span class="s4-pop__m">· Slow</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Spear <span class="s4-pop__m">· Sap</span></a><a class="s4-pop__a" href="#" role="listitem">Trident <span class="s4-pop__m">· Topple</span></a><a class="s4-pop__a" href="#" role="listitem">War Pick <span class="s4-pop__m">· Sap</span></a>
+                <a class="s4-pop__a" href="#" role="listitem">Warhammer <span class="s4-pop__m">· Push</span></a><a class="s4-pop__a" href="#" role="listitem">Whip <span class="s4-pop__m">· Slow</span></a>
+              </div>
+              <div class="s4-pop__foot"><a class="hk-btn hk-btn--leather" href="#"><i-icon name="open-book" size="13"></i-icon>See all 38 in the library</a><span class="hk-hint">Library · Items · weapons with a mastery property</span></div>
+            </div>
+          </div>
+
+          <div class="hk-feat" style="align-items:flex-start;gap:10px"><i-icon name="prayer" size="18"></i-icon><span style="min-width:0"><a class="s4-featlink" href="#" title="Open the entry: Spellcasting"><b>Spellcasting.</b></a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Prepare 2 of the 13 level-1 Paladin spells; the number grows with your level">13 options</button> <span class="s4-muted">You have learned to cast spells through prayer and meditation…</span> <a class="s4-link" href="#">Open the Paladin spell list</a></span></div>
+        </div>
+      </div>
+
+      <!-- features by level -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 class="s4-h3"><i-icon name="upgrade" size="15"></i-icon>Features by level</h2>
+        <span class="hk-hint">Every feature opens its entry; a brass chip means a choice and lists its options on hover. Slots are spell slots per level; CD is Channel Divinity uses.</span>
+      </div>
+      <table class="s4-table" aria-label="Paladin features by level">
+        <thead><tr><th class="s4-th s4-th--c" scope="col">Level</th><th class="s4-th s4-th--c" scope="col">Prof.</th><th class="s4-th" scope="col">Class features</th><th class="s4-th s4-th--c" scope="col">CD</th><th class="s4-th s4-th--c" scope="col">Prepared</th><th class="s4-th s4-th--c" scope="col">1st</th><th class="s4-th s4-th--c" scope="col">2nd</th><th class="s4-th s4-th--c" scope="col">3rd</th><th class="s4-th s4-th--c" scope="col">4th</th><th class="s4-th s4-th--c" scope="col">5th</th></tr></thead>
+        <tbody>
+          <tr><td class="s4-td s4-td--n">1</td><td class="s4-td s4-td--n">+2</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Lay On Hands">Lay On Hands</a>, <a class="s4-link" href="#" title="Open the entry: Spellcasting">Spellcasting</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Prepare 2 of the 13 level-1 Paladin spells">13 options</button>, <a class="s4-link" href="#" title="Open the entry: Weapon Mastery">Weapon Mastery</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 2 of 38 weapons with a mastery property">38 options</button></td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">+2</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Fighting Style">Fighting Style</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 1 of 4 fighting-style feats: Archery, Defense, Great Weapon Fighting, Two-Weapon Fighting; or Blessed Warrior, described in the feature">4 options</button>, <a class="s4-link" href="#" title="Open the entry: Paladin's Smite">Paladin's Smite</a></td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">+2</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Channel Divinity">Channel Divinity</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose the effect each time you use it: Divine Sense (this feature) or your Oath's Sacred Weapon">2 options</button>, <a class="s4-link" href="#" title="Open the entry: Paladin Subclass">Paladin Subclass</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose an Oath at level 3; the installed packs have one: Oath of Devotion">1 option</button></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">+2</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Ability Score Improvement">Ability Score Improvement</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 1 of 10 feats a level-4 Paladin qualifies for: Ability Score Improvement, Alert, Archery, Defense, Grappler, Great Weapon Fighting, Magic Initiate, Savage Attacker, Skilled, Two-Weapon Fighting; 7 epic boons unlock at level 19">10 options</button></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">5</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">5</td><td class="s4-td s4-td--n">+3</td><td class="s4-td"><a class="s4-link" href="#">Extra Attack</a>, <a class="s4-link" href="#">Faithful Steed</a></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">6</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">6</td><td class="s4-td s4-td--n">+3</td><td class="s4-td"><a class="s4-link" href="#">Aura of Protection</a></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">6</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">7</td><td class="s4-td s4-td--n">+3</td><td class="s4-td"><span class="hk-hint">Subclass feature</span></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">7</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">8</td><td class="s4-td s4-td--n">+3</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Ability Score Improvement">Ability Score Improvement</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 1 of 10 feats you qualify for; 7 epic boons unlock at level 19">10 options</button></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">7</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">9</td><td class="s4-td s4-td--n">+4</td><td class="s4-td"><a class="s4-link" href="#">Abjure Foes</a></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">9</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">10</td><td class="s4-td s4-td--n">+4</td><td class="s4-td"><a class="s4-link" href="#">Aura of Courage</a></td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">9</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">11</td><td class="s4-td s4-td--n">+4</td><td class="s4-td"><a class="s4-link" href="#">Radiant Strikes</a></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">10</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">12</td><td class="s4-td s4-td--n">+4</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Ability Score Improvement">Ability Score Improvement</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 1 of 10 feats you qualify for; 7 epic boons unlock at level 19">10 options</button></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">10</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">—</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">13</td><td class="s4-td s4-td--n">+5</td><td class="s4-td"><span class="hk-hint">—</span></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">11</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">1</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">14</td><td class="s4-td s4-td--n">+5</td><td class="s4-td"><a class="s4-link" href="#">Restoring Touch</a></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">11</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">1</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">15</td><td class="s4-td s4-td--n">+5</td><td class="s4-td"><span class="hk-hint">Subclass feature</span></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">12</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">16</td><td class="s4-td s4-td--n">+5</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Ability Score Improvement">Ability Score Improvement</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 1 of 10 feats you qualify for; 7 epic boons unlock at level 19">10 options</button></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">12</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td><td class="s4-td s4-td--n">—</td></tr>
+          <tr><td class="s4-td s4-td--n">17</td><td class="s4-td s4-td--n">+6</td><td class="s4-td"><span class="hk-hint">—</span></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">14</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">1</td></tr>
+          <tr><td class="s4-td s4-td--n">18</td><td class="s4-td s4-td--n">+6</td><td class="s4-td"><a class="s4-link" href="#">Aura Expansion</a></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">14</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">1</td></tr>
+          <tr><td class="s4-td s4-td--n">19</td><td class="s4-td s4-td--n">+6</td><td class="s4-td"><a class="s4-link" href="#" title="Open the entry: Epic Boon">Epic Boon</a><button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 1 of 17 feats: the 7 epic boons (Combat Prowess, Dimensional Travel, Fate, Irresistible Offense, Spell Recall, the Night Spirit, Truesight) or any of the 10 other feats">17 options</button></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">15</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td></tr>
+          <tr><td class="s4-td s4-td--n">20</td><td class="s4-td s4-td--n">+6</td><td class="s4-td"><span class="hk-hint">Subclass feature</span></td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">15</td><td class="s4-td s4-td--n">4</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">3</td><td class="s4-td s4-td--n">2</td></tr>
+        </tbody>
+      </table>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--text-2)">
+        <i-icon name="chest" size="15" style="color:var(--accent-strong)"></i-icon>
+        <span>Source: <b class="s4-ink">SRD 5.2.1 (2024 rules)</b> 0.1.0 · Wizards of the Coast · licence CC BY 4.0</span>
+        <a class="s4-link" href="#">Pack details</a>
+        <span style="flex:1 1 auto"></span>
+        <span class="hk-hint">Entry id: srd-5e-2024:class/paladin</span>
+      </div>
+    </article>
+
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <section class="hk-leaf" aria-labelledby="subTitle" style="transform:rotate(-.3deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0"><h2 class="s4-h2" id="subTitle"><i-icon name="holy-symbol" size="18"></i-icon>Subclasses</h2><span class="hk-hint">1 in the installed packs</span></div>
+        <a class="hk-card" href="#" style="width:100%;min-height:0;text-decoration:none">
+          <span class="hk-card__head"><i-icon name="holy-symbol" size="20"></i-icon><span class="hk-card__title">Oath of Devotion</span><span class="hk-chip" title="Chosen at level 3">level 3</span></span>
+          <span class="hk-card__desc">Uphold the Ideals of Justice and Order. The Oath of Devotion binds Paladins to the ideals of justice and order. These Paladins meet the archetype of the knight in shining armor.</span>
+          <span class="hk-card__foot"><span class="hk-chip" title="Level 3">3 · Sacred Weapon</span><span class="hk-chip" title="Level 3">3 · Oath Spells</span><span class="hk-chip" title="Level 7">7 · Aura of Devotion</span><span class="hk-chip" title="Level 15">15 · Smite of Protection</span><span class="hk-chip" title="Level 20">20 · Holy Nimbus</span></span>
+        </a>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="listTitle" style="transform:rotate(.2deg);display:flex;flex-direction:column;gap:10px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2" id="listTitle"><i-icon name="spell-book" size="18"></i-icon>Paladin spell list</h2>
+        <p class="s4-p"><b class="hk-num" style="font-size:20px">38</b> spells, levels 1 to 5. Paladins prepare from the whole list after each long rest.</p>
+        <div class="hk-row" style="gap:6px">
+          <span class="hk-chip">Bless</span><span class="hk-chip">Cure Wounds</span><span class="hk-chip">Divine Smite</span><span class="hk-chip">Shield of Faith</span><span class="hk-chip">Aid</span><span class="hk-chip">Lesser Restoration</span><span class="hk-chip">Zone of Truth</span><span class="hk-chip">Revivify</span><span class="hk-chip">Death Ward</span><span class="hk-chip">Raise Dead</span><span class="hk-hint">and 28 more</span>
+        </div>
+        <a class="hk-btn hk-btn--leather" href="#" style="align-self:flex-start"><i-icon name="open-book" size="15"></i-icon>Open the spell list</a>
+      </section>
+
+      <section class="hk-leaf" aria-labelledby="eqTitle" style="transform:rotate(-.2deg);display:flex;flex-direction:column;gap:8px;padding:14px 16px">
+        <x-tex kind="paper"></x-tex>
+        <h2 class="s4-h2" id="eqTitle"><i-icon name="sword-array" size="18"></i-icon>Choices along the way</h2>
+        <div class="hk-feat"><i-icon name="sword-array" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Weapon masteries<button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Choose 2 of 38 weapons with a mastery property">38 options</button></span><span class="hk-lvlbadge" title="Level 1">lv 1</span><span class="hk-hint">pick 2</span></div>
+        <div class="hk-feat"><i-icon name="prayer" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Prepared spells<button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Prepare 2 of the 13 level-1 Paladin spells; up to 15 of 38 by level 20">13 options</button></span><span class="hk-lvlbadge" title="Level 1">lv 1</span><span class="hk-hint">pick 2</span></div>
+        <div class="hk-feat"><i-icon name="shield-bash" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Fighting style<button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Archery, Defense, Great Weapon Fighting, Two-Weapon Fighting; or Blessed Warrior from the feature text">4 options</button></span><span class="hk-lvlbadge" title="Level 2">lv 2</span><span class="hk-hint">pick 1</span></div>
+        <div class="hk-feat"><i-icon name="holy-symbol" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Paladin subclass<button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="Oath of Devotion is the only Oath in the installed packs">1 option</button></span><span class="hk-lvlbadge" title="Level 3">lv 3</span><span class="hk-hint">pick 1</span></div>
+        <div class="hk-feat"><i-icon name="laurel-crown" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Feat or ability scores<button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="10 feats a level-4 Paladin qualifies for; 7 epic boons unlock at level 19">10 options</button></span><span class="hk-lvlbadge" title="Levels 4, 8, 12 and 16" style="white-space:nowrap">lv 4·8·12·16</span><span class="hk-hint" style="white-space:nowrap">pick 1</span></div>
+        <div class="hk-feat"><i-icon name="trophy" size="16"></i-icon><span style="flex:1 1 auto;min-width:0">Epic boon<button class="s4-opt" type="button" aria-haspopup="dialog" aria-expanded="false" title="7 epic boons or any of the 10 other feats">17 options</button></span><span class="hk-lvlbadge" title="Level 19">lv 19</span><span class="hk-hint">pick 1</span></div>
+      </section>
+    </div>
+  </main>
+
+  <x-strap lang="en">
+    <div class="hk-astrap__zone" aria-label="Exit">
+      <button class="hk-btn hk-btn--leather hk-btn--l" type="button" title="Back to the library"><i-icon name="return-arrow" size="17"></i-icon>Back</button>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Primary">
+      <button class="hk-btn hk-btn--brass hk-btn--l" type="button" disabled aria-disabled="true" title="Add to hero: not available — open the library from a hero's sheet"><i-icon name="plus" size="17"></i-icon>Add to hero</button>
+      <span class="hk-hint" style="color:var(--text-on-leather-3)">Open the library from a hero's sheet to add entries</span>
+    </div>
+    <span class="hk-astrap__divider" aria-hidden="true"></span>
+    <div class="hk-astrap__zone" aria-label="Secondary">
+      <button class="hk-ico" type="button" aria-label="Copy link to this entry" title="Copy link to this entry"><i-icon name="share" size="20"></i-icon></button>
+      <button class="hk-ico" type="button" aria-label="Open the pack" title="Open the pack: SRD 5.2.1 (2024 rules)"><i-icon name="chest" size="20"></i-icon></button>
+    </div>
+    <span class="hk-astrap__note" style="color:var(--text-on-leather-2)"><i-icon name="open-book" size="16" style="color:var(--brass)"></i-icon>Classes · 12 in the SRD</span>
+  </x-strap>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Later idea — session journal and quest tracker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Forum&family=Alegreya:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+__DS_CSS__
+__S5_CSS__
+</style>
+</helmet>
+<div class="s5-board" data-theme="tavern">
+  <x-defs></x-defs>
+  <x-tex kind="wood"></x-tex>
+  <div class="s5-vign" aria-hidden="true"></div>
+  <header class="s5-title"><span class="s5-tag"><i-icon name="wax-seal" size="13"></i-icon>Later idea</span><h1 class="s5-h1"><i-icon name="notebook" size="24"></i-icon>Session journal</h1><span class="s5-hintG">The Emberfall Company</span></header>
+
+  <div class="s5-row" style="gap:10px;flex-wrap:nowrap">
+    <div class="hk-search hk-search--leather" style="flex:1 1 auto;height:38px"><i-icon name="magnifying-glass" size="17"></i-icon><input class="hk-search__in" type="search" value="" placeholder="Search entries, NPCs and quests" aria-label="Search the journal"></div>
+    <div class="s5-row" style="gap:6px;flex-wrap:nowrap" role="group" aria-label="Show"><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--selected" type="button" aria-pressed="true">All</button><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--dark" type="button" aria-pressed="false"><i-icon name="candle-flame" size="13"></i-icon>Sessions</button><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--dark" type="button" aria-pressed="false"><i-icon name="hood" size="13"></i-icon>NPCs</button><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--dark" type="button" aria-pressed="false"><i-icon name="flag-objective" size="13"></i-icon>Quests</button><button class="hk-chip hk-chip--l hk-chip--btn hk-chip--dark" type="button" aria-pressed="false" title="Entries you wrote, including private ones"><i-icon name="quill" size="13"></i-icon>Mine</button></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 236px;gap:16px;align-items:stretch;flex:1 1 auto;min-height:0">
+    <!-- entries -->
+    <section class="hk-leaf" aria-labelledby="enT" style="display:flex;flex-direction:column;gap:4px;padding:12px 16px 12px;transform:rotate(-.2deg)">
+      <x-tex kind="paper"></x-tex>
+      <div class="hk-leaf__head" style="margin:0 0 2px"><h2 class="s5-h2" id="enT"><i-icon name="scroll-quill" size="19"></i-icon>Entries</h2><span class="hk-hint">14 · newest first</span><div class="hk-leaf__actions"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Export the journal" title="Export as text"><i-icon name="share" size="13"></i-icon></button></div></div>
+
+      <div class="hk-lvl" style="margin-top:4px"><span class="hk-plate" title="Session 12"><i-icon name="candle-flame" size="12"></i-icon>12</span>Session 12 · 25 Oct 2026<span class="hk-lvl__rule"></span><span class="hk-hint">3 entries</span></div>
+      <div class="s5-entry"><span class="s5-entry__t">20:14</span><p class="s5-entry__p">Cleared the Giant Spider nest in the lower gallery. Foreman Hald pays the bounty tomorrow.</p><span class="s5-entry__tags"><a class="hk-chip hk-chip--btn" href="#" style="height:24px;text-decoration:none" title="NPC: Foreman Hald · 2 entries"><i-icon name="hood" size="12"></i-icon>Foreman Hald</a><a class="hk-chip hk-chip--btn" href="#" style="height:24px;text-decoration:none" title="Quest: Clear the mine · done"><i-icon name="flag-objective" size="12"></i-icon>Clear the mine</a><span class="hk-chip hk-chip--dark" style="height:24px" title="Written by the DM, visible to the party"><i-icon name="crown" size="12"></i-icon>DM</span></span></div>
+      <div class="s5-entry"><span class="s5-entry__t">20:40</span><p class="s5-entry__p">Bramble pocketed a pearl before Maren noticed. Nobody said anything.</p><span class="s5-entry__tags"><span class="hk-chip" style="height:24px" title="Written by Taras (Bramble), visible to the party"><i-icon name="person" size="12"></i-icon>Taras</span><span class="hk-chip" style="height:24px" title="Visible to everyone in the campaign"><i-icon name="three-friends" size="12"></i-icon>party</span></span></div>
+      <div class="s5-entry" style="background:var(--leaf-sunken);border-radius:4px;padding:8px 8px;margin:0 -8px;box-shadow:inset 0 0 0 1px var(--leaf-edge)"><span class="s5-entry__t">21:05</span><p class="s5-entry__p">The caravan was hired by Captain Veska. The players don't know yet; drop a hint through Old Mirel next session.</p><span class="s5-entry__tags"><a class="hk-chip hk-chip--btn" href="#" style="height:24px;text-decoration:none" title="NPC: Captain Veska · DM only"><i-icon name="hood" size="12"></i-icon>Captain Veska</a><a class="hk-chip hk-chip--btn" href="#" style="height:24px;text-decoration:none" title="Quest: Find the missing caravan · active"><i-icon name="flag-objective" size="12"></i-icon>Find the missing caravan</a><span class="hk-has-tip" style="display:inline-flex"><span class="hk-chip hk-chip--dark" tabindex="0" style="height:24px;cursor:help" aria-describedby="tipPriv"><i-icon name="padlock" size="12"></i-icon>only me</span><span class="hk-tip hk-tip--above" id="tipPriv" role="tooltip" style="left:0;transform:none">Only you see this entry<span class="hk-tip__sub">it never syncs to players' devices; switch to "party" to share</span></span></span></span></div>
+
+      <div class="hk-lvl" style="margin-top:6px"><span class="hk-plate" title="Session 11"><i-icon name="candle-flame" size="12"></i-icon>11</span>Session 11 · 18 Oct 2026<span class="hk-lvl__rule"></span><span class="hk-hint">4 entries</span></div>
+      <div class="s5-entry"><span class="s5-entry__t">19:30</span><p class="s5-entry__p">Met Old Mirel at the trading post; she asked about the missing caravan and paid for the party's rooms.</p><span class="s5-entry__tags"><a class="hk-chip hk-chip--btn" href="#" style="height:24px;text-decoration:none" title="NPC: Old Mirel · 3 entries"><i-icon name="hood" size="12"></i-icon>Old Mirel</a><a class="hk-chip hk-chip--btn" href="#" style="height:24px;text-decoration:none" title="Quest: Find the missing caravan · active"><i-icon name="flag-objective" size="12"></i-icon>Find the missing caravan</a><span class="hk-chip hk-chip--dark" style="height:24px" title="Written by the DM, visible to the party"><i-icon name="crown" size="12"></i-icon>DM</span></span></div>
+      <button class="hk-btn hk-btn--ghost hk-btn--loading" type="button" aria-busy="true" style="align-self:flex-start;margin-top:2px" title="Older entries load from the campaign's journal stream"><span class="hk-spin" aria-hidden="true"></span><span class="hk-btn__label">Loading 3 more from session 11</span></button>
+
+      <!-- composer -->
+      <div class="hk-block" style="margin-top:auto;gap:8px;padding:10px 12px">
+        <label class="hk-sr" for="jEntry">New entry</label>
+        <textarea class="s5-ta" id="jEntry" placeholder="Write an entry… tag an NPC or a quest below"></textarea>
+        <div class="s5-row" style="gap:6px;flex-wrap:nowrap"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Tag an NPC" title="Tag an NPC (pick or create)" style="width:32px;height:32px"><i-icon name="hood" size="15"></i-icon></button><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Tag a quest" title="Tag a quest" style="width:32px;height:32px"><i-icon name="flag-objective" size="15"></i-icon></button><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Attach an image" title="Attach an image (handout, map photo) over the blob relay" style="width:32px;height:32px"><i-icon name="treasure-map" size="15"></i-icon></button><span style="flex:1 1 auto"></span><span class="s5-sel" style="flex:0 0 auto"><label class="hk-sr" for="jVis">Visibility</label><select class="hk-input s5-sel__in" id="jVis" style="height:32px;font-size:15px;width:104px"><option>Party</option><option>Only me</option></select><span class="s5-sel__chev" aria-hidden="true"></span></span><button class="hk-btn hk-btn--brass" type="button" style="height:32px;flex:0 0 auto"><i-icon name="quill" size="13"></i-icon>Add entry</button></div>
+      </div>
+    </section>
+
+    <div class="s5-col" style="gap:14px;align-self:stretch">
+      <!-- quest tracker -->
+      <section class="hk-leaf" aria-labelledby="qT" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;transform:rotate(.3deg)">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="s5-h2" id="qT"><i-icon name="flag-objective" size="19"></i-icon>Quests</h2><div class="hk-leaf__actions"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Add quest" title="Add quest"><i-icon name="plus" size="12"></i-icon></button></div></div>
+        <div class="s5-quest"><i-icon name="flag-objective" size="16"></i-icon><span class="s5-quest__n">Find the missing caravan</span><span class="hk-chip hk-chip--selected" style="height:22px" title="Active since session 9"><i-icon name="candle-flame" size="11"></i-icon>active</span><span class="s5-quest__s">5 entries · since session 9</span></div>
+        <div class="s5-quest"><i-icon name="flag-objective" size="16"></i-icon><span class="s5-quest__n">Clear the mine</span><span class="hk-chip hk-chip--moss" style="height:22px" title="Done in session 12"><i-icon name="check-mark" size="11"></i-icon>done</span><span class="s5-quest__s">3 entries · bounty pending</span></div>
+        <div class="s5-quest" style="border-bottom:0"><i-icon name="flag-objective" size="16"></i-icon><span class="s5-quest__n">Return the holy symbol</span><span class="hk-chip" style="height:22px" title="Paused: no entries since session 7"><i-icon name="hourglass" size="11"></i-icon>paused</span><span class="s5-quest__s">1 entry · session 7</span></div>
+      </section>
+
+      <!-- NPC roster -->
+      <section class="hk-leaf" aria-labelledby="npcT" style="display:flex;flex-direction:column;gap:2px;padding:12px 14px;transform:rotate(-.25deg);flex:1 1 auto">
+        <x-tex kind="paper"></x-tex>
+        <div class="hk-leaf__head" style="margin:0 0 4px"><h2 class="s5-h2" id="npcT"><i-icon name="hood" size="19"></i-icon>NPCs</h2><span class="hk-hint">3</span><div class="hk-leaf__actions"><button class="hk-ico hk-ico--leaf hk-ico--s" type="button" aria-label="Add NPC" title="Add NPC"><i-icon name="plus" size="12"></i-icon></button></div></div>
+        <div class="s5-quest" style="grid-template-columns:30px minmax(0,1fr) auto"><span class="s5-ring" style="width:30px;height:30px"><i-icon name="hood" size="15"></i-icon></span><span class="s5-quest__n">Old Mirel</span><span class="hk-lvlbadge" title="3 entries">3</span><span class="s5-quest__s">trading post · ally</span></div>
+        <div class="s5-quest" style="grid-template-columns:30px minmax(0,1fr) auto"><span class="s5-ring" style="width:30px;height:30px"><i-icon name="hood" size="15"></i-icon></span><span class="s5-quest__n">Foreman Hald</span><span class="hk-lvlbadge" title="2 entries">2</span><span class="s5-quest__s">the mine · owes a bounty</span></div>
+        <div class="s5-quest" style="grid-template-columns:30px minmax(0,1fr) auto;border-bottom:0"><span class="s5-ring s5-ring--ember" style="width:30px;height:30px"><i-icon name="hood" size="15"></i-icon></span><span class="s5-quest__n">Captain Veska<i-icon name="padlock" size="12" hint="Known to the DM only" style="margin-left:4px;color:var(--text-2)"></i-icon></span><span class="hk-lvlbadge" title="1 entry">1</span><span class="s5-quest__s">hired the caravan · DM only</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":__PREVIEW__}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
