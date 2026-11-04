@@ -28,7 +28,7 @@ import { ThemeService, type Theme } from '@shared/services/theme/theme.service';
 import { PackStore } from '@shared/stores/pack.store';
 
 const LOCALES: readonly Locale[] = ['en', 'ru', 'uk'];
-const THEMES: readonly Theme[] = ['dark', 'light'];
+const THEMES: readonly Theme[] = ['tavern', 'scroll', 'plain'];
 const BYTES_PER_MB = 1024 * 1024;
 /** task-9-brief.md: "a warning style at >= 80%". */
 const QUOTA_WARNING_THRESHOLD = 0.8;

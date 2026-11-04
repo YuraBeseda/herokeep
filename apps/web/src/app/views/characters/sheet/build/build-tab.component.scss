@@ -107,7 +107,8 @@
   width: 4.5rem;
   height: 4.5rem;
   border-radius: 50%;
-  color: var(--text-1);
+  /* Monogram letters sit on a dark per-character hue: on-dark ink, not parchment ink. */
+  color: var(--text-on-leather);
   font-weight: 600;
   flex-shrink: 0;
   object-fit: cover;

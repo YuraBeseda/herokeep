@@ -7,11 +7,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./themes": {
+      "types": "./dist/themes.d.ts",
+      "import": "./dist/themes.js"
     }
   },
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "zod": "catalog:"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -b tsconfig.build.json",

@@ -32,7 +32,9 @@
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
-  color: var(--text-1);
+  /* The monogram background is a dark per-character hue, so its letters take the on-dark ink;
+     text-1 is parchment ink since the design-system tokens (plan 17 B1). */
+  color: var(--text-on-leather);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -123,7 +125,7 @@ img.sheet-shell__portrait {
 }
 
 .sheet-shell__missing-packs-link {
-  color: var(--accent-strong);
+  color: var(--link);
   font-weight: 600;
   text-decoration: none;
 

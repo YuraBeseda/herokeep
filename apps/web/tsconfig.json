@@ -43,7 +43,10 @@
       // consumers, e.g. `pack-tools`, keep using it via `@hk/content`), but the browser build
       // must use this alias instead, for the same reason as `@hk/content/version` above.
       "@hk/content/attribution": ["../../packages/content/src/static/attribution.ts"],
-      "@hk/ui-tokens": ["../../packages/ui-tokens/src/index.ts"]
+      "@hk/ui-tokens": ["../../packages/ui-tokens/src/index.ts"],
+      // Pure leaf module (theme ids only) — browser-safe, unlike the barrel above, which pulls in
+      // the Node-only build script.
+      "@hk/ui-tokens/themes": ["../../packages/ui-tokens/src/themes.ts"]
     }
   },
   "angularCompilerOptions": {

@@ -18,7 +18,9 @@
   // Visible keyboard-focus indicator everywhere; mouse/touch interaction never
   // triggers `:focus-visible`, so this does not add a ring on every click.
   :focus-visible {
-    outline: var(--focus-ring);
+    // --focus-ring is the design system's pale inner-ring colour; the outer brass ring is the one
+    // that reads on parchment, so it is the outline until the new components draw shadow-focus.
+    outline: 2px solid var(--focus-ring-outer);
     outline-offset: 2px;
   }
 }

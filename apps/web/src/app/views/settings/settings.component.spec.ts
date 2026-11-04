@@ -297,13 +297,13 @@ describe('SettingsComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const lightChip = chipByAttr(compiled, 'data-theme-option', 'light');
-    lightChip!.click();
+    const scrollChip = chipByAttr(compiled, 'data-theme-option', 'scroll');
+    scrollChip!.click();
     await fixture.whenStable();
 
-    expect(setThemeSpy).toHaveBeenCalledWith('light');
-    expect(themeService.theme()).toBe('light');
-    expect(chipByAttr(compiled, 'data-theme-option', 'light')?.getAttribute('aria-pressed')).toBe(
+    expect(setThemeSpy).toHaveBeenCalledWith('scroll');
+    expect(themeService.theme()).toBe('scroll');
+    expect(chipByAttr(compiled, 'data-theme-option', 'scroll')?.getAttribute('aria-pressed')).toBe(
       'true',
     );
   });

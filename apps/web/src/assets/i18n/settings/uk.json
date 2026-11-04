@@ -8,8 +8,9 @@
   },
   "appearance": {
     "title": "Оформлення",
-    "theme-dark": "Темна",
-    "theme-light": "Світла"
+    "theme-tavern": "Таверна",
+    "theme-scroll": "Сувій",
+    "theme-plain": "Проста"
   },
   "storage": {
     "title": "Сховище",

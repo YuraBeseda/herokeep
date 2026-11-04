@@ -8,8 +8,9 @@
   },
   "appearance": {
     "title": "Оформление",
-    "theme-dark": "Тёмная",
-    "theme-light": "Светлая"
+    "theme-tavern": "Таверна",
+    "theme-scroll": "Свиток",
+    "theme-plain": "Простая"
   },
   "storage": {
     "title": "Хранилище",

@@ -8,8 +8,9 @@
   },
   "appearance": {
     "title": "Appearance",
-    "theme-dark": "Dark",
-    "theme-light": "Light"
+    "theme-tavern": "Tavern",
+    "theme-scroll": "Scroll",
+    "theme-plain": "Plain"
   },
   "storage": {
     "title": "Storage",
