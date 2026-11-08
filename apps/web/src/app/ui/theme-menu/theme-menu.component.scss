@@ -1,0 +1,61 @@
+:host {
+  position: relative;
+  display: inline-flex;
+}
+
+.hk-theme-menu__group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* The popover hangs under its button, on the right edge so it never leaves the viewport. */
+.hk-theme-menu__group--popover {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  flex-direction: column;
+  min-inline-size: 168px;
+  padding: var(--space-2);
+  border-radius: var(--radius-leaf);
+  background: radial-gradient(ellipse at 50% 35%, var(--leaf-glow), var(--leaf) 70%);
+  box-shadow: var(--shadow-raised);
+}
+
+.hk-theme-menu__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-slot);
+  background: var(--leaf-sunken);
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--leaf-edge);
+
+  hk-icon {
+    color: var(--accent-strong);
+  }
+
+  &[aria-checked='true'] {
+    background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+    box-shadow: var(--shadow-brass);
+    color: var(--text-on-brass);
+
+    hk-icon {
+      color: currentColor;
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+}

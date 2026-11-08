@@ -1,0 +1,41 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @if (!inline()) {
+    <button
+      #trigger
+      type="button"
+      hk-icon-button
+      [icon]="icon(current())"
+      [hint]="'shell.theme.menu'"
+      aria-haspopup="true"
+      [attr.aria-expanded]="open()"
+      (click)="toggle()"
+    ></button>
+  }
+  @if (inline() || open()) {
+    <div
+      class="hk-theme-menu__group"
+      [class.hk-theme-menu__group--popover]="!inline()"
+      role="radiogroup"
+      [attr.aria-label]="t('theme.menu')"
+    >
+      @for (id of ids; track id) {
+        <button
+          #radio
+          type="button"
+          role="radio"
+          class="hk-theme-menu__option"
+          [attr.aria-checked]="current() === id"
+          [attr.tabindex]="current() === id ? 0 : -1"
+          (click)="pick(id)"
+          (keydown.arrowRight)="onArrow($event, 1)"
+          (keydown.arrowDown)="onArrow($event, 1)"
+          (keydown.arrowLeft)="onArrow($event, -1)"
+          (keydown.arrowUp)="onArrow($event, -1)"
+        >
+          <hk-icon [icon]="'ui:' + icon(id)" />
+          <span>{{ t('theme.' + id) }}</span>
+        </button>
+      }
+    </div>
+  }
+</ng-container>

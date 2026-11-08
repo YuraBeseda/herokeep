@@ -1,108 +1,27 @@
-@use 'utilities';
-
-.app-shell__header {
+/* The shell is a column: the rail (or top bar), the notices, the page, then the dock holding the
+   action strap and the phone tab bar. The dock is sticky in the flow, never fixed, so the page
+   always reserves its height and content never sits under it; with no strap and no tabs it is empty
+   and takes no space. */
+:host {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-1);
-  border-block-end: 1px solid var(--border-1);
+  flex-direction: column;
+  min-block-size: 100dvh;
 }
 
-.app-shell__title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-}
-
-.app-shell__offline {
-  margin: 0;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-s);
-  background: var(--warning);
-  color: var(--surface-0);
-  font-size: 0.875rem;
-}
-
-.app-shell__update {
+.app-shell__notices {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-s);
-  background: var(--accent);
-  color: var(--surface-0);
+  padding: var(--space-3) var(--space-4) 0;
 }
 
 .app-shell__update-text {
-  font-size: 0.875rem;
-}
-
-.app-shell__account {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.875rem;
-}
-
-.app-shell__account-name {
-  color: var(--text-2);
-}
-
-.app-shell__login-link {
-  @include utilities.touch-target;
-
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-2);
-  text-decoration: none;
-}
-
-.app-shell__theme-toggle {
-  @include utilities.touch-target;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: var(--radius-m);
-  background: transparent;
-  cursor: pointer;
-}
-
-.app-shell__theme-icon {
-  width: var(--space-4);
-  height: var(--space-4);
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.app-shell__nav {
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--surface-0);
-  border-block-end: 1px solid var(--border-1);
-}
-
-.app-shell__link {
-  @include utilities.touch-target;
-
-  display: inline-flex;
-  align-items: center;
-  padding-inline: var(--space-3);
-  border-radius: var(--radius-s);
-  color: var(--text-2);
-  text-decoration: none;
-
-  &.is-active {
-    background: var(--surface-2);
-    color: var(--text-1);
-  }
+  font-size: 15px;
 }
 
 .app-shell__main {
+  flex: 1 1 auto;
+  min-inline-size: 0;
   padding: var(--space-4);
 }
 
@@ -111,4 +30,11 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
+}
+
+.app-shell__dock {
+  position: sticky;
+  z-index: 20;
+  inset-block-end: 0;
+  flex: none;
 }

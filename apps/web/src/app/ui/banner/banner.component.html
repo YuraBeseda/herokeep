@@ -1,0 +1,23 @@
+<div [class]="classes()" [attr.role]="urgent() ? 'alert' : 'status'">
+  <hk-icon [icon]="'ui:' + glyph()" />
+  <div class="hk-banner__body">
+    @if (heading(); as heading) {
+      <span class="hk-banner__title">{{ heading }}</span>
+    }
+    <span class="hk-banner__text"><ng-content /></span>
+  </div>
+  <div class="hk-banner__actions">
+    <ng-content select="[hkBannerActions]" />
+    @if (dismissable()) {
+      <button
+        type="button"
+        hk-icon-button
+        [icon]="'close'"
+        [hint]="'shell.icon.close'"
+        [variant]="'ghost'"
+        [size]="'s'"
+        (click)="dismissed.emit()"
+      ></button>
+    }
+  </div>
+</div>

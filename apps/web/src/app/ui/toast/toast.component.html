@@ -1,0 +1,20 @@
+<div [class]="classes()" [attr.role]="role()">
+  <hk-icon [icon]="'ui:' + glyph()" />
+  <div class="hk-toast__body">
+    <span class="hk-toast__message">{{ message() }}</span>
+    @if (detail(); as detail) {
+      <span class="hk-toast__sub">{{ detail }}</span>
+    }
+  </div>
+  @if (dismissable()) {
+    <button
+      type="button"
+      hk-icon-button
+      [icon]="'close'"
+      [hint]="'shell.icon.close'"
+      [variant]="'ghost'"
+      [size]="'s'"
+      (click)="dismissed.emit()"
+    ></button>
+  }
+</div>

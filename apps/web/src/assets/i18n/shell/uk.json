@@ -1,16 +1,26 @@
 {
   "account": {
     "login": "Увійти",
-    "logout": "Вийти"
+    "logout": "Вийти",
+    "open": "Обліковий запис: {{name}}"
   },
   "app": {
     "core-error": "Не вдалося завантажити бібліотеку контенту.",
     "core-error-retry": "Повторити",
     "offline": "Офлайн",
-    "theme-toggle": "Перемкнути тему",
     "title": "Herokeep",
     "update-available": "Доступна нова версія.",
     "update-reload": "Оновити"
+  },
+  "campaign": {
+    "chip": "Кампанія: {{name}}",
+    "fallback": "Кампанія"
+  },
+  "drawer": {
+    "close": "Закрити меню",
+    "language": "Мова",
+    "open": "Відкрити меню",
+    "title": "Меню"
   },
   "home": {
     "tagline": "Ваш супутник по D&D — Бібліотека готова; конструктор персонажів попереду."
@@ -102,15 +112,33 @@
     "wis": "Мудрість",
     "xp": "Очки досвіду"
   },
+  "language": {
+    "en": "English",
+    "ru": "Русский",
+    "uk": "Українська"
+  },
   "nav": {
     "about": "Про застосунок",
-    "campaigns": "Кампанії",
-    "characters": "Персонажі",
-    "home": "Головна",
-    "landmark": "Основна навігація",
-    "library": "Бібліотека",
-    "packs": "Пакети",
-    "settings": "Налаштування"
+    "landmark": "Основна навігація"
+  },
+  "strap": {
+    "back": "Назад",
+    "cancel": "Скасувати",
+    "exit": "Залишити екран",
+    "landmark": "Дії",
+    "more": "Інші дії",
+    "more-short": "Ще",
+    "primary": "Основні дії",
+    "secondary": "Інші дії"
+  },
+  "tabs": {
+    "landmark": "Розділи екрана"
+  },
+  "theme": {
+    "menu": "Тема",
+    "plain": "Проста",
+    "scroll": "Сувій",
+    "tavern": "Таверна"
   },
   "ui": {
     "ability": {

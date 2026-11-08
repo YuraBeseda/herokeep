@@ -1,0 +1,63 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <div
+    class="hk-drawer"
+    role="dialog"
+    aria-modal="true"
+    cdkTrapFocus
+    cdkTrapFocusAutoCapture
+    [attr.aria-label]="t('drawer.title')"
+  >
+    <svg class="hk-tex hk-tex--leather" aria-hidden="true" focusable="false">
+      <rect width="100%" height="100%" />
+    </svg>
+    <p class="hk-drawer__brand">
+      <hk-icon [icon]="'ui:spell-slot'" />
+      {{ t('app.title') }}
+    </p>
+    <nav class="hk-drawer__nav" [attr.aria-label]="t('nav.landmark')">
+      @for (item of sections; track item.id) {
+        <a
+          class="hk-drawer__section"
+          [routerLink]="item.route"
+          [class.is-current]="current() === item"
+          [attr.aria-current]="current() === item ? 'page' : null"
+          (click)="navigated.emit()"
+        >
+          <hk-icon [icon]="'ui:' + item.icon" />
+          <span>{{ t(nameKey(item)) }}</span>
+        </a>
+      }
+    </nav>
+    <a class="hk-drawer__row hk-drawer__about" routerLink="/about" (click)="navigated.emit()">
+      <hk-icon [icon]="'ui:details'" />
+      <span>{{ t('nav.about') }}</span>
+    </a>
+    <a
+      class="hk-drawer__row hk-drawer__account"
+      [routerLink]="auth.status() === 'authed' ? '/settings' : '/login'"
+      (click)="navigated.emit()"
+    >
+      <hk-icon [icon]="'ui:account'" />
+      <span>{{
+        auth.status() === 'authed'
+          ? t('account.open', { name: auth.user()?.username })
+          : t('account.login')
+      }}</span>
+    </a>
+    <div class="hk-drawer__row hk-drawer__theme">
+      <hk-theme-menu [inline]="true" />
+    </div>
+    <div class="hk-drawer__language" role="group" [attr.aria-label]="t('drawer.language')">
+      @for (loc of locales; track loc) {
+        <button
+          type="button"
+          class="hk-drawer__locale"
+          [attr.aria-pressed]="locale() === loc"
+          (click)="setLocale(loc)"
+        >
+          {{ t('language.' + loc) }}
+        </button>
+      }
+    </div>
+  </div>
+</ng-container>

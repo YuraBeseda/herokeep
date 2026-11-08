@@ -1,18 +1,17 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
-import { of } from 'rxjs';
 import { AuthService, type AuthStatus, type AuthUser } from '@shared/services/auth/auth.service';
 import { UpdateService, WINDOW_RELOAD } from '@shared/services/pwa/update.service';
 import { PackStore } from '@shared/stores/pack.store';
 import { App } from './app';
+import { NavHistoryService } from './ui/nav/nav-history.service';
+import { ShellCampaignContext } from './ui/shell/campaign-context.service';
+import { provideShellTransloco } from './ui/testing/transloco-testing';
+import { stubViewport } from './ui/testing/viewport';
 
-class StubLoader implements TranslocoLoader {
-  getTranslation() {
-    return of({});
-  }
-}
+@Component({ template: '' })
+class Stub {}
 
 /** A minimal `AuthService` stand-in — only `status`/`user`/`logout` are read/called by the
  * shell's account affordance. */
@@ -34,17 +33,11 @@ describe('App', () => {
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        provideRouter([]),
-        provideTransloco({
-          config: {
-            availableLangs: ['en', 'ru', 'uk'],
-            defaultLang: 'en',
-            fallbackLang: 'en',
-            reRenderOnLangChange: true,
-            prodMode: true,
-          },
-          loader: StubLoader,
-        }),
+        provideRouter(
+          ['', 'library', 'packs', 'settings'].map((path) => ({ path, component: Stub })),
+        ),
+        provideShellTransloco(),
+        { provide: ShellCampaignContext, useValue: { current: signal(null) } },
         // The real `UpdateService` depends on `SwUpdate`, which in turn needs a service-worker
         // registration provider this shell test doesn't set up — `UpdateService` has its own
         // dedicated spec against a stubbed `SwUpdate` (update.service.spec.ts), so here the shell
@@ -58,6 +51,8 @@ describe('App', () => {
       ],
     });
   }
+
+  afterEach(() => vi.unstubAllGlobals());
 
   beforeEach(async () => {
     updateAvailable = signal(false);
@@ -126,42 +121,86 @@ describe('App', () => {
   });
 
   describe('account affordance', () => {
-    it('shows a Login link, not a username/logout, while logged out (anon or unknown)', async () => {
+    it('shows a Log in link, not the account button, while logged out (anon or unknown)', async () => {
       configure(authServiceStub('anon'));
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
       expect(compiled.querySelector('a.app-shell__login-link')).toBeTruthy();
-      expect(compiled.querySelector('.app-shell__account-name')).toBeNull();
-      expect(compiled.querySelector('.app-shell__logout')).toBeNull();
+      expect(compiled.querySelector('a.hk-rail__account')).toBeNull();
     });
 
-    it('shows the username and a Logout button once authed, not the Login link', async () => {
+    it('shows the account button, linked to Settings, once authed', async () => {
       configure(authServiceStub('authed', { userId: 'u1', username: 'alice' }));
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.app-shell__account-name')?.textContent?.trim()).toBe('alice');
-      expect(compiled.querySelector('.app-shell__logout')).toBeTruthy();
+      const account = compiled.querySelector('a.hk-rail__account');
+      expect(account?.getAttribute('href')).toBe('/settings');
+      expect(account?.getAttribute('aria-label')).toBe('Account: alice');
       expect(compiled.querySelector('a.app-shell__login-link')).toBeNull();
     });
+  });
 
-    it('clicking Logout calls AuthService.logout() and navigates to /', async () => {
-      const stub = authServiceStub('authed', { userId: 'u1', username: 'alice' });
-      configure(stub);
+  describe('shell chrome', () => {
+    it('renders the textures, strap and tab bar exactly once, docked after main', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelectorAll('hk-textures')).toHaveLength(1);
+      expect(compiled.querySelectorAll('hk-action-strap')).toHaveLength(1);
+      expect(compiled.querySelectorAll('hk-tab-bar')).toHaveLength(1);
+      const main = compiled.querySelector('main')!;
+      const dock = compiled.querySelector('.app-shell__dock')!;
+      expect(main.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(dock.contains(compiled.querySelector('hk-action-strap'))).toBe(true);
+      expect(dock.contains(compiled.querySelector('hk-tab-bar'))).toBe(true);
+    });
+
+    it('docks the strap in the page flow (sticky, never fixed) so the page reserves its height', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      document.body.append(root);
+      const dock = root.querySelector('.app-shell__dock')!;
+      expect(getComputedStyle(dock).position).toBe('sticky');
+      root.remove();
+    });
+
+    it('shows the rail on tablet and desktop and no top bar', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('hk-nav-rail')).toBeTruthy();
+      expect(compiled.querySelector('hk-top-bar')).toBeNull();
+    });
+
+    it('shows the top bar, with the section title, instead of the rail on a phone', async () => {
+      stubViewport({ phone: true, coarse: true });
+      const fixture = TestBed.createComponent(App);
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/library');
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('hk-nav-rail')).toBeNull();
+      expect(compiled.querySelector('hk-top-bar')).toBeTruthy();
+      expect(compiled.querySelector('.hk-topbar__title')?.textContent?.trim()).toBe('Library');
+      vi.unstubAllGlobals();
+    });
+
+    it('records every committed navigation in the navigation history', async () => {
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
       const router = TestBed.inject(Router);
-      const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-      const compiled = fixture.nativeElement as HTMLElement;
-
-      compiled.querySelector<HTMLButtonElement>('.app-shell__logout')!.click();
-      await fixture.whenStable();
-
-      expect(stub.logout).toHaveBeenCalledTimes(1);
-      expect(navigateSpy).toHaveBeenCalledWith(['/']);
+      const history = TestBed.inject(NavHistoryService);
+      await router.navigateByUrl('/library');
+      await router.navigateByUrl('/packs?x=1');
+      expect(history.currentPath()).toBe('/packs');
+      expect(history.canGoBack()).toBe(true);
     });
   });
 });

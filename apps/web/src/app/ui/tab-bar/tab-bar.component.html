@@ -1,0 +1,22 @@
+<ng-container *transloco="let t">
+  @if (visible()) {
+    <nav class="hk-tabbar" [attr.aria-label]="t('shell.tabs.landmark')">
+      <svg class="hk-tex hk-tex--leather" aria-hidden="true" focusable="false">
+        <rect width="100%" height="100%" />
+      </svg>
+      @for (tab of tabs(); track tab.id) {
+        <a
+          class="hk-tabb"
+          [routerLink]="tab.route"
+          routerLinkActive="hk-tabb--on"
+          [ariaCurrentWhenActive]="'page'"
+          [hkTooltip]="t(tab.label)"
+        >
+          <span class="hk-tabb__glow" aria-hidden="true"></span>
+          <hk-icon [icon]="'ui:' + tab.icon" />
+          <span class="hk-tabb__label">{{ t(tab.label) }}</span>
+        </a>
+      }
+    </nav>
+  }
+</ng-container>

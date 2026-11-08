@@ -1,0 +1,83 @@
+/* Phone tab bar (design-system `hk-tabbar`): a 60px leather bar of icon-over-label links. */
+:host {
+  display: block;
+}
+
+:host(.hk-tab-bar--hidden) {
+  display: none;
+}
+
+.hk-tabbar {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  block-size: var(--tab-bar-height);
+  background: linear-gradient(
+    180deg,
+    var(--leather-highlight),
+    var(--leather) 50%,
+    var(--leather-dark)
+  );
+  box-shadow: var(--shadow-strap);
+
+  > :not(.hk-tex) {
+    position: relative;
+  }
+}
+
+.hk-tabb {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-inline-size: 0;
+  min-block-size: var(--touch-target);
+  padding: 0 2px;
+  color: var(--brass);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+
+  > :not(.hk-tabb__glow) {
+    position: relative;
+  }
+
+  hk-icon {
+    font-size: 24px;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 2px var(--focus-ring),
+      inset 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-tabb__label {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hk-tabb__glow {
+  display: none;
+  position: absolute;
+  inset: 4px 8px;
+  border-radius: var(--radius-slot);
+  background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+  box-shadow: var(--shadow-glow-brass);
+}
+
+.hk-tabb--on {
+  color: var(--text-on-brass);
+
+  .hk-tabb__glow {
+    display: block;
+  }
+}

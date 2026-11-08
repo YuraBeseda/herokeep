@@ -1,0 +1,185 @@
+/* NavRail (design-system `hk-rail`): a 60px leather rail carrying a 5px brass bar the section
+   buttons sit on. It never wraps; below 1024px the wordmark is the mark alone. */
+:host {
+  display: block;
+}
+
+.hk-rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  block-size: var(--rail-height);
+  padding: 0 22px;
+  background: linear-gradient(180deg, var(--leather-highlight), var(--leather-dark));
+  box-shadow: var(--shadow-strap);
+  color: var(--text-on-leather);
+
+  > :not(.hk-tex) {
+    position: relative;
+  }
+}
+
+.hk-rail__mark {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+  min-block-size: var(--touch-target);
+  color: var(--brass);
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-decoration: none;
+
+  hk-icon {
+    font-size: 26px;
+  }
+}
+
+.hk-rail__nav {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 14px;
+  padding: 0 14px;
+}
+
+.hk-rail__bar {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  block-size: 5px;
+  transform: translateY(-50%);
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--brass-top), var(--brass) 40%, var(--rivet-dark));
+}
+
+:host-context([data-theme='plain']) .hk-rail__bar {
+  background: var(--brass);
+}
+
+.hk-rail__spacer {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* The icon button: a brass-rimmed leather disc. Glyphs inherit currentColor, so the colour of
+   the surface (brass on leather, dark on the current brass disc) is set here. */
+.hk-rail__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: var(--icon-button);
+  block-size: var(--icon-button);
+  border-radius: var(--radius-seal);
+  background: radial-gradient(circle at 35% 30%, var(--leather-highlight), var(--leather-dark) 72%);
+  box-shadow:
+    inset 0 0 0 2px var(--brass),
+    inset 0 0 0 3px var(--brass-shadow);
+  color: var(--brass);
+  font-size: 22px;
+  text-decoration: none;
+
+  /* Hit area: 4px past the disc, and the 44px floor on touch. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+  }
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &.is-current {
+    background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+    box-shadow:
+      inset 0 0 0 2px var(--brass-shadow),
+      var(--shadow-glow-brass);
+    color: var(--text-on-brass);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 2px var(--brass),
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+
+  hk-icon {
+    pointer-events: none;
+  }
+}
+
+.hk-rail__link--small {
+  inline-size: var(--icon-button-s);
+  block-size: var(--icon-button-s);
+  font-size: 15px;
+}
+
+.hk-rail__campaign {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: 7px;
+  min-inline-size: 0;
+  max-inline-size: 260px;
+  min-block-size: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-slot);
+  background: var(--chip-dark);
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather-2);
+  font-size: 15px;
+  line-height: 1;
+  text-decoration: none;
+
+  hk-icon {
+    flex: none;
+    color: var(--brass);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-rail__campaign-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1023.98px) {
+  .hk-rail {
+    gap: 14px;
+    padding: 0 16px;
+  }
+
+  .hk-rail__word {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .hk-rail__campaign {
+    min-block-size: var(--touch-target);
+  }
+
+  .hk-rail__link--small::before {
+    inset: calc((var(--touch-target) - var(--icon-button-s)) / -2);
+  }
+
+  .hk-rail__link:not(.hk-rail__link--small)::before {
+    inset: calc((var(--touch-target) - var(--icon-button)) / -2);
+  }
+}

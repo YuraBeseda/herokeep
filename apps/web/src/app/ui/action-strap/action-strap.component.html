@@ -1,0 +1,135 @@
+<ng-container *transloco="let t">
+  @if (config(); as cfg) {
+    <footer
+      class="hk-astrap"
+      [class.hk-astrap--phone]="phone()"
+      [attr.aria-label]="t('shell.strap.landmark')"
+    >
+      <svg class="hk-tex hk-tex--leather" aria-hidden="true" focusable="false">
+        <rect width="100%" height="100%" />
+      </svg>
+      <div class="hk-astrap__row" [class.hk-astrap__row--phone]="phone()">
+        @if (cfg.exit?.length) {
+          <div
+            class="hk-astrap__zone hk-astrap__zone--exit"
+            role="group"
+            [attr.aria-label]="t('shell.strap.exit')"
+          >
+            @for (action of cfg.exit; track action.id) {
+              <ng-container *ngTemplateOutlet="actionTpl; context: { $implicit: action }" />
+            }
+          </div>
+          <span class="hk-astrap__divider" aria-hidden="true"></span>
+        }
+        <div
+          class="hk-astrap__zone hk-astrap__zone--primary"
+          role="group"
+          [attr.aria-label]="t('shell.strap.primary')"
+        >
+          @for (action of cfg.primary; track action.id) {
+            <ng-container *ngTemplateOutlet="actionTpl; context: { $implicit: action }" />
+          }
+        </div>
+        @if (cfg.secondary?.length) {
+          <span class="hk-astrap__divider" aria-hidden="true"></span>
+          @if (phone()) {
+            <button
+              #more
+              type="button"
+              class="hk-act hk-act--leather hk-astrap__more"
+              [attr.aria-haspopup]="'dialog'"
+              [attr.aria-expanded]="sheetOpen()"
+              [attr.aria-label]="t('shell.strap.more')"
+              (click)="toggleSheet()"
+            >
+              <svg class="hk-astrap__dots" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="19" cy="12" r="2" />
+              </svg>
+              <span class="hk-act__label">{{ t('shell.strap.more-short') }}</span>
+            </button>
+          } @else {
+            <div
+              class="hk-astrap__zone hk-astrap__zone--secondary"
+              role="group"
+              [attr.aria-label]="t('shell.strap.secondary')"
+            >
+              @for (action of cfg.secondary; track action.id) {
+                <ng-container *ngTemplateOutlet="actionTpl; context: { $implicit: action }" />
+              }
+            </div>
+          }
+        }
+        @if (cfg.status && !phone()) {
+          <p class="hk-astrap__note">{{ cfg.status }}</p>
+        }
+      </div>
+
+      @if (phone() && sheetOpen()) {
+        <div
+          class="hk-astrap__sheet"
+          role="dialog"
+          aria-modal="true"
+          cdkTrapFocus
+          cdkTrapFocusAutoCapture
+          [attr.aria-label]="t('shell.strap.secondary')"
+          (keydown.escape)="closeSheet()"
+        >
+          @for (action of cfg.secondary; track action.id) {
+            <button
+              type="button"
+              class="hk-astrap__sheet-item"
+              [attr.aria-disabled]="action.disabled ? 'true' : null"
+              (click)="runFromSheet(action)"
+            >
+              <hk-icon [icon]="'ui:' + action.icon" />
+              <span>{{ t(action.label) }}</span>
+            </button>
+          }
+        </div>
+      }
+    </footer>
+  }
+
+  <ng-template #actionTpl let-action>
+    @if (action.kind === 'icon') {
+      <button
+        type="button"
+        hk-icon-button
+        [icon]="action.icon"
+        [hint]="hintKey(action)"
+        [disabled]="!!action.disabled"
+        (click)="action.run()"
+      ></button>
+    } @else if (phone()) {
+      <button
+        type="button"
+        [class]="tileClass(action)"
+        [attr.aria-disabled]="action.disabled ? 'true' : null"
+        [hkTooltip]="
+          action.disabled && action.disabledReason ? t(action.disabledReason) : t(action.label)
+        "
+        (click)="activate(action)"
+      >
+        <hk-icon [icon]="'ui:' + action.icon" />
+        <span class="hk-act__label">{{ t(action.label) }}</span>
+      </button>
+    } @else {
+      <button
+        type="button"
+        hk-button
+        [variant]="variant(action)"
+        [size]="'l'"
+        [disabled]="!!action.disabled && !action.disabledReason"
+        [disabledReason]="
+          action.disabled && action.disabledReason ? t(action.disabledReason) : null
+        "
+        (click)="action.run()"
+      >
+        <hk-icon [icon]="'ui:' + action.icon" />
+        {{ t(action.label) }}
+      </button>
+    }
+  </ng-template>
+</ng-container>

@@ -1,99 +1,34 @@
 <ng-container *transloco="let t; read: 'shell'">
-  <header class="app-shell__header">
-    <p class="app-shell__title">{{ t('app.title') }}</p>
-    @if (!isOnline()) {
-      <p class="app-shell__offline" role="status">{{ t('app.offline') }}</p>
-    }
-    @if (updateService.updateAvailable()) {
-      <div class="app-shell__update" role="status">
-        <span class="app-shell__update-text">{{ t('app.update-available') }}</span>
-        <button
-          hk-button
-          [variant]="'ghost'"
-          class="app-shell__update-button"
-          (click)="updateService.activate()"
-        >
-          {{ t('app.update-reload') }}
-        </button>
-      </div>
-    }
-    <div class="app-shell__account">
-      @if (authService.status() === 'authed') {
-        <span class="app-shell__account-name">{{ authService.user()?.username }}</span>
-        <button
-          hk-button
-          type="button"
-          [variant]="'ghost'"
-          class="app-shell__logout"
-          (click)="onLogout()"
-        >
-          {{ t('account.logout') }}
-        </button>
-      } @else {
-        <a routerLink="/login" class="app-shell__login-link">{{ t('account.login') }}</a>
+  <hk-textures />
+  @if (phone()) {
+    @let sectionNow = section();
+    <hk-top-bar [title]="sectionNow ? t(nameKey(sectionNow)) : t('app.title')" />
+  } @else {
+    <hk-nav-rail />
+  }
+  @if (!isOnline() || updateService.updateAvailable()) {
+    <div class="app-shell__notices">
+      @if (!isOnline()) {
+        <hk-banner class="app-shell__offline" [variant]="'warning'">{{
+          t('app.offline')
+        }}</hk-banner>
+      }
+      @if (updateService.updateAvailable()) {
+        <hk-banner class="app-shell__update" [variant]="'info'">
+          <span class="app-shell__update-text">{{ t('app.update-available') }}</span>
+          <button
+            hkBannerActions
+            hk-button
+            [variant]="'primary'"
+            class="app-shell__update-button"
+            (click)="updateService.activate()"
+          >
+            {{ t('app.update-reload') }}
+          </button>
+        </hk-banner>
       }
     </div>
-    <button
-      type="button"
-      class="app-shell__theme-toggle"
-      [attr.aria-label]="t('app.theme-toggle')"
-      (click)="themeService.toggle()"
-    >
-      <span class="app-shell__theme-icon" aria-hidden="true"></span>
-    </button>
-  </header>
-  <nav class="app-shell__nav" [attr.aria-label]="t('nav.landmark')">
-    <a
-      routerLink="/"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      [routerLinkActiveOptions]="{ exact: true }"
-      class="app-shell__link"
-      >{{ t('nav.home') }}</a
-    >
-    <a
-      routerLink="/characters"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      class="app-shell__link"
-      >{{ t('nav.characters') }}</a
-    >
-    <a
-      routerLink="/campaigns"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      class="app-shell__link"
-      >{{ t('nav.campaigns') }}</a
-    >
-    <a
-      routerLink="/library"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      class="app-shell__link"
-      >{{ t('nav.library') }}</a
-    >
-    <a
-      routerLink="/packs"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      class="app-shell__link"
-      >{{ t('nav.packs') }}</a
-    >
-    <a
-      routerLink="/settings"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      class="app-shell__link"
-      >{{ t('nav.settings') }}</a
-    >
-    <a
-      routerLink="/about"
-      routerLinkActive="is-active"
-      [ariaCurrentWhenActive]="'page'"
-      class="app-shell__link"
-      >{{ t('nav.about') }}</a
-    >
-  </nav>
+  }
   <main class="app-shell__main">
     @if (packStore.coreLoadFailed()) {
       <div class="app-shell__error" role="alert">
@@ -106,4 +41,8 @@
       <router-outlet />
     }
   </main>
+  <div class="app-shell__dock">
+    <hk-action-strap />
+    <hk-tab-bar />
+  </div>
 </ng-container>

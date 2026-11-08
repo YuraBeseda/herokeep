@@ -1,0 +1,71 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <header class="hk-rail">
+    <svg class="hk-tex hk-tex--leather" aria-hidden="true" focusable="false">
+      <rect width="100%" height="100%" />
+    </svg>
+    <a class="hk-rail__mark" routerLink="/">
+      <hk-icon [icon]="'ui:spell-slot'" />
+      <span class="hk-rail__word">{{ t('app.title') }}</span>
+    </a>
+    <nav class="hk-rail__nav" [attr.aria-label]="t('nav.landmark')">
+      <span class="hk-rail__bar" aria-hidden="true"></span>
+      @for (item of sections; track item.id) {
+        <a
+          class="hk-rail__link"
+          [routerLink]="item.route"
+          [class.is-current]="current() === item"
+          [attr.aria-current]="current() === item ? 'page' : null"
+          [attr.aria-label]="t(nameKey(item))"
+          [hkTooltip]="t(nameKey(item))"
+        >
+          <hk-icon [icon]="'ui:' + item.icon" />
+        </a>
+      }
+    </nav>
+    <span class="hk-rail__spacer"></span>
+    @if (campaign(); as chip) {
+      @let campaignLabel =
+        chip.name ? t('campaign.chip', { name: chip.name }) : t('campaign.fallback');
+      <a
+        class="hk-rail__campaign"
+        [routerLink]="['/g', chip.id]"
+        [attr.aria-label]="campaignLabel"
+        [hkTooltip]="campaignLabel"
+      >
+        <hk-icon [icon]="'ui:campaigns'" />
+        <span class="hk-rail__campaign-name">{{ chip.name ?? t('campaign.fallback') }}</span>
+      </a>
+    }
+    <a
+      class="hk-rail__link hk-rail__link--small"
+      routerLink="/about"
+      routerLinkActive="is-current"
+      [ariaCurrentWhenActive]="'page'"
+      [attr.aria-label]="t('nav.about')"
+      [hkTooltip]="t('nav.about')"
+    >
+      <hk-icon [icon]="'ui:details'" />
+    </a>
+    <hk-theme-menu />
+    @if (auth.status() === 'authed') {
+      @let accountLabel = t('account.open', { name: auth.user()?.username });
+      <a
+        class="hk-rail__link hk-rail__account"
+        routerLink="/settings"
+        [attr.aria-label]="accountLabel"
+        [hkTooltip]="accountLabel"
+      >
+        <hk-icon [icon]="'ui:account'" />
+      </a>
+    } @else {
+      <a
+        class="hk-rail__link app-shell__login-link"
+        routerLink="/login"
+        [attr.aria-label]="t('account.login')"
+        [hkTooltip]="t('account.login')"
+      >
+        <hk-icon [icon]="'ui:account'" />
+      </a>
+    }
+  </header>
+</ng-container>

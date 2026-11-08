@@ -1,0 +1,69 @@
+/* Phone top bar (design-system `hk-topbar`): 52px, three columns 44px / title / 44px. */
+:host {
+  display: block;
+}
+
+.hk-topbar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: var(--space-2);
+  block-size: 52px;
+  padding: 0 var(--space-2);
+  background: linear-gradient(180deg, var(--leather-highlight), var(--leather-dark));
+  box-shadow: var(--shadow-strap);
+  color: var(--text-on-leather);
+
+  > :not(.hk-tex) {
+    position: relative;
+  }
+}
+
+.hk-topbar__folio {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-seal);
+  background: radial-gradient(circle at 35% 30%, var(--leather-highlight), var(--leather-dark) 72%);
+  box-shadow:
+    inset 0 0 0 2px var(--brass),
+    inset 0 0 0 3px var(--brass-shadow);
+  color: var(--brass);
+  font-size: 24px;
+  cursor: pointer;
+
+  &[aria-expanded='true'] {
+    background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+    box-shadow: var(--shadow-glow-brass);
+    color: var(--text-on-brass);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 2px var(--brass),
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+
+  hk-icon {
+    pointer-events: none;
+  }
+}
+
+.hk-topbar__title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

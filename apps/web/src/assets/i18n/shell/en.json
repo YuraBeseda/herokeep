@@ -1,16 +1,26 @@
 {
   "account": {
     "login": "Log in",
-    "logout": "Log out"
+    "logout": "Log out",
+    "open": "Account: {{name}}"
   },
   "app": {
     "core-error": "The content library could not be loaded.",
     "core-error-retry": "Try again",
     "offline": "Offline",
-    "theme-toggle": "Toggle theme",
     "title": "Herokeep",
     "update-available": "A new version is ready.",
     "update-reload": "Reload"
+  },
+  "campaign": {
+    "chip": "Campaign: {{name}}",
+    "fallback": "Campaign"
+  },
+  "drawer": {
+    "close": "Close the menu",
+    "language": "Language",
+    "open": "Open the menu",
+    "title": "Menu"
   },
   "home": {
     "tagline": "Your D&D companion — the Library is ready; builder comes next."
@@ -102,15 +112,33 @@
     "wis": "Wisdom",
     "xp": "Experience points"
   },
+  "language": {
+    "en": "English",
+    "ru": "Русский",
+    "uk": "Українська"
+  },
   "nav": {
     "about": "About",
-    "campaigns": "Campaigns",
-    "characters": "Characters",
-    "home": "Home",
-    "landmark": "Primary navigation",
-    "library": "Library",
-    "packs": "Packs",
-    "settings": "Settings"
+    "landmark": "Primary navigation"
+  },
+  "strap": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "exit": "Leave this screen",
+    "landmark": "Actions",
+    "more": "More actions",
+    "more-short": "More",
+    "primary": "Main actions",
+    "secondary": "More actions"
+  },
+  "tabs": {
+    "landmark": "Sections of this screen"
+  },
+  "theme": {
+    "menu": "Theme",
+    "plain": "Plain",
+    "scroll": "Scroll",
+    "tavern": "Tavern"
   },
   "ui": {
     "ability": {

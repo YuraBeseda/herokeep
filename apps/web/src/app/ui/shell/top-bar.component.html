@@ -1,0 +1,24 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <header class="hk-topbar">
+    <svg class="hk-tex hk-tex--leather" aria-hidden="true" focusable="false">
+      <rect width="100%" height="100%" />
+    </svg>
+    <button
+      #folio
+      type="button"
+      class="hk-topbar__folio"
+      [attr.aria-haspopup]="'dialog'"
+      [attr.aria-expanded]="open()"
+      [attr.aria-label]="open() ? t('drawer.close') : t('drawer.open')"
+      [hkTooltip]="open() ? t('drawer.close') : t('drawer.open')"
+      (click)="toggle()"
+    >
+      <hk-icon [icon]="open() ? 'ui:close' : 'ui:library'" />
+    </button>
+    <p class="hk-topbar__title" [hkTooltip]="title()">{{ title() }}</p>
+    <span class="hk-topbar__action"></span>
+  </header>
+  @if (open()) {
+    <hk-app-drawer (keydown.escape)="close(true)" (navigated)="close(false)" />
+  }
+</ng-container>

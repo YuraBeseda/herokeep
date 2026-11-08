@@ -106,28 +106,29 @@ describe('app routes', () => {
     expect(guarded).toEqual(['register']);
   });
 
-  it('renders the shell nav with 7 routerLink anchors using the real translations', async () => {
+  it('renders the shell rail with the six sections and About using the real translations', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    // Scoped to the primary nav specifically — task-5 adds its own account-affordance link(s)
-    // (Login / logout) in the header, outside this nav landmark, which would otherwise inflate
-    // this count without actually changing the primary nav destinations this test guards.
-    const links = compiled.querySelectorAll<HTMLAnchorElement>('.app-shell__nav a[routerLink]');
-    expect(links.length).toBe(7);
+    // The six sections are the primary nav landmark; About is a separate rail link until it folds
+    // into Settings. The account link (Log in) sits outside the landmark too.
+    const links = compiled.querySelectorAll<HTMLAnchorElement>('nav.hk-rail__nav a');
+    expect(links.length).toBe(6);
     // Compare against the imported JSON, not re-typed literals, so this cannot drift from the
     // real translation file — a typo'd key or an unresolved scope would render the raw key
     // string instead and fail this assertion.
-    const actual = Array.from(links).map((link) => link.textContent?.trim());
+    const actual = Array.from(links).map((link) => link.getAttribute('aria-label'));
     expect(actual).toEqual([
-      shellEn.nav.home,
-      shellEn.nav.characters,
-      shellEn.nav.campaigns,
-      shellEn.nav.library,
-      shellEn.nav.packs,
-      shellEn.nav.settings,
-      shellEn.nav.about,
+      shellEn.icon.home,
+      shellEn.icon.heroes,
+      shellEn.icon.campaigns,
+      shellEn.icon.library,
+      shellEn.icon.packs,
+      shellEn.icon.settings,
     ]);
+    expect(compiled.querySelector('a[href="/about"]')?.getAttribute('aria-label')).toBe(
+      shellEn.nav.about,
+    );
   });
 
   it('mounts the home route inside the shell and renders its content', async () => {
