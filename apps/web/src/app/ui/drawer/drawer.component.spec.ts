@@ -1,13 +1,19 @@
-import { Component, signal, viewChild, type ElementRef } from '@angular/core';
+import { Component, inject, signal, viewChild, type ElementRef } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { provideRouter, Router } from '@angular/router';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { hintOf, press } from '../testing/harness';
 import { provideShellTransloco } from '../testing/transloco-testing';
 import { HkDrawerComponent } from './drawer.component';
 
 @Component({ template: '' })
 class Page {}
+
+@Component({ template: `<button type="button" class="inner">{{ text }}</button>` })
+class InnerDialog {
+  protected readonly text = 'Inner';
+}
 
 @Component({
   imports: [HkDrawerComponent],
@@ -18,11 +24,15 @@ class Page {}
     <button type="button" class="elsewhere">{{ elsewhereText }}</button>
     <hk-drawer [(open)]="open" [heading]="heading" [opener]="openerRef()">
       <p class="body">{{ bodyText }}</p>
-      <button hkDrawerAction type="button" class="act">{{ actionText }}</button>
+      <button hkDrawerAction type="button" class="act" (click)="dialogs.open(Inner)">
+        {{ actionText }}
+      </button>
     </hk-drawer>
   `,
 })
 class Host {
+  protected readonly dialogs = inject(DialogService);
+  protected readonly Inner = InnerDialog;
   readonly open = signal(false);
   readonly openerRef = viewChild<ElementRef<HTMLElement>>('opener');
   protected readonly openerText = 'Open';
@@ -51,7 +61,9 @@ async function setup(): Promise<{ fixture: ComponentFixture<Host>; el: HTMLEleme
 
 const panel = (el: HTMLElement) => el.querySelector<HTMLElement>('[role="dialog"]');
 const key = (target: Element, name: string) =>
-  target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+  target.dispatchEvent(
+    new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }),
+  );
 
 async function openIt(fixture: ComponentFixture<Host>) {
   const opener = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.opener')!;
@@ -168,5 +180,53 @@ describe('HkDrawerComponent', () => {
     await fixture.whenStable();
     expect(panel(el)).toBeNull();
     expect(fixture.componentInstance.open()).toBe(false);
+  });
+
+  it('closes on a press on the scrim, the only thing under the pointer outside the panel', async () => {
+    const { fixture, el } = await setup();
+    await openIt(fixture);
+    press(el.querySelector('.hk-drawer__scrim')!);
+    await fixture.whenStable();
+    expect(panel(el)).toBeNull();
+  });
+
+  it('stays open on a press on its own header', async () => {
+    const { fixture, el } = await setup();
+    await openIt(fixture);
+    press(panel(el)!.querySelector('h2')!);
+    await fixture.whenStable();
+    expect(panel(el)).not.toBeNull();
+  });
+
+  describe('with a dialog opened from inside it', () => {
+    afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((e) => e.remove()));
+
+    async function openDialog(fixture: ComponentFixture<Host>) {
+      await openIt(fixture);
+      press((fixture.nativeElement as HTMLElement).querySelector('.act')!);
+      await fixture.whenStable();
+      expect(document.querySelector('.cdk-overlay-container hk-dialog')).not.toBeNull();
+    }
+
+    it('Escape closes only the dialog, not the drawer beneath it', async () => {
+      const { fixture, el } = await setup();
+      await openDialog(fixture);
+      key(document.querySelector('.inner')!, 'Escape');
+      await fixture.whenStable();
+      expect(document.querySelector('.cdk-overlay-container hk-dialog')).toBeNull();
+      expect(panel(el)).not.toBeNull();
+
+      key(document.body, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).toBeNull();
+    });
+
+    it('a press inside the dialog leaves the drawer open', async () => {
+      const { fixture, el } = await setup();
+      await openDialog(fixture);
+      press(document.querySelector('.inner')!);
+      await fixture.whenStable();
+      expect(panel(el)).not.toBeNull();
+    });
   });
 });

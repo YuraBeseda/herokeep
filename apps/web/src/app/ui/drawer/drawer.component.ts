@@ -58,7 +58,10 @@ export class HkDrawerComponent {
         this.returnTo = document.activeElement as HTMLElement | null;
         const onPointerDown = (event: Event): void => this.onOutsidePress(event);
         const onKeyDown = (event: KeyboardEvent): void => {
-          if (event.key !== 'Escape') return;
+          if (event.key !== 'Escape' || event.defaultPrevented) return;
+          // A dialog opened from the drawer owns Escape; its handler has already run (it prevents
+          // default) or it is still open above us.
+          if (this.dialogOpenAbove()) return;
           event.preventDefault();
           this.dismiss(true);
         };
@@ -84,10 +87,17 @@ export class HkDrawerComponent {
   private onOutsidePress(event: Event): void {
     const target = event.target;
     if (!(target instanceof Node)) return;
-    if (this.host.nativeElement.contains(target)) return;
+    // Inside the panel is inside; the scrim (also in the host) is the outside under the pointer.
+    if (this.host.nativeElement.querySelector('.hk-drawer__panel')?.contains(target)) return;
+    // A dialog or sheet stacked above the drawer lives in the CDK overlay container: not outside.
+    if (target instanceof Element && target.closest('.cdk-overlay-container')) return;
     const opener = this.openerElement();
     if (opener?.contains(target)) return;
     this.dismiss(false);
+  }
+
+  private dialogOpenAbove(): boolean {
+    return document.querySelector('.cdk-overlay-container hk-dialog') !== null;
   }
 
   private openerElement(): HTMLElement | null {

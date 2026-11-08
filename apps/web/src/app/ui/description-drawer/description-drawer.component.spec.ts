@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -9,7 +9,12 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { DialogService } from '@app/ui/dialog/dialog.service';
+import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
 import libraryEn from '../../../assets/i18n/library/en.json';
 import libraryRu from '../../../assets/i18n/library/ru.json';
 import libraryUk from '../../../assets/i18n/library/uk.json';
@@ -149,5 +154,104 @@ describe('HkDescriptionDrawerComponent', () => {
     expect(el.querySelector('[role="dialog"] h2')?.textContent?.trim()).toBe('Blinded');
     expect(body(el)).toContain('Can’t See');
     expect(body(el)).not.toContain('bright streak');
+  });
+});
+
+// Ruling R30: the drawer takes no characterId because EngineFacade is scoped by the ELEMENT
+// injector. Proven here against a pack only the character pins, through both paths a view uses.
+const parsedSample = parsePack(sampleJson);
+if (!parsedSample.ok) throw new Error('sample-content.json fixture no longer parses');
+const samplePack = parsedSample.pack;
+const SCOPED_ID = 'sample-content:feat/lunar-insight';
+const SCOPED_TEXT = 'phases of the moon';
+
+@Component({
+  selector: 'app-in-dialog',
+  imports: [HkDescriptionDrawerComponent],
+  template: `<hk-description-drawer [entity]="id" [open]="true" />`,
+})
+class InDialog {
+  protected readonly id = SCOPED_ID;
+}
+
+@Component({
+  imports: [HkDescriptionDrawerComponent],
+  providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
+  template: `
+    <hk-description-drawer [entity]="id" [open]="open()" />
+    <button type="button" class="via-dialog" (click)="dialogs.open(Content)">{{ label }}</button>
+  `,
+})
+class ScopedHost {
+  protected readonly id = SCOPED_ID;
+  protected readonly Content = InDialog;
+  protected readonly label = 'dialog';
+  protected readonly dialogs = inject(DialogService);
+  readonly open = signal(true);
+}
+
+describe('HkDescriptionDrawerComponent inside a character scope (R30)', () => {
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideTransloco({
+          config: {
+            availableLangs: ['en', 'ru', 'uk'],
+            defaultLang: 'en',
+            fallbackLang: 'en',
+            reRenderOnLangChange: true,
+            prodMode: true,
+          },
+          loader: Loader,
+        }),
+        provideTranslocoMessageformat(),
+        {
+          provide: PackStore,
+          useValue: { packs: signal([corePack, samplePack]), ready: signal(true) },
+        },
+        {
+          provide: CharacterStore,
+          useValue: {
+            facts: signal({
+              pins: { [corePack.id]: corePack.version, [samplePack.id]: samplePack.version },
+            }),
+          },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((e) => e.remove()));
+
+  it('the root (unscoped) facade cannot see the pinned pack: the control for the specs below', async () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.entity.set(SCOPED_ID);
+    await fixture.whenStable();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.hk-description__not-found')).not.toBeNull();
+    expect(el.textContent).not.toContain(SCOPED_TEXT);
+  });
+
+  it('rendered inside the scope it resolves the pinned pack entry and its text', async () => {
+    const fixture = TestBed.createComponent(ScopedHost);
+    await fixture.whenStable();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role="dialog"] h2')?.textContent?.trim()).toBe('Lunar Insight');
+    expect(el.querySelector('.hk-description__body')?.textContent).toContain(SCOPED_TEXT);
+  });
+
+  it('opened through the scoped DialogService (the overlay/portal path) it keeps the scope', async () => {
+    const fixture = TestBed.createComponent(ScopedHost);
+    fixture.componentInstance.open.set(false);
+    await fixture.whenStable();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.via-dialog')!.click();
+    await fixture.whenStable();
+    await fixture.whenStable();
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    expect(overlay.querySelector('.hk-description__body')?.textContent).toContain(SCOPED_TEXT);
   });
 });
