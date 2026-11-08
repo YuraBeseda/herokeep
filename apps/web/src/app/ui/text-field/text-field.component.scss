@@ -1,0 +1,27 @@
+@use 'field';
+
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.hk-field {
+  @include field.field;
+}
+
+.hk-field__label {
+  @include field.label;
+}
+
+.hk-field__msg {
+  @include field.message;
+}
+
+.hk-field__msg--error {
+  @include field.message-error;
+}
+
+.hk-input {
+  @include field.input-frame;
+  @include field.input-height;
+}

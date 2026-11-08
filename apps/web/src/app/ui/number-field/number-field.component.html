@@ -1,0 +1,61 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @let name = label();
+  @let stepSize = step();
+  @let minusLabel = t('ui.number.decrease', { label: name, step: stepSize });
+  @let plusLabel = t('ui.number.increase', { label: name, step: stepSize });
+  <div class="hk-field" [class.hk-field--leather]="variant() === 'leather'">
+    <label class="hk-field__label" [class.hk-visually-hidden]="labelHidden()" [for]="inputId">{{
+      name
+    }}</label>
+    <div
+      class="hk-numfield"
+      [class.hk-numfield--leaf]="variant() === 'leaf'"
+      [class.hk-numfield--phone]="coarse()"
+    >
+      <button
+        type="button"
+        class="hk-numfield__step hk-numfield__minus"
+        [attr.aria-label]="minusLabel"
+        [attr.aria-disabled]="atMin() || isDisabled()"
+        [hkTooltip]="atMin() ? t('ui.number.at-min', { label: name, min: min() }) : minusLabel"
+        (click)="stepBy(-1)"
+      >
+        <hk-icon [icon]="'ui:remove'" />
+      </button>
+      <input
+        #field
+        class="hk-numfield__in"
+        type="number"
+        inputmode="numeric"
+        [id]="inputId"
+        [attr.min]="min()"
+        [attr.max]="max()"
+        [attr.step]="step()"
+        [value]="value() ?? ''"
+        [disabled]="isDisabled()"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [attr.aria-describedby]="describedBy()"
+        (input)="onInput(field.value)"
+        (change)="onCommit(field)"
+        (blur)="onBlur()"
+      />
+      <button
+        type="button"
+        class="hk-numfield__step hk-numfield__plus"
+        [attr.aria-label]="plusLabel"
+        [attr.aria-disabled]="atMax() || isDisabled()"
+        [hkTooltip]="atMax() ? t('ui.number.at-max', { label: name, max: max() }) : plusLabel"
+        (click)="stepBy(1)"
+      >
+        <hk-icon [icon]="'ui:add'" />
+      </button>
+    </div>
+    @if (error(); as message) {
+      <span class="hk-field__msg hk-field__msg--error" [id]="messageId">
+        <hk-icon [icon]="'ui:close'" />{{ message }}
+      </span>
+    } @else if (hint(); as message) {
+      <span class="hk-field__msg" [id]="messageId">{{ message }}</span>
+    }
+  </div>
+</ng-container>

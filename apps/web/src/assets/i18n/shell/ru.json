@@ -122,6 +122,18 @@
     "attack": {
       "roll": "Бросок: {{name}}"
     },
+    "coins": {
+      "cp": "{count, plural, one {# медная монета} few {# медные монеты} many {# медных монет} other {# медной монеты}}",
+      "gp": "{count, plural, one {# золотая монета} few {# золотые монеты} many {# золотых монет} other {# золотой монеты}}",
+      "group": "Кошелёк",
+      "pp": "{count, plural, one {# платиновая монета} few {# платиновые монеты} many {# платиновых монет} other {# платиновой монеты}}",
+      "sp": "{count, plural, one {# серебряная монета} few {# серебряные монеты} many {# серебряных монет} other {# серебряной монеты}}",
+      "total": "≈ {{amount}} зм",
+      "unit-cp": "мм",
+      "unit-gp": "зм",
+      "unit-pp": "пм",
+      "unit-sp": "см"
+    },
     "condition": {
       "end": "Снять: {{name}}",
       "story-duration": "{{name}}, {{duration}}",
@@ -157,9 +169,30 @@
       "press-grant": "Героическое вдохновение: нет. Нажмите, чтобы отметить получение.",
       "press-spend": "Героическое вдохновение: есть. Нажмите, чтобы потратить."
     },
+    "item": {
+      "attuned": "Настроено",
+      "details": "Подробности: {{name}}",
+      "equipped": "Надето",
+      "equipped-mark": "Н",
+      "quantity": "Количество: {{count}}",
+      "unknown": "Неопознанный предмет"
+    },
+    "number": {
+      "at-max": "{{label}}: достигнут максимум, {{max}}",
+      "at-min": "{{label}}: достигнут минимум, {{min}}",
+      "decrease": "{{label}}: уменьшить на {{step}}",
+      "increase": "{{label}}: увеличить на {{step}}"
+    },
     "options": {
       "chip": "Вариантов: {{count}}",
       "see-all": "Все в библиотеке"
+    },
+    "party": {
+      "conditions": "Состояния",
+      "dying": "Умирает",
+      "offline": "Не в сети",
+      "online": "В сети",
+      "open": "Открыть: {{name}}"
     },
     "pool": {
       "meter": "{{label}}: {{value}} из {{max}}"
@@ -168,11 +201,26 @@
       "of": "Портрет: {{name}}",
       "placeholder": "Место для портрета, монограмма {{monogram}}"
     },
+    "satchel": {
+      "items": "Сумка"
+    },
+    "search": {
+      "clear": "Очистить поиск"
+    },
     "shield": {
       "meter": "Класс доспеха {{value}}"
     },
     "spell": {
       "cast": "Сотворить: {{name}}"
+    },
+    "weight": {
+      "label": "Вес снаряжения",
+      "meter": "{{current}} из {{capacity}} {{unit}}, {{state}}",
+      "state-encumbered": "Обременён",
+      "state-heavy": "Сильно обременён",
+      "state-light": "Лёгкая нагрузка",
+      "state-loaded": "Под нагрузкой",
+      "state-over": "Перегруз"
     },
     "xp": {
       "label": "ОО",

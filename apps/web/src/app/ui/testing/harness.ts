@@ -4,6 +4,8 @@ import { provideShellTransloco } from './transloco-testing';
 
 /** Mounts a `ui/` component with the real `shell` bundles and the given inputs. */
 export async function mount<T>(type: Type<T>, inputs: Record<string, unknown>) {
+  // A spec may mount twice to compare two states; the first fixture is read before the second.
+  TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
     providers: [provideShellTransloco()],
   }).compileComponents();
@@ -40,4 +42,26 @@ export function accessibleName(el: Element): string | null {
       .trim();
   }
   return el.getAttribute('aria-label');
+}
+
+/**
+ * A real pointer click, the way a mouse or finger produces it: hover, press, release, click.
+ * A bare `el.click()` skips the events a hint or popover listens to and hides ordering bugs.
+ */
+export function press(el: Element, pointerType: 'mouse' | 'touch' = 'mouse'): void {
+  const pointer = (type: string): Event => {
+    const event = new Event(type, { bubbles: true });
+    Object.defineProperty(event, 'pointerType', { value: pointerType });
+    return event;
+  };
+  if (pointerType === 'mouse') el.dispatchEvent(new Event('mouseenter'));
+  el.dispatchEvent(pointer('pointerdown'));
+  el.dispatchEvent(pointer('pointerup'));
+  (el as HTMLElement).click();
+}
+
+/** Types `text` into an input the way the browser reports it: set the value, fire `input`. */
+export function typeInto(input: HTMLInputElement | HTMLTextAreaElement, text: string): void {
+  input.value = text;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 }

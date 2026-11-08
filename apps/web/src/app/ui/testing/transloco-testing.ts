@@ -1,4 +1,5 @@
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import shellEn from '../../../assets/i18n/shell/en.json';
 import shellRu from '../../../assets/i18n/shell/ru.json';
@@ -15,6 +16,10 @@ class ShellLoader implements TranslocoLoader {
 
 /** Transloco wired to the real `shell` bundles, for specs of the `ui/` components. */
 export function provideShellTransloco() {
+  return [provideShellTranslocoCore(), provideTranslocoMessageformat()];
+}
+
+function provideShellTranslocoCore() {
   return provideTransloco({
     config: {
       availableLangs: ['en', 'ru', 'uk'],

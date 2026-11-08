@@ -1,0 +1,51 @@
+@use 'field';
+
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.hk-field {
+  @include field.field;
+}
+
+.hk-field__label {
+  @include field.label;
+}
+
+.hk-field__msg {
+  @include field.message;
+}
+
+.hk-field__msg--error {
+  @include field.message-error;
+}
+
+.hk-select__wrap {
+  position: relative;
+  display: block;
+}
+
+.hk-select__in {
+  @include field.input-frame;
+  @include field.input-height;
+
+  inline-size: 100%;
+  padding-inline-end: 32px;
+  appearance: none;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* The chevron is drawn with borders so it follows the ink colour of the theme. */
+.hk-select__chevron {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 12px;
+  inline-size: 0;
+  block-size: 0;
+  border-inline: 5px solid transparent;
+  border-block-start: 6px solid var(--accent-strong);
+  pointer-events: none;
+  transform: translateY(-25%);
+}

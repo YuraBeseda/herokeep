@@ -1,0 +1,27 @@
+<div class="hk-field">
+  <label class="hk-field__label" [for]="inputId">{{ label() }}</label>
+  <input
+    #field
+    class="hk-input"
+    [class.hk-input--error]="!!error()"
+    [id]="inputId"
+    [type]="type()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    [disabled]="isDisabled()"
+    [required]="required()"
+    [attr.maxlength]="maxLength()"
+    [attr.autocomplete]="autocomplete()"
+    [attr.aria-invalid]="error() ? 'true' : null"
+    [attr.aria-describedby]="describedBy()"
+    (input)="onInput(field.value)"
+    (blur)="onBlur()"
+  />
+  @if (error(); as message) {
+    <span class="hk-field__msg hk-field__msg--error" [id]="messageId">
+      <hk-icon [icon]="'ui:close'" />{{ message }}
+    </span>
+  } @else if (hint(); as message) {
+    <span class="hk-field__msg" [id]="messageId">{{ message }}</span>
+  }
+</div>

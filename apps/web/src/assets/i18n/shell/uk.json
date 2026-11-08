@@ -122,6 +122,18 @@
     "attack": {
       "roll": "Кидок: {{name}}"
     },
+    "coins": {
+      "cp": "{count, plural, one {# мідна монета} few {# мідні монети} many {# мідних монет} other {# мідної монети}}",
+      "gp": "{count, plural, one {# золота монета} few {# золоті монети} many {# золотих монет} other {# золотої монети}}",
+      "group": "Гаманець",
+      "pp": "{count, plural, one {# платинова монета} few {# платинові монети} many {# платинових монет} other {# платинової монети}}",
+      "sp": "{count, plural, one {# срібна монета} few {# срібні монети} many {# срібних монет} other {# срібної монети}}",
+      "total": "≈ {{amount}} зм",
+      "unit-cp": "мм",
+      "unit-gp": "зм",
+      "unit-pp": "пм",
+      "unit-sp": "см"
+    },
     "condition": {
       "end": "Зняти: {{name}}",
       "story-duration": "{{name}}, {{duration}}",
@@ -157,9 +169,30 @@
       "press-grant": "Героїчне натхнення: немає. Натисніть, щоб позначити отримання.",
       "press-spend": "Героїчне натхнення: є. Натисніть, щоб витратити."
     },
+    "item": {
+      "attuned": "Налаштовано",
+      "details": "Докладніше: {{name}}",
+      "equipped": "Одягнено",
+      "equipped-mark": "О",
+      "quantity": "Кількість: {{count}}",
+      "unknown": "Невпізнаний предмет"
+    },
+    "number": {
+      "at-max": "{{label}}: досягнуто максимуму, {{max}}",
+      "at-min": "{{label}}: досягнуто мінімуму, {{min}}",
+      "decrease": "{{label}}: зменшити на {{step}}",
+      "increase": "{{label}}: збільшити на {{step}}"
+    },
     "options": {
       "chip": "Варіантів: {{count}}",
       "see-all": "Усі в бібліотеці"
+    },
+    "party": {
+      "conditions": "Стани",
+      "dying": "Помирає",
+      "offline": "Не в мережі",
+      "online": "У мережі",
+      "open": "Відкрити: {{name}}"
     },
     "pool": {
       "meter": "{{label}}: {{value}} з {{max}}"
@@ -168,11 +201,26 @@
       "of": "Портрет: {{name}}",
       "placeholder": "Місце для портрета, монограма {{monogram}}"
     },
+    "satchel": {
+      "items": "Сумка"
+    },
+    "search": {
+      "clear": "Очистити пошук"
+    },
     "shield": {
       "meter": "Клас обладунку {{value}}"
     },
     "spell": {
       "cast": "Створити: {{name}}"
+    },
+    "weight": {
+      "label": "Вага спорядження",
+      "meter": "{{current}} з {{capacity}} {{unit}}, {{state}}",
+      "state-encumbered": "Обтяжений",
+      "state-heavy": "Сильно обтяжений",
+      "state-light": "Легке навантаження",
+      "state-loaded": "Під навантаженням",
+      "state-over": "Перевантаження"
     },
     "xp": {
       "label": "ОД",

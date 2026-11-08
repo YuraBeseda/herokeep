@@ -1,0 +1,24 @@
+<div class="hk-field">
+  <label class="hk-field__label" [for]="areaId">{{ label() }}</label>
+  <textarea
+    #field
+    class="hk-textarea"
+    [id]="areaId"
+    [rows]="rows()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    [disabled]="isDisabled()"
+    [attr.maxlength]="maxLength()"
+    [attr.aria-invalid]="error() ? 'true' : null"
+    [attr.aria-describedby]="describedBy()"
+    (input)="onInput(field.value)"
+    (blur)="onBlur()"
+  ></textarea>
+  @if (error(); as message) {
+    <span class="hk-field__msg hk-field__msg--error" [id]="messageId">
+      <hk-icon [icon]="'ui:close'" />{{ message }}
+    </span>
+  } @else if (hint(); as message) {
+    <span class="hk-field__msg" [id]="messageId">{{ message }}</span>
+  }
+</div>

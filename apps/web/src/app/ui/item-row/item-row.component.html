@@ -1,0 +1,38 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @let current = item();
+  @let sentence = this.sentence(current, t);
+  @let detailsLabel = t('ui.item.details', { name: current.name });
+  <div class="hk-item">
+    <button
+      type="button"
+      class="hk-item__select"
+      [attr.aria-pressed]="selected()"
+      [attr.aria-label]="sentence"
+      [hkTooltip]="sentence"
+      (click)="select.emit()"
+    >
+      <span class="hk-iring"><hk-icon [icon]="current.icon" /></span>
+      <span class="hk-item__name">
+        <span class="hk-item__title" [class.hk-item__title--unknown]="current.unknown">{{
+          current.name
+        }}</span>
+        @if (sub(current); as sub) {
+          <span class="hk-item__sub">{{ sub }}</span>
+        }
+      </span>
+    </button>
+    <hk-item-marks class="hk-item__marks" [item]="current" [focusable]="true" />
+    <button
+      type="button"
+      class="hk-item__details"
+      [attr.aria-label]="detailsLabel"
+      [hkTooltip]="detailsLabel"
+      (click)="details.emit()"
+    >
+      <hk-icon [icon]="'ui:details'" />
+    </button>
+  </div>
+  @if (selected()) {
+    <div class="hk-item__strip"><ng-content select="[hkItemActions]" /></div>
+  }
+</ng-container>

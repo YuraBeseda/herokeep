@@ -122,6 +122,18 @@
     "attack": {
       "roll": "Roll {{name}}"
     },
+    "coins": {
+      "cp": "{count, plural, one {# copper piece} other {# copper pieces}}",
+      "gp": "{count, plural, one {# gold piece} other {# gold pieces}}",
+      "group": "Coin pouch",
+      "pp": "{count, plural, one {# platinum piece} other {# platinum pieces}}",
+      "sp": "{count, plural, one {# silver piece} other {# silver pieces}}",
+      "total": "≈ {{amount}} gp",
+      "unit-cp": "cp",
+      "unit-gp": "gp",
+      "unit-pp": "pp",
+      "unit-sp": "sp"
+    },
     "condition": {
       "end": "End {{name}}",
       "story-duration": "{{name}}, {{duration}}",
@@ -157,9 +169,30 @@
       "press-grant": "Heroic inspiration: none. Press to mark a grant.",
       "press-spend": "Heroic inspiration: available. Press to spend it."
     },
+    "item": {
+      "attuned": "Attuned",
+      "details": "Details of {{name}}",
+      "equipped": "Equipped",
+      "equipped-mark": "E",
+      "quantity": "Quantity {{count}}",
+      "unknown": "Unknown item"
+    },
+    "number": {
+      "at-max": "{{label}} is at its maximum, {{max}}",
+      "at-min": "{{label}} is at its minimum, {{min}}",
+      "decrease": "Decrease {{label}} by {{step}}",
+      "increase": "Increase {{label}} by {{step}}"
+    },
     "options": {
       "chip": "{{count}} options",
       "see-all": "See all in library"
+    },
+    "party": {
+      "conditions": "Conditions",
+      "dying": "Dying",
+      "offline": "Offline",
+      "online": "Online",
+      "open": "Open {{name}}"
     },
     "pool": {
       "meter": "{{label}}: {{value}} of {{max}}"
@@ -168,11 +201,26 @@
       "of": "Portrait of {{name}}",
       "placeholder": "Portrait placeholder, monogram {{monogram}}"
     },
+    "satchel": {
+      "items": "Bag"
+    },
+    "search": {
+      "clear": "Clear search"
+    },
     "shield": {
       "meter": "Armor class {{value}}"
     },
     "spell": {
       "cast": "Cast {{name}}"
+    },
+    "weight": {
+      "label": "Weight carried",
+      "meter": "{{current}} of {{capacity}} {{unit}}, {{state}}",
+      "state-encumbered": "Encumbered",
+      "state-heavy": "Heavily encumbered",
+      "state-light": "Lightly loaded",
+      "state-loaded": "Carrying",
+      "state-over": "Over capacity"
     },
     "xp": {
       "label": "XP",

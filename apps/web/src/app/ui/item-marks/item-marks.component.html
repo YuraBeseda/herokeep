@@ -1,0 +1,35 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @let tab = focusable() ? 0 : null;
+  @if (item().equipped) {
+    <span
+      class="hk-tagE"
+      role="img"
+      [attr.tabindex]="tab"
+      [attr.aria-label]="t('ui.item.equipped')"
+      [hkTooltip]="t('ui.item.equipped')"
+      >{{ t('ui.item.equipped-mark') }}</span
+    >
+  }
+  @if (item().attuned) {
+    <span
+      class="hk-gem"
+      role="img"
+      [attr.tabindex]="tab"
+      [attr.aria-label]="t('ui.item.attuned')"
+      [hkTooltip]="t('ui.item.attuned')"
+    ></span>
+  }
+  @if (item().qty; as qty) {
+    @if (qty > 1) {
+      @let label = t('ui.item.quantity', { count: qty });
+      <span
+        class="hk-qty"
+        role="img"
+        [attr.tabindex]="tab"
+        [attr.aria-label]="label"
+        [hkTooltip]="label"
+        >×{{ qty }}</span
+      >
+    }
+  }
+</ng-container>

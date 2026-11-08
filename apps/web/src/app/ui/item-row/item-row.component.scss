@@ -1,0 +1,118 @@
+/* ItemRow (design-system): ring, name block, marks, 44px button; min-height 44px. */
+:host {
+  display: block;
+  border-block-end: 1px solid var(--leaf-edge);
+  color: var(--text-1);
+  font-size: 16px;
+}
+
+:host(.hk-item--selected) {
+  background: var(--leaf-sunken);
+}
+
+.hk-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto var(--control-phone);
+  gap: 10px;
+  align-items: center;
+  min-block-size: var(--control-phone);
+  padding-block: 4px;
+}
+
+.hk-item__select {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  box-sizing: border-box;
+  min-block-size: var(--control-phone);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-leaf);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-iring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--leather-highlight), var(--leather-dark) 75%);
+  box-shadow:
+    inset 0 0 0 1.5px var(--brass),
+    var(--shadow-1);
+  color: var(--brass-top);
+  font-size: 18px;
+}
+
+.hk-item__name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.hk-item__title,
+.hk-item__sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hk-item__title--unknown {
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.hk-item__sub {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.hk-item__marks {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hk-item__details {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--control-phone);
+  block-size: var(--control-phone);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-seal);
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: 22px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--leaf-sunken);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-item__strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0 8px;
+}

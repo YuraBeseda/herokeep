@@ -1,0 +1,94 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <article class="hk-party" [attr.aria-labelledby]="nameId">
+    <hk-portrait-frame [name]="name()" [src]="portraitSrc()" [size]="'s'" />
+    <div class="hk-party__who">
+      <div class="hk-party__name">
+        <span class="hk-party__name-text" [id]="nameId" [hkTooltip]="name()">{{ name() }}</span>
+        @if (concentrating()) {
+          <span
+            class="hk-party__orb"
+            role="img"
+            tabindex="0"
+            [attr.aria-label]="t('icon.concentration')"
+            [hkTooltip]="t('icon.concentration')"
+          >
+            <hk-icon [icon]="'ui:concentration'" />
+          </span>
+        }
+      </div>
+      <div class="hk-party__line">
+        <span class="hk-party__sub" [hkTooltip]="subtitle()">{{ subtitle() }}</span>
+        @if (online() !== null) {
+          <span class="hk-party__presence" [class.hk-party__presence--online]="online()">{{
+            online() ? t('ui.party.online') : t('ui.party.offline')
+          }}</span>
+        }
+      </div>
+    </div>
+    <div class="hk-party__side">
+      <hk-shield-badge [value]="ac()" [size]="'s'" />
+      <button
+        type="button"
+        class="hk-party__open"
+        [attr.aria-label]="t('ui.party.open', { name: name() })"
+        [hkTooltip]="t('ui.party.open', { name: name() })"
+        (click)="open.emit()"
+      >
+        <hk-icon [icon]="'ui:details'" />
+      </button>
+    </div>
+    <div class="hk-party__hp">
+      <span class="hk-party__hp-num" [class.hk-party__hp-num--dying]="dying()"
+        ><b>{{ hpCurrent() }}</b> / {{ hpMax() }}</span
+      >
+      <div
+        class="hk-gauge"
+        role="meter"
+        aria-valuemin="0"
+        [attr.aria-valuemax]="rangeMax()"
+        [attr.aria-valuenow]="now()"
+        [attr.aria-valuetext]="
+          hpTemp() > 0
+            ? t('ui.hp.meter-temp', { current: hpCurrent(), max: hpMax(), temp: hpTemp() })
+            : t('ui.hp.meter', { current: hpCurrent(), max: hpMax() })
+        "
+      >
+        <div class="hk-gauge__hp" [style.width.%]="hpWidth()"></div>
+        <div class="hk-gauge__temp" [style.width.%]="tempWidth()"></div>
+      </div>
+      @if (dying()) {
+        <span
+          class="hk-party__dying"
+          tabindex="0"
+          [hkTooltip]="dyingHint() ?? t('ui.party.dying')"
+          >{{ t('ui.party.dying') }}</span
+        >
+      }
+    </div>
+    @if (showChips()) {
+      <div class="hk-party__chips" role="group" [attr.aria-label]="t('ui.party.conditions')">
+        @for (condition of conditions(); track condition.id) {
+          <hk-condition-chip
+            [name]="condition.name"
+            [icon]="condition.icon ?? 'ui:condition'"
+            [level]="condition.level ?? null"
+            [duration]="condition.duration ?? null"
+            [hint]="condition.hint ?? null"
+          />
+        }
+        @if (inspiration()) {
+          <span
+            class="hk-party__inspiration"
+            role="img"
+            tabindex="0"
+            [attr.aria-label]="t('icon.inspiration')"
+            [hkTooltip]="t('icon.inspiration')"
+          >
+            <hk-icon [icon]="'ui:inspiration'" />
+          </span>
+        }
+      </div>
+    }
+    <div class="hk-party__fx"><ng-content select="[hkPartyFx]" /></div>
+  </article>
+</ng-container>

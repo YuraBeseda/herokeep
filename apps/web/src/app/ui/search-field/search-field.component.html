@@ -1,0 +1,27 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <label class="hk-search" [class.hk-search--leather]="variant() === 'leather'">
+    <hk-icon [icon]="'ui:search'" />
+    <span class="hk-visually-hidden">{{ label() }}</span>
+    <input
+      #field
+      class="hk-search__in"
+      type="search"
+      autocomplete="off"
+      [placeholder]="placeholder()"
+      [value]="draft()"
+      (input)="onInput(field.value)"
+      (keydown.escape)="onEscape($event)"
+    />
+    @if (draft() !== '') {
+      <button
+        type="button"
+        class="hk-search__clear"
+        [attr.aria-label]="t('ui.search.clear')"
+        [hkTooltip]="t('ui.search.clear')"
+        (click)="clear(); field.focus()"
+      >
+        <hk-icon [icon]="'ui:close'" />
+      </button>
+    }
+  </label>
+</ng-container>

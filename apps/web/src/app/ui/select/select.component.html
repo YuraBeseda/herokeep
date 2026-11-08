@@ -1,0 +1,36 @@
+<div class="hk-field">
+  <label class="hk-field__label" [for]="selectId">{{ label() }}</label>
+  <span class="hk-select__wrap">
+    <select
+      #field
+      class="hk-select__in"
+      [id]="selectId"
+      [disabled]="isDisabled()"
+      [attr.aria-invalid]="error() ? 'true' : null"
+      [attr.aria-describedby]="describedBy()"
+      (change)="onChange(field)"
+      (blur)="onBlur()"
+    >
+      @if (placeholder(); as text) {
+        <option value="" disabled [selected]="value() === null">{{ text }}</option>
+      }
+      @for (option of options(); track option.value) {
+        <option
+          [value]="option.value"
+          [disabled]="option.disabled ?? false"
+          [selected]="option.value === value()"
+        >
+          {{ option.label }}
+        </option>
+      }
+    </select>
+    <span class="hk-select__chevron" aria-hidden="true"></span>
+  </span>
+  @if (error(); as message) {
+    <span class="hk-field__msg hk-field__msg--error" [id]="messageId">
+      <hk-icon [icon]="'ui:close'" />{{ message }}
+    </span>
+  } @else if (hint(); as message) {
+    <span class="hk-field__msg" [id]="messageId">{{ message }}</span>
+  }
+</div>

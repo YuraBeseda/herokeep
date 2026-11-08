@@ -1,0 +1,34 @@
+@use 'field';
+
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.hk-field {
+  @include field.field;
+}
+
+.hk-field__label {
+  @include field.label;
+}
+
+.hk-field__msg {
+  @include field.message;
+}
+
+.hk-field__msg--error {
+  @include field.message-error;
+}
+
+.hk-textarea {
+  @include field.input-frame;
+
+  inline-size: 100%;
+  padding-block: 8px;
+  line-height: 1.4;
+  resize: vertical;
+  /* Grows with its text up to 6 lines where supported; otherwise the user resizes it. */
+  field-sizing: content;
+  max-block-size: calc(6lh + 18px);
+}

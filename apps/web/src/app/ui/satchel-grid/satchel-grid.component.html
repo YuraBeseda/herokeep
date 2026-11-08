@@ -1,0 +1,34 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <ul class="hk-satchel__grid" role="list" [attr.aria-label]="t('ui.satchel.items')">
+    @for (item of items(); track item.id) {
+      @let sentence = this.sentence(item, t);
+      <li>
+        <button
+          type="button"
+          class="hk-slot"
+          [class.hk-slot--on]="item.id === selectedId()"
+          [class.hk-slot--rarity]="!!item.rarity"
+          [style.--rim]="rim(item)"
+          [attr.aria-pressed]="item.id === selectedId()"
+          [attr.aria-label]="sentence"
+          [hkTooltip]="sentence"
+          (click)="select.emit(item.id)"
+        >
+          <span class="hk-slot__ico"><hk-icon [icon]="item.icon" /></span>
+          <span class="hk-slot__cap" [class.hk-slot__cap--unknown]="item.unknown">{{
+            item.name
+          }}</span>
+          @if (sub(item); as sub) {
+            <span class="hk-slot__sub" [class.hk-slot__sub--depleted]="item.depleted">{{
+              sub
+            }}</span>
+          }
+          <hk-item-marks [item]="item" [layout]="'corner'" />
+        </button>
+      </li>
+    }
+    @for (slot of emptySlots(); track slot) {
+      <li class="hk-slot hk-slot--empty" aria-hidden="true"></li>
+    }
+  </ul>
+</ng-container>

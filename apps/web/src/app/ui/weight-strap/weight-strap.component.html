@@ -1,0 +1,31 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @let word = t('ui.weight.state-' + state());
+  @let numbers = { current: current(), capacity: capacity(), unit: unit() };
+  <div class="hk-weight__head">
+    <span class="hk-weight__label"><hk-icon [icon]="'ui:weight'" />{{ t('ui.weight.label') }}</span>
+    <span
+      class="hk-weight__chip"
+      [class]="'hk-weight__chip hk-weight__chip--' + state()"
+      tabindex="0"
+      [hkTooltip]="stateHint() ?? word"
+    >
+      <hk-icon [icon]="'ui:weight'" />{{ word }}
+    </span>
+  </div>
+  <div
+    class="hk-gauge"
+    role="img"
+    [attr.aria-label]="
+      t('ui.weight.meter', { current: current(), capacity: capacity(), unit: unit(), state: word })
+    "
+  >
+    <div
+      class="hk-weight__fill"
+      [class]="'hk-weight__fill hk-weight__fill--' + state()"
+      [style.width.%]="fillWidth()"
+    ></div>
+  </div>
+  <span class="hk-weight__numeral" [class.hk-weight__numeral--over]="state() === 'over'"
+    >{{ numbers.current }} / {{ numbers.capacity }} {{ numbers.unit }}</span
+  >
+</ng-container>

@@ -1,0 +1,132 @@
+/* SatchelGrid (design-system): 4 columns on a recess floor, leather slots. */
+:host {
+  display: block;
+}
+
+.hk-satchel__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 8px;
+  border-radius: var(--radius-leaf);
+  background: var(--recess);
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--border-brass);
+  list-style: none;
+}
+
+li {
+  display: flex;
+  min-inline-size: 0;
+}
+
+.hk-slot {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 90px;
+  padding: 8px 5px 5px;
+  border: 0;
+  border-radius: var(--radius-slot);
+  background: linear-gradient(180deg, var(--slot), var(--slot-bottom));
+  box-shadow: var(--shadow-inset-slot);
+  color: var(--text-on-leather);
+  font-family: var(--font-body);
+  text-align: center;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-slot--on {
+  box-shadow:
+    var(--shadow-inset-slot),
+    0 0 0 2px var(--brass),
+    var(--shadow-glow-brass);
+}
+
+.hk-slot--rarity {
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 2px var(--rim);
+}
+
+.hk-slot--rarity.hk-slot--on {
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 2px var(--rim),
+    0 0 0 2px var(--brass),
+    var(--shadow-glow-brass);
+}
+
+.hk-slot--empty {
+  min-block-size: 90px;
+  border-radius: var(--radius-slot);
+  background: var(--recess);
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  cursor: default;
+}
+
+.hk-slot__ico {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--leather), var(--ground) 75%);
+  box-shadow:
+    inset 0 0 0 1.5px var(--brass),
+    var(--shadow-1);
+  color: var(--text-on-leather-2);
+  font-size: 18px;
+}
+
+.hk-slot__cap,
+.hk-slot__sub {
+  display: -webkit-box;
+  inline-size: 100%;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.hk-slot__cap {
+  color: var(--text-on-leather);
+}
+
+.hk-slot__cap--unknown {
+  font-style: italic;
+}
+
+.hk-slot__sub {
+  color: var(--text-on-leather-3);
+}
+
+.hk-slot__sub--depleted {
+  color: var(--danger-on-leather);
+}
+
+/* Tablets: three columns. */
+@media (width <= 1023px) {
+  .hk-satchel__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

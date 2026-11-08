@@ -1,0 +1,44 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <div class="hk-pouch" role="group" [attr.aria-label]="t('ui.coins.group')">
+    <svg class="hk-pouch__bag" viewBox="0 0 44 48" aria-hidden="true">
+      <path
+        class="hk-pouch__body"
+        d="M12 14 C4 22 2 34 6 41 C9 46 35 46 38 41 C42 34 40 22 32 14 Z"
+      />
+      <path class="hk-pouch__neck" d="M14 14 Q22 19 30 14 L28 9 Q22 12 16 9 Z" />
+      <path class="hk-pouch__string" d="M13 12 Q22 18 31 12" />
+      <path class="hk-pouch__tuft" d="M16 9 Q22 2 28 9 Q22 7 16 9 Z" />
+    </svg>
+    @for (metal of metals; track metal) {
+      @let count = coins()[metal];
+      <div class="hk-coinstack" role="img" [attr.aria-label]="t('ui.coins.' + metal, { count })">
+        <svg class="hk-coinstack__discs" viewBox="0 0 28 28" aria-hidden="true">
+          @for (cy of rows; track cy; let i = $index) {
+            <ellipse
+              cx="14"
+              [attr.cy]="cy"
+              rx="11"
+              ry="3.4"
+              [style.fill]="i % 2 === 0 ? disc[metal].shade : disc[metal].top"
+            />
+          }
+        </svg>
+        <span class="hk-num">{{ count }}</span>
+        <small>{{ t('ui.coins.unit-' + metal) }}</small>
+      </div>
+    }
+    @if (total() !== null) {
+      <span class="hk-pouch__total">{{ t('ui.coins.total', { amount: total() }) }}</span>
+    }
+    @if (editable()) {
+      <button
+        hk-icon-button
+        class="hk-pouch__edit"
+        type="button"
+        [icon]="'edit'"
+        [hint]="'shell.icon.edit'"
+        (click)="edit.emit()"
+      ></button>
+    }
+  </div>
+</ng-container>

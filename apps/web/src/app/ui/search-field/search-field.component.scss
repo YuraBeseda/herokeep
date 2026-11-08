@@ -1,0 +1,120 @@
+@use 'field';
+
+/* SearchField (design-system): 36px pill on leaf-glow with an accent hairline. */
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.hk-visually-hidden {
+  @include field.visually-hidden;
+}
+
+.hk-search {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  block-size: 36px;
+  padding: 0 8px 0 10px;
+  border-radius: var(--radius-seal);
+  background: var(--leaf-glow);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-strong),
+    var(--shadow-inset-slot);
+  color: var(--text-1);
+
+  > hk-icon {
+    flex: none;
+    color: var(--accent-strong);
+    font-size: 18px;
+  }
+
+  &:focus-within {
+    @include field.focus-ring;
+  }
+}
+
+.hk-search__in {
+  flex: 1 1 auto;
+  block-size: 100%;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 16px;
+  text-overflow: ellipsis;
+
+  &::placeholder {
+    color: var(--text-3);
+    font-style: italic;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.hk-search__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-seal);
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--leaf-sunken);
+  }
+
+  &:focus-visible {
+    @include field.focus-ring;
+  }
+}
+
+.hk-search--leather {
+  background: var(--recess);
+  box-shadow:
+    inset 0 0 0 1px var(--border-brass),
+    var(--shadow-inset-slot);
+  color: var(--text-on-leather);
+
+  > hk-icon,
+  .hk-search__clear {
+    color: var(--brass);
+  }
+
+  .hk-search__in {
+    color: var(--text-on-leather);
+
+    &::placeholder {
+      color: var(--text-on-leather-3);
+    }
+  }
+
+  .hk-search__clear:hover {
+    background: var(--chip-dark);
+  }
+}
+
+@media (pointer: coarse) {
+  .hk-search {
+    block-size: var(--control-phone);
+  }
+
+  .hk-search__clear {
+    inline-size: var(--control-phone);
+    block-size: var(--control-phone);
+    margin-inline-end: -8px;
+  }
+}

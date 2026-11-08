@@ -1,0 +1,99 @@
+/* CoinPouch (design-system): a leather strip with a pouch, four coin stacks, the total, edit. */
+:host {
+  display: block;
+}
+
+.hk-pouch {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: var(--radius-leaf);
+  background: linear-gradient(
+    180deg,
+    var(--leather-highlight),
+    var(--leather) 50%,
+    var(--leather-dark)
+  );
+  box-shadow: var(--shadow-raised);
+  color: var(--text-on-leather);
+  outline: 1px dashed var(--stitch);
+  outline-offset: -6px;
+}
+
+.hk-pouch__bag {
+  flex: none;
+  inline-size: 44px;
+  block-size: 48px;
+}
+
+.hk-pouch__body {
+  fill: var(--leather-light);
+  stroke: var(--leather-edge);
+  stroke-width: 1.2;
+}
+
+.hk-pouch__neck {
+  fill: var(--leather-highlight);
+  stroke: var(--leather-edge);
+  stroke-width: 1;
+}
+
+.hk-pouch__string {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.hk-pouch__tuft {
+  fill: var(--leather-light);
+  stroke: var(--leather-edge);
+  stroke-width: 0.8;
+}
+
+.hk-coinstack {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  min-inline-size: 36px;
+}
+
+.hk-coinstack__discs {
+  inline-size: 28px;
+  block-size: 28px;
+  stroke: var(--leather-edge);
+  stroke-width: 0.6;
+}
+
+.hk-num {
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+small {
+  color: var(--text-on-leather-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.hk-pouch__total {
+  color: var(--brass-top);
+  font-family: var(--font-display);
+  font-size: 19px;
+  white-space: nowrap;
+}
+
+.hk-pouch__edit {
+  flex: none;
+  margin-inline-start: auto;
+}

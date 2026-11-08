@@ -1,0 +1,18 @@
+<button
+  type="button"
+  class="hk-toggle"
+  role="switch"
+  [attr.aria-checked]="value()"
+  [attr.aria-describedby]="description() ? noteId : null"
+  [disabled]="isDisabled()"
+  (click)="flip()"
+  (blur)="onBlur()"
+>
+  <span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span>
+  <span class="hk-toggle__text">
+    <span class="hk-toggle__label">{{ label() }}</span>
+    @if (description(); as note) {
+      <span class="hk-toggle__note" [id]="noteId">{{ note }}</span>
+    }
+  </span>
+</button>
