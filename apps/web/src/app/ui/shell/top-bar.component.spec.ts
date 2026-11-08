@@ -3,9 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthService } from '@shared/services/auth/auth.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
-import { press } from '../testing/harness';
+import { hintOf, press } from '../testing/harness';
 import { provideShellTransloco } from '../testing/transloco-testing';
 import { HkTopBarComponent } from './top-bar.component';
+import { TopBarService, type TopBarAction } from './top-bar.service';
 
 @Component({ template: '' })
 class Stub {}
@@ -56,11 +57,55 @@ describe('HkTopBarComponent', () => {
     expect(drawer(el)).toBeNull();
   });
 
-  it('gives an ellipsised title its full text as a hint', async () => {
-    const { el } = await setup();
-    expect(el.querySelector('.hk-topbar__title')!.getAttribute('aria-label')).toBeNull();
-    // The title is a heading-less paragraph; the full text is the tooltip source.
-    expect(el.querySelector('.hk-topbar__title')!.hasAttribute('aria-describedby')).toBe(true);
+  it('gives an ellipsised title its full text as the hint text', async () => {
+    const { fixture, el } = await setup();
+    const long = 'Aldric Stormwind the Unyielding, Warden of the Salt Marches';
+    fixture.componentRef.setInput('title', long);
+    await fixture.whenStable();
+    expect(hintOf(el.querySelector('.hk-topbar__title')!)).toBe(long);
+  });
+
+  describe('context action', () => {
+    const action = (over: Partial<TopBarAction> = {}): TopBarAction => ({
+      id: 'edit',
+      label: 'shell.icon.edit',
+      icon: 'edit',
+      run: vi.fn(),
+      ...over,
+    });
+    const actionButton = (el: HTMLElement) =>
+      el.querySelector<HTMLButtonElement>('.hk-topbar__action button');
+
+    it('renders no button until a screen sets one', async () => {
+      const { el } = await setup();
+      expect(actionButton(el)).toBeNull();
+    });
+
+    it('renders the action as a labelled icon button with a hint, and runs it on a real press', async () => {
+      const { fixture, el } = await setup();
+      const edit = action();
+      TestBed.inject(TopBarService).set({ action: edit });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const button = actionButton(el)!;
+      expect(button.getAttribute('aria-label')).toBe('Edit');
+      expect(hintOf(button)).toBe('Edit');
+      press(button);
+      expect(edit.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables a disabled action and clear removes it', async () => {
+      const { fixture, el } = await setup();
+      const service = TestBed.inject(TopBarService);
+      service.set({ action: action({ disabled: true }) });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(actionButton(el)!.disabled).toBe(true);
+      service.clear();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(actionButton(el)).toBeNull();
+    });
   });
 
   describe('drawer', () => {

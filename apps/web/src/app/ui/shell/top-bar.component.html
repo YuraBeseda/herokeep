@@ -16,7 +16,19 @@
       <hk-icon [icon]="open() ? 'ui:close' : 'ui:library'" />
     </button>
     <p class="hk-topbar__title" [hkTooltip]="title()">{{ title() }}</p>
-    <span class="hk-topbar__action"></span>
+    <span class="hk-topbar__action">
+      @if (action(); as act) {
+        <button
+          type="button"
+          hk-icon-button
+          [icon]="act.icon"
+          [hint]="act.label"
+          [size]="'l'"
+          [disabled]="!!act.disabled"
+          (click)="act.run()"
+        ></button>
+      }
+    </span>
   </header>
   @if (open()) {
     <hk-app-drawer (keydown.escape)="close(true)" (navigated)="close(false)" />

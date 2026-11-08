@@ -2,7 +2,9 @@
   <hk-textures />
   @if (phone()) {
     @let sectionNow = section();
-    <hk-top-bar [title]="sectionNow ? t(nameKey(sectionNow)) : t('app.title')" />
+    <hk-top-bar
+      [title]="topBar.config()?.title ?? (sectionNow ? t(nameKey(sectionNow)) : t('app.title'))"
+    />
   } @else {
     <hk-nav-rail />
   }

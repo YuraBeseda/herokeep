@@ -1,8 +1,19 @@
-import { Component, effect, input, signal, viewChild, type ElementRef } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+  type ElementRef,
+} from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
+import { HkIconButtonComponent } from '../icon-button/icon-button.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import { HkAppDrawerComponent } from './app-drawer.component';
+import { TopBarService } from './top-bar.service';
 
 /**
  * `hk-top-bar` — the phone's slim leather bar (design-system NavRail phone form, board
@@ -15,7 +26,13 @@ import { HkAppDrawerComponent } from './app-drawer.component';
  */
 @Component({
   selector: 'hk-top-bar',
-  imports: [TranslocoDirective, IconComponent, HkTooltipDirective, HkAppDrawerComponent],
+  imports: [
+    TranslocoDirective,
+    IconComponent,
+    HkIconButtonComponent,
+    HkTooltipDirective,
+    HkAppDrawerComponent,
+  ],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './top-bar.component.html',
   styleUrl: './top-bar.component.scss',
@@ -27,6 +44,8 @@ export class HkTopBarComponent {
   /** Already-translated screen title; long titles ellipsise with the full text as a hint. */
   readonly title = input.required<string>();
 
+  private readonly topBar = inject(TopBarService);
+  protected readonly action = computed(() => this.topBar.config()?.action);
   protected readonly open = signal(false);
 
   constructor() {

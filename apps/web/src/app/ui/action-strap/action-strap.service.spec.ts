@@ -18,6 +18,8 @@ async function setup(guard?: () => boolean) {
       provideRouter([
         { path: 'a', component: Stub },
         { path: 'b', component: Stub },
+        { path: 'c/:id/:tab', component: Stub },
+        { path: 'library', component: Stub },
         { path: 'guarded', component: Stub, canActivate: [guard ?? (() => false)] },
       ]),
     ],
@@ -73,5 +75,43 @@ describe('ActionStrapService', () => {
     service.set(config);
     await router.navigateByUrl('/guarded');
     expect(service.config()).toBe(config);
+  });
+
+  describe('with a scope', () => {
+    const scoped = (): StrapConfig => ({ ...config, scope: ['/c', '1'] });
+
+    it('survives navigation between tabs inside the scope', async () => {
+      const { router, service } = await setup();
+      await router.navigateByUrl('/c/1/play');
+      const cfg = scoped();
+      service.set(cfg);
+      await router.navigateByUrl('/c/1/spells');
+      expect(service.config()).toBe(cfg);
+    });
+
+    it('is cleared when navigation leaves the scope', async () => {
+      const { router, service } = await setup();
+      await router.navigateByUrl('/c/1/play');
+      service.set(scoped());
+      await router.navigateByUrl('/library');
+      expect(service.config()).toBeNull();
+    });
+
+    it('does not treat another hero sharing a prefix string as inside the scope', async () => {
+      const { router, service } = await setup();
+      await router.navigateByUrl('/c/1/play');
+      service.set(scoped());
+      await router.navigateByUrl('/c/12/play');
+      expect(service.config()).toBeNull();
+    });
+
+    it('still restores the strap when a navigation out of the scope is refused', async () => {
+      const { router, service } = await setup();
+      await router.navigateByUrl('/c/1/play');
+      const cfg = scoped();
+      service.set(cfg);
+      await router.navigateByUrl('/guarded');
+      expect(service.config()).toBe(cfg);
+    });
   });
 });

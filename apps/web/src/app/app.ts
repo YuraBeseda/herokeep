@@ -14,6 +14,7 @@ import { currentSection } from './ui/shell/current-section';
 import { sectionNameKey } from './ui/shell/sections';
 import { HkNavRailComponent } from './ui/shell/nav-rail.component';
 import { HkTopBarComponent } from './ui/shell/top-bar.component';
+import { TopBarService } from './ui/shell/top-bar.service';
 import { phoneLayout } from './ui/shell/viewport';
 import { HkTabBarComponent } from './ui/tab-bar/tab-bar.component';
 import { HkTexturesComponent } from './ui/textures/textures.component';
@@ -47,6 +48,7 @@ export class App {
   // router outlet with an actionable retry state instead of leaving a blank screen when the
   // core-pack fetch fails (a rejected `init()` used to leave `bootstrapApplication` unresolved).
   protected readonly packStore = inject(PackStore);
+  protected readonly topBar = inject(TopBarService);
   private readonly router = inject(Router);
   private readonly reload = inject(WINDOW_RELOAD);
   private readonly navHistory = inject(NavHistoryService);

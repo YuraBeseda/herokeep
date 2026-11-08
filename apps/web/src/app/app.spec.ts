@@ -8,6 +8,7 @@ import { App } from './app';
 import { NavHistoryService } from './ui/nav/nav-history.service';
 import { ShellCampaignContext } from './ui/shell/campaign-context.service';
 import { provideShellTransloco } from './ui/testing/transloco-testing';
+import { TopBarService } from './ui/shell/top-bar.service';
 import { stubViewport } from './ui/testing/viewport';
 
 @Component({ template: '' })
@@ -189,6 +190,28 @@ describe('App', () => {
       expect(compiled.querySelector('hk-nav-rail')).toBeNull();
       expect(compiled.querySelector('hk-top-bar')).toBeTruthy();
       expect(compiled.querySelector('.hk-topbar__title')?.textContent?.trim()).toBe('Library');
+      vi.unstubAllGlobals();
+    });
+
+    it('shows the title a screen sets on the top bar instead of the section name, and the section again after clear', async () => {
+      stubViewport({ phone: true, coarse: true });
+      const fixture = TestBed.createComponent(App);
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/library');
+      await fixture.whenStable();
+      const service = TestBed.inject(TopBarService);
+      service.set({ title: 'Aldric', scope: ['/library'] });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const title = () =>
+        (fixture.nativeElement as HTMLElement)
+          .querySelector('.hk-topbar__title')
+          ?.textContent?.trim();
+      expect(title()).toBe('Aldric');
+      service.clear();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(title()).toBe('Library');
       vi.unstubAllGlobals();
     });
 
