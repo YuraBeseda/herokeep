@@ -2,7 +2,7 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
-import { DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { InstallPromptService } from '@shared/services/pwa/install-prompt.service';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 

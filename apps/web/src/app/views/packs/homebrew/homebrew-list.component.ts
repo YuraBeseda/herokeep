@@ -4,7 +4,7 @@ import { parseEntityId, type Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
-import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { HomebrewService } from '@shared/services/packs/homebrew.service';
 import { HOMEBREW_FORM_TYPES, type HomebrewFormType } from './entity-form.helpers';

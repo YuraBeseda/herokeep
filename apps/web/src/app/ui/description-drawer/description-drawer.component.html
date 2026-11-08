@@ -1,0 +1,32 @@
+<hk-drawer
+  *transloco="let t; read: 'library'"
+  [open]="open()"
+  (openChange)="open.set($event)"
+  [heading]="name()"
+  [opener]="opener()"
+>
+  @if (resolved(); as current) {
+    <div class="hk-description">
+      <div class="hk-description__meta">
+        <hk-tag-chip class="hk-description__type" [label]="t('type.' + current.type)" />
+      </div>
+      <app-entity-facts [entity]="current" />
+      <div #bodyContainer class="hk-description__body">
+        @for (section of body.value(); track $index) {
+          <section class="hk-description__section">
+            @if (section.name) {
+              <h3 class="hk-description__feature">{{ section.name }}</h3>
+            }
+            <div [innerHTML]="section.html"></div>
+          </section>
+        }
+      </div>
+      <a class="hk-description__open" [routerLink]="['/library', current.id]">{{
+        t('detail.open-entry')
+      }}</a>
+    </div>
+  } @else if (ready()) {
+    <p class="hk-description__not-found">{{ t('detail.not-found') }}</p>
+  }
+  <ng-content select="[hkDrawerAction]" ngProjectAs="[hkDrawerAction]" />
+</hk-drawer>

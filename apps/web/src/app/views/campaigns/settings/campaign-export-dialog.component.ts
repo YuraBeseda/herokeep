@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
 import { CampaignWriterService } from '@shared/services/export/campaign-writer.service';

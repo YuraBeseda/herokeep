@@ -5,7 +5,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import type { Event } from '@hk/protocol';
 import type { DraftEvent } from '@shared/stores/character.store';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import type { AuthUser } from '@shared/services/auth/auth.service';
 import { AuthService } from '@shared/services/auth/auth.service';
 import { CampaignStore } from '@shared/stores/campaign.store';

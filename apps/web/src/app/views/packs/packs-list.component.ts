@@ -5,7 +5,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { HkpackReader } from '@shared/services/packs/hkpack-reader.service';
 import { HomebrewIdService, isHomebrewPackId } from '@shared/services/packs/homebrew-id';

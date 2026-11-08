@@ -2,7 +2,7 @@ import { Component, Directive, inject, input } from '@angular/core';
 import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '../components/button/button.component';
-import { DIALOG_DATA, DialogRef, DialogService } from '../components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { EngineFacade } from '../services/engine/engine.facade';
 
 // `@hk/engine`'s barrel only re-exports `Sheet` itself (see `derive/index.ts`) — `Derived`/

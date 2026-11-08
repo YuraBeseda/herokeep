@@ -24,7 +24,8 @@
   },
   "detail": {
     "back": "Back to library",
-    "not-found": "This entry could not be found."
+    "not-found": "This entry could not be found.",
+    "open-entry": "Open entry"
   },
   "fact": {
     "level": "Level",

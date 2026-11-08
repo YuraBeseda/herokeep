@@ -9,7 +9,7 @@ import { parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of, Subject } from 'rxjs';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';

@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { TabBarService } from '../../../ui/tab-bar/tab-bar.service';
+import { stubViewport } from '../../../ui/testing/viewport';
 import { ToastService } from './toast.service';
 
 class StubLoader implements TranslocoLoader {
@@ -90,5 +93,56 @@ describe('ToastService', () => {
     vi.advanceTimersByTime(4000);
     TestBed.tick();
     expect(document.querySelectorAll('.hk-toast')).toHaveLength(0);
+  });
+
+  it('renders each toast through the presentational hk-toast slip', () => {
+    service.show('toast.saved');
+    TestBed.tick();
+
+    const slip = document.querySelector('.cdk-overlay-container hk-toast-host hk-toast .hk-toast');
+    expect(slip?.textContent).toContain('Saved successfully');
+    expect(slip?.getAttribute('role')).toBe('status');
+  });
+
+  const hostOf = () => document.querySelector('.cdk-overlay-container hk-toast-host')!;
+  const strapAction = {
+    id: 'roll',
+    label: 'toast.saved',
+    icon: 'roll',
+    kind: 'primary',
+    run: () => undefined,
+  } as const;
+
+  it('reserves no strap height while no strap is set', () => {
+    service.show('toast.saved');
+    TestBed.tick();
+    expect(hostOf().classList.contains('hk-toast-host--strap')).toBe(false);
+    expect(hostOf().classList.contains('hk-toast-host--tabs')).toBe(false);
+  });
+
+  it('lifts the toasts above the strap while one is set, and drops them when it clears', () => {
+    const strap = TestBed.inject(ActionStrapService);
+    strap.set({ primary: [strapAction] });
+    service.show('toast.saved');
+    TestBed.tick();
+    expect(hostOf().classList.contains('hk-toast-host--strap')).toBe(true);
+
+    strap.clear();
+    TestBed.tick();
+    expect(hostOf().classList.contains('hk-toast-host--strap')).toBe(false);
+  });
+
+  it('also clears the phone tab bar when tabs are set on a phone', () => {
+    stubViewport({ phone: true });
+    try {
+      TestBed.inject(TabBarService).set([
+        { id: 'play', label: 'toast.saved', icon: 'play', route: ['/c', '1', 'play'] },
+      ]);
+      service.show('toast.saved');
+      TestBed.tick();
+      expect(hostOf().classList.contains('hk-toast-host--tabs')).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

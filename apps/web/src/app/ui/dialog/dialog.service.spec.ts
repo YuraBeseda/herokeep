@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { stubViewport } from '../testing/viewport';
 import { DIALOG_DATA, DialogRef, DialogService } from './dialog.service';
 
 @Component({
@@ -157,6 +158,48 @@ describe('DialogService', () => {
     const shell = document.querySelector('hk-dialog');
     expect(shell?.classList.contains('hk-dialog--sheet')).toBe(false);
 
+    handle.close();
+  });
+
+  it('becomes a bottom sheet with a grip on a phone-width viewport, without being asked', () => {
+    stubViewport({ phone: true });
+    try {
+      const handle = service.open(TestDialogContentComponent);
+      TestBed.tick();
+
+      const shell = document.querySelector('hk-dialog');
+      expect(shell?.classList.contains('hk-dialog--sheet')).toBe(true);
+      expect(shell?.querySelector('.hk-dialog__grip')).not.toBeNull();
+      const pane = document.querySelector<HTMLElement>('.cdk-global-overlay-wrapper')!;
+      expect(pane.style.alignItems).toBe('flex-end');
+      handle.close();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('stays a centred parchment dialog on a desktop viewport, with no grip', () => {
+    stubViewport({ phone: false });
+    try {
+      const handle = service.open(TestDialogContentComponent);
+      TestBed.tick();
+
+      const shell = document.querySelector('hk-dialog');
+      expect(shell?.classList.contains('hk-dialog--sheet')).toBe(false);
+      expect(shell?.querySelector('.hk-dialog__grip')).toBeNull();
+      handle.close();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('creates the content in the HTML namespace, not inside the texture svg', () => {
+    const handle = service.open(TestTitledDialogContentComponent);
+    TestBed.tick();
+
+    const host = document.querySelector('app-test-titled-dialog-content')!;
+    expect(host.namespaceURI).toBe('http://www.w3.org/1999/xhtml');
+    expect(document.querySelector('hk-dialog svg.hk-tex')).not.toBeNull();
     handle.close();
   });
 

@@ -1,6 +1,7 @@
 import { Injectable, InjectionToken, Injector, type Type, inject } from '@angular/core';
 import { Overlay } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { PHONE_QUERY } from '../shell/viewport';
 import { DialogComponent } from './dialog.component';
 
 /** Injection token the component `DialogService.open()` opens can read its `data` from. */
@@ -58,7 +59,12 @@ export class DialogService {
   open<T>(component: Type<T>, opts?: DialogOptions): DialogHandle {
     const previouslyFocused = document.activeElement as HTMLElement | null;
 
-    const positionStrategy = opts?.sheet
+    // Design system: on a phone every dialog is a bottom sheet (44 px controls), whether or not
+    // the caller asked for one. Read once at open — a dialog does not reflow if the window resizes.
+    const asSheet =
+      !!opts?.sheet || (typeof matchMedia === 'function' && matchMedia(PHONE_QUERY).matches);
+
+    const positionStrategy = asSheet
       ? this.overlay.position().global().centerHorizontally().bottom('0')
       : this.overlay.position().global().centerHorizontally().centerVertically();
 
@@ -67,7 +73,7 @@ export class DialogService {
       scrollStrategy: this.overlay.scrollStrategies.block(),
       hasBackdrop: true,
       backdropClass: 'hk-overlay-backdrop',
-      width: opts?.sheet ? '100%' : undefined,
+      width: asSheet ? '100%' : undefined,
     });
 
     let resolveClosed!: (result: unknown) => void;
@@ -104,7 +110,7 @@ export class DialogService {
 
     const shellRef = overlayRef.attach(new ComponentPortal(DialogComponent));
     shellRef.setInput('contentPortal', contentPortal);
-    shellRef.setInput('sheet', !!opts?.sheet);
+    shellRef.setInput('sheet', asSheet);
     shellRef.setInput('ariaLabel', opts?.ariaLabel);
 
     overlayRef.backdropClick().subscribe(() => {

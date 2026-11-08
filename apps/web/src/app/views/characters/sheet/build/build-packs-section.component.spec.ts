@@ -14,7 +14,7 @@ import { parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import {
   RebaseReportDialogComponent,
   type RebaseReportDialogData,

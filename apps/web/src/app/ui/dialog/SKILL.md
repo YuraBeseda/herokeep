@@ -2,8 +2,11 @@
 
 `DialogService` (root-provided) opens any standalone component into a CDK overlay,
 wrapped in an `hk-dialog` shell that supplies the surface styling, backdrop, and focus
-trap. Centered modal by default; pass `{ sheet: true }` for a full-width bottom sheet
-(same overlay, different position/sizing — not a separate component).
+trap. Centered parchment modal by default; pass `{ sheet: true }` for a full-width bottom sheet
+(same overlay, different position/sizing — not a separate component). On a phone-width viewport
+(< 768 px, read when `open()` is called) EVERY dialog is a bottom sheet with a grip, asked for or not.
+
+Import it as `@app/ui/dialog/dialog.service` (moved here from the old shared components folder, plan 17 B6).
 
 ## Usage
 
@@ -47,3 +50,13 @@ Do keep the opened component "component-only" — there is no templates-as-conte
 design; if you need one-off markup, wrap it in a tiny component. Don't assume `closed`
 resolves with a specific shape — it's whatever `close(result)` was called with, `undefined`
 for ESC/backdrop dismissal.
+
+## Chrome hooks
+
+The shell paints the parchment surface; the opened component opts into two more pieces of chrome
+with plain data attributes (no directive — the content is portal-attached, see `dialog.component.ts`):
+
+- `data-dialog-title` on the title heading: Forum display type with a wax seal pressed beside it, and
+  the dialog's accessible name.
+- `data-dialog-actions` on the action row: a leather strap bleeding to the dialog's edges (text on it
+  uses `--text-on-leather`; buttons take the `ghost-leather` / `primary` variants, 44 px on touch).

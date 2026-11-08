@@ -5,7 +5,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';

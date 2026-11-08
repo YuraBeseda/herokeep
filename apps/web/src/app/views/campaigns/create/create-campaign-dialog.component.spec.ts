@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import type { Pack } from '@hk/protocol';
-import { DialogRef } from '@shared/components/dialog/dialog.service';
+import { DialogRef } from '@app/ui/dialog/dialog.service';
 import { PackStore } from '@shared/stores/pack.store';
 import { CampaignStore, CampaignStoreNotLeaderError } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';

@@ -1,0 +1,13 @@
+<div class="hk-dialog__surface" cdkTrapFocus cdkTrapFocusAutoCapture>
+  <svg class="hk-tex hk-tex--paper" aria-hidden="true" focusable="false">
+    <rect width="100%" height="100%" />
+  </svg>
+  @if (sheet()) {
+    <span class="hk-dialog__grip" aria-hidden="true"></span>
+  }
+  <!-- An HTML element between the svg and the outlet: without it the portal's host element is
+       created in the SVG namespace (the namespace state leaks past the svg) and collapses to 0x0. -->
+  <div class="hk-dialog__content">
+    <ng-template [cdkPortalOutlet]="contentPortal()" (attached)="onAttached($event)" />
+  </div>
+</div>

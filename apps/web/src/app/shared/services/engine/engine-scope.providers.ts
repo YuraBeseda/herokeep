@@ -1,5 +1,5 @@
 import type { Provider, Type } from '@angular/core';
-import { DialogService } from '../../components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { EngineFacade, EngineScope } from './engine.facade';
 
 // Kept out of `engine.facade.ts` (which is in the initial bundle) so `DialogService` and the CDK

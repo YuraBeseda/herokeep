@@ -6,7 +6,7 @@ import type { Pack } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { PackRemoveDependentsError, PackStore } from '@shared/stores/pack.store';
 import { PackInfoComponent } from './pack-info.component';

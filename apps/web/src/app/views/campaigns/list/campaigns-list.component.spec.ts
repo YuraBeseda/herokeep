@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { HkDb, type CampaignRow } from '@shared/services/storage/dexie.db';
 import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.service';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';

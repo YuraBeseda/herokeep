@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { uuidv7 } from '@shared/helpers/uuid';

@@ -1,7 +1,7 @@
 # ToastService / hk-toast
 
 `ToastService` (root-provided) queues short, auto-dismissing notifications in a single
-shared CDK overlay (`hk-toast`, an `aria-live="polite"` region). Lazily creates its
+shared CDK overlay (`hk-toast-host`, an `aria-live="polite"` region). Lazily creates its
 overlay on the first `show()` call.
 
 ## Usage
@@ -23,7 +23,7 @@ delete(name: string): void {
 `show(key: string, params?: Record<string, unknown>): void`
 
 - `key` is a **full, global** Transloco key (same global-resolution approach as
-  `hk-search-field` — see that SKILL.md — since `hk-toast` renders `*transloco="let t"`
+  `hk-search-field` — see that SKILL.md — since `hk-toast-host` renders `*transloco="let t"`
   with no scope of its own and calls `t(key, params)`).
 - `params` are interpolated with Transloco's default `{{param}}` substitution.
 - At most **3 toasts are visible at once**; a 4th `show()` call queues until a slot frees.
@@ -37,3 +37,9 @@ dismiss a specific toast early — it isn't meant for anything the user needs to
 rely on toast text alone for anything critical — screen readers announce it via
 `aria-live="polite"`, which can be missed if it fires alongside other, more assertive
 announcements.
+
+## Look and placement
+
+Each toast renders as the presentational `hk-toast` slip (`ui/toast`). The host sits bottom-centre and
+lifts itself above whatever the shell's dock shows: `hk-toast-host--strap` (an `ActionStrapService`
+config is set) adds `--strap-height`, `hk-toast-host--tabs` (phone with tabs set) adds `--tab-bar-height`.

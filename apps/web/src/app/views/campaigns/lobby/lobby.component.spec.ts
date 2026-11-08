@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import type { MembershipRole } from '@hk/protocol';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';

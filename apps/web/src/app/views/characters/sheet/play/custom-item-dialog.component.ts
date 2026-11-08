@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogRef } from '@shared/components/dialog/dialog.service';
+import { DialogRef } from '@app/ui/dialog/dialog.service';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 
 export interface CustomItemDialogResult {

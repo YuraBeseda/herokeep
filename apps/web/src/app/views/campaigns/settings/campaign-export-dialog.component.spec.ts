@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CampaignWriterService } from '@shared/services/export/campaign-writer.service';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';

@@ -5,7 +5,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import type { MembershipRole } from '@hk/protocol';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
 import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { EngineFacade } from '@shared/services/engine/engine.facade';

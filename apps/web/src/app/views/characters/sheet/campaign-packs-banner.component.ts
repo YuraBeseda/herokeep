@@ -2,7 +2,7 @@ import { Component, computed, inject, signal, type Signal } from '@angular/core'
 import { planRebase, type Pins } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { RebaseReportDialogComponent } from '@shared/components/rebase-report-dialog/rebase-report-dialog.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';

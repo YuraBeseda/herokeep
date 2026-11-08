@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { parseRollSpec, propose, roll, type ProposedEvent, type Sheet } from '@hk/engine';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { DiceResultComponent } from '@shared/components/dice-result/dice-result.component';
 import { cryptoRng } from '@shared/services/engine/rng';
 

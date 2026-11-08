@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogRef } from '@shared/components/dialog/dialog.service';
+import { DialogRef } from '@app/ui/dialog/dialog.service';
 
 /**
  * The "are you sure" dialog `RegisterComponent`'s `canDeactivate` guard opens when the user tries

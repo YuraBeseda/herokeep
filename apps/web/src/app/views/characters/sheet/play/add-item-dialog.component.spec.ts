@@ -8,7 +8,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';

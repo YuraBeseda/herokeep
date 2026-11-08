@@ -1,0 +1,66 @@
+:host {
+  display: contents;
+}
+
+.hk-description {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hk-description__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hk-description__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-wrap: anywhere;
+
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected/portal content is outside this component's encapsulation */
+  ::ng-deep p {
+    margin: 0 0 8px;
+  }
+
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected/portal content is outside this component's encapsulation */
+  ::ng-deep a[data-entity-id] {
+    color: var(--accent-strong);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+}
+
+.hk-description__feature {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 22px;
+}
+
+.hk-description__open {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 36px;
+  color: var(--accent-strong);
+  font-size: 15px;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    min-block-size: var(--touch-target);
+  }
+}
+
+.hk-description__not-found {
+  margin: 0;
+}

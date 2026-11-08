@@ -13,7 +13,7 @@ import {
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { LocaleService } from '../../services/i18n/locale.service';
 import { ButtonComponent } from '../button/button.component';
-import { DIALOG_DATA, DialogRef } from '../dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 
 /** What `DialogService.open(RebaseReportDialogComponent, { data })` passes in. */
 export interface RebaseReportDialogData {

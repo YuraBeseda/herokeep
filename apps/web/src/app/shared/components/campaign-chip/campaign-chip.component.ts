@@ -2,7 +2,7 @@ import { Component, computed, inject, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { campaignIdOfCharacter } from '@shared/services/campaigns/character-campaign-link';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharacterStore } from '@shared/stores/character.store';

@@ -1,0 +1,30 @@
+@if (open()) {
+  <div class="hk-drawer__scrim" aria-hidden="true"></div>
+  <div
+    class="hk-drawer__panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="titleId"
+    cdkTrapFocus
+    cdkTrapFocusAutoCapture
+  >
+    <svg class="hk-tex hk-tex--paper" aria-hidden="true" focusable="false">
+      <rect width="100%" height="100%" />
+    </svg>
+    <span class="hk-drawer__grip" aria-hidden="true"></span>
+    <header class="hk-drawer__head">
+      <h2 class="hk-drawer__title" [id]="titleId" tabindex="-1" cdkFocusInitial>{{ heading() }}</h2>
+      <button
+        type="button"
+        hk-icon-button
+        [icon]="'close'"
+        [hint]="'shell.icon.close'"
+        [variant]="'ghost'"
+        [size]="'s'"
+        (click)="close()"
+      ></button>
+    </header>
+    <div class="hk-drawer__body"><ng-content /></div>
+    <footer class="hk-drawer__actions"><ng-content select="[hkDrawerAction]" /></footer>
+  </div>
+}

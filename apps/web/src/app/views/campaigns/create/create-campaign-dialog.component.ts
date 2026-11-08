@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogRef } from '@shared/components/dialog/dialog.service';
+import { DialogRef } from '@app/ui/dialog/dialog.service';
 import { PackStore } from '@shared/stores/pack.store';
 import {
   CampaignStore,

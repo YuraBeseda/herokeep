@@ -1,0 +1,136 @@
+/* The side drawer: parchment from the right on >= 768 px, a full-height bottom sheet below. */
+:host {
+  display: contents;
+}
+
+.hk-drawer__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--overlay);
+}
+
+.hk-drawer__panel {
+  position: fixed;
+  z-index: 61;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  inline-size: 360px;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  overflow: hidden;
+  border-radius: var(--radius-leaf) 0 0 var(--radius-leaf);
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-raised);
+  color: var(--text-1);
+  font-size: 15px;
+  line-height: 1.4;
+  animation: hk-drawer-in var(--duration-base) ease-out;
+
+  > :not(.hk-tex) {
+    position: relative;
+  }
+}
+
+.hk-drawer__grip {
+  display: none;
+}
+
+.hk-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hk-drawer__title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.hk-drawer__body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+
+.hk-drawer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+
+  &:not(:has(*)) {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .hk-drawer__panel {
+    inset-block: 24px 0;
+    inset-inline: 0;
+    inline-size: auto;
+    border-radius: var(--radius-strap) var(--radius-strap) 0 0;
+    padding-block-start: 10px;
+    font-size: 16px;
+    animation-name: hk-sheet-in;
+  }
+
+  .hk-drawer__grip {
+    display: block;
+    flex: none;
+    align-self: center;
+    inline-size: 40px;
+    block-size: 4px;
+    border-radius: 2px;
+    background: var(--text-2);
+    opacity: 0.45;
+  }
+}
+
+@media (pointer: coarse) {
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected/portal content is outside this component's encapsulation */
+  .hk-drawer__actions ::ng-deep button {
+    min-block-size: var(--touch-target);
+  }
+}
+
+@keyframes hk-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes hk-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-drawer__panel {
+    animation: none;
+  }
+}

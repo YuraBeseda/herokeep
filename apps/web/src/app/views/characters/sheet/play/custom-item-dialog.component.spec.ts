@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CustomItemDialogComponent } from './custom-item-dialog.component';
 

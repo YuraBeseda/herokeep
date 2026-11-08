@@ -4,7 +4,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { CampaignSettings } from '@hk/protocol';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LeaderService } from '@shared/services/storage/leader.service';

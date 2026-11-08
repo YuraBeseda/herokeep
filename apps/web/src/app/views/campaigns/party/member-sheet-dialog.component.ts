@@ -7,7 +7,7 @@ import { filter } from 'rxjs';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { PipsComponent } from '@shared/components/pips/pips.component';
 import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';

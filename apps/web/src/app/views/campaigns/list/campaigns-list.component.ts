@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { CardComponent } from '@shared/components/card/card.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import type { CampaignRow } from '@shared/services/storage/dexie.db';

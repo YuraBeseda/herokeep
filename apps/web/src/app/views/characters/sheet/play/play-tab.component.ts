@@ -35,7 +35,7 @@ import { ButtonComponent } from '@shared/components/button/button.component';
 import { CampaignEditLockBannerComponent } from '@shared/components/campaign-edit-lock-banner/campaign-edit-lock-banner.component';
 import { CardComponent } from '@shared/components/card/card.component';
 import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { PipsComponent } from '@shared/components/pips/pips.component';

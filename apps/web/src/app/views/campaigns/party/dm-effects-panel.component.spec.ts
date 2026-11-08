@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore, type AckOrReject } from '@shared/stores/campaign.store';

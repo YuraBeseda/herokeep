@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { MembershipRole } from '@hk/protocol';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { AuthService } from '@shared/services/auth/auth.service';

@@ -3,7 +3,7 @@ import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { MembershipRole } from '@hk/protocol';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef, DialogService } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { apiJson } from '@shared/services/api/api-fetch';
 import { LeaderService } from '@shared/services/storage/leader.service';

@@ -1,0 +1,142 @@
+/* The parchment dialog (design-system Dialog): paper gradient, framed corners, a wax seal beside the
+   title and a leather strap of actions at the foot. On a phone it is a bottom sheet with a grip.
+   The content component is attached through a portal, so the two hooks it carries
+(`[data-dialog-title]`, `[data-dialog-actions]`) are styled with `::ng-deep` from here. */
+:host {
+  position: relative;
+  display: block;
+  max-inline-size: min(90vw, 420px);
+  max-block-size: 90vh;
+  overflow: auto;
+  border-radius: var(--radius-frame);
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-raised), var(--shadow-leaf);
+  color: var(--text-1);
+  font-size: 15px;
+  line-height: 1.4;
+  animation: hk-dialog-in var(--duration-base) ease-out;
+}
+
+:host(.hk-dialog--sheet) {
+  max-inline-size: 100%;
+  inline-size: 100%;
+  max-block-size: 92dvh;
+  border-radius: var(--radius-strap) var(--radius-strap) 0 0;
+  animation-name: hk-sheet-in;
+}
+
+.hk-dialog__surface {
+  position: relative;
+  padding: 18px 20px 16px;
+
+  > :not(.hk-tex) {
+    position: relative;
+  }
+}
+
+.hk-dialog__content {
+  display: flow-root;
+}
+
+.hk-dialog__grip {
+  display: block;
+  inline-size: 40px;
+  block-size: 4px;
+  margin: -8px auto 10px;
+  border-radius: 2px;
+  background: var(--text-2);
+  opacity: 0.45;
+}
+
+/* The title: Forum, with the wax seal pressed beside it. */
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected/portal content is outside this component's encapsulation */
+:host ::ng-deep [data-dialog-title] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 28px;
+
+  &::before {
+    content: '';
+    flex: none;
+    inline-size: 34px;
+    block-size: 34px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 38% 30%,
+      var(--wax-light),
+      var(--wax) 55%,
+      var(--wax-dark)
+    );
+    box-shadow:
+      inset 0 0 0 3px var(--wax-rim),
+      1px 2px 2px var(--wax-ink);
+  }
+}
+
+/* The action row: a leather strap bleeding to the dialog's edges, text on it in leather ink. */
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected/portal content is outside this component's encapsulation */
+:host ::ng-deep [data-dialog-actions] {
+  --text-1: var(--text-on-leather);
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px -20px -16px;
+  padding: 8px 10px;
+  border-radius: 0 0 var(--radius-frame) var(--radius-frame);
+  background: linear-gradient(
+    180deg,
+    var(--leather-highlight),
+    var(--leather) 50%,
+    var(--leather-dark)
+  );
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather);
+}
+
+@media (pointer: coarse) {
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected/portal content is outside this component's encapsulation */
+  :host ::ng-deep [data-dialog-actions] button {
+    min-block-size: var(--touch-target);
+  }
+}
+
+@keyframes hk-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hk-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+}

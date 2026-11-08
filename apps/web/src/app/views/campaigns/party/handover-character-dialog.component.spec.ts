@@ -4,7 +4,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import type { Event } from '@hk/protocol';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { CampaignStoreNotLeaderError } from '@shared/stores/campaign.store';
 import type { DraftEvent } from '@shared/stores/character.store';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';

@@ -12,7 +12,7 @@ import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../assets/i18n/characters/uk.json';
 import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
-import { DIALOG_DATA, DialogRef, DialogService } from '../dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import {
   RebaseReportDialogComponent,
   type RebaseReportDialogData,

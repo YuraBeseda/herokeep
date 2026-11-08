@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef } from '@shared/components/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import type { PackImportPreview } from '@shared/services/packs/hkpack-reader.service';
 import { PackImportConflictError } from '@shared/services/packs/pack-import.errors';

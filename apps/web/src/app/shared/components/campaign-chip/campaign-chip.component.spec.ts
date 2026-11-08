@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import type { Event } from '@hk/protocol';
-import { DialogService } from '@shared/components/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharacterStore } from '@shared/stores/character.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
