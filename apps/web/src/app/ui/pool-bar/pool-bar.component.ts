@@ -38,7 +38,9 @@ export class HkPoolBarComponent {
   /** The sprite id embossed on each pip. */
   readonly pipGlyph = input('ui:use');
 
-  protected readonly clamped = computed(() => Math.min(this.max(), Math.max(0, this.value())));
+  protected readonly clamped = computed(() =>
+    Math.min(Math.max(0, this.max()), Math.max(0, this.value())),
+  );
   protected readonly width = computed(() =>
     this.max() > 0 ? (this.clamped() / this.max()) * 100 : 0,
   );

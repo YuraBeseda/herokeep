@@ -51,7 +51,8 @@ export class HkWaxSealComponent {
   protected readonly blob = computed(() => waxBlobPath(this.seed()));
   protected readonly label = computed(() => {
     const numeral = this.numeral();
-    return this.text() ?? (numeral === null ? null : romanNumeral(numeral));
+    const valid = numeral !== null && Number.isInteger(numeral) && numeral >= 1 && numeral <= 9;
+    return this.text() ?? (valid ? romanNumeral(numeral) : null);
   });
   protected readonly symbol = computed(() => {
     const glyph = this.glyph();

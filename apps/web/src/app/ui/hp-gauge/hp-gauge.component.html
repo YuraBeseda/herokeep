@@ -14,8 +14,8 @@
       class="hk-gauge"
       role="meter"
       aria-valuemin="0"
-      [attr.aria-valuemax]="max()"
-      [attr.aria-valuenow]="current()"
+      [attr.aria-valuemax]="rangeMax()"
+      [attr.aria-valuenow]="now()"
       [attr.aria-valuetext]="
         temp() > 0
           ? t('ui.hp.meter-temp', { current: current(), max: max(), temp: temp() })
@@ -39,15 +39,28 @@
       (input)="onInput($event)"
       (keydown.enter)="emit('damage', field)"
     />
-    <button hk-button [variant]="'ember'" [disabledReason]="reason" (click)="emit('damage', field)">
+    <button
+      hk-button
+      [variant]="'ember'"
+      [size]="buttonSize()"
+      [disabledReason]="reason"
+      (click)="emit('damage', field)"
+    >
       <hk-icon [icon]="'ui:damage'" />{{ t('ui.hp.damage') }}
     </button>
-    <button hk-button [variant]="'moss'" [disabledReason]="reason" (click)="emit('heal', field)">
+    <button
+      hk-button
+      [variant]="'moss'"
+      [size]="buttonSize()"
+      [disabledReason]="reason"
+      (click)="emit('heal', field)"
+    >
       <hk-icon [icon]="'ui:heal'" />{{ t('ui.hp.heal') }}
     </button>
     <button
       hk-button
       [variant]="'ghost-leather'"
+      [size]="buttonSize()"
       [disabledReason]="reason"
       (click)="emit('setTemp', field)"
     >

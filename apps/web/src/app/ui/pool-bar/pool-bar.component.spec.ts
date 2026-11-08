@@ -98,4 +98,20 @@ describe('HkPoolBarComponent', () => {
     await fixture.whenStable();
     expect(el.querySelector<HTMLElement>('.hk-gauge__brass')!.style.width).toBe('100%');
   });
+
+  it('never shows a negative count for a negative max or value', async () => {
+    fixture.componentInstance.max.set(-3);
+    await fixture.whenStable();
+    expect(el.querySelector('.hk-pool-bar__count')!.textContent).toMatch(/^\s*0 \//);
+    expect(el.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe(
+      'Lay on Hands: 0 of -3',
+    );
+    expect(el.querySelector<HTMLElement>('.hk-gauge__brass')!.style.width).toBe('0%');
+    fixture.componentInstance.max.set(5);
+    fixture.componentInstance.value.set(-2);
+    await fixture.whenStable();
+    expect(el.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe(
+      'Lay on Hands: 0 of 5',
+    );
+  });
 });

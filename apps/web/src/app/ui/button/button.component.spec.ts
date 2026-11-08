@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { HkButtonComponent } from './button.component';
+import { HkButtonComponent, type HkButtonSize, type HkButtonVariant } from './button.component';
 
 @Component({
   selector: 'app-button-host',
@@ -9,6 +9,7 @@ import { HkButtonComponent } from './button.component';
     <button
       hk-button
       [variant]="variant()"
+      [size]="size()"
       [loading]="loading()"
       [disabledReason]="reason()"
       (click)="clicks = clicks + 1"
@@ -18,7 +19,8 @@ import { HkButtonComponent } from './button.component';
   `,
 })
 class HostComponent {
-  readonly variant = signal<'primary' | 'parchment' | 'ghost' | 'ember'>('primary');
+  readonly variant = signal<HkButtonVariant>('primary');
+  readonly size = signal<HkButtonSize>('m');
   readonly loading = signal(false);
   readonly reason = signal<string | null>(null);
   readonly label = 'Roll';
@@ -95,5 +97,18 @@ describe('HkButtonComponent', () => {
     button.dispatchEvent(new Event('focus'));
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('Nope');
     button.dispatchEvent(new Event('blur'));
+  });
+
+  it.each(['moss', 'ghost-leather'] as const)('exposes the %s variant', async (variant) => {
+    fixture.componentInstance.variant.set(variant);
+    await fixture.whenStable();
+    expect(button.classList.contains(`hk-button--${variant}`)).toBe(true);
+    expect(button.classList.contains('hk-button--primary')).toBe(false);
+  });
+
+  it.each(['m', 'l', 'phone'] as const)('exposes the %s size', async (size) => {
+    fixture.componentInstance.size.set(size);
+    await fixture.whenStable();
+    expect(button.classList.contains(`hk-button--${size}`)).toBe(true);
   });
 });

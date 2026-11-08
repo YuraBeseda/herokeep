@@ -4,7 +4,7 @@
     class="hk-gauge"
     role="progressbar"
     [attr.aria-valuemin]="floor()"
-    [attr.aria-valuemax]="next()"
+    [attr.aria-valuemax]="top()"
     [attr.aria-valuenow]="now()"
     [attr.aria-label]="t('ui.xp.meter', { xp: xpText(), next: nextText() })"
   >

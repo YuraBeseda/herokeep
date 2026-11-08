@@ -106,4 +106,49 @@ describe('HkHpGaugeComponent', () => {
     expect(input.getAttribute('aria-label')).toBe('Amount');
     expect(input.inputMode).toBe('numeric');
   });
+
+  it('keeps aria-valuenow inside the range when current exceeds max or max is 0', async () => {
+    const over = await make({ current: 90, max: 40, temp: 0 });
+    const meter = over.el.querySelector('[role="meter"]')!;
+    expect(meter.getAttribute('aria-valuenow')).toBe('40');
+    expect(meter.getAttribute('aria-valuemax')).toBe('40');
+    TestBed.resetTestingModule();
+    const zero = await make({ current: 0, max: 0, temp: 0 });
+    const range = zero.el.querySelector('[role="meter"]')!;
+    expect(range.getAttribute('aria-valuemax')).toBe('1');
+    expect(range.getAttribute('aria-valuenow')).toBe('0');
+    TestBed.resetTestingModule();
+    const negative = await make({ current: -5, max: 10, temp: 0 });
+    expect(negative.el.querySelector('[role="meter"]')!.getAttribute('aria-valuenow')).toBe('0');
+  });
+
+  it('gives its buttons the phone size on coarse pointers and m otherwise', async () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    const stub = (coarse: boolean) => {
+      window.matchMedia = ((query: string) => ({
+        matches: coarse && query === '(pointer: coarse)',
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      })) as unknown as typeof window.matchMedia;
+    };
+    const sizes = async (coarse: boolean) => {
+      stub(coarse);
+      const { el } = await make({ current: 1, max: 2, temp: 0 });
+      return Array.from(el.querySelectorAll('button')).map((b) =>
+        b.classList.contains('hk-button--phone')
+          ? 'phone'
+          : b.classList.contains('hk-button--m')
+            ? 'm'
+            : '?',
+      );
+    };
+    try {
+      expect(await sizes(true)).toEqual(['phone', 'phone', 'phone']);
+      TestBed.resetTestingModule();
+      expect(await sizes(false)).toEqual(['m', 'm', 'm']);
+    } finally {
+      if (original) Object.defineProperty(window, 'matchMedia', original);
+      else Reflect.deleteProperty(window, 'matchMedia');
+    }
+  });
 });

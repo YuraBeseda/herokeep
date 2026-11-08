@@ -33,9 +33,11 @@ export class HkXpBarComponent {
   readonly next = input.required<number>();
   readonly surface = input<'folio' | 'leaf'>('folio');
 
-  protected readonly now = computed(() => Math.min(this.next(), Math.max(this.floor(), this.xp())));
+  /** `next` below `floor` collapses to an empty range at the floor. */
+  protected readonly top = computed(() => Math.max(this.floor(), this.next()));
+  protected readonly now = computed(() => Math.min(this.top(), Math.max(this.floor(), this.xp())));
   protected readonly width = computed(() => {
-    const span = this.next() - this.floor();
+    const span = this.top() - this.floor();
     return span > 0 ? ((this.now() - this.floor()) / span) * 100 : 0;
   });
   private readonly format = computed(() => new Intl.NumberFormat(this.lang()));

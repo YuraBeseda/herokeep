@@ -45,4 +45,20 @@ describe('HkXpBarComponent', () => {
     const { el } = await make({ xp: 1, floor: 0, next: 300, surface: 'leaf' });
     expect(el.classList.contains('hk-xp-bar--leaf')).toBe(true);
   });
+
+  it('clamps XP below the level floor up to the floor', async () => {
+    const { el } = await make({ xp: 100, floor: 6500, next: 14000 });
+    const bar = el.querySelector('[role="progressbar"]')!;
+    expect(bar.getAttribute('aria-valuenow')).toBe('6500');
+    expect(el.querySelector<HTMLElement>('.hk-gauge__xp')!.style.width).toBe('0%');
+  });
+
+  it('keeps a valid range when next is below floor', async () => {
+    const { el } = await make({ xp: 50, floor: 300, next: 100 });
+    const bar = el.querySelector('[role="progressbar"]')!;
+    expect(bar.getAttribute('aria-valuemin')).toBe('300');
+    expect(bar.getAttribute('aria-valuemax')).toBe('300');
+    expect(bar.getAttribute('aria-valuenow')).toBe('300');
+    expect(el.querySelector<HTMLElement>('.hk-gauge__xp')!.style.width).toBe('0%');
+  });
 });

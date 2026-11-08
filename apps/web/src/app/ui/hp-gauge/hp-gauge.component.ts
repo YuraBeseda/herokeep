@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { HkButtonComponent } from '../button/button.component';
@@ -46,11 +46,28 @@ export class HkHpGaugeComponent {
     return value > 0 ? value : null;
   });
 
+  /** Coarse pointers (touch) get the 44px phone button, like the amount field. */
+  private readonly coarse = signal(
+    typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
+  );
+  protected readonly buttonSize = computed(() => (this.coarse() ? 'phone' : 'm'));
+  /** A valid meter range even for max 0, and a value that never leaves it. */
+  protected readonly rangeMax = computed(() => Math.max(1, this.max()));
+  protected readonly now = computed(() => Math.min(this.rangeMax(), Math.max(0, this.current())));
+
   protected readonly total = computed(() => this.max() + this.temp());
   protected readonly hpWidth = computed(() => percent(this.current(), this.total()));
   protected readonly tempWidth = computed(() =>
     Math.min(100 - this.hpWidth(), percent(this.temp(), this.total())),
   );
+
+  constructor() {
+    if (typeof matchMedia !== 'function') return;
+    const query = matchMedia('(pointer: coarse)');
+    const onChange = (event: MediaQueryListEvent): void => this.coarse.set(event.matches);
+    query.addEventListener('change', onChange);
+    inject(DestroyRef).onDestroy(() => query.removeEventListener('change', onChange));
+  }
 
   protected onInput(event: Event): void {
     this.typed.set((event.target as HTMLInputElement).value);

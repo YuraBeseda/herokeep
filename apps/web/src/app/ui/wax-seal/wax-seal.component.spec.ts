@@ -76,4 +76,14 @@ describe('HkWaxSealComponent', () => {
     expect(waxBlobPath(3)).not.toBe(waxBlobPath(4));
     expect(waxBlobPath(3)).toMatch(/^M[\d. -]+C/);
   });
+
+  it.each([0, 10, -1, 2.5])(
+    'ignores the out-of-range numeral %s: no digits, no text',
+    (numeral) => {
+      const { el } = make({ glyph: 'gi:hand-ok', numeral });
+      expect(el.querySelectorAll('text')).toHaveLength(0);
+      expect(el.textContent?.trim()).toBe('');
+      expect(el.querySelectorAll('use')).toHaveLength(3);
+    },
+  );
 });
