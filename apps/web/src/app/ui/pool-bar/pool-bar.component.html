@@ -1,0 +1,50 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <div class="hk-pool-bar__head">
+    @if (glyph(); as ring) {
+      <span class="hk-pool-bar__ring"><hk-icon [icon]="ring" /></span>
+    }
+    <b class="hk-pool-bar__name">{{ label() }}</b>
+    <ng-content select="[hkPoolAction]" />
+  </div>
+  @if (kind() === 'pips') {
+    <div
+      class="hk-pool-bar__pips"
+      role="group"
+      [attr.aria-label]="t('ui.pool.meter', { label: label(), value: clamped(), max: max() })"
+    >
+      @for (index of pips(); track index) {
+        <hk-wax-seal
+          [state]="index < clamped() ? 'filled' : 'spent'"
+          [size]="pipSize()"
+          [glyph]="pipGlyph()"
+          [hint]="pipHint()"
+          [seed]="index"
+        />
+      }
+    </div>
+  } @else {
+    <div
+      class="hk-gauge"
+      role="img"
+      [attr.aria-label]="t('ui.pool.meter', { label: label(), value: clamped(), max: max() })"
+    >
+      <div class="hk-gauge__brass" [style.width.%]="width()"></div>
+    </div>
+  }
+  <div class="hk-pool-bar__foot">
+    <span class="hk-pool-bar__count">
+      {{ clamped() }} / {{ max() }}
+      @if (unit(); as unitText) {
+        <span class="hk-pool-bar__unit">{{ unitText }}</span>
+      }
+    </span>
+    @if (recharge(); as when) {
+      <span class="hk-pool-bar__recharge">
+        @if (rechargeGlyph(); as symbol) {
+          <hk-icon [icon]="symbol" />
+        }
+        {{ when }}
+      </span>
+    }
+  </div>
+</ng-container>

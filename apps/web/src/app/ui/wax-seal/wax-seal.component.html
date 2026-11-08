@@ -1,0 +1,83 @@
+<svg viewBox="0 0 64 64" role="img" class="hk-seal" [attr.aria-label]="hint()">
+  <defs>
+    @if (spent()) {
+      <radialGradient [attr.id]="gradientId" cx="40%" cy="32%" r="75%">
+        <stop class="hk-wax-spent-stop1" offset="0" />
+        <stop class="hk-wax-spent-stop2" offset=".6" />
+        <stop class="hk-wax-spent-stop3" offset="1" />
+      </radialGradient>
+    } @else {
+      <radialGradient [attr.id]="gradientId" cx="38%" cy="30%" r="75%">
+        <stop class="hk-wax-stop1" offset="0" />
+        <stop class="hk-wax-stop2" offset=".55" />
+        <stop class="hk-wax-stop3" offset="1" />
+      </radialGradient>
+    }
+  </defs>
+  @if (spent()) {
+    <path class="hk-seal-spent-shadow" [attr.d]="blob()" transform="translate(1.5 2)" />
+    <path [attr.d]="blob()" [attr.fill]="'url(#' + gradientId + ')'" />
+    <circle class="hk-seal-spent-rim" cx="32" cy="32" r="20" />
+    <circle class="hk-seal-spent-dash" cx="32" cy="32" r="14" />
+    @if (symbol(); as href) {
+      <g class="hk-seal-glyph--spent" transform="translate(32 32) scale(0.06) translate(-256 -256)">
+        <use [attr.href]="href" width="512" height="512" />
+      </g>
+    }
+    @if (label(); as label) {
+      <text
+        class="hk-seal-txt hk-seal-txt--spent"
+        x="32"
+        y="32.4"
+        text-anchor="middle"
+        dominant-baseline="central"
+        [attr.font-size]="fontSize()"
+        [textContent]="label"
+      ></text>
+    }
+  } @else {
+    <path class="hk-seal-shadow" [attr.d]="blob()" transform="translate(1.5 2)" />
+    <path class="hk-seal-blob" [attr.d]="blob()" [attr.fill]="'url(#' + gradientId + ')'" />
+    <path class="hk-seal-sheen" [attr.d]="blob()" />
+    <circle class="hk-seal-rim" cx="32" cy="32" [attr.r]="rimRadius()" />
+    <circle class="hk-seal-rim-hi" cx="31.3" cy="31.3" [attr.r]="rimRadius()" />
+    @if (symbol(); as href) {
+      <g
+        class="hk-seal-glyph--ink"
+        transform="translate(32.7 32.7) scale(0.06) translate(-256 -256)"
+      >
+        <use [attr.href]="href" width="512" height="512" />
+      </g>
+      <g
+        class="hk-seal-glyph--hi"
+        transform="translate(31.3 31.3) scale(0.06) translate(-256 -256)"
+      >
+        <use [attr.href]="href" width="512" height="512" />
+      </g>
+      <g class="hk-seal-glyph--body" transform="translate(32 32) scale(0.06) translate(-256 -256)">
+        <use [attr.href]="href" width="512" height="512" />
+      </g>
+    }
+    @if (label(); as label) {
+      <text
+        class="hk-seal-txt hk-seal-txt--ink"
+        x="32.8"
+        y="33.3"
+        text-anchor="middle"
+        dominant-baseline="central"
+        [attr.font-size]="fontSize()"
+        [textContent]="label"
+      ></text>
+      <text
+        class="hk-seal-txt hk-seal-txt--emboss"
+        x="32"
+        y="32.4"
+        text-anchor="middle"
+        dominant-baseline="central"
+        [attr.font-size]="fontSize()"
+        [textContent]="label"
+      ></text>
+    }
+    <ellipse class="hk-seal-spec" cx="23" cy="21" rx="9" ry="5" transform="rotate(-32 23 21)" />
+  }
+</svg>

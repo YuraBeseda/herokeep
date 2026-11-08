@@ -1,0 +1,157 @@
+/* WaxSeal (design-system): sizes s 24 / m 28 / l 58 (phone ability seals override --hk-seal-size).
+   Filled and spent differ in lightness and shape, never in hue alone. In plain the gradients
+   collapse to flat fills and the sheen is hidden. */
+:host {
+  --hk-seal-size: 28px;
+
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+  inline-size: var(--hk-seal-size);
+  block-size: var(--hk-seal-size);
+  border-radius: 50%;
+  transition:
+    opacity var(--duration-base),
+    filter var(--duration-base);
+}
+
+:host(.hk-wax-seal--s) {
+  --hk-seal-size: 24px;
+}
+
+:host(.hk-wax-seal--l) {
+  --hk-seal-size: 58px;
+}
+
+:host(.hk-wax-seal--disabled) {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+
+:host(.hk-wax-seal--selected) {
+  filter: drop-shadow(0 0 4px var(--brass-top));
+}
+
+svg {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.hk-wax-stop1 {
+  stop-color: var(--wax-light);
+}
+
+.hk-wax-stop2 {
+  stop-color: var(--wax);
+}
+
+.hk-wax-stop3 {
+  stop-color: var(--wax-dark);
+}
+
+.hk-wax-spent-stop1 {
+  stop-color: var(--wax-spent-light);
+}
+
+.hk-wax-spent-stop2 {
+  stop-color: var(--wax-spent);
+}
+
+.hk-wax-spent-stop3 {
+  stop-color: var(--wax-spent-dark);
+}
+
+.hk-seal-shadow {
+  fill: var(--wax-ink);
+  opacity: 0.45;
+}
+
+.hk-seal-spent-shadow {
+  fill: var(--text-2);
+  opacity: 0.18;
+}
+
+.hk-seal-sheen {
+  fill: none;
+  stroke: var(--wax-sheen);
+  stroke-width: 0.9;
+  opacity: 0.35;
+}
+
+.hk-seal-rim {
+  fill: var(--wax-rim);
+  stroke: var(--wax-rim-dark);
+  stroke-width: 0.9;
+}
+
+.hk-seal-rim-hi {
+  fill: none;
+  stroke: var(--wax-rim-light);
+  stroke-width: 0.8;
+  opacity: 0.55;
+}
+
+.hk-seal-spec {
+  fill: var(--wax-emboss);
+  opacity: 0.13;
+}
+
+:host-context([data-theme='plain']) {
+  .hk-seal-spec,
+  .hk-seal-rim-hi,
+  .hk-seal-sheen {
+    display: none;
+  }
+}
+
+.hk-seal-txt {
+  font-family: var(--font-display);
+}
+
+.hk-seal-txt--ink {
+  fill: var(--wax-ink);
+}
+
+.hk-seal-txt--emboss {
+  fill: var(--wax-emboss);
+}
+
+.hk-seal-glyph--ink {
+  color: var(--wax-ink);
+}
+
+.hk-seal-glyph--hi {
+  color: var(--wax-sheen);
+}
+
+.hk-seal-glyph--body {
+  color: var(--wax-glyph);
+}
+
+.hk-seal-spent-rim {
+  fill: var(--wax-spent-inner);
+  stroke: var(--wax-spent-rim);
+  stroke-width: 1;
+}
+
+.hk-seal-spent-dash {
+  fill: none;
+  stroke: var(--wax-spent-dash);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.hk-seal-txt--spent {
+  fill: var(--wax-spent-ink);
+}
+
+.hk-seal-glyph--spent {
+  color: var(--wax-spent-dash);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    transition: none;
+  }
+}

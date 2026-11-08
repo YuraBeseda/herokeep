@@ -1,0 +1,35 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <hk-wax-seal
+    [size]="'l'"
+    [text]="modifierText()"
+    [seed]="score()"
+    [hint]="t('ui.ability.meter', { name: ability(), score: score(), modifier: modifierText() })"
+  />
+  <span class="hk-ability__name">{{ ability() }}</span>
+  <span
+    class="hk-ability__score"
+    role="group"
+    [hkTooltip]="t('ui.ability.score', { score: score() })"
+    [attr.aria-label]="t('ui.ability.score', { score: score() })"
+    >{{ score() }}</span
+  >
+  <span
+    class="hk-ability__save"
+    [class.hk-ability__save--prof]="saveProficient()"
+    role="group"
+    [hkTooltip]="t('ui.ability.save', { value: saveText() })"
+    [attr.aria-label]="t('ui.ability.save', { value: saveText() })"
+  >
+    <hk-icon [icon]="'ui:save'" />{{ saveText() }}
+    @if (saveProficient()) {
+      <span
+        class="hk-ability__star"
+        role="img"
+        [hkTooltip]="t('ui.ability.save-proficient')"
+        [attr.aria-label]="t('ui.ability.save-proficient')"
+      >
+        <hk-icon [icon]="'gi:star'" />
+      </span>
+    }
+  </span>
+</ng-container>

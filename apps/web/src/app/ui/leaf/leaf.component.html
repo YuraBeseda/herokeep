@@ -1,0 +1,14 @@
+<svg class="hk-tex hk-tex--paper" aria-hidden="true"><rect width="100%" height="100%" /></svg>
+<section class="hk-leaf__section" [attr.aria-labelledby]="titleId">
+  <header class="hk-leaf__head">
+    <h2 class="hk-leaf__title" [id]="titleId">
+      @if (icon(); as glyph) {
+        <hk-icon [icon]="glyph" />
+      }
+      <span class="hk-leaf__title-text">{{ title() }}</span>
+    </h2>
+    <div class="hk-leaf__actions"><ng-content select="[hkLeafActions]" /></div>
+  </header>
+  <div class="hk-leaf__tabs"><ng-content select="[hkLeafTabs]" /></div>
+  <div class="hk-leaf__body"><ng-content /></div>
+</section>

@@ -1,0 +1,20 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @if (src(); as url) {
+    <div class="hk-frame__well">
+      <img [src]="url" [alt]="t('ui.portrait.of', { name: name() })" />
+    </div>
+  } @else {
+    <div
+      class="hk-frame__well"
+      role="img"
+      [attr.aria-label]="t('ui.portrait.placeholder', { monogram: letters() })"
+    >
+      {{ letters() }}
+    </div>
+  }
+  <span class="hk-frame__rivet hk-frame__rivet--tl" aria-hidden="true"></span>
+  <span class="hk-frame__rivet hk-frame__rivet--tr" aria-hidden="true"></span>
+  <span class="hk-frame__rivet hk-frame__rivet--bl" aria-hidden="true"></span>
+  <span class="hk-frame__rivet hk-frame__rivet--br" aria-hidden="true"></span>
+  <div class="hk-frame__edit"><ng-content select="[hkPortraitEdit]" /></div>
+</ng-container>

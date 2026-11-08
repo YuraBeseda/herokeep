@@ -1,0 +1,43 @@
+@use 'gauge';
+
+/* XpBar (design-system): label, an 8px brass gauge, the count in the display face. */
+:host {
+  --hk-xp-ink: var(--text-on-leather-2);
+  --hk-xp-count: var(--text-on-leather);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hk-xp-ink);
+  font-size: 14px;
+}
+
+:host(.hk-xp-bar--leaf) {
+  --hk-xp-ink: var(--text-2);
+  --hk-xp-count: var(--text-1);
+}
+
+.hk-gauge {
+  @include gauge.track(8px);
+
+  flex: 1 1 auto;
+}
+
+.hk-gauge__xp {
+  @include gauge.fill-xp;
+}
+
+.hk-xp-bar__count {
+  color: var(--hk-xp-count);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-gauge__xp {
+    transition: none;
+  }
+}

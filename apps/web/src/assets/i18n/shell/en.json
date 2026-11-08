@@ -111,5 +111,37 @@
     "library": "Library",
     "packs": "Packs",
     "settings": "Settings"
+  },
+  "ui": {
+    "ability": {
+      "meter": "{{name}} {{score}}, modifier {{modifier}}",
+      "save": "Saving throw {{value}}",
+      "save-proficient": "Proficient saving throw",
+      "score": "Score {{score}}"
+    },
+    "hp": {
+      "amount": "Amount",
+      "amount-needed": "Enter an amount first",
+      "damage": "Damage",
+      "heal": "Heal",
+      "label": "Hit points",
+      "meter": "{{current}} of {{max}} hit points",
+      "meter-temp": "{{current}} of {{max}} hit points, plus {{temp}} temporary",
+      "temp": "Temp HP"
+    },
+    "pool": {
+      "meter": "{{label}}: {{value}} of {{max}}"
+    },
+    "portrait": {
+      "of": "Portrait of {{name}}",
+      "placeholder": "Portrait placeholder, monogram {{monogram}}"
+    },
+    "shield": {
+      "meter": "Armor class {{value}}"
+    },
+    "xp": {
+      "label": "XP",
+      "meter": "{{xp}} of {{next}} XP"
+    }
   }
 }

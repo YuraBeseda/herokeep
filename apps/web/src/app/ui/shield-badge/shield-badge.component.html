@@ -1,0 +1,46 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <svg
+    viewBox="0 0 82 96"
+    role="img"
+    [attr.width]="width()"
+    [attr.height]="height()"
+    [attr.aria-label]="hint() ?? t('ui.shield.meter', { value: value() })"
+  >
+    <defs>
+      <linearGradient [attr.id]="gradientId" x1="0" y1="0" x2="0" y2="1">
+        <stop class="hk-shield-stop1" offset="0" />
+        <stop class="hk-shield-stop2" offset=".5" />
+        <stop class="hk-shield-stop3" offset="1" />
+      </linearGradient>
+    </defs>
+    <path
+      class="hk-shield-shadow"
+      d="M41 4 L75 14 V44 C75 66 58 84 41 92 C24 84 7 66 7 44 V14 Z"
+      transform="translate(2,3)"
+    />
+    <path
+      class="hk-shield-face"
+      d="M41 4 L75 14 V44 C75 66 58 84 41 92 C24 84 7 66 7 44 V14 Z"
+      [attr.fill]="'url(#' + gradientId + ')'"
+    />
+    <path
+      class="hk-shield-inner"
+      d="M41 11 L68 19 V44 C68 62 54 77 41 84 C28 77 14 62 14 44 V19 Z"
+    />
+    <path
+      class="hk-shield-bevel"
+      d="M41 11 L68 19 V44 C68 62 54 77 41 84"
+      fill="none"
+      stroke-width="2"
+    />
+    <text
+      class="hk-shield-num"
+      x="41"
+      y="51"
+      text-anchor="middle"
+      dominant-baseline="central"
+      font-size="40"
+      [textContent]="value()"
+    ></text>
+  </svg>
+</ng-container>

@@ -1,0 +1,63 @@
+/* AbilitySeal (design-system): a column, gap 4px. Seal l = 58px (desktop), 46px compact (phone). */
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-on-leather);
+}
+
+:host(.hk-ability--compact) hk-wax-seal {
+  --hk-seal-size: 46px;
+}
+
+.hk-ability__name {
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.hk-ability__score,
+.hk-ability__save {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  block-size: 22px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hk-ability__score {
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: linear-gradient(180deg, var(--brass-top), var(--brass) 50%, var(--brass-mid));
+  box-shadow: var(--shadow-brass);
+  color: var(--text-on-brass);
+}
+
+.hk-ability__save {
+  gap: 3px;
+  padding: 0 5px;
+  background: linear-gradient(180deg, var(--plate), var(--plate-bottom));
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather);
+
+  hk-icon {
+    color: var(--brass);
+  }
+}
+
+.hk-ability__star {
+  display: inline-flex;
+
+  hk-icon {
+    color: var(--brass-top);
+  }
+}

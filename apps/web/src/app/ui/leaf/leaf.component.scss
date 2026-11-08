@@ -1,0 +1,80 @@
+/* Leaf (design-system): a parchment section panel with a warm shadow. Padding 16px 18px desktop,
+   12px phone. The paper texture sits under the content. */
+:host {
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  border-radius: var(--radius-leaf);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-leaf);
+  color: var(--text-1);
+  font-size: 15px;
+  transform: rotate(var(--leaf-tilt));
+}
+
+:host(:nth-child(even)) {
+  transform: rotate(calc(var(--leaf-tilt) * -1));
+}
+
+:host(.hk-leaf--phone) {
+  padding: 12px;
+  font-size: 16px;
+}
+
+.hk-leaf__section {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.hk-leaf__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 8px;
+}
+
+.hk-leaf__title {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+hk-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--accent-strong);
+  font-size: 20px;
+}
+
+.hk-leaf__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hk-leaf__actions:empty,
+.hk-leaf__tabs:empty {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host,
+  :host(:nth-child(even)) {
+    transform: none;
+  }
+}

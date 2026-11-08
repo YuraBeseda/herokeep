@@ -1,6 +1,7 @@
 import {
   ApplicationRef,
   type ComponentRef,
+  computed,
   DestroyRef,
   Directive,
   ElementRef,
@@ -10,6 +11,7 @@ import {
   inject,
   input,
   linkedSignal,
+  signal,
 } from '@angular/core';
 import { HkTipComponent } from './tooltip.component';
 
@@ -31,7 +33,7 @@ let nextTipId = 0;
 @Directive({
   selector: '[hkTooltip]',
   host: {
-    '[attr.aria-describedby]': 'tipId',
+    '[attr.aria-describedby]': 'describedBy()',
     '(mouseenter)': 'onMouseEnter()',
     '(mouseleave)': 'hide()',
     '(focus)': 'show()',
@@ -59,6 +61,16 @@ export class HkTooltipDirective {
   readonly text = linkedSignal(() => this.hkTooltip());
 
   protected readonly tipId = `hk-tip-${nextTipId++}`;
+
+  /**
+   * An element id the owner of this directive wants described alongside the slip (a permanent,
+   * hidden description such as a disabled reason). Listed first so it is read even when no slip
+   * is on screen.
+   */
+  readonly describedByExtra = signal<string | null>(null);
+  protected readonly describedBy = computed(() =>
+    [this.describedByExtra(), this.tipId].filter((id) => id !== null).join(' '),
+  );
 
   private tip: ComponentRef<HkTipComponent> | undefined;
   private pending: ReturnType<typeof setTimeout> | undefined;

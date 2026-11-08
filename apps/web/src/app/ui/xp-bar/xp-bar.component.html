@@ -1,0 +1,14 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <span class="hk-xp-bar__label">{{ t('ui.xp.label') }}</span>
+  <div
+    class="hk-gauge"
+    role="progressbar"
+    [attr.aria-valuemin]="floor()"
+    [attr.aria-valuemax]="next()"
+    [attr.aria-valuenow]="now()"
+    [attr.aria-label]="t('ui.xp.meter', { xp: xpText(), next: nextText() })"
+  >
+    <div class="hk-gauge__xp" [style.width.%]="width()"></div>
+  </div>
+  <span class="hk-xp-bar__count">{{ xpText() }} / {{ nextText() }}</span>
+</ng-container>

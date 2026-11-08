@@ -1,0 +1,48 @@
+/* StatTile (design-system `hk-vplate`): a sunken leather plate, min-height 56px. */
+:host {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  min-block-size: 56px;
+  padding: 6px 7px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--plate), var(--plate-bottom));
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--border-brass);
+}
+
+:host(.hk-stat-tile--on) {
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--brass),
+    var(--shadow-glow-brass);
+}
+
+.hk-stat-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-on-leather-2);
+  font-size: 14px;
+  line-height: 1.08;
+}
+
+.hk-stat-tile__value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+hk-icon {
+  color: var(--brass);
+  font-size: 16px;
+}

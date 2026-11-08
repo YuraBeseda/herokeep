@@ -1,0 +1,174 @@
+/* Button (design-system): a 30px pill (40 `l`, 44 phone), Alegreya 600 15px. A ::before inset of
+   -4px lifts the desktop hit area to 36px+. Finishes: primary = brass, parchment, ghost, ember. */
+:host {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  block-size: var(--control-desktop);
+  padding: 0 12px;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--radius-seal);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter var(--duration-fast);
+}
+
+:host::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--radius-seal);
+}
+
+:host(.hk-button--l) {
+  block-size: 40px;
+  padding: 0 16px;
+}
+
+:host(.hk-button--phone) {
+  block-size: var(--control-phone);
+  padding: 0 14px;
+  font-size: 16px;
+}
+
+:host(.hk-button--primary) {
+  background: linear-gradient(
+    180deg,
+    var(--brass-top) 0%,
+    var(--brass) 45%,
+    var(--brass-mid) 80%,
+    var(--brass-bottom) 100%
+  );
+  box-shadow: var(--shadow-brass);
+  color: var(--text-on-brass);
+}
+
+:host(.hk-button--primary:hover) {
+  filter: brightness(1.07);
+}
+
+:host(.hk-button--parchment) {
+  background: radial-gradient(ellipse at 50% 35%, var(--leaf-glow), var(--leaf) 70%);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-strong),
+    var(--shadow-1);
+  color: var(--text-1);
+}
+
+:host(.hk-button--parchment:hover) {
+  filter: brightness(1.04);
+}
+
+:host(.hk-button--ghost) {
+  padding: 0 10px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+  color: var(--text-2);
+}
+
+:host(.hk-button--ghost:hover) {
+  background: var(--leaf-sunken);
+}
+
+:host(.hk-button--ember) {
+  background: linear-gradient(180deg, var(--ember) 0%, var(--ember) 55%, var(--ember-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--ember-top),
+    inset 0 0 0 1px var(--ember-bottom),
+    var(--shadow-1);
+  color: var(--text-on-ember);
+}
+
+:host(.hk-button--ember:hover) {
+  filter: brightness(1.07);
+}
+
+:host(.hk-button--ghost-leather) {
+  padding: 0 10px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather-2);
+}
+
+:host(.hk-button--ghost-leather:hover) {
+  background: var(--plate);
+}
+
+:host(.hk-button--moss) {
+  background: linear-gradient(
+    180deg,
+    var(--moss-mid) 0%,
+    var(--moss-mid) 55%,
+    var(--moss-bottom) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 var(--moss-top),
+    inset 0 0 0 1px var(--moss-bottom),
+    var(--shadow-1);
+  color: var(--text-on-moss);
+}
+
+:host(.hk-button--moss:hover) {
+  filter: brightness(1.07);
+}
+
+:host(:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--focus-ring-outer);
+}
+
+:host([aria-disabled='true']),
+:host(:disabled) {
+  filter: grayscale(0.35) opacity(0.6);
+  cursor: not-allowed;
+}
+
+:host(.hk-button--loading) {
+  pointer-events: none;
+}
+
+:host(.hk-button--loading) .hk-button__label {
+  opacity: 0.55;
+}
+
+.hk-button__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hk-button__spinner {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: hk-button-spin 0.9s linear infinite;
+}
+
+@keyframes hk-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    transition: none;
+  }
+
+  .hk-button__spinner {
+    animation-duration: 3s;
+  }
+}

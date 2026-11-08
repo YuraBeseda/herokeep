@@ -111,5 +111,37 @@
     "library": "Библиотека",
     "packs": "Наборы",
     "settings": "Настройки"
+  },
+  "ui": {
+    "ability": {
+      "meter": "{{name}} {{score}}, модификатор {{modifier}}",
+      "save": "Спасбросок {{value}}",
+      "save-proficient": "Владение спасброском",
+      "score": "Значение {{score}}"
+    },
+    "hp": {
+      "amount": "Количество",
+      "amount-needed": "Сначала введите количество",
+      "damage": "Урон",
+      "heal": "Лечение",
+      "label": "Хиты",
+      "meter": "{{current}} из {{max}} хитов",
+      "meter-temp": "{{current}} из {{max}} хитов, плюс {{temp}} временных",
+      "temp": "Врем. хиты"
+    },
+    "pool": {
+      "meter": "{{label}}: {{value}} из {{max}}"
+    },
+    "portrait": {
+      "of": "Портрет: {{name}}",
+      "placeholder": "Место для портрета, монограмма {{monogram}}"
+    },
+    "shield": {
+      "meter": "Класс доспеха {{value}}"
+    },
+    "xp": {
+      "label": "ОО",
+      "meter": "{{xp}} из {{next}} очков опыта"
+    }
   }
 }

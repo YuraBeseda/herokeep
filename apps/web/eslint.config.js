@@ -63,7 +63,26 @@ module.exports = defineConfig([
       // (none of those four are in the default ignore-list), matching this rule's intent.
       '@angular-eslint/template/i18n': [
         'error',
-        { checkId: false, checkText: true, checkAttributes: true },
+        {
+          checkId: false,
+          checkText: true,
+          checkAttributes: true,
+          // Additive to the rule's default ignore list: SVG geometry/filter attributes and
+          // `inputmode` hold identifiers and numbers, never user-visible text (the `ui/` SVG
+          // components draw seals, shields and texture filters with them).
+          ignoreAttributes: [
+            'd',
+            'transform',
+            'text-anchor',
+            'dominant-baseline',
+            'color-interpolation-filters',
+            'result',
+            'in',
+            'in2',
+            'operator',
+            'inputmode',
+          ],
+        },
       ],
     },
   },

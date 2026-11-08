@@ -1,0 +1,140 @@
+@use 'gauge';
+
+/* HpGauge (design-system): a leather strap, dashed stitch inset, brass buckle, 44px numeral. */
+:host {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  padding: 9px 14px 9px 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    var(--leather-highlight) 0%,
+    var(--leather) 55%,
+    var(--leather-dark) 100%
+  );
+  box-shadow: var(--shadow-strap);
+  outline: 1px dashed var(--stitch);
+  outline-offset: -5px;
+  color: var(--text-on-leather);
+}
+
+/* Strap contents sit above the leather texture overlay. */
+.hk-hp-gauge__buckle,
+.hk-hp-gauge__numerals,
+.hk-hp-gauge__body,
+.hk-hp-gauge__controls {
+  position: relative;
+}
+
+.hk-hp-gauge__buckle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 16px;
+  block-size: 44px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--brass-top), var(--brass) 50%, var(--brass-bottom));
+  box-shadow:
+    inset 0 0 0 2px var(--brass-shadow),
+    var(--shadow-1);
+
+  span {
+    display: block;
+    inline-size: 4px;
+    block-size: 24px;
+    border-radius: 2px;
+    background: var(--recess);
+  }
+}
+
+.hk-hp-gauge__numerals {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.hk-hp-gauge__max {
+  color: var(--brass);
+  font-size: 22px;
+}
+
+.hk-hp-gauge__body {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  gap: 5px;
+  min-inline-size: 0;
+}
+
+.hk-hp-gauge__label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-on-leather-2);
+  font-size: 14px;
+  line-height: 1;
+
+  hk-icon {
+    color: var(--brass);
+    font-size: 15px;
+  }
+}
+
+.hk-gauge {
+  @include gauge.track;
+}
+
+.hk-gauge__hp {
+  @include gauge.fill-ember;
+}
+
+.hk-gauge__temp {
+  @include gauge.fill-temp;
+}
+
+.hk-hp-gauge__controls {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.hk-hp-gauge__amount {
+  box-sizing: border-box;
+  inline-size: 64px;
+  block-size: var(--control-desktop);
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--recess);
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 18px;
+  text-align: center;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+@media (pointer: coarse) {
+  .hk-hp-gauge__amount {
+    block-size: var(--control-phone);
+  }
+}

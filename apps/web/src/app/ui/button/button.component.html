@@ -1,0 +1,7 @@
+@if (loading()) {
+  <span class="hk-button__spinner" aria-hidden="true"></span>
+}
+<span class="hk-button__label"><ng-content /></span>
+@if (disabledReason(); as reason) {
+  <span class="hk-button__reason" hidden [id]="reasonId">{{ reason }}</span>
+}

@@ -1,0 +1,51 @@
+/* ShieldBadge (design-system): brass heater shield, plate and numeral. */
+:host {
+  display: inline-flex;
+  line-height: 0;
+}
+
+svg {
+  display: block;
+}
+
+.hk-shield-stop1 {
+  stop-color: var(--brass-top);
+}
+
+.hk-shield-stop2 {
+  stop-color: var(--brass);
+}
+
+.hk-shield-stop3 {
+  stop-color: var(--brass-bottom);
+}
+
+.hk-shield-shadow {
+  fill: var(--leather-edge);
+  opacity: 0.6;
+}
+
+.hk-shield-face {
+  stroke: var(--brass-shadow);
+  stroke-width: 1.5;
+}
+
+.hk-shield-inner {
+  fill: var(--plate);
+  stroke: var(--rivet-dark);
+  stroke-width: 1;
+}
+
+:host-context([data-theme='plain']) .hk-shield-inner {
+  stroke: var(--brass);
+}
+
+.hk-shield-bevel {
+  stroke: black;
+  opacity: 0.35;
+}
+
+.hk-shield-num {
+  fill: var(--text-on-leather);
+  font-family: var(--font-display);
+}

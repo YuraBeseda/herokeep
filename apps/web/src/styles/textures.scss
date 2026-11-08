@@ -1,0 +1,47 @@
+// Surface textures (design-system "hk-tex"). The three feTurbulence filters (#hkWood, #hkPaper,
+// #hkLeather) are defined once by `<hk-textures>`; a surface lays one of these overlays under its
+// content:
+//
+//   <svg class="hk-tex hk-tex--paper" aria-hidden="true"><rect width="100%" height="100%" /></svg>
+//
+// The tint colours carry the strength (`--texture-*-tint`) and `--texture-*` (0 in the plain
+// theme) scales the overlay's opacity, so a theme switch re-skins every surface without a
+// re-render. Overlays never take pointer events.
+@layer utilities {
+  .hk-tex {
+    position: absolute;
+    inset: 0;
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .hk-tex--wood {
+    opacity: var(--texture-wood);
+
+    rect {
+      fill: var(--texture-wood-tint);
+      filter: url('#hkWood');
+    }
+  }
+
+  .hk-tex--paper {
+    opacity: var(--texture-parchment);
+
+    rect {
+      fill: var(--texture-parchment-tint);
+      filter: url('#hkPaper');
+    }
+  }
+
+  .hk-tex--leather {
+    opacity: var(--texture-leather);
+
+    rect {
+      fill: var(--texture-leather-tint);
+      filter: url('#hkLeather');
+    }
+  }
+}

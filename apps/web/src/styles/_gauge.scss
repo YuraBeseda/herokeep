@@ -1,0 +1,37 @@
+// The recessed gauge track and its fills, shared by hk-hp-gauge, hk-pool-bar and hk-xp-bar
+// (design-system `hk-gauge`). A mixin because each component's styles are encapsulated.
+
+@mixin track($height: 14px) {
+  position: relative;
+  display: flex;
+  min-inline-size: 0;
+  block-size: $height;
+  overflow: hidden;
+  border-radius: calc($height / 2);
+  background: var(--recess);
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--border-brass);
+}
+
+@mixin fill-brass {
+  block-size: 100%;
+  background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+}
+
+@mixin fill-ember {
+  block-size: 100%;
+  background: linear-gradient(180deg, var(--ember-top), var(--ember) 55%, var(--ember-bottom));
+}
+
+@mixin fill-temp {
+  block-size: 100%;
+  background: repeating-linear-gradient(135deg, var(--brass-top) 0 3px, var(--brass-mid) 3px 6px);
+}
+
+@mixin fill-xp {
+  block-size: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--brass-bottom), var(--brass));
+  transition: width var(--duration-base);
+}

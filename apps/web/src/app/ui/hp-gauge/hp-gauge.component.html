@@ -1,0 +1,57 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <svg class="hk-tex hk-tex--leather" aria-hidden="true"><rect width="100%" height="100%" /></svg>
+  <div class="hk-hp-gauge__buckle" aria-hidden="true"><span></span></div>
+  <div class="hk-hp-gauge__numerals" aria-hidden="true">
+    <span class="hk-hp-gauge__current">{{ current() }}</span>
+    <span class="hk-hp-gauge__max">/ {{ max() }}</span>
+  </div>
+  <div class="hk-hp-gauge__body">
+    <span class="hk-hp-gauge__label">
+      <hk-icon [icon]="'ui:hp'" />
+      {{ t('ui.hp.label') }}
+    </span>
+    <div
+      class="hk-gauge"
+      role="meter"
+      aria-valuemin="0"
+      [attr.aria-valuemax]="max()"
+      [attr.aria-valuenow]="current()"
+      [attr.aria-valuetext]="
+        temp() > 0
+          ? t('ui.hp.meter-temp', { current: current(), max: max(), temp: temp() })
+          : t('ui.hp.meter', { current: current(), max: max() })
+      "
+    >
+      <div class="hk-gauge__hp" [style.width.%]="hpWidth()"></div>
+      <div class="hk-gauge__temp" [style.width.%]="tempWidth()"></div>
+    </div>
+  </div>
+  <div class="hk-hp-gauge__controls">
+    @let reason = amount() === null ? t('ui.hp.amount-needed') : null;
+    <input
+      #field
+      class="hk-hp-gauge__amount"
+      type="text"
+      inputmode="numeric"
+      autocomplete="off"
+      [attr.aria-label]="t('ui.hp.amount')"
+      [value]="typed()"
+      (input)="onInput($event)"
+      (keydown.enter)="emit('damage', field)"
+    />
+    <button hk-button [variant]="'ember'" [disabledReason]="reason" (click)="emit('damage', field)">
+      <hk-icon [icon]="'ui:damage'" />{{ t('ui.hp.damage') }}
+    </button>
+    <button hk-button [variant]="'moss'" [disabledReason]="reason" (click)="emit('heal', field)">
+      <hk-icon [icon]="'ui:heal'" />{{ t('ui.hp.heal') }}
+    </button>
+    <button
+      hk-button
+      [variant]="'ghost-leather'"
+      [disabledReason]="reason"
+      (click)="emit('setTemp', field)"
+    >
+      {{ t('ui.hp.temp') }}
+    </button>
+  </div>
+</ng-container>

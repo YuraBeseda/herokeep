@@ -1,0 +1,7 @@
+<span class="hk-stat-tile__label">{{ label() }}</span>
+<span class="hk-stat-tile__value">
+  @if (icon(); as glyph) {
+    <hk-icon [icon]="glyph" />
+  }
+  {{ text() }}
+</span>

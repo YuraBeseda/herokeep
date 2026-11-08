@@ -111,5 +111,37 @@
     "library": "Бібліотека",
     "packs": "Пакети",
     "settings": "Налаштування"
+  },
+  "ui": {
+    "ability": {
+      "meter": "{{name}} {{score}}, модифікатор {{modifier}}",
+      "save": "Рятівний кидок {{value}}",
+      "save-proficient": "Володіння рятівним кидком",
+      "score": "Значення {{score}}"
+    },
+    "hp": {
+      "amount": "Кількість",
+      "amount-needed": "Спочатку введіть кількість",
+      "damage": "Шкода",
+      "heal": "Зцілення",
+      "label": "Хіти",
+      "meter": "{{current}} з {{max}} хітів",
+      "meter-temp": "{{current}} з {{max}} хітів, плюс {{temp}} тимчасових",
+      "temp": "Тимч. хіти"
+    },
+    "pool": {
+      "meter": "{{label}}: {{value}} з {{max}}"
+    },
+    "portrait": {
+      "of": "Портрет: {{name}}",
+      "placeholder": "Місце для портрета, монограма {{monogram}}"
+    },
+    "shield": {
+      "meter": "Клас обладунку {{value}}"
+    },
+    "xp": {
+      "label": "ОД",
+      "meter": "{{xp}} з {{next}} очок досвіду"
+    }
   }
 }
