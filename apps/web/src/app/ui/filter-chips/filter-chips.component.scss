@@ -1,0 +1,44 @@
+/* FilterChips (design-system): wraps on desktop, scrolls sideways on phones. */
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.hk-filter-chips__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.hk-filter-chips__clear {
+  box-sizing: border-box;
+  block-size: 30px;
+  padding: 0 10px;
+  border: 1px dashed var(--accent-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 16px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+@media (max-width: 767px) {
+  .hk-filter-chips__group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-block-end: 2px;
+  }
+}
+
+@media (pointer: coarse) {
+  .hk-filter-chips__clear {
+    block-size: var(--control-phone);
+  }
+}

@@ -1,0 +1,69 @@
+/* SpellRow (design-system): glyph · name · marks · Cast, 28px compact / 36px comfortable. */
+:host {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-block-size: var(--row-compact);
+  color: var(--text-1);
+  font-size: 16px;
+}
+
+:host(.hk-srow--comfortable) {
+  min-block-size: var(--row-comfortable);
+}
+
+:host(.hk-srow--unprepared) > :not(button) {
+  opacity: 0.6;
+}
+
+.hk-srow__glyph {
+  flex: none;
+  color: var(--accent-strong);
+  font-size: 20px;
+}
+
+.hk-srow__name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hk-srow__always,
+.hk-srow__orb {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.hk-srow__always {
+  color: var(--accent-strong);
+}
+
+.hk-srow__orb {
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+  background: var(--arcane-strong);
+  box-shadow: inset 0 0 0 1px var(--arcane-deep);
+  color: var(--text-on-arcane);
+  font-size: 14px;
+}
+
+button {
+  flex: none;
+}
+
+@media (pointer: coarse) {
+  :host {
+    min-block-size: var(--control-phone);
+  }
+}

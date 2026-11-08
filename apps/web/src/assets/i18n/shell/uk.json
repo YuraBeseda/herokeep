@@ -119,6 +119,25 @@
       "save-proficient": "Володіння рятівним кидком",
       "score": "Значення {{score}}"
     },
+    "attack": {
+      "roll": "Кидок: {{name}}"
+    },
+    "condition": {
+      "end": "Зняти: {{name}}"
+    },
+    "death": {
+      "failure": "Невдача",
+      "failure-marked": "Невдача, позначено",
+      "failures": "Невдачі",
+      "mark-failure": "Позначити невдачу",
+      "mark-success": "Позначити успіх",
+      "success": "Успіх",
+      "success-marked": "Успіх, позначено",
+      "successes": "Успіхи"
+    },
+    "filter": {
+      "clear": "Скинути фільтри"
+    },
     "hp": {
       "amount": "Кількість",
       "amount-needed": "Спочатку введіть кількість",
@@ -129,6 +148,16 @@
       "meter-temp": "{{current}} з {{max}} хітів, плюс {{temp}} тимчасових",
       "temp": "Тимч. хіти"
     },
+    "inspiration": {
+      "available": "є",
+      "none": "немає",
+      "press-grant": "Героїчне натхнення: немає. Натисніть, щоб позначити отримання.",
+      "press-spend": "Героїчне натхнення: є. Натисніть, щоб витратити."
+    },
+    "options": {
+      "chip": "Варіантів: {{count}}",
+      "see-all": "Усі в бібліотеці"
+    },
     "pool": {
       "meter": "{{label}}: {{value}} з {{max}}"
     },
@@ -138,6 +167,9 @@
     },
     "shield": {
       "meter": "Клас обладунку {{value}}"
+    },
+    "spell": {
+      "cast": "Створити: {{name}}"
     },
     "xp": {
       "label": "ОД",

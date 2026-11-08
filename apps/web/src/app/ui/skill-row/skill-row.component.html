@@ -1,0 +1,27 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <span
+    [class]="'hk-dot hk-dot--' + proficiency()"
+    role="img"
+    tabindex="0"
+    [attr.aria-label]="proficiencyHint()"
+    [hkTooltip]="proficiencyHint()"
+  ></span>
+  <span class="hk-sk__name" [id]="nameId" [hkTooltip]="name()">{{ name() }}</span>
+  @if (disadvantage(); as cause) {
+    <span class="hk-dis" tabindex="0" [hkTooltip]="cause">
+      <hk-icon [icon]="'ui:disadvantage'" />
+      {{ t('icon.disadvantage') }}
+    </span>
+  }
+  <span class="hk-sk__mod">{{ modifierText() }}</span>
+  <button
+    hk-icon-button
+    [icon]="'roll'"
+    [hint]="'shell.icon.roll'"
+    [variant]="'ghost'"
+    [size]="'s'"
+    [id]="rollId"
+    [attr.aria-labelledby]="rollLabelledBy"
+    (click)="roll.emit()"
+  ></button>
+</ng-container>

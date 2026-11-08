@@ -1,0 +1,35 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <button
+    #chip
+    type="button"
+    class="hk-options-chip__chip"
+    aria-haspopup="true"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="open() ? popoverId : null"
+    [attr.aria-label]="t('ui.options.chip', { count: count() })"
+    (click)="onClick()"
+    (pointerdown)="onPointerDown($event)"
+    (pointerup)="cancelLongPress()"
+    (pointercancel)="cancelLongPress()"
+    (pointerleave)="cancelLongPress()"
+  >
+    <hk-icon [icon]="'ui:features'" />
+    <span class="hk-options-chip__count">{{ count() }}</span>
+  </button>
+  @if (open()) {
+    <div class="hk-options-chip__popover" [id]="popoverId">
+      <ul class="hk-options-chip__list">
+        @for (option of options(); track option.id) {
+          <li>
+            <a class="hk-options-chip__link" [href]="option.href">{{ option.name }}</a>
+          </li>
+        }
+      </ul>
+      @if (seeAllHref(); as href) {
+        <a class="hk-options-chip__link hk-options-chip__all" [href]="href">{{
+          t('ui.options.see-all')
+        }}</a>
+      }
+    </div>
+  }
+</ng-container>

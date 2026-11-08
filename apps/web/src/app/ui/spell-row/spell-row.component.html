@@ -1,0 +1,43 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @if (chosen()) {
+    <hk-wax-seal
+      [state]="'selected'"
+      [size]="'s'"
+      [glyph]="'ui:done'"
+      [hint]="chosenHint() ?? ''"
+    />
+  }
+  @if (level(); as numeral) {
+    <hk-wax-seal [size]="'s'" [numeral]="numeral" [hint]="levelHint() ?? ''" />
+  }
+  <hk-icon class="hk-srow__glyph" [icon]="icon()" />
+  <span class="hk-srow__name" [hkTooltip]="name()">{{ name() }}</span>
+  @if (alwaysPrepared(); as hint) {
+    <span
+      class="hk-srow__always"
+      role="img"
+      tabindex="0"
+      [attr.aria-label]="hint"
+      [hkTooltip]="hint"
+    >
+      <hk-icon [icon]="'ui:always-prepared'" />
+    </span>
+  }
+  @if (concentrating(); as hint) {
+    <span class="hk-srow__orb" role="img" tabindex="0" [attr.aria-label]="hint" [hkTooltip]="hint">
+      <hk-icon [icon]="'ui:concentration'" />
+    </span>
+  }
+  @if (castable()) {
+    <button
+      hk-button
+      [variant]="'primary'"
+      [size]="buttonSize()"
+      [disabledReason]="castDisabledReason()"
+      [attr.aria-label]="t('ui.spell.cast', { name: name() })"
+      (click)="cast.emit()"
+    >
+      <hk-icon [icon]="'ui:cast'" />
+    </button>
+  }
+</ng-container>

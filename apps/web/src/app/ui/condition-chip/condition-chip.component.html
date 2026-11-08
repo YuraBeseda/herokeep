@@ -1,0 +1,37 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <span
+    class="hk-cond__main"
+    role="img"
+    tabindex="0"
+    [attr.aria-label]="story()"
+    [hkTooltip]="story()"
+  >
+    <hk-icon [icon]="icon()" />
+    <span class="hk-cond__name">{{ name() }}</span>
+    @if (badge(); as text) {
+      <span class="hk-cond__dur">{{ text }}</span>
+    }
+  </span>
+  @if (locked()) {
+    <span
+      class="hk-cond__lock"
+      role="img"
+      tabindex="0"
+      [attr.aria-label]="t('icon.lock')"
+      [hkTooltip]="t('icon.lock')"
+    >
+      <hk-icon [icon]="'ui:lock'" />
+    </span>
+  } @else if (removable()) {
+    @let end = t('ui.condition.end', { name: name() });
+    <button
+      type="button"
+      class="hk-cond__end"
+      [attr.aria-label]="end"
+      [hkTooltip]="end"
+      (click)="remove.emit()"
+    >
+      <span class="hk-cond__x"><hk-icon [icon]="'ui:close'" /></span>
+    </button>
+  }
+</ng-container>

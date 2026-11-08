@@ -1,0 +1,31 @@
+<span
+  class="hk-feat__src"
+  role="img"
+  tabindex="0"
+  [attr.aria-label]="sourceHint()"
+  [hkTooltip]="sourceHint()"
+>
+  <hk-icon [icon]="icon()" />
+</span>
+<span class="hk-feat__name" [id]="nameId" [hkTooltip]="name()">{{ name() }}</span>
+@if (level() !== null) {
+  <span
+    class="hk-lvlbadge"
+    tabindex="0"
+    [attr.aria-label]="levelHint()"
+    [hkTooltip]="levelHint() ?? ''"
+    >{{ level() }}</span
+  >
+} @else if (source(); as label) {
+  <hk-tag-chip [label]="label" />
+}
+<button
+  hk-icon-button
+  [icon]="'details'"
+  [hint]="'shell.icon.details'"
+  [variant]="'ghost'"
+  [size]="'s'"
+  [id]="buttonId"
+  [attr.aria-labelledby]="labelledBy"
+  (click)="details.emit()"
+></button>

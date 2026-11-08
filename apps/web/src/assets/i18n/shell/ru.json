@@ -119,6 +119,25 @@
       "save-proficient": "Владение спасброском",
       "score": "Значение {{score}}"
     },
+    "attack": {
+      "roll": "Бросок: {{name}}"
+    },
+    "condition": {
+      "end": "Снять: {{name}}"
+    },
+    "death": {
+      "failure": "Провал",
+      "failure-marked": "Провал, отмечен",
+      "failures": "Провалы",
+      "mark-failure": "Отметить провал",
+      "mark-success": "Отметить успех",
+      "success": "Успех",
+      "success-marked": "Успех, отмечен",
+      "successes": "Успехи"
+    },
+    "filter": {
+      "clear": "Сбросить фильтры"
+    },
     "hp": {
       "amount": "Количество",
       "amount-needed": "Сначала введите количество",
@@ -129,6 +148,16 @@
       "meter-temp": "{{current}} из {{max}} хитов, плюс {{temp}} временных",
       "temp": "Врем. хиты"
     },
+    "inspiration": {
+      "available": "есть",
+      "none": "нет",
+      "press-grant": "Героическое вдохновение: нет. Нажмите, чтобы отметить получение.",
+      "press-spend": "Героическое вдохновение: есть. Нажмите, чтобы потратить."
+    },
+    "options": {
+      "chip": "Вариантов: {{count}}",
+      "see-all": "Все в библиотеке"
+    },
     "pool": {
       "meter": "{{label}}: {{value}} из {{max}}"
     },
@@ -138,6 +167,9 @@
     },
     "shield": {
       "meter": "Класс доспеха {{value}}"
+    },
+    "spell": {
+      "cast": "Сотворить: {{name}}"
     },
     "xp": {
       "label": "ОО",

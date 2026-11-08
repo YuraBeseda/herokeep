@@ -1,0 +1,47 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <span class="hk-iring"><hk-icon [icon]="icon()" /></span>
+  <span class="hk-arow__title">
+    <span class="hk-arow__name" [hkTooltip]="name()">{{ name() }}</span>
+    @if (attuned(); as hint) {
+      <span
+        class="hk-arow__gem"
+        role="img"
+        tabindex="0"
+        [attr.aria-label]="hint"
+        [hkTooltip]="hint"
+      >
+        <hk-icon [icon]="'ui:attune'" />
+      </span>
+    }
+  </span>
+  <span class="hk-arow__hit">{{ toHitText() }}</span>
+  <span class="hk-arow__dmgcell">
+    <span class="hk-arow__dmg">{{ damage() }}</span>
+    @if (damageType(); as type) {
+      <span class="hk-arow__type">
+        <hk-tag-chip [label]="type.label" [damage]="type.damage ?? null" />
+      </span>
+    }
+  </span>
+  <button
+    hk-button
+    [variant]="'primary'"
+    [size]="buttonSize()"
+    [attr.aria-label]="t('ui.attack.roll', { name: name() })"
+    (click)="roll.emit()"
+  >
+    <hk-icon [icon]="'ui:roll'" />
+  </button>
+  @if (tags().length > 0) {
+    <span class="hk-arow__tags">
+      @for (tag of tags(); track $index) {
+        <hk-tag-chip
+          [label]="tag.label"
+          [tone]="tag.tone ?? 'neutral'"
+          [icon]="tag.icon ?? null"
+          [hint]="tag.hint ?? null"
+        />
+      }
+    </span>
+  }
+</ng-container>

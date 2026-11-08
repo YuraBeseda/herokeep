@@ -119,6 +119,25 @@
       "save-proficient": "Proficient saving throw",
       "score": "Score {{score}}"
     },
+    "attack": {
+      "roll": "Roll {{name}}"
+    },
+    "condition": {
+      "end": "End {{name}}"
+    },
+    "death": {
+      "failure": "Failure",
+      "failure-marked": "Failure, marked",
+      "failures": "Failures",
+      "mark-failure": "Mark failure",
+      "mark-success": "Mark success",
+      "success": "Success",
+      "success-marked": "Success, marked",
+      "successes": "Successes"
+    },
+    "filter": {
+      "clear": "Clear filters"
+    },
     "hp": {
       "amount": "Amount",
       "amount-needed": "Enter an amount first",
@@ -129,6 +148,16 @@
       "meter-temp": "{{current}} of {{max}} hit points, plus {{temp}} temporary",
       "temp": "Temp HP"
     },
+    "inspiration": {
+      "available": "available",
+      "none": "none",
+      "press-grant": "Heroic inspiration: none. Press to mark a grant.",
+      "press-spend": "Heroic inspiration: available. Press to spend it."
+    },
+    "options": {
+      "chip": "{{count}} options",
+      "see-all": "See all in library"
+    },
     "pool": {
       "meter": "{{label}}: {{value}} of {{max}}"
     },
@@ -138,6 +167,9 @@
     },
     "shield": {
       "meter": "Armor class {{value}}"
+    },
+    "spell": {
+      "cast": "Cast {{name}}"
     },
     "xp": {
       "label": "XP",

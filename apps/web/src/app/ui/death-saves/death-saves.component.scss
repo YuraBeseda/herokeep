@@ -1,0 +1,64 @@
+/* DeathSaves (design-system): two labelled rows of three ring buttons and a Roll button. */
+:host {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-1);
+}
+
+.hk-death__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hk-death__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hk-death__label {
+  min-inline-size: 7ch;
+  font-size: 15px;
+}
+
+.hk-death__rings {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.hk-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+/* The button owns the hint; the seal inside never takes the pointer. */
+.hk-ring hk-wax-seal {
+  pointer-events: none;
+}
+
+.hk-death__roll {
+  flex: none;
+}
+
+@media (pointer: coarse) {
+  .hk-ring {
+    inline-size: var(--control-phone);
+    block-size: var(--control-phone);
+  }
+}

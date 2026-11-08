@@ -1,0 +1,48 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <div class="hk-death__rows">
+    @for (kind of kinds; track kind) {
+      <div class="hk-death__row">
+        <span class="hk-death__label">{{
+          kind === 'success' ? t('ui.death.successes') : t('ui.death.failures')
+        }}</span>
+        <span class="hk-death__rings">
+          @for (index of rings; track index) {
+            @let on = index < marked()[kind];
+            @let hint =
+              kind === 'success'
+                ? on
+                  ? t('ui.death.success-marked')
+                  : t('ui.death.mark-success')
+                : on
+                  ? t('ui.death.failure-marked')
+                  : t('ui.death.mark-failure');
+            <button
+              type="button"
+              class="hk-ring"
+              [attr.data-kind]="kind"
+              [attr.aria-pressed]="on"
+              [attr.aria-label]="hint"
+              [hkTooltip]="hint"
+              (click)="ringToggle.emit({ kind, index })"
+            >
+              <hk-wax-seal
+                [size]="'s'"
+                [state]="on ? 'filled' : 'spent'"
+                [glyph]="kind === 'success' ? 'ui:done' : 'ui:close'"
+                [seed]="index + (kind === 'success' ? 0 : 3)"
+                [hint]="hint"
+              />
+            </button>
+          }
+        </span>
+      </div>
+    }
+  </div>
+  <button
+    hk-icon-button
+    class="hk-death__roll"
+    [icon]="'roll'"
+    [hint]="'shell.icon.roll'"
+    (click)="roll.emit()"
+  ></button>
+</ng-container>

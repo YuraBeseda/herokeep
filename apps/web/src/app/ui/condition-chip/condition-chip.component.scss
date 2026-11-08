@@ -1,0 +1,109 @@
+/* ConditionChip (design-system): 36px ember chip; the End hit area is 36px around a 22px disc. */
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  block-size: 36px;
+  padding: 0 0 0 10px;
+  border-radius: 4px;
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 1px var(--danger-border);
+  color: var(--danger-strong);
+  font-family: var(--font-body);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+:host(.hk-cond--arcane) {
+  background: var(--arcane-soft);
+  box-shadow: inset 0 0 0 1px var(--arcane-strong);
+  color: var(--arcane-strong);
+}
+
+.hk-cond__main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  block-size: 100%;
+  border-radius: 4px;
+}
+
+.hk-cond__name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hk-cond__dur {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  block-size: 20px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+.hk-cond__lock,
+.hk-cond__end {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.hk-cond__lock {
+  color: inherit;
+}
+
+.hk-cond__end {
+  color: var(--text-on-ember);
+  cursor: pointer;
+}
+
+.hk-cond__x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 22px;
+  block-size: 22px;
+  border-radius: 50%;
+  background: var(--ember-bottom);
+  font-size: 12px;
+}
+
+.hk-cond__main:focus-visible,
+.hk-cond__lock:focus-visible,
+.hk-cond__end:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  box-shadow: 0 0 0 4px var(--focus-ring-outer);
+}
+
+hk-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+@media (pointer: coarse) {
+  :host {
+    block-size: var(--control-phone);
+  }
+
+  .hk-cond__lock,
+  .hk-cond__end {
+    inline-size: var(--control-phone);
+    block-size: var(--control-phone);
+  }
+}
