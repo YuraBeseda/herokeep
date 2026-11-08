@@ -52,6 +52,13 @@ describe('HkItemRowComponent', () => {
     expect(qty.textContent?.trim()).toBe('×3');
   });
 
+  it('gives an out-of-charges sub-caption the danger ink class', async () => {
+    const { el } = await mount(HkItemRowComponent, { item: ring });
+    expect(el.querySelector('.hk-item__sub--depleted')).not.toBeNull();
+    const fine = await mount(HkItemRowComponent, { item: { ...ring, depleted: false } });
+    expect(fine.el.querySelector('.hk-item__sub--depleted')).toBeNull();
+  });
+
   it('omits marks that do not apply', async () => {
     const { el } = await mount(HkItemRowComponent, {
       item: { id: 'x', name: 'Rope', icon: 'gi:rope-coil' },

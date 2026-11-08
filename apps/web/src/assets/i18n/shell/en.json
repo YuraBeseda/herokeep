@@ -125,7 +125,13 @@
     "coins": {
       "cp": "{count, plural, one {# copper piece} other {# copper pieces}}",
       "gp": "{count, plural, one {# gold piece} other {# gold pieces}}",
+      "cancel": "Cancel",
       "group": "Coin pouch",
+      "name-cp": "Copper",
+      "name-gp": "Gold",
+      "name-pp": "Platinum",
+      "name-sp": "Silver",
+      "save": "Save",
       "pp": "{count, plural, one {# platinum piece} other {# platinum pieces}}",
       "sp": "{count, plural, one {# silver piece} other {# silver pieces}}",
       "total": "≈ {{amount}} gp",
@@ -190,6 +196,7 @@
     "party": {
       "conditions": "Conditions",
       "dying": "Dying",
+      "hp": "Hit points of {{name}}",
       "offline": "Offline",
       "online": "Online",
       "open": "Open {{name}}"

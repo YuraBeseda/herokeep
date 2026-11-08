@@ -80,7 +80,21 @@ export class HkNumberFieldComponent extends HkValueAccessor<number | null> {
     this.commit(this.clamp((this.value() ?? 0) + direction * this.step()));
   }
 
-  protected onInput(raw: string): void {
+  /**
+   * The soft keypad to ask for. A field that can go negative needs the minus key, which the
+   * numeric and decimal pads of some phones lack; a fractional step needs the decimal point.
+   */
+  protected readonly inputMode = computed(() => {
+    const min = this.min();
+    if (min === undefined || min < 0) return 'text';
+    return Number.isInteger(this.step()) ? 'numeric' : 'decimal';
+  });
+
+  protected onInput(field: HTMLInputElement): void {
+    const raw = field.value;
+    // A half-typed number ("-", "1e") reads as '' with `badInput`: leave it be, or the model
+    // update would rewrite the field and swallow the keystroke.
+    if (raw === '' && field.validity.badInput) return;
     if (raw === '') {
       this.commit(null);
       return;

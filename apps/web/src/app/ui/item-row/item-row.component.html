@@ -17,7 +17,9 @@
           current.name
         }}</span>
         @if (sub(current); as sub) {
-          <span class="hk-item__sub">{{ sub }}</span>
+          <span class="hk-item__sub" [class.hk-item__sub--depleted]="current.depleted">{{
+            sub
+          }}</span>
         }
       </span>
     </button>

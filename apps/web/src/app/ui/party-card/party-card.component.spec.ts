@@ -43,6 +43,13 @@ describe('HkPartyCardComponent', () => {
     );
   });
 
+  it('names its meter after the hero', async () => {
+    const { el } = await mount(HkPartyCardComponent, base);
+    expect(el.querySelector('[role="meter"]')!.getAttribute('aria-label')).toBe(
+      'Hit points of Mira Vale',
+    );
+  });
+
   it('mentions temporary hit points in the meter text and draws them', async () => {
     const { el } = await mount(HkPartyCardComponent, { ...base, hpTemp: 5 });
     expect(el.querySelector('[role="meter"]')!.getAttribute('aria-valuetext')).toBe(

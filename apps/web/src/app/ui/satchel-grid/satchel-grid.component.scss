@@ -124,6 +124,17 @@ li {
   color: var(--danger-on-leather);
 }
 
+.hk-satchel__strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-block-start: 8px;
+}
+
+.hk-satchel__strip:empty {
+  display: none;
+}
+
 /* Tablets: three columns. */
 @media (width <= 1023px) {
   .hk-satchel__grid {

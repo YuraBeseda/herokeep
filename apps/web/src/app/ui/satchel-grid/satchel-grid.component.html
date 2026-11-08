@@ -31,4 +31,7 @@
       <li class="hk-slot hk-slot--empty" aria-hidden="true"></li>
     }
   </ul>
+  @if (selectedId()) {
+    <div class="hk-satchel__strip"><ng-content select="[hkItemActions]" /></div>
+  }
 </ng-container>

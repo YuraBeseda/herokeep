@@ -93,6 +93,19 @@ small {
   white-space: nowrap;
 }
 
+.hk-pouch__edit-fields {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.hk-pouch__edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
 .hk-pouch__edit {
   flex: none;
   margin-inline-start: auto;

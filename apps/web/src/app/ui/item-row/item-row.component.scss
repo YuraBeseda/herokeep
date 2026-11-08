@@ -80,6 +80,10 @@
   font-size: 14px;
 }
 
+.hk-item__sub--depleted {
+  color: var(--danger-strong);
+}
+
 .hk-item__marks {
   display: flex;
   gap: 4px;

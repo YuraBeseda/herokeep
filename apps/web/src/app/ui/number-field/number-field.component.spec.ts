@@ -100,6 +100,38 @@ describe('HkNumberFieldComponent', () => {
     expect(seen).toEqual([null]);
   });
 
+  it('does not wipe a half-typed minus, and takes the negative number once finished', async () => {
+    const { fixture, el } = await mount(HkNumberFieldComponent, {
+      label: 'Temp',
+      min: -10,
+      max: 10,
+    });
+    const seen: (number | null)[] = [];
+    fixture.componentInstance.value.subscribe((v) => seen.push(v));
+    // The browser reports a lone "-" as an empty value with badInput.
+    Object.defineProperty(input(el), 'validity', { value: { badInput: true }, configurable: true });
+    typeInto(input(el), '');
+    fixture.detectChanges();
+    expect(seen).toEqual([]);
+    expect(fixture.componentInstance.value()).toBeNull();
+    Object.defineProperty(input(el), 'validity', {
+      value: { badInput: false },
+      configurable: true,
+    });
+    typeInto(input(el), '-3');
+    expect(seen).toEqual([-3]);
+  });
+
+  it.each([
+    [{ min: 0 }, 'numeric'],
+    [{ min: 0, step: 0.5 }, 'decimal'],
+    [{ min: -5 }, 'text'],
+    [{}, 'text'],
+  ])('asks for the keypad that suits the constraints %j', async (constraints, mode) => {
+    const { el } = await mount(HkNumberFieldComponent, { label: 'N', ...constraints });
+    expect(input(el).getAttribute('inputmode')).toBe(mode);
+  });
+
   it('uses the 44px phone layout on a coarse pointer', async () => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,

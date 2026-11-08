@@ -1,3 +1,6 @@
+import { Component, signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideShellTransloco } from '../testing/transloco-testing';
 import type { BagItem } from '../bag-item';
 import { hintOf, mount, press } from '../testing/harness';
 import { HkSatchelGridComponent } from './satchel-grid.component';
@@ -118,5 +121,30 @@ describe('HkSatchelGridComponent', () => {
     press(slots(el)[1]);
     press(slots(el)[2], 'touch');
     expect(seen).toEqual(['arrows', 'rope']);
+  });
+});
+
+describe('HkSatchelGridComponent selected-item actions', () => {
+  it('projects the [hkItemActions] strip only while a slot is selected', async () => {
+    @Component({
+      imports: [HkSatchelGridComponent],
+      template: `<hk-satchel-grid [items]="items" [selectedId]="selected()"
+        ><div hkItemActions id="strip"></div
+      ></hk-satchel-grid>`,
+    })
+    class Host {
+      readonly items = items;
+      readonly selected = signal<string | null>(null);
+    }
+    await TestBed.configureTestingModule({
+      providers: [provideShellTransloco()],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Host);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('#strip')).toBeNull();
+    fixture.componentInstance.selected.set('arrows');
+    await fixture.whenStable();
+    expect(el.querySelector('.hk-satchel__strip #strip')).not.toBeNull();
   });
 });

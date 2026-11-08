@@ -44,6 +44,7 @@
       <div
         class="hk-gauge"
         role="meter"
+        [attr.aria-label]="t('ui.party.hp', { name: name() })"
         aria-valuemin="0"
         [attr.aria-valuemax]="rangeMax()"
         [attr.aria-valuenow]="now()"

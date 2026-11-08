@@ -26,6 +26,11 @@ function buttons(el: HTMLElement) {
 }
 
 describe('HkHpGaugeComponent', () => {
+  it('names its meter', async () => {
+    const { el } = await make({ current: 5, max: 10, temp: 0 });
+    expect(el.querySelector('[role="meter"]')!.getAttribute('aria-label')).toBe('Hit points');
+  });
+
   it('is a meter with now/min/max and a text alternative', async () => {
     const { el } = await make({ current: 31, max: 44, temp: 0 });
     const meter = el.querySelector('[role="meter"]')!;

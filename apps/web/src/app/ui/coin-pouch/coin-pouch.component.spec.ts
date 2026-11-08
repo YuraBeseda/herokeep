@@ -1,4 +1,4 @@
-import { hintOf, mount, press } from '../testing/harness';
+import { hintOf, mount, press, typeInto } from '../testing/harness';
 import { HkCoinPouchComponent } from './coin-pouch.component';
 
 const coins = { pp: 1, gp: 38, sp: 0, cp: 7 };
@@ -47,7 +47,7 @@ describe('HkCoinPouchComponent', () => {
     expect(el.querySelector('[role="group"]')!.getAttribute('aria-label')).toBe('Coin pouch');
   });
 
-  it('emits edit from a named, hinted edit button', async () => {
+  it('has a named, hinted edit button that announces edit', async () => {
     const { fixture, el } = await mount(HkCoinPouchComponent, base);
     let edits = 0;
     fixture.componentInstance.edit.subscribe(() => edits++);
@@ -56,6 +56,60 @@ describe('HkCoinPouchComponent', () => {
     expect(hintOf(button)).toBe('Edit');
     press(button);
     expect(edits).toBe(1);
+  });
+
+  describe('edit mode', () => {
+    async function editing() {
+      const m = await mount(HkCoinPouchComponent, base);
+      const saved: unknown[] = [];
+      m.fixture.componentInstance.save.subscribe((v) => saved.push(v));
+      press(m.el.querySelector<HTMLButtonElement>('button[hk-icon-button]')!);
+      m.fixture.detectChanges();
+      return { ...m, saved };
+    }
+    const fields = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll<HTMLInputElement>('hk-number-field input'));
+    const byClass = (el: HTMLElement, c: string) => el.querySelector<HTMLButtonElement>(`.${c}`)!;
+
+    it('turns each metal into a number field holding its amount, replacing the view', async () => {
+      const { el } = await editing();
+      expect(fields(el).map((f) => f.value)).toEqual(['1', '38', '0', '7']);
+      expect(fields(el).every((f) => f.min === '0')).toBe(true);
+      expect(
+        Array.from(el.querySelectorAll('hk-number-field label')).map((l) => l.textContent?.trim()),
+      ).toEqual(['Platinum', 'Gold', 'Silver', 'Copper']);
+      expect(stacks(el)).toHaveLength(0);
+      expect(el.querySelector('button[hk-icon-button]')).toBeNull();
+    });
+
+    it('saves the four amounts once and returns to the view', async () => {
+      const { fixture, el, saved } = await editing();
+      typeInto(fields(el)[1], '40');
+      press(byClass(el, 'hk-pouch__save'));
+      fixture.detectChanges();
+      expect(saved).toEqual([{ pp: 1, gp: 40, sp: 0, cp: 7 }]);
+      expect(stacks(el)).toHaveLength(4);
+    });
+
+    it('treats an emptied field as zero coins', async () => {
+      const { fixture, el, saved } = await editing();
+      typeInto(fields(el)[3], '');
+      press(byClass(el, 'hk-pouch__save'));
+      fixture.detectChanges();
+      expect(saved).toEqual([{ pp: 1, gp: 38, sp: 0, cp: 0 }]);
+    });
+
+    it('cancels without emitting, and a later edit starts from the real amounts', async () => {
+      const { fixture, el, saved } = await editing();
+      typeInto(fields(el)[1], '99');
+      press(byClass(el, 'hk-pouch__cancel'));
+      fixture.detectChanges();
+      expect(saved).toEqual([]);
+      expect(stacks(el)).toHaveLength(4);
+      press(el.querySelector<HTMLButtonElement>('button[hk-icon-button]')!);
+      fixture.detectChanges();
+      expect(fields(el)[1].value).toBe('38');
+    });
   });
 
   it('hides the edit button when not editable', async () => {

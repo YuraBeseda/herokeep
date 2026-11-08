@@ -26,7 +26,7 @@
         #field
         class="hk-numfield__in"
         type="number"
-        inputmode="numeric"
+        [attr.inputmode]="inputMode()"
         [id]="inputId"
         [attr.min]="min()"
         [attr.max]="max()"
@@ -35,7 +35,7 @@
         [disabled]="isDisabled()"
         [attr.aria-invalid]="error() ? 'true' : null"
         [attr.aria-describedby]="describedBy()"
-        (input)="onInput(field.value)"
+        (input)="onInput(field)"
         (change)="onCommit(field)"
         (blur)="onBlur()"
       />
