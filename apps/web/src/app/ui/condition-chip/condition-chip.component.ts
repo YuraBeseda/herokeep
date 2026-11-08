@@ -41,7 +41,6 @@ export class HkConditionChipComponent {
   // Outputs
   readonly remove = output<void>();
 
-  protected readonly story = computed(() => this.hint() ?? this.name());
   protected readonly badge = computed(() => {
     const duration = this.duration();
     if (duration) return duration;

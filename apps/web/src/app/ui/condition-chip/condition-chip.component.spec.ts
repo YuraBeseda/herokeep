@@ -69,4 +69,21 @@ describe('HkConditionChipComponent', () => {
     expect(hintOf(main)).toBe('Poisoned, 3 rounds left, from Giant Spider');
     expect(nameOf(main)).toBe('Poisoned, 3 rounds left, from Giant Spider');
   });
+
+  it('announces the level and duration badges in the default story', async () => {
+    const { fixture, el } = await mount(HkConditionChipComponent, {
+      name: 'Exhaustion',
+      level: 2,
+    });
+    const main = el.querySelector('.hk-cond__main')!;
+    expect(nameOf(main)).toBe('Exhaustion, level 2');
+    expect(hintOf(main)).toBe('Exhaustion, level 2');
+    fixture.componentRef.setInput('level', null);
+    fixture.componentRef.setInput('duration', '3 rounds');
+    await fixture.whenStable();
+    expect(nameOf(main)).toBe('Exhaustion, 3 rounds');
+    fixture.componentRef.setInput('level', 2);
+    await fixture.whenStable();
+    expect(nameOf(main)).toBe('Exhaustion, level 2, 3 rounds');
+  });
 });

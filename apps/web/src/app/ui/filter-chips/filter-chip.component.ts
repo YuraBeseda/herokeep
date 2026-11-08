@@ -51,6 +51,10 @@ export class HkFilterChipComponent {
   }
 
   constructor() {
-    effect(() => this.tooltip.text.set(this.option().disabledReason ?? ''));
+    effect(() => {
+      // The full label always (it ellipsises); an unavailable chip adds its reason after it.
+      const { label, disabledReason } = this.option();
+      this.tooltip.text.set(disabledReason ? `${label}: ${disabledReason}` : label);
+    });
   }
 }

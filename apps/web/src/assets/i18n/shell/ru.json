@@ -123,7 +123,10 @@
       "roll": "Бросок: {{name}}"
     },
     "condition": {
-      "end": "Снять: {{name}}"
+      "end": "Снять: {{name}}",
+      "story-duration": "{{name}}, {{duration}}",
+      "story-level": "{{name}}, уровень {{level}}",
+      "story-level-duration": "{{name}}, уровень {{level}}, {{duration}}"
     },
     "death": {
       "failure": "Провал",

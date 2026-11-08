@@ -123,7 +123,10 @@
       "roll": "Кидок: {{name}}"
     },
     "condition": {
-      "end": "Зняти: {{name}}"
+      "end": "Зняти: {{name}}",
+      "story-duration": "{{name}}, {{duration}}",
+      "story-level": "{{name}}, рівень {{level}}",
+      "story-level-duration": "{{name}}, рівень {{level}}, {{duration}}"
     },
     "death": {
       "failure": "Невдача",

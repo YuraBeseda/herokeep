@@ -1,4 +1,4 @@
-import { mount } from '../testing/harness';
+import { hintOf, mount } from '../testing/harness';
 import { HkOptionsChipComponent } from './options-chip.component';
 
 const options = [
@@ -109,5 +109,112 @@ describe('HkOptionsChipComponent', () => {
     chip(el).click();
     await fixture.whenStable();
     expect(popover(el)!.querySelectorAll('a')).toHaveLength(2);
+  });
+
+  it('stays open for a mouse click while hovering (mouseenter then click)', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    el.dispatchEvent(new Event('mouseenter'));
+    fixture.detectChanges();
+    chip(el).click();
+    fixture.detectChanges();
+    expect(popover(el)).not.toBeNull();
+  });
+
+  it('stays open for Enter after Tab focus (focusin then click)', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    chip(el).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    fixture.detectChanges();
+    chip(el).click();
+    fixture.detectChanges();
+    expect(popover(el)).not.toBeNull();
+  });
+
+  it('stays open for a touch tap (pointerdown, emulated mouseenter, click)', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    const down = new Event('pointerdown', { bubbles: true });
+    Object.defineProperty(down, 'pointerType', { value: 'touch' });
+    chip(el).dispatchEvent(down);
+    el.dispatchEvent(new Event('mouseenter'));
+    chip(el).dispatchEvent(new Event('pointerup', { bubbles: true }));
+    fixture.detectChanges();
+    chip(el).click();
+    fixture.detectChanges();
+    expect(popover(el)).not.toBeNull();
+  });
+
+  it('closes on a pointer press outside, and a later click opens it again', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    chip(el).click();
+    fixture.detectChanges();
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    fixture.detectChanges();
+    expect(popover(el)).toBeNull();
+    chip(el).click();
+    fixture.detectChanges();
+    expect(popover(el)).not.toBeNull();
+  });
+
+  it('does not close when the press lands on a popover link', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    chip(el).click();
+    fixture.detectChanges();
+    popover(el)!
+      .querySelector('a')!
+      .dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    fixture.detectChanges();
+    expect(popover(el)).not.toBeNull();
+  });
+
+  it('ignores a focusout without a related target (a mousedown on nothing focusable)', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    chip(el).click();
+    fixture.detectChanges();
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    fixture.detectChanges();
+    expect(popover(el)).not.toBeNull();
+  });
+
+  it('removes the outside-press listener on close and on destroy', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    const removed = vi.spyOn(document, 'removeEventListener');
+    chip(el).click();
+    fixture.detectChanges();
+    el.dispatchEvent(new Event('mouseleave'));
+    fixture.detectChanges();
+    expect(removed.mock.calls.filter(([type]) => type === 'pointerdown')).toHaveLength(1);
+    chip(el).click();
+    fixture.detectChanges();
+    fixture.destroy();
+    expect(removed.mock.calls.filter(([type]) => type === 'pointerdown')).toHaveLength(2);
+    removed.mockRestore();
+  });
+
+  it('a long-press with no following click does not swallow the next real click', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    vi.useFakeTimers();
+    try {
+      const down = new Event('pointerdown', { bubbles: true });
+      Object.defineProperty(down, 'pointerType', { value: 'touch' });
+      chip(el).dispatchEvent(down);
+      vi.advanceTimersByTime(400);
+      fixture.detectChanges();
+      expect(popover(el)).not.toBeNull();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      fixture.detectChanges();
+      expect(popover(el)).toBeNull();
+      chip(el).click();
+      fixture.detectChanges();
+      expect(popover(el)).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives each ellipsising link its full name as the hint', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    chip(el).click();
+    fixture.detectChanges();
+    const links = Array.from(popover(el)!.querySelectorAll('a'));
+    expect(links.map((a) => hintOf(a))).toEqual(['Archery', 'Defense', 'See all in library']);
   });
 });

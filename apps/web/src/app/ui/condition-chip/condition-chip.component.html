@@ -1,11 +1,15 @@
 <ng-container *transloco="let t; read: 'shell'">
-  <span
-    class="hk-cond__main"
-    role="img"
-    tabindex="0"
-    [attr.aria-label]="story()"
-    [hkTooltip]="story()"
-  >
+  @let named = { name: name(), level: level(), duration: duration() };
+  @let story =
+    hint() ??
+    (level() !== null && duration()
+      ? t('ui.condition.story-level-duration', named)
+      : level() !== null
+        ? t('ui.condition.story-level', named)
+        : duration()
+          ? t('ui.condition.story-duration', named)
+          : name());
+  <span class="hk-cond__main" role="img" tabindex="0" [attr.aria-label]="story" [hkTooltip]="story">
     <hk-icon [icon]="icon()" />
     <span class="hk-cond__name">{{ name() }}</span>
     @if (badge(); as text) {

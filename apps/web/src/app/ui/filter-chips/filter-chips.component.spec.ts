@@ -70,8 +70,18 @@ describe('HkFilterChipsComponent', () => {
     expect(chip.getAttribute('aria-disabled')).toBe('true');
     chip.click();
     expect(seen).toEqual([]);
-    expect(hintOf(chip)).toBe('No divine spells in the installed packs');
+    expect(hintOf(chip)).toBe('Divine: No divine spells in the installed packs');
     expect(el.textContent).not.toContain('No divine spells');
+  });
+
+  it('gives an ellipsising chip its full label as the hint', async () => {
+    const long = 'A very long translated filter label';
+    const { el } = await mount(HkFilterChipsComponent, {
+      label: 'F',
+      options: [{ id: 'x', label: long }],
+      selected: [],
+    });
+    expect(hintOf(chips(el)[0])).toBe(long);
   });
 
   it('offers Clear filters only while something is selected, and clears', async () => {
