@@ -22,6 +22,7 @@ import { HkTooltipDirective } from '../tooltip/tooltip.directive';
   styleUrl: './condition-chip.component.scss',
   host: {
     '[class.hk-cond--arcane]': 'tone() === "arcane"',
+    '[class.hk-cond--plain]': '!locked() && !removable()',
   },
 })
 export class HkConditionChipComponent {

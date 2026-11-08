@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { UI_ICONS } from '../src/app/ui/icons/vocabulary';
-import { buildSprite } from './build-sprite';
+import { buildSprite, transformIconToSymbol } from './build-sprite';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MAP_PATH = join(here, '../../../packages/content/src/icons/icons-map.json');
@@ -105,6 +105,34 @@ describe('buildSprite', () => {
       expect(() =>
         buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, { nope: { gi: 'definitely-missing' } }),
       ).toThrow(/definitely-missing/);
+    });
+  });
+
+  describe('currentColor inheritance', () => {
+    const WHITE_FILL = /(?:fill|stroke)="(?:#fff|#ffffff|white)"/i;
+
+    it('leaves no hard-coded white fill in any built symbol', () => {
+      const result = buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS);
+      const svgText = readFileSync(join(tmpDir, 'sprite.svg'), 'utf8');
+      expect(svgText).not.toMatch(WHITE_FILL);
+      expect(result.ids.length).toBe(186);
+    });
+
+    it('drops the white fill from a standard fixture and keeps the shape', () => {
+      const fixture =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M0 0h512v512H0z"/><path fill="#fff" d="M1 2h3z"/></svg>';
+      const symbol = transformIconToSymbol(fixture, 'fx');
+      expect(symbol).toBe('<symbol id="gi-fx" viewBox="0 0 512 512"><path d="M1 2h3z"/></symbol>');
+    });
+
+    it('turns a badge fixture into a single-colour glyph on the 216 box (discs removed)', () => {
+      const fixture =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><circle cx="128" cy="128" r="128"/><circle stroke="#fff" stroke-width="18" cx="128" cy="128" r="101"/><path fill="#fff" d="M1 2h3z"/></svg>';
+      const symbol = transformIconToSymbol(fixture, 'fx');
+      expect(symbol).toBe(
+        '<symbol id="gi-fx" viewBox="20 20 216 216"><path d="M1 2h3z"/></symbol>',
+      );
+      expect(symbol).not.toMatch(WHITE_FILL);
     });
   });
 

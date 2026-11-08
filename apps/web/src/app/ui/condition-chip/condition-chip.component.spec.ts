@@ -26,6 +26,18 @@ describe('HkConditionChipComponent', () => {
     expect(el.querySelector('.hk-cond__dur')!.textContent?.trim()).toBe('2');
   });
 
+  it('gives a chip without an end or lock control the same end padding as its start', async () => {
+    const { fixture, el } = await mount(HkConditionChipComponent, { name: 'Poisoned' });
+    expect(el.classList.contains('hk-cond--plain')).toBe(true);
+    fixture.componentRef.setInput('removable', true);
+    await fixture.whenStable();
+    expect(el.classList.contains('hk-cond--plain')).toBe(false);
+    fixture.componentRef.setInput('removable', false);
+    fixture.componentRef.setInput('locked', true);
+    await fixture.whenStable();
+    expect(el.classList.contains('hk-cond--plain')).toBe(false);
+  });
+
   it('uses the arcane tone for a beneficial effect', async () => {
     const { el } = await mount(HkConditionChipComponent, { name: 'Blessed', tone: 'arcane' });
     expect(el.classList.contains('hk-cond--arcane')).toBe(true);

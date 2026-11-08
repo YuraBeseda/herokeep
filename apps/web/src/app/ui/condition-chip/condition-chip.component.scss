@@ -16,6 +16,11 @@
   white-space: nowrap;
 }
 
+/* No End or lock control to close the chip: mirror the start padding at the end. */
+:host(.hk-cond--plain) {
+  padding-inline-end: 10px;
+}
+
 :host(.hk-cond--arcane) {
   background: var(--arcane-soft);
   box-shadow: inset 0 0 0 1px var(--arcane-strong);

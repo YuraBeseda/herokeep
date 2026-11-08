@@ -38,6 +38,13 @@ function isStandardBackgroundTag(tag: string): boolean {
   return fill === undefined || /^(#000(000)?|black)$/i.test(fill);
 }
 
+/**
+ * A hard-coded white fill. game-icons draws its foreground white on a black square; a presentation
+ * attribute beats the `fill: currentColor` that `.hk-icon` inherits, so it is dropped and the
+ * symbol takes the surrounding text colour.
+ */
+const WHITE_FILL_ATTR_RE = /\s+fill="(?:#fff(?:fff)?|white)"/gi;
+
 /** Leading `<circle .../>` tags of a "badge" glyph: the filled disc, then the white ring. */
 const BADGE_DISC_RE = /^<circle\b[^>]*\/>\s*<circle\b[^>]*\/>\s*/;
 const STANDARD_VIEWBOX = '0 0 512 512';
@@ -58,13 +65,16 @@ function convertIcon(svgText: string, slug: string): { viewBox: string; inner: s
   const sourceViewBox = match[1].match(/viewBox="([^"]*)"/)?.[1] ?? STANDARD_VIEWBOX;
   const disc = inner.match(BADGE_DISC_RE);
   if (sourceViewBox === '0 0 256 256' && disc) {
-    return { viewBox: BADGE_VIEWBOX, inner: inner.slice(disc[0].length) };
+    return {
+      viewBox: BADGE_VIEWBOX,
+      inner: inner.slice(disc[0].length).replace(WHITE_FILL_ATTR_RE, ''),
+    };
   }
   const leadingTag = inner.match(LEADING_SELF_CLOSING_TAG_RE);
   if (leadingTag && isStandardBackgroundTag(leadingTag[0])) {
     inner = inner.slice(leadingTag[0].length);
   }
-  return { viewBox: STANDARD_VIEWBOX, inner };
+  return { viewBox: STANDARD_VIEWBOX, inner: inner.replace(WHITE_FILL_ATTR_RE, '') };
 }
 
 /** Transforms one vendored game-icons SVG into a sprite `<symbol id="gi-<slug>">`. */
