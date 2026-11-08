@@ -9,7 +9,7 @@ one (e.g. `hk-icon-button`) supplies it separately.
 ## Usage
 
 ```html
-<hk-icon icon="gi:crossed-swords" />
+<hk-icon icon="gi:crossed-swords" /> <hk-icon icon="ui:roll" />
 ```
 
 Sized `1em` square via `width`/`height` and painted with `fill: currentColor`, so it
@@ -18,15 +18,16 @@ or recolor the icon.
 
 ## Inputs
 
-| Input  | Type                | Default | Notes                                                                     |
-| ------ | ------------------- | ------- | ------------------------------------------------------------------------- |
-| `icon` | `string` (required) | —       | A `gi:<slug>` id, e.g. `gi:crossed-swords`. Throws if not `gi:`-prefixed. |
+| Input  | Type                | Default | Notes                                                                                                                                        |
+| ------ | ------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `icon` | `string` (required) | —       | A `gi:<slug>` id (`gi:crossed-swords`) or a `ui:<name>` vocabulary id (`ui:roll`, see `ui/icons/vocabulary.ts`). Throws on any other prefix. |
 
 ## Do / Don't
 
 Do source `icon` values from `packages/content/src/icons/icons-map.json` (or an entity's
 own icon field once content resolution passes one through) rather than hand-typing
 slugs — the map is the only place slugs are verified against what's actually vendored.
+Prefer `ui:<name>` for chrome (navigation, actions, sheet marks): the vocabulary owns the slug and its hint text, and `hk-icon-button` (`ui/icon-button`) turns it into an `aria-label` plus tooltip.
 Don't pass a bare slug (`"crossed-swords"`) or any other prefix; `hk-icon` throws rather
 than silently rendering nothing, since a missing `gi:` prefix is always a caller bug, not
 runtime content.

@@ -52,6 +52,10 @@ module.exports = defineConfig([
     files: ['src/app/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {
+      // `hk-icon-button` (ui/icon-button) is icon-only by design: its required `hint` input is the
+      // accessible name (aria-label) and tooltip, so `hint` counts as content here. The hint lint
+      // (src/testing/icon-hints.spec.ts) fails any `hk-icon-button` that omits it.
+      '@angular-eslint/template/elements-content': ['error', { allowList: ['hint'] }],
       // NOTE: angular-eslint@22.4.0 changed this rule's schema — `checkAttributes` is now
       // boolean-only (with a separate `ignoreAttributes` allow-list), not the array-of-
       // attributes-to-check form used by older angular-eslint majors. `checkAttributes: true`

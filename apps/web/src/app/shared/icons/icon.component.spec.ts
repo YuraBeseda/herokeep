@@ -41,6 +41,14 @@ describe('IconComponent', () => {
     expect(use.getAttribute('href')).toBe('assets/icons/sprite.svg#gi-shield');
   });
 
+  it('resolves a ui:<name> id to the ui-<name> sprite symbol', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.icon.set('ui:roll');
+    await fixture.whenStable();
+    const use = (fixture.nativeElement as HTMLElement).querySelector('svg.hk-icon use')!;
+    expect(use.getAttribute('href')).toBe('assets/icons/sprite.svg#ui-roll');
+  });
+
   it('throws a clear error when icon is missing the gi: prefix', () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.icon.set('crossed-swords');

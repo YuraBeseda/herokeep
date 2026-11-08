@@ -1,0 +1,119 @@
+/* IconButton (design-system): a round brass-rimmed button holding one glyph. Sizes: s 28 / m 40 /
+   l 44 (phone touch floor); every size keeps a >= 44px hit area through the ::before extension on
+   touch devices and 4px on pointer devices. */
+:host {
+  --hk-ib-size: var(--icon-button);
+  --hk-ib-fill: radial-gradient(circle at 35% 25%, var(--leather-highlight), var(--leather-dark));
+  --hk-ib-ring: var(--brass);
+  --hk-ib-ring-inner: var(--brass-shadow);
+  --hk-ib-glyph: var(--brass);
+
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: var(--hk-ib-size);
+  block-size: var(--hk-ib-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-seal);
+  background: var(--hk-ib-fill);
+  box-shadow:
+    inset 0 0 0 2px var(--hk-ib-ring),
+    inset 0 0 0 3px var(--hk-ib-ring-inner);
+  color: var(--hk-ib-glyph);
+  font-size: 21px;
+  cursor: pointer;
+  transition:
+    filter var(--duration-fast),
+    box-shadow var(--duration-fast);
+
+  /* Hit area: 4px past the disc on every side. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+  }
+}
+
+:host(.hk-icon-button--s) {
+  --hk-ib-size: var(--icon-button-s);
+
+  font-size: 14px;
+}
+
+:host(.hk-icon-button--l) {
+  --hk-ib-size: var(--control-phone);
+
+  font-size: 22px;
+}
+
+@media (pointer: coarse) {
+  :host(.hk-icon-button--s)::before {
+    inset: calc((var(--control-phone) - var(--icon-button-s)) / -2);
+  }
+}
+
+/* Variants. */
+:host(.hk-icon-button--ghost) {
+  --hk-ib-fill: var(--leaf);
+  --hk-ib-ring: var(--accent-strong);
+  --hk-ib-ring-inner: transparent;
+  --hk-ib-glyph: var(--accent-strong);
+}
+
+:host(.hk-icon-button--ember) {
+  --hk-ib-fill: linear-gradient(var(--ember), var(--ember-bottom));
+  --hk-ib-ring: var(--ember-bottom);
+  --hk-ib-ring-inner: transparent;
+  --hk-ib-glyph: var(--text-on-ember);
+}
+
+:host(.hk-icon-button--moss) {
+  --hk-ib-fill: linear-gradient(var(--moss), var(--moss-bottom));
+  --hk-ib-ring: var(--moss-bottom);
+  --hk-ib-ring-inner: transparent;
+  --hk-ib-glyph: var(--text-on-moss);
+}
+
+/* States. */
+:host(:hover:not(:disabled)) {
+  filter: brightness(1.15);
+}
+
+:host([aria-pressed='true']),
+:host([aria-current]:not([aria-current='false'])) {
+  --hk-ib-fill: linear-gradient(var(--brass-top), var(--brass-mid));
+  --hk-ib-glyph: var(--text-on-brass);
+
+  box-shadow:
+    inset 0 0 0 2px var(--hk-ib-ring),
+    var(--shadow-glow-brass);
+}
+
+:host(:focus-visible) {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--hk-ib-ring),
+    0 0 0 2px var(--focus-ring),
+    0 0 0 4px var(--focus-ring-outer);
+}
+
+:host(:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+hk-icon {
+  display: inline-flex;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    transition: none;
+  }
+}

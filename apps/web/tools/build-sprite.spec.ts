@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { UI_ICONS } from '../src/app/ui/icons/vocabulary';
 import { buildSprite } from './build-sprite';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -69,8 +70,46 @@ describe('buildSprite', () => {
     );
   });
 
+  describe('ui vocabulary section', () => {
+    it('emits one ui-<name> symbol per vocabulary entry, drawing its gi glyph', () => {
+      const result = buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS);
+      const svgText = readFileSync(join(tmpDir, 'sprite.svg'), 'utf8');
+      const parsed = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+      expect(parsed.querySelector('parsererror')).toBeNull();
+      for (const [name, entry] of Object.entries(UI_ICONS)) {
+        expect(result.ids).toContain(`ui-${name}`);
+        const symbol = parsed.querySelector(`symbol[id="ui-${name}"]`);
+        expect(symbol, name).not.toBeNull();
+        expect(symbol!.querySelector('use')!.getAttribute('href')).toBe(`#gi-${entry.gi}`);
+        expect(parsed.querySelector(`symbol[id="gi-${entry.gi}"]`), entry.gi).not.toBeNull();
+      }
+    });
+
+    it('keeps the gi: ids of the icons map when a ui section is added', () => {
+      const withUi = buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS).ids;
+      const without = buildSprite(MAP_PATH, VENDOR_DIR, join(tmpDir, 'plain')).ids;
+      for (const id of without) expect(withUi).toContain(id);
+    });
+
+    it('strips the badge discs and keeps the 216-unit box for the disc-style glyphs', () => {
+      buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS);
+      const svgText = readFileSync(join(tmpDir, 'sprite.svg'), 'utf8');
+      const parsed = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+      const plus = parsed.querySelector('symbol[id="gi-plus"]')!;
+      expect(plus.getAttribute('viewBox')).toBe('20 20 216 216');
+      expect(plus.querySelector('circle')).toBeNull();
+      expect(plus.querySelector('path')).not.toBeNull();
+    });
+
+    it('throws when a ui entry names a glyph that is not vendored', () => {
+      expect(() =>
+        buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, { nope: { gi: 'definitely-missing' } }),
+      ).toThrow(/definitely-missing/);
+    });
+  });
+
   it('matches the committed sprite.svg and authors.json byte-for-byte (drift gate)', () => {
-    buildSprite(MAP_PATH, VENDOR_DIR, tmpDir);
+    buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS);
     const freshSprite = readFileSync(join(tmpDir, 'sprite.svg'));
     const committedSprite = readFileSync(join(COMMITTED_OUT_DIR, 'sprite.svg'));
     expect(freshSprite.equals(committedSprite)).toBe(true);

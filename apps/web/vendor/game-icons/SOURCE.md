@@ -7,8 +7,10 @@
 - **Retrieval method:** `fetch` from
   `https://raw.githubusercontent.com/game-icons/icons/82d948812bfe3f269ef8f731dcdb07b08160edc4/<author>/<slug>.svg`
 
-This directory is a byte-for-byte snapshot of 38 individual icon files from the pinned
-commit — not a clone of the repo. It is committed to the repo (not `.gitignore`d) and
+This directory is a byte-for-byte snapshot of 275 individual icon files from the pinned
+commit (38 for the content icons map, 237 added by plan 17 task B2 for the `ui` vocabulary and the
+Stage A board glyphs, fetched from a `--depth 1` clone of the same commit; the sprite tool only
+embeds the ones the icons map or `src/app/ui/icons/vocabulary.ts` reference) — not a clone of the repo. It is committed to the repo (not `.gitignore`d) and
 excluded from Prettier reformatting (`.prettierignore`) so the vendored SVGs stay diffable
 against upstream. Nothing after this snapshot was taken makes any network request; the
 `hk-icon` component and `apps/web/tools/build-sprite.ts` only ever read these local files.

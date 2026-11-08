@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { UI_ICONS } from '../src/app/ui/icons/vocabulary.ts';
 
 export interface IconsMap {
   categories: Record<string, string>;
@@ -13,6 +14,10 @@ export interface SpriteBuildResult {
 }
 
 const GI_PREFIX = 'gi:';
+const UI_SYMBOL_PREFIX = 'ui-';
+
+/** The `ui` section: `UI_ICONS` from `src/app/ui/icons/vocabulary.ts` (name -> game-icons slug). */
+export type UiIconMap = Record<string, { gi: string }>;
 
 /** A self-closing tag at the very start of a string, e.g. `<path d="..." fill="..."/>`. */
 const LEADING_SELF_CLOSING_TAG_RE = /^<([a-zA-Z][\w-]*)((?:\s+[\w:-]+="[^"]*")*)\s*\/>/;
@@ -33,20 +38,39 @@ function isStandardBackgroundTag(tag: string): boolean {
   return fill === undefined || /^(#000(000)?|black)$/i.test(fill);
 }
 
+/** Leading `<circle .../>` tags of a "badge" glyph: the filled disc, then the white ring. */
+const BADGE_DISC_RE = /^<circle\b[^>]*\/>\s*<circle\b[^>]*\/>\s*/;
+const STANDARD_VIEWBOX = '0 0 512 512';
+/** The badges author draws on a 256 box with a 20-unit margin around the artwork; discs removed. */
+const BADGE_VIEWBOX = '20 20 216 216';
+
 /**
- * Transforms one vendored game-icons SVG into a sprite `<symbol>`: strips the `<svg>` wrapper
- * and, if present, the standard black background square (see `isStandardBackgroundTag`),
- * keeping only the foreground artwork.
+ * Converts one vendored game-icons SVG into a symbol's viewBox and inner artwork: strips the
+ * `<svg>` wrapper and, if present, the standard black background square
+ * (see `isStandardBackgroundTag`). The nine disc-style "badges" glyphs (256 box, a filled disc
+ * and a white ring behind the artwork) lose both circles and use the 216-unit box so they match
+ * the others in weight (design-system README, Iconography).
  */
-export function transformIconToSymbol(svgText: string, slug: string): string {
-  const match = svgText.match(/<svg\b[^>]*>([\s\S]*)<\/svg>\s*$/);
+function convertIcon(svgText: string, slug: string): { viewBox: string; inner: string } {
+  const match = svgText.match(/<svg\b([^>]*)>([\s\S]*)<\/svg>\s*$/);
   if (!match) throw new Error(`build-sprite: ${slug}.svg is not a well-formed <svg> document`);
-  let inner = match[1].trim();
+  let inner = match[2].trim();
+  const sourceViewBox = match[1].match(/viewBox="([^"]*)"/)?.[1] ?? STANDARD_VIEWBOX;
+  const disc = inner.match(BADGE_DISC_RE);
+  if (sourceViewBox === '0 0 256 256' && disc) {
+    return { viewBox: BADGE_VIEWBOX, inner: inner.slice(disc[0].length) };
+  }
   const leadingTag = inner.match(LEADING_SELF_CLOSING_TAG_RE);
   if (leadingTag && isStandardBackgroundTag(leadingTag[0])) {
     inner = inner.slice(leadingTag[0].length);
   }
-  return `<symbol id="gi-${slug}" viewBox="0 0 512 512">${inner}</symbol>`;
+  return { viewBox: STANDARD_VIEWBOX, inner };
+}
+
+/** Transforms one vendored game-icons SVG into a sprite `<symbol id="gi-<slug>">`. */
+export function transformIconToSymbol(svgText: string, slug: string): string {
+  const { viewBox, inner } = convertIcon(svgText, slug);
+  return `<symbol id="gi-${slug}" viewBox="${viewBox}">${inner}</symbol>`;
 }
 
 /** Scans `vendorDir`'s author subdirectories (sorted) for the first `<author>/<slug>.svg`. */
@@ -67,27 +91,36 @@ function findVendorFile(
 
 /**
  * Builds `outDir/sprite.svg` (one `<symbol id="gi-<slug>">` per distinct `gi:<slug>` value in
- * the icons map at `mapPath`) and `outDir/authors.json` (sorted unique vendor author names).
+ * the icons map at `mapPath` or in the `ui` vocabulary, plus one `<symbol id="ui-<name>">` per `ui`
+ * entry that references its glyph) and `outDir/authors.json` (sorted unique vendor author names).
  * Throws listing every slug with no matching `vendorDir/<author>/<slug>.svg` file.
  */
-export function buildSprite(mapPath: string, vendorDir: string, outDir: string): SpriteBuildResult {
+export function buildSprite(
+  mapPath: string,
+  vendorDir: string,
+  outDir: string,
+  ui: UiIconMap = {},
+): SpriteBuildResult {
   const map = JSON.parse(readFileSync(mapPath, 'utf8')) as IconsMap;
   const values = new Set([...Object.values(map.categories), ...Object.values(map.entities)]);
 
-  const slugs = [...values]
-    .map((value) => {
-      if (!value.startsWith(GI_PREFIX)) {
-        throw new Error(
-          `build-sprite: icons map value "${value}" does not start with "${GI_PREFIX}"`,
-        );
-      }
-      return value.slice(GI_PREFIX.length);
-    })
-    .sort();
+  const mapSlugs = [...values].map((value) => {
+    if (!value.startsWith(GI_PREFIX)) {
+      throw new Error(
+        `build-sprite: icons map value "${value}" does not start with "${GI_PREFIX}"`,
+      );
+    }
+    return value.slice(GI_PREFIX.length);
+  });
+  const uiNames = Object.keys(ui).sort();
+  // Every glyph a ui entry draws gets its own `gi-<slug>` symbol too, so a `ui-<name>` symbol is
+  // just a reference and the artwork exists once.
+  const slugs = [...new Set([...mapSlugs, ...uiNames.map((name) => ui[name].gi)])].sort();
 
   const missing: string[] = [];
   const symbols: string[] = [];
   const authorsUsed = new Set<string>();
+  const viewBoxes = new Map<string, string>();
 
   for (const slug of slugs) {
     const found = findVendorFile(vendorDir, slug);
@@ -96,11 +129,20 @@ export function buildSprite(mapPath: string, vendorDir: string, outDir: string):
       continue;
     }
     authorsUsed.add(found.author);
-    symbols.push(transformIconToSymbol(readFileSync(found.path, 'utf8'), slug));
+    const { viewBox, inner } = convertIcon(readFileSync(found.path, 'utf8'), slug);
+    viewBoxes.set(slug, viewBox);
+    symbols.push(`<symbol id="gi-${slug}" viewBox="${viewBox}">${inner}</symbol>`);
   }
 
   if (missing.length > 0) {
     throw new Error(`build-sprite: no vendored icon file for slug(s): ${missing.join(', ')}`);
+  }
+
+  for (const name of uiNames) {
+    const { gi } = ui[name];
+    symbols.push(
+      `<symbol id="${UI_SYMBOL_PREFIX}${name}" viewBox="${viewBoxes.get(gi)}"><use href="#gi-${gi}"/></symbol>`,
+    );
   }
 
   const authors = [...authorsUsed].sort();
@@ -112,7 +154,13 @@ export function buildSprite(mapPath: string, vendorDir: string, outDir: string):
   writeFileSync(join(outDir, 'sprite.svg'), sprite, 'utf8');
   writeFileSync(join(outDir, 'authors.json'), `${JSON.stringify(authors, null, 2)}\n`, 'utf8');
 
-  return { ids: slugs.map((slug) => `gi-${slug}`), authors };
+  return {
+    ids: [
+      ...slugs.map((slug) => `gi-${slug}`),
+      ...uiNames.map((name) => `${UI_SYMBOL_PREFIX}${name}`),
+    ],
+    authors,
+  };
 }
 
 /** Default paths for `pnpm --filter web build:sprite`, resolved from this module's location. */
@@ -121,7 +169,7 @@ function main(): void {
   const mapPath = join(here, '../../../packages/content/src/icons/icons-map.json');
   const vendorDir = join(here, '../vendor/game-icons');
   const outDir = join(here, '../src/assets/icons');
-  const { ids, authors } = buildSprite(mapPath, vendorDir, outDir);
+  const { ids, authors } = buildSprite(mapPath, vendorDir, outDir, UI_ICONS);
   process.stdout.write(
     `OK build-sprite: ${ids.length} icons, ${authors.length} authors -> ${outDir}\n`,
   );
