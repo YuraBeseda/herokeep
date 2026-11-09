@@ -18,6 +18,7 @@ import { CampaignPacksService } from './shared/services/campaigns/campaign-packs
 import { PartyOverviewPublisherService } from './shared/services/campaigns/party-overview-publisher.service';
 import { AuthService } from './shared/services/auth/auth.service';
 import { TranslocoHttpLoader } from './shared/services/i18n/transloco.loader';
+import { DisplayPrefsService } from './shared/services/theme/display-prefs.service';
 import { SyncService } from './shared/services/sync/sync.service';
 import { PackStore } from './shared/stores/pack.store';
 
@@ -92,6 +93,11 @@ export const appConfig: ApplicationConfig = {
     // live campaign's enabled packs on a member's device, whatever screen is open.
     provideAppInitializer(() => {
       inject(CampaignPacksService);
+    }),
+    // `DisplayPrefsService` (Settings, Appearance): stamps the saved density and motion choices on
+    // `<html>` at boot, so the whole app honours them before Settings is ever opened.
+    provideAppInitializer(() => {
+      inject(DisplayPrefsService);
     }),
     // Registered in every build (including dev serve) but only *enabled* outside dev mode — `ng
     // serve` has no `ngsw-worker.js` to fetch, and a stale cached dev bundle would be actively

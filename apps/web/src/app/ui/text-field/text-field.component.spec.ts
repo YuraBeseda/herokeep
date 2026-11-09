@@ -60,6 +60,31 @@ describe('HkTextFieldComponent', () => {
     expect(input(el).getAttribute('autocomplete')).toBe('off');
   });
 
+  it('names the input for forms and password managers when given a name', async () => {
+    const named = await mount(HkTextFieldComponent, { label: 'Username', name: 'username' });
+    expect(input(named.el).getAttribute('name')).toBe('username');
+    const anonymous = await mount(HkTextFieldComponent, { label: 'Username' });
+    expect(input(anonymous.el).hasAttribute('name')).toBe(false);
+  });
+
+  it('sets codes and ids in a monospace face when mono', async () => {
+    const mono = await mount(HkTextFieldComponent, { label: 'Code', mono: true });
+    expect(input(mono.el).classList.contains('hk-input--mono')).toBe(true);
+    const plain = await mount(HkTextFieldComponent, { label: 'Code' });
+    expect(input(plain.el).classList.contains('hk-input--mono')).toBe(false);
+  });
+
+  it('reads an error aloud as an alert only when asked to announce', async () => {
+    const quiet = await mount(HkTextFieldComponent, { label: 'Name', error: 'Required' });
+    expect(quiet.el.querySelector('.hk-field__msg--error')!.hasAttribute('role')).toBe(false);
+    const loud = await mount(HkTextFieldComponent, {
+      label: 'Name',
+      error: 'Required',
+      announce: true,
+    });
+    expect(loud.el.querySelector('.hk-field__msg--error')!.getAttribute('role')).toBe('alert');
+  });
+
   it('integrates with reactive forms', async () => {
     @Component({
       imports: [ReactiveFormsModule, HkTextFieldComponent],

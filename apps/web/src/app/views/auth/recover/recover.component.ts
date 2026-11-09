@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import {
   authErrorKey,
   AuthService,
@@ -10,10 +9,20 @@ import {
 } from '@shared/services/auth/auth.service';
 import { checkPassword, type PasswordVerdict } from '@shared/services/auth/password-check';
 import { normalizeRecoveryCode } from '@shared/services/auth/recovery-code';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkBannerComponent } from '../../../ui/banner/banner.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { AuthCardComponent } from '../auth-card.component';
+import { useAuthPage } from '../auth-page';
 
 type LiveVerdict = 'idle' | 'pending' | PasswordVerdict;
 
 const PASSWORD_CHECK_DEBOUNCE_MS = 300;
+
+/** A refused or used-up code is the one failure that belongs under the code field. */
+const CODE_ERROR_KEY = 'errors.invalidCredentials';
+const USERNAME_ERROR_KEY = 'validation.invalidUsername';
 
 /**
  * `/recover` (task-5-brief.md): username + one recovery code + new password (same live
@@ -25,10 +34,21 @@ const PASSWORD_CHECK_DEBOUNCE_MS = 300;
  * (any case, stray whitespace): `normalizeRecoveryCode` (mirrors
  * `apps/api/src/core/auth/recovery-codes.ts`'s server-side function exactly) runs on submit, so
  * the string actually POSTed as `recoveryCode` is already in the shape the server hashes.
+ *
+ * Board AU01: a centred leaf whose own leather strap carries Reset password (blocked, with its
+ * reason in the hint, until every field is valid); the page strap keeps Back and Help.
  */
 @Component({
   selector: 'app-recover',
-  imports: [TranslocoDirective, RouterLink, ButtonComponent],
+  imports: [
+    TranslocoDirective,
+    RouterLink,
+    AuthCardComponent,
+    HkBannerComponent,
+    HkButtonComponent,
+    HkTextFieldComponent,
+    IconComponent,
+  ],
   providers: [provideTranslocoScope('auth')],
   templateUrl: './recover.component.html',
   styleUrl: './recover.component.scss',
@@ -65,6 +85,34 @@ export class RecoverComponent {
     if (verdict === 'idle' || verdict === 'pending' || verdict.ok) return undefined;
     return passwordVerdictKey(verdict.reason);
   });
+  /** What the new-password field says under it when there is no error: its rules, progress or approval. */
+  protected readonly passwordHintKey = computed(() => {
+    if (this.passwordVerdict() === 'pending') return 'validation.checking';
+    return this.passwordOk() ? 'validation.ok' : 'recover.newPasswordHint';
+  });
+
+  protected readonly usernameErrorKey = computed(() => {
+    const invalid = this.username().length > 0 && !this.usernameValid();
+    return invalid || this.errorKey() === USERNAME_ERROR_KEY ? USERNAME_ERROR_KEY : undefined;
+  });
+  protected readonly codeErrorKey = computed(() =>
+    this.errorKey() === CODE_ERROR_KEY ? CODE_ERROR_KEY : undefined,
+  );
+  protected readonly formErrorKey = computed(() => {
+    const key = this.errorKey();
+    return key === undefined || key === CODE_ERROR_KEY || key === USERNAME_ERROR_KEY
+      ? undefined
+      : key;
+  });
+
+  constructor() {
+    useAuthPage();
+  }
+
+  protected onCodeInput(value: string): void {
+    this.code.set(value);
+    this.errorKey.set(undefined);
+  }
 
   protected onUsernameInput(value: string): void {
     this.username.set(value);

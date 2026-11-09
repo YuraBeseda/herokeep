@@ -24,3 +24,17 @@
     outline-offset: 2px;
   }
 }
+
+// Settings, Appearance, Motion off: no animation or transition anywhere, whatever a component
+// declares. The system's own reduced-motion request is honoured by each component's media query;
+// this is the person's switch on top of it. `!important` inside a cascade layer outranks the
+// components' unlayered normal declarations, which is the only way a single switch can win.
+@layer base {
+  :root[data-motion='off'] *,
+  :root[data-motion='off'] *::before,
+  :root[data-motion='off'] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

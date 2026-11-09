@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 import { DialogRef } from '@app/ui/dialog/dialog.service';
 
 /**
@@ -17,7 +17,7 @@ import { DialogRef } from '@app/ui/dialog/dialog.service';
  */
 @Component({
   selector: 'app-confirm-leave-recovery-codes',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   templateUrl: './confirm-leave-recovery-codes.component.html',
 })
 export class ConfirmLeaveRecoveryCodesComponent {

@@ -2,7 +2,7 @@
  * 2: no user-visible string literals in TypeScript). A caller renders the actual unit WORD through
  * i18n, keyed off this code (`settings.quota.unit.<code>`, see `settings.component.html`) — this
  * module only ever returns numbers/codes. */
-export type ByteUnit = 'b' | 'kb' | 'mb';
+export type ByteUnit = 'b' | 'kb' | 'mb' | 'gb';
 
 export interface FormattedBytes {
   /** The numeric amount, already locale-formatted (`Intl.NumberFormat`) — ready to interpolate
@@ -13,6 +13,7 @@ export interface FormattedBytes {
 
 const KB = 1024;
 const MB = 1024 * 1024;
+const GB = 1024 * MB;
 
 /**
  * Human-readable byte formatting for the settings Quota card (task-9-brief.md): picks b/KB/MB by
@@ -27,7 +28,10 @@ export function formatBytes(bytes: number, locale: string): FormattedBytes {
   const abs = Math.abs(bytes);
   let value: number;
   let unit: ByteUnit;
-  if (abs >= MB) {
+  if (abs >= GB) {
+    value = bytes / GB;
+    unit = 'gb';
+  } else if (abs >= MB) {
     value = bytes / MB;
     unit = 'mb';
   } else if (abs >= KB) {

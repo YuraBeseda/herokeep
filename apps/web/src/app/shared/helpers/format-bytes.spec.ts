@@ -18,6 +18,12 @@ describe('formatBytes', () => {
     expect(formatBytes(1024 * 1024 * 2.5, 'en')).toEqual({ amount: '2.5', unit: 'mb' });
   });
 
+  it('switches to "gb" at 1024^3 bytes, one fraction digit (a device quota is gigabytes)', () => {
+    expect(formatBytes(1024 ** 3, 'en')).toEqual({ amount: '1', unit: 'gb' });
+    expect(formatBytes(4.1 * 1024 ** 3, 'en')).toEqual({ amount: '4.1', unit: 'gb' });
+    expect(formatBytes(1024 ** 3 - 1024 * 1024, 'en').unit).toBe('mb');
+  });
+
   it('formats the numeric amount per the given locale', () => {
     // Russian/Ukrainian use a comma as the decimal separator.
     expect(formatBytes(1536, 'ru').amount).toBe('1,5');

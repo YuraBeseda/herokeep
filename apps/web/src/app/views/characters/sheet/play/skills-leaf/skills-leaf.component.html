@@ -9,7 +9,7 @@
               [modifier]="skill.total"
               [proficiency]="skill.proficiency"
               [proficiencyHint]="t(skill.hintKey)"
-              [density]="phone() ? 'comfortable' : 'compact'"
+              [density]="phone() ? 'comfortable' : null"
               [surface]="surface()"
               [inspectable]="true"
               (inspect)="openBreakdown(skill.totalDerived)"

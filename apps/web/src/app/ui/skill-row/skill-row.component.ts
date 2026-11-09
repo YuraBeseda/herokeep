@@ -1,6 +1,7 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
+import { DisplayPrefsService } from '../../shared/services/theme/display-prefs.service';
 import { signed, uniqueId } from '../format';
 import { HkIconButtonComponent } from '../icon-button/icon-button.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
@@ -23,7 +24,7 @@ export type SkillProficiency = 'none' | 'proficient' | 'expertise';
   templateUrl: './skill-row.component.html',
   styleUrl: './skill-row.component.scss',
   host: {
-    '[class.hk-sk--comfortable]': 'density() === "comfortable"',
+    '[class.hk-sk--comfortable]': 'effectiveDensity() === "comfortable"',
     '[class.hk-sk--leather]': 'surface() === "leather"',
   },
 })
@@ -36,7 +37,10 @@ export class HkSkillRowComponent {
   readonly proficiencyHint = input.required<string>();
   /** Translated cause of a disadvantage ("Disadvantage: chain mail"); `null` for none. */
   readonly disadvantage = input<string | null>(null);
-  readonly density = input<'compact' | 'comfortable'>('compact');
+  /** `null` follows the saved Settings preference; a caller can pin a density (the phone sheet pins comfortable). */
+  readonly density = input<'compact' | 'comfortable' | null>(null);
+  private readonly prefs = inject(DisplayPrefsService);
+  protected readonly effectiveDensity = computed(() => this.density() ?? this.prefs.density());
   /** `leather` on the dark folio, `leaf` on parchment. */
   readonly surface = input<'leaf' | 'leather'>('leaf');
 

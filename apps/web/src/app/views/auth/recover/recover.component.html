@@ -1,69 +1,74 @@
-<section class="recover" *transloco="let t; read: 'auth'">
-  <h1 class="recover__title">{{ t('recover.title') }}</h1>
-  <p class="recover__notice">{{ t('recover.signOutNotice') }}</p>
+<ng-container *transloco="let t; read: 'auth'">
+  <app-auth-card class="recover" [glyph]="'ui:recover'" [sealHint]="t('recover.title')" [seed]="4">
+    <h1 authTitle class="recover__title">{{ t('recover.title') }}</h1>
 
-  <form class="recover__form" novalidate (submit)="onSubmit($event)">
-    <label class="recover__field">
-      <span>{{ t('recover.usernameLabel') }}</span>
-      <input
-        type="text"
+    <form class="recover__form" novalidate (submit)="onSubmit($event)">
+      <hk-banner class="recover__notice" [variant]="'warning'" [icon]="'warning'">
+        {{ t('recover.signOutNotice') }}
+      </hk-banner>
+
+      <hk-text-field
+        class="recover__username"
         name="username"
         autocomplete="username"
-        required
+        [label]="t('recover.usernameLabel')"
+        [required]="true"
+        [error]="usernameErrorKey() ? t(usernameErrorKey()!) : null"
         [value]="username()"
-        (input)="onUsernameInput($any($event.target).value)"
+        (valueChange)="onUsernameInput($event)"
       />
-    </label>
 
-    <label class="recover__field">
-      <span>{{ t('recover.codeLabel') }}</span>
-      <input
-        type="text"
+      <hk-text-field
+        class="recover__code"
         name="code"
         autocomplete="off"
-        required
+        [mono]="true"
+        [announce]="true"
+        [label]="t('recover.codeLabel')"
+        [hint]="t('recover.codeHint')"
+        [required]="true"
+        [error]="codeErrorKey() ? t(codeErrorKey()!) : null"
         [value]="code()"
-        (input)="code.set($any($event.target).value)"
+        (valueChange)="onCodeInput($event)"
       />
-      <span class="recover__hint">{{ t('recover.codeHint') }}</span>
-    </label>
 
-    <label class="recover__field">
-      <span>{{ t('recover.newPasswordLabel') }}</span>
-      <input
-        type="password"
-        name="newPassword"
-        autocomplete="new-password"
-        required
-        [value]="newPassword()"
-        (input)="onPasswordInput($any($event.target).value)"
-      />
-    </label>
-    @if (passwordVerdict() === 'pending') {
-      <p class="recover__hint" role="status">{{ t('validation.checking') }}</p>
-    } @else if (passwordVerdictReasonKey(); as reasonKey) {
-      <p class="recover__hint recover__hint--error">{{ t(reasonKey) }}</p>
-    } @else if (passwordOk()) {
-      <p class="recover__hint recover__hint--ok">{{ t('validation.ok') }}</p>
-    }
+      <div class="recover__password">
+        <hk-text-field
+          name="newPassword"
+          type="password"
+          autocomplete="new-password"
+          [label]="t('recover.newPasswordLabel')"
+          [hint]="t(passwordHintKey())"
+          [required]="true"
+          [error]="passwordVerdictReasonKey() ? t(passwordVerdictReasonKey()!) : null"
+          [value]="newPassword()"
+          (valueChange)="onPasswordInput($event)"
+        />
+      </div>
 
-    @if (errorKey(); as key) {
-      <p class="recover__error" role="alert">{{ t(key) }}</p>
-    }
+      @if (formErrorKey(); as key) {
+        <p class="recover__error" role="alert"><hk-icon [icon]="'ui:warning'" />{{ t(key) }}</p>
+      }
 
-    <button
-      hk-button
-      type="submit"
-      class="recover__submit"
-      [variant]="'primary'"
-      [disabled]="!canSubmit()"
-      [attr.aria-busy]="submitting() ? 'true' : null"
-    >
-      {{ submitting() ? t('recover.submitting') : t('recover.submit') }}
-    </button>
-  </form>
+      <p class="recover__links">
+        <a routerLink="/login">{{ t('recover.loginLink') }}</a>
+      </p>
 
-  <p class="recover__links">
-    <a routerLink="/login">{{ t('recover.loginLink') }}</a>
-  </p>
-</section>
+      <div data-auth-strap>
+        <span class="auth-card__note">{{ t('recover.strapNote') }}</span>
+        <button
+          hk-button
+          type="submit"
+          class="recover__submit"
+          [variant]="'primary'"
+          [loading]="submitting()"
+          [disabledReason]="canSubmit() || submitting() ? null : t('recover.reasonIncomplete')"
+        >
+          <hk-icon [icon]="'ui:key'" />{{
+            submitting() ? t('recover.submitting') : t('recover.submit')
+          }}
+        </button>
+      </div>
+    </form>
+  </app-auth-card>
+</ng-container>

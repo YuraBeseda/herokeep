@@ -37,6 +37,12 @@ export class HkTextFieldComponent extends HkValueAccessor<string> {
   readonly maxLength = input<number | null>(null);
   readonly autocomplete = input<string | null>(null);
   readonly required = input(false);
+  /** The input's `name`, for forms and password managers. */
+  readonly name = input<string | null>(null);
+  /** Sets the text in a monospace face (codes and ids). */
+  readonly mono = input(false);
+  /** Reads a new error aloud (`role="alert"`) when it appears after a submit. */
+  readonly announce = input(false);
 
   protected readonly inputId = fieldId('hk-text');
   protected readonly messageId = `${this.inputId}-msg`;

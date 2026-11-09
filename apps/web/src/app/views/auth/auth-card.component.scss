@@ -1,0 +1,106 @@
+/* The AU01 leaf: a centred parchment panel (the Leaf look) whose foot is the form's own leather
+   strap. Padding is 18px 22px; the strap bleeds to the leaf's edges with negative margins. */
+:host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 460px;
+  margin-inline: auto;
+  padding: 18px 22px 0;
+  overflow: hidden;
+  border-radius: var(--radius-leaf);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-leaf);
+  color: var(--text-1);
+  font-size: 15px;
+  transform: rotate(var(--leaf-tilt));
+}
+
+.auth-card__head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-inline-size: 0;
+}
+
+/* The title is projected, so its rules reach in from here. */
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+:host ::ng-deep [authTitle] {
+  margin: 0;
+  min-inline-size: 0;
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+/* The form body fills the leaf so its strap can sit at the foot. */
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+:host ::ng-deep form,
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+:host ::ng-deep .auth-card__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The leather strap at the foot: a note on the left, the primary action on the right. */
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+:host ::ng-deep [data-auth-strap] {
+  --text-1: var(--text-on-leather);
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px -22px 0;
+  padding: 8px 10px;
+  background: linear-gradient(
+    180deg,
+    var(--leather-highlight),
+    var(--leather) 50%,
+    var(--leather-dark)
+  );
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather);
+}
+
+/* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+:host ::ng-deep [data-auth-strap] .auth-card__note {
+  margin-inline-end: auto;
+  color: var(--text-on-leather-3);
+  font-size: 14px;
+  font-style: italic;
+}
+
+@media (pointer: coarse) {
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+  :host ::ng-deep [data-auth-strap] button {
+    min-block-size: var(--touch-target);
+  }
+}
+
+@media (max-width: 767.98px) {
+  :host {
+    padding: 14px 16px 0;
+    max-inline-size: none;
+  }
+
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown -- projected content is outside this component's encapsulation */
+  :host ::ng-deep [data-auth-strap] {
+    margin-inline: -16px;
+  }
+}

@@ -41,7 +41,7 @@ test.describe('library', () => {
 
     await test.step('switch the UI language to Russian in Settings', async () => {
       await page.getByRole('link', { name: 'Settings', exact: true }).click();
-      await page.locator('.settings__language-chip[data-locale="ru"]').click();
+      await page.locator('.settings__language select').selectOption('ru');
       // Live switch, no reload (locale.spec.ts covers that in depth) — the title re-renders
       // in place; waiting for it also doubles as this step's "the switch took effect" check.
       await expect(page.locator('.settings__title')).toHaveText('Настройки');

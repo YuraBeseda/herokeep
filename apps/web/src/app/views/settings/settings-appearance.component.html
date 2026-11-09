@@ -1,0 +1,84 @@
+<ng-container *transloco="let t; read: 'settings'">
+  <hk-leaf id="appearance" [title]="t('appearance.title')" [icon]="'ui:appearance'">
+    <div class="settings__field">
+      <h3 class="settings__h3">
+        <hk-icon [icon]="'ui:theme-scroll'" />{{ t('appearance.theme') }}
+      </h3>
+      <div class="settings__themes" role="radiogroup" [attr.aria-label]="t('appearance.theme')">
+        @for (option of themes; track option.id) {
+          <button
+            type="button"
+            class="settings__theme-card"
+            role="radio"
+            [attr.data-theme-option]="option.id"
+            [attr.aria-checked]="theme() === option.id"
+            [attr.tabindex]="theme() === option.id ? 0 : -1"
+            (click)="selectTheme(option.id)"
+            (keydown)="onThemeKey($event)"
+          >
+            <span class="settings__theme-preview" [attr.data-theme]="option.id" aria-hidden="true">
+              <span class="settings__theme-strap"></span>
+              <span class="settings__theme-leaf"></span>
+              <span class="settings__theme-strap settings__theme-strap--foot"></span>
+            </span>
+            <span class="settings__theme-name">
+              <hk-icon [icon]="option.icon" />{{ t('appearance.theme-' + option.id) }}
+              @if (theme() === option.id) {
+                <hk-wax-seal
+                  class="settings__theme-seal"
+                  [state]="'selected'"
+                  [glyph]="'ui:done'"
+                  [size]="'s'"
+                  [hint]="t('appearance.selected')"
+                />
+              }
+            </span>
+            <span class="settings__theme-hint">{{ t('appearance.hint-' + option.id) }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="settings__row">
+      <div class="settings__row-text">
+        <b>{{ t('appearance.density') }}</b>
+        <span class="settings__hint">{{ t('appearance.density-hint') }}</span>
+      </div>
+      <div class="settings__density" role="radiogroup" [attr.aria-label]="t('appearance.density')">
+        @for (option of densities; track option) {
+          <button
+            type="button"
+            class="settings__seg"
+            role="radio"
+            [attr.data-density]="option"
+            [attr.aria-checked]="density() === option"
+            [attr.tabindex]="density() === option ? 0 : -1"
+            (click)="selectDensity(option)"
+            (keydown)="onDensityKey($event)"
+          >
+            <hk-icon [icon]="option === 'compact' ? 'ui:compact' : 'ui:comfortable'" />{{
+              t('appearance.density-' + option)
+            }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <hk-toggle
+      class="settings__motion"
+      [label]="t('appearance.motion')"
+      [description]="t('appearance.motion-hint')"
+      [value]="motion()"
+      (valueChange)="setMotion($event)"
+    />
+
+    <hk-select
+      class="settings__language"
+      [label]="t('language.title')"
+      [hint]="t('language.hint')"
+      [options]="languageOptions(t)"
+      [value]="locale()"
+      (valueChange)="selectLocale($event)"
+    />
+  </hk-leaf>
+</ng-container>

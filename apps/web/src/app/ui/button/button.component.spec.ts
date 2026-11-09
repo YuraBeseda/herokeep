@@ -1,13 +1,15 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import { HkButtonComponent, type HkButtonSize, type HkButtonVariant } from './button.component';
 
 @Component({
   selector: 'app-button-host',
-  imports: [HkButtonComponent],
+  imports: [HkButtonComponent, HkTooltipDirective],
   template: `
     <button
       hk-button
+      [hkTooltip]="hint()"
       [variant]="variant()"
       [size]="size()"
       [loading]="loading()"
@@ -23,6 +25,7 @@ class HostComponent {
   readonly size = signal<HkButtonSize>('m');
   readonly loading = signal(false);
   readonly reason = signal<string | null>(null);
+  readonly hint = signal('');
   readonly label = 'Roll';
   clicks = 0;
 }
@@ -97,6 +100,26 @@ describe('HkButtonComponent', () => {
     button.dispatchEvent(new Event('focus'));
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('Nope');
     button.dispatchEvent(new Event('blur'));
+  });
+
+  it('keeps a plain hkTooltip hint while available and shows the reason while blocked', async () => {
+    const tipText = (): string | undefined => {
+      button.dispatchEvent(new Event('focus'));
+      const text = document.body.querySelector('[role="tooltip"]')?.textContent?.trim();
+      button.dispatchEvent(new Event('blur'));
+      return text;
+    };
+    fixture.componentInstance.hint.set('Signs this device out');
+    await fixture.whenStable();
+    expect(tipText()).toBe('Signs this device out');
+
+    fixture.componentInstance.reason.set('Nope');
+    await fixture.whenStable();
+    expect(tipText()).toBe('Nope');
+
+    fixture.componentInstance.reason.set(null);
+    await fixture.whenStable();
+    expect(tipText()).toBe('Signs this device out');
   });
 
   it.each(['moss', 'ghost-leather'] as const)('exposes the %s variant', async (variant) => {

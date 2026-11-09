@@ -115,7 +115,7 @@ describe('buildSprite', () => {
       const result = buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS);
       const svgText = readFileSync(join(tmpDir, 'sprite.svg'), 'utf8');
       expect(svgText).not.toMatch(WHITE_FILL);
-      expect(result.ids.length).toBe(186);
+      expect(result.ids.length).toBe(216);
     });
 
     it('drops the white fill from a standard fixture and keeps the shape', () => {

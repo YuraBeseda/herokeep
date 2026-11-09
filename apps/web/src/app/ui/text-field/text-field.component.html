@@ -4,6 +4,7 @@
     #field
     class="hk-input"
     [class.hk-input--error]="!!error()"
+    [class.hk-input--mono]="mono()"
     [id]="inputId"
     [type]="type()"
     [placeholder]="placeholder()"
@@ -11,6 +12,7 @@
     [disabled]="isDisabled()"
     [required]="required()"
     [attr.maxlength]="maxLength()"
+    [attr.name]="name()"
     [attr.autocomplete]="autocomplete()"
     [attr.aria-invalid]="error() ? 'true' : null"
     [attr.aria-describedby]="describedBy()"
@@ -18,7 +20,11 @@
     (blur)="onBlur()"
   />
   @if (error(); as message) {
-    <span class="hk-field__msg hk-field__msg--error" [id]="messageId">
+    <span
+      class="hk-field__msg hk-field__msg--error"
+      [id]="messageId"
+      [attr.role]="announce() ? 'alert' : null"
+    >
       <hk-icon [icon]="'ui:close'" />{{ message }}
     </span>
   } @else if (hint(); as message) {

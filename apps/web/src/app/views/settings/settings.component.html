@@ -1,217 +1,377 @@
-<section class="settings" *transloco="let t; read: 'settings'">
-  <h1 class="settings__title">{{ t('title') }}</h1>
+<div class="settings" *transloco="let t; read: 'settings'">
+  <!-- Index: a parchment leaf on a desktop, a scrolling row of chips on a phone. -->
+  <nav class="settings__index" [attr.aria-label]="t('index.label')">
+    <svg class="hk-tex hk-tex--paper" aria-hidden="true" focusable="false">
+      <rect width="100%" height="100%" />
+    </svg>
+    <h1 class="settings__title"><hk-icon [icon]="'ui:settings'" />{{ t('title') }}</h1>
+    <ul class="settings__index-list">
+      @for (section of sections; track section.id) {
+        <li>
+          <a
+            class="settings__index-link"
+            [routerLink]="[]"
+            [fragment]="section.id"
+            [attr.data-section]="section.id"
+            [attr.aria-current]="activeSection() === section.id ? 'true' : null"
+          >
+            <hk-icon [icon]="section.icon" />{{ t('index.' + section.id) }}
+          </a>
+        </li>
+      }
+    </ul>
+    <p class="settings__hint settings__index-hint">{{ t('hint') }}</p>
+  </nav>
 
-  <hk-card class="settings__section" [header]="t('language.title')">
-    <div class="settings__options">
-      @for (loc of locales; track loc) {
-        <hk-chip
-          class="settings__language-chip"
-          [attr.data-locale]="loc"
-          [selected]="locale() === loc"
-          (click)="selectLocale(loc)"
-        >
-          {{ t('language.' + loc) }}
-        </hk-chip>
-      }
-    </div>
-  </hk-card>
-
-  <hk-card class="settings__section" [header]="t('appearance.title')">
-    <div class="settings__options">
-      @for (th of themes; track th) {
-        <hk-chip
-          class="settings__theme-chip"
-          [attr.data-theme-option]="th"
-          [selected]="theme() === th"
-          (click)="selectTheme(th)"
-        >
-          {{ t('appearance.theme-' + th) }}
-        </hk-chip>
-      }
-    </div>
-  </hk-card>
-
-  <hk-card class="settings__section" [header]="t('storage.title')">
-    @if (storageSupported()) {
-      @if (usedMb(); as used) {
-        <p class="settings__storage-usage">{{ t('storage.used', { used, quota: quotaMb() }) }}</p>
-      }
-      @if (persisted()) {
-        <p class="settings__storage-state">{{ t('storage.persisted') }}</p>
-      } @else {
-        <button hk-button class="settings__persist-button" (click)="requestPersist()">
-          {{ t('storage.persist') }}
-        </button>
-      }
-    }
-
-    <div class="settings__cache">
-      <h3 class="settings__cache-title">{{ t('storage.cache.title') }}</h3>
-      <p class="settings__cache-hint">{{ t('storage.cache.hint') }}</p>
-      <label class="settings__cache-label" for="settings-cache-cap">
-        {{ t('storage.cache.cap-label', { value: cacheCapMb() }) }}
-      </label>
-      <input
-        id="settings-cache-cap"
-        class="settings__cache-slider"
-        type="range"
-        [min]="cacheCapMinMb"
-        [max]="cacheCapMaxMb"
-        step="50"
-        [value]="cacheCapMb()"
-        [attr.aria-valuemin]="cacheCapMinMb"
-        [attr.aria-valuemax]="cacheCapMaxMb"
-        [attr.aria-valuenow]="cacheCapMb()"
-        [attr.aria-valuetext]="t('storage.cache.cap-label', { value: cacheCapMb() })"
-        (input)="onCacheCapInput($any($event.target).value)"
-      />
-      @if (cacheUsedMb(); as cacheUsed) {
-        <p class="settings__cache-usage">
-          {{ t('storage.cache.usage', { used: cacheUsed, quota: cacheQuotaMb() }) }}
-        </p>
-      }
-    </div>
-  </hk-card>
-
-  <hk-card class="settings__section" [header]="t('packs.title')">
-    <div class="settings__pack-row">
-      <span>{{ t('packs.core-label') }}</span>
-      <span class="settings__pack-id">{{ corePackLabel }}</span>
-    </div>
-    <div class="settings__options">
-      @for (pack of translationPacks(); track pack.id + '@' + pack.version) {
-        <hk-chip
-          class="settings__pack-chip"
-          [attr.data-pack-key]="pack.id + '@' + pack.version"
-          [removable]="true"
-          (remove)="removePack(pack)"
-        >
-          {{ pack.id }}&#64;{{ pack.version }}
-          <span hk-chip-remove class="visually-hidden">{{ t('packs.remove') }}</span>
-        </hk-chip>
-      }
-    </div>
-    <button
-      hk-button
-      class="settings__import-button"
-      [disabled]="importing()"
-      (click)="importDemo()"
+  <div class="settings__col">
+    <!-- Account -->
+    <hk-leaf
+      id="account"
+      class="settings__section"
+      [title]="t('account.title')"
+      [icon]="'ui:account'"
     >
-      {{ t('packs.import-demo') }}
-    </button>
-    <a class="settings__manage-packs" routerLink="/packs">{{ t('packs.manage') }}</a>
-  </hk-card>
+      <hk-tag-chip
+        hkLeafActions
+        class="settings__account-state"
+        [label]="authed() ? t('account.state-authed') : t('account.state-anon')"
+        [tone]="authed() ? 'moss' : 'neutral'"
+        [icon]="authed() ? 'ui:done' : null"
+        [hint]="authed() ? t('account.state-authed-tip') : t('account.state-anon-tip')"
+      />
 
-  <hk-card class="settings__section" [header]="t('account.title')">
-    @if (authService.status() === 'authed') {
-      <p class="settings__account-username">{{ authService.user()?.username }}</p>
-      <div class="settings__account-actions">
-        <button
-          hk-button
-          [variant]="'ghost'"
-          type="button"
-          class="settings__logout"
-          (click)="logout()"
-        >
-          {{ t('account.logout') }}
-        </button>
-        <button
-          hk-button
-          [variant]="'danger'"
-          type="button"
-          class="settings__logout-all"
-          (click)="logoutAll()"
-        >
-          {{ t('account.logout-all') }}
-        </button>
-      </div>
-    } @else {
-      <p class="settings__account-prompt">{{ t('account.prompt') }}</p>
-      <div class="settings__account-actions">
-        <a routerLink="/login" class="settings__login-link">{{ t('account.login') }}</a>
-        <a routerLink="/register" class="settings__register-link">{{ t('account.register') }}</a>
-      </div>
-    }
-  </hk-card>
+      @if (authed()) {
+        <div class="settings__identity">
+          <span class="settings__iring settings__iring--l" aria-hidden="true">
+            <hk-icon [icon]="'ui:account'" />
+          </span>
+          <div class="settings__identity-text">
+            <b class="settings__account-username">{{ authService.user()?.username }}</b>
+            @if (accountSummary(); as summary) {
+              <span class="settings__hint settings__account-summary">
+                {{ t('account.summary', summary) }}
+              </span>
+            }
+            <span class="settings__hint">{{ t('account.no-email') }}</span>
+          </div>
+        </div>
 
-  @if (authService.status() === 'authed') {
-    <hk-card class="settings__section" [header]="t('devices.title')">
-      @if (devicesLoading()) {
-        <p class="visually-hidden" role="status">{{ t('devices.loading') }}</p>
-        <hk-skeleton class="settings__devices-loading" [lines]="3" width="100%" />
-      } @else if (devicesError()) {
-        <p class="settings__devices-error" role="alert">{{ t('devices.error') }}</p>
-        <button
-          hk-button
-          [variant]="'ghost'"
-          type="button"
-          class="settings__devices-retry"
-          (click)="refreshDevices()"
-        >
-          {{ t('devices.retry') }}
-        </button>
-      } @else if (devices().length === 0) {
-        <p class="settings__devices-empty">{{ t('devices.empty') }}</p>
-      } @else {
-        <ul class="settings__devices-list">
-          @for (device of devices(); track trackDevice(device)) {
-            <li
-              class="settings__devices-row"
-              [attr.data-current]="device.current"
-              [attr.data-id]="device.id"
+        <section class="settings__sub settings__devices" [attr.aria-label]="t('devices.title')">
+          <h3 class="settings__h3"><hk-icon [icon]="'ui:laptop'" />{{ t('devices.title') }}</h3>
+          @if (devicesLoading()) {
+            <p class="settings__devices-loading" role="status">{{ t('devices.loading') }}</p>
+          } @else if (devicesError()) {
+            <p class="settings__devices-error" role="alert">{{ t('devices.error') }}</p>
+            <button
+              hk-button
+              [variant]="'ghost'"
+              type="button"
+              class="settings__devices-retry"
+              (click)="refreshDevices()"
             >
-              <div class="settings__devices-info">
-                <span class="settings__devices-label">{{ device.deviceLabel }}</span>
-                @if (device.current) {
-                  <span class="settings__devices-current-tag">{{ t('devices.current') }}</span>
-                }
-                <span class="settings__devices-seen">
-                  {{ t('devices.lastSeen', { time: relativeTime(device.lastSeenAt) }) }}
-                </span>
-              </div>
-              @if (canRevoke(device)) {
-                <button
-                  hk-button
-                  [variant]="'danger'"
-                  type="button"
-                  class="settings__devices-revoke"
-                  (click)="revokeDevice(device)"
+              {{ t('devices.retry') }}
+            </button>
+          } @else if (devices().length === 0) {
+            <p class="settings__devices-empty">{{ t('devices.empty') }}</p>
+          } @else {
+            <ul class="settings__devices-list">
+              @for (device of devices(); track trackDevice(device)) {
+                <li
+                  class="settings__devices-row"
+                  [attr.data-current]="device.current"
+                  [attr.data-id]="device.id"
                 >
-                  {{ t('devices.revoke') }}
-                </button>
+                  <span class="settings__iring" aria-hidden="true">
+                    <hk-icon [icon]="deviceIcon(device.deviceLabel)" />
+                  </span>
+                  <div class="settings__devices-info">
+                    <span class="settings__devices-name">
+                      <b class="settings__devices-label">{{ device.deviceLabel }}</b>
+                      @if (device.current) {
+                        <hk-tag-chip
+                          class="settings__devices-current-tag"
+                          [label]="t('devices.current')"
+                          [tone]="'arcane'"
+                        />
+                      }
+                    </span>
+                    <span class="settings__hint settings__devices-seen">
+                      {{
+                        t('devices.activity', {
+                          active: relativeTime(device.lastSeenAt),
+                          signedIn: relativeTime(device.createdAt),
+                        })
+                      }}
+                    </span>
+                  </div>
+                  @if (canRevoke(device)) {
+                    <button
+                      hk-button
+                      [variant]="'ghost'"
+                      type="button"
+                      class="settings__devices-revoke"
+                      [attr.aria-label]="t('devices.revoke-named', { name: device.deviceLabel })"
+                      [hkTooltip]="t('devices.revoke-hint')"
+                      (click)="revokeDevice(device)"
+                    >
+                      {{ t('devices.revoke') }}
+                    </button>
+                  }
+                </li>
               }
-            </li>
+            </ul>
           }
-        </ul>
-      }
-    </hk-card>
+        </section>
 
-    <hk-card class="settings__section" [header]="t('quota.title')">
-      @if (quotaRows().length === 0) {
-        <p class="settings__quota-empty">{{ t('quota.empty') }}</p>
-      } @else {
-        <ul class="settings__quota-list">
-          @for (row of quotaRows(); track row.id) {
-            <li class="settings__quota-row" [class.settings__quota-row--warning]="row.warning">
-              <span class="settings__quota-name">{{ row.name }}</span>
-              @if (row.known) {
-                <span class="settings__quota-usage">
-                  {{
-                    t('quota.row', {
-                      used: t('quota.unit.' + row.usedUnit, { amount: row.usedAmount }),
-                      max: t('quota.unit.' + row.maxUnit, { amount: row.maxAmount }),
-                    })
-                  }}
-                </span>
-              } @else {
-                <span class="settings__quota-usage settings__quota-usage--unknown">
-                  {{ t('quota.unknown') }}
-                </span>
-              }
-            </li>
+        <section class="settings__sub settings__quota" [attr.aria-label]="t('quota.title')">
+          <h3 class="settings__h3"><hk-icon [icon]="'ui:cloud'" />{{ t('quota.title') }}</h3>
+          @if (quotaTotal(); as total) {
+            <div
+              class="settings__bar settings__quota-bar"
+              role="meter"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-label]="t('quota.meter')"
+              [attr.aria-valuenow]="total.percent"
+            >
+              <span class="settings__bar-fill" [style.inline-size.%]="total.percent"></span>
+            </div>
+            <p class="settings__quota-total">
+              {{
+                t('quota.total', {
+                  used: t(unitKey(total.used), { amount: total.used.amount }),
+                  max: t(unitKey(total.max), { amount: total.max.amount }),
+                  heroes: total.heroes,
+                })
+              }}
+            </p>
+            <p class="settings__hint">
+              {{
+                t('quota.hint', {
+                  max: t(unitKey(total.perHero), { amount: total.perHero.amount }),
+                })
+              }}
+            </p>
           }
-        </ul>
+          @if (quotaRows().length === 0) {
+            <p class="settings__quota-empty">{{ t('quota.empty') }}</p>
+          } @else {
+            <ul class="settings__quota-list">
+              @for (row of quotaRows(); track row.id) {
+                <li class="settings__quota-row" [class.settings__quota-row--warning]="row.warning">
+                  <span class="settings__quota-name">{{ row.name }}</span>
+                  @if (row.used && row.max) {
+                    <span class="settings__quota-usage">
+                      {{
+                        t('quota.row', {
+                          used: t(unitKey(row.used), { amount: row.used.amount }),
+                          max: t(unitKey(row.max), { amount: row.max.amount }),
+                        })
+                      }}
+                    </span>
+                  } @else {
+                    <span class="settings__quota-usage settings__quota-usage--unknown">
+                      {{ t('quota.unknown') }}
+                    </span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <div class="settings__actions">
+          <button
+            hk-button
+            [variant]="'ghost'"
+            type="button"
+            class="settings__logout"
+            [hkTooltip]="t('account.logout-hint')"
+            (click)="logout()"
+          >
+            <hk-icon [icon]="'ui:leave'" />{{ t('account.logout') }}
+          </button>
+          <button
+            hk-button
+            [variant]="'ghost'"
+            type="button"
+            class="settings__logout-all"
+            [hkTooltip]="t('account.logout-all-hint')"
+            (click)="logoutAll()"
+          >
+            <hk-icon [icon]="'ui:leave'" />{{ t('account.logout-all') }}
+          </button>
+          <span class="settings__hint">{{ t('account.local-note') }}</span>
+        </div>
+      } @else {
+        <p class="settings__account-prompt">{{ t('account.prompt') }}</p>
+        <div class="settings__actions">
+          <a routerLink="/login" class="settings__btn settings__btn--primary settings__login-link">
+            <hk-icon [icon]="'ui:join'" />{{ t('account.login') }}
+          </a>
+          <a routerLink="/register" class="settings__btn settings__register-link">
+            <hk-icon [icon]="'ui:add'" />{{ t('account.register') }}
+          </a>
+        </div>
       }
-    </hk-card>
-  }
-</section>
+    </hk-leaf>
+
+    <!-- Storage -->
+    <hk-leaf
+      id="storage"
+      class="settings__section"
+      [title]="t('storage.title')"
+      [icon]="'ui:storage'"
+    >
+      @if (storageSupported()) {
+        @if (storageUsed(); as used) {
+          @if (storageQuota(); as quota) {
+            <div
+              class="settings__bar settings__storage-bar"
+              role="meter"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-label]="t('storage.meter')"
+              [attr.aria-valuenow]="storagePercent()"
+            >
+              <span class="settings__bar-fill" [style.inline-size.%]="storagePercent()"></span>
+            </div>
+            <p class="settings__storage-usage">
+              {{
+                t('storage.usage', {
+                  used: t(unitKey(used), { amount: used.amount }),
+                  quota: t(unitKey(quota), { amount: quota.amount }),
+                })
+              }}
+            </p>
+          }
+        }
+
+        <div class="settings__block settings__persist">
+          <div class="settings__row-text">
+            <b>{{ t('storage.persist') }}</b>
+            <span class="settings__hint settings__persist-note">{{
+              t('storage.persist-note')
+            }}</span>
+          </div>
+          @if (persisted()) {
+            <hk-tag-chip
+              class="settings__persisted"
+              [label]="t('storage.granted')"
+              [tone]="'moss'"
+              [icon]="'ui:done'"
+              [hint]="t('storage.granted-tip')"
+            />
+          } @else {
+            <button
+              hk-button
+              type="button"
+              class="settings__persist-button"
+              [hkTooltip]="t('storage.persist-tip')"
+              (click)="requestPersist()"
+            >
+              {{ t('storage.persist') }}
+            </button>
+          }
+        </div>
+      }
+
+      <div class="settings__row settings__cache">
+        <div class="settings__row-text">
+          <b>{{ t('storage.cache.title') }}</b>
+          <span class="settings__hint">{{ t('storage.cache.hint') }}</span>
+          @if (cacheUsedMb(); as cacheUsed) {
+            <span class="settings__hint settings__cache-usage">
+              {{ t('storage.cache.usage', { used: cacheUsed, quota: cacheQuotaMb() }) }}
+            </span>
+          }
+        </div>
+        <hk-select
+          class="settings__cache-select"
+          [label]="t('storage.cache.limit')"
+          [options]="cacheOptions(t)"
+          [value]="cacheCapValue()"
+          (valueChange)="onCacheCap($event)"
+        />
+      </div>
+    </hk-leaf>
+  </div>
+
+  <div class="settings__col">
+    <app-settings-appearance />
+
+    <!-- Content packs -->
+    <hk-leaf id="packs" class="settings__section" [title]="t('packs.title')" [icon]="'ui:packs'">
+      <div
+        class="settings__pack-row settings__core-pack"
+        [attr.data-pack-key]="corePackKey"
+        [hkTooltip]="t('packs.core-tip')"
+      >
+        <hk-icon [icon]="'ui:core-pack'" />
+        <span class="settings__pack-name">
+          {{ t('packs.core-label') }}
+          @if (corePackName(); as name) {
+            <span class="settings__hint">{{ name }}</span>
+          }
+        </span>
+        <span class="settings__plate settings__pack-id">{{ corePackVersion }}</span>
+      </div>
+      <div class="settings__pack-row">
+        <hk-icon [icon]="'ui:packs'" />
+        <span class="settings__pack-name settings__pack-count">
+          {{ t('packs.count', { count: contentPackCount() }) }}
+        </span>
+        @if (updateCount() > 0) {
+          <hk-tag-chip
+            class="settings__pack-updates"
+            [tone]="'warning'"
+            [icon]="'ui:level-up'"
+            [label]="t('packs.updates', { count: updateCount() })"
+            [hint]="t('packs.updates-tip')"
+          />
+        }
+      </div>
+
+      @if (translationPacks().length > 0) {
+        <h3 class="settings__h3">{{ t('packs.translations') }}</h3>
+      }
+      <ul class="settings__translations">
+        @for (pack of translationPacks(); track pack.id + '@' + pack.version) {
+          <li class="settings__pack-chip" [attr.data-pack-key]="pack.id + '@' + pack.version">
+            <span>{{ pack.id }}&#64;{{ pack.version }}</span>
+            <button
+              type="button"
+              class="settings__pack-remove"
+              [attr.aria-label]="t('packs.remove-named', { name: pack.id + '@' + pack.version })"
+              [hkTooltip]="t('packs.remove')"
+              (click)="removePack(pack)"
+            >
+              <hk-icon [icon]="'ui:close'" />
+            </button>
+          </li>
+        }
+      </ul>
+
+      <div class="settings__actions">
+        <a routerLink="/packs" class="settings__btn settings__btn--primary settings__manage-packs">
+          <hk-icon [icon]="'ui:packs'" />{{ t('packs.open') }}
+        </a>
+        <a routerLink="/packs/homebrew" class="settings__btn settings__homebrew">
+          <hk-icon [icon]="'ui:edit'" />{{ t('packs.homebrew') }}
+        </a>
+        <button
+          hk-button
+          type="button"
+          class="settings__import-button"
+          [variant]="'ghost'"
+          [loading]="importing()"
+          (click)="importDemo()"
+        >
+          {{ t('packs.import-demo') }}
+        </button>
+      </div>
+    </hk-leaf>
+
+    <app-settings-about />
+  </div>
+</div>

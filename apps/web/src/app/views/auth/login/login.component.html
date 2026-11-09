@@ -1,60 +1,70 @@
-<section class="login" *transloco="let t; read: 'auth'">
-  <h1 class="login__title">{{ t('login.title') }}</h1>
+<ng-container *transloco="let t; read: 'auth'">
+  <app-auth-card class="login" [glyph]="'ui:account'" [sealHint]="t('login.title')" [seed]="1">
+    <h1 authTitle class="login__title">{{ t('login.title') }}</h1>
 
-  <form class="login__form" novalidate (submit)="onSubmit($event)">
-    <label class="login__field">
-      <span>{{ t('login.usernameLabel') }}</span>
-      <input
-        type="text"
+    <form class="login__form" novalidate (submit)="onSubmit($event)">
+      @if (redirectSection; as section) {
+        <hk-banner class="login__redirected" [variant]="'info'" [icon]="'join'">
+          {{ t('login.redirected', { section }) }}
+        </hk-banner>
+      }
+
+      <hk-text-field
+        class="login__username"
         name="username"
         autocomplete="username"
-        required
+        [label]="t('login.usernameLabel')"
+        [required]="true"
         [value]="username()"
-        (input)="username.set($any($event.target).value)"
+        (valueChange)="onUsernameInput($event)"
       />
-    </label>
 
-    <label class="login__field">
-      <span>{{ t('login.passwordLabel') }}</span>
-      <input
-        type="password"
+      <hk-text-field
+        class="login__password"
         name="password"
+        type="password"
         autocomplete="current-password"
-        required
+        [label]="t('login.passwordLabel')"
+        [required]="true"
+        [announce]="true"
+        [error]="passwordErrorKey() ? t(passwordErrorKey()!) : null"
         [value]="password()"
-        (input)="password.set($any($event.target).value)"
+        (valueChange)="onPasswordInput($event)"
       />
-    </label>
 
-    <label class="login__field">
-      <span>{{ t('login.deviceLabelLabel') }}</span>
-      <input
-        type="text"
+      <hk-text-field
+        class="login__device"
         name="deviceLabel"
         autocomplete="off"
+        [label]="t('login.deviceLabelLabel')"
+        [hint]="t('login.deviceLabelHint')"
         [value]="deviceLabel()"
-        (input)="deviceLabel.set($any($event.target).value)"
+        (valueChange)="deviceLabel.set($event)"
       />
-    </label>
 
-    @if (errorKey(); as key) {
-      <p class="login__error" role="alert">{{ t(key) }}</p>
-    }
+      @if (formErrorKey(); as key) {
+        <p class="login__error" role="alert"><hk-icon [icon]="'ui:warning'" />{{ t(key) }}</p>
+      }
 
-    <button
-      hk-button
-      type="submit"
-      class="login__submit"
-      [variant]="'primary'"
-      [disabled]="submitting()"
-      [attr.aria-busy]="submitting() ? 'true' : null"
-    >
-      {{ submitting() ? t('login.submitting') : t('login.submit') }}
-    </button>
-  </form>
+      <p class="login__links">
+        <a routerLink="/register">{{ t('login.registerLink') }}</a>
+        <a routerLink="/recover">{{ t('login.recoverLink') }}</a>
+      </p>
 
-  <p class="login__links">
-    <a routerLink="/register">{{ t('login.registerLink') }}</a>
-    <a routerLink="/recover">{{ t('login.recoverLink') }}</a>
-  </p>
-</section>
+      <div data-auth-strap>
+        <span class="auth-card__note">{{ t('login.strapNote') }}</span>
+        <button
+          hk-button
+          type="submit"
+          class="login__submit"
+          [variant]="'primary'"
+          [loading]="submitting()"
+        >
+          <hk-icon [icon]="'ui:join'" />{{
+            submitting() ? t('login.submitting') : t('login.submit')
+          }}
+        </button>
+      </div>
+    </form>
+  </app-auth-card>
+</ng-container>

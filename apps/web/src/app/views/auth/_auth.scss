@@ -1,0 +1,47 @@
+/* Shared bits of the four auth steps (board AU01); each step `@use`s this. */
+
+@mixin page {
+  :host {
+    display: block;
+    padding-block: var(--space-4) var(--space-6);
+  }
+}
+
+/* A row of text links under the fields: 16px, underlined, spaced. */
+@mixin links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 24px;
+    color: var(--accent-strong);
+    font-size: 16px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (pointer: coarse) {
+    a {
+      min-block-size: var(--touch-target);
+    }
+  }
+}
+
+/* A failure that belongs to the whole form rather than one field. */
+@mixin form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--danger-strong);
+  font-weight: 600;
+
+  hk-icon {
+    margin-block-start: 2px;
+  }
+}

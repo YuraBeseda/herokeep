@@ -25,3 +25,9 @@
   @include field.input-frame;
   @include field.input-height;
 }
+
+/* Codes and ids: the system monospace face, so no extra font is downloaded. */
+.hk-input--mono {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  letter-spacing: 0.04em;
+}

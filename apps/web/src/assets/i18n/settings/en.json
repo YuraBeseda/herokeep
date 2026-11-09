@@ -1,46 +1,91 @@
 {
   "title": "Settings",
+  "hint": "Changes apply immediately and stay on this device. Account settings follow you.",
+  "strap-note": "Changes apply immediately",
+  "index": {
+    "label": "Settings sections",
+    "account": "Account",
+    "appearance": "Appearance",
+    "storage": "Storage",
+    "packs": "Content packs",
+    "about": "About & licences"
+  },
   "language": {
     "title": "Language",
+    "hint": "Pack text stays in its own language until a translation pack is installed.",
     "en": "English",
     "ru": "Русский",
     "uk": "Українська"
   },
   "appearance": {
     "title": "Appearance",
+    "theme": "Theme",
     "theme-tavern": "Tavern",
     "theme-scroll": "Scroll",
-    "theme-plain": "Plain"
+    "theme-plain": "Plain",
+    "hint-tavern": "Dark oak, candlelight, parchment and brass. The default.",
+    "hint-scroll": "A vellum desk by daylight: the same leaves and brass, ink text.",
+    "hint-plain": "High contrast, flat, no textures or tilt. Easiest on weak devices.",
+    "selected": "Selected",
+    "density": "Density",
+    "density-hint": "Compact rows are 28 px, comfortable 36 px; picker cards grow with it. Buttons stay the same size.",
+    "density-compact": "Compact",
+    "density-comfortable": "Comfortable",
+    "motion": "Motion",
+    "motion-hint": "Damage shake, seal spend, level-up flourish, the candle flicker. Off also when your system asks for reduced motion."
   },
   "storage": {
     "title": "Storage",
-    "used": "{used} MB used of {quota} MB available",
+    "usage": "{used} of {quota} used on this device",
+    "meter": "Storage used on this device",
     "persist": "Keep data on this device",
-    "persisted": "Storage is protected",
+    "persist-note": "Asks the browser never to evict Herokeep's data when space runs low. Once granted, it stays.",
+    "persist-tip": "Ask the browser to keep this device's data",
+    "granted": "granted",
+    "granted-tip": "The browser will not evict Herokeep's data",
     "cache": {
       "title": "Campaign image cache",
       "hint": "Portraits and tokens shared in campaigns are cached on this device up to this limit.",
-      "cap-label": "Cache limit: {value} MB",
+      "limit": "Limit",
+      "option-mb": "{value} MB",
+      "option-gb": "{value} GB",
       "usage": "{used} MB used of {quota} MB device storage"
     }
   },
   "packs": {
     "title": "Content packs",
     "core-label": "Core rules pack",
+    "core-tip": "The rules pack built into the app",
+    "count": "{count, plural, one {# content pack installed} other {# content packs installed}}",
+    "updates": "{count, plural, one {# update ready} other {# updates ready}}",
+    "updates-tip": "Heroes adopt a newer pack version from their Build tab",
+    "translations": "Translation packs",
+    "open": "Open packs",
+    "homebrew": "My homebrew",
     "manage": "Manage packs",
     "import-demo": "Import the Russian sample pack",
     "import-success": "Pack imported",
     "import-invalid": "This pack could not be imported",
     "remove": "Remove pack",
+    "remove-named": "Remove pack {name}",
     "translations-load-failed": "Saved packs could not be loaded — continuing without them"
   },
   "account": {
     "title": "Account",
-    "prompt": "Sign in to sync your characters across devices.",
+    "prompt": "Sign in to sync your heroes across devices and join campaigns from any of them. Accounts need no e-mail; keep your recovery codes.",
+    "state-authed": "signed in",
+    "state-authed-tip": "Signed in; sync is on",
+    "state-anon": "this device only",
+    "state-anon-tip": "Not signed in; heroes stay on this device only",
+    "summary": "{heroes, plural, one {# hero syncs} other {# heroes sync}} to this account from {devices, plural, one {# device} other {# devices}}.",
+    "no-email": "There is no e-mail: recovery codes are the only way back in.",
+    "local-note": "Heroes always stay on this device.",
     "login": "Log in",
     "register": "Create an account",
     "logout": "Log out",
+    "logout-hint": "Signs this device out; heroes stay on it",
     "logout-all": "Log out everywhere",
+    "logout-all-hint": "Ends every session of your account, including this one; asks to confirm",
     "logoutAllConfirm": {
       "title": "Log out everywhere?",
       "body": "This ends every signed-in session for your account, including this one.",
@@ -51,8 +96,10 @@
   "devices": {
     "title": "Devices",
     "current": "This device",
-    "lastSeen": "Last active {time}",
+    "activity": "Last active {active} · signed in {signedIn}",
     "revoke": "Revoke",
+    "revoke-hint": "The device is signed out at once",
+    "revoke-named": "Revoke {name}",
     "revokeConfirm": {
       "title": "Revoke \"{deviceLabel}\"?",
       "body": "That device will be signed out immediately.",
@@ -68,14 +115,47 @@
     "empty": "No other devices yet."
   },
   "quota": {
-    "title": "Storage quota",
+    "title": "Account storage",
     "empty": "No synced characters yet.",
     "row": "{used} of {max}",
+    "total": "{used} of {max} · {heroes, plural, one {# hero} other {# heroes}}",
+    "hint": "Each hero may use up to {max}; portraits count.",
+    "meter": "Account storage used",
     "unit": {
       "b": "{amount} B",
       "kb": "{amount} KB",
-      "mb": "{amount} MB"
+      "mb": "{amount} MB",
+      "gb": "{amount} GB"
     },
     "unknown": "—"
+  },
+  "export": {
+    "success": "{count, plural, one {# hero exported.} other {# heroes exported.}}",
+    "failure": "Couldn't export the heroes. Try again.",
+    "pickerDescription": "Herokeep character",
+    "pack-assets-missing": "The pack {pack} was not included: some of its images are missing on this device."
+  },
+  "about": {
+    "title": "About & licences",
+    "plate": "Herokeep {version}",
+    "plate-tip": "Version {version} · built {date}",
+    "srd": "SRD text",
+    "rules-data": "Rules data",
+    "icons": "Icons",
+    "fonts": "Fonts",
+    "built": "Built",
+    "built-value": "{date}",
+    "installed": "installed as an app",
+    "in-browser": "running in the browser",
+    "open5e-credit": "Structured SRD data derived from the Open5e project (https://open5e.com).",
+    "icons-credit": "Icons made by {authors}. Available on https://game-icons.net (CC BY 3.0).",
+    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License."
+  },
+  "help": {
+    "title": "About these settings",
+    "appearance": "Theme, density, motion and language apply at once and are remembered on this device only.",
+    "storage": "Heroes live on this device. Keeping the data protects it from the browser clearing space; the image cache only holds pictures shared in campaigns.",
+    "account": "An account is optional. It syncs heroes between your devices; there is no e-mail, so keep the recovery codes shown when you create it.",
+    "close": "Close"
   }
 }

@@ -139,7 +139,7 @@ test.describe('locale', () => {
     });
 
     await test.step('switch to Russian from Settings — a live switch, not a navigation', async () => {
-      await page.locator('.settings__language-chip[data-locale="ru"]').click();
+      await page.locator('.settings__language select').selectOption('ru');
       await expect(page.locator('.settings__title')).toHaveText('Настройки');
       await assertNoRawKeys(page, 'settings (ru, immediately after switch)');
     });
@@ -149,7 +149,7 @@ test.describe('locale', () => {
     });
 
     await test.step('switch to Ukrainian from Settings — a live switch, not a navigation', async () => {
-      await page.locator('.settings__language-chip[data-locale="uk"]').click();
+      await page.locator('.settings__language select').selectOption('uk');
       await expect(page.locator('.settings__title')).toHaveText('Налаштування');
       await assertNoRawKeys(page, 'settings (uk, immediately after switch)');
     });

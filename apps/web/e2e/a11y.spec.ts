@@ -94,6 +94,9 @@ test.describe('accessibility (axe)', () => {
 
   test('about has no serious/critical violations', async ({ page }) => {
     await page.goto('/about');
+    // /about redirects into Settings, About & licences (spec §2.1).
+    await expect(page).toHaveURL(/\/settings#about$/);
+    await expect(page.locator('#about')).toBeVisible();
     await assertNoSeriousViolations(page, 'about');
   });
 

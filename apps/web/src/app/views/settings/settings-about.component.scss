@@ -1,0 +1,51 @@
+@use 'shared';
+
+:host {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.settings__plate {
+  @include shared.plate;
+}
+
+.settings__kv {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: 14px;
+}
+
+.settings__kv dt {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.settings__kv dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings__kv dd.settings__srd-attribution,
+.settings__kv dd.settings__icons-credit,
+.settings__kv dd.settings__open5e-credit,
+.settings__kv dd.settings__fonts-credit {
+  display: block;
+}
+
+@media (max-width: 767.98px) {
+  .settings__kv {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .settings__kv dd {
+    margin-block-end: var(--space-2);
+  }
+}

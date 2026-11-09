@@ -422,8 +422,10 @@ export const routes: Routes = [
       import('./views/settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
+    // About folded into Settings (spec §2.1): the old address still works and lands on the section.
     path: 'about',
-    loadComponent: () => import('./views/about/about.component').then((m) => m.AboutComponent),
+    pathMatch: 'full',
+    redirectTo: '/settings#about',
   },
   {
     path: 'login',

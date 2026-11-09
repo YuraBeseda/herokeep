@@ -53,7 +53,12 @@ export class HkButtonComponent {
   );
 
   constructor() {
-    effect(() => this.tooltip.text.set(this.disabledReason() ?? ''));
+    // While blocked the hint is the reason; otherwise it is whatever plain `hkTooltip` the caller
+    // put on the same button (empty when none), so one button can carry either.
+    effect(() => {
+      const reason = this.disabledReason() ?? '';
+      this.tooltip.text.set(reason !== '' ? reason : this.tooltip.hkTooltip());
+    });
     effect(() => this.tooltip.describedByExtra.set(this.hasReason() ? this.reasonId : null));
 
     // A capture listener on the button itself runs before any (bubble-phase) click handler the

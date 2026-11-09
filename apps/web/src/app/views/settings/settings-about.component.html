@@ -1,0 +1,28 @@
+<ng-container *transloco="let t; read: 'settings'">
+  <hk-leaf id="about" [title]="t('about.title')" [icon]="'ui:details'">
+    <span
+      hkLeafActions
+      class="settings__plate settings__about-plate"
+      [hkTooltip]="t('about.plate-tip', { version: appVersion, date: releaseDate() })"
+      tabindex="0"
+      >{{ t('about.plate', { version: appVersion }) }}</span
+    >
+    <dl class="settings__kv">
+      <dt>{{ t('about.srd') }}</dt>
+      <dd class="settings__srd-attribution">{{ attribution }}</dd>
+      <dt>{{ t('about.rules-data') }}</dt>
+      <dd class="settings__open5e-credit">{{ t('about.open5e-credit') }}</dd>
+      <dt>{{ t('about.icons') }}</dt>
+      <dd class="settings__icons-credit">
+        {{ t('about.icons-credit', { authors: authorsList }) }}
+      </dd>
+      <dt>{{ t('about.fonts') }}</dt>
+      <dd class="settings__fonts-credit">{{ t('about.fonts-credit') }}</dd>
+      <dt>{{ t('about.built') }}</dt>
+      <dd class="settings__about-built">
+        <span>{{ t('about.built-value', { date: releaseDate() }) }}</span>
+        <hk-tag-chip [label]="installed ? t('about.installed') : t('about.in-browser')" />
+      </dd>
+    </dl>
+  </hk-leaf>
+</ng-container>

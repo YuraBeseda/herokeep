@@ -1,5 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { IconComponent } from '../../shared/icons/icon.component';
+import { DisplayPrefsService } from '../../shared/services/theme/display-prefs.service';
 import { uniqueId } from '../format';
 import { HkIconButtonComponent } from '../icon-button/icon-button.component';
 import { HkTagChipComponent } from '../tag-chip/tag-chip.component';
@@ -21,7 +22,7 @@ import { HkTooltipDirective } from '../tooltip/tooltip.directive';
   styleUrl: './feature-row.component.scss',
   host: {
     '[class.hk-feat--dimmed]': 'dimmed()',
-    '[class.hk-feat--comfortable]': 'density() === "comfortable"',
+    '[class.hk-feat--comfortable]': 'effectiveDensity() === "comfortable"',
   },
 })
 export class HkFeatureRowComponent {
@@ -37,7 +38,10 @@ export class HkFeatureRowComponent {
   readonly source = input<string | null>(null);
   /** A row from an inactive multiclass level, dimmed to 60%. */
   readonly dimmed = input(false);
-  readonly density = input<'compact' | 'comfortable'>('compact');
+  /** `null` follows the saved Settings preference; a caller can pin a density (the phone sheet pins comfortable). */
+  readonly density = input<'compact' | 'comfortable' | null>(null);
+  private readonly prefs = inject(DisplayPrefsService);
+  protected readonly effectiveDensity = computed(() => this.density() ?? this.prefs.density());
 
   // Outputs
   readonly details = output<void>();

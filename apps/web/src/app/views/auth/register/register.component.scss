@@ -1,112 +1,120 @@
-:host {
-  display: block;
-}
+@use '../auth';
 
-.register__title {
-  margin: 0 0 var(--space-3);
-  font-family: var(--font-display);
-}
+@include auth.page;
 
-.register__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-width: 24rem;
-}
-
-.register__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-
-  input {
-    padding: var(--space-2);
-    border: 1px solid var(--border-1);
-    border-radius: var(--radius-s);
-    background: var(--surface-0);
-    color: var(--text-1);
-  }
-}
-
-.register__hint {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--text-2);
-
-  &--error {
-    color: var(--danger);
-  }
-
-  &--ok {
-    color: var(--success);
-  }
+.register__links {
+  @include auth.links;
 }
 
 .register__error {
-  margin: 0;
-  color: var(--danger);
+  @include auth.form-error;
 }
 
-.register__submit {
-  align-self: flex-start;
-  margin-top: var(--space-2);
-}
-
-.register__links {
+// Strength gauge under the password: a recessed track, a fill, and a label that carries the
+// verdict in words (colour is never the only cue).
+.register__strength {
   display: flex;
+  align-items: center;
   gap: var(--space-3);
-  margin-top: var(--space-4);
-
-  // See `login.component.scss`'s matching rule's comment — same pre-existing contrast gap,
-  // same fix.
-  a {
-    color: var(--accent);
-    font-weight: 600;
-    text-decoration: none;
-
-    &:hover,
-    &:focus-visible {
-      text-decoration: underline;
-    }
-  }
+  margin-block-start: var(--space-2);
 }
 
+.register__strength-track {
+  position: relative;
+  flex: 1 1 auto;
+  block-size: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--recess);
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+}
+
+.register__strength-fill {
+  display: block;
+  block-size: 100%;
+  background: var(--warning);
+  transition: inline-size var(--duration-base);
+}
+
+.register__strength[data-state='ok'] .register__strength-fill {
+  background: var(--success);
+}
+
+.register__strength[data-state='ok'] .register__strength-label {
+  color: var(--success-strong);
+}
+
+.register__strength-label {
+  flex: none;
+  color: var(--text-2);
+  font-weight: 700;
+  cursor: default;
+}
+
+// Recovery codes: a monospace block, two columns on a wide leaf, one on a phone.
 .register__codes-intro {
-  max-width: 32rem;
+  margin: 0;
 }
 
 .register__codes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-  max-width: 28rem;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
   padding: var(--space-3);
-  margin: var(--space-3) 0;
   list-style: none;
-  border: 1px solid var(--border-1);
   border-radius: var(--radius-m);
-  background: var(--surface-1);
+  background: var(--leaf-sunken);
+  box-shadow: inset 0 0 0 1px var(--leaf-edge);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 16px;
+  letter-spacing: 0.04em;
 }
 
 .register__code {
-  font-family: var(--font-mono, monospace);
-  font-size: 1rem;
-  letter-spacing: 0.05em;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 
 .register__codes-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
+}
+
+.register__codes-once {
+  margin-inline-start: auto;
+  color: var(--text-2);
+  font-style: italic;
 }
 
 .register__confirm-field {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  gap: var(--space-3);
+  min-block-size: 32px;
+  cursor: pointer;
+
+  input {
+    flex: none;
+    inline-size: 20px;
+    block-size: 20px;
+    margin: 0;
+    accent-color: var(--brass);
+  }
+
+  @media (pointer: coarse) {
+    min-block-size: var(--touch-target);
+  }
 }
 
-.register__continue {
-  align-self: flex-start;
+@media (max-width: 479.98px) {
+  .register__codes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .register__codes-once {
+    margin-inline-start: 0;
+  }
 }

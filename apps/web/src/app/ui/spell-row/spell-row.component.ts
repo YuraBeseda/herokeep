@@ -1,6 +1,7 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
+import { DisplayPrefsService } from '../../shared/services/theme/display-prefs.service';
 import { HkButtonComponent } from '../button/button.component';
 import { coarsePointer } from '../coarse-pointer';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
@@ -34,7 +35,7 @@ import { HkWaxSealComponent } from '../wax-seal/wax-seal.component';
   styleUrl: './spell-row.component.scss',
   host: {
     '[class.hk-srow--unprepared]': '!prepared()',
-    '[class.hk-srow--comfortable]': 'density() === "comfortable"',
+    '[class.hk-srow--comfortable]': 'effectiveDensity() === "comfortable"',
   },
 })
 export class HkSpellRowComponent {
@@ -55,7 +56,10 @@ export class HkSpellRowComponent {
   readonly castable = input(true);
   /** Translated reason Cast is unavailable; `null` when it is available. */
   readonly castDisabledReason = input<string | null>(null);
-  readonly density = input<'compact' | 'comfortable'>('compact');
+  /** `null` follows the saved Settings preference; a caller can pin a density (the phone sheet pins comfortable). */
+  readonly density = input<'compact' | 'comfortable' | null>(null);
+  private readonly prefs = inject(DisplayPrefsService);
+  protected readonly effectiveDensity = computed(() => this.density() ?? this.prefs.density());
 
   // Outputs
   readonly cast = output<void>();

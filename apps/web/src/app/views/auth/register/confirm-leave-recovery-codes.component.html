@@ -3,11 +3,23 @@
     {{ t('auth.register.codesStep.confirmLeave.title') }}
   </h2>
   <p>{{ t('auth.register.codesStep.confirmLeave.message') }}</p>
-  <div class="confirm-leave__actions">
-    <button hk-button type="button" [variant]="'ghost'" (click)="stay()">
+  <div class="confirm-leave__actions" data-dialog-actions>
+    <button
+      hk-button
+      type="button"
+      class="confirm-leave__stay"
+      [variant]="'primary'"
+      (click)="stay()"
+    >
       {{ t('auth.register.codesStep.confirmLeave.stay') }}
     </button>
-    <button hk-button type="button" [variant]="'danger'" (click)="leave()">
+    <button
+      hk-button
+      type="button"
+      class="confirm-leave__leave"
+      [variant]="'ghost-leather'"
+      (click)="leave()"
+    >
       {{ t('auth.register.codesStep.confirmLeave.leave') }}
     </button>
   </div>

@@ -9,8 +9,8 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogService } from '@app/ui/dialog/dialog.service';
+import { ToastService } from '@shared/components/toast/toast.service';
 import {
   authErrorKey,
   AuthService,
@@ -19,6 +19,13 @@ import {
 } from '@shared/services/auth/auth.service';
 import { defaultDeviceLabel } from '@shared/services/auth/device-label';
 import { checkPassword, type PasswordVerdict } from '@shared/services/auth/password-check';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { askOnce } from '../../../ui/nav/ask-once';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
+import { AuthCardComponent } from '../auth-card.component';
+import { useAuthPage } from '../auth-page';
 import { ConfirmLeaveRecoveryCodesComponent } from './confirm-leave-recovery-codes.component';
 
 /** Live password-verdict state (task-5-brief.md): `'idle'` before anything's been typed, so the
@@ -29,6 +36,18 @@ type LiveVerdict = 'idle' | 'pending' | PasswordVerdict;
 
 const PASSWORD_CHECK_DEBOUNCE_MS = 300;
 
+/** Errors that belong under the username field rather than to the whole form. */
+const USERNAME_ERROR_KEYS: readonly string[] = [
+  'validation.invalidUsername',
+  'errors.usernameTaken',
+];
+
+/** The strength gauge fills over this many characters (it is a cue, not a rule: the rules are
+ * `checkPassword`'s). */
+const STRENGTH_FULL_AT = 16;
+/** ADR-012's upper bound, the meter's maximum. */
+const PASSWORD_MAX = 128;
+
 /**
  * `/register` (task-5-brief.md): username + password (live `checkPassword` verdicts) + device
  * label → `AuthService.register`, THEN the ADR-012 recovery-codes step — staged as component
@@ -37,10 +56,22 @@ const PASSWORD_CHECK_DEBOUNCE_MS = 300;
  * navigate back to if the user reloads or leaves early — the `canDeactivate` guard
  * (`confirmRecoveryCodesGuard`, wired in `app.routes.ts`) is what protects against an accidental
  * loss of the still-unconfirmed codes.
+ *
+ * Board AU01: each step is a centred leaf whose own leather strap carries its primary button
+ * (Create account; Continue); the page strap (`useAuthPage`) keeps Back and Help. Whatever a button
+ * cannot do yet says why in its hint.
  */
 @Component({
   selector: 'app-register',
-  imports: [TranslocoDirective, RouterLink, ButtonComponent],
+  imports: [
+    TranslocoDirective,
+    RouterLink,
+    AuthCardComponent,
+    HkButtonComponent,
+    HkTextFieldComponent,
+    HkTooltipDirective,
+    IconComponent,
+  ],
   providers: [provideTranslocoScope('auth')],
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
@@ -49,21 +80,22 @@ export class RegisterComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
 
   // Step state
   protected readonly step = signal<'form' | 'codes'>('form');
 
-  // Fix-round finding (a11y): the codes step swaps in as a `@if`/`@else` branch replacing the
-  // whole form, including the submit button that had focus — nothing tells a screen-reader/
-  // keyboard user the page changed, and focus is left on a now-removed element. `tabindex="-1"`
-  // on the codes heading (template) makes it programmatically focusable without adding it to the
-  // normal tab order; `afterRenderEffect` (reactive to `step`) moves focus there once the view
-  // has actually rendered the codes-step branch, same "move focus to the new content's heading"
-  // pattern a step-based wizard should follow (no stronger precedent — e.g. `hk-dialog`'s
-  // `cdkTrapFocusAutoCapture` — fit this in-page, non-overlay step transition).
+  // Fix-round finding (a11y): the codes step swaps in as a branch replacing the whole form,
+  // including the submit button that had focus — nothing tells a screen-reader/keyboard user the
+  // page changed, and focus is left on a now-removed element. `tabindex="-1"` on the codes heading
+  // (template) makes it programmatically focusable without adding it to the normal tab order;
+  // `afterRenderEffect` (reactive to `step`) moves focus there once the view has actually rendered
+  // the codes-step branch, same "move focus to the new content's heading" pattern a step-based
+  // wizard should follow.
   private readonly codesHeading = viewChild<ElementRef<HTMLElement>>('codesHeading');
 
   constructor() {
+    useAuthPage();
     afterRenderEffect(() => {
       if (this.step() === 'codes') {
         this.codesHeading()?.nativeElement.focus();
@@ -93,13 +125,50 @@ export class RegisterComponent {
     () => this.usernameValid() && this.passwordOk() && !this.submitting(),
   );
   // Scope-relative validation key for the live verdict's rejection reason — `undefined` while
-  // idle/pending/ok, in which case the template shows no reason text (a separate pending
-  // indicator covers the "checking" state).
+  // idle/pending/ok, in which case the field shows its rules or progress instead.
   protected readonly passwordVerdictReasonKey = computed(() => {
     const verdict = this.passwordVerdict();
     if (verdict === 'idle' || verdict === 'pending' || verdict.ok) return undefined;
     return passwordVerdictKey(verdict.reason);
   });
+  /** What the password field says under it when there is no error: its rules, progress or approval. */
+  protected readonly passwordHintKey = computed(() => {
+    const verdict = this.passwordVerdict();
+    if (verdict === 'pending') return 'validation.checking';
+    if (this.passwordOk()) return 'validation.ok';
+    return 'register.passwordHint';
+  });
+
+  // Username errors: typing an invalid name shows it at once; a taken name (or a refused one) after submit.
+  protected readonly usernameErrorKey = computed(() => {
+    if (this.username().length > 0 && !this.usernameValid()) return 'validation.invalidUsername';
+    const key = this.errorKey();
+    return key !== undefined && USERNAME_ERROR_KEYS.includes(key) ? key : undefined;
+  });
+  protected readonly formErrorKey = computed(() => {
+    const key = this.errorKey();
+    return key !== undefined && !USERNAME_ERROR_KEYS.includes(key) ? key : undefined;
+  });
+
+  // Strength gauge (a cue; `checkPassword` stays the rule)
+  protected readonly strengthLength = computed(() =>
+    Math.min(this.password().length, PASSWORD_MAX),
+  );
+  protected readonly strengthPercent = computed(() =>
+    Math.round(Math.min(this.password().length / STRENGTH_FULL_AT, 1) * 100),
+  );
+  protected readonly strengthState = computed<'ok' | 'weak' | 'checking'>(() => {
+    if (this.passwordVerdict() === 'pending') return 'checking';
+    return this.passwordOk() ? 'ok' : 'weak';
+  });
+  protected readonly strengthLabelKey = computed(() => {
+    const state = this.strengthState();
+    if (state === 'ok') return 'register.strengthOk';
+    return state === 'checking' ? 'register.strengthChecking' : 'register.strengthWeak';
+  });
+  protected readonly strengthTextKey = computed(() =>
+    this.strengthState() === 'ok' ? 'register.strengthTip' : 'register.strengthTipWeak',
+  );
 
   // Codes step
   protected readonly recoveryCodes = signal<string[]>([]);
@@ -152,8 +221,8 @@ export class RegisterComponent {
     }
 
     // Re-check right before submitting (defense in depth against a still-pending debounce —
-    // the submit button is already disabled while `!canSubmit()`, but Enter on a text field
-    // still fires a form `submit` event regardless of the button's `disabled` state).
+    // the submit button is already blocked while `!canSubmit()`, but Enter on a text field
+    // still fires a form `submit` event regardless of the button's state).
     const verdict = await checkPassword(this.password(), this.username());
     this.passwordVerdict.set(verdict);
     if (!verdict.ok) {
@@ -178,7 +247,12 @@ export class RegisterComponent {
   }
 
   protected async onCopyCodes(): Promise<void> {
-    await navigator.clipboard.writeText(this.recoveryCodes().join('\n'));
+    try {
+      await navigator.clipboard.writeText(this.recoveryCodes().join('\n'));
+      this.toastService.show('auth.register.codesStep.copied');
+    } catch {
+      this.toastService.show('auth.register.codesStep.copy-failed');
+    }
   }
 
   protected onDownloadCodes(): void {
@@ -200,12 +274,18 @@ export class RegisterComponent {
     await this.router.navigate(['/characters']);
   }
 
+  /** The leave prompt, asked once however many exits start while it is open (Back, a tab, the
+   * browser's back button): they all share its answer instead of stacking a second dialog. */
+  private readonly askLeave = askOnce(async () => {
+    const handle = this.dialogService.open(ConfirmLeaveRecoveryCodesComponent);
+    return (await handle.closed) === true;
+  });
+
   /** `confirmRecoveryCodesGuard` (`app.routes.ts`)'s `CanDeactivateFn` delegate. Allows
    * navigation straight through unless the user is sitting on the unconfirmed codes step, in
    * which case it opens `ConfirmLeaveRecoveryCodesComponent` and waits on the dialog's result. */
   canDeactivate(): boolean | Promise<boolean> {
     if (this.step() !== 'codes' || this.leaveConfirmed) return true;
-    const handle = this.dialogService.open(ConfirmLeaveRecoveryCodesComponent);
-    return handle.closed.then((result) => result === true);
+    return this.askLeave();
   }
 }

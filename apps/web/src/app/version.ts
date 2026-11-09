@@ -9,3 +9,9 @@
  * drift out of sync with two separately-hand-bumped copies.
  */
 export const APP_VERSION = '0.1.0';
+
+/**
+ * The date of that release (`YYYY-MM-DD`, UTC), shown beside the version in Settings, About &
+ * licences. Bump it by hand with `APP_VERSION`: nothing stamps a build date at compile time.
+ */
+export const APP_RELEASE_DATE = '2026-11-02';

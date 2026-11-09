@@ -22,6 +22,8 @@ import { buildHomebrewEditorStrap } from './packs/homebrew/homebrew-editor-strap
 import { buildHomebrewListStrap } from './packs/homebrew/homebrew-list-strap';
 import { buildPackDetailStrap } from './packs/pack-detail-strap';
 import { buildPacksListStrap } from './packs/packs-list-strap';
+import { buildAuthStrap } from './auth/auth-strap';
+import { buildSettingsStrap } from './settings/settings-strap';
 
 /** Every scope the app ships is available; the strap host still only resolves its own (shell). */
 class AllScopesLoader implements TranslocoLoader {
@@ -36,7 +38,7 @@ class AllScopesLoader implements TranslocoLoader {
 const noop = (): void => undefined;
 
 /** A translation key left on screen: `scope.some.key` with no spaces. */
-const RAW_KEY = /\b(?:shell|campaigns|characters|library|settings)\.[\w-]+(?:\.[\w-]+)*/;
+const RAW_KEY = /\b(?:shell|campaigns|characters|library|settings|auth)\.[\w-]+(?:\.[\w-]+)*/;
 
 async function render(config: StrapConfig, phone = false): Promise<HTMLElement> {
   stubViewport({ phone, coarse: phone });
@@ -210,6 +212,37 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
         note: 'Unsaved changes',
       }),
     ]),
+    [
+      'settings',
+      buildSettingsStrap({
+        managePacks: noop,
+        exportAll: noop,
+        help: noop,
+        exportReason: null,
+        note: 'Changes apply immediately',
+      }),
+    ],
+    [
+      'settings, Export all heroes unavailable (no heroes)',
+      buildSettingsStrap({
+        managePacks: noop,
+        exportAll: noop,
+        help: noop,
+        exportReason: 'shell.strap.settings-export-none',
+        note: 'Changes apply immediately',
+      }),
+    ],
+    [
+      'settings, exporting',
+      buildSettingsStrap({
+        managePacks: noop,
+        exportAll: noop,
+        help: noop,
+        exportReason: 'shell.strap.packs-export-busy',
+        note: 'Changes apply immediately',
+      }),
+    ],
+    ['auth leaf', buildAuthStrap({ back: noop, help: noop, note: 'Accounts are optional' })],
     ...[
       'shell.strap.library-no-hero',
       'shell.strap.library-cantrip',
