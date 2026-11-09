@@ -1,34 +1,38 @@
 @if (offers().length > 0) {
-  <div class="campaign-packs-banner" role="status" *transloco="let t; read: 'characters'">
-    <p class="campaign-packs-banner__text">
-      {{ t('sheet.banner.campaign-packs.message', { count: offers().length }) }}
-    </p>
-    <ul class="campaign-packs-banner__list">
-      @for (offer of offers(); track offer.packId) {
-        @if (offer.state === 'installed') {
-          <li>
-            {{
-              t('sheet.banner.campaign-packs.entry', { name: offer.name, version: offer.version })
-            }}
-          </li>
-        } @else {
-          <li class="campaign-packs-banner__installing">
-            {{ t('sheet.banner.campaign-packs.installing', { name: offer.name }) }}
-          </li>
-        }
-      }
-    </ul>
-    @if (!isLeader()) {
-      <p class="campaign-packs-banner__notice">{{ t('not-leader') }}</p>
-    }
-    <button
-      hk-button
-      type="button"
-      class="campaign-packs-banner__pin"
-      [disabled]="!canPin()"
-      (click)="onPin(t)"
+  <ng-container *transloco="let t; read: 'characters'">
+    <hk-banner
+      class="campaign-packs-banner"
+      [variant]="'arcane'"
+      [heading]="t('sheet.banner.campaign-packs.message', { count: offers().length })"
     >
-      {{ t('sheet.banner.campaign-packs.pin') }}
-    </button>
-  </div>
+      <ul class="campaign-packs-banner__list">
+        @for (offer of offers(); track offer.packId) {
+          @if (offer.state === 'installed') {
+            <li>
+              {{
+                t('sheet.banner.campaign-packs.entry', { name: offer.name, version: offer.version })
+              }}
+            </li>
+          } @else {
+            <li class="campaign-packs-banner__installing">
+              {{ t('sheet.banner.campaign-packs.installing', { name: offer.name }) }}
+            </li>
+          }
+        }
+      </ul>
+      @if (!isLeader()) {
+        <p class="campaign-packs-banner__notice">{{ t('not-leader') }}</p>
+      }
+      <button
+        hkBannerActions
+        hk-button
+        type="button"
+        class="campaign-packs-banner__pin"
+        [disabled]="!canPin()"
+        (click)="onPin(t)"
+      >
+        {{ t('sheet.banner.campaign-packs.pin') }}
+      </button>
+    </hk-banner>
+  </ng-container>
 }

@@ -1,161 +1,46 @@
-@use 'utilities' as u;
-
 :host {
   display: block;
 }
 
 .characters-list__header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
   margin-block-end: var(--space-4);
 }
 
 .characters-list__title {
   margin: 0;
   font-family: var(--font-display);
+  color: var(--text-1);
 }
 
-.characters-list__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.characters-list__count {
+  margin: 0;
+  color: var(--text-2);
 }
 
 .characters-list__skeletons {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
-.characters-list__empty {
+.characters-list__empty-body {
+  margin: 0;
   color: var(--text-2);
 }
 
 .characters-list__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .characters-list__item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.characters-list__open {
-  @include u.touch-target;
-
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-1);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.characters-list__portrait {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  /* Monogram letters sit on a dark per-character hue: on-dark ink, not parchment ink. */
-  color: var(--text-on-leather);
-  font-weight: 600;
-  flex-shrink: 0;
-  object-fit: cover;
-}
-
-.characters-list__portrait--placeholder {
-  background: var(--surface-2);
-}
-
-.characters-list__name {
-  font-weight: 600;
-}
-
-.characters-list__meta {
-  color: var(--text-2);
-  font-size: 0.875rem;
-}
-
-// Sync-status indicator (task-9-brief.md, non-color distinction added fix-round 1, Important 1).
-// Color alone (synced=success vs pending=warning) is not a reliable distinction. Colorblind
-// users, and anyone on a touch device unable to hover the title tooltip, have no other signal.
-// Two SHAPE-level cues now carry the same information color does, redundantly.
-//  - Filled (synced, pending) vs hollow/outline (connecting, offline). A filled dot means the
-//    sync session is open with nothing currently in question. A hollow one means not settled
-//    yet (connecting) or not syncing at all (offline).
-//  - Solid outline (connecting) vs DASHED outline (offline) distinguishes those two from each
-//    other without relying on the (motion-guarded, see below) pulse animation alone.
-// The pending state additionally grows to fit its own visible digit count (task-9-brief.md
-// suggestion: render the number beside or inside the dot). A count is information color truly
-// cannot convey at all, so it was never color-only to begin with. The digit is aria-hidden since
-// the outer badge aria-label and title (bound in the template) already speak the full localized
-// pending-count sentence.
-.characters-list__sync-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0.5rem;
-  height: 0.5rem;
-  margin-block-start: var(--space-1);
-  border-radius: var(--radius-l);
-  background: var(--text-2);
-
-  &[data-sync-state='synced'] {
-    background: var(--success);
-  }
-
-  &[data-sync-state='pending'] {
-    min-width: 1rem;
-    height: 1rem;
-    padding-inline: 0.25rem;
-    background: var(--warning);
-  }
-
-  &[data-sync-state='connecting'] {
-    background: transparent;
-    border: 1px solid var(--text-2);
-    animation: characters-list-sync-pulse 1.2s ease-in-out infinite;
-  }
-
-  &[data-sync-state='offline'] {
-    background: transparent;
-    border: 1px dashed var(--text-2);
-  }
-}
-
-.characters-list__sync-badge-count {
-  color: var(--surface-0);
-  font-size: 0.625rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .characters-list__sync-badge[data-sync-state='connecting'] {
-    animation: none;
-  }
-}
-
-@keyframes characters-list-sync-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-
-  50% {
-    opacity: 1;
-  }
+  min-inline-size: 0;
 }

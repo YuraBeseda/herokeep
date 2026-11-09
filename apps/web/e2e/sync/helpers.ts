@@ -153,7 +153,7 @@ export async function waitForCharacterInList(
 export async function openCharacterByName(page: Page, name: string): Promise<void> {
   await waitForCharacterInList(page, name);
   const row = page.locator('.characters-list__item', { hasText: name });
-  await row.locator('.characters-list__open').click();
+  await row.locator('.hero-card__open').click();
   await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
   await expect(page.locator('.play-tab')).toBeVisible();
 }
@@ -161,9 +161,7 @@ export async function openCharacterByName(page: Page, name: string): Promise<voi
 /** The sync badge (`characters-list.component.html`) for the row named `name` — asserted against
  * its `data-sync-state` attribute (`'offline' | 'connecting' | 'synced' | 'pending'`). */
 export function syncBadgeForName(page: Page, name: string) {
-  return page
-    .locator('.characters-list__item', { hasText: name })
-    .locator('.characters-list__sync-badge');
+  return page.locator('.characters-list__item', { hasText: name }).locator('.hero-card__sync');
 }
 
 /** `.play-tab__hp-stats hk-stat-tile` value locator, by the tile's own `hasText` label — same

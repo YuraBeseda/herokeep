@@ -68,7 +68,7 @@ test.describe('campaign: portrait relay', () => {
       await test.step("settle: the CharactersRepository row's own portraitThumbHash is what BlobTransferService's connect-time P1 announce reads (NOT live CharacterStore.facts()) — wait for the /characters list row's own thumb before joining, so the announce has real data to work with", async () => {
         await memberPage.goto('/characters');
         const row = memberPage.locator('.characters-list__item', { hasText: characterName });
-        await expect(row.locator('img.characters-list__portrait')).toBeVisible({ timeout: 15_000 });
+        await expect(row.locator('hk-portrait-frame img')).toBeVisible({ timeout: 15_000 });
       });
 
       await test.step('member: joins the campaign and links this (now-portraited) character', async () => {

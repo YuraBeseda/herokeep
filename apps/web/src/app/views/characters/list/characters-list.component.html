@@ -1,98 +1,48 @@
 <section class="characters-list" *transloco="let t; read: 'characters'">
-  <div class="characters-list__header">
+  <header class="characters-list__header">
     <h1 class="characters-list__title">{{ t('list.title') }}</h1>
-    <div class="characters-list__actions">
-      <button
-        hk-button
-        [variant]="'ghost'"
-        type="button"
-        class="characters-list__import"
-        [disabled]="importing()"
-        (click)="onImportClick()"
-      >
-        {{ t('list.import') }}
-      </button>
-      <input
-        #importInput
-        type="file"
-        class="characters-list__import-input"
-        hidden
-        [disabled]="importing()"
-        [attr.accept]="importAccept"
-        (change)="onImportFileSelected($event)"
-      />
-      <button
-        hk-button
-        [variant]="'primary'"
-        type="button"
-        class="characters-list__create"
-        (click)="create()"
-      >
-        {{ t('list.create') }}
-      </button>
-    </div>
-  </div>
+    @if (!loading() && rows().length > 0) {
+      <p class="characters-list__count">{{ t('list.count', { count: rows().length }) }}</p>
+    }
+  </header>
+
+  <input
+    #importInput
+    type="file"
+    class="characters-list__import-input"
+    hidden
+    [disabled]="importing()"
+    [attr.accept]="importAccept"
+    (change)="onImportFileSelected($event)"
+  />
 
   <app-install-banner />
 
   @if (loading()) {
-    <div class="characters-list__skeletons">
+    <div class="characters-list__skeletons" [attr.aria-label]="t('list.loading')">
       @for (row of skeletonRows; track row) {
         <hk-skeleton width="100%" />
       }
     </div>
   } @else if (rows().length === 0) {
-    <p class="characters-list__empty">{{ t('list.empty') }}</p>
+    <hk-leaf class="characters-list__empty" [title]="t('list.emptyTitle')" [icon]="'ui:heroes'">
+      <p class="characters-list__empty-body">{{ t('list.empty') }}</p>
+    </hk-leaf>
   } @else {
-    <div class="characters-list__grid" [attr.aria-label]="t('list.landmark')">
+    <ul class="characters-list__grid" [attr.aria-label]="t('list.landmark')">
       @for (row of rows(); track row.id) {
-        <hk-card class="characters-list__item">
-          <button type="button" class="characters-list__open" (click)="open(row.id)">
-            @if ((row.portraitThumbHash | blobUrl)(); as thumbUrl) {
-              <img
-                class="characters-list__portrait"
-                [src]="thumbUrl"
-                [alt]="t('sheet.portrait.alt', { name: row.name })"
-              />
-            } @else {
-              <div
-                class="characters-list__portrait characters-list__portrait--placeholder"
-                [style.background]="monogramBackground(row)"
-                aria-hidden="true"
-              >
-                {{ monogramInitials(row) }}
-              </div>
-            }
-            <span class="characters-list__name">{{ row.name }}</span>
-            <span class="characters-list__meta">{{ row.system }}</span>
-            @if (authService.status() === 'authed') {
-              <span
-                class="characters-list__sync-badge"
-                role="img"
-                [attr.data-sync-state]="syncStateBucket(row.id)"
-                [attr.aria-label]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
-                [title]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
-              >
-                @if (syncStateBucket(row.id) === 'pending') {
-                  <span class="characters-list__sync-badge-count" aria-hidden="true">{{
-                    syncPendingCount(row.id)
-                  }}</span>
-                }
-              </span>
-            }
-          </button>
-          <button
-            hk-button
-            [variant]="'danger'"
-            type="button"
-            class="characters-list__delete"
-            [disabled]="importing()"
-            (click)="delete(row)"
-          >
-            {{ t('list.delete') }}
-          </button>
-        </hk-card>
+        <li class="characters-list__item">
+          <app-hero-card
+            [row]="row"
+            [summary]="summaries().get(row.id)"
+            [sync]="syncByRow().get(row.id) ?? null"
+            [menu]="true"
+            [busy]="importing()"
+            (opened)="open(row.id)"
+            (deleteRequested)="delete(row)"
+          />
+        </li>
       }
-    </div>
+    </ul>
   }
 </section>

@@ -1,43 +1,33 @@
 import {
   Component,
   computed,
+  DestroyRef,
+  effect,
   inject,
   resource,
-  signal,
   viewChild,
   type ElementRef,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { CardComponent } from '@shared/components/card/card.component';
 import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { ToastService } from '@shared/components/toast/toast.service';
-import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
-import {
-  HeroImportBadEventError,
-  HeroImportBadManifestError,
-  HeroImportBadPackError,
-  HeroImportBadZipError,
-  HeroImportHashMismatchError,
-  HeroImportPackConflictError,
-  HeroImportSyncedStreamError,
-  HeroReaderService,
-} from '@shared/services/export/hero-reader.service';
 import { AuthService } from '@shared/services/auth/auth.service';
-import { PlaceholderService } from '@shared/services/images/placeholder.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import type { CharacterRow } from '@shared/services/storage/dexie.db';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CharacterStoreNotLeaderError } from '@shared/stores/character.store';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HeroCardComponent, type HeroSyncBucket } from '../hero-card/hero-card.component';
+import { HERO_IMPORT_ACCEPT, HeroImportFlow } from '../hero-import.flow';
+import { HeroSummaryService, type HeroSummary } from '../hero-summary.service';
 import { InstallBannerComponent } from './install-banner.component';
 
 const SKELETON_ROW_COUNT = 4;
 const GENERIC_DELETE_FAILURE_KEY = 'characters.list.toast.delete-failed';
-const GENERIC_IMPORT_FAILURE_KEY = 'characters.list.toast.import-failed-generic';
-/** `.hero` files only — the extension `HeroWriterService.export` names its downloads with. */
-const IMPORT_ACCEPT = '.hero';
 
 /**
  * One-off content component for the delete confirmation dialog (per `hk-dialog`'s "wrap it in a
@@ -51,7 +41,7 @@ const IMPORT_ACCEPT = '.hero';
  */
 @Component({
   selector: 'app-characters-delete-confirm',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   template: `
     <ng-container *transloco="let t">
       <h2 class="characters-delete-confirm__title" data-dialog-title>
@@ -70,7 +60,7 @@ const IMPORT_ACCEPT = '.hero';
         </button>
         <button
           hk-button
-          [variant]="'danger'"
+          [variant]="'ember'"
           type="button"
           class="characters-delete-confirm__confirm"
           (click)="confirm()"
@@ -95,24 +85,27 @@ export class CharactersDeleteConfirmComponent {
 }
 
 /**
- * `/characters` — the character-list view (plan-5 Task 3): every `CharactersRepository` row,
- * newest-first (the repository's own `list()` order), a "create" action to `/characters/new`
- * (T5), each row opening `/c/<id>` (T10), and a delete flow (confirm dialog →
+ * `/heroes` list (route `/characters`, board H01): every `CharactersRepository` row, newest-first
+ * (the repository's own `list()` order), as hero cards (`HeroCardComponent`) that open `/c/<id>`,
+ * with the delete flow behind each card's "more" menu (confirm dialog →
  * `SyncService.deleteEverywhere`, task-8-brief.md — stops any live sync session for the row,
  * removes it locally via `CharacterStore.deleteCharacter` (its snapshot and whole event stream),
  * then a best-effort `DELETE /api/characters/:id` when authed; a no-op past the local delete when
- * anon/offline). Reads straight from `CharactersRepository` rather than `CharacterStore` — the index
- * rows (`{id, name, system, archived, updatedAt, portraitThumbHash?}`) are all a list needs; no
- * reason to load/reduce any character's full event stream just to show its name.
+ * anon/offline).
+ *
+ * New hero and Import live in the action strap (zone 2, spec §3) — set here while the list is
+ * open and released when it closes; Import opens this screen's hidden `.hero` file input and hands
+ * the file to the shared `HeroImportFlow`. Reads the Library index rows plus a per-hero summary
+ * (classes, campaign) from `HeroSummaryService`; no hero is loaded into `CharacterStore` to be
+ * listed.
  */
 @Component({
   selector: 'app-characters-list',
   imports: [
     TranslocoDirective,
-    CardComponent,
-    ButtonComponent,
+    HkLeafComponent,
     SkeletonComponent,
-    BlobUrlPipe,
+    HeroCardComponent,
     InstallBannerComponent,
   ],
   providers: [provideTranslocoScope('characters')],
@@ -125,8 +118,9 @@ export class CharactersListComponent {
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly placeholderService = inject(PlaceholderService);
-  private readonly heroReaderService = inject(HeroReaderService);
+  private readonly actionStrap = inject(ActionStrapService);
+  private readonly heroImportFlow = inject(HeroImportFlow);
+  private readonly heroSummaryService = inject(HeroSummaryService);
   protected readonly authService = inject(AuthService);
 
   // Template-facing state
@@ -136,7 +130,8 @@ export class CharactersListComponent {
   );
 
   // No `params` — this is a one-shot load re-triggered only by an explicit `.reload()` (after a
-  // successful delete), never by a reactive request value (see BaseResourceOptions's own doc).
+  // successful delete or import), never by a reactive request value (see BaseResourceOptions's
+  // own doc).
   private readonly charactersResource = resource({
     loader: () => this.charactersRepository.list(),
   });
@@ -144,19 +139,54 @@ export class CharactersListComponent {
   protected readonly rows = computed(() => this.charactersResource.value() ?? []);
   protected readonly loading = this.charactersResource.isLoading;
 
-  /** `PlaceholderService.monogram` for a row that has no `portraitThumbHash` (or whose thumb blob
-   * hasn't resolved yet) — deterministic per character id, matching `sheet-shell.component.ts`'s
-   * own header placeholder for the SAME character. */
-  protected monogramInitials(row: CharacterRow): string {
-    return this.placeholderService.monogram(row.name, row.id).initials;
-  }
+  /** Classes and campaign per hero; empty until the rows (and then their streams) are read, so a
+   * card first paints with its index-row facts and fills in. */
+  private readonly summaryResource = resource({
+    params: () => this.rows().map((row) => row.id),
+    loader: ({ params }) => this.heroSummaryService.summarize(params),
+  });
+  protected readonly summaries = computed(
+    () => this.summaryResource.value() ?? new Map<string, HeroSummary>(),
+  );
 
-  // Fix-round 1, finding 4: `PlaceholderService.monogram` now computes the `hsl(...)` string
-  // itself (`Monogram.background`) — this just re-exposes it under the name the template binds,
-  // rather than re-deriving the formula here (previously duplicated, verbatim, across THREE
-  // components, and already once out of sync with this service's own doc comment).
-  protected monogramBackground(row: CharacterRow): string {
-    return this.placeholderService.monogram(row.name, row.id).background;
+  /** Sync state per hero, read once per change rather than per template evaluation. `null` for a
+   * signed-out user (solo mode looks exactly as before: no chip at all). */
+  protected readonly syncByRow = computed(() => {
+    const authed = this.authService.status() === 'authed';
+    return new Map(
+      this.rows().map((row) => [row.id, authed ? this.syncOf(row.id) : null] as const),
+    );
+  });
+
+  protected readonly importing = this.heroImportFlow.importing;
+
+  constructor() {
+    // Zone 2 of the strap: New hero, Import. Re-set when `importing` changes (Import is disabled
+    // while a file is being read); released when the list closes.
+    effect(() => {
+      const importing = this.importing();
+      this.actionStrap.set({
+        primary: [
+          {
+            id: 'new-hero',
+            label: 'shell.strap.new-hero',
+            icon: 'add',
+            kind: 'primary',
+            run: () => this.create(),
+          },
+          {
+            id: 'import',
+            label: 'shell.strap.import',
+            icon: 'import',
+            kind: 'parchment',
+            disabled: importing,
+            run: () => this.onImportClick(),
+          },
+        ],
+        scope: ['/characters'],
+      });
+    });
+    inject(DestroyRef).onDestroy(() => this.actionStrap.clear());
   }
 
   // Methods
@@ -170,14 +200,8 @@ export class CharactersListComponent {
 
   // --- `.hero` import (plan-6 Task 10) -----------------------------------------------------
 
-  protected readonly importAccept = IMPORT_ACCEPT;
+  protected readonly importAccept = HERO_IMPORT_ACCEPT;
   protected readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
-
-  /** Guards against a second file pick racing an already-in-flight import — same re-entrancy
-   * reasoning as `BuildTabComponent`'s `portraitUploading` (task-8-brief.md's own pattern): the
-   * control is disabled in the template (`[disabled]="importing()"`) AND the handler
-   * short-circuits a synthetic/queued event that slips through anyway. */
-  protected readonly importing = signal(false);
 
   protected onImportClick(): void {
     this.importInput()?.nativeElement.click();
@@ -190,51 +214,9 @@ export class CharactersListComponent {
     // the browser only fires `change` when the input's value actually differs from before.
     input.value = '';
     if (!file) return;
-    if (this.importing()) return;
 
-    this.importing.set(true);
-    try {
-      const result = await this.heroReaderService.import(file);
-      this.charactersResource.reload();
-      const key =
-        result.mode === 'created'
-          ? 'characters.list.toast.import-created'
-          : 'characters.list.toast.import-merged';
-      this.toastService.show(key, {
-        name: result.name,
-        imported: result.imported,
-        skippedDuplicates: result.skippedDuplicates,
-      });
-    } catch (error) {
-      this.toastService.show(...this.importFailureToastArgs(error));
-    } finally {
-      this.importing.set(false);
-    }
-  }
-
-  /** Maps every `HeroReaderService.import` failure mode to its toast `show(key, params?)` args —
-   * each typed error already carries its own full, global i18n key as `code` (same pattern as
-   * `CharacterStoreNotLeaderError`, checked here too: a non-leader tab can't import either).
-   * `HeroImportBadEventError`'s 0-based `index` is shown 1-based — friendlier for a user who has
-   * no reason to think in array positions. */
-  private importFailureToastArgs(error: unknown): [string, Record<string, unknown>?] {
-    if (error instanceof HeroImportBadEventError) {
-      return [error.code, { index: error.index + 1 }];
-    }
-    // Plan 15 Task 6: a carried content pack that cannot be installed names its `id@version`.
-    if (error instanceof HeroImportBadPackError || error instanceof HeroImportPackConflictError) {
-      return [error.code, { pack: error.packKey }];
-    }
-    if (
-      error instanceof HeroImportBadZipError ||
-      error instanceof HeroImportBadManifestError ||
-      error instanceof HeroImportHashMismatchError ||
-      error instanceof HeroImportSyncedStreamError ||
-      error instanceof CharacterStoreNotLeaderError
-    ) {
-      return [error.code];
-    }
-    return [GENERIC_IMPORT_FAILURE_KEY];
+    const result = await this.heroImportFlow.importFile(file);
+    if (result) this.charactersResource.reload();
   }
 
   protected async delete(row: CharacterRow): Promise<void> {
@@ -255,35 +237,24 @@ export class CharactersListComponent {
     }
   }
 
-  // --- Sync-status indicator (task-9-brief.md) --------------------------------------------
+  // --- Sync-status chip (task-9-brief.md) --------------------------------------------------
   //
-  // Placement: a small per-row badge here on the Library list rather than the sheet shell
-  // header. This is the one screen where every synced character is visible AT ONCE — a user
-  // with several characters can see which ones are still catching up (or offline) without
-  // opening each one individually, which the sheet header (one character at a time) can't offer.
-  // It also keeps the footprint to ONE component: `row.id` is already this exact streamId
-  // `SyncService.syncState` expects, no extra plumbing needed. Hidden entirely when anon (task
-  // brief: "solo mode looks exactly as today") — `SyncService` never opens a session for anyone
-  // logged out, so `syncState` would always read 'offline' anyway; gating on `authService.status()`
-  // avoids ever rendering a misleading "offline" dot for a user who was never trying to sync.
+  // Placement: a chip on each hero card. This is the one screen where every synced character is
+  // visible AT ONCE — a user with several characters can see which ones are still catching up (or
+  // offline) without opening each one. Hidden entirely when anon (task brief: "solo mode looks
+  // exactly as today") — `SyncService` never opens a session for anyone logged out, so
+  // `syncState` would always read 'offline' anyway; gating on `authService.status()` avoids ever
+  // rendering a misleading "offline" chip for a user who was never trying to sync.
 
   private static readonly PENDING_STATE = /^pending-(\d+)$/;
 
-  protected syncStateBucket(id: string): 'synced' | 'pending' | 'connecting' | 'offline' {
+  private syncOf(id: string): { bucket: HeroSyncBucket; count: number } {
     const state = this.syncService.syncState(id)();
-    if (state === 'synced' || state === 'connecting' || state === 'offline') return state;
-    return 'pending'; // the remaining `SyncStateValue` shape is the `pending-${number}` template literal
-  }
-
-  protected syncPendingCount(id: string): number {
-    const state = this.syncService.syncState(id)();
+    if (state === 'synced' || state === 'connecting' || state === 'offline') {
+      return { bucket: state, count: 0 };
+    }
+    // The remaining `SyncStateValue` shape is the `pending-${number}` template literal.
     const match = CharactersListComponent.PENDING_STATE.exec(state);
-    return match ? Number(match[1]) : 0;
-  }
-
-  // Scope-relative key for the badge's tooltip/aria-label — same `t(key, params)` shape every
-  // other translated string in this template already uses.
-  protected syncTooltipKey(id: string): string {
-    return `list.sync.tooltip.${this.syncStateBucket(id)}`;
+    return { bucket: 'pending', count: match ? Number(match[1]) : 0 };
   }
 }

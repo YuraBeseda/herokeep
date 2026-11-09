@@ -1,0 +1,213 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.hero-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-leaf);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-leaf);
+  color: var(--text-1);
+}
+
+.hero-card__portrait {
+  flex: none;
+}
+
+.hero-card__body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.hero-card__name,
+.hero-card__classes,
+.hero-card__played {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-card__name {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.2;
+}
+
+.hero-card__classes {
+  color: var(--text-2);
+}
+
+.hero-card__played {
+  color: var(--text-3);
+  font-size: 0.875rem;
+}
+
+.hero-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.hero-card__campaign,
+.hero-card__sync {
+  display: inline-flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.hero-card__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The whole card is the Open target: the button's hit area is stretched over the article (the
+   button itself is `position: static` so the stretch is relative to the article), and the more
+   button and its menu are lifted above it. */
+.hero-card__open,
+.hero-card__open:hover {
+  position: static;
+  /* A `filter` (hk-button's hover brightness) would make the button the containing block of its
+     own stretched ::after and shrink the card's hit area to the button on hover. */
+  filter: none;
+}
+
+.hero-card:hover {
+  box-shadow:
+    var(--shadow-leaf),
+    0 0 0 1px var(--border-brass);
+}
+
+.hero-card:has(.hero-card__open:focus-visible) {
+  box-shadow:
+    0 0 0 2px var(--focus-ring),
+    0 0 0 4px var(--focus-ring-outer);
+}
+
+.hero-card__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-leaf);
+}
+
+.hero-card__more-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-card__more {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: var(--control-desktop);
+  block-size: var(--control-desktop);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-seal);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.hero-card__more:hover,
+.hero-card__more[aria-expanded='true'] {
+  background: var(--leaf-sunken);
+}
+
+.hero-card__more:focus-visible,
+.hero-card__menu-item:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--focus-ring),
+    0 0 0 4px var(--focus-ring-outer);
+}
+
+.hero-card__more svg {
+  inline-size: 18px;
+  block-size: 18px;
+  fill: currentColor;
+}
+
+.hero-card__menu {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: calc(100% + var(--space-1));
+  inset-inline-end: 0;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  border-radius: var(--radius-s);
+  background: var(--leaf);
+  box-shadow:
+    inset 0 0 0 1px var(--leaf-edge),
+    var(--shadow-leaf);
+}
+
+.hero-card__menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: var(--control-desktop);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hero-card__menu-item--danger {
+  color: var(--danger-strong);
+}
+
+.hero-card__menu-item:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.hero-card__menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (pointer: coarse) {
+  .hero-card__more,
+  .hero-card__menu-item {
+    min-inline-size: var(--control-phone);
+    min-block-size: var(--control-phone);
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-card {
+    flex-wrap: wrap;
+  }
+
+  .hero-card__actions {
+    inline-size: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -258,7 +258,7 @@ describe('CampaignPacksBannerComponent (plan 16 Task 5, ruling 4)', () => {
 
     const el = banner(fixture);
     expect(el).not.toBeNull();
-    expect(el?.getAttribute('role')).toBe('status');
+    expect(el?.querySelector('[role="status"]')).not.toBeNull();
     expect(el?.textContent).toContain(
       "Your campaign uses a content pack this character doesn't use yet:",
     );

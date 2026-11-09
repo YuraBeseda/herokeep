@@ -23,7 +23,27 @@
     "title": "Menu"
   },
   "home": {
-    "tagline": "Your D&D companion — the Library is ready; builder comes next."
+    "campaigns": {
+      "all": "All campaigns",
+      "role": {
+        "dm": "Dungeon Master",
+        "player": "Player"
+      },
+      "title": "Campaigns"
+    },
+    "continue": {
+      "open": "Open",
+      "title": "Continue"
+    },
+    "heroes": {
+      "all": "All heroes",
+      "title": "Heroes"
+    },
+    "invitation": {
+      "body": "Create your first hero, or join a friend's campaign with a code. Everything is kept on this device.",
+      "title": "Your table is waiting"
+    },
+    "library": "Browse the Library"
   },
   "icon": {
     "ac": "Armor class",
@@ -121,13 +141,23 @@
     "about": "About",
     "landmark": "Primary navigation"
   },
+  "notFound": {
+    "address": "Address: {{path}}",
+    "body": "That address doesn't lead anywhere in Herokeep. Check the link, or head back to your heroes.",
+    "heroes": "Go to heroes",
+    "home": "Home",
+    "title": "Page not found"
+  },
   "strap": {
     "back": "Back",
     "cancel": "Cancel",
     "exit": "Leave this screen",
+    "import": "Import",
+    "join-code": "Join by code",
     "landmark": "Actions",
     "more": "More actions",
     "more-short": "More",
+    "new-hero": "New hero",
     "primary": "Main actions",
     "secondary": "More actions"
   },

@@ -1,21 +1,14 @@
-/* Same frame as the missing-packs banner of the sheet shell, in the accent colour: an offer, not
-   a problem. */
-.campaign-packs-banner {
-  margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-m);
-  background: var(--surface-2);
-  font-size: 0.875rem;
-  overflow-wrap: anywhere;
+/* The banner frame, colour and layout are `hk-banner` (arcane: an offer, not a problem). */
+:host {
+  display: block;
 }
 
-.campaign-packs-banner__text {
-  margin: 0;
+.campaign-packs-banner {
+  margin: 0 0 var(--space-3);
 }
 
 .campaign-packs-banner__list {
-  margin: var(--space-1) 0 var(--space-2);
+  margin: var(--space-1) 0 0;
   padding-inline-start: var(--space-4);
 }
 
@@ -24,6 +17,6 @@
 }
 
 .campaign-packs-banner__notice {
-  margin: 0 0 var(--space-2);
+  margin: var(--space-1) 0 0;
   color: var(--text-2);
 }

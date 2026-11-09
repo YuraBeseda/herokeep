@@ -55,7 +55,9 @@ test.describe('export / import (.hero)', () => {
       await page.goto('/characters');
       const row = page.locator('.characters-list__item', { hasText: CHARACTER_NAME });
       await expect(row).toBeVisible();
-      await row.getByRole('button', { name: 'Delete', exact: true }).click();
+      // Delete sits behind the card's "more" menu (board H01).
+      await row.getByRole('button', { name: `More actions for ${CHARACTER_NAME}` }).click();
+      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
       await expect(page.locator('.characters-delete-confirm__title')).toBeVisible();
       await page.locator('.characters-delete-confirm__confirm').click();
       await expect(page.locator('.characters-list__item', { hasText: CHARACTER_NAME })).toHaveCount(
@@ -74,7 +76,7 @@ test.describe('export / import (.hero)', () => {
       // A fresh `mode: 'created'` import (the row was fully deleted above, not merged) re-stores
       // the portrait blob by hash — the list thumb, not just the placeholder monogram, proves the
       // image round-tripped along with the events.
-      await expect(row.locator('img.characters-list__portrait')).toBeVisible();
+      await expect(row.locator('hk-portrait-frame img')).toBeVisible();
     });
 
     await test.step('name and HP are intact, and the sheet header shows the real portrait again', async () => {

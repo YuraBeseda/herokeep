@@ -1,0 +1,14 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <hk-leaf class="not-found" [title]="t('notFound.title')" [icon]="'ui:details'">
+    <p class="not-found__body">{{ t('notFound.body') }}</p>
+    <p class="not-found__address">{{ t('notFound.address', { path }) }}</p>
+    <div class="not-found__actions">
+      <button hk-button [variant]="'primary'" type="button" (click)="go('/characters')">
+        {{ t('notFound.heroes') }}
+      </button>
+      <button hk-button [variant]="'ghost'" type="button" (click)="go('/')">
+        {{ t('notFound.home') }}
+      </button>
+    </div>
+  </hk-leaf>
+</ng-container>

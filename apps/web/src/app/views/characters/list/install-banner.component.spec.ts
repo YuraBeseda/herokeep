@@ -7,13 +7,16 @@ import { InstallPromptService } from '@shared/services/pwa/install-prompt.servic
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
+import shellEn from '../../../../assets/i18n/shell/en.json';
 import { InstallBannerComponent } from './install-banner.component';
 
 const DISMISSED_KEY = 'install-banner-dismissed';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
-    return langPath === 'characters/en' ? of(charactersEn) : of({});
+    if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
+    return of({});
   }
 }
 
@@ -104,7 +107,7 @@ describe('InstallBannerComponent', () => {
     );
   });
 
-  it('dismissing (×) hides the banner immediately and persists the key via SettingsRepository', async () => {
+  it('dismissing (Close) hides the banner immediately and persists the key via SettingsRepository', async () => {
     configure({ canInstall: true });
     const db = TestBed.inject(HkDb);
     await db.settings.clear();
@@ -115,11 +118,30 @@ describe('InstallBannerComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.install-banner')).not.toBeNull();
 
-    compiled.querySelector<HTMLButtonElement>('.install-banner__dismiss')?.click();
+    compiled
+      .querySelector<HTMLButtonElement>('.install-banner button[aria-label="Close"]')
+      ?.click();
     await fixture.whenStable();
 
     expect(compiled.querySelector('.install-banner')).toBeNull();
     expect(await settingsRepository.get(DISMISSED_KEY)).toBe(true);
+  });
+
+  it('is a banner notice, not a card: the sentence and the actions sit inside hk-banner', async () => {
+    configure({ canInstall: true });
+    await TestBed.inject(HkDb).settings.clear();
+    const fixture = TestBed.createComponent(InstallBannerComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const banner = compiled.querySelector('hk-banner.install-banner');
+    expect(
+      banner?.getAttribute('role') ?? banner?.querySelector('[role]')?.getAttribute('role'),
+    ).toBe('status');
+    expect(banner?.querySelector('.install-banner__text')?.textContent?.trim()).toBe(
+      charactersEn.list.installBanner.text,
+    );
+    expect(banner?.querySelector('.install-banner__install')).not.toBeNull();
   });
 
   it('dismissal persists across a fresh TestBed/component instance (fake-indexeddb-backed)', async () => {
@@ -130,7 +152,7 @@ describe('InstallBannerComponent', () => {
     const firstFixture = TestBed.createComponent(InstallBannerComponent);
     await firstFixture.whenStable();
     (firstFixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.install-banner__dismiss')
+      .querySelector<HTMLButtonElement>('.install-banner button[aria-label="Close"]')
       ?.click();
     await firstFixture.whenStable();
     db.close();

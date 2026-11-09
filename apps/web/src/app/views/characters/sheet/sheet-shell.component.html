@@ -43,10 +43,11 @@
     <!-- Plan 15 Task 4 (ruling 8): pinned packs this device does not have, on every tab. Their
          entities resolve to nothing; derive reports those as unresolved-reference warnings. -->
     @if (missingPins().length > 0) {
-      <div class="sheet-shell__missing-packs" role="status">
-        <p class="sheet-shell__missing-packs-text">
-          {{ t('sheet.banner.missing-packs.message', { count: missingPins().length }) }}
-        </p>
+      <hk-banner
+        class="sheet-shell__missing-packs"
+        [variant]="'warning'"
+        [heading]="t('sheet.banner.missing-packs.message', { count: missingPins().length })"
+      >
         <ul class="sheet-shell__missing-packs-list">
           @for (pin of missingPins(); track pin.packId) {
             <li>
@@ -59,7 +60,7 @@
         <a class="sheet-shell__missing-packs-link" routerLink="/packs">{{
           t('sheet.banner.missing-packs.link')
         }}</a>
-      </div>
+      </hk-banner>
     }
 
     <!-- Plan 16 Task 5 (ruling 4): the linked campaign's packs this character does not pin yet. -->

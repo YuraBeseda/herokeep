@@ -11,6 +11,7 @@ import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.componen
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { HkBannerComponent } from '../../../ui/banner/banner.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
 import { HeroWriterService } from '@shared/services/export/hero-writer.service';
@@ -47,6 +48,7 @@ type TabId = (typeof TAB_IDS)[number];
     BlobUrlPipe,
     CampaignChipComponent,
     CampaignPacksBannerComponent,
+    HkBannerComponent,
   ],
   // Plan 15 Task 4: a component-level `EngineFacade` scoped to the loaded character's pins — every
   // tab and level-up (routed children) names and lists against the character's own pack set.

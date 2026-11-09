@@ -1,0 +1,83 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <article class="hero-card">
+    <hk-portrait-frame
+      class="hero-card__portrait"
+      [name]="row().name"
+      [src]="(row().portraitThumbHash | blobUrl)() ?? null"
+      [monogram]="initials()"
+      [size]="'s'"
+    />
+    <div class="hero-card__body">
+      <h3 class="hero-card__name" [hkTooltip]="row().name">{{ row().name }}</h3>
+      <p class="hero-card__classes" [hkTooltip]="classLine(t)">{{ classLine(t) }}</p>
+      <div class="hero-card__chips">
+        @if (summary()?.campaign; as campaign) {
+          <span class="hero-card__campaign">
+            <hk-tag-chip [label]="campaign.name" [tone]="'arcane'" [icon]="'ui:campaigns'" />
+          </span>
+        }
+        @if (sync(); as state) {
+          <span
+            class="hero-card__sync"
+            role="img"
+            [attr.data-sync-state]="state.bucket"
+            [attr.aria-label]="syncLabel(t)"
+          >
+            <hk-tag-chip [label]="syncLabel(t)" [tone]="syncTone()" />
+          </span>
+        }
+      </div>
+      <p class="hero-card__played">{{ t('list.card.played', { date: playedDate() }) }}</p>
+    </div>
+    <div class="hero-card__actions">
+      <button
+        hk-button
+        type="button"
+        class="hero-card__open"
+        [variant]="'primary'"
+        [size]="touch() ? 'phone' : 'm'"
+        [attr.aria-label]="openLabel(t)"
+        (click)="opened.emit()"
+      >
+        {{ t('list.card.open') }}
+      </button>
+      @if (menu()) {
+        <div class="hero-card__more-wrap">
+          <button
+            #more
+            type="button"
+            class="hero-card__more"
+            [attr.aria-haspopup]="'menu'"
+            [attr.aria-expanded]="menuOpen()"
+            [attr.aria-label]="t('list.card.more', { name: row().name })"
+            [hkTooltip]="t('list.card.more', { name: row().name })"
+            (click)="toggleMenu()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="5" cy="12" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="19" cy="12" r="2" />
+            </svg>
+          </button>
+          @if (menuOpen()) {
+            <ul class="hero-card__menu" role="menu" [attr.aria-label]="t('list.card.menu')">
+              <li role="none">
+                <button
+                  #firstItem
+                  type="button"
+                  role="menuitem"
+                  class="hero-card__menu-item hero-card__menu-item--danger"
+                  [disabled]="busy()"
+                  (click)="requestDelete()"
+                >
+                  <hk-icon [icon]="'ui:remove'" />
+                  {{ t('list.delete') }}
+                </button>
+              </li>
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  </article>
+</ng-container>

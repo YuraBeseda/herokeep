@@ -449,7 +449,7 @@ describe('SheetShellComponent — per-character pack set (plan 15 Task 4)', () =
     expect(root.querySelector('.sheet-shell__name')?.textContent?.trim()).toBe('Ivan');
     const banner = root.querySelector('.sheet-shell__missing-packs');
     expect(banner).not.toBeNull();
-    expect(banner?.getAttribute('role')).toBe('status');
+    expect(banner?.querySelector('[role="status"]')).not.toBeNull();
     expect(banner?.textContent).toContain(
       "This character uses a content pack that isn't installed on this device:",
     );

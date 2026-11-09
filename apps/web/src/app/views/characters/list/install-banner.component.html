@@ -1,39 +1,34 @@
 @if (visible()) {
-  <hk-card class="install-banner" *transloco="let t; read: 'characters'">
-    <div class="install-banner__content">
-      <p class="install-banner__text">{{ t('list.installBanner.text') }}</p>
-      <div class="install-banner__actions">
-        @if (canInstall()) {
-          <button
-            hk-button
-            type="button"
-            class="install-banner__install"
-            (click)="onInstallClick()"
-          >
-            {{ t('list.installBanner.install') }}
-          </button>
-        } @else if (showIosHint()) {
-          <button
-            hk-button
-            type="button"
-            [variant]="'ghost'"
-            class="install-banner__ios"
-            (click)="onShowIosInstructions()"
-          >
-            {{ t('list.installBanner.howToInstall') }}
-          </button>
-        }
+  <ng-container *transloco="let t; read: 'characters'">
+    <hk-banner
+      class="install-banner"
+      [variant]="'info'"
+      [dismissable]="true"
+      (dismissed)="onDismiss()"
+    >
+      <span class="install-banner__text">{{ t('list.installBanner.text') }}</span>
+      @if (canInstall()) {
         <button
+          hkBannerActions
+          hk-button
+          type="button"
+          class="install-banner__install"
+          (click)="onInstallClick()"
+        >
+          {{ t('list.installBanner.install') }}
+        </button>
+      } @else if (showIosHint()) {
+        <button
+          hkBannerActions
           hk-button
           type="button"
           [variant]="'ghost'"
-          class="install-banner__dismiss"
-          [attr.aria-label]="t('list.installBanner.dismiss')"
-          (click)="onDismiss()"
+          class="install-banner__ios"
+          (click)="onShowIosInstructions()"
         >
-          ×
+          {{ t('list.installBanner.howToInstall') }}
         </button>
-      </div>
-    </div>
-  </hk-card>
+      }
+    </hk-banner>
+  </ng-container>
 }

@@ -42,7 +42,7 @@ export async function openCreateWizard(
     return;
   } else if (via === 'nav') {
     await page.getByRole('link', { name: 'Heroes', exact: true }).click();
-    await page.getByRole('button', { name: 'New character', exact: true }).click();
+    await page.getByRole('button', { name: 'New hero', exact: true }).click();
   } else {
     await page.goto('/characters/new');
   }

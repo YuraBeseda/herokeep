@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  max-inline-size: 36rem;
+  margin-inline: auto;
+}
+
+.not-found__body {
+  margin: 0 0 var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.not-found__address {
+  margin: 0 0 var(--space-4);
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.not-found__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

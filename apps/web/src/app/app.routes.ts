@@ -8,6 +8,7 @@ import { AuthService } from './shared/services/auth/auth.service';
 import { CampaignsRepository } from './shared/services/storage/campaigns.repository';
 import type { CampaignRow } from './shared/services/storage/dexie.db';
 import { CharactersRepository } from './shared/services/storage/characters.repository';
+import { SettingsRepository } from './shared/services/storage/settings.repository';
 import { CampaignStore } from './shared/stores/campaign.store';
 import { CharacterStore } from './shared/stores/character.store';
 import type { RegisterComponent } from './views/auth/register/register.component';
@@ -29,16 +30,24 @@ export const characterResolver: ResolveFn<boolean> = async (route) => {
   // crossed (NG0203).
   const charactersRepository = inject(CharactersRepository);
   const characterStore = inject(CharacterStore);
+  const settingsRepository = inject(SettingsRepository);
 
   const row = await charactersRepository.get(id);
   if (!row) return false;
 
   try {
     await characterStore.load(id);
-    return true;
   } catch {
     return false;
   }
+  // Home's "Continue" leaf: the one place every `/c/:id/**` activation passes through. UI state
+  // only (a settings row, never an event); a failed write must not fail the sheet.
+  try {
+    await settingsRepository.setLastOpened(id, Date.now());
+  } catch {
+    // Storage hiccup: Continue just keeps pointing at the previous hero.
+  }
+  return true;
 };
 
 /**
@@ -348,5 +357,11 @@ export const routes: Routes = [
     canActivate: [redirectAuthedGuard],
     loadComponent: () =>
       import('./views/auth/recover/recover.component').then((m) => m.RecoverComponent),
+  },
+  {
+    // Board X01: an address no route matches. Must stay LAST.
+    path: '**',
+    loadComponent: () =>
+      import('./views/not-found/not-found.component').then((m) => m.NotFoundComponent),
   },
 ];

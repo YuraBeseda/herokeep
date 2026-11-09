@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal, type Signal } from '@angular/core';
 import { planRebase, type Pins } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { HkBannerComponent } from '../../../ui/banner/banner.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { RebaseReportDialogComponent } from '@shared/components/rebase-report-dialog/rebase-report-dialog.component';
 import { ToastService } from '@shared/components/toast/toast.service';
@@ -64,7 +65,7 @@ const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0
  */
 @Component({
   selector: 'app-campaign-packs-banner',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkBannerComponent, HkButtonComponent],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './campaign-packs-banner.component.html',
   styleUrl: './campaign-packs-banner.component.scss',

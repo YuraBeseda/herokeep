@@ -93,10 +93,10 @@ async function visitScreens(page: Page, locale: Locale, characterId: string): Pr
   await assertNoRawKeys(page, `library detail (${locale})`);
 
   await page.getByRole('link', { name: nav.characters, exact: true }).click();
-  await expect(page.locator('.characters-list__open')).toBeVisible();
+  await expect(page.locator('.hero-card__open')).toBeVisible();
   await assertNoRawKeys(page, `characters list (${locale})`);
 
-  await page.locator('.characters-list__open').first().click();
+  await page.locator('.hero-card__open').first().click();
   await expect(page).toHaveURL(new RegExp(`/c/${characterId}/play$`));
   await expect(page.locator('.play-tab')).toBeVisible();
   await assertNoRawKeys(page, `character sheet — play (${locale})`);

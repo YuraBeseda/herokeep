@@ -38,7 +38,7 @@ export async function registerAndSyncFighter(
   await page.goto('/characters');
   const badge = page
     .locator('.characters-list__item', { hasText: characterName })
-    .locator('.characters-list__sync-badge');
+    .locator('.hero-card__sync');
   await expect(badge).toHaveAttribute('data-sync-state', 'synced', { timeout: 45_000 });
   return { username, characterId };
 }

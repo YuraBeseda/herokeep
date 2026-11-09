@@ -1,10 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { press } from '../../../ui/testing/harness';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import { AuthService, type AuthStatus } from '@shared/services/auth/auth.service';
 import {
   HeroImportBadEventError,
@@ -17,11 +20,18 @@ import {
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
+import { EventsRepository } from '@shared/services/storage/events.repository';
+import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
+import { emptyFacts, ENGINE_VERSION } from '@hk/engine';
 import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.service';
 import { CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../assets/i18n/characters/uk.json';
+import shellEn from '../../../../assets/i18n/shell/en.json';
+import shellRu from '../../../../assets/i18n/shell/ru.json';
+import shellUk from '../../../../assets/i18n/shell/uk.json';
 import { CharactersListComponent } from './characters-list.component';
 
 class StubLoader implements TranslocoLoader {
@@ -29,6 +39,9 @@ class StubLoader implements TranslocoLoader {
     if (langPath === 'characters/en') return of(charactersEn);
     if (langPath === 'characters/ru') return of(charactersRu);
     if (langPath === 'characters/uk') return of(charactersUk);
+    if (langPath === 'shell/en') return of(shellEn);
+    if (langPath === 'shell/ru') return of(shellRu);
+    if (langPath === 'shell/uk') return of(shellUk);
     return of({});
   }
 }
@@ -98,6 +111,10 @@ function configure(options: { authStatus?: AuthStatus } = {}): {
       // to its resolved `ImportResult`/rejected typed error, same division of concerns as the
       // `deleteCharacter` stub above.
       { provide: HeroReaderService, useValue: { import: importFn } },
+      {
+        provide: EngineFacade,
+        useValue: { localizer: () => ({ name: (id: string) => id.split('/').pop() }) },
+      },
     ],
   });
   const db = TestBed.inject(HkDb);
@@ -139,9 +156,24 @@ async function flushDeleteFlow(fixture: { whenStable(): Promise<unknown> }): Pro
   await fixture.whenStable();
 }
 
+/** The heroes list's strap action with this id (the strap itself is rendered by the app shell). */
+function strapAction(id: string) {
+  const config = TestBed.inject(ActionStrapService).config();
+  return [...(config?.primary ?? []), ...(config?.secondary ?? [])].find((a) => a.id === id);
+}
+
+/** A real pointer path to the card's Delete: the more button, then the menu item. */
+function chooseDelete(fixture: { nativeElement: unknown }): void {
+  const root = fixture.nativeElement as HTMLElement;
+  press(root.querySelector('.hero-card__more')!);
+  TestBed.tick();
+  press(root.querySelector('[role="menuitem"]')!);
+  TestBed.tick();
+}
+
 function itemNames(fixture: { nativeElement: unknown }): string[] {
   return Array.from(
-    (fixture.nativeElement as HTMLElement).querySelectorAll('.characters-list__name'),
+    (fixture.nativeElement as HTMLElement).querySelectorAll('.hero-card__name'),
   ).map((el) => el.textContent?.trim() ?? '');
 }
 
@@ -193,15 +225,40 @@ describe('CharactersListComponent', () => {
     expect(compiled.querySelectorAll('.characters-list__item').length).toBe(0);
   });
 
-  it('the create button navigates to /characters/new', async () => {
+  it('puts New hero and Import in the action strap, in that order, scoped to /characters', async () => {
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+
+    const config = TestBed.inject(ActionStrapService).config();
+    expect(config?.primary.map((a) => a.id)).toEqual(['new-hero', 'import']);
+    expect(config?.primary.map((a) => a.label)).toEqual([
+      'shell.strap.new-hero',
+      'shell.strap.import',
+    ]);
+    expect(config?.scope).toEqual(['/characters']);
+    // The old in-page buttons are gone: no duplicate controls.
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.characters-list__create')).toBeNull();
+    expect(compiled.querySelector('.characters-list__import')).toBeNull();
+  });
+
+  it('the strap is released when the list closes', async () => {
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+    expect(TestBed.inject(ActionStrapService).config()).not.toBeNull();
+
+    fixture.destroy();
+
+    expect(TestBed.inject(ActionStrapService).config()).toBeNull();
+  });
+
+  it('the New hero strap action navigates to /characters/new', async () => {
     const fixture = TestBed.createComponent(CharactersListComponent);
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     await fixture.whenStable();
 
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.characters-list__create')
-      ?.click();
+    strapAction('new-hero')!.run();
 
     expect(navigateSpy).toHaveBeenCalledWith(['/characters/new']);
   });
@@ -216,7 +273,7 @@ describe('CharactersListComponent', () => {
     await fixture.whenStable();
 
     (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.characters-list__open')
+      .querySelector<HTMLButtonElement>('.hero-card__open')
       ?.click();
 
     expect(navigateSpy).toHaveBeenCalledWith(['/c', row.id]);
@@ -229,10 +286,7 @@ describe('CharactersListComponent', () => {
     const fixture = TestBed.createComponent(CharactersListComponent);
     await fixture.whenStable();
 
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.characters-list__delete')
-      ?.click();
-    TestBed.tick();
+    chooseDelete(fixture);
 
     const confirmButton = document.querySelector<HTMLButtonElement>(
       '.characters-delete-confirm__confirm',
@@ -252,10 +306,7 @@ describe('CharactersListComponent', () => {
     const fixture = TestBed.createComponent(CharactersListComponent);
     await fixture.whenStable();
 
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.characters-list__delete')
-      ?.click();
-    TestBed.tick();
+    chooseDelete(fixture);
 
     const cancelButton = document.querySelector<HTMLButtonElement>(
       '.characters-delete-confirm__cancel',
@@ -278,10 +329,7 @@ describe('CharactersListComponent', () => {
     const showSpy = vi.spyOn(toastService, 'show');
     await fixture.whenStable();
 
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.characters-list__delete')
-      ?.click();
-    TestBed.tick();
+    chooseDelete(fixture);
     document.querySelector<HTMLButtonElement>('.characters-delete-confirm__confirm')?.click();
     await flushDeleteFlow(fixture);
 
@@ -309,20 +357,16 @@ describe('CharactersListComponent', () => {
     // `charactersResource`'s own load resolves, THEN `BlobUrlPipe`'s async `blobsRepository.get`
     // fetch resolves — neither is a `resource()`/Angular-tracked async primitive `whenStable()`
     // alone is guaranteed to wait out, same reasoning as this file's own `flushDeleteFlow`.
-    for (
-      let i = 0;
-      i < 20 && compiled.querySelector('img.characters-list__portrait') === null;
-      i++
-    ) {
+    for (let i = 0; i < 20 && compiled.querySelector('hk-portrait-frame img') === null; i++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await fixture.whenStable();
       compiled = fixture.nativeElement as HTMLElement;
     }
 
-    const img = compiled.querySelector<HTMLImageElement>('img.characters-list__portrait');
+    const img = compiled.querySelector<HTMLImageElement>('hk-portrait-frame img');
     expect(img).not.toBeNull();
     expect(img!.getAttribute('src')).toBe('blob:fake-thumb-url');
-    expect(compiled.querySelector('.characters-list__portrait--placeholder')).toBeNull();
+    expect(compiled.querySelector('hk-portrait-frame [role="img"]')).toBeNull();
   });
 
   it('a row with NO portraitThumbHash renders the deterministic monogram placeholder instead', async () => {
@@ -335,22 +379,22 @@ describe('CharactersListComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('img.characters-list__portrait')).toBeNull();
-    const placeholder = compiled.querySelector('.characters-list__portrait--placeholder');
+    expect(compiled.querySelector('hk-portrait-frame img')).toBeNull();
+    const placeholder = compiled.querySelector('hk-portrait-frame [role="img"]');
     expect(placeholder).not.toBeNull();
     expect(placeholder!.textContent?.trim()).toBe('BE');
   });
 
   // --- `.hero` import (plan-6 Task 10) -------------------------------------------------------
 
-  it('the import button opens the hidden file input', async () => {
+  it('the Import strap action opens the hidden file input', async () => {
     const fixture = TestBed.createComponent(CharactersListComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     const input = compiled.querySelector<HTMLInputElement>('.characters-list__import-input')!;
     const clickSpy = vi.spyOn(input, 'click');
 
-    compiled.querySelector<HTMLButtonElement>('.characters-list__import')?.click();
+    strapAction('import')!.run();
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
@@ -521,7 +565,7 @@ describe('CharactersListComponent', () => {
     await flushDeleteFlow(fixture);
   });
 
-  it('fix-round 1: per-row delete buttons are disabled while an import is in flight, re-enabled once it settles', async () => {
+  it('fix-round 1: Delete is unavailable while an import is in flight, available again once it settles', async () => {
     const db = TestBed.inject(HkDb);
     await db.characters.put(mkRow());
     let resolveImport: (value: ImportResult) => void = () => undefined;
@@ -533,27 +577,106 @@ describe('CharactersListComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     const input = compiled.querySelector<HTMLInputElement>('.characters-list__import-input')!;
+    const deleteItem = (): HTMLButtonElement => {
+      press(compiled.querySelector('.hero-card__more')!);
+      TestBed.tick();
+      return compiled.querySelector<HTMLButtonElement>('[role="menuitem"]')!;
+    };
+    const closeMenu = (): void => {
+      press(compiled.querySelector('.hero-card__more')!);
+      TestBed.tick();
+    };
 
-    const deleteButtonBefore = compiled.querySelector<HTMLButtonElement>(
-      '.characters-list__delete',
-    )!;
-    expect(deleteButtonBefore.disabled).toBe(false);
+    expect(deleteItem().disabled).toBe(false);
+    closeMenu();
 
     setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
     await fixture.whenStable();
-
-    const deleteButtonDuring = compiled.querySelector<HTMLButtonElement>(
-      '.characters-list__delete',
-    )!;
-    expect(deleteButtonDuring.disabled).toBe(true);
+    expect(deleteItem().disabled).toBe(true);
+    closeMenu();
 
     resolveImport(mkImportResult());
     await flushDeleteFlow(fixture);
+    expect(deleteItem().disabled).toBe(false);
+  });
 
-    const deleteButtonAfter = compiled.querySelector<HTMLButtonElement>(
-      '.characters-list__delete',
+  it('the Import strap action is disabled while an import is in flight', async () => {
+    let resolveImport: (value: ImportResult) => void = () => undefined;
+    importFn.mockReturnValueOnce(
+      new Promise<ImportResult>((resolve) => {
+        resolveImport = resolve;
+      }),
+    );
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '.characters-list__import-input',
     )!;
-    expect(deleteButtonAfter.disabled).toBe(false);
+    expect(strapAction('import')!.disabled).toBeFalsy();
+
+    setInputFiles(input, [new File([new Uint8Array([1])], 'x.hero')]);
+    await fixture.whenStable();
+    expect(strapAction('import')!.disabled).toBe(true);
+
+    resolveImport(mkImportResult());
+    await flushDeleteFlow(fixture);
+    expect(strapAction('import')!.disabled).toBeFalsy();
+  });
+
+  // --- Hero cards: class line and campaign chip ----------------------------------------------
+
+  it('a card shows the classes of the hero and the campaign it is linked to', async () => {
+    const row = mkRow();
+    const db = TestBed.inject(HkDb);
+    await db.characters.put(row);
+    const facts = emptyFacts(row.id);
+    facts.classes = [{ classId: 'srd:class/fighter', level: 3 }];
+    await TestBed.inject(SnapshotsRepository).put(row.id, {
+      seq: 1,
+      facts,
+      engineVersion: ENGINE_VERSION,
+    });
+    await TestBed.inject(CampaignsRepository).put({
+      id: 'camp-1',
+      name: 'The Emberfall Company',
+      system: 'srd-5e-2024',
+      role: 'player',
+      lastSeq: 0,
+      updatedAt: 1,
+    });
+    await TestBed.inject(EventsRepository).append([
+      {
+        id: '00000000-0000-4000-8000-000000000042',
+        stream: row.id,
+        ts: '2026-09-26T00:00:00.000Z',
+        actor: { userId: 'usr_owner', deviceId: 'dev_1', role: 'owner' },
+        type: 'character.campaign_joined',
+        v: 1,
+        payload: { campaignId: 'camp-1' },
+        seq: 1,
+      },
+    ]);
+
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await flushDeleteFlow(fixture);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.hero-card__classes')?.textContent?.trim()).toBe('fighter 3');
+    expect(compiled.querySelector('.hero-card__campaign')?.textContent).toContain(
+      'The Emberfall Company',
+    );
+  });
+
+  it('counts the heroes in the header, with the plural form', async () => {
+    const db = TestBed.inject(HkDb);
+    await db.characters.bulkPut([
+      mkRow({ id: 'char:00000000-0000-4000-8000-000000000001', name: 'A' }),
+      mkRow({ id: 'char:00000000-0000-4000-8000-000000000002', name: 'B' }),
+    ]);
+    const fixture = TestBed.createComponent(CharactersListComponent);
+    await fixture.whenStable();
+    const count = (fixture.nativeElement as HTMLElement).querySelector('.characters-list__count');
+    expect(count?.textContent?.trim()).toBe('2 heroes');
   });
 
   // --- Sync-status indicator (task-9-brief.md) --------------------------------------------
@@ -577,7 +700,7 @@ describe('CharactersListComponent', () => {
       await fixture.whenStable();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.characters-list__sync-badge')).toBeNull();
+      expect(compiled.querySelector('.hero-card__sync')).toBeNull();
     });
 
     it.each<[SyncStateValue, string]>([
@@ -596,18 +719,16 @@ describe('CharactersListComponent', () => {
       await fixture.whenStable();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const badge = compiled.querySelector('.characters-list__sync-badge');
+      const badge = compiled.querySelector('.hero-card__sync');
       expect(badge).toBeTruthy();
       expect(badge?.getAttribute('data-sync-state')).toBe(bucket);
     });
 
-    // Fix-round 1, Important 1: color alone (synced=success vs pending=warning) is not a
-    // reliable distinction for colorblind users, and a `title` tooltip never fires on a touch
-    // device. Every non-pending state must render with NO visible digit — only `pending` shows
-    // one, in the DOM (not just the aria-label), which is itself a structural, non-color signal
-    // distinguishing it from every other state including `synced`.
+    // Fix-round 1, Important 1: color alone is not a reliable distinction for colorblind users and
+    // a hover hint never fires on touch. The state is a chip with a WORD; only `pending` carries a
+    // digit, so it differs structurally from `synced`.
     it.each<SyncStateValue>(['synced', 'connecting', 'offline'])(
-      'the %s state never renders a visible digit badge',
+      'the %s state shows a word and no digit',
       async (state) => {
         const { syncStateSignals } = reconfigure({ authStatus: 'authed' });
         const db = TestBed.inject(HkDb);
@@ -618,12 +739,13 @@ describe('CharactersListComponent', () => {
         const fixture = TestBed.createComponent(CharactersListComponent);
         await fixture.whenStable();
 
-        const compiled = fixture.nativeElement as HTMLElement;
-        expect(compiled.querySelector('.characters-list__sync-badge-count')).toBeNull();
+        const chip = (fixture.nativeElement as HTMLElement).querySelector('.hero-card__sync')!;
+        expect(chip.textContent?.trim()).toMatch(/\S/);
+        expect(chip.textContent).not.toMatch(/\d/);
       },
     );
 
-    it('the pending state renders the pending count as a visible digit AND in its accessible label', async () => {
+    it('the pending state renders the pending count visibly AND in its accessible label', async () => {
       const { syncStateSignals } = reconfigure({ authStatus: 'authed' });
       const db = TestBed.inject(HkDb);
       const row = mkRow();
@@ -634,11 +756,9 @@ describe('CharactersListComponent', () => {
       await fixture.whenStable();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const badge = compiled.querySelector('.characters-list__sync-badge');
+      const badge = compiled.querySelector('.hero-card__sync');
       expect(badge?.getAttribute('aria-label')).toContain('4');
-      expect(
-        compiled.querySelector('.characters-list__sync-badge-count')?.textContent?.trim(),
-      ).toBe('4');
+      expect(badge?.textContent).toContain('4');
     });
   });
 });

@@ -58,4 +58,25 @@ describe('SettingsRepository', () => {
       expect(await otherRepo.deviceId()).toBe(id);
     });
   });
+
+  describe('last opened hero (UI state, not an event)', () => {
+    it('is undefined before any hero was opened', async () => {
+      expect(await TestBed.inject(SettingsRepository).getLastOpened()).toBeUndefined();
+    });
+
+    it('round-trips the id and the time, the newest write winning', async () => {
+      const repo = TestBed.inject(SettingsRepository);
+      await repo.setLastOpened('char:one', 1000);
+      expect(await repo.getLastOpened()).toEqual({ id: 'char:one', at: 1000 });
+      await repo.setLastOpened('char:two', 2000);
+      expect(await repo.getLastOpened()).toEqual({ id: 'char:two', at: 2000 });
+    });
+
+    it('stores both under the documented settings keys', async () => {
+      const repo = TestBed.inject(SettingsRepository);
+      await repo.setLastOpened('char:one', 1000);
+      expect(await repo.get('lastOpenedCharacterId')).toBe('char:one');
+      expect(await repo.get('lastOpenedAt')).toBe(1000);
+    });
+  });
 });

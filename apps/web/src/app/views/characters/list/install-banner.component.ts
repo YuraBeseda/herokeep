@@ -1,10 +1,10 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { CardComponent } from '@shared/components/card/card.component';
 import { DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { InstallPromptService } from '@shared/services/pwa/install-prompt.service';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
+import { HkBannerComponent } from '../../../ui/banner/banner.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 
 /** `SettingsRepository` key the banner's dismissed state is persisted under (task-11-brief.md). */
 const DISMISSED_KEY = 'install-banner-dismissed';
@@ -26,7 +26,7 @@ const DISMISSED_KEY = 'install-banner-dismissed';
  */
 @Component({
   selector: 'app-ios-install-sheet',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   template: `
     <ng-container *transloco="let t">
       <h2 class="ios-install-sheet__title" data-dialog-title>
@@ -76,7 +76,7 @@ export class IosInstallSheetComponent {
  */
 @Component({
   selector: 'app-install-banner',
-  imports: [TranslocoDirective, ButtonComponent, CardComponent],
+  imports: [TranslocoDirective, HkBannerComponent, HkButtonComponent],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './install-banner.component.html',
   styleUrl: './install-banner.component.scss',

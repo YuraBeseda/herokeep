@@ -1,4 +1,143 @@
 <ng-container *transloco="let t; read: 'shell'">
-  <h1 class="home__title">{{ t('app.title') }}</h1>
-  <p class="home__tagline">{{ t('home.tagline') }}</p>
+  <ng-container *transloco="let c; read: 'characters'">
+    <div class="home">
+      <h1 class="home__title">{{ t('app.title') }}</h1>
+
+      <input
+        #importInput
+        type="file"
+        class="home__import-input"
+        hidden
+        [disabled]="importing()"
+        [attr.accept]="importAccept"
+        (change)="onImportFileSelected($event)"
+      />
+
+      @if (ready()) {
+        @if (continueHero(); as hero) {
+          <hk-leaf class="home__continue" [title]="t('home.continue.title')" [icon]="'ui:play'">
+            <div class="home__continue-body">
+              <hk-portrait-frame
+                [name]="hero.name"
+                [src]="(hero.portraitThumbHash | blobUrl)() ?? null"
+                [monogram]="continueInitials()"
+                [size]="'l'"
+              />
+              <div class="home__continue-info">
+                <h3 class="home__continue-name" [hkTooltip]="hero.name">{{ hero.name }}</h3>
+                <p class="home__continue-classes" [hkTooltip]="classLine(c)">{{ classLine(c) }}</p>
+                @if (continueSummary()?.campaign; as campaign) {
+                  <span class="home__continue-campaign">
+                    <hk-tag-chip
+                      [label]="campaign.name"
+                      [tone]="'arcane'"
+                      [icon]="'ui:campaigns'"
+                    />
+                  </span>
+                }
+                <p class="home__continue-played">
+                  {{ c('list.card.played', { date: continuePlayed() }) }}
+                </p>
+                <button
+                  hk-button
+                  type="button"
+                  class="home__continue-open"
+                  [variant]="'primary'"
+                  [size]="'l'"
+                  [attr.aria-label]="openLabel(c)"
+                  (click)="openHero(hero.id)"
+                >
+                  {{ t('home.continue.open') }}
+                </button>
+              </div>
+            </div>
+          </hk-leaf>
+        } @else if (heroes().length === 0) {
+          <hk-leaf
+            class="home__invitation"
+            [title]="t('home.invitation.title')"
+            [icon]="'ui:heroes'"
+          >
+            <p class="home__invitation-body">{{ t('home.invitation.body') }}</p>
+          </hk-leaf>
+        }
+
+        @if (heroes().length > 0) {
+          <hk-leaf class="home__heroes" [title]="t('home.heroes.title')" [icon]="'ui:heroes'">
+            <button
+              hkLeafActions
+              hk-button
+              type="button"
+              class="home__heroes-all"
+              [variant]="'ghost'"
+              (click)="go(['/characters'])"
+            >
+              {{ t('home.heroes.all') }}
+            </button>
+            <ul class="home__heroes-list">
+              @for (row of rowHeroes(); track row.id) {
+                <li>
+                  <app-hero-card
+                    [row]="row"
+                    [summary]="summaries().get(row.id)"
+                    (opened)="openHero(row.id)"
+                  />
+                </li>
+              }
+            </ul>
+          </hk-leaf>
+        }
+
+        @if (campaigns().length > 0) {
+          <hk-leaf
+            class="home__campaigns"
+            [title]="t('home.campaigns.title')"
+            [icon]="'ui:campaigns'"
+          >
+            <button
+              hkLeafActions
+              hk-button
+              type="button"
+              class="home__campaigns-all"
+              [variant]="'ghost'"
+              (click)="go(['/campaigns'])"
+            >
+              {{ t('home.campaigns.all') }}
+            </button>
+            <ul class="home__campaigns-list">
+              @for (campaign of campaigns(); track campaign.id) {
+                <li class="home__campaign">
+                  <button
+                    type="button"
+                    class="home__campaign-open"
+                    (click)="go(['/g', campaign.id])"
+                  >
+                    <span class="home__campaign-name" [hkTooltip]="campaign.name">{{
+                      campaign.name
+                    }}</span>
+                    <hk-tag-chip
+                      [label]="t('home.campaigns.role.' + campaign.role)"
+                      [tone]="campaign.role === 'dm' ? 'ember' : 'neutral'"
+                    />
+                  </button>
+                </li>
+              }
+            </ul>
+          </hk-leaf>
+        }
+
+        <div class="home__quick">
+          <button
+            hk-button
+            type="button"
+            class="home__library"
+            [variant]="'ghost'"
+            (click)="go(['/library'])"
+          >
+            {{ t('home.library') }}
+          </button>
+        </div>
+      }
+    </div>
+  </ng-container>
 </ng-container>

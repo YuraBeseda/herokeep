@@ -3,6 +3,8 @@ import { uuidv7 } from '../../helpers/uuid';
 import { HkDb } from './dexie.db';
 
 const DEVICE_ID_KEY = 'deviceId';
+const LAST_OPENED_ID_KEY = 'lastOpenedCharacterId';
+const LAST_OPENED_AT_KEY = 'lastOpenedAt';
 
 /** Minimal key/value persistence used by settings-facing stores (Task 13). */
 @Injectable({ providedIn: 'root' })
@@ -17,6 +19,23 @@ export class SettingsRepository {
 
   async set(key: string, value: unknown): Promise<void> {
     await this.db.settings.put({ key, value });
+  }
+
+  /** The hero the sheet was last opened for on this device (UI state for the Home "Continue"
+   * leaf — not an event, never synced). */
+  async getLastOpened(): Promise<{ id: string; at: number } | undefined> {
+    const [id, at] = await Promise.all([
+      this.get<string>(LAST_OPENED_ID_KEY),
+      this.get<number>(LAST_OPENED_AT_KEY),
+    ]);
+    return id === undefined ? undefined : { id, at: at ?? 0 };
+  }
+
+  async setLastOpened(id: string, at: number): Promise<void> {
+    await this.db.transaction('rw', this.db.settings, async () => {
+      await this.set(LAST_OPENED_ID_KEY, id);
+      await this.set(LAST_OPENED_AT_KEY, at);
+    });
   }
 
   /**

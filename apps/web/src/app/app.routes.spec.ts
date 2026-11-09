@@ -10,7 +10,17 @@ import { HkDb, type CampaignRow } from '@shared/services/storage/dexie.db';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { UpdateService } from '@shared/services/pwa/update.service';
 import { App } from './app';
-import { authGuard, campaignGuard, redirectAuthedGuard, routes } from './app.routes';
+import {
+  authGuard,
+  campaignGuard,
+  characterResolver,
+  redirectAuthedGuard,
+  routes,
+} from './app.routes';
+import { SettingsRepository } from '@shared/services/storage/settings.repository';
+import { CharactersRepository } from '@shared/services/storage/characters.repository';
+import { CharacterStore } from '@shared/stores/character.store';
+import type { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import shellEn from '../assets/i18n/shell/en.json';
 import campaignsEn from '../assets/i18n/campaigns/en.json';
 
@@ -137,8 +147,78 @@ describe('app routes', () => {
     await router.navigateByUrl('/');
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const tagline = compiled.querySelector('app-home .home__tagline');
-    expect(tagline?.textContent?.trim()).toBe(shellEn.home.tagline);
+    expect(compiled.querySelector('app-home')).not.toBeNull();
+  });
+
+  it('ends with a wildcard route that renders the not-found screen for an unknown path', async () => {
+    expect(routes.at(-1)?.path).toBe('**');
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/no/such/place');
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-not-found')).not.toBeNull();
+    // The URL is kept (the user sees what they typed), and no other screen rendered.
+    expect(router.url).toBe('/no/such/place');
+    expect(compiled.querySelector('app-home')).toBeNull();
+  });
+});
+
+describe('characterResolver records the last opened hero', () => {
+  const route = (id: string | null) =>
+    ({ paramMap: convertToParamMap(id ? { id } : {}) }) as unknown as ActivatedRouteSnapshot;
+  const state = {} as RouterStateSnapshot;
+
+  function setup(options: { exists: boolean; loadFails?: boolean }) {
+    const load = vi.fn(() =>
+      options.loadFails ? Promise.reject(new Error('boom')) : Promise.resolve(),
+    );
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: CharactersRepository,
+          useValue: { get: () => Promise.resolve(options.exists ? { id: 'char:abc' } : undefined) },
+        },
+        { provide: CharacterStore, useValue: { load } },
+      ],
+    });
+    return TestBed.inject(SettingsRepository);
+  }
+
+  afterEach(async () => {
+    const db = TestBed.inject(HkDb);
+    await db.settings.clear();
+    db.close();
+  });
+
+  it('stores the id and the time once the character loaded', async () => {
+    const settings = setup({ exists: true });
+    const before = Date.now();
+    const found = await TestBed.runInInjectionContext(() =>
+      characterResolver(route('char:abc'), state),
+    );
+    expect(found).toBe(true);
+    const last = await settings.getLastOpened();
+    expect(last?.id).toBe('char:abc');
+    expect(last?.at).toBeGreaterThanOrEqual(before);
+  });
+
+  it('records nothing for a hero that does not exist', async () => {
+    const settings = setup({ exists: false });
+    const found = await TestBed.runInInjectionContext(() =>
+      characterResolver(route('char:gone'), state),
+    );
+    expect(found).toBe(false);
+    expect(await settings.getLastOpened()).toBeUndefined();
+  });
+
+  it('records nothing when the stream fails to load', async () => {
+    const settings = setup({ exists: true, loadFails: true });
+    const found = await TestBed.runInInjectionContext(() =>
+      characterResolver(route('char:abc'), state),
+    );
+    expect(found).toBe(false);
+    expect(await settings.getLastOpened()).toBeUndefined();
   });
 });
 
