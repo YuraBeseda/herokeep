@@ -1,0 +1,164 @@
+<div class="class-entry" *transloco="let t; read: 'library'">
+  <div class="class-entry__top">
+    <section class="class-entry__block" [attr.aria-labelledby]="'class-entry-core'">
+      <h2 id="class-entry-core" class="class-entry__heading">{{ t('class.core') }}</h2>
+      <app-entity-facts [entity]="entity()" />
+      <dl class="class-entry__kv">
+        <div class="class-entry__kv-row">
+          <dt>{{ t('class.skills') }}</dt>
+          <dd class="class-entry__skills">
+            {{ t('class.skillsValue', { count: entity().skillChoice.count }) }}
+            {{ skillNames().join(', ') }}
+          </dd>
+        </div>
+        @if (proficiencies().weapons.length > 0) {
+          <div class="class-entry__kv-row">
+            <dt>{{ t('class.weapons') }}</dt>
+            <dd class="class-entry__weapons">{{ proficiencies().weapons.join(', ') }}</dd>
+          </div>
+        }
+        @if (proficiencies().armor.length > 0) {
+          <div class="class-entry__kv-row">
+            <dt>{{ t('class.armor') }}</dt>
+            <dd class="class-entry__armor">{{ proficiencies().armor.join(', ') }}</dd>
+          </div>
+        }
+        @if (proficiencies().tools.length > 0) {
+          <div class="class-entry__kv-row">
+            <dt>{{ t('class.tools') }}</dt>
+            <dd>{{ proficiencies().tools.join(', ') }}</dd>
+          </div>
+        }
+        <div class="class-entry__kv-row">
+          <dt>{{ t('class.subclass') }}</dt>
+          <dd class="class-entry__subclass-level">
+            {{ t('class.subclassAt', { level: entity().subclassLevel }) }}
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="class-entry__block" [attr.aria-labelledby]="'class-entry-level-one'">
+      <h2 id="class-entry-level-one" class="class-entry__heading">
+        {{ t('class.levelOne', { name: className() }) }}
+      </h2>
+      <ul class="class-entry__features">
+        @for (feature of levelOne(); track feature.id) {
+          <li class="class-entry__feature">
+            <a
+              class="class-entry__link"
+              [routerLink]="['/library', feature.id]"
+              [queryParamsHandling]="'preserve'"
+              [attr.title]="t('class.openEntry', { name: feature.name })"
+              >{{ feature.name }}</a
+            >
+            <span class="class-entry__summary" [hkTooltip]="feature.summary">{{
+              feature.summary
+            }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+
+  <section class="class-entry__block" [attr.aria-labelledby]="'class-entry-by-level'">
+    <h2 id="class-entry-by-level" class="class-entry__heading">{{ t('class.byLevel') }}</h2>
+    <div
+      class="class-entry__table-wrap"
+      tabindex="0"
+      role="region"
+      [attr.aria-label]="t('class.byLevelLabel', { name: className() })"
+    >
+      <table class="class-entry__table">
+        <thead>
+          <tr>
+            <th [attr.scope]="'col'" class="class-entry__num">{{ t('class.col.level') }}</th>
+            <th [attr.scope]="'col'" class="class-entry__num">{{ t('class.col.proficiency') }}</th>
+            <th [attr.scope]="'col'">{{ t('class.col.features') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.level) {
+            <tr class="class-entry__level-row" [attr.data-level]="row.level">
+              <th [attr.scope]="'row'" class="class-entry__num">{{ row.level }}</th>
+              <td class="class-entry__num">+{{ row.proficiency }}</td>
+              <td>
+                @for (feature of row.features; track feature.id; let last = $last) {
+                  <a
+                    class="class-entry__link"
+                    [routerLink]="['/library', feature.id]"
+                    [queryParamsHandling]="'preserve'"
+                    [attr.title]="t('class.openEntry', { name: feature.name })"
+                    >{{ feature.name }}</a
+                  >
+                  @if (!last) {
+                    <span aria-hidden="true">, </span>
+                  }
+                } @empty {
+                  @if (row.subclassOnly) {
+                    <span class="class-entry__muted">{{ t('class.subclassFeature') }}</span>
+                  } @else {
+                    <span class="class-entry__muted" [attr.aria-label]="t('class.none')">—</span>
+                  }
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hk-leaf class="class-entry__leaf" [title]="t('class.subclasses')" [icon]="'ui:features'">
+    <p class="class-entry__count">
+      {{ t('class.subclassCount', { count: subclasses().length }) }}
+    </p>
+    <ul class="class-entry__features">
+      @for (subclass of subclasses(); track subclass.id) {
+        <li class="class-entry__feature class-entry__subclass">
+          <a
+            class="class-entry__link"
+            [routerLink]="['/library', subclass.id]"
+            [queryParamsHandling]="'preserve'"
+            [attr.title]="t('class.openEntry', { name: subclass.name })"
+            >{{ subclass.name }}</a
+          >
+          @if (subclass.summary) {
+            <span class="class-entry__summary" [hkTooltip]="subclass.summary">{{
+              subclass.summary
+            }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </hk-leaf>
+
+  @if (spellCount() > 0) {
+    <hk-leaf
+      class="class-entry__leaf class-entry__spell-list"
+      [title]="t('class.spells', { name: className() })"
+      [icon]="'ui:spells'"
+    >
+      <p class="class-entry__count">{{ t('class.spellCount', { count: spellCount() }) }}</p>
+      @for (group of spellGroups(); track group.level) {
+        <h3 class="class-entry__spell-level">
+          {{
+            group.level === 0 ? t('class.cantrips') : t('class.spellLevel', { level: group.level })
+          }}
+        </h3>
+        <ul class="class-entry__spells">
+          @for (spell of group.spells; track spell.id) {
+            <li>
+              <a
+                class="class-entry__spell"
+                [routerLink]="['/library', spell.id]"
+                [queryParamsHandling]="'preserve'"
+                >{{ spell.name }}</a
+              >
+            </li>
+          }
+        </ul>
+      }
+    </hk-leaf>
+  }
+</div>

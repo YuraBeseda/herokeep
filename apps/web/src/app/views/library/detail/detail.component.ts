@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -11,15 +12,32 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import type { Sheet } from '@hk/engine';
 import { map } from 'rxjs';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { PlayActionsService } from '../../characters/sheet/play/play-actions.service';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { NavHistoryService } from '../../../ui/nav/nav-history.service';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkTagChipComponent } from '../../../ui/tag-chip/tag-chip.component';
+import { TopBarService } from '../../../ui/shell/top-bar.service';
+import { buildLibraryDetailStrap } from './library-detail-strap';
+import { ClassEntryComponent } from './class-entry/class-entry.component';
 import { EntityFactsComponent } from './entity-facts.component';
+
+type SpellcastingBlock = Sheet['spellcasting'][number];
+
+/** What "Add to hero" does for the entry on screen: the sheet's own add-to-bag, or its Prepare. */
+type HeroAdd =
+  { readonly kind: 'item' } | { readonly kind: 'spell'; readonly block: SpellcastingBlock };
 
 @Component({
   selector: 'app-library-detail',
@@ -27,8 +45,11 @@ import { EntityFactsComponent } from './entity-facts.component';
     TranslocoDirective,
     IconComponent,
     SkeletonComponent,
-    ButtonComponent,
+    HkButtonComponent,
+    ClassEntryComponent,
     EntityFactsComponent,
+    HkLeafComponent,
+    HkTagChipComponent,
   ],
   providers: [provideTranslocoScope('library')],
   templateUrl: './detail.component.html',
@@ -41,6 +62,12 @@ export class LibraryDetailComponent {
   private readonly localeService = inject(LocaleService);
   private readonly markdownService = inject(MarkdownService);
   private readonly packStore = inject(PackStore);
+  private readonly characterStore = inject(CharacterStore);
+  private readonly playActions = inject(PlayActionsService);
+  private readonly toastService = inject(ToastService);
+  private readonly navHistory = inject(NavHistoryService);
+  private readonly strap = inject(ActionStrapService);
+  private readonly topBar = inject(TopBarService);
   private readonly renderer = inject(Renderer2);
 
   // Properties
@@ -58,7 +85,19 @@ export class LibraryDetailComponent {
     },
   );
 
+  // `?for=<characterId>`: the hero whose sheet the person came from. It rides along every
+  // cross-link inside the library so "Add to hero" stays available a few entries deep.
+  protected readonly forCharacter = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('for'))),
+    { initialValue: this.route.snapshot.queryParamMap.get('for') },
+  );
+
   protected readonly entity = computed(() => this.engineFacade.index().get(this.id()));
+
+  protected readonly classEntity = computed(() => {
+    const entity = this.entity();
+    return entity?.type === 'class' ? entity : undefined;
+  });
 
   protected readonly icon = computed(() => {
     const entity = this.entity();
@@ -98,6 +137,32 @@ export class LibraryDetailComponent {
   private readonly descriptionContainer =
     viewChild<ElementRef<HTMLElement>>('descriptionContainer');
 
+  // "Add to hero" (spec §4.5): only with a hero context — `?for=` names the character the
+  // sheet has loaded — and only where the sheet already has a path for the entry:
+  //  - an item goes into the bag (`PlayActionsService.addLibraryItem`, the sheet's add-from-library);
+  //  - a spell the hero already knows but has not prepared is prepared (`togglePrepared`, the
+  //    sheet's Prepare button). The sheet has no "learn a spell" path outside creation and level-up,
+  //    so any other spell gets no button.
+  // Every other entry type has no sheet path and gets none.
+  protected readonly heroAdd = computed<HeroAdd | null>(() => {
+    const forId = this.forCharacter();
+    if (!forId || forId !== this.characterStore.streamId()) return null;
+    const entity = this.entity();
+    const sheet = this.characterStore.sheet();
+    if (!entity || !sheet) return null;
+    if (entity.type === 'item') return { kind: 'item' };
+    if (entity.type === 'spell' && entity.level > 0) {
+      const block = sheet.spellcasting.find(
+        (candidate) =>
+          candidate.preparedMax !== undefined &&
+          candidate.known.includes(entity.id) &&
+          !candidate.prepared.includes(entity.id),
+      );
+      return block ? { kind: 'spell', block } : null;
+    }
+    return null;
+  });
+
   constructor() {
     // One delegated `click` listener on the rendered container, attached via `Renderer2` (not a
     // template `(click)` binding) — the container itself is not an interactive element; only the
@@ -114,6 +179,29 @@ export class LibraryDetailComponent {
       );
       onCleanup(unlisten);
     });
+
+    // The strap: Back in zone 1 and, with a hero context, Add to hero in zone 2.
+    effect(() => {
+      const add = this.heroAdd();
+      this.strap.set(
+        buildLibraryDetailStrap({
+          back: () => this.back(),
+          add: add ? { kind: add.kind, run: () => this.addToHero() } : null,
+          locked: this.playActions.editLocked(),
+        }),
+      );
+    });
+
+    // The phone top bar names the entry.
+    effect(() => {
+      const title = this.entity() ? this.name() : undefined;
+      if (title) this.topBar.set({ title });
+    });
+
+    inject(DestroyRef).onDestroy(() => {
+      this.strap.clear();
+      this.topBar.clear();
+    });
   }
 
   // Methods
@@ -127,10 +215,29 @@ export class LibraryDetailComponent {
     const entityId = anchor?.getAttribute('data-entity-id');
     if (!entityId) return;
     event.preventDefault();
-    void this.router.navigate(['/library', entityId]);
+    const forId = this.forCharacter();
+    void (forId
+      ? this.router.navigate(['/library', entityId], { queryParams: { for: forId } })
+      : this.router.navigate(['/library', entityId]));
   }
 
   protected back(): void {
-    void this.router.navigate(['/library']);
+    this.navHistory.back(['/library']);
+  }
+
+  protected addToHero(): void {
+    const add = this.heroAdd();
+    const entity = this.entity();
+    if (!add || !entity) return;
+    const name = this.name();
+    if (add.kind === 'item') {
+      if (this.playActions.addLibraryItem(entity.id)) {
+        this.toastService.show('library.detail.added', { name });
+      }
+      return;
+    }
+    if (this.playActions.togglePrepared(add.block, entity.id)) {
+      this.toastService.show('library.detail.prepared', { name });
+    }
   }
 }

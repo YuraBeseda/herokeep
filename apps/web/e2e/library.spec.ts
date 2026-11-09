@@ -16,9 +16,15 @@ test.describe('library', () => {
   }) => {
     await test.step('open /library — the default "Spells" chip is selected and shows rows', async () => {
       await page.goto('/library');
-      const spellsChip = page.getByRole('button', { name: 'Spells', exact: true });
+      // The chip's name carries its count ("Spells 361"), so match the label at the start.
+      const spellsChip = page.getByRole('button', { name: /^Spells/ });
       await expect(spellsChip).toHaveAttribute('aria-pressed', 'true');
       await expect(page.locator('.library-browse__row').first()).toBeVisible();
+    });
+
+    await test.step('search "fire" — Fireball ranks first, ahead of Fire Bolt and the other Fire spells', async () => {
+      await page.getByRole('searchbox').fill('fire');
+      await expect(page.locator('.library-browse__row-name').first()).toHaveText('Fireball');
     });
 
     await test.step('search "fireball" — the first result is Fireball', async () => {
@@ -53,8 +59,8 @@ test.describe('library', () => {
     });
 
     await test.step('class list sorts with Cyrillic collation: Бард < Варвар < Воин', async () => {
-      await page.locator('.hk-search-field__clear').click();
-      await page.getByRole('button', { name: 'Классы', exact: true }).click();
+      await page.locator('.hk-search__clear').click();
+      await page.getByRole('button', { name: /^Классы/ }).click();
       const names = page.locator('.library-browse__row-name');
       await expect(names.nth(0)).toHaveText('Бард');
       await expect(names.nth(1)).toHaveText('Варвар');

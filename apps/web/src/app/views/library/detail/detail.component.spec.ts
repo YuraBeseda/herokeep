@@ -11,6 +11,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.service';
 import { PackStore } from '@shared/stores/pack.store';
 import libraryEn from '../../../../assets/i18n/library/en.json';
 import libraryRu from '../../../../assets/i18n/library/ru.json';
@@ -66,7 +67,23 @@ function seedStore(packs: Pack[], id: string, ready = true) {
       }),
       provideTranslocoMessageformat(),
       { provide: PackStore, useValue: { packs: signal(packs), ready: signal(ready) } },
-      { provide: ActivatedRoute, useValue: { paramMap: of(paramMap), snapshot: { paramMap } } },
+      // The library detail reads the character store and the sheet's play actions for "Add to
+      // hero"; the sync service is not under test here (solo behaviour, as in the sheet specs).
+      {
+        provide: SyncService,
+        useValue: {
+          syncState: () => signal<SyncStateValue>('offline'),
+          liveCampaignIds: signal<ReadonlySet<string>>(new Set()),
+        },
+      },
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          paramMap: of(paramMap),
+          queryParamMap: of(convertToParamMap({})),
+          snapshot: { paramMap, queryParamMap: convertToParamMap({}) },
+        },
+      },
     ],
   });
 }

@@ -1,0 +1,162 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.class-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.class-entry__top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4);
+}
+
+.class-entry__block {
+  min-inline-size: 0;
+}
+
+.class-entry__heading {
+  margin: 0 0 var(--space-2);
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+}
+
+.class-entry__kv {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0 0;
+}
+
+.class-entry__kv-row {
+  display: contents;
+}
+
+.class-entry__kv dt {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.class-entry__kv dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.class-entry__features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.class-entry__feature {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.class-entry__summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.class-entry__link,
+.class-entry__spell {
+  display: inline-flex;
+  align-items: center;
+  color: var(--link);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.class-entry__link:hover,
+.class-entry__spell:hover {
+  color: var(--link-hover);
+}
+
+.class-entry__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+}
+
+.class-entry__table {
+  inline-size: 100%;
+  min-inline-size: 22rem;
+  border-collapse: collapse;
+}
+
+.class-entry__table th,
+.class-entry__table td {
+  padding: var(--space-1) var(--space-3);
+  border-block-end: 1px solid var(--border-1);
+  text-align: start;
+  vertical-align: top;
+}
+
+.class-entry__table thead th {
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.class-entry__table .class-entry__num {
+  inline-size: 1%;
+  padding-inline: var(--space-4);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Links are inline text on a pointer; a finger gets the full 44 px target. */
+@media (pointer: coarse) {
+  .class-entry__link,
+  .class-entry__spell {
+    @include u.touch-target;
+  }
+}
+
+.class-entry__muted,
+.class-entry__count {
+  color: var(--text-2);
+}
+
+.class-entry__count {
+  margin: 0 0 var(--space-2);
+  font-size: 0.875rem;
+}
+
+.class-entry__leaf {
+  display: block;
+}
+
+.class-entry__spell-level {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.class-entry__spells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

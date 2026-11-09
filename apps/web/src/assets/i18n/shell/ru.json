@@ -178,7 +178,11 @@
     "campaign-select-member": "Сначала выберите героя на вкладке «Группа»",
     "campaign-new": "Новая кампания",
     "campaign-join": "Присоединиться к кампании",
-    "edit-locked": "Заблокировано домашними правилами кампании"
+    "edit-locked": "Заблокировано домашними правилами кампании",
+    "library-new-homebrew": "Свой контент",
+    "library-import-pack": "Импорт пака",
+    "library-add-to-hero": "Добавить герою",
+    "library-prepare": "Подготовить герою"
   },
   "tabs": {
     "landmark": "Разделы экрана",

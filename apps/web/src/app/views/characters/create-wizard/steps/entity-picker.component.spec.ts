@@ -479,6 +479,7 @@ describe('EntityPickerComponent — cross-links inside a character scope (plan 1
             facts: signal({
               pins: { [corePack.id]: corePack.version, [sample.id]: sample.version },
             }),
+            streamId: signal(undefined),
           },
         },
       ],

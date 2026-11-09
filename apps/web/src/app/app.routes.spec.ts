@@ -27,7 +27,7 @@ import campaignsEn from '../assets/i18n/campaigns/en.json';
 /** A minimal `AuthService` stand-in for guard tests: only `status` is read by
  * `redirectAuthedGuard`/`authGuard`, so only `status` needs to exist on the stub. */
 function authServiceStub(status: AuthStatus): AuthService {
-  return { status: signal(status) } as unknown as AuthService;
+  return { status: signal(status), user: signal(undefined) } as unknown as AuthService;
 }
 
 function configureTestBed(authService: AuthService = authServiceStub('unknown')): void {

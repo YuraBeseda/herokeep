@@ -3,6 +3,7 @@ import {
   computed,
   effect,
   inject,
+  Injector,
   input,
   model,
   Renderer2,
@@ -15,6 +16,8 @@ import type { Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
+import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { EntityFactsComponent } from '../../views/library/detail/entity-facts.component';
 import { HkDrawerComponent } from '../drawer/drawer.component';
@@ -73,6 +76,9 @@ export class HkDescriptionDrawerComponent {
   private readonly packStore = inject(PackStore);
   private readonly router = inject(Router);
   private readonly renderer = inject(Renderer2);
+  private readonly injector = inject(Injector);
+  // Present only under a hero's own sheet (or one of its dialogs).
+  private readonly heroScope = inject(CharacterEngineScope, { optional: true });
 
   // Inputs
   /** A pack entity id, e.g. `srd-5e-2024:spell/fireball`. */
@@ -82,6 +88,12 @@ export class HkDescriptionDrawerComponent {
   readonly opener = input<Opener>(null);
 
   protected readonly ready = this.packStore.ready;
+  /** Opened from a hero's sheet, the library entry is opened for that hero (`?for=`), so it can
+   * offer "Add to hero"; elsewhere the entry opens plain. */
+  protected readonly libraryQuery = computed<{ for?: string }>(() => {
+    const heroId = this.heroScope ? this.injector.get(CharacterStore).streamId() : undefined;
+    return heroId ? { for: heroId } : {};
+  });
   protected readonly resolved = computed(() => this.engineFacade.index().get(this.entity()));
   protected readonly name = computed(() => this.engineFacade.localizer().name(this.entity()));
 
@@ -125,7 +137,10 @@ export class HkDescriptionDrawerComponent {
           const id = anchor?.getAttribute('data-entity-id');
           if (!id) return;
           event.preventDefault();
-          void this.router.navigate(['/library', id]);
+          const query = this.libraryQuery();
+          void (query.for
+            ? this.router.navigate(['/library', id], { queryParams: query })
+            : this.router.navigate(['/library', id]));
         }),
       );
     });

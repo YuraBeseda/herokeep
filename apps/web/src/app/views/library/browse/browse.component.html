@@ -1,45 +1,63 @@
 <section class="library-browse" *transloco="let t; read: 'library'">
-  <div class="library-browse__filters">
-    @for (type of types; track type) {
-      <hk-chip [selected]="selectedType() === type" (click)="selectType(type)">
-        {{ t('type.' + type) }}
-      </hk-chip>
-    }
-  </div>
+  <header class="library-browse__header">
+    <h1 class="library-browse__title">{{ t('title') }}</h1>
+    <p class="library-browse__subtitle">{{ t('subtitle') }}</p>
+  </header>
 
-  <hk-search-field
-    [(value)]="query"
-    [placeholderKey]="'library.search.placeholder'"
-    [clearLabelKey]="'library.search.clear'"
-  />
-
-  @if (!ready()) {
-    <div class="library-browse__skeletons">
-      @for (row of skeletonRows; track row) {
-        <hk-skeleton width="100%" />
-      }
+  <hk-leaf class="library-browse__leaf" [title]="t('browse.leaf')" [icon]="'ui:library'">
+    <div class="library-browse__tools">
+      <hk-search-field
+        class="library-browse__search"
+        [(value)]="query"
+        [label]="t('search.label')"
+        [placeholder]="t('search.placeholder')"
+      />
+      <span class="library-browse__hint">{{ t('search.hint') }}</span>
     </div>
-  } @else {
-    @if (searching()) {
-      <p class="library-browse__summary">{{ t('search.results', { count: rows().length }) }}</p>
+
+    <hk-filter-chips
+      class="library-browse__filters"
+      [label]="t('filter.label')"
+      [options]="typeOptions(t)"
+      [selected]="selectedTypes()"
+      (selectedChange)="setTypes($event)"
+    />
+
+    @if (!ready()) {
+      <div class="library-browse__skeletons">
+        @for (row of skeletonRows; track row) {
+          <hk-skeleton width="100%" />
+        }
+      </div>
+    } @else {
+      @if (searching()) {
+        <p class="library-browse__summary" role="status">
+          {{ t('search.results', { count: rows().length }) }}
+        </p>
+      }
+      <hk-virtual-list
+        class="library-browse__list"
+        [items]="rows()"
+        [itemSize]="56"
+        [attr.aria-label]="t('list.label')"
+      >
+        <ng-template let-row>
+          <button type="button" class="library-browse__row" (click)="onRowClick(row.id)">
+            <span class="library-browse__row-ring" aria-hidden="true">
+              <hk-icon [icon]="row.icon" class="library-browse__row-icon" />
+            </span>
+            <span class="library-browse__row-name" [hkTooltip]="row.name">{{ row.name }}</span>
+            <hk-tag-chip
+              class="library-browse__row-type"
+              [label]="t('type.' + row.type)"
+              [icon]="typeIcon(row.type)"
+            />
+            @if (row.fallback) {
+              <hk-tag-chip class="library-browse__row-tag" [label]="t('en-tag')" [tone]="'dark'" />
+            }
+          </button>
+        </ng-template>
+      </hk-virtual-list>
     }
-    <hk-virtual-list
-      class="library-browse__list"
-      [items]="rows()"
-      [itemSize]="56"
-      [attr.aria-label]="t('list.label')"
-    >
-      <ng-template let-row>
-        <button type="button" class="library-browse__row" (click)="onRowClick(row.id)">
-          <hk-icon [icon]="row.icon" class="library-browse__row-icon" />
-          <span class="library-browse__row-name">{{ row.name }}</span>
-          @if (searching()) {
-            <span class="library-browse__row-type">{{ t('type.' + row.type) }}</span>
-          } @else if (row.fallback) {
-            <span class="library-browse__row-tag">{{ t('en-tag') }}</span>
-          }
-        </button>
-      </ng-template>
-    </hk-virtual-list>
-  }
+  </hk-leaf>
 </section>

@@ -21,9 +21,12 @@
           </section>
         }
       </div>
-      <a class="hk-description__open" [routerLink]="['/library', current.id]">{{
-        t('detail.open-entry')
-      }}</a>
+      <a
+        class="hk-description__open"
+        [routerLink]="['/library', current.id]"
+        [queryParams]="libraryQuery()"
+        >{{ t('detail.open-entry') }}</a
+      >
     </div>
   } @else if (ready()) {
     <p class="hk-description__not-found">{{ t('detail.not-found') }}</p>

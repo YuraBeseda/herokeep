@@ -5,37 +5,79 @@
       <hk-skeleton [lines]="4" />
     </div>
   } @else if (entity(); as currentEntity) {
+    <div class="library-detail__crumbs">
+      <button
+        hk-button
+        type="button"
+        class="library-detail__back"
+        [variant]="'parchment'"
+        (click)="back()"
+      >
+        <hk-icon [icon]="'ui:leave'" />{{ t('detail.back') }}
+      </button>
+      <span class="library-detail__trail">{{
+        t('detail.trail', { type: t('detail.kind.' + currentEntity.type), name: name() })
+      }}</span>
+    </div>
+
     <header class="library-detail__header">
-      <hk-icon [icon]="icon()!" class="library-detail__icon" />
-      <div class="library-detail__heading">
-        <h1 class="library-detail__name">
-          {{ name() }}
-          @if (nameIsFallback()) {
-            <span class="library-detail__tag">{{ t('en-tag') }}</span>
-          }
-        </h1>
-        <span class="library-detail__type">{{ t('type.' + currentEntity.type) }}</span>
-      </div>
+      <span class="library-detail__ring" aria-hidden="true">
+        <hk-icon [icon]="icon()!" class="library-detail__icon" />
+      </span>
+      <h1 class="library-detail__name">{{ name() }}</h1>
+      <hk-tag-chip
+        class="library-detail__type"
+        [label]="t('detail.kind.' + currentEntity.type)"
+        [tone]="'neutral'"
+      />
+      @if (nameIsFallback()) {
+        <hk-tag-chip
+          class="library-detail__tag"
+          [label]="t('en-tag')"
+          [tone]="'dark'"
+          [hint]="t('en-hint')"
+        />
+      }
     </header>
 
-    <app-entity-facts [entity]="currentEntity" />
+    @if (classEntity(); as classEntry) {
+      <hk-leaf class="library-detail__leaf" [title]="t('detail.entry')" [icon]="'ui:library'">
+        @if (descriptionHtml.value(); as html) {
+          <div
+            #descriptionContainer
+            class="library-detail__description-body"
+            [innerHTML]="html"
+          ></div>
+        }
+        <app-class-entry [entity]="classEntry" />
+      </hk-leaf>
+    } @else {
+      <hk-leaf class="library-detail__leaf" [title]="t('detail.entry')" [icon]="'ui:library'">
+        <app-entity-facts [entity]="currentEntity" />
 
-    <section class="library-detail__description">
-      @if (descriptionIsFallback()) {
-        <span class="library-detail__tag">{{ t('en-tag') }}</span>
-      }
-      @if (descriptionHtml.isLoading()) {
-        <hk-skeleton [lines]="4" />
-      } @else if (descriptionHtml.value(); as html) {
-        <div
-          #descriptionContainer
-          class="library-detail__description-body"
-          [innerHTML]="html"
-        ></div>
-      }
-    </section>
+        <section class="library-detail__description">
+          @if (descriptionIsFallback()) {
+            <hk-tag-chip
+              class="library-detail__tag"
+              [label]="t('en-tag')"
+              [tone]="'dark'"
+              [hint]="t('en-hint')"
+            />
+          }
+          @if (descriptionHtml.isLoading()) {
+            <hk-skeleton [lines]="4" />
+          } @else if (descriptionHtml.value(); as html) {
+            <div
+              #descriptionContainer
+              class="library-detail__description-body"
+              [innerHTML]="html"
+            ></div>
+          }
+        </section>
+      </hk-leaf>
+    }
   } @else {
     <p class="library-detail__not-found">{{ t('detail.not-found') }}</p>
-    <button hk-button [variant]="'ghost'" (click)="back()">{{ t('detail.back') }}</button>
+    <button hk-button [variant]="'parchment'" (click)="back()">{{ t('detail.back') }}</button>
   }
 </section>

@@ -273,23 +273,23 @@ export class PlayActionsService {
     ]);
   }
 
+  // Returns whether the change was made (a refused or capped one toasts and returns false).
   // The ENGINE applies no cap on `spell.prepared`; `preparedMax` is read-model only, so this is the
   // only place the cap can be enforced. `block.prepared` INCLUDES always-prepared grants, which do
   // not count against the cap, and unpreparing goes through `propose.unprepare` so the engine's own
   // `spell.always-prepared` refusal surfaces as a toast.
-  togglePrepared(block: SpellcastingBlock, spellId: string): void {
+  togglePrepared(block: SpellcastingBlock, spellId: string): boolean {
     if (block.prepared.includes(spellId)) {
       const sheet = this.sheet();
-      if (!sheet) return;
-      this.tryPropose(() => propose.unprepare(sheet, block.classId, spellId));
-      return;
+      if (!sheet) return false;
+      return this.tryPropose(() => propose.unprepare(sheet, block.classId, spellId));
     }
     const preparedCount = block.prepared.length - (block.alwaysPrepared?.length ?? 0);
     if (block.preparedMax !== undefined && preparedCount >= block.preparedMax) {
       this.toastService.show('characters.sheet.spellcasting.preparedMaxReached', {
         max: block.preparedMax,
       });
-      return;
+      return false;
     }
     this.appendDraft([
       {
@@ -298,6 +298,7 @@ export class PlayActionsService {
         payload: { spellId, classId: block.classId } satisfies SpellPrepared,
       },
     ]);
+    return true;
   }
 
   // R-pf3: a cantrip casts DIRECTLY, no dialog — `level: 0, useSlot: false`.
@@ -423,11 +424,15 @@ export class PlayActionsService {
     const handle = this.dialogService.open(AddItemDialogComponent, { sheet: true });
     const result = (await handle.closed) as AddItemDialogResult | undefined;
     if (!result) return;
+    this.addLibraryItem(result.itemId, result.qty);
+  }
+
+  /** Puts a library item (`itemId` is a pack entity id) into the bag; the add-from-library dialog
+   * and the library's "Add to hero" share it. Returns whether the proposal was accepted. */
+  addLibraryItem(itemId: string, qty = 1): boolean {
     const sheet = this.sheet();
-    if (!sheet) return;
-    this.tryPropose(() =>
-      propose.addItem(sheet, { itemId: result.itemId, qty: result.qty }, uuidv7),
-    );
+    if (!sheet) return false;
+    return this.tryPropose(() => propose.addItem(sheet, { itemId, qty }, uuidv7));
   }
 
   // Ruling 2: a custom item's `item.added` draft carries `custom: {}` and NO `itemId`. `notes` is

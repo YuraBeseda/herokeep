@@ -178,7 +178,11 @@
     "campaign-select-member": "Pick a hero on the Party tab first",
     "campaign-new": "New campaign",
     "campaign-join": "Join campaign",
-    "edit-locked": "Locked by your campaign's house rules"
+    "edit-locked": "Locked by your campaign's house rules",
+    "library-new-homebrew": "New homebrew",
+    "library-import-pack": "Import pack",
+    "library-add-to-hero": "Add to hero",
+    "library-prepare": "Prepare for hero"
   },
   "tabs": {
     "landmark": "Sections of this screen",

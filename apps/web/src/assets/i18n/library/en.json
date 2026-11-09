@@ -6,7 +6,10 @@
   "search": {
     "clear": "Clear search",
     "placeholder": "Search the library",
-    "results": "{count, plural, one {# result} other {# results}}"
+    "results": "{count, plural, one {# result} other {# results}}",
+    "label": "Search the library",
+    "hint": "Exact and prefix matches rank first; the type chips narrow the results.",
+    "no-type-match": "No {type} match “{query}”"
   },
   "type": {
     "background": "Backgrounds",
@@ -25,7 +28,29 @@
   "detail": {
     "back": "Back to library",
     "not-found": "This entry could not be found.",
-    "open-entry": "Open entry"
+    "open-entry": "Open entry",
+    "trail": "Library · {type} · {name}",
+    "entry": "Entry",
+    "kind": {
+      "system": "System",
+      "species": "Species",
+      "background": "Background",
+      "class": "Class",
+      "subclass": "Subclass",
+      "feature": "Feature",
+      "feat": "Feat",
+      "spell": "Spell",
+      "item": "Item",
+      "condition": "Condition",
+      "skill": "Skill",
+      "ability": "Ability",
+      "language": "Language",
+      "tool": "Tool",
+      "rule": "Rule",
+      "table": "Table"
+    },
+    "added": "{name} added to the bag",
+    "prepared": "{name} prepared"
   },
   "fact": {
     "level": "Level",
@@ -69,5 +94,41 @@
       "untilDispelled": "Until dispelled",
       "special": "Special"
     }
+  },
+  "title": "Library",
+  "subtitle": "Every species, class, background, feat, spell, item, condition and rule from your installed packs.",
+  "en-hint": "Text from the pack, in English (no translation installed)",
+  "browse": {
+    "leaf": "Browse the library"
+  },
+  "filter": {
+    "label": "Filter by type"
+  },
+  "class": {
+    "core": "Core traits",
+    "skills": "Skills",
+    "skillsValue": "Choose {count}:",
+    "weapons": "Weapons",
+    "armor": "Armor training",
+    "tools": "Tools",
+    "subclass": "Subclass",
+    "subclassAt": "Chosen at level {level}",
+    "levelOne": "What a {name} does from level 1",
+    "openEntry": "Open the entry: {name}",
+    "byLevel": "Features by level",
+    "byLevelLabel": "{name} features by level",
+    "col": {
+      "level": "Level",
+      "proficiency": "Prof.",
+      "features": "Class features"
+    },
+    "subclassFeature": "Subclass feature",
+    "none": "No new features",
+    "subclasses": "Subclasses",
+    "subclassCount": "{count, plural, one {# in the installed packs} other {# in the installed packs}}",
+    "spells": "{name} spell list",
+    "spellCount": "{count, plural, one {# spell} other {# spells}}",
+    "spellLevel": "Level {level}",
+    "cantrips": "Cantrips"
   }
 }

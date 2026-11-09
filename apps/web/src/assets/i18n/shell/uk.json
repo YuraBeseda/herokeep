@@ -178,7 +178,11 @@
     "campaign-select-member": "Спершу оберіть героя на вкладці «Гурт»",
     "campaign-new": "Нова кампанія",
     "campaign-join": "Приєднатися до кампанії",
-    "edit-locked": "Заблоковано домашніми правилами кампанії"
+    "edit-locked": "Заблоковано домашніми правилами кампанії",
+    "library-new-homebrew": "Власний контент",
+    "library-import-pack": "Імпорт паку",
+    "library-add-to-hero": "Додати герою",
+    "library-prepare": "Підготувати герою"
   },
   "tabs": {
     "landmark": "Розділи екрана",

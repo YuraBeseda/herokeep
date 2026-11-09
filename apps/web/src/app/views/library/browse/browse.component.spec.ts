@@ -12,6 +12,8 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { VirtualListComponent } from '@shared/components/virtual-list/virtual-list.component';
 import { LocaleService } from '@shared/services/i18n/locale.service';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { hintOf } from '../../../ui/testing/harness';
 import { PackStore } from '@shared/stores/pack.store';
 import libraryEn from '../../../../assets/i18n/library/en.json';
 import libraryRu from '../../../../assets/i18n/library/ru.json';
@@ -103,6 +105,15 @@ function typeSearch(fixture: { nativeElement: unknown }, text: string): void {
   TestBed.tick();
 }
 
+/** The type chips in their fixed order (class first, rule last). */
+function typeChips(fixture: { nativeElement: unknown }): HTMLElement[] {
+  return Array.from(
+    (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
+      'button.hk-filter-chips__chip',
+    ),
+  );
+}
+
 function summaryText(fixture: { nativeElement: unknown }): string | null {
   const el = (fixture.nativeElement as HTMLElement).querySelector('.library-browse__summary');
   return el?.textContent?.trim() ?? null;
@@ -121,9 +132,9 @@ describe('LibraryBrowseComponent', () => {
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     await fixture.whenStable();
 
-    const chips = (fixture.nativeElement as HTMLElement).querySelectorAll('hk-chip');
+    const chips = typeChips(fixture);
     // 'class' is first in the fixed type-filter order (see LIBRARY_TYPES).
-    (chips[0] as HTMLElement).click();
+    chips[0].click();
     await fixture.whenStable();
 
     expect(virtualListItems(fixture).length).toBe(12);
@@ -136,8 +147,8 @@ describe('LibraryBrowseComponent', () => {
     localeService.setLocale('ru');
     await fixture.whenStable();
 
-    const chips = (fixture.nativeElement as HTMLElement).querySelectorAll('hk-chip');
-    (chips[0] as HTMLElement).click();
+    const chips = typeChips(fixture);
+    chips[0].click();
     await fixture.whenStable();
 
     const names = virtualListItems(fixture).map((row) => row.name);
@@ -216,6 +227,24 @@ describe('LibraryBrowseComponent', () => {
     const items = virtualListItems(fixture);
     expect(items[0]?.id).toBe('srd-5e-2024:spell/fireball');
     expect(items.length).toBe(4);
+  });
+
+  // B12a ranking: a short query ranks the whole-name prefix hit that is closest to what was typed
+  // first, so "fire" opens with Fireball ahead of "Fire Bolt" (the engine alone sorts those two by
+  // name and put "Fire Bolt" first).
+  it('typing "fire" ranks Fireball first: exact, then prefix, then word matches', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'fire');
+
+    const items = virtualListItems(fixture);
+    expect(items[0]?.id).toBe('srd-5e-2024:spell/fireball');
+    const names = items.map((row) => row.name);
+    expect(names.indexOf('Fire Bolt')).toBeGreaterThan(0);
+    expect(names.indexOf('Fire Bolt')).toBeLessThan(names.indexOf('Wall of Fire'));
   });
 
   // Acceptance golden (b) plus the ru plural summary (one vs few), asserted against the real
@@ -299,7 +328,7 @@ describe('LibraryBrowseComponent', () => {
     expect(summaryText(fixture)).not.toBeNull();
 
     const clearButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.hk-search-field__clear',
+      '.hk-search__clear',
     );
     expect(clearButton).toBeTruthy();
     clearButton!.click();
@@ -328,6 +357,109 @@ describe('LibraryBrowseComponent', () => {
     expect(fireballRow?.querySelector('.library-browse__row-type')?.textContent?.trim()).toBe(
       'Spells',
     );
+  });
+
+  // B12a chips: per-query counts, single choice, and a reason (hint only) on a type with no match.
+  it('the type chips show per-query counts and disable a type with no match, reason in the hint', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'fireball');
+
+    const chips = typeChips(fixture);
+    const chipFor = (label: string) => chips.find((chip) => chip.textContent?.includes(label));
+    const count = (chip: HTMLElement | undefined) =>
+      chip?.querySelector('.hk-filter-chips__count')?.textContent?.trim();
+    expect(count(chipFor('Spells'))).toBe('2');
+    expect(count(chipFor('Items'))).toBe('2');
+    expect(count(chipFor('Classes'))).toBe('0');
+
+    const classes = chipFor('Classes')!;
+    expect(classes.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(classes)).toContain('No Classes match “fireball”');
+    expect(classes.textContent).not.toContain('No Classes');
+    classes.click();
+    TestBed.tick();
+    expect(virtualListItems(fixture).length).toBe(4);
+  });
+
+  it('browse counts are the size of each type, and the default Spells chip is the pressed one', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    const chips = typeChips(fixture);
+    const spells = chips.find((chip) => chip.textContent?.includes('Spells'))!;
+    expect(spells.getAttribute('aria-pressed')).toBe('true');
+    expect(chips.filter((chip) => chip.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+    const spellCount = corePack.entities.filter((e) => e.type === 'spell').length;
+    expect(spells.querySelector('.hk-filter-chips__count')?.textContent?.trim()).toBe(
+      String(spellCount),
+    );
+  });
+
+  it('pressing a type chip while searching narrows the hits to that type, and pressing it again widens them', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'fireball');
+    expect(virtualListItems(fixture).length).toBe(4);
+
+    const items = typeChips(fixture).find((chip) => chip.textContent?.includes('Items'))!;
+    items.click();
+    TestBed.tick();
+    expect(virtualListItems(fixture).length).toBe(2);
+    expect(summaryText(fixture)).toBe('2 results');
+
+    items.click();
+    TestBed.tick();
+    expect(virtualListItems(fixture).length).toBe(4);
+  });
+
+  it('a row names its entry in full on hover and carries the type pill', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'delayed blast fireball');
+
+    const row = (fixture.nativeElement as HTMLElement).querySelector('.library-browse__row');
+    const name = row?.querySelector('.library-browse__row-name');
+    expect(name?.textContent?.trim()).toBe('Delayed Blast Fireball');
+    expect(hintOf(name!)).toBe('Delayed Blast Fireball');
+    expect(row?.querySelector('.library-browse__row-type')?.textContent?.trim()).toBe('Spells');
+  });
+
+  it('puts New homebrew, Import pack, Filter and Search on the strap, and releases it on close', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const strap = TestBed.inject(ActionStrapService);
+    await fixture.whenStable();
+
+    const config = strap.config();
+    expect(config?.primary.map((a) => a.id)).toEqual(['new-homebrew', 'import-pack']);
+    expect(config?.secondary?.map((a) => a.id)).toEqual(['filter', 'search']);
+
+    config?.primary[0]?.run();
+    expect(navigateSpy).toHaveBeenCalledWith(['/packs', 'homebrew']);
+    config?.primary[1]?.run();
+    expect(navigateSpy).toHaveBeenCalledWith(['/packs']);
+
+    const search = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      'input[type="search"]',
+    )!;
+    config?.secondary?.[1]?.run();
+    expect(document.activeElement).toBe(search);
+
+    fixture.destroy();
+    expect(strap.config()).toBeNull();
   });
 
   // Regression test for the id-encoding decision documented on `onRowClick`: a raw entity id

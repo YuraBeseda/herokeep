@@ -16,6 +16,8 @@ import { stubViewport } from '../ui/testing/viewport';
 import { buildCampaignStrap } from './campaigns/shell/campaign-strap';
 import { buildCampaignsListStrap } from './campaigns/list/list-strap';
 import { buildSheetStrap } from './characters/sheet/sheet-strap';
+import { buildLibraryStrap } from './library/browse/library-strap';
+import { buildLibraryDetailStrap } from './library/detail/library-detail-strap';
 
 /** Every scope the app ships is available; the strap host still only resolves its own (shell). */
 class AllScopesLoader implements TranslocoLoader {
@@ -133,6 +135,23 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
       'sheet, locked by house rules',
       buildSheetStrap({ locked: true, exporting: false, scope: ['/c', 'x'] }, sheetHandlers),
     ],
+    [
+      'library browse',
+      buildLibraryStrap({
+        newHomebrew: noop,
+        importPack: noop,
+        focusFilter: noop,
+        focusSearch: noop,
+      }),
+    ],
+    [
+      'library entry with an item to add',
+      buildLibraryDetailStrap({ back: noop, add: { kind: 'item', run: noop }, locked: false }),
+    ],
+    [
+      'library entry with a spell to prepare, locked by house rules',
+      buildLibraryDetailStrap({ back: noop, add: { kind: 'spell', run: noop }, locked: true }),
+    ],
   ];
 
   it.each(cases)('%s', async (_name, config) => {
@@ -140,5 +159,13 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
     expect(text).not.toMatch(RAW_KEY);
     const labels = [...config.primary, ...(config.secondary ?? [])] as StrapAction[];
     expect(labels.length).toBeGreaterThan(0);
+  });
+
+  it('library entry without a hero context shows only Back', async () => {
+    const config = buildLibraryDetailStrap({ back: noop, add: null, locked: false });
+    const text = readable(await render(config));
+    expect(text).not.toMatch(RAW_KEY);
+    expect(text).toContain('Back');
+    expect(config.primary).toEqual([]);
   });
 });

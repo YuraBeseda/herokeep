@@ -217,6 +217,7 @@ describe('HkDescriptionDrawerComponent inside a character scope (R30)', () => {
             facts: signal({
               pins: { [corePack.id]: corePack.version, [samplePack.id]: samplePack.version },
             }),
+            streamId: signal('char:hero-1'),
           },
         },
       ],
@@ -242,6 +243,29 @@ describe('HkDescriptionDrawerComponent inside a character scope (R30)', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[role="dialog"] h2')?.textContent?.trim()).toBe('Lunar Insight');
     expect(el.querySelector('.hk-description__body')?.textContent).toContain(SCOPED_TEXT);
+  });
+
+  it('under a hero the library link carries that hero (?for=), and plain outside a hero', async () => {
+    const scoped = TestBed.createComponent(ScopedHost);
+    await scoped.whenStable();
+    await scoped.whenStable();
+    const link = (scoped.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+      'a.hk-description__open',
+    )!;
+    expect(decodeURIComponent(link.getAttribute('href')!)).toBe(
+      `/library/${SCOPED_ID}?for=char:hero-1`,
+    );
+
+    const plain = TestBed.createComponent(Host);
+    plain.componentInstance.entity.set('srd-5e-2024:spell/fireball');
+    await plain.whenStable();
+    await plain.whenStable();
+    const plainLink = (plain.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+      'a.hk-description__open',
+    )!;
+    expect(decodeURIComponent(plainLink.getAttribute('href')!)).toBe(
+      '/library/srd-5e-2024:spell/fireball',
+    );
   });
 
   it('opened through the scoped DialogService (the overlay/portal path) it keeps the scope', async () => {

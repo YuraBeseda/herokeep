@@ -4,11 +4,49 @@
   display: block;
 }
 
-.library-browse__filters {
+.library-browse__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-end: var(--space-4);
+}
+
+.library-browse__title {
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.library-browse__subtitle {
+  margin: 0;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.library-browse__tools {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-block-end: var(--space-3);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.library-browse__search {
+  flex: 0 1 32rem;
+  min-inline-size: min(100%, 14rem);
+}
+
+.library-browse__hint {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.library-browse__filters {
+  display: block;
+  margin-block-start: var(--space-3);
 }
 
 .library-browse__skeletons {
@@ -32,12 +70,16 @@
   height: 60vh;
 }
 
+/* A result row: glyph ring, name, then the type and pack-language pills. The name column takes
+   what is left and ellipsises (its full text is the hover hint); the pills keep their size, so
+   they never leave the row. */
 .library-browse__row {
   @include u.touch-target;
 
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   width: 100%;
   padding: 0 var(--space-3);
   border: 0;
@@ -45,31 +87,43 @@
   background: transparent;
   color: var(--text-1);
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
+.library-browse__row:hover {
+  background: var(--surface-2);
+}
+
+.library-browse__row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.library-browse__row-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.125rem;
+  block-size: 2.125rem;
+  border: 1px solid var(--border-brass);
+  border-radius: 50%;
+  background: var(--leaf-sunken);
+}
+
 .library-browse__row-icon {
-  flex-shrink: 0;
   font-size: 1.25rem;
 }
 
 .library-browse__row-name {
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.library-browse__row-tag,
-.library-browse__row-type {
+.library-browse__row-type,
+.library-browse__row-tag {
   flex-shrink: 0;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 0.75rem;
-  line-height: 1.6;
+  white-space: nowrap;
 }
