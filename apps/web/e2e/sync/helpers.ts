@@ -17,6 +17,9 @@ export const TEST_PASSWORD = 'Zq7#Vwrmpl-Keep92xT';
 
 let usernameCounter = 0;
 
+/** How long each freshly loaded `/characters` page gets to paint the row before re-navigating. */
+const PER_LOAD_SETTLE_MS = 3_000;
+
 /** A fresh, `USERNAME_PATTERN`-valid username per call (3-32 `[\p{L}\p{N}_-]`). This project runs
  * `workers: 1` (one test at a time), so a per-process counter alongside a timestamp is enough to
  * never collide across the tests in one run — `start-e2e-api.mjs` also gives every RUN of the
@@ -114,7 +117,18 @@ export async function waitForCharacterInList(
   for (;;) {
     await page.goto('/characters');
     const row = page.locator('.characters-list__item', { hasText: name });
-    if (await row.isVisible().catch(() => false)) return;
+    // `page.goto` resolves on the load event, BEFORE the list component's own one-shot Dexie
+    // query has resolved and rendered (measured ~200 ms later under the redesigned shell); an
+    // instant `isVisible()` check followed by another `goto` therefore re-navigated away before
+    // the row could ever paint. Give each loaded page a short settle window for the row first.
+    if (
+      await row
+        .waitFor({ state: 'visible', timeout: PER_LOAD_SETTLE_MS })
+        .then(() => true)
+        .catch(() => false)
+    ) {
+      return;
+    }
     if (Date.now() >= deadline) {
       // A genuine failure here is exactly the kind of thing worth a real repro dump, not just a
       // bare "not found" — this only ever runs on the way to an already-failing assertion.
