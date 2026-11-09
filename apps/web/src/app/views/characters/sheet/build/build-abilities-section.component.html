@@ -1,0 +1,54 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.build.abilities.title')" [icon]="'ui:proficiency'">
+    <div class="build-abilities__head">
+      @if (table().method; as method) {
+        <hk-tag-chip
+          class="build-abilities__method"
+          [icon]="'ui:roll'"
+          [label]="t('sheet.build.abilities.method', { method: t(methodKey(method)) })"
+        />
+      }
+      <span class="build-section__hint">{{ t('sheet.build.abilities.hint') }}</span>
+    </div>
+    <table class="build-abilities__table">
+      <thead>
+        <tr>
+          <th [attr.scope]="'col'">{{ t('sheet.build.abilities.ability') }}</th>
+          <th [attr.scope]="'col'" class="build-abilities__num">
+            {{ t('sheet.build.abilities.base') }}
+          </th>
+          <th [attr.scope]="'col'" class="build-abilities__num">
+            {{ t('sheet.build.abilities.bonuses') }}
+          </th>
+          <th [attr.scope]="'col'" class="build-abilities__num">
+            {{ t('sheet.build.abilities.final') }}
+          </th>
+          <th [attr.scope]="'col'" class="build-abilities__num">
+            {{ t('sheet.build.abilities.modifier') }}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of table().rows; track row.key) {
+          <tr [attr.data-ability]="row.key">
+            <th [attr.scope]="'row'" class="build-abilities__name">
+              <hk-icon [icon]="row.icon" /><span>{{ row.name }}</span>
+            </th>
+            <td class="build-abilities__num build-abilities__base">{{ row.base }}</td>
+            <td class="build-abilities__num build-abilities__bonus">
+              @for (bonus of row.bonuses; track $index) {
+                <hk-tag-chip
+                  [tone]="'moss'"
+                  [label]="signed(bonus.amount)"
+                  [hint]="t('sheet.build.abilities.bonusFrom', { source: bonus.source })"
+                />
+              }
+            </td>
+            <td class="build-abilities__num build-abilities__final">{{ row.final }}</td>
+            <td class="build-abilities__num build-abilities__mod">{{ signed(row.modifier) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </hk-leaf>
+</ng-container>

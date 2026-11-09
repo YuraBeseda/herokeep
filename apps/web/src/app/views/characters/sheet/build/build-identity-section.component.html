@@ -1,0 +1,156 @@
+<ng-container *transloco="let t; read: 'characters'">
+  @if (sheet(); as s) {
+    <hk-leaf [title]="t('sheet.build.identity.title')" [icon]="'ui:edit'">
+      <div hkLeafActions class="build-identity__actions">
+        @if (dirty()) {
+          <hk-tag-chip
+            class="build-identity__unsaved"
+            [tone]="'warning'"
+            [icon]="'ui:edit'"
+            [label]="t('sheet.build.identity.unsaved')"
+            [hint]="t('sheet.build.identity.unsavedHint')"
+          />
+        }
+        <button
+          hk-button
+          type="button"
+          class="build-identity__save"
+          [variant]="'primary'"
+          [disabled]="!canSave()"
+          [disabledReason]="disabled() ? disabledReason() : null"
+          (click)="save()"
+        >
+          <hk-icon [icon]="'ui:done'" />{{ t('sheet.build.appearance.save') }}
+        </button>
+      </div>
+
+      <p class="build-identity__hint">{{ t('sheet.build.identity.hint') }}</p>
+
+      <div class="build-identity">
+        <div class="build-tab__portrait build-identity__portrait">
+          <h3 class="build-tab__portrait-heading">
+            {{ t('sheet.build.appearance.portraitTitle') }}
+          </h3>
+          @if ((portraitThumbHash() | blobUrl)(); as portraitUrl) {
+            <img
+              class="build-tab__portrait-preview"
+              [src]="portraitUrl"
+              [alt]="t('sheet.portrait.alt', { name: s.name })"
+            />
+          } @else {
+            <div
+              class="build-tab__portrait-preview build-tab__portrait-preview--placeholder"
+              [style.background]="monogram().background"
+              [style.color]="monogram().ink"
+              aria-hidden="true"
+            >
+              {{ monogram().initials }}
+            </div>
+          }
+          <div class="build-tab__portrait-actions">
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              class="build-tab__portrait-upload"
+              [disabled]="portraitUploading() || disabled()"
+              (click)="onPortraitUploadClick()"
+            >
+              {{ portraitThumbHash() ? t('sheet.portrait.change') : t('sheet.portrait.upload') }}
+            </button>
+            @if (portraitThumbHash()) {
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                class="build-tab__portrait-remove"
+                [disabled]="portraitUploading() || disabled()"
+                (click)="onPortraitRemove()"
+              >
+                {{ t('sheet.portrait.remove') }}
+              </button>
+            }
+          </div>
+          <input
+            #portraitInput
+            type="file"
+            class="build-tab__portrait-input"
+            hidden
+            [disabled]="portraitUploading() || disabled()"
+            [attr.accept]="portraitAccept"
+            (change)="onPortraitFileSelected($event)"
+          />
+        </div>
+
+        <div class="build-identity__fields">
+          <div class="build-identity__row">
+            <hk-text-field
+              [attr.data-field]="'name'"
+              class="build-identity__name"
+              [label]="t('sheet.build.identity.nameLabel')"
+              [value]="nameValue()"
+              [disabled]="disabled()"
+              [error]="nameValid() ? null : t('sheet.build.rename.error')"
+              (valueChange)="nameDraft.set($event)"
+            />
+            <div class="build-identity__gender-field">
+              <span class="build-identity__label" [id]="'build-identity-gender-label'"
+                >{{ t('sheet.build.identity.gender') }}
+                <span
+                  class="build-identity__info"
+                  tabindex="0"
+                  role="img"
+                  [hkTooltip]="t('sheet.build.identity.genderHint')"
+                  [attr.aria-label]="t('sheet.build.identity.genderHint')"
+                  ><hk-icon [icon]="'ui:language'"
+                /></span>
+              </span>
+              <div
+                class="build-identity__gender"
+                role="radiogroup"
+                [attr.aria-labelledby]="'build-identity-gender-label'"
+              >
+                @for (option of genderOptions; track option.value; let i = $index) {
+                  <button
+                    type="button"
+                    role="radio"
+                    class="build-identity__chip"
+                    [attr.data-gender]="option.value"
+                    [attr.aria-checked]="genderValue() === option.value"
+                    [attr.tabindex]="genderValue() === option.value ? 0 : -1"
+                    [disabled]="disabled()"
+                    (click)="genderDraft.set(option.value)"
+                    (keydown)="onGenderKey($event, i)"
+                  >
+                    {{ t(option.labelKey) }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="build-identity__grid">
+            @for (cfg of gridFields; track cfg.field) {
+              <hk-text-field
+                [attr.data-field]="cfg.field"
+                [label]="t(cfg.labelKey)"
+                [value]="appearanceValue(cfg.field)"
+                [disabled]="disabled()"
+                (valueChange)="onAppearanceInput(cfg.field, $event)"
+              />
+            }
+          </div>
+
+          <hk-textarea
+            [attr.data-field]="'description'"
+            [label]="t('sheet.build.appearance.description')"
+            [rows]="3"
+            [value]="appearanceValue('description')"
+            [disabled]="disabled()"
+            (valueChange)="onAppearanceInput('description', $event)"
+          />
+        </div>
+      </div>
+    </hk-leaf>
+  }
+</ng-container>

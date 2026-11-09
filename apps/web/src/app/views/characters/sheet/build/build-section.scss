@@ -1,0 +1,83 @@
+/* Shared by the Build tab's section components (board B01): rows on a leaf, lock chips, tables. */
+
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.build-section__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.build-section__row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 40px;
+  padding: var(--space-1) 0;
+  border-block-end: 1px solid var(--leaf-edge);
+
+  &:last-child {
+    border-block-end: 0;
+  }
+}
+
+.build-section__row--empty {
+  opacity: 0.8;
+}
+
+.build-section__main {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  gap: 2px;
+}
+
+.build-section__name {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.build-section__detail {
+  color: var(--text-2);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.build-section__hint {
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.build-section__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.build-section__empty {
+  margin: 0;
+  color: var(--text-2);
+  font-style: italic;
+}
+
+@media (max-width: 767.98px) {
+  .build-section__row {
+    grid-template-columns: 26px minmax(0, 1fr);
+
+    > :nth-child(3) {
+      grid-column: 2;
+      justify-self: start;
+    }
+  }
+}

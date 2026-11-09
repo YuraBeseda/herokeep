@@ -275,7 +275,8 @@
     "build": {
       "outstanding": {
         "title": "Outstanding choices",
-        "empty": "All caught up — nothing left to decide."
+        "empty": "All caught up — nothing left to decide.",
+        "banner": "{count, plural, one {# choice outstanding} other {# choices outstanding}}"
       },
       "rename": {
         "title": "Name",
@@ -311,7 +312,78 @@
         "update": "Update",
         "update-label": "Update {name} to v{to}",
         "update-title": "Update {name} v{from} → v{to}?",
-        "update-blocked": "This update can't be applied:"
+        "update-blocked": "This update can't be applied:",
+        "alwaysOn": "always on",
+        "manage": "Manage packs",
+        "coreTag": "core rules",
+        "notInstalledHint": "Install it from Packs first"
+      },
+      "origin": {
+        "title": "Origin and class",
+        "none": "None yet",
+        "classLevel": "{name} {level}",
+        "speciesDetail": "Species · speed {speed} ft",
+        "classDetail": "Class · d{die} hit die · saves {saves}",
+        "subclassDetail": "Subclass · {class} · chosen at level {level}",
+        "backgroundDetail": "Background · {skills}",
+        "originFeat": "Origin feat",
+        "originFeatDetail": "Origin feat · {background}"
+      },
+      "lock": {
+        "fixed": "fixed at creation",
+        "fixedHint": "Fixed at creation; start a new hero to change it",
+        "viaLevelUp": "via Level up",
+        "viaLevelUpHint": "Levels are added with Level up; the last one can be undone from the Timeline",
+        "locked": "locked",
+        "subclassHint": "Chosen at level {level} and built upon since; revert that level in the Timeline to pick again",
+        "granted": "granted",
+        "grantedHint": "Granted by {source}, not a pick",
+        "unsupported": "not editable",
+        "unsupportedHint": "This choice cannot be changed from here"
+      },
+      "abilities": {
+        "title": "Ability scores",
+        "method": "Method used at creation: {method}",
+        "hint": "bonuses are tags on the base score",
+        "ability": "Ability",
+        "base": "Base",
+        "bonuses": "Bonuses",
+        "final": "Final",
+        "modifier": "Modifier",
+        "bonusFrom": "From {source}",
+        "noBonus": "no bonuses"
+      },
+      "choices": {
+        "title": "Choices made",
+        "hint": "Re-pick where the rules allow; the lock says why not",
+        "repick": "Re-pick",
+        "repickHint": "Pick “{prompt}” again",
+        "done": "Done",
+        "level": "lv {level}",
+        "levelHint": "Chosen at level {level}",
+        "origin": "origin",
+        "originHint": "Chosen at creation",
+        "empty": "No choices made yet."
+      },
+      "proficiencies": {
+        "title": "Proficiencies and languages",
+        "armor": "Armor",
+        "weapons": "Weapons",
+        "tools": "Tools",
+        "saves": "Saving throws",
+        "skills": "Skills",
+        "languages": "Languages",
+        "none": "None",
+        "expertise": "expertise"
+      },
+      "identity": {
+        "title": "Identity",
+        "hint": "name, portrait, appearance",
+        "unsaved": "unsaved changes",
+        "unsavedHint": "Edited fields are saved together",
+        "gender": "Grammatical gender",
+        "genderHint": "Used for sentences in languages that inflect by gender, like the Timeline",
+        "nameLabel": "Name"
       }
     },
     "options": {
@@ -322,7 +394,9 @@
         "standard": "Standard",
         "variant": "Variant (encumbered tiers)",
         "houseRule": "Set by your campaign's house rules."
-      }
+      },
+      "campaignTag": "campaign rule",
+      "campaignHint": "Set by the campaign’s house rules; ask your DM to change it"
     },
     "notFound": {
       "title": "Character not found",
@@ -763,10 +837,11 @@
       "other": "Other"
     },
     "revertConfirm": {
-      "title": "Revert this?",
-      "body": "This can't be undone — the character is recomputed as if it never happened.",
-      "cancel": "Cancel",
-      "confirm": "Revert"
+      "title": "Revert this change?",
+      "body": "{name} is recomputed as if “{sentence}” never happened. The events after it stay and are replayed on top.",
+      "cancel": "Keep it",
+      "confirm": "Revert",
+      "bodyGroup": "{name} is recomputed as if “{sentence}” (and {count} related events) never happened. The events after it stay and are replayed on top."
     },
     "character-created": "{name} was created.",
     "character-renamed": "Renamed to {name}.",
@@ -820,7 +895,19 @@
     "portrait-cleared": "Cleared the portrait.",
     "override-applied": "Overrode {path}: {reason}.",
     "event-reverted": "A previous change was reverted.",
-    "history-compacted": "Compacted history through event {throughSeq}."
+    "history-compacted": "Compacted history through event {throughSeq}.",
+    "hint": "every change, as a sentence; Revert recomputes the hero as if it never happened",
+    "filterLabel": "Filter events",
+    "showReverted": "Show reverted",
+    "revertHint": "Revert: recompute the hero as if this never happened",
+    "revertGroupHint": "{count, plural, one {Reverts this and its # event} other {Reverts this and its # events}}",
+    "revertLabel": "Revert: {sentence}",
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "expand": "{count, plural, one {Show # event} other {Show # events}}",
+    "collapse": "{count, plural, one {Hide # event} other {Hide # events}}",
+    "lockedCreation": "can’t revert",
+    "lockedCreationHint": "Creation can’t be reverted; delete the hero instead",
+    "today": "Today"
   },
   "validation": {
     "generic": "This selection isn't valid yet.",

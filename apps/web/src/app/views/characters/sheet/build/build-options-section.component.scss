@@ -1,0 +1,45 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.build-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.build-options__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+
+  label {
+    color: var(--text-2);
+    font-size: 0.875rem;
+  }
+}
+
+.build-options__select {
+  @include u.touch-target;
+
+  inline-size: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font: inherit;
+
+  &:disabled {
+    color: var(--text-2);
+  }
+}
+
+.build-options__lock {
+  align-self: center;
+}

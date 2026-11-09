@@ -91,7 +91,7 @@ test.describe('level up — XP entry, average HP, and revert', () => {
       // reverting prepends a new row, since `event.reverted` itself falls in family 'other', not
       // 'leveling' (this locator, unlike a plain element reference, re-queries the DOM live).
       const levelUpRow = page.locator('.timeline-tab__row[data-family="leveling"]').first();
-      await levelUpRow.getByRole('button', { name: 'Revert', exact: true }).click();
+      await levelUpRow.getByRole('button', { name: /^Revert/ }).click();
 
       await expect(page.locator('.timeline-revert-confirm__title')).toBeVisible();
       await page.locator('.timeline-revert-confirm__confirm').click();

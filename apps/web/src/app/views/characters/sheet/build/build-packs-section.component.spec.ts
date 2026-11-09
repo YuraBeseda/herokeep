@@ -11,6 +11,7 @@ import {
   type RebasePlan,
 } from '@hk/engine';
 import { parsePack, type Event, type Pack } from '@hk/protocol';
+import { provideRouter } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
@@ -74,6 +75,7 @@ function configure(packs: Pack[], dialogResult: unknown): DialogMock {
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
+      provideRouter([]),
       {
         provide: PackStore,
         useValue: { packs: signal(packs), ready: signal(true), corePack: signal(corePack) },
@@ -93,13 +95,16 @@ async function events(): Promise<Event[]> {
   return TestBed.inject(EventsRepository).byStream(streamId);
 }
 
-function toggleFor(fixture: ComponentFixture<unknown>, packId: string): HTMLInputElement {
-  const el = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
-    `[data-pack-id="${packId}"] .build-packs__toggle`,
+/** The pack's switch (`hk-toggle` renders a `button[role=switch]`). */
+function toggleFor(fixture: ComponentFixture<unknown>, packId: string): HTMLButtonElement {
+  const el = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+    `[data-pack-id="${packId}"] .build-packs__toggle button[role="switch"]`,
   );
   if (!el) throw new Error(`no toggle for ${packId}`);
   return el;
 }
+
+const isOn = (el: Element): boolean => el.getAttribute('aria-checked') === 'true';
 
 /** Polls real macrotask turns until `predicate()` holds (the store writes to fake-indexeddb). */
 async function settle(fixture: ComponentFixture<unknown>, predicate: () => boolean): Promise<void> {
@@ -143,7 +148,7 @@ describe('BuildPacksSectionComponent (plan 15 Task 4)', () => {
     await fixture.whenStable();
 
     const core = toggleFor(fixture, corePack.id);
-    expect(core.checked).toBe(true);
+    expect(isOn(core)).toBe(true);
     expect(core.disabled).toBe(true);
     const reasonId = core.getAttribute('aria-describedby');
     expect(reasonId).toBeTruthy();
@@ -151,7 +156,7 @@ describe('BuildPacksSectionComponent (plan 15 Task 4)', () => {
     expect(reason?.textContent?.trim()).toBe('The core rules are always on.');
 
     const row = toggleFor(fixture, sample.id);
-    expect(row.checked).toBe(false);
+    expect(isOn(row)).toBe(false);
     expect(row.disabled).toBe(false);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Sample content');
   });
@@ -175,7 +180,7 @@ describe('BuildPacksSectionComponent (plan 15 Task 4)', () => {
       payload: { packId: sample.id, version: sample.version },
     });
     expect(TestBed.inject(CharacterStore).index()?.has(MOONKIN)).toBe(true);
-    expect(toggleFor(fixture, sample.id).checked).toBe(true);
+    expect(isOn(toggleFor(fixture, sample.id))).toBe(true);
   });
 
   it('turning a pack OFF opens the rebase report; Confirm commits plan.events (pack.unpinned + the cleared choice) in one transaction', async () => {
@@ -209,7 +214,7 @@ describe('BuildPacksSectionComponent (plan 15 Task 4)', () => {
     expect(appended[0]?.txId).toBeDefined();
     expect(appended[1]?.txId).toBe(appended[0]?.txId);
     expect(store.facts()?.decisions[SPECIES_CHOICE]).toBeUndefined();
-    expect(toggleFor(fixture, sample.id).checked).toBe(false);
+    expect(isOn(toggleFor(fixture, sample.id))).toBe(false);
   });
 
   it('Cancel in the rebase report commits nothing and the pack stays on', async () => {
@@ -226,7 +231,7 @@ describe('BuildPacksSectionComponent (plan 15 Task 4)', () => {
 
     expect(await events()).toHaveLength(before);
     expect(TestBed.inject(CharacterStore).facts()?.pins[sample.id]).toBe(sample.version);
-    expect(toggleFor(fixture, sample.id).checked).toBe(true);
+    expect(isOn(toggleFor(fixture, sample.id))).toBe(true);
   });
 
   it('shows the diagnostics instead of a plan when turning a pack off would break a dependency', async () => {
@@ -493,5 +498,68 @@ describe('BuildPacksSectionComponent — update flow (plan 15 Task 5)', () => {
     await fixture.whenStable();
 
     expect(updateButton(fixture, sample.id)!.disabled).toBe(true);
+  });
+});
+
+// --- B10b (plan 17, board B01): packs as toggles, with a Manage packs link --------------------------
+
+describe('BuildPacksSectionComponent — packs as switches (board B01)', () => {
+  afterEach(() => {
+    TestBed.inject(HkDb).close();
+  });
+
+  async function setup(packs: Pack[]): Promise<void> {
+    configure(packs, true);
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+    await seedFighter('Ivan');
+  }
+
+  function switchOf(root: HTMLElement, packId: string): HTMLButtonElement {
+    const el = root.querySelector<HTMLButtonElement>(
+      `[data-pack-id="${packId}"] button[role="switch"]`,
+    );
+    if (!el) throw new Error(`no switch for ${packId}`);
+    return el;
+  }
+
+  it('every pack is a switch named by the pack; the core is on, disabled and described by its reason', async () => {
+    await setup([corePack, sample]);
+    const fixture = TestBed.createComponent(BuildPacksSectionComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const core = switchOf(root, corePack.id);
+    expect(core.getAttribute('aria-checked')).toBe('true');
+    expect(core.disabled).toBe(true);
+    expect(core.textContent).toContain(corePack.name);
+    const note = root.querySelector(`#${core.getAttribute('aria-describedby')}`);
+    expect(note?.textContent?.trim()).toBe('The core rules are always on.');
+
+    const other = switchOf(root, sample.id);
+    expect(other.getAttribute('aria-checked')).toBe('false');
+    expect(other.disabled).toBe(false);
+    expect(other.textContent).toContain('Sample content');
+  });
+
+  it('a pinned pack that is not installed links to Manage packs and can still be switched off', async () => {
+    await setup([corePack]);
+    await pinSample();
+    const fixture = TestBed.createComponent(BuildPacksSectionComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const row = root.querySelector(`[data-pack-id="${sample.id}"]`)!;
+    const link = row.querySelector<HTMLAnchorElement>('a.build-packs__manage')!;
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/packs');
+    expect(link.textContent?.trim()).toBe('Manage packs');
+    expect(switchOf(root, sample.id).getAttribute('aria-checked')).toBe('true');
+    expect(switchOf(root, sample.id).disabled).toBe(false);
   });
 });

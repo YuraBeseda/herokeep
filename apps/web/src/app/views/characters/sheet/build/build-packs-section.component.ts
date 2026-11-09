@@ -8,17 +8,20 @@ import {
   type Pins,
 } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { RouterLink } from '@angular/router';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import {
   RebaseReportDialogComponent,
   type RebaseReportDialogData,
 } from '@shared/components/rebase-report-dialog/rebase-report-dialog.component';
-import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { updatesFor, type PackUpdate } from '@shared/services/packs/pack-updates';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
+import { HkToggleComponent } from '../../../../ui/toggle/toggle.component';
 
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
@@ -78,7 +81,14 @@ function introducedErrors(current: ContentIndex, next: ContentIndex): Diagnostic
  */
 @Component({
   selector: 'app-build-packs-section',
-  imports: [TranslocoDirective, ButtonComponent, SheetSectionComponent],
+  imports: [
+    TranslocoDirective,
+    RouterLink,
+    HkLeafComponent,
+    HkToggleComponent,
+    HkTagChipComponent,
+    HkButtonComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './build-packs-section.component.html',
   styleUrl: './build-packs-section.component.scss',
@@ -160,11 +170,14 @@ export class BuildPacksSectionComponent {
     });
   });
 
-  protected async onToggle(row: PackRow, event: Event, t: TranslateFn): Promise<void> {
+  protected async onToggle(
+    row: PackRow,
+    control: HkToggleComponent,
+    t: TranslateFn,
+  ): Promise<void> {
     // Keep the control on the MODEL's value: it only moves once a commit lands (and stays put on
     // Cancel or a refusal), instead of drifting from what the character actually pins.
-    const control = event.target as HTMLInputElement;
-    control.checked = row.enabled;
+    control.value.set(row.enabled);
     if (row.core || this.disabled() || this.busy()) return;
 
     this.blocked.set(undefined);

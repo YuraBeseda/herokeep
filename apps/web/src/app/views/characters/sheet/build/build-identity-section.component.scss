@@ -1,0 +1,154 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.build-identity__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.build-identity__hint {
+  margin: 0 0 var(--space-2);
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.build-identity {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.build-identity__portrait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.build-tab__portrait-heading {
+  margin: 0;
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.build-tab__portrait-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 5.5rem;
+  block-size: 5.5rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--brass);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.build-tab__portrait-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.build-identity__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.build-identity__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.build-identity__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+
+.build-identity__gender-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.build-identity__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.build-identity__info {
+  display: inline-flex;
+  border-radius: var(--radius-s);
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.build-identity__gender {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.build-identity__chip {
+  @include u.touch-target;
+
+  padding: 0 var(--space-3);
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--text-1);
+  font: inherit;
+  cursor: pointer;
+
+  &[aria-checked='true'] {
+    border-color: var(--brass);
+    background: var(--leather);
+    color: var(--text-on-leather);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .build-identity {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .build-identity__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .build-identity__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

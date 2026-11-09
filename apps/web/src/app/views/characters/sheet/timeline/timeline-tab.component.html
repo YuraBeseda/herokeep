@@ -1,110 +1,171 @@
 <div class="timeline-tab" *transloco="let t; read: 'characters'">
-  <h2 class="timeline-tab__title">{{ t('timeline.title') }}</h2>
+  <hk-leaf [title]="t('timeline.title')" [icon]="'ui:timeline'">
+    <p class="timeline-tab__hint">{{ t('timeline.hint') }}</p>
 
-  <div class="timeline-tab__filters">
-    @for (family of families; track family) {
-      <hk-chip [selected]="isFamilyActive(family)" (click)="toggleFamily(family)">
-        {{ t(familyLabelKey(family)) }}
-      </hk-chip>
-    }
-  </div>
+    <div class="timeline-tab__filters">
+      <hk-filter-chips
+        [label]="t('timeline.filterLabel')"
+        [options]="familyOptions(t)"
+        [(selected)]="selectedFamilies"
+      />
+      <hk-toggle
+        class="timeline-tab__show-reverted"
+        [label]="t('timeline.showReverted')"
+        [(value)]="showReverted"
+      />
+    </div>
 
-  @if (visibleRows().length === 0) {
-    <p class="timeline-tab__empty">{{ t('timeline.empty') }}</p>
-  } @else {
-    <ul class="timeline-tab__list">
-      @for (row of visibleRows(); track row.key) {
-        <li
-          class="timeline-tab__row"
-          [class.timeline-tab__row--reverted]="isReverted(row)"
-          [class.timeline-tab__row--override]="isOverride(row)"
-          [attr.data-family]="familyOf(row)"
-        >
-          <hk-card class="timeline-tab__card">
-            <div class="timeline-tab__row-main">
-              <p class="timeline-tab__sentence">
-                {{
-                  row.events[0]
-                    | eventSentence
-                      : index()
-                      : localizer()
-                      : row.events.length
-                      : grammaticalGender()
-                      : sheet()
-                      : installedPacks()
-                }}
-              </p>
-              @if (isOverride(row)) {
-                <span class="timeline-tab__badge timeline-tab__badge--override">{{
-                  t('timeline.overrideBadge')
-                }}</span>
+    @if (visibleRows().length === 0) {
+      <p class="timeline-tab__empty">{{ t('timeline.empty') }}</p>
+    } @else {
+      @for (day of days(); track day.key) {
+        <section class="timeline-tab__group">
+          <h3 class="timeline-tab__day">
+            <hk-icon [icon]="'ui:session'" />
+            <span>
+              @if (isToday(day.date)) {
+                {{ t('timeline.today') }} ·
               }
-              @if (isReverted(row)) {
-                <span class="timeline-tab__badge">{{ t('timeline.revertedBadge') }}</span>
-              }
-              <div class="timeline-tab__row-actions">
-                @if (row.events.length > 1) {
-                  <button
-                    type="button"
-                    class="timeline-tab__expand"
-                    [attr.aria-expanded]="isExpanded(row)"
-                    (click)="toggleExpand(row)"
+              {{ dayLabel(day.date) }}
+            </span>
+          </h3>
+          <ul class="timeline-tab__list">
+            @for (row of day.rows; track row.key) {
+              <li
+                class="timeline-tab__row"
+                [class.timeline-tab__row--reverted]="isReverted(row)"
+                [class.timeline-tab__row--override]="isOverride(row)"
+                [attr.data-family]="familyOf(row)"
+              >
+                <div class="timeline-tab__row-main">
+                  <span
+                    class="timeline-tab__kind"
+                    role="img"
+                    [attr.aria-label]="t(familyLabelKey(familyOf(row)))"
+                    [hkTooltip]="t(familyLabelKey(familyOf(row)))"
                   >
-                    {{ isExpanded(row) ? '−' : '+' }}
-                  </button>
-                }
-                @if (canRevert(row)) {
-                  <button
-                    hk-button
-                    [variant]="'ghost'"
-                    type="button"
-                    class="timeline-tab__revert"
-                    (click)="onRevert(row)"
-                  >
-                    {{ t('timeline.revert') }}
-                  </button>
-                }
-              </div>
-            </div>
-
-            @if (rollsFor(row); as rolls) {
-              <div class="timeline-tab__rolls">
-                @for (result of rolls; track $index) {
-                  <span class="timeline-tab__roll-group">
-                    @for (die of result.dice; track $index) {
-                      <span
-                        class="timeline-tab__die"
-                        [class.timeline-tab__die--dropped]="!die.kept"
+                    <hk-icon [icon]="iconOf(row)" />
+                  </span>
+                  <div class="timeline-tab__text">
+                    <p class="timeline-tab__sentence">
+                      {{
+                        row.events[0]
+                          | eventSentence
+                            : index()
+                            : localizer()
+                            : row.events.length
+                            : grammaticalGender()
+                            : sheet()
+                            : installedPacks()
+                      }}
+                    </p>
+                    <div class="timeline-tab__meta">
+                      @if (isOverride(row)) {
+                        <hk-tag-chip
+                          class="timeline-tab__badge timeline-tab__badge--override"
+                          [tone]="'warning'"
+                          [icon]="'ui:edit'"
+                          [label]="t('timeline.overrideBadge')"
+                        />
+                      }
+                      @if (isReverted(row)) {
+                        <hk-tag-chip
+                          class="timeline-tab__badge"
+                          [icon]="'ui:timeline'"
+                          [label]="t('timeline.revertedBadge')"
+                        />
+                      }
+                      @if (row.events.length > 1) {
+                        <button
+                          type="button"
+                          class="timeline-tab__expand"
+                          [attr.aria-expanded]="isExpanded(row)"
+                          [attr.aria-label]="
+                            isExpanded(row)
+                              ? t('timeline.collapse', { count: row.events.length })
+                              : t('timeline.expand', { count: row.events.length })
+                          "
+                          [hkTooltip]="
+                            isExpanded(row)
+                              ? t('timeline.collapse', { count: row.events.length })
+                              : t('timeline.expand', { count: row.events.length })
+                          "
+                          (click)="toggleExpand(row)"
+                        >
+                          <hk-icon [icon]="isExpanded(row) ? 'ui:remove' : 'ui:add'" />
+                        </button>
+                        <span class="timeline-tab__count">{{
+                          t('timeline.eventCount', { count: row.events.length })
+                        }}</span>
+                      }
+                    </div>
+                  </div>
+                  <time class="timeline-tab__time" [attr.datetime]="row.events[0].ts">{{
+                    timeLabel(row)
+                  }}</time>
+                  <div class="timeline-tab__row-actions">
+                    @if (canRevert(row)) {
+                      <button
+                        hk-button
+                        [variant]="'ghost'"
+                        type="button"
+                        class="timeline-tab__revert"
+                        [attr.aria-label]="t('timeline.revertLabel', { sentence: sentenceOf(row) })"
+                        (click)="onRevert(row)"
                       >
-                        {{ die.value }}
+                        {{ t('timeline.revert') }}
+                      </button>
+                    } @else if (isCreation(row)) {
+                      <hk-tag-chip
+                        class="timeline-tab__locked"
+                        [icon]="'ui:lock'"
+                        [label]="t('timeline.lockedCreation')"
+                        [hint]="t('timeline.lockedCreationHint')"
+                      />
+                    }
+                  </div>
+                </div>
+
+                @if (rollsFor(row); as rolls) {
+                  <div class="timeline-tab__rolls">
+                    @for (result of rolls; track $index) {
+                      <span class="timeline-tab__roll-group">
+                        @for (die of result.dice; track $index) {
+                          <span
+                            class="timeline-tab__die"
+                            [class.timeline-tab__die--dropped]="!die.kept"
+                          >
+                            {{ die.value }}
+                          </span>
+                        }
                       </span>
                     }
-                  </span>
+                  </div>
                 }
-              </div>
-            }
 
-            @if (row.events.length > 1 && isExpanded(row)) {
-              <ul class="timeline-tab__members">
-                @for (event of row.events; track event.id) {
-                  <li class="timeline-tab__member">
-                    {{
-                      event
-                        | eventSentence
-                          : index()
-                          : localizer()
-                          : 1
-                          : grammaticalGender()
-                          : sheet()
-                          : installedPacks()
-                    }}
-                  </li>
+                @if (row.events.length > 1 && isExpanded(row)) {
+                  <ul class="timeline-tab__members">
+                    @for (event of row.events; track event.id) {
+                      <li class="timeline-tab__member">
+                        {{
+                          event
+                            | eventSentence
+                              : index()
+                              : localizer()
+                              : 1
+                              : grammaticalGender()
+                              : sheet()
+                              : installedPacks()
+                        }}
+                      </li>
+                    }
+                  </ul>
                 }
-              </ul>
+              </li>
             }
-          </hk-card>
-        </li>
+          </ul>
+        </section>
       }
-    </ul>
-  }
+    }
+  </hk-leaf>
 </div>

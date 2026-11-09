@@ -1,0 +1,31 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.build.proficiencies.title')" [icon]="'ui:proficiency'">
+    <dl class="build-prof">
+      @for (group of groups(); track group.key) {
+        <dt class="build-prof__term">{{ t('sheet.build.proficiencies.' + group.key) }}</dt>
+        <dd class="build-prof__items" [attr.data-prof]="group.key">
+          @if (group.items.length === 0) {
+            <span class="build-section__hint">{{ t('sheet.build.proficiencies.none') }}</span>
+          } @else {
+            <ul class="build-section__chips">
+              @for (item of group.items; track item.label) {
+                <li>
+                  <hk-tag-chip
+                    [label]="item.label"
+                    [icon]="group.key === 'languages' ? group.icon : null"
+                    [tone]="item.expertise ? 'warning' : 'neutral'"
+                    [hint]="
+                      item.expertise
+                        ? item.label + ' · ' + t('sheet.build.proficiencies.expertise')
+                        : null
+                    "
+                  />
+                </li>
+              }
+            </ul>
+          }
+        </dd>
+      }
+    </dl>
+  </hk-leaf>
+</ng-container>

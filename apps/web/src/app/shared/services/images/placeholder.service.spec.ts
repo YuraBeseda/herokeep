@@ -1,5 +1,37 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { TestBed } from '@angular/core/testing';
-import { PlaceholderService } from './placeholder.service';
+import { PLACEHOLDER_PALETTE, PlaceholderService } from './placeholder.service';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..');
+
+interface TokenRow {
+  readonly name: string;
+  readonly value: Record<string, string>;
+}
+const tokens = (
+  JSON.parse(readFileSync(join(repoRoot, 'packages/ui-tokens/src/tokens.json'), 'utf8')) as {
+    color: { themes: { id: string }[]; tokens: TokenRow[] };
+  }
+).color;
+
+/** The theme-resolved hex of a colour token (follows `{alias}` references). */
+function resolve(theme: string, name: string): string {
+  const row = tokens.tokens.find((t) => t.name === name);
+  if (!row) throw new Error(`unknown token ${name}`);
+  const value = row.value[theme] ?? '';
+  const alias = /^\{(.+)\}$/.exec(value);
+  return alias ? resolve(theme, alias[1]) : value;
+}
+
+/** `var(--name)` -> `name`; anything else throws, so a literal colour can never pass. */
+function tokenOf(css: string): string {
+  const m = /^var\(--([a-z0-9-]+)\)$/.exec(css);
+  if (!m) throw new Error(`not a token reference: ${css}`);
+  return m[1];
+}
 
 describe('PlaceholderService.monogram', () => {
   function service(): PlaceholderService {
@@ -17,90 +49,67 @@ describe('PlaceholderService.monogram', () => {
     expect(service().monogram('   ', 'char:a').initials).toBe('');
   });
 
-  it('is deterministic: the SAME character id always yields the SAME hue', () => {
+  it('is deterministic: the SAME character id always yields the SAME colour, whatever the name', () => {
     const svc = service();
-    const first = svc.monogram('Ivan', 'char:11111111-1111-1111-1111-111111111111').hue;
-    const second = svc.monogram('Ivan', 'char:11111111-1111-1111-1111-111111111111').hue;
-    expect(second).toBe(first);
-    // The name is irrelevant to the hue — only the id is.
-    expect(
-      svc.monogram('A Totally Different Name', 'char:11111111-1111-1111-1111-111111111111').hue,
-    ).toBe(first);
+    const id = 'char:11111111-1111-1111-1111-111111111111';
+    const first = svc.monogram('Ivan', id);
+    expect(svc.monogram('Ivan', id).background).toBe(first.background);
+    expect(svc.monogram('A Totally Different Name', id).background).toBe(first.background);
   });
 
-  it('a different character id yields a different hue (no accidental collision for these fixtures)', () => {
+  it('different character ids spread over several palette colours', () => {
     const svc = service();
-    const a = svc.monogram('Ivan', 'char:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa').hue;
-    const b = svc.monogram('Ivan', 'char:bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb').hue;
-    expect(b).not.toBe(a);
+    const seen = new Set(
+      Array.from({ length: 60 }, (_, i) => svc.monogram('Ivan', `char:id-${i}`).background),
+    );
+    expect(seen.size).toBeGreaterThan(5);
   });
 
-  it('the hue is always a valid CSS hue degree: an integer in [0, 360)', () => {
-    const hue = service().monogram('Ivan', 'char:some-character-id').hue;
-    expect(Number.isInteger(hue)).toBe(true);
-    expect(hue).toBeGreaterThanOrEqual(0);
-    expect(hue).toBeLessThan(360);
-  });
-
-  // --- Fix round 1, finding 4: ONE centralized background formula, not one per caller -----------
-
-  it('background is the exact `hsl(<hue> 45% 30%)` string derived from the SAME hue', () => {
+  // R46: the colour comes from a FIXED token set, never from the random id's hue — the old
+  // `hsl(h 45% 30%)` against the theme's cream ink measured 4.47:1 for some ids (axe flake).
+  it('the background is a palette token reference and the ink is the on-leather text token', () => {
     const result = service().monogram('Ivan', 'char:some-character-id');
-    expect(result.background).toBe(`hsl(${result.hue} 45% 30%)`);
+    expect(PLACEHOLDER_PALETTE.map((p) => `var(--${p})`)).toContain(result.background);
+    expect(result.ink).toBe('var(--text-on-leather)');
+    expect(result.background).not.toMatch(/hsl/);
   });
 
-  // task-12 fix round: `40%` failed WCAG AA color-contrast (axe, serious) against the placeholder's
-  // near-white text for 167/360 hues (46.4%) — verified here for every possible hue, not just a
-  // sample, so a future lightness change can't silently reintroduce an unsafe band.
-  it('every possible hue stays at or above WCAG AA contrast (4.5:1) against the placeholder text (#f7f5f3)', () => {
-    // `hueOf` isn't exported, and sweeping character ids isn't guaranteed to hit every hue (it's a
-    // hash) — so this asserts the CONTRAST FORMULA itself (the one axe/WCAG actually use) against
-    // `backgroundOf`'s own literal parameters (`s=45%`, `l=30%`) for every hue directly, which is
-    // both exhaustive and independent of the hashing.
-    for (let hue = 0; hue < 360; hue++) {
-      expect(contrastRatio(hue, 45, 30, [0xf7, 0xf5, 0xf3])).toBeGreaterThanOrEqual(4.5);
+  it('the palette lists only colour tokens that exist in the token source', () => {
+    expect(PLACEHOLDER_PALETTE.length).toBeGreaterThanOrEqual(8);
+    for (const name of PLACEHOLDER_PALETTE) {
+      expect(tokens.tokens.some((t) => t.name === name)).toBe(true);
     }
-    // Sanity check the formula itself isn't vacuously true: the OLD `l=40%` must fail it somewhere
-    // — proves this test would actually have caught the regression it's named for.
-    const failsAt40 = Array.from({ length: 360 }, (_, hue) =>
-      contrastRatio(hue, 45, 40, [0xf7, 0xf5, 0xf3]),
-    ).some((ratio) => ratio < 4.5);
-    expect(failsAt40).toBe(true);
+  });
+
+  it('every palette entry is AA (4.5:1) against the ink on EVERY theme', () => {
+    const ink = tokenOf(service().monogram('Ivan', 'char:x').ink);
+    expect(tokens.themes.length).toBe(3);
+    for (const { id: theme } of tokens.themes) {
+      for (const name of PLACEHOLDER_PALETTE) {
+        const ratio = contrast(resolve(theme, name), resolve(theme, ink));
+        expect(ratio, `${name} on ${theme}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('every id maps into the palette (no id falls outside the AA-checked set)', () => {
+    const svc = service();
+    for (let i = 0; i < 400; i++) {
+      const bg = svc.monogram('Ivan', `char:${i}-${i * 7919}`).background;
+      expect(PLACEHOLDER_PALETTE).toContain(tokenOf(bg));
+    }
   });
 });
 
-// --- WCAG 2.x relative-luminance contrast, the same formula axe-core's `color-contrast` rule uses
-// (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance /
-// https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio) — reimplemented here (not imported from
-// anywhere) so this spec can assert the ACTUAL bar axe enforces, not just eyeball a handful of
-// sampled colors.
-
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-  const sFrac = s / 100;
-  const lFrac = l / 100;
-  const k = (n: number): number => (n + h / 30) % 12;
-  const a = sFrac * Math.min(lFrac, 1 - lFrac);
-  const f = (n: number): number =>
-    lFrac - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return [255 * f(0), 255 * f(8), 255 * f(4)];
+// WCAG 2.x relative-luminance contrast, the formula axe-core's `color-contrast` rule uses.
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function relativeLuminance([r, g, b]: readonly number[]): number {
-  const [rs, gs, bs] = [r, g, b].map((c) => {
-    const channel = c / 255;
-    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-}
-
-function contrastRatio(
-  hue: number,
-  saturation: number,
-  lightness: number,
-  textRgb: readonly number[],
-): number {
-  const bgLum = relativeLuminance(hslToRgb(hue, saturation, lightness));
-  const textLum = relativeLuminance(textRgb);
-  const [hi, lo] = bgLum > textLum ? [bgLum, textLum] : [textLum, bgLum];
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }

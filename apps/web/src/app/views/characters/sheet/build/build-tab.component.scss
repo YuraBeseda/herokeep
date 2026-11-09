@@ -1,5 +1,3 @@
-@use 'utilities' as u;
-
 :host {
   display: block;
 }
@@ -7,119 +5,41 @@
 .build-tab {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
-.build-tab__section {
-  display: block;
+.build-tab__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.build-tab__column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+@media (min-width: 1200px) {
+  .build-tab__columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .build-tab__outstanding-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  min-width: 0;
+  min-inline-size: 0;
   border: 0;
   padding: 0;
-  margin: 0;
-}
-
-.build-tab__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: flex-start;
-}
-
-.build-tab__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  width: 100%;
-  border: 0;
-  padding: 0;
-  margin: 0;
-}
-
-.build-tab__input,
-.build-tab__textarea {
-  @include u.touch-target;
-
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
-  background: var(--surface-2);
-  color: var(--text-1);
-  padding: var(--space-2);
-  font: inherit;
-  width: 100%;
-}
-
-.build-tab__textarea {
-  min-height: 6rem;
-  resize: vertical;
-}
-
-.build-tab__radio {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.build-tab__error {
-  color: var(--danger);
   margin: 0;
 }
 
 .build-tab__empty {
+  margin: 0;
   color: var(--text-2);
-  margin: 0;
-}
-
-.build-tab__options-reason {
-  color: var(--text-2);
-  font-size: 0.875rem;
-  margin: 0;
-}
-
-.build-tab__portrait {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-block-end: var(--space-3);
-}
-
-.build-tab__portrait-heading {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.build-tab__portrait-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.build-tab__portrait-preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 50%;
-  /* Monogram letters sit on a dark per-character hue: on-dark ink, not parchment ink. */
-  color: var(--text-on-leather);
-  font-weight: 600;
-  flex-shrink: 0;
-  object-fit: cover;
-}
-
-.build-tab__portrait-preview--placeholder {
-  background: var(--surface-2);
-}
-
-.build-tab__portrait-actions {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+  font-style: italic;
 }

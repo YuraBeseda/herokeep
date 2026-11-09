@@ -5,7 +5,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
-import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTransloco, TranslocoService, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
@@ -13,6 +13,9 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import charactersRu from '../../../../../assets/i18n/characters/ru.json';
+import charactersUk from '../../../../../assets/i18n/characters/uk.json';
+import { hintOf } from '@app/ui/testing/harness';
 import { seedFighter } from '../testing/character-fixtures';
 import { TimelineTabComponent } from './timeline-tab.component';
 
@@ -43,6 +46,8 @@ const DEFENSE_FEAT = 'srd-5e-2024:feat/defense';
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'characters/ru') return of(charactersRu);
+    if (langPath === 'characters/uk') return of(charactersUk);
     return of({});
   }
 }
@@ -324,4 +329,244 @@ describe('TimelineTabComponent', () => {
     expect(renamedRow.querySelector('.timeline-tab__badge--override')).toBeNull();
     expect(renamedRow.classList.contains('timeline-tab__row--override')).toBe(false);
   });
+});
+
+// --- B10b (plan 17, boards T01 + DL05) -------------------------------------------------------------
+
+function textOf(el: Element | null | undefined): string {
+  return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function chipByLabel(root: HTMLElement, label: string): HTMLButtonElement {
+  const chip = Array.from(root.querySelectorAll<HTMLButtonElement>('.hk-filter-chips__chip')).find(
+    (b) => textOf(b).startsWith(label),
+  );
+  if (!chip) throw new Error(`no filter chip "${label}"`);
+  return chip;
+}
+
+describe('TimelineTabComponent — board T01', () => {
+  beforeEach(async () => {
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    TestBed.inject(HkDb).close();
+  });
+
+  it('filter chips narrow the timeline to the picked families, and clearing shows everything again', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Aria II' } },
+    ]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 50 } }]);
+
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(rowEls(fixture).length).toBe(3);
+
+    chipByLabel(root, 'Leveling').click();
+    await fixture.whenStable();
+    expect(rowEls(fixture).map((r) => r.getAttribute('data-family'))).toEqual(['leveling']);
+
+    // A second chip widens the picked set.
+    chipByLabel(root, 'Identity').click();
+    await fixture.whenStable();
+    expect(rowEls(fixture).length).toBe(3);
+
+    // Un-picking both shows everything again (no chip on = no filter).
+    chipByLabel(root, 'Leveling').click();
+    chipByLabel(root, 'Identity').click();
+    await fixture.whenStable();
+    expect(rowEls(fixture).length).toBe(3);
+  });
+
+  it('groups rows under a header per day, newest day first, each row with its time and a kind icon', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-26T09:30:00Z'));
+    await characterStore.create('Aria', 'feminine');
+    vi.setSystemTime(new Date('2026-11-02T20:15:00Z'));
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 50 } }]);
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Aria II' } },
+    ]);
+    vi.useRealTimers();
+
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const days = Array.from(root.querySelectorAll<HTMLElement>('.timeline-tab__group'));
+    expect(days.length).toBe(2);
+    expect(days[0]?.querySelectorAll('.timeline-tab__row').length).toBe(2);
+    expect(days[1]?.querySelectorAll('.timeline-tab__row').length).toBe(1);
+    const headers = days.map((d) => textOf(d.querySelector('.timeline-tab__day')));
+    expect(headers[0]).toContain('2026');
+    expect(headers[0]).not.toBe(headers[1]);
+
+    const first = rowEls(fixture)[0];
+    expect(first.querySelector('time.timeline-tab__time')?.getAttribute('datetime')).toMatch(
+      /^2026-11-02T/,
+    );
+    const kind = first.querySelector<HTMLElement>('.timeline-tab__kind')!;
+    expect(kind.getAttribute('role')).toBe('img');
+    // The icon names its family (a hint and an accessible name), not just a glyph.
+    expect(kind.getAttribute('aria-label')).toBe(charactersEn.timeline.family.identity);
+  });
+
+  it('a tx-group has a labelled expander with the event count, and expanding lists its members', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'One' } },
+      { type: 'character.renamed', v: 1, payload: { name: 'Two' } },
+      { type: 'character.renamed', v: 1, payload: { name: 'Three' } },
+    ]);
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    const group = rowEls(fixture)[0];
+
+    const expand = group.querySelector<HTMLButtonElement>('.timeline-tab__expand')!;
+    expect(expand.getAttribute('aria-label')).toBe('Show 3 events');
+    expect(expand.getAttribute('aria-expanded')).toBe('false');
+    expect(textOf(group.querySelector('.timeline-tab__count'))).toBe('3 events');
+    expect(group.querySelectorAll('.timeline-tab__member').length).toBe(0);
+
+    expand.click();
+    await fixture.whenStable();
+    expect(expand.getAttribute('aria-label')).toBe('Hide 3 events');
+    expect(expand.getAttribute('aria-expanded')).toBe('true');
+    expect(group.querySelectorAll('.timeline-tab__member').length).toBe(3);
+  });
+
+  it('the creation row is locked with a hint instead of a Revert button', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    const created = rowEls(fixture)[0];
+
+    expect(created.querySelector('.timeline-tab__revert')).toBeNull();
+    const lock = created.querySelector<HTMLElement>('.timeline-tab__locked')!;
+    expect(lock).not.toBeNull();
+    expect(hintOf(lock)).toBe(charactersEn.timeline.lockedCreationHint);
+  });
+
+  it('"Show reverted" off hides reverted rows and keeps the rest', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Interim' } },
+    ]);
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    await revertRow(fixture, rowEls(fixture)[0], () => characterStore.facts()?.name === 'Aria');
+    const root = fixture.nativeElement as HTMLElement;
+
+    const reverted = () =>
+      rowEls(fixture).filter((r) => r.classList.contains('timeline-tab__row--reverted'));
+    expect(reverted().length).toBe(1);
+
+    root.querySelector<HTMLButtonElement>('.timeline-tab__show-reverted button')!.click();
+    await fixture.whenStable();
+    expect(reverted().length).toBe(0);
+    expect(rowEls(fixture).length).toBe(2);
+  });
+});
+
+describe('TimelineTabComponent — the revert dialog (board DL05)', () => {
+  beforeEach(async () => {
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    TestBed.inject(HkDb).close();
+  });
+
+  async function seedRename() {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'Interim' } },
+    ]);
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    return { characterStore, fixture };
+  }
+
+  it('Revert opens the confirm naming the change; Keep it appends nothing, Revert appends the existing event.reverted', async () => {
+    const { characterStore, fixture } = await seedRename();
+    const row = rowEls(fixture)[0];
+    const before = characterStore.events().length;
+
+    row.querySelector<HTMLButtonElement>('.timeline-tab__revert')!.click();
+    TestBed.tick();
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    expect(textOf(overlay.querySelector('.timeline-revert-confirm__title'))).toBe(
+      charactersEn.timeline.revertConfirm.title,
+    );
+    // The body names the sentence being reverted.
+    expect(textOf(overlay.querySelector('.timeline-revert-confirm__body'))).toContain('Interim');
+    expect(characterStore.events().length).toBe(before);
+
+    // Keep it: nothing is dispatched.
+    overlay.querySelector<HTMLButtonElement>('.timeline-revert-confirm__cancel')!.click();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(characterStore.events().length).toBe(before);
+    expect(characterStore.facts()?.name).toBe('Interim');
+
+    // Revert: confirm dispatches.
+    await revertRow(fixture, rowEls(fixture)[0], () => characterStore.facts()?.name === 'Aria');
+    expect(characterStore.events().at(-1)?.type).toBe('event.reverted');
+  });
+
+  it.each(['en', 'ru', 'uk'] as const)(
+    'the %s row action is exactly its translation and differs from the dialog Cancel',
+    async (lang) => {
+      const bundle = { en: charactersEn, ru: charactersRu, uk: charactersUk }[lang];
+      const label = { en: 'Revert', ru: 'Отменить изменение', uk: 'Відкотити' }[lang];
+      expect(bundle.timeline.revert).toBe(label);
+      expect(bundle.timeline.revertConfirm.confirm).toBe(label);
+      expect(bundle.timeline.revert).not.toBe(bundle.timeline.revertConfirm.cancel);
+
+      const { fixture } = await seedRename();
+      const transloco = TestBed.inject(TranslocoService);
+      transloco.setActiveLang(lang);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+
+      const row = rowEls(fixture)[0];
+      const button = row.querySelector<HTMLButtonElement>('.timeline-tab__revert')!;
+      expect(textOf(button)).toBe(label);
+      button.click();
+      TestBed.tick();
+      const overlay = document.querySelector('.cdk-overlay-container')!;
+      const keep = textOf(overlay.querySelector('.timeline-revert-confirm__cancel'));
+      const confirm = textOf(overlay.querySelector('.timeline-revert-confirm__confirm'));
+      expect(confirm).toBe(label);
+      expect(keep).toBe(bundle.timeline.revertConfirm.cancel);
+      expect(keep).not.toBe(confirm);
+    },
+  );
 });

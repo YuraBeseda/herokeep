@@ -1,0 +1,26 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.build.origin.title')" [icon]="'ui:heroes'">
+    <ul class="build-section__rows">
+      @for (row of rows(); track row.key + row.id) {
+        <li
+          class="build-section__row"
+          [attr.data-origin]="row.key"
+          [class.build-section__row--empty]="row.empty"
+        >
+          <hk-icon [icon]="row.icon" />
+          <span class="build-section__main">
+            <b class="build-section__name">{{
+              row.empty ? t('sheet.build.origin.none') : row.name
+            }}</b>
+            <span class="build-section__detail">{{
+              t('sheet.build.origin.' + row.detail.key, row.detail.params)
+            }}</span>
+          </span>
+          @if (row.lock; as lock) {
+            <app-build-lock [lock]="lock" />
+          }
+        </li>
+      }
+    </ul>
+  </hk-leaf>
+</ng-container>

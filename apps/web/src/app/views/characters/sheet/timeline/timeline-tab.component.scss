@@ -1,17 +1,23 @@
+@use 'utilities' as u;
+
 :host {
   display: block;
 }
 
-.timeline-tab {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.timeline-tab__hint {
+  margin: 0 0 var(--space-2);
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-style: italic;
 }
 
 .timeline-tab__filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-block-end: var(--space-3);
 }
 
 .timeline-tab__empty {
@@ -19,28 +25,64 @@
   margin: 0;
 }
 
+.timeline-tab__group + .timeline-tab__group {
+  margin-block-start: var(--space-3);
+}
+
+.timeline-tab__day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  padding-block-end: var(--space-1);
+  border-block-end: 1px solid var(--leaf-edge);
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 400;
+}
+
 .timeline-tab__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.timeline-tab__card {
-  display: block;
+.timeline-tab__row {
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--leaf-edge);
+
+  &:last-child {
+    border-block-end: 0;
+  }
 }
 
 .timeline-tab__row-main {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: start;
   gap: var(--space-2);
 }
 
+.timeline-tab__kind {
+  display: inline-flex;
+  padding-block-start: 2px;
+  color: var(--accent-strong);
+  font-size: 1.25rem;
+}
+
+.timeline-tab__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
 .timeline-tab__sentence {
-  flex: 1 1 auto;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .timeline-tab__row--reverted .timeline-tab__sentence {
@@ -49,38 +91,66 @@
 }
 
 /* doc-02 L111: override.applied "rendered distinctly" — a left accent bar on the whole row, in
-   addition to the badge below, so a skimmed timeline still surfaces manual overrides visually. */
-.timeline-tab__row--override .timeline-tab__card {
+   addition to the badge, so a skimmed timeline still surfaces manual overrides visually. */
+.timeline-tab__row--override {
   border-inline-start: 3px solid var(--accent);
+  padding-inline-start: var(--space-2);
 }
 
-.timeline-tab__badge {
-  flex: 0 0 auto;
+.timeline-tab__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+
+  &:empty {
+    display: none;
+  }
+}
+
+.timeline-tab__count {
   color: var(--text-2);
-  font-size: 0.85em;
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  padding: 0 var(--space-1);
+  font-size: 0.875rem;
 }
 
-.timeline-tab__badge--override {
-  color: var(--accent);
-  border-color: var(--accent);
+.timeline-tab__time {
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  padding-block-start: 2px;
 }
 
 .timeline-tab__row-actions {
-  flex: 0 0 auto;
   display: flex;
+  align-items: center;
   gap: var(--space-1);
 }
 
 .timeline-tab__expand {
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
+  @include u.touch-target;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  min-inline-size: 28px;
+  min-block-size: 28px;
+  border: 1px solid var(--leaf-edge);
+  border-radius: 999px;
+  background: var(--leaf-sunken);
   color: var(--text-1);
-  min-width: 1.75rem;
-  min-height: 1.75rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    inline-size: var(--touch-target);
+    block-size: var(--touch-target);
+  }
 }
 
 .timeline-tab__rolls {
@@ -88,6 +158,7 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-1);
+  margin-inline-start: calc(1.25rem + var(--space-2));
 }
 
 .timeline-tab__roll-group {
@@ -101,7 +172,7 @@
   justify-content: center;
   min-width: 1.5rem;
   min-height: 1.5rem;
-  border: 1px solid var(--border-1);
+  border: 1px solid var(--leaf-edge);
   border-radius: var(--radius-s);
   padding: 0 var(--space-1);
 }
@@ -113,9 +184,9 @@
 
 .timeline-tab__members {
   list-style: none;
-  margin: var(--space-1) 0 0;
+  margin: var(--space-1) 0 0 calc(1.25rem + var(--space-2));
   padding: var(--space-1) 0 0 var(--space-2);
-  border-top: 1px solid var(--border-1);
+  border-top: 1px solid var(--leaf-edge);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -123,4 +194,20 @@
 
 .timeline-tab__member {
   color: var(--text-2);
+}
+
+@media (max-width: 767.98px) {
+  .timeline-tab__row-main {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .timeline-tab__time {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .timeline-tab__row-actions {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
 }

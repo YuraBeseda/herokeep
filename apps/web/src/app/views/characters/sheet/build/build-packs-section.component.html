@@ -1,41 +1,53 @@
 <ng-container *transloco="let t; read: 'characters'">
-  <hk-sheet-section [titleKey]="'characters.sheet.build.packs.title'" class="build-packs">
+  <hk-leaf [title]="t('sheet.build.packs.title')" [icon]="'ui:packs'" class="build-packs">
     <p class="build-packs__intro">{{ t('sheet.build.packs.intro') }}</p>
     <ul class="build-packs__list">
       @for (row of rows(); track row.id) {
         <li class="build-packs__row" [attr.data-pack-id]="row.id">
-          <label class="build-packs__label">
-            <input
-              type="checkbox"
+          <div class="build-packs__line">
+            <hk-toggle
+              #tg
               class="build-packs__toggle"
-              [checked]="row.enabled"
+              [label]="row.name"
+              [description]="row.core ? t('sheet.build.packs.core-reason') : null"
+              [value]="row.enabled"
               [disabled]="row.core || disabled() || busy()"
-              [attr.aria-describedby]="row.core ? coreReasonId : null"
-              (change)="onToggle(row, $event, t)"
+              (click)="onToggle(row, tg, t)"
             />
-            <span class="build-packs__name">{{ row.name }}</span>
             <span class="build-packs__version">{{
               t('sheet.build.packs.version', { version: row.version })
             }}</span>
-          </label>
-          @if (row.core) {
-            <p class="build-packs__note" [id]="coreReasonId">
-              {{ t('sheet.build.packs.core-reason') }}
-            </p>
-          } @else if (!row.installed) {
-            <p class="build-packs__note build-packs__note--missing">
-              {{ t('sheet.build.packs.not-installed') }}
-            </p>
-          } @else if (row.pinnedVersion) {
-            <p class="build-packs__note">
-              {{ t('sheet.build.packs.pinned-other', { version: row.pinnedVersion }) }}
-            </p>
-          }
+            @if (row.core) {
+              <hk-tag-chip [label]="t('sheet.build.packs.coreTag')" />
+            }
+            @if (!row.installed) {
+              <hk-tag-chip
+                class="build-packs__note build-packs__note--missing"
+                [tone]="'warning'"
+                [label]="t('sheet.build.packs.not-installed')"
+                [hint]="t('sheet.build.packs.notInstalledHint')"
+              />
+              <a class="build-packs__manage" routerLink="/packs">{{
+                t('sheet.build.packs.manage')
+              }}</a>
+            } @else if (row.pinnedVersion) {
+              <hk-tag-chip
+                class="build-packs__note"
+                [tone]="'warning'"
+                [label]="t('sheet.build.packs.pinned-other', { version: row.pinnedVersion })"
+              />
+            }
+          </div>
           @if (row.update; as update) {
             <div class="build-packs__update-row">
-              <span class="build-packs__update-badge">{{
-                t('sheet.build.packs.update-available', { from: update.from, to: update.to })
-              }}</span>
+              <hk-tag-chip
+                class="build-packs__update-badge"
+                [tone]="'warning'"
+                [icon]="'ui:level-up'"
+                [label]="
+                  t('sheet.build.packs.update-available', { from: update.from, to: update.to })
+                "
+              />
               <button
                 hk-button
                 [variant]="'ghost'"
@@ -73,5 +85,5 @@
         </ul>
       </div>
     }
-  </hk-sheet-section>
+  </hk-leaf>
 </ng-container>

@@ -2,32 +2,42 @@ import { Injectable } from '@angular/core';
 
 export interface Monogram {
   readonly initials: string;
-  readonly hue: number;
-  /** The exact `hsl(...)` string every caller binds via `[style.background]` — see this file's
-   * class doc's "CENTRALIZED FORMULA" note (fix-round 1, finding 4). */
+  /** The palette token the character's colour is (`damage-fire`, ...); never a computed colour. */
+  readonly token: string;
+  /** `var(--<token>)`: the value every caller binds via `[style.background]`. */
   readonly background: string;
-}
-
-/** `45% 30%` (saturation/lightness) — the ONE place this formula is written. Fix-round 1, finding
- * 4: three callers (`sheet-shell`/`build-tab`/`characters-list` components) had each hand-rolled
- * `` `hsl(${hue} 45% 40%)` `` themselves, and this file's own doc comment disagreed with them
- * (`45% 45%`) — a duplication that had already drifted once and could silently drift again.
- * `monogram()` now computes `background` itself so no caller ever touches this string.
- *
- * task-12 fix round (axe `color-contrast`, serious): lightness was `40%` — against the
- * placeholder's fixed near-white text (`#f7f5f3`), that fails WCAG AA's 4.5:1 for 167 of 360 hues
- * (46.4%, the contiguous ~32°-198° band spanning orange through teal/blue), some as low as
- * ~2.95:1, since every hue shares this ONE lightness regardless of how light or dark it already
- * reads. `30%` was verified by brute-force checking EVERY hue at `s=45%` against `#f7f5f3`: the
- * worst case across the full 360° range is 4.85:1, safely above 4.5:1 for every possible
- * character id, not just the ones this file's own tests happen to cover. */
-function backgroundOf(hue: number): string {
-  return `hsl(${hue} 45% 30%)`;
+  /** `var(--text-on-leather)`: the monogram ink, AA against every palette colour on every theme. */
+  readonly ink: string;
 }
 
 /**
- * doc-07 "Placeholders": "portraits fall back to a monogram token with a deterministic hue from
- * the character id." SVG-free by design (doc-07's own "Safety": SVG uploads are rejected as a
+ * The FIXED token set a placeholder portrait colour is drawn from (plan 17 R46). The colour used
+ * to be `hsl(<hue from the random id> 45% 30%)` under the theme's cream ink, and some ids landed
+ * at 4.47:1 (an axe `color-contrast` flake on the Build tab). These thirteen `damage-*` tokens
+ * measure at least 5.5:1 against `--text-on-leather` on tavern, scroll and plain; the spec checks
+ * every entry against the token source, so a palette edit cannot reintroduce a failing pair.
+ */
+export const PLACEHOLDER_PALETTE: readonly string[] = [
+  'damage-acid',
+  'damage-bludgeoning',
+  'damage-cold',
+  'damage-fire',
+  'damage-force',
+  'damage-lightning',
+  'damage-necrotic',
+  'damage-piercing',
+  'damage-poison',
+  'damage-psychic',
+  'damage-radiant',
+  'damage-slashing',
+  'damage-thunder',
+];
+
+const MONOGRAM_INK = 'var(--text-on-leather)';
+
+/**
+ * doc-07 "Placeholders": "portraits fall back to a monogram token with a deterministic colour from
+ * the character id" (a palette token, see `PLACEHOLDER_PALETTE`). SVG-free by design (doc-07's own "Safety": SVG uploads are rejected as a
  * script-injection risk, and this service never accepts user content at all) — a caller renders
  * the returned `{initials, background}` as a plain styled `<div>` (e.g.
  * `[style.background]="monogram.background"`), never through `[innerHTML]` or an `<svg>`.
@@ -35,8 +45,13 @@ function backgroundOf(hue: number): string {
 @Injectable({ providedIn: 'root' })
 export class PlaceholderService {
   monogram(name: string, characterId: string): Monogram {
-    const hue = hueOf(characterId);
-    return { initials: initialsOf(name), hue, background: backgroundOf(hue) };
+    const token = PLACEHOLDER_PALETTE[hashOf(characterId) % PLACEHOLDER_PALETTE.length];
+    return {
+      initials: initialsOf(name),
+      token,
+      background: `var(--${token})`,
+      ink: MONOGRAM_INK,
+    };
   }
 }
 
@@ -53,16 +68,13 @@ function initialsOf(name: string): string {
     .join('');
 }
 
-/** A simple (non-cryptographic — determinism is all that's asked for, not collision-resistance)
- * string hash, folded into `[0, 360)` for a CSS `hsl()` hue degree. `| 0` after each step keeps
- * the running total a 32-bit signed int (matching normal JS bitwise-op semantics) so this can
- * never silently drift into a float or overflow `Number.MAX_SAFE_INTEGER` on a long id; the final
- * double-mod (`((hash % 360) + 360) % 360`) turns a possibly-negative 32-bit result into the
- * non-negative degree every CSS `hsl()` caller expects. */
-function hueOf(id: string): number {
+/** A simple (non-cryptographic: determinism is all that is asked for) string hash, kept a
+ * non-negative 32-bit integer so `% palette length` is a valid index. `| 0` after each step keeps
+ * the running total a 32-bit signed int, and the final `>>> 0` makes it unsigned. */
+function hashOf(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (Math.imul(hash, 31) + id.charCodeAt(i)) | 0;
   }
-  return ((hash % 360) + 360) % 360;
+  return hash >>> 0;
 }

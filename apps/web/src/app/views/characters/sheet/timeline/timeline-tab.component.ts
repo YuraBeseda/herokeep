@@ -2,13 +2,20 @@ import { Component, computed, inject, signal } from '@angular/core';
 import type { RollResult } from '@hk/engine';
 import type { Event } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { CardComponent } from '@shared/components/card/card.component';
-import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
+import { DialogService } from '@app/ui/dialog/dialog.service';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { IconComponent } from '../../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
+import type { FilterChipOption } from '../../../../ui/filter-chips/filter-chip.component';
+import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
+import { HkToggleComponent } from '../../../../ui/toggle/toggle.component';
+import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
+import { TimelineRevertConfirmComponent } from '../play/revert-dialog.component';
 import {
   eventFamily,
   EventSentencePipe,
@@ -28,55 +35,22 @@ interface TimelineRow {
   readonly txId?: string;
 }
 
-/** Same-content-provider pattern as `characters-list.component.ts`'s own
- * `CharactersDeleteConfirmComponent`: `DialogService.open()` attaches this under a NEW injector
- * rooted at the app's root, not `TimelineTabComponent`'s own `provideTranslocoScope('characters')`
- * — it reads the global (unscoped) `*transloco` lookup instead, safe because the `characters`
- * scope is already loaded by the time this dialog can open (its only caller loaded it first). */
-@Component({
-  selector: 'app-timeline-revert-confirm',
-  imports: [TranslocoDirective, ButtonComponent],
-  template: `
-    <ng-container *transloco="let t">
-      <h2 class="timeline-revert-confirm__title" data-dialog-title>
-        {{ t('characters.timeline.revertConfirm.title') }}
-      </h2>
-      <p class="timeline-revert-confirm__body">{{ t('characters.timeline.revertConfirm.body') }}</p>
-      <div class="timeline-revert-confirm__actions">
-        <button
-          hk-button
-          [variant]="'ghost'"
-          type="button"
-          class="timeline-revert-confirm__cancel"
-          (click)="cancel()"
-        >
-          {{ t('characters.timeline.revertConfirm.cancel') }}
-        </button>
-        <button
-          hk-button
-          [variant]="'danger'"
-          type="button"
-          class="timeline-revert-confirm__confirm"
-          (click)="confirm()"
-        >
-          {{ t('characters.timeline.revertConfirm.confirm') }}
-        </button>
-      </div>
-    </ng-container>
-  `,
-})
-export class TimelineRevertConfirmComponent {
-  protected readonly data = inject<{ count: number }>(DIALOG_DATA);
-  private readonly dialogRef = inject(DialogRef);
-
-  protected confirm(): void {
-    this.dialogRef.close(true);
-  }
-
-  protected cancel(): void {
-    this.dialogRef.close(false);
-  }
+/** The rows of one calendar day (local time), newest day first. */
+interface TimelineDay {
+  readonly key: string;
+  readonly date: Date;
+  readonly rows: TimelineRow[];
 }
+
+/** Family -> the glyph that marks a row's kind (a hint and an accessible name come with it). */
+const FAMILY_ICONS: Readonly<Record<TimelineFamily, string>> = {
+  identity: 'ui:edit',
+  decisions: 'ui:build',
+  leveling: 'ui:level-up',
+  combat: 'ui:attacks',
+  items: 'ui:bag',
+  other: 'ui:timeline',
+};
 
 /** Groups the chronological (ascending-seq) `events` into `TimelineRow`s: consecutive events
  * sharing the same defined `txId` collapse into one row (task-12-brief.md — "consecutive events
@@ -98,11 +72,14 @@ function groupEvents(events: readonly Event[]): TimelineRow[] {
   return rows;
 }
 
+const dayKey = (date: Date): string =>
+  `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
 /**
- * `/c/:id/timeline` — the sheet's Timeline mode (plan-5 task-12-brief.md): the full event log as
- * localized sentences (`EventSentencePipe`), newest-first, tx-groups collapsed into one card,
- * filterable by family, with a per-row/per-group revert affordance behind a confirm dialog.
- * Replaces T10's heading-only stub.
+ * `/c/:id/timeline` — the sheet's Timeline mode (board `T01`): the full event log as localized
+ * sentences (`EventSentencePipe`), newest-first under a header per day, tx-groups collapsed into a
+ * row with a labelled expander, filterable by family (no chip on = everything), reverted rows
+ * hideable, and a per-row/per-group Revert behind the DL05 confirm dialog.
  *
  * No `hk-virtual-list`: its fixed-`itemSize` strategy (that component's own SKILL.md: "every row
  * is assumed the same height") can't accommodate a tx-group's expand/collapse OR a
@@ -112,8 +89,18 @@ function groupEvents(events: readonly Event[]): TimelineRow[] {
  */
 @Component({
   selector: 'app-timeline-tab',
-  imports: [TranslocoDirective, CardComponent, ChipComponent, ButtonComponent, EventSentencePipe],
-  providers: [provideTranslocoScope('characters')],
+  imports: [
+    TranslocoDirective,
+    HkLeafComponent,
+    HkFilterChipsComponent,
+    HkToggleComponent,
+    HkTagChipComponent,
+    HkButtonComponent,
+    HkTooltipDirective,
+    IconComponent,
+    EventSentencePipe,
+  ],
+  providers: [provideTranslocoScope('characters'), EventSentencePipe],
   templateUrl: './timeline-tab.component.html',
   styleUrl: './timeline-tab.component.scss',
 })
@@ -122,6 +109,8 @@ export class TimelineTabComponent {
   private readonly engineFacade = inject(EngineFacade);
   private readonly dialogService = inject(DialogService);
   private readonly packStore = inject(PackStore);
+  private readonly localeService = inject(LocaleService);
+  private readonly sentencePipe = inject(EventSentencePipe);
 
   protected readonly index = this.engineFacade.index;
   protected readonly localizer = this.engineFacade.localizer;
@@ -131,7 +120,6 @@ export class TimelineTabComponent {
   protected readonly sheet = this.characterStore.sheet;
   // Plan 15 Task 5: names a pack pin event's pack once the character no longer pins it.
   protected readonly installedPacks = this.packStore.packs;
-  protected readonly families = TIMELINE_FAMILIES;
 
   // task-14: the character's CURRENT grammatical gender, threaded into `EventSentencePipe` so a
   // sentence with no gender field of its own (`level.gained`, `stabilized`, …) can still ICU
@@ -145,21 +133,58 @@ export class TimelineTabComponent {
     groupEvents(this.characterStore.events()).reverse(),
   );
 
-  // All families active by default — chips narrow the view down, they never start it filtered.
-  protected readonly activeFamilies = signal<ReadonlySet<TimelineFamily>>(
-    new Set(TIMELINE_FAMILIES),
-  );
+  // Filter chips (board T01): the chips that are ON narrow the list to their families; with none
+  // on, every family shows. `hk-filter-chips` owns the on/off state of each chip.
+  protected readonly selectedFamilies = signal<readonly string[]>([]);
+  protected readonly showReverted = signal(true);
   protected readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
 
+  // The chips' options, memoized on their labels so `hk-filter-chips` does not see a new array on
+  // every change-detection pass.
+  private optionsMemo: readonly FilterChipOption[] = [];
+  protected familyOptions(t: (key: string) => string): readonly FilterChipOption[] {
+    const next = TIMELINE_FAMILIES.map((family) => ({
+      id: family,
+      label: t(this.familyLabelKey(family)),
+      icon: FAMILY_ICONS[family],
+    }));
+    const same =
+      next.length === this.optionsMemo.length &&
+      next.every((option, i) => option.label === this.optionsMemo[i]?.label);
+    return same ? this.optionsMemo : (this.optionsMemo = next);
+  }
+
   protected readonly visibleRows = computed<TimelineRow[]>(() => {
-    const active = this.activeFamilies();
-    return this.rows().filter((row) => active.has(eventFamily(row.leadType)));
+    const picked = this.selectedFamilies();
+    const showReverted = this.showReverted();
+    return this.rows().filter(
+      (row) =>
+        (picked.length === 0 || picked.includes(eventFamily(row.leadType))) &&
+        (showReverted || !this.isReverted(row)),
+    );
+  });
+
+  /** The visible rows under one header per local calendar day, newest day first. */
+  protected readonly days = computed<TimelineDay[]>(() => {
+    const days: TimelineDay[] = [];
+    for (const row of this.visibleRows()) {
+      const date = new Date(row.events[0].ts);
+      const key = dayKey(date);
+      const open = days.at(-1);
+      if (open?.key === key) open.rows.push(row);
+      else days.push({ key, date, rows: [row] });
+    }
+    return days;
   });
 
   // Methods
 
   protected familyOf(row: TimelineRow): TimelineFamily {
     return eventFamily(row.leadType);
+  }
+
+  protected iconOf(row: TimelineRow): string {
+    return FAMILY_ICONS[this.familyOf(row)];
   }
 
   // Scope-relative key for a family chip's label, built via a plain function call rather than
@@ -169,17 +194,24 @@ export class TimelineTabComponent {
     return `timeline.family.${family}`;
   }
 
-  protected isFamilyActive(family: TimelineFamily): boolean {
-    return this.activeFamilies().has(family);
+  protected isToday(date: Date): boolean {
+    return dayKey(date) === dayKey(new Date());
   }
 
-  protected toggleFamily(family: TimelineFamily): void {
-    this.activeFamilies.update((current) => {
-      const next = new Set(current);
-      if (next.has(family)) next.delete(family);
-      else next.add(family);
-      return next;
-    });
+  protected dayLabel(date: Date): string {
+    return new Intl.DateTimeFormat(this.localeService.locale(), {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  }
+
+  protected timeLabel(row: TimelineRow): string {
+    return new Intl.DateTimeFormat(this.localeService.locale(), {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(row.events[0].ts));
   }
 
   protected isExpanded(row: TimelineRow): boolean {
@@ -223,6 +255,11 @@ export class TimelineTabComponent {
     );
   }
 
+  /** The creation row shows a lock chip (with the reason as its hint) where Revert would be. */
+  protected isCreation(row: TimelineRow): boolean {
+    return row.leadType === 'character.created';
+  }
+
   // doc-02 L111: "`override.applied` ... rendered distinctly" — a DM-applied (or solo self-
   // applied, `EVENT_ACTORS['override.applied'] = ['dm','owner']`) manual override changes a Sheet
   // value OUTSIDE the ordinary rule-driven event vocabulary, so the timeline flags it visually
@@ -247,9 +284,26 @@ export class TimelineTabComponent {
     return Array.isArray(rolls) && rolls.length > 0 ? (rolls as RollResult[]) : undefined;
   }
 
+  /** The row's own sentence, without the group suffix (for the revert confirm and its label). */
+  protected sentenceOf(row: TimelineRow): string {
+    return this.sentencePipe.transform(
+      row.events[0],
+      this.index(),
+      this.localizer(),
+      1,
+      this.grammaticalGender(),
+      this.sheet(),
+      this.installedPacks(),
+    );
+  }
+
   protected async onRevert(row: TimelineRow): Promise<void> {
     const handle = this.dialogService.open(TimelineRevertConfirmComponent, {
-      data: { count: row.events.length },
+      data: {
+        name: this.sheet()?.name ?? '',
+        sentence: this.sentenceOf(row),
+        related: row.events.length - 1,
+      },
     });
     const confirmed = await handle.closed;
     if (confirmed !== true) return;

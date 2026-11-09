@@ -218,10 +218,11 @@ test.describe('custom content packs', () => {
     await test.step('pin the homebrew pack on the Build tab; its item appears in the add-item picker', async () => {
       await page.goto(`/c/${characterId}/build`);
       const row = page.locator('.build-packs__row', { hasText: HOMEBREW_PACK_NAME });
-      const toggle = row.locator('.build-packs__toggle');
+      // Each pack is a switch (`hk-toggle`, `role="switch"`) named by the pack.
+      const toggle = row.getByRole('switch');
       await expect(toggle).not.toBeChecked();
-      // `click`, not `check`: the section resets the box to the model value on `change` and the
-      // pin lands asynchronously (one `appendTx`), so the checked state follows a tick later.
+      // The section holds the switch at the model value until the pin lands (one `appendTx`), so
+      // the checked state follows a tick later.
       await toggle.click();
       await expect(toggle).toBeChecked();
       await openTab(page, 'Play');

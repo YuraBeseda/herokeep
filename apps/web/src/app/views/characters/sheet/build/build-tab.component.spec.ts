@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type CampaignSettings, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -25,6 +26,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
+import { hintOf } from '@app/ui/testing/harness';
 import { ChoiceStepComponent } from '../../create-wizard/steps/choice-step.component';
 import { seedFighter } from '../testing/character-fixtures';
 import { BuildTabComponent } from './build-tab.component';
@@ -121,6 +123,7 @@ function configureReal(): {
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
+      provideRouter([]),
       {
         provide: PackStore,
         useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
@@ -198,7 +201,7 @@ describe('BuildTabComponent', () => {
     expect(compiled.querySelector('.build-tab__empty')).not.toBeNull();
   });
 
-  it('the rename form round-trips a new name into the sheet', async () => {
+  it('the identity form round-trips a new name into the sheet (one Save)', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
 
@@ -206,14 +209,13 @@ describe('BuildTabComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const input = compiled.querySelector<HTMLInputElement>('.build-tab__rename-input')!;
+    const input = compiled.querySelector<HTMLInputElement>('[data-field="name"] input')!;
     expect(input.value).toBe('Ivan');
     input.value = 'Ivanka';
     input.dispatchEvent(new Event('input'));
     await fixture.whenStable();
 
-    const form = compiled.querySelector<HTMLFormElement>('.build-tab__rename-form')!;
-    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    compiled.querySelector<HTMLButtonElement>('.build-identity__save')!.click();
     await pollUntil(fixture, () => characterStore.sheet()?.name === 'Ivanka');
 
     expect(input.value).toBe('Ivanka');
@@ -272,7 +274,7 @@ describe('BuildTabComponent', () => {
     expect(characterStore.events().length).toBe(before + 1);
   });
 
-  it('the appearance form only includes dirty fields in its committed payload', async () => {
+  it('Save only includes the dirty appearance fields in its committed payload', async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     // Seed an existing 'height' value BEFORE the tab ever mounts, so the form must render it
@@ -286,16 +288,15 @@ describe('BuildTabComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const heightInput = compiled.querySelector<HTMLInputElement>('[data-field="height"]')!;
+    const heightInput = compiled.querySelector<HTMLInputElement>('[data-field="height"] input')!;
     expect(heightInput.value).toBe('6\'0"');
 
-    const ageInput = compiled.querySelector<HTMLInputElement>('[data-field="age"]')!;
+    const ageInput = compiled.querySelector<HTMLInputElement>('[data-field="age"] input')!;
     ageInput.value = '27';
     ageInput.dispatchEvent(new Event('input'));
     await fixture.whenStable();
 
-    const form = compiled.querySelector<HTMLFormElement>('.build-tab__appearance-form')!;
-    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    compiled.querySelector<HTMLButtonElement>('.build-identity__save')!.click();
     await pollUntil(fixture, () => characterStore.facts()?.appearance['age'] === '27');
 
     const lastEvent = characterStore.events().at(-1)!;
@@ -531,6 +532,8 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
           loader: StubLoader,
         }),
         provideTranslocoMessageformat(),
+        provideRouter([]),
+        provideRouter([]),
         {
           provide: PackStore,
           useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
@@ -613,9 +616,11 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelector('.campaign-edit-lock-banner')).toBeNull();
+    expect(compiled.querySelector<HTMLInputElement>('[data-field="name"] input')!.disabled).toBe(
+      false,
+    );
     expect(
-      compiled.querySelector<HTMLButtonElement>('.build-tab__rename-form button[type=submit]')!
-        .disabled,
+      compiled.querySelector<HTMLButtonElement>('.build-identity__gender [role=radio]')!.disabled,
     ).toBe(false);
   });
 
@@ -631,20 +636,17 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
     expect(banner?.getAttribute('role')).toBe('status');
     expect(banner?.textContent?.trim()).toBe(campaignsEn.edit.locked);
 
-    // Rename (typing a valid name first, so this isn't ALSO blocked by !nameValid())
-    const nameInput = compiled.querySelector<HTMLInputElement>('.build-tab__rename-input')!;
-    nameInput.value = 'Ivan the Bold';
-    nameInput.dispatchEvent(new Event('input'));
-    await fixture.whenStable();
+    // Name and appearance fields, and the one Save, are blocked.
+    const nameInput = compiled.querySelector<HTMLInputElement>('[data-field="name"] input')!;
+    expect(nameInput.disabled).toBe(true);
+    expect(compiled.querySelector<HTMLInputElement>('[data-field="age"] input')!.disabled).toBe(
+      true,
+    );
     expect(
-      compiled.querySelector<HTMLButtonElement>('.build-tab__rename-form button[type=submit]')!
-        .disabled,
-    ).toBe(true);
-
-    // Appearance
-    expect(
-      compiled.querySelector<HTMLButtonElement>('.build-tab__appearance-form button[type=submit]')!
-        .disabled,
+      compiled
+        .querySelector<HTMLButtonElement>('.build-identity__save')!
+        .getAttribute('aria-disabled') === 'true' ||
+        compiled.querySelector<HTMLButtonElement>('.build-identity__save')!.disabled,
     ).toBe(true);
 
     // Portrait
@@ -652,10 +654,12 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
       true,
     );
 
-    // Gender
-    expect(
-      compiled.querySelector<HTMLFieldSetElement>('.build-tab__gender-fieldset')!.disabled,
-    ).toBe(true);
+    // Gender chips
+    for (const chip of compiled.querySelectorAll<HTMLButtonElement>(
+      '.build-identity__gender [role=radio]',
+    )) {
+      expect(chip.disabled).toBe(true);
+    }
 
     // Outstanding choice re-entry: the wrapping `<fieldset disabled>` still correctly blocks the
     // query/static/literal branches' real `<button>`s (per the HTML spec — a real browser DOES
@@ -779,5 +783,243 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
     const reason = compiled.querySelector(`#${reasonId}`);
     expect(reason?.classList.contains('build-tab__options-reason')).toBe(true);
     expect(reason?.textContent?.trim()).toBe(charactersEn.sheet.options.encumbrance.houseRule);
+  });
+});
+
+// --- B10b (plan 17, board B01): the Build tab shows the build -------------------------------------
+
+const DEFENSE = 'srd-5e-2024:feat/defense';
+const ARCHERY = 'srd-5e-2024:feat/archery';
+const FIGHTER = 'srd-5e-2024:class/fighter';
+const CHAMPION = 'srd-5e-2024:subclass/champion';
+
+function text(el: Element | null | undefined): string {
+  return (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+async function clearDb(): Promise<void> {
+  const db = TestBed.inject(HkDb);
+  await Promise.all([
+    db.events.clear(),
+    db.settings.clear(),
+    db.snapshots.clear(),
+    db.characters.clear(),
+    db.blobs.clear(),
+  ]);
+  URL.createObjectURL = vi.fn(() => 'blob:fake-portrait-url');
+  URL.revokeObjectURL = vi.fn();
+}
+
+function closeOverlays(): void {
+  document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+  TestBed.inject(HkDb).close();
+}
+
+describe('BuildTabComponent — the build is shown (board B01)', () => {
+  beforeEach(async () => {
+    configureReal();
+    await clearDb();
+  });
+
+  afterEach(closeOverlays);
+
+  async function mountFighter() {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    return { root: fixture.nativeElement as HTMLElement, fixture };
+  }
+
+  it('lists species, class with level, background, and a subclass slot that says when it is chosen', async () => {
+    const { root } = await mountFighter();
+
+    expect(text(root.querySelector('[data-origin="species"]'))).toContain('Human');
+    expect(text(root.querySelector('[data-origin="class"]'))).toContain('Fighter 1');
+    expect(text(root.querySelector('[data-origin="background"]'))).toContain('Soldier');
+    // A level-1 fighter has no subclass yet (it is chosen at level 3, class data).
+    const subclass = root.querySelector('[data-origin="subclass"]');
+    expect(text(subclass)).toContain('None yet');
+    expect(text(subclass)).toContain('3');
+  });
+
+  it('shows a chosen subclass with a lock whose reason is a hint, not inline text', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.appendTx([
+      { type: 'level.gained', v: 1, payload: { classId: FIGHTER, level: 2 } },
+      { type: 'level.gained', v: 1, payload: { classId: FIGHTER, level: 3, subclassId: CHAMPION } },
+    ]);
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const row = root.querySelector('[data-origin="subclass"]')!;
+    expect(text(row)).toContain('Champion');
+    expect(text(root.querySelector('[data-origin="class"]'))).toContain('Fighter 3');
+    const lock = row.querySelector<HTMLElement>('.build-tab__lock')!;
+    expect(lock).not.toBeNull();
+    expect(hintOf(lock)).toContain('level 3');
+    // The reason is not printed beside the row.
+    expect(text(row)).not.toContain('revert that level');
+  });
+
+  it('the ability table shows the method, base, the bonus tag with its source, final and modifier', async () => {
+    const { root } = await mountFighter();
+
+    expect(text(root.querySelector('.build-abilities__method'))).toContain('Standard array');
+    const str = root.querySelector('[data-ability="str"]')!;
+    expect(text(str.querySelector('.build-abilities__base'))).toBe('15');
+    expect(text(str.querySelector('.build-abilities__bonus'))).toContain('+2');
+    expect(text(str.querySelector('.build-abilities__final'))).toBe('17');
+    expect(text(str.querySelector('.build-abilities__mod'))).toBe('+3');
+    // The bonus tag names where it came from (hint): the Soldier background.
+    expect(hintOf(str.querySelector('.build-abilities__bonus hk-tag-chip')!)).toContain('Soldier');
+    // An ability with no bonus has an empty bonus cell and final = base.
+    const dex = root.querySelector('[data-ability="dex"]')!;
+    expect(text(dex.querySelector('.build-abilities__base'))).toBe('13');
+    expect(text(dex.querySelector('.build-abilities__final'))).toBe('13');
+    expect(dex.querySelector('.build-abilities__bonus hk-tag-chip')).toBeNull();
+  });
+
+  it('lists each choice made with its picks, level badge and a Re-pick button', async () => {
+    const { root } = await mountFighter();
+
+    const style = root.querySelector(`[data-choice-id="${FIGHTING_STYLE_CHOICE}"]`)!;
+    expect(text(style)).toContain('Defense');
+    expect(text(style.querySelector('.build-choices__level'))).toBe('lv 1');
+    expect(style.querySelector('.build-choices__repick')).not.toBeNull();
+
+    const masteries = root.querySelector(
+      '[data-choice-id="srd-5e-2024:class/fighter@1/weapon-masteries"]',
+    )!;
+    expect(text(masteries)).toContain('Longsword');
+    expect(text(masteries)).toContain('Dagger');
+
+    // The class skill pick is a synthetic id and still reads as skill names.
+    const skills = root.querySelector('[data-choice-id="srd-5e-2024:class/fighter@1/skills"]')!;
+    expect(text(skills)).toContain('Athletics');
+    expect(text(skills)).toContain('Perception');
+  });
+
+  it('Re-pick opens the choice with its current picks; choosing Archery replaces the decision', async () => {
+    const { root, fixture } = await mountFighter();
+    const characterStore = TestBed.inject(CharacterStore);
+    const row = root.querySelector(`[data-choice-id="${FIGHTING_STYLE_CHOICE}"]`)!;
+
+    expect(row.querySelector('hk-choice-step')).toBeNull();
+    row.querySelector<HTMLButtonElement>('.build-choices__repick')!.click();
+    await fixture.whenStable();
+    expect(row.querySelector('hk-choice-step')).not.toBeNull();
+
+    const before = characterStore.events().length;
+    const chooseButtons = Array.from(
+      row.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+    );
+    const dueling = chooseButtons.find((b) =>
+      (b.closest('li, .hk-picker-card')?.textContent ?? '').includes('Archery'),
+    );
+    expect(dueling).toBeTruthy();
+    dueling!.click();
+    await pollUntil(
+      fixture,
+      () => characterStore.facts()?.decisions[FIGHTING_STYLE_CHOICE]?.[0] === ARCHERY,
+    );
+
+    const added = characterStore.events().slice(before);
+    expect(added.map((e) => e.type)).toEqual(['decision.made']);
+    expect(added[0]?.payload).toMatchObject({
+      choiceId: FIGHTING_STYLE_CHOICE,
+      selection: [ARCHERY],
+    });
+    expect(DEFENSE).not.toBe(ARCHERY);
+
+    // Done closes the editor.
+    row.querySelector<HTMLButtonElement>('.build-choices__done')!.click();
+    await fixture.whenStable();
+    expect(row.querySelector('hk-choice-step')).toBeNull();
+  });
+
+  it('the proficiency groups and languages are listed', async () => {
+    const { root } = await mountFighter();
+
+    expect(text(root.querySelector('[data-prof="armor"]'))).toContain('heavy');
+    expect(text(root.querySelector('[data-prof="weapons"]'))).toContain('martial');
+    expect(text(root.querySelector('[data-prof="saves"]'))).toContain('Strength');
+    expect(text(root.querySelector('[data-prof="skills"]'))).toContain('Athletics');
+    expect(text(root.querySelector('[data-prof="languages"]'))).toContain('Common');
+  });
+});
+
+describe('BuildTabComponent — identity: one Save, an unsaved-changes chip (board B01)', () => {
+  beforeEach(async () => {
+    configureReal();
+    await clearDb();
+  });
+
+  afterEach(closeOverlays);
+
+  function field(root: HTMLElement, name: string): HTMLInputElement {
+    return root.querySelector<HTMLInputElement>(
+      `[data-field="${name}"] input, [data-field="${name}"] textarea`,
+    )!;
+  }
+
+  it('name, appearance and gender edits share ONE Save and ONE chip, and commit as one transaction', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelectorAll('.build-identity__save').length).toBe(1);
+    expect(root.querySelector('.build-identity__unsaved')).toBeNull();
+
+    const name = field(root, 'name');
+    name.value = 'Ivanka';
+    name.dispatchEvent(new Event('input'));
+    const age = field(root, 'age');
+    age.value = '27';
+    age.dispatchEvent(new Event('input'));
+    const feminine = root.querySelector<HTMLButtonElement>(
+      '.build-identity__gender [data-gender="feminine"]',
+    )!;
+    expect(feminine.getAttribute('role')).toBe('radio');
+    feminine.click();
+    await fixture.whenStable();
+
+    expect(root.querySelectorAll('.build-identity__unsaved').length).toBe(1);
+    // Nothing is committed until Save.
+    expect(characterStore.sheet()?.name).toBe('Ivan');
+
+    const before = characterStore.events().length;
+    root.querySelector<HTMLButtonElement>('.build-identity__save')!.click();
+    await pollUntil(fixture, () => characterStore.sheet()?.name === 'Ivanka');
+
+    const added = characterStore.events().slice(before);
+    expect(added.map((e) => e.type).sort()).toEqual([
+      'character.appearance_set',
+      'character.gender_set',
+      'character.renamed',
+    ]);
+    // One transaction: the three events share a txId.
+    expect(new Set(added.map((e) => e.txId)).size).toBe(1);
+    expect(added[0]?.txId).toBeTruthy();
+    expect(characterStore.facts()?.appearance['age']).toBe('27');
+    expect(characterStore.sheet()?.grammaticalGender).toBe('feminine');
+    await fixture.whenStable();
+    expect(root.querySelector('.build-identity__unsaved')).toBeNull();
+  });
+
+  it('the appearance fields sit in a three-column grid', async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const grid = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.build-identity__grid',
+    )!;
+    const names = Array.from(grid.querySelectorAll('[data-field]')).map((e) =>
+      e.getAttribute('data-field'),
+    );
+    expect(names).toEqual(['age', 'height', 'weight', 'eyes', 'hair', 'skin']);
   });
 });

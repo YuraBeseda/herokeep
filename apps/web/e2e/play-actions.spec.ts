@@ -148,7 +148,7 @@ test.describe('play actions', () => {
       const restRow = page.locator('.timeline-tab__row[data-family="combat"]').first();
       await expect(restRow.locator('.timeline-tab__expand')).toBeVisible();
 
-      await restRow.getByRole('button', { name: 'Revert', exact: true }).click();
+      await restRow.getByRole('button', { name: /^Revert/ }).click();
       await expect(page.locator('.timeline-revert-confirm__title')).toBeVisible();
       await page.locator('.timeline-revert-confirm__confirm').click();
       await expect(restRow.locator('.timeline-tab__badge')).toHaveText('Reverted');

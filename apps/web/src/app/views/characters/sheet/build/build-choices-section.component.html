@@ -1,0 +1,76 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.build.choices.title')" [icon]="'ui:spells'">
+    <p class="build-section__hint">{{ t('sheet.build.choices.hint') }}</p>
+    @if (rows().length === 0) {
+      <p class="build-section__empty">{{ t('sheet.build.choices.empty') }}</p>
+    } @else {
+      <ul class="build-section__rows build-choices__rows">
+        @for (row of rows(); track row.choiceId) {
+          <li class="build-choices__row" [attr.data-choice-id]="row.choiceId">
+            <div class="build-choices__line">
+              <hk-tag-chip
+                class="build-choices__level"
+                [tone]="'dark'"
+                [label]="
+                  row.level === 'origin'
+                    ? t('sheet.build.choices.origin')
+                    : t('sheet.build.choices.level', { level: row.level })
+                "
+                [hint]="
+                  row.level === 'origin'
+                    ? t('sheet.build.choices.originHint')
+                    : t('sheet.build.choices.levelHint', { level: row.level })
+                "
+              />
+              <span class="build-section__main">
+                <span class="build-section__detail build-choices__prompt">{{ row.prompt }}</span>
+                <ul class="build-section__chips">
+                  @for (pick of row.picks; track $index) {
+                    <li><hk-tag-chip [label]="pick" /></li>
+                  }
+                </ul>
+              </span>
+              @if (row.lock; as lock) {
+                <app-build-lock [lock]="lock" />
+              } @else {
+                <button
+                  hk-button
+                  type="button"
+                  class="build-choices__repick"
+                  [variant]="'ghost'"
+                  [disabledReason]="disabled() ? disabledReason() : null"
+                  [attr.aria-expanded]="editing() === row.choiceId"
+                  [attr.aria-label]="t('sheet.build.choices.repickHint', { prompt: row.prompt })"
+                  (click)="toggle(row)"
+                >
+                  {{ t('sheet.build.choices.repick') }}
+                </button>
+              }
+            </div>
+            @if (editing() === row.choiceId && sheet(); as s) {
+              <div class="build-choices__editor">
+                <hk-choice-step
+                  [choiceId]="row.choiceId"
+                  [sheet]="s"
+                  [validate]="validate()"
+                  [commit]="commit()"
+                  [disabled]="disabled()"
+                  [initialSelection]="row.selection"
+                />
+                <button
+                  hk-button
+                  type="button"
+                  class="build-choices__done"
+                  [variant]="'primary'"
+                  (click)="toggle(row)"
+                >
+                  {{ t('sheet.build.choices.done') }}
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </hk-leaf>
+</ng-container>

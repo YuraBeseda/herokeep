@@ -1,0 +1,37 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.options.title')" [icon]="'ui:settings'">
+    <div class="build-options">
+      <div class="build-options__field">
+        <label for="build-tab-options-encumbrance">{{
+          t('sheet.options.encumbrance.label')
+        }}</label>
+        <select
+          id="build-tab-options-encumbrance"
+          class="build-options__select build-tab__options-encumbrance"
+          [disabled]="encumbranceHouseRule() !== undefined || disabled()"
+          [attr.aria-describedby]="
+            encumbranceHouseRule() !== undefined ? encumbranceReasonId : null
+          "
+          (change)="onEncumbranceChange($any($event.target).value)"
+        >
+          @for (option of encumbranceOptions; track option.value) {
+            <option [value]="option.value" [selected]="option.value === encumbranceValue()">
+              {{ t(option.labelKey) }}
+            </option>
+          }
+        </select>
+      </div>
+      @if (encumbranceHouseRule() !== undefined) {
+        <hk-tag-chip
+          class="build-options__lock"
+          [icon]="'ui:lock'"
+          [label]="t('sheet.options.campaignTag')"
+          [hint]="t('sheet.options.campaignHint')"
+        />
+        <span class="build-tab__options-reason visually-hidden" [id]="encumbranceReasonId">{{
+          t('sheet.options.encumbrance.houseRule')
+        }}</span>
+      }
+    </div>
+  </hk-leaf>
+</ng-container>
