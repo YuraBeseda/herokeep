@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { HkButtonComponent } from '../button/button.component';
 import { HkNumberFieldComponent } from '../number-field/number-field.component';
@@ -9,9 +9,11 @@ export interface CoinPurse {
   readonly gp: number;
   readonly sp: number;
   readonly cp: number;
+  /** Electrum is optional: supply it to let the player see (when non-zero) and edit it. */
+  readonly ep?: number;
 }
 
-const METALS = ['pp', 'gp', 'sp', 'cp'] as const;
+const METALS = ['pp', 'gp', 'ep', 'sp', 'cp'] as const;
 export type CoinMetal = (typeof METALS)[number];
 
 /** The disc colours of a metal: CSS custom properties of the design tokens. */
@@ -20,6 +22,8 @@ const DISC: Record<CoinMetal, { top: string; shade: string }> = {
   gp: { top: 'var(--coin-gold)', shade: 'var(--coin-gold-shade)' },
   sp: { top: 'var(--coin-silver)', shade: 'var(--coin-silver-shade)' },
   cp: { top: 'var(--coin-copper)', shade: 'var(--coin-copper-shade)' },
+  // Electrum is a gold-silver alloy: no token of its own, so it takes silver over the gold shade.
+  ep: { top: 'var(--coin-silver)', shade: 'var(--coin-gold-shade)' },
 };
 
 /** Ellipse centres of the six stacked discs, bottom to top. */
@@ -61,16 +65,25 @@ export class HkCoinPouchComponent {
   protected readonly draft = signal<Record<CoinMetal, number | null>>({
     pp: 0,
     gp: 0,
+    ep: 0,
     sp: 0,
     cp: 0,
   });
 
-  protected readonly metals = METALS;
+  /** The metals drawn: electrum only while the purse holds some. */
+  protected readonly shown = computed(() =>
+    METALS.filter((metal) => metal !== 'ep' || (this.coins().ep ?? 0) > 0),
+  );
+  /** The metals edited: electrum whenever the caller supplies it, even at zero (so it can be added). */
+  protected readonly editedMetals = computed(() =>
+    METALS.filter((metal) => metal !== 'ep' || this.coins().ep !== undefined),
+  );
+
   protected readonly disc = DISC;
   protected readonly rows = DISC_ROWS;
 
   protected startEdit(): void {
-    this.draft.set({ ...this.coins() });
+    this.draft.set({ ep: 0, ...this.coins() });
     this.editing.set(true);
     this.edit.emit();
   }
@@ -82,7 +95,13 @@ export class HkCoinPouchComponent {
   protected commit(): void {
     const d = this.draft();
     // An emptied field is zero coins.
-    this.save.emit({ pp: d.pp ?? 0, gp: d.gp ?? 0, sp: d.sp ?? 0, cp: d.cp ?? 0 });
+    this.save.emit({
+      pp: d.pp ?? 0,
+      gp: d.gp ?? 0,
+      ...(this.coins().ep !== undefined ? { ep: d.ep ?? 0 } : {}),
+      sp: d.sp ?? 0,
+      cp: d.cp ?? 0,
+    });
     this.editing.set(false);
   }
 

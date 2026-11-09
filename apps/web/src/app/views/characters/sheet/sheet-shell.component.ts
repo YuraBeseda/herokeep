@@ -13,15 +13,11 @@ import { PlaceholderService, type Monogram } from '@shared/services/images/place
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { combineLatest, filter, map, switchMap } from 'rxjs';
-import {
-  ActionStrapService,
-  type StrapAction,
-} from '../../../ui/action-strap/action-strap.service';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import { HkBannerComponent } from '../../../ui/banner/banner.component';
 import { HkButtonComponent } from '../../../ui/button/button.component';
 import { HkNumberFieldComponent } from '../../../ui/number-field/number-field.component';
 import { HkPortraitFrameComponent } from '../../../ui/portrait-frame/portrait-frame.component';
-import { phoneLayout } from '../../../ui/shell/viewport';
 import { TopBarService } from '../../../ui/shell/top-bar.service';
 import { TabBarService, type TabItem } from '../../../ui/tab-bar/tab-bar.service';
 import { HkXpBarComponent } from '../../../ui/xp-bar/xp-bar.component';
@@ -33,14 +29,14 @@ import { VitalsLeafComponent } from './play/vitals-leaf/vitals-leaf.component';
 import { WakeLockToggleComponent } from './play/wake-lock-toggle/wake-lock-toggle.component';
 import { CampaignPacksBannerComponent } from './campaign-packs-banner.component';
 import { SheetChromeService } from './sheet-chrome.service';
+import { PHONE_TAB_IDS, SheetLayoutService } from './sheet-layout';
+import { buildSheetStrap } from './sheet-strap';
 import { sheetNames } from './play/play-names';
 
 /** The folio's tabs (desktop/tablet); each is a child route of `/c/:id`. */
 const TAB_IDS = ['play', 'build', 'timeline'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
-/** The phone's play tabs: child routes at every width, shown as tabs only below 768 px. */
-export const PHONE_TAB_IDS = ['combat', 'spells', 'bag', 'hero', 'more'] as const;
 type PhoneTabId = (typeof PHONE_TAB_IDS)[number];
 
 /** Icons and (shell-scope) label keys of the phone's tab bar. */
@@ -127,7 +123,8 @@ export class SheetShellComponent {
   protected readonly missingPins = this.characterStore.missingPins;
 
   /** The one breakpoint signal (`ui/shell/viewport`): phone below 768 px. */
-  protected readonly phone = phoneLayout();
+  private readonly layout = inject(SheetLayoutService);
+  protected readonly phone = this.layout.phone;
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
@@ -154,9 +151,8 @@ export class SheetShellComponent {
   protected readonly layoutOk = computed(() => {
     const segment = this.childSegment();
     if (!SHEET_CHILDREN.has(segment)) return true; // level-up and the like
-    return this.phone()
-      ? segment !== 'play'
-      : !(PHONE_TAB_IDS as readonly string[]).includes(segment);
+    this.phone();
+    return this.layout.resolve(segment) === segment;
   });
 
   // --- Portrait (plan-6 Task 8) ---------------------------------------------------------------
@@ -341,6 +337,7 @@ export class SheetShellComponent {
     const sheet = this.sheet();
     const segment = this.childSegment();
     const locked = this.actions.editLocked();
+    const exporting = this.chrome.exporting();
     const status = this.statusText();
     this.translationsReady();
     if (!sheet) return;
@@ -351,88 +348,23 @@ export class SheetShellComponent {
       });
       return;
     }
-    const reason = locked ? 'characters.sheet.editLocked' : undefined;
     untracked(() => {
-      const mutating = (action: StrapAction): StrapAction =>
-        locked ? { ...action, disabled: true, disabledReason: reason } : action;
-      this.strap.set({
-        primary: [
-          mutating({
-            id: 'damage',
-            label: 'shell.icon.damage',
-            icon: 'damage',
-            kind: 'ember',
-            run: () => this.focusHpAmount(),
-          }),
-          mutating({
-            id: 'heal',
-            label: 'shell.icon.heal',
-            icon: 'heal',
-            kind: 'primary',
-            run: () => this.focusHpAmount(),
-          }),
+      this.strap.set(
+        buildSheetStrap(
+          { locked, exporting, status, scope: ['/c', this.routeId] },
           {
-            id: 'roll',
-            label: 'shell.icon.roll',
-            icon: 'roll',
-            kind: 'primary',
-            run: () => this.rollPlain(),
+            focusHpAmount: () => this.focusHpAmount(),
+            rollPlain: () => this.rollPlain(),
+            shortRest: () => void this.actions.shortRest(this.names.hitDiceOptions(this.sheet())),
+            longRest: () => void this.actions.longRest(),
+            addCondition: () => void this.actions.addCondition(this.names.conditionOptions()),
+            openNotes: () => this.chrome.openNotes(),
+            openRollLog: () => this.chrome.openRollLog(),
+            exportHero: () => void this.chrome.exportHero(this.scopedT),
+            edit: () => void this.router.navigate(['build'], { relativeTo: this.route }),
           },
-          mutating({
-            id: 'short-rest',
-            label: 'shell.icon.short-rest',
-            icon: 'short-rest',
-            kind: 'ghost',
-            run: () => void this.actions.shortRest(this.names.hitDiceOptions(this.sheet())),
-          }),
-          mutating({
-            id: 'long-rest',
-            label: 'shell.icon.long-rest',
-            icon: 'long-rest',
-            kind: 'ghost',
-            run: () => void this.actions.longRest(),
-          }),
-        ],
-        secondary: [
-          mutating({
-            id: 'add-condition',
-            label: 'shell.strap.add-condition',
-            icon: 'condition',
-            kind: 'icon',
-            run: () => void this.actions.addCondition(this.names.conditionOptions()),
-          }),
-          {
-            id: 'notes',
-            label: 'shell.icon.notes',
-            icon: 'notes',
-            kind: 'icon',
-            run: () => this.chrome.openNotes(),
-          },
-          {
-            id: 'roll-log',
-            label: 'shell.strap.roll-log',
-            icon: 'roll',
-            kind: 'icon',
-            run: () => this.chrome.openRollLog(),
-          },
-          {
-            id: 'export',
-            label: 'shell.icon.export',
-            icon: 'export',
-            kind: 'icon',
-            run: () => void this.chrome.exportHero(this.scopedT),
-          },
-          {
-            id: 'edit',
-            label: 'shell.icon.edit',
-            icon: 'edit',
-            kind: 'icon',
-            run: () => void this.router.navigate(['build'], { relativeTo: this.route }),
-          },
-        ],
-        ...(status ? { status } : {}),
-        scope: ['/c', this.routeId],
-      });
+        ),
+      );
     });
   }
 
@@ -444,6 +376,14 @@ export class SheetShellComponent {
             id,
             ...PHONE_TAB_ITEMS[id],
             route: ['/c', this.routeId, id],
+            ...(id === 'more'
+              ? {
+                  alsoActive: [
+                    ['/c', this.routeId, 'build'],
+                    ['/c', this.routeId, 'timeline'],
+                  ],
+                }
+              : {}),
           }))
         : null,
     );
@@ -469,10 +409,14 @@ export class SheetShellComponent {
     );
   }
 
-  /** Below 768 px `/play` lands on `/combat`; from 768 px a phone-tab URL resolves to `/play`. */
+  /** A live resize across the breakpoint: the route guard (`sheetLayoutGuard`) resolves the route
+   * before activation; this moves an already-open tab (`play` -> the phone tab the player was on,
+   * a phone tab -> `play`). */
   private reconcileLayout(): void {
+    const segment = this.childSegment();
+    this.layout.note(segment);
     if (this.layoutOk()) return;
-    const target = this.phone() ? 'combat' : 'play';
+    const target = this.layout.resolve(segment);
     untracked(
       () => void this.router.navigate([target], { relativeTo: this.route, replaceUrl: true }),
     );

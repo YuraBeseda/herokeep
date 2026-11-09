@@ -1,3 +1,4 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -30,6 +31,13 @@ function open() {
   return service.open(CustomItemDialogComponent);
 }
 
+/** `ngModel` writes its value on a microtask; let it land (and the view refresh) before clicking.
+ * Without this the confirm click could race the model write under a loaded full-suite run. */
+async function settle(): Promise<void> {
+  await TestBed.inject(ApplicationRef).whenStable();
+  TestBed.tick();
+}
+
 function buttonNamed(text: string): HTMLButtonElement {
   const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
     (b) => b.textContent?.trim() === text,
@@ -59,7 +67,7 @@ describe('CustomItemDialogComponent', () => {
     const nameInput = document.querySelector<HTMLInputElement>('input[type="text"]')!;
     nameInput.value = 'Lucky Coin';
     nameInput.dispatchEvent(new Event('input'));
-    TestBed.tick();
+    await settle();
 
     buttonNamed(charactersEn.sheet.inventory.customDialog.confirm).click();
     TestBed.tick();
@@ -83,7 +91,7 @@ describe('CustomItemDialogComponent', () => {
     const notesInput = document.querySelector<HTMLTextAreaElement>('textarea')!;
     notesInput.value = '  A bit frayed  ';
     notesInput.dispatchEvent(new Event('input'));
-    TestBed.tick();
+    await settle();
 
     buttonNamed(charactersEn.sheet.inventory.customDialog.confirm).click();
     TestBed.tick();

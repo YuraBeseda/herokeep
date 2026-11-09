@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { HkWaxSealComponent } from '../wax-seal/wax-seal.component';
@@ -35,6 +35,15 @@ export class HkPoolBarComponent {
   readonly rechargeGlyph = input<string | null>(null);
   /** Translated hint every pip carries ("Channel Divinity use"). */
   readonly pipHint = input('');
+  /** The "n / max" count becomes activatable (keyboard too) so a caller can show how the maximum is built. */
+  readonly inspectable = input(false);
+  readonly inspect = output<void>();
+
+  protected press(event: Event): void {
+    if (!this.inspectable()) return;
+    event.preventDefault();
+    this.inspect.emit();
+  }
   /** The sprite id embossed on each pip. */
   readonly pipGlyph = input('ui:use');
 

@@ -94,17 +94,23 @@ describe('app routes', () => {
     expect(harness.routeNativeElement).toBeTruthy();
   });
 
-  it("adds canActivate to exactly level-up, the three auth routes, and plan-10's campaigns/join/join-code/g routes — no other route is guarded", () => {
+  it("adds canActivate to exactly level-up, the three auth routes, and plan-10's campaigns/join/join-code/g routes, and the sheet's play/phone-tab routes (layout guard) — no other route is guarded", () => {
     expect(collectGuardedPaths(routes).sort()).toEqual(
       [
+        'bag',
         'campaigns',
+        'combat',
         'g/:id',
+        'hero',
         'join',
         'join/:code',
         'level-up',
         'login',
+        'more',
+        'play',
         'recover',
         'register',
+        'spells',
       ].sort(),
     );
   });

@@ -11,6 +11,8 @@
               [proficiencyHint]="t(skill.hintKey)"
               [density]="phone() ? 'comfortable' : 'compact'"
               [surface]="surface()"
+              [inspectable]="true"
+              (inspect)="openBreakdown(skill.totalDerived)"
               (roll)="roll(skill, t)"
             />
           </li>

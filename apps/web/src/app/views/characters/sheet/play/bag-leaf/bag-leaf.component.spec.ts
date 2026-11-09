@@ -366,4 +366,41 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     const chainMailWeight = slotFor(compiled, 'Chain Mail')!.querySelector('.hk-slot__sub')!;
     expect(chainMailWeight.textContent).toContain('55');
   });
+
+  it('electrum: add, spend and set to zero go through the same propose.currency delta path', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const fixture = TestBed.createComponent(BagLeafComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    async function setEp(value: string): Promise<void> {
+      compiled.querySelector<HTMLButtonElement>('.hk-pouch__edit')!.click();
+      await fixture.whenStable();
+      // Field order of the coin pouch: pp, gp, ep, sp, cp — index 2 is electrum.
+      const ep = Array.from(
+        compiled.querySelectorAll<HTMLInputElement>('.hk-pouch__edit-fields input[type="number"]'),
+      )[2];
+      ep.value = value;
+      ep.dispatchEvent(new Event('input'));
+      TestBed.tick();
+      compiled.querySelector<HTMLButtonElement>('.hk-pouch__save')!.click();
+    }
+
+    await setEp('7'); // add
+    await pollUntil(fixture, () => characterStore.sheet()?.currency.ep === 7);
+    let changed = characterStore.events().at(-1)!;
+    expect(changed).toMatchObject({ type: 'currency.changed', payload: { ep: 7 } });
+    expect(Object.keys(changed.payload as object)).toEqual(['ep']);
+
+    await setEp('4'); // spend 3
+    await pollUntil(fixture, () => characterStore.sheet()?.currency.ep === 4);
+    changed = characterStore.events().at(-1)!;
+    expect(changed).toMatchObject({ type: 'currency.changed', payload: { ep: -3 } });
+
+    await setEp('0'); // set to zero
+    await pollUntil(fixture, () => characterStore.sheet()?.currency.ep === 0);
+    changed = characterStore.events().at(-1)!;
+    expect(changed).toMatchObject({ type: 'currency.changed', payload: { ep: -4 } });
+  });
 });

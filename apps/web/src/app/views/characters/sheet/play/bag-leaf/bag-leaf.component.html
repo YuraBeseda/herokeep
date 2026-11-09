@@ -192,9 +192,6 @@
       [editable]="!actions.editLocked()"
       (save)="saveCoins($event)"
     />
-    @if (electrum() > 0) {
-      <p class="bag__electrum">{{ t('sheet.inventory.electrum', { count: electrum() }) }}</p>
-    }
   </hk-leaf>
 
   @if (detailsId(); as id) {

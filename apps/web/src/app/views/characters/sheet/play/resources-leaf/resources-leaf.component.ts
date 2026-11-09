@@ -6,6 +6,7 @@ import { HkButtonComponent } from '../../../../../ui/button/button.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { HkPoolBarComponent } from '../../../../../ui/pool-bar/pool-bar.component';
 import { PlayActionsService } from '../play-actions.service';
+import { breakdownOpener } from '../open-breakdown';
 import { sheetNames } from '../play-names';
 
 // The reset tags a resource carries (`resource.define.reset`), each with the glyph of its hint.
@@ -33,6 +34,8 @@ export class ResourcesLeafComponent {
   protected readonly actions = inject(PlayActionsService);
   private readonly names = sheetNames(inject(EngineFacade));
   private readonly sheet = inject(CharacterStore).sheet;
+
+  protected readonly openBreakdown = breakdownOpener();
 
   protected readonly resources = computed(() =>
     (this.sheet()?.resources ?? []).map((view) => ({

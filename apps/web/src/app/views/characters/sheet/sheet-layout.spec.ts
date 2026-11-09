@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { NavigationEnd, Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { propose } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -11,6 +11,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
@@ -323,6 +324,110 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(strapIds().primary).toEqual(['damage', 'heal', 'roll', 'short-rest', 'long-rest']);
   });
 
+  /** A `matchMedia` stub whose phone query can be flipped, firing the change listeners (a resize). */
+  function switchableViewport(phone: boolean): (next: boolean) => void {
+    let matches = phone;
+    const listeners: ((event: { matches: boolean }) => void)[] = [];
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      media: query,
+      get matches() {
+        return query.includes('max-width') ? matches : false;
+      },
+      addEventListener: (_: string, l: (event: { matches: boolean }) => void) => listeners.push(l),
+      removeEventListener: () => undefined,
+    }));
+    return (next) => {
+      matches = next;
+      listeners.forEach((l) => l({ matches: next }));
+    };
+  }
+
+  it('on a phone /play resolves to Combat before it activates: the Play tab is never mounted', async () => {
+    stubViewport({ phone: true });
+    const id = await seedFighter('Ivan');
+    const router = TestBed.inject(Router);
+    const ended: string[] = [];
+    router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) ended.push(event.urlAfterRedirects);
+    });
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    await harness.fixture.whenStable();
+
+    expect(ended.every((url) => !url.endsWith('/play'))).toBe(true);
+    expect(router.url).toMatch(/\/combat$/);
+    expect(mainOf(harness.routeNativeElement!).querySelector('.play-tab')).toBeNull();
+  });
+
+  it('a resize across the breakpoint keeps the place: Spells -> Play at tablet width -> Spells again', async () => {
+    const flip = switchableViewport(true);
+    const id = await seedFighter('Ivan');
+    const router = TestBed.inject(Router);
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/spells`);
+    await harness.fixture.whenStable();
+    expect(router.url).toMatch(/\/spells$/);
+
+    flip(false);
+    await pollUntil(harness.fixture, () => router.url.endsWith('/play'));
+    flip(true);
+    await pollUntil(harness.fixture, () => router.url.endsWith('/spells'));
+  });
+
+  it('on desktop /spells, /bag and /hero resolve to Play', async () => {
+    const id = await seedFighter('Ivan');
+    const router = TestBed.inject(Router);
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    for (const tab of ['spells', 'bag', 'hero']) {
+      await harness.navigateByUrl(`/c/${id}/${tab}`);
+      expect(router.url, tab).toMatch(/\/play$/);
+    }
+  });
+
+  it('the phone tab bar marks More current on Build and Timeline, which More lists', async () => {
+    stubViewport({ phone: true });
+    const id = await seedFighter('Ivan');
+    const harness = await RouterTestingHarness.create(`/c/${id}/more`);
+    await harness.fixture.whenStable();
+    const more = TestBed.inject(TabBarService)
+      .tabs()!
+      .find((t) => t.id === 'more')!;
+    expect(more.alsoActive?.map((r) => r.at(-1))).toEqual(['build', 'timeline']);
+  });
+
+  it('Export is disabled while the export is pending and enabled again after success and after failure', async () => {
+    const id = await seedFighter('Ivan');
+    const writer = TestBed.inject(HeroWriterService);
+    let settle!: (value: 'ok' | Error) => void;
+    vi.spyOn(writer, 'export').mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          settle = (value) =>
+            value === 'ok'
+              ? resolve({ blob: new Blob(['z']), fileName: 'Ivan.hero', warnings: [] })
+              : reject(value);
+        }),
+    );
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    await pollUntil(harness.fixture, () => strapIds().secondary.length > 0);
+    const exportAction = () =>
+      TestBed.inject(ActionStrapService)
+        .config()!
+        .secondary!.find((a) => a.id === 'export')!;
+
+    expect(exportAction().disabled).toBeFalsy();
+    exportAction().run();
+    await pollUntil(harness.fixture, () => exportAction().disabled === true);
+
+    settle('ok');
+    await pollUntil(harness.fixture, () => !exportAction().disabled);
+
+    exportAction().run();
+    await pollUntil(harness.fixture, () => exportAction().disabled === true);
+    settle(new Error('boom'));
+    await pollUntil(harness.fixture, () => !exportAction().disabled);
+  });
+
   it('the strap Damage action brings the player to the HP amount field', async () => {
     const id = await seedFighter('Ivan');
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
@@ -395,7 +500,21 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     root.querySelector<HTMLButtonElement>('.bag__use')!.click();
     await pollUntil(harness.fixture, () => stack() === 1);
 
+    // Using the LAST one removes the entry, so it asks first (like Remove): cancel keeps it...
+    const eventsBefore = characterStore.events().length;
     root.querySelector<HTMLButtonElement>('.bag__use')!.click();
+    TestBed.tick();
+    const overlay = document.querySelector<HTMLElement>('.cdk-overlay-container')!;
+    expect(overlay.querySelector('.item-remove-confirm__title')).not.toBeNull();
+    overlay.querySelector<HTMLButtonElement>('.item-remove-confirm__actions button')!.click();
+    await harness.fixture.whenStable();
+    expect(stack()).toBe(1);
+    expect(characterStore.events().length).toBe(eventsBefore);
+
+    // ...and confirming removes it.
+    root.querySelector<HTMLButtonElement>('.bag__use')!.click();
+    TestBed.tick();
+    overlay.querySelectorAll<HTMLButtonElement>('.item-remove-confirm__actions button')[1].click();
     await pollUntil(harness.fixture, () => stack() === undefined);
     expect(characterStore.events().at(-1)).toMatchObject({ type: 'item.removed' });
   });

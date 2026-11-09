@@ -116,4 +116,33 @@ describe('HkCoinPouchComponent', () => {
     const { el } = await mount(HkCoinPouchComponent, { ...base, editable: false });
     expect(el.querySelector('button')).toBeNull();
   });
+
+  describe('electrum (optional fifth metal)', () => {
+    const withEp = { coins: { ...coins, ep: 3 }, total: null };
+
+    it('draws an electrum stack only while the purse holds some; none when ep is absent or zero', async () => {
+      expect(stacks((await mount(HkCoinPouchComponent, base)).el)).toHaveLength(4);
+      expect(
+        stacks((await mount(HkCoinPouchComponent, { coins: { ...coins, ep: 0 } })).el),
+      ).toHaveLength(4);
+      const { el } = await mount(HkCoinPouchComponent, withEp);
+      expect(stacks(el).map((st) => st.getAttribute('aria-label'))).toContain('3 electrum pieces');
+    });
+
+    it('edit mode always offers the electrum field when the caller supplies ep, and saves it back', async () => {
+      const m = await mount(HkCoinPouchComponent, { coins: { ...coins, ep: 0 } });
+      const saved: unknown[] = [];
+      m.fixture.componentInstance.save.subscribe((v) => saved.push(v));
+      press(m.el.querySelector<HTMLButtonElement>('button[hk-icon-button]')!);
+      m.fixture.detectChanges();
+      const labels = Array.from(m.el.querySelectorAll('hk-number-field label')).map((l) =>
+        l.textContent?.trim(),
+      );
+      expect(labels).toEqual(['Platinum', 'Gold', 'Electrum', 'Silver', 'Copper']);
+      const fields = Array.from(m.el.querySelectorAll<HTMLInputElement>('hk-number-field input'));
+      typeInto(fields[2], '5');
+      press(m.el.querySelector<HTMLButtonElement>('.hk-pouch__save')!);
+      expect(saved).toEqual([{ pp: 1, gp: 38, ep: 5, sp: 0, cp: 7 }]);
+    });
+  });
 });

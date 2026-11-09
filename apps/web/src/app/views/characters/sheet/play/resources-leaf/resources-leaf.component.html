@@ -12,6 +12,8 @@
               [recharge]="r.resetGlyph ? t('sheet.resources.reset.' + r.view.reset) : null"
               [rechargeGlyph]="r.resetGlyph"
               [pipHint]="t('sheet.resources.pipHint', { name: r.label })"
+              [inspectable]="true"
+              (inspect)="openBreakdown(r.view.max)"
             >
               <span hkPoolAction class="resources__actions">
                 <button

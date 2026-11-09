@@ -66,4 +66,33 @@ describe('HkTabBarComponent', () => {
     expect(router.url).toBe('/c/1/spells');
     expect(el.querySelectorAll('a')[1].getAttribute('aria-current')).toBe('page');
   });
+
+  it('marks a tab current on the routes it also covers (More covers Build and Timeline)', async () => {
+    const withMore: TabItem[] = [
+      ...tabs,
+      {
+        id: 'more',
+        label: 'shell.icon.settings',
+        icon: 'settings',
+        route: ['/c', '1', 'more'],
+        alsoActive: [
+          ['/c', '1', 'build'],
+          ['/c', '1', 'timeline'],
+        ],
+      },
+    ];
+    const { el, fixture, router } = await setup(true, withMore);
+    const current = () =>
+      Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('aria-current'));
+    expect(current()).toEqual(['page', null, null, null]);
+
+    await router.navigateByUrl('/c/1/build');
+    await fixture.whenStable();
+    expect(current()).toEqual([null, null, null, 'page']);
+    expect(el.querySelectorAll('.hk-tabb--on')).toHaveLength(1);
+
+    await router.navigateByUrl('/c/1/timeline');
+    await fixture.whenStable();
+    expect(current()).toEqual([null, null, null, 'page']);
+  });
 });

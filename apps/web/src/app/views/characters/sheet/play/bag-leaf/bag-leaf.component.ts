@@ -124,9 +124,8 @@ export class BagLeafComponent {
 
   protected readonly coins = computed<CoinPurse>(() => {
     const currency = this.sheet()?.currency ?? { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
-    return { pp: currency.pp, gp: currency.gp, sp: currency.sp, cp: currency.cp };
+    return { pp: currency.pp, gp: currency.gp, ep: currency.ep, sp: currency.sp, cp: currency.cp };
   });
-  protected readonly electrum = computed(() => this.sheet()?.currency.ep ?? 0);
 
   // `Sheet.carry` is present ONLY when encumbrance is in force for this character (a campaign house
   // rule, or the character's own Build → Options choice); absent, not a zeroed struct, otherwise.

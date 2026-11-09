@@ -14,9 +14,29 @@
       </span>
     }
   </span>
-  <span class="hk-arow__hit">{{ toHitText() }}</span>
+  <span
+    class="hk-arow__hit"
+    [attr.data-breakdown]="'hit'"
+    [class.hk-arow__inspect]="inspectable()"
+    [attr.role]="inspectable() ? 'button' : null"
+    [attr.tabindex]="inspectable() ? 0 : null"
+    (click)="press('hit', $event)"
+    (keydown.enter)="press('hit', $event)"
+    (keydown.space)="press('hit', $event)"
+    >{{ toHitText() }}</span
+  >
   <span class="hk-arow__dmgcell">
-    <span class="hk-arow__dmg">{{ damage() }}</span>
+    <span
+      class="hk-arow__dmg"
+      [attr.data-breakdown]="'damage'"
+      [class.hk-arow__inspect]="inspectable()"
+      [attr.role]="inspectable() ? 'button' : null"
+      [attr.tabindex]="inspectable() ? 0 : null"
+      (click)="press('damage', $event)"
+      (keydown.enter)="press('damage', $event)"
+      (keydown.space)="press('damage', $event)"
+      >{{ damage() }}</span
+    >
     @if (damageType(); as type) {
       <span class="hk-arow__type">
         <hk-tag-chip [label]="type.label" [damage]="type.damage ?? null" />

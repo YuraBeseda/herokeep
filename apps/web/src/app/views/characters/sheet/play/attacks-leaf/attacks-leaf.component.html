@@ -11,6 +11,10 @@
               [damage]="attack.damageText"
               [damageType]="attack.damageType"
               [tags]="attack.tags"
+              [inspectable]="true"
+              (inspect)="
+                openBreakdown($event === 'hit' ? attack.toHitDerived : attack.bonusDerived)
+              "
               (roll)="rollToHit(attack, t)"
             />
             <button

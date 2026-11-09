@@ -1,5 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import type { DerivedValue } from '@shared/directives/derived-popover.directive';
 import { CharacterStore } from '@shared/stores/character.store';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import {
@@ -10,6 +11,7 @@ import { HkButtonComponent } from '../../../../../ui/button/button.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import type { DamageInk } from '../../../../../ui/tag-chip/damage-type';
 import { signed } from '../../../../../ui/format';
+import { breakdownOpener } from '../open-breakdown';
 import { PlayRollsService, type ScopedT } from '../play-rolls.service';
 import { sheetNames } from '../play-names';
 
@@ -34,6 +36,8 @@ interface AttackView {
   readonly name: string;
   readonly icon: string;
   readonly toHit: number;
+  readonly toHitDerived: DerivedValue;
+  readonly bonusDerived: DerivedValue;
   readonly dice: string;
   readonly bonus: number;
   readonly damageText: string;
@@ -70,6 +74,8 @@ export class AttacksLeafComponent {
         name: this.names.resolve(row.name),
         icon: this.names.iconOf(row.itemId, 'ui:attacks'),
         toHit: row.toHit.value,
+        toHitDerived: row.toHit,
+        bonusDerived: row.damage.bonus,
         dice: row.damage.dice,
         bonus,
         damageText: `${row.damage.dice}${bonus === 0 ? '' : signed(bonus)}`,
@@ -92,6 +98,8 @@ export class AttacksLeafComponent {
       };
     }),
   );
+
+  protected readonly openBreakdown = breakdownOpener();
 
   protected rollToHit(attack: AttackView, t: ScopedT): void {
     this.rolls.rollAttackToHit(attack.name, attack.toHit, t);

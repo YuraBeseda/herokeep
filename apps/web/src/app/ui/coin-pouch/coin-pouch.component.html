@@ -11,7 +11,7 @@
     </svg>
     @if (editing()) {
       <div class="hk-pouch__edit-fields">
-        @for (metal of metals; track metal) {
+        @for (metal of editedMetals(); track metal) {
           <hk-number-field
             [label]="t('ui.coins.name-' + metal)"
             [min]="0"
@@ -41,8 +41,8 @@
         </button>
       </div>
     } @else {
-      @for (metal of metals; track metal) {
-        @let count = coins()[metal];
+      @for (metal of shown(); track metal) {
+        @let count = coins()[metal] ?? 0;
         <div class="hk-coinstack" role="img" [attr.aria-label]="t('ui.coins.' + metal, { count })">
           <svg class="hk-coinstack__discs" viewBox="0 0 28 28" aria-hidden="true">
             @for (cy of rows; track cy; let i = $index) {

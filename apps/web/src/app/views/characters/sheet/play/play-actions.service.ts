@@ -502,9 +502,8 @@ export class PlayActionsService {
       this.setQty(row, row.qty - 1);
       return;
     }
-    this.appendDraft([
-      { type: 'item.removed', v: 1, payload: { instanceId: row.instanceId } satisfies ItemRemoved },
-    ]);
+    // Using the last one removes the entry, so it confirms like Remove does.
+    void this.removeItem(row);
   }
 
   // Behind its own confirm dialog (`ItemRemoveConfirmComponent`).

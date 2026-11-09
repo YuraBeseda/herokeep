@@ -13,7 +13,17 @@
       {{ t('icon.disadvantage') }}
     </span>
   }
-  <span class="hk-sk__mod">{{ modifierText() }}</span>
+  <span
+    class="hk-sk__mod"
+    [attr.data-breakdown]="'total'"
+    [class.hk-sk__inspect]="inspectable()"
+    [attr.role]="inspectable() ? 'button' : null"
+    [attr.tabindex]="inspectable() ? 0 : null"
+    (click)="press($event)"
+    (keydown.enter)="press($event)"
+    (keydown.space)="press($event)"
+    >{{ modifierText() }}</span
+  >
   <button
     hk-icon-button
     [icon]="'roll'"

@@ -1,12 +1,14 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import type { DerivedValue } from '@shared/directives/derived-popover.directive';
 import { CharacterStore } from '@shared/stores/character.store';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { IconComponent } from '../../../../../shared/icons/icon.component';
 import { HkAbilitySealComponent } from '../../../../../ui/ability-seal/ability-seal.component';
 import { HkButtonComponent } from '../../../../../ui/button/button.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
+import { breakdownOpener } from '../open-breakdown';
 import { PlayRollsService, type ScopedT } from '../play-rolls.service';
 import { sheetNames } from '../play-names';
 
@@ -51,12 +53,23 @@ export class AbilitiesLeafComponent {
         id,
         label: this.names.abilityName(id),
         score: block.score.value,
+        scoreDerived: block.score,
+        saveDerived: block.save,
         mod: block.mod,
         save: block.save.value,
         saveProficient: block.saveProficient,
       };
     });
   });
+
+  protected readonly openBreakdown = breakdownOpener();
+
+  protected inspect(
+    row: { scoreDerived: DerivedValue; saveDerived: DerivedValue },
+    kind: 'score' | 'save',
+  ): void {
+    this.openBreakdown(kind === 'score' ? row.scoreDerived : row.saveDerived);
+  }
 
   protected rollCheck(row: { label: string; mod: number }, t: ScopedT): void {
     this.rolls.rollAbilityCheck(row.label, row.mod, t);

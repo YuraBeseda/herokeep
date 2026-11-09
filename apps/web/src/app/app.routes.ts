@@ -11,6 +11,7 @@ import { CharactersRepository } from './shared/services/storage/characters.repos
 import { SettingsRepository } from './shared/services/storage/settings.repository';
 import { CampaignStore } from './shared/stores/campaign.store';
 import { CharacterStore } from './shared/stores/character.store';
+import { sheetLayoutGuard } from './views/characters/sheet/sheet-layout';
 import type { RegisterComponent } from './views/auth/register/register.component';
 
 /**
@@ -224,6 +225,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'play' },
       {
         path: 'play',
+        canActivate: [sheetLayoutGuard],
         loadComponent: () =>
           import('./views/characters/sheet/play/play-tab.component').then(
             (m) => m.PlayTabComponent,
@@ -233,26 +235,31 @@ export const routes: Routes = [
       // px `play` lands on `combat`, from 768 px a phone tab lands on `play`).
       {
         path: 'combat',
+        canActivate: [sheetLayoutGuard],
         loadComponent: () =>
           import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.CombatTabComponent),
       },
       {
         path: 'spells',
+        canActivate: [sheetLayoutGuard],
         loadComponent: () =>
           import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.SpellsTabComponent),
       },
       {
         path: 'bag',
+        canActivate: [sheetLayoutGuard],
         loadComponent: () =>
           import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.BagTabComponent),
       },
       {
         path: 'hero',
+        canActivate: [sheetLayoutGuard],
         loadComponent: () =>
           import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.HeroTabComponent),
       },
       {
         path: 'more',
+        canActivate: [sheetLayoutGuard],
         loadComponent: () =>
           import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.MoreTabComponent),
       },

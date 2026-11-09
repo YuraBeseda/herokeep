@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
@@ -37,6 +37,16 @@ export class HkAbilitySealComponent {
   readonly save = input.required<number>();
   readonly saveProficient = input(false);
   readonly compact = input(false);
+  /** Makes the score plate and the save plate activatable (keyboard too) so a caller can show how
+   * each number is built; `inspect` says which one was pressed. */
+  readonly inspectable = input(false);
+  readonly inspect = output<'score' | 'save'>();
+
+  protected press(kind: 'score' | 'save', event: Event): void {
+    if (!this.inspectable()) return;
+    event.preventDefault();
+    this.inspect.emit(kind);
+  }
 
   protected readonly modifierText = computed(() => signed(this.modifier()));
   protected readonly saveText = computed(() => signed(this.save()));

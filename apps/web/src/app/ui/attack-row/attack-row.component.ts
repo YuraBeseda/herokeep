@@ -52,6 +52,15 @@ export class HkAttackRowComponent {
 
   // Outputs
   readonly roll = output<void>();
+  /** To-hit and damage become activatable (keyboard too) so a caller can show how they are built. */
+  readonly inspectable = input(false);
+  readonly inspect = output<'hit' | 'damage'>();
+
+  protected press(kind: 'hit' | 'damage', event: Event): void {
+    if (!this.inspectable()) return;
+    event.preventDefault();
+    this.inspect.emit(kind);
+  }
 
   private readonly coarse = coarsePointer();
   protected readonly buttonSize = computed(() => (this.coarse() ? 'phone' : 'm'));

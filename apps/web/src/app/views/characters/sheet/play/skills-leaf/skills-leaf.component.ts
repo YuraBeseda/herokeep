@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import type { DerivedValue } from '@shared/directives/derived-popover.directive';
 import { CharacterStore } from '@shared/stores/character.store';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { IconComponent } from '../../../../../shared/icons/icon.component';
@@ -11,6 +12,7 @@ import {
 } from '../../../../../ui/skill-row/skill-row.component';
 import { HkTagChipComponent } from '../../../../../ui/tag-chip/tag-chip.component';
 import { signed } from '../../../../../ui/format';
+import { breakdownOpener } from '../open-breakdown';
 import { PlayRollsService, type ScopedT } from '../play-rolls.service';
 import { sheetNames } from '../play-names';
 
@@ -18,6 +20,7 @@ interface SkillRow {
   readonly id: string;
   readonly label: string;
   readonly total: number;
+  readonly totalDerived: DerivedValue;
   readonly proficiency: SkillProficiency;
   /** Scope-relative i18n key of the dot's hint. */
   readonly hintKey: string;
@@ -69,6 +72,7 @@ export class SkillsLeafComponent {
         id,
         label: this.names.skillName(id),
         total: block.total.value,
+        totalDerived: block.total,
         proficiency: DOT[block.proficiency] ?? 'none',
         hintKey:
           block.proficiency === 'none'
@@ -77,6 +81,8 @@ export class SkillsLeafComponent {
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
   );
+
+  protected readonly openBreakdown = breakdownOpener();
 
   protected roll(row: SkillRow, t: ScopedT): void {
     this.rolls.rollSkill(row.label, row.total, t);

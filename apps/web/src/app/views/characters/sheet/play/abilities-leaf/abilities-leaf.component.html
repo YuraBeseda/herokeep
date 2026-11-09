@@ -10,6 +10,8 @@
             [save]="row.save"
             [saveProficient]="row.saveProficient"
             [compact]="mode() === 'saves'"
+            [inspectable]="true"
+            (inspect)="inspect(row, $event)"
           />
           <div class="abilities__rolls">
             @if (mode() === 'full') {

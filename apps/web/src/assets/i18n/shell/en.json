@@ -209,7 +209,10 @@
       "unit-cp": "cp",
       "unit-gp": "gp",
       "unit-pp": "pp",
-      "unit-sp": "sp"
+      "unit-sp": "sp",
+      "ep": "{count, plural, one {# electrum piece} other {# electrum pieces}}",
+      "name-ep": "Electrum",
+      "unit-ep": "ep"
     },
     "condition": {
       "end": "End {{name}}",

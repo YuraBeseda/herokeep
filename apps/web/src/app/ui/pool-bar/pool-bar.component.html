@@ -32,7 +32,16 @@
     </div>
   }
   <div class="hk-pool-bar__foot">
-    <span class="hk-pool-bar__count">
+    <span
+      class="hk-pool-bar__count"
+      [attr.data-breakdown]="'max'"
+      [class.hk-pool-bar__inspect]="inspectable()"
+      [attr.role]="inspectable() ? 'button' : null"
+      [attr.tabindex]="inspectable() ? 0 : null"
+      (click)="press($event)"
+      (keydown.enter)="press($event)"
+      (keydown.space)="press($event)"
+    >
       {{ clamped() }} / {{ max() }}
       @if (unit(); as unitText) {
         <span class="hk-pool-bar__unit">{{ unitText }}</span>

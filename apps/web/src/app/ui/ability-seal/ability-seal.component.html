@@ -8,15 +8,27 @@
   <span class="hk-ability__name">{{ ability() }}</span>
   <span
     class="hk-ability__score"
-    role="group"
+    [attr.data-breakdown]="'score'"
+    [class.hk-ability__inspect]="inspectable()"
+    [attr.role]="inspectable() ? 'button' : 'group'"
+    [attr.tabindex]="inspectable() ? 0 : null"
+    (click)="press('score', $event)"
+    (keydown.enter)="press('score', $event)"
+    (keydown.space)="press('score', $event)"
     [hkTooltip]="t('ui.ability.score', { score: score() })"
     [attr.aria-label]="t('ui.ability.score', { score: score() })"
     >{{ score() }}</span
   >
   <span
     class="hk-ability__save"
+    [attr.data-breakdown]="'save'"
     [class.hk-ability__save--prof]="saveProficient()"
-    role="group"
+    [class.hk-ability__inspect]="inspectable()"
+    [attr.role]="inspectable() ? 'button' : 'group'"
+    [attr.tabindex]="inspectable() ? 0 : null"
+    (click)="press('save', $event)"
+    (keydown.enter)="press('save', $event)"
+    (keydown.space)="press('save', $event)"
     [hkTooltip]="t('ui.ability.save', { value: saveText() })"
     [attr.aria-label]="t('ui.ability.save', { value: saveText() })"
   >

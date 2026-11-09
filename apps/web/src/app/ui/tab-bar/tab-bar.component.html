@@ -8,8 +8,8 @@
         <a
           class="hk-tabb"
           [routerLink]="tab.route"
-          routerLinkActive="hk-tabb--on"
-          [ariaCurrentWhenActive]="'page'"
+          [class.hk-tabb--on]="active(tab)"
+          [attr.aria-current]="active(tab) ? 'page' : null"
           [hkTooltip]="t(tab.label)"
         >
           <span class="hk-tabb__glow" aria-hidden="true"></span>

@@ -42,6 +42,15 @@ export class HkSkillRowComponent {
 
   // Outputs
   readonly roll = output<void>();
+  /** The modifier becomes activatable (keyboard too) so a caller can show how it is built. */
+  readonly inspectable = input(false);
+  readonly inspect = output<void>();
+
+  protected press(event: Event): void {
+    if (!this.inspectable()) return;
+    event.preventDefault();
+    this.inspect.emit();
+  }
 
   protected readonly modifierText = computed(() => signed(this.modifier()));
   protected readonly nameId = uniqueId('hk-sk-name');

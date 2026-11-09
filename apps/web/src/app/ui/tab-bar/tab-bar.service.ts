@@ -7,6 +7,8 @@ export interface TabItem {
   readonly label: string;
   readonly icon: UiIconName;
   readonly route: readonly string[];
+  /** Other routes this tab also stands for (a hub tab such as More covers the screens it lists). */
+  readonly alsoActive?: readonly (readonly string[])[];
 }
 
 /**
