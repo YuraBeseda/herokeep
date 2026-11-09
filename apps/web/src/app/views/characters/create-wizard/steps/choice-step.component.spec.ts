@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
@@ -367,10 +368,17 @@ describe('ChoiceStepComponent', () => {
         c.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
       );
     const nameOf = (b: HTMLButtonElement) => pickName(b) ?? '';
-    // A row carries its reason as the toggle's description; a card prints it under its name.
-    const reasonOf = (_c: HTMLElement, b: HTMLButtonElement): string | undefined =>
-      b.getAttribute('aria-description') ??
-      b.closest('hk-picker-card')?.querySelector('.hk-picker-card__gate')?.textContent?.trim();
+    // A row carries its reason as the toggle's description; a card points at its padlock, whose
+    // accessible name is the reason (never text on the card).
+    const reasonOf = (c: HTMLElement, b: HTMLButtonElement): string | undefined => {
+      const ids = (b.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
+      return (
+        b.getAttribute('aria-description') ??
+        ids
+          .map((id) => c.querySelector(`[id="${id}"]`)?.textContent.trim())
+          .find((text) => !!text && !text.startsWith('hk-'))
+      );
+    };
 
     function seedLevel4Fighter(): CreateWizardState {
       const state = createState();
@@ -716,5 +724,41 @@ describe('ChoiceStepComponent — mixed-type queries pick', () => {
       'srd-5e-2024:skill/perception',
       'srd-5e-2024:item/smiths-tools',
     ]);
+  });
+
+  it('a class skill the pack has no entity for stays listed as a plain row and can still be picked', async () => {
+    const trimmed: Pack = {
+      ...corePack,
+      entities: corePack.entities.filter((e) => e.id !== 'srd-5e-2024:skill/athletics'),
+    };
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: { availableLangs: ['en'], defaultLang: 'en', prodMode: true },
+          loader: StubLoader,
+        }),
+        provideTranslocoMessageformat(),
+        {
+          provide: PackStore,
+          useValue: { packs: signal([trimmed]), ready: signal(true), corePack: signal(trimmed) },
+        },
+        CreateWizardState,
+      ],
+    });
+    const state = createState();
+    state.name.set('Aldric');
+    state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
+    const fixture = TestBed.createComponent(ChoiceStepComponent);
+    fixture.componentRef.setInput('choiceId', CLASS_SKILLS_CHOICE);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const plain = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.choice-step__plain-row'),
+    );
+    expect(plain.length).toBe(9);
+    plain.find((b) => b.textContent.trim() === 'athletics')!.click();
+    await fixture.whenStable();
+    expect(state.decisions().get(CLASS_SKILLS_CHOICE)).toEqual(['athletics']);
   });
 });

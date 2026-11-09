@@ -243,6 +243,13 @@ export class ChoiceStepComponent {
       : 'cards';
   });
 
+  /** True while every skill of the pick has an entity the picker can list and describe. */
+  protected readonly skillsHaveEntities = computed(() => {
+    const v = this.view();
+    const index = this.engineFacade.index();
+    return v.kind !== 'skills' || v.options.every((o) => index.has(o.entityId));
+  });
+
   /** The skill pick as the picker sees it: entity ids in, entity ids back. */
   protected readonly skillIds = computed<string[]>(() => {
     const v = this.view();

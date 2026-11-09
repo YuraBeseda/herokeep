@@ -1,4 +1,15 @@
-import { computed, Injectable, signal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  type ElementRef,
+  inject,
+  Injectable,
+  signal,
+  type Signal,
+  untracked,
+} from '@angular/core';
+import { phoneLayout } from '../../../ui/shell/viewport';
 
 /**
  * The bridge between the action strap's zone 3 (Filter · Search) and the picker on screen. The
@@ -41,4 +52,53 @@ export class PickerToolsService {
   requestSearch(): void {
     this.searchRequests.update((n) => n + 1);
   }
+}
+
+/**
+ * Wires a list with a search field and optional filter chips to the strap's Filter and Search
+ * buttons, when a `PickerToolsService` is provided (the creation wizard): registers while the
+ * component lives, reports whether it has chips, and focuses its search field on a Search press.
+ * Call in an injection context. Folding the chips away also clears them (`onFold`), so no filter
+ * stays applied out of sight.
+ */
+export function bindPickerTools(options: {
+  host: ElementRef<HTMLElement>;
+  hasFilters: Signal<boolean>;
+  onFold: () => void;
+}): { filtersVisible: Signal<boolean> } {
+  const tools = inject(PickerToolsService, { optional: true });
+  const phone = phoneLayout();
+  const filtersVisible = computed(() => {
+    if (!options.hasFilters()) return false;
+    return tools ? (tools.filterOpen() ?? !phone()) : true;
+  });
+  effect(() => {
+    if (!filtersVisible()) untracked(() => options.onFold());
+  });
+  if (tools) {
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(tools.register());
+    let withdraw: (() => void) | undefined;
+    effect(() => {
+      const has = options.hasFilters();
+      untracked(() => {
+        if (has && !withdraw) withdraw = tools.reportFilters();
+        if (!has && withdraw) {
+          withdraw();
+          withdraw = undefined;
+        }
+      });
+    });
+    destroyRef.onDestroy(() => withdraw?.());
+    let seen = untracked(() => tools.searchRequests());
+    effect(() => {
+      const requests = tools.searchRequests();
+      if (requests === seen) return;
+      seen = requests;
+      untracked(() =>
+        options.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+      );
+    });
+  }
+  return { filtersVisible };
 }

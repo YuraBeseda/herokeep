@@ -72,7 +72,7 @@ export async function createWizard(page: Page, name: string): Promise<string> {
   for (const spell of ['Magic Missile', 'Sleep']) {
     await page
       .locator('.spells-step__spellbook')
-      .getByRole('button', { name: new RegExp(`^${spell} —`) })
+      .getByRole('button', { name: spell, exact: true })
       .click();
   }
   await page.locator('[data-action="next"]').click();

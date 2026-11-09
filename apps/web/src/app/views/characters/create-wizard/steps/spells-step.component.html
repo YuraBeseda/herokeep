@@ -15,8 +15,9 @@
           "
         />
       </header>
+      <ng-container *ngTemplateOutlet="tools; context: { view: cantripView }" />
       <ul class="spells-step__list">
-        @for (id of cantripIds(); track id) {
+        @for (id of cantripView.rows(); track id) {
           <li>
             <hk-spell-pick-row
               [spellId]="id"
@@ -33,6 +34,7 @@
           </li>
         }
       </ul>
+      <ng-container *ngTemplateOutlet="more; context: { view: cantripView }" />
     </section>
 
     <section class="spells-step__section spells-step__spellbook">
@@ -45,8 +47,9 @@
           [hint]="t('wizard.spells.spellbookHelper', { recommended: recommendedCount() })"
         />
       </header>
+      <ng-container *ngTemplateOutlet="tools; context: { view: spellbookView }" />
       <ul class="spells-step__list">
-        @for (id of spellbookIds(); track id) {
+        @for (id of spellbookView.rows(); track id) {
           <li>
             <hk-spell-pick-row
               [spellId]="id"
@@ -58,6 +61,7 @@
           </li>
         }
       </ul>
+      <ng-container *ngTemplateOutlet="more; context: { view: spellbookView }" />
     </section>
 
     @if (spellbookKnownIds().length > 0) {
@@ -110,4 +114,42 @@
       <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
     }
   }
+  <ng-template #tools let-view="view">
+    @if (view.showSearch() || (filtersVisible() && view.filterOptions().length > 0)) {
+      <div class="spells-step__bar">
+        @if (view.showSearch()) {
+          <hk-search-field
+            class="spells-step__search"
+            [(value)]="view.query"
+            [label]="t('wizard.picker.searchLabel')"
+            [placeholder]="t('wizard.picker.searchPlaceholder')"
+          />
+        }
+        @if (filtersVisible() && view.filterOptions().length > 0) {
+          <hk-filter-chips
+            class="spells-step__filters"
+            [label]="t('wizard.picker.filterLabel')"
+            [options]="view.filterOptions()"
+            [(selected)]="view.filters"
+          />
+        }
+      </div>
+    }
+    @if (view.matching().length === 0) {
+      <p class="spells-step__empty">{{ t('wizard.picker.empty') }}</p>
+    }
+  </ng-template>
+  <ng-template #more let-view="view">
+    @if (view.hidden() > 0) {
+      <button
+        type="button"
+        hk-button
+        class="spells-step__more"
+        [variant]="'parchment'"
+        (click)="view.showMore()"
+      >
+        {{ t('wizard.spells.showMore', { count: view.hidden() }) }}
+      </button>
+    }
+  </ng-template>
 </div>

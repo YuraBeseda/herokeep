@@ -34,20 +34,33 @@
   <!-- Plan 15 Task 4: only when content packs are installed; none checked by default. -->
   @if (state.installedContent().length > 0) {
     <fieldset class="name-step__field name-step__packs">
-      <legend>{{ t('create.packs.title') }}</legend>
+      <legend>
+        {{ t('create.packs.title') }}
+        <button
+          type="button"
+          class="name-step__hint"
+          [attr.aria-label]="t('create.packs.hint')"
+          [hkTooltip]="t('create.packs.hint')"
+        >
+          <hk-icon [icon]="'ui:details'" />
+        </button>
+      </legend>
       <ul class="name-step__pack-list">
         @if (state.corePack(); as core) {
-          <li
-            class="name-step__pack name-step__pack--core"
-            tabindex="0"
-            [attr.aria-label]="core.name + ' — ' + t('create.packs.coreLocked')"
-            [hkTooltip]="t('create.packs.coreLocked')"
-          >
+          <li class="name-step__pack name-step__pack--core">
             <span class="name-step__pack-name">{{ core.name }}</span>
             <span class="name-step__pack-version">{{
               t('create.packs.version', { version: core.version })
             }}</span>
-            <hk-icon class="name-step__pin" [icon]="'ui:lock'" />
+            <span
+              class="name-step__lock"
+              role="img"
+              tabindex="0"
+              [attr.aria-label]="core.name + ' — ' + t('create.packs.coreLocked')"
+              [hkTooltip]="t('create.packs.coreLocked')"
+            >
+              <hk-icon class="name-step__pin" [icon]="'ui:lock'" />
+            </span>
           </li>
         }
         @for (pack of state.installedContent(); track pack.id) {

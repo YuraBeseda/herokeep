@@ -1,16 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import {
-  Component,
-  computed,
-  DestroyRef,
-  effect,
-  ElementRef,
-  inject,
-  input,
-  output,
-  signal,
-  untracked,
-} from '@angular/core';
+import { Component, computed, ElementRef, inject, input, output, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
@@ -19,12 +8,11 @@ import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
 import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
 import { HkPickerCardComponent } from '../../../../ui/picker-card/picker-card.component';
-import { phoneLayout } from '../../../../ui/shell/viewport';
 import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field.component';
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
-import { PickerToolsService } from '../picker-tools.service';
+import { bindPickerTools } from '../picker-tools.service';
 import { descriptionExcerpt, pickerFacet, pickerFacts, pickerMeta } from './picker-facts';
 
 interface EntityRow {
@@ -89,10 +77,8 @@ const SEARCH_THRESHOLD = 8;
 export class EntityPickerComponent {
   private readonly engineFacade = inject(EngineFacade);
   private readonly localeService = inject(LocaleService);
-  private readonly tools = inject(PickerToolsService, { optional: true });
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
-  private readonly phone = phoneLayout();
 
   // Inputs / Outputs
   readonly ids = input.required<readonly string[]>();
@@ -143,10 +129,11 @@ export class EntityPickerComponent {
   });
 
   protected readonly showSearch = computed(() => this.ids().length > SEARCH_THRESHOLD);
-  protected readonly filtersVisible = computed(() => {
-    if (this.filterOptions().length === 0) return false;
-    return this.tools ? (this.tools.filterOpen() ?? !this.phone()) : true;
-  });
+  protected readonly filtersVisible = bindPickerTools({
+    host: this.host,
+    hasFilters: computed(() => this.filterOptions().length > 0),
+    onFold: () => this.activeFilters.set([]),
+  }).filtersVisible;
 
   // The full search-filtered, sorted row set — BEFORE `limit` truncates it. `rows`/`hiddenCount`
   // below both derive from this so the hint's count and the rendered slice always agree.
@@ -195,36 +182,6 @@ export class EntityPickerComponent {
     const id = this.detailsId();
     return id === undefined ? undefined : this.allRows().find((row) => row.id === id);
   });
-
-  constructor() {
-    if (this.tools) {
-      const tools = this.tools;
-      const unregister = tools.register();
-      const destroyRef = inject(DestroyRef);
-      destroyRef.onDestroy(unregister);
-      let withdraw: (() => void) | undefined;
-      effect(() => {
-        const has = this.filterOptions().length > 0;
-        untracked(() => {
-          if (has && !withdraw) withdraw = tools.reportFilters();
-          if (!has && withdraw) {
-            withdraw();
-            withdraw = undefined;
-          }
-        });
-      });
-      destroyRef.onDestroy(() => withdraw?.());
-      let seen = untracked(() => tools.searchRequests());
-      effect(() => {
-        const requests = tools.searchRequests();
-        if (requests === seen) return;
-        seen = requests;
-        untracked(() =>
-          this.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
-        );
-      });
-    }
-  }
 
   // Methods
   protected isSelected(id: string): boolean {

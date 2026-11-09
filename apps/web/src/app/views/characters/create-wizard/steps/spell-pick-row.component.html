@@ -9,6 +9,7 @@
     [attr.aria-pressed]="chosen()"
     [attr.aria-disabled]="blockedReason() ? 'true' : null"
     [attr.aria-label]="toggleLabel()"
+    [attr.aria-describedby]="blockedReason() ? reasonId : null"
     [hkTooltip]="blockedReason() ?? chosenHint()"
     (click)="blockedReason() ? null : toggled.emit()"
   >
@@ -18,6 +19,9 @@
       <span class="spell-pick__ring" aria-hidden="true"></span>
     }
   </button>
+  @if (blockedReason(); as why) {
+    <span class="visually-hidden" [id]="reasonId">{{ why }}</span>
+  }
   <hk-spell-row
     class="spell-pick__row"
     [name]="name()"

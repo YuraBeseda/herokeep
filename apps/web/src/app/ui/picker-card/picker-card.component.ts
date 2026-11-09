@@ -2,6 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { HkButtonComponent } from '../button/button.component';
+import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import { HkTagChipComponent } from '../tag-chip/tag-chip.component';
 import { HkWaxSealComponent } from '../wax-seal/wax-seal.component';
 
@@ -27,6 +28,7 @@ let nextReasonId = 0;
     IconComponent,
     HkButtonComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
     HkWaxSealComponent,
   ],
   providers: [provideTranslocoScope('shell')],

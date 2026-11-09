@@ -154,3 +154,23 @@
   outline: 2px solid var(--focus-ring);
   box-shadow: 0 0 0 4px var(--focus-ring-outer);
 }
+
+.name-step__hint,
+.name-step__lock {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.name-step__hint {
+  margin-inline-start: var(--space-1);
+  cursor: help;
+}

@@ -59,7 +59,15 @@ describe('HkPickerCardComponent', () => {
     fixture.componentInstance.choose.subscribe(picked);
     fixture.componentInstance.details.subscribe(opened);
 
-    expect(el.querySelector('.hk-picker-card__gate')!.textContent).toContain('Needs 2 more levels');
+    const gate = el.querySelector('.hk-picker-card__gate')!;
+    expect(gate.textContent.trim()).toBe(''); // the reason is never text on the card
+    expect(gate.getAttribute('aria-label')).toBe('Needs 2 more levels');
+    expect(hintOf(gate)).toBe('Needs 2 more levels');
+    // The disabled button describes itself with the same reason (aria-describedby).
+    const described = (choose(el).getAttribute('aria-describedby') ?? '')
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent.trim());
+    expect(described).toContain('Needs 2 more levels');
     expect(choose(el).getAttribute('aria-disabled')).toBe('true');
     expect(hintOf(choose(el))).toBe('Needs 2 more levels');
 

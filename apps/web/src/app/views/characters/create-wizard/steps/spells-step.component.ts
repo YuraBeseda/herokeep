@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, computed, ElementRef, inject, input, signal } from '@angular/core';
 import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
@@ -6,6 +7,10 @@ import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { CreateWizardState } from '../create-wizard.state';
+import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
+import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field.component';
+import { bindPickerTools } from '../picker-tools.service';
+import { SpellListView } from './spell-list-view';
 import { SpellPickRowComponent } from './spell-pick-row.component';
 
 // Not exported from `@hk/engine`'s own barrel (only the `deriveSpellcasting` FUNCTION is, via
@@ -51,6 +56,9 @@ const SPELLBOOK_RECOMMENDED = 6;
     TranslocoDirective,
     HkButtonComponent,
     HkDescriptionDrawerComponent,
+    HkFilterChipsComponent,
+    HkSearchFieldComponent,
+    NgTemplateOutlet,
     HkTagChipComponent,
     SpellPickRowComponent,
   ],
@@ -112,6 +120,32 @@ export class SpellsStepComponent {
       .query({ type: 'spell', level: 1, classes: [classId] })
       .map((e) => e.id);
   });
+
+  /** Search, chips and paging of each long list (the prepared list is short and has none). */
+  protected readonly cantripView = new SpellListView(
+    this.cantripIds,
+    (id) => this.engineFacade.index().get(id),
+    this.engineFacade.localizer,
+  );
+  protected readonly spellbookView = new SpellListView(
+    this.spellbookIds,
+    (id) => this.engineFacade.index().get(id),
+    this.engineFacade.localizer,
+  );
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** The strap's Filter and Search reach the lists' chips and search fields. */
+  protected readonly filtersVisible = bindPickerTools({
+    host: this.host,
+    hasFilters: computed(
+      () =>
+        this.cantripView.filterOptions().length > 0 ||
+        this.spellbookView.filterOptions().length > 0,
+    ),
+    onFold: () => {
+      this.cantripView.filters.set([]);
+      this.spellbookView.filters.set([]);
+    },
+  }).filtersVisible;
 
   protected readonly knownIds = computed(() => this.block()?.known ?? []);
 

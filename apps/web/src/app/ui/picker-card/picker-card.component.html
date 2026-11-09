@@ -34,11 +34,18 @@
     </ul>
   }
 
-  @if (gated() && !selected() && reason()) {
-    <p class="hk-picker-card__gate" [id]="reasonId">
+  @if (gated() && !selected() && reason(); as why) {
+    <!-- The reason lives in the hint and the accessible name, never as text on the card. -->
+    <span
+      class="hk-picker-card__gate"
+      role="img"
+      tabindex="0"
+      [id]="reasonId"
+      [attr.aria-label]="why"
+      [hkTooltip]="why"
+    >
       <hk-icon class="hk-picker-card__gate-icon" [icon]="'ui:lock'" />
-      <span>{{ reason() }}</span>
-    </p>
+    </span>
   }
 
   <div class="hk-picker-card__foot">

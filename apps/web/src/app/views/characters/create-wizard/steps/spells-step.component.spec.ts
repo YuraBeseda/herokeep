@@ -344,4 +344,107 @@ describe('SpellsStepComponent', () => {
     compiled.querySelector<HTMLButtonElement>('.spells-step__continue')!.click();
     expect(finish).toHaveBeenCalledTimes(1);
   });
+
+  describe('search, filters and paging (plan 17 fix round)', () => {
+    const names = (compiled: HTMLElement, section: string) =>
+      Array.from(compiled.querySelectorAll(`.${section} .hk-srow__name`)).map((n) =>
+        n.textContent.trim(),
+      );
+
+    async function typeSearch(
+      fixture: { whenStable(): Promise<unknown> },
+      input: HTMLInputElement,
+      text: string,
+    ) {
+      vi.useFakeTimers();
+      input.value = text;
+      input.dispatchEvent(new Event('input'));
+      vi.advanceTimersByTime(150);
+      TestBed.tick();
+      vi.useRealTimers();
+      await fixture.whenStable();
+    }
+
+    it('each long list has its own search field that narrows only that list', async () => {
+      createWizardDraft();
+      const fixture = TestBed.createComponent(SpellsStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const cantripsBefore = names(compiled, 'spells-step__cantrips');
+      const bookBefore = names(compiled, 'spells-step__spellbook');
+      expect(compiled.querySelectorAll('input[type="search"]')).toHaveLength(2);
+
+      const bookSearch = compiled.querySelector<HTMLInputElement>(
+        '.spells-step__spellbook input[type="search"]',
+      )!;
+      await typeSearch(fixture, bookSearch, 'sleep');
+      expect(names(compiled, 'spells-step__spellbook')).toEqual(['Sleep']);
+      expect(names(compiled, 'spells-step__cantrips')).toEqual(cantripsBefore);
+
+      const cantripSearch = compiled.querySelector<HTMLInputElement>(
+        '.spells-step__cantrips input[type="search"]',
+      )!;
+      await typeSearch(fixture, cantripSearch, cantripsBefore[0].slice(0, 4).toLowerCase());
+      expect(names(compiled, 'spells-step__cantrips')).toContain(cantripsBefore[0]);
+      expect(names(compiled, 'spells-step__cantrips').length).toBeLessThan(cantripsBefore.length);
+      expect(names(compiled, 'spells-step__spellbook')).toEqual(['Sleep']);
+      expect(bookBefore.length).toBeGreaterThan(1);
+
+      await typeSearch(fixture, bookSearch, 'zzzz');
+      expect(compiled.querySelector('.spells-step__spellbook .spells-step__empty')).not.toBeNull();
+    });
+
+    it('school chips filter the spellbook, and an empty selection brings every spell back', async () => {
+      createWizardDraft();
+      const fixture = TestBed.createComponent(SpellsStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const total = names(compiled, 'spells-step__spellbook').length;
+      const chip = compiled.querySelector<HTMLButtonElement>(
+        '.spells-step__spellbook button[hk-filter-chip]',
+      )!;
+      press(chip);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const filtered = names(compiled, 'spells-step__spellbook').length;
+      expect(filtered).toBeGreaterThan(0);
+      expect(filtered).toBeLessThan(total);
+      press(compiled.querySelector('.spells-step__spellbook .hk-filter-chips__clear')!);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(names(compiled, 'spells-step__spellbook')).toHaveLength(total);
+    });
+
+    it('an unlearned row is named by the spell alone, a learned one carries its state', async () => {
+      createWizardDraft();
+      const fixture = TestBed.createComponent(SpellsStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const first = () => toggles(compiled, 'spells-step__cantrips')[0];
+      const name = first()
+        .closest('.spell-pick')!
+        .querySelector('.hk-srow__name')!
+        .textContent.trim();
+      expect(first().getAttribute('aria-label')).toBe(name);
+      first().click();
+      await fixture.whenStable();
+      expect(first().getAttribute('aria-label')).toBe(`${name} \u2014 Known cantrip`);
+    });
+
+    it('a blocked row points at its reason with a stable aria-describedby', async () => {
+      createWizardDraft();
+      const fixture = TestBed.createComponent(SpellsStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      for (let i = 0; i < 3; i++) {
+        toggles(compiled, 'spells-step__cantrips')[i].click();
+        await fixture.whenStable();
+      }
+      const blocked = toggles(compiled, 'spells-step__cantrips')[3];
+      const target = compiled.querySelector(`[id="${blocked.getAttribute('aria-describedby')}"]`)!;
+      expect(target.textContent.trim()).toBe(
+        charactersEn.wizard.spells.cantripCapReached.replace('{cap}', '3'),
+      );
+    });
+  });
 });

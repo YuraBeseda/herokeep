@@ -102,6 +102,21 @@
                   [min]="gen().manual.min"
                   [max]="gen().manual.max"
                   [step]="1"
+                  [hint]="
+                    t('wizard.abilityScores.manualHint', {
+                      min: gen().manual.min,
+                      max: gen().manual.max,
+                    })
+                  "
+                  [error]="
+                    manualOutOfRange()[a.id]
+                      ? t('wizard.abilityScores.manualOutOfRange', {
+                          min: gen().manual.min,
+                          max: gen().manual.max,
+                        })
+                      : null
+                  "
+                  (input)="onManualRaw(a.id, $event)"
                   [ngModel]="manualValue(a.id)"
                   (ngModelChange)="onManualChange(a.id, $event)"
                 />

@@ -283,6 +283,18 @@ export class AbilityScoresStepComponent {
     return this.manualScores()[abilityId] ?? null;
   }
 
+  /** Ability ids whose typed value is outside the pack's manual range (the field then clamps it). */
+  protected readonly manualOutOfRange = signal<Record<string, boolean>>({});
+
+  /** Runs on every keystroke (the native input event bubbles from the field). */
+  protected onManualRaw(abilityId: string, event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    if (raw === '') return;
+    const { min, max } = this.gen().manual;
+    const value = Number(raw);
+    this.manualOutOfRange.update((prev) => ({ ...prev, [abilityId]: value < min || value > max }));
+  }
+
   protected onManualChange(abilityId: string, value: number | null): void {
     this.manualScores.update((prev) => {
       const next = { ...prev };

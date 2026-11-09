@@ -140,7 +140,9 @@
       "rollAll": "Кинути всі шість",
       "rollsAnnounced": "Кинуто шість характеристик: {scores}.",
       "methodLabel": "Спосіб визначення",
-      "scoreLabel": "{ability}: значення"
+      "scoreLabel": "{ability}: значення",
+      "manualHint": "від {min} до {max}",
+      "manualOutOfRange": "Поза діапазоном від {min} до {max}: замінено найближчим допустимим значенням"
     },
     "abilitiesImprove": {
       "deltaLabel": "+{delta}",
@@ -162,7 +164,8 @@
       "concentration": "Концентрація",
       "ritual": "Ритуал",
       "ritualShort": "Р",
-      "spellbookHelper": "Рекомендуємо близько {recommended} заклинань для початкової книги — можна обрати більше."
+      "spellbookHelper": "Рекомендуємо близько {recommended} заклинань для початкової книги — можна обрати більше.",
+      "showMore": "Показати ще ({count})"
     },
     "equipment": {
       "qtyLabel": "Кількість",

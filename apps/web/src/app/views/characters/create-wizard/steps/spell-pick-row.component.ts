@@ -7,6 +7,8 @@ import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
 
+let nextSpellReasonId = 0;
+
 /**
  * One spell of the spells step: a tick seal you press to learn / prepare it, the spell's row (glyph,
  * name, the concentration orb, a ritual chip) and an info button that opens its description.
@@ -53,5 +55,9 @@ export class SpellPickRowComponent {
     const entity = this.entity();
     return entity ? this.engineFacade.iconFor(entity) : 'ui:spells';
   });
-  protected readonly toggleLabel = computed(() => `${this.name()} — ${this.chosenHint()}`);
+  /** The name reflects the real state: the hint ("Known cantrip") only once it is true. */
+  protected readonly toggleLabel = computed(() =>
+    this.chosen() ? `${this.name()} — ${this.chosenHint()}` : this.name(),
+  );
+  protected readonly reasonId = `spell-pick-reason-${nextSpellReasonId++}`;
 }

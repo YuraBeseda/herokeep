@@ -102,14 +102,14 @@
 }
 
 .hk-picker-card__gate {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 0;
+  display: inline-flex;
+  align-self: flex-start;
   color: var(--danger-strong);
-  font-size: 14px;
-  font-style: italic;
-  overflow-wrap: anywhere;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
 }
 
 .hk-picker-card__gate-icon {

@@ -87,3 +87,29 @@
   border-color: var(--danger);
   color: var(--danger);
 }
+
+.choice-step__plain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.choice-step__plain-row {
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
+  color: var(--text-1);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    box-shadow: 0 0 0 2px var(--brass);
+  }
+}

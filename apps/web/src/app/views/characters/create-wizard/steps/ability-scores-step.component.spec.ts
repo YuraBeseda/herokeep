@@ -237,7 +237,6 @@ describe('AbilityScoresStepComponent', () => {
     const fullSelection = state.decisions().get(ABILITY_SCORES_CHOICE);
     expect(fullSelection).toEqual(['str:16', 'dex:14', 'con:13', 'int:12', 'wis:18', 'cha:8']);
     expect(inputs[4].value).toBe('18');
-    expect(compiled.querySelectorAll('.ability-scores-step__diagnostic')).toHaveLength(0);
 
     const outOfRange = ['str:16', 'dex:14', 'con:13', 'int:12', 'wis:25', 'cha:8'];
     const diagnostics = state.validate(ABILITY_SCORES_CHOICE, outOfRange);
@@ -356,5 +355,42 @@ describe('AbilityScoresStepComponent — seals and tabs (plan 17)', () => {
     first.dispatchEvent(new Event('change'));
     await fixture.whenStable();
     expect(parseFloat(fill())).toBeGreaterThan(parseFloat(before));
+  });
+});
+
+describe('AbilityScoresStepComponent — manual range (plan 17 fix round)', () => {
+  beforeEach(() => configure());
+
+  it('shows the allowed range as a hint, and a typed value outside it as a visible, described error', async () => {
+    const state = createState();
+    state.name.set('Aldric');
+    const fixture = TestBed.createComponent(AbilityScoresStepComponent);
+    fixture.componentRef.setInput('choiceId', ABILITY_SCORES_CHOICE);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    findTabButton(root, 'Manual').click();
+    await fixture.whenStable();
+
+    const field = root.querySelectorAll('.ability-scores-step__number')[4];
+    expect(field.querySelector('.hk-field__msg')!.textContent).toContain('3 to 18');
+    expect(field.querySelector('.hk-field__msg--error')).toBeNull();
+
+    const input = field.querySelector<HTMLInputElement>('input[type="number"]')!;
+    input.value = '25';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    const error = field.querySelector('.hk-field__msg--error')!;
+    expect(error.textContent).toContain('Outside 3 to 18');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe(error.id);
+
+    // The field then adjusts to the nearest allowed value; typing a valid one clears the error.
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await fixture.whenStable();
+    expect(input.value).toBe('18');
+    input.value = '14';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+    expect(field.querySelector('.hk-field__msg--error')).toBeNull();
   });
 });

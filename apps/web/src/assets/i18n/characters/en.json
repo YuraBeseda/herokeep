@@ -140,7 +140,9 @@
       "rollAll": "Roll all six",
       "rollsAnnounced": "Rolled six ability scores: {scores}.",
       "methodLabel": "Generation method",
-      "scoreLabel": "{ability} score"
+      "scoreLabel": "{ability} score",
+      "manualHint": "{min} to {max}",
+      "manualOutOfRange": "Outside {min} to {max}: adjusted to the nearest allowed value"
     },
     "abilitiesImprove": {
       "deltaLabel": "+{delta}",
@@ -162,7 +164,8 @@
       "concentration": "Concentration",
       "ritual": "Ritual",
       "ritualShort": "R",
-      "spellbookHelper": "We recommend around {recommended} spells for your starting spellbook — you may learn more."
+      "spellbookHelper": "We recommend around {recommended} spells for your starting spellbook — you may learn more.",
+      "showMore": "Show more ({count})"
     },
     "equipment": {
       "qtyLabel": "Quantity",

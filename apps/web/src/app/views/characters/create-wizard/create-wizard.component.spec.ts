@@ -1427,7 +1427,12 @@ describe('CreateWizardComponent — rebuilt steps (plan 17 B8b)', () => {
     const core = rows[0];
     expect(core.classList.contains('name-step__pack--core')).toBe(true);
     expect(core.querySelector('input')).toBeNull();
-    expect(core.getAttribute('aria-label')).toContain(charactersEn.create.packs.coreLocked);
+    const lock = core.querySelector('[role="img"]')!;
+    expect(lock.getAttribute('aria-label')).toContain(charactersEn.create.packs.coreLocked);
+    expect(lock.getAttribute('tabindex')).toBe('0');
+    expect(core.getAttribute('tabindex')).toBeNull();
+    const hint = root(fixture).querySelector('.name-step__hint')!;
+    expect(hint.getAttribute('aria-label')).toBe(charactersEn.create.packs.hint);
     expect(rows[1].querySelector('input[type="checkbox"]')).not.toBeNull();
   });
 

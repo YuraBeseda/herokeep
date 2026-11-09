@@ -57,14 +57,33 @@
         />
       }
       @case ('skills') {
-        <hk-entity-picker
-          class="choice-step__skills"
-          [ids]="skillIds()"
-          [selectedIds]="selectedSkillIds()"
-          [layout]="'rows'"
-          [disabled]="disabled()"
-          (toggled)="onToggleSkill($event)"
-        />
+        @if (!skillsHaveEntities()) {
+          <!-- A skill the pack has no entity for stays listed, as a plain row without a description. -->
+          <ul class="choice-step__plain">
+            @for (opt of v.options; track opt.id) {
+              <li>
+                <button
+                  type="button"
+                  class="choice-step__plain-row"
+                  [attr.aria-pressed]="isSelected(opt.id)"
+                  [attr.aria-disabled]="disabled() ? 'true' : null"
+                  (click)="onToggle(opt.id)"
+                >
+                  {{ opt.name }}
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <hk-entity-picker
+            class="choice-step__skills"
+            [ids]="skillIds()"
+            [selectedIds]="selectedSkillIds()"
+            [layout]="'rows'"
+            [disabled]="disabled()"
+            (toggled)="onToggleSkill($event)"
+          />
+        }
       }
       @case ('literal') {
         <div class="choice-step__literal">

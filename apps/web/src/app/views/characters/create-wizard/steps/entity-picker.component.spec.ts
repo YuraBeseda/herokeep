@@ -372,6 +372,19 @@ describe('EntityPickerComponent — strap tools (plan 17)', () => {
     await fixture.whenStable();
     expect(root.querySelector('button[hk-filter-chip]')).toBeNull();
 
+    // Folding the chips away also clears a chip that was applied, so no filter stays out of sight.
+    tools.toggleFilters(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    press(root.querySelector<HTMLElement>('button[hk-filter-chip]')!);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(root.querySelectorAll('hk-picker-card').length).toBeLessThan(speciesIds.length);
+    tools.toggleFilters(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(root.querySelectorAll('hk-picker-card')).toHaveLength(speciesIds.length);
+
     document.body.append(root);
     tools.requestSearch();
     fixture.detectChanges();
