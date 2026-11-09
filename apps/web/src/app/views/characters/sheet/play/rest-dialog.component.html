@@ -8,13 +8,33 @@
   </h2>
 
   @if (data.kind === 'short') {
+    <p class="rest-dialog__intro">{{ t('characters.sheet.rest.dialog.shortBody') }}</p>
+
     @if (hasAnyHitDice()) {
-      <ul class="rest-dialog__hit-dice">
+      <ul
+        class="rest-dialog__hit-dice"
+        [attr.aria-label]="t('characters.sheet.rest.dialog.hitDice')"
+      >
         @for (row of hitDiceRows(); track row.classId) {
           <li class="rest-dialog__hit-die-row">
             <span class="rest-dialog__class-name">{{ row.className }}</span>
             <span class="rest-dialog__remaining">
               {{ t('characters.sheet.rest.dialog.remaining', { remaining: row.remaining }) }}
+            </span>
+            <span class="rest-dialog__seals">
+              @for (available of sealsOf(row); track $index; let s = $index) {
+                <hk-wax-seal
+                  [size]="'s'"
+                  [state]="available ? 'filled' : 'spent'"
+                  [glyph]="'ui:roll'"
+                  [seed]="s"
+                  [hint]="
+                    available
+                      ? t('characters.sheet.rest.dialog.dieAvailable')
+                      : t('characters.sheet.rest.dialog.dieSpent')
+                  "
+                />
+              }
             </span>
             <button
               hk-button
@@ -24,7 +44,9 @@
               [disabled]="row.remaining <= 0"
               (click)="rollDie(row)"
             >
-              {{ t('characters.sheet.rest.dialog.roll', { die: row.die }) }}
+              <hk-icon [icon]="'ui:roll'" />{{
+                t('characters.sheet.rest.dialog.roll', { die: row.die })
+              }}
             </button>
           </li>
         }
@@ -50,16 +72,28 @@
         }
       </ul>
     }
+
+    <p class="rest-dialog__hp">
+      <hk-icon [icon]="'ui:hp'" />
+      <span class="rest-dialog__hp-label">{{ t('characters.sheet.rest.dialog.hp') }}</span>
+      <b>{{
+        t('characters.sheet.rest.dialog.hpPreview', {
+          current: hpNow,
+          after: hpAfter(),
+          max: hpMax,
+        })
+      }}</b>
+    </p>
   } @else {
     <p class="rest-dialog__body">{{ t('characters.sheet.rest.dialog.longBody') }}</p>
   }
 
-  <div class="rest-dialog__actions">
-    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+  <div class="rest-dialog__actions" data-dialog-actions>
+    <button hk-button type="button" [variant]="'ghost-leather'" (click)="cancel()">
       {{ t('characters.sheet.rest.dialog.cancel') }}
     </button>
     <button hk-button type="button" (click)="confirm()">
-      {{
+      <hk-icon [icon]="data.kind === 'short' ? 'ui:short-rest' : 'ui:long-rest'" />{{
         data.kind === 'short'
           ? t('characters.sheet.rest.dialog.confirmShort')
           : t('characters.sheet.rest.dialog.confirmLong')

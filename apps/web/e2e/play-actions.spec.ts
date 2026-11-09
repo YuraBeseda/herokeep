@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createFighter, chooseControl } from './helpers/create-fighter';
 import { createWizard, prepareSpell } from './helpers/create-wizard';
 import { chooseOwnClassIfPrompted } from './helpers/level-up';
-import { applyHp, hpCurrent, hpMax, strapAction } from './helpers/sheet';
+import { applyHp, chooseCastSlotLane, hpCurrent, hpMax, strapAction } from './helpers/sheet';
 
 const FIGHTER_NAME = 'Aldric Rest Actions';
 const WIZARD_NAME = 'Aldric Spellcaster';
@@ -13,28 +13,6 @@ const WIZARD_NAME = 'Aldric Spellcaster';
  * store's async `appendTx` -> derive -> render cycle instead of waiting it out. */
 function hpValueLocator(page: Page, label: 'Current' | 'Max'): Locator {
   return label === 'Current' ? hpCurrent(page) : hpMax(page);
-}
-
-/** Selects the cast dialog's slot option by its LEVEL, not by the `<select>`'s own `value` — as of
- * task 12 (phase 4 plan 11) that `value` is the option's ARRAY INDEX, not its spell level
- * (`cast-dialog.component.ts`'s own doc: two options can share a `level` once a pact lane exists,
- * e.g. a Warlock's pact slot and a regular slot at the same level on a multiclassed character, so
- * index is the only value stable enough to disambiguate them — a bare `value: '3'` no longer means
- * "the level-3 option"). This reads the matching `<option>`'s actual `value` attribute first
- * rather than assuming a fixed index, so it stays correct regardless of how many slot levels or
- * pact-lane options sit below the one being picked. Matches on `"Level {level} ("` — the
- * non-pact `slotOption` translation's own fixed prefix (`characters/en.json`). Playwright's
- * `hasText` is a case-INSENSITIVE substring match, so this CAN also match the `slotOptionPact`
- * string ("Pact slot, level {level} (…"); it is safe here only because this spec drives a
- * single-class Wizard (no pact lane). A future collision fails loudly (strict-mode violation on
- * `getAttribute` over a multi-match locator), not silently. */
-async function selectCastSlotByLevel(page: Page, level: number): Promise<void> {
-  const option = page
-    .locator('.cast-dialog__slot-select option')
-    .filter({ hasText: `Level ${level} (` });
-  const value = await option.getAttribute('value');
-  if (value === null) throw new Error(`no cast-dialog slot option for level ${level}`);
-  await page.locator('.cast-dialog__slot-select').selectOption({ value });
 }
 
 /**
@@ -216,7 +194,7 @@ test.describe('play actions', () => {
       await preparedRow.getByRole('button', { name: 'Cast Magic Missile', exact: true }).click();
 
       await expect(page.locator('.cast-dialog__title')).toHaveText('Cast Magic Missile');
-      await selectCastSlotByLevel(page, 3);
+      await chooseCastSlotLane(page, 3);
       await page
         .locator('.cast-dialog__actions')
         .getByRole('button', { name: 'Cast', exact: true })
@@ -232,7 +210,7 @@ test.describe('play actions', () => {
       await preparedRow.getByRole('button', { name: 'Cast Sleep', exact: true }).click();
 
       await expect(page.locator('.cast-dialog__title')).toHaveText('Cast Sleep');
-      await selectCastSlotByLevel(page, 3);
+      await chooseCastSlotLane(page, 3);
       await page
         .locator('.cast-dialog__actions')
         .getByRole('button', { name: 'Cast', exact: true })

@@ -1,0 +1,39 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <div
+    class="note-editor"
+    role="group"
+    [attr.aria-label]="
+      mode() === 'add' ? t('sheet.notes.dialog.addTitle') : t('sheet.notes.dialog.editTitle')
+    "
+  >
+    <hk-text-field [label]="t('sheet.notes.dialog.titleLabel')" [(value)]="titleValue" />
+    <hk-textarea
+      [label]="t('sheet.notes.dialog.bodyLabel')"
+      [hint]="t('sheet.notes.editorHint')"
+      [rows]="8"
+      [maxLength]="maxBodyLength()"
+      [(value)]="bodyValue"
+    />
+
+    @if (bodyTooLong()) {
+      <p class="note-editor__error" role="alert">
+        {{ t('sheet.notes.dialog.bodyTooLong', { length: bodyLength(), max: maxBodyLength() }) }}
+      </p>
+    }
+
+    <div class="note-editor__actions">
+      @if (mode() === 'edit') {
+        <button hk-button type="button" [variant]="'ember'" (click)="removed.emit()">
+          {{ t('sheet.notes.editorRemove') }}
+        </button>
+      }
+      <span class="note-editor__spacer"></span>
+      <button hk-button type="button" [variant]="'ghost'" (click)="cancelled.emit()">
+        {{ t('sheet.notes.dialog.cancel') }}
+      </button>
+      <button hk-button type="button" [disabled]="bodyTooLong()" (click)="save()">
+        {{ t('sheet.notes.dialog.save') }}
+      </button>
+    </div>
+  </div>
+</ng-container>

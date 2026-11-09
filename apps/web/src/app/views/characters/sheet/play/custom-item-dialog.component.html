@@ -3,38 +3,39 @@
     {{ t('characters.sheet.inventory.customDialog.title') }}
   </h2>
 
-  <label class="custom-item-dialog__field">
-    <span>{{ t('characters.sheet.inventory.customDialog.nameLabel') }}</span>
-    <input
-      type="text"
-      class="custom-item-dialog__name-input"
+  <div class="custom-item-dialog__fields">
+    <!-- The icon field arrives with plan slice 2; the slot is left empty on purpose. -->
+    <hk-text-field
+      [label]="t('characters.sheet.inventory.customDialog.nameLabel')"
+      [maxLength]="200"
+      [required]="true"
+      [error]="
+        nameTouched() && nameBlank()
+          ? t('characters.sheet.inventory.customDialog.nameRequired')
+          : null
+      "
       [value]="name()"
-      (input)="onNameChange($any($event.target).value)"
+      (valueChange)="name.set($event); nameTouched.set(true)"
     />
-  </label>
+    <hk-textarea
+      [label]="t('characters.sheet.inventory.customDialog.notesLabel')"
+      [rows]="3"
+      [(value)]="notes"
+    />
+  </div>
 
-  <hk-number-field
-    [labelKey]="'characters.sheet.inventory.customDialog.qtyLabel'"
-    [min]="1"
-    [step]="1"
-    [ngModel]="qty()"
-    (ngModelChange)="onQtyChange($event)"
-  />
-
-  <label class="custom-item-dialog__field">
-    <span>{{ t('characters.sheet.inventory.customDialog.notesLabel') }}</span>
-    <textarea
-      class="custom-item-dialog__notes-input"
-      [value]="notes()"
-      (input)="onNotesChange($any($event.target).value)"
-    ></textarea>
-  </label>
-
-  <div class="custom-item-dialog__actions">
-    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+  <div class="custom-item-dialog__actions" data-dialog-actions>
+    <button hk-button type="button" [variant]="'ghost-leather'" (click)="cancel()">
       {{ t('characters.sheet.inventory.customDialog.cancel') }}
     </button>
-    <button hk-button type="button" [disabled]="!name().trim()" (click)="confirm()">
+    <hk-number-field
+      class="custom-item-dialog__qty"
+      [label]="t('characters.sheet.inventory.customDialog.qtyLabel')"
+      [min]="1"
+      [step]="1"
+      [(value)]="qty"
+    />
+    <button hk-button type="button" [disabled]="nameBlank()" (click)="confirm()">
       {{ t('characters.sheet.inventory.customDialog.confirm') }}
     </button>
   </div>

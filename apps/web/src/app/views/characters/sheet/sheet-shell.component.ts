@@ -22,8 +22,10 @@ import { TopBarService } from '../../../ui/shell/top-bar.service';
 import { TabBarService, type TabItem } from '../../../ui/tab-bar/tab-bar.service';
 import { HkXpBarComponent } from '../../../ui/xp-bar/xp-bar.component';
 import { AbilitiesLeafComponent } from './play/abilities-leaf/abilities-leaf.component';
+import { NotesDrawerComponent } from './play/notes-drawer/notes-drawer.component';
 import { PlayActionsService } from './play/play-actions.service';
 import { PlayRollsService } from './play/play-rolls.service';
+import { RollLogDrawerComponent } from './play/roll-log-drawer/roll-log-drawer.component';
 import { SkillsLeafComponent } from './play/skills-leaf/skills-leaf.component';
 import { VitalsLeafComponent } from './play/vitals-leaf/vitals-leaf.component';
 import { WakeLockToggleComponent } from './play/wake-lock-toggle/wake-lock-toggle.component';
@@ -34,6 +36,11 @@ import { buildSheetStrap } from './sheet-strap';
 import { sheetNames } from './play/play-names';
 
 /** The folio's tabs (desktop/tablet); each is a child route of `/c/:id`. */
+/** A strap button by action id: the drawers it opens treat it as their opener (focus goes back to it,
+ * and pressing it again is a toggle, not an outside press). */
+const strapButton = (id: string): HTMLElement | null =>
+  document.querySelector<HTMLElement>(`[data-action="${id}"]`);
+
 const TAB_IDS = ['play', 'build', 'timeline'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
@@ -86,6 +93,8 @@ const SHEET_CHILDREN: ReadonlySet<string> = new Set([...TAB_IDS, ...PHONE_TAB_ID
     AbilitiesLeafComponent,
     SkillsLeafComponent,
     WakeLockToggleComponent,
+    NotesDrawerComponent,
+    RollLogDrawerComponent,
   ],
   // Plan 15 Task 4: a component-level `EngineFacade` scoped to the loaded character's pins — every
   // tab and level-up (routed children) names and lists against the character's own pack set.
@@ -274,6 +283,10 @@ export class SheetShellComponent {
   // --- Export (plan-6 Task 9) -----------------------------------------------------------------
 
   protected readonly exporting = this.chrome.exporting;
+  protected readonly notesOpen = this.chrome.notesOpen;
+  protected readonly rollLogOpen = this.chrome.rollLogOpen;
+  protected readonly notesOpener = this.chrome.notesOpener;
+  protected readonly rollLogOpener = this.chrome.rollLogOpener;
 
   protected onExport(t: (key: string, params?: Record<string, unknown>) => string): void {
     void this.chrome.exportHero(t);
@@ -358,8 +371,8 @@ export class SheetShellComponent {
             shortRest: () => void this.actions.shortRest(this.names.hitDiceOptions(this.sheet())),
             longRest: () => void this.actions.longRest(),
             addCondition: () => void this.actions.addCondition(this.names.conditionOptions()),
-            openNotes: () => this.chrome.openNotes(),
-            openRollLog: () => this.chrome.openRollLog(),
+            toggleNotes: () => this.chrome.toggleNotes(strapButton('notes')),
+            toggleRollLog: () => this.chrome.toggleRollLog(strapButton('roll-log')),
             exportHero: () => void this.chrome.exportHero(this.scopedT),
             edit: () => void this.router.navigate(['build'], { relativeTo: this.route }),
           },

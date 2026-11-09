@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
+import { propose } from '@hk/engine';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -14,6 +15,7 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import { overlayRoot } from '../../../../ui/testing/overlay';
 import { levelUpToTwo, seedFighter } from '../testing/character-fixtures';
 import { RestDialogComponent, type RestDialogData } from './rest-dialog.component';
 
@@ -23,9 +25,6 @@ import { RestDialogComponent, type RestDialogData } from './rest-dialog.componen
 // `propose.spendHitDie` against it — task-6-brief.md's "seed real streams via existing helpers".
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..', '..');
-
-/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
-const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
 
 function readPack(path: string): Pack {
   const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
@@ -277,5 +276,92 @@ describe('RestDialogComponent', () => {
       { type: 'hit_dice.spent', v: 1, payload: { classId: FIGHTER, count: 1, healed: 6 + conMod } },
       { type: 'hit_dice.spent', v: 1, payload: { classId: FIGHTER, count: 1, healed: 9 + conMod } },
     ]);
+  });
+
+  // --- Board DL02: hit-dice seals, the HP preview and the parchment strap ----------------------
+
+  describe('parchment layout (board DL02)', () => {
+    const seals = () => Array.from(overlayRoot().querySelectorAll<HTMLElement>('hk-wax-seal'));
+
+    it('shows one wax seal per hit die, the unrolled ones filled and the rolled ones cooled', async () => {
+      await seedFighter('Ivan');
+      await levelUpToTwo();
+      const sheet = TestBed.inject(CharacterStore).sheet()!;
+      scriptRolls([{ value: 4, sides: 10 }]);
+
+      open({
+        kind: 'short',
+        sheet,
+        hitDiceOptions: [{ classId: FIGHTER, className: 'Fighter' }],
+      });
+      TestBed.tick();
+      expect(seals().map((s) => s.classList.contains('hk-wax-seal--spent'))).toEqual([
+        false,
+        false,
+      ]);
+
+      rollButton().click();
+      TestBed.tick();
+      expect(seals().map((s) => s.classList.contains('hk-wax-seal--spent'))).toEqual([false, true]);
+      expect(seals()[1].querySelector('svg')?.getAttribute('aria-label')).toBe(
+        charactersEn.sheet.rest.dialog.dieSpent,
+      );
+      expect(seals()[0].querySelector('svg')?.getAttribute('aria-label')).toBe(
+        charactersEn.sheet.rest.dialog.dieAvailable,
+      );
+    });
+
+    it('previews the hit points: now, after the rolled dice (capped at the maximum), and the maximum', async () => {
+      await seedFighter('Ivan');
+      await levelUpToTwo();
+      const characterStore = TestBed.inject(CharacterStore);
+      await characterStore.appendTx(propose.damage(characterStore.sheet()!, 10));
+      const sheet = characterStore.sheet()!;
+      const conMod = sheet.abilities['con'].mod;
+      scriptRolls([{ value: 6, sides: 10 }]);
+
+      open({
+        kind: 'short',
+        sheet,
+        hitDiceOptions: [{ classId: FIGHTER, className: 'Fighter' }],
+      });
+      TestBed.tick();
+      const preview = () => overlayRoot().querySelector('.rest-dialog__hp')?.textContent ?? '';
+      const text = (after: number) =>
+        charactersEn.sheet.rest.dialog.hpPreview
+          .replace('{current}', String(sheet.hp.current))
+          .replace('{after}', String(after))
+          .replace('{max}', String(sheet.hp.max.value));
+      expect(preview()).toContain(text(sheet.hp.current));
+
+      rollButton().click();
+      TestBed.tick();
+      expect(preview()).toContain(
+        text(Math.min(sheet.hp.max.value, sheet.hp.current + 6 + conMod)),
+      );
+    });
+
+    it('names the hit-dice block and offers no HP preview on a long rest', async () => {
+      await seedFighter('Ivan');
+      const sheet = TestBed.inject(CharacterStore).sheet()!;
+      open({ kind: 'long', sheet, hitDiceOptions: [] });
+      TestBed.tick();
+      expect(overlayRoot().querySelector('.rest-dialog__hp')).toBeNull();
+      expect(seals()).toHaveLength(0);
+    });
+
+    it('puts Cancel and the confirm on the leather strap', async () => {
+      await seedFighter('Ivan');
+      const sheet = TestBed.inject(CharacterStore).sheet()!;
+      open({ kind: 'short', sheet, hitDiceOptions: [] });
+      TestBed.tick();
+      const strap = overlayRoot().querySelector('[data-dialog-actions]')!;
+      expect(
+        Array.from(strap.querySelectorAll('button')).map((b) => b.textContent?.trim()),
+      ).toEqual([
+        charactersEn.sheet.rest.dialog.cancel,
+        charactersEn.sheet.rest.dialog.confirmShort,
+      ]);
+    });
   });
 });

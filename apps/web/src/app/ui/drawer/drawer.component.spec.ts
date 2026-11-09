@@ -1,3 +1,5 @@
+import { Overlay } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
 import { Component, inject, signal, viewChild, type ElementRef } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { Location } from '@angular/common';
@@ -14,6 +16,9 @@ class Page {}
 class InnerDialog {
   protected readonly text = 'Inner';
 }
+
+@Component({ template: `<div role="menu"></div>` })
+class InnerPopover {}
 
 @Component({
   imports: [HkDrawerComponent],
@@ -246,6 +251,49 @@ describe('HkDrawerComponent', () => {
       press(document.querySelector('.inner')!);
       await fixture.whenStable();
       expect(panel(el)).not.toBeNull();
+    });
+
+    it('a press on the dialog backdrop leaves the drawer open', async () => {
+      const { fixture, el } = await setup();
+      await openDialog(fixture);
+      press(document.querySelector('.hk-overlay-backdrop')!);
+      await fixture.whenStable();
+      expect(document.querySelector('.cdk-overlay-container hk-dialog')).toBeNull();
+      expect(panel(el)).not.toBeNull();
+    });
+  });
+
+  describe('with a popover (a CDK overlay that is not a dialog) or a toast above it', () => {
+    afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((e) => e.remove()));
+
+    it('Escape leaves the drawer open while the popover pane is up, and closes it once gone', async () => {
+      const { fixture, el } = await setup();
+      await openIt(fixture);
+      const popover = TestBed.inject(Overlay).create();
+      popover.attach(new ComponentPortal(InnerPopover));
+      await fixture.whenStable();
+
+      key(document.body, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).not.toBeNull();
+
+      popover.dispose();
+      key(document.body, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).toBeNull();
+    });
+
+    it('a pane that holds no dialog or popover (a toast) does not swallow Escape', async () => {
+      const { fixture, el } = await setup();
+      await openIt(fixture);
+      const toast = TestBed.inject(Overlay).create();
+      toast.attach(new ComponentPortal(InnerDialog));
+      await fixture.whenStable();
+
+      key(document.body, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).toBeNull();
+      toast.dispose();
     });
   });
 

@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  min-inline-size: min(100%, 420px);
+}
+
+hk-entity-picker {
+  display: block;
+  max-block-size: 60dvh;
+  overflow-y: auto;
+}
+
+.add-item-dialog__qty {
+  display: block;
+  margin-inline-start: auto;
+}

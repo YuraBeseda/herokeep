@@ -11,7 +11,10 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
-import type { AdvantageMode } from './roll-log-panel.component';
+
+/** The advantage toggle's three states: `'normal'` rolls a plain `1d20`; `'adv'`/`'dis'` roll
+ * `2d20kh1`/`2d20kl1` for the NEXT d20 roll only, then `PlayRollsService` resets it to `'normal'`. */
+export type AdvantageMode = 'normal' | 'adv' | 'dis';
 
 // A dice-notation modifier TERM (`parseRollSpec`, `packages/engine/src/dice/parse.ts`): `0` omits
 // the term entirely, a positive value needs an explicit `+`, a negative one already carries `-`.

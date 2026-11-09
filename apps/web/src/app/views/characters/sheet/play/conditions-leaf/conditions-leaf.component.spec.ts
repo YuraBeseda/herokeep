@@ -145,9 +145,9 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
     buttonNamed(compiled, charactersEn.sheet.conditions.add).click();
     TestBed.tick();
 
-    const select = overlay().querySelector<HTMLSelectElement>('select')!;
-    select.value = BLINDED_ID;
-    select.dispatchEvent(new Event('change'));
+    overlay()
+      .querySelector<HTMLElement>(`.condition-dialog__chip[data-id="${BLINDED_ID}"]`)!
+      .click();
     TestBed.tick();
     buttonNamed(overlay(), charactersEn.sheet.conditions.addDialog.confirm).click();
 
@@ -173,9 +173,9 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
     async function addExhaustion(level: number): Promise<void> {
       buttonNamed(compiled, charactersEn.sheet.conditions.add).click();
       TestBed.tick();
-      const select = overlay().querySelector<HTMLSelectElement>('select')!;
-      select.value = EXHAUSTION_ID;
-      select.dispatchEvent(new Event('change'));
+      overlay()
+        .querySelector<HTMLElement>(`.condition-dialog__chip[data-id="${EXHAUSTION_ID}"]`)!
+        .click();
       TestBed.tick();
       const levelInput = overlay().querySelector<HTMLInputElement>('input[type="number"]')!;
       levelInput.value = String(level);

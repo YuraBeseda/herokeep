@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  inline-size: 360px;
+  inline-size: var(--hk-drawer-width, 360px);
   max-inline-size: 100%;
   box-sizing: border-box;
   padding: 16px 18px;
@@ -65,7 +65,13 @@
 .hk-drawer__body {
   flex: 1 1 auto;
   min-block-size: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+
+  /* Room for the 4px hit-area extension of the buttons at the edge: without it the body is a few
+     pixels wider than its box and scrolls sideways when a field takes focus. */
+  margin-inline: -4px;
+  padding-inline: 4px;
 }
 
 .hk-drawer__actions {

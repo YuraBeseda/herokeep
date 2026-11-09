@@ -4,7 +4,14 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import { overlayRoot } from '../../../../ui/testing/overlay';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
+
+/** The pay-with lanes (board DL01): one radio per available slot, pact slot or free-cast option. */
+const lanes = (): HTMLElement[] =>
+  Array.from(overlayRoot().querySelectorAll<HTMLElement>('[role="radio"].cast-dialog__lane'));
+const laneTitle = (lane: HTMLElement): string =>
+  lane.querySelector('.cast-dialog__lane-title')?.textContent?.trim() ?? '';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -54,14 +61,14 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
-    // Task 12: option `value` is the ARRAY INDEX (never the bare level) — two options can share
+    // Task 12: a lane's identity is the ARRAY INDEX (never the bare level) — two options can share
     // the same `level` (a pact slot and a regular slot both at level 3), so index is what
     // disambiguates the selection; see the component's own class doc.
-    const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
+    const options = lanes();
     expect(options).toHaveLength(2);
-    expect(options.map((o) => o.value)).toEqual(['0', '1']);
+    expect(options.map((o) => o.dataset['index'])).toEqual(['0', '1']);
     expect(options[0].textContent).toContain('1');
-    expect(options.some((o) => o.value === '' || /no slot/i.test(o.textContent ?? ''))).toBe(false);
+    expect(options.some((o) => /no slot/i.test(o.textContent ?? ''))).toBe(false);
   });
 
   it('shows the "no slots available" message and disables confirm when availableSlots is empty', () => {
@@ -69,7 +76,7 @@ describe('CastDialogComponent', () => {
     open({ ...BASE_DATA, availableSlots: [] });
     TestBed.tick();
 
-    expect(document.querySelector('option')).toBeNull();
+    expect(lanes()).toHaveLength(0);
     const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
     const confirmButton = buttons.find(
       (b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm,
@@ -138,10 +145,8 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
-    const select = document.querySelector<HTMLSelectElement>('select')!;
-    // Index-based value (task 12) — '1' selects the SECOND option (level 2), not "value 1".
-    select.value = '1';
-    select.dispatchEvent(new Event('change'));
+    // Index-based (task 12) — the SECOND lane is level 2.
+    lanes()[1].click();
     TestBed.tick();
 
     const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
@@ -166,14 +171,14 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
-    const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
+    const options = lanes();
     expect(options).toHaveLength(2);
-    expect(options[0].textContent?.trim()).toBe(
+    expect(laneTitle(options[0])).toBe(
       charactersEn.sheet.spellcasting.castDialog.slotOption
         .replace('{level}', '3')
         .replace('{remaining}', '1'),
     );
-    expect(options[1].textContent?.trim()).toBe(
+    expect(laneTitle(options[1])).toBe(
       charactersEn.sheet.spellcasting.castDialog.slotOptionPact
         .replace('{level}', '3')
         .replace('{remaining}', '1'),
@@ -191,9 +196,7 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
-    const select = document.querySelector<HTMLSelectElement>('select')!;
-    select.value = '1'; // the pact option, index 1
-    select.dispatchEvent(new Event('change'));
+    lanes()[1].click(); // the pact option, index 1
     TestBed.tick();
 
     const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
@@ -237,8 +240,7 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
-    const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
-    expect(options.map((o) => o.textContent?.trim())).toEqual([
+    expect(lanes().map(laneTitle)).toEqual([
       charactersEn.sheet.spellcasting.castDialog.slotOption
         .replace('{level}', '1')
         .replace('{remaining}', '2'),
@@ -260,9 +262,7 @@ describe('CastDialogComponent', () => {
     });
     TestBed.tick();
 
-    const select = document.querySelector<HTMLSelectElement>('select')!;
-    select.value = '1';
-    select.dispatchEvent(new Event('change'));
+    lanes()[1].click();
     TestBed.tick();
     Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
       .find((b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm)!
@@ -284,5 +284,178 @@ describe('CastDialogComponent', () => {
     TestBed.tick();
 
     expect(await handle.closed).toBeUndefined();
+  });
+
+  // --- Lanes (board DL01) -----------------------------------------------------------------------
+
+  describe('pay-with lanes', () => {
+    const seals = (lane: HTMLElement) =>
+      Array.from(lane.querySelectorAll<HTMLElement>('hk-wax-seal'));
+    const arrow = (lane: HTMLElement, key: string) =>
+      lane.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    const confirmButton = () =>
+      Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+        (b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm,
+      )!;
+
+    it('are one radio group named "Pay with", the first lane chosen', () => {
+      configure();
+      open({
+        ...BASE_DATA,
+        availableSlots: [
+          { level: 1, max: 2, used: 0 },
+          { level: 2, max: 1, used: 0 },
+        ],
+      });
+      TestBed.tick();
+
+      const group = overlayRoot().querySelector('[role="radiogroup"]')!;
+      expect(group.getAttribute('aria-label')).toBe(
+        charactersEn.sheet.spellcasting.castDialog.payWith,
+      );
+      expect(lanes().map((l) => l.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+    });
+
+    it('the arrow keys move the choice with a roving tabindex, and the chosen lane pays', async () => {
+      configure();
+      const handle = open({
+        ...BASE_DATA,
+        availableSlots: [
+          { level: 1, max: 2, used: 0 },
+          { level: 2, max: 1, used: 0 },
+          { level: 3, max: 1, used: 0 },
+        ],
+      });
+      TestBed.tick();
+      expect(lanes().map((l) => l.tabIndex)).toEqual([0, -1, -1]);
+
+      arrow(lanes()[0], 'ArrowDown');
+      TestBed.tick();
+      expect(lanes().map((l) => l.getAttribute('aria-checked'))).toEqual([
+        'false',
+        'true',
+        'false',
+      ]);
+      expect(lanes().map((l) => l.tabIndex)).toEqual([-1, 0, -1]);
+
+      // Wraps: up from the second lane to the first, up again to the last.
+      arrow(lanes()[1], 'ArrowUp');
+      TestBed.tick();
+      arrow(lanes()[0], 'ArrowUp');
+      TestBed.tick();
+      expect(lanes().map((l) => l.getAttribute('aria-checked'))).toEqual([
+        'false',
+        'false',
+        'true',
+      ]);
+
+      confirmButton().click();
+      expect(await handle.closed).toEqual({ level: 3 });
+    });
+
+    it('a slot lane shows one wax seal per slot: the left ones filled, the spent ones cooled', () => {
+      configure();
+      open({ ...BASE_DATA, availableSlots: [{ level: 1, max: 4, used: 1 }] });
+      TestBed.tick();
+
+      const [lane] = lanes();
+      expect(lane.dataset['kind']).toBe('slot');
+      expect(seals(lane)).toHaveLength(4);
+      expect(seals(lane).map((s) => s.classList.contains('hk-wax-seal--spent'))).toEqual([
+        false,
+        false,
+        false,
+        true,
+      ]);
+      expect(lane.querySelector('.cast-dialog__lane-sub')?.textContent).toContain('3 of 4');
+    });
+
+    it('the pact slot is its own lane beside a regular slot of the same level, with its own seals', () => {
+      configure();
+      open({
+        ...BASE_DATA,
+        availableSlots: [
+          { level: 3, max: 1, used: 0 },
+          { level: 3, max: 2, used: 1, pact: true },
+        ],
+      });
+      TestBed.tick();
+
+      expect(lanes().map((l) => l.dataset['kind'])).toEqual(['slot', 'pact']);
+      expect(seals(lanes()[1]).map((s) => s.classList.contains('hk-wax-seal--spent'))).toEqual([
+        false,
+        true,
+      ]);
+      // The two lanes are told apart by name even though both pay at level 3.
+      expect(new Set(lanes().map(laneTitle)).size).toBe(2);
+    });
+
+    it('the free-cast lane names its resource and shows the resource pips, spending no slot', async () => {
+      configure();
+      const handle = open({
+        ...BASE_DATA,
+        availableSlots: [
+          { level: 1, max: 3, used: 1, freeResource: 'favored-enemy', freeLabel: 'Favored Enemy' },
+        ],
+      });
+      TestBed.tick();
+
+      const [lane] = lanes();
+      expect(lane.dataset['kind']).toBe('free');
+      expect(laneTitle(lane)).toContain('Favored Enemy');
+      expect(seals(lane)).toHaveLength(3);
+      expect(seals(lane).filter((s) => s.classList.contains('hk-wax-seal--spent'))).toHaveLength(1);
+
+      confirmButton().click();
+      expect(await handle.closed).toEqual({ level: 1, freeResource: 'favored-enemy' });
+    });
+
+    it('a seal carries a name: "<lane>: available" or "<lane>: spent"', () => {
+      configure();
+      open({ ...BASE_DATA, availableSlots: [{ level: 1, max: 2, used: 1 }] });
+      TestBed.tick();
+      const names = seals(lanes()[0]).map((s) =>
+        s.querySelector('svg')?.getAttribute('aria-label'),
+      );
+      const lane = laneTitle(lanes()[0]);
+      expect(names).toEqual([
+        charactersEn.sheet.spellcasting.castDialog.sealAvailable.replace('{lane}', lane),
+        charactersEn.sheet.spellcasting.castDialog.sealSpent.replace('{lane}', lane),
+      ]);
+    });
+  });
+
+  describe('concentration warning', () => {
+    it('is a note above the lanes naming the consequence, only when the cast would replace concentration', () => {
+      configure();
+      open({ ...BASE_DATA, spellConcentration: true, alreadyConcentrating: true });
+      TestBed.tick();
+
+      const warn = overlayRoot().querySelector('.cast-dialog__warn')!;
+      expect(warn.getAttribute('role')).toBe('note');
+      expect(warn.textContent).toContain(
+        charactersEn.sheet.spellcasting.castDialog.replacesConcentration,
+      );
+      const group = overlayRoot().querySelector('[role="radiogroup"]')!;
+      expect(warn.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('is absent otherwise', () => {
+      configure();
+      open({ ...BASE_DATA, spellConcentration: true, alreadyConcentrating: false });
+      TestBed.tick();
+      expect(overlayRoot().querySelector('.cast-dialog__warn')).toBeNull();
+    });
+  });
+
+  it('is a parchment dialog: the title is the dialog name and the actions sit on the leather strap', async () => {
+    configure();
+    open(BASE_DATA);
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const dialog = overlayRoot().querySelector('hk-dialog')!;
+    const title = document.getElementById(dialog.getAttribute('aria-labelledby')!)!;
+    expect(title.textContent).toContain('Burning Hands');
+    expect(overlayRoot().querySelector('[data-dialog-actions]')).not.toBeNull();
   });
 });

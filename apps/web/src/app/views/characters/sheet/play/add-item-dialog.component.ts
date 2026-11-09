@@ -1,9 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogRef } from '@app/ui/dialog/dialog.service';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { DialogRef } from '../../../../ui/dialog/dialog.service';
+import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
 import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
@@ -33,25 +32,20 @@ export interface AddItemDialogResult {
  */
 @Component({
   selector: 'app-add-item-dialog',
-  imports: [
-    TranslocoDirective,
-    FormsModule,
-    ButtonComponent,
-    NumberFieldComponent,
-    EntityPickerComponent,
-  ],
+  imports: [TranslocoDirective, HkButtonComponent, HkNumberFieldComponent, EntityPickerComponent],
   // Plan 15 Task 4: dialog content renders under the ROOT injector (outside the sheet shell's
   // scope), so it scopes its own `EngineFacade` (and the embedded picker's) to the loaded
   // character's pins — a pinned pack's items are offered, an unpinned pack's are not.
   providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
   templateUrl: './add-item-dialog.component.html',
+  styleUrl: './add-item-dialog.component.scss',
 })
 export class AddItemDialogComponent {
   private readonly engineFacade = inject(EngineFacade);
   private readonly dialogRef = inject(DialogRef);
 
   protected readonly itemPickerLimit = ITEM_PICKER_LIMIT;
-  protected readonly qty = signal(1);
+  protected readonly qty = signal<number | null>(1);
 
   protected readonly itemIds = computed<string[]>(() =>
     this.engineFacade
@@ -60,12 +54,10 @@ export class AddItemDialogComponent {
       .map((e) => e.id),
   );
 
-  protected onQtyChange(value: number | null): void {
-    this.qty.set(value !== null && value >= 1 ? Math.floor(value) : 1);
-  }
-
   protected onPick(itemId: string): void {
-    this.dialogRef.close({ itemId, qty: this.qty() } satisfies AddItemDialogResult);
+    const wanted = this.qty();
+    const qty = wanted !== null && wanted >= 1 ? Math.floor(wanted) : 1;
+    this.dialogRef.close({ itemId, qty } satisfies AddItemDialogResult);
   }
 
   protected cancel(): void {

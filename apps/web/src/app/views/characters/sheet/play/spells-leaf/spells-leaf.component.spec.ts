@@ -793,14 +793,14 @@ describe('SpellsLeafComponent — free-cast lane (plan 13 task 4)', () => {
     ]);
     const { fixture, overlay } = await openMarkDialog();
 
-    const options = Array.from(overlay.querySelectorAll<HTMLOptionElement>('option'));
-    expect(options.map((o) => o.textContent?.trim())).toEqual([
+    const options = Array.from(overlay.querySelectorAll<HTMLElement>('.cast-dialog__lane'));
+    expect(
+      options.map((o) => o.querySelector('.cast-dialog__lane-title')?.textContent?.trim()),
+    ).toEqual([
       dialog.slotOption.replace('{level}', '1').replace('{remaining}', '2'),
       freeOptionText(2),
     ]);
-    const select = overlay.querySelector<HTMLSelectElement>('select')!;
-    select.value = '1';
-    select.dispatchEvent(new Event('change'));
+    overlay.querySelectorAll<HTMLElement>('.cast-dialog__lane')[1].click();
     TestBed.tick();
     await confirm(fixture, overlay, store);
 
@@ -834,9 +834,7 @@ describe('SpellsLeafComponent — free-cast lane (plan 13 task 4)', () => {
     const store = await seedRanger();
     const { fixture, overlay } = await openMarkDialog();
     const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
-    const select = overlay.querySelector<HTMLSelectElement>('select')!;
-    select.value = '1'; // the free option
-    select.dispatchEvent(new Event('change'));
+    overlay.querySelectorAll<HTMLElement>('.cast-dialog__lane')[1].click(); // the free option
     TestBed.tick();
     await store.appendTx([
       { type: 'resource.spent', v: 1, payload: { resourceId: 'favored-enemy', count: 2 } },
@@ -859,8 +857,8 @@ describe('SpellsLeafComponent — free-cast lane (plan 13 task 4)', () => {
     ]);
     const { overlay } = await openMarkDialog();
 
-    const texts = Array.from(overlay.querySelectorAll<HTMLOptionElement>('option')).map((o) =>
-      o.textContent?.trim(),
+    const texts = Array.from(overlay.querySelectorAll<HTMLElement>('.cast-dialog__lane')).map((o) =>
+      o.querySelector('.cast-dialog__lane-title')?.textContent?.trim(),
     );
     expect(texts).toEqual([dialog.slotOption.replace('{level}', '1').replace('{remaining}', '2')]);
   });

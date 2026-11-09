@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { confirmRecoveryCodesAndContinue, registerToCodesStep, uniqueUsername } from './helpers';
 import { createFighter } from '../helpers/create-fighter';
+import { closeDrawer, openDrawer } from '../helpers/sheet';
 
 /**
  * Shared plumbing for the plan-10 task-16 campaign e2e scenarios — the real-API, two/three-
@@ -306,23 +307,25 @@ export async function endSession(page: Page): Promise<void> {
 
 // --- Play tab: campaign-aware roll publishing --------------------------------------------------
 
-/** Sets the (sticky) campaign roll-visibility picker through the roll log (opened from the sheet
- * strap, B9a: the existing `RollLogPanelComponent` in a dialog) — its `.roll-log-panel__visibility`
- * group is only rendered once `PlayRollsService` sees the character campaign-linked AND that
- * campaign's own sync not `'offline'`, so this waits for the picker itself to appear first, then
- * closes the log again. */
+/** Sets the (sticky) campaign roll-visibility picker through the roll-log drawer (opened from the
+ * sheet strap, board D02) — its `.roll-log-drawer__visibility` group is only rendered once
+ * `PlayRollsService` sees the character campaign-linked AND that campaign's own sync not
+ * `'offline'`, so this waits for the picker itself to appear first, then closes the drawer. */
 export async function setCampaignRollVisibility(
   page: Page,
   visibility: 'everyone' | 'dm' | 'private',
 ): Promise<void> {
   const label =
     visibility === 'everyone' ? 'Everyone' : visibility === 'dm' ? 'DM only' : 'Private';
-  await page.locator('[data-action="roll-log"]').click();
-  const group = page.locator('.roll-log-panel__visibility');
+  await openDrawer(page, 'roll-log');
+  const group = page.locator('.roll-log-drawer__visibility');
   await expect(group).toBeVisible({ timeout: 25_000 });
-  await group.getByRole('button', { name: label, exact: true }).click();
-  await page.locator('.roll-log-dialog__actions').getByRole('button').click();
-  await expect(group).toHaveCount(0);
+  await group.getByRole('radio', { name: label, exact: true }).click();
+  await expect(group.getByRole('radio', { name: label, exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await closeDrawer(page);
 }
 
 /** Rolls the FIRST ability's "Roll check" button (`AbilitiesLeafComponent` -> `PlayRollsService`

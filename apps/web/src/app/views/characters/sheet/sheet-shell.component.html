@@ -160,6 +160,8 @@
         }
       </div>
     </div>
+    <app-notes-drawer [(open)]="notesOpen" [opener]="notesOpener()" />
+    <app-roll-log-drawer [(open)]="rollLogOpen" [opener]="rollLogOpener()" />
   } @else {
     <hk-skeleton [lines]="6" />
   }

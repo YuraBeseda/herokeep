@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
+import { IconComponent } from '../../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';
+import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
 
 export interface CastDialogSlotOption {
   readonly level: number;
@@ -49,12 +51,16 @@ export interface CastDialogData {
  * confirm, or `undefined` on cancel/ESC/backdrop. Selection is by INDEX into `data.availableSlots`
  * (task 12's own fix — two options can legitimately share the same `level`, e.g. a pact slot and a
  * regular slot both at level 3 on a multiclassed character; a bare `level` value could no longer
- * disambiguate which one was picked, so the `<select>`'s own `value` is the option's array index).
+ * disambiguate which one was picked, so a lane's identity is its array index).
+ *
+ * Board DL01: the options are "pay with" LANES (a radio group), each with its wax seals — one per
+ * slot or resource use, the spent ones cooled — and a concentration warning above them.
  */
 @Component({
   selector: 'app-cast-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent, HkWaxSealComponent, IconComponent],
   templateUrl: './cast-dialog.component.html',
+  styleUrl: './cast-dialog.component.scss',
 })
 export class CastDialogComponent {
   protected readonly data = inject<CastDialogData>(DIALOG_DATA);
@@ -68,9 +74,38 @@ export class CastDialogComponent {
     () => this.data.spellConcentration && this.data.alreadyConcentrating,
   );
 
-  protected onSlotChange(value: string): void {
-    const index = Number(value);
-    this.selectedIndex.set(Number.isInteger(index) ? index : undefined);
+  protected select(index: number): void {
+    this.selectedIndex.set(index);
+  }
+
+  /** The lane's kind, which picks its seal glyph and styling: a regular slot, the pact slot, or a
+   * free cast paid by a named resource. */
+  protected kindOf(slot: CastDialogSlotOption): 'slot' | 'pact' | 'free' {
+    return slot.freeResource !== undefined ? 'free' : slot.pact ? 'pact' : 'slot';
+  }
+
+  /** One seal per use: the ones left first, the spent ones after. */
+  protected sealsOf(slot: CastDialogSlotOption): boolean[] {
+    return Array.from({ length: Math.max(0, slot.max) }, (_, i) => i < slot.max - slot.used);
+  }
+
+  /** Radio-group keys: the arrows move the choice (wrapping) and focus follows it. */
+  protected onLaneKey(event: KeyboardEvent, index: number): void {
+    const count = this.data.availableSlots.length;
+    const step =
+      event.key === 'ArrowDown' || event.key === 'ArrowRight'
+        ? 1
+        : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+          ? -1
+          : 0;
+    if (step === 0 || count === 0) return;
+    event.preventDefault();
+    const next = (index + step + count) % count;
+    this.selectedIndex.set(next);
+    const lanes = (event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLElement>(
+      '[role="radio"]',
+    );
+    lanes?.[next]?.focus();
   }
 
   protected cancel(): void {

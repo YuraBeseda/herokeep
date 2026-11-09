@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { parseRollSpec, propose, roll, type ProposedEvent, type Sheet } from '@hk/engine';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';
+import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
+import { IconComponent } from '../../../../shared/icons/icon.component';
 import { DiceResultComponent } from '@shared/components/dice-result/dice-result.component';
 import { cryptoRng } from '@shared/services/engine/rng';
 
@@ -82,8 +84,15 @@ export type RestDialogResult =
  */
 @Component({
   selector: 'app-rest-dialog',
-  imports: [TranslocoDirective, ButtonComponent, DiceResultComponent],
+  imports: [
+    TranslocoDirective,
+    HkButtonComponent,
+    HkWaxSealComponent,
+    IconComponent,
+    DiceResultComponent,
+  ],
   templateUrl: './rest-dialog.component.html',
+  styleUrl: './rest-dialog.component.scss',
 })
 export class RestDialogComponent {
   protected readonly data = inject<RestDialogData>(DIALOG_DATA);
@@ -115,9 +124,24 @@ export class RestDialogComponent {
       classId: o.classId,
       className: o.className,
       die: this.data.sheet.hp.hitDice[o.classId]?.die ?? 0,
+      total: this.data.sheet.hp.hitDice[o.classId]?.total ?? 0,
       remaining: this.remainingByClass()[o.classId] ?? 0,
     })),
   );
+
+  // The hit-points preview (board DL02): now, and after the dice rolled so far. `healed` is the
+  // amount the real `propose.spendHitDie` draft computed for each roll (never re-derived here); the
+  // result is only capped at the maximum so the preview never promises more than the sheet holds.
+  protected readonly hpNow = this.data.sheet.hp.current;
+  protected readonly hpMax = this.data.sheet.hp.max.value;
+  protected readonly hpAfter = computed(() =>
+    Math.min(this.hpMax, this.hpNow + this.rolls().reduce((sum, rolled) => sum + rolled.healed, 0)),
+  );
+
+  /** A row's seals, the dice still to roll first. */
+  protected sealsOf(row: { total: number; remaining: number }): boolean[] {
+    return Array.from({ length: row.total }, (_, i) => i < row.remaining);
+  }
 
   protected readonly hasAnyHitDice = computed(() => this.hitDiceRows().length > 0);
 

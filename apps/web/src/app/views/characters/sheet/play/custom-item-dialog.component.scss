@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  min-inline-size: min(100%, 380px);
+}
+
+.custom-item-dialog__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.custom-item-dialog__qty {
+  display: block;
+  margin-inline-start: auto;
+}

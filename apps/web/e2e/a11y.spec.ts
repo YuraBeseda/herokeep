@@ -11,6 +11,7 @@ import {
   pickSpecies,
 } from './helpers/create-fighter';
 import { createWizard, prepareSpell } from './helpers/create-wizard';
+import { openDrawer } from './helpers/sheet';
 
 const SAMPLE_PACK_FIXTURE = path.join(
   __dirname,
@@ -162,9 +163,9 @@ test.describe('accessibility (axe)', () => {
       .first()
       .getByRole('button', { name: /^Roll .* check$/ })
       .click();
-    // The roll log opens from the action strap (zone 3), B9a: still the existing panel, in a dialog.
-    await page.locator('[data-action="roll-log"]').click();
-    await expect(page.locator('.roll-log-panel__entries .roll-log-panel__entry')).toHaveCount(1);
+    // The roll log is a drawer opened from the action strap (zone 3), board D02.
+    await openDrawer(page, 'roll-log');
+    await expect(page.locator('.roll-log-drawer__feed .roll-log-drawer__entry')).toHaveCount(1);
     await assertNoSeriousViolations(page, 'play tab — roll log with an entry');
   });
 

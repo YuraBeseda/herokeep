@@ -59,9 +59,10 @@ export class HkDrawerComponent {
         const onPointerDown = (event: Event): void => this.onOutsidePress(event);
         const onKeyDown = (event: KeyboardEvent): void => {
           if (event.key !== 'Escape' || event.defaultPrevented) return;
-          // A dialog opened from the drawer owns Escape; its handler has already run (it prevents
-          // default) or it is still open above us.
-          if (this.dialogOpenAbove()) return;
+          // Whatever is stacked above the drawer (a confirm dialog opened from it) owns Escape:
+          // its handler has already run (it prevents default) or it is still open above us, so
+          // one Escape closes only the topmost overlay.
+          if (this.overlayOpenAbove()) return;
           event.preventDefault();
           event.stopPropagation();
           this.dismiss(true);
@@ -104,11 +105,14 @@ export class HkDrawerComponent {
     this.dismiss(false);
   }
 
-  private dialogOpenAbove(): boolean {
-    // Only a dialog stacked above the drawer counts, not the one that hosts it.
-    return Array.from(document.querySelectorAll('.cdk-overlay-container hk-dialog')).some(
-      (dialog) => !dialog.contains(this.host.nativeElement),
-    );
+  private overlayOpenAbove(): boolean {
+    // A dialog or popover (menu, listbox) in a CDK overlay pane stacked above the drawer counts,
+    // not the pane that hosts it. A pane that holds neither (a toast) never owns Escape.
+    return Array.from(
+      document.querySelectorAll(
+        '.cdk-overlay-container .cdk-overlay-pane:has([role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"])',
+      ),
+    ).some((pane) => !pane.contains(this.host.nativeElement));
   }
 
   private openerElement(): HTMLElement | null {

@@ -107,12 +107,20 @@ export class HeroTabComponent {}
           }}</a>
         </li>
         <li>
-          <button type="button" class="more__row more__notes" (click)="chrome.openNotes()">
+          <button
+            type="button"
+            class="more__row more__notes"
+            (click)="chrome.openNotes($any($event.currentTarget))"
+          >
             {{ t('sheet.notes.title') }}
           </button>
         </li>
         <li>
-          <button type="button" class="more__row more__roll-log" (click)="chrome.openRollLog()">
+          <button
+            type="button"
+            class="more__row more__roll-log"
+            (click)="chrome.openRollLog($any($event.currentTarget))"
+          >
             {{ t('sheet.roll.logTitle') }}
           </button>
         </li>

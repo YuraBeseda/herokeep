@@ -7,8 +7,7 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CustomItemDialogComponent } from './custom-item-dialog.component';
 
-/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
-const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+import { overlayRoot } from '../../../../ui/testing/overlay';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -115,5 +114,76 @@ describe('CustomItemDialogComponent', () => {
     TestBed.tick();
 
     expect(await handle.closed).toBeUndefined();
+  });
+
+  // --- Board DL04 (custom item): name validation, quantity in the strap, no icon field yet --------
+
+  it('shows no error before the player has touched the name, and one once it is left blank', async () => {
+    configure();
+    open();
+    TestBed.tick();
+    expect(overlayRoot().textContent).not.toContain(
+      charactersEn.sheet.inventory.customDialog.nameRequired,
+    );
+
+    const nameInput = overlayRoot().querySelector<HTMLInputElement>('input[type="text"]')!;
+    nameInput.value = 'x';
+    nameInput.dispatchEvent(new Event('input'));
+    nameInput.value = '';
+    nameInput.dispatchEvent(new Event('input'));
+    nameInput.dispatchEvent(new Event('blur'));
+    await settle();
+
+    expect(overlayRoot().textContent).toContain(
+      charactersEn.sheet.inventory.customDialog.nameRequired,
+    );
+    expect(nameInput.getAttribute('aria-invalid')).toBe('true');
+    expect(buttonNamed(charactersEn.sheet.inventory.customDialog.confirm).disabled).toBe(true);
+  });
+
+  it('keeps Cancel, the quantity stepper and Add together on the leather strap', () => {
+    configure();
+    open();
+    TestBed.tick();
+    const strap = overlayRoot().querySelector('[data-dialog-actions]')!;
+    expect(strap.querySelector('input[type="number"]')).not.toBeNull();
+    const labels = Array.from(strap.querySelectorAll('button'))
+      .map((b) => b.textContent?.trim())
+      .filter(
+        (t) =>
+          t === charactersEn.sheet.inventory.customDialog.cancel ||
+          t === charactersEn.sheet.inventory.customDialog.confirm,
+      );
+    expect(labels).toEqual([
+      charactersEn.sheet.inventory.customDialog.cancel,
+      charactersEn.sheet.inventory.customDialog.confirm,
+    ]);
+  });
+
+  it('has a name, a quantity and notes and no icon field (that arrives with plan slice 2)', () => {
+    configure();
+    open();
+    TestBed.tick();
+    expect(overlayRoot().querySelectorAll('input[type="text"]')).toHaveLength(1);
+    expect(overlayRoot().querySelectorAll('input[type="number"]')).toHaveLength(1);
+    expect(overlayRoot().querySelectorAll('textarea')).toHaveLength(1);
+    expect(overlayRoot().querySelector('[class*="icon-picker"], [data-icon-field]')).toBeNull();
+  });
+
+  it('never goes below a quantity of 1', async () => {
+    configure();
+    const handle = open();
+    TestBed.tick();
+    const nameInput = overlayRoot().querySelector<HTMLInputElement>('input[type="text"]')!;
+    nameInput.value = 'Coin';
+    nameInput.dispatchEvent(new Event('input'));
+    const qty = overlayRoot().querySelector<HTMLInputElement>('input[type="number"]')!;
+    qty.value = '0';
+    qty.dispatchEvent(new Event('input'));
+    qty.dispatchEvent(new Event('change'));
+    await settle();
+    buttonNamed(charactersEn.sheet.inventory.customDialog.confirm).click();
+    TestBed.tick();
+    expect(await handle.closed).toMatchObject({ name: 'Coin', qty: 1 });
   });
 });

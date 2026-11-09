@@ -1,7 +1,6 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { signal, type WritableSignal } from '@angular/core';
+import { Component, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { DialogRef } from '@app/ui/dialog/dialog.service';
 import type { CampaignSettings } from '@hk/protocol';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
 import { bareCharacterId } from '@shared/services/campaigns/campaign-link-sequence';
@@ -16,7 +15,7 @@ import { seedFighter } from '../testing/character-fixtures';
 import { AbilitiesLeafComponent } from './abilities-leaf/abilities-leaf.component';
 import { AttacksLeafComponent } from './attacks-leaf/attacks-leaf.component';
 import { configureReal as configureBase, mountSheetParts } from './play-spec-support';
-import { RollLogDialogComponent } from './roll-log-dialog.component';
+import { RollLogDrawerComponent } from './roll-log-drawer/roll-log-drawer.component';
 import { SkillsLeafComponent } from './skills-leaf/skills-leaf.component';
 
 // Every roll button on the sheet (ability checks and saves, skills, attack damage, the roll log's
@@ -24,14 +23,15 @@ import { SkillsLeafComponent } from './skills-leaf/skills-leaf.component';
 // panel side by side, exactly the way the sheet places them. The ROW'S already-derived total is the
 // roll's modifier — never recomputed.
 
-/** `configureReal` plus the `DialogRef` the roll-log host (opened from the strap in the app) needs. */
-function configureReal(...args: Parameters<typeof configureBase>): void {
-  const [packs = [], providers = []] = args;
-  configureBase(packs, [
-    { provide: DialogRef, useValue: new DialogRef(() => undefined) },
-    ...providers,
-  ]);
-}
+/** The roll-log drawer, open, the way the sheet shows it after the strap's Roll log action. */
+@Component({
+  selector: 'app-roll-log-open-host',
+  imports: [RollLogDrawerComponent],
+  template: '<app-roll-log-drawer [open]="true" />',
+})
+class RollLogOpenHost {}
+
+const configureReal = configureBase;
 
 describe('PlayRollsService — dice roller and roll log', () => {
   beforeEach(async () => {
@@ -110,7 +110,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
     const announceSpy = vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce');
 
@@ -145,7 +145,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
     const rollLogService = TestBed.inject(RollLogService);
 
@@ -183,7 +183,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
     const rollLogService = TestBed.inject(RollLogService);
 
@@ -213,7 +213,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
     });
     // One-shot: back to Normal after consuming the toggle.
     expect(
-      buttonNamed(compiled, charactersEn.sheet.roll.advantage.normal).getAttribute('aria-pressed'),
+      buttonNamed(compiled, charactersEn.sheet.roll.advantage.normal).getAttribute('aria-checked'),
     ).toBe('true');
 
     buttonNamed(compiled, charactersEn.sheet.roll.advantage.disadvantage).click();
@@ -243,7 +243,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
     const rollLogService = TestBed.inject(RollLogService);
 
@@ -267,7 +267,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
     // The advantage toggle is untouched by a damage roll (never consumed).
     expect(
       buttonNamed(compiled, charactersEn.sheet.roll.advantage.advantage).getAttribute(
-        'aria-pressed',
+        'aria-checked',
       ),
     ).toBe('true');
   });
@@ -279,11 +279,11 @@ describe('PlayRollsService — dice roller and roll log', () => {
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
 
     const amountInput = compiled.querySelector<HTMLInputElement>(
-      '.roll-log-panel__manual input[type="number"]',
+      '.roll-log-drawer__manual input[type="number"]',
     )!;
     amountInput.value = '11';
     amountInput.dispatchEvent(new Event('input'));
@@ -432,9 +432,9 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
-    expect(compiled.querySelector('.roll-log-panel__visibility')).toBeNull();
+    expect(compiled.querySelector('.roll-log-drawer__visibility')).toBeNull();
 
     const campaignStore = TestBed.inject(CampaignStore);
     const appendSpy = vi.spyOn(campaignStore, 'appendToStream');
@@ -459,9 +459,9 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
-    expect(compiled.querySelector('.roll-log-panel__visibility')).toBeNull();
+    expect(compiled.querySelector('.roll-log-drawer__visibility')).toBeNull();
 
     scriptRolls([{ value: 10, sides: 20 }]);
     abilityRollButton(compiled, 'Strength', 'check').click();
@@ -489,13 +489,13 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
     const strMod = TestBed.inject(CharacterStore).sheet()!.abilities['str'].mod;
 
     // Defaults to the campaign's own setting ('dm'), not the schema's own 'everyone' fallback.
     expect(
-      buttonNamed(compiled, charactersEn.sheet.roll.visibility.dm).getAttribute('aria-pressed'),
+      buttonNamed(compiled, charactersEn.sheet.roll.visibility.dm).getAttribute('aria-checked'),
     ).toBe('true');
 
     buttonNamed(compiled, charactersEn.sheet.roll.advantage.advantage).click();
@@ -534,7 +534,7 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
 
     buttonNamed(compiled, charactersEn.sheet.roll.visibility.private).click();
@@ -559,7 +559,7 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
     const longsword = TestBed.inject(CharacterStore).sheet()!.attacks[0];
     const bonus = longsword.damage.bonus.value;
@@ -590,11 +590,11 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       AbilitiesLeafComponent,
       SkillsLeafComponent,
       AttacksLeafComponent,
-      RollLogDialogComponent,
+      RollLogOpenHost,
     );
 
     const amountInput = compiled.querySelector<HTMLInputElement>(
-      '.roll-log-panel__manual input[type="number"]',
+      '.roll-log-drawer__manual input[type="number"]',
     )!;
     amountInput.value = '9';
     amountInput.dispatchEvent(new Event('input'));
@@ -625,10 +625,10 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
         AbilitiesLeafComponent,
         SkillsLeafComponent,
         AttacksLeafComponent,
-        RollLogDialogComponent,
+        RollLogOpenHost,
       );
 
-      const group = compiled.querySelector('.roll-log-panel__visibility')!;
+      const group = compiled.querySelector('.roll-log-drawer__visibility')!;
       expect(group).not.toBeNull();
       expect(
         Array.from(group.querySelectorAll('button')).some(
@@ -645,10 +645,10 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
         AbilitiesLeafComponent,
         SkillsLeafComponent,
         AttacksLeafComponent,
-        RollLogDialogComponent,
+        RollLogOpenHost,
       );
 
-      const group = compiled.querySelector('.roll-log-panel__visibility')!;
+      const group = compiled.querySelector('.roll-log-drawer__visibility')!;
       expect(
         Array.from(group.querySelectorAll('button')).some(
           (b) => b.textContent?.trim() === charactersEn.sheet.roll.visibility.private,

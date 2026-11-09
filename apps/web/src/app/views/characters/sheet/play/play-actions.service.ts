@@ -39,11 +39,7 @@ import {
   CustomItemDialogComponent,
   type CustomItemDialogResult,
 } from './custom-item-dialog.component';
-import {
-  NoteDialogComponent,
-  type NoteDialogData,
-  type NoteDialogResult,
-} from './note-dialog.component';
+import type { NoteEditorResult } from './notes-drawer/note-editor.component';
 import { ItemRemoveConfirmComponent, NoteDeleteConfirmComponent } from './play-confirms';
 import {
   RestDialogComponent,
@@ -107,9 +103,8 @@ export class PlayActionsService {
   /** `Facts.notes` — freeform stream state with no derived-`Sheet` projection. */
   readonly notes = computed<NoteEntry[]>(() => this.characterStore.facts()?.notes ?? []);
 
-  // The protocol schema's own `NoteAdded.body` cap, so the note dialog's guard is not a duplicate.
-  private readonly noteBodyMaxLength =
-    NoteAddedV1.shape.body.unwrap().maxLength ?? Number.MAX_SAFE_INTEGER;
+  /** The protocol schema's own `NoteAdded.body` cap, so the note editor's guard is not a duplicate. */
+  readonly noteBodyMaxLength = NoteAddedV1.shape.body.unwrap().maxLength ?? Number.MAX_SAFE_INTEGER;
 
   private sheet(): Sheet | undefined {
     return this.characterStore.sheet();
@@ -387,38 +382,26 @@ export class PlayActionsService {
   }
 
   // `propose.note` takes no `Sheet` — every note action fires straight through `appendDraft`.
-  async addNote(): Promise<void> {
-    const handle = this.dialogService.open(NoteDialogComponent, {
-      data: { mode: 'add', maxBodyLength: this.noteBodyMaxLength } satisfies NoteDialogData,
-    });
-    const result = (await handle.closed) as NoteDialogResult | undefined;
-    if (!result) return;
+
+  /** Appends `note.added` for the editor's saved fields (the notes drawer owns the form). */
+  createNote(result: NoteEditorResult): void {
     this.appendDraft(
       propose.note('added', { id: uuidv7(), title: result.title, body: result.body }),
     );
   }
 
-  async editNote(note: NoteEntry): Promise<void> {
-    const handle = this.dialogService.open(NoteDialogComponent, {
-      data: {
-        mode: 'edit',
-        title: note.title || undefined,
-        body: note.body || undefined,
-        maxBodyLength: this.noteBodyMaxLength,
-      } satisfies NoteDialogData,
-    });
-    const result = (await handle.closed) as NoteDialogResult | undefined;
-    if (!result) return;
-    this.appendDraft(
-      propose.note('updated', { id: note.id, title: result.title, body: result.body }),
-    );
+  /** Appends `note.updated` for an existing note. */
+  updateNote(id: string, result: NoteEditorResult): void {
+    this.appendDraft(propose.note('updated', { id, title: result.title, body: result.body }));
   }
 
-  async removeNote(note: NoteEntry): Promise<void> {
+  /** Asks first; resolves whether the note was actually removed. */
+  async removeNote(note: NoteEntry): Promise<boolean> {
     const handle = this.dialogService.open(NoteDeleteConfirmComponent);
     const confirmed = await handle.closed;
-    if (confirmed !== true) return;
+    if (confirmed !== true) return false;
     this.appendDraft(propose.note('removed', { id: note.id }));
+    return true;
   }
 
   // --- Inventory and currency -------------------------------------------------------------------

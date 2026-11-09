@@ -1,0 +1,87 @@
+:host {
+  display: block;
+  min-inline-size: min(100%, 380px);
+}
+
+.rest-dialog__intro,
+.rest-dialog__body {
+  margin: 0 0 12px;
+  color: var(--text-1);
+}
+
+.rest-dialog__hit-dice,
+.rest-dialog__rolls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.rest-dialog__hit-die-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--leaf-sunken);
+  box-shadow: inset 0 0 0 1px var(--leaf-edge);
+}
+
+.rest-dialog__class-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.rest-dialog__remaining {
+  grid-column: 1;
+  color: var(--text-2);
+  font-size: 15px;
+}
+
+.rest-dialog__seals {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1;
+  gap: 3px;
+}
+
+.rest-dialog__roll {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
+.rest-dialog__die {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.rest-dialog__healed {
+  color: var(--success-strong);
+  font-weight: 600;
+}
+
+.rest-dialog__no-hit-dice {
+  margin: 0 0 12px;
+  color: var(--text-2);
+}
+
+.rest-dialog__hp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--leaf-sunken);
+  box-shadow: inset 0 0 0 1px var(--leaf-edge);
+}
+
+.rest-dialog__hp-label {
+  flex: 1 1 auto;
+  color: var(--text-2);
+}

@@ -4,48 +4,90 @@
   </h2>
 
   @if (showsReplaceNote()) {
-    <p class="cast-dialog__note">
-      {{ t('characters.sheet.spellcasting.castDialog.replacesConcentration') }}
+    <p class="cast-dialog__warn" role="note">
+      <hk-icon class="cast-dialog__warn-icon" [icon]="'ui:concentration'" />
+      <span>{{ t('characters.sheet.spellcasting.castDialog.replacesConcentration') }}</span>
     </p>
   }
 
   @if (data.availableSlots.length > 0) {
-    <label class="cast-dialog__slot-label">
-      <span>{{ t('characters.sheet.spellcasting.castDialog.slotLabel') }}</span>
-      <select class="cast-dialog__slot-select" (change)="onSlotChange($any($event.target).value)">
-        @for (slot of data.availableSlots; track $index) {
-          <option [value]="$index" [selected]="$index === selectedIndex()">
-            {{
-              slot.freeResource !== undefined
-                ? t('characters.sheet.spellcasting.castDialog.slotOptionFree', {
-                    resource: slot.freeLabel,
-                    level: slot.level,
-                    remaining: slot.max - slot.used,
-                  })
-                : slot.pact
-                  ? t('characters.sheet.spellcasting.castDialog.slotOptionPact', {
-                      level: slot.level,
-                      remaining: slot.max - slot.used,
-                    })
-                  : t('characters.sheet.spellcasting.castDialog.slotOption', {
-                      level: slot.level,
-                      remaining: slot.max - slot.used,
-                    })
-            }}
-          </option>
-        }
-      </select>
-    </label>
+    <div
+      class="cast-dialog__lanes"
+      role="radiogroup"
+      [attr.aria-label]="t('characters.sheet.spellcasting.castDialog.payWith')"
+    >
+      <span class="cast-dialog__pay-with" aria-hidden="true">{{
+        t('characters.sheet.spellcasting.castDialog.payWith')
+      }}</span>
+      @for (slot of data.availableSlots; track $index; let i = $index) {
+        @let kind = kindOf(slot);
+        @let title =
+          kind === 'free'
+            ? t('characters.sheet.spellcasting.castDialog.slotOptionFree', {
+                resource: slot.freeLabel,
+                level: slot.level,
+                remaining: slot.max - slot.used,
+              })
+            : kind === 'pact'
+              ? t('characters.sheet.spellcasting.castDialog.slotOptionPact', {
+                  level: slot.level,
+                  remaining: slot.max - slot.used,
+                })
+              : t('characters.sheet.spellcasting.castDialog.slotOption', {
+                  level: slot.level,
+                  remaining: slot.max - slot.used,
+                });
+        <button
+          type="button"
+          role="radio"
+          class="cast-dialog__lane"
+          [class.cast-dialog__lane--on]="selectedIndex() === i"
+          [attr.data-index]="i"
+          [attr.data-kind]="kind"
+          [attr.aria-checked]="selectedIndex() === i"
+          [attr.aria-labelledby]="'cast-lane-title-' + i + ' cast-lane-sub-' + i"
+          [tabindex]="selectedIndex() === i ? 0 : -1"
+          (click)="select(i)"
+          (keydown)="onLaneKey($event, i)"
+        >
+          <span class="cast-dialog__lane-text">
+            <b class="cast-dialog__lane-title" [id]="'cast-lane-title-' + i">{{ title }}</b>
+            <span class="cast-dialog__lane-sub" [id]="'cast-lane-sub-' + i">{{
+              t('characters.sheet.spellcasting.castDialog.remaining', {
+                remaining: slot.max - slot.used,
+                max: slot.max,
+              })
+            }}</span>
+          </span>
+          <span class="cast-dialog__seals">
+            @for (available of sealsOf(slot); track $index; let s = $index) {
+              <hk-wax-seal
+                [size]="'s'"
+                [state]="available ? 'filled' : 'spent'"
+                [numeral]="kind === 'free' ? null : slot.level"
+                [glyph]="kind === 'free' ? 'ui:use' : null"
+                [seed]="s + i"
+                [hint]="
+                  available
+                    ? t('characters.sheet.spellcasting.castDialog.sealAvailable', { lane: title })
+                    : t('characters.sheet.spellcasting.castDialog.sealSpent', { lane: title })
+                "
+              />
+            }
+          </span>
+        </button>
+      }
+    </div>
   } @else {
     <p class="cast-dialog__empty">{{ t('characters.sheet.spellcasting.castDialog.noSlots') }}</p>
   }
 
-  <div class="cast-dialog__actions">
-    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+  <div class="cast-dialog__actions" data-dialog-actions>
+    <button hk-button type="button" [variant]="'ghost-leather'" (click)="cancel()">
       {{ t('characters.sheet.spellcasting.castDialog.cancel') }}
     </button>
     <button hk-button type="button" [disabled]="selectedIndex() === undefined" (click)="confirm()">
-      {{ t('characters.sheet.spellcasting.castDialog.confirm') }}
+      <hk-icon [icon]="'ui:cast'" />{{ t('characters.sheet.spellcasting.castDialog.confirm') }}
     </button>
   </div>
 </ng-container>

@@ -1,0 +1,91 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-drawer [(open)]="open" [heading]="t('sheet.notes.title')" [opener]="opener()">
+    <p class="notes-drawer__count">
+      {{ t('sheet.notes.count', { count: actions.notes().length }) }}
+    </p>
+    <div class="notes-drawer__head">
+      <button
+        hk-button
+        type="button"
+        [disabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+        (click)="startAdd()"
+      >
+        <hk-icon [icon]="'ui:add'" />{{ t('sheet.notes.add') }}
+      </button>
+    </div>
+
+    @if (editing() === 'new') {
+      <app-note-editor
+        class="notes-drawer__editor"
+        [mode]="'add'"
+        [maxBodyLength]="actions.noteBodyMaxLength"
+        (saved)="save($event)"
+        (cancelled)="editing.set(null)"
+      />
+    }
+
+    @if (actions.notes().length > 0) {
+      <ul class="notes-drawer__list">
+        @for (note of actions.notes(); track note.id) {
+          <li
+            class="notes-drawer__note"
+            [class.notes-drawer__note--editing]="editing() === note.id"
+          >
+            @if (editing() === note.id) {
+              <app-note-editor
+                class="notes-drawer__editor"
+                [mode]="'edit'"
+                [title]="note.title"
+                [body]="note.body"
+                [maxBodyLength]="actions.noteBodyMaxLength"
+                (saved)="save($event)"
+                (cancelled)="editing.set(null)"
+                (removed)="remove(note)"
+              />
+            } @else {
+              <div class="notes-drawer__row">
+                <hk-icon [icon]="'ui:notes'" class="notes-drawer__glyph" />
+                <span class="notes-drawer__name">
+                  <b class="notes-drawer__title">{{ note.title || t('sheet.notes.untitled') }}</b>
+                  @if (note.body) {
+                    <span class="notes-drawer__body">{{ note.body }}</span>
+                  }
+                </span>
+                <span class="notes-drawer__row-actions">
+                  <button
+                    type="button"
+                    class="notes-drawer__icon"
+                    [hkTooltip]="t('sheet.notes.edit')"
+                    [attr.aria-label]="
+                      t('sheet.notes.editNamed', { title: note.title || t('sheet.notes.untitled') })
+                    "
+                    [disabled]="actions.editLocked()"
+                    (click)="startEdit(note)"
+                  >
+                    <hk-icon [icon]="'ui:edit'" />
+                  </button>
+                  <button
+                    type="button"
+                    class="notes-drawer__icon notes-drawer__icon--remove"
+                    [hkTooltip]="t('sheet.notes.remove')"
+                    [attr.aria-label]="
+                      t('sheet.notes.removeNamed', {
+                        title: note.title || t('sheet.notes.untitled'),
+                      })
+                    "
+                    [disabled]="actions.editLocked()"
+                    (click)="remove(note)"
+                  >
+                    <hk-icon [icon]="'ui:remove'" />
+                  </button>
+                </span>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    } @else if (editing() !== 'new') {
+      <p class="notes-drawer__empty">{{ t('sheet.notes.empty') }}</p>
+    }
+  </hk-drawer>
+</ng-container>

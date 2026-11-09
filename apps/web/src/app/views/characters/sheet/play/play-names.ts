@@ -67,9 +67,13 @@ export function sheetNames(engineFacade: EngineFacade) {
         .system()
         .conditions.map((id) => {
           const entity = index.get(id);
-          const levelBearing =
-            (entity?.type === 'condition' ? entity.levels : undefined) !== undefined;
-          return { id, name: resolve(id), levelBearing };
+          const levels = entity?.type === 'condition' ? entity.levels : undefined;
+          return {
+            id,
+            name: resolve(id),
+            levelBearing: levels !== undefined,
+            ...(levels !== undefined ? { maxLevel: levels } : {}),
+          };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
     },

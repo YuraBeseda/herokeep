@@ -247,8 +247,8 @@ describe('sheet — campaign edit lock (plan-10 task-14-brief.md, ruling 7)', ()
       .find((a) => a.id === 'notes')!
       .run();
     TestBed.tick();
-    const overlay = document.querySelector<HTMLElement>('.cdk-overlay-container')!;
-    expect(isBlocked(buttonNamed(overlay, charactersEn.sheet.notes.add))).toBe(true);
+    // The notes drawer is hosted by the shell, so its controls are inside the mounted sheet.
+    expect(isBlocked(buttonNamed(compiled, charactersEn.sheet.notes.add))).toBe(true);
 
     // --- Rolling dice is NEVER gated by this lock (ruling 7's own boundary) ---
     const strength = Array.from(

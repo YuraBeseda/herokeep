@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogRef } from '@app/ui/dialog/dialog.service';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { DialogRef } from '../../../../ui/dialog/dialog.service';
+import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
+import { HkTextFieldComponent } from '../../../../ui/text-field/text-field.component';
+import { HkTextareaComponent } from '../../../../ui/textarea/textarea.component';
 
 export interface CustomItemDialogResult {
   readonly name: string;
@@ -29,27 +30,26 @@ export interface CustomItemDialogResult {
  */
 @Component({
   selector: 'app-custom-item-dialog',
-  imports: [TranslocoDirective, FormsModule, ButtonComponent, NumberFieldComponent],
+  imports: [
+    TranslocoDirective,
+    HkButtonComponent,
+    HkNumberFieldComponent,
+    HkTextFieldComponent,
+    HkTextareaComponent,
+  ],
   templateUrl: './custom-item-dialog.component.html',
+  styleUrl: './custom-item-dialog.component.scss',
 })
 export class CustomItemDialogComponent {
   private readonly dialogRef = inject(DialogRef);
 
   protected readonly name = signal('');
-  protected readonly qty = signal(1);
+  protected readonly qty = signal<number | null>(1);
   protected readonly notes = signal('');
+  /** The name has been left once: only then does a blank one read as an error. */
+  protected readonly nameTouched = signal(false);
 
-  protected onNameChange(value: string): void {
-    this.name.set(value);
-  }
-
-  protected onQtyChange(value: number | null): void {
-    this.qty.set(value !== null && value >= 1 ? Math.floor(value) : 1);
-  }
-
-  protected onNotesChange(value: string): void {
-    this.notes.set(value);
-  }
+  protected readonly nameBlank = computed(() => this.name().trim() === '');
 
   protected cancel(): void {
     this.dialogRef.close(undefined);
@@ -57,11 +57,14 @@ export class CustomItemDialogComponent {
 
   protected confirm(): void {
     const name = this.name().trim();
-    if (!name) return;
+    if (!name) {
+      this.nameTouched.set(true);
+      return;
+    }
     const notes = this.notes().trim();
     this.dialogRef.close({
       name,
-      qty: this.qty(),
+      qty: this.qty() !== null && this.qty()! >= 1 ? Math.floor(this.qty()!) : 1,
       notes: notes || undefined,
     } satisfies CustomItemDialogResult);
   }

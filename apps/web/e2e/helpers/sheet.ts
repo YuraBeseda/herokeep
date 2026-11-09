@@ -77,3 +77,31 @@ export async function selectBagItem(page: Page, name: string): Promise<Locator> 
   await expect(actions).toBeVisible();
   return actions;
 }
+
+// --- Drawers and play dialogs (plan 17 B9b) --------------------------------------------------------
+
+/** Opens a sheet drawer from its action-strap button and returns the drawer panel. */
+export async function openDrawer(page: Page, action: 'notes' | 'roll-log'): Promise<Locator> {
+  await page.locator(`[data-action="${action}"]`).click();
+  const drawer = page.locator('.hk-drawer__panel');
+  await expect(drawer).toBeVisible();
+  return drawer;
+}
+
+/** Closes the open sheet drawer with Escape (its scrim sits over the strap, so the opener cannot be clicked). */
+export async function closeDrawer(page: Page): Promise<void> {
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.hk-drawer__panel')).toHaveCount(0);
+}
+
+/** Chooses the cast dialog's slot lane by its spell level (a regular slot lane, never the pact or free lane). */
+export async function chooseCastSlotLane(page: Page, level: number): Promise<void> {
+  await page
+    .locator('.cast-dialog__lane[data-kind="slot"]', { hasText: `Level ${level} (` })
+    .click();
+}
+
+/** Chooses the cast dialog's pact slot lane. */
+export async function chooseCastPactLane(page: Page): Promise<void> {
+  await page.locator('.cast-dialog__lane[data-kind="pact"]').click();
+}

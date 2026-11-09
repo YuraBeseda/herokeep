@@ -1,0 +1,117 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-drawer [(open)]="open" [heading]="t('sheet.roll.logTitle')" [opener]="opener()">
+    <div class="roll-log-drawer__controls">
+      <span class="roll-log-drawer__th">{{ t('sheet.roll.nextRoll') }}</span>
+      <div
+        class="roll-log-drawer__seg"
+        role="radiogroup"
+        [attr.aria-label]="t('sheet.roll.advantageGroup')"
+      >
+        @for (choice of advantageChoices; track choice.mode) {
+          <button
+            type="button"
+            role="radio"
+            class="roll-log-drawer__seg-btn"
+            [class.roll-log-drawer__seg-btn--on]="rolls.advantageMode() === choice.mode"
+            [attr.aria-checked]="rolls.advantageMode() === choice.mode"
+            (click)="setAdvantage(choice.mode)"
+          >
+            @if (choice.icon; as icon) {
+              <hk-icon [icon]="icon" />
+            }
+            {{ t(choice.labelKey) }}
+          </button>
+        }
+      </div>
+
+      @if (rolls.rollVisibilityOptions(); as visibilityOptions) {
+        <span class="roll-log-drawer__th">{{ t('sheet.roll.whoSees') }}</span>
+        <div
+          class="roll-log-drawer__visibility"
+          role="radiogroup"
+          [attr.aria-label]="t('sheet.roll.visibilityGroup')"
+        >
+          @for (option of visibilityOptions; track option) {
+            <button
+              type="button"
+              role="radio"
+              class="roll-log-drawer__chip"
+              [class.roll-log-drawer__chip--on]="rolls.rollVisibility() === option"
+              [attr.aria-checked]="rolls.rollVisibility() === option"
+              (click)="setVisibility(option)"
+            >
+              {{ t('sheet.roll.visibility.' + option) }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <hr class="roll-log-drawer__rule" />
+
+    @if (entries().length > 0) {
+      <ul class="roll-log-drawer__feed" [attr.aria-label]="t('sheet.roll.logTitle')">
+        @for (entry of entries(); track entry.id) {
+          <li class="roll-log-drawer__entry">
+            <span class="roll-log-drawer__entry-label">
+              {{ t(entry.labelKey, entry.params) }}
+              @if (entry.advantage === 'adv') {
+                <span class="roll-log-drawer__entry-tag">{{
+                  t('sheet.roll.advantage.advantage')
+                }}</span>
+              } @else if (entry.advantage === 'dis') {
+                <span class="roll-log-drawer__entry-tag">{{
+                  t('sheet.roll.advantage.disadvantage')
+                }}</span>
+              } @else if (entry.manual) {
+                <span class="roll-log-drawer__entry-tag">{{ t('sheet.roll.manualTag') }}</span>
+              }
+            </span>
+            <hk-dice-result [dice]="entry.dice" [modifier]="entry.modifier" [total]="entry.total" />
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="roll-log-drawer__empty">{{ t('sheet.roll.empty') }}</p>
+    }
+
+    <section class="roll-log-drawer__manual-block" [attr.aria-label]="t('sheet.roll.logARoll')">
+      <h3 class="roll-log-drawer__block-title">
+        {{ t('sheet.roll.logARoll') }}
+        <span class="roll-log-drawer__hint">{{ t('sheet.roll.logARollHint') }}</span>
+      </h3>
+      <div class="roll-log-drawer__manual">
+        <hk-number-field
+          [label]="t('sheet.roll.manual.amountLabel')"
+          [variant]="'leaf'"
+          [step]="1"
+          [(value)]="manualAmount"
+        />
+        <hk-select
+          [label]="t('sheet.roll.manual.labelLabel')"
+          [options]="kindOptions(t)"
+          [(value)]="manualKind"
+        />
+        <button
+          hk-button
+          type="button"
+          [disabledReason]="manualAmount() === null ? t('sheet.roll.manual.needTotal') : null"
+          (click)="addManual(t)"
+        >
+          {{ t('sheet.roll.manual.add') }}
+        </button>
+      </div>
+    </section>
+
+    @if (entries().length > 0) {
+      <div class="roll-log-drawer__foot">
+        <button hk-button type="button" [variant]="'ember'" (click)="clear()">
+          {{ t('sheet.roll.clear') }}
+        </button>
+        <span class="roll-log-drawer__hint">{{
+          t('sheet.roll.rollCount', { count: entries().length })
+        }}</span>
+      </div>
+    }
+  </hk-drawer>
+</ng-container>

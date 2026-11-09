@@ -7,8 +7,8 @@ export interface SheetStrapHandlers {
   readonly shortRest: () => void;
   readonly longRest: () => void;
   readonly addCondition: () => void;
-  readonly openNotes: () => void;
-  readonly openRollLog: () => void;
+  readonly toggleNotes: () => void;
+  readonly toggleRollLog: () => void;
   readonly exportHero: () => void;
   readonly edit: () => void;
 }
@@ -75,13 +75,13 @@ export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): 
         kind: 'icon',
         run: h.addCondition,
       }),
-      { id: 'notes', label: 'shell.icon.notes', icon: 'notes', kind: 'icon', run: h.openNotes },
+      { id: 'notes', label: 'shell.icon.notes', icon: 'notes', kind: 'icon', run: h.toggleNotes },
       {
         id: 'roll-log',
         label: 'shell.strap.roll-log',
         icon: 'roll',
         kind: 'icon',
-        run: h.openRollLog,
+        run: h.toggleRollLog,
       },
       {
         id: 'export',

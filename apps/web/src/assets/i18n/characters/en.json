@@ -390,7 +390,13 @@
         "longBody": "Take a long rest? HP is restored to full, spent spell slots and short/long-rest resources reset, and exhaustion is reduced.",
         "cancel": "Cancel",
         "confirmShort": "Take short rest",
-        "confirmLong": "Take long rest"
+        "confirmLong": "Take long rest",
+        "shortBody": "An hour of rest. Roll hit dice to heal; some features come back.",
+        "hitDice": "Hit dice",
+        "hp": "Hit points",
+        "hpPreview": "{current} to {after} of {max}",
+        "dieAvailable": "Hit die available",
+        "dieSpent": "Hit die spent"
       }
     },
     "inspiration": {
@@ -435,7 +441,8 @@
           "attack": "Manual attack roll",
           "damage": "Manual damage roll",
           "other": "Manual roll"
-        }
+        },
+        "needTotal": "Enter the total first"
       },
       "entries": {
         "check": "{name} check",
@@ -462,7 +469,18 @@
       "plainName": "d20",
       "plainResult": "d20: {total}",
       "logTitle": "Roll log",
-      "close": "Close"
+      "close": "Close",
+      "nextRoll": "Next roll",
+      "whoSees": "Who sees it",
+      "logARoll": "Log a roll",
+      "logARollHint": "for dice rolled at the table",
+      "rollCount": "{count, plural, one {# roll} other {# rolls}} on this device",
+      "clearConfirm": {
+        "title": "Clear the roll log?",
+        "body": "This removes the rolls kept on this device. Rolls already shared with the campaign stay on its table.",
+        "cancel": "Keep",
+        "confirm": "Clear"
+      }
     },
     "attacks": {
       "title": "Attacks",
@@ -500,7 +518,11 @@
         "noSlots": "No spell slots available.",
         "replacesConcentration": "Casting this will end your current concentration.",
         "cancel": "Cancel",
-        "confirm": "Cast"
+        "confirm": "Cast",
+        "payWith": "Pay with",
+        "remaining": "{remaining} of {max} left",
+        "sealAvailable": "{lane}: available",
+        "sealSpent": "{lane}: spent"
       },
       "empty": "No spellcasting.",
       "slotsAria": "Level {level} slots, {left} of {max}",
@@ -547,7 +569,10 @@
         "conditionLabel": "Condition",
         "levelLabel": "Level",
         "cancel": "Cancel",
-        "confirm": "Add"
+        "confirm": "Add",
+        "search": "Search conditions",
+        "noMatch": "No condition matches.",
+        "levelHint": "Level 1 to {max}"
       }
     },
     "proficiencies": {
@@ -608,7 +633,8 @@
         "qtyLabel": "Quantity",
         "notesLabel": "Notes",
         "cancel": "Cancel",
-        "confirm": "Add"
+        "confirm": "Add",
+        "nameRequired": "Enter a name for the item."
       },
       "deleteConfirm": {
         "title": "Remove item?",
@@ -644,7 +670,13 @@
         "body": "This note will be permanently removed.",
         "cancel": "Cancel",
         "confirm": "Remove"
-      }
+      },
+      "count": "{count, plural, one {# note} other {# notes}} · private to you, kept in exports and sync",
+      "editNamed": "Edit note: {title}",
+      "removeNamed": "Remove note: {title}",
+      "editing": "editing",
+      "editorHint": "plain text, line breaks kept",
+      "editorRemove": "Remove note"
     },
     "derivedPopover": {
       "title": "Breakdown",

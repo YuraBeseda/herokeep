@@ -21,8 +21,7 @@ import { AddItemDialogComponent } from './add-item-dialog.component';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..', '..');
 
-/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
-const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+import { overlayRoot } from '../../../../ui/testing/overlay';
 
 function readPack(path: string): Pack {
   const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
@@ -168,5 +167,41 @@ describe('AddItemDialogComponent', () => {
     TestBed.tick();
 
     expect(() => searchAndFindCard('Moonblade', 'Moonblade Sickle')).toThrow();
+  });
+
+  // --- Board DL04 (library): the quantity stepper rides on the strap with Cancel -----------------
+
+  it('keeps Cancel and the quantity stepper together on the leather strap, the picker above it', () => {
+    configure();
+    open();
+    TestBed.tick();
+
+    const strap = overlayRoot().querySelector('[data-dialog-actions]')!;
+    expect(strap.querySelector('input[type="number"]')).not.toBeNull();
+    expect(
+      Array.from(strap.querySelectorAll('button')).some(
+        (b) => b.textContent?.trim() === charactersEn.sheet.inventory.addDialog.cancel,
+      ),
+    ).toBe(true);
+    const picker = overlayRoot().querySelector('hk-entity-picker')!;
+    expect(picker.compareDocumentPosition(strap) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('never goes below a quantity of 1', async () => {
+    configure();
+    const handle = open();
+    TestBed.tick();
+
+    const qty = overlayRoot().querySelector<HTMLInputElement>('input[type="number"]')!;
+    qty.value = '0';
+    qty.dispatchEvent(new Event('input'));
+    qty.dispatchEvent(new Event('change'));
+    TestBed.tick();
+    searchAndFindCard('Dagger', 'Dagger')
+      .querySelector<HTMLButtonElement>('.entity-picker__toggle')!
+      .click();
+    TestBed.tick();
+
+    expect(await handle.closed).toEqual({ itemId: DAGGER_ID, qty: 1 });
   });
 });

@@ -3,36 +3,64 @@
     {{ t('characters.sheet.conditions.addDialog.title') }}
   </h2>
 
-  <label class="condition-dialog__field">
-    <span>{{ t('characters.sheet.conditions.addDialog.conditionLabel') }}</span>
-    <select
-      class="condition-dialog__select"
-      (change)="onConditionChange($any($event.target).value)"
+  <hk-search-field
+    class="condition-dialog__search"
+    [label]="t('characters.sheet.conditions.addDialog.search')"
+    [placeholder]="t('characters.sheet.conditions.addDialog.search')"
+    [(value)]="query"
+  />
+
+  @if (visibleOptions().length > 0) {
+    <div
+      class="condition-dialog__chips"
+      role="radiogroup"
+      [attr.aria-label]="t('characters.sheet.conditions.addDialog.conditionLabel')"
     >
-      @for (option of data.options; track option.id) {
-        <option [value]="option.id" [selected]="option.id === selectedId()">
+      @for (option of visibleOptions(); track option.id; let i = $index) {
+        <button
+          type="button"
+          role="radio"
+          class="condition-dialog__chip"
+          [class.condition-dialog__chip--on]="selectedId() === option.id"
+          [attr.data-id]="option.id"
+          [attr.aria-checked]="selectedId() === option.id"
+          [tabindex]="selectedId() === option.id ? 0 : -1"
+          (click)="select(option.id)"
+          (keydown)="onChipKey($event, i)"
+        >
           {{ option.name }}
-        </option>
+        </button>
       }
-    </select>
-  </label>
+    </div>
+  } @else {
+    <p class="condition-dialog__empty">
+      {{ t('characters.sheet.conditions.addDialog.noMatch') }}
+    </p>
+  }
 
   @if (showsLevel()) {
     <hk-number-field
-      [labelKey]="'characters.sheet.conditions.addDialog.levelLabel'"
+      class="condition-dialog__level"
+      [variant]="'leaf'"
+      [label]="t('characters.sheet.conditions.addDialog.levelLabel')"
+      [hint]="
+        maxLevel() !== undefined
+          ? t('characters.sheet.conditions.addDialog.levelHint', { max: maxLevel() })
+          : null
+      "
       [min]="1"
+      [max]="maxLevel()"
       [step]="1"
-      [ngModel]="level()"
-      (ngModelChange)="onLevelChange($event)"
+      [(value)]="level"
     />
   }
 
-  <div class="condition-dialog__actions">
-    <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">
+  <div class="condition-dialog__actions" data-dialog-actions>
+    <button hk-button type="button" [variant]="'ghost-leather'" (click)="cancel()">
       {{ t('characters.sheet.conditions.addDialog.cancel') }}
     </button>
     <button hk-button type="button" [disabled]="!selectedId()" (click)="confirm()">
-      {{ t('characters.sheet.conditions.addDialog.confirm') }}
+      <hk-icon [icon]="'ui:condition'" />{{ t('characters.sheet.conditions.addDialog.confirm') }}
     </button>
   </div>
 </ng-container>

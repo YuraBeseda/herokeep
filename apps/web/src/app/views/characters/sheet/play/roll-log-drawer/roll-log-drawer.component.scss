@@ -1,0 +1,176 @@
+:host {
+  display: contents;
+  --hk-drawer-width: 460px;
+}
+
+.roll-log-drawer__controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.roll-log-drawer__th {
+  color: var(--text-2);
+  font-size: 15px;
+}
+
+.roll-log-drawer__hint {
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.roll-log-drawer__seg {
+  display: flex;
+  min-inline-size: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--chip-border);
+  overflow: hidden;
+}
+
+.roll-log-drawer__seg-btn,
+.roll-log-drawer__chip {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-block-size: 36px;
+  padding: 0 10px;
+  border: 0;
+  background: var(--chip-bg);
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 16px;
+  cursor: pointer;
+
+  hk-icon {
+    flex: none;
+    color: var(--accent-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    min-block-size: var(--touch-target);
+  }
+}
+
+.roll-log-drawer__seg-btn--on,
+.roll-log-drawer__chip--on {
+  background: linear-gradient(180deg, var(--brass-top), var(--brass-mid) 55%, var(--brass-bottom));
+  color: var(--text-on-brass);
+
+  hk-icon {
+    color: var(--text-on-brass);
+  }
+}
+
+.roll-log-drawer__visibility {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.roll-log-drawer__chip {
+  flex: 0 0 auto;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--chip-border);
+}
+
+.roll-log-drawer__rule {
+  margin: 10px 0;
+  border: 0;
+  border-block-start: 1px solid var(--leaf-edge);
+}
+
+.roll-log-drawer__feed {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roll-log-drawer__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-block-end: 1px solid var(--leaf-edge);
+}
+
+.roll-log-drawer__entry-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.roll-log-drawer__entry-tag {
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--chip-bg);
+  box-shadow: inset 0 0 0 1px var(--chip-border);
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.roll-log-drawer__empty {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.roll-log-drawer__manual-block {
+  margin-block-start: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--leaf-sunken);
+  box-shadow: inset 0 0 0 1px var(--leaf-edge);
+}
+
+.roll-log-drawer__block-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 0 0 8px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.roll-log-drawer__manual {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+
+    button {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.roll-log-drawer__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-block-start: 12px;
+}
