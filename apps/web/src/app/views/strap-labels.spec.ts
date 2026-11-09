@@ -18,6 +18,10 @@ import { buildCampaignsListStrap } from './campaigns/list/list-strap';
 import { buildSheetStrap } from './characters/sheet/sheet-strap';
 import { buildLibraryStrap } from './library/browse/library-strap';
 import { buildLibraryDetailStrap } from './library/detail/library-detail-strap';
+import { buildHomebrewEditorStrap } from './packs/homebrew/homebrew-editor-strap';
+import { buildHomebrewListStrap } from './packs/homebrew/homebrew-list-strap';
+import { buildPackDetailStrap } from './packs/pack-detail-strap';
+import { buildPacksListStrap } from './packs/packs-list-strap';
 
 /** Every scope the app ships is available; the strap host still only resolves its own (shell). */
 class AllScopesLoader implements TranslocoLoader {
@@ -164,6 +168,32 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
         openPack: noop,
       }),
     ],
+    ['packs list', buildPacksListStrap({ importPack: noop, newHomebrew: noop, importing: false })],
+    [
+      'packs list, importing',
+      buildPacksListStrap({ importPack: noop, newHomebrew: noop, importing: true }),
+    ],
+    ['pack detail', buildPackDetailStrap({ back: noop, exportPack: noop, exporting: false })],
+    [
+      'pack detail, not found',
+      buildPackDetailStrap({ back: noop, exportPack: null, exporting: false }),
+    ],
+    [
+      'homebrew list',
+      buildHomebrewListStrap({ back: noop, newEntry: noop, exportPack: noop, exporting: false }),
+    ],
+    ...(['item', 'spell', 'feat', 'species'] as const).map((type): [string, StrapConfig] => [
+      `homebrew editor, ${type}`,
+      buildHomebrewEditorStrap({
+        type,
+        cancel: noop,
+        save: noop,
+        markdownHelp: noop,
+        busy: false,
+        canSave: true,
+        note: 'Unsaved changes',
+      }),
+    ]),
     ...[
       'shell.strap.library-no-hero',
       'shell.strap.library-cantrip',

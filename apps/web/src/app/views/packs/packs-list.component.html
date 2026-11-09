@@ -1,30 +1,8 @@
 <section class="packs-list" *transloco="let t; read: 'packs'">
-  <div class="packs-list__header">
-    <h1 class="packs-list__title">{{ t('list.title') }}</h1>
-    <div class="packs-list__actions">
-      <a class="packs-list__homebrew" routerLink="/packs/homebrew">{{ t('homebrew.open') }}</a>
-      <button
-        hk-button
-        [variant]="'primary'"
-        type="button"
-        class="packs-list__import"
-        [disabled]="importing()"
-        (click)="importInput.click()"
-      >
-        {{ t('list.import') }}
-      </button>
-      <input
-        #importInput
-        type="file"
-        class="packs-list__import-input"
-        hidden
-        [disabled]="importing()"
-        [attr.accept]="importAccept"
-        (change)="onImportFileSelected($event)"
-      />
-    </div>
-  </div>
-  <p class="packs-list__intro">{{ t('list.intro') }}</p>
+  <header class="packs-list__header">
+    <h1 class="packs-list__title"><hk-icon [icon]="'ui:packs'" />{{ t('list.title') }}</h1>
+    <p class="packs-list__intro">{{ t('list.intro') }}</p>
+  </header>
 
   @if (importDetails().length > 0) {
     <div class="packs-list__import-details" role="status">
@@ -48,57 +26,277 @@
     </div>
   }
 
-  <hk-card class="packs-list__group packs-list__core">
-    <h2 class="packs-list__heading">{{ t('list.core-heading') }}</h2>
-    @if (corePack(); as core) {
-      <a class="packs-list__row" [routerLink]="['/packs', packKey(core)]">
-        <span class="packs-list__name">{{ core.name }}</span>
-        <span class="packs-list__meta">
-          <span class="packs-list__version">{{ core.version }}</span>
-          <span class="packs-list__badge">{{ t('list.core-label') }}</span>
-          @if (updateTargets().has(packKey(core))) {
-            <span class="packs-list__update">{{ t('update-available') }}</span>
-          }
-        </span>
-      </a>
-    }
-  </hk-card>
+  <div class="packs-list__layout">
+    <hk-leaf class="packs-list__installed" [title]="t('list.installed')" [icon]="'ui:packs'">
+      <span hkLeafActions class="packs-list__summary">
+        {{ t('list.count', { count: packCount() }) }}
+        @if (updateCount() > 0) {
+          · {{ t('list.updates', { count: updateCount() }) }}
+        }
+      </span>
 
-  <hk-card class="packs-list__group packs-list__content">
-    <h2 class="packs-list__heading">{{ t('list.content-heading') }}</h2>
-    @for (pack of contentPacks(); track packKey(pack)) {
-      <a class="packs-list__row" [routerLink]="['/packs', packKey(pack)]">
-        <span class="packs-list__name">{{ pack.name }}</span>
-        <span class="packs-list__meta">
-          <span class="packs-list__version">{{ pack.version }}</span>
-          @if (isOtherDeviceHomebrew(pack)) {
-            <span class="packs-list__other-device">{{ t('list.other-device-homebrew') }}</span>
-          }
-          @if (updateTargets().has(packKey(pack))) {
-            <span class="packs-list__update">{{ t('update-available') }}</span>
-          }
-        </span>
-      </a>
-    } @empty {
-      <p class="packs-list__empty">{{ t('list.content-empty') }}</p>
-    }
-  </hk-card>
+      <div class="packs-list__group packs-list__core">
+        <h3 class="packs-list__heading">{{ t('list.core-heading') }}</h3>
+        @if (coreRow(); as row) {
+          <ng-container *ngTemplateOutlet="packRow; context: { row: row }" />
+        }
+      </div>
 
-  <hk-card class="packs-list__group packs-list__translations">
-    <h2 class="packs-list__heading">{{ t('list.translations-heading') }}</h2>
-    <div class="packs-list__chips">
-      @for (pack of translationPacks(); track packKey(pack)) {
-        <hk-chip
-          [attr.data-pack-key]="packKey(pack)"
-          [removable]="true"
-          (remove)="removeTranslation(pack)"
+      <div class="packs-list__group packs-list__content">
+        <h3 class="packs-list__heading">{{ t('list.content-heading') }}</h3>
+        @for (row of contentRows(); track row.key) {
+          <ng-container *ngTemplateOutlet="packRow; context: { row: row }" />
+        } @empty {
+          <div class="packs-list__empty-card">
+            <p class="packs-list__empty">{{ t('list.content-empty') }}</p>
+            <div class="packs-list__empty-actions">
+              <button hk-button type="button" (click)="openFilePicker()">
+                <hk-icon [icon]="'ui:import'" />{{ t('list.import') }}
+              </button>
+              <button hk-button type="button" [variant]="'parchment'" (click)="newHomebrew()">
+                <hk-icon [icon]="'ui:add'" />{{ t('homebrew.open-new') }}
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="packs-list__group packs-list__translations">
+        <h3 class="packs-list__heading">{{ t('list.translations-heading') }}</h3>
+        @for (pack of translationPacks(); track packKey(pack)) {
+          <div class="packs-list__translation" [attr.data-pack-key]="packKey(pack)">
+            <hk-icon [icon]="'ui:language'" />
+            <span class="packs-list__name">{{ packKey(pack) }}</span>
+            <button
+              hk-button
+              type="button"
+              class="packs-list__remove-translation"
+              [variant]="'ghost'"
+              [attr.aria-label]="t('list.remove-translation-named', { name: pack.name })"
+              (click)="removeTranslation(pack)"
+            >
+              {{ t('list.remove-translation') }}
+            </button>
+          </div>
+        } @empty {
+          <p class="packs-list__empty packs-list__translations-empty">
+            {{ t('list.translations-empty') }}
+          </p>
+        }
+      </div>
+    </hk-leaf>
+
+    <div class="packs-list__side">
+      <hk-leaf
+        class="packs-list__import-card"
+        [title]="t('list.import-title')"
+        [icon]="'ui:import'"
+      >
+        <div
+          class="packs-list__dropzone"
+          [class.packs-list__dropzone--over]="dragging()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave()"
+          (drop)="onDrop($event)"
         >
-          {{ packKey(pack) }}
-          <span hk-chip-remove class="visually-hidden">{{ t('list.remove-translation') }}</span>
-        </hk-chip>
-      } @empty {
-        <p class="packs-list__empty">{{ t('list.translations-empty') }}</p>
-      }
+          <hk-icon [icon]="'ui:import'" class="packs-list__drop-icon" />
+          <strong>{{ t('list.drop') }}</strong>
+          <span class="packs-list__hint">{{ t('list.drop-hint') }}</span>
+          <button
+            hk-button
+            type="button"
+            class="packs-list__import"
+            [disabled]="importing()"
+            (click)="openFilePicker()"
+          >
+            {{ t('list.import') }}
+          </button>
+          <input
+            #importInput
+            type="file"
+            class="packs-list__import-input"
+            hidden
+            [disabled]="importing()"
+            [attr.accept]="importAccept"
+            (change)="onImportFileSelected($event)"
+          />
+        </div>
+        <p class="packs-list__hint">
+          {{
+            t('list.limit', {
+              size: t('info.unit.' + limitSize().unit, { amount: limitSize().amount }),
+            })
+          }}
+        </p>
+      </hk-leaf>
+
+      <hk-leaf
+        class="packs-list__homebrew-card"
+        [title]="t('homebrew.pack-name')"
+        [icon]="'ui:edit'"
+      >
+        <p class="packs-list__text">{{ t('list.homebrew-text') }}</p>
+        <div class="packs-list__card-actions">
+          <button
+            hk-button
+            type="button"
+            class="packs-list__homebrew"
+            [variant]="'parchment'"
+            (click)="go('/packs/homebrew')"
+          >
+            <hk-icon [icon]="'ui:edit'" />{{ t('homebrew.open') }}
+          </button>
+          <button
+            hk-button
+            type="button"
+            class="packs-list__new-entry"
+            [variant]="'ghost'"
+            (click)="newHomebrew()"
+          >
+            <hk-icon [icon]="'ui:add'" />{{ t('list.new-entry') }}
+          </button>
+        </div>
+      </hk-leaf>
+
+      <hk-leaf class="packs-list__storage-card" [title]="t('list.storage')" [icon]="'ui:bag'">
+        <div
+          class="packs-list__bar"
+          role="img"
+          [attr.aria-label]="
+            t('list.storage-packs', {
+              size: t('info.unit.' + packSize().unit, { amount: packSize().amount }),
+            })
+          "
+        >
+          <span class="packs-list__bar-fill" [style.inline-size.%]="barPercent()"></span>
+        </div>
+        <dl class="packs-list__kv">
+          <dt>{{ t('list.storage-packs-label') }}</dt>
+          <dd>{{ t('info.unit.' + packSize().unit, { amount: packSize().amount }) }}</dd>
+          @if (usage(); as u) {
+            <dt>{{ t('list.storage-device') }}</dt>
+            <dd>
+              {{
+                t('list.storage-used', {
+                  used: t('info.unit.' + u.used.unit, { amount: u.used.amount }),
+                  quota: t('info.unit.' + u.quota.unit, { amount: u.quota.amount }),
+                })
+              }}
+            </dd>
+          }
+          @if (persisted() !== undefined) {
+            <dt>{{ t('list.storage-kept') }}</dt>
+            <dd>
+              <hk-tag-chip
+                [label]="persisted() ? t('list.storage-granted') : t('list.storage-not-granted')"
+                [tone]="persisted() ? 'moss' : 'neutral'"
+              />
+              <a class="packs-list__link" routerLink="/settings">{{
+                t('list.storage-settings')
+              }}</a>
+            </dd>
+          }
+        </dl>
+      </hk-leaf>
     </div>
-  </hk-card>
+  </div>
+  <ng-template #packRow let-row="row">
+    <div class="packs-list__row" [attr.data-pack-key]="row.key">
+      <span class="packs-list__ring" aria-hidden="true">
+        <hk-icon [icon]="row.core ? 'ui:lock' : row.thisDevice ? 'ui:edit' : 'ui:packs'" />
+      </span>
+      <div class="packs-list__main">
+        <div class="packs-list__line">
+          <a
+            class="packs-list__name"
+            [routerLink]="['/packs', row.key]"
+            [attr.title]="row.pack.name"
+            >{{ row.pack.name }}</a
+          >
+          <span
+            class="packs-list__version"
+            [attr.title]="t('list.version-hint', { version: row.pack.version })"
+            >{{ row.pack.version }}</span
+          >
+          @if (row.core) {
+            <span class="packs-list__badge" [attr.title]="t('list.core-hint')">{{
+              t('list.core-label')
+            }}</span>
+            <span
+              class="packs-list__lock"
+              role="img"
+              [attr.aria-label]="t('list.core-lock')"
+              [attr.title]="t('list.core-lock') + ' — ' + t('list.core-lock-sub')"
+            >
+              <hk-icon [icon]="'ui:lock'" />
+            </span>
+          }
+          @if (row.thisDevice) {
+            <hk-tag-chip [label]="t('list.this-device')" [hint]="t('list.this-device-hint')" />
+          }
+          @if (row.otherDevice) {
+            <span class="packs-list__other-device" [attr.title]="t('list.other-device-hint')">{{
+              t('list.other-device-homebrew')
+            }}</span>
+          }
+          @if (row.updateVersion) {
+            <span
+              class="packs-list__update"
+              [attr.title]="t('list.update-hint', { version: row.updateVersion })"
+              >{{ t('update-available') }}</span
+            >
+          }
+        </div>
+        <div class="packs-list__sub">
+          @if (row.pack.authors.length > 0) {
+            <span class="packs-list__authors">{{ row.pack.authors.join(', ') }}</span>
+          }
+          @if (row.pack.license) {
+            <span class="packs-list__license">{{ row.pack.license }}</span>
+          }
+          @if (row.thisDevice || row.otherDevice) {
+            <span>
+              {{ t('list.row.entries', { count: row.entries }) }}:
+              @for (part of row.breakdown; track part.type; let last = $last) {
+                <span class="packs-list__part"
+                  >{{ t('entity-type.' + part.type) }} {{ part.count }}{{ last ? '' : ',' }}</span
+                >
+              }
+            </span>
+          } @else {
+            <span>{{ t('list.row.entries', { count: row.entries }) }}</span>
+          }
+          @if (row.images > 0) {
+            <span>{{ t('info.assets-count', { count: row.images }) }}</span>
+          }
+          <span>{{ t('list.row.used-by', { count: row.usedBy }) }}</span>
+          @if (row.toReview > 0) {
+            <span>{{ t('list.row.review', { count: row.toReview }) }}</span>
+          }
+        </div>
+      </div>
+      <div class="packs-list__actions">
+        @if (row.thisDevice) {
+          <button
+            hk-button
+            type="button"
+            class="packs-list__edit"
+            [variant]="'parchment'"
+            [attr.title]="t('list.edit-hint')"
+            (click)="go('/packs/homebrew')"
+          >
+            <hk-icon [icon]="'ui:edit'" />{{ t('homebrew.edit') }}
+          </button>
+        }
+        <a
+          class="packs-list__open"
+          [routerLink]="['/packs', row.key]"
+          [attr.aria-label]="t('list.open-named', { name: row.pack.name })"
+          [attr.title]="t('list.open')"
+        >
+          <hk-icon [icon]="'ui:leave'" />
+        </a>
+      </div>
+    </div>
+  </ng-template>
 </section>

@@ -15,6 +15,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
 import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
 import { PackTrustDialogComponent } from './pack-trust-dialog.component';
+import { PackUsageService } from './pack-usage.service';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -25,6 +26,14 @@ class StubLoader implements TranslocoLoader {
 
 const ICON_HASH = 'sha256:86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65';
 const OVERRIDE_TARGET = 'srd-5e-2024:spell/fireball';
+
+const CORE = { ...samplePackBase(), id: 'srd-5e-2024', version: '0.1.0', name: 'SRD' } as Pack;
+
+function samplePackBase(): Pack {
+  const parsed = parsePack(sampleJson);
+  if (!parsed.ok) throw new Error('sample-content.json fixture no longer parses');
+  return parsed.pack;
+}
 
 function samplePack(): Pack {
   const parsed = parsePack(sampleJson);
@@ -54,7 +63,11 @@ function mkPreview(overrides: Partial<PackImportPreview> = {}): PackImportPrevie
 
 function setup(
   preview: PackImportPreview,
-  options: { importContent?: ReturnType<typeof vi.fn> } = {},
+  options: {
+    importContent?: ReturnType<typeof vi.fn>;
+    installed?: Pack[];
+    pinning?: number;
+  } = {},
 ) {
   const close = vi.fn();
   const importContent = options.importContent ?? vi.fn().mockResolvedValue(undefined);
@@ -76,7 +89,18 @@ function setup(
       provideTranslocoMessageformat(),
       { provide: DIALOG_DATA, useValue: preview },
       { provide: DialogRef, useValue: { close } },
-      { provide: PackStore, useValue: { importContent } },
+      {
+        provide: PackStore,
+        useValue: {
+          importContent,
+          corePack: signal<Pack | undefined>(CORE),
+          installedContent: signal<Pack[]>(options.installed ?? []),
+        },
+      },
+      {
+        provide: PackUsageService,
+        useValue: { countPinning: vi.fn().mockResolvedValue(options.pinning ?? 0) },
+      },
       { provide: ToastService, useValue: { show } },
       { provide: MarkdownService, useValue: { render } },
       { provide: LocaleService, useValue: { locale: signal('en') } },
@@ -167,8 +191,7 @@ describe('PackTrustDialogComponent', () => {
     const { fixture, root } = await renderDialog();
 
     const install = root.querySelector<HTMLButtonElement>('.pack-trust-dialog__install')!;
-    expect(install.disabled).toBe(false);
-    expect(install.getAttribute('aria-describedby')).toBeNull();
+    expect(install.getAttribute('aria-disabled')).toBeNull();
     install.click();
     await fixture.whenStable();
 
@@ -216,16 +239,17 @@ describe('PackTrustDialogComponent', () => {
     expect(show).not.toHaveBeenCalled();
   });
 
-  it('an already-installed preview disables Install with an aria-describedby reason', async () => {
+  it('an already-installed preview draws Install disabled with its reason in the button', async () => {
     const { importContent } = setup(mkPreview({ alreadyInstalled: true }));
     const { root } = await renderDialog();
 
     const install = root.querySelector<HTMLButtonElement>('.pack-trust-dialog__install')!;
-    expect(install.disabled).toBe(true);
-    const reasonId = install.getAttribute('aria-describedby');
-    expect(reasonId).toBeTruthy();
-    expect(root.querySelector(`#${reasonId}`)?.textContent?.trim()).toBe(
+    expect(install.getAttribute('aria-disabled')).toBe('true');
+    expect(install.querySelector('.hk-button__reason')?.textContent?.trim()).toBe(
       packsEn.trust['already-installed'],
+    );
+    expect(root.querySelector('.pack-trust-dialog__installed')?.textContent).toContain(
+      packsEn.trust['already-installed-hint'],
     );
     install.click();
     expect(importContent).not.toHaveBeenCalled();
@@ -243,10 +267,42 @@ describe('PackTrustDialogComponent', () => {
     const { root } = await renderDialog();
 
     const install = root.querySelector<HTMLButtonElement>('.pack-trust-dialog__install')!;
-    expect(install.disabled).toBe(true);
-    const reason = root.querySelector(`#${install.getAttribute('aria-describedby')}`);
+    expect(install.getAttribute('aria-disabled')).toBe('true');
+    const reason = install.querySelector('.hk-button__reason');
     expect(reason?.textContent).toContain('Unknown entity x');
     expect(reason?.textContent).not.toContain('Second error');
+  });
+
+  it('shows the chosen file and what the check covered', async () => {
+    const preview = { ...mkPreview(), fileName: 'sample.hkpack', fileSize: 2048 };
+    setup(preview);
+    const { root } = await renderDialog();
+    expect(root.querySelector('.pack-info__file')?.textContent).toContain('sample.hkpack');
+    expect(root.querySelector('.pack-info__file')?.textContent).toContain('2 KB');
+    expect(root.querySelector('.pack-info__integrity')?.textContent).toContain(
+      packsEn.info['integrity-checked'],
+    );
+    expect(root.querySelector('.pack-info__clean')?.textContent?.trim()).toBe(
+      packsEn.info['validation-clean'],
+    );
+  });
+
+  it('marks the requirement installed or missing against the installed packs', async () => {
+    setup(mkPreview(), { installed: [] });
+    const first = await renderDialog();
+    expect(first.root.querySelector('.pack-info__dependencies')?.textContent).toContain(
+      packsEn.info['dep-installed'],
+    );
+  });
+
+  it('compares with the installed previous version: replaces, adds, heroes that stay', async () => {
+    const previous = { ...samplePack(), version: '0.9.0', entities: [] } as Pack;
+    setup(mkPreview(), { installed: [previous], pinning: 2 });
+    const { root } = await renderDialog();
+    const text = root.querySelector('.pack-trust-dialog__changes')?.textContent ?? '';
+    expect(text).toContain('replaces 0.9.0 for new pins');
+    expect(text).toContain('adds 4 entries since 0.9.0');
+    expect(text).toContain('2 heroes stay on 0.9.0');
   });
 
   describe('opened through DialogService', () => {
@@ -265,7 +321,18 @@ describe('PackTrustDialogComponent', () => {
             loader: StubLoader,
           }),
           provideTranslocoMessageformat(),
-          { provide: PackStore, useValue: { importContent } },
+          {
+            provide: PackStore,
+            useValue: {
+              importContent,
+              corePack: signal<Pack | undefined>(CORE),
+              installedContent: signal<Pack[]>([]),
+            },
+          },
+          {
+            provide: PackUsageService,
+            useValue: { countPinning: vi.fn().mockResolvedValue(0) },
+          },
           { provide: ToastService, useValue: { show: vi.fn() } },
           {
             provide: MarkdownService,

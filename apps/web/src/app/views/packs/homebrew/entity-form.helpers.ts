@@ -83,6 +83,12 @@ export const DURATION_UNITS = [
   'hour',
   'day',
 ] as const satisfies readonly NonNullable<SpellEntity['duration']['unit']>[];
+export const CHARGE_RESETS = [
+  'never',
+  'dawn',
+  'shortRest',
+  'longRest',
+] as const satisfies readonly NonNullable<ItemEntity['charges']>['reset'][];
 export const FEAT_CATEGORIES = [
   'origin',
   'general',
@@ -140,6 +146,8 @@ export interface HomebrewVocabulary {
   readonly sizes: readonly string[];
   readonly creatureTypes: readonly string[];
   readonly classes: readonly ClassOption[];
+  /** Currencies the core items are priced in (the item form's Coin select). */
+  readonly currencies: readonly string[];
 }
 
 const sortedUnique = (values: Iterable<string>): string[] =>
@@ -169,6 +177,11 @@ export function harvestVocabulary(index: ContentIndex, localizer: Localizer): Ho
     sizes: sortedUnique(species.map((s) => s.size)),
     creatureTypes: sortedUnique(species.map((s) => s.creatureType)),
     classes,
+    currencies: sortedUnique(
+      (index.byType('item') as ItemEntity[]).flatMap((item) =>
+        item.cost ? [item.cost.currency] : [],
+      ),
+    ),
   };
 }
 

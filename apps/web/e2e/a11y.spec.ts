@@ -88,7 +88,7 @@ test.describe('accessibility (axe)', () => {
     await expect(page.locator('.packs-list__content .packs-list__row')).toHaveCount(1);
 
     await page.locator('.packs-list__import-input').setInputFiles(file);
-    await expect(page.locator('.pack-trust-dialog__reason')).toBeVisible();
+    await expect(page.locator('.pack-trust-dialog__installed')).toBeVisible();
     await assertNoSeriousViolations(page, 'pack trust dialog — already installed');
   });
 

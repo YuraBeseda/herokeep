@@ -65,7 +65,9 @@ test.describe('campaign: content pack relay', () => {
       await registerToCodesStep(page, uniqueUsername('dmpacks'), 'DM Device');
       await confirmRecoveryCodesAndContinue(page);
       const dialog = await importPack(page, SAMPLE_HKPACK);
-      await expect(dialog.locator('.pack-trust-dialog__title')).toHaveText(`Install ${PACK_NAME}?`);
+      await expect(dialog.locator('.pack-trust-dialog__title')).toHaveText(
+        `Install ${PACK_NAME} 1.0.0?`,
+      );
       await dialog.locator('.pack-trust-dialog__install').click();
       await expect(dialog).toHaveCount(0);
       await expect(installedPackRow(page, PACK_NAME)).toContainText('1.0.0');

@@ -1,7 +1,11 @@
-import { Component, linkedSignal } from '@angular/core';
+import { Component, forwardRef, linkedSignal } from '@angular/core';
 import type { FeatEntity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkSelectComponent } from '../../../ui/select/select.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { HkTextareaComponent } from '../../../ui/textarea/textarea.component';
+import { HkToggleComponent } from '../../../ui/toggle/toggle.component';
 import {
   entityShell,
   FEAT_CATEGORIES,
@@ -9,7 +13,7 @@ import {
   REQUIRED_KEY,
   type FieldErrors,
 } from './entity-form.helpers';
-import { HomebrewFormBase } from './homebrew-form.base';
+import { HOMEBREW_FORM, HomebrewFormBase, type PacksT } from './homebrew-form.base';
 
 type Category = FeatEntity['category'];
 
@@ -20,8 +24,18 @@ type Category = FeatEntity['category'];
  */
 @Component({
   selector: 'app-homebrew-feat-form',
-  imports: [TranslocoDirective, ButtonComponent],
-  providers: [provideTranslocoScope('packs')],
+  imports: [
+    TranslocoDirective,
+    HkLeafComponent,
+    HkTextFieldComponent,
+    HkTextareaComponent,
+    HkSelectComponent,
+    HkToggleComponent,
+  ],
+  providers: [
+    provideTranslocoScope('packs'),
+    { provide: HOMEBREW_FORM, useExisting: forwardRef(() => FeatFormComponent) },
+  ],
   templateUrl: './feat-form.component.html',
   styleUrl: './homebrew-form.scss',
 })
@@ -32,8 +46,16 @@ export class FeatFormComponent extends HomebrewFormBase<FeatEntity> {
   protected readonly category = linkedSignal<Category>(() => this.entity()?.category ?? 'general');
   protected readonly repeatable = linkedSignal(() => this.entity()?.repeatable ?? false);
 
-  protected setCategory(value: string): void {
-    this.category.set(value as Category);
+  protected snapshot(): string {
+    return JSON.stringify([this.category(), this.repeatable()]);
+  }
+
+  protected categoryOptions(t: PacksT) {
+    return this.enumOptions(t, 'feat-category', this.categories);
+  }
+
+  protected setCategory(value: string | null): void {
+    if (value) this.category.set(value as Category);
   }
 
   protected validate(): FieldErrors {

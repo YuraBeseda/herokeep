@@ -1,13 +1,32 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, DestroyRef, computed, effect, inject, resource, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { parseEntityId, type Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { CardComponent } from '@shared/components/card/card.component';
+import semver from 'semver';
 import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
 import { HomebrewService } from '@shared/services/packs/homebrew.service';
-import { HOMEBREW_FORM_TYPES, type HomebrewFormType } from './entity-form.helpers';
+import {
+  HkpackAssetsMissingError,
+  HkpackWriter,
+} from '@shared/services/packs/hkpack-writer.service';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { NavHistoryService } from '../../../ui/nav/nav-history.service';
+import { HkTagChipComponent } from '../../../ui/tag-chip/tag-chip.component';
+import { PackUsageService } from '../pack-usage.service';
+import {
+  harvestVocabulary,
+  HOMEBREW_FORM_TYPES,
+  type HomebrewFormType,
+} from './entity-form.helpers';
+import { HomebrewNewChooserComponent } from './homebrew-new-chooser.component';
+import { buildHomebrewListStrap } from './homebrew-list-strap';
+import { entrySummary } from './homebrew-summary';
 
 export interface HomebrewDeleteConfirmData {
   readonly name: string;
@@ -16,7 +35,7 @@ export interface HomebrewDeleteConfirmData {
 /** `DialogService.open()` content for Delete: closes `true` to delete. */
 @Component({
   selector: 'app-homebrew-delete-confirm',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   providers: [provideTranslocoScope('packs')],
   template: `
     <ng-container *transloco="let t; read: 'packs'">
@@ -24,10 +43,10 @@ export interface HomebrewDeleteConfirmData {
         {{ t('homebrew.delete-confirm.title', { name: data.name }) }}
       </h2>
       <p class="hb-delete-confirm__body">{{ t('homebrew.delete-confirm.body') }}</p>
-      <div class="hb-delete-confirm__actions">
+      <div class="hb-delete-confirm__actions" data-dialog-actions>
         <button
           hk-button
-          [variant]="'ghost'"
+          [variant]="'ghost-leather'"
           type="button"
           class="hb-delete-confirm__cancel"
           (click)="close(false)"
@@ -36,7 +55,7 @@ export interface HomebrewDeleteConfirmData {
         </button>
         <button
           hk-button
-          [variant]="'danger'"
+          [variant]="'ember'"
           type="button"
           class="hb-delete-confirm__confirm"
           (click)="close(true)"
@@ -47,19 +66,13 @@ export interface HomebrewDeleteConfirmData {
     </ng-container>
   `,
   styles: `
-    .hb-delete-confirm__title {
-      margin: 0 0 var(--space-2);
-      font-size: 1.125rem;
+    :host {
+      display: block;
+      min-inline-size: min(100%, 380px);
     }
+
     .hb-delete-confirm__body {
-      margin: 0 0 var(--space-4);
-      color: var(--text-2);
-    }
-    .hb-delete-confirm__actions {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: var(--space-2);
+      margin: 0 0 var(--space-3);
     }
   `,
 })
@@ -77,15 +90,32 @@ interface EntityGroup {
   readonly entities: readonly Entity[];
 }
 
+const GROUP_ICONS: Record<HomebrewFormType, string> = {
+  item: 'ui:bag',
+  spell: 'ui:spells',
+  feat: 'ui:features',
+  species: 'ui:heroes',
+};
+
 /**
- * `/packs/homebrew` — the local homebrew pack's entities grouped by type (item, spell, feat,
- * species), each with Edit (the type's form) and Delete (asks first, then `HomebrewService.remove`
- * — characters using the entity are left with an Update to review instead of being changed), plus
- * one "New …" link per type. Entity names are pack data, shown as typed.
+ * `/packs/homebrew` (board PK04) — the local homebrew pack's entities grouped by type (item,
+ * spell, feat, species), each with Edit (the type's form) and Delete (asks first, then
+ * `HomebrewService.remove` — characters using the entity are left with an Update to review instead
+ * of being changed). The side column shows the heroes that pin the pack, the export card and what
+ * an entry can be. Entity names are pack data, shown as typed.
+ *
+ * Strap: Back, New (a chooser over the four forms) and Export as .hkpack (`HkpackWriter`).
  */
 @Component({
   selector: 'app-homebrew-list',
-  imports: [TranslocoDirective, RouterLink, ButtonComponent, CardComponent],
+  imports: [
+    TranslocoDirective,
+    RouterLink,
+    HkButtonComponent,
+    HkLeafComponent,
+    HkTagChipComponent,
+    IconComponent,
+  ],
   providers: [provideTranslocoScope('packs')],
   templateUrl: './homebrew-list.component.html',
   styleUrl: './homebrew-list.component.scss',
@@ -94,9 +124,16 @@ export class HomebrewListComponent {
   private readonly homebrewService = inject(HomebrewService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly navHistory = inject(NavHistoryService);
+  private readonly strap = inject(ActionStrapService);
+  private readonly packUsageService = inject(PackUsageService);
+  private readonly hkpackWriter = inject(HkpackWriter);
+  private readonly engineFacade = inject(EngineFacade);
 
   protected readonly pack = this.homebrewService.pack;
   protected readonly types = HOMEBREW_FORM_TYPES;
+  protected readonly groupIcons = GROUP_ICONS;
   protected readonly groups = computed<EntityGroup[]>(() => {
     const entities = this.pack()?.entities ?? [];
     return this.types.map((type) => ({
@@ -104,10 +141,91 @@ export class HomebrewListComponent {
       entities: entities.filter((entity) => entity.type === type),
     }));
   });
+  protected readonly entryCount = computed(() => this.pack()?.entities.length ?? 0);
   protected readonly removing = signal<string | null>(null);
+  protected readonly exporting = signal(false);
+
+  private readonly classes = computed(
+    () => harvestVocabulary(this.engineFacade.index(), this.engineFacade.localizer()).classes,
+  );
+
+  /** Every stored character with its pins (read once per visit). */
+  private readonly heroes = resource({ loader: () => this.packUsageService.heroPins() });
+
+  /** Heroes pinning this device's homebrew pack, and whether a newer saved version waits for them. */
+  protected readonly users = computed(() => {
+    const pack = this.pack();
+    if (!pack || !this.heroes.hasValue()) return [];
+    return this.heroes
+      .value()
+      .filter((hero) => hero.pins[pack.id] !== undefined)
+      .map((hero) => {
+        const pinned = hero.pins[pack.id];
+        const behind =
+          semver.valid(pinned) !== null &&
+          semver.valid(pack.version) !== null &&
+          semver.lt(pinned, pack.version);
+        return { id: hero.id, name: hero.name, pinned, behind };
+      });
+  });
+
+  constructor() {
+    effect(() =>
+      this.strap.set(
+        buildHomebrewListStrap({
+          back: () => this.navHistory.back(['/packs']),
+          newEntry: () => void this.newEntry(),
+          exportPack: this.pack() ? () => void this.exportPack() : null,
+          exporting: this.exporting(),
+        }),
+      ),
+    );
+    inject(DestroyRef).onDestroy(() => this.strap.clear());
+  }
 
   protected slugOf(entity: Entity): string {
     return parseEntityId(entity.id)?.slug ?? '';
+  }
+
+  /** The facts line under an entry's name, as translated parts (joined by the view). */
+  protected summary(
+    entity: Entity,
+    t: (key: string, params?: Record<string, unknown>) => string,
+  ): readonly string[] {
+    return entrySummary(entity, t, this.classes());
+  }
+
+  protected attunes(entity: Entity): boolean {
+    return entity.type === 'item' && entity.attunement?.required === true;
+  }
+
+  protected back(): void {
+    this.navHistory.back(['/packs']);
+  }
+
+  protected openBuild(id: string): void {
+    void this.router.navigate(['/c', id, 'build']);
+  }
+
+  protected async newEntry(): Promise<void> {
+    const type = await this.dialogService.open(HomebrewNewChooserComponent).closed;
+    if (typeof type === 'string') await this.router.navigate(['/packs/homebrew/new', type]);
+  }
+
+  protected async exportPack(): Promise<void> {
+    const pack = this.pack();
+    if (!pack || this.exporting()) return;
+    this.exporting.set(true);
+    try {
+      const { blob, fileName } = await this.hkpackWriter.export(pack);
+      await deliverHeroBundle(blob, fileName, pack.name, ['.hkpack']);
+    } catch (error) {
+      this.toastService.show(
+        error instanceof HkpackAssetsMissingError ? error.code : 'packs.export-failed',
+      );
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   protected async remove(entity: Entity): Promise<void> {

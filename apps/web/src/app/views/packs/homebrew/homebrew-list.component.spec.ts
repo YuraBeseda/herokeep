@@ -1,13 +1,17 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { HomebrewService } from '@shared/services/packs/homebrew.service';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { PackUsageService } from '../pack-usage.service';
+import { HomebrewNewChooserComponent } from './homebrew-new-chooser.component';
 import packsEn from '../../../../assets/i18n/packs/en.json';
 import { HomebrewDeleteConfirmComponent, HomebrewListComponent } from './homebrew-list.component';
 
@@ -49,7 +53,11 @@ const parsed = parsePack({
 if (!parsed.ok) throw new Error('homebrew list fixture does not parse');
 const PACK: Pack = parsed.pack;
 
-async function setup(confirm: unknown, updateCheckFailed = false) {
+async function setup(
+  confirm: unknown,
+  updateCheckFailed = false,
+  heroes: { id: string; name: string; pins: Record<string, string> }[] = [],
+) {
   const remove = vi.fn().mockResolvedValue({
     pack: PACK,
     diagnostics: [],
@@ -57,7 +65,10 @@ async function setup(confirm: unknown, updateCheckFailed = false) {
     pending: ['char:b'],
     updateCheckFailed,
   });
-  const open = vi.fn(() => ({ closed: Promise.resolve(confirm), close: vi.fn() }));
+  const open = vi.fn((..._args: unknown[]) => ({
+    closed: Promise.resolve(confirm),
+    close: vi.fn(),
+  }));
   const show = vi.fn();
   TestBed.configureTestingModule({
     providers: [
@@ -75,6 +86,14 @@ async function setup(confirm: unknown, updateCheckFailed = false) {
       provideTranslocoMessageformat(),
       { provide: HomebrewService, useValue: { pack: signal<Pack | null>(PACK), remove } },
       { provide: DialogService, useValue: { open } },
+      { provide: PackUsageService, useValue: { heroPins: () => Promise.resolve(heroes) } },
+      {
+        provide: EngineFacade,
+        useValue: {
+          index: () => ({ byType: () => [] }),
+          localizer: () => ({ name: (id: string) => id }),
+        },
+      },
       { provide: ToastService, useValue: { show } },
     ],
   });
@@ -108,7 +127,7 @@ describe('HomebrewListComponent', () => {
     );
     expect(names(groups[3])).toEqual(['Tidekin']);
     expect(groups[0].querySelector('.hb-list__heading')?.textContent?.trim()).toBe(
-      packsEn['entity-type'].item,
+      `${packsEn['entity-type'].item} · 2`,
     );
 
     const edit = groups[3].querySelector<HTMLAnchorElement>('.hb-list__edit');
@@ -122,6 +141,42 @@ describe('HomebrewListComponent', () => {
       '/packs/homebrew/new/species',
     ]);
     expect(root.querySelector('.hb-list__version')?.textContent).toContain('0.1.3');
+  });
+
+  it('reads the facts of each entry under its name and shows the heroes that pin the pack', async () => {
+    const { root } = await setup(false, false, [
+      { id: 'char:a', name: 'Aria', pins: { 'homebrew-aaaaaaaa': '0.1.0' } },
+      { id: 'char:b', name: 'Brann', pins: { 'homebrew-aaaaaaaa': '0.1.3' } },
+      { id: 'char:c', name: 'Cora', pins: {} },
+    ]);
+    const sub = (id: string) =>
+      root.querySelector(`[data-entity-id="${id}"] .hb-list__sub`)?.textContent ?? '';
+    expect(sub('homebrew-aaaaaaaa:item/coral-knife')).toContain(
+      packsEn.homebrew.enum.category.gear,
+    );
+    expect(sub('homebrew-aaaaaaaa:species/tidekin')).toContain('30 ft');
+    const users = [...root.querySelectorAll('.hb-list__user')];
+    expect(users.map((u) => u.querySelector('strong')?.textContent)).toEqual(['Aria', 'Brann']);
+    expect(users[0].textContent).toContain('an update waits on Build');
+    expect(users[1].textContent).not.toContain('an update waits on Build');
+    expect(root.querySelector('.hb-list__count')?.textContent).toContain('3 entries');
+    expect(root.querySelector('.hb-list__count')?.textContent).toContain('used by 2 heroes');
+  });
+
+  it('the strap has Back, New (the type chooser) and Export; Export is disabled without a pack', async () => {
+    const { open } = await setup(false);
+    const config = TestBed.inject(ActionStrapService).config()!;
+    expect(config.exit?.map((a) => a.id)).toEqual(['back']);
+    expect(config.primary.map((a) => a.id)).toEqual(['new-entry']);
+    expect(config.secondary?.map((a) => a.id)).toEqual(['export-pack']);
+    expect(config.secondary?.[0].disabled).toBe(false);
+
+    open.mockReturnValue({ closed: Promise.resolve('feat'), close: vi.fn() });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    config.primary[0].run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(open).toHaveBeenCalledWith(HomebrewNewChooserComponent);
+    expect(navigate).toHaveBeenCalledWith(['/packs/homebrew/new', 'feat']);
   });
 
   it('Delete asks for confirmation; Cancel deletes nothing', async () => {

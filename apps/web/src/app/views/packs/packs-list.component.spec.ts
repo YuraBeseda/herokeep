@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import type { Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -16,8 +16,12 @@ import {
 } from '@shared/services/packs/pack-import.errors';
 import { PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
+import { ActionStrapService } from '../../ui/action-strap/action-strap.service';
+import { HomebrewNewChooserComponent } from './homebrew/homebrew-new-chooser.component';
 import { PackTrustDialogComponent } from './pack-trust-dialog.component';
 import { PackUsageService } from './pack-usage.service';
+import { LocaleService } from '@shared/services/i18n/locale.service';
+import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { PacksListComponent } from './packs-list.component';
 
 class StubLoader implements TranslocoLoader {
@@ -73,9 +77,19 @@ function setup(
     return Promise.resolve();
   });
   const read = options.read ?? vi.fn();
-  const open = vi.fn(() => ({ closed: Promise.resolve(undefined), close: vi.fn() }));
+  const open = vi.fn<(...args: unknown[]) => { closed: Promise<unknown>; close: () => void }>(
+    () => ({ closed: Promise.resolve(undefined), close: vi.fn() }),
+  );
   const show = vi.fn();
-  const pinSets = vi.fn(() => Promise.resolve(options.storedPins ?? []));
+  const heroPins = vi.fn(() =>
+    Promise.resolve(
+      (options.storedPins ?? []).map((pins, index) => ({
+        id: `char:${index}`,
+        name: `Hero ${index}`,
+        pins,
+      })),
+    ),
+  );
 
   TestBed.configureTestingModule({
     providers: [
@@ -103,12 +117,17 @@ function setup(
       { provide: HkpackReader, useValue: { read } },
       { provide: DialogService, useValue: { open } },
       { provide: ToastService, useValue: { show } },
-      { provide: PackUsageService, useValue: { pinSets } },
+      { provide: PackUsageService, useValue: { heroPins } },
+      { provide: LocaleService, useValue: { locale: signal('en') } },
+      {
+        provide: StoragePersistService,
+        useValue: { estimate: signal(undefined), persisted: signal(undefined) },
+      },
       { provide: HomebrewIdService, useValue: { id: signal<string | null>(LOCAL_HOMEBREW) } },
     ],
   });
 
-  return { read, open, show, removeTranslation, pinSets };
+  return { read, open, show, removeTranslation, heroPins };
 }
 
 async function render() {
@@ -138,7 +157,9 @@ describe('PacksListComponent', () => {
     const { root } = await render();
 
     const rowOf = (key: string) =>
-      root.querySelector<HTMLElement>(`.packs-list__content a[href="/packs/${key}"]`)!;
+      root.querySelector<HTMLElement>(
+        `.packs-list__content .packs-list__row[data-pack-key="${key}"]`,
+      )!;
     const hint = (key: string) =>
       rowOf(key).querySelector('.packs-list__other-device')?.textContent?.trim();
     expect(hint('homebrew-bbbbbbbb@1.0.0')).toBe(packsEn.list['other-device-homebrew']);
@@ -177,7 +198,9 @@ describe('PacksListComponent', () => {
     const { fixture, root } = await render();
 
     root
-      .querySelector<HTMLElement>('[data-pack-key="srd-5e-2024-ru-sample@0.1.0"] .hk-chip__remove')!
+      .querySelector<HTMLElement>(
+        '[data-pack-key="srd-5e-2024-ru-sample@0.1.0"] .packs-list__remove-translation',
+      )!
       .click();
     await fixture.whenStable();
 
@@ -190,7 +213,9 @@ describe('PacksListComponent', () => {
     const { fixture, root } = await render();
 
     root
-      .querySelector<HTMLElement>('[data-pack-key="srd-5e-2024-ru-sample@0.1.0"] .hk-chip__remove')!
+      .querySelector<HTMLElement>(
+        '[data-pack-key="srd-5e-2024-ru-sample@0.1.0"] .packs-list__remove-translation',
+      )!
       .click();
     await fixture.whenStable();
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -221,7 +246,9 @@ describe('PacksListComponent', () => {
     await selectFile(fixture, root, file);
 
     expect(read).toHaveBeenCalledWith(file);
-    expect(open).toHaveBeenCalledWith(PackTrustDialogComponent, { data: preview });
+    expect(open).toHaveBeenCalledWith(PackTrustDialogComponent, {
+      data: { ...preview, fileName: 'sample.hkpack', fileSize: file.size },
+    });
     expect(show).not.toHaveBeenCalled();
   });
 
@@ -295,16 +322,16 @@ describe('PacksListComponent', () => {
     }
 
     const badgeOf = (root: HTMLElement, key: string) =>
-      root.querySelector(`a[href="/packs/${key}"] .packs-list__update`);
+      root.querySelector(`.packs-list__row[data-pack-key="${key}"] .packs-list__update`);
 
     it('marks the newest installed version when a stored character pins an older one', async () => {
-      const { pinSets } = setup({
+      const { heroPins } = setup({
         content: [SAMPLE, SAMPLE_11],
         storedPins: [{ [CORE.id]: CORE.version, [SAMPLE.id]: '1.0.0' }],
       });
       const { root } = await renderSettled();
 
-      expect(pinSets).toHaveBeenCalled();
+      expect(heroPins).toHaveBeenCalled();
       expect(badgeOf(root, 'sample-content@1.1.0')?.textContent?.trim()).toBe(
         packsEn['update-available'],
       );
@@ -337,6 +364,96 @@ describe('PacksListComponent', () => {
       const { root } = await renderSettled();
 
       expect(root.querySelector('.packs-list__update')).toBeNull();
+    });
+  });
+
+  describe('board PK01 elements (plan 17 B12b)', () => {
+    async function renderSettled() {
+      const rendered = await render();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await rendered.fixture.whenStable();
+      return rendered;
+    }
+
+    it('shows entries, images and how many stored heroes pin each pack on its row', async () => {
+      const withAssets = mkPack({
+        id: 'sample-content',
+        version: '1.0.0',
+        name: 'Sample content',
+        authors: ['Herokeep contributors'],
+        license: 'CC BY 4.0',
+        assets: [{ hash: `sha256:${'a'.repeat(64)}`, kind: 'icon', mime: 'image/webp', size: 34 }],
+      });
+      setup({
+        content: [withAssets],
+        storedPins: [{ [withAssets.id]: '1.0.0' }, { [withAssets.id]: '1.0.0' }, {}],
+      });
+      const { root } = await renderSettled();
+      const sub = root.querySelector(
+        '.packs-list__row[data-pack-key="sample-content@1.0.0"] .packs-list__sub',
+      )!;
+      expect(sub.textContent).toContain('Herokeep contributors');
+      expect(sub.textContent).toContain('0 entries');
+      expect(sub.textContent).toContain('1 image');
+      expect(sub.textContent).toContain('used by 2 heroes');
+    });
+
+    it("draws this device's homebrew with its chip and an Edit button, and the core with its lock", async () => {
+      const homebrew = mkPack({ id: LOCAL_HOMEBREW, name: 'My homebrew', version: '0.1.0' });
+      setup({ content: [homebrew] });
+      const { root } = await renderSettled();
+      const row = root.querySelector(`.packs-list__row[data-pack-key="${LOCAL_HOMEBREW}@0.1.0"]`)!;
+      expect(row.textContent).toContain(packsEn.list['this-device']);
+      expect(row.querySelector('.packs-list__edit')).not.toBeNull();
+      const lock = root.querySelector('.packs-list__core .packs-list__lock')!;
+      expect(lock.getAttribute('aria-label')).toBe(packsEn.list['core-lock']);
+    });
+
+    it('an empty content group offers Import pack and New homebrew inside the card', async () => {
+      setup({ content: [] });
+      const { root } = await renderSettled();
+      const card = root.querySelector('.packs-list__empty-card')!;
+      expect(card.textContent).toContain(packsEn.list.import);
+      expect(card.textContent).toContain(packsEn.homebrew['open-new']);
+    });
+
+    it('a dropped file goes through the same import path as a chosen one', async () => {
+      const preview = { pack: SAMPLE } as unknown as PackImportPreview;
+      const read = vi.fn().mockResolvedValue(preview);
+      const { open } = setup({ read });
+      const { fixture, root } = await render();
+      const file = new File(['{}'], 'dropped.hkpack');
+      const drop = new Event('drop', { cancelable: true });
+      Object.defineProperty(drop, 'dataTransfer', { value: { files: [file] } });
+      root.querySelector('.packs-list__dropzone')!.dispatchEvent(drop);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await fixture.whenStable();
+      expect(read).toHaveBeenCalledWith(file);
+      expect(open).toHaveBeenCalled();
+    });
+
+    it('the strap carries Import pack and New homebrew, and a drawn-disabled Check for updates with its reason', async () => {
+      setup();
+      await renderSettled();
+      const config = TestBed.inject(ActionStrapService).config()!;
+      expect(config.primary.map((a) => a.id)).toEqual(['import-pack', 'new-homebrew']);
+      const check = config.secondary!.find((a) => a.id === 'check-updates')!;
+      expect(check.disabled).toBe(true);
+      expect(check.disabledReason).toBe('shell.strap.packs-check-none');
+    });
+
+    it('New homebrew opens the type chooser and goes to the chosen form', async () => {
+      const { open } = setup();
+      open.mockReturnValue({ closed: Promise.resolve('spell'), close: vi.fn() });
+      await renderSettled();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      TestBed.inject(ActionStrapService)
+        .config()!
+        .primary.find((a) => a.id === 'new-homebrew')!
+        .run();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(open).toHaveBeenCalledWith(HomebrewNewChooserComponent);
+      expect(navigate).toHaveBeenCalledWith(['/packs/homebrew/new', 'spell']);
     });
   });
 });

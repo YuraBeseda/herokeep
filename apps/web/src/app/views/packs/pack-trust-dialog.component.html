@@ -1,31 +1,77 @@
 <div class="pack-trust-dialog" *transloco="let t; read: 'packs'">
   <h2 class="pack-trust-dialog__title" data-dialog-title>
-    {{ t('trust.title', { name: preview.pack.name }) }}
+    {{ t('trust.title', { name: preview.pack.name + ' ' + preview.pack.version }) }}
   </h2>
-  <p class="pack-trust-dialog__intro">{{ t('trust.intro') }}</p>
+
+  @if (preview.alreadyInstalled) {
+    <hk-banner
+      class="pack-trust-dialog__installed"
+      [variant]="'info'"
+      [heading]="t('trust.already-installed')"
+    >
+      {{ t('trust.already-installed-hint') }}
+    </hk-banner>
+  } @else {
+    <p class="pack-trust-dialog__intro">{{ t('trust.intro') }}</p>
+  }
 
   <div class="pack-trust-dialog__body">
     <app-pack-info
       [pack]="preview.pack"
       [summary]="preview.summary"
       [diagnostics]="preview.diagnostics"
+      [file]="file"
     />
+
+    @if (!preview.alreadyInstalled) {
+      <section class="pack-trust-dialog__changes">
+        <h3 class="pack-trust-dialog__heading">{{ t('trust.changes') }}</h3>
+        <div class="pack-trust-dialog__chips">
+          <hk-tag-chip
+            [label]="
+              preview.summary.overrides.length === 0
+                ? t('trust.overrides-none')
+                : t('trust.overrides', { count: preview.summary.overrides.length })
+            "
+            [tone]="preview.summary.overrides.length === 0 ? 'moss' : 'warning'"
+            [hint]="
+              preview.summary.overrides.length === 0
+                ? t('trust.overrides-none-hint')
+                : t('trust.overrides-hint')
+            "
+          />
+          @if (previous(); as prev) {
+            <hk-tag-chip
+              [label]="t('trust.replaces', { version: prev.version })"
+              [hint]="t('trust.replaces-hint')"
+            />
+            <hk-tag-chip
+              [label]="t('trust.adds', { count: added(), version: prev.version })"
+              [hint]="t('trust.adds-hint', { version: prev.version })"
+            />
+            @if (staying.hasValue() && staying.value() > 0) {
+              <hk-tag-chip
+                [label]="t('trust.staying', { count: staying.value(), version: prev.version })"
+                [hint]="t('trust.staying-hint', { version: prev.version })"
+              />
+            }
+          }
+        </div>
+      </section>
+    }
   </div>
 
   @if (block(); as reason) {
-    <p class="pack-trust-dialog__reason" [id]="reasonId">
-      @if (reason.key === 'trust.has-errors') {
-        {{ t(reason.key, { message: reason.message }) }}
-      } @else {
-        {{ t(reason.key) }}
-      }
-    </p>
+    @if (reason.key === 'trust.has-errors') {
+      <p class="pack-trust-dialog__reason">{{ t(reason.key, { message: reason.message }) }}</p>
+    }
   }
 
-  <div class="pack-trust-dialog__actions">
+  <div class="pack-trust-dialog__actions" data-dialog-actions>
+    <span class="pack-trust-dialog__note">{{ t('trust.local-only') }}</span>
     <button
       hk-button
-      [variant]="'ghost'"
+      [variant]="'ghost-leather'"
       type="button"
       class="pack-trust-dialog__cancel"
       (click)="cancel()"
@@ -37,8 +83,8 @@
       [variant]="'primary'"
       type="button"
       class="pack-trust-dialog__install"
-      [disabled]="block() !== undefined || installing()"
-      [attr.aria-describedby]="block() ? reasonId : null"
+      [loading]="installing()"
+      [disabledReason]="blockReason(t)"
       (click)="install()"
     >
       {{ t('trust.install') }}

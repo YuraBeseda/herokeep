@@ -10,13 +10,18 @@ import { parsePack, type Entity, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { HomebrewIdService } from '@shared/services/packs/homebrew-id';
 import { HomebrewService, HomebrewValidationError } from '@shared/services/packs/homebrew.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { PackStore } from '@shared/stores/pack.store';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import packsEn from '../../../../assets/i18n/packs/en.json';
+import { PACKS_ROUTES } from '../packs.routes';
+import { HomebrewLeaveConfirmComponent } from './homebrew-leave-confirm.component';
+import { homebrewLeaveGuard } from './homebrew-leave.guard';
 import { FeatFormComponent } from './feat-form.component';
 import { HomebrewEditorComponent } from './homebrew-editor.component';
 import { ItemFormComponent } from './item-form.component';
@@ -119,13 +124,21 @@ function el<E extends Element = HTMLInputElement>(root: HTMLElement, selector: s
   return found;
 }
 
+/** The native control behind a field component's host (`hk-text-field`, `hk-textarea`, …). */
+function control(root: HTMLElement, selector: string): HTMLInputElement | HTMLTextAreaElement {
+  const host = el<HTMLElement>(root, selector);
+  return host.matches('input, textarea')
+    ? (host as HTMLInputElement)
+    : el<HTMLInputElement | HTMLTextAreaElement>(host, 'input, textarea');
+}
+
 async function type(
   fixture: ComponentFixture<unknown>,
   root: HTMLElement,
   selector: string,
   value: string,
 ) {
-  const input = el<HTMLInputElement | HTMLTextAreaElement>(root, selector);
+  const input = control(root, selector);
   input.value = value;
   input.dispatchEvent(new Event('input'));
   await settle(fixture);
@@ -137,24 +150,52 @@ async function choose(
   selector: string,
   value: string,
 ) {
-  const select = el<HTMLSelectElement>(root, selector);
+  const host = el<HTMLElement>(root, selector);
+  const select = host.matches('select') ? host : el<HTMLSelectElement>(host, 'select');
   select.value = value;
   select.dispatchEvent(new Event('change'));
   await settle(fixture);
 }
 
+/** Presses a toggle or button: the control inside a field host, or the element itself. */
 async function tick(fixture: ComponentFixture<unknown>, root: HTMLElement, selector: string) {
-  el(root, selector).click();
+  const host = el<HTMLElement>(root, selector);
+  (host.matches('button, input') ? host : el<HTMLElement>(host, 'button')).click();
   await settle(fixture);
 }
 
-async function save(fixture: ComponentFixture<unknown>, root: HTMLElement) {
-  el<HTMLButtonElement>(root, '.hb-form__save').click();
+const chipOf = (root: HTMLElement, label: string): HTMLButtonElement => {
+  const found = [...root.querySelectorAll<HTMLButtonElement>('button[hk-filter-chip]')].find(
+    (button) => button.textContent?.trim().startsWith(label),
+  );
+  if (!found) throw new Error(`no chip ${label}`);
+  return found;
+};
+
+async function pressChip(fixture: ComponentFixture<unknown>, root: HTMLElement, label: string) {
+  chipOf(root, label).click();
+  await settle(fixture);
+}
+
+const switchOn = (root: HTMLElement, selector: string): boolean =>
+  el<HTMLElement>(root, `${selector} button`).getAttribute('aria-checked') === 'true';
+
+/** Save is the strap's: a form alone submits through its handle, the editor through the strap. */
+async function save(fixture: ComponentFixture<unknown>, _root?: HTMLElement) {
+  const form = fixture.componentInstance as { requestSubmit?: () => void };
+  if (form.requestSubmit) form.requestSubmit();
+  else
+    TestBed.inject(ActionStrapService)
+      .config()!
+      .primary.find((a) => a.id === 'save-entry')!
+      .run();
   await settle(fixture);
 }
 
 const alerts = (root: HTMLElement) =>
-  [...root.querySelectorAll('.hb-form__error')].map((p) => p.textContent?.trim());
+  [...root.querySelectorAll('.hk-field__msg--error, .hb-form__error')].map((p) =>
+    p.textContent?.trim(),
+  );
 
 /** The emitted entity is accepted by `parsePack` inside the pack the real service builds. */
 async function expectSavable(entity: Entity, installContent: ReturnType<typeof vi.fn>) {
@@ -172,7 +213,7 @@ describe('ItemFormComponent', () => {
     await type(fixture, root, '.hb-form__name', 'Coral Knife');
     await choose(fixture, root, '.hb-form__category', 'weapon');
     await type(fixture, root, '.hb-form__damage', '1d4');
-    await tick(fixture, root, '.hb-form__property[data-property="light"]');
+    await pressChip(fixture, root, 'light');
     await save(fixture, root);
 
     expect(emitted).toHaveLength(1);
@@ -195,7 +236,7 @@ describe('ItemFormComponent', () => {
     await save(fixture, root);
     expect(emitted).toEqual([]);
     expect(alerts(root)).toEqual([hb.field.required, hb.field.required]);
-    expect(el(root, '.hb-form__name').getAttribute('aria-invalid')).toBe('true');
+    expect(control(root, '.hb-form__name').getAttribute('aria-invalid')).toBe('true');
 
     await type(fixture, root, '.hb-form__name', 'Odd Blade');
     await type(fixture, root, '.hb-form__damage', 'banana');
@@ -220,10 +261,10 @@ describe('ItemFormComponent', () => {
     } as Entity;
     const { fixture, root, emitted } = await renderForm(ItemFormComponent, armor);
 
-    expect(el(root, '.hb-form__name').value).toBe('Shell Mail');
-    expect(el<HTMLSelectElement>(root, '.hb-form__category').value).toBe('armor');
+    expect(control(root, '.hb-form__name').value).toBe('Shell Mail');
+    expect(el<HTMLSelectElement>(root, '.hb-form__category select').value).toBe('armor');
     expect(el(root, '.hb-form__ac input').value).toBe('14');
-    expect(el(root, '.hb-form__stealth').checked).toBe(true);
+    expect(switchOn(root, '.hb-form__stealth')).toBe(true);
 
     await save(fixture, root);
     expect(emitted[0]).toEqual(armor);
@@ -237,7 +278,7 @@ describe('SpellFormComponent', () => {
     const { fixture, root, emitted } = await renderForm(SpellFormComponent);
 
     await type(fixture, root, '.hb-form__name', 'Огненный шар');
-    await tick(fixture, root, '.hb-form__class[data-class="wizard"]');
+    await pressChip(fixture, root, 'Wizard');
     await tick(fixture, root, '.hb-form__v');
     await save(fixture, root);
 
@@ -292,8 +333,8 @@ describe('SpellFormComponent', () => {
 
     expect(el(root, '.hb-form__level input').value).toBe('3');
     expect(el(root, '.hb-form__range-distance input').value).toBe('60');
-    expect(el(root, '.hb-form__material-text').value).toBe('a pearl');
-    expect(el(root, '.hb-form__class[data-class="bard"]').checked).toBe(true);
+    expect(control(root, '.hb-form__material-text').value).toBe('a pearl');
+    expect(chipOf(root, 'Bard').getAttribute('aria-pressed')).toBe('true');
 
     await save(fixture, root);
     expect(emitted[0]).toEqual(spell);
@@ -355,10 +396,8 @@ describe('FeatFormComponent', () => {
       repeatable: true,
     } as Entity;
     const { fixture, root, emitted } = await renderForm(FeatFormComponent, feat);
-    expect(el<HTMLTextAreaElement>(root, '.hb-form__description').value).toBe(
-      'Once per day, reroll.',
-    );
-    expect(el(root, '.hb-form__repeatable').checked).toBe(true);
+    expect(control(root, '.hb-form__description').value).toBe('Once per day, reroll.');
+    expect(switchOn(root, '.hb-form__repeatable')).toBe(true);
     await save(fixture, root);
     expect(emitted[0]).toEqual(feat);
   });
@@ -414,7 +453,7 @@ describe('SpeciesFormComponent', () => {
       creatureType: 'humanoid',
     } as Entity;
     const { fixture, root, emitted } = await renderForm(SpeciesFormComponent, species);
-    expect(el(root, '.hb-form__trait-name').value).toBe('Green Rest');
+    expect(control(root, '.hb-form__trait-name').value).toBe('Green Rest');
     expect(el(root, '.hb-form__speed input').value).toBe('25');
     await save(fixture, root);
     expect(emitted[0]).toEqual(species);
@@ -422,7 +461,15 @@ describe('SpeciesFormComponent', () => {
 });
 
 describe('HomebrewEditorComponent', () => {
-  function setupEditor(params: Record<string, string>, saveImpl: () => Promise<unknown>) {
+  function setupEditor(
+    params: Record<string, string>,
+    saveImpl: () => Promise<unknown>,
+    options: { leave?: unknown; existing?: Entity[] } = {},
+  ) {
+    const open = vi.fn((..._args: unknown[]) => ({
+      closed: Promise.resolve(options.leave),
+      close: vi.fn(),
+    }));
     const paramMap = convertToParamMap(params);
     const saveSpy = vi.fn(saveImpl);
     const { show } = configure([
@@ -430,15 +477,18 @@ describe('HomebrewEditorComponent', () => {
       {
         provide: HomebrewService,
         useValue: {
-          pack: signal<Pack | null>(null),
+          pack: signal<Pack | null>(
+            options.existing ? ({ id: LOCAL, entities: options.existing } as Pack) : null,
+          ),
           packId: signal(LOCAL),
           save: saveSpy,
           newEntityId: (name: string, t: string) => `${LOCAL}:${t}/${name.toLowerCase()}`,
         },
       },
+      { provide: DialogService, useValue: { open } },
     ]);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    return { show, navigate, saveSpy };
+    return { show, navigate, saveSpy, open };
   }
 
   async function renderEditor() {
@@ -514,6 +564,117 @@ describe('HomebrewEditorComponent', () => {
     expect(show).toHaveBeenCalledWith('packs.homebrew.saved', { updated: 0 });
     expect(show).toHaveBeenCalledWith('packs.homebrew.update-check-failed');
     expect(navigate).toHaveBeenCalledWith(['/packs/homebrew']);
+  });
+
+  describe('dirty form (plan 17 B12b)', () => {
+    async function editorWithName(options: { leave?: unknown } = {}) {
+      const ctx = setupEditor({ type: 'feat' }, () => Promise.reject(new Error('disk')), options);
+      const fixture = TestBed.createComponent(HomebrewEditorComponent);
+      await settle(fixture);
+      return { ...ctx, fixture, root: fixture.nativeElement as HTMLElement };
+    }
+
+    it('a clean form leaves without asking', async () => {
+      const { fixture, open } = await editorWithName();
+      expect(await fixture.componentInstance.canLeave()).toBe(true);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('unsaved edits ask once: Discard leaves, Keep editing and Escape stay', async () => {
+      const keep = await editorWithName({ leave: false });
+      await type(keep.fixture, keep.root, '.hb-form__name', 'Thing');
+      expect(await keep.fixture.componentInstance.canLeave()).toBe(false);
+      expect(keep.open).toHaveBeenCalledTimes(1);
+      expect(keep.open).toHaveBeenCalledWith(HomebrewLeaveConfirmComponent);
+      TestBed.resetTestingModule();
+
+      const escape = await editorWithName({ leave: undefined });
+      await type(escape.fixture, escape.root, '.hb-form__name', 'Thing');
+      expect(await escape.fixture.componentInstance.canLeave()).toBe(false);
+      TestBed.resetTestingModule();
+
+      const discard = await editorWithName({ leave: true });
+      await type(discard.fixture, discard.root, '.hb-form__name', 'Thing');
+      expect(await discard.fixture.componentInstance.canLeave()).toBe(true);
+    });
+
+    it('typing the original value back makes the form clean again', async () => {
+      const { fixture, root, open } = await editorWithName({ leave: false });
+      await type(fixture, root, '.hb-form__name', 'Thing');
+      await type(fixture, root, '.hb-form__name', '');
+      expect(await fixture.componentInstance.canLeave()).toBe(true);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('a failed save keeps the edits and still asks before leaving', async () => {
+      const { fixture, root, show, open } = await editorWithName({ leave: false });
+      await type(fixture, root, '.hb-form__name', 'Thing');
+      await type(fixture, root, '.hb-form__description', 'Benefit.');
+      await save(fixture, root);
+      expect(show).toHaveBeenCalledWith('packs.homebrew.save-failed-unknown');
+      expect(control(root, '.hb-form__name').value).toBe('Thing');
+      expect(await fixture.componentInstance.canLeave()).toBe(false);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('a successful save leaves without asking', async () => {
+      const { open, navigate } = setupEditor({ type: 'feat' }, () =>
+        Promise.resolve({ pack: corePack, diagnostics: [], fastForwarded: [], pending: [] }),
+      );
+      const fixture = TestBed.createComponent(HomebrewEditorComponent);
+      await settle(fixture);
+      const root = fixture.nativeElement as HTMLElement;
+      await type(fixture, root, '.hb-form__name', 'Thing');
+      await type(fixture, root, '.hb-form__description', 'Benefit.');
+      await save(fixture);
+      expect(navigate).toHaveBeenCalledWith(['/packs/homebrew']);
+      expect(await fixture.componentInstance.canLeave()).toBe(true);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('the strap Cancel goes back to the list (through the guard) and the guard asks the editor', async () => {
+      const { fixture, navigate } = await editorWithName();
+      TestBed.inject(ActionStrapService)
+        .config()!
+        .exit!.find((a) => a.id === 'cancel')!
+        .run();
+      await settle(fixture);
+      expect(navigate).toHaveBeenCalledWith(['/packs/homebrew']);
+      const canLeave = vi.fn().mockResolvedValue(false);
+      expect(
+        await TestBed.runInInjectionContext(() =>
+          homebrewLeaveGuard({ canLeave } as never, {} as never, {} as never, {} as never),
+        ),
+      ).toBe(false);
+      const guarded = PACKS_ROUTES.filter((r) => r.canDeactivate).map((r) => r.path);
+      expect(guarded).toEqual(['homebrew/new/:type', 'homebrew/edit/:type/:slug']);
+    });
+
+    it('a new entry whose name maps to an id already in the pack is refused with a message', async () => {
+      const existing = { type: 'feat', id: `${LOCAL}:feat/thing`, name: 'Thing' } as Entity;
+      const { saveSpy } = setupEditor({ type: 'feat' }, () => Promise.resolve({}), {
+        existing: [existing],
+      });
+      const fixture = TestBed.createComponent(HomebrewEditorComponent);
+      await settle(fixture);
+      const root = fixture.nativeElement as HTMLElement;
+      await type(fixture, root, '.hb-form__name', 'Thing');
+      await type(fixture, root, '.hb-form__description', 'Benefit.');
+      await save(fixture);
+      expect(saveSpy).not.toHaveBeenCalled();
+      expect(alerts(root)).toEqual([hb.field['name-taken']]);
+    });
+
+    it('the strap carries Cancel, a type-labelled Save and Markdown help', async () => {
+      const { fixture } = await editorWithName();
+      const config = TestBed.inject(ActionStrapService).config()!;
+      expect(config.exit?.map((a) => a.id)).toEqual(['cancel']);
+      expect(config.primary.map((a) => [a.id, a.label])).toEqual([
+        ['save-entry', 'shell.strap.homebrew-save-feat'],
+      ]);
+      expect(config.secondary?.map((a) => a.id)).toEqual(['markdown-help']);
+      void fixture;
+    });
   });
 
   it('shows not-found for an unknown type or a missing entity', async () => {

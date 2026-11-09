@@ -5,6 +5,7 @@
 .pack-trust-dialog__title {
   margin: 0 0 var(--space-2);
   font-family: var(--font-display);
+  overflow-wrap: anywhere;
 }
 
 .pack-trust-dialog__intro {
@@ -12,20 +13,40 @@
   color: var(--text-2);
 }
 
+.pack-trust-dialog__installed {
+  display: block;
+  margin-block-end: var(--space-3);
+}
+
 /* The `hk-dialog` shell already caps the height (90vh) and scrolls; no inner scroll region here. */
 .pack-trust-dialog__body {
   margin-block-end: var(--space-3);
 }
 
-/* Same treatment as the build tab's disabled-with-reason text (`.build-tab__options-reason`):
-   `--danger` as text on the dialog's surface-2 measured 3.79:1 in dark theme (axe). */
-.pack-trust-dialog__reason {
-  margin: 0 0 var(--space-3);
-  color: var(--text-2);
+.pack-trust-dialog__heading {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
 }
 
-.pack-trust-dialog__actions {
+.pack-trust-dialog__chips {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pack-trust-dialog__changes {
+  margin-block-start: var(--space-3);
+}
+
+/* `--danger` as text on the dialog surface measured 3.79:1 in dark theme (axe); the reason reads in
+   the body colour and the Install button carries the blocked state. */
+.pack-trust-dialog__reason {
+  margin: 0 0 var(--space-3);
+  color: var(--text-1);
+}
+
+.pack-trust-dialog__note {
+  margin-inline-end: auto;
+  color: var(--text-on-leather-2);
+  font-size: 0.875rem;
 }

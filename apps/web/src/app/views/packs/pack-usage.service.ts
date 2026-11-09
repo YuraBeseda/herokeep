@@ -4,9 +4,16 @@ import { CharactersRepository } from '@shared/services/storage/characters.reposi
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 
+/** One stored character and the packs it pins (the packs screens' "used by" lists). */
+export interface HeroPins {
+  readonly id: string;
+  readonly name: string;
+  readonly pins: Pins;
+}
+
 /**
- * "Used by N characters" for the pack detail screen: counts the stored characters whose
- * `facts.pins` pin exactly `packId@version`.
+ * "Used by N heroes" for the packs screens: counts the stored characters whose `facts.pins` pin
+ * exactly `packId@version`.
  *
  * Source: each Library row's own event log, folded with the engine's `reduce` on top of its cached
  * snapshot — the same `reduce(events, snapshot)` `CharacterStore.loadNow` runs, minus `derive`.
@@ -25,12 +32,14 @@ export class PackUsageService {
     return pinSets.filter((pins) => pins[packId] === version).length;
   }
 
-  /**
-   * Every stored character's `facts.pins`, in Library order (plan 15 Task 5: the `/packs`
-   * "Update available" badge). Cost: one `byStream` + one snapshot read and one `reduce` per
-   * stored character — the same fold `countPinning` always did; nothing is derived.
-   */
+  /** Every stored character's `facts.pins`, in Library order (the list's "Update available"). */
   async pinSets(): Promise<Pins[]> {
+    return (await this.heroPins()).map((hero) => hero.pins);
+  }
+
+  /** Every stored character with its pins, in Library order: one `byStream` + one snapshot read
+   * and one `reduce` per character; nothing is derived. */
+  async heroPins(): Promise<HeroPins[]> {
     const rows = await this.charactersRepository.list();
     return Promise.all(
       rows.map(async (row) => {
@@ -38,7 +47,7 @@ export class PackUsageService {
           this.eventsRepository.byStream(row.id),
           this.snapshotsRepository.get(row.id),
         ]);
-        return reduce(events, snapshot).pins;
+        return { id: row.id, name: row.name, pins: reduce(events, snapshot).pins };
       }),
     );
   }

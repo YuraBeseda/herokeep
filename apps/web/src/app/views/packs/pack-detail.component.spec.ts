@@ -15,6 +15,7 @@ import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PackRemoveDependentsError, PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
 import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
+import { ActionStrapService } from '../../ui/action-strap/action-strap.service';
 import { PackDetailComponent, PackRemoveConfirmComponent } from './pack-detail.component';
 
 class StubLoader implements TranslocoLoader {
@@ -216,7 +217,10 @@ describe('PackDetailComponent', () => {
       [...root.querySelectorAll('.pack-detail__dependent')].map((li) => li.textContent?.trim()),
     ).toEqual(['Sample add-on 1.0.0']);
     const remove = root.querySelector<HTMLButtonElement>('.pack-detail__remove')!;
-    expect(remove.disabled).toBe(true);
+    expect(remove.getAttribute('aria-disabled')).toBe('true');
+    expect(remove.querySelector('.hk-button__reason')?.textContent?.trim()).toBe(
+      packsEn.detail['remove-blocked'],
+    );
     remove.click();
     await fixture.whenStable();
     expect(removeContent).not.toHaveBeenCalled();
@@ -255,6 +259,50 @@ describe('PackDetailComponent', () => {
       packsEn.detail['not-found'],
     );
     expect(root.querySelector('.pack-detail__remove')).toBeNull();
+  });
+});
+
+describe('PackDetailComponent, board PK02 elements (plan 17 B12b)', () => {
+  it('lists the heroes that pin this version, each with Open sheet', async () => {
+    const { navigate } = await setup(SAMPLE_KEY);
+    await seedCharacter('Aria', pinSample);
+    await seedCharacter('Brann', () => []);
+    const { fixture, root } = await render();
+
+    const users = [...root.querySelectorAll('.pack-detail__user')];
+    expect(users.map((u) => u.querySelector('.pack-detail__user-name')?.textContent)).toEqual([
+      'Aria',
+    ]);
+    expect(users[0].textContent).toContain('pinned 1.0.0');
+    users[0].querySelector<HTMLButtonElement>('.pack-detail__open-sheet')!.click();
+    await fixture.whenStable();
+    expect(navigate).toHaveBeenCalledWith(['/c', expect.stringContaining('char:')]);
+  });
+
+  it('shows the versions on this device with the heroes pinning each and the dependencies', async () => {
+    await setup(SAMPLE_KEY);
+    await seedCharacter('Aria', pinSample);
+    const { root } = await render();
+
+    const row = root.querySelector('.pack-detail__version-row[data-version="1.0.0"]')!;
+    expect(row.textContent).toContain('pinned by 1 hero');
+    expect(row.textContent).toContain(packsEn.detail.current);
+    const need = root.querySelector('.pack-detail__need')!;
+    expect(need.textContent).toContain('SRD');
+    expect(root.querySelector('.pack-detail__deps')?.textContent).toContain(
+      packsEn.detail['nothing-depends'],
+    );
+  });
+
+  it('the strap has Back, a drawn-disabled Update pack with its reason, and Export', async () => {
+    await setup(SAMPLE_KEY);
+    await render();
+    const config = TestBed.inject(ActionStrapService).config()!;
+    expect(config.exit?.map((a) => a.id)).toEqual(['back']);
+    const update = config.primary.find((a) => a.id === 'update-pack')!;
+    expect(update.disabled).toBe(true);
+    expect(update.disabledReason).toBe('shell.strap.packs-update-none');
+    expect(config.secondary?.find((a) => a.id === 'export-pack')?.disabled).toBe(false);
   });
 });
 

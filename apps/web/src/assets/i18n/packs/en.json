@@ -18,18 +18,53 @@
   "remove-failed-dependents": "Other installed packs depend on this pack. Remove them first.",
   "list": {
     "title": "Packs",
-    "intro": "Content packs add new options to the builder. A pack changes nothing until you install it.",
+    "intro": "Content packs add options to the builder and the library. A pack changes nothing until a hero pins it.",
     "core-heading": "Core rules",
     "core-label": "core rules",
     "content-heading": "Content packs",
     "content-empty": "No content packs installed yet.",
     "translations-heading": "Translations",
-    "translations-empty": "No translation packs installed.",
+    "translations-empty": "No translation packs installed. They are .hkpack files too: import one and the library and sheets switch to its language.",
     "remove-translation": "Remove translation pack",
     "import": "Import pack",
     "import-details": "What went wrong",
     "import-details-dismiss": "Dismiss",
-    "other-device-homebrew": "From another device"
+    "other-device-homebrew": "From another device",
+    "installed": "Installed packs",
+    "count": "{count, plural, one {# pack} other {# packs}}",
+    "updates": "{count, plural, one {# update available} other {# updates available}}",
+    "version-hint": "Version {version}",
+    "core-hint": "The core rules pack",
+    "core-lock": "Built into the app",
+    "core-lock-sub": "it can't be removed; updates arrive with the app",
+    "this-device": "This device",
+    "this-device-hint": "Written on this device",
+    "other-device-hint": "Written on another device; read-only here",
+    "update-hint": "Version {version} is installed; heroes adopt it from their Build tab",
+    "row": {
+      "entries": "{count, plural, one {# entry} other {# entries}}",
+      "used-by": "{count, plural, =0 {not used by any hero} one {used by # hero} other {used by # heroes}}",
+      "review": "{count, plural, one {# hero has an update to review} other {# heroes have an update to review}}"
+    },
+    "open": "Open",
+    "open-named": "Open {name}",
+    "edit-hint": "Edit the homebrew entries",
+    "remove-translation-named": "Remove translation pack {name}",
+    "import-title": "Import a pack",
+    "drop": "Drop an .hkpack file here",
+    "drop-hint": "You'll see what the pack contains before anything is installed.",
+    "limit": "Up to {size} per file. Images inside a pack count towards device storage.",
+    "homebrew-text": "Items, spells, feats and species you write yourself live in a pack on this device. A hero sees them once the pack is pinned on its Build tab.",
+    "new-entry": "New entry",
+    "storage": "Storage",
+    "storage-packs": "Packs take {size}",
+    "storage-packs-label": "Packs",
+    "storage-device": "This device",
+    "storage-used": "{used} of {quota} used",
+    "storage-kept": "Kept data",
+    "storage-granted": "granted",
+    "storage-not-granted": "not granted",
+    "storage-settings": "Storage settings"
   },
   "info": {
     "version": "Version {version}",
@@ -48,7 +83,20 @@
       "b": "{amount} B",
       "kb": "{amount} KB",
       "mb": "{amount} MB"
-    }
+    },
+    "version-label": "Version",
+    "file": "File",
+    "integrity": "Integrity",
+    "integrity-checked": "Checked on import",
+    "integrity-images": "{count, plural, one {the image matches its sha256} other {all # images match their sha256}}",
+    "integrity-structure": "structure and references validated",
+    "pack-id": "Pack id",
+    "dep-installed": "installed",
+    "dep-installed-hint": "Version {version} is installed",
+    "dep-missing": "not installed",
+    "dep-missing-hint": "Install this pack first",
+    "entities-total": "{count, plural, one {Contents · # entry} other {Contents · # entries}}",
+    "validation-clean": "Validation found no errors or warnings."
   },
   "entity-type": {
     "system": "Game systems",
@@ -70,11 +118,24 @@
   },
   "trust": {
     "title": "Install {name}?",
-    "intro": "Review what this pack contains before you install it.",
+    "intro": "Review what the pack contains before it is installed. Nothing changes for your heroes until you pin the new version on their Build tab.",
     "install": "Install",
     "cancel": "Cancel",
     "already-installed": "This pack is already installed.",
-    "has-errors": "This pack has errors: {message}"
+    "has-errors": "This pack has errors: {message}",
+    "already-installed-hint": "Same name, version and contents. Remove it first to reinstall.",
+    "changes": "What it changes",
+    "overrides": "{count, plural, one {overrides # existing entry} other {overrides # existing entries}}",
+    "overrides-none": "overrides 0 existing entries",
+    "overrides-none-hint": "No installed entry is replaced",
+    "overrides-hint": "These entries are replaced for heroes that pin this pack",
+    "replaces": "replaces {version} for new pins",
+    "replaces-hint": "Heroes keep their pinned version until they update",
+    "adds": "{count, plural, one {adds # entry since {version}} other {adds # entries since {version}}}",
+    "adds-hint": "Compared with the installed {version}",
+    "staying": "{count, plural, one {# hero stays on {version}} other {# heroes stay on {version}}}",
+    "staying-hint": "Heroes keep {version} until you update them",
+    "local-only": "Installs on this device only"
   },
   "detail": {
     "back": "Back to packs",
@@ -82,7 +143,21 @@
     "used-by": "{count, plural, =0 {Not used by any character} one {Used by # character} other {Used by # characters}}",
     "remove": "Remove pack",
     "dependents": "{count, plural, one {# installed pack depends on this pack. Remove it first.} other {# installed packs depend on this pack. Remove them first.}}",
-    "core-note": "The core rules pack is built in and cannot be removed."
+    "core-note": "The core rules pack is built in and cannot be removed.",
+    "trail": "Packs · {name}",
+    "pinned": "pinned {version}",
+    "open-sheet": "Open sheet",
+    "open-sheet-named": "Open the sheet of {name}",
+    "remove-hint": "{count, plural, =0 {No hero uses this pack.} one {# hero uses this pack. After removal its sheet shows unresolved references until you install the pack again.} other {# heroes use this pack. After removal their sheets show unresolved references until you install the pack again.}}",
+    "remove-blocked": "Other installed packs depend on it; remove them first",
+    "versions": "Versions on this device",
+    "pinned-by": "{count, plural, one {pinned by # hero} other {pinned by # heroes}}",
+    "kept": "kept for the timeline, not pinned",
+    "current": "current",
+    "versions-hint": "Older versions stay so a hero's history still resolves.",
+    "dependencies": "Dependencies",
+    "needs": "Needs {name}",
+    "nothing-depends": "Nothing depends on this pack"
   },
   "remove-confirm": {
     "title": "Remove {name}?",
@@ -182,7 +257,18 @@
         "stealth": "Disadvantage on Stealth checks",
         "shield-heading": "Shield",
         "shield-ac": "Armor Class bonus",
-        "whole-number": "Enter a whole number in the allowed range."
+        "whole-number": "Enter a whole number in the allowed range.",
+        "range-hint": "Ranges apply to thrown and ranged weapons; the long range is never shorter than the normal one.",
+        "description-hint": "Markdown: bold, italic, lists and headings. The sheet shows this text under Details.",
+        "cost": "Cost",
+        "currency": "Coin",
+        "charges": "Charges",
+        "charges-hint": "A number, or leave empty for none",
+        "charges-reset": "Charges return",
+        "regain": "Regains",
+        "regain-all": "All charges",
+        "charges-invalid": "Use a whole number or a short formula.",
+        "attunement-hint": "Takes one of the hero's attunement slots. Shown as a gem on the bag slot."
       },
       "spell": {
         "level": "Level (0 is a cantrip)",
@@ -222,7 +308,9 @@
         "trait-incomplete": "Give the trait a name and a text, or remove it.",
         "add-trait": "Add trait",
         "remove-trait": "Remove trait"
-      }
+      },
+      "id-hint": "Id: {id} (made from the name)",
+      "name-taken": "This name is already used in My homebrew. Choose another, or edit that entry."
     },
     "enum": {
       "category": {
@@ -288,7 +376,97 @@
         "general": "General",
         "fightingStyle": "Fighting style",
         "epicBoon": "Epic boon"
+      },
+      "charge-reset": {
+        "never": "Never",
+        "dawn": "At dawn",
+        "shortRest": "After a short rest",
+        "longRest": "After a long rest"
       }
-    }
-  }
+    },
+    "trail": "Packs · My homebrew",
+    "open-new": "New homebrew",
+    "version-hint": "Pack version {version}; it grows when you save a change",
+    "count": "{entries, plural, one {# entry} other {# entries}} · {heroes, plural, =0 {used by no hero} one {used by # hero} other {used by # heroes}}",
+    "empty-hint": {
+      "item": "Write a weapon, armor, gear or magic item.",
+      "spell": "A spell needs a level, a school, a casting time and a class list.",
+      "feat": "A feat is a name, a category and its benefit text.",
+      "species": "A species needs a size, a speed, a creature type and at least one trait."
+    },
+    "sub": {
+      "weapon": "{damage} {type}",
+      "ac": "AC {ac}",
+      "shield-ac": "AC +{ac}",
+      "weight": "{weight} lb",
+      "cost": "{amount} {currency}",
+      "attunement": "Requires attunement",
+      "spell": "Level {level} {school}",
+      "repeatable": "repeatable",
+      "not-repeatable": "not repeatable",
+      "speed": "{speed} ft"
+    },
+    "where": "Where it shows up",
+    "pinned": "pinned {version}",
+    "pinned-behind": "pinned {version} · an update waits on Build",
+    "no-heroes": "No hero pins this pack yet.",
+    "open-build": "Open Build",
+    "open-build-named": "Open the Build tab of {name}",
+    "where-hint": "Heroes keep the version they pinned until you review the update on their Build tab; nothing changes on a sheet by itself.",
+    "share": "Share with your table",
+    "share-text": "Export the pack as an .hkpack file. Friends import it on their devices, and a DM can share it to the whole campaign from the campaign's Settings.",
+    "export": "Export .hkpack",
+    "export-none": "The homebrew pack is not loaded yet",
+    "can-be": "What a homebrew entry can be",
+    "can": {
+      "item": "Item: weapon, armor, shield, gear, tool, consumable or magic item",
+      "spell": "Spell: level, school, time, range, components, duration, class lists",
+      "feat": "Feat: origin, general, fighting style or epic boon; benefit text",
+      "species": "Species: size, speed, creature type, traits"
+    },
+    "chooser": {
+      "title": "New homebrew entry"
+    },
+    "required-note": "Fields marked * are required. Everything else is optional.",
+    "sections": {
+      "item": "Item details",
+      "spell": "Spell details",
+      "feat": "Feat details",
+      "species": "Species details"
+    },
+    "preview": {
+      "title": "How it reads on a sheet",
+      "unnamed": "Unnamed item",
+      "hint": "Attack numbers come from the hero who equips it; the preview shows what you have typed so far.",
+      "damage": "{dice} {type}",
+      "range": "range {normal}/{long}",
+      "ac": "AC {ac}",
+      "shield": "AC +{ac}"
+    },
+    "saving": {
+      "title": "Saving",
+      "bump": "Saving raises the version of My homebrew. Heroes that pin it are offered the update on their Build tab.",
+      "validated": "The entry is validated against the pack format before it is written; errors are listed here.",
+      "names": "Names can be in any language; the id is transliterated so it stays readable in exports."
+    },
+    "leave": {
+      "title": "Leave without saving?",
+      "body": "This entry has changes that are not saved. If you leave now they are lost.",
+      "keep": "Keep editing",
+      "discard": "Discard changes"
+    },
+    "markdown": {
+      "title": "Markdown help",
+      "intro": "Descriptions accept a little Markdown.",
+      "bold": "bold text",
+      "italic": "italic text",
+      "list": "a bulleted list",
+      "heading": "a heading",
+      "close": "Close"
+    },
+    "attention": "{count, plural, one {# field needs attention} other {# fields need attention}}",
+    "unsaved": "Unsaved changes"
+  },
+  "export-failed": "The pack could not be exported",
+  "export-assets-missing": "An image of this pack is not stored on this device, so it cannot be exported"
 }

@@ -1,46 +1,81 @@
+@use 'utilities' as u;
+
 :host {
   display: block;
+}
+
+/* The form leaf and its side column (preview, saving tips). */
+.hb-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 64rem) {
+  .hb-form-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.hb-form__side {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
 }
 
 .hb-form {
   display: grid;
   gap: var(--space-3);
-  max-inline-size: 40rem;
 }
 
-.hb-form__field {
+.hb-form__required-note,
+.hb-form__hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+/* Two columns on a wide leaf, one on a phone; `hb-form__span` fields take the whole row. */
+.hb-form__grid {
   display: grid;
-  gap: var(--space-1);
-  min-inline-size: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: start;
+}
 
-  input,
-  select,
-  textarea {
-    inline-size: 100%;
-    min-block-size: 2.75rem;
-    padding: var(--space-2);
-    border: 1px solid var(--border-1);
-    border-radius: var(--radius-s);
-    background: var(--surface-1);
-    color: var(--text-1);
-    font: inherit;
-  }
-
-  textarea {
-    resize: vertical;
+@media (max-width: 48rem) {
+  .hb-form__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.hb-form__row {
+.hb-form__span {
+  grid-column: 1 / -1;
+}
+
+.hb-form__col,
+.hb-form__pair,
+.hb-form__triple {
+  min-inline-size: 0;
+}
+
+.hb-form__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.hb-form__triple {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-3);
 }
 
-.hb-form__group,
-.hb-form__checks {
+.hb-form__group {
   display: grid;
   gap: var(--space-3);
+  min-inline-size: 0;
   margin: 0;
   padding: var(--space-3);
   border: 1px solid var(--border-1);
@@ -48,25 +83,15 @@
 
   legend {
     padding-inline: var(--space-1);
+    color: var(--text-1);
     font-weight: 600;
   }
 }
 
-.hb-form__checks {
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+.hb-form__toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
   gap: var(--space-2);
-}
-
-.hb-form__check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: 2.75rem;
-
-  input {
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
-  }
 }
 
 .hb-form__trait {
@@ -78,14 +103,8 @@
 }
 
 .hb-form__error {
-  margin: calc(-1 * var(--space-2)) 0 0;
-  color: var(--danger);
-  font-size: 0.875rem;
-}
-
-.hb-form__hint {
   margin: 0;
-  color: var(--text-2);
+  color: var(--text-1);
   font-size: 0.875rem;
 }
 
@@ -96,24 +115,66 @@
   gap: var(--space-2);
 }
 
+.hb-form__preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+}
+
+.hb-form__preview-name {
+  overflow-wrap: anywhere;
+}
+
+.hb-form__preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.hb-form__tip-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+/* Editor chrome: crumbs, header and the refusal panel above the form. */
 .hb-editor {
   display: grid;
   gap: var(--space-3);
 }
 
-.hb-editor__back {
-  color: var(--accent);
+.hb-editor__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.hb-editor__trail {
+  color: var(--text-2);
+  font-size: 0.875rem;
 }
 
 .hb-editor__title {
   margin: 0;
+  color: var(--text-1);
   font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.hb-editor__not-found {
+  color: var(--text-2);
 }
 
 .hb-editor__failure {
   padding: var(--space-3);
   border: 1px solid var(--danger);
   border-radius: var(--radius-m);
+  background: var(--leaf);
+  color: var(--text-1);
   overflow-wrap: anywhere;
 
   p,

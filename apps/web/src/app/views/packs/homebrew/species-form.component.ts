@@ -1,9 +1,13 @@
-import { Component, linkedSignal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, forwardRef, linkedSignal } from '@angular/core';
 import type { SpeciesEntity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkNumberFieldComponent } from '../../../ui/number-field/number-field.component';
+import { HkSelectComponent } from '../../../ui/select/select.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { HkTextareaComponent } from '../../../ui/textarea/textarea.component';
 import {
   entityShell,
   featureText,
@@ -12,7 +16,7 @@ import {
   wholeNumber,
   type FieldErrors,
 } from './entity-form.helpers';
-import { HomebrewFormBase } from './homebrew-form.base';
+import { HOMEBREW_FORM, HomebrewFormBase } from './homebrew-form.base';
 
 /** One trait row of the form: becomes a `feature.text` effect (text-only mechanics). */
 export interface TraitRow {
@@ -26,8 +30,20 @@ export interface TraitRow {
  */
 @Component({
   selector: 'app-homebrew-species-form',
-  imports: [TranslocoDirective, FormsModule, ButtonComponent, NumberFieldComponent],
-  providers: [provideTranslocoScope('packs')],
+  imports: [
+    TranslocoDirective,
+    HkLeafComponent,
+    HkButtonComponent,
+    HkTextFieldComponent,
+    HkTextareaComponent,
+    HkSelectComponent,
+    HkNumberFieldComponent,
+    IconComponent,
+  ],
+  providers: [
+    provideTranslocoScope('packs'),
+    { provide: HOMEBREW_FORM, useExisting: forwardRef(() => SpeciesFormComponent) },
+  ],
   templateUrl: './species-form.component.html',
   styleUrl: './homebrew-form.scss',
 })
@@ -46,6 +62,17 @@ export class SpeciesFormComponent extends HomebrewFormBase<SpeciesEntity> {
       effect.type === 'feature.text' ? [{ name: effect.name, text: effect.description }] : [],
     ),
   );
+
+  protected snapshot(): string {
+    return JSON.stringify([this.size(), this.speed(), this.creatureType(), this.traits()]);
+  }
+
+  protected sizeOptions() {
+    return this.slugOptions('size', this.vocabulary().sizes);
+  }
+  protected creatureTypeOptions() {
+    return this.slugOptions('creature-type', this.vocabulary().creatureTypes);
+  }
 
   protected addTrait(): void {
     this.traits.update((rows) => [...rows, { name: '', text: '' }]);

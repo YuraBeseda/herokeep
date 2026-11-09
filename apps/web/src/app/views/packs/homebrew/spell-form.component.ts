@@ -1,9 +1,14 @@
-import { Component, linkedSignal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, forwardRef, linkedSignal } from '@angular/core';
 import type { SpellEntity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
+import type { FilterChipOption } from '../../../ui/filter-chips/filter-chip.component';
+import { HkFilterChipsComponent } from '../../../ui/filter-chips/filter-chips.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkNumberFieldComponent } from '../../../ui/number-field/number-field.component';
+import { HkSelectComponent } from '../../../ui/select/select.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { HkTextareaComponent } from '../../../ui/textarea/textarea.component';
+import { HkToggleComponent } from '../../../ui/toggle/toggle.component';
 import {
   DURATION_KINDS,
   DURATION_UNITS,
@@ -15,7 +20,7 @@ import {
   wholeNumber,
   type FieldErrors,
 } from './entity-form.helpers';
-import { HomebrewFormBase } from './homebrew-form.base';
+import { HOMEBREW_FORM, HomebrewFormBase, type PacksT } from './homebrew-form.base';
 
 type TimeUnit = SpellEntity['castingTime']['unit'];
 type RangeKind = SpellEntity['range']['kind'];
@@ -26,15 +31,27 @@ type DurationUnit = NonNullable<SpellEntity['duration']['unit']>;
 const DISTANCE_KINDS: readonly RangeKind[] = ['feet', 'miles'];
 
 /**
- * Quick homebrew spell (ruling 10): the structural fields `SpellEntitySchema` requires — level,
- * school, casting time, range, components, duration, concentration/ritual and the classes whose
- * lists offer it — plus description and "at higher levels" text. Damage, saves and attacks stay in
- * the text.
+ * Quick homebrew spell (board PK05 vocabulary): the structural fields `SpellEntitySchema` requires
+ * — level, school, casting time, range, components, duration, concentration/ritual and the classes
+ * whose lists offer it — plus description and "at higher levels" text. Damage, saves and attacks
+ * stay in the text.
  */
 @Component({
   selector: 'app-homebrew-spell-form',
-  imports: [TranslocoDirective, FormsModule, ButtonComponent, NumberFieldComponent],
-  providers: [provideTranslocoScope('packs')],
+  imports: [
+    TranslocoDirective,
+    HkLeafComponent,
+    HkTextFieldComponent,
+    HkTextareaComponent,
+    HkSelectComponent,
+    HkNumberFieldComponent,
+    HkToggleComponent,
+    HkFilterChipsComponent,
+  ],
+  providers: [
+    provideTranslocoScope('packs'),
+    { provide: HOMEBREW_FORM, useExisting: forwardRef(() => SpellFormComponent) },
+  ],
   templateUrl: './spell-form.component.html',
   styleUrl: './homebrew-form.scss',
 })
@@ -79,30 +96,72 @@ export class SpellFormComponent extends HomebrewFormBase<SpellEntity> {
   protected readonly classes = linkedSignal<readonly string[]>(() => this.entity()?.classes ?? []);
   protected readonly higherLevels = linkedSignal(() => this.entity()?.higherLevels ?? '');
 
+  protected snapshot(): string {
+    return JSON.stringify([
+      this.level(),
+      this.school(),
+      this.castingValue(),
+      this.castingUnit(),
+      this.rangeKind(),
+      this.rangeDistance(),
+      this.verbal(),
+      this.somatic(),
+      this.material(),
+      this.materialText(),
+      this.durationKind(),
+      this.durationValue(),
+      this.durationUnit(),
+      this.concentration(),
+      this.ritual(),
+      this.classes(),
+      this.higherLevels(),
+    ]);
+  }
+
   protected needsDistance(): boolean {
     return DISTANCE_KINDS.includes(this.rangeKind());
   }
 
-  protected setCastingUnit(value: string): void {
-    this.castingUnit.set(value as TimeUnit);
+  protected schoolOptions() {
+    return this.slugOptions('school', this.vocabulary().schools);
+  }
+  protected timeUnitOptions(t: PacksT) {
+    return this.enumOptions(t, 'time-unit', this.timeUnits);
+  }
+  protected rangeKindOptions(t: PacksT) {
+    return this.enumOptions(t, 'range-kind', this.rangeKinds);
+  }
+  protected durationKindOptions(t: PacksT) {
+    return this.enumOptions(t, 'duration-kind', this.durationKinds);
+  }
+  protected durationUnitOptions(t: PacksT) {
+    return this.enumOptions(t, 'duration-unit', this.durationUnits);
   }
 
-  protected setRangeKind(value: string): void {
-    this.rangeKind.set(value as RangeKind);
+  private classOptionsMemo: readonly FilterChipOption[] = [];
+  /** The class chips: the localized class names, keyed by slug. */
+  protected classOptions(): readonly FilterChipOption[] {
+    const next = this.vocabulary().classes.map((c) => ({ id: c.slug, label: c.name }));
+    const same =
+      next.length === this.classOptionsMemo.length &&
+      next.every(
+        (o, i) =>
+          o.id === this.classOptionsMemo[i]?.id && o.label === this.classOptionsMemo[i]?.label,
+      );
+    return same ? this.classOptionsMemo : (this.classOptionsMemo = next);
   }
 
-  protected setDurationKind(value: string): void {
-    this.durationKind.set(value as DurationKind);
+  protected setCastingUnit(value: string | null): void {
+    if (value) this.castingUnit.set(value as TimeUnit);
   }
-
-  protected setDurationUnit(value: string): void {
-    this.durationUnit.set(value as DurationUnit);
+  protected setRangeKind(value: string | null): void {
+    if (value) this.rangeKind.set(value as RangeKind);
   }
-
-  protected toggleClass(slug: string, checked: boolean): void {
-    this.classes.update((list) =>
-      checked ? [...list.filter((c) => c !== slug), slug] : list.filter((c) => c !== slug),
-    );
+  protected setDurationKind(value: string | null): void {
+    if (value) this.durationKind.set(value as DurationKind);
+  }
+  protected setDurationUnit(value: string | null): void {
+    if (value) this.durationUnit.set(value as DurationUnit);
   }
 
   protected validate(): FieldErrors {

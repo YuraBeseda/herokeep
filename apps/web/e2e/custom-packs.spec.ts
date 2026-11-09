@@ -84,6 +84,7 @@ async function removeInstalledPack(page: Page, version: string): Promise<void> {
   await page
     .locator('.packs-list__content .packs-list__row', { hasText: PACK_NAME })
     .filter({ hasText: version })
+    .locator('.packs-list__name')
     .click();
   await expect(page.locator('.pack-detail__title')).toHaveText(PACK_NAME);
   await page.locator('.pack-detail__remove').click();
@@ -104,7 +105,9 @@ test.describe('custom content packs', () => {
 
     await test.step('import sample-content.hkpack: the trust screen lists its contents; Install', async () => {
       const dialog = await importPack(page, V1_HKPACK);
-      await expect(dialog.locator('.pack-trust-dialog__title')).toHaveText(`Install ${PACK_NAME}?`);
+      await expect(dialog.locator('.pack-trust-dialog__title')).toHaveText(
+        `Install ${PACK_NAME} 1.0.0?`,
+      );
       for (const type of ['item', 'spell', 'feat', 'species']) {
         await expect(
           dialog.locator(`.pack-info__count[data-type="${type}"] .pack-info__count-value`),
@@ -209,8 +212,8 @@ test.describe('custom content packs', () => {
     await test.step('homebrew: create an item in /packs/homebrew', async () => {
       await page.goto('/packs/homebrew');
       await page.locator('.hb-list__new-link[data-type="item"]').click();
-      await page.locator('.hb-form__name').fill(HOMEBREW_ITEM);
-      await page.locator('.hb-form__save').click();
+      await page.locator('.hb-form__name input').fill(HOMEBREW_ITEM);
+      await strapAction(page, 'save-entry').click();
       await expect(page).toHaveURL(/\/packs\/homebrew$/);
       await expect(page.locator('.hb-list__row', { hasText: HOMEBREW_ITEM })).toBeVisible();
     });

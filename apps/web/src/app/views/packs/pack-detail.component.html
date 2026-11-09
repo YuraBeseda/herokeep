@@ -1,42 +1,161 @@
 <section class="pack-detail" *transloco="let t; read: 'packs'">
-  <a class="pack-detail__back" routerLink="/packs">{{ t('detail.back') }}</a>
-
   @if (pack(); as pack) {
-    <h1 class="pack-detail__title">{{ pack.name }}</h1>
+    <div class="pack-detail__layout">
+      <hk-leaf class="pack-detail__main" [title]="pack.name" [icon]="'ui:packs'">
+        <div class="pack-detail__crumbs">
+          <button
+            hk-button
+            type="button"
+            class="pack-detail__back"
+            [variant]="'parchment'"
+            (click)="back()"
+          >
+            <hk-icon [icon]="'ui:leave'" />{{ t('detail.back') }}
+          </button>
+          <span class="pack-detail__trail">{{ t('detail.trail', { name: pack.name }) }}</span>
+        </div>
 
-    @if (usage.hasValue()) {
-      <p class="pack-detail__used-by">{{ t('detail.used-by', { count: usage.value() }) }}</p>
-    }
-
-    @if (summary(); as summary) {
-      <app-pack-info [pack]="pack" [summary]="summary" [diagnostics]="diagnostics()" />
-    }
-
-    @if (isCore()) {
-      <p class="pack-detail__core-note">{{ t('detail.core-note') }}</p>
-    } @else {
-      @if (dependents().length > 0) {
-        <p class="pack-detail__dependents">
-          {{ t('detail.dependents', { count: dependents().length }) }}
-        </p>
-        <ul class="pack-detail__dependents-list">
-          @for (dependent of dependents(); track dependent.id + '@' + dependent.version) {
-            <li class="pack-detail__dependent">{{ dependent.name }} {{ dependent.version }}</li>
+        <header class="pack-detail__header">
+          <h1 class="pack-detail__title">{{ pack.name }}</h1>
+          <span
+            class="pack-detail__plate"
+            [attr.title]="t('list.version-hint', { version: pack.version })"
+            >{{ pack.version }}</span
+          >
+          @if (isHomebrew()) {
+            <hk-tag-chip [label]="t('list.this-device')" [hint]="t('list.this-device-hint')" />
           }
-        </ul>
-      }
-      <button
-        hk-button
-        [variant]="'danger'"
-        type="button"
-        class="pack-detail__remove"
-        [disabled]="removing() || dependents().length > 0"
-        (click)="remove()"
-      >
-        {{ t('detail.remove') }}
-      </button>
-    }
+          @if (isCore()) {
+            <hk-tag-chip [label]="t('list.core-label')" [hint]="t('list.core-hint')" />
+          }
+          @if (usedBy() !== null) {
+            <p class="pack-detail__used-by">{{ t('detail.used-by', { count: usedBy() }) }}</p>
+          }
+        </header>
+
+        @if (summary(); as summary) {
+          <app-pack-info [pack]="pack" [summary]="summary" [diagnostics]="diagnostics()" />
+        }
+
+        @if (users().length > 0) {
+          <section class="pack-detail__users">
+            <h3 class="pack-detail__heading">
+              {{ t('detail.used-by', { count: users().length }) }}
+            </h3>
+            @for (hero of users(); track hero.id) {
+              <div class="pack-detail__user" [attr.data-hero-id]="hero.id">
+                <div class="pack-detail__user-text">
+                  <strong class="pack-detail__user-name">{{ hero.name }}</strong>
+                  <span class="pack-detail__hint">{{
+                    t('detail.pinned', { version: hero.pins[pack.id] })
+                  }}</span>
+                </div>
+                <button
+                  hk-button
+                  type="button"
+                  class="pack-detail__open-sheet"
+                  [variant]="'parchment'"
+                  [attr.aria-label]="t('detail.open-sheet-named', { name: hero.name })"
+                  (click)="openSheet(hero.id)"
+                >
+                  {{ t('detail.open-sheet') }}
+                </button>
+              </div>
+            }
+          </section>
+        }
+
+        @if (isCore()) {
+          <p class="pack-detail__core-note">{{ t('detail.core-note') }}</p>
+        } @else {
+          <div class="pack-detail__danger">
+            <h3 class="pack-detail__heading">{{ t('detail.remove') }}</h3>
+            @if (dependents().length > 0) {
+              <p class="pack-detail__dependents">
+                {{ t('detail.dependents', { count: dependents().length }) }}
+              </p>
+              <ul class="pack-detail__dependents-list">
+                @for (dependent of dependents(); track dependent.id + '@' + dependent.version) {
+                  <li class="pack-detail__dependent">
+                    {{ dependent.name }} {{ dependent.version }}
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="pack-detail__hint">
+                {{ t('detail.remove-hint', { count: usedBy() ?? 0 }) }}
+              </p>
+            }
+            <div>
+              <button
+                hk-button
+                [variant]="'ember'"
+                type="button"
+                class="pack-detail__remove"
+                [loading]="removing()"
+                [disabledReason]="dependents().length > 0 ? t('detail.remove-blocked') : null"
+                (click)="remove()"
+              >
+                {{ t('detail.remove') }}
+              </button>
+            </div>
+          </div>
+        }
+      </hk-leaf>
+
+      <div class="pack-detail__side">
+        <hk-leaf
+          class="pack-detail__versions"
+          [title]="t('detail.versions')"
+          [icon]="'ui:timeline'"
+        >
+          <ul class="pack-detail__list">
+            @for (row of versions(); track row.version) {
+              <li class="pack-detail__version-row" [attr.data-version]="row.version">
+                <strong>{{ row.version }}</strong>
+                <span class="pack-detail__hint">{{
+                  row.pinnedBy > 0
+                    ? t('detail.pinned-by', { count: row.pinnedBy })
+                    : t('detail.kept')
+                }}</span>
+                @if (row.current) {
+                  <hk-tag-chip [label]="t('detail.current')" [tone]="'moss'" />
+                }
+              </li>
+            }
+          </ul>
+          <p class="pack-detail__hint">{{ t('detail.versions-hint') }}</p>
+        </hk-leaf>
+
+        <hk-leaf class="pack-detail__deps" [title]="t('detail.dependencies')" [icon]="'ui:pin'">
+          <ul class="pack-detail__list">
+            @for (need of needs(); track need.id) {
+              <li class="pack-detail__need">
+                <span>{{ t('detail.needs', { name: need.name }) }}</span>
+                <hk-tag-chip
+                  [label]="need.installed ?? t('info.dep-missing')"
+                  [tone]="need.installed ? 'moss' : 'ember'"
+                  [hint]="need.range"
+                />
+              </li>
+            }
+            @if (dependents().length === 0) {
+              <li class="pack-detail__hint">{{ t('detail.nothing-depends') }}</li>
+            }
+          </ul>
+        </hk-leaf>
+      </div>
+    </div>
   } @else {
+    <button
+      hk-button
+      type="button"
+      class="pack-detail__back"
+      [variant]="'parchment'"
+      (click)="back()"
+    >
+      <hk-icon [icon]="'ui:leave'" />{{ t('detail.back') }}
+    </button>
     <p class="pack-detail__not-found">{{ t('detail.not-found') }}</p>
   }
 </section>

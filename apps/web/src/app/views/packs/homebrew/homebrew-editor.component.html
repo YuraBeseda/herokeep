@@ -1,5 +1,16 @@
 <section class="hb-editor" *transloco="let t; read: 'packs'">
-  <a class="hb-editor__back" routerLink="/packs/homebrew">{{ t('homebrew.back-to-list') }}</a>
+  <div class="hb-editor__crumbs">
+    <button
+      hk-button
+      type="button"
+      class="hb-editor__back"
+      [variant]="'parchment'"
+      (click)="back()"
+    >
+      <hk-icon [icon]="'ui:leave'" />{{ t('homebrew.back-to-list') }}
+    </button>
+    <span class="hb-editor__trail">{{ t('homebrew.trail') }}</span>
+  </div>
 
   @if (notFound()) {
     <p class="hb-editor__not-found" role="status">{{ t('homebrew.not-found') }}</p>
@@ -41,7 +52,6 @@
           [entity]="asItem(entity())"
           [busy]="busy()"
           (submitted)="onSubmitted($event)"
-          (cancelled)="onCancelled()"
         />
       }
       @case ('spell') {
@@ -49,7 +59,6 @@
           [entity]="asSpell(entity())"
           [busy]="busy()"
           (submitted)="onSubmitted($event)"
-          (cancelled)="onCancelled()"
         />
       }
       @case ('feat') {
@@ -57,7 +66,6 @@
           [entity]="asFeat(entity())"
           [busy]="busy()"
           (submitted)="onSubmitted($event)"
-          (cancelled)="onCancelled()"
         />
       }
       @case ('species') {
@@ -65,7 +73,6 @@
           [entity]="asSpecies(entity())"
           [busy]="busy()"
           (submitted)="onSubmitted($event)"
-          (cancelled)="onCancelled()"
         />
       }
     }

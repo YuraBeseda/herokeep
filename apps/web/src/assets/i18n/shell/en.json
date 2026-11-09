@@ -190,7 +190,20 @@
     "library-not-known": "This hero does not know the spell",
     "library-copy-link": "Copy link to this entry",
     "library-open-pack": "Open the pack",
-    "library-no-clipboard": "Copying is not available here"
+    "library-no-clipboard": "Copying is not available here",
+    "packs-update": "Update pack",
+    "packs-update-none": "Updates arrive as new versions on this device; heroes adopt them from their Build tab",
+    "packs-export": "Export as .hkpack",
+    "packs-browse": "Browse entries in the library",
+    "packs-browse-none": "The library cannot filter by pack yet",
+    "packs-check": "Check for updates",
+    "packs-check-none": "There is no online catalog: import a newer .hkpack, or let your campaign share it",
+    "homebrew-new": "New",
+    "homebrew-save-item": "Save item",
+    "homebrew-save-spell": "Save spell",
+    "homebrew-save-feat": "Save feat",
+    "homebrew-save-species": "Save species",
+    "markdown-help": "Markdown help"
   },
   "tabs": {
     "landmark": "Sections of this screen",

@@ -190,7 +190,20 @@
     "library-not-known": "Этот герой не знает это заклинание",
     "library-copy-link": "Скопировать ссылку на запись",
     "library-open-pack": "Открыть пак",
-    "library-no-clipboard": "Копирование здесь недоступно"
+    "library-no-clipboard": "Копирование здесь недоступно",
+    "packs-update": "Обновить набор",
+    "packs-update-none": "Обновления приходят как новые версии на этом устройстве; персонажи переходят на них на вкладке «Билд»",
+    "packs-export": "Экспорт как .hkpack",
+    "packs-browse": "Смотреть записи в библиотеке",
+    "packs-browse-none": "Библиотека пока не умеет фильтровать по набору",
+    "packs-check": "Проверить обновления",
+    "packs-check-none": "Онлайн-каталога нет: импортируйте новый .hkpack или пусть им поделится ваша кампания",
+    "homebrew-new": "Новое",
+    "homebrew-save-item": "Сохранить предмет",
+    "homebrew-save-spell": "Сохранить заклинание",
+    "homebrew-save-feat": "Сохранить черту",
+    "homebrew-save-species": "Сохранить вид",
+    "markdown-help": "Справка по Markdown"
   },
   "tabs": {
     "landmark": "Разделы экрана",
