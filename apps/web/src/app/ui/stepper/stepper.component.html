@@ -1,0 +1,101 @@
+<ng-container *transloco="let t; read: 'shell'">
+  @if (variant() === 'strip') {
+    <div
+      class="hk-stepper hk-stepper--strip"
+      role="group"
+      [attr.aria-label]="t('ui.stepper.label')"
+    >
+      <button
+        #allSteps
+        type="button"
+        hk-icon-button
+        class="hk-stepper__all"
+        [icon]="'details'"
+        [hint]="'shell.ui.stepper.all'"
+        [attr.aria-expanded]="sheetOpen()"
+        (click)="sheetOpen.set(!sheetOpen())"
+      ></button>
+      <div class="hk-stepper__strip-text">
+        <span class="hk-stepper__count">{{
+          t('ui.stepper.count', { current: position().index + 1, total: steps().length })
+        }}</span>
+        <span class="hk-stepper__strip-name">{{ position().name }}</span>
+      </div>
+      <div
+        class="hk-stepper__gauge"
+        role="progressbar"
+        [attr.aria-label]="t('ui.stepper.label')"
+        aria-valuemin="1"
+        [attr.aria-valuemax]="steps().length"
+        [attr.aria-valuenow]="position().index + 1"
+        [attr.aria-valuetext]="
+          t('ui.stepper.position', {
+            current: position().index + 1,
+            total: steps().length,
+            name: position().name,
+          })
+        "
+      >
+        <span class="hk-stepper__gauge-fill" [style.inline-size.%]="position().percent"></span>
+      </div>
+    </div>
+    <hk-drawer
+      [open]="sheetOpen()"
+      (openChange)="sheetOpen.set($event)"
+      [heading]="t('ui.stepper.all')"
+      [opener]="allStepsButton()"
+    >
+      <ng-container *ngTemplateOutlet="list" />
+    </hk-drawer>
+  } @else {
+    <ng-container *ngTemplateOutlet="list" />
+  }
+
+  <ng-template #list>
+    <nav class="hk-stepper hk-stepper--vertical" [attr.aria-label]="t('ui.stepper.label')">
+      <ol class="hk-stepper__list">
+        @for (step of steps(); track step.id; let i = $index) {
+          <li class="hk-stepper__item">
+            <button
+              type="button"
+              class="hk-stepper__step"
+              [class.hk-stepper__step--done]="step.state === 'done'"
+              [class.hk-stepper__step--current]="step.state === 'current'"
+              [class.hk-stepper__step--todo]="step.state === 'todo'"
+              [class.hk-stepper__step--locked]="step.state === 'locked'"
+              [class.hk-stepper__step--invalid]="step.invalid"
+              [attr.aria-current]="step.id === current() ? 'step' : null"
+              [attr.aria-disabled]="reachable(step) ? null : 'true'"
+              [hkTooltip]="step.hint ?? ''"
+              (click)="choose(step)"
+            >
+              <span class="hk-stepper__marker" aria-hidden="true">
+                @switch (step.state) {
+                  @case ('done') {
+                    <hk-wax-seal [size]="'s'" [glyph]="'ui:done'" [hint]="t('ui.stepper.done')" />
+                  }
+                  @case ('locked') {
+                    <hk-icon class="hk-stepper__lock" [icon]="'ui:lock'" />
+                  }
+                  @default {
+                    <span class="hk-stepper__num">{{ i + 1 }}</span>
+                  }
+                }
+              </span>
+              <span class="hk-stepper__name">{{ step.label }}</span>
+              @if (step.state === 'done') {
+                <span class="visually-hidden">{{ t('ui.stepper.done') }}</span>
+              }
+            </button>
+            @if (step.summary) {
+              <span class="hk-stepper__summary">{{ step.summary }}</span>
+            }
+            @if (step.invalid && step.hint) {
+              <span class="hk-stepper__invalid">{{ step.hint }}</span>
+            }
+          </li>
+        }
+      </ol>
+    </nav>
+  </ng-template>
+</ng-container>

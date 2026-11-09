@@ -151,6 +151,7 @@
   "strap": {
     "back": "Назад",
     "cancel": "Отмена",
+    "create-hero": "Создать героя",
     "exit": "Покинуть экран",
     "import": "Импорт",
     "join-code": "Войти по коду",
@@ -158,7 +159,11 @@
     "more": "Другие действия",
     "more-short": "Ещё",
     "new-hero": "Новый герой",
+    "next": "Далее",
     "primary": "Основные действия",
+    "reason-incomplete": "Сначала завершите все шаги",
+    "reason-name": "Сначала введите имя",
+    "reason-step": "Сначала завершите этот шаг",
     "secondary": "Другие действия"
   },
   "tabs": {
@@ -290,6 +295,19 @@
     "xp": {
       "label": "ОО",
       "meter": "{{xp}} из {{next}} очков опыта"
+    },
+    "stepper": {
+      "all": "Все шаги",
+      "count": "Шаг {{current}} из {{total}}",
+      "done": "Готово",
+      "label": "Шаги",
+      "position": "Шаг {{current}} из {{total}} · {{name}}"
+    },
+    "picker": {
+      "choose": "Выбрать",
+      "chosen": "Выбрано",
+      "details": "Подробнее",
+      "details-of": "Подробнее: {{name}}"
     }
   }
 }

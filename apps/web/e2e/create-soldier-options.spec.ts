@@ -32,7 +32,7 @@ async function equipKitWithSpareArmor(page: Page): Promise<void> {
     const row = page.locator('.equipment-step__entry', { hasText: item });
     await row.getByRole('button', { name: 'Equip', exact: true }).click();
   }
-  await page.locator('.create-wizard__next').click();
+  await page.locator('[data-action="next"]').click();
 }
 
 test.describe('character creation — Soldier gaming set + per-character encumbrance option', () => {

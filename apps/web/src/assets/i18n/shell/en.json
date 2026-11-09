@@ -151,6 +151,7 @@
   "strap": {
     "back": "Back",
     "cancel": "Cancel",
+    "create-hero": "Create hero",
     "exit": "Leave this screen",
     "import": "Import",
     "join-code": "Join by code",
@@ -158,7 +159,11 @@
     "more": "More actions",
     "more-short": "More",
     "new-hero": "New hero",
+    "next": "Next",
     "primary": "Main actions",
+    "reason-incomplete": "Finish every step first",
+    "reason-name": "Enter a name first",
+    "reason-step": "Finish this step first",
     "secondary": "More actions"
   },
   "tabs": {
@@ -290,6 +295,19 @@
     "xp": {
       "label": "XP",
       "meter": "{{xp}} of {{next}} XP"
+    },
+    "stepper": {
+      "all": "All steps",
+      "count": "Step {{current}} of {{total}}",
+      "done": "Done",
+      "label": "Steps",
+      "position": "Step {{current}} of {{total}} · {{name}}"
+    },
+    "picker": {
+      "choose": "Choose",
+      "chosen": "Chosen",
+      "details": "Details",
+      "details-of": "Details: {{name}}"
     }
   }
 }

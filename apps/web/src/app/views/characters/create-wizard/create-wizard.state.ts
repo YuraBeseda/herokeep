@@ -14,24 +14,14 @@ import {
   type Sheet,
   type SystemRules,
 } from '@hk/engine';
-import {
-  parseChoiceId,
-  parseEvent,
-  type Event,
-  type GrammaticalGender,
-  type Pack,
-} from '@hk/protocol';
+import { parseEvent, type Event, type GrammaticalGender, type Pack } from '@hk/protocol';
 import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
 import { type DraftEvent } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { wizardSteps, type WizardStep } from '../flow/steps.ts';
 
-export interface WizardStep {
-  id: string;
-  labelKey: string;
-  choiceId?: string;
-  kind: 'name' | 'choice' | 'spells' | 'equipment' | 'review';
-}
+export type { WizardStep } from '../flow/steps.ts';
 
 // Fixed, never-persisted stream/actor for the wizard's in-memory draft (task-5-brief.md): a
 // throwaway envelope shape purely so `reduce`/`derive`/`validateSelection` (which all need a
@@ -41,35 +31,6 @@ export interface WizardStep {
 const DRAFT_STREAM = 'char:00000000-0000-7000-8000-000000000000';
 const DRAFT_ACTOR: Event['actor'] = { userId: 'local', deviceId: 'draft', role: 'owner' };
 const DRAFT_TS = '2000-01-01T00:00:00.000Z';
-
-/** Curated ordering (task-5-brief.md): only sorts these known creation-choice slugs to the
- * front, in this order — everything else `outstandingChoices` surfaces (a pack choice this task
- * doesn't special-case, e.g. a class's own level-1 feature choices) still gets a step, just
- * appended after, in the engine's own sorted order. Adding a pack choice therefore needs zero UI
- * changes (rules-are-data) — it simply shows up, uncurated, at the tail of the list. */
-type KnownStepId =
-  'species' | 'background' | 'background-abilities' | 'class' | 'ability-scores' | 'class-skills';
-const KNOWN_STEP_ORDER: readonly KnownStepId[] = [
-  'species',
-  'background',
-  'background-abilities',
-  'class',
-  'ability-scores',
-  'class-skills',
-];
-
-function labelKeyFor(id: KnownStepId | 'choice'): string {
-  const camel: Record<KnownStepId | 'choice', string> = {
-    species: 'species',
-    background: 'background',
-    'background-abilities': 'backgroundAbilities',
-    class: 'class',
-    'ability-scores': 'abilityScores',
-    'class-skills': 'classSkills',
-    choice: 'choice',
-  };
-  return `characters.wizard.steps.${camel[id]}`;
-}
 
 /**
  * Component-provided (NOT root — `CreateWizardComponent` lists it in its own `providers`) state
@@ -311,75 +272,32 @@ export class CreateWizardState implements EngineScope {
    * A choice's step disappears once it has a VALID decision, but stays (see `curatedChoiceSteps`)
    * as long as it is either outstanding or decided-but-invalid — `CreateWizardComponent` renders
    * the latter as a clickable 'blocked' stepper step, so the user can revisit and fix it. */
-  readonly steps: Signal<WizardStep[]> = computed(() => {
-    const steps: WizardStep[] = [
-      { id: 'name', labelKey: 'characters.wizard.steps.name', kind: 'name' },
-    ];
-    const sheet = this.draftSheet();
-    if (sheet) {
-      steps.push(...this.curatedChoiceSteps());
-      if (sheet.spellcasting.length > 0) {
-        steps.push({ id: 'spells', labelKey: 'characters.wizard.steps.spells', kind: 'spells' });
-      }
-      steps.push({
-        id: 'equipment',
-        labelKey: 'characters.wizard.steps.equipment',
-        kind: 'equipment',
-      });
-    }
-    steps.push({ id: 'review', labelKey: 'characters.wizard.steps.review', kind: 'review' });
-    return steps;
+  readonly steps: Signal<WizardStep[]> = computed(() =>
+    wizardSteps({
+      hasSheet: this.draftSheet() !== undefined,
+      hasSpellcasting: (this.draftSheet()?.spellcasting.length ?? 0) > 0,
+      // A choiceId is either outstanding (no decision yet) or decided (`outstandingChoices` gates on
+      // `facts.decisions[id] === undefined`) — never both — so concatenating these two id lists
+      // never double-counts the same choice under two different known-step buckets.
+      choiceIds: [...this.outstanding().map((r) => r.choiceId), ...this.invalidDecisions().keys()],
+      systemId: this.systemId(),
+    }),
+  );
+
+  /** `steps` plus every choice already answered validly: the whole flow in canonical order, which
+   * is what the stepper shows ("done steps keep their place") and what Back / Edit navigate over.
+   * `steps` stays the list of what is still to do — Next walks that one. */
+  readonly allSteps: Signal<WizardStep[]> = computed(() => {
+    const invalid = this.invalidDecisions();
+    const outstanding = this.outstanding().map((r) => r.choiceId);
+    const answered = [...this.decisions().keys()].filter((id) => !invalid.has(id));
+    return wizardSteps({
+      hasSheet: this.draftSheet() !== undefined,
+      hasSpellcasting: (this.draftSheet()?.spellcasting.length ?? 0) > 0,
+      choiceIds: [...outstanding, ...invalid.keys(), ...answered],
+      systemId: this.systemId(),
+    });
   });
-
-  private curatedChoiceSteps(): WizardStep[] {
-    // A choiceId is either outstanding (no decision yet) or decided (`outstandingChoices` gates on
-    // `facts.decisions[id] === undefined`) — never both — so concatenating these two id lists
-    // never double-counts the same choice under two different `byKnownId` buckets.
-    const ids = [...this.outstanding().map((r) => r.choiceId), ...this.invalidDecisions().keys()];
-    if (ids.length === 0) return [];
-    const systemId = this.systemId();
-
-    const knownKind = (choiceId: string): KnownStepId | undefined => {
-      const parsed = parseChoiceId(choiceId);
-      if (!parsed) return undefined;
-      if (parsed.entityId === systemId) {
-        if (parsed.slug === 'species') return 'species';
-        if (parsed.slug === 'background') return 'background';
-        if (parsed.slug === 'class') return 'class';
-        if (parsed.slug === 'ability-scores') return 'ability-scores';
-        return undefined;
-      }
-      if (parsed.slug === 'ability-scores') return 'background-abilities';
-      if (parsed.slug === 'skills' && parsed.level === 1) return 'class-skills';
-      return undefined;
-    };
-
-    const byKnownId = new Map<KnownStepId, string>();
-    const rest: string[] = [];
-    for (const choiceId of ids) {
-      const kind = knownKind(choiceId);
-      if (kind && !byKnownId.has(kind)) byKnownId.set(kind, choiceId);
-      else rest.push(choiceId);
-    }
-
-    const steps: WizardStep[] = [];
-    for (const knownId of KNOWN_STEP_ORDER) {
-      const choiceId = byKnownId.get(knownId);
-      if (choiceId)
-        steps.push({ id: knownId, labelKey: labelKeyFor(knownId), choiceId, kind: 'choice' });
-    }
-    // Sorted by choice id (the same plain code-unit order `outstandingChoices` already emits):
-    // a decided-but-invalid choice — e.g. a count-2 pick after its first toggle, which the choice
-    // step commits immediately — must keep the slot it had while outstanding. Appending the
-    // invalid ids after the outstanding ones instead moved it to the END of this block, so when it
-    // then resolved `CreateWizardComponent.reHomeActiveStep` re-homed by that later ordinal and
-    // skipped any still-outstanding choice sorted after it (rogue Expertise -> Weapon Masteries).
-    rest.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-    for (const choiceId of rest) {
-      steps.push({ id: choiceId, labelKey: labelKeyFor('choice'), choiceId, kind: 'choice' });
-    }
-    return steps;
-  }
 
   setDecision(choiceId: string, selection: string[], context?: Record<string, unknown>): void {
     this.decisions.update((prev) => {

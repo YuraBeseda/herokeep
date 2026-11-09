@@ -50,7 +50,7 @@ async function createPregenAtCurrentLocation(page: Page, name: string): Promise<
   await equipGear(page);
 
   await expect(page.locator('.create-wizard__incomplete')).toHaveCount(0);
-  const createButton = page.locator('.create-wizard__create');
+  const createButton = page.locator('[data-action="next"]');
   await expect(createButton).toBeEnabled();
   await createButton.click();
   await expect(page).toHaveURL(/\/g\/[^/]+\/link-character$/, { timeout: 20_000 });

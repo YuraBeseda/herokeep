@@ -58,6 +58,8 @@ export async function createWizard(page: Page, name: string): Promise<string> {
     const row = page.locator('.ability-scores-step__row', { hasText: ability });
     await row.locator('select').selectOption({ label: score });
   }
+  // The ability step stays open once the scores are valid (no auto-advance): Next moves on.
+  await page.locator('[data-action="next"]').click();
 
   await page.getByRole('button', { name: 'Arcana', exact: true }).click();
   await page.getByRole('button', { name: 'History', exact: true }).click();
@@ -78,7 +80,7 @@ export async function createWizard(page: Page, name: string): Promise<string> {
   // (`CreateWizardComponent.stepperSteps`'s `spellsDone` — cosmetic only; `canGoNext` itself
   // doesn't gate on it, only on `kind !== 'name'`); the wizard's own Next still has to be clicked
   // to actually move to the equipment step.
-  await page.locator('.create-wizard__next').click();
+  await page.locator('[data-action="next"]').click();
   // Waited for explicitly (not just clicked-and-continued): `equipGear`'s very first action is an
   // UNSCOPED `page.getByRole('searchbox')`, which strict-mode-fails immediately (no retry — that's
   // not an actionability wait Playwright can retry through) if it runs during the brief window

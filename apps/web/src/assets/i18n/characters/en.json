@@ -77,10 +77,6 @@
       "equipment": "Equipment",
       "review": "Review"
     },
-    "actions": {
-      "back": "Back",
-      "next": "Next"
-    },
     "pendingStep": "This step isn't available yet.",
     "name": {
       "title": "Name your character",
@@ -92,6 +88,8 @@
       "genderNeuter": "Neuter"
     },
     "review": {
+      "edit": "Edit",
+      "editStep": "Edit: {step}",
       "title": "Review",
       "nameLabel": "Name",
       "genderLabel": "Gender",
@@ -102,7 +100,6 @@
       "prof": "Proficiency bonus",
       "itemsLabel": "Equipment",
       "spellsLabel": "Spells known",
-      "create": "Create character",
       "incomplete": "Finish every step before creating your character.",
       "toast": {
         "createFailed": "Couldn't create the character. Try again."
@@ -113,8 +110,6 @@
       "searchClear": "Clear search",
       "empty": "No matching options.",
       "expand": "Show description",
-      "collapse": "Hide description",
-      "loading": "Loading…",
       "valueLabel": "Value",
       "addValue": "Add",
       "skillsTitle": "Choose {count, plural, one {# skill} other {# skills}} for {class}",
@@ -166,6 +161,16 @@
         "pp": "Platinum"
       },
       "continue": "Continue"
+    },
+    "title": "New hero",
+    "stepper": {
+      "needsAttention": "Needs another look"
+    },
+    "cancel": {
+      "leave": "Discard and leave",
+      "message": "What you entered and chose so far will be lost.",
+      "stay": "Keep editing",
+      "title": "Leave without creating?"
     }
   },
   "levelUp": {

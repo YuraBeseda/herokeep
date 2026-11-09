@@ -1,10 +1,12 @@
 <section class="create-wizard" *transloco="let t; read: 'characters'">
   <hk-stepper
     class="create-wizard__stepper"
-    [steps]="stepperSteps()"
-    [activeId]="activeStepId()"
-    (stepSelected)="onStepSelected($event)"
-  >
+    [steps]="stepItems()"
+    [current]="flow.currentId()"
+    [variant]="phone() ? 'strip' : 'vertical'"
+    (stepSelected)="flow.go($event)"
+  />
+  <div class="create-wizard__content">
     @switch (currentStep()?.kind) {
       @case ('name') {
         <div class="create-wizard__step">
@@ -86,7 +88,21 @@
           <h2>{{ t('wizard.review.title') }}</h2>
           <dl class="create-wizard__summary">
             <dt>{{ t('wizard.review.nameLabel') }}</dt>
-            <dd>{{ state.name() }}</dd>
+            <dd>
+              {{ state.name() }}
+              <button
+                type="button"
+                class="create-wizard__edit"
+                [attr.data-edit-step]="'name'"
+                [attr.aria-label]="
+                  t('wizard.review.editStep', { step: t('wizard.review.nameLabel') })
+                "
+                [hkTooltip]="t('wizard.review.edit')"
+                (click)="onEdit(null)"
+              >
+                <hk-icon [icon]="'ui:edit'" />
+              </button>
+            </dd>
             <dt>{{ t('wizard.review.genderLabel') }}</dt>
             <dd>{{ t(genderLabelKey()) }}</dd>
           </dl>
@@ -115,6 +131,20 @@
                         @if (!last) {
                           <span>, </span>
                         }
+                      }
+                      @if (editStepId(d.choiceId); as editId) {
+                        <button
+                          type="button"
+                          class="create-wizard__edit"
+                          [attr.data-edit-step]="editId"
+                          [attr.aria-label]="
+                            t('wizard.review.editStep', { step: d.promptText || t(d.promptKey!) })
+                          "
+                          [hkTooltip]="t('wizard.review.edit')"
+                          (click)="onEdit(d.choiceId)"
+                        >
+                          <hk-icon [icon]="'ui:edit'" />
+                        </button>
                       }
                     </dd>
                   }
@@ -175,45 +205,11 @@
               </ul>
             </div>
           }
-          <button
-            hk-button
-            type="button"
-            class="create-wizard__create"
-            [variant]="'primary'"
-            [disabled]="!complete() || creating()"
-            (click)="onCreate()"
-          >
-            {{ t('wizard.review.create') }}
-          </button>
         </div>
       }
       @default {
         <p class="create-wizard__pending">{{ t('wizard.pendingStep') }}</p>
       }
     }
-
-    <div hk-stepper-footer class="create-wizard__footer">
-      <button
-        hk-button
-        type="button"
-        class="create-wizard__back"
-        [variant]="'ghost'"
-        [disabled]="!canGoBack()"
-        (click)="back()"
-      >
-        {{ t('wizard.actions.back') }}
-      </button>
-      @if (currentStep()?.kind !== 'review') {
-        <button
-          hk-button
-          type="button"
-          class="create-wizard__next"
-          [disabled]="!canGoNext()"
-          (click)="next()"
-        >
-          {{ t('wizard.actions.next') }}
-        </button>
-      }
-    </div>
-  </hk-stepper>
+  </div>
 </section>

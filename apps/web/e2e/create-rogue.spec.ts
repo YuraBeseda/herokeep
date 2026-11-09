@@ -89,6 +89,8 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
         const row = page.locator('.ability-scores-step__row', { hasText: ability });
         await row.locator('select').selectOption({ label: score });
       }
+      // The ability step stays open once the scores are valid (no auto-advance): Next moves on.
+      await page.locator('[data-action="next"]').click();
       await expect(page.locator('.choice-step__chips')).toBeVisible();
     });
 
@@ -129,7 +131,7 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
     });
 
     await test.step('equipment: nothing equipped; review is complete; create', async () => {
-      await page.locator('.create-wizard__next').click();
+      await page.locator('[data-action="next"]').click();
       await expect(page.locator('.create-wizard__review')).toBeVisible();
       await finishReviewAndCreate(page);
     });

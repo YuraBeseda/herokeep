@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Location } from '@angular/common';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
@@ -11,6 +12,12 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { DialogService } from '../../../ui/dialog/dialog.service';
+import { NavHistoryService } from '../../../ui/nav/nav-history.service';
+import { TopBarService } from '../../../ui/shell/top-bar.service';
+import { press } from '../../../ui/testing/harness';
+import { stubViewport } from '../../../ui/testing/viewport';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
@@ -19,6 +26,9 @@ import { CharacterStore } from '@shared/stores/character.store';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../assets/i18n/characters/uk.json';
+import shellEn from '../../../../assets/i18n/shell/en.json';
+import shellRu from '../../../../assets/i18n/shell/ru.json';
+import shellUk from '../../../../assets/i18n/shell/uk.json';
 import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { CreateWizardComponent } from './create-wizard.component';
 import { CreateWizardState } from './create-wizard.state';
@@ -48,6 +58,9 @@ class StubLoader implements TranslocoLoader {
     if (langPath === 'characters/en') return of(charactersEn);
     if (langPath === 'characters/ru') return of(charactersRu);
     if (langPath === 'characters/uk') return of(charactersUk);
+    if (langPath === 'shell/en') return of(shellEn);
+    if (langPath === 'shell/ru') return of(shellRu);
+    if (langPath === 'shell/uk') return of(shellUk);
     return of({});
   }
 }
@@ -82,10 +95,40 @@ function configure(packs: Pack[] = [corePack]): {
   return { create, appendTx };
 }
 
+/** The stepper's step names, in order (one entry per step, answered ones included). */
 function stepLabels(fixture: { nativeElement: unknown }): string[] {
   return Array.from(
     (fixture.nativeElement as HTMLElement).querySelectorAll('.hk-stepper__step'),
-  ).map((el) => el.textContent?.trim() ?? '');
+  ).map((el) => (el.querySelector('.hk-stepper__name') ?? el).textContent?.trim() ?? '');
+}
+
+/** The name of the step the wizard is on, as the stepper marks it. */
+function currentLabel(fixture: { nativeElement: unknown }): string | undefined {
+  const current = (fixture.nativeElement as HTMLElement).querySelector(
+    '.hk-stepper__step--current',
+  );
+  return (current?.querySelector('.hk-stepper__name') ?? current)?.textContent?.trim();
+}
+
+/** A strap action the wizard has set (the strap itself is rendered by the app shell). */
+function strapAction(id: string) {
+  const config = TestBed.inject(ActionStrapService).config();
+  return [...(config?.exit ?? []), ...(config?.primary ?? []), ...(config?.secondary ?? [])].find(
+    (a) => a.id === id,
+  );
+}
+
+async function pressStrap(fixture: { whenStable(): Promise<unknown> }, id: string): Promise<void> {
+  const action = strapAction(id);
+  expect(action, `strap action ${id}`).toBeDefined();
+  action!.run();
+  await fixture.whenStable();
+}
+
+/** The Create slot: the strap's `next` action once it reads "Create hero" (the review step). */
+function createAction() {
+  const action = strapAction('next');
+  return action?.label === 'shell.strap.create-hero' ? action : undefined;
 }
 
 const norm = (text: string | null | undefined): string => (text ?? '').replace(/\s+/g, ' ').trim();
@@ -105,20 +148,31 @@ function decisionPairs(fixture: {
   }));
 }
 
-/** Public-API-only navigation: clicks the footer's "Next" button until the review step's create
- * button appears (or gives up after a generous bound — a real stall fails loudly instead of
- * hanging). Exercises the exact same `canGoNext`/`next()` path a real user would. */
+/** Public-API-only navigation: runs the strap's Next action until the review step is current (or
+ * gives up after a generous bound — a real stall fails loudly instead of hanging). Exercises the
+ * exact same `canNext`/`next()` path a real user would, so every step on the way must already be
+ * answered (Next is disabled on an unanswered choice). */
 async function advanceToReview(fixture: {
   nativeElement: unknown;
   whenStable(): Promise<unknown>;
 }): Promise<void> {
-  const root = () => fixture.nativeElement as HTMLElement;
-  for (let i = 0; i < 20 && !root().querySelector('.create-wizard__create'); i++) {
-    const next = root().querySelector<HTMLButtonElement>('.create-wizard__next');
+  for (let i = 0; i < 20 && currentLabel(fixture) !== 'Review'; i++) {
+    const next = strapAction('next');
     if (!next || next.disabled) break;
-    next.click();
+    next.run();
     await fixture.whenStable();
   }
+}
+
+/** Opens the review step directly, for the specs that look at an INCOMPLETE draft there: the
+ * strap's Next never gets past an unanswered choice, so no user path leads to a half-answered
+ * review. Goes through the wizard's own flow controller (the same one Next and the stepper use). */
+async function openReview(fixture: {
+  componentInstance: unknown;
+  whenStable(): Promise<unknown>;
+}): Promise<void> {
+  (fixture.componentInstance as { flow: { go(id: string): void } }).flow.go('review');
+  await fixture.whenStable();
 }
 
 /** Same fixture-1 (human fighter) decision set the "creating navigates to /c/<id>/play" test
@@ -173,13 +227,11 @@ describe('CreateWizardComponent', () => {
     input!.value = 'Aldric';
     input!.dispatchEvent(new Event('input'));
     await fixture.whenStable();
-    await advanceToReview(fixture);
+    await openReview(fixture);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.create-wizard__create',
-    );
-    expect(button).not.toBeNull();
-    expect(button?.disabled).toBe(true);
+    const create = createAction();
+    expect(create).toBeDefined();
+    expect(create?.disabled).toBe(true);
   });
 
   it('typing a name grows the stepper with the system creation-choice steps', async () => {
@@ -214,10 +266,9 @@ describe('CreateWizardComponent', () => {
     input!.dispatchEvent(new Event('input'));
     await fixture.whenStable();
 
-    // Navigate to 'species' via the public Next button (name -> species).
-    root().querySelector<HTMLButtonElement>('.create-wizard__next')!.click();
-    await fixture.whenStable();
-    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe('Species');
+    // Navigate to 'species' via the strap's Next (name -> species).
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Species');
 
     // A future species-step component (T6) would call `setDecision` here without itself calling
     // `next()` first — species is now decided while it is still the ACTIVE step, so it vanishes
@@ -228,16 +279,15 @@ describe('CreateWizardComponent', () => {
 
     // Re-homed to whatever now sits at species' own former ordinal position — 'background', which
     // shifted left into that slot — not stranded, and the footer works in both directions again.
-    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe(
-      'Background',
-    );
-    expect(root().querySelector<HTMLButtonElement>('.create-wizard__back')?.disabled).toBe(false);
-    expect(root().querySelector<HTMLButtonElement>('.create-wizard__next')?.disabled).toBe(false);
+    expect(currentLabel(fixture)).toBe('Background');
+    expect(strapAction('back')?.disabled).toBeFalsy();
 
-    // Back/Next both still actually navigate (not just enabled-but-inert).
-    root().querySelector<HTMLButtonElement>('.create-wizard__back')!.click();
-    await fixture.whenStable();
-    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe('Name');
+    // Back is not inert: it returns to the step the user just answered (it is still reachable even
+    // though it left the list of steps to do), and from there to the name.
+    await pressStrap(fixture, 'back');
+    expect(currentLabel(fixture)).toBe('Species');
+    await pressStrap(fixture, 'back');
+    expect(currentLabel(fixture)).toBe('Name');
   });
 
   it('re-homes a count-2 pick answered one toggle at a time onto the next unanswered choice, not past it (rogue Expertise -> Weapon Masteries)', async () => {
@@ -272,8 +322,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
 
     // name -> the first remaining choice step: Expertise (sorted before weapon-masteries).
-    root().querySelector<HTMLButtonElement>('.create-wizard__next')!.click();
-    await fixture.whenStable();
+    await pressStrap(fixture, 'next');
     expect(title()).toContain('Expertise');
 
     // The choice step commits per toggle: first toggle -> decided-but-invalid (count 1 of 2).
@@ -331,16 +380,14 @@ describe('CreateWizardComponent', () => {
     expect(state.outstanding()).toEqual([]);
 
     await advanceToReview(fixture);
-    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.create-wizard__create',
-    );
-    expect(button).not.toBeNull();
-    expect(button?.disabled).toBe(false);
+    const button = createAction();
+    expect(button).toBeDefined();
+    expect(button?.disabled).toBeFalsy();
     // The review skeleton's gender row resolves the SCOPED gender label key correctly (no
     // double-prefixed 'characters.characters....' lookup miss).
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Masculine');
 
-    button!.click();
+    button!.run();
     await fixture.whenStable();
 
     expect(create).toHaveBeenCalledWith('Aldric', 'masculine');
@@ -376,9 +423,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
 
     await advanceToReview(fixture);
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.create-wizard__create')!
-      .click();
+    createAction()!.run();
     await fixture.whenStable();
 
     expect(navigateByUrlSpy).toHaveBeenCalledWith(
@@ -404,9 +449,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
 
     await advanceToReview(fixture);
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.create-wizard__create')!
-      .click();
+    createAction()!.run();
     await fixture.whenStable();
 
     expect(navigateSpy).toHaveBeenCalledWith([
@@ -450,28 +493,26 @@ describe('CreateWizardComponent', () => {
     ]);
     await fixture.whenStable();
 
-    // Unlike species/background (validly decided, vanished from the stepper), the invalid
-    // ability-scores decision keeps its step and renders it 'blocked' — visible and clickable.
+    // The invalid ability-scores decision keeps its step and the stepper marks it invalid — visible
+    // and clickable, unlike the steps still to do.
     expect(stepLabels(fixture)).toContain('Ability scores');
     const findStepButton = (label: string): HTMLButtonElement =>
       Array.from(root().querySelectorAll<HTMLButtonElement>('.hk-stepper__step')).find(
-        (b) => b.textContent?.trim() === label,
+        (b) => b.querySelector('.hk-stepper__name')?.textContent?.trim() === label,
       )!;
     const abilityStepButton = findStepButton('Ability scores');
-    expect(abilityStepButton.classList.contains('hk-stepper__step--blocked')).toBe(true);
-    expect(abilityStepButton.disabled).toBe(false);
+    expect(abilityStepButton.classList.contains('hk-stepper__step--invalid')).toBe(true);
+    expect(abilityStepButton.getAttribute('aria-disabled')).toBeNull();
 
-    await advanceToReview(fixture);
-    const createButton = root().querySelector<HTMLButtonElement>('.create-wizard__create');
-    expect(createButton).not.toBeNull();
+    await openReview(fixture);
+    const createButton = createAction();
+    expect(createButton).toBeDefined();
     expect(createButton?.disabled).toBe(true);
 
     // Revisit the blocked step directly from the stepper.
-    findStepButton('Ability scores').click();
+    press(findStepButton('Ability scores'));
     await fixture.whenStable();
-    expect(root().querySelector('.hk-stepper__step--current')?.textContent?.trim()).toBe(
-      'Ability scores',
-    );
+    expect(currentLabel(fixture)).toBe('Ability scores');
 
     // Fix it: a valid standard-array selection.
     state.setDecision(
@@ -481,9 +522,13 @@ describe('CreateWizardComponent', () => {
     );
     await fixture.whenStable();
 
-    expect(stepLabels(fixture)).not.toContain('Ability scores');
+    // Answered, it is no longer invalid, and it stays where it is until the user moves on.
+    expect(findStepButton('Ability scores').classList.contains('hk-stepper__step--invalid')).toBe(
+      false,
+    );
+    expect(currentLabel(fixture)).toBe('Ability scores');
     await advanceToReview(fixture);
-    expect(root().querySelector<HTMLButtonElement>('.create-wizard__create')?.disabled).toBe(false);
+    expect(createAction()?.disabled).toBeFalsy();
   });
 
   it('the review lists every decision as a localized "prompt: selection" pair, plus items/spells summaries and HP/AC/proficiency bonus', async () => {
@@ -573,7 +618,7 @@ describe('CreateWizardComponent', () => {
     input!.value = 'Aldric';
     input!.dispatchEvent(new Event('input'));
     await fixture.whenStable();
-    await advanceToReview(fixture);
+    await openReview(fixture);
 
     const outstanding = norm(
       (fixture.nativeElement as HTMLElement).querySelector('.create-wizard__outstanding')
@@ -688,11 +733,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     expect(state.draftSheet()?.prof).toBe(2);
 
     await advanceToReview(fixture);
-    const createButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.create-wizard__create',
-    );
-    expect(createButton?.disabled).toBe(false);
-    createButton!.click();
+    const createButton = createAction();
+    expect(createButton?.disabled).toBeFalsy();
+    createButton!.run();
     // `onCreate()`'s `CharacterStore.create`/`appendTx` calls are real (unmocked) fake-indexeddb
     // promise chains — not tracked by Angular's zoneless stability system (same reasoning as
     // `characters-list.component.spec.ts`'s own `flushDeleteFlow`), so a single `whenStable()`
@@ -782,9 +825,7 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
     expect(state.draftSheet()?.resources.some((r) => r.id === 'focus-points')).toBe(false);
 
     await advanceToReview(fixture);
-    (fixture.nativeElement as HTMLElement)
-      .querySelector<HTMLButtonElement>('.create-wizard__create')!
-      .click();
+    createAction()!.run();
     for (let i = 0; i < 50 && navigateSpy.mock.calls.length === 0; i++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await fixture.whenStable();
@@ -856,11 +897,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
 
     expect(state.outstanding()).toEqual([]);
     await advanceToReview(fixture);
-    const createButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.create-wizard__create',
-    );
-    expect(createButton?.disabled).toBe(false);
-    createButton!.click();
+    const createButton = createAction();
+    expect(createButton?.disabled).toBeFalsy();
+    createButton!.run();
 
     // Same "real fake-indexeddb promise chain, poll real macrotask turns" reasoning as the test
     // above — wait for the catch block to fully finish (its LAST action is the toast, after the
@@ -926,11 +965,9 @@ describe('CreateWizardComponent — creation transaction (binding spec)', () => 
 
     expect(state.outstanding()).toEqual([]);
     await advanceToReview(fixture);
-    const createButton = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.create-wizard__create',
-    );
-    expect(createButton?.disabled).toBe(false);
-    createButton!.click();
+    const createButton = createAction();
+    expect(createButton?.disabled).toBeFalsy();
+    createButton!.run();
 
     // Same "real fake-indexeddb promise chain, poll real macrotask turns" reasoning as the specs
     // above — wait for the catch block to fully finish (its last action is the toast).
@@ -969,8 +1006,7 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
     nativeElement: unknown;
     whenStable(): Promise<unknown>;
   }): Promise<string[]> {
-    root(fixture).querySelector<HTMLButtonElement>('.create-wizard__next')!.click();
-    await fixture.whenStable();
+    await pressStrap(fixture, 'next');
     return pickerNames(fixture);
   }
 
@@ -1036,9 +1072,9 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
     state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['sample-content:species/moonkin']);
     await fixture.whenStable();
     await advanceToReview(fixture);
-    const button = root(fixture).querySelector<HTMLButtonElement>('.create-wizard__create');
-    expect(button?.disabled).toBe(false);
-    button!.click();
+    const button = createAction();
+    expect(button?.disabled).toBeFalsy();
+    button!.run();
     await fixture.whenStable();
     await vi.waitFor(() => expect(appendTx).toHaveBeenCalledTimes(1));
 
@@ -1058,5 +1094,284 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
         .map((d) => d.type)
         .slice(0, 2),
     ).toEqual(['character.created', 'pack.pinned']);
+  });
+});
+
+// --- Plan 17 B8a: the flow (stepper, strap, Next / Back / Edit) ---------------------------------
+describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
+  const SYSTEM = 'srd-5e-2024:system/5e-2024';
+  const SPECIES = `${SYSTEM}@0/species`;
+  const BACKGROUND = `${SYSTEM}@0/background`;
+  const CLASS = `${SYSTEM}@0/class`;
+  const ABILITIES = `${SYSTEM}@0/ability-scores`;
+  const root = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
+
+  beforeEach(() => {
+    configure();
+  });
+
+  /** The decisions every flow below needs answered before the step under test. */
+  function answerBackground(state: CreateWizardState): void {
+    state.setDecision(BACKGROUND, ['srd-5e-2024:background/soldier']);
+    state.setDecision('srd-5e-2024:background/soldier@0/ability-scores', ['str:+2', 'con:+1']);
+    state.setDecision('srd-5e-2024:background/soldier@0/tools', [
+      'srd-5e-2024:item/gaming-set-dice',
+    ]);
+  }
+
+  const STANDARD_ARRAY = ['str:15', 'dex:13', 'con:14', 'int:10', 'wis:12', 'cha:8'];
+
+  async function start(name = 'Aldric') {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set(name);
+    await fixture.whenStable();
+    return { fixture, state };
+  }
+
+  it('Next never skips an unanswered step: it stays disabled, with its reason, until the current choice is answered', async () => {
+    const { fixture, state } = await start();
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Species');
+
+    expect(strapAction('next')?.disabled).toBe(true);
+    expect(strapAction('next')?.disabledReason).toBe('shell.strap.reason-step');
+    // Even a direct activation cannot walk past the unanswered species.
+    strapAction('next')!.run();
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Species');
+
+    // Answered, the flow moves on by itself to the next step still to do — Background, not later.
+    state.setDecision(SPECIES, ['srd-5e-2024:species/human']);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Background');
+    expect(strapAction('next')?.disabled).toBe(true);
+  });
+
+  it('Next goes to the first step still to do and leaves out one already answered out of order', async () => {
+    const { fixture, state } = await start();
+    // The class is answered before the species, from nowhere in the flow.
+    state.setDecision(CLASS, ['srd-5e-2024:class/fighter']);
+    await fixture.whenStable();
+
+    const visited: string[] = [];
+    await pressStrap(fixture, 'next');
+    visited.push(currentLabel(fixture)!);
+    state.setDecision(SPECIES, ['srd-5e-2024:species/human']);
+    await fixture.whenStable();
+    visited.push(currentLabel(fixture)!);
+    answerBackground(state);
+    await fixture.whenStable();
+    visited.push(currentLabel(fixture)!);
+
+    // Species, then Background, then the first unanswered step after it (the ability scores) —
+    // the class was already answered, so it is not offered again, and nothing is skipped.
+    expect(visited).toEqual(['Species', 'Background', 'Ability scores']);
+  });
+
+  it('Back returns to the previous step in the path, even one that was answered', async () => {
+    const { fixture, state } = await start();
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Species');
+    state.setDecision(SPECIES, ['srd-5e-2024:species/human']);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Background');
+
+    await pressStrap(fixture, 'back');
+    expect(currentLabel(fixture)).toBe('Species');
+    // The answered step is shown as it was answered, not blank.
+    expect(root(fixture).querySelector('hk-choice-step')).not.toBeNull();
+    expect(strapAction('back')?.disabled).toBeFalsy();
+
+    await pressStrap(fixture, 'back');
+    expect(currentLabel(fixture)).toBe('Name');
+    expect(strapAction('back')?.disabled).toBe(true);
+  });
+
+  it('the ability step does not auto-advance when its scores become valid', async () => {
+    const { fixture, state } = await start();
+    state.setDecision(SPECIES, ['srd-5e-2024:species/human']);
+    answerBackground(state);
+    await fixture.whenStable();
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Class');
+    state.setDecision(CLASS, ['srd-5e-2024:class/fighter']);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Ability scores');
+
+    // A valid standard array lands: the step stays open, Next is now enabled.
+    state.setDecision(ABILITIES, STANDARD_ARRAY, { method: 'standardArray' });
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Ability scores');
+    expect(strapAction('next')?.disabled).toBeFalsy();
+
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).not.toBe('Ability scores');
+    expect(currentLabel(fixture)).toBe('Skills');
+  });
+
+  it('every picker option opens its description in the description drawer', async () => {
+    const { fixture } = await start();
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Species');
+    const names = Array.from(root(fixture).querySelectorAll('.entity-picker__name')).map(
+      (el) => el.textContent?.trim() ?? '',
+    );
+    const buttons = Array.from(
+      root(fixture).querySelectorAll<HTMLElement>('.entity-picker__expand'),
+    );
+    expect(buttons.length).toBeGreaterThan(5);
+
+    for (const [i, button] of buttons.entries()) {
+      press(button);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(
+        root(fixture).querySelector('hk-description-drawer .hk-drawer__title')?.textContent?.trim(),
+        `option ${i}`,
+      ).toBe(names[i]);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+  });
+
+  it('the review Edit link jumps to the step and Next returns to the review', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    fillValidDecisions(state);
+    await fixture.whenStable();
+    await advanceToReview(fixture);
+    expect(currentLabel(fixture)).toBe('Review');
+    expect(strapAction('next')?.label).toBe('shell.strap.create-hero');
+
+    press(root(fixture).querySelector<HTMLElement>('[data-edit-step="species"]')!);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Species');
+    expect(strapAction('next')?.disabled).toBeFalsy();
+
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Review');
+    expect(strapAction('next')?.label).toBe('shell.strap.create-hero');
+  });
+
+  it('after an Edit that opens a new unanswered choice, Next visits it before returning to the review', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    fillValidDecisions(state);
+    await fixture.whenStable();
+    await advanceToReview(fixture);
+
+    press(root(fixture).querySelector<HTMLElement>('[data-edit-step="class"]')!);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Class');
+    state.setDecision(CLASS, ['srd-5e-2024:class/rogue']);
+    await fixture.whenStable();
+    // The rogue's own skills are unanswered: Next does not jump over them to the review.
+    expect(currentLabel(fixture)).toBe('Class');
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Skills');
+    expect(strapAction('next')?.disabled).toBe(true);
+  });
+
+  it('sets the strap: Cancel and Back, one Next slot that reads Create hero on the review, and the step status', async () => {
+    const { fixture } = await start();
+    const config = TestBed.inject(ActionStrapService).config()!;
+    expect(config.exit?.map((a) => a.id)).toEqual(['cancel', 'back']);
+    expect(config.primary.map((a) => a.id)).toEqual(['next']);
+    expect(config.scope).toEqual(['/characters', 'new']);
+    expect(strapAction('next')?.label).toBe('shell.strap.next');
+    expect(config.status).toMatch(/^Step 1 of \d+ · Name$/);
+
+    await openReview(fixture);
+    expect(
+      TestBed.inject(ActionStrapService)
+        .config()!
+        .primary.map((a) => a.id),
+    ).toEqual(['next']);
+    expect(strapAction('next')?.label).toBe('shell.strap.create-hero');
+    expect(TestBed.inject(ActionStrapService).config()!.status).toMatch(
+      /^Step \d+ of \d+ · Review$/,
+    );
+  });
+
+  it('Next carries the reason on the name step until the name is valid, and the strap goes with the screen', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    expect(strapAction('next')?.disabled).toBe(true);
+    expect(strapAction('next')?.disabledReason).toBe('shell.strap.reason-name');
+    fixture.destroy();
+    expect(TestBed.inject(ActionStrapService).config()).toBeNull();
+  });
+
+  it('Cancel leaves at once for an untouched wizard and asks first once something has changed', async () => {
+    const back = vi
+      .spyOn(TestBed.inject(NavHistoryService), 'back')
+      .mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    // `provideEngineScope` gives the wizard its own DialogService (dialogs parent to the wizard).
+    const open = vi
+      .spyOn(fixture.debugElement.injector.get(DialogService), 'open')
+      .mockReturnValue({ closed: Promise.resolve(false), close: () => undefined });
+    await pressStrap(fixture, 'cancel');
+    expect(open).not.toHaveBeenCalled();
+    expect(back).toHaveBeenCalledWith(['/characters']);
+
+    back.mockClear();
+    fixture.debugElement.injector.get(CreateWizardState).name.set('Aldric');
+    await fixture.whenStable();
+    await pressStrap(fixture, 'cancel');
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    // Declined: the wizard stays.
+    expect(back).not.toHaveBeenCalled();
+
+    open.mockReturnValue({ closed: Promise.resolve(true), close: () => undefined });
+    await pressStrap(fixture, 'cancel');
+    await vi.waitFor(() => expect(back).toHaveBeenCalledWith(['/characters']));
+  });
+
+  it('carries the step in the URL', async () => {
+    const { fixture } = await start();
+    await pressStrap(fixture, 'next');
+    expect(TestBed.inject(Location).path()).toContain('step=species');
+    await pressStrap(fixture, 'back');
+    expect(TestBed.inject(Location).path()).toContain('step=name');
+  });
+
+  it('reopens a deep-linked step', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ step: 'review' }) } },
+    });
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Review');
+  });
+
+  it('sets the phone top bar title for the screen', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    expect(TestBed.inject(TopBarService).config()?.title).toBe('New hero');
+  });
+
+  it('shows the vertical stepper on tablets and desktops and the strip on a phone', async () => {
+    const wide = TestBed.createComponent(CreateWizardComponent);
+    await wide.whenStable();
+    expect(root(wide).querySelector('.hk-stepper--vertical')).not.toBeNull();
+    expect(root(wide).querySelector('.hk-stepper--strip')).toBeNull();
+    wide.destroy();
+
+    stubViewport({ phone: true });
+    try {
+      const phone = TestBed.createComponent(CreateWizardComponent);
+      await phone.whenStable();
+      expect(root(phone).querySelector('.hk-stepper--strip')).not.toBeNull();
+      expect(root(phone).querySelector('.hk-stepper__count')?.textContent).toBe('Step 1 of 2');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -1,0 +1,164 @@
+/* Stepper (design-system): the vertical parchment list and the phone leather strip. Tokens only. */
+:host {
+  display: block;
+}
+
+.hk-stepper--vertical {
+  display: block;
+}
+
+.hk-stepper__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hk-stepper__item {
+  display: flex;
+  flex-direction: column;
+}
+
+.hk-stepper__step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-block-size: 36px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: var(--radius-leaf);
+  background: transparent;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 15px;
+  text-align: start;
+  cursor: pointer;
+
+  @media (pointer: coarse) {
+    min-block-size: 44px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-stepper__step--current {
+  background: var(--leaf-sunken);
+  box-shadow:
+    inset 0 0 0 1px var(--leaf-edge),
+    2px 3px 6px rgb(10 5 2 / 25%);
+  font-weight: 600;
+}
+
+.hk-stepper__step--todo,
+.hk-stepper__step--locked {
+  color: var(--text-2);
+}
+
+.hk-stepper__step--todo,
+.hk-stepper__step--locked {
+  &:not(.hk-stepper__step--invalid) {
+    cursor: default;
+  }
+}
+
+.hk-stepper__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+}
+
+.hk-stepper__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--accent-strong);
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+.hk-stepper__step--current .hk-stepper__num {
+  background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+  box-shadow: var(--shadow-brass);
+  color: var(--text-on-brass);
+}
+
+.hk-stepper__lock {
+  color: var(--accent-strong);
+}
+
+.hk-stepper__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.hk-stepper__summary,
+.hk-stepper__invalid {
+  padding-inline: 46px 8px;
+  font-size: 13px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.hk-stepper__summary {
+  color: var(--text-2);
+}
+
+.hk-stepper__invalid {
+  color: var(--danger-strong);
+}
+
+/* Phone strip */
+.hk-stepper--strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-leaf);
+  background: linear-gradient(180deg, var(--leather-highlight), var(--leather-dark));
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather);
+}
+
+.hk-stepper__strip-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.hk-stepper__count {
+  color: var(--text-on-leather-2);
+  font-size: 14px;
+}
+
+.hk-stepper__strip-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.hk-stepper__gauge {
+  grid-column: 1 / -1;
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--recess);
+  overflow: hidden;
+}
+
+.hk-stepper__gauge-fill {
+  display: block;
+  block-size: 100%;
+  background: linear-gradient(90deg, var(--brass-top), var(--brass));
+}

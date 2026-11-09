@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -12,6 +13,7 @@ import { provideEngineScope } from '@shared/services/engine/engine-scope.provide
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { press } from '../../../../ui/testing/harness';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { EntityPickerComponent } from './entity-picker.component';
@@ -76,6 +78,7 @@ function configure(): void {
   TestBed.configureTestingModule({
     imports: [HostComponent],
     providers: [
+      provideRouter([]),
       provideTransloco({
         config: {
           availableLangs: ['en', 'ru', 'uk'],
@@ -239,6 +242,38 @@ describe('EntityPickerComponent', () => {
   });
 });
 
+describe('EntityPickerComponent — descriptions open in the description drawer', () => {
+  beforeEach(() => configure());
+
+  it('every option opens its own description in the drawer, headed by its name, and closes on Escape', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.ids.set(speciesIds);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    const names = Array.from(root.querySelectorAll('.entity-picker__name')).map(
+      (el) => el.textContent?.trim() ?? '',
+    );
+    const buttons = Array.from(root.querySelectorAll<HTMLElement>('.entity-picker__expand'));
+    expect(buttons.length).toBe(speciesIds.length);
+    expect(root.querySelector('hk-description-drawer .hk-drawer__panel')).toBeNull();
+
+    for (const [i, button] of buttons.entries()) {
+      press(button);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const heading = root.querySelector('hk-description-drawer .hk-drawer__title');
+      expect(heading?.textContent?.trim(), `option ${i}`).toBe(names[i]);
+      expect(root.querySelector('hk-description-drawer [role="dialog"]')).not.toBeNull();
+      // Opening a description never picks the option.
+      expect(fixture.componentInstance.toggled).toEqual([]);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(root.querySelector('hk-description-drawer [role="dialog"]')).toBeNull();
+    }
+  });
+});
+
 // --- Plan 15 Task 4 fix round 1: an expanded card's description renders its `[[id]]` cross-links
 // against the picker's (scoped) pack set — `MarkdownService` is root-provided, so the picker
 // passes its own localizer.
@@ -269,6 +304,7 @@ describe('EntityPickerComponent — cross-links inside a character scope (plan 1
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         provideTransloco({
           config: { availableLangs: ['en'], defaultLang: 'en', prodMode: true },
           loader: StubLoader,
@@ -294,19 +330,21 @@ describe('EntityPickerComponent — cross-links inside a character scope (plan 1
     });
   });
 
-  it("names a cross-linked entity of the character's pinned pack in the expanded description", async () => {
+  it("names a cross-linked entity of the character's pinned pack in the drawer description", async () => {
     const fixture = TestBed.createComponent(ScopedHostComponent);
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.entity-picker__name')?.textContent?.trim()).toBe('Moonkin');
 
-    root.querySelector<HTMLButtonElement>('.entity-picker__expand')!.click();
-    for (let i = 0; i < 20 && !root.querySelector('.entity-picker__description a'); i++) {
+    press(root.querySelector<HTMLElement>('.entity-picker__expand')!);
+    const link = 'hk-description-drawer .hk-description__body a';
+    for (let i = 0; i < 20 && !root.querySelector(link); i++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
+      fixture.detectChanges();
       await fixture.whenStable();
     }
 
-    const anchor = root.querySelector('.entity-picker__description a');
+    const anchor = root.querySelector(link);
     expect(anchor?.textContent).toBe('Lunar Insight');
     expect(anchor?.getAttribute('data-entity-id')).toBe(LUNAR);
   });

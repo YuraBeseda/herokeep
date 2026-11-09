@@ -124,7 +124,7 @@ test.describe('custom content packs', () => {
         .locator('.create-wizard__pack', { hasText: PACK_NAME })
         .locator('.create-wizard__pack-toggle')
         .check();
-      await page.locator('.create-wizard__next').click();
+      await page.locator('[data-action="next"]').click();
       await page.getByRole('button', { name: 'Moonkin', exact: true }).click();
       await pickBackground(page);
       await applyBackgroundAbilities(page);
@@ -134,7 +134,7 @@ test.describe('custom content packs', () => {
       await pickGamingSet(page);
       await pickFightingStyleAndMasteries(page);
       // Equipment (never choice-gated): nothing to add here; the weapon comes from the sheet.
-      await page.locator('.create-wizard__next').click();
+      await page.locator('[data-action="next"]').click();
       characterId = await finishReviewAndCreate(page);
     });
 

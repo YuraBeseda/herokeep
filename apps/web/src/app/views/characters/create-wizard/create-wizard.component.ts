@@ -1,4 +1,6 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Location } from '@angular/common';
+import { Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { ContentIndex, Localizer, Sheet } from '@hk/engine';
 import {
@@ -8,21 +10,36 @@ import {
   ShortTextSchema,
   type GrammaticalGender,
 } from '@hk/protocol';
-import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { StepperComponent, type HkStepperStep } from '@shared/components/stepper/stepper.component';
+import { provideTranslocoScope, TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { IconComponent } from '@shared/icons/icon.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
-import { CreateWizardState, type WizardStep } from './create-wizard.state';
+import { combineLatest, switchMap } from 'rxjs';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { DialogService } from '../../../ui/dialog/dialog.service';
+import { FlowController } from '../../../ui/flow/flow-controller';
+import { NavHistoryService } from '../../../ui/nav/nav-history.service';
+import { TopBarService } from '../../../ui/shell/top-bar.service';
+import { phoneLayout } from '../../../ui/shell/viewport';
+import { HkStepperComponent, type StepItem } from '../../../ui/stepper/stepper.component';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
+import {
+  compareWizardSteps,
+  holdsWhenAnswered,
+  isRequiredStep,
+  type WizardStep,
+} from '../flow/steps';
+import { CancelWizardDialogComponent } from './cancel-wizard-dialog.component';
+import { CreateWizardState } from './create-wizard.state';
 import { ChoiceStepComponent } from './steps/choice-step.component';
 import { EquipmentStepComponent } from './steps/equipment-step.component';
 import { SpellsStepComponent } from './steps/spells-step.component';
 
 // Relative to the 'characters' scope (this component's own template reads `t()` scoped via
-// `*transloco="let t; read: 'characters'"` — unlike `WizardStep.labelKey`, which is read by
-// `hk-stepper`'s own UNSCOPED template and therefore needs the full `characters.` prefix).
+// `*transloco="let t; read: 'characters'"` — unlike `WizardStep.labelKey`, which is resolved by
+// `tr()` below through the global key space and therefore needs the full `characters.` prefix).
 const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
   { value: 'masculine', labelKey: 'wizard.name.genderMasculine' },
   { value: 'feminine', labelKey: 'wizard.name.genderFeminine' },
@@ -34,14 +51,19 @@ const GENDER_OPTIONS: { value: GrammaticalGender; labelKey: string }[] = [
 // `Localizer.choicePrompt` can't resolve a prompt for it — the review falls back to the step's own
 // label key instead. Same fallback shape for 'name' — reachable only when the review is viewed
 // before a name has been entered. Both are RELATIVE keys (no 'characters.' prefix) — unlike
-// `WizardStep.labelKey` (consumed by `hk-stepper`'s own UNSCOPED template, see this component's
-// `GENDER_OPTIONS` comment above), these are read by THIS component's own SCOPED `t()`
+// `WizardStep.labelKey` (resolved by `tr()`, see this component's `GENDER_OPTIONS` comment
+// above), these are read by THIS component's own SCOPED `t()`
 // (`*transloco="let t; read: 'characters'"`), which auto-prepends the scope itself.
 const SKILLS_SUFFIX = '@1/skills';
 const SKILLS_FALLBACK_LABEL_KEY = 'wizard.steps.classSkills';
 const NAME_FALLBACK_LABEL_KEY = 'wizard.steps.name';
 
 const GENERIC_CREATE_FAILURE_KEY = 'characters.wizard.review.toast.createFailed';
+
+/** The route this screen lives under: its strap and top bar clear when navigation leaves it. */
+const SCREEN_SCOPE = ['/characters', 'new'] as const;
+/** Where Cancel returns to when the user has no earlier screen in this session. */
+const CANCEL_FALLBACK = ['/characters'] as const;
 
 /** Either an already-localized display string, or (when none was found — the synthetic
  * class-skills choice, or the pre-name 'name' step) a full i18n KEY the template resolves via its
@@ -75,18 +97,23 @@ const ABILITY_VALUE_RE = /^([a-z]+):([+-]?\d+)$/i;
 
 /**
  * `/characters/new` — the creation wizard's shell (plan-5 task-5-brief.md). Hosts
- * `CreateWizardState` as a COMPONENT provider (a fresh draft per visit, never shared/root), wires
- * its engine-derived `steps()` into `hk-stepper`, and implements the 'name' step and the 'review'
- * step's skeleton itself — T6-9 plug in 'choice'/'spells'/'equipment' step bodies (rendered as a
- * placeholder here in the meantime; the step derivation and navigation shell around them is this
- * task's whole job).
+ * `CreateWizardState` as a COMPONENT provider (a fresh draft per visit, never shared/root), shows
+ * its engine-derived steps in `hk-stepper` and implements the 'name' step and the 'review' step
+ * itself.
+ *
+ * Navigation is the shared `FlowController` (plan 17): Next, Back, Cancel and the review's Edit
+ * links go through it, and the controls live in the action strap (Cancel · Back | Next, which reads
+ * "Create hero" on the review) rather than in a footer of this screen. The URL carries the step
+ * (`?step=<id>`), written with `Location.replaceState` so a step change never becomes a router
+ * navigation (it would clear the strap and close an open description).
  */
 @Component({
   selector: 'app-create-wizard',
   imports: [
     TranslocoDirective,
-    StepperComponent,
-    ButtonComponent,
+    HkStepperComponent,
+    IconComponent,
+    HkTooltipDirective,
     ChoiceStepComponent,
     SpellsStepComponent,
     EquipmentStepComponent,
@@ -111,9 +138,15 @@ export class CreateWizardComponent {
 
   protected readonly genderOptions = GENDER_OPTIONS;
 
-  // The wizard's own navigation cursor — `hk-stepper` never derives this itself (see its
-  // SKILL.md's "Do / Don't"). Defaults to 'name': `state.steps()` always starts with it.
-  protected readonly activeStepId = signal('name');
+  private readonly transloco = inject(TranslocoService);
+  private readonly strap = inject(ActionStrapService);
+  private readonly topBar = inject(TopBarService);
+  private readonly dialog = inject(DialogService);
+  private readonly navHistory = inject(NavHistoryService);
+  private readonly location = inject(Location);
+
+  protected readonly phone = phoneLayout();
+
   protected readonly nameTouched = signal(false);
   protected readonly creating = signal(false);
 
@@ -123,54 +156,109 @@ export class CreateWizardComponent {
   // Reused straight off the protocol's own schema (task-5-brief.md) rather than a copied literal.
   protected readonly nameMaxLength = ShortTextSchema.maxLength ?? undefined;
 
-  protected readonly currentStep = computed<WizardStep | undefined>(() =>
-    this.state.steps().find((s) => s.id === this.activeStepId()),
+  /** Anything entered or chosen: Cancel asks before throwing it away. */
+  private readonly dirty = computed(
+    () =>
+      this.state.name().trim().length > 0 ||
+      this.state.decisions().size > 0 ||
+      this.state.selectedPacks().size > 0 ||
+      this.state.extraDrafts().length > 0,
   );
 
-  private readonly currentIndex = computed(() =>
-    this.state.steps().findIndex((s) => s.id === this.activeStepId()),
+  /** Ids of the choice steps whose decision is missing or not acceptable yet. */
+  private readonly unansweredChoiceIds = computed(
+    () => new Set(this.state.steps().flatMap((step) => (step.choiceId ? [step.choiceId] : []))),
   );
 
-  protected readonly canGoBack = computed(() => this.currentIndex() > 0);
-
-  protected readonly canGoNext = computed(() => {
-    const idx = this.currentIndex();
-    const steps = this.state.steps();
-    if (idx < 0 || idx >= steps.length - 1) return false; // unknown position, or already last
-    return steps[idx]?.kind !== 'name' || this.nameValid();
+  /**
+   * Walks the steps for Next / Back / Edit. `allSteps` is the whole flow (answered steps keep their
+   * place), `steps` what is still to do. A step answered while open moves the flow on, except the
+   * ability scores (built over several edits, so the user decides when to leave it).
+   */
+  protected readonly flow = new FlowController<WizardStep>({
+    all: this.state.allSteps,
+    remaining: this.state.steps,
+    compare: compareWizardSteps,
+    isRequired: isRequiredStep,
+    holdsWhenAnswered,
+    canAdvance: (step) => this.isStepFinished(step),
+    dirty: this.dirty,
+    confirmLeave: async () => (await this.dialog.open(CancelWizardDialogComponent).closed) === true,
+    leave: () => this.navHistory.back(CANCEL_FALLBACK),
   });
 
-  // A step is 'current' while active (highest priority — even an invalid decision's step is
-  // still just 'current' while you're actively fixing it, not also 'blocked'); otherwise
-  // 'blocked' when it's a choice step whose decision is currently invalid
-  // (`state.invalidDecisions`) — clickable, so the user can revisit and fix it (see
-  // `StepperComponent.isClickable`); otherwise 'done' once the draft actually records it: the
-  // name once non-empty, a choice step once its choiceId has a recorded (valid) decision, the
+  protected readonly currentStep = this.flow.current;
+
+  /** Emits once the `characters` and `shell` bundles for the active language are loaded, so the
+   * labels computed below (which read `translate` synchronously) re-run after the load. */
+  private readonly translationsReady = toSignal(
+    this.transloco.langChanges$.pipe(
+      switchMap(() =>
+        combineLatest([
+          this.transloco.selectTranslate('wizard.steps.name', {}, 'characters'),
+          this.transloco.selectTranslate('ui.stepper.label', {}, 'shell'),
+        ]),
+      ),
+    ),
+    { initialValue: null },
+  );
+
+  // The steps as the stepper shows them. The current one is 'current' (highest priority — even an
+  // invalid decision's step is just 'current' while you are fixing it); a choice step whose decision
+  // is invalid is a reachable, `invalid` to-do; otherwise 'done' once the draft actually records it:
+  // the name once non-empty, a choice step once its choiceId has a recorded (valid) decision, the
   // free-form 'spells' step once `state.spellsAutoDone()` (>=1 cantrip learned) OR the user
   // explicitly continued past it (`state.doneSteps()`), and 'equipment' likewise but marked-only
   // (task-8-brief.md: no auto-done rule for it); otherwise 'todo'.
-  protected readonly stepperSteps = computed<HkStepperStep[]>(() => {
-    const active = this.activeStepId();
+  protected readonly stepItems = computed<StepItem[]>(() => {
+    const current = this.flow.currentId();
     const decisions = this.state.decisions();
     const invalidDecisions = this.state.invalidDecisions();
-    const nameDone = this.state.name().trim().length > 0;
+    const name = this.state.name().trim();
     const spellsDone = this.state.spellsAutoDone() || this.state.doneSteps().has('spells');
     const equipmentDone = this.state.doneSteps().has('equipment');
-    return this.state.steps().map((step): HkStepperStep => {
-      if (step.id === active) return { id: step.id, labelKey: step.labelKey, state: 'current' };
+    const summaries = this.stepSummaries();
+    return this.state.allSteps().map((step): StepItem => {
+      const label = this.tr(step.labelKey);
+      if (step.id === current) return { id: step.id, label, state: 'current' };
       if (
         step.kind === 'choice' &&
         step.choiceId !== undefined &&
         invalidDecisions.has(step.choiceId)
       ) {
-        return { id: step.id, labelKey: step.labelKey, state: 'blocked' };
+        return {
+          id: step.id,
+          label,
+          state: 'todo',
+          invalid: true,
+          hint: this.tr('characters.wizard.stepper.needsAttention'),
+        };
       }
       const done =
-        (step.kind === 'name' && nameDone) ||
+        (step.kind === 'name' && name.length > 0) ||
         (step.kind === 'choice' && step.choiceId !== undefined && decisions.has(step.choiceId)) ||
         (step.kind === 'spells' && spellsDone) ||
         (step.kind === 'equipment' && equipmentDone);
-      return { id: step.id, labelKey: step.labelKey, state: done ? 'done' : 'todo' };
+      const summary =
+        step.kind === 'name' ? name : step.choiceId ? summaries.get(step.choiceId) : undefined;
+      return {
+        id: step.id,
+        label,
+        state: done ? 'done' : 'todo',
+        ...(done && summary ? { summary } : {}),
+      };
+    });
+  });
+
+  /** "Step N of M · name", the strap's status note. */
+  private readonly statusText = computed(() => {
+    const steps = this.state.allSteps();
+    const index = steps.findIndex((step) => step.id === this.flow.currentId());
+    if (index < 0) return '';
+    return this.tr('shell.ui.stepper.position', {
+      current: index + 1,
+      total: steps.length,
+      name: this.tr(steps[index].labelKey),
     });
   });
 
@@ -184,33 +272,6 @@ export class CreateWizardComponent {
   protected readonly genderLabelKey = computed(() => {
     const option = this.genderOptions.find((o) => o.value === this.state.gender());
     return option?.labelKey ?? this.genderOptions[0].labelKey;
-  });
-
-  // Steps are removed the moment their decision is recorded (`CreateWizardState.steps` is
-  // re-derived from `outstandingChoices`, not appended-to — see its class doc). A future
-  // species/background/etc. step component (T6-9) can legitimately call `setDecision` on the
-  // CURRENTLY ACTIVE step without navigating away first, which would otherwise strand
-  // `activeStepId` on a vanished id: `currentIndex` becomes -1, and `canGoBack`/`canGoNext` both
-  // read false, dead-ending the footer (only a stepper-nav click on a 'done' step could recover).
-  // This effect re-homes `activeStepId` whenever it stops appearing in `state.steps()`: it lands
-  // on whatever now sits at the vanished step's OWN former ordinal position (i.e. the next
-  // undecided step that took its place), clamped to the new (shorter) list, falling back to the
-  // last step ('review') if that former position can't be recovered. `steps()` is the only
-  // tracked dependency (recomputes only when the derived list itself changes, not on every
-  // deliberate `activeStepId` navigation); prior state is read via `untracked` so this effect
-  // never re-triggers itself off its own write.
-  private previousSteps: WizardStep[] = [];
-  private readonly reHomeActiveStep = effect(() => {
-    const steps = this.state.steps();
-    const activeId = untracked(() => this.activeStepId());
-    if (!steps.some((s) => s.id === activeId)) {
-      const formerIndex = this.previousSteps.findIndex((s) => s.id === activeId);
-      const targetIndex =
-        formerIndex === -1 ? steps.length - 1 : Math.min(formerIndex, steps.length - 1);
-      const target = steps[targetIndex] ?? steps.at(-1);
-      if (target) this.activeStepId.set(target.id);
-    }
-    this.previousSteps = steps;
   });
 
   // Ability line + chosen entity names for the review skeleton (task-5-brief.md: "renders the
@@ -284,20 +345,16 @@ export class CreateWizardComponent {
     this.state.gender.set(value);
   }
 
-  protected onStepSelected(id: string): void {
-    this.activeStepId.set(id);
+  /** The review's Edit link: jump to the step, and Next brings the user back to the review. */
+  protected onEdit(choiceId: string | null): void {
+    const id = this.editStepId(choiceId);
+    if (id) this.flow.go(id, { returnTo: 'review' });
   }
 
-  protected back(): void {
-    const idx = this.currentIndex();
-    const steps = this.state.steps();
-    if (idx > 0) this.activeStepId.set(steps[idx - 1].id);
-  }
-
-  protected next(): void {
-    const idx = this.currentIndex();
-    const steps = this.state.steps();
-    if (idx >= 0 && idx < steps.length - 1) this.activeStepId.set(steps[idx + 1].id);
+  /** Id of the step that holds a decision (`null`: the name step). */
+  protected editStepId(choiceId: string | null): string | undefined {
+    if (choiceId === null) return 'name';
+    return this.state.allSteps().find((step) => step.choiceId === choiceId)?.id;
   }
 
   protected itemName(entry: Sheet['inventory'][number]): string {
@@ -373,6 +430,106 @@ export class CreateWizardComponent {
       .byType('ability')
       .find((e) => e.type === 'ability' && e.abbreviation === key);
     return entity ? localizer.name(entity.id) : key.toUpperCase();
+  }
+
+  constructor() {
+    // Set from an effect, not here: a predecessor screen's destroy-time clear can run after this
+    // constructor, and would wipe a strap set eagerly.
+    effect(() => this.setStrap());
+    effect(() =>
+      this.topBar.set({ title: this.tr('characters.wizard.title'), scope: SCREEN_SCOPE }),
+    );
+    effect(() => {
+      const id = this.flow.currentId();
+      if (id) untracked(() => this.writeStepToUrl(id));
+    });
+    this.flow.restore(this.route.snapshot.queryParamMap.get('step'));
+    inject(DestroyRef).onDestroy(() => {
+      this.strap.clear();
+      this.topBar.clear();
+    });
+  }
+
+  /** Cancel · Back | Next (Create hero on the review) — the slot never changes, only its label. */
+  private setStrap(): void {
+    const step = this.flow.current();
+    const onReview = step?.kind === 'review';
+    const canNext = this.flow.canNext();
+    const blocked = onReview ? !this.complete() || this.creating() : !canNext;
+    const reason = onReview
+      ? 'shell.strap.reason-incomplete'
+      : step?.kind === 'name'
+        ? 'shell.strap.reason-name'
+        : 'shell.strap.reason-step';
+    this.strap.set({
+      exit: [
+        {
+          id: 'cancel',
+          label: 'shell.strap.cancel',
+          icon: 'close',
+          kind: 'ghost',
+          run: () => void this.flow.cancel(),
+        },
+        {
+          id: 'back',
+          label: 'shell.strap.back',
+          icon: 'leave',
+          kind: 'parchment',
+          disabled: !this.flow.canBack(),
+          run: () => this.flow.back(),
+        },
+      ],
+      primary: [
+        {
+          id: 'next',
+          label: onReview ? 'shell.strap.create-hero' : 'shell.strap.next',
+          icon: 'done',
+          kind: 'primary',
+          disabled: blocked,
+          ...(blocked && !this.creating() ? { disabledReason: reason } : {}),
+          run: () => (onReview ? void this.onCreate() : this.flow.next()),
+        },
+      ],
+      status: this.statusText(),
+      scope: SCREEN_SCOPE,
+    });
+  }
+
+  /** Next may leave a step once it is answered: a valid name, a choice with an acceptable decision.
+   * The free-form steps (spells, equipment) and the review are never blocking. */
+  private isStepFinished(step: WizardStep): boolean {
+    if (step.kind === 'name') return this.nameValid();
+    if (step.kind === 'choice' && step.choiceId !== undefined) {
+      return !this.unansweredChoiceIds().has(step.choiceId);
+    }
+    return true;
+  }
+
+  /** Mirrors the step into `?step=` (replacing the history entry, keeping other params such as
+   * `returnUrl`). Not a router navigation: that would clear the strap and close an open drawer. */
+  private writeStepToUrl(id: string): void {
+    const [path, query = ''] = this.location.path().split('?');
+    const params = new URLSearchParams(query);
+    params.set('step', id);
+    this.location.replaceState(path, params.toString());
+  }
+
+  /** The already-answered choice steps' answers as short text, for the stepper ("Human"). */
+  private readonly stepSummaries = computed(() => {
+    const summaries = new Map<string, string>();
+    for (const decision of this.decisionSummaries()) {
+      const text = decision.parts
+        .flatMap((part) => (part.kind === 'text' ? [part.text] : []))
+        .join(', ');
+      if (text) summaries.set(decision.choiceId, text);
+    }
+    return summaries;
+  });
+
+  /** A translation read synchronously; re-evaluated when the bundles load or the language changes. */
+  private tr(key: string, params?: Record<string, unknown>): string {
+    this.translationsReady();
+    return this.transloco.translate(key, params);
   }
 
   protected async onCreate(): Promise<void> {

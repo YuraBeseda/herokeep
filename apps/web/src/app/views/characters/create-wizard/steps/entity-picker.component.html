@@ -30,18 +30,14 @@
             @if (row.gate; as gate) {
               <p class="entity-picker__gate" [id]="gateIdPrefix + i">{{ t(gate) }}</p>
             }
-            <button type="button" class="entity-picker__expand" (click)="onExpand(row.id, $event)">
-              {{
-                expandedId() === row.id ? t('wizard.picker.collapse') : t('wizard.picker.expand')
-              }}
+            <button
+              type="button"
+              class="entity-picker__expand"
+              [attr.aria-haspopup]="'dialog'"
+              (click)="onDetails(row.id, $event)"
+            >
+              {{ t('wizard.picker.expand') }}
             </button>
-            @if (expandedId() === row.id) {
-              @if (descriptionHtml.isLoading()) {
-                <p class="entity-picker__description-loading">{{ t('wizard.picker.loading') }}</p>
-              } @else if (descriptionHtml.value(); as html) {
-                <div class="entity-picker__description" [innerHTML]="html"></div>
-              }
-            }
           </hk-card>
         </li>
       }
@@ -51,5 +47,9 @@
         {{ t('wizard.picker.more', { count: hiddenCount() }) }}
       </p>
     }
+  }
+
+  @if (detailsId(); as id) {
+    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
   }
 </div>

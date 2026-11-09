@@ -9,17 +9,16 @@ import { expect, type Page } from '@playwright/test';
  * AC 19 / HP 12 / prof +2. `fighter-2.json` (XP 300, `hpRoll: 'average'`) is the level-up
  * counterpart `level-up.spec.ts` drives interactively for HP 20 (12 + 6 + 2).
  *
- * IMPORTANT — do NOT click `.create-wizard__next` after a `hk-choice-step` selection: the moment
- * a choice's decision becomes fully valid, `CreateWizardState.steps()` drops it, and
- * `CreateWizardComponent`'s own `reHomeActiveStep` effect re-homes `activeStepId` onto whatever
- * now sits at that vanished step's former index — i.e. the wizard ALREADY auto-advances to the
- * next step. Clicking Next afterward advances a SECOND time, silently skipping a step (confirmed
- * the hard way — an earlier version of this helper did exactly that and landed on the Class step
- * having never visited Background). Only 'name' and 'equipment' never vanish from `steps()`, so
- * only those two functions below click Next themselves.
+ * IMPORTANT — do NOT click the strap's Next (`[data-action="next"]`) after a `hk-choice-step`
+ * selection: the moment a choice's decision becomes fully valid, `CreateWizardState.steps()` drops
+ * it, and the wizard's `FlowController` moves on to the next step still to do — i.e. the wizard
+ * ALREADY auto-advances. Clicking Next afterward would advance a SECOND time, silently skipping a
+ * step. The exception is the ability scores, which the wizard keeps open once valid (no
+ * auto-advance), so `assignStandardArray` clicks Next itself. Only 'name', the ability scores and
+ * 'equipment' are left by a Next click; the two free-form steps never vanish from `steps()`.
  */
 
-const NEXT_BUTTON = '.create-wizard__next';
+const NEXT_BUTTON = '[data-action="next"]';
 
 async function clickNext(page: Page): Promise<void> {
   await page.locator(NEXT_BUTTON).click();
@@ -104,14 +103,16 @@ const STANDARD_ARRAY: ReadonlyMap<string, string> = new Map([
 
 /** Step 6: ability scores via the Standard Array method (the tab `hk-tabs` already defaults to,
  * per `AbilityScoresStepComponent.availableMethods`'s own declared order — clicked explicitly
- * anyway so this stays correct even if that default ever changes). Auto-advances to class skills
- * once all six abilities are assigned. */
+ * anyway so this stays correct even if that default ever changes). Unlike the pickers, this step
+ * does NOT auto-advance when the six scores become valid (it is built over several edits, so the
+ * wizard keeps it open): Next, which only enables once they are valid, moves on to class skills. */
 export async function assignStandardArray(page: Page): Promise<void> {
   await page.getByRole('tab', { name: 'Standard array', exact: true }).click();
   for (const [ability, score] of STANDARD_ARRAY) {
     const row = page.locator('.ability-scores-step__row', { hasText: ability });
     await row.locator('select').selectOption({ label: score });
   }
+  await clickNext(page);
 }
 
 /** Step 7: the synthetic class-skills pick — Athletics + Perception (matches `fighter-1.json`'s
@@ -226,7 +227,7 @@ export async function equipGear(page: Page): Promise<void> {
  * URL). */
 export async function finishReviewAndCreate(page: Page): Promise<string> {
   await expect(page.locator('.create-wizard__incomplete')).toHaveCount(0);
-  const createButton = page.locator('.create-wizard__create');
+  const createButton = page.locator('[data-action="next"]');
   await expect(createButton).toBeEnabled();
   await createButton.click();
   await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);

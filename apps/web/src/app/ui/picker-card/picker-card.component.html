@@ -1,0 +1,57 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <button
+    type="button"
+    class="hk-picker-card__body"
+    [attr.aria-label]="t('ui.picker.details-of', { name: name() })"
+    (click)="details.emit()"
+  >
+    <span class="hk-picker-card__head">
+      @if (icon(); as glyph) {
+        <hk-icon class="hk-picker-card__glyph" [icon]="glyph" />
+      }
+      <span class="hk-picker-card__name">{{ name() }}</span>
+    </span>
+    @if (description(); as text) {
+      <span class="hk-picker-card__desc">{{ text }}</span>
+    }
+  </button>
+
+  @if (selected()) {
+    <hk-wax-seal
+      class="hk-picker-card__seal"
+      [size]="'s'"
+      [state]="'selected'"
+      [glyph]="'ui:done'"
+      [hint]="t('ui.picker.chosen')"
+    />
+  }
+
+  @if (meta().length > 0) {
+    <ul class="hk-picker-card__meta">
+      @for (item of meta(); track item) {
+        <li><hk-tag-chip [label]="item" /></li>
+      }
+    </ul>
+  }
+
+  @if (gated() && !selected() && reason()) {
+    <p class="hk-picker-card__gate" [id]="reasonId">
+      <hk-icon class="hk-picker-card__gate-icon" [icon]="'ui:lock'" />
+      <span>{{ reason() }}</span>
+    </p>
+  }
+
+  <div class="hk-picker-card__foot">
+    <button
+      type="button"
+      hk-button
+      class="hk-picker-card__choose"
+      [variant]="selected() ? 'parchment' : 'primary'"
+      [attr.aria-pressed]="selected()"
+      [disabledReason]="blockedReason()"
+      (click)="choose.emit()"
+    >
+      {{ selected() ? t('ui.picker.chosen') : t('ui.picker.choose') }}
+    </button>
+  </div>
+</ng-container>

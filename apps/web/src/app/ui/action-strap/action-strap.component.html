@@ -80,6 +80,7 @@
             <button
               type="button"
               class="hk-astrap__sheet-item"
+              [attr.data-action]="action.id"
               [attr.aria-disabled]="action.disabled ? 'true' : null"
               (click)="runFromSheet(action)"
             >
@@ -97,6 +98,7 @@
       <button
         type="button"
         hk-icon-button
+        [attr.data-action]="action.id"
         [icon]="action.icon"
         [hint]="hintKey(action)"
         [disabled]="!!action.disabled"
@@ -105,6 +107,7 @@
     } @else if (phone()) {
       <button
         type="button"
+        [attr.data-action]="action.id"
         [class]="tileClass(action)"
         [attr.aria-disabled]="action.disabled ? 'true' : null"
         [hkTooltip]="
@@ -119,6 +122,7 @@
       <button
         type="button"
         hk-button
+        [attr.data-action]="action.id"
         [variant]="variant(action)"
         [size]="'l'"
         [disabled]="!!action.disabled && !action.disabledReason"

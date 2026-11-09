@@ -1,12 +1,11 @@
-import { Component, computed, inject, input, output, resource, signal } from '@angular/core';
-import type { SafeHtml } from '@angular/platform-browser';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { CardComponent } from '@shared/components/card/card.component';
 import { SearchFieldComponent } from '@shared/components/search-field/search-field.component';
 import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
-import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
 
 interface EntityRow {
   readonly id: string;
@@ -28,10 +27,10 @@ let nextEntityPickerId = 0;
  * the caller (`ChoiceStepComponent`), and every tap just re-emits `toggle` with the tapped id,
  * leaving the "is this a valid selection" question entirely to the caller's `state.validate`.
  *
- * Deliberately NOT `hk-virtual-list`-backed (unlike `library`'s browse list): a card here can
- * expand in place to show its full markdown description, and `hk-virtual-list`'s fixed-size CDK
- * strategy assumes every row is the same height (see its SKILL.md) — an expanded row would
- * overflow its allotted band. Creation-choice option counts (species/background/class/feats) are
+ * Deliberately NOT `hk-virtual-list`-backed (unlike `library`'s browse list): `hk-virtual-list`'s
+ * fixed-size CDK strategy assumes every row is the same height (see its SKILL.md). A card's Details
+ * button opens the entity's description in the shared `hk-description-drawer` (one place every pack
+ * description opens), not inline. Creation-choice option counts (species/background/class/feats) are
  * small (single/low-double digits in the SRD pack), so a plain scrollable list is both simpler and
  * correct. For a genuinely large option count (e.g. task 8's 339-spell picker), the caller instead
  * passes `limit` (controller ruling, task-6 fix round): when the search-filtered result count
@@ -42,14 +41,20 @@ let nextEntityPickerId = 0;
  * `gates` (plan 13 task 8, ruling 10): option id -> scope-relative i18n key of the reason the
  * caller's validation refuses that option. A gated card stays LISTED (discoverability) but its
  * select button is `disabled`, with the reason rendered visibly and wired to the button via
- * `aria-describedby` (the plan-12 always-prepared disabled-with-reason pattern); its description
- * toggle stays usable. A gated card that is already SELECTED (e.g. a pre-seeded pick the current
+ * `aria-describedby` (the plan-12 always-prepared disabled-with-reason pattern); its Details
+ * button stays usable. A gated card that is already SELECTED (e.g. a pre-seeded pick the current
  * validation now refuses) keeps its select button enabled — the gate only blocks ADDING an option,
  * never undoing a pick — and still shows its reason.
  */
 @Component({
   selector: 'hk-entity-picker',
-  imports: [TranslocoDirective, CardComponent, SearchFieldComponent, IconComponent],
+  imports: [
+    TranslocoDirective,
+    CardComponent,
+    SearchFieldComponent,
+    IconComponent,
+    HkDescriptionDrawerComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './entity-picker.component.html',
   styleUrl: './entity-picker.component.scss',
@@ -57,7 +62,6 @@ let nextEntityPickerId = 0;
 export class EntityPickerComponent {
   private readonly engineFacade = inject(EngineFacade);
   private readonly localeService = inject(LocaleService);
-  private readonly markdownService = inject(MarkdownService);
 
   // Inputs / Outputs
   readonly ids = input.required<readonly string[]>();
@@ -68,7 +72,10 @@ export class EntityPickerComponent {
 
   // Template-facing state
   protected readonly query = signal('');
-  protected readonly expandedId = signal<string | undefined>(undefined);
+  /** The option whose description the drawer shows (kept after closing, so the drawer can animate out). */
+  protected readonly detailsId = signal<string | undefined>(undefined);
+  protected readonly detailsOpen = signal(false);
+  protected readonly detailsOpener = signal<HTMLElement | null>(null);
   protected readonly gateIdPrefix = `hk-entity-picker-${nextEntityPickerId++}-gate-`;
 
   // `Intl.Collator` construction is the expensive part; recreate only when the locale changes
@@ -114,22 +121,6 @@ export class EntityPickerComponent {
     return limit !== undefined && all.length > limit ? all.length - limit : 0;
   });
 
-  // Re-renders the currently-expanded card's `description` field as sanitized markdown, reusing
-  // the library detail page's own `MarkdownService` (task-6-brief.md: "reuse, do not
-  // re-implement sanitization"). `resource()` skips the loader entirely while `expandedId` is
-  // `undefined` (nothing expanded) and cancels a still-in-flight render when the expanded card
-  // changes.
-  protected readonly descriptionHtml = resource({
-    params: () => this.expandedId(),
-    loader: ({ params }): Promise<SafeHtml | undefined> => {
-      if (!params) return Promise.resolve(undefined);
-      const description = this.engineFacade.localizer().text(params, 'description').text;
-      return description
-        ? this.markdownService.render(description, this.engineFacade.localizer())
-        : Promise.resolve(undefined);
-    },
-  });
-
   // Methods
   protected isSelected(id: string): boolean {
     return this.selectedIds().includes(id);
@@ -139,10 +130,13 @@ export class EntityPickerComponent {
     this.toggled.emit(id);
   }
 
-  // Expansion is a secondary affordance nested inside the same card as the selection button;
-  // `stopPropagation` keeps it from also toggling selection.
-  protected onExpand(id: string, event: Event): void {
+  // The description is a secondary affordance nested inside the same card as the selection button;
+  // `stopPropagation` keeps it from also toggling selection. It opens in the shared description
+  // drawer, which resolves the entity against this picker's own pack scope.
+  protected onDetails(id: string, event: Event): void {
     event.stopPropagation();
-    this.expandedId.set(this.expandedId() === id ? undefined : id);
+    this.detailsOpener.set(event.currentTarget as HTMLElement);
+    this.detailsId.set(id);
+    this.detailsOpen.set(true);
   }
 }

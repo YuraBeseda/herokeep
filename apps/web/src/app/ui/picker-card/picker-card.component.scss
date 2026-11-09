@@ -1,0 +1,128 @@
+/* PickerCard (design-system): a parchment card in a responsive grid, 220px wide at its densest. */
+:host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  padding: 12px;
+  border-radius: var(--radius-frame);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-leaf);
+  color: var(--text-1);
+}
+
+:host(.hk-picker-card--selected) {
+  box-shadow:
+    var(--shadow-leaf),
+    0 0 0 2px var(--brass),
+    var(--shadow-glow-brass);
+}
+
+.hk-picker-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(0.97);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.hk-picker-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+}
+
+.hk-picker-card__glyph {
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--accent-strong);
+}
+
+.hk-picker-card__name {
+  min-inline-size: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.hk-picker-card__desc {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+:host(.hk-picker-card--gated:not(.hk-picker-card--selected)) {
+  .hk-picker-card__name,
+  .hk-picker-card__desc {
+    opacity: 0.8;
+  }
+}
+
+.hk-picker-card__seal {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+}
+
+.hk-picker-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hk-picker-card__gate {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: var(--danger-strong);
+  font-size: 14px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.hk-picker-card__gate-icon {
+  flex: none;
+}
+
+.hk-picker-card__foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.hk-picker-card__choose {
+  @media (pointer: coarse) {
+    min-block-size: 44px;
+  }
+}
