@@ -27,7 +27,8 @@ export interface LibraryDetailStrapState {
  * its reason otherwise, so the slot stays where it is; Copy link and Open the pack in zone 3.
  */
 export function buildLibraryDetailStrap(state: LibraryDetailStrapState): StrapConfig {
-  const reason = state.locked ? 'shell.strap.edit-locked' : (state.add?.reason ?? null);
+  // A missing hero context is the first thing to fix, so it outranks the edit lock.
+  const reason = state.add?.reason ?? (state.locked ? 'shell.strap.edit-locked' : null);
   const secondary: StrapAction[] = [
     {
       id: 'copy-link',

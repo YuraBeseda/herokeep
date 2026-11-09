@@ -202,4 +202,24 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
     expect(text).toContain('Back');
     expect(config.primary).toEqual([]);
   });
+  it('a missing hero context outranks the edit lock as the reason Add to hero is unavailable', () => {
+    const state = {
+      back: noop,
+      copy: { run: noop, unavailable: null },
+      openPack: null,
+    };
+    const noHero = buildLibraryDetailStrap({
+      ...state,
+      add: { kind: 'item', run: noop, reason: 'shell.strap.library-no-hero' },
+      locked: true,
+    });
+    expect(noHero.primary[0]?.disabledReason).toBe('shell.strap.library-no-hero');
+
+    const locked = buildLibraryDetailStrap({
+      ...state,
+      add: { kind: 'item', run: noop, reason: null },
+      locked: true,
+    });
+    expect(locked.primary[0]?.disabledReason).toBe('shell.strap.edit-locked');
+  });
 });

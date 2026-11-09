@@ -188,4 +188,18 @@ describe('LibraryDetailComponent', () => {
     expect(compiled.querySelector('.library-detail__header')).toBeNull();
     expect(compiled.querySelector('.library-detail__not-found')).toBeNull();
   });
+  it('shows the licence and attribution of the pack the entry comes from, from its manifest', async () => {
+    seedStore([corePack], 'srd-5e-2024:spell/fireball');
+    const fixture = TestBed.createComponent(LibraryDetailComponent);
+    await fixture.whenStable();
+
+    const leaf = (fixture.nativeElement as HTMLElement).querySelector('.library-detail__licence');
+    expect(corePack.license).toBeTruthy();
+    expect(leaf?.querySelector('.library-detail__licence-line')?.textContent?.trim()).toBe(
+      `Licence: ${corePack.license}`,
+    );
+    expect(leaf?.querySelector('.library-detail__attribution')?.textContent).toContain(
+      'System Reference Document',
+    );
+  });
 });

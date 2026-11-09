@@ -8,6 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { uniqueId } from '../format';
@@ -49,6 +50,7 @@ const LONG_PRESS_MS = 400;
 })
 export class HkOptionsChipComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly router = inject(Router);
   private readonly chip = viewChild.required<ElementRef<HTMLButtonElement>>('chip');
 
   // Inputs
@@ -79,6 +81,18 @@ export class HkOptionsChipComponent {
       document.addEventListener('pointerdown', onPress);
       onCleanup(() => document.removeEventListener('pointerdown', onPress));
     });
+  }
+
+  /**
+   * A plain click on an option or the footer link goes through the router, so the app is not
+   * reloaded; a modified click (new tab, new window) keeps the browser's own handling.
+   */
+  protected onLink(event: MouseEvent, href: string): void {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    this.open.set(false);
+    void this.router.navigateByUrl(href);
   }
 
   protected onClick(): void {

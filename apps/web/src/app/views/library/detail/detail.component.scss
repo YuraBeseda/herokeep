@@ -123,3 +123,20 @@
   color: var(--link);
   font-weight: 600;
 }
+
+.library-detail__licence {
+  display: block;
+  margin-block-start: var(--space-4);
+}
+
+.library-detail__licence-line {
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+}
+
+.library-detail__attribution {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}

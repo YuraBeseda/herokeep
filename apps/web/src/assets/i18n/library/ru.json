@@ -62,7 +62,9 @@
     "source": "Источник: {name} {version}",
     "packDetails": "О паке",
     "linkCopied": "Ссылка скопирована",
-    "linkFailed": "Не удалось скопировать ссылку"
+    "linkFailed": "Не удалось скопировать ссылку",
+    "licenceTitle": "Лицензия",
+    "licence": "Лицензия: {licence}"
   },
   "fact": {
     "level": "Уровень",

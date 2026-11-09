@@ -1,3 +1,5 @@
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { hintOf, mount } from '../testing/harness';
 import { HkOptionsChipComponent } from './options-chip.component';
 
@@ -216,5 +218,29 @@ describe('HkOptionsChipComponent', () => {
     fixture.detectChanges();
     const links = Array.from(popover(el)!.querySelectorAll('a'));
     expect(links.map((a) => hintOf(a))).toEqual(['Archery', 'Defense', 'See all in library']);
+  });
+  it('follows an option link inside the app, without a page load, and leaves a modified click alone', async () => {
+    const { fixture, el } = await mount(HkOptionsChipComponent, base);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    chip(el).click();
+    await fixture.whenStable();
+    const link = popover(el)!.querySelector<HTMLAnchorElement>('a')!;
+
+    const plain = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    link.dispatchEvent(plain);
+    expect(plain.defaultPrevented).toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/library/feats/archery');
+
+    chip(el).click();
+    await fixture.whenStable();
+    const modified = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: true,
+    });
+    popover(el)!.querySelector('a')!.dispatchEvent(modified);
+    expect(modified.defaultPrevented).toBe(false);
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
 });

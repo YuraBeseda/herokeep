@@ -205,7 +205,13 @@ export class LibraryDetailComponent {
       ? this.packStore.packs().find((candidate) => candidate.id === packId)
       : undefined;
     return pack
-      ? { name: pack.name, version: pack.version, key: `${pack.id}@${pack.version}` }
+      ? {
+          name: pack.name,
+          version: pack.version,
+          key: `${pack.id}@${pack.version}`,
+          license: pack.license ?? null,
+          attribution: pack.attribution ?? null,
+        }
       : null;
   });
 

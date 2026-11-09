@@ -118,6 +118,22 @@
           t('detail.packDetails')
         }}</a>
       </p>
+      @if (src.license || src.attribution) {
+        <hk-leaf
+          class="library-detail__licence"
+          [title]="t('detail.licenceTitle')"
+          [icon]="'ui:packs'"
+        >
+          @if (src.license) {
+            <p class="library-detail__licence-line">
+              {{ t('detail.licence', { licence: src.license }) }}
+            </p>
+          }
+          @if (src.attribution) {
+            <p class="library-detail__attribution">{{ src.attribution }}</p>
+          }
+        </hk-leaf>
+      }
     }
   } @else {
     <p class="library-detail__not-found">{{ t('detail.not-found') }}</p>

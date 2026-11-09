@@ -62,7 +62,9 @@
     "source": "Source: {name} {version}",
     "packDetails": "Pack details",
     "linkCopied": "Link copied",
-    "linkFailed": "Could not copy the link"
+    "linkFailed": "Could not copy the link",
+    "licenceTitle": "Licence",
+    "licence": "Licence: {licence}"
   },
   "fact": {
     "level": "Level",

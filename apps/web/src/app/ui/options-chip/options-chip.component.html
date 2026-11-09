@@ -21,9 +21,13 @@
       <ul class="hk-options-chip__list">
         @for (option of options(); track option.id) {
           <li>
-            <a class="hk-options-chip__link" [href]="option.href" [hkTooltip]="option.name">{{
-              option.name
-            }}</a>
+            <a
+              class="hk-options-chip__link"
+              [href]="option.href"
+              (click)="onLink($event, option.href)"
+              [hkTooltip]="option.name"
+              >{{ option.name }}</a
+            >
           </li>
         }
       </ul>
@@ -31,6 +35,7 @@
         <a
           class="hk-options-chip__link hk-options-chip__all"
           [href]="href"
+          (click)="onLink($event, href)"
           [hkTooltip]="t('ui.options.see-all')"
           >{{ t('ui.options.see-all') }}</a
         >

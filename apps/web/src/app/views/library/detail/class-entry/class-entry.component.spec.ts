@@ -321,6 +321,58 @@ describe('ClassEntryComponent', () => {
     expect(drawer?.querySelector('h2')?.textContent?.trim()).toBe('Lay On Hands');
     expect(drawer?.textContent).toContain('pool of healing power');
   });
+  it('names a choice prompt and individual weapons in the active language from the installed translation', async () => {
+    const ukPack: Pack = {
+      format: 1,
+      id: 'srd-5e-2024-uk-test',
+      version: '0.1.0',
+      kind: 'translation',
+      name: 'UK test',
+      authors: [],
+      dependencies: [],
+      locale: 'uk',
+      translates: { id: PACK_ID, range: `^${PACK_VERSION}` },
+      entities: [],
+      overrides: [],
+      assets: [],
+      i18n: {},
+      strings: {
+        'class/paladin@1/weapon-masteries': { prompt: 'Майстерність зброї' },
+        'item/rapier': { name: 'Рапіра' },
+      },
+    };
+    const paladin = await mountClass('paladin', [corePack, ukPack]);
+    TestBed.inject(LocaleService).setLocale('uk');
+    await paladin.fixture.whenStable();
+    expect(
+      rowFor(paladin.el, 1).querySelector('.class-entry__choice-prompt')?.textContent?.trim(),
+    ).toBe('Майстерність зброї');
+    TestBed.resetTestingModule();
+
+    const rogue = await mountClass('rogue', [corePack, ukPack]);
+    TestBed.inject(LocaleService).setLocale('uk');
+    await rogue.fixture.whenStable();
+    const weapons = rogue.el.querySelector('.class-entry__weapons')?.textContent ?? '';
+    expect(weapons).toContain('Рапіра'); // translated item entity
+    expect(weapons).toContain('Hand Crossbow'); // the item entity name, not the slug "Hand-crossbow"
+    expect(weapons).not.toContain('Hand-crossbow');
+  });
+
+  it('keeps the hero context in the options chip "See all" link', async () => {
+    const { fixture, el } = await mountClass('paladin');
+    fixture.componentRef.setInput('heroId', 'char:hero-1');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const chip = rowFor(el, 1).querySelector<HTMLButtonElement>('.hk-options-chip__chip')!;
+    chip.click();
+    await fixture.whenStable();
+    const links = Array.from(
+      rowFor(el, 1).querySelectorAll<HTMLAnchorElement>('.hk-options-chip__popover a'),
+    ).map((a) => decodeURIComponent(a.getAttribute('href') ?? ''));
+    expect(links.at(-1)).toBe('/library?for=char:hero-1');
+    expect(links[0]).toContain('?for=char:hero-1');
+  });
 });
 
 describe('summaryOf', () => {

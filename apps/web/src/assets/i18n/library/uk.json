@@ -62,7 +62,9 @@
     "source": "Джерело: {name} {version}",
     "packDetails": "Про пак",
     "linkCopied": "Посилання скопійовано",
-    "linkFailed": "Не вдалося скопіювати посилання"
+    "linkFailed": "Не вдалося скопіювати посилання",
+    "licenceTitle": "Ліцензія",
+    "licence": "Ліцензія: {licence}"
   },
   "fact": {
     "level": "Рівень",

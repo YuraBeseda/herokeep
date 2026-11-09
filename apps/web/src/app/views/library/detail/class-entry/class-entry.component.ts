@@ -219,7 +219,10 @@ export class ClassEntryComponent {
   ): string {
     const key = `class.prof.${kind}.${slug}`;
     const out = t(key);
-    return out.endsWith(key) ? slugText(slug) : out;
+    if (!out.endsWith(key)) return out;
+    // An individual item (a weapon such as the rapier) is named by its item entity.
+    const item = sheetNames(this.engineFacade).toolName(slug);
+    return item === slug ? slugText(slug) : item;
   }
 
   protected categoryList(t: (key: string) => string, kind: 'armor' | 'weapon'): string {
@@ -265,6 +268,14 @@ export class ClassEntryComponent {
     return ids;
   }
 
+  /** The library root, with the hero context when there is one (the chips' "See all" link). */
+  protected readonly libraryRootHref = computed(() => {
+    const hero = this.heroId();
+    return this.router.serializeUrl(
+      this.router.createUrlTree(['/library'], hero ? { queryParams: { for: hero } } : {}),
+    );
+  });
+
   private libraryHref(id: string): string {
     const hero = this.heroId();
     return this.router.serializeUrl(
@@ -296,7 +307,7 @@ export class ClassEntryComponent {
         return [
           {
             id: choice.id,
-            prompt: choice.prompt,
+            prompt: localizer.choicePrompt(choice.id).text || choice.prompt,
             count: ids.length,
             options: ids.slice(0, POPOVER_OPTION_LIMIT).map((id) => ({
               id,
