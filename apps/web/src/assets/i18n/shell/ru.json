@@ -182,7 +182,15 @@
     "library-new-homebrew": "Свой контент",
     "library-import-pack": "Импорт пака",
     "library-add-to-hero": "Добавить герою",
-    "library-prepare": "Подготовить герою"
+    "library-prepare": "Подготовить герою",
+    "library-no-hero": "Откройте запись из листа героя, чтобы добавить её",
+    "library-cantrip": "Заговоры известны, а не подготавливаются",
+    "library-already-prepared": "Уже подготовлено",
+    "library-no-prepare": "Этот герой не подготавливает заклинания",
+    "library-not-known": "Этот герой не знает это заклинание",
+    "library-copy-link": "Скопировать ссылку на запись",
+    "library-open-pack": "Открыть пак",
+    "library-no-clipboard": "Копирование здесь недоступно"
   },
   "tabs": {
     "landmark": "Разделы экрана",

@@ -1,5 +1,15 @@
 <ng-container *transloco="let t; read: 'shell'">
   <div class="hk-filter-chips__group" role="group" [attr.aria-label]="label()">
+    @if (allOption(); as all) {
+      <!-- eslint-disable-next-line @angular-eslint/template/elements-content -- the chip component renders its own label -->
+      <button
+        hk-filter-chip
+        class="hk-filter-chips__chip--all"
+        [option]="all"
+        [pressed]="selected().length === 0"
+        (click)="clear()"
+      ></button>
+    }
     @for (option of options(); track option.id) {
       <!-- eslint-disable-next-line @angular-eslint/template/elements-content -- the chip component renders its own label -->
       <button
@@ -9,7 +19,7 @@
         (click)="toggle(option)"
       ></button>
     }
-    @if (selected().length > 0) {
+    @if (selected().length > 0 && allOption() === null) {
       <button type="button" class="hk-filter-chips__clear" (click)="clear()">
         {{ t('ui.filter.clear') }}
       </button>

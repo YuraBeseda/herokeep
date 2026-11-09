@@ -1,7 +1,8 @@
 {
   "en-tag": "EN",
   "list": {
-    "label": "Library list"
+    "label": "Library list",
+    "count": "{count, plural, one {# entry} other {# entries}}"
   },
   "search": {
     "clear": "Clear search",
@@ -50,7 +51,18 @@
       "table": "Table"
     },
     "added": "{name} added to the bag",
-    "prepared": "{name} prepared"
+    "prepared": "{name} prepared",
+    "spellLists": "Spell lists",
+    "also": "Also",
+    "openSpellList": "Open the {name} entry",
+    "concentration": "Concentration",
+    "noConcentration": "No concentration",
+    "ritual": "Ritual",
+    "noRitual": "Not a ritual",
+    "source": "Source: {name} {version}",
+    "packDetails": "Pack details",
+    "linkCopied": "Link copied",
+    "linkFailed": "Could not copy the link"
   },
   "fact": {
     "level": "Level",
@@ -102,12 +114,13 @@
     "leaf": "Browse the library"
   },
   "filter": {
-    "label": "Filter by type"
+    "label": "Filter by type",
+    "all": "All"
   },
   "class": {
     "core": "Core traits",
     "skills": "Skills",
-    "skillsValue": "Choose {count}:",
+    "skillsValue": "{count, plural, one {Choose #:} other {Choose #:}}",
     "weapons": "Weapons",
     "armor": "Armor training",
     "tools": "Tools",
@@ -129,6 +142,31 @@
     "spells": "{name} spell list",
     "spellCount": "{count, plural, one {# spell} other {# spells}}",
     "spellLevel": "Level {level}",
-    "cantrips": "Cantrips"
+    "cantrips": "Cantrips",
+    "fullText": "Full text",
+    "prof": {
+      "armor": {
+        "light": "Light",
+        "medium": "Medium",
+        "heavy": "Heavy",
+        "shields": "Shields"
+      },
+      "weapon": {
+        "simple": "Simple",
+        "martial": "Martial"
+      }
+    }
+  },
+  "sort": {
+    "label": "Sort",
+    "match": "Best match",
+    "name": "Name",
+    "type": "Type, then name",
+    "level": "Level"
+  },
+  "row": {
+    "cantrip": "Cantrip",
+    "level": "Level {level}",
+    "chosenAt": "chosen at level {level}"
   }
 }

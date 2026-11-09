@@ -1,7 +1,8 @@
 {
   "en-tag": "EN",
   "list": {
-    "label": "Список библиотеки"
+    "label": "Список библиотеки",
+    "count": "{count, plural, one {# запись} few {# записи} many {# записей} other {# записи}}"
   },
   "search": {
     "clear": "Очистить поиск",
@@ -50,7 +51,18 @@
       "table": "Таблица"
     },
     "added": "«{name}» добавлено в сумку",
-    "prepared": "«{name}» подготовлено"
+    "prepared": "«{name}» подготовлено",
+    "spellLists": "Списки заклинаний",
+    "also": "Также",
+    "openSpellList": "Открыть запись: {name}",
+    "concentration": "Концентрация",
+    "noConcentration": "Без концентрации",
+    "ritual": "Ритуал",
+    "noRitual": "Не ритуал",
+    "source": "Источник: {name} {version}",
+    "packDetails": "О паке",
+    "linkCopied": "Ссылка скопирована",
+    "linkFailed": "Не удалось скопировать ссылку"
   },
   "fact": {
     "level": "Уровень",
@@ -102,12 +114,13 @@
     "leaf": "Обзор библиотеки"
   },
   "filter": {
-    "label": "Фильтр по типу"
+    "label": "Фильтр по типу",
+    "all": "Все"
   },
   "class": {
     "core": "Основные черты",
     "skills": "Навыки",
-    "skillsValue": "Выберите {count}:",
+    "skillsValue": "{count, plural, one {Выберите #:} few {Выберите #:} many {Выберите #:} other {Выберите #:}}",
     "weapons": "Оружие",
     "armor": "Владение доспехами",
     "tools": "Инструменты",
@@ -129,6 +142,31 @@
     "spells": "Список заклинаний: {name}",
     "spellCount": "{count, plural, one {# заклинание} few {# заклинания} many {# заклинаний} other {# заклинания}}",
     "spellLevel": "Уровень {level}",
-    "cantrips": "Заговоры"
+    "cantrips": "Заговоры",
+    "fullText": "Полный текст",
+    "prof": {
+      "armor": {
+        "light": "Лёгкие",
+        "medium": "Средние",
+        "heavy": "Тяжёлые",
+        "shields": "Щиты"
+      },
+      "weapon": {
+        "simple": "Простое",
+        "martial": "Воинское"
+      }
+    }
+  },
+  "sort": {
+    "label": "Сортировка",
+    "match": "По совпадению",
+    "name": "По названию",
+    "type": "По типу и названию",
+    "level": "По уровню"
+  },
+  "row": {
+    "cantrip": "Заговор",
+    "level": "Уровень {level}",
+    "chosenAt": "выбирается на уровне {level}"
   }
 }

@@ -127,3 +127,34 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+.library-browse__sort {
+  flex: 0 0 11rem;
+}
+
+.library-browse__count {
+  margin: var(--space-3) 0 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.library-browse__row-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.library-browse__row-sub {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-browse__mark {
+  background: var(--chip-bg);
+  color: inherit;
+  font-weight: 700;
+  border-radius: var(--radius-s);
+}

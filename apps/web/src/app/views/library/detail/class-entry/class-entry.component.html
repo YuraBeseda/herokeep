@@ -11,22 +11,22 @@
             {{ skillNames().join(', ') }}
           </dd>
         </div>
-        @if (proficiencies().weapons.length > 0) {
+        @if (entity().weaponProficiencies.length > 0) {
           <div class="class-entry__kv-row">
             <dt>{{ t('class.weapons') }}</dt>
-            <dd class="class-entry__weapons">{{ proficiencies().weapons.join(', ') }}</dd>
+            <dd class="class-entry__weapons">{{ categoryList(t, 'weapon') }}</dd>
           </div>
         }
-        @if (proficiencies().armor.length > 0) {
+        @if (entity().armorTraining.length > 0) {
           <div class="class-entry__kv-row">
             <dt>{{ t('class.armor') }}</dt>
-            <dd class="class-entry__armor">{{ proficiencies().armor.join(', ') }}</dd>
+            <dd class="class-entry__armor">{{ categoryList(t, 'armor') }}</dd>
           </div>
         }
-        @if (proficiencies().tools.length > 0) {
+        @if (toolNames().length > 0) {
           <div class="class-entry__kv-row">
             <dt>{{ t('class.tools') }}</dt>
-            <dd>{{ proficiencies().tools.join(', ') }}</dd>
+            <dd class="class-entry__tools">{{ toolNames().join(', ') }}</dd>
           </div>
         }
         <div class="class-entry__kv-row">
@@ -52,9 +52,20 @@
               [attr.title]="t('class.openEntry', { name: feature.name })"
               >{{ feature.name }}</a
             >
-            <span class="class-entry__summary" [hkTooltip]="feature.summary">{{
-              feature.summary
-            }}</span>
+            @if (feature.summary) {
+              <span class="class-entry__summary" [hkTooltip]="feature.summary">{{
+                feature.summary
+              }}</span>
+            }
+            @if (feature.more) {
+              <button
+                type="button"
+                class="class-entry__more"
+                (click)="showFullText($event, feature.id)"
+              >
+                {{ t('class.fullText') }}
+              </button>
+            }
           </li>
         }
       </ul>
@@ -74,6 +85,11 @@
           <tr>
             <th [attr.scope]="'col'" class="class-entry__num">{{ t('class.col.level') }}</th>
             <th [attr.scope]="'col'" class="class-entry__num">{{ t('class.col.proficiency') }}</th>
+            @for (column of columns(); track column.key) {
+              <th [attr.scope]="'col'" class="class-entry__num class-entry__column">
+                {{ column.header }}
+              </th>
+            }
             <th [attr.scope]="'col'">{{ t('class.col.features') }}</th>
           </tr>
         </thead>
@@ -82,6 +98,9 @@
             <tr class="class-entry__level-row" [attr.data-level]="row.level">
               <th [attr.scope]="'row'" class="class-entry__num">{{ row.level }}</th>
               <td class="class-entry__num">+{{ row.proficiency }}</td>
+              @for (cell of row.cells; track $index) {
+                <td class="class-entry__num class-entry__cell">{{ cell || '—' }}</td>
+              }
               <td>
                 @for (feature of row.features; track feature.id; let last = $last) {
                   <a
@@ -97,9 +116,19 @@
                 } @empty {
                   @if (row.subclassOnly) {
                     <span class="class-entry__muted">{{ t('class.subclassFeature') }}</span>
-                  } @else {
+                  } @else if (row.choices.length === 0) {
                     <span class="class-entry__muted" [attr.aria-label]="t('class.none')">—</span>
                   }
+                }
+                @for (choice of row.choices; track choice.id) {
+                  <span class="class-entry__choice">
+                    <span class="class-entry__choice-prompt">{{ choice.prompt }}</span>
+                    <hk-options-chip
+                      [count]="choice.count"
+                      [options]="choice.options"
+                      [seeAllHref]="'/library'"
+                    />
+                  </span>
                 }
               </td>
             </tr>
@@ -127,6 +156,15 @@
             <span class="class-entry__summary" [hkTooltip]="subclass.summary">{{
               subclass.summary
             }}</span>
+          }
+          @if (subclass.more) {
+            <button
+              type="button"
+              class="class-entry__more"
+              (click)="showFullText($event, subclass.id)"
+            >
+              {{ t('class.fullText') }}
+            </button>
           }
         </li>
       }
@@ -160,5 +198,9 @@
         </ul>
       }
     </hk-leaf>
+  }
+
+  @if (drawerEntity(); as drawerId) {
+    <hk-description-drawer [entity]="drawerId" [(open)]="drawerOpen" [opener]="drawerOpener()" />
   }
 </div>

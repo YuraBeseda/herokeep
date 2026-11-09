@@ -146,12 +146,40 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
     ],
     [
       'library entry with an item to add',
-      buildLibraryDetailStrap({ back: noop, add: { kind: 'item', run: noop }, locked: false }),
+      buildLibraryDetailStrap({
+        back: noop,
+        add: { kind: 'item', run: noop, reason: null },
+        locked: false,
+        copy: { run: noop, unavailable: null },
+        openPack: noop,
+      }),
     ],
     [
       'library entry with a spell to prepare, locked by house rules',
-      buildLibraryDetailStrap({ back: noop, add: { kind: 'spell', run: noop }, locked: true }),
+      buildLibraryDetailStrap({
+        back: noop,
+        add: { kind: 'spell', run: noop, reason: null },
+        locked: true,
+        copy: { run: noop, unavailable: null },
+        openPack: noop,
+      }),
     ],
+    ...[
+      'shell.strap.library-no-hero',
+      'shell.strap.library-cantrip',
+      'shell.strap.library-already-prepared',
+      'shell.strap.library-no-prepare',
+      'shell.strap.library-not-known',
+    ].map((reason): [string, StrapConfig] => [
+      `library entry, Add to hero unavailable (${reason})`,
+      buildLibraryDetailStrap({
+        back: noop,
+        add: { kind: 'spell', run: noop, reason },
+        locked: false,
+        copy: { run: noop, unavailable: 'shell.strap.library-no-clipboard' },
+        openPack: null,
+      }),
+    ]),
   ];
 
   it.each(cases)('%s', async (_name, config) => {
@@ -162,7 +190,13 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
   });
 
   it('library entry without a hero context shows only Back', async () => {
-    const config = buildLibraryDetailStrap({ back: noop, add: null, locked: false });
+    const config = buildLibraryDetailStrap({
+      back: noop,
+      add: null,
+      locked: false,
+      copy: { run: noop, unavailable: null },
+      openPack: null,
+    });
     const text = readable(await render(config));
     expect(text).not.toMatch(RAW_KEY);
     expect(text).toContain('Back');

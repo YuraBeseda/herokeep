@@ -1,7 +1,8 @@
 {
   "en-tag": "EN",
   "list": {
-    "label": "Список бібліотеки"
+    "label": "Список бібліотеки",
+    "count": "{count, plural, one {# запис} few {# записи} many {# записів} other {# записи}}"
   },
   "search": {
     "clear": "Очистити пошук",
@@ -50,7 +51,18 @@
       "table": "Таблиця"
     },
     "added": "«{name}» додано до сумки",
-    "prepared": "«{name}» підготовлено"
+    "prepared": "«{name}» підготовлено",
+    "spellLists": "Списки заклинань",
+    "also": "Також",
+    "openSpellList": "Відкрити запис: {name}",
+    "concentration": "Концентрація",
+    "noConcentration": "Без концентрації",
+    "ritual": "Ритуал",
+    "noRitual": "Не ритуал",
+    "source": "Джерело: {name} {version}",
+    "packDetails": "Про пак",
+    "linkCopied": "Посилання скопійовано",
+    "linkFailed": "Не вдалося скопіювати посилання"
   },
   "fact": {
     "level": "Рівень",
@@ -102,12 +114,13 @@
     "leaf": "Огляд бібліотеки"
   },
   "filter": {
-    "label": "Фільтр за типом"
+    "label": "Фільтр за типом",
+    "all": "Усі"
   },
   "class": {
     "core": "Основні риси",
     "skills": "Навички",
-    "skillsValue": "Оберіть {count}:",
+    "skillsValue": "{count, plural, one {Оберіть #:} few {Оберіть #:} many {Оберіть #:} other {Оберіть #:}}",
     "weapons": "Зброя",
     "armor": "Володіння обладунками",
     "tools": "Інструменти",
@@ -129,6 +142,31 @@
     "spells": "Список заклинань: {name}",
     "spellCount": "{count, plural, one {# заклинання} few {# заклинання} many {# заклинань} other {# заклинання}}",
     "spellLevel": "Рівень {level}",
-    "cantrips": "Замовляння"
+    "cantrips": "Замовляння",
+    "fullText": "Повний текст",
+    "prof": {
+      "armor": {
+        "light": "Легкі",
+        "medium": "Середні",
+        "heavy": "Важкі",
+        "shields": "Щити"
+      },
+      "weapon": {
+        "simple": "Проста",
+        "martial": "Військова"
+      }
+    }
+  },
+  "sort": {
+    "label": "Сортування",
+    "match": "За збігом",
+    "name": "За назвою",
+    "type": "За типом і назвою",
+    "level": "За рівнем"
+  },
+  "row": {
+    "cantrip": "Замовляння",
+    "level": "Рівень {level}",
+    "chosenAt": "обирається на рівні {level}"
   }
 }

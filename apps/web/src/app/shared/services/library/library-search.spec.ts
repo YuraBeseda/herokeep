@@ -5,7 +5,7 @@ import { createContentIndex, createLocalizer, createSearchIndex } from '@hk/engi
 import type { SearchHit } from '@hk/engine';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type EntityType, type Pack } from '@hk/protocol';
-import { countByType, rankLibraryHits, RANK_TIER } from './library-search';
+import { countByType, highlightSegments, rankLibraryHits, RANK_TIER } from './library-search';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..');
@@ -119,5 +119,31 @@ describe('countByType', () => {
     expect(counts.get('spell')).toBe(2);
     expect(counts.get('item')).toBe(1);
     expect(counts.has('class')).toBe(false);
+  });
+});
+
+describe('highlightSegments', () => {
+  it('marks every query word in the name, ignoring case, and the runs join back to the name', () => {
+    const segments = highlightSegments('Wall of Fire', 'FIRE wall');
+    expect(segments).toEqual([
+      { text: 'Wall', hit: true },
+      { text: ' of ', hit: false },
+      { text: 'Fire', hit: true },
+    ]);
+    expect(segments.map((s) => s.text).join('')).toBe('Wall of Fire');
+  });
+
+  it('works on a localized name', () => {
+    expect(highlightSegments('Огненный шар', 'огнен')).toEqual([
+      { text: 'Огнен', hit: true },
+      { text: 'ный шар', hit: false },
+    ]);
+  });
+
+  it('treats regex characters in the query as plain text and leaves a non-match whole', () => {
+    expect(highlightSegments("Alchemist's Fire", '(')).toEqual([
+      { text: "Alchemist's Fire", hit: false },
+    ]);
+    expect(highlightSegments('Fire Bolt', '   ')).toEqual([{ text: 'Fire Bolt', hit: false }]);
   });
 });

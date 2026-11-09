@@ -51,7 +51,11 @@ function classNamed(slug: string): ClassEntity {
   return entity;
 }
 
-async function mountClass(slug: string, packs: Pack[] = [corePack]) {
+async function mountClass(
+  slug: string,
+  packs: Pack[] = [corePack],
+  entity: ClassEntity = classNamed(slug),
+) {
   localStorage.removeItem('hk.locale');
   TestBed.configureTestingModule({
     providers: [
@@ -71,7 +75,7 @@ async function mountClass(slug: string, packs: Pack[] = [corePack]) {
     ],
   });
   const fixture = TestBed.createComponent(ClassEntryComponent);
-  fixture.componentRef.setInput('entity', classNamed(slug));
+  fixture.componentRef.setInput('entity', entity);
   await fixture.whenStable();
   return { fixture, el: fixture.nativeElement as HTMLElement };
 }
@@ -185,6 +189,137 @@ describe('ClassEntryComponent', () => {
     expect(el.querySelector('.class-entry__subclass-level')?.textContent?.trim()).toContain(
       'Выбирается на уровне',
     );
+  });
+  it('draws one column per class-table fact, headed by its feature name, across levels 1-20', async () => {
+    const { el } = await mountClass('paladin');
+    const headers = Array.from(el.querySelectorAll('thead th.class-entry__column')).map((th) =>
+      th.textContent?.trim(),
+    );
+
+    // The names are the column features' own (localized) names, in the order the pack lists them.
+    expect(headers).toEqual([
+      'Prepared Spells',
+      '1st',
+      'Channel Divinity',
+      '2nd',
+      '3rd',
+      '4th',
+      '5th',
+    ]);
+    // The proficiency bonus column is the Prof. column already drawn, not a second one.
+    expect(headers).not.toContain('Proficiency Bonus');
+
+    const cell = (level: number, header: string) =>
+      Array.from(rowFor(el, level).querySelectorAll('td.class-entry__cell'))[
+        headers.indexOf(header)
+      ]?.textContent?.trim();
+    const paladin = classNamed('paladin');
+    for (let level = 1; level <= 20; level++) {
+      const prepared = [...paladin.levels]
+        .reverse()
+        .find((row) => row.level <= level && row.extra?.['paladin-prepared-spells'] !== undefined);
+      expect(cell(level, 'Prepared Spells')).toBe(
+        String(prepared?.extra?.['paladin-prepared-spells']),
+      );
+    }
+    // A fact that starts later reads as a dash before it, and carries forward after.
+    expect(cell(1, 'Channel Divinity')).toBe('—');
+    expect(cell(3, 'Channel Divinity')).toBe('2');
+    expect(cell(4, 'Channel Divinity')).toBe('2');
+  });
+
+  it('draws the same columns for another class from its own data, with no class named in code', async () => {
+    const { el } = await mountClass('barbarian');
+    const headers = Array.from(el.querySelectorAll('thead th.class-entry__column')).map((th) =>
+      th.textContent?.trim(),
+    );
+    expect(headers).toEqual(expect.arrayContaining(['Rages', 'Rage Damage']));
+    expect(rowFor(el, 1).querySelectorAll('td.class-entry__cell').length).toBe(headers.length);
+  });
+
+  it('lists a feature with no description of its own by name, since it is not a column', async () => {
+    const pack = structuredClone(corePack);
+    const nameless = 'srd-5e-2024:feature/test-nameless-feature';
+    pack.entities.push({
+      type: 'feature',
+      id: nameless,
+      name: 'Nameless Gift',
+      tags: [],
+      prerequisites: [],
+      effects: [],
+      grants: [],
+      choices: [],
+    } as unknown as (typeof pack.entities)[number]);
+    const paladin = pack.entities.find(
+      (e) => e.id === 'srd-5e-2024:class/paladin',
+    ) as unknown as ClassEntity;
+    paladin.levels[0].grants.push({ feature: nameless });
+
+    const { el } = await mountClass('paladin', [pack], paladin);
+
+    expect(rowFor(el, 1).textContent).toContain('Nameless Gift');
+    expect(el.querySelector('.class-entry__features')?.textContent).toContain('Nameless Gift');
+  });
+
+  it('names armor and weapon training in the active language, and tools through the item entity', async () => {
+    const { fixture, el } = await mountClass('paladin');
+    TestBed.inject(LocaleService).setLocale('uk');
+    await fixture.whenStable();
+
+    expect(el.querySelector('.class-entry__armor')?.textContent?.trim()).toBe(
+      'Легкі, Середні, Важкі, Щити',
+    );
+    expect(el.querySelector('.class-entry__weapons')?.textContent?.trim()).toBe(
+      'Проста, Військова',
+    );
+  });
+
+  it('names tool training through the item entity, not the slug', async () => {
+    const { el } = await mountClass('rogue');
+    expect(el.querySelector('.class-entry__tools')?.textContent?.trim()).toContain(
+      "Thieves' Tools",
+    );
+  });
+
+  it('counts the skill choice with the language plural form', async () => {
+    const { fixture, el } = await mountClass('paladin');
+    TestBed.inject(LocaleService).setLocale('uk');
+    await fixture.whenStable();
+    expect(el.querySelector('.class-entry__skills')?.textContent).toContain('Оберіть 2:');
+  });
+
+  it('shows an options chip on the level a choice is made, counted from the choice query', async () => {
+    const { el } = await mountClass('paladin');
+    const paladin = classNamed('paladin');
+    const choice = paladin.levels[0].choices[0];
+    const expected = index.query(
+      (choice.pick as { query: Parameters<typeof index.query>[0] }).query,
+    ).length;
+
+    const chip = rowFor(el, 1).querySelector('hk-options-chip');
+    expect(chip?.querySelector('.hk-options-chip__count')?.textContent?.trim()).toBe(
+      String(expected),
+    );
+    expect(expected).toBeGreaterThan(0);
+    const quiet = paladin.levels.find((row) => row.choices.length === 0)!.level;
+    expect(rowFor(el, quiet).querySelector('hk-options-chip')).toBeNull();
+  });
+
+  it('opens a feature in full from its Full text button, in the description drawer', async () => {
+    const { fixture, el } = await mountClass('paladin');
+    const button = Array.from(el.querySelectorAll<HTMLButtonElement>('.class-entry__more')).find(
+      (b) => b.closest('li')?.textContent?.includes('Lay On Hands'),
+    )!;
+    expect(button).toBeTruthy();
+    expect(el.querySelector('hk-description-drawer')).toBeNull();
+
+    button.click();
+    await fixture.whenStable();
+    await fixture.whenStable();
+
+    const drawer = el.querySelector('hk-description-drawer');
+    expect(drawer?.querySelector('h2')?.textContent?.trim()).toBe('Lay On Hands');
+    expect(drawer?.textContent).toContain('pool of healing power');
   });
 });
 

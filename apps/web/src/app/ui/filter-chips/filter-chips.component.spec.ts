@@ -100,4 +100,27 @@ describe('HkFilterChipsComponent', () => {
     clear.click();
     expect(seen).toEqual([[]]);
   });
+  it('draws a leading All chip, pressed while nothing is selected, that clears the selection', async () => {
+    const { fixture, el } = await mount(HkFilterChipsComponent, {
+      label: 'F',
+      options,
+      selected: [],
+      allLabel: 'All',
+      allCount: 12,
+    });
+    const all = el.querySelector<HTMLButtonElement>('.hk-filter-chips__chip--all')!;
+    expect(all.textContent).toContain('All');
+    expect(all.querySelector('.hk-filter-chips__count')?.textContent?.trim()).toBe('12');
+    expect(all.getAttribute('aria-pressed')).toBe('true');
+
+    fixture.componentRef.setInput('selected', ['fire']);
+    await fixture.whenStable();
+    expect(all.getAttribute('aria-pressed')).toBe('false');
+    // All is the way back: no separate Clear filters chip next to it.
+    expect(el.querySelector('.hk-filter-chips__clear')).toBeNull();
+    const seen: (readonly string[])[] = [];
+    fixture.componentInstance.selected.subscribe((v) => seen.push(v));
+    all.click();
+    expect(seen).toEqual([[]]);
+  });
 });

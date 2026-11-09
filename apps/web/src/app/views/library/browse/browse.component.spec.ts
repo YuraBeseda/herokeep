@@ -109,7 +109,7 @@ function typeSearch(fixture: { nativeElement: unknown }, text: string): void {
 function typeChips(fixture: { nativeElement: unknown }): HTMLElement[] {
   return Array.from(
     (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
-      'button.hk-filter-chips__chip',
+      'button.hk-filter-chips__chip:not(.hk-filter-chips__chip--all)',
     ),
   );
 }
@@ -118,6 +118,21 @@ function summaryText(fixture: { nativeElement: unknown }): string | null {
   const el = (fixture.nativeElement as HTMLElement).querySelector('.library-browse__summary');
   return el?.textContent?.trim() ?? null;
 }
+
+const LIBRARY_TYPE_IDS = [
+  'class',
+  'subclass',
+  'species',
+  'background',
+  'feat',
+  'spell',
+  'item',
+  'feature',
+  'condition',
+  'skill',
+  'language',
+  'rule',
+] as const;
 
 describe('LibraryBrowseComponent', () => {
   beforeEach(() => localStorage.removeItem('hk.locale'));
@@ -460,6 +475,135 @@ describe('LibraryBrowseComponent', () => {
 
     fixture.destroy();
     expect(strap.config()).toBeNull();
+  });
+
+  // B12a fix round: sort, sub-lines, always-on count, All chip, match highlight.
+  it('shows a plural-aware count line in browse mode and the results line while searching', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    const spellCount = corePack.entities.filter((e) => e.type === 'spell').length;
+
+    expect(root.querySelector('.library-browse__count')?.textContent?.trim()).toBe(
+      `${spellCount} entries`,
+    );
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'delayed blast fireball');
+    expect(root.querySelector('.library-browse__count')).toBeNull();
+    expect(summaryText(fixture)).toBe('1 result');
+  });
+
+  it('has an All chip, pressed only while no type narrows the list', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+    const all = () =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+        '.hk-filter-chips__chip--all',
+      )!;
+
+    expect(all().textContent).toContain('All');
+    expect(all().getAttribute('aria-pressed')).toBe('false'); // Spells is the browse default
+    all().click();
+    TestBed.tick();
+    expect(all().getAttribute('aria-pressed')).toBe('true');
+    const total = LIBRARY_TYPE_IDS.reduce(
+      (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
+      0,
+    );
+    expect(virtualListItems(fixture).length).toBe(total);
+    expect(all().querySelector('.hk-filter-chips__count')?.textContent?.trim()).toBe(String(total));
+  });
+
+  it('sorts by name, by type then name, and by level from the Sort select', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    const select = root.querySelector<HTMLSelectElement>('select')!;
+    const choose = (value: string) => {
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      TestBed.tick();
+    };
+    const levelOf = (id: string) => {
+      const entity = corePack.entities.find((e) => e.id === id);
+      return entity && 'level' in entity ? entity.level : undefined;
+    };
+
+    expect(Array.from(select.options).map((o) => o.textContent?.trim())).toEqual([
+      'Best match',
+      'Name',
+      'Type, then name',
+      'Level',
+    ]);
+
+    choose('level');
+    const byLevel = virtualListItems(fixture).map(
+      (row) => levelOf((row as { id: string }).id) ?? 99,
+    );
+    expect(byLevel).toEqual([...byLevel].sort((a, b) => a - b));
+    expect(byLevel[0]).toBe(0);
+
+    // All types, then "type, then name": classes come before spells, each in name order.
+    root.querySelector<HTMLButtonElement>('.hk-filter-chips__chip--all')!.click();
+    TestBed.tick();
+    choose('type');
+    const types = virtualListItems(fixture).map(
+      (row) => corePack.entities.find((e) => e.id === (row as { id: string }).id)!.type,
+    );
+    expect(types.indexOf('class')).toBe(0);
+    expect(types.lastIndexOf('class')).toBeLessThan(types.indexOf('spell'));
+
+    choose('name');
+    const names = virtualListItems(fixture).map((row) => row.name);
+    const collator = new Intl.Collator('en');
+    expect(names).toEqual([...names].sort((a, b) => collator.compare(a, b)));
+  });
+
+  it('puts a one-line summary under a row from the entity data', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'fireball');
+    const rows = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
+    );
+    const sub = (name: string) =>
+      rows
+        .find((row) => row.querySelector('.library-browse__row-name')?.textContent?.trim() === name)
+        ?.querySelector('.library-browse__row-sub')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim();
+
+    expect(sub('Fireball')).toBe('Level 3 · Evocation');
+    expect(sub('Wand of Fireballs')).toContain('Magic');
+
+    typeSearch(fixture, 'alchemist');
+    const alchemist = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
+    )[0]?.querySelector('.library-browse__row-sub');
+    expect(alchemist?.textContent).toMatch(/gp/);
+  });
+
+  it('marks the matched text of a name, ignoring case, and the name still reads whole', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'FIRE');
+    const row = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
+    ).find(
+      (r) => r.querySelector('.library-browse__row-name')?.textContent?.trim() === 'Fire Bolt',
+    );
+    expect(row?.querySelector('.library-browse__row-name mark')?.textContent).toBe('Fire');
+    expect(row?.querySelector('.library-browse__row-name')?.textContent).toBe('Fire Bolt');
   });
 
   // Regression test for the id-encoding decision documented on `onRowClick`: a raw entity id

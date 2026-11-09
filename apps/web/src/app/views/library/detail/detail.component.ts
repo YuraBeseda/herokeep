@@ -6,11 +6,13 @@ import {
   inject,
   Renderer2,
   resource,
+  untracked,
   viewChild,
   type ElementRef,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Sheet } from '@hk/engine';
 import { map } from 'rxjs';
@@ -20,6 +22,7 @@ import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { PlayActionsService } from '../../characters/sheet/play/play-actions.service';
@@ -36,13 +39,19 @@ import { EntityFactsComponent } from './entity-facts.component';
 type SpellcastingBlock = Sheet['spellcasting'][number];
 
 /** What "Add to hero" does for the entry on screen: the sheet's own add-to-bag, or its Prepare. */
-type HeroAdd =
-  { readonly kind: 'item' } | { readonly kind: 'spell'; readonly block: SpellcastingBlock };
+interface HeroAdd {
+  readonly kind: 'item' | 'spell';
+  /** The block that prepares the spell; absent for an item or when nothing can be done. */
+  readonly block?: SpellcastingBlock;
+  /** Shell key of why the button is unavailable; `null` when it works. */
+  readonly reason: string | null;
+}
 
 @Component({
   selector: 'app-library-detail',
   imports: [
     TranslocoDirective,
+    RouterLink,
     IconComponent,
     SkeletonComponent,
     HkButtonComponent,
@@ -63,6 +72,7 @@ export class LibraryDetailComponent {
   private readonly markdownService = inject(MarkdownService);
   private readonly packStore = inject(PackStore);
   private readonly characterStore = inject(CharacterStore);
+  private readonly charactersRepository = inject(CharactersRepository);
   private readonly playActions = inject(PlayActionsService);
   private readonly toastService = inject(ToastService);
   private readonly navHistory = inject(NavHistoryService);
@@ -137,30 +147,83 @@ export class LibraryDetailComponent {
   private readonly descriptionContainer =
     viewChild<ElementRef<HTMLElement>>('descriptionContainer');
 
-  // "Add to hero" (spec §4.5): only with a hero context — `?for=` names the character the
-  // sheet has loaded — and only where the sheet already has a path for the entry:
-  //  - an item goes into the bag (`PlayActionsService.addLibraryItem`, the sheet's add-from-library);
-  //  - a spell the hero already knows but has not prepared is prepared (`togglePrepared`, the
-  //    sheet's Prepare button). The sheet has no "learn a spell" path outside creation and level-up,
-  //    so any other spell gets no button.
-  // Every other entry type has no sheet path and gets none.
-  protected readonly heroAdd = computed<HeroAdd | null>(() => {
-    const forId = this.forCharacter();
-    if (!forId || forId !== this.characterStore.streamId()) return null;
-    const entity = this.entity();
-    const sheet = this.characterStore.sheet();
-    if (!entity || !sheet) return null;
-    if (entity.type === 'item') return { kind: 'item' };
-    if (entity.type === 'spell' && entity.level > 0) {
-      const block = sheet.spellcasting.find(
-        (candidate) =>
-          candidate.preparedMax !== undefined &&
-          candidate.known.includes(entity.id) &&
-          !candidate.prepared.includes(entity.id),
-      );
-      return block ? { kind: 'spell', block } : null;
+  // The hero the library was opened for, once the sheet has it. A reload, a deep link or a second
+  // tab opens the library with `?for=` but no loaded hero, so it is loaded here the way the level-up
+  // guard does (`CharactersRepository.get`, then `CharacterStore.load`, which waits for the packs).
+  // A hero that is gone leaves the entry without a hero context.
+  private hydrateToken = 0;
+  private async hydrateHero(heroId: string | null): Promise<void> {
+    const token = ++this.hydrateToken;
+    if (!heroId || this.characterStore.streamId() === heroId) return;
+    try {
+      if (!(await this.charactersRepository.get(heroId))) return;
+      if (token !== this.hydrateToken) return;
+      await this.characterStore.load(heroId);
+    } catch {
+      // A missing or unreadable hero: no hero context.
     }
-    return null;
+  }
+
+  // Add to hero (spec 4.5) is in the strap for every entry type the sheet can add: an item goes
+  // into the bag (`PlayActionsService.addLibraryItem`, the sheet's add-from-library) and a spell is
+  // prepared (`togglePrepared`, the sheet's Prepare button; the sheet has no learn-a-spell path
+  // outside creation and level-up). It is enabled with a hero context and drawn disabled, with the
+  // reason as its hint, without one or when the spell cannot be prepared for that hero. Every other
+  // entry type has no sheet path and gets no button.
+  protected readonly heroAdd = computed<HeroAdd | null>(() => {
+    const entity = this.entity();
+    if (!entity || (entity.type !== 'item' && entity.type !== 'spell')) return null;
+    const kind = entity.type;
+    const forId = this.forCharacter();
+    const sheet = this.characterStore.sheet();
+    if (!forId || forId !== this.characterStore.streamId() || !sheet) {
+      return { kind, reason: 'shell.strap.library-no-hero' };
+    }
+    if (entity.type === 'item') return { kind, reason: null };
+    if (entity.level === 0) return { kind, reason: 'shell.strap.library-cantrip' };
+    const blocks = sheet.spellcasting;
+    const block = blocks.find(
+      (candidate) =>
+        candidate.preparedMax !== undefined &&
+        candidate.known.includes(entity.id) &&
+        !candidate.prepared.includes(entity.id),
+    );
+    if (block) return { kind, block, reason: null };
+    if (blocks.some((candidate) => candidate.prepared.includes(entity.id))) {
+      return { kind, reason: 'shell.strap.library-already-prepared' };
+    }
+    if (blocks.some((candidate) => candidate.known.includes(entity.id))) {
+      return { kind, reason: 'shell.strap.library-no-prepare' };
+    }
+    return { kind, reason: 'shell.strap.library-not-known' };
+  });
+
+  // The pack the entry comes from: its name and version, and the packs screen's key for it.
+  protected readonly source = computed(() => {
+    const packId = parseEntityId(this.id())?.packId;
+    const pack = packId
+      ? this.packStore.packs().find((candidate) => candidate.id === packId)
+      : undefined;
+    return pack
+      ? { name: pack.name, version: pack.version, key: `${pack.id}@${pack.version}` }
+      : null;
+  });
+
+  // Spell lists, concentration and ritual of a spell, read off the entity.
+  protected readonly spellExtras = computed(() => {
+    const entity = this.entity();
+    if (entity?.type !== 'spell') return null;
+    const index = this.engineFacade.index();
+    const localizer = this.engineFacade.localizer();
+    const lists = entity.classes.flatMap((ref) => {
+      const classId = index.resolveClassRef(ref) ?? ref;
+      return index.has(classId) ? [{ id: classId, name: localizer.name(classId) }] : [];
+    });
+    return {
+      lists,
+      concentration: entity.concentration === true,
+      ritual: entity.ritual === true,
+    };
   });
 
   constructor() {
@@ -180,14 +243,26 @@ export class LibraryDetailComponent {
       onCleanup(unlisten);
     });
 
-    // The strap: Back in zone 1 and, with a hero context, Add to hero in zone 2.
+    // Hydrate the hero named by `?for=` when the sheet does not have it loaded.
+    effect(() => {
+      const heroId = this.forCharacter();
+      untracked(() => void this.hydrateHero(heroId));
+    });
+
+    // The strap: Back in zone 1, Add to hero in zone 2, Copy link and Open the pack in zone 3.
     effect(() => {
       const add = this.heroAdd();
+      const source = this.source();
       this.strap.set(
         buildLibraryDetailStrap({
           back: () => this.back(),
-          add: add ? { kind: add.kind, run: () => this.addToHero() } : null,
+          add: add ? { kind: add.kind, reason: add.reason, run: () => this.addToHero() } : null,
           locked: this.playActions.editLocked(),
+          copy: {
+            run: () => void this.copyLink(),
+            unavailable: this.clipboardAvailable() ? null : 'shell.strap.library-no-clipboard',
+          },
+          openPack: source ? () => void this.router.navigate(['/packs', source.key]) : null,
         }),
       );
     });
@@ -225,12 +300,28 @@ export class LibraryDetailComponent {
     this.navHistory.back(['/library']);
   }
 
+  private clipboardAvailable(): boolean {
+    return typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function';
+  }
+
+  // The link to the entry itself: no hero context in it, it is a link to share.
+  protected async copyLink(): Promise<void> {
+    if (!this.clipboardAvailable()) return;
+    const path = this.router.serializeUrl(this.router.createUrlTree(['/library', this.id()]));
+    try {
+      await navigator.clipboard.writeText(`${location.origin}${path}`);
+      this.toastService.show('library.detail.linkCopied');
+    } catch {
+      this.toastService.show('library.detail.linkFailed');
+    }
+  }
+
   protected addToHero(): void {
     const add = this.heroAdd();
     const entity = this.entity();
-    if (!add || !entity) return;
+    if (add?.reason !== null || !entity) return;
     const name = this.name();
-    if (add.kind === 'item') {
+    if (add.kind === 'item' || !add.block) {
       if (this.playActions.addLibraryItem(entity.id)) {
         this.toastService.show('library.detail.added', { name });
       }

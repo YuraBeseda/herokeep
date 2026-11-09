@@ -78,3 +78,35 @@ export function countByType(
   for (const hit of hits) counts.set(hit.type, (counts.get(hit.type) ?? 0) + 1);
   return counts;
 }
+
+export interface NameSegment {
+  readonly text: string;
+  readonly hit: boolean;
+}
+
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Splits a (localized) name into plain and matched runs for the query: every word of the query is
+ * marked wherever it occurs, ignoring case. The runs always join back to the whole name.
+ */
+export function highlightSegments(name: string, query: string): NameSegment[] {
+  const words = query
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word !== '')
+    .sort((a, b) => b.length - a.length);
+  if (words.length === 0) return [{ text: name, hit: false }];
+  const pattern = new RegExp(words.map(escapeRegExp).join('|'), 'giu');
+  const segments: NameSegment[] = [];
+  let last = 0;
+  for (const match of name.matchAll(pattern)) {
+    const start = match.index;
+    if (match[0] === '') continue;
+    if (start > last) segments.push({ text: name.slice(last, start), hit: false });
+    segments.push({ text: match[0], hit: true });
+    last = start + match[0].length;
+  }
+  if (last < name.length) segments.push({ text: name.slice(last), hit: false });
+  return segments.length > 0 ? segments : [{ text: name, hit: false }];
+}

@@ -182,7 +182,15 @@
     "library-new-homebrew": "Власний контент",
     "library-import-pack": "Імпорт паку",
     "library-add-to-hero": "Додати герою",
-    "library-prepare": "Підготувати герою"
+    "library-prepare": "Підготувати герою",
+    "library-no-hero": "Відкрийте запис з аркуша героя, щоб додати його",
+    "library-cantrip": "Замовляння відомі, а не готуються",
+    "library-already-prepared": "Уже підготовлено",
+    "library-no-prepare": "Цей герой не готує заклинання",
+    "library-not-known": "Цей герой не знає це заклинання",
+    "library-copy-link": "Скопіювати посилання на запис",
+    "library-open-pack": "Відкрити пак",
+    "library-no-clipboard": "Копіювання тут недоступне"
   },
   "tabs": {
     "landmark": "Розділи екрана",

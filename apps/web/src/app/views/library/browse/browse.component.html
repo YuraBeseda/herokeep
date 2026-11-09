@@ -13,12 +13,22 @@
         [placeholder]="t('search.placeholder')"
       />
       <span class="library-browse__hint">{{ t('search.hint') }}</span>
+      <hk-select
+        class="library-browse__sort"
+        [label]="t('sort.label')"
+        [options]="sortOptions(t)"
+        [value]="sort()"
+        (valueChange)="setSort($event)"
+      />
     </div>
 
     <hk-filter-chips
       class="library-browse__filters"
       [label]="t('filter.label')"
       [options]="typeOptions(t)"
+      [allLabel]="t('filter.all')"
+      [allCount]="allCount()"
+      [allIcon]="'ui:library'"
       [selected]="selectedTypes()"
       (selectedChange)="setTypes($event)"
     />
@@ -34,11 +44,15 @@
         <p class="library-browse__summary" role="status">
           {{ t('search.results', { count: rows().length }) }}
         </p>
+      } @else {
+        <p class="library-browse__count" role="status">
+          {{ t('list.count', { count: rows().length }) }}
+        </p>
       }
       <hk-virtual-list
         class="library-browse__list"
         [items]="rows()"
-        [itemSize]="56"
+        [itemSize]="64"
         [attr.aria-label]="t('list.label')"
       >
         <ng-template let-row>
@@ -46,7 +60,27 @@
             <span class="library-browse__row-ring" aria-hidden="true">
               <hk-icon [icon]="row.icon" class="library-browse__row-icon" />
             </span>
-            <span class="library-browse__row-name" [hkTooltip]="row.name">{{ row.name }}</span>
+            <span class="library-browse__row-text">
+              <span class="library-browse__row-name" [hkTooltip]="row.name">
+                @for (segment of row.segments; track $index) {
+                  @if (segment.hit) {
+                    <mark class="library-browse__mark">{{ segment.text }}</mark>
+                  } @else {
+                    <span>{{ segment.text }}</span>
+                  }
+                }
+              </span>
+              @if (row.sub.length > 0) {
+                <span class="library-browse__row-sub">
+                  @for (part of row.sub; track $index; let last = $last) {
+                    <app-fact-value [value]="part" />
+                    @if (!last) {
+                      <span aria-hidden="true"> · </span>
+                    }
+                  }
+                </span>
+              }
+            </span>
             <hk-tag-chip
               class="library-browse__row-type"
               [label]="t('type.' + row.type)"

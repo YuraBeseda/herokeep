@@ -160,3 +160,39 @@
   padding: 0;
   list-style: none;
 }
+
+.class-entry__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: var(--space-3);
+}
+
+.class-entry__choice-prompt {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.class-entry__more {
+  align-self: flex-start;
+  min-block-size: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .class-entry__more {
+    min-block-size: var(--touch-target);
+    padding-inline: var(--space-2);
+  }
+}
+
+.class-entry__column {
+  white-space: normal;
+}

@@ -1,21 +1,52 @@
-import type { StrapConfig } from '../../../ui/action-strap/action-strap.service';
+import type { StrapAction, StrapConfig } from '../../../ui/action-strap/action-strap.service';
 
 export type HeroAddKind = 'item' | 'spell';
 
 export interface LibraryDetailStrapState {
   readonly back: () => void;
-  /** Present when the entry can be added to the hero the person came from. */
-  readonly add: { readonly kind: HeroAddKind; readonly run: () => void } | null;
+  /**
+   * Present for the entry types the sheet can add (items, spells). `reason` is the shell key of why
+   * it cannot be used right now (no hero context, a cantrip, ...); `null` when it can.
+   */
+  readonly add: {
+    readonly kind: HeroAddKind;
+    readonly run: () => void;
+    readonly reason: string | null;
+  } | null;
   /** The hero's campaign locks edits. */
   readonly locked: boolean;
+  /** Copy the entry's link; `unavailable` is the shell key of why the clipboard cannot be used. */
+  readonly copy: { readonly run: () => void; readonly unavailable: string | null };
+  /** Open the pack the entry comes from; absent when the pack is not installed. */
+  readonly openPack: (() => void) | null;
 }
 
 /**
- * The strap on a library entry (boards LB02, LB03): Back in zone 1 and, when the entry was opened
- * from a hero's sheet and the sheet has a path for it, "Add to hero" in zone 2 (an item goes into
- * the bag; a known spell is prepared). The button is left out for everything else.
+ * The strap on a library entry (boards LB02, LB03): Back in zone 1; "Add to hero" in zone 2 for an
+ * item (into the bag) or a spell (prepared), enabled with a hero context and drawn disabled with
+ * its reason otherwise, so the slot stays where it is; Copy link and Open the pack in zone 3.
  */
 export function buildLibraryDetailStrap(state: LibraryDetailStrapState): StrapConfig {
+  const reason = state.locked ? 'shell.strap.edit-locked' : (state.add?.reason ?? null);
+  const secondary: StrapAction[] = [
+    {
+      id: 'copy-link',
+      label: 'shell.strap.library-copy-link',
+      icon: 'export',
+      kind: 'icon',
+      run: state.copy.run,
+      ...(state.copy.unavailable ? { disabled: true, disabledReason: state.copy.unavailable } : {}),
+    },
+  ];
+  if (state.openPack) {
+    secondary.push({
+      id: 'open-pack',
+      label: 'shell.strap.library-open-pack',
+      icon: 'packs',
+      kind: 'icon',
+      run: state.openPack,
+    });
+  }
   return {
     exit: [
       {
@@ -37,9 +68,10 @@ export function buildLibraryDetailStrap(state: LibraryDetailStrapState): StrapCo
             icon: state.add.kind === 'spell' ? 'spells' : 'bag',
             kind: 'primary',
             run: state.add.run,
-            ...(state.locked ? { disabled: true, disabledReason: 'shell.strap.edit-locked' } : {}),
+            ...(reason ? { disabled: true, disabledReason: reason } : {}),
           },
         ]
       : [],
+    secondary,
   };
 }

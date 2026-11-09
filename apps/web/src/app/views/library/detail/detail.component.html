@@ -49,7 +49,7 @@
             [innerHTML]="html"
           ></div>
         }
-        <app-class-entry [entity]="classEntry" />
+        <app-class-entry [entity]="classEntry" [heroId]="forCharacter()" />
       </hk-leaf>
     } @else {
       <hk-leaf class="library-detail__leaf" [title]="t('detail.entry')" [icon]="'ui:library'">
@@ -74,7 +74,50 @@
             ></div>
           }
         </section>
+
+        @if (spellExtras(); as extras) {
+          <div class="library-detail__extras">
+            @if (extras.lists.length > 0) {
+              <section class="library-detail__group">
+                <h2 class="library-detail__group-title">{{ t('detail.spellLists') }}</h2>
+                <ul class="library-detail__chips">
+                  @for (list of extras.lists; track list.id) {
+                    <li>
+                      <a
+                        class="library-detail__chip"
+                        [routerLink]="['/library', list.id]"
+                        [queryParamsHandling]="'preserve'"
+                        [attr.title]="t('detail.openSpellList', { name: list.name })"
+                        >{{ list.name }}</a
+                      >
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+            <section class="library-detail__group">
+              <h2 class="library-detail__group-title">{{ t('detail.also') }}</h2>
+              <div class="library-detail__chips">
+                <hk-tag-chip
+                  [label]="
+                    extras.concentration ? t('detail.concentration') : t('detail.noConcentration')
+                  "
+                />
+                <hk-tag-chip [label]="extras.ritual ? t('detail.ritual') : t('detail.noRitual')" />
+              </div>
+            </section>
+          </div>
+        }
       </hk-leaf>
+    }
+
+    @if (source(); as src) {
+      <p class="library-detail__source">
+        {{ t('detail.source', { name: src.name, version: src.version }) }}
+        <a class="library-detail__source-link" [routerLink]="['/packs', src.key]">{{
+          t('detail.packDetails')
+        }}</a>
+      </p>
     }
   } @else {
     <p class="library-detail__not-found">{{ t('detail.not-found') }}</p>
