@@ -38,7 +38,7 @@
 .hk-options-chip__popover {
   position: absolute;
   inset-block-start: 100%;
-  inset-inline-start: 0;
+  inset-inline-end: 0; /* opens toward the page, so a chip near the right edge keeps the list on screen */
   z-index: 10;
   display: flex;
   flex-direction: column;
