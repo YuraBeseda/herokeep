@@ -528,7 +528,14 @@ describe('projectCampaign', () => {
       const state = projectCampaign(events);
 
       expect(state.log).toEqual([
-        { kind: 'roll', seq: 1, eventId: 'evt-roll-1', actorUserId: 'usr_a', payload: rollPayload },
+        {
+          kind: 'roll',
+          seq: 1,
+          ts: '2026-09-26T00:00:00.000Z',
+          eventId: 'evt-roll-1',
+          actorUserId: 'usr_a',
+          payload: rollPayload,
+        },
       ]);
     });
 
@@ -545,7 +552,30 @@ describe('projectCampaign', () => {
       const state = projectCampaign(events);
 
       expect(state.log).toEqual([
-        { kind: 'chat', seq: 1, eventId: 'evt-chat-1', actorUserId: 'usr_a', payload: chatPayload },
+        {
+          kind: 'chat',
+          seq: 1,
+          ts: '2026-09-26T00:00:00.000Z',
+          eventId: 'evt-chat-1',
+          actorUserId: 'usr_a',
+          payload: chatPayload,
+        },
+      ]);
+    });
+
+    it('every log entry carries its own envelope timestamp', () => {
+      const events = [
+        mkEvent('session.started', {}, { seq: 1, id: 'a', ts: '2026-09-26T19:48:00.000Z' }),
+        mkEvent(
+          'chat.message',
+          { text: 'hi', visibility: 'everyone' },
+          { seq: 2, id: 'b', ts: '2026-09-26T19:50:30.000Z' },
+        ),
+      ];
+
+      expect(projectCampaign(events).log.map((entry) => entry.ts)).toEqual([
+        '2026-09-26T19:48:00.000Z',
+        '2026-09-26T19:50:30.000Z',
       ]);
     });
 
@@ -558,8 +588,20 @@ describe('projectCampaign', () => {
       const state = projectCampaign(events);
 
       expect(state.log).toEqual([
-        { kind: 'session-start', seq: 1, eventId: 'evt-start-1', title: 'Session 1' },
-        { kind: 'session-end', seq: 2, eventId: 'evt-end-1', title: undefined },
+        {
+          kind: 'session-start',
+          seq: 1,
+          ts: '2026-09-26T00:00:00.000Z',
+          eventId: 'evt-start-1',
+          title: 'Session 1',
+        },
+        {
+          kind: 'session-end',
+          seq: 2,
+          ts: '2026-09-26T00:00:00.000Z',
+          eventId: 'evt-end-1',
+          title: undefined,
+        },
       ]);
     });
 

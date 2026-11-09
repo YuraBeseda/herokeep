@@ -69,10 +69,10 @@ export class HkPartyCardComponent {
   /** Translated death-save story for the dying chip's hint; defaults to the word. */
   readonly dyingHint = input<string | null>(null);
 
-  // Outputs
   /** `false` hides the open button, for a viewer who has nothing to open. */
   readonly openable = input(true);
 
+  // Outputs
   readonly open = output<void>();
 
   protected readonly nameId = fieldId('hk-party-name');

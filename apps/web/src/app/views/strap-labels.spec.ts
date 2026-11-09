@@ -1,0 +1,144 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
+import { of } from 'rxjs';
+import campaignsEn from '../../assets/i18n/campaigns/en.json';
+import charactersEn from '../../assets/i18n/characters/en.json';
+import shellEn from '../../assets/i18n/shell/en.json';
+import { HkActionStrapComponent } from '../ui/action-strap/action-strap.component';
+import {
+  ActionStrapService,
+  type StrapAction,
+  type StrapConfig,
+} from '../ui/action-strap/action-strap.service';
+import { stubViewport } from '../ui/testing/viewport';
+import { buildCampaignStrap } from './campaigns/shell/campaign-strap';
+import { buildCampaignsListStrap } from './campaigns/list/list-strap';
+import { buildSheetStrap } from './characters/sheet/sheet-strap';
+
+/** Every scope the app ships is available; the strap host still only resolves its own (shell). */
+class AllScopesLoader implements TranslocoLoader {
+  getTranslation(path: string) {
+    if (path === 'shell/en') return of(shellEn);
+    if (path === 'campaigns/en') return of(campaignsEn);
+    if (path === 'characters/en') return of(charactersEn);
+    return of({});
+  }
+}
+
+const noop = (): void => undefined;
+
+/** A translation key left on screen: `scope.some.key` with no spaces. */
+const RAW_KEY = /\b(?:shell|campaigns|characters|library|settings)\.[\w-]+(?:\.[\w-]+)*/;
+
+async function render(config: StrapConfig, phone = false): Promise<HTMLElement> {
+  stubViewport({ phone, coarse: phone });
+  TestBed.resetTestingModule();
+  await TestBed.configureTestingModule({
+    providers: [
+      provideRouter([]),
+      provideTransloco({
+        config: {
+          availableLangs: ['en'],
+          defaultLang: 'en',
+          prodMode: true,
+          reRenderOnLangChange: true,
+        },
+        loader: AllScopesLoader,
+      }),
+      provideTranslocoMessageformat(),
+    ],
+  }).compileComponents();
+  TestBed.inject(ActionStrapService).set(config);
+  const fixture = TestBed.createComponent(HkActionStrapComponent);
+  await fixture.whenStable();
+  fixture.detectChanges();
+  await fixture.whenStable();
+  return fixture.nativeElement as HTMLElement;
+}
+
+/** Everything a person can read on the strap: text, accessible names and hidden reasons. */
+function readable(el: HTMLElement): string {
+  const names = Array.from(el.querySelectorAll('[aria-label]')).map((n) =>
+    n.getAttribute('aria-label'),
+  );
+  return [el.textContent, ...names].join(' | ');
+}
+
+const campaignHandlers = {
+  effect: noop,
+  toggleSession: noop,
+  exportCampaign: noop,
+  openSheet: noop,
+};
+
+const sheetHandlers = {
+  focusHpAmount: noop,
+  rollPlain: noop,
+  shortRest: noop,
+  longRest: noop,
+  addCondition: noop,
+  toggleNotes: noop,
+  toggleRollLog: noop,
+  exportHero: noop,
+  edit: noop,
+};
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe('strap labels resolve through the real strap host (no raw keys)', () => {
+  const cases: [string, StrapConfig][] = [
+    ['campaigns list', buildCampaignsListStrap({ create: noop, join: noop })],
+    [
+      'campaign DM, nothing selected, idle',
+      buildCampaignStrap(
+        {
+          role: 'dm',
+          selected: false,
+          sessionActive: false,
+          canOpenSheet: false,
+          scope: ['/g', 'x'],
+        },
+        campaignHandlers,
+      ),
+    ],
+    [
+      'campaign DM, selected, session running',
+      buildCampaignStrap(
+        {
+          role: 'dm',
+          selected: true,
+          sessionActive: true,
+          canOpenSheet: false,
+          scope: ['/g', 'x'],
+        },
+        campaignHandlers,
+      ),
+    ],
+    [
+      'campaign player with a hero',
+      buildCampaignStrap(
+        {
+          role: 'player',
+          selected: false,
+          sessionActive: false,
+          canOpenSheet: true,
+          scope: ['/g', 'x'],
+        },
+        campaignHandlers,
+      ),
+    ],
+    [
+      'sheet, locked by house rules',
+      buildSheetStrap({ locked: true, exporting: false, scope: ['/c', 'x'] }, sheetHandlers),
+    ],
+  ];
+
+  it.each(cases)('%s', async (_name, config) => {
+    const text = readable(await render(config));
+    expect(text).not.toMatch(RAW_KEY);
+    const labels = [...config.primary, ...(config.secondary ?? [])] as StrapAction[];
+    expect(labels.length).toBeGreaterThan(0);
+  });
+});

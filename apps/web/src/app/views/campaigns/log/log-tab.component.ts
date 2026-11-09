@@ -16,6 +16,7 @@ import {
 } from '@shared/components/dice-result/dice-result.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { AuthService } from '@shared/services/auth/auth.service';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import type { LogEntry } from '@shared/services/campaigns/campaign-projection';
 import {
   CampaignStore,
@@ -124,6 +125,7 @@ export class LogTabComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
+  private readonly localeService = inject(LocaleService);
 
   protected readonly state = this.campaignStore.state;
   protected readonly entries = computed<readonly LogEntry[]>(() => this.state()?.log ?? []);
@@ -266,6 +268,13 @@ export class LogTabComponent {
   }
 
   // --- Rendering helpers -------------------------------------------------------------------------
+
+  /** An entry's envelope time of day, in the active locale. */
+  protected clock(ts: string): string {
+    return new Intl.DateTimeFormat(this.localeService.locale(), { timeStyle: 'short' }).format(
+      new Date(ts),
+    );
+  }
 
   /** Every rolled die renders `kept: true` — see class doc's "all rolled dice, no kept/dropped
    * distinction" section for why the wire schema can't carry the original flag. */

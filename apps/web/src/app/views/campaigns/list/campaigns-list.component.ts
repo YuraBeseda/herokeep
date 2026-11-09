@@ -11,8 +11,8 @@ import { IconComponent } from '../../../shared/icons/icon.component';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import { HkButtonComponent } from '../../../ui/button/button.component';
 import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
-import { campaignsScopeReady } from '../shell/scope-ready';
 import { CreateCampaignDialogComponent } from '../create/create-campaign-dialog.component';
+import { buildCampaignsListStrap } from './list-strap';
 
 const SKELETON_ROW_COUNT = 3;
 
@@ -77,33 +77,13 @@ export class CampaignsListComponent {
   protected readonly rows = computed(() => this.campaignsResource.value() ?? []);
   protected readonly loading = this.campaignsResource.isLoading;
 
-  private readonly labelsReady = campaignsScopeReady(['list.create', 'list.join']);
-
   constructor() {
-    // Zone 2 of the strap: New campaign, Join; released when the list closes. Set again once the
-    // `campaigns` labels are loaded (the strap translates outside this scope's provider).
-    effect(() => {
-      this.labelsReady();
-      this.strap.set({
-        primary: [
-          {
-            id: 'new-campaign',
-            label: 'campaigns.list.create',
-            icon: 'add',
-            kind: 'primary',
-            run: () => void this.onCreate(),
-          },
-          {
-            id: 'join',
-            label: 'campaigns.list.join',
-            icon: 'join',
-            kind: 'parchment',
-            run: () => this.onJoin(),
-          },
-        ],
-        scope: ['/campaigns'],
-      });
-    });
+    // Zone 2 of the strap: New campaign, Join; released when the list closes.
+    effect(() =>
+      this.strap.set(
+        buildCampaignsListStrap({ create: () => void this.onCreate(), join: () => this.onJoin() }),
+      ),
+    );
     inject(DestroyRef).onDestroy(() => this.strap.clear());
   }
 

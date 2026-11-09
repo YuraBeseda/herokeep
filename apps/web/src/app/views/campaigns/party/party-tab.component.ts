@@ -6,6 +6,8 @@ import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { AuthService } from '@shared/services/auth/auth.service';
 import type { PartyOverview } from '@shared/services/campaigns/campaign-projection';
 import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
+import { mergeMemberPresence } from '@shared/services/campaigns/member-presence';
+import { SyncService } from '@shared/services/sync/sync.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import { IconComponent } from '../../../shared/icons/icon.component';
@@ -141,6 +143,7 @@ export class PartyTabComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly dialogService = inject(DialogService);
   private readonly selection = inject(CampaignSelectionService);
+  private readonly syncService = inject(SyncService);
 
   protected readonly state = this.campaignStore.state;
   protected readonly role = this.campaignStore.role;
@@ -219,6 +222,21 @@ export class PartyTabComponent {
     if (!state || !userId) return true;
     return [...state.roster.values()].some((r) => r.ownerId === userId && !r.left);
   });
+
+  /** Who is online, per owner, from the same derivation as the Lobby roster; `null` while there is
+   * no live member list (presence unknown, nothing is drawn). */
+  private readonly onlineByOwner = computed<ReadonlyMap<string, boolean> | null>(() => {
+    const state = this.state();
+    const id = this.campaignId();
+    const live = id ? this.syncService.membersFor(id)() : null;
+    if (!state || !live) return null;
+    return new Map(mergeMemberPresence(state.members, live).map((m) => [m.userId, m.online]));
+  });
+
+  protected online(card: PartyCardVm): boolean | null {
+    const map = this.onlineByOwner();
+    return map ? (map.get(card.ownerId) ?? false) : null;
+  }
 
   /** The chips on a DM card: XP in XP mode, Level in milestone mode (the leaf's pair). */
   protected readonly fxKinds = computed<readonly DmEffectKind[]>(() => {

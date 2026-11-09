@@ -98,6 +98,16 @@
   box-shadow: var(--shadow-strap);
 }
 
+.log-tab__entry-time {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-tab__entry--dm .log-tab__entry-time {
+  color: var(--text-on-leather);
+}
+
 .log-tab__entry-actor {
   font-weight: 600;
 }

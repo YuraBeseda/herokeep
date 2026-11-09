@@ -10,6 +10,7 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
 import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
 import shellEn from '../../../../assets/i18n/shell/en.json';
@@ -63,6 +64,7 @@ function configure(options: {
   role?: MembershipRole;
   state?: Partial<CampaignState>;
   userId?: string | null;
+  live?: { userId: string; displayName: string; role: string; online: boolean }[] | null;
 }): { navigateSpy: ReturnType<typeof vi.fn>; dialogOpenSpy: ReturnType<typeof vi.fn> } {
   const navigateSpy = vi.fn().mockResolvedValue(true);
   const dialogOpenSpy = vi
@@ -102,6 +104,7 @@ function configure(options: {
         },
       },
       { provide: EngineFacade, useValue: stubEngineFacade() },
+      { provide: SyncService, useValue: { membersFor: () => signal(options.live ?? null) } },
       // [plan-10 Task 9] Spied/mocked rather than the real `DialogService` — this spec's own
       // TestBed provides none of `MemberSheetDialogComponent`'s own DI needs (SyncService/
       // PackStore/EngineFacade with a real pack); that component's own rendering is exhaustively
@@ -929,6 +932,57 @@ describe('PartyTabComponent', () => {
   });
 
   // plan 17 B11b (board C07): the player's own hero is highlighted and opens its sheet.
+  describe('presence on the cards', () => {
+    const roster = new Map([
+      ['char-1', { ownerId: 'u-a', name: 'Ivan', left: false }],
+      ['char-2', { ownerId: 'u-b', name: 'Grog', left: false }],
+    ]);
+    const overviews = new Map([
+      ['char-1', OVERVIEW],
+      ['char-2', OVERVIEW],
+    ]);
+    const members = new Map([
+      ['u-a', { displayName: 'Ann', role: 'player' as const, removed: false }],
+      ['u-b', { displayName: 'Bob', role: 'player' as const, removed: false }],
+    ]);
+    const presenceOf = (compiled: HTMLElement): (string | undefined)[] =>
+      Array.from(compiled.querySelectorAll('.party-tab__card')).map((card) =>
+        card.querySelector('.hk-party__presence')?.textContent?.trim(),
+      );
+
+    it("says online or offline on each card from its owner's live presence, as the lobby does", async () => {
+      configure({
+        role: 'dm',
+        state: mkState({ roster, overviews, members }),
+        live: [
+          { userId: 'u-a', displayName: 'Ann', role: 'member', online: true },
+          { userId: 'u-b', displayName: 'Bob', role: 'member', online: false },
+        ],
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect(presenceOf(fixture.nativeElement as HTMLElement)).toEqual(['Online', 'Offline']);
+    });
+
+    it('draws nothing while there is no live member list (presence unknown)', async () => {
+      configure({ role: 'dm', state: mkState({ roster, overviews, members }), live: null });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect(presenceOf(fixture.nativeElement as HTMLElement)).toEqual([undefined, undefined]);
+    });
+
+    it('reads an owner missing from the live list as offline', async () => {
+      configure({
+        role: 'player',
+        state: mkState({ roster, overviews, members }),
+        live: [{ userId: 'u-a', displayName: 'Ann', role: 'member', online: true }],
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect(presenceOf(fixture.nativeElement as HTMLElement)).toEqual(['Online', 'Offline']);
+    });
+  });
+
   describe('the player view', () => {
     function ownAndOther() {
       return mkState({

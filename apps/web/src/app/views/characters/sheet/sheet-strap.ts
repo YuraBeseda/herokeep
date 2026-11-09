@@ -33,7 +33,7 @@ export interface SheetStrapState {
 export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): StrapConfig {
   const mutating = (action: StrapAction): StrapAction =>
     state.locked
-      ? { ...action, disabled: true, disabledReason: 'characters.sheet.editLocked' }
+      ? { ...action, disabled: true, disabledReason: 'shell.strap.edit-locked' }
       : action;
   return {
     primary: [

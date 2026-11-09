@@ -175,7 +175,10 @@
     "campaign-session-start": "Start session",
     "campaign-session-end": "End session",
     "campaign-open-sheet": "Open my sheet",
-    "campaign-select-member": "Pick a hero on the Party tab first"
+    "campaign-select-member": "Pick a hero on the Party tab first",
+    "campaign-new": "New campaign",
+    "campaign-join": "Join campaign",
+    "edit-locked": "Locked by your campaign's house rules"
   },
   "tabs": {
     "landmark": "Sections of this screen",

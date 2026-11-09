@@ -9,6 +9,7 @@ import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { apiJson } from '@shared/services/api/api-fetch';
 import { LeaderService } from '@shared/services/storage/leader.service';
+import { mergeMemberPresence } from '@shared/services/campaigns/member-presence';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
@@ -175,20 +176,7 @@ export class LobbyComponent {
     if (!state) return [];
     const id = this.campaignId();
     const live = id ? this.syncService.membersFor(id)() : null;
-    const liveByUserId = new Map((live ?? []).map((m) => [m.userId, m]));
-
-    const rows: MemberVm[] = [];
-    for (const [userId, entry] of state.members) {
-      const liveEntry = liveByUserId.get(userId);
-      rows.push({
-        userId,
-        displayName: liveEntry?.displayName ?? entry.displayName,
-        role: entry.role,
-        removed: entry.removed,
-        online: liveEntry?.online ?? false,
-      });
-    }
-    return rows;
+    return mergeMemberPresence(state.members, live);
   });
 
   protected canRemove(member: MemberVm): boolean {

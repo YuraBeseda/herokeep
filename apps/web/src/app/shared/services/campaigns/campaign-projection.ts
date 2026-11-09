@@ -130,6 +130,8 @@ export type LogEntry =
       kind: 'roll';
       seq: number | undefined;
       eventId: string;
+      /** The envelope's `ts` (ISO UTC), for display in the feed. */
+      ts: string;
       actorUserId: string;
       payload: RollLogged;
     }
@@ -137,11 +139,25 @@ export type LogEntry =
       kind: 'chat';
       seq: number | undefined;
       eventId: string;
+      /** The envelope's `ts` (ISO UTC), for display in the feed. */
+      ts: string;
       actorUserId: string;
       payload: ChatMessage;
     }
-  | { kind: 'session-start'; seq: number | undefined; eventId: string; title: string | undefined }
-  | { kind: 'session-end'; seq: number | undefined; eventId: string; title: string | undefined };
+  | {
+      kind: 'session-start';
+      seq: number | undefined;
+      eventId: string;
+      ts: string;
+      title: string | undefined;
+    }
+  | {
+      kind: 'session-end';
+      seq: number | undefined;
+      eventId: string;
+      ts: string;
+      title: string | undefined;
+    };
 
 /**
  * The full projected view of a campaign stream (Ruling 1's pinned shape). `settings` is `null`
@@ -308,13 +324,13 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
       case 'session.started': {
         const p = e.payload as SessionStarted;
         session = { active: true, startedAt: e.id, title: p.title };
-        log.push({ kind: 'session-start', seq: e.seq, eventId: e.id, title: p.title });
+        log.push({ kind: 'session-start', seq: e.seq, eventId: e.id, ts: e.ts, title: p.title });
         break;
       }
       case 'session.ended': {
         const p = e.payload as SessionEnded;
         session = { active: false, title: p.title };
-        log.push({ kind: 'session-end', seq: e.seq, eventId: e.id, title: p.title });
+        log.push({ kind: 'session-end', seq: e.seq, eventId: e.id, ts: e.ts, title: p.title });
         break;
       }
       case 'roll.logged': {
@@ -323,6 +339,7 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
           kind: 'roll',
           seq: e.seq,
           eventId: e.id,
+          ts: e.ts,
           actorUserId: e.actor.userId,
           payload: p,
         });
@@ -334,6 +351,7 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
           kind: 'chat',
           seq: e.seq,
           eventId: e.id,
+          ts: e.ts,
           actorUserId: e.actor.userId,
           payload: p,
         });

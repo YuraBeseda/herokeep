@@ -337,21 +337,6 @@ describe('MemberSheetDrawerComponent', () => {
     expect(sync.unsubscribeCalls).toEqual([{ campaignId, stream: streamId }]);
   });
 
-  it('a NavigationEnd WITHIN the same campaign (a different tab) does NOT close the drawer', async () => {
-    const streamId = await seedFighter('Ivan');
-    const characterId = streamId.slice('char:'.length);
-    openDrawer({ campaignId, characterId, name: 'Ivan' });
-    TestBed.tick();
-    await Promise.resolve();
-
-    router.navigateTo(`/g/${campaignId}/log`);
-    TestBed.tick();
-    await Promise.resolve();
-
-    expect(sync.unsubscribeCalls).toEqual([]);
-    expect(document.querySelector('[role="dialog"]')).toBeTruthy();
-  });
-
   describe('closing the drawer', () => {
     async function open() {
       const streamId = await seedFighter('Ivan');

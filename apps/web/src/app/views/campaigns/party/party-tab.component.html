@@ -89,6 +89,7 @@
                 [hpTemp]="ov.temp"
                 [conditions]="conditions(card)"
                 [concentrating]="ov.concentration"
+                [online]="online(card)"
                 [dying]="ov.hp === 0 && ov.hpMax > 0"
                 [openable]="canDrillIn()"
                 (open)="openFromCard(card, cell)"

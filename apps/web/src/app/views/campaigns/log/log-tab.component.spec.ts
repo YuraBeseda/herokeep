@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import { hintOf } from '../../../ui/testing/harness';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
@@ -10,6 +11,8 @@ import type { CampaignState, LogEntry } from '@shared/services/campaigns/campaig
 import { CampaignStore, CampaignStoreNotLeaderError } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
 import { LogTabComponent } from './log-tab.component';
+
+const TS = '2026-09-26T19:50:30.000Z';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -81,6 +84,7 @@ function rollEntry(
     kind: 'roll',
     seq: 1,
     eventId: 'evt-roll-1',
+    ts: TS,
     actorUserId: 'u-player',
     payload: {
       label: 'Strength check',
@@ -101,6 +105,7 @@ function chatEntry(
     kind: 'chat',
     seq: 2,
     eventId: 'evt-chat-1',
+    ts: TS,
     actorUserId: 'u-player',
     payload: { text: 'Hello party', visibility: 'everyone', ...overrides },
   };
@@ -197,8 +202,14 @@ describe('LogTabComponent', () => {
       configure({
         state: mkState({
           log: [
-            { kind: 'session-start', seq: 1, eventId: 'e1', title: 'Session 1: The Beginning' },
-            { kind: 'session-end', seq: 5, eventId: 'e2', title: undefined },
+            {
+              kind: 'session-start',
+              seq: 1,
+              eventId: 'e1',
+              ts: TS,
+              title: 'Session 1: The Beginning',
+            },
+            { kind: 'session-end', seq: 5, eventId: 'e2', ts: TS, title: undefined },
           ],
         }),
       });
@@ -210,7 +221,7 @@ describe('LogTabComponent', () => {
         el.textContent?.trim(),
       );
       expect(dividers[0]).toContain('Session 1: The Beginning');
-      expect(dividers[1]).toBe(campaignsEn.log.session.endedNoTitle);
+      expect(dividers[1]?.startsWith(campaignsEn.log.session.endedNoTitle)).toBe(true);
     });
 
     it('falls back to a truncated raw id when the actor is not (yet) in state.members', async () => {
@@ -681,6 +692,57 @@ describe('LogTabComponent', () => {
 
       expect(compiled.querySelector('.log-tab__badge')).toBeNull();
       expect(compiled.querySelector('.log-tab__entry--dm')).toBeNull();
+    });
+  });
+
+  describe('timestamps (board C09)', () => {
+    const clock = (locale: string): string =>
+      new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(new Date(TS));
+
+    it('shows each roll and chat entry time in the active locale, with the ISO value on a time element', async () => {
+      configure({ state: mkState({ log: [chatEntry(), rollEntry()] }) });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const locale = TestBed.inject(LocaleService).locale();
+
+      const times = Array.from(compiled.querySelectorAll<HTMLTimeElement>('.log-tab__entry time'));
+      expect(times).toHaveLength(2);
+      expect(times.map((t) => t.textContent?.trim())).toEqual([clock(locale), clock(locale)]);
+      expect(times[0].getAttribute('datetime')).toBe(TS);
+    });
+
+    it('follows the locale when it changes', async () => {
+      configure({ state: mkState({ log: [chatEntry()] }) });
+      const locales = TestBed.inject(LocaleService);
+      try {
+        locales.setLocale('uk');
+        const fixture = TestBed.createComponent(LogTabComponent);
+        await fixture.whenStable();
+        expect(
+          (fixture.nativeElement as HTMLElement)
+            .querySelector('.log-tab__entry time')
+            ?.textContent?.trim(),
+        ).toBe(clock('uk'));
+      } finally {
+        // The locale persists to storage: leave it as found for the specs that follow.
+        locales.setLocale('en');
+        TestBed.tick();
+        localStorage.removeItem('hk.locale');
+      }
+    });
+
+    it('adds the time to the session system lines', async () => {
+      configure({
+        state: mkState({
+          log: [{ kind: 'session-start', seq: 1, eventId: 'e1', ts: TS, title: 'Session 12' }],
+        }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const line = (fixture.nativeElement as HTMLElement).querySelector('.log-tab__divider')!;
+      expect(line.textContent).toContain('Session 12');
+      expect(line.querySelector('time')?.getAttribute('datetime')).toBe(TS);
     });
   });
 

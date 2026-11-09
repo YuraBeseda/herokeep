@@ -28,6 +28,7 @@ import {
   openHandoverDialog,
   readJoinCode,
   resumeLinkCharacterByName,
+  selectPartyCard,
   skipLinking,
 } from './campaign-helpers';
 
@@ -113,7 +114,12 @@ test.describe('campaign: pregen handover and real claim', () => {
         await confirmHandoverTo(page, 'Claimant');
         // The DM's own already-open party tab reflects the roster's new ownerId reactively (the
         // handover sequence's own local echo) — the pregen is no longer THEIRS to hand over again.
-        // (The entry leaves the DM's roster, so its leaf goes with it: no hand-over action remains.)
+        // The DM's selection is dropped while the entry changes hands; picking the card again shows
+        // its leaf (it is still on the roster, now owned by the member) with no hand-over action.
+        await selectPartyCard(page, pregenName);
+        await expect(page.locator('app-quick-effects-leaf .hk-leaf__title-text')).toHaveText(
+          pregenName,
+        );
         await expect(page.locator('.qfx__handover')).toHaveCount(0, { timeout: 15_000 });
       });
 

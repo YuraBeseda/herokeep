@@ -69,6 +69,7 @@
                   ? t('log.session.started', { title: entry.title })
                   : t('log.session.startedNoTitle')
               }}
+              · <time [attr.datetime]="entry.ts">{{ clock(entry.ts) }}</time>
             </div>
           }
           @case ('session-end') {
@@ -78,6 +79,7 @@
                   ? t('log.session.ended', { title: entry.title })
                   : t('log.session.endedNoTitle')
               }}
+              · <time [attr.datetime]="entry.ts">{{ clock(entry.ts) }}</time>
             </div>
           }
           @case ('roll') {
@@ -85,6 +87,9 @@
               class="log-tab__entry log-tab__entry--roll"
               [class.log-tab__entry--dm]="entry.payload.visibility !== 'everyone'"
             >
+              <time class="log-tab__entry-time" [attr.datetime]="entry.ts">{{
+                clock(entry.ts)
+              }}</time>
               <span class="log-tab__entry-actor">{{ actorName(entry.actorUserId) }}</span>
               <span class="log-tab__entry-label">{{ entry.payload.label }}</span>
               <hk-dice-result [dice]="diceFor(entry)" [total]="entry.payload.total" />
@@ -113,6 +118,9 @@
               class="log-tab__entry log-tab__entry--chat"
               [class.log-tab__entry--dm]="entry.payload.visibility !== 'everyone'"
             >
+              <time class="log-tab__entry-time" [attr.datetime]="entry.ts">{{
+                clock(entry.ts)
+              }}</time>
               <span class="log-tab__entry-actor">{{ actorName(entry.actorUserId) }}</span>
               <p class="log-tab__entry-text">{{ entry.payload.text }}</p>
               @if (entry.payload.visibility !== 'everyone') {
