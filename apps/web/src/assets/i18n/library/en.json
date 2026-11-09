@@ -64,7 +64,9 @@
     "linkCopied": "Link copied",
     "linkFailed": "Could not copy the link",
     "licenceTitle": "Licence",
-    "licence": "Licence: {licence}"
+    "licence": "Licence: {licence}",
+    "choices": "Choices",
+    "choiceAtLevel": "Level {level}"
   },
   "fact": {
     "level": "Level",

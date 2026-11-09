@@ -64,7 +64,9 @@
     "linkCopied": "Ссылка скопирована",
     "linkFailed": "Не удалось скопировать ссылку",
     "licenceTitle": "Лицензия",
-    "licence": "Лицензия: {licence}"
+    "licence": "Лицензия: {licence}",
+    "choices": "Варианты выбора",
+    "choiceAtLevel": "Уровень {level}"
   },
   "fact": {
     "level": "Уровень",

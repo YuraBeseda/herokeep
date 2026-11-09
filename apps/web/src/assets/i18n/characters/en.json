@@ -820,7 +820,13 @@
     },
     "features": {
       "title": "Features",
-      "sourceHint": "Feature: {name}"
+      "groups": {
+        "feat": "Feats",
+        "option": "Chosen options",
+        "other": "Other features"
+      },
+      "fromSource": "From {source}",
+      "fromSourceLevel": "From {source}, level {level}"
     },
     "more": {
       "packs": "Content packs"

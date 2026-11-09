@@ -12,8 +12,9 @@ import {
 } from '@angular/core';
 import type { ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import type { Entity } from '@hk/protocol';
+import type { Choice, Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { optionsForChoice } from '@shared/services/engine/choice-options';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
@@ -21,6 +22,10 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { EntityFactsComponent } from '../../views/library/detail/entity-facts.component';
 import { HkDrawerComponent } from '../drawer/drawer.component';
+import {
+  HkOptionsChipComponent,
+  type OptionsChipOption,
+} from '../options-chip/options-chip.component';
 import { HkTagChipComponent } from '../tag-chip/tag-chip.component';
 
 type Opener = ElementRef<HTMLElement> | HTMLElement | null | undefined;
@@ -41,6 +46,19 @@ function grantedFeatureIds(entity: Entity): readonly string[] {
   }
   return ids;
 }
+
+/** A choice the entity (or, for a class, one of its level rows) offers, with its options. */
+interface ChoiceRow {
+  readonly id: string;
+  readonly prompt: string;
+  /** The class level the choice is made at; absent for an entity-level choice. */
+  readonly level?: number;
+  readonly count: number;
+  readonly options: readonly OptionsChipOption[];
+}
+
+/** A choice's popover lists this many options; the chip's count is the whole set. */
+const POPOVER_OPTION_LIMIT = 24;
 
 /**
  * `hk-description-drawer` — the one place every pack description opens (design-system
@@ -64,6 +82,7 @@ function grantedFeatureIds(entity: Entity): readonly string[] {
     RouterLink,
     HkDrawerComponent,
     HkTagChipComponent,
+    HkOptionsChipComponent,
     EntityFactsComponent,
   ],
   providers: [provideTranslocoScope('library')],
@@ -96,6 +115,51 @@ export class HkDescriptionDrawerComponent {
   });
   protected readonly resolved = computed(() => this.engineFacade.index().get(this.entity()));
   protected readonly name = computed(() => this.engineFacade.localizer().name(this.entity()));
+
+  /** The library root, keeping the hero context (the chips' "See all in library" link). */
+  protected readonly libraryRootHref = computed(() =>
+    this.router.serializeUrl(
+      this.router.createUrlTree(['/library'], { queryParams: this.libraryQuery() }),
+    ),
+  );
+
+  /**
+   * The choices the entry offers — a class's level-row choices, or an entity's own — each with
+   * the options chip, counted by the same candidate evaluation the wizard pickers use. A choice with
+   * no option list (ability scores, free text) is not listed.
+   */
+  protected readonly choices = computed<readonly ChoiceRow[]>(() => {
+    const entity = this.resolved();
+    if (!entity) return [];
+    const index = this.engineFacade.index();
+    const localizer = this.engineFacade.localizer();
+    const href = (id: string): string =>
+      this.router.serializeUrl(
+        this.router.createUrlTree(['/library', id], { queryParams: this.libraryQuery() }),
+      );
+    const rows: ChoiceRow[] = [];
+    const add = (choice: Choice, level?: number): void => {
+      const offer = optionsForChoice(choice, index, {
+        ownerId: entity.id,
+        localizer,
+        href,
+        limit: POPOVER_OPTION_LIMIT,
+      });
+      if (offer.count === 0) return;
+      rows.push({
+        id: choice.id,
+        prompt: localizer.choicePrompt(choice.id).text || choice.prompt,
+        level,
+        count: offer.count,
+        options: offer.options,
+      });
+    };
+    for (const choice of entity.choices) add(choice);
+    if (entity.type === 'class') {
+      for (const row of entity.levels) for (const choice of row.choices) add(choice, row.level);
+    }
+    return rows;
+  });
 
   private readonly sections = computed<readonly Section[]>(() => {
     const entity = this.resolved();

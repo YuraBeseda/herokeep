@@ -36,6 +36,8 @@ export class HkFeatureRowComponent {
   readonly levelHint = input<string | null>(null);
   /** Translated source name for species / background / feat / chosen rows. */
   readonly source = input<string | null>(null);
+  /** Translated name of the resource the feature spends (a chip beside the badge or source chip). */
+  readonly resource = input<string | null>(null);
   /** A row from an inactive multiclass level, dimmed to 60%. */
   readonly dimmed = input(false);
   /** `null` follows the saved Settings preference; a caller can pin a density (the phone sheet pins comfortable). */

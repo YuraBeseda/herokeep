@@ -820,7 +820,13 @@
     },
     "features": {
       "title": "Вміння",
-      "sourceHint": "Вміння: {name}"
+      "groups": {
+        "feat": "Риси",
+        "option": "Обрані варіанти",
+        "other": "Інші вміння"
+      },
+      "fromSource": "Джерело: {source}",
+      "fromSourceLevel": "Джерело: {source}, рівень {level}"
     },
     "more": {
       "packs": "Пакети вмісту"

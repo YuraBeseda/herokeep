@@ -1,14 +1,8 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import {
-  makeEntityId,
-  parseEntityId,
-  type Choice,
-  type ClassEntity,
-  type EntityQuery,
-  type SubclassEntity,
-} from '@hk/protocol';
+import { makeEntityId, parseEntityId, type ClassEntity, type SubclassEntity } from '@hk/protocol';
+import { optionsForChoice } from '@shared/services/engine/choice-options';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { sheetNames } from '../../../characters/sheet/play/play-names';
@@ -253,21 +247,6 @@ export class ClassEntryComponent {
       });
   });
 
-  // The options a choice offers, from its own pick data: fixed ids, one entity query or the union
-  // of several. Other pick forms (ability scores) have no list.
-  private optionIds(choice: Choice): string[] {
-    const index = this.engineFacade.index();
-    const pick = choice.pick;
-    if ('static' in pick) return pick.static.filter((id) => index.has(id));
-    const queries: EntityQuery[] =
-      'query' in pick ? [pick.query] : 'queries' in pick ? pick.queries : [];
-    const ids: string[] = [];
-    for (const query of queries) {
-      for (const entity of index.query(query)) if (!ids.includes(entity.id)) ids.push(entity.id);
-    }
-    return ids;
-  }
-
   /** The library root, with the hero context when there is one (the chips' "See all" link). */
   protected readonly libraryRootHref = computed(() => {
     const hero = this.heroId();
@@ -302,18 +281,19 @@ export class ClassEntryComponent {
         name,
       }));
       const choices = (row?.choices ?? []).flatMap((choice): ChoiceChip[] => {
-        const ids = this.optionIds(choice);
-        if (ids.length === 0) return [];
+        const offer = optionsForChoice(choice, index, {
+          ownerId: entity.id,
+          localizer,
+          href: (id) => this.libraryHref(id),
+          limit: POPOVER_OPTION_LIMIT,
+        });
+        if (offer.count === 0) return [];
         return [
           {
             id: choice.id,
             prompt: localizer.choicePrompt(choice.id).text || choice.prompt,
-            count: ids.length,
-            options: ids.slice(0, POPOVER_OPTION_LIMIT).map((id) => ({
-              id,
-              name: localizer.name(id),
-              href: this.libraryHref(id),
-            })),
+            count: offer.count,
+            options: offer.options,
           },
         ];
       });

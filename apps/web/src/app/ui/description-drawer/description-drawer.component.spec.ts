@@ -5,6 +5,7 @@ import { Component, inject, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
+import { createContentIndex } from '@hk/engine';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -131,6 +132,25 @@ describe('HkDescriptionDrawerComponent', () => {
     expect(decodeURIComponent(link.getAttribute('href')!)).toBe(
       '/library/srd-5e-2024:spell/fireball',
     );
+  });
+
+  it('lists a class\x27s choices with an options chip counted like the wizard picker', async () => {
+    const { el } = await render('srd-5e-2024:class/paladin');
+    const rows = el.querySelectorAll('.hk-description__choice');
+    expect(rows.length).toBeGreaterThan(0);
+    const mastery = Array.from(rows).find((row) => row.textContent?.includes('Weapon Masteries'))!;
+    const expected = createContentIndex([corePack])
+      .byType('item')
+      .filter((item) => item.type === 'item' && item.weapon?.mastery !== undefined).length;
+    expect(mastery.querySelector('.hk-options-chip__count')?.textContent?.trim()).toBe(
+      String(expected),
+    );
+    expect(mastery.textContent).toContain('Level 1');
+  });
+
+  it('shows no choices section for an entry that offers none', async () => {
+    const { el } = await render('srd-5e-2024:spell/fireball');
+    expect(el.querySelector('.hk-description__choice')).toBeNull();
   });
 
   it('projects the primary action into the drawer footer', async () => {

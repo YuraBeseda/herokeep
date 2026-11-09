@@ -64,7 +64,9 @@
     "linkCopied": "Посилання скопійовано",
     "linkFailed": "Не вдалося скопіювати посилання",
     "licenceTitle": "Ліцензія",
-    "licence": "Ліцензія: {licence}"
+    "licence": "Ліцензія: {licence}",
+    "choices": "Варіанти вибору",
+    "choiceAtLevel": "Рівень {level}"
   },
   "fact": {
     "level": "Рівень",

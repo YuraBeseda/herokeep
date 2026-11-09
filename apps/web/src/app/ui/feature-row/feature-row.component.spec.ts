@@ -35,6 +35,17 @@ describe('HkFeatureRowComponent', () => {
     expect(el.querySelector('hk-tag-chip')!.textContent?.trim()).toBe('Dwarf');
   });
 
+  it('shows a linked-resource chip next to the level badge', async () => {
+    const { el } = await mount(HkFeatureRowComponent, {
+      ...base,
+      level: 2,
+      levelHint: 'Gained at level 2',
+      resource: '(Action Surge)',
+    });
+    expect(el.querySelector('.hk-lvlbadge')).not.toBeNull();
+    expect(el.querySelector('.hk-feat__resource')!.textContent?.trim()).toBe('(Action Surge)');
+  });
+
   it('has a details button named after the feature that emits details', async () => {
     const { fixture, el } = await mount(HkFeatureRowComponent, base);
     const button = el.querySelector<HTMLButtonElement>('button')!;

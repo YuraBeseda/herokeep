@@ -820,7 +820,13 @@
     },
     "features": {
       "title": "Умения",
-      "sourceHint": "Умение: {name}"
+      "groups": {
+        "feat": "Черты",
+        "option": "Выбранные варианты",
+        "other": "Прочие умения"
+      },
+      "fromSource": "Источник: {source}",
+      "fromSourceLevel": "Источник: {source}, уровень {level}"
     },
     "more": {
       "packs": "Пакеты контента"

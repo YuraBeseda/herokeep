@@ -1,23 +1,63 @@
 <ng-container *transloco="let t; read: 'characters'">
   <hk-leaf [title]="t('sheet.features.title')" [icon]="'ui:features'" [phone]="phone()">
-    @if (features().length > 0) {
-      <ul class="features">
-        @for (feature of features(); track feature.id) {
-          <li>
-            <hk-feature-row
-              [name]="feature.name"
-              [icon]="feature.icon"
-              [sourceHint]="t('sheet.features.sourceHint', { name: feature.name })"
-              [source]="
-                feature.resource
-                  ? t('sheet.actions.resourceHint', { resource: feature.resource })
-                  : null
-              "
-              (details)="feature.hasEntity ? openDetails(feature.source) : null"
-            />
-          </li>
+    @if (groups().length > 0) {
+      <div class="features">
+        @for (group of groups(); track group.key) {
+          <section class="features__group" [attr.aria-labelledby]="'features-group-' + $index">
+            <h3 class="features__heading" [id]="'features-group-' + $index">
+              @switch (group.kind) {
+                @case ('feat') {
+                  {{ t('sheet.features.groups.feat') }}
+                }
+                @case ('option') {
+                  {{ t('sheet.features.groups.option') }}
+                }
+                @case ('other') {
+                  {{ t('sheet.features.groups.other') }}
+                }
+                @default {
+                  {{ group.headingName }}
+                }
+              }
+            </h3>
+            <ul class="features__list">
+              @for (feature of group.features; track feature.id) {
+                <li>
+                  <hk-feature-row
+                    [name]="feature.name"
+                    [icon]="feature.icon"
+                    [sourceHint]="
+                      feature.sourceName === null
+                        ? feature.name
+                        : feature.origin?.level
+                          ? t('sheet.features.fromSourceLevel', {
+                              source: feature.sourceName,
+                              level: feature.origin?.level,
+                            })
+                          : t('sheet.features.fromSource', { source: feature.sourceName })
+                    "
+                    [level]="feature.origin?.level ?? null"
+                    [levelHint]="
+                      feature.origin?.level && feature.sourceName !== null
+                        ? t('sheet.features.fromSourceLevel', {
+                            source: feature.sourceName,
+                            level: feature.origin?.level,
+                          })
+                        : null
+                    "
+                    [resource]="
+                      feature.resource
+                        ? t('sheet.actions.resourceHint', { resource: feature.resource })
+                        : null
+                    "
+                    (details)="feature.hasEntity ? openDetails(feature.source) : null"
+                  />
+                </li>
+              }
+            </ul>
+          </section>
         }
-      </ul>
+      </div>
     } @else {
       <p class="features__empty">{{ t('sheet.actions.empty') }}</p>
     }

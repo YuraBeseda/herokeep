@@ -5,6 +5,22 @@
 
 .features {
   display: grid;
+  gap: var(--space-4);
+}
+
+.features__heading {
+  margin: 0 0 var(--space-2);
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.features__list {
+  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   gap: 2px var(--space-4);
   margin: 0;

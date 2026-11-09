@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
@@ -57,6 +58,7 @@ function configure(): void {
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
+      provideRouter([]),
       {
         provide: PackStore,
         useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
@@ -234,5 +236,24 @@ describe('EquipmentStepComponent', () => {
     equip.dispatchEvent(new Event('click', { bubbles: true }));
     await fixture.whenStable();
     expect(equip.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('a bag row\x27s details button opens the item\x27s full description in the drawer', async () => {
+    createDraft();
+    const fixture = TestBed.createComponent(EquipmentStepComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const card = await searchAndFindCard(fixture, compiled, 'Chain Mail', 'Chain Mail');
+    card.querySelector<HTMLButtonElement>('.entity-picker__toggle')!.click();
+    await fixture.whenStable();
+
+    expect(compiled.querySelector('.equipment-step__entry hk-description-drawer')).toBeNull();
+    const details = compiled.querySelector<HTMLButtonElement>('.equipment-step__details')!;
+    expect(
+      details.getAttribute('aria-label') ?? details.getAttribute('aria-labelledby'),
+    ).toBeTruthy();
+    details.click();
+    await fixture.whenStable();
+    expect(compiled.querySelector('hk-description-drawer')).not.toBeNull();
   });
 });

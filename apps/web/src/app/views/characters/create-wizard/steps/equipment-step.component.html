@@ -41,10 +41,27 @@
       <ul class="equipment-step__inventory">
         @for (entry of inventory(); track entry.instanceId) {
           <li class="equipment-step__entry" role="group" [attr.aria-label]="entryName(entry)">
-            <span class="equipment-step__entry-name" [hkTooltip]="entryName(entry)">
+            <span
+              class="equipment-step__entry-name"
+              [id]="'equipment-name-' + $index"
+              [hkTooltip]="entryName(entry)"
+            >
               {{ entryName(entry) }}
             </span>
             <hk-tag-chip class="equipment-step__entry-qty" [label]="'× ' + entry.qty" />
+            @if (entry.itemId && entry.resolved) {
+              <button
+                hk-icon-button
+                class="equipment-step__details"
+                [icon]="'details'"
+                [hint]="'shell.icon.details'"
+                [variant]="'ghost'"
+                [size]="'s'"
+                [id]="'equipment-details-' + $index"
+                [attr.aria-labelledby]="'equipment-details-' + $index + ' equipment-name-' + $index"
+                (click)="openDetails($event, entry.itemId)"
+              ></button>
+            }
             @if (isEquipEligible(entry.itemId)) {
               <hk-toggle
                 class="equipment-step__equip-toggle"
@@ -76,4 +93,8 @@
       }
     </ul>
   </section>
+
+  @if (detailsId(); as id) {
+    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
+  }
 </div>

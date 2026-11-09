@@ -19,6 +19,9 @@
 } @else if (source(); as label) {
   <hk-tag-chip [label]="label" />
 }
+@if (resource(); as label) {
+  <hk-tag-chip class="hk-feat__resource" [label]="label" />
+}
 <button
   hk-icon-button
   [icon]="'details'"

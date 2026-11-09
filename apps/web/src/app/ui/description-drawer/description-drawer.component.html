@@ -21,6 +21,28 @@
           </section>
         }
       </div>
+      @if (choices().length > 0) {
+        <section class="hk-description__choices" [attr.aria-label]="t('detail.choices')">
+          <h3 class="hk-description__feature">{{ t('detail.choices') }}</h3>
+          <ul class="hk-description__choice-list">
+            @for (choice of choices(); track choice.id) {
+              <li class="hk-description__choice">
+                <span class="hk-description__choice-prompt">{{ choice.prompt }}</span>
+                @if (choice.level !== undefined) {
+                  <span class="hk-description__choice-level">{{
+                    t('detail.choiceAtLevel', { level: choice.level })
+                  }}</span>
+                }
+                <hk-options-chip
+                  [count]="choice.count"
+                  [options]="choice.options"
+                  [seeAllHref]="libraryRootHref()"
+                />
+              </li>
+            }
+          </ul>
+        </section>
+      }
       <a
         class="hk-description__open"
         [routerLink]="['/library', current.id]"

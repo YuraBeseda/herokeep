@@ -64,3 +64,37 @@
 .hk-description__not-found {
   margin: 0;
 }
+
+.hk-description__choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hk-description__choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 36px;
+}
+
+.hk-description__choice-prompt {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.hk-description__choice-level {
+  flex: none;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+@media (pointer: coarse) {
+  .hk-description__choice {
+    min-block-size: 44px;
+  }
+}
