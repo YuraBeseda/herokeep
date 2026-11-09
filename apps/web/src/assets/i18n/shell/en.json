@@ -301,7 +301,8 @@
       "count": "Step {{current}} of {{total}}",
       "done": "Done",
       "label": "Steps",
-      "position": "Step {{current}} of {{total}} · {{name}}"
+      "position": "Step {{current}} of {{total}} · {{name}}",
+      "unreachable": "Finish the steps before it"
     },
     "picker": {
       "choose": "Choose",

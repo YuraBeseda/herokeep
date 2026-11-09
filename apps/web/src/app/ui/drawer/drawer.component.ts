@@ -63,13 +63,16 @@ export class HkDrawerComponent {
           // default) or it is still open above us.
           if (this.dialogOpenAbove()) return;
           event.preventDefault();
+          event.stopPropagation();
           this.dismiss(true);
         };
         document.addEventListener('pointerdown', onPointerDown, true);
-        document.addEventListener('keydown', onKeyDown);
+        // Capture phase: a drawer hosted inside a dialog (the add-item picker) must see Escape
+        // before the dialog's own overlay handler does, and stop it there.
+        document.addEventListener('keydown', onKeyDown, true);
         onCleanup(() => {
           document.removeEventListener('pointerdown', onPointerDown, true);
-          document.removeEventListener('keydown', onKeyDown);
+          document.removeEventListener('keydown', onKeyDown, true);
         });
       });
     });
@@ -90,14 +93,22 @@ export class HkDrawerComponent {
     // Inside the panel is inside; the scrim (also in the host) is the outside under the pointer.
     if (this.host.nativeElement.querySelector('.hk-drawer__panel')?.contains(target)) return;
     // A dialog or sheet stacked above the drawer lives in the CDK overlay container: not outside.
-    if (target instanceof Element && target.closest('.cdk-overlay-container')) return;
+    // The overlay that HOSTS the drawer (an add-item dialog) is not above it: pressing there is.
+    if (target instanceof Element && target.closest('.cdk-overlay-container')) {
+      const pane = target.closest('.cdk-overlay-pane');
+      const hostedInOverlay = this.host.nativeElement.closest('.cdk-overlay-container') !== null;
+      if (pane ? !pane.contains(this.host.nativeElement) : !hostedInOverlay) return;
+    }
     const opener = this.openerElement();
     if (opener?.contains(target)) return;
     this.dismiss(false);
   }
 
   private dialogOpenAbove(): boolean {
-    return document.querySelector('.cdk-overlay-container hk-dialog') !== null;
+    // Only a dialog stacked above the drawer counts, not the one that hosts it.
+    return Array.from(document.querySelectorAll('.cdk-overlay-container hk-dialog')).some(
+      (dialog) => !dialog.contains(this.host.nativeElement),
+    );
   }
 
   private openerElement(): HTMLElement | null {

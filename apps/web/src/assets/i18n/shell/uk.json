@@ -301,7 +301,8 @@
       "count": "Крок {{current}} з {{total}}",
       "done": "Готово",
       "label": "Кроки",
-      "position": "Крок {{current}} з {{total}} · {{name}}"
+      "position": "Крок {{current}} з {{total}} · {{name}}",
+      "unreachable": "Спершу завершіть попередні кроки"
     },
     "picker": {
       "choose": "Обрати",

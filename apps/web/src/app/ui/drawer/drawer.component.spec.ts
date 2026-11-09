@@ -18,6 +18,25 @@ class InnerDialog {
 @Component({
   imports: [HkDrawerComponent],
   template: `
+    <button type="button" class="in-dialog-opener" #opener (click)="open.set(true)">
+      {{ openerText }}
+    </button>
+    <hk-drawer [(open)]="open" [heading]="heading" [opener]="openerRef()">
+      <p class="body">{{ bodyText }}</p>
+    </hk-drawer>
+  `,
+})
+class DrawerInDialog {
+  readonly open = signal(false);
+  readonly openerRef = viewChild<ElementRef<HTMLElement>>('opener');
+  protected readonly openerText = 'Details';
+  protected readonly heading = 'Longsword';
+  protected readonly bodyText = 'A blade';
+}
+
+@Component({
+  imports: [HkDrawerComponent],
+  template: `
     <button type="button" class="opener" #opener (click)="open.set(!open())">
       {{ openerText }}
     </button>
@@ -227,6 +246,57 @@ describe('HkDrawerComponent', () => {
       press(document.querySelector('.inner')!);
       await fixture.whenStable();
       expect(panel(el)).not.toBeNull();
+    });
+  });
+
+  describe('hosted inside an open dialog (the add-item picker)', () => {
+    afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((e) => e.remove()));
+
+    const dialog = () => document.querySelector('.cdk-overlay-container hk-dialog');
+    const drawerPanel = () => document.querySelector('.cdk-overlay-container .hk-drawer__panel');
+
+    async function openDrawerInDialog() {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        providers: [provideShellTransloco(), provideRouter([{ path: '', component: Page }])],
+      }).compileComponents();
+      await TestBed.inject(Router).navigateByUrl('/');
+      const fixture = TestBed.createComponent(Host);
+      await fixture.whenStable();
+      TestBed.inject(DialogService).open(DrawerInDialog);
+      await fixture.whenStable();
+      press(document.querySelector('.in-dialog-opener')!);
+      await fixture.whenStable();
+      expect(drawerPanel()).not.toBeNull();
+      return fixture;
+    }
+
+    it('a press on its scrim closes the drawer and leaves the dialog open', async () => {
+      const fixture = await openDrawerInDialog();
+      press(document.querySelector('.cdk-overlay-container .hk-drawer__scrim')!);
+      await fixture.whenStable();
+      expect(drawerPanel()).toBeNull();
+      expect(dialog()).not.toBeNull();
+    });
+
+    it('Escape closes the drawer only, and a second Escape closes the dialog', async () => {
+      const fixture = await openDrawerInDialog();
+      key(document.activeElement ?? document.body, 'Escape');
+      await fixture.whenStable();
+      expect(drawerPanel()).toBeNull();
+      expect(dialog()).not.toBeNull();
+
+      key(document.activeElement ?? document.body, 'Escape');
+      await fixture.whenStable();
+      expect(dialog()).toBeNull();
+    });
+
+    it('a press inside the dialog but outside the drawer closes the drawer', async () => {
+      const fixture = await openDrawerInDialog();
+      press(document.querySelector('.cdk-overlay-container hk-dialog')!);
+      await fixture.whenStable();
+      expect(drawerPanel()).toBeNull();
+      expect(dialog()).not.toBeNull();
     });
   });
 });

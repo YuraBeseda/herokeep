@@ -301,7 +301,8 @@
       "count": "Шаг {{current}} из {{total}}",
       "done": "Готово",
       "label": "Шаги",
-      "position": "Шаг {{current}} из {{total}} · {{name}}"
+      "position": "Шаг {{current}} из {{total}} · {{name}}",
+      "unreachable": "Сначала завершите предыдущие шаги"
     },
     "picker": {
       "choose": "Выбрать",

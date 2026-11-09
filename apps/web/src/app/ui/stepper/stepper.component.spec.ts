@@ -38,15 +38,20 @@ describe('HkStepperComponent', () => {
       expect(el.querySelector('.hk-stepper__summary')!.textContent).toBe('Aldric');
     });
 
-    it('shows the hint of a locked group on hover and prints the reason of an invalid step', async () => {
+    it('explains an unreachable or invalid step only through its hint, never as inline text', async () => {
       const { el } = await mount(HkStepperComponent, { steps: STEPS, current: 'species' });
-      const locked = el.querySelectorAll<HTMLElement>('.hk-stepper__step')[3];
-      locked.dispatchEvent(new Event('focus'));
-      expect(document.body.querySelector('[role="tooltip"]')!.textContent).toContain(
-        'Choose a class first',
-      );
-      locked.dispatchEvent(new Event('blur'));
-      expect(el.querySelector('.hk-stepper__invalid')!.textContent).toBe('Needs 6 scores');
+      const steps = Array.from(el.querySelectorAll<HTMLElement>('.hk-stepper__step'));
+      const hint = (step: HTMLElement): string | null => {
+        step.dispatchEvent(new Event('focus'));
+        const text = document.body.querySelector('[role="tooltip"]')?.textContent ?? null;
+        step.dispatchEvent(new Event('blur'));
+        return text;
+      };
+      expect(hint(steps[3])).toContain('Choose a class first'); // locked group
+      expect(hint(steps[4])).toContain('Needs 6 scores'); // invalid
+      expect(hint(steps[2])).toContain('Finish the steps before it'); // to do
+      expect(hint(steps[0])).toBeNull(); // done: nothing to explain
+      expect(el.textContent).not.toContain('Needs 6 scores');
     });
 
     it('reports a click on a done, current or invalid step, never on a to-do or locked one', async () => {

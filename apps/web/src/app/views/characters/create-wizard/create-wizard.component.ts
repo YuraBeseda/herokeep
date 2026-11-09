@@ -443,7 +443,11 @@ export class CreateWizardComponent {
       const id = this.flow.currentId();
       if (id) untracked(() => this.writeStepToUrl(id));
     });
-    this.flow.restore(this.route.snapshot.queryParamMap.get('step'));
+    // The draft lives in memory, so a deep link past the name step (a fresh load of `?step=review`
+    // or a picker step) has nothing to show: such a link opens the name step.
+    if (this.state.name().trim().length > 0) {
+      this.flow.restore(this.route.snapshot.queryParamMap.get('step'));
+    }
     inject(DestroyRef).onDestroy(() => {
       this.strap.clear();
       this.topBar.clear();

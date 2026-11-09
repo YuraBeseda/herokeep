@@ -1342,13 +1342,18 @@ describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
     expect(TestBed.inject(Location).path()).toContain('step=name');
   });
 
-  it('reopens a deep-linked step', async () => {
-    TestBed.overrideProvider(ActivatedRoute, {
-      useValue: { snapshot: { queryParamMap: convertToParamMap({ step: 'review' }) } },
-    });
-    const fixture = TestBed.createComponent(CreateWizardComponent);
-    await fixture.whenStable();
-    expect(currentLabel(fixture)).toBe('Review');
+  it('opens the name step for a deep link the in-memory draft cannot back (review, a picker step)', async () => {
+    for (const step of ['review', 'species']) {
+      TestBed.resetTestingModule();
+      configure();
+      TestBed.overrideProvider(ActivatedRoute, {
+        useValue: { snapshot: { queryParamMap: convertToParamMap({ step }) } },
+      });
+      const fixture = TestBed.createComponent(CreateWizardComponent);
+      await fixture.whenStable();
+      expect(currentLabel(fixture), step).toBe('Name');
+      fixture.destroy();
+    }
   });
 
   it('sets the phone top bar title for the screen', async () => {
