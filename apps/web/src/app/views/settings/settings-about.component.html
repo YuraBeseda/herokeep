@@ -18,10 +18,19 @@
       </dd>
       <dt>{{ t('about.fonts') }}</dt>
       <dd class="settings__fonts-credit">{{ t('about.fonts-credit') }}</dd>
-      <dt>{{ t('about.built') }}</dt>
+      <dt>{{ t('about.released') }}</dt>
       <dd class="settings__about-built">
         <span>{{ t('about.built-value', { date: releaseDate() }) }}</span>
         <hk-tag-chip [label]="installed ? t('about.installed') : t('about.in-browser')" />
+        <button
+          hk-button
+          type="button"
+          class="settings__release-notes"
+          [variant]="'ghost'"
+          [disabledReason]="t('about.release-notes-reason')"
+        >
+          {{ t('about.release-notes') }}
+        </button>
       </dd>
     </dl>
   </hk-leaf>

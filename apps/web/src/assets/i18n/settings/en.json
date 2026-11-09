@@ -49,7 +49,12 @@
       "limit": "Limit",
       "option-mb": "{value} MB",
       "option-gb": "{value} GB",
-      "usage": "{used} MB used of {quota} MB device storage"
+      "in-use": "{used} in use"
+    },
+    "breakdown": {
+      "images": "Cached images",
+      "packs": "Packs",
+      "other": "Other"
     }
   },
   "packs": {
@@ -112,7 +117,9 @@
     "loading": "Loading devices…",
     "error": "Couldn't load your devices.",
     "retry": "Try again",
-    "empty": "No other devices yet."
+    "empty": "No other devices yet.",
+    "revoke-self": "This is the device you are using; use Log out instead",
+    "revoke-unknown": "This older session cannot be revoked on its own; use Log out everywhere"
   },
   "quota": {
     "title": "Account storage",
@@ -143,13 +150,15 @@
     "rules-data": "Rules data",
     "icons": "Icons",
     "fonts": "Fonts",
-    "built": "Built",
+    "released": "Released",
     "built-value": "{date}",
     "installed": "installed as an app",
     "in-browser": "running in the browser",
     "open5e-credit": "Structured SRD data derived from the Open5e project (https://open5e.com).",
     "icons-credit": "Icons made by {authors}. Available on https://game-icons.net (CC BY 3.0).",
-    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License."
+    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License.",
+    "release-notes": "Release notes",
+    "release-notes-reason": "Release notes arrive with the first public release"
   },
   "help": {
     "title": "About these settings",

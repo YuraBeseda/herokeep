@@ -147,7 +147,7 @@ describe('HkTopBarComponent', () => {
       press(folio(el));
       await settle();
       const panel = drawer(el)!;
-      expect(panel.querySelector('a[href="/about"]')).not.toBeNull();
+      expect(panel.querySelector('a[href="/settings#about"]')).not.toBeNull();
       const account = panel.querySelector('a.hk-drawer__account')!;
       expect(account.getAttribute('href')).toBe('/settings');
       expect(account.textContent).toContain('alice');

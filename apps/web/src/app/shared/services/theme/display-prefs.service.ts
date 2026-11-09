@@ -1,3 +1,4 @@
+import { readStored, writeStored } from '../../helpers/safe-storage';
 import { effect, Injectable, signal, type Signal } from '@angular/core';
 
 /** How tall the sheet's list rows are: 28 px (compact) or 36 px (comfortable). */
@@ -7,38 +8,33 @@ const DENSITY_KEY = 'hk.density';
 const MOTION_KEY = 'hk.motion';
 const DENSITIES: readonly Density[] = ['compact', 'comfortable'];
 
-function read(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* storage unavailable (private browsing, disabled storage, quota, etc.) */
-  }
-}
-
 function readDensity(): Density {
-  const stored = read(DENSITY_KEY);
+  const stored = readStored(DENSITY_KEY);
   return DENSITIES.find((d) => d === stored) ?? 'compact';
 }
 
-/** Motion is on unless the person switched it off; anything else stored is ignored. */
+/** Whether the system asks for reduced motion (`prefers-reduced-motion: reduce`). */
+function systemWantsReducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Motion follows the person's explicit choice when one is stored; with none, it follows the system
+ * (ruling R60): off for someone whose system asks for reduced motion, on otherwise.
+ */
 function readMotion(): boolean {
-  return read(MOTION_KEY) !== 'off';
+  const stored = readStored(MOTION_KEY);
+  if (stored === 'on') return true;
+  if (stored === 'off') return false;
+  return !systemWantsReducedMotion();
 }
 
 /**
  * The two Appearance choices that sit beside the theme (Settings, board ST01): row density and
  * motion. Both are per-device conveniences kept in `localStorage` (like the theme and the
  * language) and stamped on `<html>` as `data-density` / `data-motion`; a stylesheet rule turns
- * motion off when `data-motion="off"`. The system's own reduced-motion request is honoured by the
- * components' media queries whatever this says.
+ * motion off when `data-motion="off"`. With no stored motion choice the default follows the
+ * system's reduced-motion request.
  */
 @Injectable({ providedIn: 'root' })
 export class DisplayPrefsService {
@@ -49,21 +45,20 @@ export class DisplayPrefsService {
   /** Whether animation is allowed (`true`) or switched off (`false`). */
   readonly motion: Signal<boolean> = this.motionState.asReadonly();
 
-  // I/O boundary: stamps the choices onto <html> and persists them whenever they change.
-  private readonly stampAndPersist = effect(() => {
-    const density = this.densityState();
-    const motion = this.motionState() ? 'on' : 'off';
-    document.documentElement.dataset['density'] = density;
-    document.documentElement.dataset['motion'] = motion;
-    write(DENSITY_KEY, density);
-    write(MOTION_KEY, motion);
+  // I/O boundary: stamps the choices onto <html>. Nothing is persisted here: a value is stored
+  // only when the person changes it (below), so an untouched default keeps following the system.
+  private readonly stamp = effect(() => {
+    document.documentElement.dataset['density'] = this.densityState();
+    document.documentElement.dataset['motion'] = this.motionState() ? 'on' : 'off';
   });
 
   setDensity(density: Density): void {
     this.densityState.set(density);
+    writeStored(DENSITY_KEY, density);
   }
 
   setMotion(on: boolean): void {
     this.motionState.set(on);
+    writeStored(MOTION_KEY, on ? 'on' : 'off');
   }
 }

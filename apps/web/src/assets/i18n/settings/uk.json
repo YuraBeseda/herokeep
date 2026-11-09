@@ -49,7 +49,12 @@
       "limit": "Межа",
       "option-mb": "{value} МБ",
       "option-gb": "{value} ГБ",
-      "usage": "Використано {used} МБ із {quota} МБ сховища пристрою"
+      "in-use": "Зайнято {used}"
+    },
+    "breakdown": {
+      "images": "Кешовані зображення",
+      "packs": "Пакети",
+      "other": "Інше"
     }
   },
   "packs": {
@@ -112,7 +117,9 @@
     "loading": "Завантаження пристроїв…",
     "error": "Не вдалося завантажити список пристроїв.",
     "retry": "Повторити",
-    "empty": "Інших пристроїв поки немає."
+    "empty": "Інших пристроїв поки немає.",
+    "revoke-self": "Це пристрій, яким ви користуєтеся; скористайтеся «Вийти»",
+    "revoke-unknown": "Цей старий сеанс не можна відкликати окремо; скористайтеся «Вийти всюди»"
   },
   "quota": {
     "title": "Сховище облікового запису",
@@ -143,13 +150,15 @@
     "rules-data": "Дані правил",
     "icons": "Іконки",
     "fonts": "Шрифти",
-    "built": "Збірка",
+    "released": "Випуск",
     "built-value": "{date}",
     "installed": "встановлено як застосунок",
     "in-browser": "відкрито в браузері",
     "open5e-credit": "Structured SRD data derived from the Open5e project (https://open5e.com).",
     "icons-credit": "Icons made by {authors}. Available on https://game-icons.net (CC BY 3.0).",
-    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License."
+    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License.",
+    "release-notes": "Нотатки до випуску",
+    "release-notes-reason": "Нотатки до випуску з'являться з першим публічним випуском"
   },
   "help": {
     "title": "Про ці налаштування",

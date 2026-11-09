@@ -14,6 +14,7 @@
             [fragment]="section.id"
             [attr.data-section]="section.id"
             [attr.aria-current]="activeSection() === section.id ? 'true' : null"
+            (click)="onIndexClick(section.id)"
           >
             <hk-icon [icon]="section.icon" />{{ t('index.' + section.id) }}
           </a>
@@ -104,7 +105,20 @@
                       }}
                     </span>
                   </div>
-                  @if (canRevoke(device)) {
+                  @if (!canRevoke(device)) {
+                    <button
+                      hk-button
+                      [variant]="'ghost'"
+                      type="button"
+                      class="settings__devices-revoke-blocked"
+                      [attr.aria-label]="t('devices.revoke-named', { name: device.deviceLabel })"
+                      [disabledReason]="
+                        device.current ? t('devices.revoke-self') : t('devices.revoke-unknown')
+                      "
+                    >
+                      {{ t('devices.revoke') }}
+                    </button>
+                  } @else {
                     <button
                       hk-button
                       [variant]="'ghost'"
@@ -234,8 +248,22 @@
               [attr.aria-label]="t('storage.meter')"
               [attr.aria-valuenow]="storagePercent()"
             >
-              <span class="settings__bar-fill" [style.inline-size.%]="storagePercent()"></span>
+              @for (part of storageParts(); track part.id) {
+                <span
+                  class="settings__bar-fill settings__bar-fill--{{ part.id }}"
+                  [attr.data-segment]="part.id"
+                  [style.inline-size.%]="part.percent"
+                ></span>
+              }
             </div>
+            <dl class="settings__storage-breakdown">
+              @for (part of storageParts(); track part.id) {
+                <div [attr.data-segment]="part.id">
+                  <dt>{{ t('storage.breakdown.' + part.id) }}</dt>
+                  <dd>{{ t(unitKey(part.size), { amount: part.size.amount }) }}</dd>
+                </div>
+              }
+            </dl>
             <p class="settings__storage-usage">
               {{
                 t('storage.usage', {
@@ -280,9 +308,9 @@
         <div class="settings__row-text">
           <b>{{ t('storage.cache.title') }}</b>
           <span class="settings__hint">{{ t('storage.cache.hint') }}</span>
-          @if (cacheUsedMb(); as cacheUsed) {
+          @if (cacheInUse(); as inUse) {
             <span class="settings__hint settings__cache-usage">
-              {{ t('storage.cache.usage', { used: cacheUsed, quota: cacheQuotaMb() }) }}
+              {{ t('storage.cache.in-use', { used: t(unitKey(inUse), { amount: inUse.amount }) }) }}
             </span>
           }
         </div>
@@ -306,6 +334,7 @@
         class="settings__pack-row settings__core-pack"
         [attr.data-pack-key]="corePackKey"
         [hkTooltip]="t('packs.core-tip')"
+        tabindex="0"
       >
         <hk-icon [icon]="'ui:core-pack'" />
         <span class="settings__pack-name">
@@ -362,7 +391,7 @@
         <button
           hk-button
           type="button"
-          class="settings__import-button"
+          class="settings__import-button settings__quiet"
           [variant]="'ghost'"
           [loading]="importing()"
           (click)="importDemo()"

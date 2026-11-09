@@ -15,6 +15,7 @@ import { ExportAllHeroesService } from '@shared/services/export/export-all-heroe
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { PackUsageService } from '@app/views/packs/pack-usage.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { putBlob } from '@shared/services/blob-transfer/testing/blob-cache-fixtures';
 import { HkDb, type CharacterRow } from '@shared/services/storage/dexie.db';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import type { QuotaInfo } from '@shared/services/sync/stream-sync-session';
@@ -61,7 +62,7 @@ function demoPack(overrides: Partial<Pack> = {}): Pack {
   };
 }
 
-function contentPack(version: string): Pack {
+function contentPack(version: string, assetSizes: number[] = []): Pack {
   return {
     format: 1,
     id: 'sample-content',
@@ -72,7 +73,7 @@ function contentPack(version: string): Pack {
     dependencies: [],
     entities: [],
     overrides: [],
-    assets: [],
+    assets: assetSizes.map((size, i) => ({ hash: `sha256:${i}`, size })),
     i18n: {},
   } as unknown as Pack;
 }
@@ -566,6 +567,15 @@ describe('SettingsComponent', () => {
     expect(chip.textContent).toContain('1');
   });
 
+  it('the core pack row is focusable, so its hint reaches keyboard and touch', async () => {
+    await setup({});
+    const { el } = await mountSettings();
+
+    const row = q(el, '.settings__core-pack')!;
+    expect(row.getAttribute('tabindex')).toBe('0');
+    expect(hintOf(row)).toBe(settingsEn.packs['core-tip']);
+  });
+
   it('shows no update chip when no hero pins an older version', async () => {
     await setup({
       contentPacks: [contentPack('1.0.0')],
@@ -643,6 +653,69 @@ describe('SettingsComponent', () => {
 
     expect(q(el, '.settings__persist-button')).toBeNull();
     expect(q(el, '.settings__storage-usage')).toBeNull();
+  });
+
+  describe('Storage breakdown and the cache line (S4 notes: one storage line)', () => {
+    const MB = 1024 * 1024;
+
+    it('splits the device usage into cached images, installed packs and the rest', async () => {
+      await setup({
+        storage: { supported: true, estimate: { usage: 10 * MB, quota: 100 * MB } },
+        contentPacks: [contentPack('1.0.0', [MB, MB])],
+      });
+      await putBlob('peer-image', MB, false, undefined, 'peer');
+      const { fixture, el } = await mountSettings();
+      await flushAsync(fixture);
+
+      const text = (segment: string) =>
+        q(el, `.settings__storage-breakdown [data-segment="${segment}"]`)?.textContent ?? '';
+      expect(text('images')).toContain('1 MB');
+      expect(text('packs')).toContain('2 MB');
+      expect(text('other')).toContain('7 MB');
+      expect(el.querySelectorAll('.settings__storage-bar [data-segment]').length).toBe(3);
+    });
+
+    it('never lets "other" go negative when the parts outweigh the estimate', async () => {
+      await setup({
+        storage: { supported: true, estimate: { usage: MB, quota: 100 * MB } },
+        contentPacks: [contentPack('1.0.0', [5 * MB])],
+      });
+      const { fixture, el } = await mountSettings();
+      await flushAsync(fixture);
+
+      expect(q(el, '.settings__storage-breakdown [data-segment="other"]')?.textContent).toContain(
+        '0 B',
+      );
+    });
+
+    it('the cache line shows the cache’s own bytes, not the device estimate again', async () => {
+      await setup({
+        storage: { supported: true, estimate: { usage: 50 * MB, quota: 100 * MB } },
+      });
+      await putBlob('peer-image', 3 * MB, false, undefined, 'peer');
+      const { fixture, el } = await mountSettings();
+      await flushAsync(fixture);
+
+      const line = q(el, '.settings__cache-usage')?.textContent ?? '';
+      expect(line).toContain('3 MB');
+      expect(line).not.toContain('50');
+      expect(line).not.toContain('100');
+    });
+
+    it('re-measures the cache after the limit changes', async () => {
+      await setup({});
+      await putBlob('peer-a', 150 * MB, false, 1, 'peer');
+      await putBlob('peer-b', 150 * MB, false, 2, 'peer');
+      const { fixture, el } = await mountSettings();
+      await flushAsync(fixture);
+      expect(q(el, '.settings__cache-usage')?.textContent).toContain('300 MB');
+
+      choose(q<HTMLSelectElement>(el, '.settings__cache-select select')!, '100');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await flushAsync(fixture);
+
+      expect(q(el, '.settings__cache-usage')?.textContent).not.toContain('300 MB');
+    });
   });
 
   describe('Blob cache limit', () => {
@@ -738,6 +811,26 @@ describe('SettingsComponent', () => {
       expect(q(el, '.settings__open5e-credit')?.textContent?.trim()).toBe(
         'Structured SRD data derived from the Open5e project (https://open5e.com).',
       );
+    });
+
+    it('labels the date "Released", not "Built", since it is a hand-bumped release date', async () => {
+      await setup({});
+      const { el } = await mountSettings();
+
+      const labels = Array.from(el.querySelectorAll('.settings__kv dt')).map((n) =>
+        n.textContent?.trim(),
+      );
+      expect(labels).toContain(settingsEn.about.released);
+      expect(labels).not.toContain('Built');
+    });
+
+    it('draws the release-notes link disabled, with its reason', async () => {
+      await setup({});
+      const { el } = await mountSettings();
+
+      const link = q(el, '.settings__release-notes')!;
+      expect(link.getAttribute('aria-disabled')).toBe('true');
+      expect(hintOf(link)).toBe(settingsEn.about['release-notes-reason']);
     });
 
     it('credits the fonts', async () => {
@@ -1165,6 +1258,37 @@ describe('SettingsComponent', () => {
       const nullIdRow = q(el, '.settings__devices-row[data-current="false"]');
       expect(nullIdRow?.textContent).toContain('Old device');
       expect(nullIdRow?.querySelector('.settings__devices-revoke')).toBeNull();
+    });
+
+    it('draws Revoke disabled in the current device’s slot and on an unknown session, with the reason', async () => {
+      globalThis.fetch = routedFetch({
+        '/api/me/sessions': () =>
+          jsonResponse(200, [
+            { id: 'sess-1', deviceLabel: 'Chrome', createdAt: 1, lastSeenAt: 1, current: true },
+            { id: null, deviceLabel: 'Old device', createdAt: 2, lastSeenAt: 2, current: false },
+          ]),
+      });
+      await setup({ authStatus: 'authed', authUser: { userId: 'u1', username: 'A' } });
+      const { fixture, el } = await mountSettings();
+      await flushAsync(fixture);
+
+      const current = q(
+        el,
+        '.settings__devices-row[data-current="true"] .settings__devices-revoke-blocked',
+      )!;
+      expect(current.getAttribute('aria-disabled')).toBe('true');
+      expect(hintOf(current)).toBe(settingsEn.devices['revoke-self']);
+      const unknown = q(
+        el,
+        '.settings__devices-row[data-current="false"] .settings__devices-revoke-blocked',
+      )!;
+      expect(unknown.getAttribute('aria-disabled')).toBe('true');
+      expect(hintOf(unknown)).toBe(settingsEn.devices['revoke-unknown']);
+      // Neither can start a revoke.
+      expect(el.querySelectorAll('.settings__devices-revoke').length).toBe(0);
+      current.click();
+      await fixture.whenStable();
+      expect(overlayRoot().querySelector('.settings-revoke-device-confirm__title')).toBeNull();
     });
 
     it('two null-id rows both render distinctly (fallback track key, not identity collapse)', async () => {

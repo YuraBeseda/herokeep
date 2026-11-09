@@ -45,6 +45,7 @@ import { SettingsAboutComponent } from './settings-about.component';
 import { SettingsAppearanceComponent } from './settings-appearance.component';
 import { HkTooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { openHelpDialog } from '../help-dialog/help-dialog.component';
+import { packBytesOf } from '../packs/pack-summary';
 import { PackUsageService } from '../packs/pack-usage.service';
 import { translated } from '../translated';
 import { buildSettingsStrap } from './settings-strap';
@@ -318,6 +319,25 @@ export class SettingsComponent {
   protected readonly storageQuota = computed(() =>
     this.bytesOf(this.storagePersistService.estimate()?.quota),
   );
+  /** Device usage split into cached images, installed packs and the rest (usage minus those two). */
+  protected readonly storageParts = computed(() => {
+    const estimate = this.storagePersistService.estimate();
+    if (estimate?.usage === undefined || !estimate.quota) return null;
+    const images = this.cacheBytes.hasValue() ? this.cacheBytes.value() : 0;
+    const core = this.packStore.corePack();
+    const packs = packBytesOf(
+      core ? [core, ...this.packStore.installedContent()] : this.packStore.installedContent(),
+    );
+    const other = Math.max(0, estimate.usage - images - packs);
+    const quota = estimate.quota;
+    const share = (bytes: number): number => Math.min(100, (bytes / quota) * 100);
+    return [
+      { id: 'images', bytes: images, percent: share(images) },
+      { id: 'packs', bytes: packs, percent: share(packs) },
+      { id: 'other', bytes: other, percent: share(other) },
+    ].map((part) => ({ ...part, size: formatBytes(part.bytes, this.localeService.locale()) }));
+  });
+
   /** The share of this device's storage in use, 0–100, for the bar. */
   protected readonly storagePercent = computed(() => {
     const estimate = this.storagePersistService.estimate();
@@ -332,9 +352,11 @@ export class SettingsComponent {
   );
   /** The select works in strings; this is the stored cap in MB as the option value. */
   protected readonly cacheCapValue = computed(() => String(this.cacheCapMb()));
-  private readonly cacheEstimate = this.cacheManagerService.estimate;
-  protected readonly cacheUsedMb = computed(() => this.formatMb(this.cacheEstimate()?.usage));
-  protected readonly cacheQuotaMb = computed(() => this.formatMb(this.cacheEstimate()?.quota));
+  /** What the image cache itself holds (its own blob sizes), measured again after a limit change. */
+  private readonly cacheBytes = resource({ loader: () => this.cacheManagerService.cacheBytes() });
+  protected readonly cacheInUse = computed(() =>
+    this.cacheBytes.hasValue() ? this.bytesOf(this.cacheBytes.value()) : undefined,
+  );
 
   // --- Devices ------------------------------------------------------------------------------------------
 
@@ -445,12 +467,25 @@ export class SettingsComponent {
     // A fragment (`#about`) names the section to bring into view, on arrival and on each change.
     afterRenderEffect(() => {
       const fragment = this.fragment();
-      if (!isSection(fragment)) return;
-      const target = this.host.querySelector<HTMLElement>(`#${fragment}`);
-      if (target && typeof target.scrollIntoView === 'function') {
-        target.scrollIntoView({ block: 'start' });
-      }
+      if (isSection(fragment)) this.reveal(fragment);
     });
+  }
+
+  /** Scrolls a section into view and moves focus to its heading, so a keyboard or screen-reader user lands there too. */
+  private reveal(id: SectionId): void {
+    const target = this.host.querySelector<HTMLElement>(`#${id}`);
+    if (!target) return;
+    if (typeof target.scrollIntoView === 'function') target.scrollIntoView({ block: 'start' });
+    const heading = target.querySelector<HTMLElement>('h2');
+    if (heading) {
+      heading.setAttribute('tabindex', '-1');
+      heading.focus({ preventScroll: true });
+    }
+  }
+
+  /** The index link of the section already named by the URL: the router ignores the same address, so scroll again here. */
+  protected onIndexClick(id: SectionId): void {
+    if (this.fragment() === id) this.reveal(id);
   }
 
   // --- Storage --------------------------------------------------------------------------------------
@@ -482,7 +517,9 @@ export class SettingsComponent {
   protected onCacheCap(value: string | null): void {
     const mb = Number(value);
     if (value === null || !Number.isFinite(mb)) return;
-    void this.cacheManagerService.setCapBytes(mb * BYTES_PER_MB);
+    void this.cacheManagerService
+      .setCapBytes(mb * BYTES_PER_MB)
+      .then(() => this.cacheBytes.reload());
   }
 
   // --- Content packs --------------------------------------------------------------------------------
@@ -586,13 +623,6 @@ export class SettingsComponent {
 
   private bytesOf(bytes: number | undefined): FormattedBytes | undefined {
     return bytes === undefined ? undefined : formatBytes(bytes, this.localeService.locale());
-  }
-
-  private formatMb(bytes: number | undefined): string | undefined {
-    if (bytes === undefined) return undefined;
-    return new Intl.NumberFormat(this.localeService.locale(), {
-      maximumFractionDigits: 1,
-    }).format(bytes / BYTES_PER_MB);
   }
 
   private toQuotaRow(row: CharacterRow): QuotaRowVm {

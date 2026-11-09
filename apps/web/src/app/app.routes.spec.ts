@@ -155,7 +155,7 @@ describe('app routes', () => {
       shellEn.icon.packs,
       shellEn.icon.settings,
     ]);
-    expect(compiled.querySelector('a[href="/about"]')?.getAttribute('aria-label')).toBe(
+    expect(compiled.querySelector('a[href="/settings#about"]')?.getAttribute('aria-label')).toBe(
       shellEn.nav.about,
     );
   });

@@ -85,9 +85,9 @@ describe('HkNavRailComponent', () => {
     expect(router.url).toBe('/library');
   });
 
-  it('keeps About reachable at /about', async () => {
+  it('keeps About reachable at /settings#about', async () => {
     const { el } = await setup();
-    expect(el.querySelector('a[href="/about"]')!.getAttribute('aria-label')).toBe('About');
+    expect(el.querySelector('a[href="/settings#about"]')!.getAttribute('aria-label')).toBe('About');
   });
 
   describe('account button', () => {

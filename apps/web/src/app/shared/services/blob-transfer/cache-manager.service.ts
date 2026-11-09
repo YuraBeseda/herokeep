@@ -180,6 +180,17 @@ export class CacheManagerService {
   /** LRU-evicts unpinned rows down to the current cap (`selectLruEvictions`) — never removes a
    * pinned row. Safe to call any time (Settings slider change, a periodic background tick, or
    * right after a fresh blob arrives). */
+  /** What the image cache itself holds, in bytes: the stored `size` of every blob the sweeps may
+   * evict (everything except pack assets). This is the cache's own figure; the device estimate
+   * (`estimate`) covers the whole origin. */
+  async cacheBytes(): Promise<number> {
+    const rows = sweepable(
+      await this.blobsRepository.list(),
+      await this.installedPackAssetHashes(),
+    );
+    return rows.reduce((sum, row) => sum + row.size, 0);
+  }
+
   async runLruSweep(): Promise<void> {
     const packHashes = await this.installedPackAssetHashes();
     const rows = sweepable(await this.blobsRepository.list(), packHashes);

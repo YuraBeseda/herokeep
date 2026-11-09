@@ -1,4 +1,5 @@
 import { effect, Injectable, signal, type Signal } from '@angular/core';
+import { readStored, writeStored } from '../../helpers/safe-storage';
 import { THEME_IDS, type ThemeId } from '@hk/ui-tokens/themes';
 
 export type Theme = ThemeId;
@@ -14,22 +15,10 @@ function isTheme(value: string): value is Theme {
 }
 
 function readStoredTheme(): Theme | null {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === null) return null;
-    if (isTheme(stored)) return stored;
-    return LEGACY_THEMES[stored] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function persistTheme(theme: Theme): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, theme);
-  } catch {
-    /* storage unavailable (private browsing, disabled storage, quota, etc.) */
-  }
+  const stored = readStored(STORAGE_KEY);
+  if (stored === null) return null;
+  if (isTheme(stored)) return stored;
+  return LEGACY_THEMES[stored] ?? null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -43,7 +32,7 @@ export class ThemeService {
   private readonly stampAndPersist = effect(() => {
     const theme = this.themeState();
     document.documentElement.dataset['theme'] = theme;
-    persistTheme(theme);
+    writeStored(STORAGE_KEY, theme);
   });
 
   // Methods

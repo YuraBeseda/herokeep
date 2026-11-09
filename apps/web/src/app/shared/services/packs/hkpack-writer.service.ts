@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HKPACK_PACK_ENTRY, type Pack } from '@hk/protocol';
+import { zipFiles } from '../export/zip-files';
 import { BlobsRepository } from '../storage/blobs.repository';
 import { canonicalJson } from './canonical-json';
 import { packAssetEntry } from './pack-assets';
@@ -30,9 +31,9 @@ export class HkpackWriter {
       if (!row) throw new HkpackAssetsMissingError(`${pack.id}@${pack.version}`);
       files[packAssetEntry(asset.hash)] = row.bytes;
     }
-    const { strToU8, zipSync } = await import('fflate');
+    const { strToU8 } = await import('fflate');
     files[HKPACK_PACK_ENTRY] = strToU8(canonicalJson(pack));
-    const blob = new Blob([zipSync(files)], { type: 'application/zip' });
+    const blob = await zipFiles(files);
     return { blob, fileName: `${pack.id}-${pack.version}.hkpack` };
   }
 }

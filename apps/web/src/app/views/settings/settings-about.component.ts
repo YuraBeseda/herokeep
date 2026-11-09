@@ -7,6 +7,7 @@ import { LocaleService } from '@shared/services/i18n/locale.service';
 // same `resolveJsonModule` pattern as `@hk/content/icons` in engine.facade.ts — because the
 // author list is small, non-localized, and needed synchronously for the composed credit line.
 import authorsJson from '../../../assets/icons/authors.json';
+import { HkButtonComponent } from '../../ui/button/button.component';
 import { HkLeafComponent } from '../../ui/leaf/leaf.component';
 import { HkTagChipComponent } from '../../ui/tag-chip/tag-chip.component';
 import { HkTooltipDirective } from '../../ui/tooltip/tooltip.directive';
@@ -25,7 +26,13 @@ function humanizeAuthor(slug: string): string {
  */
 @Component({
   selector: 'app-settings-about',
-  imports: [TranslocoDirective, HkLeafComponent, HkTagChipComponent, HkTooltipDirective],
+  imports: [
+    TranslocoDirective,
+    HkButtonComponent,
+    HkLeafComponent,
+    HkTagChipComponent,
+    HkTooltipDirective,
+  ],
   providers: [provideTranslocoScope('settings')],
   templateUrl: './settings-about.component.html',
   styleUrl: './settings-about.component.scss',

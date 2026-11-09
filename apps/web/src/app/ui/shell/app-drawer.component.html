@@ -28,7 +28,12 @@
         </a>
       }
     </nav>
-    <a class="hk-drawer__row hk-drawer__about" routerLink="/about" (click)="navigated.emit()">
+    <a
+      class="hk-drawer__row hk-drawer__about"
+      routerLink="/settings"
+      [fragment]="'about'"
+      (click)="navigated.emit()"
+    >
       <hk-icon [icon]="'ui:details'" />
       <span>{{ t('nav.about') }}</span>
     </a>

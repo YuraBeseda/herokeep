@@ -39,3 +39,11 @@ export function entityCountRows(counts: Partial<Record<EntityType, number>>): En
     return count > 0 ? [{ type, count }] : [];
   });
 }
+
+/** What `packs` weigh on this device: the declared size of every asset (the pack JSON itself is small). */
+export function packBytesOf(packs: readonly Pack[]): number {
+  return packs.reduce(
+    (sum, pack) => sum + pack.assets.reduce((inner, asset) => inner + asset.size, 0),
+    0,
+  );
+}

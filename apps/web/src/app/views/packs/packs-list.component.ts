@@ -38,7 +38,7 @@ import { HkLeafComponent } from '../../ui/leaf/leaf.component';
 import { HkTagChipComponent } from '../../ui/tag-chip/tag-chip.component';
 import { HomebrewNewChooserComponent } from './homebrew/homebrew-new-chooser.component';
 import { PackTrustDialogComponent, type PackTrustData } from './pack-trust-dialog.component';
-import { packKey, entityCountRows, summarizePack } from './pack-summary';
+import { packBytesOf, packKey, entityCountRows, summarizePack } from './pack-summary';
 import { PackUsageService } from './pack-usage.service';
 import { buildPacksListStrap } from './packs-list-strap';
 
@@ -190,12 +190,7 @@ export class PacksListComponent {
   );
 
   // Storage card: what the installed packs weigh (declared asset sizes + the pack JSON is small).
-  protected readonly packBytes = computed(() =>
-    this.installedAll().reduce(
-      (sum, pack) => sum + pack.assets.reduce((inner, asset) => inner + asset.size, 0),
-      0,
-    ),
-  );
+  protected readonly packBytes = computed(() => packBytesOf(this.installedAll()));
   protected readonly packSize = computed(() =>
     formatBytes(this.packBytes(), this.localeService.locale()),
   );

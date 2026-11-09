@@ -49,7 +49,12 @@
       "limit": "Предел",
       "option-mb": "{value} МБ",
       "option-gb": "{value} ГБ",
-      "usage": "Использовано {used} МБ из {quota} МБ хранилища устройства"
+      "in-use": "Занято {used}"
+    },
+    "breakdown": {
+      "images": "Кешированные изображения",
+      "packs": "Наборы",
+      "other": "Прочее"
     }
   },
   "packs": {
@@ -112,7 +117,9 @@
     "loading": "Загрузка устройств…",
     "error": "Не удалось загрузить список устройств.",
     "retry": "Повторить",
-    "empty": "Других устройств пока нет."
+    "empty": "Других устройств пока нет.",
+    "revoke-self": "Это устройство, которым вы пользуетесь; воспользуйтесь «Выйти»",
+    "revoke-unknown": "Этот старый сеанс нельзя отозвать отдельно; воспользуйтесь «Выйти везде»"
   },
   "quota": {
     "title": "Хранилище аккаунта",
@@ -143,13 +150,15 @@
     "rules-data": "Данные правил",
     "icons": "Иконки",
     "fonts": "Шрифты",
-    "built": "Сборка",
+    "released": "Выпуск",
     "built-value": "{date}",
     "installed": "установлено как приложение",
     "in-browser": "открыто в браузере",
     "open5e-credit": "Structured SRD data derived from the Open5e project (https://open5e.com).",
     "icons-credit": "Icons made by {authors}. Available on https://game-icons.net (CC BY 3.0).",
-    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License."
+    "fonts-credit": "Forum (Denis Masharov) and Alegreya (Huerta Tipográfica), SIL Open Font License.",
+    "release-notes": "Заметки о выпуске",
+    "release-notes-reason": "Заметки о выпуске появятся с первым публичным выпуском"
   },
   "help": {
     "title": "О настройках",

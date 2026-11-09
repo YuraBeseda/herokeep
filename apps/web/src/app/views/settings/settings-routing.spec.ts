@@ -94,4 +94,25 @@ describe('Settings routing', () => {
       'packs',
     ]);
   });
+
+  it('moves focus to the section heading the redirect lands on, for keyboard and screen-reader users', async () => {
+    const harness = await open('/about');
+
+    const heading = harness.routeNativeElement!.querySelector<HTMLElement>('#about h2')!;
+    expect(heading.getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(heading);
+  });
+
+  it('clicking the link of the section already shown scrolls to it again', async () => {
+    const harness = await open('/settings#packs');
+    const link = harness.routeNativeElement!.querySelector<HTMLAnchorElement>(
+      '.settings__index a[data-section="packs"]',
+    )!;
+    scrolled.length = 0;
+
+    link.click();
+    await harness.fixture.whenStable();
+
+    expect(scrolled.map((el) => el.id)).toEqual(['packs']);
+  });
 });

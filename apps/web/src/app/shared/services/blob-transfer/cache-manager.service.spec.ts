@@ -97,6 +97,27 @@ describe('CacheManagerService', () => {
     TestBed.inject(HkDb).close();
   });
 
+  describe('cacheBytes', () => {
+    it('sums the stored size of the blobs the cache owns, leaving out pack assets', async () => {
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      await putBlob('peer-a', 1000, false, undefined, 'peer');
+      await putBlob('upload-b', 500, false, undefined, 'upload');
+      await putBlob('pack-origin', 7000, false, undefined, 'pack');
+      // A hash an installed pack lists is the pack's even when it first arrived as an upload.
+      await putBlob(SHARED_ASSET_HASH, 3000, false, undefined, 'peer');
+      await TestBed.inject(PacksRepository).putPack(packListing(SHARED_ASSET_HASH));
+
+      expect(await service.cacheBytes()).toBe(1500);
+    });
+
+    it('is zero for an empty cache', async () => {
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      expect(await service.cacheBytes()).toBe(0);
+    });
+  });
+
   describe('capBytes', () => {
     it('defaults to 500 MB when no cap has ever been set', async () => {
       const service = TestBed.inject(CacheManagerService);

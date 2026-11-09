@@ -71,6 +71,7 @@ function setup(
     storedPins?: Record<string, string>[];
     campaigns?: { id: string; name: string; packs: Record<string, string> }[];
     removeTranslationFails?: boolean;
+    estimate?: { usage: number; quota: number };
   } = {},
 ) {
   const translationPacks = signal<Pack[]>([RU]);
@@ -146,7 +147,7 @@ function setup(
       { provide: LocaleService, useValue: { locale: signal('en') } },
       {
         provide: StoragePersistService,
-        useValue: { estimate: signal(undefined), persisted: signal(undefined) },
+        useValue: { estimate: signal(options.estimate), persisted: signal(undefined) },
       },
       { provide: HomebrewIdService, useValue: { id: signal<string | null>(LOCAL_HOMEBREW) } },
     ],
@@ -175,6 +176,15 @@ async function selectFile(
 }
 
 describe('PacksListComponent', () => {
+  it('draws a device quota of several gigabytes with its unit word, never a raw key', async () => {
+    setup({ estimate: { usage: 3 * 1024 ** 2, quota: 4.5 * 1024 ** 3 } });
+    const { root } = await render();
+
+    const card = root.querySelector('.packs-list__storage-card')!;
+    expect(card.textContent).toContain('3 MB of 4.5 GB');
+    expect(card.textContent).not.toContain('info.unit');
+  });
+
   it("hints that another device's homebrew pack came from another device (never this device's own)", async () => {
     const homebrew = (id: string) =>
       ({ ...SAMPLE, id, name: 'My homebrew', entities: [], assets: [] }) as Pack;

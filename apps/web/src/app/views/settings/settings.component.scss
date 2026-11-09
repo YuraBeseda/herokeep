@@ -1,4 +1,5 @@
 @use 'gauge';
+@use 'shared';
 
 /* Board ST01. Desktop: the index leaf, then two columns of leaves. Tablet: the index and one
    column. Phone: the index becomes a row of chips that scrolls sideways, and the leaves stack. */
@@ -107,25 +108,11 @@
 /* ---- Shared bits ---- */
 
 .settings__hint {
-  color: var(--text-2);
-  font-size: 14px;
-  font-style: italic;
-  line-height: 1.35;
+  @include shared.hint;
 }
 
 .settings__h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 400;
-
-  hk-icon {
-    color: var(--accent-strong);
-    font-size: 15px;
-  }
+  @include shared.h3;
 }
 
 .settings__sub {
@@ -136,24 +123,11 @@
 }
 
 .settings__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
-  margin-block-start: var(--space-4);
+  @include shared.row;
 }
 
 .settings__row-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-inline-size: 0;
-}
-
-.settings__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  @include shared.row-text;
 }
 
 .settings__block {
@@ -181,16 +155,7 @@
 }
 
 .settings__plate {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: var(--radius-seal);
-  background: var(--leaf-sunken);
-  box-shadow: inset 0 0 0 1px var(--border-brass);
-  color: var(--text-1);
-  font-family: var(--font-display);
-  font-size: 14px;
-  white-space: nowrap;
+  @include shared.plate;
 }
 
 /* A link that looks like a button (hk-button is a <button> only). */
@@ -477,8 +442,39 @@
       }
     }
   }
+}
 
-  .settings__row {
-    grid-template-columns: minmax(0, 1fr);
+.settings__bar-fill--packs {
+  background: linear-gradient(180deg, var(--arcane-light), var(--arcane) 55%, var(--arcane-deep));
+}
+
+.settings__bar-fill--other {
+  background: var(--leaf-edge);
+}
+
+.settings__storage-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-2) 0 0;
+  font-size: 14px;
+
+  div {
+    display: flex;
+    gap: var(--space-2);
   }
+
+  dt {
+    color: var(--text-2);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.settings__quiet {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

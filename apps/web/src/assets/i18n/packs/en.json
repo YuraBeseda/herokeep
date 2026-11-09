@@ -88,7 +88,8 @@
     "unit": {
       "b": "{amount} B",
       "kb": "{amount} KB",
-      "mb": "{amount} MB"
+      "mb": "{amount} MB",
+      "gb": "{amount} GB"
     },
     "version-label": "Version",
     "file": "File",
