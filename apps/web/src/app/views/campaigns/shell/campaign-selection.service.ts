@@ -32,6 +32,8 @@ export class CampaignSelectionService {
 
   select(member: SelectedMember): void {
     this.selectedState.set(member);
+    // A request belongs to the selection that made it.
+    this.requestState.set(null);
   }
 
   /** Selects the member, or drops the selection when they are already the selected one. */
@@ -39,6 +41,12 @@ export class CampaignSelectionService {
     this.selectedState.update((current) =>
       current?.characterId === member.characterId ? null : member,
     );
+    this.requestState.set(null);
+  }
+
+  /** A request is acted on once: the panel that handles it takes it off the board. */
+  consume(request: EffectRequest): void {
+    if (this.requestState() === request) this.requestState.set(null);
   }
 
   clear(): void {

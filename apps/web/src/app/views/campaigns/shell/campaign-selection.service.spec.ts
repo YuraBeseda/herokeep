@@ -38,4 +38,19 @@ describe('CampaignSelectionService', () => {
     expect(s.selected()).toBeNull();
     expect(s.request()).toBeNull();
   });
+
+  it('drops a pending request when the selection changes or the request is consumed', () => {
+    const s = service();
+    s.select(ilyana);
+    s.requestEffect('damage');
+    s.select(marek);
+    expect(s.request()).toBeNull();
+    s.requestEffect('heal');
+    s.toggle(marek);
+    expect(s.request()).toBeNull();
+    s.toggle(marek);
+    s.requestEffect('xp');
+    s.consume(s.request()!);
+    expect(s.request()).toBeNull();
+  });
 });

@@ -62,6 +62,9 @@
               </span>
             </span>
           </button>
+          <p class="campaigns-list__played">
+            {{ t('list.lastPlayed', { date: playedDate(row) }) }}
+          </p>
           <nav
             class="campaigns-list__tabs"
             [attr.aria-label]="t('list.tabsLabel', { name: row.name })"

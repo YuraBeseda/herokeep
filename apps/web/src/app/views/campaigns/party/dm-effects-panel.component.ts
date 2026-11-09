@@ -192,18 +192,17 @@ export class DmEffectsPanelComponent {
     () => this.overridePath().trim().length > 0 && this.overrideReason().trim().length > 0,
   );
 
-  /** The last strap request this panel acted on (a request is acted on once). */
-  private handledNonce = 0;
-
   constructor() {
     // The campaign strap's Damage / Heal / Condition / XP / Item for the selected member: the panel
     // of the addressed member runs the same action its own buttons do.
     effect(() => {
       const request = this.selection.request();
       if (request?.characterId !== this.characterId()) return;
-      if (request.nonce <= this.handledNonce) return;
-      this.handledNonce = request.nonce;
-      untracked(() => this.handleRequest(request));
+      // Consume-once: taken off the board before it runs, so a panel mounting later never replays it.
+      untracked(() => {
+        this.selection.consume(request);
+        this.handleRequest(request);
+      });
     });
   }
 

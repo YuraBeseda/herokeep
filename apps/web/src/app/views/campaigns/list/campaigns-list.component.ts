@@ -4,6 +4,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import type { CampaignRow } from '@shared/services/storage/dexie.db';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { IconComponent } from '../../../shared/icons/icon.component';
@@ -61,6 +62,7 @@ export class CampaignsListComponent {
   private readonly dialogService = inject(DialogService);
   private readonly router = inject(Router);
   private readonly strap = inject(ActionStrapService);
+  private readonly localeService = inject(LocaleService);
 
   protected readonly skeletonRows: readonly number[] = Array.from(
     { length: SKELETON_ROW_COUNT },
@@ -103,6 +105,13 @@ export class CampaignsListComponent {
       });
     });
     inject(DestroyRef).onDestroy(() => this.strap.clear());
+  }
+
+  /** When the campaign was last active here, in the active locale (the cached row's `updatedAt`). */
+  protected playedDate(row: CampaignRow): string {
+    return new Intl.DateTimeFormat(this.localeService.locale(), { dateStyle: 'medium' }).format(
+      row.updatedAt,
+    );
   }
 
   protected open(row: CampaignRow): void {

@@ -577,5 +577,22 @@ describe('DmEffectsPanelComponent', () => {
       expect(dialogOpen).not.toHaveBeenCalled();
       expect(compiled.querySelector('.dm-effects-panel__body')).toBeNull();
     });
+
+    it('never replays a request that was already handled when another panel mounts later', async () => {
+      const { dialogOpen } = configure({
+        dialogOpen: vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) }),
+      });
+      const first = TestBed.createComponent(HostComponent);
+      await whenStable(first);
+      select();
+      TestBed.inject(CampaignSelectionService).requestEffect('condition');
+      await whenStable(first);
+      expect(dialogOpen).toHaveBeenCalledOnce();
+      first.destroy();
+      const second = TestBed.createComponent(HostComponent);
+      await whenStable(second);
+      expect(dialogOpen).toHaveBeenCalledOnce();
+      expect(TestBed.inject(CampaignSelectionService).request()).toBeNull();
+    });
   });
 });

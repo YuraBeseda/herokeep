@@ -6,6 +6,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import { HkDb, type CampaignRow } from '@shared/services/storage/dexie.db';
 import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.service';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
@@ -222,5 +223,23 @@ describe('CampaignsListComponent', () => {
       .querySelector<HTMLButtonElement>('.campaigns-list__empty .campaigns-list__create')!
       .click();
     expect(open).toHaveBeenCalled();
+  });
+
+  it('shows when each campaign was last played, formatted for the active locale', async () => {
+    configure();
+    const db = TestBed.inject(HkDb);
+    await db.campaigns.clear();
+    await db.campaigns.put(mkRow({ updatedAt: Date.UTC(2026, 9, 25, 12) }));
+    const fixture = TestBed.createComponent(CampaignsListComponent);
+    await fixture.whenStable();
+    const locale = TestBed.inject(LocaleService).locale();
+    const date = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
+      Date.UTC(2026, 9, 25, 12),
+    );
+    expect(
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('.campaigns-list__played')
+        ?.textContent?.trim(),
+    ).toBe(`Last played ${date}`);
   });
 });

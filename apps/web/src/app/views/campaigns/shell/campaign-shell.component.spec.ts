@@ -308,5 +308,17 @@ describe('CampaignShellComponent', () => {
       expect(TestBed.inject(TabBarService).tabs()).toBeNull();
       expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
     });
+
+    it('runs a strap effect pressed on another tab by going to Party first, once', async () => {
+      configure();
+      const harness = await RouterTestingHarness.create(`/g/${ID}/log`);
+      const selection = TestBed.inject(CampaignSelectionService);
+      selection.toggle({ characterId: 'c1', name: 'Ilyana' });
+      TestBed.tick();
+      strapAction('condition')!.run();
+      await harness.fixture.whenStable();
+      expect(TestBed.inject(Router).url).toBe(`/g/${ID}/party`);
+      expect(selection.request()).toMatchObject({ kind: 'condition', characterId: 'c1' });
+    });
   });
 });

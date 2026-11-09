@@ -18,7 +18,7 @@ import { TopBarService } from '../../../ui/shell/top-bar.service';
 import { phoneLayout } from '../../../ui/shell/viewport';
 import { TabBarService, type TabItem } from '../../../ui/tab-bar/tab-bar.service';
 import { CampaignExportDialogComponent } from '../settings/campaign-export-dialog.component';
-import { CampaignSelectionService } from './campaign-selection.service';
+import { CampaignSelectionService, type DmEffectKind } from './campaign-selection.service';
 import { buildCampaignStrap } from './campaign-strap';
 import { campaignsScopeReady } from './scope-ready';
 
@@ -158,6 +158,17 @@ export class CampaignShellComponent {
     queueMicrotask(() => document.getElementById(`campaign-tab-${TAB_IDS[next]}`)?.focus());
   }
 
+  /** The effects live on the Party tab's panels: from another tab, go there and run it once. */
+  private runEffect(kind: DmEffectKind): void {
+    if (this.activeTabId() === 'party') {
+      this.selection.requestEffect(kind);
+      return;
+    }
+    void this.router.navigate(['party'], { relativeTo: this.route }).then((ok) => {
+      if (ok) this.selection.requestEffect(kind);
+    });
+  }
+
   private setStrap(): void {
     this.labelsReady();
     const role = this.role();
@@ -169,7 +180,7 @@ export class CampaignShellComponent {
         buildCampaignStrap(
           { role, selected, sessionActive, canOpenSheet, scope: ['/g', this.routeId] },
           {
-            effect: (kind) => this.selection.requestEffect(kind),
+            effect: (kind) => this.runEffect(kind),
             toggleSession: () => void this.toggleSession(),
             exportCampaign: () => this.openExport(),
             openSheet: () => {

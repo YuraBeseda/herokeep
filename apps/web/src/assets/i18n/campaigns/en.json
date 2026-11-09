@@ -38,7 +38,8 @@
     "emptyTitle": "No campaigns yet",
     "emptyHint": "Ask your DM for a join code or a QR code.",
     "open": "Open {name}, {role}",
-    "tabsLabel": "Tabs of {name}"
+    "tabsLabel": "Tabs of {name}",
+    "lastPlayed": "Last played {date}"
   },
   "create": {
     "title": "New campaign",
@@ -75,7 +76,6 @@
     "title": "Link a character",
     "intro": "Pick one of your characters to play in this campaign.",
     "loading": "Loading your characters…",
-    "pick": "Link this character",
     "resume": "Finish linking",
     "resumeLeave": "Finish leaving",
     "linkedElsewhere": "Already in another campaign",
