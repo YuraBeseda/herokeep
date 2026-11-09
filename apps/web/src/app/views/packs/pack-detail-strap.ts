@@ -3,9 +3,10 @@ import type { StrapConfig } from '../../ui/action-strap/action-strap.service';
 /** What the pack detail strap's buttons do; the detail view supplies the callbacks. */
 export interface PackDetailStrapHandlers {
   readonly back: () => void;
-  /** `null` while the pack is not found (nothing to export). */
-  readonly exportPack: (() => void) | null;
-  readonly exporting: boolean;
+  readonly exportPack: () => void;
+  /** Full i18n key of why Export is unavailable (not found, core pack, importer would refuse it,
+   * an export already running), or `null` when it is available. */
+  readonly exportReason: string | null;
 }
 
 /**
@@ -34,8 +35,9 @@ export function buildPackDetailStrap(h: PackDetailStrapHandlers): StrapConfig {
         label: 'shell.strap.packs-export',
         icon: 'export',
         kind: 'icon',
-        disabled: h.exportPack === null || h.exporting,
-        run: h.exportPack ?? (() => undefined),
+        disabled: h.exportReason !== null,
+        ...(h.exportReason ? { disabledReason: h.exportReason } : {}),
+        run: h.exportPack,
       },
       {
         id: 'browse-pack',

@@ -19,6 +19,8 @@ import packsEn from '../../../assets/i18n/packs/en.json';
 import { ActionStrapService } from '../../ui/action-strap/action-strap.service';
 import { HomebrewNewChooserComponent } from './homebrew/homebrew-new-chooser.component';
 import { PackTrustDialogComponent } from './pack-trust-dialog.component';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { PackUsageService } from './pack-usage.service';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
@@ -67,6 +69,7 @@ function setup(
     read?: ReturnType<typeof vi.fn>;
     content?: Pack[];
     storedPins?: Record<string, string>[];
+    campaigns?: { id: string; name: string; packs: Record<string, string> }[];
     removeTranslationFails?: boolean;
   } = {},
 ) {
@@ -118,6 +121,28 @@ function setup(
       { provide: DialogService, useValue: { open } },
       { provide: ToastService, useValue: { show } },
       { provide: PackUsageService, useValue: { heroPins } },
+      {
+        provide: CampaignsRepository,
+        useValue: {
+          list: () =>
+            Promise.resolve((options.campaigns ?? []).map(({ id, name }) => ({ id, name }))),
+        },
+      },
+      {
+        provide: CampaignStore,
+        useValue: {
+          enabledPacks: signal(
+            new Map(
+              (options.campaigns ?? []).map((c) => [
+                c.id,
+                new Map(
+                  Object.entries(c.packs).map(([id, version]) => [id, { version, sha256: 'ab' }]),
+                ),
+              ]),
+            ),
+          ),
+        },
+      },
       { provide: LocaleService, useValue: { locale: signal('en') } },
       {
         provide: StoragePersistService,
@@ -248,6 +273,7 @@ describe('PacksListComponent', () => {
     expect(read).toHaveBeenCalledWith(file);
     expect(open).toHaveBeenCalledWith(PackTrustDialogComponent, {
       data: { ...preview, fileName: 'sample.hkpack', fileSize: file.size },
+      size: 'wide',
     });
     expect(show).not.toHaveBeenCalled();
   });
@@ -454,6 +480,59 @@ describe('PacksListComponent', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(open).toHaveBeenCalledWith(HomebrewNewChooserComponent);
       expect(navigate).toHaveBeenCalledWith(['/packs/homebrew/new', 'spell']);
+    });
+
+    it('opens the trust dialog in the wide size', async () => {
+      const preview = { pack: SAMPLE } as unknown as PackImportPreview;
+      const { open } = setup({ read: vi.fn().mockResolvedValue(preview) });
+      const { fixture, root } = await render();
+      await selectFile(fixture, root, new File(['{}'], 'sample.hkpack'));
+      expect((open.mock.calls[0][1] as { size: string }).size).toBe('wide');
+    });
+
+    it('shows the campaign that shares exactly this pack version as a chip', async () => {
+      setup({
+        content: [SAMPLE],
+        campaigns: [
+          { id: 'c1', name: 'The Emberfall Company', packs: { 'sample-content': '1.0.0' } },
+          { id: 'c2', name: 'Salt Kings', packs: { 'sample-content': '0.9.0' } },
+        ],
+      });
+      const { root } = await renderSettled();
+      const row = root.querySelector('.packs-list__row[data-pack-key="sample-content@1.0.0"]')!;
+      const chips = [...row.querySelectorAll('.packs-list__campaign')].map((c) =>
+        c.textContent?.trim(),
+      );
+      expect(chips).toEqual(['Campaign: The Emberfall Company']);
+    });
+
+    it('lists the homebrew breakdown by type with locale-built parts', async () => {
+      const entity = (type: string, n: number) =>
+        ({ type, id: `${LOCAL_HOMEBREW}:${type}/e${n}`, name: `E${n}` }) as never;
+      const homebrew = mkPack({
+        id: LOCAL_HOMEBREW,
+        name: 'My homebrew',
+        entities: [entity('item', 1), entity('item', 2), entity('spell', 3)],
+      });
+      setup({ content: [homebrew] });
+      const { root } = await renderSettled();
+      const text = root.querySelector('.packs-list__breakdown')?.textContent?.trim();
+      expect(text).toBe('3 entries: Spells 1 Items 2');
+    });
+
+    it('hints with the tooltip directive, never a native title, and the icon-only open link is named', async () => {
+      setup({ content: [SAMPLE] });
+      const { root } = await renderSettled();
+      expect(root.querySelectorAll('.packs-list__row [title]')).toHaveLength(0);
+      const open = root.querySelector<HTMLElement>(
+        '.packs-list__row[data-pack-key="sample-content@1.0.0"] .packs-list__open',
+      )!;
+      expect(open.getAttribute('aria-label')).toBe('Open Sample content');
+      const lock = root.querySelector<HTMLElement>('.packs-list__lock')!;
+      expect(lock.getAttribute('tabindex')).toBe('0');
+      lock.dispatchEvent(new Event('focus'));
+      await renderSettled();
+      expect(document.body.textContent).toContain(packsEn.list['core-lock-tip']);
     });
   });
 });

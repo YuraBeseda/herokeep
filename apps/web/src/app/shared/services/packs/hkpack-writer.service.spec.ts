@@ -4,7 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { TestBed } from '@angular/core/testing';
 import { parsePack, type Pack } from '@hk/protocol';
 import { unzipSync, strFromU8 } from 'fflate';
+import { signal } from '@angular/core';
+import { PACK_ID, PACK_VERSION } from '@hk/content/version';
+import { PackStore } from '@shared/stores/pack.store';
 import { BlobsRepository } from '../storage/blobs.repository';
+import { HkpackReader } from './hkpack-reader.service';
 import { canonicalJson } from './canonical-json';
 import { HkpackAssetsMissingError, HkpackWriter } from './hkpack-writer.service';
 
@@ -53,5 +57,48 @@ describe('HkpackWriter', () => {
     await expect(TestBed.inject(HkpackWriter).export(pack)).rejects.toBeInstanceOf(
       HkpackAssetsMissingError,
     );
+  });
+
+  it('round trip: what it writes is accepted by the HkpackReader with the same content', async () => {
+    const core = parsePack(
+      JSON.parse(
+        readFileSync(
+          join(
+            here,
+            '..',
+            '..',
+            '..',
+            '..',
+            '..',
+            '..',
+            '..',
+            'packages/content/dist/packs',
+            PACK_ID,
+            PACK_VERSION,
+            'pack.json',
+          ),
+          'utf8',
+        ),
+      ),
+    );
+    if (!core.ok) throw new Error('core pack fixture no longer parses');
+    const blobs = new Map(pack.assets.map((asset) => [asset.hash, iconBytes] as const));
+    configure(blobs);
+    TestBed.overrideProvider(PackStore, {
+      useValue: {
+        corePack: signal(core.pack),
+        installedContent: signal<Pack[]>([]),
+        translationPacks: signal<Pack[]>([]),
+      },
+    });
+    const { blob, fileName } = await TestBed.inject(HkpackWriter).export(pack);
+    const file = new File([blob], fileName);
+
+    const preview = await TestBed.inject(HkpackReader).read(file);
+    expect(preview.pack).toEqual(pack);
+    expect(preview.alreadyInstalled).toBe(false);
+    expect(preview.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect([...preview.assets.keys()].sort()).toEqual(pack.assets.map((a) => a.hash).sort());
+    expect(preview.canonicalJson).toBe(canonicalJson(pack));
   });
 });

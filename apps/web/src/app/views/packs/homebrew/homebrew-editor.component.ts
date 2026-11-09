@@ -18,6 +18,7 @@ import { HomebrewService, HomebrewValidationError } from '@shared/services/packs
 import { IconComponent } from '../../../shared/icons/icon.component';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import { HkButtonComponent } from '../../../ui/button/button.component';
+import { askOnce } from '../../../ui/nav/ask-once';
 import { isHomebrewFormType, type HomebrewFormType } from './entity-form.helpers';
 import { FeatFormComponent } from './feat-form.component';
 import { HOMEBREW_FORM } from './homebrew-form.base';
@@ -180,10 +181,14 @@ export class HomebrewEditorComponent {
    * changes"); a clean form, a saved one or a not-found screen leaves silently. Escape and the
    * backdrop close the confirm with `undefined`, which stays.
    */
-  async canLeave(): Promise<boolean> {
-    if (this.saved || this.notFound() || !(this.form()?.dirty() ?? false)) return true;
+  private readonly askLeave = askOnce(async () => {
     const handle = this.dialogService.open(HomebrewLeaveConfirmComponent);
     return (await handle.closed) === true;
+  });
+
+  async canLeave(): Promise<boolean> {
+    if (this.saved || this.notFound() || !(this.form()?.dirty() ?? false)) return true;
+    return this.askLeave();
   }
 
   protected async onSubmitted(entity: Entity): Promise<void> {

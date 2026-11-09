@@ -10,7 +10,14 @@ import { ToastService } from '@shared/components/toast/toast.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { HomebrewService } from '@shared/services/packs/homebrew.service';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { HkpackDelivery } from '@shared/services/packs/hkpack-delivery';
+import {
+  HkpackAssetsMissingError,
+  HkpackWriter,
+} from '@shared/services/packs/hkpack-writer.service';
 import { PackUsageService } from '../pack-usage.service';
+
+const deliver = vi.fn().mockResolvedValue('saved');
 import { HomebrewNewChooserComponent } from './homebrew-new-chooser.component';
 import packsEn from '../../../../assets/i18n/packs/en.json';
 import { HomebrewDeleteConfirmComponent, HomebrewListComponent } from './homebrew-list.component';
@@ -57,6 +64,7 @@ async function setup(
   confirm: unknown,
   updateCheckFailed = false,
   heroes: { id: string; name: string; pins: Record<string, string> }[] = [],
+  extra: { writer?: unknown; pack?: Pack } = {},
 ) {
   const remove = vi.fn().mockResolvedValue({
     pack: PACK,
@@ -84,7 +92,12 @@ async function setup(
         loader: StubLoader,
       }),
       provideTranslocoMessageformat(),
-      { provide: HomebrewService, useValue: { pack: signal<Pack | null>(PACK), remove } },
+      {
+        provide: HomebrewService,
+        useValue: { pack: signal<Pack | null>(extra.pack ?? PACK), remove },
+      },
+      { provide: HkpackDelivery, useValue: { deliver } },
+      ...(extra.writer ? [{ provide: HkpackWriter, useValue: extra.writer }] : []),
       { provide: DialogService, useValue: { open } },
       { provide: PackUsageService, useValue: { heroPins: () => Promise.resolve(heroes) } },
       {
@@ -168,8 +181,8 @@ describe('HomebrewListComponent', () => {
     const config = TestBed.inject(ActionStrapService).config()!;
     expect(config.exit?.map((a) => a.id)).toEqual(['back']);
     expect(config.primary.map((a) => a.id)).toEqual(['new-entry']);
-    expect(config.secondary?.map((a) => a.id)).toEqual(['export-pack']);
-    expect(config.secondary?.[0].disabled).toBe(false);
+    expect(config.secondary?.map((a) => a.id)).toEqual(['import-entries', 'export-pack']);
+    expect(config.secondary?.[1].disabled).toBe(false);
 
     open.mockReturnValue({ closed: Promise.resolve('feat'), close: vi.fn() });
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -177,6 +190,86 @@ describe('HomebrewListComponent', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(open).toHaveBeenCalledWith(HomebrewNewChooserComponent);
     expect(navigate).toHaveBeenCalledWith(['/packs/homebrew/new', 'feat']);
+  });
+
+  it('draws Import into My homebrew disabled, with its reason on the action', async () => {
+    await setup(false);
+    const action = TestBed.inject(ActionStrapService)
+      .config()!
+      .secondary!.find((a) => a.id === 'import-entries')!;
+    expect(action.disabled).toBe(true);
+    expect(action.disabledReason).toBe('shell.strap.homebrew-import-none');
+  });
+
+  it('Export hands the built archive to the delivery ladder; failures toast their reason', async () => {
+    const blob = new Blob(['zip']);
+    const exportFn = vi
+      .fn()
+      .mockResolvedValueOnce({ blob, fileName: 'homebrew-aaaaaaaa-0.1.3.hkpack' })
+      .mockRejectedValueOnce(new HkpackAssetsMissingError('homebrew-aaaaaaaa@0.1.3'))
+      .mockRejectedValueOnce(new Error('disk'));
+    const { show } = await setup(false, false, [], { writer: { export: exportFn } });
+    const exportAction = () =>
+      TestBed.inject(ActionStrapService)
+        .config()!
+        .secondary!.find((a) => a.id === 'export-pack')!;
+    expect(exportAction().disabled).toBe(false);
+
+    exportAction().run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(deliver).toHaveBeenCalledWith(blob, 'homebrew-aaaaaaaa-0.1.3.hkpack', 'My homebrew');
+    expect(show).not.toHaveBeenCalled();
+
+    exportAction().run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(show).toHaveBeenLastCalledWith('packs.export-assets-missing');
+    exportAction().run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(show).toHaveBeenLastCalledWith('packs.export-failed');
+  });
+
+  it('reads a spell as a cantrip or a level, with a plural-aware casting time and the class list', async () => {
+    const spell = (slug: string, level: number, value: number, unit: string) => ({
+      ...base,
+      type: 'spell',
+      id: `homebrew-aaaaaaaa:spell/${slug}`,
+      name: slug,
+      level,
+      school: 'evocation',
+      castingTime: { value, unit },
+      range: { kind: 'touch' },
+      components: { v: true, s: false, m: false },
+      duration: { kind: 'instantaneous' },
+      concentration: false,
+      ritual: false,
+      classes: ['wizard'],
+    });
+    const parsedSpells = parsePack({
+      format: 1,
+      id: 'homebrew-aaaaaaaa',
+      version: '0.1.0',
+      kind: 'content',
+      system: '5e-2024',
+      name: 'My homebrew',
+      dependencies: [{ id: 'srd-5e-2024', range: '^0.1.0' }],
+      entities: [spell('spark', 0, 1, 'action'), spell('ward', 3, 10, 'minute')],
+    });
+    if (!parsedSpells.ok) throw new Error('spell fixture does not parse');
+    const { root } = await setup(false, false, [], { pack: parsedSpells.pack });
+    const sub = (slug: string) =>
+      root.querySelector(`[data-entity-id="homebrew-aaaaaaaa:spell/${slug}"] .hb-list__sub`)
+        ?.textContent ?? '';
+    expect(sub('spark')).toContain('Cantrip, evocation');
+    expect(sub('spark')).toContain('1 action');
+    expect(sub('ward')).toContain('Level 3, evocation');
+    expect(sub('ward')).toContain('10 minutes');
+  });
+
+  it('uses the tooltip directive instead of native titles and names its icon-only Edit link', async () => {
+    const { root } = await setup(false);
+    expect(root.querySelectorAll('.hb-list [title]')).toHaveLength(0);
+    const edit = root.querySelector('.hb-list__edit')!;
+    expect(edit.getAttribute('aria-label')).toBe('Edit Coral Knife');
   });
 
   it('Delete asks for confirmation; Cancel deletes nothing', async () => {

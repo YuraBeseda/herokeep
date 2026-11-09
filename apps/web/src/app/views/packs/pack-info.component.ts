@@ -2,21 +2,13 @@ import { Component, computed, inject, input, resource, ViewEncapsulation } from 
 import type { Diagnostic } from '@hk/engine';
 import type { Pack } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import semver from 'semver';
 import { formatBytes } from '@shared/helpers/format-bytes';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { PackStore } from '@shared/stores/pack.store';
 import { HkTagChipComponent } from '../../ui/tag-chip/tag-chip.component';
+import { resolveDependencies } from './pack-dependencies';
 import { entityCountRows, type PackSummary } from './pack-summary';
-
-/** A dependency row: the required pack, its range, and the installed version that satisfies it. */
-interface DependencyView {
-  readonly id: string;
-  readonly name: string;
-  readonly range: string;
-  readonly installed: string | null;
-}
 
 /**
  * The ADR-008 "enable screen" facts about one pack (:107-109 — declared overrides, asset count
@@ -63,25 +55,21 @@ export class PackInfoComponent {
     const file = this.file();
     return file ? formatBytes(file.size, this.localeService.locale()) : null;
   });
+  protected readonly authorsText = computed(() =>
+    new Intl.ListFormat(this.localeService.locale(), { style: 'narrow', type: 'unit' }).format(
+      this.pack().authors,
+    ),
+  );
   protected readonly warnings = computed(() =>
     this.diagnostics().filter((d) => d.severity !== 'error'),
   );
 
-  protected readonly dependencies = computed<readonly DependencyView[]>(() => {
+  protected readonly dependencies = computed(() => {
     const core = this.packStore.corePack();
-    const installed = core ? [core, ...this.packStore.installedContent()] : [];
-    return this.summary().dependencies.map((dep) => {
-      const range = semver.validRange(dep.range);
-      const matches = installed
-        .filter((p) => p.id === dep.id && range !== null && semver.satisfies(p.version, range))
-        .sort((a, b) => semver.rcompare(a.version, b.version));
-      return {
-        id: dep.id,
-        name: installed.find((p) => p.id === dep.id)?.name ?? dep.id,
-        range: dep.range,
-        installed: matches[0]?.version ?? null,
-      };
-    });
+    return resolveDependencies(
+      this.summary().dependencies,
+      core ? [core, ...this.packStore.installedContent()] : [],
+    );
   });
 
   protected readonly attributionHtml = resource({

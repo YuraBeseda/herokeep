@@ -19,7 +19,7 @@
         @if (pack(); as current) {
           <span
             class="hb-list__version"
-            [attr.title]="t('homebrew.version-hint', { version: current.version })"
+            [hkTooltip]="t('homebrew.version-hint', { version: current.version })"
             >{{ t('homebrew.version', { version: current.version }) }}</span
           >
         }
@@ -45,7 +45,12 @@
       @for (group of groups(); track group.type) {
         <div class="hb-list__group" [attr.data-type]="group.type">
           <h2 class="hb-list__heading">
-            {{ t('entity-type.' + group.type) }} · {{ group.entities.length }}
+            {{
+              t('homebrew.group-heading', {
+                type: t('entity-type.' + group.type),
+                count: group.entities.length,
+              })
+            }}
           </h2>
           @for (entity of group.entities; track entity.id) {
             <div class="hb-list__row" [attr.data-entity-id]="entity.id">
@@ -53,14 +58,14 @@
                 <hk-icon [icon]="groupIcons[group.type]" />
               </span>
               <div class="hb-list__text">
-                <span class="hb-list__name" [attr.title]="entity.name">{{ entity.name }}</span>
+                <span class="hb-list__name" [hkTooltip]="entity.name">{{ entity.name }}</span>
                 @if (attunes(entity)) {
                   <hk-icon
                     class="hb-list__gem"
                     [icon]="'ui:attune'"
                     role="img"
                     [attr.aria-label]="t('homebrew.sub.attunement')"
-                    [attr.title]="t('homebrew.sub.attunement')"
+                    [hkTooltip]="t('homebrew.sub.attunement')"
                   />
                 }
                 <span class="hb-list__sub">
@@ -74,7 +79,7 @@
                   class="hb-list__edit"
                   [routerLink]="['/packs/homebrew/edit', group.type, slugOf(entity)]"
                   [attr.aria-label]="t('homebrew.edit-label', { name: entity.name })"
-                  [attr.title]="t('homebrew.edit-label', { name: entity.name })"
+                  [hkTooltip]="t('homebrew.edit-label', { name: entity.name })"
                 >
                   <hk-icon [icon]="'ui:edit'" />
                 </a>
@@ -85,7 +90,7 @@
                   class="hb-list__delete"
                   [disabled]="removing() !== null"
                   [attr.aria-label]="t('homebrew.delete-label', { name: entity.name })"
-                  [attr.title]="t('homebrew.delete-label', { name: entity.name })"
+                  [hkTooltip]="t('homebrew.delete-label', { name: entity.name })"
                   (click)="remove(entity)"
                 >
                   {{ t('homebrew.delete') }}

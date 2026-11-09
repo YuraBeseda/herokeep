@@ -272,6 +272,109 @@ describe('ItemFormComponent', () => {
   });
 });
 
+describe('ItemFormComponent cost, charges and preview (plan 17 B12b fix round)', () => {
+  it('writes cost and charges the pack accepts, with a user-typed regain and no default', async () => {
+    const { installContent } = configure();
+    const { fixture, root, emitted } = await renderForm(ItemFormComponent);
+
+    await type(fixture, root, '.hb-form__name', 'Lantern');
+    await type(fixture, root, '.hb-form__cost input', '25');
+    await choose(fixture, root, '.hb-form__currency', 'gp');
+    await type(fixture, root, '.hb-form__charges', '3');
+    await choose(fixture, root, '.hb-form__charges-reset', 'dawn');
+    // Nothing typed: every charge returns, so no `regain` key is written.
+    await save(fixture, root);
+    expect(emitted[0]).toMatchObject({
+      cost: { amount: 25, currency: 'gp' },
+      charges: { max: '3', reset: 'dawn' },
+    });
+    expect((emitted[0] as { charges: Record<string, unknown> }).charges).not.toHaveProperty(
+      'regain',
+    );
+    await expectSavable(emitted[0], installContent);
+
+    await type(fixture, root, '.hb-form__charges-regain', '1d4+1');
+    await save(fixture, root);
+    expect(emitted[1]).toMatchObject({ charges: { max: '3', reset: 'dawn', regain: '1d4+1' } });
+    await expectSavable(emitted[1], installContent);
+  });
+
+  it('refuses a regain that is not dice, and a charges formula outside the grammar', async () => {
+    configure();
+    const { fixture, root, emitted } = await renderForm(ItemFormComponent);
+    await type(fixture, root, '.hb-form__name', 'Lantern');
+    await type(fixture, root, '.hb-form__charges', '3');
+    await type(fixture, root, '.hb-form__charges-regain', 'banana');
+    await save(fixture, root);
+    expect(emitted).toEqual([]);
+    expect(alerts(root)).toEqual([hb.field.item['charges-invalid']]);
+
+    await type(fixture, root, '.hb-form__charges-regain', '');
+    await type(fixture, root, '.hb-form__charges', 'x;y');
+    await save(fixture, root);
+    expect(alerts(root)).toEqual([hb.field.item['charges-invalid']]);
+  });
+
+  it('refuses a negative or fractional cost', async () => {
+    configure();
+    const { fixture, root, emitted } = await renderForm(ItemFormComponent);
+    await type(fixture, root, '.hb-form__name', 'Lantern');
+    await type(fixture, root, '.hb-form__cost input', '2.5');
+    await save(fixture, root);
+    expect(emitted).toEqual([]);
+    expect(alerts(root)).toEqual([hb.field.item['whole-number']]);
+  });
+
+  it('pre-fills an edited item with its cost and charges and keeps them on save', async () => {
+    configure();
+    const item = {
+      type: 'item',
+      id: 'homebrew-aaaaaaaa:item/rod',
+      name: 'Rod',
+      tags: [],
+      prerequisites: [],
+      effects: [],
+      grants: [],
+      choices: [],
+      category: 'magic',
+      cost: { amount: 50, currency: 'gp' },
+      charges: { max: '5', reset: 'longRest', regain: '1d6' },
+    } as Entity;
+    const { fixture, root, emitted } = await renderForm(ItemFormComponent, item);
+    expect(el(root, '.hb-form__cost input').value).toBe('50');
+    expect(control(root, '.hb-form__charges').value).toBe('5');
+    expect(control(root, '.hb-form__charges-regain').value).toBe('1d6');
+    await save(fixture, root);
+    expect(emitted[0]).toEqual(item);
+  });
+
+  it('the preview reads the item as it is typed: damage, range, weight, rarity, attunement', async () => {
+    configure();
+    const { fixture, root } = await renderForm(ItemFormComponent);
+    const preview = () => el<HTMLElement>(root, '.hb-form__preview').textContent ?? '';
+    expect(preview()).toContain(hb.preview.unnamed);
+
+    await type(fixture, root, '.hb-form__name', 'Firepot');
+    await choose(fixture, root, '.hb-form__category', 'weapon');
+    await type(fixture, root, '.hb-form__damage', '1d6');
+    await type(fixture, root, '.hb-form__range-normal input', '30');
+    await type(fixture, root, '.hb-form__range-long input', '120');
+    await type(fixture, root, '.hb-form__weight input', '2');
+    await choose(fixture, root, '.hb-form__rarity', 'uncommon');
+    await tick(fixture, root, '.hb-form__attunement');
+
+    const text = preview();
+    expect(text).toContain('Firepot');
+    expect(text).toContain('1d6');
+    expect(text).toContain('range 30/120');
+    expect(text).toContain('2 lb');
+    expect(text).toContain(hb.enum.rarity.uncommon);
+    expect(el(root, '.hb-form__preview [role="img"]').getAttribute('aria-label')).toBe(
+      hb.sub.attunement,
+    );
+  });
+});
+
 describe('SpellFormComponent', () => {
   it('produces a spell the homebrew pack accepts', async () => {
     const { installContent } = configure();
@@ -606,6 +709,19 @@ describe('HomebrewEditorComponent', () => {
       expect(open).not.toHaveBeenCalled();
     });
 
+    it('a double Cancel while the confirm is open stacks no second prompt', async () => {
+      let release!: (leave: boolean) => void;
+      const pending = new Promise<boolean>((resolve) => (release = resolve));
+      const { fixture, root, open } = await editorWithName({ leave: pending });
+      await type(fixture, root, '.hb-form__name', 'Thing');
+      const first = fixture.componentInstance.canLeave();
+      const second = fixture.componentInstance.canLeave();
+      expect(open).toHaveBeenCalledTimes(1);
+      release(true);
+      expect(await first).toBe(true);
+      expect(await second).toBe(true);
+    });
+
     it('a failed save keeps the edits and still asks before leaving', async () => {
       const { fixture, root, show, open } = await editorWithName({ leave: false });
       await type(fixture, root, '.hb-form__name', 'Thing');
@@ -650,21 +766,6 @@ describe('HomebrewEditorComponent', () => {
       expect(guarded).toEqual(['homebrew/new/:type', 'homebrew/edit/:type/:slug']);
     });
 
-    it('a new entry whose name maps to an id already in the pack is refused with a message', async () => {
-      const existing = { type: 'feat', id: `${LOCAL}:feat/thing`, name: 'Thing' } as Entity;
-      const { saveSpy } = setupEditor({ type: 'feat' }, () => Promise.resolve({}), {
-        existing: [existing],
-      });
-      const fixture = TestBed.createComponent(HomebrewEditorComponent);
-      await settle(fixture);
-      const root = fixture.nativeElement as HTMLElement;
-      await type(fixture, root, '.hb-form__name', 'Thing');
-      await type(fixture, root, '.hb-form__description', 'Benefit.');
-      await save(fixture);
-      expect(saveSpy).not.toHaveBeenCalled();
-      expect(alerts(root)).toEqual([hb.field['name-taken']]);
-    });
-
     it('the strap carries Cancel, a type-labelled Save and Markdown help', async () => {
       const { fixture } = await editorWithName();
       const config = TestBed.inject(ActionStrapService).config()!;
@@ -684,5 +785,82 @@ describe('HomebrewEditorComponent', () => {
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('.hb-editor__not-found')?.textContent?.trim()).toBe(hb['not-found']);
     expect(root.querySelector('form')).toBeNull();
+  });
+});
+
+describe('homebrew name check against the REAL HomebrewService (plan 17 B12b fix round)', () => {
+  const existingFeat = {
+    type: 'feat',
+    id: `${LOCAL}:feat/thing`,
+    name: 'Thing',
+    description: 'Old.',
+    tags: [],
+    prerequisites: [],
+    effects: [{ type: 'feature.text', name: 'Thing', description: 'Old.' }],
+    grants: [],
+    choices: [],
+    category: 'general',
+    repeatable: false,
+  } as Entity;
+
+  function withExisting() {
+    const pack = {
+      format: 1,
+      id: LOCAL,
+      version: '0.1.0',
+      kind: 'content',
+      name: 'My homebrew',
+      authors: [],
+      dependencies: [],
+      locale: 'en',
+      entities: [existingFeat],
+      overrides: [],
+      assets: [],
+      i18n: {},
+    } as unknown as Pack;
+    configure([
+      {
+        provide: PackStore,
+        useValue: {
+          packs: signal([corePack, pack]),
+          corePack: signal(corePack),
+          installedContent: signal<Pack[]>([pack]),
+          ready: signal(true),
+          installContent: vi.fn().mockResolvedValue(undefined),
+          removeContent: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    ]);
+  }
+
+  it('the real newEntityId already suffixes a taken name, so only the name can tell them apart', () => {
+    withExisting();
+    expect(TestBed.inject(HomebrewService).newEntityId('Thing', 'feat')).toBe(
+      `${LOCAL}:feat/thing-2`,
+    );
+  });
+
+  it('refuses a new entry whose trimmed, case-insensitive name is already used by an entry of the same kind', async () => {
+    withExisting();
+    const { fixture, root, emitted } = await renderForm(FeatFormComponent);
+    await type(fixture, root, '.hb-form__name', '  tHING ');
+    await type(fixture, root, '.hb-form__description', 'Benefit.');
+    await save(fixture, root);
+    expect(emitted).toEqual([]);
+    expect(alerts(root)).toEqual([hb.field['name-taken']]);
+  });
+
+  it('lets an edit keep its own name, and a different kind reuse the name', async () => {
+    withExisting();
+    const edit = await renderForm(FeatFormComponent, existingFeat);
+    await save(edit.fixture, edit.root);
+    expect(edit.emitted).toHaveLength(1);
+    TestBed.resetTestingModule();
+
+    withExisting();
+    const item = await renderForm(ItemFormComponent);
+    await type(item.fixture, item.root, '.hb-form__name', 'Thing');
+    await save(item.fixture, item.root);
+    expect(item.emitted).toHaveLength(1);
   });
 });

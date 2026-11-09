@@ -153,8 +153,11 @@ describe('PackTrustDialogComponent', () => {
     expect(assets.textContent).toContain('1 image');
     expect(assets.textContent).toContain('34 B');
     const deps = root.querySelector<HTMLElement>('.pack-info__dependencies')!;
-    expect(deps.textContent).toContain('srd-5e-2024');
-    expect(deps.textContent).toContain('^0.1.0');
+    // The pack's display name and a version phrase, never the raw id or semver range.
+    expect(deps.textContent).toContain('SRD');
+    expect(deps.textContent).toContain('0.1.0 or newer');
+    expect(deps.textContent).not.toContain('srd-5e-2024');
+    expect(deps.textContent).not.toContain('^0.1.0');
     expect(root.querySelector('.pack-info__overrides')?.textContent).toContain(
       packsEn.info['overrides-none'],
     );

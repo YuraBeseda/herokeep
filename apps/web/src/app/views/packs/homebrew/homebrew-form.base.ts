@@ -92,11 +92,23 @@ export abstract class HomebrewFormBase<E extends Entity> implements HomebrewForm
     }
   });
 
-  /** A new entry whose name maps to an id the pack already uses would silently overwrite it. */
+  /**
+   * An entry whose name (trimmed, case-insensitive) is already used by another entry of the same
+   * kind in this device's homebrew pack. The id is NOT the test: newEntityId makes every new id
+   * unique (thing-2), so two entries with one name would both save and only the name would
+   * tell them apart. When editing, the entry being edited is excluded.
+   */
   private nameTakenError(): FieldErrors {
-    const id = this.newId();
-    if (id === null) return {};
-    const taken = this.homebrewService.pack()?.entities.some((entity) => entity.id === id);
+    const wanted = this.name().trim().toLowerCase();
+    const own = this.entity()?.id;
+    const taken = this.homebrewService
+      .pack()
+      ?.entities.some(
+        (entity) =>
+          entity.type === this.type &&
+          entity.id !== own &&
+          entity.name.trim().toLowerCase() === wanted,
+      );
     return taken ? { name: NAME_TAKEN_KEY } : {};
   }
 

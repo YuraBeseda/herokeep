@@ -8,7 +8,7 @@
       <dt>{{ t('info.authors') }}</dt>
       <dd>
         @if (pack().authors.length > 0) {
-          {{ pack().authors.join(', ') }}
+          {{ authorsText() }}
         } @else {
           {{ t('info.none') }}
         }
@@ -23,9 +23,14 @@
       <dd>
         @for (dep of dependencies(); track dep.id) {
           <span class="pack-info__dependency">
-            <span>
-              {{ dep.name }} <code>{{ dep.id }}</code> {{ dep.range }}
-            </span>
+            <span class="pack-info__dep-name">{{ dep.name }}</span>
+            @if (dep.minVersion) {
+              <span class="pack-info__dep-range">{{
+                dep.exact
+                  ? t('info.dep-exact', { version: dep.minVersion })
+                  : t('info.dep-range', { version: dep.minVersion })
+              }}</span>
+            }
             @if (dep.installed) {
               <hk-tag-chip
                 [label]="t('info.dep-installed')"
@@ -60,8 +65,12 @@
       <div class="pack-info__fact pack-info__file">
         <dt>{{ t('info.file') }}</dt>
         <dd>
-          {{ f.name }} ·
-          {{ t('info.unit.' + fileSize()!.unit, { amount: fileSize()!.amount }) }}
+          {{
+            t('info.file-value', {
+              name: f.name,
+              size: t('info.unit.' + fileSize()!.unit, { amount: fileSize()!.amount }),
+            })
+          }}
         </dd>
       </div>
       <div class="pack-info__fact pack-info__integrity">

@@ -319,3 +319,22 @@ describe('DialogService', () => {
     handle.close();
   });
 });
+
+describe('DialogService size option (plan 17 B12b fix round)', () => {
+  afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove()));
+
+  it("a 'wide' dialog carries the wide variant class; the default does not", () => {
+    stubViewport({ phone: false, coarse: false });
+    const service = TestBed.inject(DialogService);
+    const wide = service.open(TestDialogContentComponent, { data: 'x', size: 'wide' });
+    TestBed.tick();
+    expect(document.querySelector('hk-dialog')?.classList.contains('hk-dialog--wide')).toBe(true);
+    wide.close();
+    TestBed.tick();
+
+    const plain = service.open(TestDialogContentComponent, { data: 'x' });
+    TestBed.tick();
+    expect(document.querySelector('hk-dialog')?.classList.contains('hk-dialog--wide')).toBe(false);
+    plain.close();
+  });
+});

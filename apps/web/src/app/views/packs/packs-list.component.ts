@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import {
   Component,
   DestroyRef,
@@ -27,6 +28,8 @@ import {
   PackImportInvalidError,
 } from '@shared/services/packs/pack-import.errors';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { ActionStrapService } from '../../ui/action-strap/action-strap.service';
@@ -56,6 +59,8 @@ interface PackRowView {
   readonly entries: number;
   readonly images: number;
   readonly usedBy: number;
+  /** Names of the campaigns that share exactly this pack version. */
+  readonly campaigns: readonly string[];
   /** Heroes pinning an older version of this pack than the one installed (an update to review). */
   readonly toReview: number;
   readonly breakdown: readonly { readonly type: string; readonly count: number }[];
@@ -84,6 +89,7 @@ interface PackRowView {
     HkButtonComponent,
     HkLeafComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
     IconComponent,
   ],
   providers: [provideTranslocoScope('packs')],
@@ -100,6 +106,8 @@ export class PacksListComponent {
   private readonly localeService = inject(LocaleService);
   private readonly storagePersist = inject(StoragePersistService);
   private readonly router = inject(Router);
+  private readonly campaignStore = inject(CampaignStore);
+  private readonly campaignsRepository = inject(CampaignsRepository);
   private readonly strap = inject(ActionStrapService);
 
   protected readonly importAccept = IMPORT_ACCEPT;
@@ -113,6 +121,8 @@ export class PacksListComponent {
 
   /** Every stored character's pins (read once; installing a pack recomputes the rows). */
   private readonly storedPins = resource({ loader: () => this.packUsageService.heroPins() });
+
+  private readonly campaignRows = resource({ loader: () => this.campaignsRepository.list() });
 
   private readonly installedAll = computed<Pack[]>(() => {
     const core = this.corePack();
@@ -148,10 +158,20 @@ export class PacksListComponent {
       updateVersion: this.updateTargets().has(key) ? pack.version : null,
       entries: pack.entities.length,
       images: pack.assets.length,
+      campaigns: this.campaignNames(pack),
       usedBy: heroes.filter((hero) => hero.pins[pack.id] === pack.version).length,
       toReview: this.updateTargets().get(key) ?? 0,
       breakdown: entityCountRows(summarizePack(pack).entityCounts),
     };
+  }
+
+  /** The campaigns whose enabled set holds exactly `pack` (id and version). */
+  private campaignNames(pack: Pack): readonly string[] {
+    const rows = this.campaignRows.hasValue() ? this.campaignRows.value() : [];
+    const enabled = this.campaignStore.enabledPacks();
+    return rows
+      .filter((row) => enabled.get(row.id)?.get(pack.id)?.version === pack.version)
+      .map((row) => row.name);
   }
 
   protected readonly coreRow = computed(() => {
@@ -267,6 +287,7 @@ export class PacksListComponent {
       const preview = await this.hkpackReader.read(file);
       this.dialogService.open(PackTrustDialogComponent, {
         data: { ...preview, fileName: file.name, fileSize: file.size } satisfies PackTrustData,
+        size: 'wide',
       });
     } catch (error) {
       this.showImportFailure(error);
@@ -292,7 +313,20 @@ export class PacksListComponent {
     }
   }
 
-  /** "Items: 3, Spells: 1" — type names come from the `entity-type` keys; the list joins by locale. */
+  /** The homebrew sub-line: "4 entries: Items 3, Spells 1" — each part and the join are the locale's. */
+  protected breakdownText(
+    row: PackRowView,
+    t: (key: string, params?: Record<string, unknown>) => string,
+  ): string {
+    const parts = row.breakdown.map((part) =>
+      t('list.row.part', { type: t('entity-type.' + part.type), count: part.count }),
+    );
+    return t('list.row.breakdown', {
+      entries: t('list.row.entries', { count: row.entries }),
+      parts: this.formatList(parts),
+    });
+  }
+
   protected formatList(parts: readonly string[]): string {
     return new Intl.ListFormat(this.localeService.locale(), {
       style: 'narrow',

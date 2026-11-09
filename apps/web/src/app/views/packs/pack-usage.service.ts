@@ -8,6 +8,8 @@ import { SnapshotsRepository } from '@shared/services/storage/snapshots.reposito
 export interface HeroPins {
   readonly id: string;
   readonly name: string;
+  readonly system: string;
+  readonly portraitThumbHash?: string;
   readonly pins: Pins;
 }
 
@@ -47,7 +49,13 @@ export class PackUsageService {
           this.eventsRepository.byStream(row.id),
           this.snapshotsRepository.get(row.id),
         ]);
-        return { id: row.id, name: row.name, pins: reduce(events, snapshot).pins };
+        return {
+          id: row.id,
+          name: row.name,
+          system: row.system,
+          ...(row.portraitThumbHash ? { portraitThumbHash: row.portraitThumbHash } : {}),
+          pins: reduce(events, snapshot).pins,
+        };
       }),
     );
   }

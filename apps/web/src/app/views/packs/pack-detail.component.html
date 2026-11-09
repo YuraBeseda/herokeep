@@ -19,7 +19,7 @@
           <h1 class="pack-detail__title">{{ pack.name }}</h1>
           <span
             class="pack-detail__plate"
-            [attr.title]="t('list.version-hint', { version: pack.version })"
+            [hkTooltip]="t('list.version-hint', { version: pack.version })"
             >{{ pack.version }}</span
           >
           @if (isHomebrew()) {
@@ -28,10 +28,25 @@
           @if (isCore()) {
             <hk-tag-chip [label]="t('list.core-label')" [hint]="t('list.core-hint')" />
           }
+          @for (share of campaignShares(); track share.id) {
+            <hk-tag-chip
+              class="pack-detail__campaign"
+              [label]="t('list.campaign', { name: share.name })"
+              [tone]="'arcane'"
+              [hint]="t('list.campaign-hint', { name: share.name })"
+            />
+          }
           @if (usedBy() !== null) {
             <p class="pack-detail__used-by">{{ t('detail.used-by', { count: usedBy() }) }}</p>
           }
         </header>
+
+        @for (share of campaignShares(); track share.id) {
+          <p class="pack-detail__integrity" [attr.data-state]="share.state">
+            <strong>{{ t('detail.integrity') }}</strong>
+            {{ t('detail.integrity-' + share.state, { name: share.name }) }}
+          </p>
+        }
 
         @if (summary(); as summary) {
           <app-pack-info [pack]="pack" [summary]="summary" [diagnostics]="diagnostics()" />
@@ -44,8 +59,17 @@
             </h3>
             @for (hero of users(); track hero.id) {
               <div class="pack-detail__user" [attr.data-hero-id]="hero.id">
+                <hk-portrait-frame
+                  class="pack-detail__portrait"
+                  [name]="hero.name"
+                  [src]="(hero.portraitThumbHash | blobUrl)() ?? null"
+                  [size]="'s'"
+                />
                 <div class="pack-detail__user-text">
                   <strong class="pack-detail__user-name">{{ hero.name }}</strong>
+                  <span class="pack-detail__hero-line pack-detail__hint">{{
+                    classLine(hero, t)
+                  }}</span>
                   <span class="pack-detail__hint">{{
                     t('detail.pinned', { version: hero.pins[pack.id] })
                   }}</span>
@@ -132,10 +156,21 @@
             @for (need of needs(); track need.id) {
               <li class="pack-detail__need">
                 <span>{{ t('detail.needs', { name: need.name }) }}</span>
+                @if (need.minVersion) {
+                  <span class="pack-detail__hint pack-detail__need-range">{{
+                    need.exact
+                      ? t('info.dep-exact', { version: need.minVersion })
+                      : t('info.dep-range', { version: need.minVersion })
+                  }}</span>
+                }
                 <hk-tag-chip
-                  [label]="need.installed ?? t('info.dep-missing')"
+                  [label]="need.installed ? t('info.dep-installed') : t('info.dep-missing')"
                   [tone]="need.installed ? 'moss' : 'ember'"
-                  [hint]="need.range"
+                  [hint]="
+                    need.installed
+                      ? t('info.dep-installed-hint', { version: need.installed })
+                      : t('info.dep-missing-hint')
+                  "
                 />
               </li>
             }

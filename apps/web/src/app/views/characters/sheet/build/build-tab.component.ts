@@ -7,6 +7,7 @@ import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edi
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
+import { askOnce } from '../../../../ui/nav/ask-once';
 import type {
   ChoiceCommitFn,
   ChoiceValidateFn,
@@ -97,8 +98,12 @@ export class BuildTabComponent {
    * phone tab bar, the More list, the rail, browser Back — asks ONCE while the identity form holds
    * unsaved edits, and stays silent when it is clean. "Keep editing" (or Escape) stays.
    */
+  private readonly askLeave = askOnce(() =>
+    this.dialog.open(BuildLeaveConfirmComponent).closed.then((leave) => leave === true),
+  );
+
   canLeave(): boolean | Promise<boolean> {
     if (!this.identity()?.hasUnsaved()) return true;
-    return this.dialog.open(BuildLeaveConfirmComponent).closed.then((leave) => leave === true);
+    return this.askLeave();
   }
 }

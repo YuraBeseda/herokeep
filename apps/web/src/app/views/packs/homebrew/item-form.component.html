@@ -211,13 +211,12 @@
             [value]="chargesReset()"
             (valueChange)="setChargesReset($event)"
           />
-          <hk-select
+          <hk-text-field
             class="hb-form__charges-regain"
             [label]="t('homebrew.field.item.regain')"
-            [options]="regainOptions(t)"
-            [value]="chargesRegain()"
-            (valueChange)="chargesRegain.set($event ?? '')"
+            [(value)]="chargesRegain"
             [error]="err(t, 'chargesRegain')"
+            [hint]="t('homebrew.field.item.regain-hint')"
           />
         </div>
 
@@ -241,7 +240,7 @@
             [icon]="'ui:attune'"
             role="img"
             [attr.aria-label]="t('homebrew.sub.attunement')"
-            [attr.title]="t('homebrew.sub.attunement')"
+            [hkTooltip]="t('homebrew.sub.attunement')"
           />
         }
         <span class="hb-form__preview-tags">

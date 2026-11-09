@@ -12,10 +12,22 @@ import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { EventsRepository } from '@shared/services/storage/events.repository';
+import { CampaignPacksService } from '@shared/services/campaigns/campaign-packs.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { PackRemoveDependentsError, PackStore } from '@shared/stores/pack.store';
 import packsEn from '../../../assets/i18n/packs/en.json';
 import sampleJson from '../../../testing/fixtures/packs/sample-content.json';
+import { HkpackDelivery } from '@shared/services/packs/hkpack-delivery';
+import {
+  HkpackAssetsMissingError,
+  HkpackWriter,
+} from '@shared/services/packs/hkpack-writer.service';
+import { HeroSummaryService } from '../characters/hero-summary.service';
 import { ActionStrapService } from '../../ui/action-strap/action-strap.service';
+
+const deliver = vi.fn().mockResolvedValue('saved');
 import { PackDetailComponent, PackRemoveConfirmComponent } from './pack-detail.component';
 
 class StubLoader implements TranslocoLoader {
@@ -84,7 +96,15 @@ const pinSample = (stream: string) => [
 
 async function setup(
   key: string,
-  options: { confirm?: unknown; dependents?: Pack[]; removeError?: unknown } = {},
+  options: {
+    confirm?: unknown;
+    dependents?: Pack[];
+    removeError?: unknown;
+    installed?: Pack[];
+    campaigns?: { id: string; name: string; version: string; state: string }[];
+    writer?: unknown;
+    summaries?: unknown;
+  } = {},
 ) {
   const removeContent =
     options.removeError === undefined
@@ -114,12 +134,56 @@ async function setup(
         provide: PackStore,
         useValue: {
           corePack: signal<Pack | undefined>(CORE),
-          installedContent: signal<Pack[]>([samplePack()]),
+          installedContent: signal<Pack[]>(options.installed ?? [samplePack()]),
           removeContent,
           dependentsOf,
         },
       },
       { provide: DialogService, useValue: { open } },
+      { provide: HkpackDelivery, useValue: { deliver } },
+      ...(options.writer ? [{ provide: HkpackWriter, useValue: options.writer }] : []),
+      ...(options.summaries ? [{ provide: HeroSummaryService, useValue: options.summaries }] : []),
+      {
+        provide: CampaignsRepository,
+        useValue: {
+          list: () =>
+            Promise.resolve((options.campaigns ?? []).map(({ id, name }) => ({ id, name }))),
+        },
+      },
+      {
+        provide: CampaignStore,
+        useValue: {
+          enabledPacks: signal(
+            new Map(
+              (options.campaigns ?? []).map((c) => [
+                c.id,
+                new Map([['sample-content', { version: c.version, sha256: 'ab' }]]),
+              ]),
+            ),
+          ),
+        },
+      },
+      {
+        provide: CampaignPacksService,
+        useValue: {
+          installStatus: (campaignId: string) =>
+            signal(
+              new Map([
+                [
+                  'sample-content',
+                  {
+                    state:
+                      options.campaigns?.find((c) => c.id === campaignId)?.state ?? 'installed',
+                  },
+                ],
+              ]),
+            ),
+        },
+      },
+      {
+        provide: EngineFacade,
+        useValue: { localizer: () => ({ name: (id: string) => id.split('/').pop() ?? id }) },
+      },
       { provide: ToastService, useValue: { show } },
       {
         provide: MarkdownService,
@@ -303,6 +367,124 @@ describe('PackDetailComponent, board PK02 elements (plan 17 B12b)', () => {
     expect(update.disabled).toBe(true);
     expect(update.disabledReason).toBe('shell.strap.packs-update-none');
     expect(config.secondary?.find((a) => a.id === 'export-pack')?.disabled).toBe(false);
+  });
+});
+
+describe('PackDetailComponent, fix round: provenance, heroes, dependencies, export', () => {
+  const exportAction = () =>
+    TestBed.inject(ActionStrapService)
+      .config()!
+      .secondary!.find((a) => a.id === 'export-pack')!;
+
+  it('names the campaign that shares this exact version and its sha256 check state', async () => {
+    await setup(SAMPLE_KEY, {
+      campaigns: [
+        { id: 'c1', name: 'The Emberfall Company', version: '1.0.0', state: 'installed' },
+        { id: 'c2', name: 'Salt Kings', version: '0.9.0', state: 'installed' },
+        { id: 'c3', name: 'Old Guard', version: '1.0.0', state: 'error' },
+      ],
+    });
+    const { root } = await render();
+    expect(
+      [...root.querySelectorAll('.pack-detail__campaign')].map((c) => c.textContent?.trim()),
+    ).toEqual(['Campaign: The Emberfall Company', 'Campaign: Old Guard']);
+    const lines = [...root.querySelectorAll('.pack-detail__integrity')];
+    expect(lines.map((l) => l.getAttribute('data-state'))).toEqual(['installed', 'error']);
+    expect(lines[0].textContent).toContain('matches the record of The Emberfall Company');
+    expect(lines[1].textContent).toContain('does not match the record of Old Guard');
+  });
+
+  it('shows each hero that pins the pack with a portrait frame and the class line', async () => {
+    await setup(SAMPLE_KEY, {
+      summaries: {
+        summarize: (ids: string[]) =>
+          Promise.resolve(
+            new Map(
+              ids.map((id) => [id, { classes: [{ classId: 'srd:class/paladin', level: 5 }] }]),
+            ),
+          ),
+      },
+    });
+    await seedCharacter('Ilyana Vorn', pinSample);
+    const { root } = await render();
+    const user = root.querySelector('.pack-detail__user')!;
+    expect(user.querySelector('hk-portrait-frame')).not.toBeNull();
+    expect(user.querySelector('.pack-detail__hero-line')?.textContent?.trim()).toBe('paladin 5');
+  });
+
+  it('says dependencies with the pack name and a version phrase, not the raw range or id', async () => {
+    await setup(SAMPLE_KEY);
+    const { root } = await render();
+    const info = root.querySelector('.pack-info__dependencies')!;
+    expect(info.textContent).toContain('SRD 5.2.1');
+    expect(info.textContent).toContain('0.1.0 or newer');
+    expect(info.textContent).not.toContain('^0.1.0');
+    expect(info.textContent).not.toContain('srd-5e-2024');
+    const need = root.querySelector('.pack-detail__need')!;
+    expect(need.textContent).toContain('SRD 5.2.1');
+    expect(need.textContent).toContain('0.1.0 or newer');
+    expect(need.textContent).toContain(packsEn.info['dep-installed']);
+  });
+
+  it('marks a dependency that is not installed', async () => {
+    const orphan = {
+      ...samplePack(),
+      dependencies: [{ id: 'ghost-pack', range: '>=2.0.0' }],
+    } as Pack;
+    await setup(SAMPLE_KEY, { installed: [orphan] });
+    const { root } = await render();
+    const need = root.querySelector('.pack-detail__need')!;
+    expect(need.textContent).toContain('ghost-pack');
+    expect(need.textContent).toContain('2.0.0 or newer');
+    expect(need.textContent).toContain(packsEn.info['dep-missing']);
+  });
+
+  it('draws Export disabled for the core pack, with the reason on the action', async () => {
+    await setup('srd-5e-2024@0.1.0');
+    await render();
+    expect(exportAction().disabled).toBe(true);
+    expect(exportAction().disabledReason).toBe('shell.strap.packs-export-core');
+  });
+
+  it('draws Export disabled for a pack the importer would refuse', async () => {
+    const broken = {
+      ...samplePack(),
+      dependencies: [{ id: 'ghost-pack', range: '^1.0.0' }],
+    } as Pack;
+    await setup(SAMPLE_KEY, { installed: [broken] });
+    await render();
+    expect(exportAction().disabled).toBe(true);
+    expect(exportAction().disabledReason).toBe('shell.strap.packs-export-invalid');
+  });
+
+  it('Export builds the archive and hands it to the delivery ladder', async () => {
+    const blob = new Blob(['zip']);
+    const exportFn = vi.fn().mockResolvedValue({ blob, fileName: 'sample-content-1.0.0.hkpack' });
+    await setup(SAMPLE_KEY, { writer: { export: exportFn } });
+    const { show } = TestBed.inject(ToastService) as unknown as { show: ReturnType<typeof vi.fn> };
+    await render();
+    expect(exportAction().disabled).toBe(false);
+    exportAction().run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(exportFn).toHaveBeenCalledTimes(1);
+    expect(deliver).toHaveBeenCalledWith(blob, 'sample-content-1.0.0.hkpack', 'Sample content');
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('a missing image blob toasts its own reason; any other failure toasts export-failed', async () => {
+    const exportFn = vi
+      .fn()
+      .mockRejectedValueOnce(new HkpackAssetsMissingError('sample-content@1.0.0'))
+      .mockRejectedValueOnce(new Error('disk'));
+    await setup(SAMPLE_KEY, { writer: { export: exportFn } });
+    const { show } = TestBed.inject(ToastService) as unknown as { show: ReturnType<typeof vi.fn> };
+    await render();
+    exportAction().run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(show).toHaveBeenLastCalledWith('packs.export-assets-missing');
+    exportAction().run();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(show).toHaveBeenLastCalledWith('packs.export-failed');
   });
 });
 

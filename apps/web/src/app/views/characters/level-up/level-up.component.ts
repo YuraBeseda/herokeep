@@ -11,6 +11,7 @@ import { DialogService } from '../../../ui/dialog/dialog.service';
 import { FlowController } from '../../../ui/flow/flow-controller';
 import { HkDescriptionDrawerComponent } from '../../../ui/description-drawer/description-drawer.component';
 import { NavHistoryService } from '../../../ui/nav/nav-history.service';
+import { askOnce } from '../../../ui/nav/ask-once';
 import { phoneLayout } from '../../../ui/shell/viewport';
 import { HkPickerCardComponent } from '../../../ui/picker-card/picker-card.component';
 import { HkStepperComponent } from '../../../ui/stepper/stepper.component';
@@ -151,9 +152,13 @@ export class LevelUpComponent {
    * Finish — a tab link, the rail, browser Back — asks first while something has been chosen, with
    * the same dialog Cancel uses. A clean level-up leaves without asking.
    */
+  private readonly askLeave = askOnce(() =>
+    this.dialog.open(CancelLevelUpDialogComponent).closed.then((leave) => leave === true),
+  );
+
   canLeave(): boolean | Promise<boolean> {
     if (this.exitApproved || !this.state.dirty()) return true;
-    return this.dialog.open(CancelLevelUpDialogComponent).closed.then((leave) => leave === true);
+    return this.askLeave();
   }
 
   /** Next may leave a step once it is answered: hit points rolled or averaged, a choice with an

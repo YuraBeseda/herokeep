@@ -44,7 +44,9 @@
     "row": {
       "entries": "{count, plural, one {# запис} few {# записи} many {# записів} other {# запису}}",
       "used-by": "{count, plural, =0 {не використовується} one {використовується # персонажем} other {використовується # персонажами}}",
-      "review": "{count, plural, one {у # персонажа є оновлення для перегляду} other {у # персонажів є оновлення для перегляду}}"
+      "review": "{count, plural, one {у # персонажа є оновлення для перегляду} other {у # персонажів є оновлення для перегляду}}",
+      "part": "{type} {count}",
+      "breakdown": "{entries}: {parts}"
     },
     "open": "Відкрити",
     "open-named": "Відкрити «{name}»",
@@ -64,7 +66,11 @@
     "storage-kept": "Збереження даних",
     "storage-granted": "дозволено",
     "storage-not-granted": "не дозволено",
-    "storage-settings": "Налаштування сховища"
+    "storage-settings": "Налаштування сховища",
+    "summary": "{count, plural, one {# пакет} few {# пакети} many {# пакетів} other {# пакета}}{updates, plural, =0 {} one { · # оновлення} few { · # оновлення} many { · # оновлень} other { · # оновлення}}",
+    "core-lock-tip": "Вбудований у застосунок — його не можна видалити; оновлення приходять разом із застосунком",
+    "campaign": "Кампанія: {name}",
+    "campaign-hint": "Пакет відкрито кампанією {name}; ведучий оновлює його для всіх"
   },
   "info": {
     "version": "Версія {version}",
@@ -96,7 +102,10 @@
     "dep-missing": "не встановлено",
     "dep-missing-hint": "Спершу встановіть цей пакет",
     "entities-total": "{count, plural, one {Вміст · # запис} few {Вміст · # записи} many {Вміст · # записів} other {Вміст · # запису}}",
-    "validation-clean": "Перевірка не знайшла помилок і попереджень."
+    "validation-clean": "Перевірка не знайшла помилок і попереджень.",
+    "dep-range": "{version} або новіша",
+    "dep-exact": "саме {version}",
+    "file-value": "{name} · {size}"
   },
   "entity-type": {
     "system": "Ігрові системи",
@@ -117,7 +126,7 @@
     "table": "Таблиці"
   },
   "trust": {
-    "title": "Встановити «{name}»?",
+    "title": "Встановити {name} {version}?",
     "intro": "Перегляньте, що в пакеті, перш ніж його встановити. Нічого не зміниться в персонажів, доки ви не закріпите нову версію на їхній вкладці «Білд».",
     "install": "Встановити",
     "cancel": "Скасувати",
@@ -157,7 +166,12 @@
     "versions-hint": "Старі версії лишаються, щоб історія персонажа й далі відкривалась.",
     "dependencies": "Залежності",
     "needs": "Потрібен «{name}»",
-    "nothing-depends": "Від цього пакета ніщо не залежить"
+    "nothing-depends": "Від цього пакета ніщо не залежить",
+    "integrity": "Цілісність",
+    "integrity-installed": "sha256 збігається із записом кампанії «{name}»",
+    "integrity-installing": "ще не перевірено: копія з кампанії «{name}» завантажується",
+    "integrity-error": "не збігається із записом кампанії «{name}»",
+    "class-level": "{class} {level}"
   },
   "remove-confirm": {
     "title": "Видалити «{name}»?",
@@ -268,7 +282,8 @@
         "regain": "Відновлюється",
         "regain-all": "Усі заряди",
         "charges-invalid": "Введіть ціле число або коротку формулу.",
-        "attunement-hint": "Займає один зі слотів налаштування персонажа. На комірці сумки показано як самоцвіт."
+        "attunement-hint": "Займає один зі слотів налаштування персонажа. На комірці сумки показано як самоцвіт.",
+        "regain-hint": "Кубики, наприклад 1d4+1; залиште порожнім, щоб повернути всі заряди"
       },
       "spell": {
         "level": "Рівень (0 — замовляння)",
@@ -401,10 +416,17 @@
       "weight": "{weight} фнт",
       "cost": "{amount} {currency}",
       "attunement": "Потребує налаштування",
-      "spell": "Рівень {level}, {school}",
+      "spell": "{level, plural, =0 {Замовляння} other {Рівень #}}, {school}",
       "repeatable": "можна брати повторно",
       "not-repeatable": "повторно не береться",
-      "speed": "{speed} фт"
+      "speed": "{speed} фт",
+      "casting": {
+        "action": "{value, plural, one {# дія} few {# дії} many {# дій} other {# дії}}",
+        "bonus": "{value, plural, one {# бонусна дія} few {# бонусні дії} many {# бонусних дій} other {# бонусної дії}}",
+        "reaction": "{value, plural, one {# реакція} few {# реакції} many {# реакцій} other {# реакції}}",
+        "minute": "{value, plural, one {# хвилина} few {# хвилини} many {# хвилин} other {# хвилини}}",
+        "hour": "{value, plural, one {# година} few {# години} many {# годин} other {# години}}"
+      }
     },
     "where": "Де це видно",
     "pinned": "закріплено {version}",
@@ -462,10 +484,17 @@
       "italic": "курсив",
       "list": "маркований список",
       "heading": "заголовок",
-      "close": "Закрити"
+      "close": "Закрити",
+      "sample": {
+        "bold": "**жирний**",
+        "italic": "_курсив_",
+        "list": "- пункт",
+        "heading": "## заголовок"
+      }
     },
     "attention": "{count, plural, one {# поле потребує уваги} few {# поля потребують уваги} many {# полів потребують уваги} other {# поля потребують уваги}}",
-    "unsaved": "Є незбережені зміни"
+    "unsaved": "Є незбережені зміни",
+    "group-heading": "{type} · {count}"
   },
   "export-failed": "Не вдалося експортувати пакет",
   "export-assets-missing": "Зображення цього пакета не збережене на пристрої, тож його не можна експортувати"

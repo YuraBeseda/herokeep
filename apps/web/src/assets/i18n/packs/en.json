@@ -44,7 +44,9 @@
     "row": {
       "entries": "{count, plural, one {# entry} other {# entries}}",
       "used-by": "{count, plural, =0 {not used by any hero} one {used by # hero} other {used by # heroes}}",
-      "review": "{count, plural, one {# hero has an update to review} other {# heroes have an update to review}}"
+      "review": "{count, plural, one {# hero has an update to review} other {# heroes have an update to review}}",
+      "part": "{type} {count}",
+      "breakdown": "{entries}: {parts}"
     },
     "open": "Open",
     "open-named": "Open {name}",
@@ -64,7 +66,11 @@
     "storage-kept": "Kept data",
     "storage-granted": "granted",
     "storage-not-granted": "not granted",
-    "storage-settings": "Storage settings"
+    "storage-settings": "Storage settings",
+    "summary": "{count, plural, one {# pack} other {# packs}}{updates, plural, =0 {} one { · # update available} other { · # updates available}}",
+    "core-lock-tip": "Built into the app — it can't be removed; updates arrive with the app",
+    "campaign": "Campaign: {name}",
+    "campaign-hint": "Shared by the campaign {name}; the DM updates it for everyone"
   },
   "info": {
     "version": "Version {version}",
@@ -96,7 +102,10 @@
     "dep-missing": "not installed",
     "dep-missing-hint": "Install this pack first",
     "entities-total": "{count, plural, one {Contents · # entry} other {Contents · # entries}}",
-    "validation-clean": "Validation found no errors or warnings."
+    "validation-clean": "Validation found no errors or warnings.",
+    "dep-range": "{version} or newer",
+    "dep-exact": "exactly {version}",
+    "file-value": "{name} · {size}"
   },
   "entity-type": {
     "system": "Game systems",
@@ -117,7 +126,7 @@
     "table": "Tables"
   },
   "trust": {
-    "title": "Install {name}?",
+    "title": "Install {name} {version}?",
     "intro": "Review what the pack contains before it is installed. Nothing changes for your heroes until you pin the new version on their Build tab.",
     "install": "Install",
     "cancel": "Cancel",
@@ -157,7 +166,12 @@
     "versions-hint": "Older versions stay so a hero's history still resolves.",
     "dependencies": "Dependencies",
     "needs": "Needs {name}",
-    "nothing-depends": "Nothing depends on this pack"
+    "nothing-depends": "Nothing depends on this pack",
+    "integrity": "Integrity",
+    "integrity-installed": "sha256 matches the record of {name}",
+    "integrity-installing": "not verified yet: the copy from {name} is still being fetched",
+    "integrity-error": "does not match the record of {name}",
+    "class-level": "{class} {level}"
   },
   "remove-confirm": {
     "title": "Remove {name}?",
@@ -268,7 +282,8 @@
         "regain": "Regains",
         "regain-all": "All charges",
         "charges-invalid": "Use a whole number or a short formula.",
-        "attunement-hint": "Takes one of the hero's attunement slots. Shown as a gem on the bag slot."
+        "attunement-hint": "Takes one of the hero's attunement slots. Shown as a gem on the bag slot.",
+        "regain-hint": "Dice, for example 1d4+1; leave empty to restore every charge"
       },
       "spell": {
         "level": "Level (0 is a cantrip)",
@@ -401,10 +416,17 @@
       "weight": "{weight} lb",
       "cost": "{amount} {currency}",
       "attunement": "Requires attunement",
-      "spell": "Level {level} {school}",
+      "spell": "{level, plural, =0 {Cantrip} other {Level #}}, {school}",
       "repeatable": "repeatable",
       "not-repeatable": "not repeatable",
-      "speed": "{speed} ft"
+      "speed": "{speed} ft",
+      "casting": {
+        "action": "{value, plural, one {# action} other {# actions}}",
+        "bonus": "{value, plural, one {# bonus action} other {# bonus actions}}",
+        "reaction": "{value, plural, one {# reaction} other {# reactions}}",
+        "minute": "{value, plural, one {# minute} other {# minutes}}",
+        "hour": "{value, plural, one {# hour} other {# hours}}"
+      }
     },
     "where": "Where it shows up",
     "pinned": "pinned {version}",
@@ -462,10 +484,17 @@
       "italic": "italic text",
       "list": "a bulleted list",
       "heading": "a heading",
-      "close": "Close"
+      "close": "Close",
+      "sample": {
+        "bold": "**bold**",
+        "italic": "_italic_",
+        "list": "- item",
+        "heading": "## heading"
+      }
     },
     "attention": "{count, plural, one {# field needs attention} other {# fields need attention}}",
-    "unsaved": "Unsaved changes"
+    "unsaved": "Unsaved changes",
+    "group-heading": "{type} · {count}"
   },
   "export-failed": "The pack could not be exported",
   "export-assets-missing": "An image of this pack is not stored on this device, so it cannot be exported"

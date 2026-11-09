@@ -22,6 +22,10 @@
   animation: hk-dialog-in var(--duration-base) ease-out;
 }
 
+:host(.hk-dialog--wide) {
+  max-inline-size: min(90vw, var(--dialog-wide));
+}
+
 :host(.hk-dialog--sheet) {
   max-inline-size: 100%;
   inline-size: 100%;

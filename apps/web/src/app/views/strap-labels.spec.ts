@@ -173,14 +173,30 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
       'packs list, importing',
       buildPacksListStrap({ importPack: noop, newHomebrew: noop, importing: true }),
     ],
-    ['pack detail', buildPackDetailStrap({ back: noop, exportPack: noop, exporting: false })],
-    [
-      'pack detail, not found',
-      buildPackDetailStrap({ back: noop, exportPack: null, exporting: false }),
-    ],
+    ['pack detail', buildPackDetailStrap({ back: noop, exportPack: noop, exportReason: null })],
+    ...(
+      [
+        'shell.strap.packs-export-core',
+        'shell.strap.packs-export-invalid',
+        'shell.strap.packs-export-none',
+        'shell.strap.packs-export-busy',
+      ] as const
+    ).map((reason): [string, StrapConfig] => [
+      `pack detail, Export unavailable (${reason})`,
+      buildPackDetailStrap({ back: noop, exportPack: noop, exportReason: reason }),
+    ]),
     [
       'homebrew list',
-      buildHomebrewListStrap({ back: noop, newEntry: noop, exportPack: noop, exporting: false }),
+      buildHomebrewListStrap({ back: noop, newEntry: noop, exportPack: noop, exportReason: null }),
+    ],
+    [
+      'homebrew list, nothing to export',
+      buildHomebrewListStrap({
+        back: noop,
+        newEntry: noop,
+        exportPack: noop,
+        exportReason: 'shell.strap.packs-export-none',
+      }),
     ],
     ...(['item', 'spell', 'feat', 'species'] as const).map((type): [string, StrapConfig] => [
       `homebrew editor, ${type}`,

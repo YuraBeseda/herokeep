@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { Component, computed, forwardRef, linkedSignal } from '@angular/core';
 import { FormulaSchema, RegainDiceSchema, type ItemEntity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -33,9 +34,6 @@ type Weapon = NonNullable<ItemEntity['weapon']>;
 type Armor = NonNullable<ItemEntity['armor']>;
 type Reset = NonNullable<ItemEntity['charges']>['reset'];
 
-/** The regain choices the form offers besides "all"; an edited entity's own value is kept too. */
-const REGAIN_CHOICES = ['1d3'] as const;
-
 /**
  * Quick homebrew item (board PK05): name, description, category, rarity, weight, cost, attunement,
  * charges, plus the structural block its category needs — a weapon's damage dice/type/properties/
@@ -55,6 +53,7 @@ const REGAIN_CHOICES = ['1d3'] as const;
     HkToggleComponent,
     HkFilterChipsComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
     IconComponent,
   ],
   providers: [
@@ -193,15 +192,6 @@ export class ItemFormComponent extends HomebrewFormBase<ItemEntity> {
   protected resetOptions(t: PacksT) {
     return this.enumOptions(t, 'charge-reset', this.chargeResets);
   }
-  protected regainOptions(t: PacksT) {
-    const current = this.chargesRegain();
-    const extra = current && !REGAIN_CHOICES.some((c) => c === current) ? [current] : [];
-    return this.opts('regain', [
-      { value: '', label: t('homebrew.field.item.regain-all') },
-      ...[...REGAIN_CHOICES, ...extra].map((value) => ({ value, label: value })),
-    ]);
-  }
-
   private propertyOptionsMemo: readonly FilterChipOption[] = [];
   protected propertyOptions(): readonly FilterChipOption[] {
     const next = this.vocabulary().weaponProperties.map((value) => ({ id: value, label: value }));

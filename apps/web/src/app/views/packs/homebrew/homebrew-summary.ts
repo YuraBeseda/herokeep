@@ -14,6 +14,7 @@ export function entrySummary(
   entity: Entity,
   t: T,
   classes: readonly ClassOption[] = [],
+  list: (parts: readonly string[]) => string = (parts) => parts.join(' '),
 ): readonly string[] {
   switch (entity.type) {
     case 'item': {
@@ -48,9 +49,9 @@ export function entrySummary(
       );
       return [
         t('homebrew.sub.spell', { level: entity.level, school: entity.school }),
-        `${entity.castingTime.value} ${t(`homebrew.enum.time-unit.${entity.castingTime.unit}`)}`,
+        t(`homebrew.sub.casting.${entity.castingTime.unit}`, { value: entity.castingTime.value }),
         t(`homebrew.enum.range-kind.${entity.range.kind}`),
-        ...(names.length > 0 ? [names.join(', ')] : []),
+        ...(names.length > 0 ? [list(names)] : []),
       ];
     }
     case 'feat':

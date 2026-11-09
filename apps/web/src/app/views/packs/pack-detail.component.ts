@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { Component, DestroyRef, computed, effect, inject, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,22 +9,31 @@ import semver from 'semver';
 import { map } from 'rxjs';
 import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
-import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
+import { HkpackDelivery } from '@shared/services/packs/hkpack-delivery';
 import {
   HkpackAssetsMissingError,
   HkpackWriter,
 } from '@shared/services/packs/hkpack-writer.service';
 import { isHomebrewPackId } from '@shared/services/packs/homebrew-id';
+import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
+import { CampaignPacksService } from '@shared/services/campaigns/campaign-packs.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import { PackRemoveDependentsError, PackStore } from '@shared/stores/pack.store';
+import { HeroSummaryService } from '../characters/hero-summary.service';
+import { heroClassLine } from '../characters/hero-class-line';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { ActionStrapService } from '../../ui/action-strap/action-strap.service';
 import { HkButtonComponent } from '../../ui/button/button.component';
 import { HkLeafComponent } from '../../ui/leaf/leaf.component';
+import { HkPortraitFrameComponent } from '../../ui/portrait-frame/portrait-frame.component';
 import { NavHistoryService } from '../../ui/nav/nav-history.service';
 import { HkTagChipComponent } from '../../ui/tag-chip/tag-chip.component';
 import { buildPackDetailStrap } from './pack-detail-strap';
 import { PackInfoComponent } from './pack-info.component';
 import { packKey, summarizePack } from './pack-summary';
+import { resolveDependencies } from './pack-dependencies';
 import { PackUsageService } from './pack-usage.service';
 
 export interface PackRemoveConfirmData {
@@ -121,6 +131,9 @@ interface VersionRow {
     HkButtonComponent,
     HkLeafComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
+    HkPortraitFrameComponent,
+    BlobUrlPipe,
     IconComponent,
     PackInfoComponent,
   ],
@@ -138,6 +151,12 @@ export class PackDetailComponent {
   private readonly navHistory = inject(NavHistoryService);
   private readonly strap = inject(ActionStrapService);
   private readonly hkpackWriter = inject(HkpackWriter);
+  private readonly hkpackDelivery = inject(HkpackDelivery);
+  private readonly campaignStore = inject(CampaignStore);
+  private readonly campaignsRepository = inject(CampaignsRepository);
+  private readonly campaignPacks = inject(CampaignPacksService);
+  private readonly heroSummaryService = inject(HeroSummaryService);
+  private readonly engineFacade = inject(EngineFacade);
 
   protected readonly key = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('key') ?? '')),
@@ -172,6 +191,20 @@ export class PackDetailComponent {
   /** Every stored character with its pins (read once per visit). */
   protected readonly heroes = resource({ loader: () => this.packUsageService.heroPins() });
 
+  /** Campaigns that share exactly this pack version, with the state of its sha256 check here. */
+  private readonly campaignRows = resource({ loader: () => this.campaignsRepository.list() });
+  protected readonly campaignShares = computed(() => {
+    const pack = this.pack();
+    if (!pack || !this.campaignRows.hasValue()) return [];
+    const enabled = this.campaignStore.enabledPacks();
+    return this.campaignRows.value().flatMap((row) => {
+      const entry = enabled.get(row.id)?.get(pack.id);
+      if (entry?.version !== pack.version) return [];
+      const state = this.campaignPacks.installStatus(row.id)().get(pack.id)?.state ?? 'installing';
+      return [{ id: row.id, name: row.name, state }];
+    });
+  });
+
   /** The stored heroes pinning exactly this pack version. */
   protected readonly users = computed(() => {
     const pack = this.pack();
@@ -179,6 +212,22 @@ export class PackDetailComponent {
     return this.heroes.value().filter((hero) => hero.pins[pack.id] === pack.version);
   });
   protected readonly usedBy = computed(() => (this.heroes.hasValue() ? this.users().length : null));
+
+  /** Class lines and campaigns of the heroes in `users`, as the hero cards show them. */
+  private readonly summaries = resource({
+    params: () => this.users().map((hero) => hero.id),
+    loader: ({ params }) => this.heroSummaryService.summarize(params),
+  });
+
+  protected classLine(
+    hero: { id: string; system: string },
+    t: (key: string, params?: Record<string, unknown>) => string,
+  ): string {
+    const summary = this.summaries.hasValue() ? this.summaries.value().get(hero.id) : undefined;
+    return heroClassLine(summary, hero.system, this.engineFacade.localizer(), (_key, params) =>
+      t('detail.class-level', params),
+    );
+  }
 
   /** Installed versions of this pack id on the device, newest first. */
   protected readonly versions = computed<readonly VersionRow[]>(() => {
@@ -213,32 +262,39 @@ export class PackDetailComponent {
     const pack = this.pack();
     if (!pack) return [];
     const core = this.packStore.corePack();
-    const installed = [...(core ? [core] : []), ...this.packStore.installedContent()];
-    return pack.dependencies.map((dep) => {
-      const range = semver.validRange(dep.range);
-      const found = installed
-        .filter((p) => p.id === dep.id && range !== null && semver.satisfies(p.version, range))
-        .sort((a, b) => semver.rcompare(a.version, b.version))[0];
-      return {
-        id: dep.id,
-        name: installed.find((p) => p.id === dep.id)?.name ?? dep.id,
-        range: dep.range,
-        installed: found?.version ?? null,
-      };
-    });
+    return resolveDependencies(pack.dependencies, [
+      ...(core ? [core] : []),
+      ...this.packStore.installedContent(),
+    ]);
   });
 
   protected readonly removing = signal(false);
   protected readonly exporting = signal(false);
 
+  /** Why Export is unavailable: the key of the reason, or `null`. */
+  protected readonly exportReason = computed<string | null>(() => {
+    const pack = this.pack();
+    if (!pack) return 'shell.strap.packs-export-none';
+    if (this.isCore()) return 'shell.strap.packs-export-core';
+    if (this.exporting()) return 'shell.strap.packs-export-busy';
+    const core = this.packStore.corePack();
+    const others = this.packStore.installedContent().filter((p) => p !== pack);
+    const refused =
+      pack.kind !== 'content' ||
+      (core !== undefined &&
+        validatePack(pack, [core, ...others]).some(
+          (diagnostic) => diagnostic.severity === 'error',
+        ));
+    return refused ? 'shell.strap.packs-export-invalid' : null;
+  });
+
   constructor() {
     effect(() => {
-      const pack = this.pack();
       this.strap.set(
         buildPackDetailStrap({
           back: () => this.back(),
-          exportPack: pack ? () => void this.exportPack() : null,
-          exporting: this.exporting(),
+          exportPack: () => void this.exportPack(),
+          exportReason: this.exportReason(),
         }),
       );
     });
@@ -255,11 +311,11 @@ export class PackDetailComponent {
 
   protected async exportPack(): Promise<void> {
     const pack = this.pack();
-    if (!pack || this.exporting()) return;
+    if (!pack || this.exportReason() !== null) return;
     this.exporting.set(true);
     try {
       const { blob, fileName } = await this.hkpackWriter.export(pack);
-      await deliverHeroBundle(blob, fileName, pack.name, ['.hkpack']);
+      await this.hkpackDelivery.deliver(blob, fileName, pack.name);
     } catch (error) {
       this.toastService.show(
         error instanceof HkpackAssetsMissingError ? error.code : 'packs.export-failed',

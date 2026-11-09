@@ -3,13 +3,8 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { DialogRef } from '@app/ui/dialog/dialog.service';
 import { HkButtonComponent } from '../../../ui/button/button.component';
 
-/** The Markdown forms a description accepts: the syntax sample for each described form. */
-const SYNTAX = {
-  bold: '**bold**',
-  italic: '_italic_',
-  list: '- item',
-  heading: '## heading',
-} as const;
+/** The Markdown forms a description accepts; each sample's text is the locale's (`homebrew.markdown.sample.*`). */
+const SAMPLES = ['bold', 'italic', 'list', 'heading'] as const;
 
 /** The strap's "Markdown help": a short cheat-sheet of what a description supports. */
 @Component({
@@ -23,7 +18,7 @@ const SYNTAX = {
       <dl class="md-help__list">
         @for (sample of samples; track sample) {
           <dt>
-            <code>{{ syntax[sample] }}</code>
+            <code>{{ t('homebrew.markdown.sample.' + sample) }}</code>
           </dt>
           <dd>{{ t('homebrew.markdown.' + sample) }}</dd>
         }
@@ -55,8 +50,7 @@ const SYNTAX = {
 })
 export class MarkdownHelpComponent {
   private readonly dialogRef = inject(DialogRef);
-  protected readonly samples = Object.keys(SYNTAX) as (keyof typeof SYNTAX)[];
-  protected readonly syntax = SYNTAX;
+  protected readonly samples = SAMPLES;
 
   protected close(): void {
     this.dialogRef.close();

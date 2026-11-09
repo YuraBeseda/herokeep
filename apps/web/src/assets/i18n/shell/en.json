@@ -195,7 +195,7 @@
     "packs-update-none": "Updates arrive as new versions on this device; heroes adopt them from their Build tab",
     "packs-export": "Export as .hkpack",
     "packs-browse": "Browse entries in the library",
-    "packs-browse-none": "The library cannot filter by pack yet",
+    "packs-browse-none": "The library lists content packs only for a hero that pins them, so browsing one pack needs a scoped library",
     "packs-check": "Check for updates",
     "packs-check-none": "There is no online catalog: import a newer .hkpack, or let your campaign share it",
     "homebrew-new": "New",
@@ -203,7 +203,13 @@
     "homebrew-save-spell": "Save spell",
     "homebrew-save-feat": "Save feat",
     "homebrew-save-species": "Save species",
-    "markdown-help": "Markdown help"
+    "markdown-help": "Markdown help",
+    "packs-export-core": "The core rules are built into the app and cannot be exported",
+    "packs-export-invalid": "This pack would be refused on import, so it cannot be exported",
+    "packs-export-none": "There is no pack to export yet",
+    "packs-export-busy": "Exporting…",
+    "homebrew-import": "Import into My homebrew",
+    "homebrew-import-none": "Merging another pack into your homebrew is not possible yet; import it as its own pack"
   },
   "tabs": {
     "landmark": "Sections of this screen",

@@ -29,10 +29,7 @@
   <div class="packs-list__layout">
     <hk-leaf class="packs-list__installed" [title]="t('list.installed')" [icon]="'ui:packs'">
       <span hkLeafActions class="packs-list__summary">
-        {{ t('list.count', { count: packCount() }) }}
-        @if (updateCount() > 0) {
-          · {{ t('list.updates', { count: updateCount() }) }}
-        }
+        {{ t('list.summary', { count: packCount(), updates: updateCount() }) }}
       </span>
 
       <div class="packs-list__group packs-list__core">
@@ -210,23 +207,24 @@
           <a
             class="packs-list__name"
             [routerLink]="['/packs', row.key]"
-            [attr.title]="row.pack.name"
+            [hkTooltip]="row.pack.name"
             >{{ row.pack.name }}</a
           >
           <span
             class="packs-list__version"
-            [attr.title]="t('list.version-hint', { version: row.pack.version })"
+            [hkTooltip]="t('list.version-hint', { version: row.pack.version })"
             >{{ row.pack.version }}</span
           >
           @if (row.core) {
-            <span class="packs-list__badge" [attr.title]="t('list.core-hint')">{{
+            <span class="packs-list__badge" [hkTooltip]="t('list.core-hint')">{{
               t('list.core-label')
             }}</span>
             <span
               class="packs-list__lock"
               role="img"
               [attr.aria-label]="t('list.core-lock')"
-              [attr.title]="t('list.core-lock') + ' — ' + t('list.core-lock-sub')"
+              tabindex="0"
+              [hkTooltip]="t('list.core-lock-tip')"
             >
               <hk-icon [icon]="'ui:lock'" />
             </span>
@@ -234,35 +232,40 @@
           @if (row.thisDevice) {
             <hk-tag-chip [label]="t('list.this-device')" [hint]="t('list.this-device-hint')" />
           }
+          @for (campaign of row.campaigns; track campaign) {
+            <hk-tag-chip
+              class="packs-list__campaign"
+              [label]="t('list.campaign', { name: campaign })"
+              [tone]="'arcane'"
+              [hint]="t('list.campaign-hint', { name: campaign })"
+            />
+          }
           @if (row.otherDevice) {
-            <span class="packs-list__other-device" [attr.title]="t('list.other-device-hint')">{{
-              t('list.other-device-homebrew')
-            }}</span>
+            <span
+              class="packs-list__other-device"
+              tabindex="0"
+              [hkTooltip]="t('list.other-device-hint')"
+              >{{ t('list.other-device-homebrew') }}</span
+            >
           }
           @if (row.updateVersion) {
             <span
               class="packs-list__update"
-              [attr.title]="t('list.update-hint', { version: row.updateVersion })"
+              tabindex="0"
+              [hkTooltip]="t('list.update-hint', { version: row.updateVersion })"
               >{{ t('update-available') }}</span
             >
           }
         </div>
         <div class="packs-list__sub">
           @if (row.pack.authors.length > 0) {
-            <span class="packs-list__authors">{{ row.pack.authors.join(', ') }}</span>
+            <span class="packs-list__authors">{{ formatList(row.pack.authors) }}</span>
           }
           @if (row.pack.license) {
             <span class="packs-list__license">{{ row.pack.license }}</span>
           }
           @if (row.thisDevice || row.otherDevice) {
-            <span>
-              {{ t('list.row.entries', { count: row.entries }) }}:
-              @for (part of row.breakdown; track part.type; let last = $last) {
-                <span class="packs-list__part"
-                  >{{ t('entity-type.' + part.type) }} {{ part.count }}{{ last ? '' : ',' }}</span
-                >
-              }
-            </span>
+            <span class="packs-list__breakdown">{{ breakdownText(row, t) }}</span>
           } @else {
             <span>{{ t('list.row.entries', { count: row.entries }) }}</span>
           }
@@ -282,7 +285,6 @@
             type="button"
             class="packs-list__edit"
             [variant]="'parchment'"
-            [attr.title]="t('list.edit-hint')"
             (click)="go('/packs/homebrew')"
           >
             <hk-icon [icon]="'ui:edit'" />{{ t('homebrew.edit') }}
@@ -292,7 +294,7 @@
           class="packs-list__open"
           [routerLink]="['/packs', row.key]"
           [attr.aria-label]="t('list.open-named', { name: row.pack.name })"
-          [attr.title]="t('list.open')"
+          [hkTooltip]="t('list.open')"
         >
           <hk-icon [icon]="'ui:leave'" />
         </a>

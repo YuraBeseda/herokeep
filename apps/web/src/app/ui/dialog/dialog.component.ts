@@ -52,6 +52,7 @@ const DIALOG_TITLE_SELECTOR = '[data-dialog-title]';
     role: 'dialog',
     'aria-modal': 'true',
     '[class.hk-dialog--sheet]': 'sheet()',
+    '[class.hk-dialog--wide]': "size() === 'wide'",
     '[attr.aria-labelledby]': 'titleId()',
     '[attr.aria-label]': 'fallbackAriaLabel()',
   },
@@ -61,6 +62,8 @@ export class DialogComponent {
 
   readonly contentPortal = input.required<ComponentPortal<unknown>>();
   readonly sheet = input(false);
+  /** `'wide'` widens the centered dialog to the `--dialog-wide` token; a phone sheet is full width either way. */
+  readonly size = input<'default' | 'wide'>('default');
   /** Fallback accessible name (`DialogOptions.ariaLabel`) — only ever rendered as `aria-label` when
    * no `[data-dialog-title]` element was found in the attached content (see `onAttached`). */
   readonly ariaLabel = input<string | undefined>(undefined);

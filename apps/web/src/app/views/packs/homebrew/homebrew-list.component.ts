@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { Component, DestroyRef, computed, effect, inject, resource, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { parseEntityId, type Entity } from '@hk/protocol';
@@ -6,7 +7,8 @@ import semver from 'semver';
 import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
-import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
+import { LocaleService } from '@shared/services/i18n/locale.service';
+import { HkpackDelivery } from '@shared/services/packs/hkpack-delivery';
 import { HomebrewService } from '@shared/services/packs/homebrew.service';
 import {
   HkpackAssetsMissingError,
@@ -114,6 +116,7 @@ const GROUP_ICONS: Record<HomebrewFormType, string> = {
     HkButtonComponent,
     HkLeafComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
     IconComponent,
   ],
   providers: [provideTranslocoScope('packs')],
@@ -129,7 +132,9 @@ export class HomebrewListComponent {
   private readonly strap = inject(ActionStrapService);
   private readonly packUsageService = inject(PackUsageService);
   private readonly hkpackWriter = inject(HkpackWriter);
+  private readonly hkpackDelivery = inject(HkpackDelivery);
   private readonly engineFacade = inject(EngineFacade);
+  private readonly localeService = inject(LocaleService);
 
   protected readonly pack = this.homebrewService.pack;
   protected readonly types = HOMEBREW_FORM_TYPES;
@@ -169,14 +174,20 @@ export class HomebrewListComponent {
       });
   });
 
+  /** Why Export is unavailable (full i18n key), or `null`. */
+  protected readonly exportReason = computed<string | null>(() => {
+    if (!this.pack()) return 'shell.strap.packs-export-none';
+    return this.exporting() ? 'shell.strap.packs-export-busy' : null;
+  });
+
   constructor() {
     effect(() =>
       this.strap.set(
         buildHomebrewListStrap({
           back: () => this.navHistory.back(['/packs']),
           newEntry: () => void this.newEntry(),
-          exportPack: this.pack() ? () => void this.exportPack() : null,
-          exporting: this.exporting(),
+          exportPack: () => void this.exportPack(),
+          exportReason: this.exportReason(),
         }),
       ),
     );
@@ -192,7 +203,15 @@ export class HomebrewListComponent {
     entity: Entity,
     t: (key: string, params?: Record<string, unknown>) => string,
   ): readonly string[] {
-    return entrySummary(entity, t, this.classes());
+    return entrySummary(entity, t, this.classes(), (parts) => this.formatList(parts));
+  }
+
+  /** Joins translated parts the way the active locale lists things. */
+  private formatList(parts: readonly string[]): string {
+    return new Intl.ListFormat(this.localeService.locale(), {
+      style: 'narrow',
+      type: 'unit',
+    }).format(parts);
   }
 
   protected attunes(entity: Entity): boolean {
@@ -214,11 +233,11 @@ export class HomebrewListComponent {
 
   protected async exportPack(): Promise<void> {
     const pack = this.pack();
-    if (!pack || this.exporting()) return;
+    if (!pack || this.exportReason() !== null) return;
     this.exporting.set(true);
     try {
       const { blob, fileName } = await this.hkpackWriter.export(pack);
-      await deliverHeroBundle(blob, fileName, pack.name, ['.hkpack']);
+      await this.hkpackDelivery.deliver(blob, fileName, pack.name);
     } catch (error) {
       this.toastService.show(
         error instanceof HkpackAssetsMissingError ? error.code : 'packs.export-failed',

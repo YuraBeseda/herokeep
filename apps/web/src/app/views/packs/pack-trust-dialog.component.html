@@ -1,6 +1,6 @@
 <div class="pack-trust-dialog" *transloco="let t; read: 'packs'">
   <h2 class="pack-trust-dialog__title" data-dialog-title>
-    {{ t('trust.title', { name: preview.pack.name + ' ' + preview.pack.version }) }}
+    {{ t('trust.title', { name: preview.pack.name, version: preview.pack.version }) }}
   </h2>
 
   @if (preview.alreadyInstalled) {
