@@ -105,7 +105,17 @@
     <ul class="link-character__list">
       @for (candidate of candidates(); track candidate.row.id) {
         <li class="link-character__row" [attr.data-eligibility]="eligibility(candidate)">
-          <span class="link-character__name">{{ candidate.row.name }}</span>
+          <hk-portrait-frame
+            class="link-character__portrait"
+            [name]="candidate.row.name"
+            [monogram]="monogram(candidate).initials"
+            [size]="'s'"
+            [style.--hk-frame-well]="monogram(candidate).background"
+            [style.--hk-frame-well-ink]="monogram(candidate).ink"
+          />
+          <span class="link-character__name" [attr.title]="candidate.row.name">{{
+            candidate.row.name
+          }}</span>
           @switch (eligibility(candidate)) {
             @case ('eligible') {
               <button
@@ -116,7 +126,7 @@
                 [disabled]="busy()"
                 (click)="select(candidate)"
               >
-                {{ t('link.pick') }}
+                {{ t('link.pickNamed', { name: candidate.row.name }) }}
               </button>
             }
             @case ('resume') {

@@ -1,42 +1,75 @@
 <ng-container *transloco="let t">
   <h2 class="create-campaign-dialog__title" data-dialog-title>{{ t('campaigns.create.title') }}</h2>
 
-  <label class="create-campaign-dialog__field">
-    <span>{{ t('campaigns.create.nameLabel') }}</span>
-    <input
-      type="text"
-      name="name"
-      [value]="name()"
-      (input)="onNameChange($any($event.target).value)"
-    />
-  </label>
+  @if (confirmingDiscard()) {
+    <p class="create-campaign-dialog__discard-body" role="alert">
+      {{ t('campaigns.discard.body') }}
+    </p>
+    <div class="create-campaign-dialog__discard" data-dialog-actions>
+      <button
+        hk-button
+        type="button"
+        class="create-campaign-dialog__keep"
+        [variant]="'ghost-leather'"
+        (click)="keepEditing()"
+      >
+        {{ t('campaigns.discard.keep') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="create-campaign-dialog__discard-confirm"
+        [variant]="'ember'"
+        (click)="discard()"
+      >
+        {{ t('campaigns.discard.confirm') }}
+      </button>
+    </div>
+  } @else {
+    <div class="create-campaign-dialog__field">
+      <hk-text-field
+        class="create-campaign-dialog__name"
+        [label]="t('campaigns.create.nameLabel')"
+        [value]="name()"
+        [hint]="t('campaigns.create.helper')"
+        [error]="nameTooLong() ? t('campaigns.create.nameError') : null"
+        [autocomplete]="'off'"
+        (valueChange)="onNameChange($event)"
+      />
+      <span
+        class="create-campaign-dialog__counter"
+        [class.create-campaign-dialog__counter--over]="nameTooLong()"
+        >{{
+          t('campaigns.create.counter', { count: name().trim().length, max: nameMaxLength })
+        }}</span
+      >
+    </div>
 
-  @if (nameTooLong()) {
-    <p class="create-campaign-dialog__error" role="alert">{{ t('campaigns.create.nameError') }}</p>
-  }
-  @if (errorKey(); as key) {
-    <p class="create-campaign-dialog__error" role="alert">{{ t(key) }}</p>
-  }
+    @if (errorKey(); as key) {
+      <p class="create-campaign-dialog__error" role="alert">{{ t(key) }}</p>
+    }
 
-  <div class="create-campaign-dialog__actions">
-    <button
-      hk-button
-      type="button"
-      [variant]="'ghost'"
-      class="create-campaign-dialog__cancel"
-      [disabled]="submitting()"
-      (click)="cancel()"
-    >
-      {{ t('campaigns.create.cancel') }}
-    </button>
-    <button
-      hk-button
-      type="button"
-      class="create-campaign-dialog__confirm"
-      [disabled]="!canSubmit()"
-      (click)="confirm()"
-    >
-      {{ submitting() ? t('campaigns.create.creating') : t('campaigns.create.confirm') }}
-    </button>
-  </div>
+    <div class="create-campaign-dialog__actions" data-dialog-actions>
+      <button
+        hk-button
+        type="button"
+        [variant]="'ghost-leather'"
+        class="create-campaign-dialog__cancel"
+        [disabled]="submitting()"
+        (click)="cancel()"
+      >
+        {{ t('campaigns.create.cancel') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="create-campaign-dialog__confirm"
+        [loading]="submitting()"
+        [disabled]="!canSubmit()"
+        (click)="confirm()"
+      >
+        {{ submitting() ? t('campaigns.create.creating') : t('campaigns.create.confirm') }}
+      </button>
+    </div>
+  }
 </ng-container>

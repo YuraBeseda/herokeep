@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { AuthService } from '@shared/services/auth/auth.service';
 import {
@@ -42,7 +42,7 @@ export interface LeaveCampaignDialogData {
  */
 @Component({
   selector: 'app-leave-campaign-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './leave-campaign-dialog.component.html',
   styleUrl: './leave-campaign-dialog.component.scss',

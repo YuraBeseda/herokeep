@@ -33,7 +33,12 @@
         "connecting": "Connecting…",
         "offline": "Not syncing"
       }
-    }
+    },
+    "count": "{count, plural, one {# campaign} other {# campaigns}}",
+    "emptyTitle": "No campaigns yet",
+    "emptyHint": "Ask your DM for a join code or a QR code.",
+    "open": "Open {name}, {role}",
+    "tabsLabel": "Tabs of {name}"
   },
   "create": {
     "title": "New campaign",
@@ -44,7 +49,9 @@
     "creating": "Creating…",
     "errors": {
       "generic": "Couldn't create the campaign. Try again."
-    }
+    },
+    "counter": "{count} / {max}",
+    "helper": "Players see this name on the join screen."
   },
   "join": {
     "title": "Join a campaign",
@@ -61,7 +68,8 @@
       "full": "This campaign already has the maximum number of members.",
       "network": "Couldn't reach the server. Check your connection and try again.",
       "generic": "Couldn't join the campaign. Try again."
-    }
+    },
+    "intro": "Joining adds you to the DM's table. Next you pick a hero to bring."
   },
   "link": {
     "title": "Link a character",
@@ -104,7 +112,8 @@
     "errors": {
       "characterNotLeader": "Another tab is currently the active character-data writer. Try again from that tab.",
       "generic": "Couldn't link that character. Try again."
-    }
+    },
+    "pickNamed": "Link {name}"
   },
   "chip": {
     "fallbackName": "Linked campaign",
@@ -120,14 +129,22 @@
   "shell": {
     "tabs": {
       "party": "Party",
-      "log": "Log",
+      "log": "Table",
       "settings": "Settings",
-      "lobby": "Lobby"
+      "lobby": "Lobby",
+      "landmark": "Campaign sections"
     },
     "staleNotice": "Another tab is syncing this campaign — this view won't update live until you switch to it.",
     "session": {
       "active": "Session in progress",
       "activeWithTitle": "Session in progress — {title}"
+    },
+    "strap": {
+      "selectMember": "Pick a hero on the Party tab first",
+      "item": "Item",
+      "sessionStart": "Start session",
+      "sessionEnd": "End session",
+      "openSheet": "Open my sheet"
     }
   },
   "lobby": {
@@ -137,14 +154,17 @@
       "copyLink": "Copy invite link",
       "rotate": "Generate a new code",
       "rotating": "Generating…",
-      "qrAlt": "QR code for the invite link"
+      "qrAlt": "QR code for the invite link",
+      "qrCaption": "Scan to join",
+      "rotateHint": "A new code stops the old one from working."
     },
     "members": {
       "title": "Members",
       "online": "Online",
       "offline": "Offline",
       "removedBadge": "Removed",
-      "remove": "Remove"
+      "remove": "Remove",
+      "removeNamed": "Remove {name}"
     },
     "removeConfirm": {
       "title": "Remove {name}?",
@@ -159,7 +179,8 @@
       "rotateFailed": "Couldn't generate a new join code. Try again.",
       "memberRemoved": "{name} was removed from the campaign.",
       "removeFailed": "Couldn't remove that member. Try again."
-    }
+    },
+    "memberNote": "The DM shares the join code. To leave, use the campaign chip on your hero's sheet."
   },
   "settings": {
     "title": "Settings",
@@ -243,7 +264,9 @@
       "open": "Open for joining",
       "requireApproval": "New members need DM approval"
     },
-    "exportAction": "Export campaign"
+    "exportAction": "Export campaign",
+    "unsaved": "Unsaved changes",
+    "exportTitle": "Export"
   },
   "export": {
     "title": "Export campaign data",
@@ -275,7 +298,10 @@
       "passivePerception": "Passive Perception {value}",
       "classLevel": "{class} {level}",
       "concentrating": "Concentrating",
-      "viewSheet": "View sheet"
+      "viewSheet": "View sheet",
+      "select": "Select",
+      "selectAria": "Select {name} for the quick-effects strap",
+      "selected": "Selected"
     },
     "membersWithoutCharacter": {
       "title": "No character yet",
@@ -469,5 +495,11 @@
         "generic": "Couldn't send that message. Try again."
       }
     }
+  },
+  "discard": {
+    "title": "Discard your changes?",
+    "body": "What you changed here is not saved yet.",
+    "keep": "Keep editing",
+    "confirm": "Discard"
   }
 }

@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.campaign-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.campaign-settings__option {
+  min-block-size: var(--touch-target, 44px);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--chip-border);
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    border-color: var(--brass);
+    background: linear-gradient(180deg, var(--brass-top), var(--brass));
+    color: var(--text-on-brass);
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}

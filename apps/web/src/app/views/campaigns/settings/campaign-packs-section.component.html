@@ -1,6 +1,9 @@
-<div class="campaign-packs" *transloco="let t; read: 'campaigns'">
-  <h3 class="campaign-packs__title">{{ t('settings.packs.title') }}</h3>
-
+<hk-leaf
+  class="campaign-packs"
+  *transloco="let t; read: 'campaigns'"
+  [title]="t('settings.packs.title')"
+  [icon]="'ui:packs'"
+>
   @if (isDm()) {
     @if (!canEdit()) {
       <p class="campaign-packs__notice" role="status">{{ t('not-leader') }}</p>
@@ -8,6 +11,19 @@
     <p class="campaign-packs__quota">
       {{ t('settings.packs.quota', { count: enabledCount(), max: maxPacks }) }}
     </p>
+    <div
+      class="campaign-packs__gauge"
+      role="meter"
+      aria-valuemin="0"
+      [attr.aria-valuemax]="maxPacks"
+      [attr.aria-valuenow]="enabledCount()"
+      [attr.aria-label]="t('settings.packs.quota', { count: enabledCount(), max: maxPacks })"
+    >
+      <span
+        class="campaign-packs__gauge-fill"
+        [style.inline-size.%]="(enabledCount() / maxPacks) * 100"
+      ></span>
+    </div>
 
     @if (dmRows().length === 0) {
       <p class="campaign-packs__empty">{{ t('settings.packs.empty') }}</p>
@@ -117,4 +133,4 @@
       </ul>
     }
   }
-</div>
+</hk-leaf>

@@ -67,6 +67,28 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
 }
 
 describe('CampaignExportDialogComponent', () => {
+  it('puts Cancel and Export on the dialog strap (hk-dialog chrome)', async () => {
+    configure({});
+    const fixture = TestBed.createComponent(CampaignExportDialogComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(
+      compiled
+        .querySelector('.campaign-export-dialog__actions')!
+        .hasAttribute('data-dialog-actions'),
+    ).toBe(true);
+    expect(
+      compiled
+        .querySelector('.campaign-export-dialog__cancel')!
+        .classList.contains('hk-button--ghost-leather'),
+    ).toBe(true);
+    expect(
+      compiled
+        .querySelector('.campaign-export-dialog__confirm')!
+        .classList.contains('hk-button--primary'),
+    ).toBe(true);
+  });
+
   it('has an accessible title (data-dialog-title) and states inclusions/exclusions per ruling 9 (no member characters, no images, no import)', async () => {
     configure({});
     const fixture = TestBed.createComponent(CampaignExportDialogComponent);

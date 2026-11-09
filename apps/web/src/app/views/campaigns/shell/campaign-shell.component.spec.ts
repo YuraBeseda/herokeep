@@ -5,10 +5,19 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { AuthService } from '@shared/services/auth/auth.service';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { DialogService } from '../../../ui/dialog/dialog.service';
+import { TabBarService } from '../../../ui/tab-bar/tab-bar.service';
+import { stubViewport } from '../../../ui/testing/viewport';
+import { CampaignExportDialogComponent } from '../settings/campaign-export-dialog.component';
+import { CampaignSelectionService } from './campaign-selection.service';
 import { CampaignShellComponent } from './campaign-shell.component';
+
+const ID = '00000000-0000-4000-8000-000000000001';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -17,9 +26,21 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
+interface Spies {
+  appendTx: ReturnType<typeof vi.fn>;
+  open: ReturnType<typeof vi.fn>;
+}
+
 function configure(
-  options: { isLeader?: boolean; session?: { active: boolean; title?: string } } = {},
-): void {
+  options: {
+    isLeader?: boolean;
+    session?: { active: boolean; title?: string };
+    role?: 'dm' | 'player';
+    roster?: [string, { ownerId: string; left: boolean }][];
+  } = {},
+): Spies {
+  const appendTx = vi.fn().mockResolvedValue(undefined);
+  const open = vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) });
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -34,6 +55,7 @@ function configure(
             { path: 'lobby', children: [] },
           ],
         },
+        { path: 'elsewhere', children: [] },
       ]),
       provideTransloco({
         config: {
@@ -49,13 +71,27 @@ function configure(
       {
         provide: CampaignStore,
         useValue: {
-          state: signal({ name: 'Curse of Strahd', session: options.session }),
-          role: signal('dm'),
+          state: signal({
+            name: 'Curse of Strahd',
+            session: options.session,
+            roster: new Map(options.roster ?? []),
+          }),
+          role: signal(options.role ?? 'dm'),
+          campaignId: signal(ID),
+          appendTx,
         },
       },
       { provide: LeaderService, useValue: { isLeader: signal(options.isLeader ?? true) } },
+      { provide: AuthService, useValue: { user: signal({ userId: 'u1' }) } },
+      { provide: DialogService, useValue: { open } },
     ],
   });
+  return { appendTx, open };
+}
+
+function strapAction(id: string) {
+  const config = TestBed.inject(ActionStrapService).config();
+  return [...(config?.primary ?? []), ...(config?.secondary ?? [])].find((a) => a.id === id);
 }
 
 describe('CampaignShellComponent', () => {
@@ -137,7 +173,7 @@ describe('CampaignShellComponent', () => {
     expect(compiled.querySelector('.campaign-shell__session')).not.toBeNull();
   });
 
-  it('navigates between tabs via hk-tabs', async () => {
+  it('navigates between tabs via the tab row', async () => {
     configure();
     const harness = await RouterTestingHarness.create(
       '/g/00000000-0000-4000-8000-000000000001/party',
@@ -150,5 +186,127 @@ describe('CampaignShellComponent', () => {
     await harness.fixture.whenStable();
     const router = TestBed.inject(Router);
     expect(router.url).toBe('/g/00000000-0000-4000-8000-000000000001/lobby');
+  });
+
+  describe('the campaign tabs, the strap and the phone tab bar', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('puts Party · Table · Lobby · Settings on the phone tab bar, the Table tab keeping the log route', async () => {
+      stubViewport({ phone: true });
+      configure();
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      const tabs = TestBed.inject(TabBarService).tabs();
+      expect(tabs?.map((t) => t.route)).toEqual([
+        ['/g', ID, 'party'],
+        ['/g', ID, 'log'],
+        ['/g', ID, 'lobby'],
+        ['/g', ID, 'settings'],
+      ]);
+      expect(tabs?.map((t) => t.label)).toEqual([
+        'campaigns.shell.tabs.party',
+        'campaigns.shell.tabs.log',
+        'campaigns.shell.tabs.lobby',
+        'campaigns.shell.tabs.settings',
+      ]);
+      expect(campaignsEn.shell.tabs.log).toBe('Table');
+    });
+
+    it('leaves the tab bar empty on desktop and shows the four tabs on the page', async () => {
+      stubViewport({ phone: false });
+      configure();
+      const harness = await RouterTestingHarness.create(`/g/${ID}/log`);
+      expect(TestBed.inject(TabBarService).tabs()).toBeNull();
+      const tabs = Array.from(
+        harness.routeNativeElement!.querySelectorAll<HTMLElement>('[role="tab"]'),
+      );
+      expect(tabs.map((t) => t.textContent?.trim())).toEqual([
+        'Party',
+        'Table',
+        'Lobby',
+        'Settings',
+      ]);
+      expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual([
+        'false',
+        'true',
+        'false',
+        'false',
+      ]);
+    });
+
+    it('sets the DM strap scoped to the campaign, effects disabled until a member is selected', async () => {
+      configure();
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      const config = TestBed.inject(ActionStrapService).config()!;
+      expect(config.primary.map((a) => a.id)).toEqual([
+        'damage',
+        'heal',
+        'condition',
+        'xp',
+        'item',
+      ]);
+      expect(config.secondary?.map((a) => a.id)).toEqual(['session', 'export']);
+      expect(config.scope).toEqual(['/g', ID]);
+      expect(strapAction('damage')?.disabled).toBe(true);
+
+      TestBed.inject(CampaignSelectionService).toggle({ characterId: 'c1', name: 'Ilyana' });
+      TestBed.tick();
+      expect(strapAction('damage')?.disabled).toBeFalsy();
+    });
+
+    it('sends a strap effect to the selected member', async () => {
+      configure();
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      const selection = TestBed.inject(CampaignSelectionService);
+      selection.toggle({ characterId: 'c1', name: 'Ilyana' });
+      TestBed.tick();
+      strapAction('condition')!.run();
+      expect(selection.request()).toMatchObject({ kind: 'condition', characterId: 'c1' });
+    });
+
+    it('starts the session from the strap while none is running', async () => {
+      const spies = configure({ session: undefined });
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      strapAction('session')!.run();
+      expect(spies.appendTx).toHaveBeenCalledWith([{ type: 'session.started', v: 1, payload: {} }]);
+    });
+
+    it('ends the running session from the strap', async () => {
+      const spies = configure({ session: { active: true } });
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      strapAction('session')!.run();
+      expect(spies.appendTx).toHaveBeenCalledWith([{ type: 'session.ended', v: 1, payload: {} }]);
+    });
+
+    it('opens the export dialog from the strap', async () => {
+      const spies = configure();
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      strapAction('export')!.run();
+      expect(spies.open).toHaveBeenCalledWith(CampaignExportDialogComponent, {
+        data: { campaignId: ID, name: 'Curse of Strahd' },
+      });
+    });
+
+    it('gives a player Open my sheet only when they have a hero, and no DM actions', async () => {
+      configure({ role: 'player', roster: [['c9', { ownerId: 'u1', left: false }]] });
+      await RouterTestingHarness.create(`/g/${ID}/party`);
+      const config = TestBed.inject(ActionStrapService).config()!;
+      expect(config.primary.map((a) => a.id)).toEqual(['open-sheet']);
+      expect(config.secondary ?? []).toEqual([]);
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      strapAction('open-sheet')!.run();
+      expect(navigate).toHaveBeenCalledWith(['/c', 'c9']);
+    });
+
+    it('clears the strap, the tab bar and the selection when the campaign closes', async () => {
+      stubViewport({ phone: true });
+      configure();
+      const harness = await RouterTestingHarness.create(`/g/${ID}/party`);
+      TestBed.inject(CampaignSelectionService).toggle({ characterId: 'c1', name: 'Ilyana' });
+      expect(TestBed.inject(TabBarService).tabs()).not.toBeNull();
+      harness.fixture.destroy();
+      expect(TestBed.inject(ActionStrapService).config()).toBeNull();
+      expect(TestBed.inject(TabBarService).tabs()).toBeNull();
+      expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
+    });
   });
 });

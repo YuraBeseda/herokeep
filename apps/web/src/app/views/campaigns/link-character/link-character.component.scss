@@ -12,10 +12,15 @@
 
 .link-character__title {
   margin: 0;
+  color: var(--text-1);
   font-family: var(--font-display);
+  font-weight: 400;
 }
 
-.link-character__intro {
+.link-character__intro,
+.link-character__empty,
+.link-character__loading {
+  margin: 0;
   color: var(--text-2);
 }
 
@@ -30,25 +35,38 @@
 
 .link-character__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-leaf);
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-raised), var(--shadow-leaf);
+  color: var(--text-1);
+}
+
+.link-character__portrait {
+  flex: none;
 }
 
 .link-character__name {
-  font-weight: 600;
+  flex: 1 1 8rem;
+  min-inline-size: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .link-character__notice {
   color: var(--text-2);
   font-size: 0.8125rem;
-}
-
-.link-character__empty {
-  color: var(--text-2);
 }
 
 .link-character__actions {
@@ -63,8 +81,10 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
+  box-shadow: var(--shadow-raised), var(--shadow-leaf);
+  color: var(--text-1);
 }
 
 .link-character__progress-title {
@@ -92,23 +112,23 @@
    "waiting" in words) — the color is a reinforcing cue only. */
 .link-character__step[data-outcome='rejected'] .link-character__step-outcome,
 .link-character__step[data-outcome='timeout'] .link-character__step-outcome {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .link-character__step[data-outcome='committed'] .link-character__step-outcome {
-  color: var(--success);
+  color: var(--success-strong);
 }
 
 .link-character__error {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .link-character__success {
-  color: var(--success);
+  color: var(--success-strong);
 }
 
 .link-character__incomplete {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .link-character__claimed {
@@ -116,8 +136,10 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
+  box-shadow: var(--shadow-raised), var(--shadow-leaf);
+  color: var(--text-1);
 }
 
 .link-character__claimed-title {
@@ -150,5 +172,5 @@
 /* Same "words already say it, color reinforces" posture as `.link-character__step` above. */
 .link-character__claimed-row[data-claim-state='notYetVisible'] .link-character__claimed-status,
 .link-character__claimed-row[data-claim-state='failed'] .link-character__claimed-status {
-  color: var(--danger);
+  color: var(--danger-strong);
 }

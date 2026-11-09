@@ -1,27 +1,10 @@
 <section class="campaigns-list" *transloco="let t; read: 'campaigns'">
-  <div class="campaigns-list__header">
+  <header class="campaigns-list__header">
     <h1 class="campaigns-list__title">{{ t('list.title') }}</h1>
-    <div class="campaigns-list__actions">
-      <button
-        hk-button
-        [variant]="'ghost'"
-        type="button"
-        class="campaigns-list__join"
-        (click)="onJoin()"
-      >
-        {{ t('list.join') }}
-      </button>
-      <button
-        hk-button
-        [variant]="'primary'"
-        type="button"
-        class="campaigns-list__create"
-        (click)="onCreate()"
-      >
-        {{ t('list.create') }}
-      </button>
-    </div>
-  </div>
+    @if (!loading() && rows().length > 0) {
+      <p class="campaigns-list__count">{{ t('list.count', { count: rows().length }) }}</p>
+    }
+  </header>
 
   @if (loading()) {
     <div class="campaigns-list__skeletons">
@@ -30,15 +13,38 @@
       }
     </div>
   } @else if (rows().length === 0) {
-    <p class="campaigns-list__empty">{{ t('list.empty') }}</p>
+    <hk-leaf class="campaigns-list__empty" [title]="t('list.emptyTitle')" [icon]="'ui:campaigns'">
+      <p class="campaigns-list__empty-text">{{ t('list.empty') }}</p>
+      <p class="campaigns-list__empty-hint">{{ t('list.emptyHint') }}</p>
+      <div class="campaigns-list__empty-actions">
+        <button hk-button type="button" class="campaigns-list__create" (click)="onCreate()">
+          <hk-icon [icon]="'ui:add'" />{{ t('list.create') }}
+        </button>
+        <button
+          hk-button
+          type="button"
+          class="campaigns-list__join"
+          [variant]="'parchment'"
+          (click)="onJoin()"
+        >
+          <hk-icon [icon]="'ui:join'" />{{ t('list.join') }}
+        </button>
+      </div>
+    </hk-leaf>
   } @else {
     <div class="campaigns-list__grid" [attr.aria-label]="t('list.landmark')">
       @for (row of rows(); track row.id) {
-        <hk-card class="campaigns-list__item">
-          <button type="button" class="campaigns-list__open" (click)="open(row)">
-            <span class="campaigns-list__name">{{ row.name }}</span>
+        <article class="campaigns-list__item" [attr.data-role]="row.role">
+          <button
+            type="button"
+            class="campaigns-list__open"
+            [attr.aria-label]="t('list.open', { name: row.name, role: t('roles.' + row.role) })"
+            (click)="open(row)"
+          >
+            <span class="campaigns-list__name" [attr.title]="row.name">{{ row.name }}</span>
             <span class="campaigns-list__meta">
               <span class="campaigns-list__role" [attr.data-role]="row.role">
+                <hk-icon [icon]="row.role === 'dm' ? 'ui:dm' : 'ui:heroes'" />
                 {{ t('roles.' + row.role) }}
               </span>
               <span
@@ -56,7 +62,23 @@
               </span>
             </span>
           </button>
-        </hk-card>
+          <nav
+            class="campaigns-list__tabs"
+            [attr.aria-label]="t('list.tabsLabel', { name: row.name })"
+          >
+            @for (tab of quickTabs; track tab) {
+              <button
+                type="button"
+                class="campaigns-list__tab"
+                [attr.data-tab]="tab"
+                (click)="openTab(row, tab)"
+              >
+                <hk-icon [icon]="quickTabIcon(tab)" />
+                {{ t('shell.tabs.' + tab) }}
+              </button>
+            }
+          </nav>
+        </article>
       }
     </div>
   }

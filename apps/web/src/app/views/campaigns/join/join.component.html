@@ -1,29 +1,24 @@
 <section class="join" *transloco="let t; read: 'campaigns'">
   <h1 class="join__title">{{ t('join.title') }}</h1>
+  <p class="join__intro">{{ t('join.intro') }}</p>
 
   <form class="join__form" novalidate (submit)="$event.preventDefault(); confirm()">
-    <label class="join__field">
-      <span>{{ t('join.codeLabel') }}</span>
-      <input
-        type="text"
-        name="code"
-        autocomplete="off"
-        [value]="code()"
-        (input)="onCodeChange($any($event.target).value)"
-      />
-      <small class="join__hint">{{ t('join.codeHint') }}</small>
-    </label>
+    <hk-text-field
+      class="join__code"
+      [label]="t('join.codeLabel')"
+      [value]="code()"
+      [hint]="t('join.codeHint')"
+      [autocomplete]="'off'"
+      (valueChange)="onCodeChange($event)"
+    />
 
-    <label class="join__field">
-      <span>{{ t('join.displayNameLabel') }}</span>
-      <input
-        type="text"
-        name="displayName"
-        autocomplete="off"
-        [value]="displayName()"
-        (input)="onDisplayNameChange($any($event.target).value)"
-      />
-    </label>
+    <hk-text-field
+      class="join__display-name"
+      [label]="t('join.displayNameLabel')"
+      [value]="displayName()"
+      [autocomplete]="'off'"
+      (valueChange)="onDisplayNameChange($event)"
+    />
 
     @if (errorKey(); as key) {
       <p class="join__error" role="alert">{{ t(key) }}</p>
@@ -36,8 +31,8 @@
         type="submit"
         class="join__confirm"
         [variant]="'primary'"
+        [loading]="submitting()"
         [disabled]="!canSubmit()"
-        [attr.aria-busy]="submitting() ? 'true' : null"
       >
         {{ submitting() ? t('join.joining') : t('join.confirm') }}
       </button>

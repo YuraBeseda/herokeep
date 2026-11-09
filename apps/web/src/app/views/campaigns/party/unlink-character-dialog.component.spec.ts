@@ -117,6 +117,25 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
 }
 
 describe('UnlinkCharacterDialogComponent', () => {
+  it('puts its actions on the dialog strap, with the destructive verb in ember (hk-dialog chrome)', async () => {
+    configure({});
+    const fixture = TestBed.createComponent(UnlinkCharacterDialogComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+    const actions = compiled.querySelector('.unlink-character-dialog__actions')!;
+    expect(actions.hasAttribute('data-dialog-actions')).toBe(true);
+    expect(
+      compiled
+        .querySelector('.unlink-character-dialog__confirm')!
+        .classList.contains('hk-button--ember'),
+    ).toBe(true);
+    expect(
+      compiled
+        .querySelector('.unlink-character-dialog__cancel')!
+        .classList.contains('hk-button--ghost-leather'),
+    ).toBe(true);
+  });
+
   it('shows a confirm step first, with the character name interpolated', async () => {
     configure({});
     const fixture = TestBed.createComponent(UnlinkCharacterDialogComponent);

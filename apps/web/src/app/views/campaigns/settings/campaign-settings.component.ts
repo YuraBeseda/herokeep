@@ -1,11 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { CampaignSettings } from '@hk/protocol';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { ChipComponent } from '@shared/components/chip/chip.component';
 import { DialogService } from '@app/ui/dialog/dialog.service';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import {
@@ -13,6 +9,13 @@ import {
   CampaignStoreNotAuthenticatedError,
   CampaignStoreNotLeaderError,
 } from '@shared/stores/campaign.store';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkNumberFieldComponent } from '../../../ui/number-field/number-field.component';
+import { HkToggleComponent } from '../../../ui/toggle/toggle.component';
+import { askToDiscard } from '../shell/discard-changes-dialog.component';
+import { CampaignSegmentedComponent } from './campaign-segmented.component';
 import { CampaignExportDialogComponent } from './campaign-export-dialog.component';
 import { CampaignPacksSectionComponent } from './campaign-packs-section.component';
 
@@ -80,10 +83,12 @@ type Join = CampaignSettings['join'];
   selector: 'app-campaign-settings',
   imports: [
     TranslocoDirective,
-    ButtonComponent,
-    ChipComponent,
-    NumberFieldComponent,
-    FormsModule,
+    HkButtonComponent,
+    HkLeafComponent,
+    HkNumberFieldComponent,
+    HkToggleComponent,
+    IconComponent,
+    CampaignSegmentedComponent,
     CampaignPacksSectionComponent,
   ],
   providers: [provideTranslocoScope('campaigns')],
@@ -229,6 +234,17 @@ export class CampaignSettingsComponent {
   /** DM-only, gated by `isDm()` alone — NOT `canEdit()` (task-15-brief.md: "DM-only … gated
    * isDm"). Exporting is a read-only backup action, not an edit of the campaign document, so a DM
    * on a non-leader tab can still use it (unlike `save()`, which genuinely needs the write lock). */
+  /** House rules changed and not saved yet. */
+  protected readonly dirty = computed(() => this.draft() !== null);
+
+  /**
+   * Whether the tab may be left (`campaignLeaveGuard`): silent while nothing is edited or the edit
+   * was saved, otherwise it asks once whether to discard the unsaved house rules.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    return this.dirty() ? askToDiscard(this.dialogService) : true;
+  }
+
   protected openExportDialog(): void {
     const campaignId = this.campaignStore.campaignId();
     if (!this.isDm() || !campaignId) return;

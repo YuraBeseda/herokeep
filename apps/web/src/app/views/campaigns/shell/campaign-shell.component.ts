@@ -1,43 +1,62 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
+import { ToastService } from '@shared/components/toast/toast.service';
+import { AuthService } from '@shared/services/auth/auth.service';
 import { LeaderService } from '@shared/services/storage/leader.service';
-import { CampaignStore } from '@shared/stores/campaign.store';
+import {
+  CampaignStore,
+  CampaignStoreNotAuthenticatedError,
+  CampaignStoreNotLeaderError,
+} from '@shared/stores/campaign.store';
 import { filter, map } from 'rxjs';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { DialogService } from '../../../ui/dialog/dialog.service';
+import { TopBarService } from '../../../ui/shell/top-bar.service';
+import { phoneLayout } from '../../../ui/shell/viewport';
+import { TabBarService, type TabItem } from '../../../ui/tab-bar/tab-bar.service';
+import { CampaignExportDialogComponent } from '../settings/campaign-export-dialog.component';
+import { CampaignSelectionService } from './campaign-selection.service';
+import { buildCampaignStrap } from './campaign-strap';
+import { campaignsScopeReady } from './scope-ready';
 
-const TAB_IDS = ['party', 'log', 'settings', 'lobby'] as const;
+const TAB_IDS = ['party', 'log', 'lobby', 'settings'] as const;
 type TabId = (typeof TAB_IDS)[number];
+
+/** Icons and (campaigns-scope) label keys of the tabs; the Table tab keeps the `log` route. */
+const TAB_ITEMS: Record<TabId, Pick<TabItem, 'icon' | 'label'>> = {
+  party: { icon: 'campaigns', label: 'campaigns.shell.tabs.party' },
+  log: { icon: 'notes', label: 'campaigns.shell.tabs.log' },
+  lobby: { icon: 'join', label: 'campaigns.shell.tabs.lobby' },
+  settings: { icon: 'settings', label: 'campaigns.shell.tabs.settings' },
+};
 
 /**
  * `/g/:id`'s shell (plan-10 task-6-brief.md): `campaignGuard` (`app.routes.ts`) has already
  * `CampaignStore.open()`'d the stream by the time this component is ever created (mirrors
- * `SheetShellComponent`'s own relationship to `characterResolver`) — this just renders the
- * campaign's name/role plus `hk-tabs` routing between the `party`/`log`/`settings`/`lobby` child
- * routes, near-verbatim adapted from `sheet-shell.component.ts`'s own tab-shell pattern
- * (`activeTabId`/`tabsFor`/`onTabSelected`).
+ * `SheetShellComponent`'s own relationship to `characterResolver`). It renders the campaign's
+ * name and role, the Party · Table · Lobby · Settings tabs, and sets the chrome the way the sheet
+ * does (plan 17 B11a): the phone's bottom tab bar, the phone top bar's title, and the campaign
+ * action strap, each set from an effect and cleared when the campaign closes.
+ *
+ * The strap (`buildCampaignStrap`): the DM's Damage · Heal · Condition · XP · Item act on the
+ * member picked on the Party tab (`CampaignSelectionService` — the strap posts a request and that
+ * member's effects panel runs its own action), Session starts or ends the session, Export opens
+ * the export dialog; a player gets Open my sheet when they have a hero here.
  *
  * ## Follower-mode "stale" notice (task-5-report.md's carried concern; task-6-brief.md ruling)
  *
- * `SyncService` only runs a campaign's live `StreamSyncSession` on the LEADER tab
- * (`onAuthLeaderChange`'s `mode === 'leader'` gate) — task-5-report.md's own words: "No
- * SyncBroadcast/follower-tab reload story exists for campaigns yet." A non-leader tab's
- * `CampaignStore.state()` is therefore whatever this device last had locally when THIS tab
- * happened to load it — it will not pick up events a sibling (leader) tab's live socket receives
- * until a full reload or this tab itself becomes leader. No reuse pattern exists for this on the
- * character side (`play-tab.component.ts`'s own not-leader handling is about the WRITE lock —
- * `CharacterStoreNotLeaderError` toasted on a failed append — not about read-side staleness), so
- * this is a new, lightweight, i18n-keyed banner rather than an adapted existing one: a
- * `role="status"` paragraph shown whenever `LeaderService.isLeader()` is `false`. It does not
+ * `SyncService` only runs a campaign's live `StreamSyncSession` on the LEADER tab, so a non-leader
+ * tab's `CampaignStore.state()` does not pick up events a sibling tab's socket receives. This
+ * shows a `role="status"` paragraph whenever `LeaderService.isLeader()` is `false`; it does not
  * disable navigation or reading — only `LobbyComponent`/`CampaignSettingsComponent` disable their
- * own MUTATING actions (rotate/remove-member/save) on the same signal, since those two bypass or
- * wrap `CampaignStore`'s own leader-gated write path and would otherwise appear to silently do
- * nothing from a stale, non-reactive view.
+ * own MUTATING actions on the same signal.
  */
 @Component({
   selector: 'app-campaign-shell',
-  imports: [TranslocoDirective, RouterOutlet, TabsComponent],
+  imports: [TranslocoDirective, RouterOutlet, IconComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './campaign-shell.component.html',
   styleUrl: './campaign-shell.component.scss',
@@ -45,11 +64,36 @@ type TabId = (typeof TAB_IDS)[number];
 export class CampaignShellComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly strap = inject(ActionStrapService);
+  private readonly tabBar = inject(TabBarService);
+  private readonly topBar = inject(TopBarService);
+  private readonly selection = inject(CampaignSelectionService);
+  private readonly dialogs = inject(DialogService);
+  private readonly toasts = inject(ToastService);
+  private readonly auth = inject(AuthService);
   protected readonly campaignStore = inject(CampaignStore);
   protected readonly leaderService = inject(LeaderService);
 
   protected readonly state = this.campaignStore.state;
   protected readonly role = this.campaignStore.role;
+  protected readonly tabIds = TAB_IDS;
+  protected readonly tabIcon = (id: TabId): string => `ui:${TAB_ITEMS[id].icon}`;
+
+  /** The strap's and the tab bar's labels live in the `campaigns` scope; see `campaignsScopeReady`. */
+  private readonly labelsReady = campaignsScopeReady([
+    'shell.tabs.party',
+    'shell.tabs.log',
+    'shell.tabs.lobby',
+    'shell.tabs.settings',
+    'shell.strap.item',
+    'shell.strap.sessionStart',
+    'shell.strap.sessionEnd',
+    'shell.strap.openSheet',
+  ]);
+
+  /** The one breakpoint signal (`ui/shell/viewport`): phone below 768 px. */
+  protected readonly phone = phoneLayout();
+  private readonly routeId = this.route.snapshot.paramMap.get('id') ?? '';
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
@@ -64,12 +108,126 @@ export class CampaignShellComponent {
     return TAB_IDS.find((id) => url.endsWith(`/${id}`)) ?? 'party';
   });
 
-  protected tabsFor(t: (key: string) => string): HkTab[] {
-    return TAB_IDS.map((id) => ({ id, label: t(`shell.tabs.${id}`) }));
+  /** The player's first active hero in this campaign (what Open my sheet opens). */
+  private readonly ownCharacterId = computed<string | undefined>(() => {
+    const userId = this.auth.user()?.userId;
+    const roster = this.state()?.roster;
+    if (!userId || !roster) return undefined;
+    for (const [characterId, entry] of roster) {
+      if (entry.ownerId === userId && !entry.left) return characterId;
+    }
+    return undefined;
+  });
+
+  constructor() {
+    // Set from effects, not eagerly: a predecessor screen's destroy-time clear can run after this
+    // constructor and would wipe a config set eagerly (the sheet shell's own note).
+    effect(() => this.setStrap());
+    effect(() => this.setTabBar());
+    effect(() => this.setTopBar());
+
+    inject(DestroyRef).onDestroy(() => {
+      this.strap.clear();
+      this.tabBar.set(null);
+      this.topBar.clear();
+      this.selection.clear();
+    });
   }
 
-  protected onTabSelected(id: string | undefined): void {
-    if (!id || id === this.activeTabId()) return;
+  protected onTabSelected(id: TabId): void {
+    if (id === this.activeTabId()) return;
     void this.router.navigate([id], { relativeTo: this.route });
+  }
+
+  /** Roving arrows between the tabs, Home and End to the ends. */
+  protected onTabsKey(event: KeyboardEvent): void {
+    const index = TAB_IDS.indexOf(this.activeTabId());
+    const next =
+      event.key === 'ArrowRight'
+        ? (index + 1) % TAB_IDS.length
+        : event.key === 'ArrowLeft'
+          ? (index + TAB_IDS.length - 1) % TAB_IDS.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? TAB_IDS.length - 1
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    this.onTabSelected(TAB_IDS[next]);
+    queueMicrotask(() => document.getElementById(`campaign-tab-${TAB_IDS[next]}`)?.focus());
+  }
+
+  private setStrap(): void {
+    this.labelsReady();
+    const role = this.role();
+    const selected = this.selection.selected() !== null;
+    const sessionActive = this.state()?.session?.active ?? false;
+    const canOpenSheet = this.ownCharacterId() !== undefined;
+    untracked(() =>
+      this.strap.set(
+        buildCampaignStrap(
+          { role, selected, sessionActive, canOpenSheet, scope: ['/g', this.routeId] },
+          {
+            effect: (kind) => this.selection.requestEffect(kind),
+            toggleSession: () => void this.toggleSession(),
+            exportCampaign: () => this.openExport(),
+            openSheet: () => {
+              const id = this.ownCharacterId();
+              if (id) void this.router.navigate(['/c', id]);
+            },
+          },
+        ),
+      ),
+    );
+  }
+
+  private setTabBar(): void {
+    this.labelsReady();
+    this.tabBar.set(
+      this.phone()
+        ? TAB_IDS.map((id) => ({
+            id,
+            ...TAB_ITEMS[id],
+            route: ['/g', this.routeId, id],
+          }))
+        : null,
+    );
+  }
+
+  private setTopBar(): void {
+    const name = this.state()?.name;
+    if (!this.phone() || !name) {
+      untracked(() => this.topBar.clear());
+      return;
+    }
+    untracked(() => this.topBar.set({ title: name, scope: ['/g', this.routeId] }));
+  }
+
+  /** Start with no title (the Table tab's own form names a session), or end the running one. */
+  private async toggleSession(): Promise<void> {
+    const active = this.state()?.session?.active ?? false;
+    try {
+      await this.campaignStore.appendTx([
+        active
+          ? { type: 'session.ended', v: 1, payload: {} }
+          : { type: 'session.started', v: 1, payload: {} },
+      ]);
+    } catch (err) {
+      this.toasts.show(
+        err instanceof CampaignStoreNotLeaderError ||
+          err instanceof CampaignStoreNotAuthenticatedError
+          ? err.code
+          : 'campaigns.log.session.errors.generic',
+      );
+    }
+  }
+
+  private openExport(): void {
+    const campaignId = this.campaignStore.campaignId();
+    if (this.role() !== 'dm' || !campaignId) return;
+    this.dialogs.open(CampaignExportDialogComponent, {
+      data: { campaignId, name: this.state()?.name ?? '' },
+    });
   }
 }

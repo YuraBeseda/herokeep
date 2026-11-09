@@ -1,6 +1,6 @@
 <div class="campaign-shell" *transloco="let t; read: 'campaigns'">
   <header class="campaign-shell__header">
-    <h1 class="campaign-shell__name">{{ state()?.name }}</h1>
+    <h1 class="campaign-shell__name" [attr.title]="state()?.name">{{ state()?.name }}</h1>
     @if (role(); as r) {
       <span class="campaign-shell__role" [attr.data-role]="r">{{ t('roles.' + r) }}</span>
     }
@@ -12,6 +12,7 @@
 
   @if (state()?.session?.active) {
     <p class="campaign-shell__session" role="status">
+      <hk-icon [icon]="'ui:session'" />
       {{
         state()?.session?.title
           ? t('shell.session.activeWithTitle', { title: state()?.session?.title })
@@ -20,12 +21,26 @@
     </p>
   }
 
-  <hk-tabs
-    class="campaign-shell__tabs"
-    [tabs]="tabsFor(t)"
-    [selected]="activeTabId()"
-    (selectedChange)="onTabSelected($event)"
-  />
+  @if (!phone()) {
+    <div class="campaign-shell__tabs" role="tablist" [attr.aria-label]="t('shell.tabs.landmark')">
+      @for (id of tabIds; track id) {
+        <button
+          type="button"
+          role="tab"
+          class="campaign-shell__tab"
+          [id]="'campaign-tab-' + id"
+          [class.campaign-shell__tab--on]="activeTabId() === id"
+          [attr.aria-selected]="activeTabId() === id"
+          [tabindex]="activeTabId() === id ? 0 : -1"
+          (click)="onTabSelected(id)"
+          (keydown)="onTabsKey($event)"
+        >
+          <hk-icon [icon]="tabIcon(id)" />
+          {{ t('shell.tabs.' + id) }}
+        </button>
+      }
+    </div>
+  }
 
   <router-outlet />
 </div>

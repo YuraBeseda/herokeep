@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import {
   runDmUnlinkSequence,
@@ -36,7 +36,7 @@ export interface UnlinkCharacterDialogData {
  */
 @Component({
   selector: 'app-unlink-character-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './unlink-character-dialog.component.html',
   styleUrl: './unlink-character-dialog.component.scss',

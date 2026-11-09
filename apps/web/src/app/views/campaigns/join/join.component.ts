@@ -1,7 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { DialogService } from '@app/ui/dialog/dialog.service';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { askToDiscard } from '../shell/discard-changes-dialog.component';
 import { ApiError } from '@shared/services/api/api-fetch';
 import {
   CampaignStore,
@@ -45,7 +48,7 @@ function toBareId(streamId: string): string {
  */
 @Component({
   selector: 'app-join',
-  imports: [TranslocoDirective, ButtonComponent, RouterLink],
+  imports: [TranslocoDirective, HkButtonComponent, HkTextFieldComponent, RouterLink],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './join.component.html',
   styleUrl: './join.component.scss',
@@ -54,17 +57,31 @@ export class JoinComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly campaignStore = inject(CampaignStore);
+  private readonly dialogService = inject(DialogService);
 
-  protected readonly code = signal(
-    this.route.snapshot.paramMap.get('code') ?? this.route.snapshot.queryParamMap.get('code') ?? '',
-  );
+  private readonly initialCode =
+    this.route.snapshot.paramMap.get('code') ?? this.route.snapshot.queryParamMap.get('code') ?? '';
+  protected readonly code = signal(this.initialCode);
   protected readonly displayName = signal('');
   protected readonly submitting = signal(false);
+  /** The join went through: what the form held is no longer unsaved. */
+  private readonly joined = signal(false);
   protected readonly errorKey = signal<string | undefined>(undefined);
 
   protected readonly canSubmit = computed(
     () => this.code().trim().length > 0 && !this.submitting(),
   );
+
+  /**
+   * Whether the screen may be left (`campaignLeaveGuard`, and Back): silent while the form is as it
+   * arrived (a code prefilled from the invite link is not the user's input) or the join went
+   * through; otherwise it asks once.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    const dirty =
+      !this.joined() && (this.displayName().trim() !== '' || this.code() !== this.initialCode);
+    return dirty ? askToDiscard(this.dialogService) : true;
+  }
 
   protected onCodeChange(value: string): void {
     this.code.set(value);
@@ -87,6 +104,7 @@ export class JoinComponent {
       // (or create-new via the wizard then return)" — `LinkCharacterComponent` is that next step;
       // it (or its own "skip for now") is what lands the user on `/g/<id>/lobby`, not this
       // component directly.
+      this.joined.set(true);
       await this.router.navigate(['/g', toBareId(streamId), 'link-character']);
     } catch (err) {
       this.errorKey.set(this.toErrorKey(err));

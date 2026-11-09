@@ -11,6 +11,7 @@ import type { CampaignState } from '@shared/services/campaigns/campaign-projecti
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import { CampaignSelectionService } from '../shell/campaign-selection.service';
 import { HandoverCharacterDialogComponent } from './handover-character-dialog.component';
 import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
 import { PartyTabComponent } from './party-tab.component';
@@ -564,6 +565,44 @@ describe('PartyTabComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
 
       expect(compiled.querySelector('app-dm-effects-panel')).not.toBeNull();
+    });
+
+    it('lets the DM select one card for the strap, marking it pressed, and toggles it off', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          roster: new Map([
+            ['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }],
+            ['char-2', { ownerId: 'u-player', name: 'Grog', left: false }],
+          ]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const selection = TestBed.inject(CampaignSelectionService);
+      const selectButtons = () =>
+        Array.from(compiled.querySelectorAll<HTMLButtonElement>('.party-tab__select'));
+
+      selectButtons()[0].click();
+      await fixture.whenStable();
+      expect(selection.selected()).toEqual({ characterId: 'char-1', name: 'Ivan' });
+      expect(selectButtons().map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+      selectButtons()[0].click();
+      await fixture.whenStable();
+      expect(selection.selected()).toBeNull();
+    });
+
+    it('offers no select control to a non-DM viewer', async () => {
+      configure({
+        role: 'player',
+        state: mkState({
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.party-tab__select')).toBeNull();
     });
 
     it('never mounts the panel for a non-DM viewer', async () => {

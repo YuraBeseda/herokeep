@@ -2,8 +2,10 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { MembershipRole } from '@hk/protocol';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { apiJson } from '@shared/services/api/api-fetch';
 import { LeaderService } from '@shared/services/storage/leader.service';
@@ -29,7 +31,7 @@ interface MemberVm {
  * `CharactersDeleteConfirmComponent`. */
 @Component({
   selector: 'app-lobby-remove-member-confirm',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   template: `
     <ng-container *transloco="let t">
       <h2 class="lobby-remove-member-confirm__title" data-dialog-title>
@@ -38,11 +40,11 @@ interface MemberVm {
       <p class="lobby-remove-member-confirm__body">
         {{ t('campaigns.lobby.removeConfirm.body', { name: data.displayName }) }}
       </p>
-      <div class="lobby-remove-member-confirm__actions">
-        <button hk-button [variant]="'ghost'" type="button" (click)="cancel()">
+      <div class="lobby-remove-member-confirm__actions" data-dialog-actions>
+        <button hk-button [variant]="'ghost-leather'" type="button" (click)="cancel()">
           {{ t('campaigns.lobby.removeConfirm.cancel') }}
         </button>
-        <button hk-button [variant]="'danger'" type="button" (click)="confirm()">
+        <button hk-button [variant]="'ember'" type="button" (click)="confirm()">
           {{ t('campaigns.lobby.removeConfirm.confirm') }}
         </button>
       </div>
@@ -104,7 +106,7 @@ function groupJoinCode(code: string): string {
  */
 @Component({
   selector: 'app-lobby',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent, HkLeafComponent, IconComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',

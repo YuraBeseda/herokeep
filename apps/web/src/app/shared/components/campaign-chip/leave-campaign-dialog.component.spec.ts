@@ -146,6 +146,29 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
 }
 
 describe('LeaveCampaignDialogComponent', () => {
+  it('puts its actions on the dialog strap, with the destructive verb in ember (hk-dialog chrome)', async () => {
+    configure({});
+    const fixture = TestBed.createComponent(LeaveCampaignDialogComponent);
+    await fixture.whenStable();
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(
+      compiled
+        .querySelector('.leave-campaign-dialog__actions')!
+        .hasAttribute('data-dialog-actions'),
+    ).toBe(true);
+    expect(
+      compiled
+        .querySelector('.leave-campaign-dialog__confirm')!
+        .classList.contains('hk-button--ember'),
+    ).toBe(true);
+    expect(
+      compiled
+        .querySelector('.leave-campaign-dialog__cancel')!
+        .classList.contains('hk-button--ghost-leather'),
+    ).toBe(true);
+  });
+
   it('shows a confirm step first, with the character name interpolated', async () => {
     configure({});
     const fixture = TestBed.createComponent(LeaveCampaignDialogComponent);

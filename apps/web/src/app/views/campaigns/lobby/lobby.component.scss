@@ -4,30 +4,67 @@
 
 .lobby__title {
   margin: 0 0 var(--space-3);
+  color: var(--text-1);
   font-family: var(--font-display);
+  font-weight: 400;
 }
 
-.lobby__join-code,
-.lobby__members {
-  margin-block-end: var(--space-5);
+/* The code plate and the roster side by side from tablet width; one column on a phone. */
+.lobby__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
 }
 
-.lobby__join-code h3,
-.lobby__members h3 {
-  margin: 0 0 var(--space-2);
+@media (min-width: 768px) {
+  .lobby__columns {
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  }
 }
 
+.lobby__member-note {
+  margin: 0;
+  color: var(--text-2);
+}
+
+/* The join code on a brass plate in the display face. */
 .lobby__code {
-  font-family: var(--font-mono, monospace);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, var(--brass-top), var(--brass));
+  box-shadow: inset 0 0 0 1px var(--brass-shadow);
+  color: var(--text-on-brass);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.lobby__qr-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+}
+
+.lobby__qr-caption {
+  color: var(--text-2);
+  font-size: 0.875rem;
 }
 
 .lobby__join-code-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-2);
-  margin-block: var(--space-2);
+}
+
+.lobby__rotate-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
 }
 
 /* QR codes need light modules on a light background to stay scannable regardless of the app's
@@ -35,8 +72,8 @@
  * library's unfilled/transparent "light" modules) — an explicit white backing, not a token,
  * deliberately overrides the surrounding theme here. */
 .lobby__qr {
-  display: inline-block;
-  width: fit-content;
+  display: block;
+  inline-size: min(100%, 13rem);
   padding: var(--space-2);
   border-radius: var(--radius-s);
   /* stylelint-disable-next-line declaration-property-value-disallowed-list, color-no-hex --
@@ -46,6 +83,12 @@
    * light regardless of theme"; adding one to the shared package for this single use felt like
    * more risk than one narrowly-scoped, explained exception. */
   background: #fff;
+}
+
+.lobby__qr :is(svg) {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
 }
 
 .lobby__members-list {
@@ -63,7 +106,7 @@
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-m);
-  background: var(--surface-1);
+  background: var(--leaf-sunken);
 }
 
 .lobby__member-row[data-removed='true'] {
@@ -80,12 +123,16 @@
   flex-shrink: 0;
 
   &[data-online='true'] {
-    background: var(--success);
+    background: var(--success-strong);
   }
 }
 
 .lobby__member-name {
+  min-inline-size: 0;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lobby__member-role {
@@ -96,7 +143,7 @@
 }
 
 .lobby__member-removed-badge {
-  color: var(--danger);
+  color: var(--danger-strong);
   font-size: 0.8125rem;
 }
 

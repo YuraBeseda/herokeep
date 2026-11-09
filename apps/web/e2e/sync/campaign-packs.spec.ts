@@ -80,7 +80,9 @@ test.describe('campaign: content pack relay', () => {
 
       const quota = page.locator('.campaign-packs__quota');
       const row = campaignPackRow(page);
-      await expect(page.locator('.campaign-packs__title')).toHaveText('Content packs');
+      await expect(page.locator('.campaign-packs .hk-leaf__title-text')).toHaveText(
+        'Content packs',
+      );
       await expect(quota).toHaveText('0 / 6 packs enabled');
       await expect(row.locator('.campaign-packs__name')).toHaveText(PACK_NAME);
       await expect(row.locator('.campaign-packs__version')).toHaveText('Version 1.0.0');

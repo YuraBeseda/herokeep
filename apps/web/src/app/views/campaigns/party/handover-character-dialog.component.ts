@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { bareCharacterId } from '@shared/services/campaigns/campaign-link-sequence';
 import {
@@ -44,7 +44,7 @@ interface MemberOption {
  */
 @Component({
   selector: 'app-handover-character-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './handover-character-dialog.component.html',
   styleUrl: './handover-character-dialog.component.scss',

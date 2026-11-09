@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkPortraitFrameComponent } from '../../../ui/portrait-frame/portrait-frame.component';
 import { AuthService } from '@shared/services/auth/auth.service';
 import {
   bareCharacterId,
@@ -103,7 +105,7 @@ export type ClaimPullState = 'pulling' | 'notYetVisible' | 'failed';
  */
 @Component({
   selector: 'app-link-character',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent, HkPortraitFrameComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './link-character.component.html',
   styleUrl: './link-character.component.scss',
@@ -116,6 +118,7 @@ export class LinkCharacterComponent {
   private readonly syncService = inject(SyncService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly placeholders = inject(PlaceholderService);
 
   protected readonly campaignId = computed(() => this.campaignStore.campaignId());
   private readonly roster = computed(() => this.campaignStore.state()?.roster);
@@ -168,6 +171,11 @@ export class LinkCharacterComponent {
     const state = this.syncService.syncState(id)();
     if (state === 'synced' || state === 'connecting' || state === 'offline') return state;
     return 'pending';
+  }
+
+  /** The candidate's placeholder portrait (AA-safe palette token, deterministic from its id). */
+  protected monogram(candidate: Candidate): Monogram {
+    return this.placeholders.monogram(candidate.row.name, candidate.row.id);
   }
 
   protected eligibility(candidate: Candidate): Eligibility {

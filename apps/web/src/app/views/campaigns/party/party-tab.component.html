@@ -43,6 +43,7 @@
           role="group"
           [attr.aria-label]="card.name"
           [attr.data-left]="card.left"
+          [attr.data-selected]="isSelected(card)"
         >
           @if ((card.overview?.portraitThumb | blobUrl)(); as thumbUrl) {
             <img
@@ -68,6 +69,20 @@
 
           @if (card.left) {
             <span class="party-tab__left-badge">{{ t('party.card.leftBadge') }}</span>
+          }
+
+          @if (isDm() && !card.left) {
+            <button
+              hk-button
+              type="button"
+              [variant]="isSelected(card) ? 'primary' : 'ghost'"
+              class="party-tab__select"
+              [attr.aria-pressed]="isSelected(card)"
+              [attr.aria-label]="t('party.card.selectAria', { name: card.name })"
+              (click)="toggleSelected(card)"
+            >
+              {{ isSelected(card) ? t('party.card.selected') : t('party.card.select') }}
+            </button>
           }
 
           @if (canDrillIn()) {

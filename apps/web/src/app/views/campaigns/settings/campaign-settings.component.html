@@ -5,258 +5,243 @@
     <p class="campaign-settings__readonly-notice">{{ t('settings.readOnlyNotice') }}</p>
   }
 
-  <div class="campaign-settings__section">
-    <h3>{{ t('settings.houseRules.title') }}</h3>
-
-    <label class="campaign-settings__checkbox-row">
-      <input
-        type="checkbox"
-        [checked]="current().houseRules.strictValidation"
+  <div class="campaign-settings__grid">
+    <hk-leaf
+      class="campaign-settings__section"
+      [title]="t('settings.houseRules.title')"
+      [icon]="'ui:settings'"
+    >
+      <hk-toggle
+        [label]="t('settings.houseRules.strictValidation')"
+        [value]="current().houseRules.strictValidation"
         [disabled]="!canEdit()"
-        (change)="setStrictValidation($any($event.target).checked)"
+        (valueChange)="setStrictValidation($event)"
       />
-      {{ t('settings.houseRules.strictValidation') }}
-    </label>
 
-    <label class="campaign-settings__checkbox-row">
-      <input
-        type="checkbox"
-        [checked]="current().houseRules.allowOverrides"
+      <hk-toggle
+        [label]="t('settings.houseRules.allowOverrides')"
+        [value]="current().houseRules.allowOverrides"
         [disabled]="!canEdit()"
-        (change)="setAllowOverrides($any($event.target).checked)"
+        (valueChange)="setAllowOverrides($event)"
       />
-      {{ t('settings.houseRules.allowOverrides') }}
-    </label>
 
-    <div class="campaign-settings__field">
-      <span class="campaign-settings__field-label">{{
-        t('settings.houseRules.editOutsideSession.label')
-      }}</span>
-      @if (canEdit()) {
-        <div class="campaign-settings__chips">
-          @for (opt of editOutsideSessionOptions; track opt) {
-            <hk-chip
-              [selected]="current().houseRules.editOutsideSession === opt"
-              (click)="setEditOutsideSession(opt)"
-            >
-              {{ t('settings.houseRules.editOutsideSession.' + opt) }}
-            </hk-chip>
-          }
-        </div>
-      } @else {
-        <span class="campaign-settings__value">
-          {{
-            t('settings.houseRules.editOutsideSession.' + current().houseRules.editOutsideSession)
-          }}
-        </span>
-      }
-    </div>
-
-    <div class="campaign-settings__field">
-      <span class="campaign-settings__field-label">{{
-        t('settings.houseRules.xpMode.label')
-      }}</span>
-      @if (canEdit()) {
-        <div class="campaign-settings__chips">
-          @for (opt of xpModeOptions; track opt) {
-            <hk-chip [selected]="current().houseRules.xpMode === opt" (click)="setXpMode(opt)">
-              {{ t('settings.houseRules.xpMode.' + opt) }}
-            </hk-chip>
-          }
-        </div>
-      } @else {
-        <span class="campaign-settings__value">
-          {{ t('settings.houseRules.xpMode.' + current().houseRules.xpMode) }}
-        </span>
-      }
-    </div>
-
-    <div class="campaign-settings__field">
-      <span class="campaign-settings__field-label">{{
-        t('settings.houseRules.hpOnLevelUp.label')
-      }}</span>
-      @if (canEdit()) {
-        <div class="campaign-settings__chips">
-          @for (opt of hpOnLevelUpOptions; track opt) {
-            <hk-chip
-              [selected]="current().houseRules.hpOnLevelUp === opt"
-              (click)="setHpOnLevelUp(opt)"
-            >
-              {{ t('settings.houseRules.hpOnLevelUp.' + opt) }}
-            </hk-chip>
-          }
-        </div>
-      } @else {
-        <span class="campaign-settings__value">
-          {{ t('settings.houseRules.hpOnLevelUp.' + current().houseRules.hpOnLevelUp) }}
-        </span>
-      }
-    </div>
-
-    <div class="campaign-settings__field">
-      <span class="campaign-settings__field-label">{{
-        t('settings.houseRules.encumbrance.label')
-      }}</span>
-      @if (canEdit()) {
-        <div class="campaign-settings__chips">
-          @for (opt of encumbranceOptions; track opt) {
-            <hk-chip
-              [selected]="current().houseRules.encumbrance === opt"
-              (click)="setEncumbrance(opt)"
-            >
-              {{ t('settings.houseRules.encumbrance.' + opt) }}
-            </hk-chip>
-          }
-        </div>
-      } @else {
-        <span class="campaign-settings__value">
-          {{ t('settings.houseRules.encumbrance.' + current().houseRules.encumbrance) }}
-        </span>
-      }
-    </div>
-
-    <div class="campaign-settings__field">
-      @if (canEdit()) {
-        <hk-number-field
-          [labelKey]="'campaigns.settings.houseRules.attunementMax'"
-          [min]="0"
-          [max]="20"
-          [step]="1"
-          [ngModel]="current().houseRules.attunementMax"
-          (ngModelChange)="setAttunementMax($event)"
-        />
-      } @else {
+      <div class="campaign-settings__field">
         <span class="campaign-settings__field-label">{{
-          t('settings.houseRules.attunementMax')
+          t('settings.houseRules.editOutsideSession.label')
         }}</span>
-        <span class="campaign-settings__value">{{ current().houseRules.attunementMax }}</span>
-      }
-    </div>
+        @if (canEdit()) {
+          <app-campaign-segmented
+            [prefix]="'settings.houseRules.editOutsideSession'"
+            [ids]="editOutsideSessionOptions"
+            [value]="current().houseRules.editOutsideSession"
+            (picked)="setEditOutsideSession($event)"
+          />
+        } @else {
+          <span class="campaign-settings__value">
+            {{
+              t('settings.houseRules.editOutsideSession.' + current().houseRules.editOutsideSession)
+            }}
+          </span>
+        }
+      </div>
 
-    <div class="campaign-settings__field">
-      @if (canEdit()) {
-        <hk-number-field
-          [labelKey]="'campaigns.settings.houseRules.startingLevel'"
-          [min]="1"
-          [max]="20"
-          [step]="1"
-          [ngModel]="current().houseRules.startingLevel"
-          (ngModelChange)="setStartingLevel($event)"
-        />
-      } @else {
+      <div class="campaign-settings__field">
         <span class="campaign-settings__field-label">{{
-          t('settings.houseRules.startingLevel')
+          t('settings.houseRules.xpMode.label')
         }}</span>
-        <span class="campaign-settings__value">{{ current().houseRules.startingLevel }}</span>
-      }
-    </div>
-  </div>
+        @if (canEdit()) {
+          <app-campaign-segmented
+            [prefix]="'settings.houseRules.xpMode'"
+            [ids]="xpModeOptions"
+            [value]="current().houseRules.xpMode"
+            (picked)="setXpMode($event)"
+          />
+        } @else {
+          <span class="campaign-settings__value">
+            {{ t('settings.houseRules.xpMode.' + current().houseRules.xpMode) }}
+          </span>
+        }
+      </div>
 
-  <app-campaign-packs-section />
+      <div class="campaign-settings__field">
+        <span class="campaign-settings__field-label">{{
+          t('settings.houseRules.hpOnLevelUp.label')
+        }}</span>
+        @if (canEdit()) {
+          <app-campaign-segmented
+            [prefix]="'settings.houseRules.hpOnLevelUp'"
+            [ids]="hpOnLevelUpOptions"
+            [value]="current().houseRules.hpOnLevelUp"
+            (picked)="setHpOnLevelUp($event)"
+          />
+        } @else {
+          <span class="campaign-settings__value">
+            {{ t('settings.houseRules.hpOnLevelUp.' + current().houseRules.hpOnLevelUp) }}
+          </span>
+        }
+      </div>
 
-  <div class="campaign-settings__section">
-    <h3>{{ t('settings.visibility.title') }}</h3>
+      <div class="campaign-settings__field">
+        <span class="campaign-settings__field-label">{{
+          t('settings.houseRules.encumbrance.label')
+        }}</span>
+        @if (canEdit()) {
+          <app-campaign-segmented
+            [prefix]="'settings.houseRules.encumbrance'"
+            [ids]="encumbranceOptions"
+            [value]="current().houseRules.encumbrance"
+            (picked)="setEncumbrance($event)"
+          />
+        } @else {
+          <span class="campaign-settings__value">
+            {{ t('settings.houseRules.encumbrance.' + current().houseRules.encumbrance) }}
+          </span>
+        }
+      </div>
 
-    <div class="campaign-settings__field">
-      <span class="campaign-settings__field-label">{{
-        t('settings.visibility.partySheets.label')
-      }}</span>
-      @if (canEdit()) {
-        <div class="campaign-settings__chips">
-          @for (opt of partySheetsOptions; track opt) {
-            <hk-chip
-              [selected]="current().visibility.partySheets === opt"
-              (click)="setPartySheets(opt)"
-            >
-              {{ t('settings.visibility.partySheets.' + opt) }}
-            </hk-chip>
-          }
-        </div>
-      } @else {
-        <span class="campaign-settings__value">
-          {{ t('settings.visibility.partySheets.' + current().visibility.partySheets) }}
-        </span>
-      }
-    </div>
+      <div class="campaign-settings__field">
+        @if (canEdit()) {
+          <hk-number-field
+            [label]="t('settings.houseRules.attunementMax')"
+            [variant]="'leaf'"
+            [min]="0"
+            [max]="20"
+            [step]="1"
+            [value]="current().houseRules.attunementMax"
+            (valueChange)="setAttunementMax($event)"
+          />
+        } @else {
+          <span class="campaign-settings__field-label">{{
+            t('settings.houseRules.attunementMax')
+          }}</span>
+          <span class="campaign-settings__value">{{ current().houseRules.attunementMax }}</span>
+        }
+      </div>
 
-    <div class="campaign-settings__field">
-      <span class="campaign-settings__field-label">{{ t('settings.visibility.rolls.label') }}</span>
-      @if (canEdit()) {
-        <div class="campaign-settings__chips">
-          @for (opt of rollsOptions; track opt) {
-            <hk-chip
-              [selected]="current().visibility.rolls === opt"
-              (click)="setRollsVisibility(opt)"
-            >
-              {{ t('settings.visibility.rolls.' + opt) }}
-            </hk-chip>
-          }
-        </div>
-      } @else {
-        <span class="campaign-settings__value">
-          {{ t('settings.visibility.rolls.' + current().visibility.rolls) }}
-        </span>
-      }
-    </div>
+      <div class="campaign-settings__field">
+        @if (canEdit()) {
+          <hk-number-field
+            [label]="t('settings.houseRules.startingLevel')"
+            [variant]="'leaf'"
+            [min]="1"
+            [max]="20"
+            [step]="1"
+            [value]="current().houseRules.startingLevel"
+            (valueChange)="setStartingLevel($event)"
+          />
+        } @else {
+          <span class="campaign-settings__field-label">{{
+            t('settings.houseRules.startingLevel')
+          }}</span>
+          <span class="campaign-settings__value">{{ current().houseRules.startingLevel }}</span>
+        }
+      </div>
+    </hk-leaf>
 
-    <label class="campaign-settings__checkbox-row">
-      <input
-        type="checkbox"
-        [checked]="current().visibility.allowPrivateRolls"
+    <app-campaign-packs-section />
+
+    <hk-leaf
+      class="campaign-settings__section"
+      [title]="t('settings.visibility.title')"
+      [icon]="'ui:lock'"
+    >
+      <div class="campaign-settings__field">
+        <span class="campaign-settings__field-label">{{
+          t('settings.visibility.partySheets.label')
+        }}</span>
+        @if (canEdit()) {
+          <app-campaign-segmented
+            [prefix]="'settings.visibility.partySheets'"
+            [ids]="partySheetsOptions"
+            [value]="current().visibility.partySheets"
+            (picked)="setPartySheets($event)"
+          />
+        } @else {
+          <span class="campaign-settings__value">
+            {{ t('settings.visibility.partySheets.' + current().visibility.partySheets) }}
+          </span>
+        }
+      </div>
+
+      <div class="campaign-settings__field">
+        <span class="campaign-settings__field-label">{{
+          t('settings.visibility.rolls.label')
+        }}</span>
+        @if (canEdit()) {
+          <app-campaign-segmented
+            [prefix]="'settings.visibility.rolls'"
+            [ids]="rollsOptions"
+            [value]="current().visibility.rolls"
+            (picked)="setRollsVisibility($event)"
+          />
+        } @else {
+          <span class="campaign-settings__value">
+            {{ t('settings.visibility.rolls.' + current().visibility.rolls) }}
+          </span>
+        }
+      </div>
+
+      <hk-toggle
+        [label]="t('settings.visibility.allowPrivateRolls')"
+        [value]="current().visibility.allowPrivateRolls"
         [disabled]="!canEdit()"
-        (change)="setAllowPrivateRolls($any($event.target).checked)"
+        (valueChange)="setAllowPrivateRolls($event)"
       />
-      {{ t('settings.visibility.allowPrivateRolls') }}
-    </label>
-  </div>
+    </hk-leaf>
 
-  <div class="campaign-settings__section">
-    <h3>{{ t('settings.join.title') }}</h3>
-
-    <label class="campaign-settings__checkbox-row">
-      <input
-        type="checkbox"
-        [checked]="current().join.open"
+    <hk-leaf
+      class="campaign-settings__section"
+      [title]="t('settings.join.title')"
+      [icon]="'ui:join'"
+    >
+      <hk-toggle
+        [label]="t('settings.join.open')"
+        [value]="current().join.open"
         [disabled]="!canEdit()"
-        (change)="setJoinOpen($any($event.target).checked)"
+        (valueChange)="setJoinOpen($event)"
       />
-      {{ t('settings.join.open') }}
-    </label>
 
-    <label class="campaign-settings__checkbox-row">
-      <input
-        type="checkbox"
-        [checked]="current().join.requireApproval"
+      <hk-toggle
+        [label]="t('settings.join.requireApproval')"
+        [value]="current().join.requireApproval"
         [disabled]="!canEdit()"
-        (change)="setJoinRequireApproval($any($event.target).checked)"
+        (valueChange)="setJoinRequireApproval($event)"
       />
-      {{ t('settings.join.requireApproval') }}
-    </label>
+    </hk-leaf>
+
+    @if (isDm()) {
+      <hk-leaf
+        class="campaign-settings__section"
+        [title]="t('settings.exportTitle')"
+        [icon]="'ui:export'"
+      >
+        <button
+          hk-button
+          type="button"
+          class="campaign-settings__export"
+          [variant]="'parchment'"
+          (click)="openExportDialog()"
+        >
+          <hk-icon [icon]="'ui:export'" />{{ t('settings.exportAction') }}
+        </button>
+      </hk-leaf>
+    }
   </div>
 
   @if (canEdit()) {
-    <button
-      hk-button
-      type="button"
-      class="campaign-settings__save"
-      [variant]="'primary'"
-      [disabled]="saving()"
-      (click)="save()"
-    >
-      {{ saving() ? t('settings.saving') : t('settings.save') }}
-    </button>
-  }
-
-  @if (isDm()) {
-    <div class="campaign-settings__section">
+    <div class="campaign-settings__save-row">
+      @if (dirty()) {
+        <span class="campaign-settings__unsaved" role="status">{{ t('settings.unsaved') }}</span>
+      }
       <button
         hk-button
         type="button"
-        class="campaign-settings__export"
-        [variant]="'ghost'"
-        (click)="openExportDialog()"
+        class="campaign-settings__save"
+        [variant]="'primary'"
+        [loading]="saving()"
+        (click)="save()"
       >
-        {{ t('settings.exportAction') }}
+        {{ saving() ? t('settings.saving') : t('settings.save') }}
       </button>
     </div>
   }

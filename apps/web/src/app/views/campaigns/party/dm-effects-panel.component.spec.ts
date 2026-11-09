@@ -9,6 +9,7 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore, type AckOrReject } from '@shared/stores/campaign.store';
 import type { DraftEvent } from '@shared/stores/character.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import { CampaignSelectionService } from '../shell/campaign-selection.service';
 import { DmEffectsPanelComponent } from './dm-effects-panel.component';
 import type { ConditionDialogResult } from '../../characters/sheet/play/condition-dialog.component';
 
@@ -530,6 +531,51 @@ describe('DmEffectsPanelComponent', () => {
 
       expect(compiled.textContent).toContain(campaignsEn.dmEffects.status.applied);
       expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.status.appliedCaveat);
+    });
+  });
+
+  describe('strap commands for the selected member', () => {
+    const select = (id = CHARACTER_ID) =>
+      TestBed.inject(CampaignSelectionService).select({ characterId: id, name: 'Ilyana' });
+
+    it('expands and focuses the damage field when the strap asks for damage on this member', async () => {
+      configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      select();
+      TestBed.inject(CampaignSelectionService).requestEffect('damage');
+      await whenStable(fixture);
+      fixture.detectChanges();
+      await whenStable(fixture);
+
+      expect(compiled.querySelector('.dm-effects-panel__body')).not.toBeNull();
+      const focused = document.activeElement as HTMLElement;
+      expect(compiled.querySelector('[data-effect="damage"]')?.contains(focused)).toBe(true);
+    });
+
+    it('opens the condition picker when the strap asks for a condition on this member', async () => {
+      const { dialogOpen } = configure({
+        dialogOpen: vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) }),
+      });
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      select();
+      TestBed.inject(CampaignSelectionService).requestEffect('condition');
+      await whenStable(fixture);
+      expect(dialogOpen).toHaveBeenCalledOnce();
+    });
+
+    it('ignores a command addressed to another member', async () => {
+      const { dialogOpen } = configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      select('someone-else');
+      TestBed.inject(CampaignSelectionService).requestEffect('condition');
+      await whenStable(fixture);
+      expect(dialogOpen).not.toHaveBeenCalled();
+      expect(compiled.querySelector('.dm-effects-panel__body')).toBeNull();
     });
   });
 });

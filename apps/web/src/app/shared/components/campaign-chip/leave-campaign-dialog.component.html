@@ -3,12 +3,12 @@
 
   @if (confirming()) {
     <p class="leave-campaign-dialog__body">{{ t('leave.body', { name: characterName }) }}</p>
-    <div class="leave-campaign-dialog__actions">
+    <div class="leave-campaign-dialog__actions" data-dialog-actions>
       <button
         hk-button
         type="button"
         class="leave-campaign-dialog__cancel"
-        [variant]="'ghost'"
+        [variant]="'ghost-leather'"
         (click)="cancel()"
       >
         {{ t('leave.cancel') }}
@@ -17,7 +17,7 @@
         hk-button
         type="button"
         class="leave-campaign-dialog__confirm"
-        [variant]="'danger'"
+        [variant]="'ember'"
         (click)="confirmLeave()"
       >
         {{ t('leave.confirm') }}

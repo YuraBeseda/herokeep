@@ -2,7 +2,6 @@ import { Component, computed, inject, signal, type Signal } from '@angular/core'
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Pack } from '@hk/protocol';
 import semver from 'semver';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { ApiError } from '@shared/services/api/api-fetch';
 import {
@@ -21,6 +20,8 @@ import {
   CampaignStoreNotLeaderError,
 } from '@shared/stores/campaign.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
 
 /** One DM row: a content pack this device holds, or one the campaign has enabled (possibly from
  * another device — listed so it can still be disabled). */
@@ -72,7 +73,7 @@ const NO_STATUS: Signal<ReadonlyMap<string, CampaignPackInstallStatus>> = signal
  */
 @Component({
   selector: 'app-campaign-packs-section',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent, HkLeafComponent],
   providers: [provideTranslocoScope('campaigns'), provideTranslocoScope('packs')],
   templateUrl: './campaign-packs-section.component.html',
   styleUrl: './campaign-packs-section.component.scss',

@@ -196,6 +196,25 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
 }
 
 describe('HandoverCharacterDialogComponent', () => {
+  it('puts its actions on the dialog strap, with the destructive verb in ember (hk-dialog chrome)', async () => {
+    configure({});
+    const fixture = TestBed.createComponent(HandoverCharacterDialogComponent);
+    await whenStable(fixture);
+    const compiled = fixture.nativeElement as HTMLElement;
+    const actions = compiled.querySelector('.handover-character-dialog__actions')!;
+    expect(actions.hasAttribute('data-dialog-actions')).toBe(true);
+    expect(
+      compiled
+        .querySelector('.handover-character-dialog__confirm')!
+        .classList.contains('hk-button--primary'),
+    ).toBe(true);
+    expect(
+      compiled
+        .querySelector('.handover-character-dialog__cancel')!
+        .classList.contains('hk-button--ghost-leather'),
+    ).toBe(true);
+  });
+
   it('shows a member picker first, with the character name interpolated into the title', async () => {
     configure({});
     const fixture = TestBed.createComponent(HandoverCharacterDialogComponent);

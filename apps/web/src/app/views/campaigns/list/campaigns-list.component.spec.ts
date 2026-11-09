@@ -2,8 +2,10 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { DialogService } from '@app/ui/dialog/dialog.service';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import { HkDb, type CampaignRow } from '@shared/services/storage/dexie.db';
 import { SyncService, type SyncStateValue } from '@shared/services/sync/sync.service';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
@@ -56,12 +58,21 @@ function configure(options: { open?: ReturnType<typeof vi.fn> } = {}): {
         },
         loader: StubLoader,
       }),
+      provideTranslocoMessageformat(),
       { provide: SyncService, useValue: { syncState } },
       { provide: DialogService, useValue: { open } },
     ],
   });
 
   return { open, syncState };
+}
+
+function strapRun(id: string): void {
+  TestBed.tick();
+  TestBed.inject(ActionStrapService)
+    .config()!
+    .primary.find((a) => a.id === id)!
+    .run();
 }
 
 describe('CampaignsListComponent', () => {
@@ -72,7 +83,7 @@ describe('CampaignsListComponent', () => {
     const fixture = TestBed.createComponent(CampaignsListComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.campaigns-list__empty')?.textContent?.trim()).toBe(
+    expect(compiled.querySelector('.campaigns-list__empty-text')?.textContent?.trim()).toBe(
       campaignsEn.list.empty,
     );
   });
@@ -112,9 +123,8 @@ describe('CampaignsListComponent', () => {
     await fixture.whenStable();
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    const compiled = fixture.nativeElement as HTMLElement;
 
-    compiled.querySelector<HTMLButtonElement>('.campaigns-list__create')!.click();
+    strapRun('new-campaign');
     await fixture.whenStable();
 
     expect(open).toHaveBeenCalled();
@@ -127,9 +137,8 @@ describe('CampaignsListComponent', () => {
     await fixture.whenStable();
     const router = TestBed.inject(Router);
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    const compiled = fixture.nativeElement as HTMLElement;
 
-    compiled.querySelector<HTMLButtonElement>('.campaigns-list__join')!.click();
+    strapRun('join');
     expect(navigateSpy).toHaveBeenCalledWith(['/join']);
   });
 
@@ -146,5 +155,72 @@ describe('CampaignsListComponent', () => {
     expect(
       compiled.querySelector('.campaigns-list__sync-badge')?.getAttribute('data-sync-state'),
     ).toBe('synced');
+  });
+
+  it('puts New campaign and Join in strap zone 2 scoped to /campaigns', async () => {
+    configure();
+    const fixture = TestBed.createComponent(CampaignsListComponent);
+    await fixture.whenStable();
+    TestBed.tick();
+    const config = TestBed.inject(ActionStrapService).config()!;
+    expect(config.primary.map((a) => a.id)).toEqual(['new-campaign', 'join']);
+    expect(config.scope).toEqual(['/campaigns']);
+    fixture.destroy();
+    expect(TestBed.inject(ActionStrapService).config()).toBeNull();
+  });
+
+  it('counts the campaigns, plural-aware, and opens each tab from a card quick link', async () => {
+    configure();
+    const db = TestBed.inject(HkDb);
+    await db.campaigns.clear();
+    await db.campaigns.put(mkRow());
+    await db.campaigns.put(
+      mkRow({ id: '00000000-0000-4000-8000-000000000002', name: 'Icewind Dale', role: 'player' }),
+    );
+    const fixture = TestBed.createComponent(CampaignsListComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('.campaigns-list__count')?.textContent?.trim()).toBe(
+      '2 campaigns',
+    );
+    const firstCard = compiled.querySelector('.campaigns-list__item')!;
+    const tabs = Array.from(firstCard.querySelectorAll<HTMLButtonElement>('.campaigns-list__tab'));
+    expect(tabs.map((t) => t.dataset['tab'])).toEqual(['party', 'log', 'lobby', 'settings']);
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Party', 'Table', 'Lobby', 'Settings']);
+    tabs[1].click();
+    expect(navigateSpy).toHaveBeenCalledWith(['/g', '00000000-0000-4000-8000-000000000001', 'log']);
+  });
+
+  it('names the open button after the campaign and its role', async () => {
+    configure();
+    const db = TestBed.inject(HkDb);
+    await db.campaigns.clear();
+    await db.campaigns.put(mkRow());
+    const fixture = TestBed.createComponent(CampaignsListComponent);
+    await fixture.whenStable();
+    const open = (fixture.nativeElement as HTMLElement).querySelector('.campaigns-list__open')!;
+    expect(open.getAttribute('aria-label')).toBe('Open Curse of Strahd, DM');
+  });
+
+  it('puts the New campaign and Join calls to action inside the empty state', async () => {
+    const open = vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) });
+    configure({ open });
+    await TestBed.inject(HkDb).campaigns.clear();
+    const fixture = TestBed.createComponent(CampaignsListComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    compiled
+      .querySelector<HTMLButtonElement>('.campaigns-list__empty .campaigns-list__join')!
+      .click();
+    expect(navigateSpy).toHaveBeenCalledWith(['/join']);
+    compiled
+      .querySelector<HTMLButtonElement>('.campaigns-list__empty .campaigns-list__create')!
+      .click();
+    expect(open).toHaveBeenCalled();
   });
 });

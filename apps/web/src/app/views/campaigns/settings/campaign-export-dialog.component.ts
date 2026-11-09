@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
 import { DIALOG_DATA, DialogRef } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
@@ -37,10 +37,9 @@ const CAMPAIGN_BUNDLE_EXTENSIONS = ['.herocampaign'] as const;
  */
 @Component({
   selector: 'app-campaign-export-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './campaign-export-dialog.component.html',
-  styleUrl: './campaign-export-dialog.component.scss',
 })
 export class CampaignExportDialogComponent {
   private readonly data = inject<CampaignExportDialogData>(DIALOG_DATA);

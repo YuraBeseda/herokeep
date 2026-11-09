@@ -12,6 +12,7 @@ import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
+import { CampaignSelectionService } from '../shell/campaign-selection.service';
 import { DmEffectsPanelComponent } from './dm-effects-panel.component';
 import { HandoverCharacterDialogComponent } from './handover-character-dialog.component';
 import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
@@ -86,6 +87,7 @@ export class PartyTabComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly dialogService = inject(DialogService);
+  private readonly selection = inject(CampaignSelectionService);
 
   protected readonly state = this.campaignStore.state;
   protected readonly role = this.campaignStore.role;
@@ -268,6 +270,15 @@ export class PartyTabComponent {
   protected canUnlink(card: PartyCardVm): boolean {
     if (!this.isDm() || card.left) return false;
     return this.state()?.members.get(card.ownerId)?.removed === true;
+  }
+
+  /** The DM's pick for the campaign strap's quick effects (B11b replaces this with the card grid). */
+  protected isSelected(card: PartyCardVm): boolean {
+    return this.selection.selected()?.characterId === card.characterId;
+  }
+
+  protected toggleSelected(card: PartyCardVm): void {
+    this.selection.toggle({ characterId: card.characterId, name: card.name });
   }
 
   protected openUnlink(card: PartyCardVm): void {

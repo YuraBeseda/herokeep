@@ -115,11 +115,18 @@ describe('app routes', () => {
     );
   });
 
-  it('adds canDeactivate to exactly the register route (task-5: the recovery-codes confirm guard)', () => {
+  it('adds canDeactivate to exactly the register route and the two join routes (recovery codes; unsaved join input)', () => {
     const guarded = routes
       .filter((route) => route.canDeactivate && route.canDeactivate.length > 0)
-      .map((route) => route.path);
-    expect(guarded).toEqual(['register']);
+      .map((route) => route.path)
+      .sort();
+    expect(guarded).toEqual(['join', 'join/:code', 'register']);
+  });
+
+  it("guards the campaign's settings child route against leaving unsaved house rules (canDeactivate)", () => {
+    const campaign = routes.find((route) => route.path === 'g/:id');
+    const settings = campaign?.children?.find((route) => route.path === 'settings');
+    expect(settings?.canDeactivate?.length).toBe(1);
   });
 
   it("guards the sheet's build child route against leaving unsaved identity edits (canDeactivate)", () => {

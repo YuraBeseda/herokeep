@@ -1,4 +1,15 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -22,6 +33,7 @@ import {
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import type { DraftEvent } from '@shared/stores/character.store';
+import { CampaignSelectionService, type EffectRequest } from '../shell/campaign-selection.service';
 import {
   ConditionDialogComponent,
   type ConditionDialogData,
@@ -114,6 +126,9 @@ export class DmEffectsPanelComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly dialogService = inject(DialogService);
+  private readonly selection = inject(CampaignSelectionService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   // Inputs
   /** Bare character uuid — `CampaignStore.gatewayAppend`'s own first parameter shape. */
@@ -176,6 +191,42 @@ export class DmEffectsPanelComponent {
   protected readonly canApplyOverride = computed(
     () => this.overridePath().trim().length > 0 && this.overrideReason().trim().length > 0,
   );
+
+  /** The last strap request this panel acted on (a request is acted on once). */
+  private handledNonce = 0;
+
+  constructor() {
+    // The campaign strap's Damage / Heal / Condition / XP / Item for the selected member: the panel
+    // of the addressed member runs the same action its own buttons do.
+    effect(() => {
+      const request = this.selection.request();
+      if (request?.characterId !== this.characterId()) return;
+      if (request.nonce <= this.handledNonce) return;
+      this.handledNonce = request.nonce;
+      untracked(() => this.handleRequest(request));
+    });
+  }
+
+  private handleRequest(request: EffectRequest): void {
+    this.expanded.set(true);
+    if (request.kind === 'condition') {
+      void this.onAddCondition();
+      return;
+    }
+    // XP mode shows the XP award, milestone mode the level grant: both answer the strap's XP.
+    const target =
+      request.kind === 'xp'
+        ? '[data-effect="xp"], [data-effect="level"]'
+        : `[data-effect="${request.kind}"]`;
+    afterNextRender(
+      () => {
+        const section = this.host.nativeElement.querySelector(target);
+        section?.scrollIntoView?.({ block: 'nearest' });
+        section?.querySelector<HTMLElement>('input, button')?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
 
   // Panel chrome
 

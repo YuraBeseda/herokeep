@@ -50,8 +50,8 @@ export async function registerAndSyncFighter(
  * campaign id. */
 export async function createCampaign(page: Page, name: string): Promise<string> {
   await page.goto('/campaigns');
-  await page.locator('.campaigns-list__create').click();
-  await page.locator('input[name="name"]').fill(name);
+  await page.locator('[data-action="new-campaign"]').click();
+  await page.locator('.create-campaign-dialog__name input').fill(name);
   await page.locator('.create-campaign-dialog__confirm').click();
   await expect(page).toHaveURL(/\/g\/[^/]+\/lobby$/, { timeout: 20_000 });
   const match = /\/g\/([^/]+)\/lobby$/.exec(page.url());
@@ -77,8 +77,8 @@ export async function readJoinCode(page: Page): Promise<string> {
  * form "accepts sloppy input and lets the server normalize". */
 export async function joinCampaign(page: Page, code: string, displayName: string): Promise<string> {
   await page.goto('/join');
-  await page.locator('input[name="code"]').fill(code);
-  await page.locator('input[name="displayName"]').fill(displayName);
+  await page.locator('.join__code input').fill(code);
+  await page.locator('.join__display-name input').fill(displayName);
   await page.locator('.join__confirm').click();
   await expect(page).toHaveURL(/\/g\/[^/]+\/link-character$/, { timeout: 20_000 });
   const match = /\/g\/([^/]+)\/link-character$/.exec(page.url());
@@ -169,7 +169,7 @@ export async function claimPregenByName(
 
 const TAB_LABEL: Record<'party' | 'log' | 'settings' | 'lobby', string> = {
   party: 'Party',
-  log: 'Log',
+  log: 'Table',
   settings: 'Settings',
   lobby: 'Lobby',
 };

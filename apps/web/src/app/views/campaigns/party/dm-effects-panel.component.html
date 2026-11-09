@@ -16,7 +16,7 @@
         [titleKey]="'campaigns.dmEffects.hp.title'"
         class="dm-effects-panel__section"
       >
-        <div class="dm-effects-panel__hp-row">
+        <div class="dm-effects-panel__hp-row" [attr.data-effect]="'damage'">
           <hk-number-field
             [labelKey]="'campaigns.dmEffects.hp.damageLabel'"
             [min]="0"
@@ -34,7 +34,7 @@
             {{ t('dmEffects.hp.damage') }}
           </button>
         </div>
-        <div class="dm-effects-panel__hp-row">
+        <div class="dm-effects-panel__hp-row" [attr.data-effect]="'heal'">
           <hk-number-field
             [labelKey]="'campaigns.dmEffects.hp.healLabel'"
             [min]="0"
@@ -132,6 +132,7 @@
         <hk-sheet-section
           [titleKey]="'campaigns.dmEffects.xp.title'"
           class="dm-effects-panel__section"
+          [attr.data-effect]="'xp'"
         >
           <hk-number-field
             [labelKey]="'campaigns.dmEffects.xp.amountLabel'"
@@ -162,6 +163,7 @@
         <hk-sheet-section
           [titleKey]="'campaigns.dmEffects.level.title'"
           class="dm-effects-panel__section"
+          [attr.data-effect]="'level'"
         >
           <hk-number-field
             [labelKey]="'campaigns.dmEffects.level.countLabel'"
@@ -185,6 +187,7 @@
       <hk-sheet-section
         [titleKey]="'campaigns.dmEffects.item.title'"
         class="dm-effects-panel__section"
+        [attr.data-effect]="'item'"
       >
         <label class="dm-effects-panel__field">
           <span>{{ t('dmEffects.item.nameLabel') }}</span>

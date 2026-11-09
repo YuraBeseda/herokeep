@@ -5,6 +5,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { parsePack, type CampaignSettings, type MembershipRole, type Pack } from '@hk/protocol';
 import { DialogService } from '@app/ui/dialog/dialog.service';
+
 import { ToastService } from '@shared/components/toast/toast.service';
 import { ApiError } from '@shared/services/api/api-fetch';
 import {
@@ -212,7 +213,7 @@ describe('CampaignSettingsComponent', () => {
     );
     expect(compiled.querySelector('.campaign-settings__save')).toBeNull();
     // Read-only mode renders plain values, not interactive chips.
-    expect(compiled.querySelector('hk-chip')).toBeNull();
+    expect(compiled.querySelector('.campaign-settings__option')).toBeNull();
   });
 
   it('renders plain values matching the current settings for a player', async () => {
@@ -235,7 +236,7 @@ describe('CampaignSettingsComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.campaign-settings__save')).not.toBeNull();
-    expect(compiled.querySelectorAll('hk-chip').length).toBeGreaterThan(0);
+    expect(compiled.querySelectorAll('.campaign-settings__option').length).toBeGreaterThan(0);
   });
 
   it('disables editing for the DM on a NON-leader tab (canEdit = isDm && isLeader)', async () => {
@@ -244,7 +245,7 @@ describe('CampaignSettingsComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.campaign-settings__save')).toBeNull();
-    expect(compiled.querySelector('hk-chip')).toBeNull();
+    expect(compiled.querySelector('.campaign-settings__option')).toBeNull();
   });
 
   it('editing a field then saving appends campaign.settings_changed with the FULL settings document', async () => {
@@ -253,9 +254,9 @@ describe('CampaignSettingsComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const milestoneChip = Array.from(compiled.querySelectorAll<HTMLElement>('hk-chip')).find(
-      (el) => el.textContent?.trim() === campaignsEn.settings.houseRules.xpMode.milestone,
-    )!;
+    const milestoneChip = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.campaign-settings__option'),
+    ).find((el) => el.textContent?.trim() === campaignsEn.settings.houseRules.xpMode.milestone)!;
     milestoneChip.click();
     await fixture.whenStable();
 
@@ -338,7 +339,9 @@ describe('CampaignSettingsComponent', () => {
       configure({ role: 'dm', isLeader: true, installed: [sample, sampleNext, second, homebrew] });
       const { compiled } = await render();
 
-      const headings = Array.from(compiled.querySelectorAll('h3')).map((h) => text(h));
+      const headings = Array.from(compiled.querySelectorAll('.hk-leaf__title-text')).map((h) =>
+        text(h),
+      );
       expect(headings.slice(0, 3)).toEqual([
         campaignsEn.settings.houseRules.title,
         packsText.title,
@@ -639,6 +642,101 @@ describe('CampaignSettingsComponent', () => {
       expect(text(member.compiled.querySelector('.campaign-packs__empty'))).toBe(
         packsText.noneEnabled,
       );
+    });
+  });
+
+  describe('house rules on the new library', () => {
+    it('renders the boolean rules as switches that save through the same document', async () => {
+      const { appendTx } = configure({ role: 'dm', isLeader: true });
+      const fixture = TestBed.createComponent(CampaignSettingsComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const switches = Array.from(compiled.querySelectorAll<HTMLElement>('button[role="switch"]'));
+      expect(
+        switches.map((el) => el.querySelector('.hk-toggle__label')?.textContent?.trim()),
+      ).toEqual([
+        campaignsEn.settings.houseRules.strictValidation,
+        campaignsEn.settings.houseRules.allowOverrides,
+        campaignsEn.settings.visibility.allowPrivateRolls,
+        campaignsEn.settings.join.open,
+        campaignsEn.settings.join.requireApproval,
+      ]);
+      switches[1].click();
+      await fixture.whenStable();
+      compiled.querySelector<HTMLButtonElement>('.campaign-settings__save')!.click();
+      await fixture.whenStable();
+      const settings = (
+        appendTx.mock.calls[0][0] as { payload: { settings: CampaignSettings } }[]
+      )[0].payload.settings;
+      expect(settings.houseRules.allowOverrides).toBe(false);
+    });
+
+    it('marks the chosen option of each single-choice rule as pressed and moves the mark on click', async () => {
+      configure({ role: 'dm', isLeader: true });
+      const fixture = TestBed.createComponent(CampaignSettingsComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const group = compiled.querySelector<HTMLElement>(
+        '[role="group"][aria-label="Advancement"]',
+      )!;
+      const pressed = () =>
+        Array.from(group.querySelectorAll('button'))
+          .filter((b) => b.getAttribute('aria-pressed') === 'true')
+          .map((b) => b.textContent?.trim());
+      expect(pressed()).toEqual([campaignsEn.settings.houseRules.xpMode.xp]);
+      Array.from(group.querySelectorAll('button'))[1].click();
+      await fixture.whenStable();
+      expect(pressed()).toEqual([campaignsEn.settings.houseRules.xpMode.milestone]);
+    });
+
+    it('shows a read-only player the switches off-limits instead of live controls', async () => {
+      configure({ role: 'player' });
+      const fixture = TestBed.createComponent(CampaignSettingsComponent);
+      await fixture.whenStable();
+      const switches = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+          'button[role="switch"]',
+        ),
+      );
+      expect(switches.length).toBe(5);
+      expect(switches.every((b) => b.disabled)).toBe(true);
+    });
+  });
+
+  describe('leaving with unsaved house rules', () => {
+    it('leaves silently while nothing is edited', async () => {
+      const { dialogOpen } = configure({ role: 'dm', isLeader: true });
+      const fixture = TestBed.createComponent(CampaignSettingsComponent);
+      await fixture.whenStable();
+      expect(await fixture.componentInstance.canLeave()).toBe(true);
+      expect(dialogOpen).not.toHaveBeenCalled();
+    });
+
+    it('asks once once a rule is edited, stays on Keep editing and leaves on Discard', async () => {
+      const { dialogOpen } = configure({ role: 'dm', isLeader: true });
+      const fixture = TestBed.createComponent(CampaignSettingsComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      compiled.querySelectorAll<HTMLElement>('button[role="switch"]')[0].click();
+      await fixture.whenStable();
+      dialogOpen.mockReturnValueOnce({ closed: Promise.resolve(false) });
+      expect(await fixture.componentInstance.canLeave()).toBe(false);
+      dialogOpen.mockReturnValueOnce({ closed: Promise.resolve(true) });
+      expect(await fixture.componentInstance.canLeave()).toBe(true);
+      expect(dialogOpen).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not ask after the edit is saved', async () => {
+      const { dialogOpen } = configure({ role: 'dm', isLeader: true });
+      const fixture = TestBed.createComponent(CampaignSettingsComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      compiled.querySelectorAll<HTMLElement>('button[role="switch"]')[0].click();
+      await fixture.whenStable();
+      compiled.querySelector<HTMLButtonElement>('.campaign-settings__save')!.click();
+      await fixture.whenStable();
+      expect(await fixture.componentInstance.canLeave()).toBe(true);
+      expect(dialogOpen).not.toHaveBeenCalled();
     });
   });
 });

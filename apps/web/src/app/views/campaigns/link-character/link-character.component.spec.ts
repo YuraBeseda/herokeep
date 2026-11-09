@@ -2,6 +2,7 @@ import { signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import type { Event } from '@hk/protocol';
 import type { AuthUser } from '@shared/services/auth/auth.service';
@@ -157,6 +158,7 @@ function configure(options: {
         },
         loader: StubLoader,
       }),
+      provideTranslocoMessageformat(),
       {
         provide: CampaignStore,
         useValue: {
@@ -201,6 +203,27 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
 }
 
 describe('LinkCharacterComponent', () => {
+  it('draws each candidate as a card with a monogram portrait and names the pick action after the hero', async () => {
+    configure({ rows: [mkRow(CHAR_A, 'Aria')] });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const rowEl = (fixture.nativeElement as HTMLElement).querySelector('.link-character__row')!;
+    expect(rowEl.querySelector('hk-portrait-frame')).not.toBeNull();
+    expect(rowEl.querySelector('.link-character__pick')!.textContent?.trim()).toBe('Link Aria');
+  });
+
+  it('keeps Create a new hero and Skip for now as the two exits under the list', async () => {
+    configure({ rows: [mkRow(CHAR_A, 'Aria')] });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const actions = (fixture.nativeElement as HTMLElement).querySelector(
+      '.link-character__actions',
+    )!;
+    expect(
+      Array.from(actions.querySelectorAll('button')).map((b) => b.textContent?.trim()),
+    ).toEqual([campaignsEn.link.createNew, campaignsEn.link.skip]);
+  });
+
   it('lists eligible SYNCED, unlinked characters with a "link this character" action', async () => {
     configure({ rows: [mkRow(CHAR_A, 'Aria')] });
     const fixture = TestBed.createComponent(LinkCharacterComponent);

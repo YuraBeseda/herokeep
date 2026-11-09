@@ -1,7 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { DialogRef } from '@app/ui/dialog/dialog.service';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
 import { PackStore } from '@shared/stores/pack.store';
 import {
   CampaignStore,
@@ -29,15 +30,20 @@ const NAME_MAX_LENGTH = 200;
  */
 @Component({
   selector: 'app-create-campaign-dialog',
-  imports: [TranslocoDirective, ButtonComponent],
+  imports: [TranslocoDirective, HkButtonComponent, HkTextFieldComponent],
   templateUrl: './create-campaign-dialog.component.html',
+  styleUrl: './create-campaign-dialog.component.scss',
+  host: { '(document:keydown.escape)': 'cancel()' },
 })
 export class CreateCampaignDialogComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly packStore = inject(PackStore);
   private readonly dialogRef = inject(DialogRef);
 
+  protected readonly nameMaxLength = NAME_MAX_LENGTH;
   protected readonly name = signal('');
+  /** The "discard what you typed?" question replaces the form while it is asked. */
+  protected readonly confirmingDiscard = signal(false);
   protected readonly submitting = signal(false);
   protected readonly errorKey = signal<string | undefined>(undefined);
 
@@ -46,11 +52,34 @@ export class CreateCampaignDialogComponent {
     () => this.name().trim().length > 0 && !this.nameTooLong() && !this.submitting(),
   );
 
+  /** A typed name is unsaved work: it is never thrown away without asking once. */
+  private readonly dirty = computed(() => this.name().length > 0 && !this.submitting());
+
+  constructor() {
+    // Escape and the backdrop would close silently; while there is something to lose they do not,
+    // and Cancel / Escape ask instead.
+    effect(() => this.dialogRef.setDismissible(!this.dirty()));
+  }
+
   protected onNameChange(value: string): void {
     this.name.set(value);
   }
 
   protected cancel(): void {
+    if (this.submitting()) return;
+    if (this.confirmingDiscard()) return;
+    if (this.dirty()) {
+      this.confirmingDiscard.set(true);
+      return;
+    }
+    this.dialogRef.close(undefined);
+  }
+
+  protected keepEditing(): void {
+    this.confirmingDiscard.set(false);
+  }
+
+  protected discard(): void {
     this.dialogRef.close(undefined);
   }
 

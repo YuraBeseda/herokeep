@@ -5,12 +5,12 @@
 
   @if (confirming()) {
     <p class="unlink-character-dialog__body">{{ t('unlink.body', { name: characterName }) }}</p>
-    <div class="unlink-character-dialog__actions">
+    <div class="unlink-character-dialog__actions" data-dialog-actions>
       <button
         hk-button
         type="button"
         class="unlink-character-dialog__cancel"
-        [variant]="'ghost'"
+        [variant]="'ghost-leather'"
         (click)="cancel()"
       >
         {{ t('unlink.cancel') }}
@@ -19,7 +19,7 @@
         hk-button
         type="button"
         class="unlink-character-dialog__confirm"
-        [variant]="'danger'"
+        [variant]="'ember'"
         (click)="confirmUnlink()"
       >
         {{ t('unlink.confirm') }}

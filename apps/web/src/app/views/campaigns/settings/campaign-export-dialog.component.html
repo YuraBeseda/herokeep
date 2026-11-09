@@ -3,12 +3,12 @@
 
   <p class="campaign-export-dialog__body">{{ t('export.body') }}</p>
 
-  <div class="campaign-export-dialog__actions">
+  <div class="campaign-export-dialog__actions" data-dialog-actions>
     <button
       hk-button
       type="button"
       class="campaign-export-dialog__cancel"
-      [variant]="'ghost'"
+      [variant]="'ghost-leather'"
       [disabled]="exporting()"
       (click)="cancel()"
     >
@@ -19,7 +19,7 @@
       type="button"
       class="campaign-export-dialog__confirm"
       [variant]="'primary'"
-      [disabled]="exporting()"
+      [loading]="exporting()"
       (click)="onExport(t)"
     >
       {{ exporting() ? t('export.exporting') : t('export.confirm') }}

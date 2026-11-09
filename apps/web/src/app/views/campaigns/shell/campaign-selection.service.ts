@@ -1,0 +1,55 @@
+import { Injectable, signal, type Signal } from '@angular/core';
+
+/** The DM quick effects the campaign strap offers for the selected member. */
+export type DmEffectKind = 'damage' | 'heal' | 'condition' | 'xp' | 'item';
+
+export interface SelectedMember {
+  readonly characterId: string;
+  readonly name: string;
+}
+
+export interface EffectRequest {
+  readonly kind: DmEffectKind;
+  readonly characterId: string;
+  /** Distinguishes two identical requests in a row. */
+  readonly nonce: number;
+}
+
+/**
+ * Which party member the DM has picked, and the strap's pending request to act on them. The strap
+ * (campaign shell, zone 2) cannot reach a card's effects panel, so it posts a request here and the
+ * panel of the addressed member picks it up: the same actions the panel's own buttons run. The
+ * shell clears both when the campaign closes.
+ */
+@Injectable({ providedIn: 'root' })
+export class CampaignSelectionService {
+  private readonly selectedState = signal<SelectedMember | null>(null);
+  private readonly requestState = signal<EffectRequest | null>(null);
+  private nonce = 0;
+
+  readonly selected: Signal<SelectedMember | null> = this.selectedState.asReadonly();
+  readonly request: Signal<EffectRequest | null> = this.requestState.asReadonly();
+
+  select(member: SelectedMember): void {
+    this.selectedState.set(member);
+  }
+
+  /** Selects the member, or drops the selection when they are already the selected one. */
+  toggle(member: SelectedMember): void {
+    this.selectedState.update((current) =>
+      current?.characterId === member.characterId ? null : member,
+    );
+  }
+
+  clear(): void {
+    this.selectedState.set(null);
+    this.requestState.set(null);
+  }
+
+  /** Asks the selected member's effects panel to open `kind`. Nothing happens with no selection. */
+  requestEffect(kind: DmEffectKind): void {
+    const member = this.selectedState();
+    if (!member) return;
+    this.requestState.set({ kind, characterId: member.characterId, nonce: ++this.nonce });
+  }
+}

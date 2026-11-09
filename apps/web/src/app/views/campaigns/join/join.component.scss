@@ -2,17 +2,35 @@
   display: block;
 }
 
+/* A paper leaf centred on the table, not a form hugging the left edge. */
 .join {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  max-width: 28rem;
+  gap: var(--space-3);
+  max-inline-size: 30rem;
   margin-inline: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-leaf);
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    var(--leaf-glow) 0%,
+    var(--leaf) 55%,
+    var(--leaf-dark) 100%
+  );
+  box-shadow: var(--shadow-raised), var(--shadow-leaf);
+  color: var(--text-1);
 }
 
 .join__title {
   margin: 0;
   font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.join__intro {
+  margin: 0;
+  color: var(--text-2);
 }
 
 .join__form {
@@ -21,19 +39,9 @@
   gap: var(--space-3);
 }
 
-.join__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.join__hint {
-  color: var(--text-2);
-  font-size: 0.8125rem;
-}
-
 .join__error {
-  color: var(--danger);
+  margin: 0;
+  color: var(--danger-strong);
 }
 
 .join__actions {
@@ -41,4 +49,18 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.join__back {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-target, 44px);
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
 }

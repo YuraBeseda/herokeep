@@ -2,15 +2,19 @@
   display: block;
 }
 
-.campaign-packs {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-block-end: var(--space-5);
+.campaign-packs__gauge {
+  block-size: 8px;
+  margin-block: var(--space-1) var(--space-3);
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--leaf-sunken);
+  box-shadow: var(--shadow-inset-slot);
 }
 
-.campaign-packs__title {
-  margin: 0;
+.campaign-packs__gauge-fill {
+  display: block;
+  block-size: 100%;
+  background: linear-gradient(180deg, var(--brass-top), var(--brass));
 }
 
 .campaign-packs__notice,
@@ -63,7 +67,7 @@
 }
 
 .campaign-packs__status--error {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .campaign-packs__busy {

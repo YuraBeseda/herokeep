@@ -1,3 +1,4 @@
+import { campaignLeaveGuard } from './views/campaigns/campaign-leave.guard';
 import { buildLeaveGuard } from './views/characters/sheet/build/build-leave.guard';
 import { Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -343,12 +344,14 @@ export const routes: Routes = [
   {
     path: 'join',
     canActivate: [authGuard],
+    canDeactivate: [campaignLeaveGuard],
     loadComponent: () =>
       import('./views/campaigns/join/join.component').then((m) => m.JoinComponent),
   },
   {
     path: 'join/:code',
     canActivate: [authGuard],
+    canDeactivate: [campaignLeaveGuard],
     loadComponent: () =>
       import('./views/campaigns/join/join.component').then((m) => m.JoinComponent),
   },
@@ -373,6 +376,7 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
+        canDeactivate: [campaignLeaveGuard],
         loadComponent: () =>
           import('./views/campaigns/settings/campaign-settings.component').then(
             (m) => m.CampaignSettingsComponent,

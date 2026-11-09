@@ -1,9 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
+import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import type { MembershipRole } from '@hk/protocol';
-import { DialogService } from '@app/ui/dialog/dialog.service';
+import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
@@ -11,8 +12,9 @@ import { HkDb, type CampaignRow } from '@shared/services/storage/dexie.db';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
+import { hintOf } from '../../../ui/testing/harness';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
-import { LobbyComponent } from './lobby.component';
+import { LobbyComponent, LobbyRemoveMemberConfirmComponent } from './lobby.component';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -89,6 +91,7 @@ function configure(options: {
         },
         loader: StubLoader,
       }),
+      provideTranslocoMessageformat(),
       {
         provide: CampaignStore,
         useValue: {
@@ -215,7 +218,9 @@ describe('LobbyComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.lobby__member-remove')).toBeNull();
-    expect(compiled.querySelector<HTMLButtonElement>('.lobby__rotate')!.disabled).toBe(true);
+    const rotate = compiled.querySelector<HTMLButtonElement>('.lobby__rotate')!;
+    expect(rotate.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(rotate)).toBe(campaignsEn['not-leader']);
   });
 
   it('rotate posts to /api/campaigns/:id/rotate-code, updates the repository row and the displayed code', async () => {
@@ -300,5 +305,81 @@ describe('LobbyComponent', () => {
 
     expect(clipboardWrite).toHaveBeenCalledWith(`${location.origin}/join/7QX4M2HN`);
     expect(toastShow).toHaveBeenCalledWith('campaigns.lobby.toast.linkCopied');
+  });
+
+  it('captions the QR as an image and states what the new code does as a hint line', async () => {
+    configure({ role: 'dm' });
+    const fixture = TestBed.createComponent(LobbyComponent);
+    await fixture.whenStable();
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const qr = compiled.querySelector('.lobby__qr')!;
+    expect(qr.getAttribute('role')).toBe('img');
+    expect(qr.getAttribute('aria-label')).toBe(campaignsEn.lobby.joinCode.qrAlt);
+    expect(compiled.querySelector('.lobby__qr-caption')?.textContent?.trim()).toBe(
+      campaignsEn.lobby.joinCode.qrCaption,
+    );
+    expect(compiled.querySelector('.lobby__rotate-hint')?.textContent?.trim()).toBe(
+      campaignsEn.lobby.joinCode.rotateHint,
+    );
+  });
+
+  it('says what a player sees here and where Leave lives, instead of an empty page', async () => {
+    configure({ role: 'player' });
+    const fixture = TestBed.createComponent(LobbyComponent);
+    await fixture.whenStable();
+    expect(
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('.lobby__member-note')
+        ?.textContent?.trim(),
+    ).toBe(campaignsEn.lobby.memberNote);
+  });
+
+  it('names the presence dot and the remove action after the member in the roster row', async () => {
+    configure({
+      role: 'dm',
+      members: [{ userId: 'u-player', displayName: 'Bob', role: 'player', online: true }],
+    });
+    const fixture = TestBed.createComponent(LobbyComponent);
+    await fixture.whenStable();
+    const row = (fixture.nativeElement as HTMLElement).querySelector('[data-user-id="u-player"]')!;
+    expect(row.querySelector('.lobby__member-dot')?.getAttribute('aria-label')).toBe('Online');
+    expect(row.querySelector('.lobby__member-remove')?.getAttribute('aria-label')).toBe(
+      'Remove Bob',
+    );
+  });
+});
+
+describe('LobbyRemoveMemberConfirmComponent', () => {
+  it('is a dialog with its actions on the strap, the destructive verb in ember, and answers true or false', async () => {
+    const close = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideTransloco({
+          config: {
+            availableLangs: ['en', 'ru', 'uk'],
+            defaultLang: 'en',
+            fallbackLang: 'en',
+            reRenderOnLangChange: true,
+            prodMode: true,
+          },
+          loader: StubLoader,
+        }),
+        provideTranslocoMessageformat(),
+        provideTranslocoScope('campaigns'),
+        { provide: DIALOG_DATA, useValue: { displayName: 'Bob' } },
+        { provide: DialogRef, useValue: { close } },
+      ],
+    });
+    const fixture = TestBed.createComponent(LobbyRemoveMemberConfirmComponent);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-dialog-title]')?.textContent?.trim()).toBe('Remove Bob?');
+    const actions = el.querySelector('[data-dialog-actions]')!;
+    const [cancel, confirm] = Array.from(actions.querySelectorAll('button'));
+    expect(confirm.classList.contains('hk-button--ember')).toBe(true);
+    confirm.click();
+    cancel.click();
+    expect(close.mock.calls).toEqual([[true], [false]]);
   });
 });

@@ -4,35 +4,35 @@
 
 .campaign-settings__title {
   margin: 0 0 var(--space-3);
+  color: var(--text-1);
   font-family: var(--font-display);
+  font-weight: 400;
 }
 
 .campaign-settings__readonly-notice {
-  margin-block-end: var(--space-4);
+  margin: 0 0 var(--space-4);
   color: var(--text-2);
 }
 
-.campaign-settings__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-block-end: var(--space-5);
+/* Leaves in reading order, two to a row from tablet width. */
+.campaign-settings__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
 }
 
-.campaign-settings__section h3 {
-  margin: 0;
-}
-
-.campaign-settings__checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+@media (min-width: 1024px) {
+  .campaign-settings__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .campaign-settings__field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  margin-block-start: var(--space-3);
 }
 
 .campaign-settings__field-label {
@@ -40,12 +40,23 @@
   font-size: 0.875rem;
 }
 
-.campaign-settings__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
 .campaign-settings__value {
   font-weight: 600;
+}
+
+hk-toggle {
+  display: block;
+  margin-block-start: var(--space-2);
+}
+
+.campaign-settings__save-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+}
+
+.campaign-settings__unsaved {
+  color: var(--text-2);
 }
