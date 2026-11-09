@@ -826,7 +826,8 @@
         "other": "Прочие умения"
       },
       "fromSource": "Источник: {source}",
-      "fromSourceLevel": "Источник: {source}, уровень {level}"
+      "fromSourceLevel": "Источник: {source}, уровень {level}",
+      "noEntry": "Описание этого умения не найдено в установленных паках"
     },
     "more": {
       "packs": "Пакеты контента"

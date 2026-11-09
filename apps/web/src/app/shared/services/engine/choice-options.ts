@@ -42,6 +42,12 @@ export function choiceOptionIds(
   return [];
 }
 
+/** A pick that offers only what the hero already has (an Expertise pick): it needs a sheet to be counted. */
+export function needsSheet(choice: Choice): boolean {
+  const pick = choice.pick;
+  return 'query' in pick && pick.requireProficient === true;
+}
+
 export interface ChoiceOptionsContext {
   readonly ownerId: string;
   readonly localizer: Localizer;

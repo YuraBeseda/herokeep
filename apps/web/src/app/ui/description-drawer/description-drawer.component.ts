@@ -12,14 +12,16 @@ import {
 } from '@angular/core';
 import type { ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import type { Sheet } from '@hk/engine';
 import type { Choice, Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { optionsForChoice } from '@shared/services/engine/choice-options';
+import { needsSheet, optionsForChoice } from '@shared/services/engine/choice-options';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { CreateWizardState } from '../../views/characters/create-wizard/create-wizard.state';
 import { EntityFactsComponent } from '../../views/library/detail/entity-facts.component';
 import { HkDrawerComponent } from '../drawer/drawer.component';
 import {
@@ -98,6 +100,8 @@ export class HkDescriptionDrawerComponent {
   private readonly injector = inject(Injector);
   // Present only under a hero's own sheet (or one of its dialogs).
   private readonly heroScope = inject(CharacterEngineScope, { optional: true });
+  // Present only inside the creation wizard: its draft sheet is the hero a proficiency-gated pick is counted for.
+  private readonly wizardState = inject(CreateWizardState, { optional: true });
 
   // Inputs
   /** A pack entity id, e.g. `srd-5e-2024:spell/fireball`. */
@@ -115,6 +119,12 @@ export class HkDescriptionDrawerComponent {
   });
   protected readonly resolved = computed(() => this.engineFacade.index().get(this.entity()));
   protected readonly name = computed(() => this.engineFacade.localizer().name(this.entity()));
+
+  /** The hero the entry is read for: the sheet under a hero, or the wizard's draft; none elsewhere. */
+  private heroSheet(): Sheet | undefined {
+    if (this.heroScope) return this.injector.get(CharacterStore).sheet();
+    return this.wizardState?.draftSheet();
+  }
 
   /** The library root, keeping the hero context (the chips' "See all in library" link). */
   protected readonly libraryRootHref = computed(() =>
@@ -143,6 +153,7 @@ export class HkDescriptionDrawerComponent {
         ownerId: entity.id,
         localizer,
         href,
+        sheet: needsSheet(choice) ? this.heroSheet() : undefined,
         limit: POPOVER_OPTION_LIMIT,
       });
       if (offer.count === 0) return;

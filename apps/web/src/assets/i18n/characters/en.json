@@ -826,7 +826,8 @@
         "other": "Other features"
       },
       "fromSource": "From {source}",
-      "fromSourceLevel": "From {source}, level {level}"
+      "fromSourceLevel": "From {source}, level {level}",
+      "noEntry": "This feature’s entry is not in the installed packs"
     },
     "more": {
       "packs": "Content packs"

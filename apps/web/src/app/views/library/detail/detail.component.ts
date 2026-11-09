@@ -97,6 +97,14 @@ export class LibraryDetailComponent {
 
   // `?for=<characterId>`: the hero whose sheet the person came from. It rides along every
   // cross-link inside the library so "Add to hero" stays available a few entries deep.
+  /** The sheet of the hero the library was opened for (`?for=`), once it is the loaded one. */
+  protected readonly heroSheet = computed(() => {
+    const heroId = this.forCharacter();
+    return heroId && this.characterStore.streamId() === heroId
+      ? this.characterStore.sheet()
+      : undefined;
+  });
+
   protected readonly forCharacter = toSignal(
     this.route.queryParamMap.pipe(map((params) => params.get('for'))),
     { initialValue: this.route.snapshot.queryParamMap.get('for') },

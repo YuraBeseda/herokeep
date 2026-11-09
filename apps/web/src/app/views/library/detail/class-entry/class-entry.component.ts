@@ -1,8 +1,10 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import type { Sheet } from '@hk/engine';
 import { makeEntityId, parseEntityId, type ClassEntity, type SubclassEntity } from '@hk/protocol';
-import { optionsForChoice } from '@shared/services/engine/choice-options';
+import { classColumnKeys, hasProse } from '@shared/services/engine/class-columns';
+import { needsSheet, optionsForChoice } from '@shared/services/engine/choice-options';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { sheetNames } from '../../../characters/sheet/play/play-names';
@@ -19,9 +21,6 @@ import { summaryOf } from './summary-text';
 const CLASS_LEVELS = 20;
 /** A choice's popover lists this many options; the chip's count is the whole set. */
 const POPOVER_OPTION_LIMIT = 24;
-
-/** A description that is only a bracketed placeholder, e.g. a table-column stand-in. */
-const PLACEHOLDER_TEXT = /^\[[^\]]*\]$/;
 
 interface FeatureLine {
   readonly id: string;
@@ -97,6 +96,8 @@ export class ClassEntryComponent {
   readonly entity = input.required<ClassEntity>();
   /** The hero the library was opened for (`?for=`); links and popovers keep it. */
   readonly heroId = input<string | null>(null);
+  /** The hero's sheet when it is loaded: a proficiency-gated pick (Expertise) is then counted from it, as the wizard step does. */
+  readonly heroSheet = input<Pick<Sheet, 'skills'> | undefined>(undefined);
 
   // The feature whose full text is open in the description drawer.
   protected readonly drawerEntity = signal<string | null>(null);
@@ -130,11 +131,10 @@ export class ClassEntryComponent {
     }
     const columns: Column[] = [];
     const values = new Map<string, string[]>();
-    const columnKeys = new Set<string>();
+    const columnKeys = classColumnKeys(entity, index);
     for (const key of keys) {
       const featureId = packId ? makeEntityId(packId, 'feature', key) : undefined;
       if (!featureId || !index.has(featureId)) continue;
-      columnKeys.add(key);
       let last: string | number | undefined;
       const perLevel = this.levels.map((level) => {
         const raw = entity.levels.find((row) => row.level === level)?.extra?.[key];
@@ -159,7 +159,7 @@ export class ClassEntryComponent {
     const slug = parseEntityId(id)?.slug ?? '';
     // A grant that IS one of the table's columns is drawn as that column, not as a feature to read;
     // a column feature that also carries prose of its own stays listed too.
-    const prose = text.trim() !== '' && !PLACEHOLDER_TEXT.test(text.trim());
+    const prose = hasProse(text);
     if (this.columnData().columnKeys.has(slug) && !prose) return undefined;
     const summary = prose ? summaryOf(text) : '';
     return {
@@ -284,6 +284,7 @@ export class ClassEntryComponent {
         const offer = optionsForChoice(choice, index, {
           ownerId: entity.id,
           localizer,
+          sheet: needsSheet(choice) ? this.heroSheet() : undefined,
           href: (id) => this.libraryHref(id),
           limit: POPOVER_OPTION_LIMIT,
         });

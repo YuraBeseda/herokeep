@@ -243,4 +243,68 @@ describe('HkOptionsChipComponent', () => {
     expect(modified.defaultPrevented).toBe(false);
     expect(navigate).toHaveBeenCalledTimes(1);
   });
+
+  describe('viewport placement', () => {
+    const POPOVER = { width: 200, height: 100 };
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- restored as the same prototype method
+    const original = Element.prototype.getBoundingClientRect;
+
+    beforeEach(() => {
+      Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+      Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+    });
+    afterEach(() => {
+      Element.prototype.getBoundingClientRect = original;
+    });
+
+    /** jsdom has no layout: the chip sits at `chipLeft`, the popover has a fixed size. */
+    function layOut(chipLeft: number, ancestorOffset = 0): void {
+      Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
+        const isPopover = this.classList.contains('hk-options-chip__popover');
+        const w = isPopover ? POPOVER.width : 40;
+        const h = isPopover ? POPOVER.height : 22;
+        const left = isPopover
+          ? (parseFloat((this as HTMLElement).style.left) || 0) + ancestorOffset
+          : chipLeft;
+        const top = isPopover ? 0 : 300;
+        return {
+          left,
+          top,
+          right: left + w,
+          bottom: top + h,
+          width: w,
+          height: h,
+          x: left,
+          y: top,
+          toJSON: () => ({}),
+        };
+      };
+    }
+
+    async function openAt(chipLeft: number, ancestorOffset = 0): Promise<HTMLElement> {
+      layOut(chipLeft, ancestorOffset);
+      const { fixture, el } = await mount(HkOptionsChipComponent, base);
+      chip(el).click();
+      await fixture.whenStable();
+      await fixture.whenStable();
+      return popover(el)!;
+    }
+
+    it('keeps the popover on screen for a chip at the left edge', async () => {
+      const pop = await openAt(2);
+      expect(parseFloat(pop.style.left)).toBeGreaterThanOrEqual(8);
+    });
+
+    it('keeps the popover on screen when an ancestor offsets fixed positioning (a transform)', async () => {
+      const pop = await openAt(348, 20);
+      expect(parseFloat(pop.style.left) + 20 + POPOVER.width).toBeLessThanOrEqual(390 - 8);
+      const left = await openAt(2, 20);
+      expect(parseFloat(left.style.left) + 20).toBeGreaterThanOrEqual(8);
+    });
+
+    it('keeps the popover on screen for a chip at the right edge', async () => {
+      const pop = await openAt(348);
+      expect(parseFloat(pop.style.left) + POPOVER.width).toBeLessThanOrEqual(390 - 8);
+    });
+  });
 });

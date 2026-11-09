@@ -66,4 +66,18 @@ describe('HkFeatureRowComponent', () => {
     const { el } = await mount(HkFeatureRowComponent, { ...base, name: long });
     expect(hintOf(el.querySelector('.hk-feat__name')!)).toBe(long);
   });
+
+  it('draws the details button disabled with a reason when the entry is missing', async () => {
+    const { fixture, el } = await mount(HkFeatureRowComponent, {
+      ...base,
+      detailsDisabledReason: 'Its entry is not installed',
+    });
+    let emitted = 0;
+    fixture.componentInstance.details.subscribe(() => emitted++);
+    const button = el.querySelector<HTMLButtonElement>('button')!;
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(button)).toBe('Its entry is not installed');
+    button.click();
+    expect(emitted).toBe(0);
+  });
 });

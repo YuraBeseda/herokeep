@@ -826,7 +826,8 @@
         "other": "Інші вміння"
       },
       "fromSource": "Джерело: {source}",
-      "fromSourceLevel": "Джерело: {source}, рівень {level}"
+      "fromSourceLevel": "Джерело: {source}, рівень {level}",
+      "noEntry": "Опису цього вміння немає в установлених паках"
     },
     "more": {
       "packs": "Пакети вмісту"

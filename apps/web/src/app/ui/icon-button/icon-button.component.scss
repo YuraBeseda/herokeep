@@ -117,3 +117,8 @@ hk-icon {
     transition: none;
   }
 }
+
+:host([aria-disabled='true']) {
+  filter: grayscale(0.35) opacity(0.6);
+  cursor: not-allowed;
+}

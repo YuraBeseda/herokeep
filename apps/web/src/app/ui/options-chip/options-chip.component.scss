@@ -36,14 +36,12 @@
 }
 
 .hk-options-chip__popover {
-  position: absolute;
-  inset-block-start: 100%;
-  inset-inline-end: 0; /* opens toward the page, so a chip near the right edge keeps the list on screen */
+  position: fixed;
   z-index: 10;
   display: flex;
   flex-direction: column;
   min-inline-size: 180px;
-  max-inline-size: min(320px, 90vw);
+  max-inline-size: min(320px, calc(100vw - 16px));
   padding: 6px;
   border-radius: 6px;
   background: var(--leaf);
@@ -98,4 +96,9 @@
   .hk-options-chip__link {
     min-block-size: var(--control-phone);
   }
+}
+
+.hk-options-chip__popover {
+  max-block-size: min(50vh, 22rem);
+  overflow-y: auto;
 }

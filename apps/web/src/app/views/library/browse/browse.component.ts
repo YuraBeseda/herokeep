@@ -294,6 +294,16 @@ export class LibraryBrowseComponent {
   }
 
   // Methods
+  /** The whole summary line as plain text: the row ellipsises it, so this is its hint. */
+  protected subText(
+    parts: readonly FactValue[],
+    t: (key: string, params?: Record<string, unknown>) => string,
+  ): string {
+    return parts
+      .map((part) => (part.kind === 'key' ? t(part.key, part.params) : part.text))
+      .join(' · ');
+  }
+
   protected typeIcon(type: EntityType): string | null {
     return TYPE_ICONS[type] ?? null;
   }

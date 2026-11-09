@@ -49,7 +49,11 @@
             [innerHTML]="html"
           ></div>
         }
-        <app-class-entry [entity]="classEntry" [heroId]="forCharacter()" />
+        <app-class-entry
+          [entity]="classEntry"
+          [heroId]="forCharacter()"
+          [heroSheet]="heroSheet()"
+        />
       </hk-leaf>
     } @else {
       <hk-leaf class="library-detail__leaf" [title]="t('detail.entry')" [icon]="'ui:library'">

@@ -590,6 +590,21 @@ describe('LibraryBrowseComponent', () => {
     expect(alchemist?.textContent).toMatch(/gp/);
   });
 
+  it('keeps the whole one-line summary as a hint, since the row cuts it with an ellipsis', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    typeSearch(fixture, 'fireball');
+    const row = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
+    ).find((r) => r.querySelector('.library-browse__row-name')?.textContent?.trim() === 'Fireball');
+    const sub = row?.querySelector('.library-browse__row-sub');
+    expect(sub).toBeTruthy();
+    expect(hintOf(sub!)).toBe('Level 3 · Evocation');
+  });
+
   it('marks the matched text of a name, ignoring case, and the name still reads whole', async () => {
     seedStore([corePack]);
     const fixture = TestBed.createComponent(LibraryBrowseComponent);

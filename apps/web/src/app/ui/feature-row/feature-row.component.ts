@@ -38,6 +38,8 @@ export class HkFeatureRowComponent {
   readonly source = input<string | null>(null);
   /** Translated name of the resource the feature spends (a chip beside the badge or source chip). */
   readonly resource = input<string | null>(null);
+  /** Translated reason the details button is unavailable (its entry is missing); `null` when it works. */
+  readonly detailsDisabledReason = input<string | null>(null);
   /** A row from an inactive multiclass level, dimmed to 60%. */
   readonly dimmed = input(false);
   /** `null` follows the saved Settings preference; a caller can pin a density (the phone sheet pins comfortable). */

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
+import { Component, computed, DestroyRef, effect, ElementRef, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import { switchMap } from 'rxjs';
@@ -7,12 +7,17 @@ import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import type { UiIconName } from '../icons/vocabulary';
 
 const SHELL_KEY_PREFIX = 'shell.';
+let nextReasonId = 0;
 
 /**
  * `button[hk-icon-button]` — a round brass-rimmed button holding one vocabulary glyph (design-system
  * IconButton). The required `hint` input is an i18n key (`UI_ICONS[name].hint`, scope `shell`); its
  * translation becomes both the `aria-label` and the tooltip, so an icon-only control always has an
  * accessible name and a visible hint (the hint rule).
+ *
+ * `disabledReason` — already-translated text. While set the button is `aria-disabled` (still
+ * focusable, so the reason can be reached by keyboard and touch), swallows activation, and the
+ * reason becomes the hint and a hidden description; the accessible name stays the glyph's own.
  *
  * Pressed state: bind `aria-pressed` or `aria-current` on the host; the stylesheet keys off them.
  */
@@ -25,6 +30,7 @@ const SHELL_KEY_PREFIX = 'shell.';
   host: {
     '[attr.aria-label]': 'label()',
     '[class]': 'classes()',
+    '[attr.aria-disabled]': 'hasReason() ? "true" : null',
   },
 })
 export class HkIconButtonComponent {
@@ -37,6 +43,8 @@ export class HkIconButtonComponent {
   readonly hint = input.required<string>();
   readonly variant = input<'brass' | 'ghost' | 'ember' | 'moss'>('brass');
   readonly size = input<'s' | 'm' | 'l'>('m');
+  /** Translated reason the action is unavailable; `null` when it is available. */
+  readonly disabledReason = input<string | null>(null);
 
   // Re-resolves when the hint key changes and when the language changes.
   protected readonly label = toSignal(
@@ -49,11 +57,28 @@ export class HkIconButtonComponent {
     { initialValue: '' },
   );
 
+  protected readonly reasonId = `hk-icon-button-reason-${nextReasonId++}`;
+  protected readonly hasReason = computed(() => (this.disabledReason() ?? '') !== '');
+
   protected readonly classes = computed(
     () => `hk-icon-button hk-icon-button--${this.variant()} hk-icon-button--${this.size()}`,
   );
 
   constructor() {
-    effect(() => this.tooltip.text.set(this.label()));
+    effect(() => {
+      const reason = this.disabledReason() ?? '';
+      this.tooltip.text.set(reason !== '' ? reason : this.label());
+    });
+    effect(() => this.tooltip.describedByExtra.set(this.hasReason() ? this.reasonId : null));
+
+    // A capture listener runs before any click handler the caller bound, so a blocked button never reaches them.
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const swallow = (event: Event): void => {
+      if (!this.hasReason()) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    host.addEventListener('click', swallow, true);
+    inject(DestroyRef).onDestroy(() => host.removeEventListener('click', swallow, true));
   }
 }

@@ -71,7 +71,7 @@
                 }
               </span>
               @if (row.sub.length > 0) {
-                <span class="library-browse__row-sub">
+                <span class="library-browse__row-sub" [hkTooltip]="subText(row.sub, t)">
                   @for (part of row.sub; track $index; let last = $last) {
                     <app-fact-value [value]="part" />
                     @if (!last) {

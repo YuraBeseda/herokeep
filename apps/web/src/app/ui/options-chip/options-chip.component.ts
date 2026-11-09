@@ -1,9 +1,11 @@
 import {
   Component,
+  afterNextRender,
   DestroyRef,
   ElementRef,
   effect,
   inject,
+  Injector,
   input,
   signal,
   viewChild,
@@ -13,6 +15,7 @@ import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { uniqueId } from '../format';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
+import { placePopover } from './popover-placement';
 
 export interface OptionsChipOption {
   readonly id: string;
@@ -52,6 +55,8 @@ export class HkOptionsChipComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly router = inject(Router);
   private readonly chip = viewChild.required<ElementRef<HTMLButtonElement>>('chip');
+  private readonly popoverEl = viewChild<ElementRef<HTMLElement>>('popover');
+  private readonly injector = inject(Injector);
 
   // Inputs
   readonly count = input.required<number>();
@@ -60,6 +65,8 @@ export class HkOptionsChipComponent {
   readonly seeAllHref = input<string | null>(null);
 
   protected readonly open = signal(false);
+  /** Viewport coordinates of the open popover (it is fixed, so no scroll box clips it); null until measured. */
+  protected readonly position = signal<{ left: number; top: number } | null>(null);
   protected readonly popoverId = uniqueId('hk-options-popover');
 
   private suppressFocusOpen = false;
@@ -67,6 +74,15 @@ export class HkOptionsChipComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.longPressTimer));
+
+    // Opening places the popover (it first renders hidden, then moves into view).
+    effect(() => {
+      if (!this.open()) {
+        this.position.set(null);
+        return;
+      }
+      afterNextRender(() => this.reposition(), { injector: this.injector });
+    });
 
     // While open, a press anywhere outside the chip closes it. Touch browsers that do not focus
     // buttons or links on tap never fire a `focusout`, so this is the reliable way out. The
@@ -78,9 +94,34 @@ export class HkOptionsChipComponent {
         if (target instanceof Node && this.host.contains(target)) return;
         this.open.set(false);
       };
+      const onMove = (): void => this.reposition();
       document.addEventListener('pointerdown', onPress);
-      onCleanup(() => document.removeEventListener('pointerdown', onPress));
+      window.addEventListener('resize', onMove);
+      window.addEventListener('scroll', onMove, true);
+      onCleanup(() => {
+        document.removeEventListener('pointerdown', onPress);
+        window.removeEventListener('resize', onMove);
+        window.removeEventListener('scroll', onMove, true);
+      });
     });
+  }
+
+  /** Keeps the popover fully inside the viewport, wherever the chip is (see `placePopover`). */
+  private reposition(): void {
+    const popover = this.popoverEl()?.nativeElement;
+    if (!popover) return;
+    const anchor = this.chip().nativeElement.getBoundingClientRect();
+    const box = popover.getBoundingClientRect();
+    // The popover is fixed, but an ancestor with a transform or filter would make that relative to
+    // itself: the gap between where it was put and where it landed is that ancestor's offset.
+    const put = this.position() ?? { left: 0, top: 0 };
+    const offset = { left: box.left - put.left, top: box.top - put.top };
+    const placed = placePopover(
+      anchor,
+      { width: box.width, height: box.height },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
+    this.position.set({ left: placed.left - offset.left, top: placed.top - offset.top });
   }
 
   /**

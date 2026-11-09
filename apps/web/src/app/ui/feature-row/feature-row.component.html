@@ -28,6 +28,7 @@
   [hint]="'shell.icon.details'"
   [variant]="'ghost'"
   [size]="'s'"
+  [disabledReason]="detailsDisabledReason()"
   [id]="buttonId"
   [attr.aria-labelledby]="labelledBy"
   (click)="details.emit()"

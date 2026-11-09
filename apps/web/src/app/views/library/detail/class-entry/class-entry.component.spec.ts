@@ -305,6 +305,37 @@ describe('ClassEntryComponent', () => {
     expect(rowFor(el, quiet).querySelector('hk-options-chip')).toBeNull();
   });
 
+  it(
+    'counts a proficiency-gated pick (Expertise) from the hero' +
+      's own skills when a hero sheet is given, as the wizard step does',
+    async () => {
+      const { fixture, el } = await mountClass('rogue');
+      const expertiseRow = (): HTMLElement => {
+        const rogue = classNamed('rogue');
+        const level = rogue.levels.find((row) =>
+          row.choices.some((choice) => choice.id.endsWith('/expertise')),
+        )!.level;
+        return rowFor(el, level);
+      };
+      const count = (): string | undefined =>
+        Array.from(expertiseRow().querySelectorAll('.class-entry__choice'))
+          .find((choice) => choice.textContent?.includes('Expertise'))
+          ?.querySelector('.hk-options-chip__count')
+          ?.textContent?.trim();
+      // No hero: the whole skill list.
+      expect(count()).toBe(String(index.byType('skill').length));
+
+      fixture.componentRef.setInput('heroSheet', {
+        skills: {
+          athletics: { proficiency: 'proficient' },
+          stealth: { proficiency: 'proficient' },
+        },
+      });
+      await fixture.whenStable();
+      expect(count()).toBe('2');
+    },
+  );
+
   it('opens a feature in full from its Full text button, in the description drawer', async () => {
     const { fixture, el } = await mountClass('paladin');
     const button = Array.from(el.querySelectorAll<HTMLButtonElement>('.class-entry__more')).find(

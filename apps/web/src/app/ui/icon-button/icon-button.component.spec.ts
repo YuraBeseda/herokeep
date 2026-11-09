@@ -27,6 +27,8 @@ class StubLoader implements TranslocoLoader {
       [hint]="UI_ICONS[icon()].hint"
       [variant]="variant()"
       [size]="size()"
+      [disabledReason]="reason()"
+      (click)="clicks.update((n) => n + 1)"
     ></button>
   `,
 })
@@ -35,6 +37,8 @@ class HostComponent {
   readonly icon = signal<UiIconName>('roll');
   readonly variant = signal<'brass' | 'ghost' | 'ember' | 'moss'>('brass');
   readonly size = signal<'s' | 'm' | 'l'>('m');
+  readonly reason = signal<string | null>(null);
+  readonly clicks = signal(0);
 }
 
 describe('HkIconButtonComponent', () => {
@@ -80,6 +84,32 @@ describe('HkIconButtonComponent', () => {
     const use = button.querySelector('hk-icon use')!;
     expect(use.getAttribute('href')).toBe('assets/icons/sprite.svg#ui-roll');
     expect(button.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('with a disabled reason it stays focusable, swallows clicks, and the reason is its hint and description', async () => {
+    fixture.componentInstance.reason.set('The entry is not installed');
+    await fixture.whenStable();
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(fixture.componentInstance.clicks()).toBe(0);
+    button.dispatchEvent(new Event('focus'));
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain(
+      'The entry is not installed',
+    );
+    button.dispatchEvent(new Event('blur'));
+    const describedBy = button.getAttribute('aria-describedby') ?? '';
+    const reasonEl = (fixture.nativeElement as HTMLElement).querySelector(
+      '.hk-icon-button__reason',
+    );
+    expect(describedBy).toContain(reasonEl!.id);
+    expect(button.getAttribute('aria-label')).toBe('Roll');
+  });
+
+  it('without a disabled reason it is an ordinary enabled button', () => {
+    expect(button.getAttribute('aria-disabled')).toBeNull();
+    button.click();
+    expect(fixture.componentInstance.clicks()).toBe(1);
   });
 
   it('follows icon and hint changes', async () => {

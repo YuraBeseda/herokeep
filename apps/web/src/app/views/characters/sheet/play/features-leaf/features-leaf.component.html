@@ -50,8 +50,14 @@
                         ? t('sheet.actions.resourceHint', { resource: feature.resource })
                         : null
                     "
-                    (details)="feature.hasEntity ? openDetails(feature.source) : null"
+                    [detailsDisabledReason]="feature.hasEntity ? null : t('sheet.features.noEntry')"
+                    (details)="openDetails(feature.source)"
                   />
+                  @if (feature.summary) {
+                    <p class="features__summary" [hkTooltip]="feature.summary">
+                      {{ feature.summary }}
+                    </p>
+                  }
                 </li>
               }
             </ul>

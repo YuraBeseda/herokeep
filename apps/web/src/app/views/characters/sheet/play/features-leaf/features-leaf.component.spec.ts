@@ -1,4 +1,6 @@
-import { TestBed } from '@angular/core/testing';
+import { computed } from '@angular/core';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import type { Sheet } from '@hk/engine';
 import { provideRouter } from '@angular/router';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { CharacterStore } from '@shared/stores/character.store';
@@ -93,7 +95,11 @@ describe('FeaturesLeafComponent — features by source', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.hk-lvlbadge')?.getAttribute('aria-label')).toBe(
+    // Action Surge (gained at level 2): the leaf now also lists the level-1 features before it.
+    const surge = Array.from(el.querySelectorAll('hk-feature-row')).find((row) =>
+      row.textContent?.includes('Action Surge'),
+    );
+    expect(surge?.querySelector('.hk-lvlbadge')?.getAttribute('aria-label')).toBe(
       'From Fighter, level 2',
     );
     expect(el.querySelector('.hk-feat__src')?.getAttribute('aria-label')).toMatch(
@@ -136,5 +142,126 @@ describe('FeaturesLeafComponent — features by source', () => {
     );
     expect(headings.slice(0, 2)).toEqual(['Fighter', 'Paladin']);
     expect(el.querySelectorAll('.features__group').length).toBe(headings.length);
+  });
+});
+
+describe('FeaturesLeafComponent — every granted feature (R64)', () => {
+  setupLeafSpec([ruTranslationPack], [provideRouter([])]);
+
+  const barbarianOne = {
+    type: 'level.gained',
+    v: 1,
+    payload: { classId: 'srd-5e-2024:class/barbarian', level: 1, hpRoll: 'average' },
+  } as const;
+
+  let current: ComponentFixture<FeaturesLeafComponent>;
+  async function mountBarbarianFighter(): Promise<HTMLElement> {
+    await seedFighter('Ivan');
+    await TestBed.inject(CharacterStore).appendTx([barbarianOne]);
+    current = TestBed.createComponent(FeaturesLeafComponent);
+    await current.whenStable();
+    return current.nativeElement as HTMLElement;
+  }
+
+  const groupOf = (el: HTMLElement, heading: string): Element | undefined =>
+    Array.from(el.querySelectorAll('.features__group')).find(
+      (g) => g.querySelector('.features__heading')?.textContent?.trim() === heading,
+    );
+  const rowNamed = (group: Element | undefined, name: string): Element | undefined =>
+    Array.from(group?.querySelectorAll('hk-feature-row') ?? []).find(
+      (row) => row.querySelector('.hk-feat__name')?.textContent?.trim() === name,
+    );
+
+  it('gives a Barbarian 1 + Fighter 1 hero a Class group each, with Rage in the Barbarian one', async () => {
+    const el = await mountBarbarianFighter();
+
+    const headings = Array.from(el.querySelectorAll('.features__heading')).map((h) =>
+      h.textContent?.trim(),
+    );
+    expect(headings.slice(0, 2)).toEqual(['Fighter', 'Barbarian']);
+    expect(rowNamed(groupOf(el, 'Barbarian'), 'Rage')).toBeTruthy();
+    expect(rowNamed(groupOf(el, 'Barbarian'), 'Unarmored Defense')).toBeTruthy();
+  });
+
+  it('lists a feature that has no action with its level badge, a summary and a details button', async () => {
+    const el = await mountBarbarianFighter();
+
+    const rage = rowNamed(groupOf(el, 'Barbarian'), 'Rage')!;
+    expect(rage.querySelector('.hk-lvlbadge')?.textContent?.trim()).toBe('1');
+    expect(rage.querySelector('.hk-lvlbadge')?.getAttribute('aria-label')).toBe(
+      'From Barbarian, level 1',
+    );
+    expect(rage.querySelector('button')).not.toBeNull();
+    expect(rage.parentElement?.querySelector('.features__summary')?.textContent).toContain(
+      'primal power',
+    );
+  });
+
+  it('opens the description drawer from a feature that has no action', async () => {
+    const el = await mountBarbarianFighter();
+    expect(el.querySelector('hk-description-drawer')).toBeNull();
+
+    rowNamed(groupOf(el, 'Barbarian'), 'Rage')!.querySelector('button')!.click();
+    await current.whenStable();
+
+    expect(el.querySelector('hk-description-drawer')).not.toBeNull();
+  });
+
+  it('leaves out the class-table column features, which are table data with no prose', async () => {
+    const el = await mountBarbarianFighter();
+
+    const names = Array.from(el.querySelectorAll('.hk-feat__name')).map((n) =>
+      n.textContent?.trim(),
+    );
+    for (const column of ['Rages', 'Rage Damage', 'Proficiency Bonus', 'Weapon Mastery Count']) {
+      expect(names).not.toContain(column);
+    }
+  });
+});
+
+describe('FeaturesLeafComponent — a feature whose entry is missing (M3)', () => {
+  setupLeafSpec([ruTranslationPack], [provideRouter([])]);
+
+  // Hand-shapes the real persisted sheet (the spells-leaf precedent): no pack in this fixture set
+  // has an action whose granting entity is absent, so one is added to the derived sheet.
+  function shapeSheet(mutate: (sheet: Sheet) => Sheet): void {
+    const store = TestBed.inject(CharacterStore);
+    const real = store.sheet;
+    Object.defineProperty(store, 'sheet', {
+      value: computed(() => {
+        const sheet = real();
+        return sheet ? mutate(sheet) : sheet;
+      }),
+    });
+  }
+
+  it('draws the details button disabled with a reason, and opens nothing, for an action with no entry', async () => {
+    await seedFighter('Ivan');
+    shapeSheet((sheet) => ({
+      ...sheet,
+      actions: [
+        ...sheet.actions,
+        {
+          id: 'ghost-strike',
+          name: 'Ghost Strike',
+          kind: 'action',
+          description: '',
+          source: 'srd-5e-2024:feature/not-in-any-pack',
+        },
+      ],
+    }));
+    const fixture = TestBed.createComponent(FeaturesLeafComponent);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const row = Array.from(el.querySelectorAll('hk-feature-row')).find((r) =>
+      r.textContent?.includes('Ghost Strike'),
+    )!;
+    expect(row).toBeTruthy();
+    const button = row.querySelector<HTMLButtonElement>('button')!;
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    button.click();
+    await fixture.whenStable();
+    expect(el.querySelector('hk-description-drawer')).toBeNull();
   });
 });

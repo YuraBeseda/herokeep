@@ -1,1 +1,4 @@
 <hk-icon [icon]="'ui:' + icon()" />
+@if (disabledReason(); as reason) {
+  <span class="hk-icon-button__reason" hidden [id]="reasonId">{{ reason }}</span>
+}
