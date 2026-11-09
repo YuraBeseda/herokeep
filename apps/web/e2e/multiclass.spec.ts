@@ -42,19 +42,23 @@ test.describe('level up — multiclassing into a second class', () => {
       await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
     });
 
-    await test.step("the which-class picker offers Fighter's own advancement plus multiclass options", async () => {
+    await test.step("the which-class step offers Fighter's own advancement plus multiclass options", async () => {
       await expect(page.locator('.level-up__class-picker')).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Which class?' })).toBeVisible();
       await expect(
-        page.getByRole('button', { name: 'Level up Fighter to 2', exact: true }),
+        page
+          .locator('.level-up__class-own')
+          .getByRole('button', { name: 'Choose: Fighter', exact: true }),
       ).toBeVisible();
       await expect(
-        page.getByRole('button', { name: 'Multiclass into Barbarian', exact: true }),
+        page
+          .locator('.level-up__class-multi')
+          .getByRole('button', { name: 'Choose: Barbarian', exact: true }),
       ).toBeVisible();
     });
 
     await test.step('choosing Barbarian skips the HP step and asks no level-1 choice (no skill pick; the shared mastery cap is full)', async () => {
-      await page.getByRole('button', { name: 'Multiclass into Barbarian', exact: true }).click();
+      await page.getByRole('button', { name: 'Choose: Barbarian', exact: true }).click();
       await expect(page.locator('.level-up__class-picker')).toHaveCount(0);
       await expect(page.locator('.level-up__hp-average')).toHaveCount(0);
       await expect(page.locator('.level-up__review')).toBeVisible();
@@ -65,7 +69,8 @@ test.describe('level up — multiclassing into a second class', () => {
     await test.step('review shows complete (no HP roll was ever required); finish', async () => {
       await expect(page.locator('.level-up__review')).toBeVisible();
       await expect(page.locator('.level-up__incomplete')).toHaveCount(0);
-      await page.locator('.level-up__finish').click();
+      await expect(page.locator('[data-action="next"]')).toContainText('Finish level up');
+      await page.locator('[data-action="next"]').click();
       await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
     });
 

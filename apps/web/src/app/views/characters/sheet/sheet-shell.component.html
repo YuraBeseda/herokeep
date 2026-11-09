@@ -74,8 +74,10 @@
                     class="sheet-shell__tab"
                     [id]="'sheet-tab-' + id"
                     [class.sheet-shell__tab--on]="activeTabId() === id"
+                    [class.sheet-shell__tab--dim]="levelUpOpen()"
                     [attr.aria-selected]="activeTabId() === id"
-                    [tabindex]="activeTabId() === id ? 0 : -1"
+                    [attr.aria-disabled]="levelUpOpen() ? 'true' : null"
+                    [tabindex]="activeTabId() === id || (levelUpOpen() && id === 'play') ? 0 : -1"
                     (click)="onTabSelected(id)"
                     (keydown)="onTabsKey($event)"
                   >
@@ -84,7 +86,12 @@
                 }
               </div>
               @if (levelUpAvailable()) {
-                <a class="sheet-shell__level-up-badge" [routerLink]="['level-up']">
+                <a
+                  class="sheet-shell__level-up-badge"
+                  [class.sheet-shell__level-up-badge--on]="levelUpOpen()"
+                  [attr.aria-current]="levelUpOpen() ? 'page' : null"
+                  [routerLink]="['level-up']"
+                >
                   {{ t('sheet.header.levelUp') }}
                 </a>
               } @else {

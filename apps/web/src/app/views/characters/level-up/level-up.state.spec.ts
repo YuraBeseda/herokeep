@@ -463,4 +463,55 @@ describe('LevelUpState', () => {
       { classId: 'srd-5e-2024:class/fighter', level: 1 },
     ]);
   });
+
+  // --- Plan 17 B10a: the flow's views of the same draft ---------------------------------------------
+
+  it('prices what each hit point answer adds from the engine (die + modifier), and is dirty only once something is chosen', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await awardXp(characterStore, 300);
+    const state = createState(FIGHTER);
+
+    expect(state.hpMaxBefore()).toBe(12);
+    expect(state.averageHpGain()).toBe(8); // 6 (half of d10, rounded up) + 2 Constitution
+    expect(state.rolledHpGain()).toBeUndefined();
+    expect(state.dirty()).toBe(false);
+
+    state.rollHp(() => 0.45); // 5 on the die
+    expect(state.rolledHpGain()).toBe(7);
+    expect(state.averageHpGain()).toBe(8); // unchanged by the roll
+    expect(state.dirty()).toBe(true);
+  });
+
+  it('lists the choices already decided in the whole-flow steps, while the remaining steps drop them', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await awardXp(characterStore, 300);
+    await characterStore.appendTx([
+      { type: 'level.gained', v: 1, payload: { classId: FIGHTER, level: 2, hpRoll: 'average' } },
+    ]);
+    await awardXp(characterStore, 600);
+    const state = createState(FIGHTER);
+
+    expect(state.steps().map((step) => step.id)).toEqual(['hp', SUBCLASS_CHOICE, 'review']);
+    expect(state.allSteps().map((step) => step.id)).toEqual(['hp', SUBCLASS_CHOICE, 'review']);
+
+    state.setDecision(SUBCLASS_CHOICE, [CHAMPION]);
+    expect(state.steps().map((step) => step.id)).toEqual(['hp', 'review']);
+    expect(state.allSteps().map((step) => step.id)).toEqual(['hp', SUBCLASS_CHOICE, 'review']);
+  });
+
+  it('with a class still to pick the flow is just the which-class step; with one eligible class there is none', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    await awardXp(characterStore, 300);
+    const picking = TestBed.runInInjectionContext(() => new LevelUpState());
+
+    expect(picking.classChoices().length).toBeGreaterThan(1);
+    expect(picking.steps()).toEqual([]);
+    expect(picking.allSteps().map((step) => step.id)).toEqual(['class']);
+
+    picking.chooseClass(FIGHTER);
+    expect(picking.allSteps().map((step) => step.id)).toEqual(['hp', 'review']);
+  });
 });

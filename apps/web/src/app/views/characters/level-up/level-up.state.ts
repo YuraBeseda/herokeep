@@ -21,13 +21,9 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { cryptoRng } from '@shared/services/engine/rng';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import { levelUpSteps, type LevelUpStep } from '../flow/steps';
 
-export interface LevelUpStep {
-  id: string;
-  labelKey: string;
-  choiceId?: string;
-  kind: 'hp' | 'choice' | 'spells' | 'review';
-}
+export type { LevelUpStep };
 
 // Same throwaway-envelope technique `CreateWizardState` uses (see its own `DRAFT_*` doc) — a
 // fixed, never-replayed actor/ts purely so `reduce`/`outstandingChoices`/`validateSelection` (which
@@ -150,7 +146,11 @@ export class LevelUpState {
    * the draft SHEET's current score, so re-validating it while its own prior contribution is still
    * baked into that sheet would otherwise see e.g. `17 + 2 (already applied) + 2 (proposed) > 20`
    * instead of the correct `17 + 2 (proposed) ≤ 20`). */
-  private buildDraftEnvelopes(fromSeq: number, excludeChoiceId?: string): Event[] {
+  private buildDraftEnvelopes(
+    fromSeq: number,
+    excludeChoiceId?: string,
+    hpRollOverride?: number | 'average',
+  ): Event[] {
     const a = this.advancement();
     const streamId = this.characterStore.streamId();
     if (!a || !streamId) return [];
@@ -175,7 +175,7 @@ export class LevelUpState {
       if (parsed.ok) events.push(parsed.event);
     };
 
-    const hpRoll = this.hpRoll();
+    const hpRoll = hpRollOverride ?? this.hpRoll();
     const subclassId = this.subclassIdThisLevel();
     push('level.gained', 1, {
       classId: a.classId,
@@ -199,11 +199,11 @@ export class LevelUpState {
    * and `buildDraftEnvelopes`'s own `excludeChoiceId` doc. `undefined` before packs/facts/an
    * advancement are all ready (mirrors `CreateWizardState.draftFacts`'s own "nothing to reduce yet"
    * gate). */
-  private reduceDraft(excludeChoiceId?: string) {
+  private reduceDraft(excludeChoiceId?: string, hpRollOverride?: number | 'average') {
     const base = this.characterStore.facts();
     const a = this.advancement();
     if (!base || !a) return undefined;
-    const events = this.buildDraftEnvelopes(base.lastSeq, excludeChoiceId);
+    const events = this.buildDraftEnvelopes(base.lastSeq, excludeChoiceId, hpRollOverride);
     if (events.length === 0) return base;
     const snapshot: Snapshot = {
       seq: base.lastSeq,
@@ -220,6 +220,29 @@ export class LevelUpState {
     const facts = this.draftFacts();
     if (!facts || !this.packStore.ready()) return undefined;
     return derive(facts, this.engineFacade.index(), this.systemRules());
+  });
+
+  /** The hit point maximum the character has now, before this level up. */
+  readonly hpMaxBefore: Signal<number | undefined> = computed(
+    () => this.characterStore.sheet()?.hp.max.value,
+  );
+
+  /** How many hit points the level adds if the hit point step is answered with `roll`: the engine's own
+   * `derive` over the draft with that answer, minus the maximum now. `undefined` before a draft exists. */
+  private hpGainFor(roll: number | 'average'): number | undefined {
+    const before = this.hpMaxBefore();
+    const facts = this.reduceDraft(undefined, roll);
+    if (before === undefined || !facts || !this.packStore.ready()) return undefined;
+    return derive(facts, this.engineFacade.index(), this.systemRules()).hp.max.value - before;
+  }
+
+  /** What taking the average adds (shown on its card from the start). */
+  readonly averageHpGain: Signal<number | undefined> = computed(() => this.hpGainFor('average'));
+
+  /** What the rolled die adds, once it is rolled. */
+  readonly rolledHpGain: Signal<number | undefined> = computed(() => {
+    const roll = this.hpRoll();
+    return typeof roll === 'number' ? this.hpGainFor(roll) : undefined;
   });
 
   readonly outstanding: Signal<ChoiceRequest[]> = computed(() => {
@@ -268,6 +291,35 @@ export class LevelUpState {
    * reads `steps()` synchronously with no `TestBed.tick()` in between). */
   private readonly choiceOrder = new Map<string, number>();
 
+  /** The choice ids that currently have a step: outstanding or decided-but-invalid, in the order they
+   * were first met (see `choiceOrder`). */
+  private readonly openChoiceIds = computed(() => {
+    const rawIds = [
+      ...this.outstanding().map((r) => r.choiceId),
+      ...this.invalidDecisions().keys(),
+    ];
+    return this.inFirstSeenOrder(rawIds);
+  });
+
+  private inFirstSeenOrder(rawIds: readonly string[]): string[] {
+    for (const id of rawIds) {
+      if (!this.choiceOrder.has(id)) this.choiceOrder.set(id, this.choiceOrder.size);
+    }
+    return [...new Set(rawIds)].sort(
+      (x, y) => (this.choiceOrder.get(x) ?? 0) - (this.choiceOrder.get(y) ?? 0),
+    );
+  }
+
+  /** Where a choice id sits in the first-seen order (unknown ids sort last among choices). */
+  choiceRank(choiceId: string): number {
+    return this.choiceOrder.get(choiceId) ?? this.choiceOrder.size;
+  }
+
+  private readonly hasSpellcasting = computed(() => {
+    const a = this.advancement();
+    return !!a && !!this.draftSheet()?.spellcasting.some((b) => b.classId === a.classId);
+  });
+
   /** ORDER: 'hp' (always — `Advancement.hpChoice` is always true in 1b's XP-mode scope, per
    * `pendingAdvancements`'s own doc) → one 'choice' step per outstanding-or-invalidly-decided
    * choiceId (STABLE first-seen order — see `choiceOrder`'s own doc; a newly-unlocked sub-choice,
@@ -280,38 +332,42 @@ export class LevelUpState {
       this.choiceOrder.clear();
       return [];
     }
-    const steps: LevelUpStep[] = [];
-    if (a.hpChoice) steps.push({ id: 'hp', labelKey: 'characters.levelUp.steps.hp', kind: 'hp' });
-
-    const seen = new Set<string>();
-    const rawIds = [
-      ...this.outstanding().map((r) => r.choiceId),
-      ...this.invalidDecisions().keys(),
-    ];
-    for (const id of rawIds) {
-      if (!this.choiceOrder.has(id)) this.choiceOrder.set(id, this.choiceOrder.size);
-    }
-    const ids = [...new Set(rawIds)].sort(
-      (x, y) => (this.choiceOrder.get(x) ?? 0) - (this.choiceOrder.get(y) ?? 0),
-    );
-    for (const choiceId of ids) {
-      if (seen.has(choiceId)) continue;
-      seen.add(choiceId);
-      steps.push({
-        id: choiceId,
-        labelKey: 'characters.levelUp.steps.choice',
-        choiceId,
-        kind: 'choice',
-      });
-    }
-
-    const sheet = this.draftSheet();
-    if (sheet?.spellcasting.some((b) => b.classId === a.classId)) {
-      steps.push({ id: 'spells', labelKey: 'characters.levelUp.steps.spells', kind: 'spells' });
-    }
-    steps.push({ id: 'review', labelKey: 'characters.levelUp.steps.review', kind: 'review' });
-    return steps;
+    return levelUpSteps({
+      hasAdvancement: true,
+      hpChoice: a.hpChoice,
+      choiceIds: this.openChoiceIds(),
+      hasSpellcasting: this.hasSpellcasting(),
+    });
   });
+
+  /** Every step of the flow in order, answered choices included (what the stepper lists and Back can
+   * reach): the which-class step alone while a class still has to be picked, otherwise the same
+   * list as `steps` plus the choices already decided this session. */
+  readonly allSteps: Signal<LevelUpStep[]> = computed(() => {
+    const a = this.advancement();
+    if (!a) {
+      return this.classChoices().length > 0
+        ? levelUpSteps({
+            hasAdvancement: false,
+            hpChoice: false,
+            choiceIds: [],
+            hasSpellcasting: false,
+          })
+        : [];
+    }
+    const decided = [...this.decisions().keys()];
+    return levelUpSteps({
+      hasAdvancement: true,
+      hpChoice: a.hpChoice,
+      choiceIds: this.inFirstSeenOrder([...this.openChoiceIds(), ...decided]),
+      hasSpellcasting: this.hasSpellcasting(),
+    });
+  });
+
+  /** Anything chosen this session (hit points, a decision, a spell): Cancel has to ask before it is lost. */
+  readonly dirty: Signal<boolean> = computed(
+    () => this.hpRoll() !== undefined || this.decisions().size > 0 || this.extraDrafts().length > 0,
+  );
 
   /** Gates the review step's "Finish" action: an HP choice must be made (always required, see
    * `steps`'s doc) and every choice this level asks for must be resolved and valid. Spell

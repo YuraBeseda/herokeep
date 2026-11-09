@@ -307,7 +307,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(strapIds().primary).toEqual(['damage', 'heal', 'roll', 'short-rest', 'long-rest']);
   });
 
-  it('the sheet strap does not linger on the level-up screen, and comes back with the sheet', async () => {
+  it('the sheet strap does not linger on the level-up screen (which sets its own), and comes back with the sheet', async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
@@ -317,7 +317,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
 
     await harness.navigateByUrl(`/c/${id}/level-up`);
     await harness.fixture.whenStable();
-    expect(strapIds().primary).toEqual([]);
+    expect(strapIds().primary).toEqual(['next']);
 
     await harness.navigateByUrl(`/c/${id}/play`);
     await pollUntil(harness.fixture, () => strapIds().primary.length > 0);
@@ -401,7 +401,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(router.url).toBe(`/c/${id}/more?a=1#f`);
   });
 
-  it('the phone tab bar marks More current on Build and Timeline, which More lists', async () => {
+  it('the phone tab bar marks More current on Build, Timeline and the level-up, which More lists', async () => {
     stubViewport({ phone: true });
     const id = await seedFighter('Ivan');
     const harness = await RouterTestingHarness.create(`/c/${id}/more`);
@@ -409,7 +409,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     const more = TestBed.inject(TabBarService)
       .tabs()!
       .find((t) => t.id === 'more')!;
-    expect(more.alsoActive?.map((r) => r.at(-1))).toEqual(['build', 'timeline']);
+    expect(more.alsoActive?.map((r) => r.at(-1))).toEqual(['build', 'timeline', 'level-up']);
   });
 
   it('Export is disabled while the export is pending and enabled again after success and after failure', async () => {

@@ -36,6 +36,19 @@ test.describe('level up — XP entry, average HP, and revert', () => {
       await expect(page.locator('.sheet-shell__level-up-badge')).toBeVisible();
     });
 
+    await test.step('the level-up dims the sheet tabs, and Cancel returns to the tab the player came from', async () => {
+      await page.locator('.sheet-shell__level-up-badge').click();
+      await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
+      await expect(page.locator('.sheet-shell__tab[aria-disabled="true"]')).toHaveCount(3);
+      await expect(page.locator('.sheet-shell__level-up-badge')).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      await page.locator('[data-action="cancel"]').click();
+      await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
+      await expect(page.locator('.sheet-shell__tab[aria-disabled="true"]')).toHaveCount(0);
+    });
+
     await test.step('open the level-up wizard and take the average HP', async () => {
       await page.locator('.sheet-shell__level-up-badge').click();
       await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
@@ -47,10 +60,12 @@ test.describe('level up — XP entry, average HP, and revert', () => {
     });
 
     await test.step('finish the level up', async () => {
-      await page.locator('.level-up__next').click();
+      await page.locator('[data-action="next"]').click();
       await expect(page.locator('.level-up__review')).toBeVisible();
       await expect(page.locator('.level-up__summary')).toContainText('20');
-      await page.locator('.level-up__finish').click();
+      // The Next slot now reads "Finish level up".
+      await expect(page.locator('[data-action="next"]')).toContainText('Finish level up');
+      await page.locator('[data-action="next"]').click();
       await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
     });
 

@@ -32,7 +32,7 @@ async function completeLevelUp(page: Page, pickName?: string): Promise<void> {
   // `chooseOwnClassIfPrompted`'s doc) — keep leveling Wizard.
   await chooseOwnClassIfPrompted(page);
   await page.locator('.level-up__hp-average').click();
-  await page.locator('.level-up__next').click();
+  await page.locator('[data-action="next"]').click();
 
   if (pickName) {
     const pickButton = chooseControl(page, pickName);
@@ -40,15 +40,14 @@ async function completeLevelUp(page: Page, pickName?: string): Promise<void> {
     await pickButton.waitFor({ state: 'detached' });
   }
 
-  await expect(page.locator('.spells-step__continue')).toBeVisible();
-  await page.locator('.spells-step__continue').click();
+  await expect(page.locator('.spells-step')).toBeVisible();
   // 'spells' never leaves `LevelUpState.steps()` either (same "sheet keeps spellcasting forever
   // once it has it" reasoning `createWizard`'s own doc documents for the creation wizard) — no
-  // auto-advance, so Next still has to be clicked explicitly.
-  await page.locator('.level-up__next').click();
+  // auto-advance, so Next still has to be clicked explicitly (leaving the step marks it done).
+  await page.locator('[data-action="next"]').click();
 
   await expect(page.locator('.level-up__review')).toBeVisible();
-  await page.locator('.level-up__finish').click();
+  await page.locator('[data-action="next"]').click();
   await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
 }
 

@@ -55,6 +55,8 @@ const PHONE_TAB_ITEMS: Record<PhoneTabId, Pick<TabItem, 'icon' | 'label'>> = {
   more: { icon: 'notes', label: 'shell.tabs.more' },
 };
 
+const LEVEL_UP_SEGMENT = 'level-up';
+
 /** The sheet child routes the strap and the layout resolution apply to (not `level-up`). */
 const SHEET_CHILDREN: ReadonlySet<string> = new Set([...TAB_IDS, ...PHONE_TAB_IDS]);
 
@@ -149,9 +151,14 @@ export class SheetShellComponent {
     return path.split('/').filter(Boolean).pop() ?? 'play';
   });
 
-  /** The folio tab that is current: every play tab (`combat`, `spells`, …) is "Play". */
-  protected readonly activeTabId = computed<TabId>(() => {
+  /** The level-up flow is open: the folio's tabs are dimmed and the Level up tab-action is the active one. */
+  protected readonly levelUpOpen = computed(() => this.childSegment() === LEVEL_UP_SEGMENT);
+
+  /** The folio tab that is current: every play tab (`combat`, `spells`, …) is "Play"; none while the
+   * level-up is open. */
+  protected readonly activeTabId = computed<TabId | null>(() => {
     const segment = this.childSegment();
+    if (segment === LEVEL_UP_SEGMENT) return null;
     if (segment === 'build' || segment === 'timeline') return segment;
     return 'play';
   });
@@ -254,13 +261,15 @@ export class SheetShellComponent {
   protected readonly tabIds = TAB_IDS;
 
   protected onTabSelected(id: TabId): void {
-    if (id === this.activeTabId()) return;
+    // The tabs are inert while the level-up is open (Cancel leaves it).
+    if (this.levelUpOpen() || id === this.activeTabId()) return;
     void this.router.navigate([id], { relativeTo: this.route });
   }
 
   /** Left/Right/Home/End move between the three folio tabs (the tablist's keyboard contract). */
   protected onTabsKey(event: KeyboardEvent): void {
-    const index = TAB_IDS.indexOf(this.activeTabId());
+    if (this.levelUpOpen()) return;
+    const index = TAB_IDS.indexOf(this.activeTabId() ?? 'play');
     const last = TAB_IDS.length - 1;
     const next =
       event.key === 'ArrowRight'
@@ -382,7 +391,8 @@ export class SheetShellComponent {
   }
 
   private setTabBar(): void {
-    const show = this.phone() && SHEET_CHILDREN.has(this.childSegment());
+    const segment = this.childSegment();
+    const show = this.phone() && (SHEET_CHILDREN.has(segment) || segment === LEVEL_UP_SEGMENT);
     this.tabBar.set(
       show
         ? PHONE_TAB_IDS.map((id) => ({
@@ -394,6 +404,7 @@ export class SheetShellComponent {
                   alsoActive: [
                     ['/c', this.routeId, 'build'],
                     ['/c', this.routeId, 'timeline'],
+                    ['/c', this.routeId, LEVEL_UP_SEGMENT],
                   ],
                 }
               : {}),

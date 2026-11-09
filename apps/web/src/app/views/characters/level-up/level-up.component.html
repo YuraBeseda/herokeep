@@ -1,160 +1,287 @@
 <section class="level-up" *transloco="let t; read: 'characters'">
-  @if (state.classChoices().length > 0 && !state.advancement()) {
-    <div class="level-up__class-picker">
-      <h1 class="level-up__title">{{ t('levelUp.classPicker.title') }}</h1>
-      <div
-        class="level-up__class-picker-options"
-        role="group"
-        [attr.aria-label]="t('levelUp.classPicker.label')"
-      >
-        @for (option of state.classChoices(); track option.classId) {
-          <button
-            hk-button
-            type="button"
-            class="level-up__class-picker-option"
-            (click)="onChooseClass(option.classId)"
-          >
-            {{
-              option.isNewClass
-                ? t('levelUp.classPicker.multiclass', { class: resolveClassName(option.classId) })
-                : t('levelUp.classPicker.levelUp', {
-                    class: resolveClassName(option.classId),
-                    level: option.toLevel,
-                  })
-            }}
-          </button>
-        }
-      </div>
-    </div>
-  } @else if (state.advancement(); as advancement) {
-    <h1 class="level-up__title">
-      {{ t('levelUp.title', { level: advancement.toLevel }) }}
-    </h1>
+  <hk-stepper
+    class="level-up__stepper"
+    [steps]="stepItems()"
+    [current]="flow.currentId()"
+    [variant]="phone() ? 'strip' : 'vertical'"
+    (stepSelected)="flow.go($event)"
+  />
 
-    <hk-stepper
-      class="level-up__stepper"
-      [steps]="stepperSteps()"
-      [activeId]="activeStepId()"
-      (stepSelected)="onStepSelected($event)"
-    >
-      @switch (currentStep()?.kind) {
-        @case ('hp') {
-          <div class="level-up__step">
-            <h2>{{ t('levelUp.hp.title') }}</h2>
-            <p class="level-up__hp-hint">
-              {{ t('levelUp.hp.hint', { hitDie: state.hitDie() ?? 0 }) }}
-            </p>
-            <div class="level-up__hp-actions">
-              <button hk-button type="button" class="level-up__hp-roll" (click)="onRollHp()">
+  <div class="level-up__content">
+    @switch (currentStep()?.kind) {
+      @case ('class') {
+        <div class="level-up__step level-up__class-picker">
+          <h2 class="level-up__title">{{ t('levelUp.classPicker.title') }}</h2>
+          <p class="level-up__hint">{{ t('levelUp.classPicker.hint') }}</p>
+          <ul
+            class="level-up__class-grid level-up__class-own"
+            role="group"
+            [attr.aria-label]="t('levelUp.classPicker.label')"
+          >
+            @for (card of ownClassCards(); track card.classId) {
+              <li>
+                <hk-picker-card
+                  class="level-up__class-card"
+                  [name]="card.name"
+                  [description]="card.description"
+                  [meta]="card.meta"
+                  (choose)="onChooseClass(card.classId)"
+                  (details)="onClassDetails(card.classId)"
+                />
+              </li>
+            }
+          </ul>
+          @if (newClassCards().length > 0) {
+            <h3 class="level-up__subtitle">{{ t('levelUp.classPicker.multiclassTitle') }}</h3>
+            <ul class="level-up__class-grid level-up__class-multi">
+              @for (card of newClassCards(); track card.classId) {
+                <li>
+                  <hk-picker-card
+                    class="level-up__class-card"
+                    [name]="card.name"
+                    [description]="card.description"
+                    [meta]="card.meta"
+                    (choose)="onChooseClass(card.classId)"
+                    (details)="onClassDetails(card.classId)"
+                  />
+                </li>
+              }
+            </ul>
+          }
+          @if (detailsId(); as id) {
+            <hk-description-drawer
+              [entity]="id"
+              [(open)]="detailsOpen"
+              [opener]="detailsOpener()"
+            />
+          }
+        </div>
+      }
+      @case ('hp') {
+        <div class="level-up__step level-up__hp">
+          <h2 class="level-up__title">
+            {{ t('levelUp.hp.title', { level: characterLevel() }) }}
+          </h2>
+          <p class="level-up__hint">
+            {{ t('levelUp.hp.hint', { hitDie: state.hitDie() ?? 0 }) }}
+          </p>
+          <div class="level-up__hp-cards">
+            <article
+              class="level-up__hp-card level-up__hp-card--roll"
+              [attr.data-chosen]="state.hpRoll() !== undefined && state.hpRoll() !== 'average'"
+            >
+              <h3 class="level-up__hp-card-title">
+                {{ t('levelUp.hp.rollTitle', { hitDie: state.hitDie() ?? 0 }) }}
+              </h3>
+              @if (state.hpRoll() !== undefined && state.hpRoll() !== 'average') {
+                <hk-wax-seal
+                  class="level-up__hp-seal"
+                  [size]="'s'"
+                  [state]="'selected'"
+                  [glyph]="'ui:done'"
+                  [hint]="t('levelUp.hp.chosen')"
+                />
+              }
+              @if (state.hpRollDice(); as dice) {
+                <span class="level-up__hp-dice">
+                  @for (die of dice; track $index) {
+                    <span class="level-up__hp-die" [class.level-up__hp-die--dropped]="!die.kept">
+                      {{ die.value }}
+                    </span>
+                  }
+                </span>
+              }
+              @if (state.rolledHpGain(); as gain) {
+                <p class="level-up__hp-gain">{{ t('levelUp.hp.gain', { gain }) }}</p>
+              }
+              <button
+                hk-button
+                type="button"
+                class="level-up__hp-roll"
+                [variant]="
+                  state.hpRoll() !== undefined && state.hpRoll() !== 'average'
+                    ? 'parchment'
+                    : 'primary'
+                "
+                (click)="onRollHp()"
+              >
                 {{ t('levelUp.hp.roll') }}
               </button>
+            </article>
+            <article
+              class="level-up__hp-card level-up__hp-card--average"
+              [attr.data-chosen]="state.hpRoll() === 'average'"
+            >
+              <h3 class="level-up__hp-card-title">{{ t('levelUp.hp.averageTitle') }}</h3>
+              @if (state.hpRoll() === 'average') {
+                <hk-wax-seal
+                  class="level-up__hp-seal"
+                  [size]="'s'"
+                  [state]="'selected'"
+                  [glyph]="'ui:done'"
+                  [hint]="t('levelUp.hp.chosen')"
+                />
+              }
+              @if (state.averageHpGain(); as gain) {
+                <p class="level-up__hp-gain">{{ t('levelUp.hp.gain', { gain }) }}</p>
+              }
               <button
                 hk-button
                 type="button"
                 class="level-up__hp-average"
-                [variant]="'ghost'"
+                [variant]="state.hpRoll() === 'average' ? 'parchment' : 'primary'"
                 (click)="state.chooseAverageHp()"
               >
                 {{ t('levelUp.hp.average') }}
               </button>
-            </div>
-            @if (state.hpRoll(); as hpRoll) {
-              <p class="level-up__hp-result">
-                @if (hpRoll === 'average') {
-                  {{ t('levelUp.hp.averageResult') }}
-                } @else {
-                  {{ t('levelUp.hp.rollResult', { value: hpRoll }) }}
-                }
+            </article>
+          </div>
+          @if (state.hpRoll(); as hpRoll) {
+            <p class="level-up__hp-result" role="status">
+              @if (hpRoll === 'average') {
+                {{ t('levelUp.hp.averageResult') }}
+              } @else {
+                {{ t('levelUp.hp.rollResult', { value: hpRoll }) }}
+              }
+            </p>
+            @if (state.hpMaxBefore() !== undefined && hpMaxAfter() !== undefined) {
+              <p class="level-up__hp-total">
+                {{ t('levelUp.hp.total', { before: state.hpMaxBefore(), after: hpMaxAfter() }) }}
               </p>
             }
-            @if (state.hpRollDice(); as dice) {
-              <span class="level-up__hp-dice">
-                @for (die of dice; track $index) {
-                  <span class="level-up__hp-die" [class.level-up__hp-die--dropped]="!die.kept">
-                    {{ die.value }}
-                  </span>
-                }
-              </span>
-            }
-          </div>
-        }
-        @case ('choice') {
-          <div class="level-up__step">
-            @if (currentStep()?.choiceId; as choiceId) {
-              <hk-choice-step
-                [choiceId]="choiceId"
-                [sheet]="state.draftSheet()"
-                [validate]="validateChoice"
-                [commit]="commitChoice"
-                [initialSelection]="choiceSeed()"
-              />
-            }
-          </div>
-        }
-        @case ('spells') {
-          <div class="level-up__step">
-            <hk-spells-step
-              [spellcasting]="spellcastingBlock()"
-              [learn]="learnSpell"
-              [unlearn]="unlearnSpell"
-              [prepare]="prepareSpell"
-              [unprepare]="unprepareSpell"
-              [finish]="finishSpells"
-              [recommendedCount]="levelUpSpellbookRecommended"
+          }
+        </div>
+      }
+      @case ('choice') {
+        <div class="level-up__step">
+          @if (currentStep()?.choiceId; as choiceId) {
+            <hk-choice-step
+              [choiceId]="choiceId"
+              [sheet]="state.draftSheet()"
+              [validate]="validateChoice"
+              [commit]="commitChoice"
+              [initialSelection]="choiceSeed()"
             />
-          </div>
-        }
-        @case ('review') {
-          <div class="level-up__step level-up__review">
-            <h2>{{ t('levelUp.review.title') }}</h2>
-            @if (state.draftSheet(); as sheet) {
-              <dl class="level-up__summary">
-                <dt>{{ t('levelUp.review.level') }}</dt>
-                <dd>{{ advancement.toLevel }}</dd>
-                <dt>{{ t('levelUp.review.hp') }}</dt>
-                <dd>{{ sheet.hp.max.value }}</dd>
+          }
+        </div>
+      }
+      @case ('spells') {
+        <div class="level-up__step">
+          <hk-spells-step
+            [spellcasting]="spellcastingBlock()"
+            [learn]="learnSpell"
+            [unlearn]="unlearnSpell"
+            [prepare]="prepareSpell"
+            [unprepare]="unprepareSpell"
+            [recommendedCount]="levelUpSpellbookRecommended"
+          />
+        </div>
+      }
+      @case ('review') {
+        <div class="level-up__step level-up__review">
+          <h2 class="level-up__title">
+            {{ t('levelUp.review.title', { level: characterLevel() }) }}
+          </h2>
+          <p class="level-up__hint">{{ t('levelUp.review.hint') }}</p>
+
+          @if (state.draftSheet(); as sheet) {
+            <dl class="level-up__summary">
+              <dt>{{ t('levelUp.review.level') }}</dt>
+              <dd>
+                {{ levelClassName() }}
+                {{ state.advancement()?.toLevel }}
+              </dd>
+              <dt>{{ t('levelUp.review.hp') }}</dt>
+              <dd class="level-up__summary-hp">
+                @if (state.hpMaxBefore() !== undefined) {
+                  {{ state.hpMaxBefore() }} → {{ sheet.hp.max.value }}
+                } @else {
+                  {{ sheet.hp.max.value }}
+                }
+                @if (hasStep('hp')) {
+                  <button
+                    type="button"
+                    class="level-up__edit"
+                    [attr.data-edit-step]="'hp'"
+                    [attr.aria-label]="
+                      t('levelUp.review.editStep', { step: t('levelUp.steps.hp') })
+                    "
+                    [hkTooltip]="t('levelUp.review.edit')"
+                    (click)="onEdit('hp')"
+                  >
+                    <hk-icon [icon]="'ui:edit'" />
+                  </button>
+                }
+              </dd>
+            </dl>
+          }
+
+          @if (newFeatureNames().length > 0) {
+            <section class="level-up__group level-up__features">
+              <h3 class="level-up__subtitle">{{ t('levelUp.review.features') }}</h3>
+              <ul class="level-up__list">
+                @for (name of newFeatureNames(); track name) {
+                  <li>{{ name }}</li>
+                }
+              </ul>
+            </section>
+          }
+
+          <section class="level-up__group level-up__choices">
+            <h3 class="level-up__subtitle">{{ t('levelUp.review.choices') }}</h3>
+            @if (choiceRows().length === 0) {
+              <p class="level-up__empty">{{ t('levelUp.review.noChoices') }}</p>
+            } @else {
+              <dl class="level-up__rows">
+                @for (row of choiceRows(); track row.stepId) {
+                  <dt>{{ row.prompt }}</dt>
+                  <dd>
+                    {{ row.text }}
+                    <button
+                      type="button"
+                      class="level-up__edit"
+                      [attr.data-edit-step]="row.stepId"
+                      [attr.aria-label]="t('levelUp.review.editStep', { step: row.prompt })"
+                      [hkTooltip]="t('levelUp.review.edit')"
+                      (click)="onEdit(row.stepId)"
+                    >
+                      <hk-icon [icon]="'ui:edit'" />
+                    </button>
+                  </dd>
+                }
               </dl>
             }
-            @if (!state.complete()) {
-              <p class="level-up__incomplete">{{ t('levelUp.review.incomplete') }}</p>
-            }
-            <button
-              hk-button
-              type="button"
-              class="level-up__finish"
-              [variant]="'primary'"
-              [disabled]="!state.complete() || committing()"
-              (click)="onFinish()"
-            >
-              {{ t('levelUp.review.finish') }}
-            </button>
-          </div>
-        }
-      }
+          </section>
 
-      <div hk-stepper-footer class="level-up__footer">
-        <button
-          hk-button
-          type="button"
-          class="level-up__back"
-          [variant]="'ghost'"
-          [disabled]="!canGoBack()"
-          (click)="back()"
-        >
-          {{ t('levelUp.actions.back') }}
-        </button>
-        @if (currentStep()?.kind !== 'review') {
-          <button
-            hk-button
-            type="button"
-            class="level-up__next"
-            [disabled]="!canGoNext()"
-            (click)="next()"
-          >
-            {{ t('levelUp.actions.next') }}
-          </button>
-        }
-      </div>
-    </hk-stepper>
-  }
+          @if (spellRows().length > 0) {
+            <section class="level-up__group level-up__spells">
+              <h3 class="level-up__subtitle">{{ t('levelUp.review.spells') }}</h3>
+              <dl class="level-up__rows">
+                @for (row of spellRows(); track row.prompt) {
+                  <dt>{{ row.prompt }}</dt>
+                  <dd>
+                    {{ row.text }}
+                    <button
+                      type="button"
+                      class="level-up__edit"
+                      [attr.data-edit-step]="row.stepId"
+                      [attr.aria-label]="t('levelUp.review.editStep', { step: row.prompt })"
+                      [hkTooltip]="t('levelUp.review.edit')"
+                      (click)="onEdit(row.stepId)"
+                    >
+                      <hk-icon [icon]="'ui:edit'" />
+                    </button>
+                  </dd>
+                }
+              </dl>
+            </section>
+          }
+
+          @if (!state.complete()) {
+            <p class="level-up__incomplete">{{ t('levelUp.review.incomplete') }}</p>
+          }
+        </div>
+      }
+    }
+  </div>
 </section>

@@ -1,7 +1,9 @@
-import { inject } from '@angular/core';
+import { Injector, inject } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import type { CanActivateFn, CanDeactivateFn, ResolveFn, Routes } from '@angular/router';
 import { Router } from '@angular/router';
 import type { MembershipRole } from '@hk/protocol';
+import { filter, firstValueFrom, timeout } from 'rxjs';
 import { ToastService } from './shared/components/toast/toast.service';
 import { apiJson } from './shared/services/api/api-fetch';
 import { AuthService } from './shared/services/auth/auth.service';
@@ -11,8 +13,12 @@ import { CharactersRepository } from './shared/services/storage/characters.repos
 import { SettingsRepository } from './shared/services/storage/settings.repository';
 import { CampaignStore } from './shared/stores/campaign.store';
 import { CharacterStore } from './shared/stores/character.store';
+import { PackStore } from './shared/stores/pack.store';
 import { sheetLayoutGuard } from './views/characters/sheet/sheet-layout';
 import type { RegisterComponent } from './views/auth/register/register.component';
+
+/** How long the level-up guard waits for the packs on a cold load before treating the level up as unavailable. */
+const PACKS_READY_TIMEOUT_MS = 15_000;
 
 /**
  * `/c/:id`'s route-level resolver (plan-5 task-10-brief.md): checks `CharactersRepository.get`
@@ -53,21 +59,45 @@ export const characterResolver: ResolveFn<boolean> = async (route) => {
 
 /**
  * `/c/:id/level-up`'s guard (plan-5 task-13-brief.md): refuses to activate the level-up wizard
- * while `CharacterStore.advancements()` is empty — reads it straight off the store rather than
- * re-parsing `:id` off the route (the parent `c/:id` route's own `characterResolver` has always
- * already run by the time a child route's guard does, so `characterStore`'s signals are already
- * pointed at this character) — redirecting back to the sheet's `play` tab with a toast instead.
+ * while `CharacterStore.advancements()` is empty, redirecting back to the sheet's `play` tab with a
+ * toast instead.
+ *
+ * Angular runs EVERY guard before any resolver, so on a cold load (a reload, a bookmark, a link
+ * opened in a new tab) the parent `c/:id` route's `characterResolver` has not loaded the character
+ * yet when this runs — `advancements()` would be empty and the player bounced to the heroes list.
+ * The guard therefore loads the character itself when the store is not on it yet, and waits for the
+ * packs the advancements are derived from. (The resolver loads it again afterwards; a replay is
+ * idempotent.)
  */
-export const levelUpGuard: CanActivateFn = () => {
+export const levelUpGuard: CanActivateFn = async (route) => {
   const characterStore = inject(CharacterStore);
+  const packStore = inject(PackStore);
   const toastService = inject(ToastService);
   const router = inject(Router);
+  const injector = inject(Injector);
+  const id = route.parent?.paramMap.get('id') ?? null;
+
+  if (id && characterStore.streamId() !== id) {
+    try {
+      await characterStore.load(id);
+    } catch {
+      // A missing or unreadable character: the sheet's resolver reports it; nothing to level up.
+    }
+  }
+  if (!packStore.ready()) {
+    await firstValueFrom(
+      toObservable(packStore.ready, { injector }).pipe(
+        filter(Boolean),
+        timeout({ first: PACKS_READY_TIMEOUT_MS }),
+      ),
+    ).catch(() => undefined);
+  }
 
   if (characterStore.advancements().length > 0) return true;
 
   toastService.show('characters.levelUp.toast.noneAvailable');
-  const id = characterStore.streamId();
-  return router.createUrlTree(id ? ['/c', id, 'play'] : ['/characters']);
+  const streamId = characterStore.streamId();
+  return router.createUrlTree(streamId ? ['/c', streamId, 'play'] : ['/characters']);
 };
 
 /**

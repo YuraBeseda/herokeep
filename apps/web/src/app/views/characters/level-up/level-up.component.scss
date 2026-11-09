@@ -4,8 +4,28 @@
   display: block;
 }
 
-.level-up__title {
-  margin: 0 0 var(--space-3);
+/* Stepper beside the step on tablet/desktop, strip above it on a phone (same grid as the wizard). */
+.level-up {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+.level-up__stepper {
+  @media (min-width: 768px) {
+    position: sticky;
+    inset-block-start: var(--space-3);
+  }
+}
+
+.level-up__content {
+  min-inline-size: 0;
 }
 
 .level-up__step {
@@ -14,17 +34,80 @@
   gap: var(--space-3);
 }
 
-.level-up__hp-hint {
-  color: var(--text-2);
+.level-up__title,
+.level-up__subtitle {
   margin: 0;
+  font-family: var(--font-display);
+  overflow-wrap: anywhere;
 }
 
-.level-up__hp-actions {
+.level-up__subtitle {
+  font-size: 1.125rem;
+}
+
+.level-up__hint,
+.level-up__empty,
+.level-up__incomplete {
+  margin: 0;
+  color: var(--text-2);
+}
+
+/* Which class: the character's own class first, then the classes it may start. */
+.level-up__class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Hit points: the roll and the average side by side, each showing what it adds. */
+.level-up__hp-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+}
+
+.level-up__hp-card {
+  position: relative;
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-frame);
+  background: var(--leaf);
+  box-shadow: var(--shadow-leaf);
+
+  &[data-chosen='true'] {
+    box-shadow:
+      var(--shadow-leaf),
+      0 0 0 2px var(--brass),
+      var(--shadow-glow-brass);
+  }
 }
 
-.level-up__hp-result {
+.level-up__hp-card-title {
+  margin: 0;
+  padding-inline-end: var(--space-5);
+  font-size: 1.125rem;
+}
+
+.level-up__hp-seal {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+}
+
+.level-up__hp-gain {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+
+.level-up__hp-result,
+.level-up__hp-total {
   margin: 0;
 }
 
@@ -46,41 +129,66 @@
   text-decoration: line-through;
 }
 
-.level-up__summary {
+/* Review: a summary of the level, then one parchment group per kind of change, each row with Edit. */
+.level-up__summary,
+.level-up__rows {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(7rem, 8.25rem) minmax(0, 1fr);
   gap: var(--space-1) var(--space-3);
   margin: 0;
+
+  dt {
+    color: var(--text-2);
+    overflow-wrap: anywhere;
+  }
+
+  dd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-inline-size: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
 }
 
-.level-up__summary dt {
-  color: var(--text-2);
-}
-
-.level-up__incomplete {
-  color: var(--text-2);
-}
-
-.level-up__footer {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-/* The which-class picker (task 12, phase 4 plan 11, ADR-007) — a simple vertical button stack,
-   same pattern the wizard's own hp-actions button row already uses elsewhere in this file. */
-.level-up__class-picker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.level-up__class-picker-options {
+.level-up__group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-frame);
+  background: var(--leaf);
+  box-shadow: var(--shadow-leaf);
 }
 
-.level-up__class-picker-option {
-  text-align: left;
+.level-up__list {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.level-up__edit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    inline-size: 44px;
+    block-size: 44px;
+  }
 }

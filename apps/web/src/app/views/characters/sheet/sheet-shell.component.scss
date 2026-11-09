@@ -142,6 +142,18 @@
   color: var(--text-on-brass);
 }
 
+/* While the level-up is open the tabs are inert: Cancel is how the player leaves. */
+.sheet-shell__tab--dim {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sheet-shell__level-up-badge--on {
+  box-shadow:
+    0 0 0 2px var(--brass),
+    var(--shadow-glow-brass);
+}
+
 .sheet-shell__level-up-badge {
   display: inline-flex;
   align-items: center;

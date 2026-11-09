@@ -160,3 +160,83 @@ export function holdsWhenAnswered(step: WizardStep): boolean {
 export function isRequiredStep(step: WizardStep): boolean {
   return step.kind === 'choice';
 }
+
+// --------------------------------------------------------------------------------------------------
+// Level-up
+// --------------------------------------------------------------------------------------------------
+
+/** One step of the level-up flow. `class` is the which-class pick (only while the class is still
+ * undecided), `hp` the hit point roll or average, `choice` one of the level's pack choices, `spells`
+ * the free-form spell step of a caster. */
+export interface LevelUpStep {
+  id: string;
+  labelKey: string;
+  choiceId?: string;
+  kind: 'class' | 'hp' | 'choice' | 'spells' | 'review';
+}
+
+export interface LevelUpStepInput {
+  /** The class to level is known (`LevelUpState.advancement()`); before that only the which-class
+   * step exists. */
+  readonly hasAdvancement: boolean;
+  /** `Advancement.hpChoice`: a new class's level 1 never rolls hit dice. */
+  readonly hpChoice: boolean;
+  /** Every choice id that should get a step, already in the order the player first met them. */
+  readonly choiceIds: readonly string[];
+  readonly hasSpellcasting: boolean;
+}
+
+/**
+ * ORDER: (which class, until it is picked) → 'hp' (only when `hpChoice`) → one 'choice' step per id,
+ * in the given order → 'spells' (only for a spellcasting class) → 'review'. Before the class is known
+ * nothing else can be listed: the flow is just the which-class step.
+ */
+export function levelUpSteps(input: LevelUpStepInput): LevelUpStep[] {
+  if (!input.hasAdvancement) {
+    return [{ id: 'class', labelKey: 'characters.levelUp.steps.class', kind: 'class' }];
+  }
+  const steps: LevelUpStep[] = [];
+  if (input.hpChoice) steps.push({ id: 'hp', labelKey: 'characters.levelUp.steps.hp', kind: 'hp' });
+  for (const choiceId of input.choiceIds) {
+    steps.push({
+      id: choiceId,
+      labelKey: 'characters.levelUp.steps.choice',
+      choiceId,
+      kind: 'choice',
+    });
+  }
+  if (input.hasSpellcasting) {
+    steps.push({ id: 'spells', labelKey: 'characters.levelUp.steps.spells', kind: 'spells' });
+  }
+  steps.push({ id: 'review', labelKey: 'characters.levelUp.steps.review', kind: 'review' });
+  return steps;
+}
+
+const LEVEL_UP_KIND_RANK: Record<LevelUpStep['kind'], number> = {
+  class: 0,
+  hp: 100,
+  choice: 200,
+  spells: 1000,
+  review: 1100,
+};
+
+/** The canonical order `levelUpSteps` produces, as a comparator, so a step that has just left the
+ * list (answered) can still be placed against the ones that remain. `choiceRank` gives the position
+ * a choice id was first met at (the flow keeps that order stable as choices appear and resolve). */
+export function levelUpComparator(
+  choiceRank: (choiceId: string) => number,
+): (a: LevelUpStep, b: LevelUpStep) => number {
+  const rank = (step: LevelUpStep): number =>
+    LEVEL_UP_KIND_RANK[step.kind] +
+    (step.kind === 'choice' && step.choiceId !== undefined ? choiceRank(step.choiceId) : 0);
+  return (a, b) => {
+    const byRank = rank(a) - rank(b);
+    if (byRank !== 0) return byRank;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  };
+}
+
+/** The steps that must be answered before the level up can finish. */
+export function isRequiredLevelUpStep(step: LevelUpStep): boolean {
+  return step.kind === 'hp' || step.kind === 'choice';
+}

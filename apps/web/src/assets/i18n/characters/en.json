@@ -196,40 +196,62 @@
     }
   },
   "levelUp": {
-    "title": "Level up to {level}",
     "classPicker": {
       "title": "Which class?",
       "label": "Choose which class to advance",
-      "levelUp": "Level up {class} to {level}",
-      "multiclass": "Multiclass into {class}"
+      "hint": "Your own class is the usual choice. A second class starts at level 1 and needs its ability score minimums.",
+      "multiclassTitle": "Or start a second class",
+      "toLevel": "Level {level}"
     },
     "steps": {
+      "class": "Which class?",
+      "classChoices": "Class choices",
       "hp": "Hit points",
       "choice": "Choice",
       "spells": "Spells",
       "review": "Review"
     },
-    "actions": {
-      "back": "Back",
-      "next": "Next"
+    "stepper": {
+      "afterClass": "Choose a class first",
+      "classChosen": "Class chosen. Cancel to start over and pick another.",
+      "needsAttention": "This step needs another look"
     },
     "hp": {
-      "title": "Hit points",
-      "hint": "Roll 1d{hitDie}, or take the average.",
+      "title": "Hit points for level {level}",
+      "hint": "Roll 1d{hitDie} or take the average; your modifiers are added either way.",
+      "rollTitle": "Roll 1d{hitDie}",
+      "averageTitle": "Take the average",
       "roll": "Roll",
       "average": "Take average",
+      "chosen": "Chosen",
+      "gain": "+{gain} hit points",
+      "total": "Hit point maximum {before} to {after}",
       "rollResult": "Rolled {value}.",
       "averageResult": "Taking the average."
     },
     "review": {
-      "title": "Review",
+      "title": "Everything gained at level {level}",
+      "hint": "Edit jumps to that step and comes back here on Next.",
       "level": "New level",
       "hp": "Hit points",
+      "features": "New features",
+      "choices": "Choices",
+      "noChoices": "Nothing to choose at this level.",
+      "spells": "Spells",
+      "learned": "Learned",
+      "prepared": "Prepared",
+      "edit": "Edit",
+      "editStep": "Edit: {step}",
       "incomplete": "Finish every step before leveling up.",
-      "finish": "Finish level up",
       "toast": {
         "failed": "Couldn't level up. Try again."
       }
+    },
+    "cancel": {
+      "title": "Leave without leveling up?",
+      "message": "What you chose so far will be lost.",
+      "stay": "Keep going",
+      "leave": "Discard and leave"
     },
     "toast": {
       "noneAvailable": "No level up is available yet."

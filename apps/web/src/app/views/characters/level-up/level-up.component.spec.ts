@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
@@ -16,7 +16,12 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
+import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
+import { DialogService } from '../../../ui/dialog/dialog.service';
+import { NavHistoryService } from '../../../ui/nav/nav-history.service';
+import { TabBarService } from '../../../ui/tab-bar/tab-bar.service';
 import { hintOf } from '../../../ui/testing/harness';
+import { stubViewport } from '../../../ui/testing/viewport';
 import shellEn from '../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
@@ -85,25 +90,19 @@ function configureReal(): void {
   });
 }
 
-/** Task 12 (phase 4 plan 11): clicks the which-class picker's OWN "level up <class>" option for
- * an already-taken class — `seedFighter`'s own real-pack fixture is genuinely eligible to
- * multiclass into Barbarian/Rogue too (T7's real `system.multiclass.prerequisites` data, same note
- * `level-up.state.spec.ts` already carries), so the picker renders whenever `characterStore
- * .advancements()` reports more than one entry. A no-op (never queries the DOM at all) when the
- * picker isn't showing — every test that calls this stays correct regardless of whether THIS
- * particular fixture happens to be multiclass-eligible at the moment it's called. */
+/** Task 12 (phase 4 plan 11): chooses the which-class step's card for `className` — `seedFighter`'s
+ * own real-pack fixture is genuinely eligible to multiclass into Barbarian/Rogue too (T7's real
+ * `system.multiclass.prerequisites` data, same note `level-up.state.spec.ts` already carries), so
+ * the step renders whenever `characterStore.advancements()` reports more than one entry. A no-op
+ * (never queries a card at all) when the step isn't showing — every test that calls this stays
+ * correct regardless of whether THIS particular fixture happens to be multiclass-eligible. */
 async function chooseClassIfOffered(
   root: HTMLElement,
   fixture: { whenStable(): Promise<unknown> },
-  label: string,
+  className: string,
 ): Promise<void> {
   if (root.querySelector('.level-up__class-picker') === null) return;
-  const button = Array.from(
-    root.querySelectorAll<HTMLButtonElement>('.level-up__class-picker-option'),
-  ).find((b) => b.textContent?.trim() === label);
-  if (!button) throw new Error(`no class-picker option matching "${label}"`);
-  button.click();
-  await fixture.whenStable();
+  await pickClass(root, fixture, className);
 }
 
 /** Lets `CharacterStore.appendTx`'s real (unmocked) fake-indexeddb promise chain settle before
@@ -128,6 +127,50 @@ function pickName(button: Element): string | undefined {
     ?.textContent?.trim();
 }
 
+/** A strap action the level-up (or the sheet) has set; the strap itself is rendered by the app shell. */
+function strapAction(id: string) {
+  const config = TestBed.inject(ActionStrapService).config();
+  return [...(config?.exit ?? []), ...(config?.primary ?? []), ...(config?.secondary ?? [])].find(
+    (a) => a.id === id,
+  );
+}
+
+async function pressStrap(fixture: { whenStable(): Promise<unknown> }, id: string): Promise<void> {
+  const action = strapAction(id);
+  expect(action, `strap action ${id}`).toBeDefined();
+  action!.run();
+  await fixture.whenStable();
+}
+
+/** Presses the strap's Next until it reads "Finish level up", then presses that. */
+async function finishLevelUp(fixture: { whenStable(): Promise<unknown> }): Promise<void> {
+  await fixture.whenStable();
+  for (let i = 0; i < 8 && strapAction('next')?.label !== 'shell.strap.finish-level-up'; i++) {
+    const next = strapAction('next');
+    if (!next || next.disabled) break;
+    next.run();
+    await fixture.whenStable();
+  }
+  const finish = strapAction('next');
+  expect(finish?.label).toBe('shell.strap.finish-level-up');
+  expect(finish?.disabled).toBeFalsy();
+  finish!.run();
+}
+
+/** Chooses the class card named `name` on the which-class step. */
+async function pickClass(
+  root: HTMLElement,
+  fixture: { whenStable(): Promise<unknown> },
+  name: string,
+): Promise<void> {
+  const choose = Array.from(
+    root.querySelectorAll<HTMLButtonElement>('.level-up__class-picker .hk-picker-card__choose'),
+  ).find((b) => pickName(b) === name);
+  expect(choose, `class card ${name}`).toBeDefined();
+  choose!.click();
+  await fixture.whenStable();
+}
+
 describe('LevelUpComponent', () => {
   beforeEach(async () => {
     configureReal();
@@ -141,6 +184,7 @@ describe('LevelUpComponent', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     TestBed.inject(HkDb).close();
   });
 
@@ -171,13 +215,7 @@ describe('LevelUpComponent', () => {
     const root = harness.routeNativeElement!;
     expect(root.querySelector('.level-up')).not.toBeNull();
 
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.levelUp
-        .replace('{class}', 'Fighter')
-        .replace('{level}', '2'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Fighter');
 
     const averageButton = root.querySelector<HTMLButtonElement>('.level-up__hp-average')!;
     expect(averageButton).not.toBeNull();
@@ -186,14 +224,14 @@ describe('LevelUpComponent', () => {
 
     // Fighter's level-2 row has no choices (packages/content dist pack) — the very next step is
     // 'review'.
-    const nextButton = root.querySelector<HTMLButtonElement>('.level-up__next')!;
-    expect(nextButton.disabled).toBe(false);
-    nextButton.click();
-    await harness.fixture.whenStable();
+    expect(strapAction('next')?.disabled).toBeFalsy();
+    await pressStrap(harness.fixture, 'next');
+    expect(root.querySelector('.level-up__review')).not.toBeNull();
 
-    const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
-    expect(finishButton.disabled).toBe(false);
-    finishButton.click();
+    // The Next slot now reads "Finish level up" and commits.
+    expect(strapAction('next')?.label).toBe('shell.strap.finish-level-up');
+    expect(strapAction('next')?.disabled).toBeFalsy();
+    strapAction('next')!.run();
 
     await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 2);
 
@@ -208,13 +246,7 @@ describe('LevelUpComponent', () => {
 
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.levelUp
-        .replace('{class}', 'Fighter')
-        .replace('{level}', '2'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Fighter');
     expect(root.querySelector('.level-up__hp-dice')).toBeNull();
 
     root.querySelector<HTMLButtonElement>('.level-up__hp-roll')!.click();
@@ -250,30 +282,24 @@ describe('LevelUpComponent', () => {
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
 
-    const group = root.querySelector('[role="group"].level-up__class-picker-options')!;
+    const group = root.querySelector('[role="group"].level-up__class-own')!;
     expect(group.getAttribute('aria-label')).toBe(charactersEn.levelUp.classPicker.label);
     expect(root.querySelector('.level-up__title')?.textContent?.trim()).toBe(
       charactersEn.levelUp.classPicker.title,
     );
-    const options = Array.from(
-      root.querySelectorAll<HTMLButtonElement>('.level-up__class-picker-option'),
-    );
-    expect(options.length).toBe(classIds.size);
-    // The character's OWN class reads as a plain level-up; every other option reads as multiclass.
+    const names = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('.level-up__class-picker .hk-picker-card__choose'),
+    ).map((b) => pickName(b));
+    expect(names.length).toBe(classIds.size);
+    // The character's OWN class is listed first on its own; every other option is a class to start.
     expect(
-      options.some(
-        (o) =>
-          o.textContent?.trim() ===
-          charactersEn.levelUp.classPicker.levelUp
-            .replace('{class}', 'Fighter')
-            .replace('{level}', '2'),
+      Array.from(root.querySelectorAll('.level-up__class-own .hk-picker-card__name')).map((n) =>
+        n.textContent?.trim(),
       ),
-    ).toBe(true);
-    expect(
-      options.filter((o) =>
-        o.textContent?.trim().startsWith(charactersEn.levelUp.classPicker.multiclass.split(' ')[0]),
-      ).length,
-    ).toBeGreaterThan(0);
+    ).toEqual(['Fighter']);
+    expect(root.querySelectorAll('.level-up__class-multi .hk-picker-card__name').length).toBe(
+      classIds.size - 1,
+    );
     // No wizard content renders until a class is actually chosen.
     expect(root.querySelector('.level-up__hp-roll')).toBeNull();
   });
@@ -290,11 +316,7 @@ describe('LevelUpComponent', () => {
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
 
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.multiclass.replace('{class}', 'Barbarian'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Barbarian');
 
     // A brand-new class's level 1 never rolls hit dice (`hpChoice: false`, task-2-report.md) — the
     // wizard skips straight past the HP step; whatever level-1 choices Barbarian asks for (or
@@ -312,10 +334,9 @@ describe('LevelUpComponent', () => {
     expect(root.querySelector('.hk-picker-card__choose, .entity-picker__toggle')).toBeNull();
     expect(root.querySelector('.level-up__review')).not.toBeNull();
 
-    const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
-    expect(finishButton).not.toBeNull();
-    expect(finishButton.disabled).toBe(false);
-    finishButton.click();
+    expect(strapAction('next')?.label).toBe('shell.strap.finish-level-up');
+    expect(strapAction('next')?.disabled).toBeFalsy();
+    strapAction('next')!.run();
 
     // `seedFighter` itself already committed a `level.gained{classId: fighter}` at creation —
     // a bare `.some(type === 'level.gained')` predicate would match THAT pre-existing event
@@ -398,11 +419,7 @@ describe('LevelUpComponent', () => {
 
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.multiclass.replace('{class}', 'Bard'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Bard');
 
     // The multiclass skill pick is the first step: "Choose 1 skill for Bard", chips = Bard's list.
     expect(root.querySelector('.choice-step__title')?.textContent?.trim()).toBe(
@@ -433,13 +450,7 @@ describe('LevelUpComponent', () => {
       await harness.fixture.whenStable();
     }
 
-    for (let i = 0; i < 5 && root.querySelector('.level-up__finish') === null; i++) {
-      root.querySelector<HTMLButtonElement>('.level-up__next')?.click();
-      await harness.fixture.whenStable();
-    }
-    const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
-    expect(finishButton.disabled).toBe(false);
-    finishButton.click();
+    await finishLevelUp(harness.fixture);
 
     await pollUntil(harness.fixture, () =>
       characterStore
@@ -548,19 +559,12 @@ describe('LevelUpComponent', () => {
 
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.levelUp
-        .replace('{class}', 'Paladin')
-        .replace('{level}', '3'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Paladin');
 
     root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
     await harness.fixture.whenStable();
 
-    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
-    await harness.fixture.whenStable();
+    await pressStrap(harness.fixture, 'next');
 
     // The subclass step: exactly one option, and it is Oath of Devotion.
     const options = Array.from(
@@ -574,15 +578,7 @@ describe('LevelUpComponent', () => {
     expect(root.textContent).not.toMatch(/characters\.[a-z]+\.[A-Za-z.]+/);
 
     // Advance through whatever steps remain (spells/review) to Finish.
-    for (let i = 0; i < 6 && root.querySelector('.level-up__finish') === null; i++) {
-      const next = root.querySelector<HTMLButtonElement>('.level-up__next');
-      if (!next || next.disabled) break;
-      next.click();
-      await harness.fixture.whenStable();
-    }
-    const finish = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
-    expect(finish.disabled).toBe(false);
-    finish.click();
+    await finishLevelUp(harness.fixture);
     await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 3);
 
     expect(characterStore.sheet()!.classes[0]).toMatchObject({
@@ -615,8 +611,7 @@ describe('LevelUpComponent', () => {
 
     root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
     await harness.fixture.whenStable();
-    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
-    await harness.fixture.whenStable();
+    await pressStrap(harness.fixture, 'next');
 
     const hint = hintOf(root.querySelector('.spells-step__spellbook .spells-step__counter')!);
     expect(hint).toContain('2');
@@ -662,13 +657,7 @@ describe('LevelUpComponent', () => {
 
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.levelUp
-        .replace('{class}', 'Fighter')
-        .replace('{level}', '4'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Fighter');
     const state = harness.fixture.debugElement
       .query(By.css('app-level-up'))
       .injector.get(LevelUpState);
@@ -676,8 +665,7 @@ describe('LevelUpComponent', () => {
 
     root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
     await harness.fixture.whenStable();
-    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
-    await harness.fixture.whenStable();
+    await pressStrap(harness.fixture, 'next');
 
     const selectedNames = (): string[] =>
       Array.from(
@@ -714,11 +702,7 @@ describe('LevelUpComponent', () => {
       masteryDraft(manual.buildTransaction()),
     );
 
-    for (let i = 0; i < 5 && root.querySelector('.level-up__finish') === null; i++) {
-      root.querySelector<HTMLButtonElement>('.level-up__next')?.click();
-      await harness.fixture.whenStable();
-    }
-    root.querySelector<HTMLButtonElement>('.level-up__finish')!.click();
+    await finishLevelUp(harness.fixture);
     await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 4);
 
     const emitted = characterStore
@@ -778,20 +762,13 @@ describe('LevelUpComponent', () => {
 
     const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
     const root = harness.routeNativeElement!;
-    await chooseClassIfOffered(
-      root,
-      harness.fixture,
-      charactersEn.levelUp.classPicker.levelUp
-        .replace('{class}', 'Fighter')
-        .replace('{level}', '4'),
-    );
+    await chooseClassIfOffered(root, harness.fixture, 'Fighter');
     const state = harness.fixture.debugElement
       .query(By.css('app-level-up'))
       .injector.get(LevelUpState);
     root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
     await harness.fixture.whenStable();
-    root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
-    await harness.fixture.whenStable();
+    await pressStrap(harness.fixture, 'next');
 
     const buttons = () =>
       Array.from(
@@ -830,5 +807,276 @@ describe('LevelUpComponent', () => {
       'srd-5e-2024:item/shortsword',
       'srd-5e-2024:item/dagger',
     ]);
+  });
+
+  // --- Plan 17 B10a: level-up on the shared stepper (boards L01..L04) -------------------------------
+
+  describe('on the shared stepper (plan 17 B10a)', () => {
+    const FIGHTER_NAME = 'Fighter';
+
+    async function seedLevelUp(xp = 300): Promise<string> {
+      const id = await seedFighter('Ivan');
+      await TestBed.inject(CharacterStore).appendTx([
+        { type: 'xp.awarded', v: 1, payload: { amount: xp } },
+      ]);
+      return id;
+    }
+
+    /** Opens the level-up the way a link does, recording it in the user's path like the app shell. */
+    async function visit(url: string) {
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl(url);
+      TestBed.inject(NavHistoryService).push(url);
+      return harness;
+    }
+
+    const currentStepName = (root: HTMLElement): string | undefined =>
+      (
+        root.querySelector('.hk-stepper__step--current .hk-stepper__name') ??
+        root.querySelector('.hk-stepper__step--current')
+      )?.textContent?.trim();
+
+    it('a deep link to the level-up, then Cancel, returns to the tab the user came from', async () => {
+      const id = await seedLevelUp();
+      const router = TestBed.inject(Router);
+      const nav = TestBed.inject(NavHistoryService);
+      const timeline = `/c/${id}/timeline`;
+      const harness = await RouterTestingHarness.create(timeline);
+      nav.push(timeline);
+      await harness.navigateByUrl(`/c/${id}/level-up`);
+      nav.push(`/c/${id}/level-up`);
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+
+      expect(router.url).toBe(timeline);
+    });
+
+    it('a cold deep link (a reload or bookmark, the character not loaded yet) opens the level-up instead of bouncing to the heroes list', async () => {
+      const id = await seedLevelUp();
+      // A fresh app: the stores start empty, the route's guard runs before the sheet's resolver.
+      TestBed.inject(HkDb).close();
+      TestBed.resetTestingModule();
+      configureReal();
+      expect(TestBed.inject(CharacterStore).streamId()).toBeFalsy();
+
+      const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+
+      expect(TestBed.inject(Router).url).toBe(`/c/${id}/level-up`);
+      expect(harness.routeNativeElement!.querySelector('.level-up')).not.toBeNull();
+    });
+
+    it('a level-up opened by deep link (no earlier screen) falls back to the play tab on Cancel', async () => {
+      const id = await seedLevelUp();
+      const harness = await visit(`/c/${id}/level-up`);
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).toBe(`/c/${id}/play`);
+      expect(harness.routeNativeElement!.querySelector('.level-up')).toBeNull();
+    });
+
+    it('the level-up replaces the sheet strap with Cancel, Back and Next, and the sheet strap returns after leaving', async () => {
+      const id = await seedLevelUp();
+      const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+      TestBed.inject(NavHistoryService).push(`/c/${id}/play`);
+      expect(strapAction('damage'), 'sheet strap before').toBeDefined();
+      expect(strapAction('cancel')).toBeUndefined();
+
+      await harness.navigateByUrl(`/c/${id}/level-up`);
+      TestBed.inject(NavHistoryService).push(`/c/${id}/level-up`);
+      await harness.fixture.whenStable();
+      expect(strapAction('cancel'), 'level-up strap').toBeDefined();
+      expect(strapAction('back')).toBeDefined();
+      expect(strapAction('next')).toBeDefined();
+      expect(strapAction('damage')).toBeUndefined();
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+      expect(strapAction('damage'), 'sheet strap after').toBeDefined();
+      expect(strapAction('cancel')).toBeUndefined();
+    });
+
+    /** Opens the level-up on Fighter's own class with its dialog service stubbed to answer "keep going". */
+    async function openWithStubbedDialog(id: string) {
+      const harness = await visit(`/c/${id}/level-up`);
+      const dialog = harness.fixture.debugElement
+        .query(By.css('app-level-up'))
+        .injector.get(DialogService);
+      const open = vi
+        .spyOn(dialog, 'open')
+        .mockReturnValue({ closed: Promise.resolve(false) } as ReturnType<DialogService['open']>);
+      await pickClass(harness.routeNativeElement!, harness.fixture, FIGHTER_NAME);
+      return { harness, open };
+    }
+
+    it('Cancel leaves without asking while nothing has been chosen', async () => {
+      const id = await seedLevelUp();
+      const { harness, open } = await openWithStubbedDialog(id);
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+
+      expect(open).not.toHaveBeenCalled();
+      expect(TestBed.inject(Router).url).toBe(`/c/${id}/play`);
+    });
+
+    it('Cancel asks first once something has been chosen, and stays when the answer is to keep going', async () => {
+      const id = await seedLevelUp();
+      const { harness, open } = await openWithStubbedDialog(id);
+      harness
+        .routeNativeElement!.querySelector<HTMLButtonElement>('.level-up__hp-average')!
+        .click();
+      await harness.fixture.whenStable();
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(TestBed.inject(Router).url).toBe(`/c/${id}/level-up`);
+    });
+
+    it('while the level-up is open the sheet tabs are dimmed and the Level up tab is the active one', async () => {
+      const id = await seedLevelUp();
+      const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+      const root = harness.routeNativeElement!;
+      const tabs = () => Array.from(root.querySelectorAll<HTMLElement>('.sheet-shell__tab'));
+      const badge = () => root.querySelector<HTMLElement>('.sheet-shell__level-up-badge')!;
+      expect(tabs().every((t) => t.getAttribute('aria-disabled') !== 'true')).toBe(true);
+      expect(badge().getAttribute('aria-current')).toBeNull();
+
+      await harness.navigateByUrl(`/c/${id}/level-up`);
+      await harness.fixture.whenStable();
+
+      expect(tabs()).toHaveLength(3);
+      expect(tabs().every((t) => t.getAttribute('aria-disabled') === 'true')).toBe(true);
+      expect(tabs().some((t) => t.getAttribute('aria-selected') === 'true')).toBe(false);
+      expect(badge().getAttribute('aria-current')).toBe('page');
+    });
+
+    it('on a phone the tab bar stays and More is the active tab while the level-up is open', async () => {
+      stubViewport({ phone: true });
+      const id = await seedLevelUp();
+      await RouterTestingHarness.create(`/c/${id}/level-up`);
+      await Promise.resolve();
+
+      const more = TestBed.inject(TabBarService)
+        .tabs()
+        ?.find((t) => t.id === 'more');
+      expect(more, 'a tab bar is set').toBeDefined();
+      expect(more!.alsoActive).toContainEqual(['/c', id, 'level-up']);
+    });
+
+    it('the HP step shows the roll and the hit points it adds before the level up is confirmed', async () => {
+      const id = await seedLevelUp();
+      const characterStore = TestBed.inject(CharacterStore);
+      const harness = await visit(`/c/${id}/level-up`);
+      const root = harness.routeNativeElement!;
+      await pickClass(root, harness.fixture, FIGHTER_NAME);
+      expect(currentStepName(root)).toBe(charactersEn.levelUp.steps.hp);
+      // The average is priced from the start; the roll only once it is rolled.
+      expect(
+        root.querySelector('.level-up__hp-card--average .level-up__hp-gain')?.textContent,
+      ).toContain('+8');
+      expect(root.querySelector('.level-up__hp-card--roll .level-up__hp-gain')).toBeNull();
+
+      root.querySelector<HTMLButtonElement>('.level-up__hp-roll')!.click();
+      await harness.fixture.whenStable();
+
+      const die = Number(root.querySelector('.level-up__hp-die')?.textContent?.trim());
+      expect(die).toBeGreaterThanOrEqual(1);
+      // Constitution +2 is added to the die; shown on the card, still on this step.
+      expect(
+        root.querySelector('.level-up__hp-card--roll .level-up__hp-gain')?.textContent,
+      ).toContain(`+${die + 2}`);
+      expect(root.querySelector('.level-up__hp-card--roll')?.getAttribute('data-chosen')).toBe(
+        'true',
+      );
+      expect(currentStepName(root)).toBe(charactersEn.levelUp.steps.hp);
+      // Nothing is confirmed yet: the character is still level 1 until the review's Finish.
+      expect(characterStore.sheet()?.level).toBe(1);
+      expect(strapAction('next')?.disabled).toBeFalsy();
+    });
+
+    it('once the class is picked the stepper keeps it as a locked, answered first row with the class name', async () => {
+      const id = await seedLevelUp();
+      const harness = await visit(`/c/${id}/level-up`);
+      const root = harness.routeNativeElement!;
+      expect(currentStepName(root)).toBe(charactersEn.levelUp.steps.class);
+
+      await pickClass(root, harness.fixture, FIGHTER_NAME);
+
+      const first = root.querySelector('.hk-stepper__step')!;
+      expect(first.classList.contains('hk-stepper__step--locked')).toBe(true);
+      expect(first.textContent).toContain(charactersEn.levelUp.steps.class);
+      expect(root.querySelector('.hk-stepper__item')?.textContent).toContain(FIGHTER_NAME);
+      // Back from the first real step has nowhere to go: the class cannot be changed any more.
+      expect(strapAction('back')?.disabled).toBe(true);
+    });
+
+    it('the review lists the hit point change with an Edit that jumps back, and Next returns to the review', async () => {
+      const id = await seedLevelUp();
+      const harness = await visit(`/c/${id}/level-up`);
+      const root = harness.routeNativeElement!;
+      await pickClass(root, harness.fixture, FIGHTER_NAME);
+      root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+      await harness.fixture.whenStable();
+      await pressStrap(harness.fixture, 'next');
+      expect(root.querySelector('.level-up__review')).not.toBeNull();
+      expect(root.querySelector('.level-up__summary-hp')?.textContent).toContain('12');
+      expect(root.querySelector('.level-up__summary-hp')?.textContent).toContain('20');
+
+      root.querySelector<HTMLButtonElement>('[data-edit-step="hp"]')!.click();
+      await harness.fixture.whenStable();
+      expect(currentStepName(root)).toBe(charactersEn.levelUp.steps.hp);
+      expect(root.querySelector('.level-up__review')).toBeNull();
+
+      await pressStrap(harness.fixture, 'next');
+      expect(root.querySelector('.level-up__review')).not.toBeNull();
+      // Back from the review lands on the step the player just came from.
+      await pressStrap(harness.fixture, 'back');
+      expect(currentStepName(root)).toBe(charactersEn.levelUp.steps.hp);
+    });
+
+    it('Next waits for an unanswered choice and never skips it; the review offers "Finish level up" in the Next slot', async () => {
+      const id = await seedLevelUp();
+      const harness = await visit(`/c/${id}/level-up`);
+      const root = harness.routeNativeElement!;
+      // A second class opens on its own level-1 choices (no hit points step).
+      await pickClass(root, harness.fixture, 'Rogue');
+
+      let sawChoice = false;
+      for (let i = 0; i < 12 && root.querySelector('.level-up__review') === null; i++) {
+        const title = root.querySelector('.choice-step__title')?.textContent;
+        if (title) {
+          sawChoice = true;
+          expect(strapAction('next')?.disabled, 'Next on an unanswered choice').toBe(true);
+          strapAction('next')!.run();
+          await harness.fixture.whenStable();
+          expect(root.querySelector('.choice-step__title')?.textContent).toBe(title);
+          for (
+            let j = 0;
+            j < 6 && root.querySelector('.choice-step__title')?.textContent === title;
+            j++
+          ) {
+            const choose = Array.from(
+              root.querySelectorAll<HTMLButtonElement>(
+                '.hk-picker-card__choose, .entity-picker__toggle',
+              ),
+            ).find((b) => b.getAttribute('aria-pressed') !== 'true' && !b.disabled);
+            if (!choose) break;
+            choose.click();
+            await harness.fixture.whenStable();
+          }
+        } else {
+          await pressStrap(harness.fixture, 'next');
+        }
+      }
+      expect(sawChoice, 'Rogue asks at least one level-1 choice').toBe(true);
+      expect(root.querySelector('.level-up__review')).not.toBeNull();
+      expect(strapAction('next')?.label).toBe('shell.strap.finish-level-up');
+      expect(strapAction('next')?.disabled).toBeFalsy();
+    });
   });
 });
