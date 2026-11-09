@@ -522,7 +522,10 @@
         "payWith": "Чем оплатить",
         "remaining": "Осталось {remaining} из {max}",
         "sealAvailable": "{lane}: доступна",
-        "sealSpent": "{lane}: потрачена"
+        "sealSpent": "{lane}: потрачена",
+        "summary": "Сведения о заклинании",
+        "spellLevel": "{level, plural, =0 {Заговор} other {# уровень}}",
+        "laneSpent": "Ячеек {level} уровня не осталось"
       },
       "empty": "Нет заклинаний.",
       "slotsAria": "Ячейки {level} уровня, {left} из {max}",
@@ -572,7 +575,8 @@
         "confirm": "Добавить",
         "search": "Поиск состояний",
         "noMatch": "Подходящих состояний нет.",
-        "levelHint": "Уровень от 1 до {max}"
+        "levelHint": "Уровень от 1 до {max}",
+        "effect": "Действие"
       }
     },
     "proficiencies": {

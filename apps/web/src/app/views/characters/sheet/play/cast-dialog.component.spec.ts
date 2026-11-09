@@ -3,6 +3,7 @@ import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { DialogService } from '@app/ui/dialog/dialog.service';
+import libraryEn from '../../../../../assets/i18n/library/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { overlayRoot } from '../../../../ui/testing/overlay';
 import { CastDialogComponent, type CastDialogData } from './cast-dialog.component';
@@ -15,6 +16,7 @@ const laneTitle = (lane: HTMLElement): string =>
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
+    if (langPath === 'library/en') return of(libraryEn);
     return langPath === 'characters/en' ? of(charactersEn) : of({});
   }
 }
@@ -457,5 +459,142 @@ describe('CastDialogComponent', () => {
     const title = document.getElementById(dialog.getAttribute('aria-labelledby')!)!;
     expect(title.textContent).toContain('Burning Hands');
     expect(overlayRoot().querySelector('[data-dialog-actions]')).not.toBeNull();
+  });
+
+  // --- Board DL01: the spell summary chips and the spent slot levels ------------------------------
+
+  describe('spell summary chips', () => {
+    const SUMMARY: CastDialogData['summary'] = {
+      school: { kind: 'text', text: 'Abjuration' },
+      castingTime: { kind: 'key', key: 'fact.unit.bonus', params: { value: 1 } },
+      castingCondition: 'which you take after a hit',
+      range: { kind: 'key', key: 'fact.unit.feet', params: { value: 60 } },
+      components: { kind: 'text', text: 'V, S, M (a prayer scroll)' },
+      duration: { kind: 'key', key: 'fact.unit.minute', params: { value: 10 } },
+      ritual: false,
+    };
+    const chipTexts = () =>
+      Array.from(overlayRoot().querySelectorAll('.cast-dialog__chips li')).map((li) =>
+        li.textContent?.replace(/\s+/g, ' ').trim(),
+      );
+    const settle = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      TestBed.tick();
+    };
+
+    it('shows level, school, casting time (with its condition), range, duration and components, units resolved', async () => {
+      configure();
+      open({ ...BASE_DATA, spellLevel: 1, summary: SUMMARY });
+      TestBed.tick();
+      await settle();
+
+      const texts = chipTexts();
+      expect(texts.some((t) => t?.endsWith('Level 1'))).toBe(true);
+      expect(texts).toContain('Abjuration');
+      expect(
+        texts.some(
+          (t) => t?.includes('1 bonus action') && t.includes('which you take after a hit'),
+        ),
+      ).toBe(true);
+      expect(texts).toContain('60 feet');
+      expect(texts).toContain('10 minutes');
+      expect(texts).toContain('V, S, M (a prayer scroll)');
+    });
+
+    it('adds a Concentration chip for a concentration spell and a Ritual chip for a ritual one', async () => {
+      configure();
+      open({ ...BASE_DATA, spellConcentration: true, summary: { ...SUMMARY, ritual: true } });
+      TestBed.tick();
+      await settle();
+      expect(chipTexts()).toContain(charactersEn.wizard.spells.concentration);
+      expect(chipTexts()).toContain(charactersEn.wizard.spells.ritual);
+    });
+
+    it('names a cantrip as such, and shows no chips at all without a summary', async () => {
+      configure();
+      open({ ...BASE_DATA, spellLevel: 0, summary: SUMMARY });
+      TestBed.tick();
+      await settle();
+      expect(chipTexts().some((t) => t?.endsWith('Cantrip'))).toBe(true);
+      document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+      open(BASE_DATA);
+      TestBed.tick();
+      expect(overlayRoot().querySelector('.cast-dialog__chips')).toBeNull();
+    });
+  });
+
+  describe('spent slot levels', () => {
+    it('stay in the list as disabled lanes with every seal spent; the reason is in the tooltip and aria, not inline', () => {
+      configure();
+      open({
+        ...BASE_DATA,
+        availableSlots: [
+          { level: 1, max: 2, used: 2, spent: true },
+          { level: 2, max: 1, used: 0 },
+        ],
+      });
+      TestBed.tick();
+
+      const [spentLane, openLane] = lanes();
+      const reason = charactersEn.sheet.spellcasting.castDialog.laneSpent.replace('{level}', '1');
+      expect(spentLane.getAttribute('aria-disabled')).toBe('true');
+      expect(spentLane.getAttribute('aria-description')).toBe(reason);
+      expect(spentLane.textContent).not.toContain(reason);
+      expect(
+        Array.from(spentLane.querySelectorAll('hk-wax-seal')).every((s) =>
+          s.classList.contains('hk-wax-seal--spent'),
+        ),
+      ).toBe(true);
+      expect(openLane.getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('cannot be chosen, by click or arrow key, and the choice starts on the first lane that can pay', async () => {
+      configure();
+      const handle = open({
+        ...BASE_DATA,
+        availableSlots: [
+          { level: 1, max: 2, used: 2, spent: true },
+          { level: 2, max: 1, used: 0 },
+          { level: 3, max: 1, used: 1, spent: true },
+        ],
+      });
+      TestBed.tick();
+      expect(lanes().map((l) => l.getAttribute('aria-checked'))).toEqual([
+        'false',
+        'true',
+        'false',
+      ]);
+
+      lanes()[0].click();
+      lanes()[2].click();
+      lanes()[1].dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+      );
+      TestBed.tick();
+      expect(lanes().map((l) => l.getAttribute('aria-checked'))).toEqual([
+        'false',
+        'true',
+        'false',
+      ]);
+
+      Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+        .find((b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm)!
+        .click();
+      expect(await handle.closed).toEqual({ level: 2 });
+    });
+
+    it('with only spent lanes, Cast is unavailable and the no-slots note shows', () => {
+      configure();
+      open({ ...BASE_DATA, availableSlots: [{ level: 1, max: 2, used: 2, spent: true }] });
+      TestBed.tick();
+      expect(lanes()).toHaveLength(1);
+      expect(overlayRoot().textContent).toContain(
+        charactersEn.sheet.spellcasting.castDialog.noSlots,
+      );
+      const cast = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+        (b) => b.textContent?.trim() === charactersEn.sheet.spellcasting.castDialog.confirm,
+      )!;
+      expect(cast.disabled).toBe(true);
+    });
   });
 });

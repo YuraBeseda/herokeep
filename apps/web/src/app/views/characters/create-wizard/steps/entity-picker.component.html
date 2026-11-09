@@ -37,7 +37,11 @@
             [attr.aria-disabled]="blocked(row) ? 'true' : null"
             [attr.aria-description]="row.gate ? t(row.gate) : null"
             [attr.aria-label]="
-              row.meta.length > 0 ? row.name + ' — ' + row.meta.join(', ') : row.name
+              row.detail.length > 0
+                ? null
+                : row.meta.length > 0
+                  ? row.name + ' — ' + row.meta.join(', ')
+                  : row.name
             "
             [hkTooltip]="row.gate ? t(row.gate) : ''"
             (click)="blocked(row) ? null : onToggle(row.id)"
@@ -46,6 +50,16 @@
             <span class="entity-picker__name" [hkTooltip]="row.name">{{ row.name }}</span>
             @for (item of row.meta; track item) {
               <hk-tag-chip class="entity-picker__meta" [label]="item" />
+            }
+            @if (row.detail.length > 0) {
+              <span class="entity-picker__detail">
+                @for (fact of row.detail; track $index) {
+                  @if ($index > 0) {
+                    <span aria-hidden="true"> · </span>
+                  }
+                  <app-fact-value [value]="fact" />
+                }
+              </span>
             }
             <span class="entity-picker__mark" aria-hidden="true">
               @if (isSelected(row.id)) {

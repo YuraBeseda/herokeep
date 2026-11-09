@@ -2,7 +2,15 @@ import { makeEntityId, parseEntityId } from '@hk/protocol';
 import type { Sheet } from '@hk/engine';
 import type { EngineFacade } from '@shared/services/engine/engine.facade';
 import type { SpellRow } from './play-actions.service';
+import {
+  formatCastingTime,
+  formatComponents,
+  formatDuration,
+  formatRange,
+  formatSchool,
+} from '../../../library/detail/entity-facts.formatters';
 import type { ConditionDialogOption } from './condition-dialog.component';
+import type { CastDialogSummary } from './cast-dialog.component';
 import type { RestDialogHitDieOption } from './rest-dialog.component';
 
 type ResourceView = Sheet['resources'][number];
@@ -68,11 +76,16 @@ export function sheetNames(engineFacade: EngineFacade) {
         .conditions.map((id) => {
           const entity = index.get(id);
           const levels = entity?.type === 'condition' ? entity.levels : undefined;
+          const description =
+            entity?.type === 'condition'
+              ? engineFacade.localizer().text(id, 'description').text
+              : '';
           return {
             id,
             name: resolve(id),
             levelBearing: levels !== undefined,
             ...(levels !== undefined ? { maxLevel: levels } : {}),
+            ...(description ? { description } : {}),
           };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -88,11 +101,25 @@ export function sheetNames(engineFacade: EngineFacade) {
     spellRow: (id: string): SpellRow => {
       const entity = engineFacade.index().get(id);
       const spell = entity?.type === 'spell' ? entity : undefined;
+      const summary: CastDialogSummary | undefined = spell
+        ? {
+            school: formatSchool(spell.school),
+            castingTime: formatCastingTime(spell.castingTime),
+            ...(spell.castingTime.condition
+              ? { castingCondition: spell.castingTime.condition }
+              : {}),
+            range: formatRange(spell.range),
+            components: formatComponents(spell.components),
+            duration: formatDuration(spell.duration),
+            ritual: spell.ritual,
+          }
+        : undefined;
       return {
         id,
         name: resolve(id),
         level: spell?.level ?? 0,
         concentration: spell?.concentration ?? false,
+        ...(summary ? { summary } : {}),
       };
     },
   };

@@ -1,8 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icons/icon.component';
+import type { FactValue } from '../../../library/detail/entity-facts.formatters';
+import { FactValueComponent } from '../../../library/detail/fact-value.component';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';
+import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
 
 export interface CastDialogSlotOption {
@@ -19,6 +22,21 @@ export interface CastDialogSlotOption {
    * free lane casts at. `freeLabel` is the resource's already-localized name for the option text. */
   readonly freeResource?: string;
   readonly freeLabel?: string;
+  /** A slot level with none left: shown as a disabled lane (reason in its tooltip), never chosen. */
+  readonly spent?: boolean;
+}
+
+/** The spell's facts for the summary chips (board DL01), formatted by the library's own
+ * formatters so a unit reads the same here as on the library page. */
+export interface CastDialogSummary {
+  readonly school: FactValue;
+  readonly castingTime: FactValue;
+  /** The casting-time condition ("which you take after a hit"), when the spell has one. */
+  readonly castingCondition?: string;
+  readonly range: FactValue;
+  readonly components: FactValue;
+  readonly duration: FactValue;
+  readonly ritual: boolean;
 }
 
 export interface CastDialogResult {
@@ -31,6 +49,8 @@ export interface CastDialogData {
   readonly spellName: string;
   readonly spellLevel: number;
   readonly spellConcentration: boolean;
+  /** Facts for the summary chips; absent for a spell the content index no longer knows. */
+  readonly summary?: CastDialogSummary;
   /** Slots at/above `spellLevel` that still have room, PLUS (task 12) the pact-lane option when
    * eligible — pre-filtered by the CALLER (`PlayTabComponent.onCastLeveled`), never by this
    * component. Never includes a bare "no slot" option (task-3-brief.md: only cantrips skip a slot,
@@ -58,7 +78,14 @@ export interface CastDialogData {
  */
 @Component({
   selector: 'app-cast-dialog',
-  imports: [TranslocoDirective, HkButtonComponent, HkWaxSealComponent, IconComponent],
+  imports: [
+    TranslocoDirective,
+    FactValueComponent,
+    HkButtonComponent,
+    HkTooltipDirective,
+    HkWaxSealComponent,
+    IconComponent,
+  ],
   templateUrl: './cast-dialog.component.html',
   styleUrl: './cast-dialog.component.scss',
 })
@@ -66,15 +93,22 @@ export class CastDialogComponent {
   protected readonly data = inject<CastDialogData>(DIALOG_DATA);
   private readonly dialogRef = inject(DialogRef);
 
-  protected readonly selectedIndex = signal<number | undefined>(
-    this.data.availableSlots.length > 0 ? 0 : undefined,
-  );
+  protected readonly selectedIndex = signal<number | undefined>(this.firstEnabled());
+
+  private firstEnabled(): number | undefined {
+    const index = this.data.availableSlots.findIndex((slot) => !slot.spent);
+    return index === -1 ? undefined : index;
+  }
+
+  /** Whether any lane can pay (a list of only spent slot levels still gets the "no slots" note). */
+  protected readonly hasEnabledLane = computed(() => this.firstEnabled() !== undefined);
 
   protected readonly showsReplaceNote = computed(
     () => this.data.spellConcentration && this.data.alreadyConcentrating,
   );
 
   protected select(index: number): void {
+    if (this.data.availableSlots[index]?.spent) return;
     this.selectedIndex.set(index);
   }
 
@@ -100,7 +134,12 @@ export class CastDialogComponent {
           : 0;
     if (step === 0 || count === 0) return;
     event.preventDefault();
-    const next = (index + step + count) % count;
+    let next = index;
+    for (let tried = 0; tried < count; tried++) {
+      next = (next + step + count) % count;
+      if (!this.data.availableSlots[next]?.spent) break;
+    }
+    if (this.data.availableSlots[next]?.spent) return;
     this.selectedIndex.set(next);
     const lanes = (event.currentTarget as HTMLElement).parentElement?.querySelectorAll<HTMLElement>(
       '[role="radio"]',

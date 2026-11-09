@@ -118,6 +118,13 @@
   flex: none;
 }
 
+.entity-picker__detail {
+  flex: none;
+  color: var(--text-2);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
 .entity-picker__mark {
   display: inline-flex;
   flex: none;

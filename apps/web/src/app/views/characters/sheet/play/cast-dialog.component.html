@@ -3,6 +3,43 @@
     {{ t('characters.sheet.spellcasting.castDialog.title', { name: data.spellName }) }}
   </h2>
 
+  @if (data.summary; as summary) {
+    <ul
+      class="cast-dialog__chips"
+      [attr.aria-label]="t('characters.sheet.spellcasting.castDialog.summary')"
+    >
+      <li class="cast-dialog__chip cast-dialog__chip--level">
+        <hk-wax-seal
+          [size]="'s'"
+          [numeral]="data.spellLevel > 0 ? data.spellLevel : null"
+          [glyph]="data.spellLevel > 0 ? null : 'ui:spells'"
+          [hint]="
+            t('characters.sheet.spellcasting.castDialog.spellLevel', { level: data.spellLevel })
+          "
+        />
+        {{ t('characters.sheet.spellcasting.castDialog.spellLevel', { level: data.spellLevel }) }}
+      </li>
+      <li class="cast-dialog__chip"><app-fact-value [value]="summary.school" /></li>
+      @if (data.spellConcentration) {
+        <li class="cast-dialog__chip cast-dialog__chip--concentration">
+          <hk-icon [icon]="'ui:concentration'" />{{ t('characters.wizard.spells.concentration') }}
+        </li>
+      }
+      @if (summary.ritual) {
+        <li class="cast-dialog__chip">{{ t('characters.wizard.spells.ritual') }}</li>
+      }
+      <li class="cast-dialog__chip">
+        <hk-icon [icon]="'ui:initiative'" /><app-fact-value [value]="summary.castingTime" />
+        @if (summary.castingCondition) {
+          <span class="cast-dialog__chip-note">, {{ summary.castingCondition }}</span>
+        }
+      </li>
+      <li class="cast-dialog__chip"><app-fact-value [value]="summary.range" /></li>
+      <li class="cast-dialog__chip"><app-fact-value [value]="summary.duration" /></li>
+      <li class="cast-dialog__chip"><app-fact-value [value]="summary.components" /></li>
+    </ul>
+  }
+
   @if (showsReplaceNote()) {
     <p class="cast-dialog__warn" role="note">
       <hk-icon class="cast-dialog__warn-icon" [icon]="'ui:concentration'" />
@@ -45,8 +82,22 @@
           [attr.data-index]="i"
           [attr.data-kind]="kind"
           [attr.aria-checked]="selectedIndex() === i"
+          [attr.aria-disabled]="slot.spent ? 'true' : null"
+          [attr.aria-description]="
+            slot.spent
+              ? t('characters.sheet.spellcasting.castDialog.laneSpent', { level: slot.level })
+              : null
+          "
+          [hkTooltip]="
+            slot.spent
+              ? t('characters.sheet.spellcasting.castDialog.laneSpent', { level: slot.level })
+              : ''
+          "
+          [class.cast-dialog__lane--spent]="slot.spent"
           [attr.aria-labelledby]="'cast-lane-title-' + i + ' cast-lane-sub-' + i"
-          [tabindex]="selectedIndex() === i ? 0 : -1"
+          [tabindex]="
+            selectedIndex() === i || (slot.spent && !hasEnabledLane() && i === 0) ? 0 : -1
+          "
           (click)="select(i)"
           (keydown)="onLaneKey($event, i)"
         >
@@ -78,7 +129,8 @@
         </button>
       }
     </div>
-  } @else {
+  }
+  @if (!hasEnabledLane()) {
     <p class="cast-dialog__empty">{{ t('characters.sheet.spellcasting.castDialog.noSlots') }}</p>
   }
 

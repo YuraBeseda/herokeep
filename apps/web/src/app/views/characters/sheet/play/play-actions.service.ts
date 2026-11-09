@@ -26,6 +26,7 @@ import { AddItemDialogComponent, type AddItemDialogResult } from './add-item-dia
 import {
   CastDialogComponent,
   type CastDialogData,
+  type CastDialogSummary,
   type CastDialogResult,
   type CastDialogSlotOption,
 } from './cast-dialog.component';
@@ -63,6 +64,8 @@ export interface SpellRow {
   readonly name: string;
   readonly level: number;
   readonly concentration: boolean;
+  /** The spell's facts for the cast dialog's summary chips (absent for a stale id). */
+  readonly summary?: CastDialogSummary;
 }
 
 // task-3-brief.md extends this set: `propose.spendSlot`/`propose.cast` are the first proposers that
@@ -317,7 +320,16 @@ export class PlayActionsService {
     row: SpellRow,
     resourceLabel: (resource: ResourceView) => string,
   ): Promise<void> {
-    const regularOptions = block.slots.filter((s) => s.level >= row.level && s.used < s.max);
+    // A slot level with none left stays in the list as a disabled lane (its seals all spent), so
+    // the player sees why it cannot pay; the dialog never lets it be chosen.
+    const regularOptions: CastDialogSlotOption[] = block.slots
+      .filter((s) => s.level >= row.level)
+      .map((s) => ({
+        level: s.level,
+        max: s.max,
+        used: s.used,
+        ...(s.used >= s.max ? { spent: true } : {}),
+      }));
     const pact = block.pact;
     const pactOptions: CastDialogSlotOption[] =
       pact && pact.level >= row.level && pact.used < pact.count
@@ -343,6 +355,7 @@ export class PlayActionsService {
         spellName: row.name,
         spellLevel: row.level,
         spellConcentration: row.concentration,
+        ...(row.summary ? { summary: row.summary } : {}),
         availableSlots: [...regularOptions, ...pactOptions, ...freeOptions],
         alreadyConcentrating: current?.concentration !== undefined,
       } satisfies CastDialogData,

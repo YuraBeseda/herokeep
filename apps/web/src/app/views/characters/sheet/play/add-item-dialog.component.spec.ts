@@ -12,6 +12,7 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import libraryEn from '../../../../../assets/i18n/library/en.json';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
 import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { AddItemDialogComponent } from './add-item-dialog.component';
@@ -46,6 +47,7 @@ class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
     if (langPath === 'shell/en') return of(shellEn);
+    if (langPath === 'library/en') return of(libraryEn);
     return of({});
   }
 }
@@ -203,5 +205,43 @@ describe('AddItemDialogComponent', () => {
     TestBed.tick();
 
     expect(await handle.closed).toEqual({ itemId: DAGGER_ID, qty: 1 });
+  });
+
+  // --- Board DL04: type chips and weight / cost on each row ---------------------------------------
+
+  it('offers the item types as filter chips with their counts', () => {
+    configure();
+    open();
+    TestBed.tick();
+    const chips = Array.from(overlayRoot().querySelectorAll('.entity-picker__filters button')).map(
+      (b) => b.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(chips.some((c) => c?.startsWith('Weapon'))).toBe(true);
+    expect(chips.some((c) => c?.startsWith('Armor'))).toBe(true);
+  });
+
+  it('shows each row weight and cost from the item entity, once (not also as a chip)', async () => {
+    configure();
+    open();
+    TestBed.tick();
+    const row = searchAndFindCard('Dagger', 'Dagger');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    TestBed.tick();
+    const detail = row.querySelector('.entity-picker__detail')!;
+    expect(detail.textContent?.replace(/\s+/g, ' ').trim()).toBe('1 lb · 2 gp');
+    const chips = Array.from(row.querySelectorAll('.entity-picker__meta')).map((c) =>
+      c.textContent?.trim(),
+    );
+    expect(chips).not.toContain('2 gp');
+  });
+
+  it('names the row from its visible content (weight and cost included), with no stale aria-label', async () => {
+    configure();
+    open();
+    TestBed.tick();
+    const row = searchAndFindCard('Dagger', 'Dagger');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    TestBed.tick();
+    expect(row.querySelector('.entity-picker__toggle')!.getAttribute('aria-label')).toBeNull();
   });
 });

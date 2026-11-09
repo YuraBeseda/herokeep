@@ -38,6 +38,18 @@
     </p>
   }
 
+  @if (effectHtml.value(); as html) {
+    <section
+      class="condition-dialog__effect"
+      [attr.aria-label]="t('characters.sheet.conditions.addDialog.effect')"
+    >
+      <h3 class="condition-dialog__effect-title">
+        {{ t('characters.sheet.conditions.addDialog.effect') }}
+      </h3>
+      <div class="condition-dialog__effect-body" [innerHTML]="html"></div>
+    </section>
+  }
+
   @if (showsLevel()) {
     <hk-number-field
       class="condition-dialog__level"

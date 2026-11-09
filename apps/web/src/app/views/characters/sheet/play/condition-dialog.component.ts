@@ -1,5 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
+import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { MarkdownService } from '@shared/services/markdown/markdown.service';
+import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { IconComponent } from '../../../../shared/icons/icon.component';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';
@@ -18,6 +22,8 @@ export interface ConditionDialogOption {
   /** The pack's own level count for a level-bearing condition (`ConditionEntitySchema.levels`,
    * exhaustion: 6): the level stepper's maximum. Absent when the pack gives none (no cap). */
   readonly maxLevel?: number;
+  /** The condition's localized effect text (markdown), read off the entity by the caller. */
+  readonly description?: string;
 }
 
 export interface ConditionDialogData {
@@ -55,12 +61,18 @@ export interface ConditionDialogResult {
     HkSearchFieldComponent,
     IconComponent,
   ],
+  // The dialog renders under the root injector, outside the sheet's scope: it scopes its own
+  // `EngineFacade` to the character's pins so the effect text's cross-links name entities the way
+  // the sheet does (the same arrangement the add-item dialog uses).
+  providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
   templateUrl: './condition-dialog.component.html',
   styleUrl: './condition-dialog.component.scss',
 })
 export class ConditionDialogComponent {
   protected readonly data = inject<ConditionDialogData>(DIALOG_DATA);
   private readonly dialogRef = inject(DialogRef);
+  private readonly engineFacade = inject(EngineFacade);
+  private readonly markdownService = inject(MarkdownService);
 
   protected readonly query = signal('');
   private readonly pickedId = signal<string | undefined>(this.data.options[0]?.id);
@@ -86,6 +98,14 @@ export class ConditionDialogComponent {
 
   protected readonly showsLevel = computed(() => this.selectedOption()?.levelBearing ?? false);
   protected readonly maxLevel = computed(() => this.selectedOption()?.maxLevel);
+
+  /** The chosen condition's effect text, rendered through the same sanitizing markdown service the
+   * description drawer and the library detail page use. */
+  protected readonly effectHtml = resource({
+    params: () => this.selectedOption()?.description,
+    loader: async ({ params }) =>
+      params ? this.markdownService.render(params, this.engineFacade.localizer()) : null,
+  });
 
   protected select(id: string): void {
     if (id !== this.selectedId()) this.level.set(1);

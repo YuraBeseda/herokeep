@@ -38,8 +38,9 @@ export function pickerFacts(entity: Entity): PickerFact[] {
   return facts;
 }
 
-export function pickerMeta(entity: Entity): string[] {
+export function pickerMeta(entity: Entity, exclude: readonly string[] = []): string[] {
   return pickerFacts(entity)
+    .filter((fact) => !exclude.includes(fact.key))
     .slice(0, MAX_META)
     .map((fact) => fact.value);
 }

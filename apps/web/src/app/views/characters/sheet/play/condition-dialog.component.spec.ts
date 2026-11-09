@@ -1,4 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { PACK_ID, PACK_VERSION } from '@hk/content/version';
+import { parsePack } from '@hk/protocol';
+import { PackStore } from '@shared/stores/pack.store';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
@@ -12,6 +19,33 @@ import { overlayRoot } from '../../../../ui/testing/overlay';
 const chips = (): HTMLElement[] =>
   Array.from(overlayRoot().querySelectorAll<HTMLElement>('[role="radio"].condition-dialog__chip'));
 const chipFor = (id: string): HTMLElement => chips().find((c) => c.dataset['id'] === id)!;
+
+// The dialog scopes its own `EngineFacade` (it renders the effect text), so it needs the real pack.
+const here = dirname(fileURLToPath(import.meta.url));
+const parsed = parsePack(
+  JSON.parse(
+    readFileSync(
+      join(
+        here,
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        'packages/content/dist/packs',
+        PACK_ID,
+        PACK_VERSION,
+        'pack.json',
+      ),
+      'utf8',
+    ),
+  ),
+);
+if (!parsed.ok) throw new Error('core pack no longer parses');
+const corePack = parsed.pack;
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
@@ -28,6 +62,10 @@ function configure(): void {
       }),
       provideTranslocoMessageformat(),
       provideTranslocoScope('characters'),
+      {
+        provide: PackStore,
+        useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
+      },
     ],
   });
 }
@@ -339,5 +377,66 @@ describe('ConditionDialogComponent', () => {
       charactersEn.sheet.conditions.addDialog.cancel,
       charactersEn.sheet.conditions.addDialog.confirm,
     ]);
+  });
+
+  // --- Board DL03: the condition's effect text ----------------------------------------------------
+
+  describe('effect text', () => {
+    const settle = async () => {
+      for (let i = 0; i < 20; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        TestBed.tick();
+      }
+    };
+
+    it('shows the chosen condition description, rendered as markdown, and follows the choice', async () => {
+      configure();
+      open({
+        options: [
+          { id: 'a', name: 'Alpha', levelBearing: false, description: 'Cannot **see**.' },
+          { id: 'b', name: 'Beta', levelBearing: false, description: 'Cannot hear.' },
+        ],
+      });
+      TestBed.tick();
+      await settle();
+      const body = () => overlayRoot().querySelector('.condition-dialog__effect-body');
+      expect(body()?.querySelector('strong')?.textContent).toBe('see');
+      expect(body()?.textContent).toContain('Cannot see.');
+
+      chipFor('b').click();
+      TestBed.tick();
+      await settle();
+      expect(body()?.textContent).toContain('Cannot hear.');
+      expect(body()?.querySelector('strong')).toBeNull();
+    });
+
+    it('sanitizes the text the same way the description drawer does (no script survives)', async () => {
+      configure();
+      open({
+        options: [
+          {
+            id: 'a',
+            name: 'Alpha',
+            levelBearing: false,
+            description:
+              'Safe <script>window.__pwned = 1</script><img src=x onerror="window.__pwned=1">',
+          },
+        ],
+      });
+      TestBed.tick();
+      await settle();
+      const body = overlayRoot().querySelector('.condition-dialog__effect-body')!;
+      expect(body.querySelector('script')).toBeNull();
+      expect(body.innerHTML).not.toContain('onerror');
+      expect(body.textContent).toContain('Safe');
+    });
+
+    it('shows no effect block for a condition without a description', async () => {
+      configure();
+      open({ options: [{ id: 'a', name: 'Alpha', levelBearing: false }] });
+      TestBed.tick();
+      await settle();
+      expect(overlayRoot().querySelector('.condition-dialog__effect')).toBeNull();
+    });
   });
 });

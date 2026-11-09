@@ -522,7 +522,10 @@
         "payWith": "Pay with",
         "remaining": "{remaining} of {max} left",
         "sealAvailable": "{lane}: available",
-        "sealSpent": "{lane}: spent"
+        "sealSpent": "{lane}: spent",
+        "summary": "Spell facts",
+        "spellLevel": "{level, plural, =0 {Cantrip} other {Level #}}",
+        "laneSpent": "No level {level} slots left"
       },
       "empty": "No spellcasting.",
       "slotsAria": "Level {level} slots, {left} of {max}",
@@ -572,7 +575,8 @@
         "confirm": "Add",
         "search": "Search conditions",
         "noMatch": "No condition matches.",
-        "levelHint": "Level 1 to {max}"
+        "levelHint": "Level 1 to {max}",
+        "effect": "Effect"
       }
     },
     "proficiencies": {

@@ -12,6 +12,9 @@ import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
+import { formatCost, formatWeight } from '../../../library/detail/entity-facts.formatters';
+import type { FactValue } from '../../../library/detail/entity-facts.formatters';
+import { FactValueComponent } from '../../../library/detail/fact-value.component';
 import { bindPickerTools } from '../picker-tools.service';
 import { descriptionExcerpt, pickerFacet, pickerFacts, pickerMeta } from './picker-facts';
 
@@ -21,6 +24,8 @@ interface EntityRow {
   readonly icon: string;
   readonly description: string | null;
   readonly meta: string[];
+  /** An item's weight and cost, formatted by the library's own formatters (`showItemDetails`). */
+  readonly detail: FactValue[];
   /** The facts' values, for the filter chips. */
   readonly facts: ReadonlySet<string>;
   // Scope-relative i18n key of the reason this option can't be picked (see `gates`), if any.
@@ -60,6 +65,7 @@ const SEARCH_THRESHOLD = 8;
   selector: 'hk-entity-picker',
   imports: [
     TranslocoDirective,
+    FactValueComponent,
     HkButtonComponent,
     HkDescriptionDrawerComponent,
     HkFilterChipsComponent,
@@ -70,7 +76,7 @@ const SEARCH_THRESHOLD = 8;
     HkWaxSealComponent,
     IconComponent,
   ],
-  providers: [provideTranslocoScope('characters')],
+  providers: [provideTranslocoScope('characters'), provideTranslocoScope('library')],
   templateUrl: './entity-picker.component.html',
   styleUrl: './entity-picker.component.scss',
 })
@@ -86,6 +92,8 @@ export class EntityPickerComponent {
   readonly limit = input<number | undefined>(undefined);
   readonly gates = input<ReadonlyMap<string, string>>(NO_GATES);
   readonly layout = input<'cards' | 'rows'>('cards');
+  /** Rows show an item's weight and cost beside its name (the add-item dialog turns this on). */
+  readonly showItemDetails = input(false);
   /** The whole list is read-only (another member holds the campaign edit lock). */
   readonly disabled = input(false);
   readonly toggled = output<string>();
@@ -144,6 +152,7 @@ export class EntityPickerComponent {
     const collator = this.collator();
     const gates = this.gates();
     const facetKey = this.facet()?.key;
+    const details = this.showItemDetails();
 
     const mapped = this.entities()
       .map((entity): EntityRow => {
@@ -153,7 +162,14 @@ export class EntityPickerComponent {
           name: localizer.name(entity.id),
           icon: this.engineFacade.iconFor(entity),
           description: descriptionExcerpt(localizer.text(entity.id, 'description').text),
-          meta: pickerMeta(entity),
+          meta: pickerMeta(entity, details ? ['fact.cost', 'fact.weight'] : []),
+          detail:
+            details && entity.type === 'item'
+              ? [
+                  ...(entity.weight !== undefined ? [formatWeight(entity.weight)] : []),
+                  ...(entity.cost ? [formatCost(entity.cost)] : []),
+                ]
+              : [],
           facts: new Set(facts.filter((f) => f.key === facetKey).map((f) => f.value)),
           gate: gates.get(entity.id),
         };
