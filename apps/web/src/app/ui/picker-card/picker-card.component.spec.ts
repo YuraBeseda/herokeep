@@ -31,7 +31,7 @@ describe('HkPickerCardComponent', () => {
     fixture.componentInstance.details.subscribe(opened);
 
     const body = el.querySelector<HTMLButtonElement>('.hk-picker-card__body')!;
-    expect(body.getAttribute('aria-label')).toBe('Details: Elf');
+    expect(body.getAttribute('aria-label')).toBe('Details: Elf — Medium, Darkvision');
     press(body);
     expect(opened).toHaveBeenCalledTimes(1);
     expect(picked).not.toHaveBeenCalled();

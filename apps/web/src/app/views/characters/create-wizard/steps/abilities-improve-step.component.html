@@ -3,19 +3,22 @@
     <ul class="abilities-improve-step__slots">
       @for (delta of info.deltas; track $index; let slot = $index) {
         <li class="abilities-improve-step__slot">
-          <span class="abilities-improve-step__slot-label">
-            {{ t('wizard.abilitiesImprove.deltaLabel', { delta: delta }) }}
-          </span>
+          <hk-tag-chip
+            class="abilities-improve-step__slot-label"
+            [tone]="'warning'"
+            [label]="t('wizard.abilitiesImprove.deltaLabel', { delta: delta })"
+          />
           <div class="abilities-improve-step__chips">
             @for (a of optionsForSlot(slot); track a.id) {
-              <hk-chip
-                [selected]="isAssigned(slot, a.id)"
+              <!-- eslint-disable-next-line @angular-eslint/template/elements-content -- the chip renders its own label -->
+              <button
+                hk-filter-chip
+                type="button"
+                [option]="chipOption(a.id, t('wizard.abilitiesImprove.locked'))"
+                [pressed]="isAssigned(slot, a.id)"
                 [class.abilities-improve-step__chip--disabled]="disabled()"
-                [attr.aria-disabled]="disabled() ? 'true' : null"
                 (click)="onSelectSlot(slot, a.id)"
-              >
-                {{ abilityName(a.id) }}
-              </hk-chip>
+              ></button>
             }
           </div>
         </li>

@@ -2,64 +2,41 @@
   display: block;
 }
 
+.spells-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .spells-step__section {
-  margin: 0 0 var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.spells-step__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .spells-step__title {
-  margin: 0 0 var(--space-2);
+  margin: 0;
+  font-family: var(--font-display);
 }
 
-.spells-step__helper {
-  margin: 0 0 var(--space-3);
-  color: var(--text-2);
-  font-size: 0.875rem;
-}
-
-.spells-step__cap-message {
-  margin: var(--space-3) 0 0;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
-  color: var(--danger);
-  font-size: 0.875rem;
-}
-
-.spells-step__prepared-list {
+/* Full height: the page scrolls, never an inner box. Two columns when there is room. */
+.spells-step__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.spells-step__prepared-toggle {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-1);
-  color: var(--text-1);
-  font: inherit;
-  cursor: pointer;
-
-  &[aria-pressed='true'] {
-    border-color: var(--accent);
-    background: var(--surface-2);
-  }
-}
-
-.spells-step__prepared-toggle:disabled {
-  cursor: not-allowed;
-}
-
-.spells-step__always-prepared {
-  margin-inline-start: var(--space-1);
-  color: var(--text-2);
-  font-size: 0.875rem;
 }
 
 .spells-step__continue {
-  margin-top: var(--space-3);
+  align-self: flex-start;
 }

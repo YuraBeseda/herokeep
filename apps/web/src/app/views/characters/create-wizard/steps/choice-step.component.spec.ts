@@ -8,6 +8,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
 import { ChoiceStepComponent } from './choice-step.component';
@@ -44,6 +45,7 @@ const BARD_TOOLS_CHOICE = 'srd-5e-2024:class/bard@1/tools';
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -74,6 +76,17 @@ function createState(): CreateWizardState {
   return TestBed.inject(CreateWizardState);
 }
 
+/** The name of the card or row a choose / toggle button belongs to. */
+function pickName(button: Element): string | undefined {
+  return button
+    .closest('hk-picker-card, .entity-picker__row')
+    ?.querySelector('.hk-picker-card__name, .entity-picker__name')
+    ?.textContent?.trim();
+}
+
+/** A button that cannot be pressed: a card's Choose reads aria-disabled, a row's toggle too. */
+const isBlocked = (button: Element): boolean => button.getAttribute('aria-disabled') === 'true';
+
 describe('ChoiceStepComponent', () => {
   beforeEach(() => configure());
 
@@ -86,7 +99,7 @@ describe('ChoiceStepComponent', () => {
     await fixture.whenStable();
 
     const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
-      '.entity-picker__select',
+      '.hk-picker-card__choose, .entity-picker__toggle',
     );
     expect(buttons.length).toBeGreaterThanOrEqual(4);
 
@@ -109,7 +122,7 @@ describe('ChoiceStepComponent', () => {
 
     const buttons = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
-        '.entity-picker__select',
+        '.hk-picker-card__choose, .entity-picker__toggle',
       ),
     );
     expect(buttons.length).toBeGreaterThanOrEqual(2);
@@ -152,7 +165,9 @@ describe('ChoiceStepComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const buttons = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.hk-picker-card__choose, .entity-picker__toggle',
+      ),
     );
     expect(buttons.length).toBeGreaterThan(3);
 
@@ -179,7 +194,7 @@ describe('ChoiceStepComponent', () => {
     expect(compiled.querySelectorAll('.choice-step__diagnostic').length).toBeGreaterThan(0);
   });
 
-  it('the synthetic class-skills pick renders chips from the fighter skillChoice, enforces count 2, and shows the diagnostic on a 3rd pick', async () => {
+  it('the synthetic class-skills pick lists the fighter skillChoice as rows, enforces count 2, and shows the diagnostic on a 3rd pick', async () => {
     const state = createState();
     state.name.set('Aldric');
     state.setDecision(CLASS_CHOICE, ['srd-5e-2024:class/fighter']);
@@ -189,11 +204,10 @@ describe('ChoiceStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const chips = Array.from(compiled.querySelectorAll('hk-chip'));
+    const rows = Array.from(compiled.querySelectorAll<HTMLElement>('.entity-picker__toggle'));
     // The fighter's skillChoice.from offers exactly 9 skills.
-    expect(chips.length).toBe(9);
-    const findChip = (text: string): HTMLElement =>
-      chips.find((c) => c.textContent?.trim() === text) as HTMLElement;
+    expect(rows.length).toBe(9);
+    const findChip = (text: string): HTMLElement => rows.find((c) => pickName(c) === text)!;
 
     findChip('Athletics').click();
     await fixture.whenStable();
@@ -234,9 +248,9 @@ describe('ChoiceStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const names = Array.from(compiled.querySelectorAll('.entity-picker__name')).map((n) =>
-      n.textContent?.trim(),
-    );
+    const names = Array.from(
+      compiled.querySelectorAll('.hk-picker-card__name, .entity-picker__name'),
+    ).map((n) => n.textContent?.trim());
     // 4 rogue class skills + Soldier's Athletics and Intimidation; no unproficient skill (Arcana).
     expect([...names].sort()).toEqual(
       [
@@ -250,10 +264,11 @@ describe('ChoiceStepComponent', () => {
     );
 
     const buttons = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.hk-picker-card__choose, .entity-picker__toggle',
+      ),
     );
-    const byName = (text: string) =>
-      buttons.find((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() === text)!;
+    const byName = (text: string) => buttons.find((b) => pickName(b) === text)!;
     byName('Stealth').click();
     await fixture.whenStable();
     byName('Sleight of Hand').click();
@@ -281,9 +296,9 @@ describe('ChoiceStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const names = Array.from(compiled.querySelectorAll('.entity-picker__name')).map((n) =>
-      n.textContent?.trim(),
-    );
+    const names = Array.from(
+      compiled.querySelectorAll('.hk-picker-card__name, .entity-picker__name'),
+    ).map((n) => n.textContent?.trim());
     expect([...names].sort()).toEqual(
       [
         'Bagpipes',
@@ -302,14 +317,12 @@ describe('ChoiceStepComponent', () => {
     );
 
     const buttons = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.hk-picker-card__choose, .entity-picker__toggle',
+      ),
     );
     const byName = (text: string) =>
-      buttons.find(
-        (b) =>
-          b.querySelector('.entity-picker__name')?.textContent?.trim() ===
-          `Musical Instrument, ${text}`,
-      )!;
+      buttons.find((b) => pickName(b) === `Musical Instrument, ${text}`)!;
     for (const name of ['Lute', 'Flute', 'Drum']) {
       byName(name).click();
       await fixture.whenStable();
@@ -350,15 +363,14 @@ describe('ChoiceStepComponent', () => {
         payload: { classId, level: i + 2, hpRoll: 'average' },
       }));
     const selectButtons = (c: HTMLElement) =>
-      Array.from(c.querySelectorAll<HTMLButtonElement>('.entity-picker__select'));
-    const nameOf = (b: HTMLButtonElement) =>
-      b.querySelector('.entity-picker__name')?.textContent?.trim() ?? '';
-    const reasonOf = (c: HTMLElement, b: HTMLButtonElement): string | undefined => {
-      const describedBy = b.getAttribute('aria-describedby');
-      return describedBy
-        ? c.querySelector(`[id="${describedBy}"]`)?.textContent?.trim()
-        : undefined;
-    };
+      Array.from(
+        c.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+      );
+    const nameOf = (b: HTMLButtonElement) => pickName(b) ?? '';
+    // A row carries its reason as the toggle's description; a card prints it under its name.
+    const reasonOf = (_c: HTMLElement, b: HTMLButtonElement): string | undefined =>
+      b.getAttribute('aria-description') ??
+      b.closest('hk-picker-card')?.querySelector('.hk-picker-card__gate')?.textContent?.trim();
 
     function seedLevel4Fighter(): CreateWizardState {
       const state = createState();
@@ -399,15 +411,15 @@ describe('ChoiceStepComponent', () => {
         ].sort(),
       );
       for (const boon of boons) {
-        expect(boon.disabled, nameOf(boon)).toBe(true);
+        expect(isBlocked(boon), nameOf(boon)).toBe(true);
         expect(reasonOf(compiled, boon), nameOf(boon)).toBe(
           charactersEn.wizard.picker.gate.prerequisiteFailed,
         );
       }
       // Level 4 / Str 17 satisfies ASI's and Grappler's own prerequisites: not gated.
       for (const eligible of buttons.filter((b) => !nameOf(b).startsWith('Boon of'))) {
-        expect(eligible.disabled, nameOf(eligible)).toBe(false);
-        expect(eligible.hasAttribute('aria-describedby'), nameOf(eligible)).toBe(false);
+        expect(isBlocked(eligible), nameOf(eligible)).toBe(false);
+        expect(eligible.hasAttribute('aria-description'), nameOf(eligible)).toBe(false);
       }
       // Every reason id is unique in the document (one picker can't collide with itself).
       const ids = Array.from(compiled.querySelectorAll('[id]')).map((e) => e.id);
@@ -511,20 +523,20 @@ describe('ChoiceStepComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
 
       const buttons = selectButtons(compiled);
-      const gated = buttons.filter((b) => b.disabled).map(nameOf);
+      const gated = buttons.filter(isBlocked).map(nameOf);
       expect(gated.sort()).toEqual(['Sleight of Hand', 'Stealth']);
-      for (const b of buttons.filter((x) => x.disabled)) {
+      for (const b of buttons.filter(isBlocked)) {
         expect(reasonOf(compiled, b)).toBe(charactersEn.wizard.picker.gate.duplicate);
       }
-      expect(buttons.find((b) => nameOf(b) === 'Perception')?.disabled).toBe(false);
+      expect(isBlocked(buttons.find((b) => nameOf(b) === 'Perception')!)).toBe(false);
     });
   });
 
   // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------
   //
   // The reviewer's own finding: a wrapping `<fieldset disabled>` (`build-tab.component.html`) is
-  // COSMETIC ONLY for this branch in a real browser — `hk-chip` is a custom element, not a
-  // "listed" form-associated one, so fieldset-disabled never reaches its host `(click)` binding.
+  // COSMETIC ONLY for this branch in a real browser — a skill row and an ability chip are
+  // not all "listed" form controls, so a fieldset never reaches every click binding.
   // `ChoiceStepComponent`'s own `disabled` input (gating `onToggle` directly) is the real fix;
   // these specs assert the STORE side effect is untouched on click, never the fieldset property.
   describe('disabled input (fix round 1 — the chip click-through gate)', () => {
@@ -539,9 +551,9 @@ describe('ChoiceStepComponent', () => {
       await fixture.whenStable();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const athletics = Array.from(compiled.querySelectorAll('hk-chip')).find(
-        (c) => c.textContent?.trim() === 'Athletics',
-      ) as HTMLElement;
+      const athletics = Array.from(
+        compiled.querySelectorAll<HTMLElement>('.entity-picker__toggle'),
+      ).find((c) => pickName(c) === 'Athletics')!;
       expect(athletics.getAttribute('aria-disabled')).toBe('true');
 
       athletics.click();
@@ -561,9 +573,9 @@ describe('ChoiceStepComponent', () => {
       await fixture.whenStable();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const athletics = Array.from(compiled.querySelectorAll('hk-chip')).find(
-        (c) => c.textContent?.trim() === 'Athletics',
-      ) as HTMLElement;
+      const athletics = Array.from(
+        compiled.querySelectorAll<HTMLElement>('.entity-picker__toggle'),
+      ).find((c) => pickName(c) === 'Athletics')!;
       expect(athletics.getAttribute('aria-disabled')).toBeNull();
 
       athletics.click();
@@ -582,9 +594,9 @@ describe('ChoiceStepComponent', () => {
       await fixture.whenStable(); // `disabled` never set
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const athletics = Array.from(compiled.querySelectorAll('hk-chip')).find(
-        (c) => c.textContent?.trim() === 'Athletics',
-      ) as HTMLElement;
+      const athletics = Array.from(
+        compiled.querySelectorAll<HTMLElement>('.entity-picker__toggle'),
+      ).find((c) => pickName(c) === 'Athletics')!;
       athletics.click();
       await fixture.whenStable();
 
@@ -601,7 +613,7 @@ describe('ChoiceStepComponent', () => {
       await fixture.whenStable();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const strength = Array.from(compiled.querySelectorAll('hk-chip')).find(
+      const strength = Array.from(compiled.querySelectorAll('button[hk-filter-chip]')).find(
         (c) => c.textContent?.trim() === 'Strength',
       ) as HTMLElement;
       expect(strength.getAttribute('aria-disabled')).toBe('true');
@@ -636,7 +648,7 @@ describe('ChoiceStepComponent', () => {
     await improveFixture.whenStable();
     const improveCompiled = improveFixture.nativeElement as HTMLElement;
     expect(improveCompiled.querySelector('hk-abilities-improve-step')).not.toBeNull();
-    expect(improveCompiled.querySelectorAll('hk-chip').length).toBeGreaterThan(0);
+    expect(improveCompiled.querySelectorAll('button[hk-filter-chip]').length).toBeGreaterThan(0);
   });
 });
 
@@ -687,12 +699,13 @@ describe('ChoiceStepComponent — mixed-type queries pick', () => {
       (e) => e.type === 'item' && e.category === 'tool',
     ).length;
     const buttons = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>('.entity-picker__select'),
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.hk-picker-card__choose, .entity-picker__toggle',
+      ),
     );
     expect(buttons.length).toBe(skillCount + toolCount);
 
-    const byName = (text: string) =>
-      buttons.find((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() === text)!;
+    const byName = (text: string) => buttons.find((b) => pickName(b) === text)!;
     for (const name of ['Athletics', 'Perception', "Smith's Tools (20 GP)"]) {
       byName(name).click();
       await fixture.whenStable();

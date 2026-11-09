@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import {
   applyBackgroundAbilities,
+  chooseOption,
   equipGear,
   finishReviewAndCreate,
   nameCharacter,
@@ -43,7 +44,7 @@ export async function createWizard(page: Page, name: string): Promise<string> {
   await pickSpecies(page);
   await pickBackground(page);
   await applyBackgroundAbilities(page);
-  await page.getByRole('button', { name: 'Wizard', exact: true }).click();
+  await chooseOption(page, 'Wizard');
 
   await page.getByRole('tab', { name: 'Standard array', exact: true }).click();
   const scores: ReadonlyMap<string, string> = new Map([
@@ -61,31 +62,20 @@ export async function createWizard(page: Page, name: string): Promise<string> {
   // The ability step stays open once the scores are valid (no auto-advance): Next moves on.
   await page.locator('[data-action="next"]').click();
 
-  await page.getByRole('button', { name: 'Arcana', exact: true }).click();
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await chooseOption(page, 'Arcana');
+  await chooseOption(page, 'History');
   await pickGamingSet(page);
 
+  // The spellbook lists every level-1 spell of the class (no search, no cap): tick two of them by
+  // the toggle named after the spell. The step has no Continue button; Next leaves it.
   await expect(page.locator('.spells-step__spellbook')).toBeVisible();
-  const spellbookSearch = page.locator('.spells-step__spellbook').getByRole('searchbox');
-  await spellbookSearch.fill('Magic Missile');
-  await page.getByRole('button', { name: 'Magic Missile', exact: true }).click();
-  await spellbookSearch.fill('Sleep');
-  await page.getByRole('button', { name: 'Sleep', exact: true }).click();
-  await spellbookSearch.fill('');
-  await page.locator('.spells-step__continue').click();
-  // Unlike a resolved 'choice' step, 'spells' NEVER disappears from `CreateWizardState.steps()`
-  // (`sheet.spellcasting.length > 0` stays true forever once true — see that computed's own doc)
-  // — it's the SAME "never auto-advances" category `create-fighter.ts` documents for 'name'/
-  // 'equipment', so `.spells-step__continue` only marks the STEPPER's own checkmark done
-  // (`CreateWizardComponent.stepperSteps`'s `spellsDone` — cosmetic only; `canGoNext` itself
-  // doesn't gate on it, only on `kind !== 'name'`); the wizard's own Next still has to be clicked
-  // to actually move to the equipment step.
+  for (const spell of ['Magic Missile', 'Sleep']) {
+    await page
+      .locator('.spells-step__spellbook')
+      .getByRole('button', { name: new RegExp(`^${spell} —`) })
+      .click();
+  }
   await page.locator('[data-action="next"]').click();
-  // Waited for explicitly (not just clicked-and-continued): `equipGear`'s very first action is an
-  // UNSCOPED `page.getByRole('searchbox')`, which strict-mode-fails immediately (no retry — that's
-  // not an actionability wait Playwright can retry through) if it runs during the brief window
-  // where the outgoing spells-step's own two search boxes (cantrips + spellbook) are still
-  // attached alongside the incoming equipment-step's — confirmed flaky without this wait.
   await expect(page.locator('.equipment-step')).toBeVisible();
 
   await equipGear(page);

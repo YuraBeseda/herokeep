@@ -1,0 +1,156 @@
+@use 'utilities' as u;
+
+:host {
+  display: block;
+}
+
+.name-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  h2 {
+    margin: 0;
+    font-family: var(--font-display);
+  }
+}
+
+.name-step__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    padding: 0;
+    color: var(--text-2);
+    font-size: 0.875rem;
+  }
+}
+
+.name-step__name-input {
+  max-inline-size: 32rem;
+}
+
+/* Grammatical form: a brass segmented control over real radios. */
+.name-step__segments {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-inline-size: 100%;
+  border: 1px solid var(--brass-shadow);
+  border-radius: var(--radius-leaf);
+  overflow: hidden;
+}
+
+.name-step__segment {
+  position: relative;
+  display: inline-flex;
+  flex: 1 1 auto;
+}
+
+.name-step__segment-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.name-step__segment-label {
+  @include u.touch-target;
+
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  background: var(--leaf);
+  color: var(--text-1);
+  text-align: center;
+}
+
+.name-step__segment-input:checked + .name-step__segment-label {
+  background: var(--brass);
+  color: var(--text-on-brass);
+  font-weight: 600;
+}
+
+.name-step__segment-input:focus-visible + .name-step__segment-label {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 4px var(--focus-ring-outer);
+}
+
+/* Content packs: one row per pack, the pin at the end (the core pack's is a padlock). */
+.name-step__pack-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-inline-size: 32rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.name-step__pack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
+  color: var(--text-1);
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.name-step__pack--core {
+  color: var(--text-2);
+}
+
+.name-step__pack-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.name-step__pack-version {
+  flex: none;
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.name-step__pack-toggle {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.name-step__pin {
+  flex: none;
+  color: var(--text-2);
+}
+
+.name-step__pack:has(.name-step__pack-toggle:checked) {
+  box-shadow: 0 0 0 2px var(--brass);
+
+  .name-step__pin {
+    color: var(--accent-strong);
+  }
+}
+
+.name-step__pack:has(.name-step__pack-toggle:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  box-shadow: 0 0 0 4px var(--focus-ring-outer);
+}

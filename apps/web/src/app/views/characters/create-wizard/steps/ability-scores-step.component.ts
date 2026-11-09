@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { parseRollSpec, roll, type Diagnostic, type RollResult, type Sheet } from '@hk/engine';
 import type { Entity } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
-import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { cryptoRng } from '@shared/services/engine/rng';
+import { HkAbilitySealComponent } from '../../../../ui/ability-seal/ability-seal.component';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
+import { HkSelectComponent, type SelectOption } from '../../../../ui/select/select.component';
 import { CreateWizardState } from '../create-wizard.state';
 import type { ChoiceCommitFn, ChoiceValidateFn } from './choice-step-overrides';
 
@@ -50,7 +51,14 @@ function diagnosticKey(code: string): string {
  */
 @Component({
   selector: 'hk-ability-scores-step',
-  imports: [TranslocoDirective, FormsModule, TabsComponent, NumberFieldComponent, ButtonComponent],
+  imports: [
+    TranslocoDirective,
+    FormsModule,
+    HkAbilitySealComponent,
+    HkButtonComponent,
+    HkNumberFieldComponent,
+    HkSelectComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './ability-scores-step.component.html',
   styleUrl: './ability-scores-step.component.scss',
@@ -128,12 +136,67 @@ export class AbilityScoresStepComponent {
 
   // Methods
 
-  protected methodTabs(t: (key: string) => string): HkTab[] {
-    return this.availableMethods().map((m) => ({
-      id: m,
-      label: t(`wizard.abilityScores.method.${m}`),
-    }));
+  /** Arrow keys / Home / End move between the method tabs (the roving-tabindex pattern). */
+  protected onTabKey(event: KeyboardEvent): void {
+    const methods = this.availableMethods();
+    const at = methods.indexOf(this.activeMethod()!);
+    const target =
+      event.key === 'ArrowRight'
+        ? (at + 1) % methods.length
+        : event.key === 'ArrowLeft'
+          ? (at - 1 + methods.length) % methods.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? methods.length - 1
+              : -1;
+    if (target < 0) return;
+    event.preventDefault();
+    this.method.set(methods[target]);
+    const tabs = (event.currentTarget as HTMLElement).parentElement!.querySelectorAll<HTMLElement>(
+      '[role=tab]',
+    );
+    tabs[target]?.focus();
   }
+
+  /** The seal of an ability as the draft derives it (background bonuses included), so the six
+   * seals show the effect of every pick live; nothing about how a score becomes a modifier lives here. */
+  protected sealOf(abilityId: string): { score: number; modifier: number; save: number } {
+    const block = this.state?.draftSheet()?.abilities[abilityId];
+    return block
+      ? { score: block.score.value, modifier: block.mod, save: block.save.value }
+      : { score: 0, modifier: 0, save: 0 };
+  }
+
+  protected slotValue(slot: number | undefined): string {
+    return slot === undefined ? '' : String(slot);
+  }
+
+  protected standardArrayChoices(abilityId: string, unassigned: string): SelectOption[] {
+    return [
+      { value: '', label: unassigned },
+      ...this.standardArrayOptionsFor(abilityId).map((o) => ({
+        value: String(o.index),
+        label: String(o.value),
+      })),
+    ];
+  }
+
+  protected rollChoices(abilityId: string, unassigned: string): SelectOption[] {
+    return [
+      { value: '', label: unassigned },
+      ...this.rollOptionsFor(abilityId).map((o) => ({
+        value: String(o.index),
+        label: String(o.total),
+      })),
+    ];
+  }
+
+  /** How full the point-buy budget is, 0-100. */
+  protected readonly pointBuyFill = computed(() => {
+    const budget = this.gen().pointBuy.budget;
+    return budget > 0 ? Math.min(100, (this.pointBuyTotal() / budget) * 100) : 0;
+  });
 
   protected abilityName(key: string): string {
     const entity = this.engineFacade

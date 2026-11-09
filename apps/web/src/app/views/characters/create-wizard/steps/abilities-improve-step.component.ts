@@ -1,8 +1,12 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { abilitiesPickOptions, findChoice, type Diagnostic, type Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ChipComponent } from '@shared/components/chip/chip.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import {
+  HkFilterChipComponent,
+  type FilterChipOption,
+} from '../../../../ui/filter-chips/filter-chip.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { CreateWizardState } from '../create-wizard.state';
 import type { ChoiceCommitFn, ChoiceValidateFn } from './choice-step-overrides';
 
@@ -46,7 +50,7 @@ function diagnosticKey(code: string): string {
  */
 @Component({
   selector: 'hk-abilities-improve-step',
-  imports: [TranslocoDirective, ChipComponent],
+  imports: [TranslocoDirective, HkFilterChipComponent, HkTagChipComponent],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './abilities-improve-step.component.html',
   styleUrl: './abilities-improve-step.component.scss',
@@ -129,6 +133,16 @@ export class AbilitiesImproveStepComponent {
         .map(([, v]) => v),
     );
     return info.allowedAbilities.filter((a) => !usedElsewhere.has(a.id));
+  }
+
+  /** The chip of one ability: while the step is locked (another member holds the edit lock) it reads
+   * as disabled and says why in its hint. */
+  protected chipOption(abilityId: string, lockedReason: string): FilterChipOption {
+    return {
+      id: abilityId,
+      label: this.abilityName(abilityId),
+      ...(this.disabled() ? { disabledReason: lockedReason } : {}),
+    };
   }
 
   protected isAssigned(slot: number, abilityId: string): boolean {

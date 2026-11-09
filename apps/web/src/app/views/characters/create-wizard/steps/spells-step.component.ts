@@ -1,10 +1,12 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { CreateWizardState } from '../create-wizard.state';
-import { EntityPickerComponent } from './entity-picker.component';
+import { SpellPickRowComponent } from './spell-pick-row.component';
 
 // Not exported from `@hk/engine`'s own barrel (only the `deriveSpellcasting` FUNCTION is, via
 // `derive/index.ts`) — recovered from the already-exported `Sheet` shape instead of widening the
@@ -13,11 +15,6 @@ type SpellcastingBlock = Sheet['spellcasting'][number];
 
 /** A single spell-mutator override — see this file's class doc's "override trio" note. */
 type SpellMutatorFn = (spellId: string, classId: string) => void;
-
-// `hk-entity-picker`'s R3 render cap (task-6 fix round) — the real SRD pack carries 339 spells;
-// even a single class's cantrip/level-1 slice is small (15/30 in the SRD pack), but the cap is
-// passed defensively regardless (task-8-brief.md: "PASS A CAP … for the spell picker").
-const SPELL_PICKER_LIMIT = 60;
 
 // Recommended (soft, non-blocking) spellbook size at creation — controller ruling (design
 // rulings 1-2, task-8-brief.md): helper text only, never enforced.
@@ -50,7 +47,13 @@ const SPELLBOOK_RECOMMENDED = 6;
  */
 @Component({
   selector: 'hk-spells-step',
-  imports: [TranslocoDirective, EntityPickerComponent, ButtonComponent],
+  imports: [
+    TranslocoDirective,
+    HkButtonComponent,
+    HkDescriptionDrawerComponent,
+    HkTagChipComponent,
+    SpellPickRowComponent,
+  ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './spells-step.component.html',
   styleUrl: './spells-step.component.scss',
@@ -64,7 +67,10 @@ export class SpellsStepComponent {
   private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
 
-  protected readonly spellPickerLimit = SPELL_PICKER_LIMIT;
+  /** The spell whose description the drawer shows (kept after closing, so the drawer can animate out). */
+  protected readonly detailsId = signal<string | undefined>(undefined);
+  protected readonly detailsOpen = signal(false);
+  protected readonly detailsOpener = signal<HTMLElement | null>(null);
 
   // Override trio + two more (task-13-brief.md): `spellcasting` overrides which block this step
   // reads (`CreateWizardState.draftSheet()?.spellcasting[0]` otherwise); `learn`/`unlearn`/
@@ -179,6 +185,24 @@ export class SpellsStepComponent {
     }
     if (this.preparedCapReached()) return; // hard cap — silently refused, see class doc
     this.runPrepare(id, classId);
+  }
+
+  protected onDetails(id: string, opener: HTMLElement): void {
+    this.detailsOpener.set(opener);
+    this.detailsId.set(id);
+    this.detailsOpen.set(true);
+  }
+
+  /** Why a prepared row cannot be toggled: granted by the class, or every slot is taken. */
+  protected preparedBlockedReason(
+    id: string,
+    t: (key: string, params?: Record<string, unknown>) => string,
+  ): string | null {
+    if (this.isAlwaysPrepared(id)) return t('sheet.spellcasting.alwaysPreparedReason');
+    if (!this.isPrepared(id) && this.preparedCapReached()) {
+      return t('wizard.spells.preparedCapReached', { cap: this.preparedMax() });
+    }
+    return null;
   }
 
   protected onContinue(): void {

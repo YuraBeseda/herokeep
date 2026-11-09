@@ -10,60 +10,7 @@
     @switch (currentStep()?.kind) {
       @case ('name') {
         <div class="create-wizard__step">
-          <h2>{{ t('wizard.name.title') }}</h2>
-
-          <label class="create-wizard__field">
-            <span>{{ t('wizard.name.nameLabel') }}</span>
-            <input
-              type="text"
-              class="create-wizard__name-input"
-              [value]="state.name()"
-              (input)="onNameInput($any($event.target).value)"
-              (blur)="onNameBlur()"
-              [attr.maxlength]="nameMaxLength"
-            />
-          </label>
-          @if (nameTouched() && !nameValid()) {
-            <p class="create-wizard__error">{{ t('wizard.name.nameError') }}</p>
-          }
-
-          <fieldset class="create-wizard__field">
-            <legend>{{ t('wizard.name.genderLabel') }}</legend>
-            @for (option of genderOptions; track option.value) {
-              <label class="create-wizard__radio">
-                <input
-                  type="radio"
-                  name="create-wizard-gender"
-                  [value]="option.value"
-                  [checked]="state.gender() === option.value"
-                  (change)="onGenderChange(option.value)"
-                />
-                {{ t(option.labelKey) }}
-              </label>
-            }
-          </fieldset>
-
-          <!-- Plan 15 Task 4: only when content packs are installed; none checked by default. -->
-          @if (state.installedContent().length > 0) {
-            <fieldset class="create-wizard__field create-wizard__packs">
-              <legend>{{ t('create.packs.title') }}</legend>
-              <p class="create-wizard__packs-hint">{{ t('create.packs.hint') }}</p>
-              @for (pack of state.installedContent(); track pack.id) {
-                <label class="create-wizard__radio create-wizard__pack">
-                  <input
-                    type="checkbox"
-                    class="create-wizard__pack-toggle"
-                    [checked]="state.isPackSelected(pack)"
-                    (change)="state.togglePack(pack.id, pack.version)"
-                  />
-                  {{ pack.name }}
-                  <span class="create-wizard__pack-version">{{
-                    t('create.packs.version', { version: pack.version })
-                  }}</span>
-                </label>
-              }
-            </fieldset>
-          }
+          <hk-name-step />
         </div>
       }
       @case ('choice') {
@@ -86,52 +33,64 @@
       @case ('review') {
         <div class="create-wizard__step create-wizard__review">
           <h2>{{ t('wizard.review.title') }}</h2>
-          <dl class="create-wizard__summary">
-            <dt>{{ t('wizard.review.nameLabel') }}</dt>
-            <dd>
-              {{ state.name() }}
+
+          <section class="create-wizard__group">
+            <header class="create-wizard__group-head">
+              <h3>{{ t('wizard.review.conceptLabel') }}</h3>
               <button
                 type="button"
                 class="create-wizard__edit"
                 [attr.data-edit-step]="'name'"
                 [attr.aria-label]="
-                  t('wizard.review.editStep', { step: t('wizard.review.nameLabel') })
+                  t('wizard.review.editStep', { step: t('wizard.review.conceptLabel') })
                 "
                 [hkTooltip]="t('wizard.review.edit')"
                 (click)="onEdit(null)"
               >
                 <hk-icon [icon]="'ui:edit'" />
               </button>
-            </dd>
-            <dt>{{ t('wizard.review.genderLabel') }}</dt>
-            <dd>{{ t(genderLabelKey()) }}</dd>
-          </dl>
+            </header>
+            <dl class="create-wizard__summary">
+              <dt>{{ t('wizard.review.nameLabel') }}</dt>
+              <dd>{{ state.name() }}</dd>
+              <dt>{{ t('wizard.review.genderLabel') }}</dt>
+              <dd>{{ t(genderLabelKey()) }}</dd>
+              @if (state.selectedPacks().size > 0) {
+                <dt>{{ t('create.packs.title') }}</dt>
+                <dd>{{ selectedPackNames() }}</dd>
+              }
+            </dl>
+          </section>
 
           @if (state.draftSheet()) {
             @if (decisionSummaries().length > 0) {
-              <div>
-                <h3>{{ t('wizard.review.chosenLabel') }}</h3>
+              <section class="create-wizard__group">
+                <header class="create-wizard__group-head">
+                  <h3>{{ t('wizard.review.chosenLabel') }}</h3>
+                </header>
                 <dl class="create-wizard__summary create-wizard__decisions">
                   @for (d of decisionSummaries(); track d.choiceId) {
                     <dt>{{ d.promptText || t(d.promptKey!) }}</dt>
                     <dd>
-                      @for (part of d.parts; track $index; let last = $last) {
-                        @switch (part.kind) {
-                          @case ('abilityDelta') {
-                            {{ part.ability }}
-                            {{ t('wizard.abilitiesImprove.deltaLabel', { delta: part.delta }) }}
+                      <span class="create-wizard__value">
+                        @for (part of d.parts; track $index; let last = $last) {
+                          @switch (part.kind) {
+                            @case ('abilityDelta') {
+                              {{ part.ability }}
+                              {{ t('wizard.abilitiesImprove.deltaLabel', { delta: part.delta }) }}
+                            }
+                            @case ('abilityScore') {
+                              {{ part.ability }} {{ part.value }}
+                            }
+                            @default {
+                              {{ part.text }}
+                            }
                           }
-                          @case ('abilityScore') {
-                            {{ part.ability }} {{ part.value }}
-                          }
-                          @default {
-                            {{ part.text }}
+                          @if (!last) {
+                            <span>, </span>
                           }
                         }
-                        @if (!last) {
-                          <span>, </span>
-                        }
-                      }
+                      </span>
                       @if (editStepId(d.choiceId); as editId) {
                         <button
                           type="button"
@@ -149,12 +108,51 @@
                     </dd>
                   }
                 </dl>
-              </div>
+              </section>
+            }
+
+            @if (knownSpellIds().length > 0) {
+              <section class="create-wizard__group">
+                <header class="create-wizard__group-head">
+                  <h3>{{ t('wizard.review.spellsLabel') }}</h3>
+                  <button
+                    type="button"
+                    class="create-wizard__edit"
+                    [attr.data-edit-step]="'spells'"
+                    [attr.aria-label]="
+                      t('wizard.review.editStep', { step: t('wizard.review.spellsLabel') })
+                    "
+                    [hkTooltip]="t('wizard.review.edit')"
+                    (click)="onEditStep('spells')"
+                  >
+                    <hk-icon [icon]="'ui:edit'" />
+                  </button>
+                </header>
+                <ul class="create-wizard__spells">
+                  @for (id of knownSpellIds(); track id) {
+                    <li>{{ spellName(id) }}</li>
+                  }
+                </ul>
+              </section>
             }
 
             @if (inventorySummary().length > 0) {
-              <div>
-                <h3>{{ t('wizard.review.itemsLabel') }}</h3>
+              <section class="create-wizard__group">
+                <header class="create-wizard__group-head">
+                  <h3>{{ t('wizard.review.itemsLabel') }}</h3>
+                  <button
+                    type="button"
+                    class="create-wizard__edit"
+                    [attr.data-edit-step]="'equipment'"
+                    [attr.aria-label]="
+                      t('wizard.review.editStep', { step: t('wizard.review.itemsLabel') })
+                    "
+                    [hkTooltip]="t('wizard.review.edit')"
+                    (click)="onEditStep('equipment')"
+                  >
+                    <hk-icon [icon]="'ui:edit'" />
+                  </button>
+                </header>
                 <ul class="create-wizard__items">
                   @for (entry of inventorySummary(); track entry.instanceId) {
                     <li>
@@ -167,31 +165,37 @@
                     </li>
                   }
                 </ul>
-              </div>
-            }
-
-            @if (knownSpellIds().length > 0) {
-              <div>
-                <h3>{{ t('wizard.review.spellsLabel') }}</h3>
-                <ul class="create-wizard__spells">
-                  @for (id of knownSpellIds(); track id) {
-                    <li>{{ spellName(id) }}</li>
-                  }
-                </ul>
-              </div>
+              </section>
             }
 
             @if (state.draftSheet(); as sheet) {
-              <dl class="create-wizard__summary">
-                <dt>{{ t('wizard.review.abilitiesLabel') }}</dt>
-                <dd>{{ abilityLine() }}</dd>
-                <dt>{{ t('wizard.review.hp') }}</dt>
-                <dd>{{ sheet.hp.max.value }}</dd>
-                <dt>{{ t('wizard.review.ac') }}</dt>
-                <dd>{{ sheet.ac.value }}</dd>
-                <dt>{{ t('wizard.review.prof') }}</dt>
-                <dd>{{ sheet.prof }}</dd>
-              </dl>
+              <section class="create-wizard__group create-wizard__derived">
+                <header class="create-wizard__group-head">
+                  <h3>{{ t('wizard.review.abilitiesLabel') }}</h3>
+                </header>
+                <ul class="create-wizard__seals">
+                  @for (seal of abilitySeals(); track seal.id) {
+                    <li>
+                      <hk-ability-seal
+                        [ability]="seal.name"
+                        [score]="seal.score"
+                        [modifier]="seal.modifier"
+                        [save]="seal.save"
+                        [saveProficient]="seal.saveProficient"
+                        [compact]="true"
+                      />
+                    </li>
+                  }
+                </ul>
+                <dl class="create-wizard__summary create-wizard__numbers">
+                  <dt>{{ t('wizard.review.hp') }}</dt>
+                  <dd>{{ sheet.hp.max.value }}</dd>
+                  <dt>{{ t('wizard.review.ac') }}</dt>
+                  <dd>{{ sheet.ac.value }}</dd>
+                  <dt>{{ t('wizard.review.prof') }}</dt>
+                  <dd>{{ sheet.prof }}</dd>
+                </dl>
+              </section>
             }
           }
 

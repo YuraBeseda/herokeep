@@ -66,9 +66,7 @@
               [class.hk-stepper__step--invalid]="step.invalid"
               [attr.aria-current]="step.id === current() ? 'step' : null"
               [attr.aria-disabled]="reachable(step) ? null : 'true'"
-              [hkTooltip]="
-                reachable(step) && !step.invalid ? '' : (step.hint ?? t('ui.stepper.unreachable'))
-              "
+              [hkTooltip]="hintOf(step, t('ui.stepper.invalid'), t('ui.stepper.unreachable'))"
               (click)="choose(step)"
             >
               <span class="hk-stepper__marker" aria-hidden="true">

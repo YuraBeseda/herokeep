@@ -61,6 +61,9 @@ export class CreateWizardState implements EngineScope {
     );
   });
 
+  /** The core pack every draft pins; always on, so the first step shows it locked. */
+  readonly corePack: Signal<Pack | undefined> = computed(() => this.packStore.corePack());
+
   /** Checked content packs: pack id → version. */
   readonly selectedPacks = signal<ReadonlyMap<string, string>>(new Map());
 

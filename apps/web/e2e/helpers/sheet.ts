@@ -19,6 +19,10 @@ export async function searchLibrary(page: Page, search: string): Promise<Locator
 /** The Play tab's "Add from library" dialog: search, then pick. Picking closes the dialog. */
 export async function addFromLibrary(page: Page, search: string, item: string): Promise<void> {
   const dialog = await searchLibrary(page, search);
-  await dialog.getByRole('button', { name: item, exact: true }).click();
+  await dialog
+    .locator('.entity-picker__row')
+    .filter({ has: page.locator('.entity-picker__name').getByText(item, { exact: true }) })
+    .locator('.entity-picker__toggle')
+    .click();
   await expect(page.locator('.add-item-dialog__title')).toHaveCount(0);
 }

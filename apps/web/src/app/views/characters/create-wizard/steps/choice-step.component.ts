@@ -10,10 +10,11 @@ import {
 } from '@hk/engine';
 import { makeEntityId, parseEntityId } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { ChipComponent } from '@shared/components/chip/chip.component';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
+import { HkTextFieldComponent } from '../../../../ui/text-field/text-field.component';
 import { CreateWizardState } from '../create-wizard.state';
 import { AbilitiesImproveStepComponent } from './abilities-improve-step.component';
 import { AbilityScoresStepComponent } from './ability-scores-step.component';
@@ -21,7 +22,10 @@ import type { ChoiceCommitFn, ChoiceValidateFn } from './choice-step-overrides';
 import { EntityPickerComponent } from './entity-picker.component';
 
 interface SkillOption {
+  /** The skill's slug: what the decision records. */
   readonly id: string;
+  /** The skill entity the picker lists (and the drawer describes). */
+  readonly entityId: string;
   readonly name: string;
 }
 
@@ -63,6 +67,9 @@ const OPTION_GATE_KEYS: Readonly<Record<string, string>> = {
 
 const NO_GATES: ReadonlyMap<string, string> = new Map();
 
+/** More options than this and a pick lists as compact rows instead of cards. */
+const ROW_LAYOUT_THRESHOLD = 12;
+
 /**
  * Generic engine-driven choice step (task-6-brief.md): resolves `choiceId` to its `Choice` (or,
  * for the synthetic `<classId>@1/skills` / `<classId>@1/multiclass-skills` ids, to the owning
@@ -84,8 +91,9 @@ const NO_GATES: ReadonlyMap<string, string> = new Map();
   selector: 'hk-choice-step',
   imports: [
     TranslocoDirective,
-    ChipComponent,
-    ButtonComponent,
+    HkButtonComponent,
+    HkTagChipComponent,
+    HkTextFieldComponent,
     EntityPickerComponent,
     AbilityScoresStepComponent,
     AbilitiesImproveStepComponent,
@@ -156,7 +164,7 @@ export class ChoiceStepComponent {
         const skillEntityId = packId ? makeEntityId(packId, 'skill', slug) : undefined;
         const skillEntity = skillEntityId ? index.get(skillEntityId) : undefined;
         const name = skillEntity ? localizer.name(skillEntityId!) : slug;
-        return { id: slug, name };
+        return { id: slug, entityId: skillEntityId ?? slug, name };
       });
       return { kind: 'skills', classId, options, count: skillPick.count };
     }
@@ -226,6 +234,35 @@ export class ChoiceStepComponent {
     return gates;
   });
 
+  /** Long lists (weapons, skills) read as compact rows; short ones as cards with their facts. */
+  protected readonly layout = computed<'cards' | 'rows'>(() => {
+    const v = this.view();
+    if (v.kind === 'skills') return 'rows';
+    return (v.kind === 'query' || v.kind === 'static') && v.ids.length > ROW_LAYOUT_THRESHOLD
+      ? 'rows'
+      : 'cards';
+  });
+
+  /** The skill pick as the picker sees it: entity ids in, entity ids back. */
+  protected readonly skillIds = computed<string[]>(() => {
+    const v = this.view();
+    return v.kind === 'skills' ? v.options.map((o) => o.entityId) : [];
+  });
+
+  protected readonly selectedSkillIds = computed<string[]>(() => {
+    const v = this.view();
+    if (v.kind !== 'skills') return [];
+    const chosen = new Set(this.selection());
+    return v.options.filter((o) => chosen.has(o.id)).map((o) => o.entityId);
+  });
+
+  /** How many of a multi-pick are chosen, for the counter (a single pick needs none). */
+  protected readonly counter = computed(() => {
+    const v = this.view();
+    const count = 'count' in v ? v.count : 0;
+    return count > 1 ? { chosen: this.selection().length, count } : undefined;
+  });
+
   protected readonly promptText = computed(
     () => this.engineFacade.localizer().choicePrompt(this.choiceId()).text,
   );
@@ -283,8 +320,15 @@ export class ChoiceStepComponent {
     this.applySelection(next);
   }
 
-  protected onAddLiteral(event: Event): void {
-    event.preventDefault();
+  protected onToggleSkill(entityId: string): void {
+    const v = this.view();
+    if (v.kind !== 'skills') return;
+    const option = v.options.find((o) => o.entityId === entityId);
+    if (option) this.onToggle(option.id);
+  }
+
+  protected onAddLiteral(event?: Event): void {
+    event?.preventDefault();
     if (this.disabled()) return;
     const value = this.literalDraft().trim();
     if (!value) return;

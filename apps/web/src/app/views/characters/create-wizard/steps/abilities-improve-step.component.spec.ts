@@ -9,6 +9,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
 import { AbilitiesImproveStepComponent } from './abilities-improve-step.component';
@@ -44,6 +45,7 @@ const GRAPPLER_CHOICE = 'srd-5e-2024:feat/grappler@4/ability-score';
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -76,7 +78,7 @@ function createState(): CreateWizardState {
 }
 
 function findChip(compiled: HTMLElement, text: string): HTMLElement {
-  const chip = Array.from(compiled.querySelectorAll('hk-chip')).find(
+  const chip = Array.from(compiled.querySelectorAll('button[hk-filter-chip]')).find(
     (c) => c.textContent?.trim() === text,
   );
   if (!chip) throw new Error(`No chip labeled "${text}"`);
@@ -95,7 +97,7 @@ describe('AbilitiesImproveStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const chipTexts = Array.from(compiled.querySelectorAll('hk-chip')).map((c) =>
+    const chipTexts = Array.from(compiled.querySelectorAll('button[hk-filter-chip]')).map((c) =>
       c.textContent?.trim(),
     );
     // Two slots ('+2' then '+1'), each offering only str/dex/con -> 6 chips total, never the other
@@ -137,7 +139,7 @@ describe('AbilitiesImproveStepComponent', () => {
     const slot1Texts = Array.from(
       (
         compiled.querySelectorAll('.abilities-improve-step__slot')[1] as HTMLElement
-      ).querySelectorAll('hk-chip'),
+      ).querySelectorAll('button[hk-filter-chip]'),
     ).map((c) => c.textContent?.trim());
     expect(slot1Texts).not.toContain('Strength');
   });
@@ -151,7 +153,7 @@ describe('AbilitiesImproveStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const chipTexts = Array.from(compiled.querySelectorAll('hk-chip')).map((c) =>
+    const chipTexts = Array.from(compiled.querySelectorAll('button[hk-filter-chip]')).map((c) =>
       c.textContent?.trim(),
     );
     expect(chipTexts).toHaveLength(6);
@@ -171,7 +173,7 @@ describe('AbilitiesImproveStepComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const chipTexts = Array.from(compiled.querySelectorAll('hk-chip')).map((c) =>
+    const chipTexts = Array.from(compiled.querySelectorAll('button[hk-filter-chip]')).map((c) =>
       c.textContent?.trim(),
     );
     expect(chipTexts).toEqual(['Strength', 'Dexterity']);
@@ -185,7 +187,7 @@ describe('AbilitiesImproveStepComponent', () => {
   // --- Campaign edit lock fix round 1 (plan-10 task-14-brief.md, ruling 7) --------------------
   //
   // Same reviewer finding `choice-step.component.spec.ts`'s identical describe block documents:
-  // a wrapping `<fieldset disabled>` is cosmetic-only for `hk-chip`'s host `(click)` binding in a
+  // a wrapping `<fieldset disabled>` is cosmetic-only for `button[hk-filter-chip]`'s host `(click)` binding in a
   // real browser (it's a custom element, not a "listed" form-associated one) — this component's
   // own `disabled` input (gating `onSelectSlot` directly) is the real fix.
   describe('disabled input (fix round 1 — the chip click-through gate)', () => {

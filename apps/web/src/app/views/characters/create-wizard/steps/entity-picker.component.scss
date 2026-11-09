@@ -1,82 +1,163 @@
 :host {
   display: block;
+  min-inline-size: 0;
 }
 
-.entity-picker__empty {
-  margin: var(--space-3) 0 0;
-  color: var(--text-2);
-}
-
-.entity-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  gap: var(--space-3);
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
-  max-height: 50vh;
-  overflow-y: auto;
-}
-
-.entity-picker__card {
-  height: 100%;
-}
-
-.entity-picker__card--selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.entity-picker__select {
+.entity-picker {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+}
+
+.entity-picker__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.entity-picker__search {
+  flex: 1 1 14rem;
+  max-inline-size: 24rem;
+}
+
+.entity-picker__filters {
+  flex: 2 1 16rem;
+}
+
+.entity-picker__empty,
+.entity-picker__more {
+  margin: 0;
+  color: var(--text-2);
+}
+
+/* Full height: the page scrolls, never an inner box. */
+.entity-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entity-picker__item {
+  display: flex;
+  min-inline-size: 0;
+
+  > * {
+    flex: 1 1 auto;
+  }
+}
+
+.entity-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entity-picker__row {
+  display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2);
-  border: 0;
-  background: transparent;
+  min-inline-size: 0;
+}
+
+.entity-picker__toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: 48px;
+  padding: 4px var(--space-3);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
   color: var(--text-1);
   font: inherit;
-  text-align: center;
+  text-align: start;
   cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.8;
+    color: var(--text-2);
+  }
 }
 
-// Plan 13 task 8: a gated option stays listed but reads as unavailable.
-.entity-picker__card--gated .entity-picker__select {
-  color: var(--text-2);
-  cursor: not-allowed;
-}
-
-.entity-picker__gate {
-  margin: var(--space-1) 0 0;
-  color: var(--text-2);
-  font-size: 0.75rem;
-  text-align: center;
+.entity-picker__row--selected .entity-picker__toggle {
+  box-shadow: 0 0 0 2px var(--brass);
 }
 
 .entity-picker__icon {
-  font-size: 1.5rem;
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--accent-strong);
 }
 
 .entity-picker__name {
-  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.entity-picker__expand {
-  display: block;
-  width: 100%;
-  margin-block-start: var(--space-2);
+.entity-picker__meta {
+  flex: none;
+}
+
+.entity-picker__mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  color: var(--text-2);
+}
+
+.entity-picker__info {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
   border: 0;
+  border-radius: var(--radius-leaf);
   background: transparent;
-  color: var(--text-2);
-  font-size: 0.75rem;
-  text-decoration: underline;
+  color: var(--accent-strong);
   cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    inline-size: 44px;
+    block-size: 44px;
+  }
 }
 
-.entity-picker__more {
-  margin: var(--space-2) 0 0;
-  color: var(--text-2);
-  font-size: 0.875rem;
+@media (max-width: 767px) {
+  .entity-picker__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Phones keep the row name and one fact; the rest is in the description. */
+  .entity-picker__meta:nth-of-type(n + 2) {
+    display: none;
+  }
 }

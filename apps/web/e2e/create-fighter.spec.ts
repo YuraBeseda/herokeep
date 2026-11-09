@@ -11,6 +11,7 @@ import {
   pickGamingSet,
   pickSkills,
   pickSpecies,
+  option,
 } from './helpers/create-fighter';
 
 const CHARACTER_NAME = 'Aldric Golden Path';
@@ -28,12 +29,12 @@ test.describe('character creation — golden path', () => {
     await test.step('name the character and pick a grammatical gender', async () => {
       await nameCharacter(page, CHARACTER_NAME);
       // Landed on the next (species) step.
-      await expect(page.getByRole('button', { name: 'Human', exact: true })).toBeVisible();
+      await expect(option(page, 'Human')).toBeVisible();
     });
 
     await test.step('species: Human', async () => {
       await pickSpecies(page);
-      await expect(page.getByRole('button', { name: 'Soldier', exact: true })).toBeVisible();
+      await expect(option(page, 'Soldier')).toBeVisible();
     });
 
     await test.step('background: Soldier', async () => {
@@ -43,7 +44,7 @@ test.describe('character creation — golden path', () => {
 
     await test.step('background ability bumps: +2 Strength, +1 Constitution', async () => {
       await applyBackgroundAbilities(page);
-      await expect(page.getByRole('button', { name: 'Fighter', exact: true })).toBeVisible();
+      await expect(option(page, 'Fighter')).toBeVisible();
     });
 
     await test.step('class: Fighter', async () => {
@@ -54,7 +55,7 @@ test.describe('character creation — golden path', () => {
     await test.step('ability scores: standard array str15/dex13/con14/int10/wis12/cha8', async () => {
       await assignStandardArray(page);
       // Landed on the class-skills step (chips).
-      await expect(page.locator('.choice-step__chips')).toBeVisible();
+      await expect(page.locator('.choice-step__skills')).toBeVisible();
     });
 
     await test.step('skills: Athletics + Perception', async () => {

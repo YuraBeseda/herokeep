@@ -2,59 +2,134 @@
   display: block;
 }
 
-.ability-scores-step__tabs {
-  margin: 0 0 var(--space-3);
-}
-
-.ability-scores-step__meter {
-  margin: 0 0 var(--space-3);
-  font-weight: 600;
-}
-
-.ability-scores-step__meter--over {
-  color: var(--danger);
-}
-
-.ability-scores-step__rows {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.ability-scores-step {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
-.ability-scores-step__row {
+.ability-scores-step__bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
 
-.ability-scores-step__name {
-  min-width: 3.5rem;
+/* The four generation methods: brass tabs. */
+.ability-scores-step__tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-inline-size: 100%;
+  border: 1px solid var(--brass-shadow);
+  border-radius: var(--radius-leaf);
+  overflow: hidden;
+}
+
+.ability-scores-step__tab {
+  min-block-size: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: var(--leaf);
+  color: var(--text-1);
+  font: inherit;
+  cursor: pointer;
+
+  &[aria-selected='true'] {
+    background: var(--brass);
+    color: var(--text-on-brass);
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    min-block-size: 44px;
+  }
+}
+
+.ability-scores-step__meter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-weight: 600;
 }
 
-.ability-scores-step__select-label {
-  display: inline-flex;
+.ability-scores-step__meter--over {
+  color: var(--danger-strong);
 }
 
-.ability-scores-step__select {
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-1);
+.ability-scores-step__gauge {
+  inline-size: 7rem;
+  block-size: 8px;
+  border-radius: 4px;
+  background: var(--leaf-sunken);
+  overflow: hidden;
+}
+
+.ability-scores-step__gauge-fill {
+  display: block;
+  block-size: 100%;
+  background: var(--brass);
+}
+
+.ability-scores-step__meter--over .ability-scores-step__gauge-fill {
+  background: var(--danger-strong);
+}
+
+/* Six identical blocks, all visible at once: three across on a desktop, two on a phone. */
+.ability-scores-step__rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  @media (max-width: 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+}
+
+.ability-scores-step__row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-frame);
+  /* The seal is made for leather: its light text needs the dark block behind it. */
+  background: var(--leather);
+  color: var(--text-on-leather);
+  box-shadow: var(--shadow-leaf);
+}
+
+.ability-scores-step__control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  inline-size: 100%;
+  padding: var(--space-2);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
   color: var(--text-1);
-  font: inherit;
+}
+
+.ability-scores-step__select,
+.ability-scores-step__number {
+  inline-size: 100%;
+  max-inline-size: 11rem;
 }
 
 .ability-scores-step__cost {
   color: var(--text-2);
   font-size: 0.875rem;
-}
-
-.ability-scores-step__roll-all {
-  margin: 0 0 var(--space-3);
 }
 
 .ability-scores-step__dice {
@@ -64,9 +139,9 @@
 
 .ability-scores-step__die {
   padding: 0 var(--space-2);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf-sunken);
   font-size: 0.75rem;
 }
 
@@ -76,24 +151,24 @@
 }
 
 .ability-scores-step__diagnostics {
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .ability-scores-step__diagnostic {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
   color: var(--text-2);
   font-size: 0.875rem;
 }
 
 .ability-scores-step__diagnostic--error {
-  border-color: var(--danger);
-  color: var(--danger);
+  border-color: var(--danger-strong);
+  color: var(--danger-strong);
 }

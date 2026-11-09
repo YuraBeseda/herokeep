@@ -75,7 +75,8 @@
       "choice": "Выбор",
       "spells": "Заклинания",
       "equipment": "Снаряжение",
-      "review": "Обзор"
+      "review": "Обзор",
+      "classChoices": "Выбор класса"
     },
     "pendingStep": "Этот шаг пока недоступен.",
     "name": {
@@ -103,13 +104,13 @@
       "incomplete": "Завершите все шаги, чтобы создать персонажа.",
       "toast": {
         "createFailed": "Не удалось создать персонажа. Попробуйте снова."
-      }
+      },
+      "conceptLabel": "Имя и образ"
     },
     "picker": {
       "searchPlaceholder": "Поиск…",
       "searchClear": "Очистить поиск",
       "empty": "Нет подходящих вариантов.",
-      "expand": "Показать описание",
       "valueLabel": "Значение",
       "addValue": "Добавить",
       "skillsTitle": "Выберите {count, plural, one {# навык} few {# навыка} many {# навыков} other {# навыка}} для класса {class}",
@@ -117,7 +118,14 @@
       "gate": {
         "prerequisiteFailed": "Требования не выполнены",
         "duplicate": "Уже выбрано"
-      }
+      },
+      "searchLabel": "Поиск вариантов",
+      "filterLabel": "Фильтр вариантов",
+      "chosen": "Выбрано",
+      "choose": "Выбрать",
+      "detailsOf": "Описание: {name}",
+      "counter": "Выбрано {chosen} из {count}",
+      "removeValue": "Убрать {value}"
     },
     "abilityScores": {
       "method": {
@@ -130,24 +138,33 @@
       "budgetMeter": "{total} / {budget} очков",
       "cost": "Стоимость: {cost}",
       "rollAll": "Бросить все шесть",
-      "rollsAnnounced": "Брошены шесть характеристик: {scores}."
+      "rollsAnnounced": "Брошены шесть характеристик: {scores}.",
+      "methodLabel": "Способ определения",
+      "scoreLabel": "{ability}: значение"
     },
     "abilitiesImprove": {
-      "deltaLabel": "+{delta}"
+      "deltaLabel": "+{delta}",
+      "locked": "Сейчас нельзя изменить"
     },
     "spells": {
       "cantripsTitle": "Заговоры",
-      "cantripsHelper": "{known} / {cap} заговоров изучено.",
       "cantripCapReached": "Вы изучили все доступные на этом уровне заговоры ({cap}).",
       "spellbookTitle": "Книга заклинаний",
-      "spellbookHelper": "Рекомендуем около {recommended} заклинаний для начальной книги — можно выбрать больше.",
       "preparedTitle": "Подготовленные заклинания",
-      "preparedHelper": "{prepared} / {cap} заклинаний подготовлено.",
       "preparedCapReached": "Вы подготовили все доступные на этом уровне заклинания ({cap}).",
-      "continue": "Далее"
+      "continue": "Далее",
+      "cantripCounter": "Известно {known} из {cap}",
+      "spellbookCounter": "{count, plural, one {# заклинание} few {# заклинания} many {# заклинаний} other {# заклинания}} в книге заклинаний",
+      "preparedCounter": "Подготовлено {prepared} из {cap}",
+      "knownCantrip": "Известный заговор",
+      "inSpellbook": "В книге заклинаний",
+      "prepared": "Подготовлено",
+      "concentration": "Концентрация",
+      "ritual": "Ритуал",
+      "ritualShort": "Р",
+      "spellbookHelper": "Рекомендуем около {recommended} заклинаний для начальной книги — можно выбрать больше."
     },
     "equipment": {
-      "addTitle": "Добавить снаряжение",
       "qtyLabel": "Количество",
       "inventoryTitle": "Инвентарь",
       "equip": "Экипировать",
@@ -160,11 +177,13 @@
         "gp": "Золото",
         "pp": "Платина"
       },
-      "continue": "Далее"
+      "addFromLibrary": "Добавить из библиотеки",
+      "hideLibrary": "Скрыть библиотеку"
     },
     "title": "Новый герой",
     "stepper": {
-      "needsAttention": "Нужно проверить"
+      "needsAttention": "Нужно проверить",
+      "afterClass": "Появится после выбора класса"
     },
     "cancel": {
       "leave": "Отменить и выйти",
@@ -722,7 +741,8 @@
     "packs": {
       "title": "Наборы контента",
       "hint": "Дополнительный контент для этого персонажа (необязательно). Это можно изменить позже на вкладке «Билд».",
-      "version": "v{version}"
+      "version": "v{version}",
+      "coreLocked": "Всегда включён для каждого героя"
     }
   },
   "rebase": {

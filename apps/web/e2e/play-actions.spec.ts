@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { createFighter } from './helpers/create-fighter';
+import { createFighter, chooseControl } from './helpers/create-fighter';
 import { createWizard, prepareSpell } from './helpers/create-wizard';
 import { chooseOwnClassIfPrompted } from './helpers/level-up';
 
@@ -71,7 +71,7 @@ async function completeLevelUp(page: Page, pickName?: string): Promise<void> {
   await page.locator('.level-up__next').click();
 
   if (pickName) {
-    const pickButton = page.getByRole('button', { name: pickName, exact: true });
+    const pickButton = chooseControl(page, pickName);
     await pickButton.click();
     await pickButton.waitFor({ state: 'detached' });
   }

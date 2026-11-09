@@ -1,96 +1,113 @@
 <div class="spells-step" *transloco="let t; read: 'characters'">
   @if (block()) {
     <section class="spells-step__section spells-step__cantrips">
-      <h3 class="spells-step__title">{{ t('wizard.spells.cantripsTitle') }}</h3>
-      <p class="spells-step__helper">
-        {{
-          t('wizard.spells.cantripsHelper', { known: cantripsKnownIds().length, cap: cantripCap() })
-        }}
-      </p>
-      <hk-entity-picker
-        [ids]="cantripIds()"
-        [selectedIds]="cantripsKnownIds()"
-        [limit]="spellPickerLimit"
-        (toggled)="onToggleCantrip($event)"
-      />
-      @if (cantripCapReached()) {
-        <p class="spells-step__cap-message">
-          {{ t('wizard.spells.cantripCapReached', { cap: cantripCap() }) }}
-        </p>
-      }
+      <header class="spells-step__head">
+        <h3 class="spells-step__title">{{ t('wizard.spells.cantripsTitle') }}</h3>
+        <hk-tag-chip
+          class="spells-step__counter"
+          role="status"
+          [tone]="cantripCapReached() ? 'moss' : 'neutral'"
+          [label]="
+            t('wizard.spells.cantripCounter', {
+              known: cantripsKnownIds().length,
+              cap: cantripCap(),
+            })
+          "
+        />
+      </header>
+      <ul class="spells-step__list">
+        @for (id of cantripIds(); track id) {
+          <li>
+            <hk-spell-pick-row
+              [spellId]="id"
+              [chosen]="cantripsKnownIds().includes(id)"
+              [chosenHint]="t('wizard.spells.knownCantrip')"
+              [blockedReason]="
+                cantripCapReached() && !cantripsKnownIds().includes(id)
+                  ? t('wizard.spells.cantripCapReached', { cap: cantripCap() })
+                  : null
+              "
+              (toggled)="onToggleCantrip(id)"
+              (details)="onDetails(id, $event)"
+            />
+          </li>
+        }
+      </ul>
     </section>
 
     <section class="spells-step__section spells-step__spellbook">
-      <h3 class="spells-step__title">{{ t('wizard.spells.spellbookTitle') }}</h3>
-      <p class="spells-step__helper">
-        {{ t('wizard.spells.spellbookHelper', { recommended: recommendedCount() }) }}
-      </p>
-      <hk-entity-picker
-        [ids]="spellbookIds()"
-        [selectedIds]="spellbookKnownIds()"
-        [limit]="spellPickerLimit"
-        (toggled)="onToggleSpellbook($event)"
-      />
+      <header class="spells-step__head">
+        <h3 class="spells-step__title">{{ t('wizard.spells.spellbookTitle') }}</h3>
+        <hk-tag-chip
+          class="spells-step__counter"
+          role="status"
+          [label]="t('wizard.spells.spellbookCounter', { count: spellbookKnownIds().length })"
+          [hint]="t('wizard.spells.spellbookHelper', { recommended: recommendedCount() })"
+        />
+      </header>
+      <ul class="spells-step__list">
+        @for (id of spellbookIds(); track id) {
+          <li>
+            <hk-spell-pick-row
+              [spellId]="id"
+              [chosen]="spellbookKnownIds().includes(id)"
+              [chosenHint]="t('wizard.spells.inSpellbook')"
+              (toggled)="onToggleSpellbook(id)"
+              (details)="onDetails(id, $event)"
+            />
+          </li>
+        }
+      </ul>
     </section>
 
     @if (spellbookKnownIds().length > 0) {
       <section class="spells-step__section spells-step__prepared">
-        <h3 class="spells-step__title">{{ t('wizard.spells.preparedTitle') }}</h3>
-        <p class="spells-step__helper">
-          {{
-            t('wizard.spells.preparedHelper', {
-              prepared: preparedCount(),
-              cap: preparedMax(),
-            })
-          }}
-        </p>
-        <ul class="spells-step__prepared-list">
+        <header class="spells-step__head">
+          <h3 class="spells-step__title">{{ t('wizard.spells.preparedTitle') }}</h3>
+          <hk-tag-chip
+            class="spells-step__counter"
+            role="status"
+            [tone]="preparedCapReached() ? 'moss' : 'neutral'"
+            [label]="
+              t('wizard.spells.preparedCounter', { prepared: preparedCount(), cap: preparedMax() })
+            "
+          />
+        </header>
+        <ul class="spells-step__list spells-step__prepared-list">
           @for (id of spellbookKnownIds(); track id) {
             <li>
-              <button
-                type="button"
+              <hk-spell-pick-row
                 class="spells-step__prepared-toggle"
-                [attr.aria-pressed]="isPrepared(id)"
-                [disabled]="isAlwaysPrepared(id)"
-                [attr.aria-describedby]="
-                  isAlwaysPrepared(id) ? 'always-prepared-reason-' + classId() + '-' + id : null
+                [spellId]="id"
+                [chosen]="isPrepared(id)"
+                [chosenHint]="t('wizard.spells.prepared')"
+                [alwaysPrepared]="
+                  isAlwaysPrepared(id) ? t('sheet.spellcasting.alwaysPrepared') : null
                 "
-                [attr.title]="
-                  isAlwaysPrepared(id) ? t('sheet.spellcasting.alwaysPreparedReason') : null
-                "
-                (click)="onTogglePrepared(id)"
-              >
-                {{ spellName(id) }}
-              </button>
-              @if (isAlwaysPrepared(id)) {
-                <span class="spells-step__always-prepared">{{
-                  t('sheet.spellcasting.alwaysPrepared')
-                }}</span>
-                <span
-                  class="visually-hidden"
-                  [id]="'always-prepared-reason-' + classId() + '-' + id"
-                  >{{ t('sheet.spellcasting.alwaysPreparedReason') }}</span
-                >
-              }
+                [blockedReason]="preparedBlockedReason(id, t)"
+                (toggled)="onTogglePrepared(id)"
+                (details)="onDetails(id, $event)"
+              />
             </li>
           }
         </ul>
-        @if (preparedCapReached()) {
-          <p class="spells-step__cap-message">
-            {{ t('wizard.spells.preparedCapReached', { cap: preparedMax() }) }}
-          </p>
-        }
       </section>
     }
 
-    <button
-      hk-button
-      type="button"
-      class="spells-step__continue"
-      [variant]="'ghost'"
-      (click)="onContinue()"
-    >
-      {{ t('wizard.spells.continue') }}
-    </button>
+    @if (finish()) {
+      <button
+        hk-button
+        type="button"
+        class="spells-step__continue"
+        [variant]="'parchment'"
+        (click)="onContinue()"
+      >
+        {{ t('wizard.spells.continue') }}
+      </button>
+    }
+
+    @if (detailsId(); as id) {
+      <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
+    }
   }
 </div>

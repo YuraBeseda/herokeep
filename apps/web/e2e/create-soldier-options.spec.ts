@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  addLibraryItems,
   applyBackgroundAbilities,
+  equipItems,
   assignStandardArray,
   finishReviewAndCreate,
   nameCharacter,
@@ -22,16 +24,8 @@ const GAMING_SET = 'Gaming Set, Playing Cards';
  * `variant` — 129 ≥ 17 × 5 = 85 and < 17 × 10 = 170 → Encumbered, Speed −10 ft. Clicks Next to
  * Review ('equipment' never leaves `steps()`, see the helper module's doc). */
 async function equipKitWithSpareArmor(page: Page): Promise<void> {
-  const searchBox = page.getByRole('searchbox');
-  for (const item of ['Chain Mail', 'Longsword', 'Shield', 'Plate Armor']) {
-    await searchBox.fill(item);
-    await page.getByRole('button', { name: item, exact: true }).click();
-  }
-  await searchBox.fill('');
-  for (const item of ['Chain Mail', 'Longsword', 'Shield']) {
-    const row = page.locator('.equipment-step__entry', { hasText: item });
-    await row.getByRole('button', { name: 'Equip', exact: true }).click();
-  }
+  await addLibraryItems(page, ['Chain Mail', 'Longsword', 'Shield', 'Plate Armor']);
+  await equipItems(page, ['Chain Mail', 'Longsword', 'Shield']);
   await page.locator('[data-action="next"]').click();
 }
 
@@ -55,7 +49,7 @@ test.describe('character creation — Soldier gaming set + per-character encumbr
       await assignStandardArray(page);
       await pickSkills(page);
       // The step right after class skills is the Soldier tool pick: its four Gaming Set cards.
-      await expect(page.locator('.entity-picker__select')).toHaveCount(4);
+      await expect(page.locator('.hk-picker-card__choose')).toHaveCount(4);
       await pickGamingSet(page, GAMING_SET);
       await pickFightingStyleAndWeaponMasteries(page);
       await expect(page.locator('.equipment-step')).toBeVisible();

@@ -1,59 +1,86 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { CardComponent } from '@shared/components/card/card.component';
-import { SearchFieldComponent } from '@shared/components/search-field/search-field.component';
 import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
+import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
+import { HkPickerCardComponent } from '../../../../ui/picker-card/picker-card.component';
+import { phoneLayout } from '../../../../ui/shell/viewport';
+import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
+import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
+import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
+import { PickerToolsService } from '../picker-tools.service';
+import { descriptionExcerpt, pickerFacet, pickerFacts, pickerMeta } from './picker-facts';
 
 interface EntityRow {
   readonly id: string;
   readonly name: string;
   readonly icon: string;
+  readonly description: string | null;
+  readonly meta: string[];
+  /** The facts' values, for the filter chips. */
+  readonly facts: ReadonlySet<string>;
   // Scope-relative i18n key of the reason this option can't be picked (see `gates`), if any.
   readonly gate: string | undefined;
 }
 
 const NO_GATES: ReadonlyMap<string, string> = new Map();
 
-// Per-instance prefix for the gate-reason element ids (`aria-describedby` targets): several pickers
-// can render on one page (the build tab's outstanding list), each listing the same entity ids.
-let nextEntityPickerId = 0;
+/** A search box earns its place once the list is longer than this. */
+const SEARCH_THRESHOLD = 8;
 
 /**
- * Card-grid picker for `query`/`static` pick forms (task-6-brief.md). A dumb, presentational
- * component: it never talks to `CreateWizardState` itself — `ids`/`selectedIds` are supplied by
- * the caller (`ChoiceStepComponent`), and every tap just re-emits `toggle` with the tapped id,
- * leaving the "is this a valid selection" question entirely to the caller's `state.validate`.
+ * Picker for `query`/`static` pick forms (task-6-brief.md), as the plan-17 grid: a search field and
+ * filter chips on top, then every option on the page (no inner scroll box) as `hk-picker-card`s
+ * (`layout: 'cards'`) or as compact selectable rows with a tick seal (`layout: 'rows'`, long lists
+ * such as weapons or skills). A card's body (rows: the info button) opens the option's description in
+ * the shared `hk-description-drawer`, whose action slot carries the same Choose / Chosen button.
  *
- * Deliberately NOT `hk-virtual-list`-backed (unlike `library`'s browse list): `hk-virtual-list`'s
- * fixed-size CDK strategy assumes every row is the same height (see its SKILL.md). A card's Details
- * button opens the entity's description in the shared `hk-description-drawer` (one place every pack
- * description opens), not inline. Creation-choice option counts (species/background/class/feats) are
- * small (single/low-double digits in the SRD pack), so a plain scrollable list is both simpler and
- * correct. For a genuinely large option count (e.g. task 8's 339-spell picker), the caller instead
- * passes `limit` (controller ruling, task-6 fix round): when the search-filtered result count
- * exceeds it, only the first `limit` cards render, followed by a non-interactive hint row naming
- * how many more are hidden — narrowing the search below `limit` removes the hint. `undefined`
- * (the default) keeps today's unlimited behavior.
+ * A dumb, presentational component: it never talks to `CreateWizardState`; `ids`/`selectedIds` are
+ * supplied by the caller (`ChoiceStepComponent`, the spells and equipment steps, the add-item
+ * dialog) and every choice re-emits `toggled` with the id, leaving "is this a valid selection" to
+ * the caller's `state.validate`.
+ *
+ * Inside the creation wizard the picker registers with `PickerToolsService`: the action strap's
+ * Filter and Search buttons then fold the chips away and focus the search field. Without one (a
+ * dialog) both stay on screen.
+ *
+ * `limit` (controller ruling, task-6 fix round): when the search-filtered result count exceeds it,
+ * only the first `limit` options render, followed by a hint naming how many more are hidden.
  *
  * `gates` (plan 13 task 8, ruling 10): option id -> scope-relative i18n key of the reason the
- * caller's validation refuses that option. A gated card stays LISTED (discoverability) but its
- * select button is `disabled`, with the reason rendered visibly and wired to the button via
- * `aria-describedby` (the plan-12 always-prepared disabled-with-reason pattern); its Details
- * button stays usable. A gated card that is already SELECTED (e.g. a pre-seeded pick the current
- * validation now refuses) keeps its select button enabled — the gate only blocks ADDING an option,
- * never undoing a pick — and still shows its reason.
+ * caller's validation refuses that option. A gated option stays LISTED (discoverability) with its
+ * choose control disabled and the reason as its hint; its details stay openable. A gated option that
+ * is already SELECTED keeps its control enabled — the gate only blocks ADDING an option.
  */
 @Component({
   selector: 'hk-entity-picker',
   imports: [
     TranslocoDirective,
-    CardComponent,
-    SearchFieldComponent,
-    IconComponent,
+    HkButtonComponent,
     HkDescriptionDrawerComponent,
+    HkFilterChipsComponent,
+    HkPickerCardComponent,
+    HkSearchFieldComponent,
+    HkTagChipComponent,
+    HkTooltipDirective,
+    HkWaxSealComponent,
+    IconComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './entity-picker.component.html',
@@ -62,48 +89,90 @@ let nextEntityPickerId = 0;
 export class EntityPickerComponent {
   private readonly engineFacade = inject(EngineFacade);
   private readonly localeService = inject(LocaleService);
+  private readonly tools = inject(PickerToolsService, { optional: true });
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly phone = phoneLayout();
 
   // Inputs / Outputs
   readonly ids = input.required<readonly string[]>();
   readonly selectedIds = input<readonly string[]>([]);
   readonly limit = input<number | undefined>(undefined);
   readonly gates = input<ReadonlyMap<string, string>>(NO_GATES);
+  readonly layout = input<'cards' | 'rows'>('cards');
+  /** The whole list is read-only (another member holds the campaign edit lock). */
+  readonly disabled = input(false);
   readonly toggled = output<string>();
 
   // Template-facing state
   protected readonly query = signal('');
+  protected readonly activeFilters = signal<readonly string[]>([]);
   /** The option whose description the drawer shows (kept after closing, so the drawer can animate out). */
   protected readonly detailsId = signal<string | undefined>(undefined);
   protected readonly detailsOpen = signal(false);
   protected readonly detailsOpener = signal<HTMLElement | null>(null);
-  protected readonly gateIdPrefix = `hk-entity-picker-${nextEntityPickerId++}-gate-`;
 
   // `Intl.Collator` construction is the expensive part; recreate only when the locale changes
   // (mirrors `LibraryBrowseComponent`'s own `collator` computed).
   private readonly collator = computed(() => new Intl.Collator(this.localeService.locale()));
 
+  private readonly entities = computed(() => {
+    const index = this.engineFacade.index();
+    return this.ids().flatMap((id) => {
+      const entity = index.get(id);
+      return entity ? [entity] : [];
+    });
+  });
+
+  /** The fact that splits the options into chips, if one does. */
+  private readonly facet = computed(() => pickerFacet(this.entities()));
+
+  protected readonly filterOptions = computed(() => {
+    const facet = this.facet();
+    if (!facet) return [];
+    const counts = new Map<string, number>();
+    for (const entity of this.entities()) {
+      for (const fact of pickerFacts(entity)) {
+        if (fact.key === facet.key) counts.set(fact.value, (counts.get(fact.value) ?? 0) + 1);
+      }
+    }
+    const collator = this.collator();
+    return facet.values
+      .map((value) => ({ id: value, label: value, count: counts.get(value) ?? 0 }))
+      .sort((a, b) => collator.compare(a.label, b.label));
+  });
+
+  protected readonly showSearch = computed(() => this.ids().length > SEARCH_THRESHOLD);
+  protected readonly filtersVisible = computed(() => {
+    if (this.filterOptions().length === 0) return false;
+    return this.tools ? (this.tools.filterOpen() ?? !this.phone()) : true;
+  });
+
   // The full search-filtered, sorted row set — BEFORE `limit` truncates it. `rows`/`hiddenCount`
   // below both derive from this so the hint's count and the rendered slice always agree.
   private readonly allRows = computed<EntityRow[]>(() => {
-    const index = this.engineFacade.index();
     const localizer = this.engineFacade.localizer();
     const text = this.query().trim().toLowerCase();
+    const filters = this.activeFilters();
     const collator = this.collator();
     const gates = this.gates();
+    const facetKey = this.facet()?.key;
 
-    const mapped = this.ids()
-      .map((id): EntityRow | undefined => {
-        const entity = index.get(id);
-        if (!entity) return undefined;
+    const mapped = this.entities()
+      .map((entity): EntityRow => {
+        const facts = pickerFacts(entity);
         return {
-          id,
-          name: localizer.name(id),
+          id: entity.id,
+          name: localizer.name(entity.id),
           icon: this.engineFacade.iconFor(entity),
-          gate: gates.get(id),
+          description: descriptionExcerpt(localizer.text(entity.id, 'description').text),
+          meta: pickerMeta(entity),
+          facts: new Set(facts.filter((f) => f.key === facetKey).map((f) => f.value)),
+          gate: gates.get(entity.id),
         };
       })
-      .filter((row): row is EntityRow => row !== undefined)
-      .filter((row) => !text || row.name.toLowerCase().includes(text));
+      .filter((row) => !text || row.name.toLowerCase().includes(text))
+      .filter((row) => filters.length === 0 || filters.some((value) => row.facts.has(value)));
     return mapped.sort((a, b) => collator.compare(a.name, b.name));
   });
 
@@ -121,21 +190,62 @@ export class EntityPickerComponent {
     return limit !== undefined && all.length > limit ? all.length - limit : 0;
   });
 
+  /** The row the open drawer is about, for its Choose button. */
+  protected readonly detailsRow = computed(() => {
+    const id = this.detailsId();
+    return id === undefined ? undefined : this.allRows().find((row) => row.id === id);
+  });
+
+  constructor() {
+    if (this.tools) {
+      const tools = this.tools;
+      const unregister = tools.register();
+      const destroyRef = inject(DestroyRef);
+      destroyRef.onDestroy(unregister);
+      let withdraw: (() => void) | undefined;
+      effect(() => {
+        const has = this.filterOptions().length > 0;
+        untracked(() => {
+          if (has && !withdraw) withdraw = tools.reportFilters();
+          if (!has && withdraw) {
+            withdraw();
+            withdraw = undefined;
+          }
+        });
+      });
+      destroyRef.onDestroy(() => withdraw?.());
+      let seen = untracked(() => tools.searchRequests());
+      effect(() => {
+        const requests = tools.searchRequests();
+        if (requests === seen) return;
+        seen = requests;
+        untracked(() =>
+          this.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+        );
+      });
+    }
+  }
+
   // Methods
   protected isSelected(id: string): boolean {
     return this.selectedIds().includes(id);
   }
 
   protected onToggle(id: string): void {
+    if (this.disabled()) return;
     this.toggled.emit(id);
   }
 
-  // The description is a secondary affordance nested inside the same card as the selection button;
-  // `stopPropagation` keeps it from also toggling selection. It opens in the shared description
-  // drawer, which resolves the entity against this picker's own pack scope.
-  protected onDetails(id: string, event: Event): void {
-    event.stopPropagation();
-    this.detailsOpener.set(event.currentTarget as HTMLElement);
+  /** A gated option cannot be added; one that is already picked can always be un-picked. */
+  protected blocked(row: EntityRow): boolean {
+    return this.disabled() || (!!row.gate && !this.isSelected(row.id));
+  }
+
+  // The description opens in the shared description drawer, which resolves the entity against this
+  // picker's own pack scope.
+  protected onDetails(id: string, event?: Event): void {
+    const opener = (event?.currentTarget as HTMLElement | null) ?? this.document.activeElement;
+    this.detailsOpener.set(opener instanceof HTMLElement ? opener : null);
     this.detailsId.set(id);
     this.detailsOpen.set(true);
   }

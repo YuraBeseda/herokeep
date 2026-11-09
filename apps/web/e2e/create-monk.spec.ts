@@ -6,6 +6,9 @@ import {
   pickBackground,
   pickGamingSet,
   pickSpecies,
+  chooseControl,
+  chooseOption,
+  option,
 } from './helpers/create-fighter';
 
 const CHARACTER_NAME = 'Lian Open Hand';
@@ -37,11 +40,11 @@ test.describe('character creation — Monk (slice 2)', () => {
       await pickSpecies(page);
       await pickBackground(page);
       await applyBackgroundAbilities(page);
-      await expect(page.getByRole('button', { name: 'Monk', exact: true })).toBeVisible();
+      await expect(option(page, 'Monk')).toBeVisible();
     });
 
     await test.step('class: Monk', async () => {
-      await page.getByRole('button', { name: 'Monk', exact: true }).click();
+      await chooseOption(page, 'Monk');
       await expect(page.locator('.ability-scores-step')).toBeVisible();
     });
 
@@ -61,24 +64,20 @@ test.describe('character creation — Monk (slice 2)', () => {
       }
       // The ability step stays open once the scores are valid (no auto-advance): Next moves on.
       await page.locator('[data-action="next"]').click();
-      await expect(page.locator('.choice-step__chips')).toBeVisible();
+      await expect(page.locator('.choice-step__skills')).toBeVisible();
     });
 
     await test.step("class skills: Monk's own pool (Acrobatics + Stealth)", async () => {
-      await page.getByRole('button', { name: 'Acrobatics', exact: true }).click();
-      await page.getByRole('button', { name: 'Stealth', exact: true }).click();
+      await chooseOption(page, 'Acrobatics');
+      await chooseOption(page, 'Stealth');
       // Plan 14 task 2: the Soldier background's one Gaming Set comes first (sorted by choice id).
       await pickGamingSet(page);
       // Plan 13 task 2: next, the Monk's one Artisan's Tools or Musical Instrument (a static pick).
-      await expect(
-        page.locator('.entity-picker__select', { hasText: 'Musical Instrument, Flute' }),
-      ).toBeVisible();
+      await expect(chooseControl(page, 'Musical Instrument, Flute')).toBeVisible();
     });
 
     await test.step('tool proficiency: one Musical Instrument (Flute)', async () => {
-      await page
-        .locator('.entity-picker__select', { hasText: 'Musical Instrument, Flute' })
-        .click();
+      await chooseOption(page, 'Musical Instrument, Flute');
       // No weapon-mastery / fighting-style choice for Monk: straight on to equipment.
       await expect(page.locator('.equipment-step')).toBeVisible();
     });

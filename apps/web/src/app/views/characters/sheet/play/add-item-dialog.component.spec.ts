@@ -12,6 +12,7 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { AddItemDialogComponent } from './add-item-dialog.component';
 
@@ -41,7 +42,9 @@ const sample = parsedSample.pack;
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
-    return langPath === 'characters/en' ? of(charactersEn) : of({});
+    if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
+    return of({});
   }
 }
 
@@ -88,10 +91,10 @@ function searchAndFindCard(text: string, exactName: string): HTMLElement {
   TestBed.tick();
   vi.useRealTimers();
 
-  const card = Array.from(document.querySelectorAll('.entity-picker__card')).find(
+  const card = Array.from(document.querySelectorAll('.entity-picker__row')).find(
     (c) => c.querySelector('.entity-picker__name')?.textContent?.trim() === exactName,
   );
-  if (!card) throw new Error(`No card found with exact name "${exactName}"`);
+  if (!card) throw new Error(`No row found with exact name "${exactName}"`);
   return card as HTMLElement;
 }
 
@@ -109,7 +112,7 @@ describe('AddItemDialogComponent', () => {
     TestBed.tick();
 
     const card = searchAndFindCard('Dagger', 'Dagger');
-    card.querySelector<HTMLButtonElement>('.entity-picker__select')!.click();
+    card.querySelector<HTMLButtonElement>('.entity-picker__toggle')!.click();
     TestBed.tick();
 
     expect(await handle.closed).toEqual({ itemId: DAGGER_ID, qty: 1 });
@@ -126,7 +129,7 @@ describe('AddItemDialogComponent', () => {
     TestBed.tick();
 
     const card = searchAndFindCard('Dagger', 'Dagger');
-    card.querySelector<HTMLButtonElement>('.entity-picker__select')!.click();
+    card.querySelector<HTMLButtonElement>('.entity-picker__toggle')!.click();
     TestBed.tick();
 
     expect(await handle.closed).toEqual({ itemId: DAGGER_ID, qty: 3 });

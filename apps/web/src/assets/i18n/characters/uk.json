@@ -75,7 +75,8 @@
       "choice": "Вибір",
       "spells": "Заклинання",
       "equipment": "Спорядження",
-      "review": "Огляд"
+      "review": "Огляд",
+      "classChoices": "Вибір класу"
     },
     "pendingStep": "Цей крок ще не доступний.",
     "name": {
@@ -103,13 +104,13 @@
       "incomplete": "Завершіть усі кроки, щоб створити персонажа.",
       "toast": {
         "createFailed": "Не вдалося створити персонажа. Спробуйте ще раз."
-      }
+      },
+      "conceptLabel": "Ім’я та образ"
     },
     "picker": {
       "searchPlaceholder": "Пошук…",
       "searchClear": "Очистити пошук",
       "empty": "Немає відповідних варіантів.",
-      "expand": "Показати опис",
       "valueLabel": "Значення",
       "addValue": "Додати",
       "skillsTitle": "Оберіть {count, plural, one {# навичку} few {# навички} many {# навичок} other {# навички}} для класу {class}",
@@ -117,7 +118,14 @@
       "gate": {
         "prerequisiteFailed": "Вимоги не виконано",
         "duplicate": "Уже обрано"
-      }
+      },
+      "searchLabel": "Пошук варіантів",
+      "filterLabel": "Фільтр варіантів",
+      "chosen": "Обрано",
+      "choose": "Обрати",
+      "detailsOf": "Опис: {name}",
+      "counter": "Обрано {chosen} з {count}",
+      "removeValue": "Прибрати {value}"
     },
     "abilityScores": {
       "method": {
@@ -130,24 +138,33 @@
       "budgetMeter": "{total} / {budget} очок",
       "cost": "Вартість: {cost}",
       "rollAll": "Кинути всі шість",
-      "rollsAnnounced": "Кинуто шість характеристик: {scores}."
+      "rollsAnnounced": "Кинуто шість характеристик: {scores}.",
+      "methodLabel": "Спосіб визначення",
+      "scoreLabel": "{ability}: значення"
     },
     "abilitiesImprove": {
-      "deltaLabel": "+{delta}"
+      "deltaLabel": "+{delta}",
+      "locked": "Зараз не можна змінити"
     },
     "spells": {
       "cantripsTitle": "Заговори",
-      "cantripsHelper": "{known} / {cap} заговорів вивчено.",
       "cantripCapReached": "Ви вивчили всі доступні на цьому рівні заговори ({cap}).",
       "spellbookTitle": "Книга заклинань",
-      "spellbookHelper": "Рекомендуємо близько {recommended} заклинань для початкової книги — можна обрати більше.",
       "preparedTitle": "Підготовлені заклинання",
-      "preparedHelper": "{prepared} / {cap} заклинань підготовлено.",
       "preparedCapReached": "Ви підготували всі доступні на цьому рівні заклинання ({cap}).",
-      "continue": "Далі"
+      "continue": "Далі",
+      "cantripCounter": "Відомо {known} з {cap}",
+      "spellbookCounter": "{count, plural, one {# заклинання} few {# заклинання} many {# заклинань} other {# заклинання}} у книзі заклинань",
+      "preparedCounter": "Підготовлено {prepared} з {cap}",
+      "knownCantrip": "Відомий заговір",
+      "inSpellbook": "У книзі заклинань",
+      "prepared": "Підготовлено",
+      "concentration": "Концентрація",
+      "ritual": "Ритуал",
+      "ritualShort": "Р",
+      "spellbookHelper": "Рекомендуємо близько {recommended} заклинань для початкової книги — можна обрати більше."
     },
     "equipment": {
-      "addTitle": "Додати спорядження",
       "qtyLabel": "Кількість",
       "inventoryTitle": "Інвентар",
       "equip": "Спорядити",
@@ -160,11 +177,13 @@
         "gp": "Золото",
         "pp": "Платина"
       },
-      "continue": "Далі"
+      "addFromLibrary": "Додати з бібліотеки",
+      "hideLibrary": "Сховати бібліотеку"
     },
     "title": "Новий герой",
     "stepper": {
-      "needsAttention": "Потрібно перевірити"
+      "needsAttention": "Потрібно перевірити",
+      "afterClass": "З’явиться після вибору класу"
     },
     "cancel": {
       "leave": "Скасувати й вийти",
@@ -722,7 +741,8 @@
     "packs": {
       "title": "Пакети вмісту",
       "hint": "Додатковий вміст для цього персонажа (необов'язково). Це можна змінити пізніше на вкладці «Білд».",
-      "version": "v{version}"
+      "version": "v{version}",
+      "coreLocked": "Завжди ввімкнено для кожного героя"
     }
   },
   "rebase": {

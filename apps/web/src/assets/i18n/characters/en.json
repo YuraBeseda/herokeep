@@ -75,7 +75,8 @@
       "choice": "Choice",
       "spells": "Spells",
       "equipment": "Equipment",
-      "review": "Review"
+      "review": "Review",
+      "classChoices": "Class choices"
     },
     "pendingStep": "This step isn't available yet.",
     "name": {
@@ -103,13 +104,13 @@
       "incomplete": "Finish every step before creating your character.",
       "toast": {
         "createFailed": "Couldn't create the character. Try again."
-      }
+      },
+      "conceptLabel": "Name & concept"
     },
     "picker": {
       "searchPlaceholder": "Search…",
       "searchClear": "Clear search",
       "empty": "No matching options.",
-      "expand": "Show description",
       "valueLabel": "Value",
       "addValue": "Add",
       "skillsTitle": "Choose {count, plural, one {# skill} other {# skills}} for {class}",
@@ -117,7 +118,14 @@
       "gate": {
         "prerequisiteFailed": "Prerequisites not met",
         "duplicate": "Already chosen"
-      }
+      },
+      "searchLabel": "Search options",
+      "filterLabel": "Filter options",
+      "chosen": "Chosen",
+      "choose": "Choose",
+      "detailsOf": "Details: {name}",
+      "counter": "{chosen} of {count} chosen",
+      "removeValue": "Remove {value}"
     },
     "abilityScores": {
       "method": {
@@ -130,24 +138,33 @@
       "budgetMeter": "{total} / {budget} points",
       "cost": "Cost: {cost}",
       "rollAll": "Roll all six",
-      "rollsAnnounced": "Rolled six ability scores: {scores}."
+      "rollsAnnounced": "Rolled six ability scores: {scores}.",
+      "methodLabel": "Generation method",
+      "scoreLabel": "{ability} score"
     },
     "abilitiesImprove": {
-      "deltaLabel": "+{delta}"
+      "deltaLabel": "+{delta}",
+      "locked": "Not editable right now"
     },
     "spells": {
       "cantripsTitle": "Cantrips",
-      "cantripsHelper": "{known} / {cap} cantrips known.",
       "cantripCapReached": "You've learned every cantrip you can know at this level ({cap}).",
       "spellbookTitle": "Spellbook",
-      "spellbookHelper": "We recommend around {recommended} spells for your starting spellbook — you may learn more.",
       "preparedTitle": "Prepared spells",
-      "preparedHelper": "{prepared} / {cap} spells prepared.",
       "preparedCapReached": "You've prepared every spell you can at this level ({cap}).",
-      "continue": "Continue"
+      "continue": "Continue",
+      "cantripCounter": "{known} of {cap} known",
+      "spellbookCounter": "{count, plural, one {# spell} other {# spells}} in the spellbook",
+      "preparedCounter": "{prepared} of {cap} prepared",
+      "knownCantrip": "Known cantrip",
+      "inSpellbook": "In the spellbook",
+      "prepared": "Prepared",
+      "concentration": "Concentration",
+      "ritual": "Ritual",
+      "ritualShort": "R",
+      "spellbookHelper": "We recommend around {recommended} spells for your starting spellbook — you may learn more."
     },
     "equipment": {
-      "addTitle": "Add equipment",
       "qtyLabel": "Quantity",
       "inventoryTitle": "Inventory",
       "equip": "Equip",
@@ -160,11 +177,13 @@
         "gp": "Gold",
         "pp": "Platinum"
       },
-      "continue": "Continue"
+      "addFromLibrary": "Add from library",
+      "hideLibrary": "Hide library"
     },
     "title": "New hero",
     "stepper": {
-      "needsAttention": "Needs another look"
+      "needsAttention": "Needs another look",
+      "afterClass": "Appears once you choose a class"
     },
     "cancel": {
       "leave": "Discard and leave",
@@ -722,7 +741,8 @@
     "packs": {
       "title": "Content packs",
       "hint": "Optional extra content for this character. You can change this later on the Build tab.",
-      "version": "v{version}"
+      "version": "v{version}",
+      "coreLocked": "Always on for every hero"
     }
   },
   "rebase": {

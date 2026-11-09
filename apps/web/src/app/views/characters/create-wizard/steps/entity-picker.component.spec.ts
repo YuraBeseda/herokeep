@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
@@ -14,6 +14,8 @@ import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { press } from '../../../../ui/testing/harness';
+import { PickerToolsService } from '../picker-tools.service';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { EntityPickerComponent } from './entity-picker.component';
@@ -45,6 +47,7 @@ const speciesIds = corePack.entities
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -58,6 +61,7 @@ class StubLoader implements TranslocoLoader {
       [selectedIds]="selectedIds()"
       [limit]="limit()"
       [gates]="gates()"
+      [layout]="layout()"
       (toggled)="onToggle($event)"
     />
   `,
@@ -67,6 +71,7 @@ class HostComponent {
   readonly selectedIds = signal<readonly string[]>([]);
   readonly limit = signal<number | undefined>(undefined);
   readonly gates = signal<ReadonlyMap<string, string>>(new Map());
+  readonly layout = signal<'cards' | 'rows'>('cards');
   readonly toggled: string[] = [];
 
   onToggle(id: string): void {
@@ -107,7 +112,7 @@ describe('EntityPickerComponent', () => {
     await fixture.whenStable();
 
     const names = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('.entity-picker__name'),
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.hk-picker-card__name'),
     ).map((el) => el.textContent?.trim());
     expect(names.length).toBe(speciesIds.length);
     expect(names).toContain('Human');
@@ -119,7 +124,7 @@ describe('EntityPickerComponent', () => {
     await fixture.whenStable();
 
     const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
-      '.entity-picker__select',
+      '.hk-picker-card__choose',
     );
     expect(button).toBeTruthy();
     button!.click();
@@ -137,10 +142,10 @@ describe('EntityPickerComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const humanRow = Array.from(compiled.querySelectorAll('.entity-picker__card')).find(
-      (card) => card.querySelector('.entity-picker__name')?.textContent?.trim() === 'Human',
+    const humanRow = Array.from(compiled.querySelectorAll('hk-picker-card')).find(
+      (card) => card.querySelector('.hk-picker-card__name')?.textContent?.trim() === 'Human',
     );
-    const button = humanRow?.querySelector('.entity-picker__select');
+    const button = humanRow?.querySelector('.hk-picker-card__choose');
     expect(button?.getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -160,16 +165,20 @@ describe('EntityPickerComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const buttonFor = (name: string) =>
-      Array.from(compiled.querySelectorAll('.entity-picker__card'))
-        .find((card) => card.querySelector('.entity-picker__name')?.textContent?.trim() === name)
-        ?.querySelector<HTMLButtonElement>('.entity-picker__select');
+      Array.from(compiled.querySelectorAll('hk-picker-card'))
+        .find((card) => card.querySelector('.hk-picker-card__name')?.textContent?.trim() === name)
+        ?.querySelector<HTMLButtonElement>('.hk-picker-card__choose');
 
-    // Gated and NOT selected: refused, as before.
-    expect(buttonFor('Elf')?.disabled).toBe(true);
+    // Gated and NOT selected: refused (the button reads as disabled and a press does nothing).
+    const elf = buttonFor('Elf')!;
+    expect(elf.getAttribute('aria-disabled')).toBe('true');
+    elf.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.toggled).toEqual([]);
     // Gated but selected: still pressed, and still clickable so the pick can be undone.
     const human = buttonFor('Human')!;
     expect(human.getAttribute('aria-pressed')).toBe('true');
-    expect(human.disabled).toBe(false);
+    expect(human.getAttribute('aria-disabled')).not.toBe('true');
     human.click();
     await fixture.whenStable();
     expect(fixture.componentInstance.toggled).toEqual([humanId]);
@@ -193,7 +202,7 @@ describe('EntityPickerComponent', () => {
     await fixture.whenStable();
 
     const names = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('.entity-picker__name'),
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.hk-picker-card__name'),
     ).map((el) => el.textContent?.trim());
     expect(names).toEqual(['Human']);
   });
@@ -216,7 +225,7 @@ describe('EntityPickerComponent', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.entity-picker__card').length).toBe(20);
+    expect(compiled.querySelectorAll('hk-picker-card').length).toBe(20);
     expect(compiled.querySelector('.entity-picker__more')?.textContent).toContain('80');
 
     // The longest name among the 100 is the search term least likely to also be a substring of
@@ -237,8 +246,141 @@ describe('EntityPickerComponent', () => {
     vi.useRealTimers();
     await fixture.whenStable();
 
-    expect(compiled.querySelectorAll('.entity-picker__card').length).toBe(matchCount);
+    expect(compiled.querySelectorAll('hk-picker-card').length).toBe(matchCount);
     expect(compiled.querySelector('.entity-picker__more')).toBeNull();
+  });
+});
+
+/** A weapon mastery list is long: it reads as rows, each with a tick seal and an info button. */
+describe('EntityPickerComponent — rows, filters and the drawer action (plan 17)', () => {
+  beforeEach(() => configure());
+  const weaponIds = corePack.entities
+    .filter((e) => e.type === 'item' && e.weapon?.mastery)
+    .map((e) => e.id);
+
+  async function mountRows(selected: string[] = []) {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.ids.set(weaponIds);
+    fixture.componentInstance.selectedIds.set(selected);
+    fixture.componentInstance.layout.set('rows');
+    await fixture.whenStable();
+    return { fixture, root: fixture.nativeElement as HTMLElement };
+  }
+
+  it('rows toggle on a press of the row and open the description from the info button without picking', async () => {
+    const { fixture, root } = await mountRows();
+    const rows = root.querySelectorAll<HTMLElement>('.entity-picker__row');
+    expect(rows.length).toBe(weaponIds.length);
+    expect(root.querySelector('hk-picker-card')).toBeNull();
+
+    press(rows[0].querySelector<HTMLElement>('.entity-picker__toggle')!);
+    expect(fixture.componentInstance.toggled).toHaveLength(1);
+
+    press(rows[1].querySelector<HTMLElement>('.entity-picker__info')!);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(root.querySelector('hk-description-drawer [role="dialog"]')).not.toBeNull();
+    expect(fixture.componentInstance.toggled).toHaveLength(1);
+  });
+
+  it('a selected row wears the tick seal and is pressed; its accessible name carries the visible facts', async () => {
+    const { root } = await mountRows([weaponIds[0]]);
+    const selected = root.querySelector('.entity-picker__row--selected')!;
+    expect(selected.querySelector('hk-wax-seal')).not.toBeNull();
+    const toggle = selected.querySelector('.entity-picker__toggle')!;
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    const name = selected.querySelector('.entity-picker__name')!.textContent.trim();
+    expect(toggle.getAttribute('aria-label')).toContain(name);
+    const chips = Array.from(selected.querySelectorAll('.hk-tag-chip__label'));
+    expect(chips.length).toBeGreaterThan(0);
+    for (const chip of chips) {
+      expect(toggle.getAttribute('aria-label')).toContain(chip.textContent.trim());
+    }
+  });
+
+  it('a gated row stays listed, reads disabled and does not pick', async () => {
+    const { fixture, root } = await mountRows();
+    fixture.componentInstance.gates.set(new Map([[weaponIds[0], 'wizard.picker.gate.duplicate']]));
+    await fixture.whenStable();
+    const toggle = root.querySelector<HTMLElement>(
+      '.entity-picker__row--gated .entity-picker__toggle',
+    )!;
+    expect(toggle.getAttribute('aria-disabled')).toBe('true');
+    press(toggle);
+    expect(fixture.componentInstance.toggled).toEqual([]);
+  });
+
+  it('the facet chips filter the options, and clearing them brings every option back', async () => {
+    const { fixture, root } = await mountRows();
+    const chips = Array.from(root.querySelectorAll<HTMLButtonElement>('button[hk-filter-chip]'));
+    expect(chips.length).toBeGreaterThan(1);
+    const total = root.querySelectorAll('.entity-picker__row').length;
+    press(chips[0]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const filtered = root.querySelectorAll('.entity-picker__row').length;
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThan(total);
+    press(root.querySelector<HTMLElement>('.hk-filter-chips__clear')!);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(root.querySelectorAll('.entity-picker__row')).toHaveLength(total);
+  });
+
+  it('the drawer carries a Choose button that picks the option it describes, then reads Chosen', async () => {
+    const { fixture, root } = await mountRows();
+    press(root.querySelector<HTMLElement>('.entity-picker__info')!);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const action = () => root.querySelector<HTMLButtonElement>('.entity-picker__drawer-choose')!;
+    expect(action().getAttribute('aria-pressed')).toBe('false');
+    press(action());
+    expect(fixture.componentInstance.toggled).toHaveLength(1);
+    fixture.componentInstance.selectedIds.set([fixture.componentInstance.toggled[0]]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(action().getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+/** Inside the wizard the strap's Filter and Search buttons reach the picker through the tools service. */
+describe('EntityPickerComponent — strap tools (plan 17)', () => {
+  @Component({
+    selector: 'app-tools-host',
+    imports: [EntityPickerComponent],
+    providers: [PickerToolsService],
+    template: `<hk-entity-picker [ids]="ids" />`,
+  })
+  class ToolsHostComponent {
+    readonly ids = speciesIds;
+    readonly tools = inject(PickerToolsService);
+  }
+
+  beforeEach(() => configure());
+
+  it('registers while mounted, reports its chips, folds them away on Filter and focuses the search on Search', async () => {
+    const fixture = TestBed.createComponent(ToolsHostComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    const tools = fixture.componentInstance.tools;
+    expect(tools.active()).toBe(true);
+    expect(tools.hasFilters()).toBe(true);
+    expect(root.querySelector('button[hk-filter-chip]')).not.toBeNull();
+
+    tools.toggleFilters(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(root.querySelector('button[hk-filter-chip]')).toBeNull();
+
+    document.body.append(root);
+    tools.requestSearch();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(root.querySelector('input[type="search"]'));
+    root.remove();
+
+    fixture.destroy();
+    expect(tools.active()).toBe(false);
   });
 });
 
@@ -250,10 +392,10 @@ describe('EntityPickerComponent — descriptions open in the description drawer'
     fixture.componentInstance.ids.set(speciesIds);
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
-    const names = Array.from(root.querySelectorAll('.entity-picker__name')).map(
+    const names = Array.from(root.querySelectorAll('.hk-picker-card__name')).map(
       (el) => el.textContent?.trim() ?? '',
     );
-    const buttons = Array.from(root.querySelectorAll<HTMLElement>('.entity-picker__expand'));
+    const buttons = Array.from(root.querySelectorAll<HTMLElement>('.hk-picker-card__body'));
     expect(buttons.length).toBe(speciesIds.length);
     expect(root.querySelector('hk-description-drawer .hk-drawer__panel')).toBeNull();
 
@@ -334,9 +476,9 @@ describe('EntityPickerComponent — cross-links inside a character scope (plan 1
     const fixture = TestBed.createComponent(ScopedHostComponent);
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('.entity-picker__name')?.textContent?.trim()).toBe('Moonkin');
+    expect(root.querySelector('.hk-picker-card__name')?.textContent?.trim()).toBe('Moonkin');
 
-    press(root.querySelector<HTMLElement>('.entity-picker__expand')!);
+    press(root.querySelector<HTMLElement>('.hk-picker-card__body')!);
     const link = 'hk-description-drawer .hk-description__body a';
     for (let i = 0; i < 20 && !root.querySelector(link); i++) {
       await new Promise((resolve) => setTimeout(resolve, 0));

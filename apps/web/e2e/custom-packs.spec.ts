@@ -8,6 +8,8 @@ import {
   pickClass,
   pickGamingSet,
   pickSkills,
+  chooseControl,
+  chooseOption,
 } from './helpers/create-fighter';
 import { importPack } from './helpers/packs';
 import { addFromLibrary, openTab } from './helpers/sheet';
@@ -47,13 +49,11 @@ async function pickFightingStyleAndMasteries(page: Page): Promise<void> {
     await title.waitFor({ state: 'visible' });
     if ((await title.textContent())?.trim() === 'Weapon Masteries') {
       for (const weapon of picks) {
-        await page.getByRole('button', { name: weapon, exact: true }).click();
+        await chooseOption(page, weapon);
       }
-      await page
-        .getByRole('button', { name: picks[picks.length - 1], exact: true })
-        .waitFor({ state: 'detached' });
+      await chooseControl(page, picks[picks.length - 1]).waitFor({ state: 'detached' });
     } else {
-      const defense = page.getByRole('button', { name: 'Defense', exact: true });
+      const defense = chooseControl(page, 'Defense');
       await defense.click();
       await defense.waitFor({ state: 'detached' });
     }
@@ -118,14 +118,14 @@ test.describe('custom content packs', () => {
     let characterId = '';
     await test.step('create a fighter with the pack checked in the wizard; the pack species is offered and chosen', async () => {
       await page.goto('/characters/new');
-      await page.locator('.create-wizard__name-input').fill(CHARACTER_NAME);
+      await page.locator('.name-step__name-input input').fill(CHARACTER_NAME);
       await page.getByRole('radio', { name: 'Masculine', exact: true }).check();
       await page
-        .locator('.create-wizard__pack', { hasText: PACK_NAME })
-        .locator('.create-wizard__pack-toggle')
+        .locator('.name-step__pack', { hasText: PACK_NAME })
+        .locator('.name-step__pack-toggle')
         .check();
       await page.locator('[data-action="next"]').click();
-      await page.getByRole('button', { name: 'Moonkin', exact: true }).click();
+      await chooseOption(page, 'Moonkin');
       await pickBackground(page);
       await applyBackgroundAbilities(page);
       await pickClass(page);

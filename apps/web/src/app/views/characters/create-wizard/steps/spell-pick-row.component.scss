@@ -1,0 +1,63 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.spell-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: 48px;
+  padding-inline-end: var(--space-1);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf);
+  color: var(--text-1);
+}
+
+.spell-pick--chosen {
+  box-shadow: 0 0 0 2px var(--brass);
+}
+
+.spell-pick__toggle,
+.spell-pick__info {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.spell-pick__ring {
+  inline-size: 24px;
+  block-size: 24px;
+  border: 2px dashed var(--leaf-edge);
+  border-radius: 50%;
+}
+
+.spell-pick__row {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.spell-pick__ritual {
+  flex: none;
+}

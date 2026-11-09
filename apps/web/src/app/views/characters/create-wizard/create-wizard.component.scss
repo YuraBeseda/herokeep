@@ -4,77 +4,6 @@
   display: block;
 }
 
-.create-wizard__step {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.create-wizard__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  border: 0;
-  padding: 0;
-  margin: 0;
-}
-
-.create-wizard__name-input {
-  @include u.touch-target;
-
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
-  background: var(--surface-2);
-  color: var(--text-1);
-  padding: var(--space-2);
-  font: inherit;
-}
-
-.create-wizard__radio {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.create-wizard__error {
-  color: var(--danger);
-  margin: 0;
-}
-
-.create-wizard__summary {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-1) var(--space-3);
-  margin: 0;
-}
-
-.create-wizard__summary dt {
-  color: var(--text-2);
-}
-
-.create-wizard__items,
-.create-wizard__spells,
-.create-wizard__outstanding {
-  margin: 0;
-  padding-inline-start: var(--space-4);
-}
-
-.create-wizard__decisions dd {
-  margin: 0;
-}
-
-.create-wizard__equipped {
-  color: var(--text-2);
-}
-
-.create-wizard__incomplete {
-  color: var(--text-2);
-}
-
-.create-wizard__pending {
-  color: var(--text-2);
-}
-
 .create-wizard {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -98,20 +27,116 @@
   min-inline-size: 0;
 }
 
+.create-wizard__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  h2,
+  h3 {
+    margin: 0;
+    font-family: var(--font-display);
+  }
+}
+
+/* Review: one parchment group per step, each with its Edit link. */
+.create-wizard__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-frame);
+  background: var(--leaf);
+  box-shadow: var(--shadow-leaf);
+}
+
+.create-wizard__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+
+  h3 {
+    font-size: 1.125rem;
+  }
+}
+
+.create-wizard__summary {
+  display: grid;
+  grid-template-columns: minmax(7rem, 8.25rem) minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+
+  dt {
+    color: var(--text-2);
+    overflow-wrap: anywhere;
+  }
+
+  dd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-inline-size: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.create-wizard__value {
+  min-inline-size: 0;
+}
+
+.create-wizard__items,
+.create-wizard__spells,
+.create-wizard__outstanding {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.create-wizard__equipped {
+  color: var(--text-2);
+}
+
+.create-wizard__seals li {
+  padding: var(--space-2);
+  border-radius: var(--radius-frame);
+  /* The seal is made for leather: its light text needs the dark tile behind it. */
+  background: var(--leather);
+  color: var(--text-on-leather);
+}
+
+.create-wizard__seals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.create-wizard__numbers {
+  margin-block-start: var(--space-2);
+}
+
+.create-wizard__incomplete,
+.create-wizard__pending {
+  color: var(--text-2);
+}
+
 .create-wizard__edit {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  inline-size: 28px;
-  block-size: 28px;
-  margin-inline-start: var(--space-2);
+  inline-size: 32px;
+  block-size: 32px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--link);
+  color: var(--accent-strong);
   cursor: pointer;
-  vertical-align: middle;
 
   &:focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -122,15 +147,4 @@
     inline-size: 44px;
     block-size: 44px;
   }
-}
-
-.create-wizard__packs-hint {
-  margin: 0;
-  color: var(--text-2);
-  font-size: 0.875rem;
-}
-
-.create-wizard__pack-version {
-  color: var(--text-2);
-  font-size: 0.875rem;
 }

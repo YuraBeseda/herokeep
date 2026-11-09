@@ -25,6 +25,7 @@ import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/cha
 import { PackStore } from '@shared/stores/pack.store';
 import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
 import { CreateWizardState } from '../../create-wizard/create-wizard.state';
 import { levelUpToTwo, seedFighter, seedWarlock, seedWizard } from '../testing/character-fixtures';
@@ -87,6 +88,7 @@ const ruTranslationPack: Pack = {
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     if (langPath === 'characters/ru') return of(charactersRu);
     if (langPath === 'campaigns/en') return of(campaignsEn);
     return of({});
@@ -1602,10 +1604,10 @@ describe('PlayTabComponent — inventory and currency controls', () => {
     TestBed.tick();
     vi.useRealTimers();
 
-    const card = Array.from(overlay().querySelectorAll('.entity-picker__card')).find(
+    const card = Array.from(overlay().querySelectorAll('.entity-picker__row')).find(
       (c) => c.querySelector('.entity-picker__name')?.textContent?.trim() === 'Dagger',
     )!;
-    card.querySelector<HTMLButtonElement>('.entity-picker__select')!.click();
+    card.querySelector<HTMLButtonElement>('.entity-picker__toggle')!.click();
 
     await pollUntil(
       fixture,

@@ -1,0 +1,73 @@
+<div class="name-step" *transloco="let t; read: 'characters'">
+  <h2>{{ t('wizard.name.title') }}</h2>
+
+  <hk-text-field
+    class="name-step__name-input"
+    [label]="t('wizard.name.nameLabel')"
+    [value]="state.name()"
+    [maxLength]="nameMaxLength"
+    [required]="true"
+    [error]="touched() && !nameValid() ? t('wizard.name.nameError') : null"
+    (valueChange)="state.name.set($event)"
+    (focusout)="touched.set(true)"
+  />
+
+  <fieldset class="name-step__field">
+    <legend>{{ t('wizard.name.genderLabel') }}</legend>
+    <div class="name-step__segments">
+      @for (option of genderOptions; track option.value) {
+        <label class="name-step__segment">
+          <input
+            type="radio"
+            class="name-step__segment-input"
+            name="create-wizard-gender"
+            [value]="option.value"
+            [checked]="state.gender() === option.value"
+            (change)="state.gender.set(option.value)"
+          />
+          <span class="name-step__segment-label">{{ t(option.labelKey) }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <!-- Plan 15 Task 4: only when content packs are installed; none checked by default. -->
+  @if (state.installedContent().length > 0) {
+    <fieldset class="name-step__field name-step__packs">
+      <legend>{{ t('create.packs.title') }}</legend>
+      <ul class="name-step__pack-list">
+        @if (state.corePack(); as core) {
+          <li
+            class="name-step__pack name-step__pack--core"
+            tabindex="0"
+            [attr.aria-label]="core.name + ' — ' + t('create.packs.coreLocked')"
+            [hkTooltip]="t('create.packs.coreLocked')"
+          >
+            <span class="name-step__pack-name">{{ core.name }}</span>
+            <span class="name-step__pack-version">{{
+              t('create.packs.version', { version: core.version })
+            }}</span>
+            <hk-icon class="name-step__pin" [icon]="'ui:lock'" />
+          </li>
+        }
+        @for (pack of state.installedContent(); track pack.id) {
+          <li>
+            <label class="name-step__pack">
+              <span class="name-step__pack-name">{{ pack.name }}</span>
+              <span class="name-step__pack-version">{{
+                t('create.packs.version', { version: pack.version })
+              }}</span>
+              <input
+                type="checkbox"
+                class="name-step__pack-toggle"
+                [checked]="state.isPackSelected(pack)"
+                (change)="state.togglePack(pack.id, pack.version)"
+              />
+              <hk-icon class="name-step__pin" [icon]="'ui:pin'" />
+            </label>
+          </li>
+        }
+      </ul>
+    </fieldset>
+  }
+</div>

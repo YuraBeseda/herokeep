@@ -1,12 +1,22 @@
 <div class="choice-step" *transloco="let t; read: 'characters'">
   @if (view(); as v) {
-    <h2 class="choice-step__title">
-      @if (v.kind === 'skills') {
-        {{ t('wizard.picker.skillsTitle', { count: v.count, class: skillsClassName() }) }}
-      } @else {
-        {{ promptText() }}
+    <header class="choice-step__head">
+      <h2 class="choice-step__title">
+        @if (v.kind === 'skills') {
+          {{ t('wizard.picker.skillsTitle', { count: v.count, class: skillsClassName() }) }}
+        } @else {
+          {{ promptText() }}
+        }
+      </h2>
+      @if (counter(); as c) {
+        <hk-tag-chip
+          class="choice-step__counter"
+          role="status"
+          [tone]="c.chosen >= c.count ? 'moss' : 'neutral'"
+          [label]="t('wizard.picker.counter', { chosen: c.chosen, count: c.count })"
+        />
       }
-    </h2>
+    </header>
 
     @switch (v.kind) {
       @case ('query') {
@@ -14,6 +24,8 @@
           [ids]="v.ids"
           [selectedIds]="selection()"
           [gates]="optionGates()"
+          [layout]="layout()"
+          [disabled]="disabled()"
           (toggled)="onToggle($event)"
         />
       }
@@ -22,6 +34,8 @@
           [ids]="v.ids"
           [selectedIds]="selection()"
           [gates]="optionGates()"
+          [layout]="layout()"
+          [disabled]="disabled()"
           (toggled)="onToggle($event)"
         />
       }
@@ -43,48 +57,51 @@
         />
       }
       @case ('skills') {
-        <div class="choice-step__chips">
-          @for (opt of v.options; track opt.id) {
-            <hk-chip
-              [selected]="isSelected(opt.id)"
-              [class.choice-step__chip--disabled]="disabled()"
-              [attr.aria-disabled]="disabled() ? 'true' : null"
-              (click)="onToggle(opt.id)"
-            >
-              {{ opt.name }}
-            </hk-chip>
-          }
-        </div>
+        <hk-entity-picker
+          class="choice-step__skills"
+          [ids]="skillIds()"
+          [selectedIds]="selectedSkillIds()"
+          [layout]="'rows'"
+          [disabled]="disabled()"
+          (toggled)="onToggleSkill($event)"
+        />
       }
       @case ('literal') {
         <div class="choice-step__literal">
           @if (selection().length > 0) {
-            <div class="choice-step__chips">
+            <ul class="choice-step__chips">
               @for (value of selection(); track value) {
-                <hk-chip
-                  [removable]="true"
-                  [class.choice-step__chip--disabled]="disabled()"
-                  [attr.aria-disabled]="disabled() ? 'true' : null"
-                  (remove)="onRemoveLiteral(value)"
-                  >{{ value }}</hk-chip
-                >
+                <li>
+                  <button
+                    type="button"
+                    class="choice-step__value"
+                    [disabled]="disabled()"
+                    [attr.aria-label]="t('wizard.picker.removeValue', { value })"
+                    (click)="onRemoveLiteral(value)"
+                  >
+                    {{ value }}
+                  </button>
+                </li>
               }
-            </div>
+            </ul>
           }
           <form class="choice-step__literal-form" (submit)="onAddLiteral($event)">
-            <label class="choice-step__literal-label">
-              <span class="visually-hidden">{{ t('wizard.picker.valueLabel') }}</span>
-              <input
-                type="text"
+            <fieldset class="choice-step__fieldset" [disabled]="disabled()">
+              <hk-text-field
                 class="choice-step__literal-input"
-                [disabled]="disabled()"
+                [label]="t('wizard.picker.valueLabel')"
                 [value]="literalDraft()"
-                (input)="literalDraft.set($any($event.target).value)"
+                (valueChange)="literalDraft.set($event)"
               />
-            </label>
-            <button type="submit" hk-button [variant]="'ghost'" [disabled]="disabled()">
-              {{ t('wizard.picker.addValue') }}
-            </button>
+              <button
+                type="submit"
+                hk-button
+                class="choice-step__literal-add"
+                [variant]="'parchment'"
+              >
+                {{ t('wizard.picker.addValue') }}
+              </button>
+            </fieldset>
           </form>
         </div>
       }

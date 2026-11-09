@@ -1,133 +1,140 @@
 <div class="ability-scores-step" *transloco="let t; read: 'characters'">
-  <hk-tabs class="ability-scores-step__tabs" [tabs]="methodTabs(t)" [(selected)]="method" />
+  <div class="ability-scores-step__bar">
+    <div
+      class="ability-scores-step__tabs"
+      role="tablist"
+      [attr.aria-label]="t('wizard.abilityScores.methodLabel')"
+    >
+      @for (m of availableMethods(); track m) {
+        <button
+          type="button"
+          role="tab"
+          class="ability-scores-step__tab"
+          [attr.aria-selected]="m === activeMethod()"
+          [attr.tabindex]="m === activeMethod() ? 0 : -1"
+          (click)="method.set(m)"
+          (keydown)="onTabKey($event)"
+        >
+          {{ t('wizard.abilityScores.method.' + m) }}
+        </button>
+      }
+    </div>
 
-  @switch (activeMethod()) {
-    @case ('standardArray') {
-      <ul class="ability-scores-step__rows">
-        @for (a of abilities(); track a.id) {
-          <li class="ability-scores-step__row">
-            <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
-            <label class="ability-scores-step__select-label">
-              <span class="visually-hidden">{{ t('wizard.picker.valueLabel') }}</span>
-              <select
-                class="ability-scores-step__select"
-                (change)="onAssignStandardArray(a.id, $any($event.target).value)"
-              >
-                <option value="" [selected]="standardArrayAssignment()[a.id] === undefined">
-                  {{ t('wizard.abilityScores.unassigned') }}
-                </option>
-                @for (opt of standardArrayOptionsFor(a.id); track opt.index) {
-                  <option
-                    [value]="opt.index"
-                    [selected]="standardArrayAssignment()[a.id] === opt.index"
-                  >
-                    {{ opt.value }}
-                  </option>
-                }
-              </select>
-            </label>
-          </li>
-        }
-      </ul>
-    }
-    @case ('pointBuy') {
-      <p
+    @if (activeMethod() === 'pointBuy') {
+      <div
         class="ability-scores-step__meter"
         [class.ability-scores-step__meter--over]="pointBuyOverBudget()"
       >
-        {{
+        <span class="ability-scores-step__meter-text">{{
           t('wizard.abilityScores.budgetMeter', {
             total: pointBuyTotal(),
             budget: gen().pointBuy.budget,
           })
-        }}
-      </p>
-      <ul class="ability-scores-step__rows">
-        @for (a of abilities(); track a.id) {
-          <li class="ability-scores-step__row">
-            <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
-            <hk-number-field
-              [labelKey]="'characters.wizard.picker.valueLabel'"
-              [min]="gen().pointBuy.min"
-              [max]="gen().pointBuy.max"
-              [step]="1"
-              [ngModel]="pointBuyValue(a.id)"
-              (ngModelChange)="onPointBuyChange(a.id, $event)"
-            />
-            <span class="ability-scores-step__cost">
-              {{ t('wizard.abilityScores.cost', { cost: pointBuyCost(pointBuyValue(a.id)) }) }}
-            </span>
-          </li>
-        }
-      </ul>
+        }}</span>
+        <span class="ability-scores-step__gauge" aria-hidden="true">
+          <span
+            class="ability-scores-step__gauge-fill"
+            [style.inline-size.%]="pointBuyFill()"
+          ></span>
+        </span>
+      </div>
     }
-    @case ('manual') {
-      <ul class="ability-scores-step__rows">
-        @for (a of abilities(); track a.id) {
-          <li class="ability-scores-step__row">
-            <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
-            <hk-number-field
-              [labelKey]="'characters.wizard.picker.valueLabel'"
-              [min]="gen().manual.min"
-              [max]="gen().manual.max"
-              [step]="1"
-              [ngModel]="manualValue(a.id)"
-              (ngModelChange)="onManualChange(a.id, $event)"
-            />
-          </li>
-        }
-      </ul>
-    }
-    @case ('roll') {
+
+    @if (activeMethod() === 'roll') {
       <button
         hk-button
         type="button"
         class="ability-scores-step__roll-all"
-        [variant]="'ghost'"
+        [variant]="'primary'"
         [disabled]="!!rollResults()"
         (click)="onRollAll(t)"
       >
         {{ t('wizard.abilityScores.rollAll') }}
       </button>
-      @if (rollResults()) {
-        <ul class="ability-scores-step__rows">
-          @for (a of abilities(); track a.id) {
-            <li class="ability-scores-step__row">
-              <span class="ability-scores-step__name">{{ abilityName(a.id) }}</span>
-              <label class="ability-scores-step__select-label">
-                <span class="visually-hidden">{{ t('wizard.picker.valueLabel') }}</span>
-                <select
+    }
+  </div>
+
+  <!-- All six seals stay on screen whatever the method; each carries its own control. -->
+  <ul class="ability-scores-step__rows">
+    @for (a of abilities(); track a.id) {
+      <li class="ability-scores-step__row">
+        <hk-ability-seal
+          class="ability-scores-step__seal"
+          [ability]="abilityName(a.id)"
+          [score]="sealOf(a.id).score"
+          [modifier]="sealOf(a.id).modifier"
+          [save]="sealOf(a.id).save"
+        />
+        @if (activeMethod() !== 'roll' || rollResults()) {
+          <div class="ability-scores-step__control">
+            @switch (activeMethod()) {
+              @case ('standardArray') {
+                <hk-select
                   class="ability-scores-step__select"
-                  (change)="onAssignRoll(a.id, $any($event.target).value)"
-                >
-                  <option value="" [selected]="rollAssignment()[a.id] === undefined">
-                    {{ t('wizard.abilityScores.unassigned') }}
-                  </option>
-                  @for (opt of rollOptionsFor(a.id); track opt.index) {
-                    <option [value]="opt.index" [selected]="rollAssignment()[a.id] === opt.index">
-                      {{ opt.total }}
-                    </option>
-                  }
-                </select>
-              </label>
-              @if (rollDiceFor(a.id); as dice) {
-                <span class="ability-scores-step__dice">
-                  @for (die of dice; track $index) {
-                    <span
-                      class="ability-scores-step__die"
-                      [class.ability-scores-step__die--dropped]="!die.kept"
-                    >
-                      {{ die.value }}
-                    </span>
-                  }
+                  [label]="t('wizard.abilityScores.scoreLabel', { ability: abilityName(a.id) })"
+                  [options]="standardArrayChoices(a.id, t('wizard.abilityScores.unassigned'))"
+                  [value]="slotValue(standardArrayAssignment()[a.id])"
+                  (valueChange)="onAssignStandardArray(a.id, $event ?? '')"
+                />
+              }
+              @case ('pointBuy') {
+                <hk-number-field
+                  class="ability-scores-step__number"
+                  [label]="t('wizard.abilityScores.scoreLabel', { ability: abilityName(a.id) })"
+                  [labelHidden]="true"
+                  [variant]="'leaf'"
+                  [min]="gen().pointBuy.min"
+                  [max]="gen().pointBuy.max"
+                  [step]="1"
+                  [ngModel]="pointBuyValue(a.id)"
+                  (ngModelChange)="onPointBuyChange(a.id, $event)"
+                />
+                <span class="ability-scores-step__cost">
+                  {{ t('wizard.abilityScores.cost', { cost: pointBuyCost(pointBuyValue(a.id)) }) }}
                 </span>
               }
-            </li>
-          }
-        </ul>
-      }
+              @case ('manual') {
+                <hk-number-field
+                  class="ability-scores-step__number"
+                  [label]="t('wizard.abilityScores.scoreLabel', { ability: abilityName(a.id) })"
+                  [labelHidden]="true"
+                  [variant]="'leaf'"
+                  [min]="gen().manual.min"
+                  [max]="gen().manual.max"
+                  [step]="1"
+                  [ngModel]="manualValue(a.id)"
+                  (ngModelChange)="onManualChange(a.id, $event)"
+                />
+              }
+              @case ('roll') {
+                @if (rollResults()) {
+                  <hk-select
+                    class="ability-scores-step__select"
+                    [label]="t('wizard.abilityScores.scoreLabel', { ability: abilityName(a.id) })"
+                    [options]="rollChoices(a.id, t('wizard.abilityScores.unassigned'))"
+                    [value]="slotValue(rollAssignment()[a.id])"
+                    (valueChange)="onAssignRoll(a.id, $event ?? '')"
+                  />
+                  @if (rollDiceFor(a.id); as dice) {
+                    <span class="ability-scores-step__dice">
+                      @for (die of dice; track $index) {
+                        <span
+                          class="ability-scores-step__die"
+                          [class.ability-scores-step__die--dropped]="!die.kept"
+                        >
+                          {{ die.value }}
+                        </span>
+                      }
+                    </span>
+                  }
+                }
+              }
+            }
+          </div>
+        }
+      </li>
     }
-  }
+  </ul>
 
   @if (diagnostics().length > 0) {
     <ul class="ability-scores-step__diagnostics">

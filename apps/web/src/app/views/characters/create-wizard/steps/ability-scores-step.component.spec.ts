@@ -10,6 +10,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
 import { AbilityScoresStepComponent } from './ability-scores-step.component';
@@ -40,6 +41,7 @@ const ABILITY_SCORES_CHOICE = `${SYSTEM_ID}@0/ability-scores`;
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -75,7 +77,9 @@ function createState(): CreateWizardState {
 const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
 function selectsInAbilityOrder(compiled: HTMLElement): HTMLSelectElement[] {
-  return Array.from(compiled.querySelectorAll<HTMLSelectElement>('.ability-scores-step__select'));
+  return Array.from(
+    compiled.querySelectorAll<HTMLSelectElement>('.ability-scores-step__select select'),
+  );
 }
 
 function pickOptionByText(select: HTMLSelectElement, text: string): void {
@@ -161,6 +165,7 @@ describe('AbilityScoresStepComponent', () => {
     for (const [index, value] of values.entries()) {
       inputs[index].value = value;
       inputs[index].dispatchEvent(new Event('input'));
+      inputs[index].dispatchEvent(new Event('change'));
       await fixture.whenStable();
     }
 
@@ -206,38 +211,37 @@ describe('AbilityScoresStepComponent', () => {
     // Only one ability entered so far — committed alone, not padded with defaults.
     inputs[0].value = '16';
     inputs[0].dispatchEvent(new Event('input'));
+    inputs[0].dispatchEvent(new Event('change'));
     await fixture.whenStable();
 
     expect(state.decisions().get(ABILITY_SCORES_CHOICE)).toEqual(['str:16']);
     expect(state.decisionContexts().get(ABILITY_SCORES_CHOICE)?.['method']).toBe('manual');
 
-    // Filling in the rest, with one (wis) OUTSIDE the pack's 3-18 manual range, must surface the
-    // engine's `manualRange` diagnostic — the RED gap the reviewer flagged: this test's own name
-    // claims that coverage, so it must actually enter an out-of-range value and check for it,
-    // not just assert the min/max HTML attributes above.
+    // Filling in the rest: a wis value OUTSIDE the pack's 3-18 manual range typed into the field is
+    // clamped to the range by the field itself (the stepper is the way to stay in range), so the
+    // out-of-range case can only reach the engine programmatically — which must still refuse it.
     const rest: [number, string][] = [
       [1, '14'],
       [2, '13'],
       [3, '12'],
-      [4, '25'], // wis: out of range (manual.max is 18)
+      [4, '25'],
       [5, '8'],
     ];
     for (const [index, value] of rest) {
       inputs[index].value = value;
       inputs[index].dispatchEvent(new Event('input'));
+      inputs[index].dispatchEvent(new Event('change'));
       await fixture.whenStable();
     }
 
     const fullSelection = state.decisions().get(ABILITY_SCORES_CHOICE);
-    expect(fullSelection).toEqual(['str:16', 'dex:14', 'con:13', 'int:12', 'wis:25', 'cha:8']);
+    expect(fullSelection).toEqual(['str:16', 'dex:14', 'con:13', 'int:12', 'wis:18', 'cha:8']);
+    expect(inputs[4].value).toBe('18');
+    expect(compiled.querySelectorAll('.ability-scores-step__diagnostic')).toHaveLength(0);
 
-    const diagnostics = state.validate(ABILITY_SCORES_CHOICE, fullSelection!);
+    const outOfRange = ['str:16', 'dex:14', 'con:13', 'int:12', 'wis:25', 'cha:8'];
+    const diagnostics = state.validate(ABILITY_SCORES_CHOICE, outOfRange);
     expect(diagnostics.some((d) => d.code === 'selection.manualRange')).toBe(true);
-
-    const diagnosticTexts = Array.from(
-      compiled.querySelectorAll('.ability-scores-step__diagnostic'),
-    ).map((el) => el.textContent?.trim());
-    expect(diagnosticTexts).toContain(charactersEn.validation.selection.manualRange);
   });
 
   it('roll: rolling all six produces six 4d6kh3 results whose context lands in the decision, scores match the kept sums, and re-roll is no longer offered', async () => {
@@ -290,5 +294,67 @@ describe('AbilityScoresStepComponent', () => {
     expect(announceSpy).toHaveBeenCalledTimes(1);
     const announced = announceSpy.mock.calls[0]?.[0] as string;
     expect(announced).toContain(rolls.map((r) => r.total).join(', '));
+  });
+});
+
+describe('AbilityScoresStepComponent — seals and tabs (plan 17)', () => {
+  beforeEach(() => configure());
+
+  async function mount() {
+    const state = createState();
+    state.name.set('Aldric');
+    const fixture = TestBed.createComponent(AbilityScoresStepComponent);
+    fixture.componentRef.setInput('choiceId', ABILITY_SCORES_CHOICE);
+    await fixture.whenStable();
+    return { state, fixture, root: fixture.nativeElement as HTMLElement };
+  }
+
+  it('all six seals stay on screen whichever of the four methods is open', async () => {
+    const { fixture, root } = await mount();
+    expect(root.querySelectorAll('[role="tab"]')).toHaveLength(4);
+    for (const label of ['Standard array', 'Point buy', 'Manual', 'Roll']) {
+      findTabButton(root, label).click();
+      await fixture.whenStable();
+      expect(root.querySelectorAll('hk-ability-seal'), label).toHaveLength(6);
+    }
+  });
+
+  it('a seal shows the score the draft derives once an ability is assigned', async () => {
+    const { fixture, root } = await mount();
+    pickOptionByText(selectsInAbilityOrder(root)[0], '15');
+    await fixture.whenStable();
+    const score = root.querySelector('hk-ability-seal .hk-ability__score');
+    expect(score?.textContent?.trim()).toBe('15');
+  });
+
+  it('the arrow keys move between the method tabs and keep exactly one tab in the tab order', async () => {
+    const { fixture, root } = await mount();
+    const tabs = () => Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    expect(tabs().filter((tab) => tab.tabIndex === 0)).toHaveLength(1);
+    tabs()[0].focus();
+    tabs()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await fixture.whenStable();
+    expect(tabs()[1].getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(tabs()[1]);
+    tabs()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    tabs()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await fixture.whenStable();
+    expect(tabs()[3].getAttribute('aria-selected')).toBe('true');
+    expect(tabs().filter((tab) => tab.tabIndex === 0)).toHaveLength(1);
+  });
+
+  it('the point-buy plate shows the budget and fills with the spend', async () => {
+    const { fixture, root } = await mount();
+    findTabButton(root, 'Point buy').click();
+    await fixture.whenStable();
+    const fill = () =>
+      root.querySelector<HTMLElement>('.ability-scores-step__gauge-fill')!.style.inlineSize;
+    const before = fill();
+    const first = root.querySelector<HTMLInputElement>('input[type="number"]')!;
+    first.value = '15';
+    first.dispatchEvent(new Event('input'));
+    first.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(parseFloat(fill())).toBeGreaterThan(parseFloat(before));
   });
 });

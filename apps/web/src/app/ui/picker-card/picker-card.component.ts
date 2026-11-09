@@ -57,6 +57,11 @@ export class HkPickerCardComponent {
   protected readonly reasonId = `hk-picker-card-reason-${nextReasonId++}`;
 
   /** The reason shown as the Choose button's hint while the option cannot be chosen. */
+  /** The body button's name carries the visible facts too, so a screen reader hears what a sighted user sees. */
+  protected bodyLabel(base: string): string {
+    return this.meta().length > 0 ? `${base} — ${this.meta().join(', ')}` : base;
+  }
+
   protected readonly blockedReason = computed(() =>
     this.gated() && !this.selected() ? (this.reason() ?? '') : null,
   );

@@ -2,9 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
+import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
+import { HkToggleComponent } from '../../../../ui/toggle/toggle.component';
+import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { CreateWizardState } from '../create-wizard.state';
 import { EntityPickerComponent } from './entity-picker.component';
 
@@ -36,8 +39,11 @@ const DENOMINATIONS: readonly Denomination[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
     TranslocoDirective,
     FormsModule,
     EntityPickerComponent,
-    NumberFieldComponent,
-    ButtonComponent,
+    HkButtonComponent,
+    HkNumberFieldComponent,
+    HkTagChipComponent,
+    HkToggleComponent,
+    HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './equipment-step.component.html',
@@ -71,10 +77,16 @@ export class EquipmentStepComponent {
   );
 
   protected readonly qty = signal(1);
+  /** The library list stays folded until asked for: 960 items are never the first thing on screen. */
+  protected readonly libraryOpen = signal(false);
 
   protected readonly currencyDraft = computed<Sheet['currency']>(
     () => this.state.draftSheet()?.currency ?? { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   );
+
+  protected entryName(entry: InventoryRow): string {
+    return entry.itemId ? this.itemName(entry.itemId) : (entry.name ?? entry.instanceId);
+  }
 
   protected itemName(id: string): string {
     return this.engineFacade.localizer().name(id);
@@ -101,9 +113,5 @@ export class EquipmentStepComponent {
 
   protected onCurrencyChange(denom: Denomination, value: number | null): void {
     this.state.setCurrency({ ...this.currencyDraft(), [denom]: value ?? 0 });
-  }
-
-  protected onContinue(): void {
-    this.state.markStepDone('equipment');
   }
 }

@@ -3,12 +3,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
+import { hintOf, press } from '../../../../ui/testing/harness';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
 import { SpellsStepComponent } from './spells-step.component';
@@ -43,6 +46,7 @@ const BACKGROUND_ABILITIES_CHOICE = 'srd-5e-2024:background/soldier@0/ability-sc
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -50,6 +54,7 @@ class StubLoader implements TranslocoLoader {
 function configure(): void {
   TestBed.configureTestingModule({
     providers: [
+      provideRouter([]),
       provideTransloco({
         config: {
           availableLangs: ['en', 'ru', 'uk'],
@@ -88,11 +93,14 @@ function createWizardDraft(classId = 'srd-5e-2024:class/wizard'): CreateWizardSt
   return state;
 }
 
-function selectButtons(compiled: HTMLElement, sectionClass: string): HTMLButtonElement[] {
+/** The tick toggles of one section, in list order. */
+function toggles(compiled: HTMLElement, sectionClass: string): HTMLButtonElement[] {
   return Array.from(
-    compiled.querySelectorAll<HTMLButtonElement>(`.${sectionClass} .entity-picker__select`),
+    compiled.querySelectorAll<HTMLButtonElement>(`.${sectionClass} .spell-pick__toggle`),
   );
 }
+
+const isBlocked = (button: Element): boolean => button.getAttribute('aria-disabled') === 'true';
 
 describe('SpellsStepComponent', () => {
   beforeEach(() => configure());
@@ -108,25 +116,32 @@ describe('SpellsStepComponent', () => {
     expect(state.steps().map((s) => s.id)).toContain('spells');
   });
 
-  it('enforces the cantrip cap (3 at wizard L1): a 4th tap is refused and the cap message appears', async () => {
+  it('enforces the cantrip cap (3 at wizard L1): a 4th press is refused, the rest read blocked with the cap as their hint', async () => {
     const state = createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const cantripButtons = () => selectButtons(compiled, 'spells-step__cantrips');
-    expect(cantripButtons().length).toBeGreaterThanOrEqual(4);
+    const cantrips = () => toggles(compiled, 'spells-step__cantrips');
+    expect(cantrips().length).toBeGreaterThanOrEqual(4);
+    expect(cantrips().some(isBlocked)).toBe(false);
 
     for (let i = 0; i < 3; i++) {
-      cantripButtons()[i].click();
+      cantrips()[i].click();
       await fixture.whenStable();
     }
     const classId = state.draftSheet()!.spellcasting[0].classId;
     expect(state.draftSheet()!.spellcasting[0].known).toHaveLength(3);
-    expect(compiled.querySelector('.spells-step__cantrips .spells-step__cap-message')).toBeTruthy();
 
-    // A 4th tap (on the still-unselected 4th card) must not grow `known` past 3.
-    cantripButtons()[3].click();
+    // The three learned rows stay pressable (to undo); every other row is blocked and says why.
+    expect(cantrips().slice(0, 3).some(isBlocked)).toBe(false);
+    expect(isBlocked(cantrips()[3])).toBe(true);
+    expect(hintOf(cantrips()[3])).toBe(
+      charactersEn.wizard.spells.cantripCapReached.replace('{cap}', '3'),
+    );
+
+    // A 4th press (on the still-unselected 4th row) must not grow `known` past 3.
+    cantrips()[3].click();
     await fixture.whenStable();
     expect(state.draftSheet()!.spellcasting[0].known).toHaveLength(3);
     expect(
@@ -139,27 +154,73 @@ describe('SpellsStepComponent', () => {
     ).toHaveLength(3);
   });
 
-  it('allows a 7th spellbook spell (soft cap) and always shows the recommended-count helper', async () => {
+  it('every learned row wears the tick seal; the counter chip counts them', async () => {
+    createWizardDraft();
+    const fixture = TestBed.createComponent(SpellsStepComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const section = compiled.querySelector('.spells-step__cantrips')!;
+    expect(section.querySelector('hk-wax-seal')).toBeNull();
+    expect(section.querySelector('.spells-step__counter')?.textContent?.trim()).toBe(
+      '0 of 3 known',
+    );
+
+    toggles(compiled, 'spells-step__cantrips')[0].click();
+    await fixture.whenStable();
+
+    expect(section.querySelectorAll('hk-wax-seal')).toHaveLength(1);
+    expect(toggles(compiled, 'spells-step__cantrips')[0].getAttribute('aria-pressed')).toBe('true');
+    expect(section.querySelector('.spells-step__counter')?.textContent?.trim()).toBe(
+      '1 of 3 known',
+    );
+  });
+
+  it('a concentration spell carries the orb glyph with its hint, and no caption stays on the page', async () => {
+    createWizardDraft();
+    const fixture = TestBed.createComponent(SpellsStepComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const orbs = compiled.querySelectorAll('.hk-srow__orb');
+    expect(orbs.length).toBeGreaterThan(0);
+    expect(hintOf(orbs[0])).toBe(charactersEn.wizard.spells.concentration);
+    expect(orbs[0].getAttribute('aria-label')).toBe(charactersEn.wizard.spells.concentration);
+    expect(compiled.querySelector('.spells-step__helper, .spells-step__cap-message')).toBeNull();
+  });
+
+  it('an info button opens the spell in the description drawer without learning it', async () => {
+    const state = createWizardDraft();
+    const fixture = TestBed.createComponent(SpellsStepComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const info = compiled.querySelector<HTMLElement>('.spells-step__cantrips .spell-pick__info')!;
+    press(info);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(compiled.querySelector('hk-description-drawer [role="dialog"]')).not.toBeNull();
+    expect(state.draftSheet()!.spellcasting[0].known).toHaveLength(0);
+  });
+
+  it('allows a 7th spellbook spell (soft cap); the recommended count is the counter chip hint', async () => {
     const state = createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    // Helper visible even before anything is learned.
-    const helper = compiled.querySelector('.spells-step__spellbook .spells-step__helper');
-    expect(helper?.textContent).toContain('6');
+    // The recommendation is available before anything is learned, as the counter's hint.
+    const counter = compiled.querySelector('.spells-step__spellbook .spells-step__counter')!;
+    expect(hintOf(counter)).toContain('6');
 
-    const spellbookButtons = () => selectButtons(compiled, 'spells-step__spellbook');
-    expect(spellbookButtons().length).toBeGreaterThanOrEqual(7);
+    const spellbook = () => toggles(compiled, 'spells-step__spellbook');
+    expect(spellbook().length).toBeGreaterThanOrEqual(7);
 
     for (let i = 0; i < 7; i++) {
-      spellbookButtons()[i].click();
+      spellbook()[i].click();
       await fixture.whenStable();
     }
 
     expect(state.draftSheet()!.spellcasting[0].known).toHaveLength(7);
-    // Still no blocking message anywhere — the spellbook cap is soft.
-    expect(compiled.querySelector('.spells-step__spellbook .spells-step__cap-message')).toBeNull();
+    // Still nothing blocked in the spellbook — the cap is soft.
+    expect(spellbook().some(isBlocked)).toBe(false);
   });
 
   it('recommendedCount is overridable — the level-up wizard passes 2 instead of the creation-only default of 6', async () => {
@@ -169,48 +230,47 @@ describe('SpellsStepComponent', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const helper = compiled.querySelector('.spells-step__spellbook .spells-step__helper');
-    expect(helper?.textContent).toContain('2');
-    expect(helper?.textContent).not.toContain('6');
+    const hint = hintOf(compiled.querySelector('.spells-step__spellbook .spells-step__counter')!);
+    expect(hint).toContain('2');
+    expect(hint).not.toContain('6');
   });
 
-  it('caps prepared spells at preparedMax (4 at wizard L1): a 5th toggle is refused with a cap message', async () => {
+  it('caps prepared spells at preparedMax (4 at wizard L1): a 5th toggle is refused, blocked with the cap as its hint', async () => {
     const state = createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const spellbookButtons = () => selectButtons(compiled, 'spells-step__spellbook');
+    const spellbook = () => toggles(compiled, 'spells-step__spellbook');
     for (let i = 0; i < 5; i++) {
-      spellbookButtons()[i].click();
+      spellbook()[i].click();
       await fixture.whenStable();
     }
     expect(state.draftSheet()!.spellcasting[0].known).toHaveLength(5);
 
-    const preparedToggles = () =>
-      Array.from(
-        compiled.querySelectorAll<HTMLButtonElement>(
-          '.spells-step__prepared .spells-step__prepared-toggle',
-        ),
-      );
-    expect(preparedToggles()).toHaveLength(5);
+    const prepared = () => toggles(compiled, 'spells-step__prepared');
+    expect(prepared()).toHaveLength(5);
 
     for (let i = 0; i < 4; i++) {
-      preparedToggles()[i].click();
+      prepared()[i].click();
       await fixture.whenStable();
     }
     expect(state.draftSheet()!.spellcasting[0].prepared).toHaveLength(4);
-    expect(compiled.querySelector('.spells-step__prepared .spells-step__cap-message')).toBeTruthy();
+    expect(isBlocked(prepared()[4])).toBe(true);
+    expect(hintOf(prepared()[4])).toBe(
+      charactersEn.wizard.spells.preparedCapReached.replace('{cap}', '4'),
+    );
 
     // The 5th spell's own toggle is still refused past the cap.
-    preparedToggles()[4].click();
+    prepared()[4].click();
     await fixture.whenStable();
     expect(state.draftSheet()!.spellcasting[0].prepared).toHaveLength(4);
 
     // Un-preparing one frees a slot back up.
-    preparedToggles()[0].click();
+    prepared()[0].click();
     await fixture.whenStable();
     expect(state.draftSheet()!.spellcasting[0].prepared).toHaveLength(3);
+    expect(isBlocked(prepared()[4])).toBe(false);
   });
 
   // Plan 12 task 4: `block.prepared` includes always-prepared grants, which are exempt from the cap
@@ -227,7 +287,7 @@ describe('SpellsStepComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
       for (let i = 0; i < 5; i++) {
-        selectButtons(compiled, 'spells-step__spellbook')[i].click();
+        toggles(compiled, 'spells-step__spellbook')[i].click();
         await fixture.whenStable();
       }
       const base = state.draftSheet()!.spellcasting[0];
@@ -241,53 +301,47 @@ describe('SpellsStepComponent', () => {
       await fixture.whenStable();
       return { fixture, compiled, prepare, unprepare, granted, chosen };
     }
-    const toggles = (c: HTMLElement) =>
-      Array.from(
-        c.querySelectorAll<HTMLButtonElement>(
-          '.spells-step__prepared .spells-step__prepared-toggle',
-        ),
-      );
 
     it('does not count the granted spell against preparedMax: a 4th chosen spell can still be prepared', async () => {
       const { fixture, compiled, prepare, chosen } = await setup();
 
-      expect(compiled.querySelector('.spells-step__prepared .spells-step__cap-message')).toBeNull();
-      const fourth = toggles(compiled).find((b) => b.getAttribute('aria-pressed') === 'false')!;
+      const fourth = toggles(compiled, 'spells-step__prepared').find(
+        (b) => b.getAttribute('aria-pressed') === 'false',
+      )!;
+      expect(isBlocked(fourth)).toBe(false);
       fourth.click();
       await fixture.whenStable();
 
       expect(prepare).toHaveBeenCalledWith(chosen[3], expect.any(String));
     });
 
-    it('disables the granted spell toggle with an accessible reason and a marker; clicking is a no-op', async () => {
+    it('blocks the granted spell with an accessible reason and a fleur-de-lys marker; pressing it is a no-op', async () => {
       const { fixture, compiled, unprepare } = await setup();
       const reason = charactersEn.sheet.spellcasting.alwaysPreparedReason;
 
-      const disabled = toggles(compiled).filter((b) => b.disabled);
-      expect(disabled).toHaveLength(1);
-      const describedBy = disabled[0].getAttribute('aria-describedby')!;
-      expect(compiled.querySelector(`[id="${describedBy}"]`)?.textContent?.trim()).toBe(reason);
-      expect(disabled[0].getAttribute('title')).toBe(reason);
-      expect(disabled[0].closest('li')?.textContent).toContain(
-        charactersEn.sheet.spellcasting.alwaysPrepared,
-      );
+      const blocked = toggles(compiled, 'spells-step__prepared').filter(isBlocked);
+      expect(blocked).toHaveLength(1);
+      expect(hintOf(blocked[0])).toBe(reason);
+      const mark = blocked[0].closest('.spell-pick')!.querySelector('.hk-srow__always')!;
+      expect(mark.getAttribute('aria-label')).toBe(charactersEn.sheet.spellcasting.alwaysPrepared);
 
-      disabled[0].click();
+      blocked[0].click();
       await fixture.whenStable();
       expect(unprepare).not.toHaveBeenCalled();
     });
   });
 
-  it('"Continue" marks the spells step done even with nothing learned yet', async () => {
-    const state = createWizardDraft();
+  it("the creation wizard has no Continue button (the strap's Next is the only way on); a caller's finish override brings it back", async () => {
+    createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.spells-step__continue')).toBeNull();
 
-    expect(state.spellsAutoDone()).toBe(false);
-    compiled.querySelector<HTMLButtonElement>('.spells-step__continue')!.click();
+    const finish = vi.fn();
+    fixture.componentRef.setInput('finish', finish);
     await fixture.whenStable();
-
-    expect(state.doneSteps().has('spells')).toBe(true);
+    compiled.querySelector<HTMLButtonElement>('.spells-step__continue')!.click();
+    expect(finish).toHaveBeenCalledTimes(1);
   });
 });

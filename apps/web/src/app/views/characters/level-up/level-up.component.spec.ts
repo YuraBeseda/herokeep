@@ -16,6 +16,8 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
+import { hintOf } from '../../../ui/testing/harness';
+import shellEn from '../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
 import { CreateWizardState } from '../create-wizard/create-wizard.state';
@@ -44,6 +46,7 @@ const corePack = readPack(
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -115,6 +118,14 @@ async function pollUntil(
     await fixture.whenStable();
   }
   expect(predicate()).toBe(true);
+}
+
+/** The name of the card or row a choose / toggle button belongs to. */
+function pickName(button: Element): string | undefined {
+  return button
+    .closest('hk-picker-card, .entity-picker__row')
+    ?.querySelector('.hk-picker-card__name, .entity-picker__name')
+    ?.textContent?.trim();
 }
 
 describe('LevelUpComponent', () => {
@@ -297,8 +308,8 @@ describe('LevelUpComponent', () => {
     // Barbarian is offered 0 and level 1 asks nothing: the wizard opens on Review with Finish
     // enabled. (Fix round 1's "a fresh step list lands on its FIRST step, not Review" regression
     // keeps its coverage in the fighter → bard test below, whose first step is a real choice.)
-    expect(root.querySelector('.choice-step__chips hk-chip')).toBeNull();
-    expect(root.querySelector('.entity-picker__select')).toBeNull();
+    expect(root.querySelector('.choice-step__skills .entity-picker__row')).toBeNull();
+    expect(root.querySelector('.hk-picker-card__choose, .entity-picker__toggle')).toBeNull();
     expect(root.querySelector('.level-up__review')).not.toBeNull();
 
     const finishButton = root.querySelector<HTMLButtonElement>('.level-up__finish')!;
@@ -397,11 +408,13 @@ describe('LevelUpComponent', () => {
     expect(root.querySelector('.choice-step__title')?.textContent?.trim()).toBe(
       'Choose 1 skill for Bard',
     );
-    const chips = Array.from(root.querySelectorAll<HTMLElement>('.choice-step__chips hk-chip'));
+    const chips = Array.from(
+      root.querySelectorAll<HTMLElement>('.choice-step__skills .entity-picker__toggle'),
+    );
     const bardList = corePack.entities.find((e) => e.id === BARD);
     expect(bardList?.type).toBe('class');
     expect(chips.length).toBe(bardList?.type === 'class' ? bardList.skillChoice.from.length : -1);
-    chips.find((c) => c.textContent?.trim() === 'Arcana')!.click();
+    chips.find((c) => pickName(c) === 'Arcana')!.click();
     await harness.fixture.whenStable();
 
     // Plan 14 task 1 re-pin: Bard's three-instrument `@1/tools` pick is `scope: 'initial'`, so a
@@ -412,12 +425,10 @@ describe('LevelUpComponent', () => {
       'Tool Proficiency: choose one Musical Instrument',
     );
     for (const name of ['Lute']) {
-      Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
-        .find(
-          (b) =>
-            b.querySelector('.entity-picker__name')?.textContent?.trim() ===
-            `Musical Instrument, ${name}`,
-        )!
+      Array.from(
+        root.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+      )
+        .find((b) => pickName(b) === `Musical Instrument, ${name}`)!
         .click();
       await harness.fixture.whenStable();
     }
@@ -552,7 +563,9 @@ describe('LevelUpComponent', () => {
     await harness.fixture.whenStable();
 
     // The subclass step: exactly one option, and it is Oath of Devotion.
-    const options = Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'));
+    const options = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+    );
     expect(options).toHaveLength(1);
     expect(root.textContent).toContain('Oath of Devotion');
     options[0].click();
@@ -605,9 +618,9 @@ describe('LevelUpComponent', () => {
     root.querySelector<HTMLButtonElement>('.level-up__next')!.click();
     await harness.fixture.whenStable();
 
-    const helper = root.querySelector('.spells-step__spellbook .spells-step__helper');
-    expect(helper?.textContent).toContain('2');
-    expect(helper?.textContent).not.toContain('6');
+    const hint = hintOf(root.querySelector('.spells-step__spellbook .spells-step__counter')!);
+    expect(hint).toContain('2');
+    expect(hint).not.toContain('6');
   });
 
   // Plan 13 task 9: fighter Weapon Mastery grows 3 -> 4 at class level 4 (plan 12 task 2), so the
@@ -667,15 +680,19 @@ describe('LevelUpComponent', () => {
     await harness.fixture.whenStable();
 
     const selectedNames = (): string[] =>
-      Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
+      Array.from(
+        root.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+      )
         .filter((b) => b.getAttribute('aria-pressed') === 'true')
-        .map((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() ?? '');
+        .map((b) => pickName(b) ?? '');
     expect(selectedNames()).toEqual(['Dagger', 'Longsword', 'Shortsword']);
     // Nothing is committed by the pre-seed alone — only the player's own toggle commits.
     expect(state.decisions().has(MASTERIES)).toBe(false);
 
-    Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'))
-      .find((b) => b.querySelector('.entity-picker__name')?.textContent?.trim() === 'Handaxe')!
+    Array.from(
+      root.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+    )
+      .find((b) => pickName(b) === 'Handaxe')!
       .click();
     await harness.fixture.whenStable();
     expect(state.outstanding().map((r) => r.choiceId)).not.toContain(MASTERIES);
@@ -777,9 +794,10 @@ describe('LevelUpComponent', () => {
     await harness.fixture.whenStable();
 
     const buttons = () =>
-      Array.from(root.querySelectorAll<HTMLButtonElement>('.entity-picker__select'));
-    const nameOf = (b: HTMLButtonElement) =>
-      b.querySelector('.entity-picker__name')?.textContent?.trim() ?? '';
+      Array.from(
+        root.querySelectorAll<HTMLButtonElement>('.hk-picker-card__choose, .entity-picker__toggle'),
+      );
+    const nameOf = (b: HTMLButtonElement) => pickName(b) ?? '';
     const selectedNames = (): string[] =>
       buttons()
         .filter((b) => b.getAttribute('aria-pressed') === 'true')
@@ -787,7 +805,7 @@ describe('LevelUpComponent', () => {
     expect(selectedNames()).toEqual(['Dagger', 'Longsword', 'Shortsword']);
 
     const longsword = buttons().find((b) => nameOf(b) === 'Longsword')!;
-    expect(longsword.disabled).toBe(false);
+    expect(longsword.getAttribute('aria-disabled')).not.toBe('true');
     longsword.click();
     await harness.fixture.whenStable();
     expect(selectedNames()).toEqual(['Dagger', 'Shortsword']);

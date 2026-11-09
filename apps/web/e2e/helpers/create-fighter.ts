@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * Drives the character-creation wizard through the exact "fighter-1" binding decisions
@@ -22,6 +22,25 @@ const NEXT_BUTTON = '[data-action="next"]';
 
 async function clickNext(page: Page): Promise<void> {
   await page.locator(NEXT_BUTTON).click();
+}
+
+/** The card (or, in a long list, the row) of one option in a picker step, by its exact name. */
+export function option(page: Page, name: string): Locator {
+  return page.locator('hk-picker-card, .entity-picker__row').filter({
+    has: page
+      .locator('.hk-picker-card__name, .entity-picker__name')
+      .getByText(name, { exact: true }),
+  });
+}
+
+/** The control that picks an option: a card's Choose button, or a row's toggle. */
+export function chooseControl(page: Page, name: string): Locator {
+  return option(page, name).locator('.hk-picker-card__choose, .entity-picker__toggle');
+}
+
+/** Picks one option of the picker on screen by its exact name. */
+export async function chooseOption(page: Page, name: string): Promise<void> {
+  await chooseControl(page, name).click();
 }
 
 /** How to reach `/characters/new`: a plain `page.goto` (every spec but `locale.spec.ts`, which
@@ -56,7 +75,7 @@ export async function nameCharacter(
   via: 'goto' | 'nav' | 'current' = 'goto',
 ): Promise<void> {
   await openCreateWizard(page, via);
-  await page.locator('.create-wizard__name-input').fill(name);
+  await page.locator('.name-step__name-input input').fill(name);
   await page.getByRole('radio', { name: 'Masculine', exact: true }).check();
   await clickNext(page);
 }
@@ -64,12 +83,12 @@ export async function nameCharacter(
 /** Step 2: species — Human. Selecting it resolves the choice, which auto-advances the wizard to
  * Background (see this file's module doc) — no Next click here. */
 export async function pickSpecies(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Human', exact: true }).click();
+  await chooseOption(page, 'Human');
 }
 
 /** Step 3: background — Soldier. Auto-advances to Background's own ability bump. */
 export async function pickBackground(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Soldier', exact: true }).click();
+  await chooseOption(page, 'Soldier');
 }
 
 /** Step 4: Soldier's own +2/+1 ability bump — Strength +2, Constitution +1 (matches
@@ -85,7 +104,7 @@ export async function applyBackgroundAbilities(page: Page): Promise<void> {
 
 /** Step 5: class — Fighter. Auto-advances to ability scores. */
 export async function pickClass(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Fighter', exact: true }).click();
+  await chooseOption(page, 'Fighter');
 }
 
 /** The SRD 2024 standard array, keyed by full ability name (as `hk-ability-scores-step` renders
@@ -119,8 +138,8 @@ export async function assignStandardArray(page: Page): Promise<void> {
  * `["athletics", "perception"]`). Auto-advances once both are selected (the count-2 choice is
  * only valid, and therefore only resolved, with exactly two). */
 export async function pickSkills(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Athletics', exact: true }).click();
-  await page.getByRole('button', { name: 'Perception', exact: true }).click();
+  await chooseOption(page, 'Athletics');
+  await chooseOption(page, 'Perception');
 }
 
 /** Step 7b (plan 14 task 2): the Soldier background's Tool Proficiency pick — "Choose one kind of
@@ -133,7 +152,7 @@ export async function pickSkills(page: Page): Promise<void> {
  * leave the DOM (the next step's picker rows are different entities, or the next step is not a
  * picker at all) so a caller never acts on this step's stale view. */
 export async function pickGamingSet(page: Page, gamingSet = 'Gaming Set, Dice'): Promise<void> {
-  const card = page.locator('.entity-picker__select', { hasText: gamingSet });
+  const card = chooseControl(page, gamingSet);
   await card.click();
   await card.waitFor({ state: 'detached' });
 }
@@ -184,15 +203,12 @@ export async function pickFightingStyleAndWeaponMasteries(page: Page): Promise<v
     const heading = (await title.textContent())?.trim();
     if (heading === WEAPON_MASTERIES_TITLE) {
       for (const weapon of WEAPON_PICKS) {
-        await page.getByRole('button', { name: weapon, exact: true }).click();
+        await chooseOption(page, weapon);
       }
-      const lastWeaponButton = page.getByRole('button', {
-        name: WEAPON_PICKS[WEAPON_PICKS.length - 1],
-        exact: true,
-      });
+      const lastWeaponButton = chooseControl(page, WEAPON_PICKS[WEAPON_PICKS.length - 1]);
       await lastWeaponButton.waitFor({ state: 'detached' });
     } else {
-      const defenseButton = page.getByRole('button', { name: 'Defense', exact: true });
+      const defenseButton = chooseControl(page, 'Defense');
       await defenseButton.click();
       await defenseButton.waitFor({ state: 'detached' });
     }
@@ -208,18 +224,29 @@ export async function pickFightingStyleAndWeaponMasteries(page: Page): Promise<v
  * — like 'name' — this DOES need its own explicit Next click, to Review. */
 export async function equipGear(page: Page): Promise<void> {
   const items = ['Chain Mail', 'Longsword', 'Shield'];
+  await addLibraryItems(page, items);
+  await equipItems(page, items);
+  await clickNext(page);
+}
+
+/** Opens the equipment step's library (folded until asked for) and adds each item by name, searching
+ * first because the list holds ~960 items and shows only the first 60. */
+export async function addLibraryItems(page: Page, items: readonly string[]): Promise<void> {
+  await page.locator('.equipment-step__library').click();
   const searchBox = page.getByRole('searchbox');
   for (const item of items) {
     await searchBox.fill(item);
-    await page.getByRole('button', { name: item, exact: true }).click();
+    await chooseOption(page, item);
   }
   await searchBox.fill('');
+}
 
+/** Switches the bag rows of the given items to equipped. */
+export async function equipItems(page: Page, items: readonly string[]): Promise<void> {
   for (const item of items) {
     const row = page.locator('.equipment-step__entry', { hasText: item });
-    await row.getByRole('button', { name: 'Equip', exact: true }).click();
+    await row.getByRole('switch', { name: 'Equip', exact: true }).click();
   }
-  await clickNext(page);
 }
 
 /** Step 11: the review step — asserts it reports complete (no outstanding/invalid decisions),

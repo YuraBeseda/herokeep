@@ -24,6 +24,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import { ChoiceStepComponent } from '../../create-wizard/steps/choice-step.component';
 import { seedFighter } from '../testing/character-fixtures';
 import { BuildTabComponent } from './build-tab.component';
@@ -89,6 +90,7 @@ async function pollUntil(
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
     if (langPath === 'campaigns/en') return of(campaignsEn);
     return of({});
   }
@@ -179,7 +181,9 @@ describe('BuildTabComponent', () => {
     expect(compiled.querySelector('hk-choice-step')).not.toBeNull();
     expect(compiled.querySelector('.build-tab__empty')).toBeNull();
 
-    const selectButton = compiled.querySelector<HTMLButtonElement>('.entity-picker__select');
+    const selectButton = compiled.querySelector<HTMLButtonElement>(
+      '.hk-picker-card__choose, .entity-picker__toggle',
+    );
     expect(selectButton).not.toBeNull();
     selectButton!.click();
     await pollUntil(

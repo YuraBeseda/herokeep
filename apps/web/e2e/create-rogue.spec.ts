@@ -6,6 +6,9 @@ import {
   pickBackground,
   pickGamingSet,
   pickSpecies,
+  chooseControl,
+  chooseOption,
+  option,
 } from './helpers/create-fighter';
 
 const CHARACTER_NAME = 'Vessa Quickfingers';
@@ -51,11 +54,9 @@ const WEAPON_MASTERIES_TITLE = 'Weapon Masteries';
  * `pickFightingStyleAndWeaponMasteries` uses (see that helper's doc for the re-home race it closes). */
 async function pickCards(page: Page, names: readonly string[]): Promise<void> {
   for (const name of names) {
-    await page.getByRole('button', { name, exact: true }).click();
+    await chooseOption(page, name);
   }
-  await page
-    .getByRole('button', { name: names[names.length - 1], exact: true })
-    .waitFor({ state: 'detached' });
+  await chooseControl(page, names[names.length - 1]).waitFor({ state: 'detached' });
 }
 
 test.describe('character creation — Rogue with Expertise (slice 3)', () => {
@@ -67,11 +68,11 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
       await pickSpecies(page);
       await pickBackground(page);
       await applyBackgroundAbilities(page);
-      await expect(page.getByRole('button', { name: 'Rogue', exact: true })).toBeVisible();
+      await expect(option(page, 'Rogue')).toBeVisible();
     });
 
     await test.step('class: Rogue', async () => {
-      await page.getByRole('button', { name: 'Rogue', exact: true }).click();
+      await chooseOption(page, 'Rogue');
       await expect(page.locator('.ability-scores-step')).toBeVisible();
     });
 
@@ -91,16 +92,16 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
       }
       // The ability step stays open once the scores are valid (no auto-advance): Next moves on.
       await page.locator('[data-action="next"]').click();
-      await expect(page.locator('.choice-step__chips')).toBeVisible();
+      await expect(page.locator('.choice-step__skills')).toBeVisible();
     });
 
     await test.step('class skills: four from the rogue pool', async () => {
       for (const skill of CLASS_SKILLS) {
-        await page.getByRole('button', { name: skill, exact: true }).click();
+        await chooseOption(page, skill);
       }
       // The skills chips step resolves on the 4th pick and auto-advances; the next step renders
-      // entity-picker cards whose names repeat these skills, so wait on the chips container.
-      await expect(page.locator('.choice-step__chips')).toHaveCount(0);
+      // entity-picker cards whose names repeat these skills, so wait on the skills list.
+      await expect(page.locator('.choice-step__skills')).toHaveCount(0);
     });
 
     await test.step('tool proficiency: one Gaming Set (Dice) for the Soldier background', async () => {
@@ -109,14 +110,14 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
 
     await test.step('Expertise: only proficient skills are offered; pick Stealth + Sleight of Hand', async () => {
       await expect(page.locator('.choice-step__title')).toHaveText(EXPERTISE_TITLE);
-      const offered = page.locator('.entity-picker__name');
+      const offered = page.locator('.hk-picker-card__name');
       await expect(offered).toHaveCount(PROFICIENT_SKILLS.length);
       expect((await offered.allTextContents()).map((s) => s.trim()).sort()).toEqual(
         [...PROFICIENT_SKILLS].sort(),
       );
       // In the rogue pool but not picked (Perception) / outside the pool (Arcana): not offered.
-      await expect(page.getByRole('button', { name: 'Perception', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Arcana', exact: true })).toHaveCount(0);
+      await expect(option(page, 'Perception')).toHaveCount(0);
+      await expect(option(page, 'Arcana')).toHaveCount(0);
       await pickCards(page, EXPERTISE_PICKS);
     });
 

@@ -1,55 +1,119 @@
 <div class="entity-picker" *transloco="let t; read: 'characters'">
-  <hk-search-field
-    [(value)]="query"
-    [placeholderKey]="'characters.wizard.picker.searchPlaceholder'"
-    [clearLabelKey]="'characters.wizard.picker.searchClear'"
-  />
+  @if (showSearch() || filtersVisible()) {
+    <div class="entity-picker__bar">
+      @if (showSearch()) {
+        <hk-search-field
+          class="entity-picker__search"
+          [(value)]="query"
+          [label]="t('wizard.picker.searchLabel')"
+          [placeholder]="t('wizard.picker.searchPlaceholder')"
+        />
+      }
+      @if (filtersVisible()) {
+        <hk-filter-chips
+          class="entity-picker__filters"
+          [label]="t('wizard.picker.filterLabel')"
+          [options]="filterOptions()"
+          [(selected)]="activeFilters"
+        />
+      }
+    </div>
+  }
 
   @if (rows().length === 0) {
     <p class="entity-picker__empty">{{ t('wizard.picker.empty') }}</p>
-  } @else {
-    <ul class="entity-picker__grid">
-      @for (row of rows(); track row.id; let i = $index) {
-        <li>
-          <hk-card
-            class="entity-picker__card"
-            [class.entity-picker__card--selected]="isSelected(row.id)"
-            [class.entity-picker__card--gated]="!!row.gate"
+  } @else if (layout() === 'rows') {
+    <ul class="entity-picker__list">
+      @for (row of rows(); track row.id) {
+        <li
+          class="entity-picker__row"
+          [class.entity-picker__row--selected]="isSelected(row.id)"
+          [class.entity-picker__row--gated]="blocked(row)"
+        >
+          <button
+            type="button"
+            class="entity-picker__toggle"
+            [attr.aria-pressed]="isSelected(row.id)"
+            [attr.aria-disabled]="blocked(row) ? 'true' : null"
+            [attr.aria-description]="row.gate ? t(row.gate) : null"
+            [attr.aria-label]="
+              row.meta.length > 0 ? row.name + ' — ' + row.meta.join(', ') : row.name
+            "
+            [hkTooltip]="row.gate ? t(row.gate) : ''"
+            (click)="blocked(row) ? null : onToggle(row.id)"
           >
-            <button
-              type="button"
-              class="entity-picker__select"
-              [attr.aria-pressed]="isSelected(row.id)"
-              [disabled]="!!row.gate && !isSelected(row.id)"
-              [attr.aria-describedby]="row.gate ? gateIdPrefix + i : null"
-              (click)="onToggle(row.id)"
-            >
-              <hk-icon [icon]="row.icon" class="entity-picker__icon" />
-              <span class="entity-picker__name">{{ row.name }}</span>
-            </button>
-            @if (row.gate; as gate) {
-              <p class="entity-picker__gate" [id]="gateIdPrefix + i">{{ t(gate) }}</p>
+            <hk-icon [icon]="row.icon" class="entity-picker__icon" />
+            <span class="entity-picker__name" [hkTooltip]="row.name">{{ row.name }}</span>
+            @for (item of row.meta; track item) {
+              <hk-tag-chip class="entity-picker__meta" [label]="item" />
             }
-            <button
-              type="button"
-              class="entity-picker__expand"
-              [attr.aria-haspopup]="'dialog'"
-              (click)="onDetails(row.id, $event)"
-            >
-              {{ t('wizard.picker.expand') }}
-            </button>
-          </hk-card>
+            <span class="entity-picker__mark" aria-hidden="true">
+              @if (isSelected(row.id)) {
+                <hk-wax-seal
+                  [size]="'s'"
+                  [state]="'selected'"
+                  [glyph]="'ui:done'"
+                  [hint]="t('wizard.picker.chosen')"
+                />
+              } @else if (row.gate) {
+                <hk-icon [icon]="'ui:lock'" />
+              }
+            </span>
+          </button>
+          <button
+            type="button"
+            class="entity-picker__info"
+            [attr.aria-label]="t('wizard.picker.detailsOf', { name: row.name })"
+            [attr.aria-haspopup]="'dialog'"
+            [hkTooltip]="t('wizard.picker.detailsOf', { name: row.name })"
+            (click)="onDetails(row.id, $event)"
+          >
+            <hk-icon [icon]="'ui:details'" />
+          </button>
         </li>
       }
     </ul>
-    @if (hiddenCount() > 0) {
-      <p class="entity-picker__more">
-        {{ t('wizard.picker.more', { count: hiddenCount() }) }}
-      </p>
-    }
+  } @else {
+    <ul class="entity-picker__grid">
+      @for (row of rows(); track row.id) {
+        <li class="entity-picker__item">
+          <hk-picker-card
+            [name]="row.name"
+            [description]="row.description"
+            [icon]="row.icon"
+            [meta]="row.meta"
+            [selected]="isSelected(row.id)"
+            [gated]="!!row.gate"
+            [reason]="row.gate ? t(row.gate) : null"
+            (choose)="onToggle(row.id)"
+            (details)="onDetails(row.id)"
+          />
+        </li>
+      }
+    </ul>
+  }
+  @if (hiddenCount() > 0) {
+    <p class="entity-picker__more">
+      {{ t('wizard.picker.more', { count: hiddenCount() }) }}
+    </p>
   }
 
   @if (detailsId(); as id) {
-    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
+    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()">
+      @if (detailsRow(); as current) {
+        <button
+          hkDrawerAction
+          hk-button
+          type="button"
+          class="entity-picker__drawer-choose"
+          [variant]="isSelected(id) ? 'parchment' : 'primary'"
+          [attr.aria-pressed]="isSelected(id)"
+          [disabledReason]="blocked(current) ? t(current.gate!) : null"
+          (click)="onToggle(id)"
+        >
+          {{ isSelected(id) ? t('wizard.picker.chosen') : t('wizard.picker.choose') }}
+        </button>
+      }
+    </hk-description-drawer>
   }
 </div>

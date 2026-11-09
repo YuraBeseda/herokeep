@@ -222,7 +222,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
 
     const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
-      '.create-wizard__name-input',
+      '.name-step__name-input input',
     );
     input!.value = 'Aldric';
     input!.dispatchEvent(new Event('input'));
@@ -239,7 +239,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
 
     const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
-      '.create-wizard__name-input',
+      '.name-step__name-input input',
     );
     input!.value = 'Aldric';
     input!.dispatchEvent(new Event('input'));
@@ -251,6 +251,7 @@ describe('CreateWizardComponent', () => {
       'Background',
       'Class',
       'Ability scores',
+      'Class choices',
       'Equipment',
       'Review',
     ]);
@@ -261,7 +262,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
     const root = () => fixture.nativeElement as HTMLElement;
 
-    const input = root().querySelector<HTMLInputElement>('.create-wizard__name-input');
+    const input = root().querySelector<HTMLInputElement>('.name-step__name-input input');
     input!.value = 'Aldric';
     input!.dispatchEvent(new Event('input'));
     await fixture.whenStable();
@@ -613,7 +614,7 @@ describe('CreateWizardComponent', () => {
     await fixture.whenStable();
 
     const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
-      '.create-wizard__name-input',
+      '.name-step__name-input input',
     );
     input!.value = 'Aldric';
     input!.dispatchEvent(new Event('input'));
@@ -998,7 +999,7 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
   const root = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
 
   const pickerNames = (fixture: { nativeElement: unknown }): string[] =>
-    Array.from(root(fixture).querySelectorAll('.entity-picker__name')).map(
+    Array.from(root(fixture).querySelectorAll('.hk-picker-card__name, .entity-picker__name')).map(
       (el) => el.textContent?.trim() ?? '',
     );
 
@@ -1015,7 +1016,7 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
     const fixture = TestBed.createComponent(CreateWizardComponent);
     await fixture.whenStable();
 
-    expect(root(fixture).querySelector('.create-wizard__packs')).toBeNull();
+    expect(root(fixture).querySelector('.name-step__packs')).toBeNull();
   });
 
   it('shows the installed content packs on the first step, unchecked by default', async () => {
@@ -1024,11 +1025,11 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
     await fixture.whenStable();
 
     const toggles = root(fixture).querySelectorAll<HTMLInputElement>(
-      '.create-wizard__packs .create-wizard__pack-toggle',
+      '.name-step__packs .name-step__pack-toggle',
     );
     expect(toggles).toHaveLength(1);
     expect(toggles[0].checked).toBe(false);
-    expect(root(fixture).querySelector('.create-wizard__packs')?.textContent).toContain(
+    expect(root(fixture).querySelector('.name-step__packs')?.textContent).toContain(
       'Sample content',
     );
     expect(fixture.debugElement.injector.get(CreateWizardState).pins()).toEqual({
@@ -1066,7 +1067,7 @@ describe('CreateWizardComponent — content packs (plan 15 Task 4)', () => {
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const state = fixture.debugElement.injector.get(CreateWizardState);
 
-    root(fixture).querySelector<HTMLInputElement>('.create-wizard__pack-toggle')!.click();
+    root(fixture).querySelector<HTMLInputElement>('.name-step__pack-toggle')!.click();
     await fixture.whenStable();
     fillValidDecisions(state);
     state.setDecision('srd-5e-2024:system/5e-2024@0/species', ['sample-content:species/moonkin']);
@@ -1215,11 +1216,11 @@ describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
     const { fixture } = await start();
     await pressStrap(fixture, 'next');
     expect(currentLabel(fixture)).toBe('Species');
-    const names = Array.from(root(fixture).querySelectorAll('.entity-picker__name')).map(
-      (el) => el.textContent?.trim() ?? '',
-    );
+    const names = Array.from(
+      root(fixture).querySelectorAll('.hk-picker-card__name, .entity-picker__name'),
+    ).map((el) => el.textContent?.trim() ?? '');
     const buttons = Array.from(
-      root(fixture).querySelectorAll<HTMLElement>('.entity-picker__expand'),
+      root(fixture).querySelectorAll<HTMLElement>('.hk-picker-card__body, .entity-picker__info'),
     );
     expect(buttons.length).toBeGreaterThan(5);
 
@@ -1380,3 +1381,185 @@ describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
     }
   });
 });
+
+// --- Plan 17 B8b: the steps on the shared component library -------------------------------------
+describe('CreateWizardComponent — rebuilt steps (plan 17 B8b)', () => {
+  const root = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
+  const SYSTEM = 'srd-5e-2024:system/5e-2024';
+
+  beforeEach(() => {
+    configure();
+  });
+
+  async function startFull() {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    fillValidDecisions(state);
+    await fixture.whenStable();
+    return { fixture, state };
+  }
+
+  it('the name step is a text field, a three-way grammatical form of real radios and no pack list when none is installed', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const el = root(fixture);
+    expect(el.querySelector('hk-text-field.name-step__name-input input')).not.toBeNull();
+    const radios = Array.from(
+      el.querySelectorAll<HTMLInputElement>('.name-step__segments input[type="radio"]'),
+    );
+    expect(radios.map((r) => r.value)).toEqual(['masculine', 'feminine', 'neuter']);
+    radios[1].click();
+    await fixture.whenStable();
+    expect(fixture.debugElement.injector.get(CreateWizardState).gender()).toBe('feminine');
+    expect(el.querySelector('.name-step__packs')).toBeNull();
+  });
+
+  it('with a content pack installed the core pack shows first, locked, and cannot be toggled', async () => {
+    TestBed.resetTestingModule();
+    const parsed = parsePack(sampleJson);
+    if (!parsed.ok) throw new Error('sample-content.json fixture no longer parses');
+    configure([corePack, parsed.pack]);
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const rows = Array.from(root(fixture).querySelectorAll('.name-step__pack-list > li'));
+    expect(rows).toHaveLength(2);
+    const core = rows[0];
+    expect(core.classList.contains('name-step__pack--core')).toBe(true);
+    expect(core.querySelector('input')).toBeNull();
+    expect(core.getAttribute('aria-label')).toContain(charactersEn.create.packs.coreLocked);
+    expect(rows[1].querySelector('input[type="checkbox"]')).not.toBeNull();
+  });
+
+  it('choice steps carry the choice\'s own name from the pack, never the generic "Choice"', async () => {
+    const { fixture } = await startFull();
+    const labels = Array.from(root(fixture).querySelectorAll('.hk-stepper__name')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(labels).toContain('Fighting Style');
+    expect(labels).toContain('Weapon Masteries');
+    expect(labels).not.toContain('Choice');
+  });
+
+  it('the status line names the current choice step by its own label', async () => {
+    const { fixture } = await startFull();
+    (fixture.componentInstance as unknown as { flow: { go(id: string): void } }).flow.go(
+      'srd-5e-2024:class/fighter@1/weapon-masteries',
+    );
+    await fixture.whenStable();
+    expect(TestBed.inject(ActionStrapService).config()?.status).toContain('Weapon Masteries');
+  });
+
+  it('until a class is chosen one locked "Class choices" row holds the place of the class steps, then gives way to them', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Aldric');
+    await fixture.whenStable();
+    const placeholder = () =>
+      Array.from(root(fixture).querySelectorAll('.hk-stepper__step--locked'));
+    expect(placeholder()).toHaveLength(1);
+    expect(placeholder()[0].textContent).toContain('Class choices');
+    // Not reachable: pressing it keeps the wizard where it is.
+    const before = TestBed.inject(ActionStrapService).config()?.status;
+    press(placeholder()[0]);
+    await fixture.whenStable();
+    expect(TestBed.inject(ActionStrapService).config()?.status).toBe(before);
+
+    state.setDecision(`${SYSTEM}@0/class`, ['srd-5e-2024:class/fighter']);
+    await fixture.whenStable();
+    expect(placeholder()).toHaveLength(0);
+    expect(
+      Array.from(root(fixture).querySelectorAll('.hk-stepper__name')).map((e) =>
+        e.textContent?.trim(),
+      ),
+    ).toContain('Fighting Style');
+  });
+
+  it('the strap gains Filter and Search on a picker step only, and Filter folds the chips away', async () => {
+    const fixture = TestBed.createComponent(CreateWizardComponent);
+    await fixture.whenStable();
+    const state = fixture.debugElement.injector.get(CreateWizardState);
+    state.name.set('Aldric');
+    await fixture.whenStable();
+    const strap = TestBed.inject(ActionStrapService);
+    expect(strap.config()?.secondary).toBeUndefined();
+
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Species');
+    expect(strap.config()?.secondary?.map((a) => a.id)).toEqual(['filter', 'search']);
+    expect(strapAction('filter')?.disabled).toBeFalsy();
+    expect(root(fixture).querySelector('button[hk-filter-chip]')).not.toBeNull();
+
+    await pressStrap(fixture, 'filter');
+    fixture.detectChanges();
+    expect(root(fixture).querySelector('button[hk-filter-chip]')).toBeNull();
+    await pressStrap(fixture, 'filter');
+    fixture.detectChanges();
+    expect(root(fixture).querySelector('button[hk-filter-chip]')).not.toBeNull();
+
+    await pressStrap(fixture, 'back');
+    expect(strap.config()?.secondary).toBeUndefined();
+  });
+
+  it('leaving the equipment step with Next marks it done in the stepper; there is no Continue button', async () => {
+    const { fixture, state } = await startFull();
+    await advanceToStep(fixture, 'Equipment');
+    expect(root(fixture).querySelector('.equipment-step__continue')).toBeNull();
+    expect(state.doneSteps().has('equipment')).toBe(false);
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Review');
+    expect(state.doneSteps().has('equipment')).toBe(true);
+  });
+
+  it('the review groups by step, each with an Edit link; the abilities are seals in the system order', async () => {
+    const { fixture } = await startFull();
+    await advanceToReview(fixture);
+    const el = root(fixture);
+    expect(el.querySelectorAll('.create-wizard__group').length).toBeGreaterThanOrEqual(3);
+    const editSteps = Array.from(el.querySelectorAll('[data-edit-step]')).map((b) =>
+      b.getAttribute('data-edit-step'),
+    );
+    expect(editSteps).toContain('name');
+    expect(editSteps).toContain('species');
+    expect(editSteps).toContain('class');
+    const seals = Array.from(el.querySelectorAll('hk-ability-seal .hk-ability__name')).map((s) =>
+      s.textContent?.trim(),
+    );
+    expect(seals).toEqual([
+      'Strength',
+      'Dexterity',
+      'Constitution',
+      'Intelligence',
+      'Wisdom',
+      'Charisma',
+    ]);
+  });
+
+  it("the review's equipment Edit link opens the equipment step and Next returns to the review", async () => {
+    const { fixture, state } = await startFull();
+    state.addItem('srd-5e-2024:item/chain-mail', 1);
+    await advanceToReview(fixture);
+    const edit = root(fixture).querySelector<HTMLElement>('[data-edit-step="equipment"]')!;
+    expect(edit).not.toBeNull();
+    press(edit);
+    await fixture.whenStable();
+    expect(currentLabel(fixture)).toBe('Equipment');
+    await pressStrap(fixture, 'next');
+    expect(currentLabel(fixture)).toBe('Review');
+  });
+});
+
+/** Presses Next until the stepper marks the named step current. */
+async function advanceToStep(
+  fixture: { nativeElement: unknown; whenStable(): Promise<unknown> },
+  label: string,
+): Promise<void> {
+  for (let i = 0; i < 20 && currentLabel(fixture) !== label; i++) {
+    const next = strapAction('next');
+    if (!next || next.disabled) break;
+    next.run();
+    await fixture.whenStable();
+  }
+  expect(currentLabel(fixture)).toBe(label);
+}

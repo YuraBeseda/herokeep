@@ -11,7 +11,12 @@
     (ngModelChange)="onQtyChange($event)"
   />
 
-  <hk-entity-picker [ids]="itemIds()" [limit]="itemPickerLimit" (toggled)="onPick($event)" />
+  <hk-entity-picker
+    [ids]="itemIds()"
+    [limit]="itemPickerLimit"
+    [layout]="'rows'"
+    (toggled)="onPick($event)"
+  />
 
   <div class="add-item-dialog__actions">
     <button hk-button type="button" [variant]="'ghost'" (click)="cancel()">

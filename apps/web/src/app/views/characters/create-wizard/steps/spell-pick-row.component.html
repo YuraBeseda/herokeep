@@ -1,0 +1,46 @@
+<div
+  class="spell-pick"
+  *transloco="let t; read: 'characters'"
+  [class.spell-pick--chosen]="chosen()"
+>
+  <button
+    type="button"
+    class="spell-pick__toggle"
+    [attr.aria-pressed]="chosen()"
+    [attr.aria-disabled]="blockedReason() ? 'true' : null"
+    [attr.aria-label]="toggleLabel()"
+    [hkTooltip]="blockedReason() ?? chosenHint()"
+    (click)="blockedReason() ? null : toggled.emit()"
+  >
+    @if (chosen()) {
+      <hk-wax-seal [size]="'s'" [state]="'selected'" [glyph]="'ui:done'" [hint]="chosenHint()" />
+    } @else {
+      <span class="spell-pick__ring" aria-hidden="true"></span>
+    }
+  </button>
+  <hk-spell-row
+    class="spell-pick__row"
+    [name]="name()"
+    [icon]="icon()"
+    [castable]="false"
+    [alwaysPrepared]="alwaysPrepared()"
+    [concentrating]="entity()?.concentration ? t('wizard.spells.concentration') : null"
+  />
+  @if (entity()?.ritual) {
+    <hk-tag-chip
+      class="spell-pick__ritual"
+      [label]="t('wizard.spells.ritualShort')"
+      [hint]="t('wizard.spells.ritual')"
+    />
+  }
+  <button
+    type="button"
+    class="spell-pick__info"
+    [attr.aria-label]="t('wizard.picker.detailsOf', { name: name() })"
+    [attr.aria-haspopup]="'dialog'"
+    [hkTooltip]="t('wizard.picker.detailsOf', { name: name() })"
+    (click)="details.emit($any($event.currentTarget))"
+  >
+    <hk-icon [icon]="'ui:details'" />
+  </button>
+</div>

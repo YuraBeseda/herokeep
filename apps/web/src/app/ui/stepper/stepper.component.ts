@@ -69,6 +69,13 @@ export class HkStepperComponent {
     return step.state === 'done' || step.state === 'current' || step.invalid === true;
   }
 
+  /** The hover / long-press reason of a step you cannot simply open, or an invalid one: its own hint,
+   * else a reason that fits its state (an invalid step is not "waiting for the steps before it"). */
+  protected hintOf(step: StepItem, invalid: string, unreachable: string): string {
+    if (this.reachable(step) && !step.invalid) return '';
+    return step.hint ?? (step.invalid ? invalid : unreachable);
+  }
+
   protected choose(step: StepItem): void {
     if (!this.reachable(step)) return;
     this.sheetOpen.set(false);

@@ -164,7 +164,8 @@
     "reason-incomplete": "Finish every step first",
     "reason-name": "Enter a name first",
     "reason-step": "Finish this step first",
-    "secondary": "More actions"
+    "secondary": "More actions",
+    "reason-no-filters": "No filters for this list"
   },
   "tabs": {
     "landmark": "Sections of this screen"
@@ -302,7 +303,8 @@
       "done": "Done",
       "label": "Steps",
       "position": "Step {{current}} of {{total}} · {{name}}",
-      "unreachable": "Finish the steps before it"
+      "unreachable": "Finish the steps before it",
+      "invalid": "This step needs another look"
     },
     "picker": {
       "choose": "Choose",

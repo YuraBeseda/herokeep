@@ -2,7 +2,7 @@
   <button
     type="button"
     class="hk-picker-card__body"
-    [attr.aria-label]="t('ui.picker.details-of', { name: name() })"
+    [attr.aria-label]="bodyLabel(t('ui.picker.details-of', { name: name() }))"
     (click)="details.emit()"
   >
     <span class="hk-picker-card__head">
@@ -48,6 +48,9 @@
       class="hk-picker-card__choose"
       [variant]="selected() ? 'parchment' : 'primary'"
       [attr.aria-pressed]="selected()"
+      [attr.aria-label]="
+        (selected() ? t('ui.picker.chosen') : t('ui.picker.choose')) + ': ' + name()
+      "
       [disabledReason]="blockedReason()"
       (click)="choose.emit()"
     >

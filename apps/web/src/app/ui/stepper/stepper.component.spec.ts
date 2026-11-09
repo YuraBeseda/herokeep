@@ -1,4 +1,4 @@
-import { mount, press } from '../testing/harness';
+import { hintOf, mount, press } from '../testing/harness';
 import { HkStepperComponent, type StepItem } from './stepper.component';
 
 const STEPS: readonly StepItem[] = [
@@ -52,6 +52,19 @@ describe('HkStepperComponent', () => {
       expect(hint(steps[2])).toContain('Finish the steps before it'); // to do
       expect(hint(steps[0])).toBeNull(); // done: nothing to explain
       expect(el.textContent).not.toContain('Needs 6 scores');
+    });
+
+    it('an invalid step with no hint of its own says it needs another look, not "finish the steps before it"', async () => {
+      const { el } = await mount(HkStepperComponent, {
+        steps: [
+          { id: 'name', label: 'Name', state: 'current' },
+          { id: 'species', label: 'Species', state: 'todo', invalid: true },
+        ],
+        current: 'name',
+      });
+      const species = el.querySelectorAll<HTMLElement>('.hk-stepper__step')[1];
+      expect(hintOf(species)).toBe('This step needs another look');
+      expect(hintOf(species)).not.toContain('Finish the steps before it');
     });
 
     it('reports a click on a done, current or invalid step, never on a to-do or locked one', async () => {
