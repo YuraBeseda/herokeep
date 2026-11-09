@@ -1,53 +1,69 @@
+/* Table (board C09): the session strip, then a paper leaf holding the feed and the composer. The
+   composer never outgrows its leaf: every row wraps and every field is capped at its parent. */
 :host {
   display: block;
 }
 
-.log-tab__header {
+.log-tab__strip {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   margin-block-end: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    var(--leather-highlight),
+    var(--leather) 50%,
+    var(--leather-dark)
+  );
+  box-shadow: var(--shadow-strap);
+  color: var(--text-on-leather);
 }
 
-.log-tab__title {
-  margin: 0;
+.log-tab__strip-ring {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px var(--brass),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.log-tab__strip-status {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   font-family: var(--font-display);
+  font-size: 1.25rem;
 }
 
 .log-tab__session-start {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-2);
-}
-
-.log-tab__session-start-label {
-  font-size: 0.8125rem;
-  color: var(--text-2);
+  min-inline-size: 0;
 }
 
 .log-tab__session-start-title {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-1);
-  color: var(--text-1);
-  font: inherit;
+  flex: 1 1 14rem;
+  min-inline-size: 0;
 }
 
 .log-tab__log {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-height: 24rem;
+  max-block-size: 28rem;
   overflow-y: auto;
-  padding: var(--space-3);
-  margin-block-end: var(--space-4);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
-  background: var(--surface-1);
+  min-inline-size: 0;
+  padding: var(--space-2);
+  margin-block-end: var(--space-3);
 }
 
 .log-tab__empty {
@@ -55,10 +71,11 @@
   color: var(--text-2);
 }
 
+/* System lines: the session markers. */
 .log-tab__divider {
   padding: var(--space-1) 0;
   color: var(--text-2);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-style: italic;
   text-align: center;
   border-block-end: 1px solid var(--border-1);
@@ -69,7 +86,16 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2);
-  padding: var(--space-1) 0;
+  min-inline-size: 0;
+  padding: var(--space-1) var(--space-2);
+}
+
+/* A slip meant for the DM (or private): a dark leather slip, as the board draws it. */
+.log-tab__entry--dm {
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--leather), var(--leather-dark));
+  color: var(--text-on-leather);
+  box-shadow: var(--shadow-strap);
 }
 
 .log-tab__entry-actor {
@@ -81,50 +107,106 @@
   font-size: 0.8125rem;
 }
 
-.log-tab__entry-text {
-  margin: 0;
-  flex-basis: 100%;
+.log-tab__entry--dm .log-tab__entry-formula {
+  color: var(--text-on-leather);
 }
 
-.log-tab__hint-chip {
+.log-tab__entry-text {
+  flex-basis: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.log-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 0.125rem var(--space-2);
-  border-radius: var(--radius-s);
+  border-radius: 4px;
   background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 0.75rem;
+  box-shadow: inset 0 0 0 1px var(--border-1);
+  color: var(--text-1);
+  font-size: 0.8125rem;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
 }
 
 .log-tab__composer {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-inline-size: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--border-1);
 }
 
-.log-tab__composer-label {
-  font-weight: 600;
-}
-
-.log-tab__composer-text {
-  width: 100%;
-  padding: var(--space-2);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
-  background: var(--surface-1);
-  color: var(--text-1);
-  font: inherit;
-  resize: vertical;
+.log-tab__composer-field {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .log-tab__composer-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+
+.log-tab__composer-visibility {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.log-tab__seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  block-size: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border-1);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    border-color: var(--accent-strong);
+    background: var(--surface-2);
+    box-shadow: inset 0 0 0 1px var(--accent-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+.log-tab__composer-hint {
+  flex: 1 1 10rem;
+  min-inline-size: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
 }
 
 .log-tab__composer-count {
   color: var(--text-2);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
 }
 
 .log-tab__composer-count--over {
@@ -132,12 +214,12 @@
   font-weight: 600;
 }
 
-.log-tab__composer-visibility {
-  display: flex;
-  gap: var(--space-1);
-  margin-inline-start: auto;
-}
-
 .log-tab__composer-send {
   flex-shrink: 0;
+}
+
+@media (pointer: coarse) {
+  .log-tab__seg {
+    block-size: var(--control-phone);
+  }
 }

@@ -10,7 +10,6 @@ import {
 import { FormsModule } from '@angular/forms';
 import type { CampaignVisibility } from '@hk/protocol';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
 import {
   DiceResultComponent,
   type DiceResultDie,
@@ -23,6 +22,19 @@ import {
   CampaignStoreNotAuthenticatedError,
   CampaignStoreNotLeaderError,
 } from '@shared/stores/campaign.store';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkTextareaComponent } from '../../../ui/textarea/textarea.component';
+import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
+
+/** The icon of each visibility choice (board C09's segmented picker and the entry badges). */
+const VISIBILITY_ICONS: Record<CampaignVisibility, string> = {
+  everyone: 'ui:campaigns',
+  dm: 'ui:dm',
+  private: 'ui:lock',
+};
 
 /** doc-02's own wire bound (`ChatMessageV1`'s `.refine`) — this composer's live count/disable gate
  * mirrors it EXACTLY, measured the same way the schema measures it (UTF-8 bytes, not UTF-16 code
@@ -43,6 +55,16 @@ type RollLogEntry = Extract<LogEntry, { kind: 'roll' }>;
  * `PlayTabComponent`'s roll publisher, which lives on a DIFFERENT page (the character's own play
  * tab) and must instead use the parameterized `CampaignStore.appendToStream` — see that
  * component's own doc for why.
+ *
+ * ## Board C09 (plan 17 B11b, "Table")
+ *
+ * A session strip (leather) for everyone: the running session's title or "No session running",
+ * with the DM's Start (title field) or End session. The feed is a paper leaf: rolls and chat with
+ * a badge on every entry that is not for everyone, the session markers as system lines. The
+ * composer is a labelled textarea, a segmented visibility picker with its hint, the byte count as
+ * "n / 2048" (the byte limit in its tooltip) and Send, which says why it is unavailable in its
+ * tooltip. Encounter lines, timestamps and the "at the table" aside of the board need data this
+ * log does not carry (plan slice 2), so they are not drawn.
  *
  * ## Rendering
  *
@@ -83,7 +105,17 @@ type RollLogEntry = Extract<LogEntry, { kind: 'roll' }>;
  */
 @Component({
   selector: 'app-log-tab',
-  imports: [TranslocoDirective, FormsModule, ButtonComponent, DiceResultComponent],
+  imports: [
+    TranslocoDirective,
+    FormsModule,
+    DiceResultComponent,
+    HkButtonComponent,
+    HkLeafComponent,
+    HkTextareaComponent,
+    HkTextFieldComponent,
+    HkTooltipDirective,
+    IconComponent,
+  ],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './log-tab.component.html',
   styleUrl: './log-tab.component.scss',
@@ -101,6 +133,8 @@ export class LogTabComponent {
    * all, not merely a disabled one). */
   protected readonly isDm = computed(() => this.campaignStore.role() === 'dm');
   protected readonly sessionActive = computed(() => this.state()?.session?.active ?? false);
+  protected readonly sessionTitle = computed(() => this.state()?.session?.title);
+  protected readonly visibilityIcon = (v: CampaignVisibility): string => VISIBILITY_ICONS[v];
 
   private readonly logContainer = viewChild<ElementRef<HTMLElement>>('logContainer');
 
@@ -181,6 +215,13 @@ export class LogTabComponent {
   protected readonly canSend = computed(
     () => this.draftText().trim().length > 0 && !this.overLimit() && !this.sending(),
   );
+  protected readonly maxBytes = CHAT_MAX_BYTES;
+  /** Why Send is unavailable (`null` when it is): the key under `log.composer.sendReason`. */
+  protected readonly sendReasonKey = computed<'empty' | 'tooLong' | null>(() => {
+    if (this.overLimit()) return 'tooLong';
+    if (this.draftText().trim().length === 0) return 'empty';
+    return null;
+  });
 
   // Auto-scrolls to the newest (bottom) entry whenever `entries()` changes (a new log entry
   // arriving, in practice) — `queueMicrotask` defers past this same change-detection pass so the

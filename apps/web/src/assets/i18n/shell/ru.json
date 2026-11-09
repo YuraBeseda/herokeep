@@ -170,7 +170,12 @@
     "secondary": "Другие действия",
     "reason-no-filters": "Для этого списка нет фильтров",
     "add-condition": "Добавить состояние",
-    "roll-log": "Журнал бросков"
+    "roll-log": "Журнал бросков",
+    "campaign-item": "Предмет",
+    "campaign-session-start": "Начать сессию",
+    "campaign-session-end": "Завершить сессию",
+    "campaign-open-sheet": "Открыть мой лист",
+    "campaign-select-member": "Сначала выберите героя на вкладке «Группа»"
   },
   "tabs": {
     "landmark": "Разделы экрана",
@@ -178,7 +183,11 @@
     "spells": "Заклинания",
     "bag": "Сумка",
     "hero": "Герой",
-    "more": "Ещё"
+    "more": "Ещё",
+    "campaign-party": "Группа",
+    "campaign-table": "Стол",
+    "campaign-lobby": "Лобби",
+    "campaign-settings": "Настройки"
   },
   "theme": {
     "menu": "Тема",

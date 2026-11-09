@@ -7,16 +7,12 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { ChipComponent } from '@shared/components/chip/chip.component';
-import { DialogService } from '@app/ui/dialog/dialog.service';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
-import { SheetSectionComponent } from '@shared/components/sheet-section/sheet-section.component';
 import { uuidv7 } from '@shared/helpers/uuid';
 import {
   conditionDraft,
@@ -33,96 +29,117 @@ import {
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import type { DraftEvent } from '@shared/stores/character.store';
-import { CampaignSelectionService, type EffectRequest } from '../shell/campaign-selection.service';
+import { IconComponent } from '../../../../shared/icons/icon.component';
+import { HkButtonComponent } from '../../../../ui/button/button.component';
+import { HkIconButtonComponent } from '../../../../ui/icon-button/icon-button.component';
+import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
+import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
+import { HkTextFieldComponent } from '../../../../ui/text-field/text-field.component';
+import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
+import { DialogService } from '../../../../ui/dialog/dialog.service';
 import {
   ConditionDialogComponent,
   type ConditionDialogData,
   type ConditionDialogOption,
   type ConditionDialogResult,
-} from '../../characters/sheet/play/condition-dialog.component';
+} from '../../../characters/sheet/play/condition-dialog.component';
+import {
+  CampaignSelectionService,
+  type EffectRequest,
+} from '../../shell/campaign-selection.service';
 
-/** One resolved "currently active" condition row (`activeConditionIds()` resolved to a display
- * name) — for the panel's own remove-chip list, mirroring `PlayTabComponent.conditions()`'s row
- * shape without a `level` column (the panel has no per-condition level display, only add/remove;
- * a re-add with a new level via `onAddCondition` still replaces the entry, per the reducer's own
- * replace-by-`conditionId` semantics — `packages/engine/src/reduce/handlers/vitals.ts`). */
+/** The nine quick effects, in the order of board C06's tab row. */
+export type EffectTab =
+  'damage' | 'heal' | 'temp' | 'condition' | 'xp' | 'level' | 'item' | 'inspiration' | 'override';
+
+const TAB_ICONS: Record<EffectTab, string> = {
+  damage: 'ui:damage',
+  heal: 'ui:heal',
+  temp: 'ui:temp-hp',
+  condition: 'ui:condition',
+  xp: 'ui:xp',
+  level: 'ui:level-up',
+  item: 'ui:bag',
+  inspiration: 'ui:inspiration',
+  override: 'ui:edit',
+};
+
+const TAB_ORDER: readonly EffectTab[] = [
+  'damage',
+  'heal',
+  'temp',
+  'condition',
+  'xp',
+  'level',
+  'item',
+  'inspiration',
+  'override',
+];
+
+let nextLeafId = 0;
+
+/** One resolved "currently active" condition row, for the remove-chip list. */
 interface ActiveConditionRow {
   readonly id: string;
   readonly name: string;
 }
 
 /**
- * `DmEffectsPanelComponent` (plan-10 task-11-brief.md) — the DM effects panel: damage/heal/temp
- * HP, condition add/remove, inspiration toggle, XP/level grant (gated by `houseRules.xpMode`),
- * item grant, and a manual override, ALL via `CampaignStore.gatewayAppend` (doc-03's cross-stream
- * gateway forward — the DM never owns the target character, so this can never go through a local
- * `CharacterStore.appendTx`). Mounts on the party card (`PartyTabComponent`, works in 'overview'
- * mode off `state.overviews`) AND inside `MemberSheetDialogComponent` ('full' mode, off the live
- * subscribed `Sheet` — task-9-report.md's documented seam). DM-only rendering is the OPENER's job
- * (both callers already gate on `isDm()`/the drill-in's own DM-only affordance) — this component
- * trusts it was only ever mounted for an authorized viewer, same "the caller already checked"
- * posture `MemberSheetDialogComponent` itself documents.
+ * `QuickEffectsLeafComponent` (board C06's leaf, plan 17 B11b; it replaces the old DM effects
+ * panel): the DM's effects for ONE member, as a paper leaf with a row of nine effect tabs
+ * (Damage, Heal, Temp HP, Condition, XP, Level, Item, Inspiration, Override) and the form of the
+ * chosen one. Every effect goes through `CampaignStore.gatewayAppend` (doc-03's cross-stream
+ * gateway forward: the DM never owns the target character, so it can never be a local append) with
+ * exactly the drafts the panel built before: `dm-effects.ts` clamps HP the way the engine does.
  *
- * ## HP delta composition (`shared/services/campaigns/dm-effects.ts`)
+ * It mounts beside the party grid (`PartyTabComponent`, 'overview' mode off `state.overviews`) and,
+ * `embedded`, inside the member drawer ('full' mode, off the live subscribed sheet). DM-only
+ * rendering is the OPENER's job: both callers gate on the DM.
  *
- * `hp()` is `undefined` whenever the caller has no baseline to clamp against (a roster entry with
- * no `party.overview_updated` yet) — the HP section renders disabled in that case rather than
- * guessing. Where a baseline exists, `dm-effects.ts`'s builders replicate
- * `packages/engine/src/propose/vitals.ts`'s own damage/heal clamping so the reducer never floors/
- * overheals in a way the DM's typed amount didn't actually intend (see that module's own class
- * doc for the full `hp.changed`, delta-vs-absolute finding).
+ * ## XP and Level
  *
- * ## Inline feedback
+ * Both tabs are always drawn, as on the board, but only the one `houseRules.xpMode` selects works:
+ * the other is `aria-disabled` with the reason as its tooltip and description (never printed).
  *
- * Every action funnels through the private `send()` helper, which resolves `gatewayAppend`'s own
- * `AckOrReject` into `feedbackOk`/`feedbackMessage` — shown inline (`role="status"`) IN ADDITION
- * to the generic per-code toast `StreamSyncSession`'s own `REJECT_TOAST_KEYS` channel already
- * raises for ANY gateway reject (task-11-brief.md's own instruction: "the panel should ALSO
- * reflect per-effect success/failure inline").
+ * ## Strap requests
  *
- * ## Fix round 1 — honest overview-mode damage/heal feedback
+ * The campaign strap posts a request for a member (`CampaignSelectionService`); the leaf of the
+ * addressed member takes it (consume-once) and runs the same action its own tab runs: it picks the
+ * tab and focuses its first field, or, for Condition, opens the condition picker.
  *
- * A server ACK only means the event was accepted and appended — NOT that the reducer's own effect
- * actually applied. `hp.changed{kind:'damage'|'heal'}` skips with `'hp-unresolved'` when the
- * character's underlying `facts.hp.current` is still the long-rest `'max'` sentinel (`dm-
- * effects.ts`'s own delta-vs-absolute class doc), and `HpSnapshot.currentWasMax` — the ONLY signal
- * that could tell this component whether that's the case — is only ever knowable from a live
- * `Sheet` (`MemberSheetDialogComponent`'s 'full' mode). The party card's 'overview' mode
- * (`PartyOverview`, no such field in `PartyOverviewUpdatedV1`) STRUCTURALLY cannot know either way
- * — `hp().currentWasMax` reads `undefined` there, not `false`. Telling the DM "Applied." on an ACK
- * in that blind spot is dishonest: the event may have silently no-opped.
+ * ## Honest overview-mode damage/heal feedback
  *
- * Fix: `applyDamage`/`applyHeal` pass `caveatIfUnresolvedSentinel: hp.currentWasMax === undefined`
- * to `send()`; on a successful ack, `feedbackCaveated` is set from that flag and the template picks
- * `dmEffects.status.appliedCaveat` (a caveated "sent, but may not have applied yet" phrasing)
- * instead of the plain `dmEffects.status.applied`. Every OTHER action (temp HP — never reads prior
- * state; inspiration/condition/xp/level/item/override — no sentinel concept at all) always passes
- * no caveat and keeps the plain success message. A REJECT is unaffected either way (still the
- * plain `dmEffects.status.failed`) — the caveat is specifically about a MISLEADING SUCCESS, not
- * failure, which is already accurate.
+ * A server ACK only means the event was appended, not that the reducer applied it:
+ * `hp.changed{damage|heal}` skips with 'hp-unresolved' while `facts.hp.current` is still the
+ * long-rest 'max' sentinel, which only a live sheet (`HpSnapshot.currentWasMax`) can reveal. In
+ * 'overview' mode `currentWasMax` is `undefined`, so a successful damage/heal shows the caveated
+ * "sent, applies once HP is initialized" message instead of a plain "Applied.". A reject is
+ * unaffected.
  *
  * ## Names (plan 16 Task 5, design ruling 6)
  *
- * Condition names — the picker's options and the remove chips — resolve through the injected
- * `EngineFacade`. Mounted in `MemberSheetDialogComponent`, that is the dialog's facade scoped to
- * the selected member's own pins (so a condition from the member's pack is named, and one from a
- * pack this device lacks shows its raw id); on the party card it is the root facade (core).
+ * Condition names resolve through the injected `EngineFacade`: in the member drawer that is the
+ * drawer's facade scoped to the member's own pins, beside the grid it is the root facade (core).
  */
 @Component({
-  selector: 'app-dm-effects-panel',
+  selector: 'app-quick-effects-leaf',
   imports: [
     TranslocoDirective,
     FormsModule,
-    ButtonComponent,
-    ChipComponent,
-    NumberFieldComponent,
-    SheetSectionComponent,
+    IconComponent,
+    HkButtonComponent,
+    HkIconButtonComponent,
+    HkLeafComponent,
+    HkNumberFieldComponent,
+    HkTextFieldComponent,
+    HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('campaigns')],
-  templateUrl: './dm-effects-panel.component.html',
-  styleUrl: './dm-effects-panel.component.scss',
+  host: { '(keydown.escape)': 'onEscape($event)' },
+  templateUrl: './quick-effects-leaf.component.html',
+  styleUrl: './quick-effects-leaf.component.scss',
 })
-export class DmEffectsPanelComponent {
+export class QuickEffectsLeafComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly dialogService = inject(DialogService);
@@ -131,22 +148,32 @@ export class DmEffectsPanelComponent {
   private readonly injector = inject(Injector);
 
   // Inputs
-  /** Bare character uuid — `CampaignStore.gatewayAppend`'s own first parameter shape. */
+  /** Bare character uuid: `CampaignStore.gatewayAppend`'s own first parameter shape. */
   readonly characterId = input.required<string>();
+  /** The member's name (the leaf's heading beside the grid). */
+  readonly name = input('');
   /** `undefined` when no HP baseline is available yet (see class doc). */
   readonly hp = input<HpSnapshot | undefined>(undefined);
-  /** The character's currently-known active condition ids (from `PartyOverview.conditions` or a
-   * live `Sheet.conditions`), for the remove-chip list. */
+  /** The member's currently-known active condition ids, for the remove-chip list. */
   readonly activeConditionIds = input<readonly string[]>([]);
+  /** In the member drawer: no member heading, close button or footer actions. */
+  readonly embedded = input(false);
+  /** Footer actions, each offered by the party view only where it applies. */
+  readonly canOpenSheet = input(false);
+  readonly canHandOver = input(false);
+  readonly canUnlink = input(false);
 
-  // Panel chrome
-  protected readonly expanded = signal(false);
+  readonly closed = output<void>();
+  readonly openSheet = output<void>();
+  readonly handOver = output<void>();
+  readonly unlink = output<void>();
+
+  protected readonly leafId = `qfx-${nextLeafId++}`;
+  protected readonly tab = signal<EffectTab>('damage');
   protected readonly busy = signal(false);
   protected readonly feedbackOk = signal<boolean | undefined>(undefined);
   protected readonly feedbackMessage = signal<string | undefined>(undefined);
-  /** `true` only alongside a successful (`feedbackOk() === true`) damage/heal ack sent WITHOUT
-   * sentinel certainty (fix round 1 — see class doc). Meaningless/ignored whenever `feedbackOk()`
-   * isn't `true`. */
+  /** `true` only alongside a successful damage/heal ack sent WITHOUT sentinel certainty. */
   protected readonly feedbackCaveated = signal(false);
 
   // HP
@@ -192,13 +219,20 @@ export class DmEffectsPanelComponent {
     () => this.overridePath().trim().length > 0 && this.overrideReason().trim().length > 0,
   );
 
+  protected readonly tabIds = TAB_ORDER;
+  protected readonly tabIcon = (id: EffectTab): string => TAB_ICONS[id];
+
+  /** The tab the XP/Level pair collapses to under the campaign's XP mode. */
+  private readonly xpTab = computed<EffectTab>(() => (this.xpMode() === 'xp' ? 'xp' : 'level'));
+
   constructor() {
-    // The campaign strap's Damage / Heal / Condition / XP / Item for the selected member: the panel
-    // of the addressed member runs the same action its own buttons do.
+    // The campaign strap's Damage / Heal / Condition / XP / Item for the selected member: the leaf
+    // of the addressed member runs the same action its own tab runs. A request for a member this
+    // leaf does not address is left on the board.
     effect(() => {
       const request = this.selection.request();
       if (request?.characterId !== this.characterId()) return;
-      // Consume-once: taken off the board before it runs, so a panel mounting later never replays it.
+      // Consume-once: taken off the board before it runs, so a leaf mounting later never replays it.
       untracked(() => {
         this.selection.consume(request);
         this.handleRequest(request);
@@ -206,46 +240,66 @@ export class DmEffectsPanelComponent {
     });
   }
 
+  /** Whether `id` works in this campaign's XP mode (the other of XP and Level does not). */
+  protected isOff(id: EffectTab): boolean {
+    return (id === 'xp' || id === 'level') && id !== this.xpTab();
+  }
+
   private handleRequest(request: EffectRequest): void {
-    this.expanded.set(true);
     if (request.kind === 'condition') {
+      this.tab.set('condition');
       void this.onAddCondition();
       return;
     }
     // XP mode shows the XP award, milestone mode the level grant: both answer the strap's XP.
-    const target =
-      request.kind === 'xp'
-        ? '[data-effect="xp"], [data-effect="level"]'
-        : `[data-effect="${request.kind}"]`;
+    this.pick(request.kind === 'xp' ? this.xpTab() : request.kind);
+  }
+
+  /** Shows `id`'s form and moves focus to its first field. */
+  protected pick(id: EffectTab): void {
+    if (this.isOff(id)) return;
+    this.tab.set(id);
     afterNextRender(
       () => {
-        const section = this.host.nativeElement.querySelector(target);
-        section?.scrollIntoView?.({ block: 'nearest' });
-        section?.querySelector<HTMLElement>('input, button')?.focus();
+        const panel = this.host.nativeElement.querySelector<HTMLElement>('.qfx__panel');
+        panel?.scrollIntoView?.({ block: 'nearest' });
+        panel?.querySelector<HTMLElement>('input, button')?.focus();
       },
       { injector: this.injector },
     );
   }
 
-  // Panel chrome
+  /** Roving arrows between the tabs, Home and End to the ends. */
+  protected onTabsKey(event: KeyboardEvent): void {
+    const usable = TAB_ORDER.filter((id) => !this.isOff(id));
+    const index = usable.indexOf(this.tab());
+    const next =
+      event.key === 'ArrowRight'
+        ? (index + 1) % usable.length
+        : event.key === 'ArrowLeft'
+          ? (index + usable.length - 1) % usable.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? usable.length - 1
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    this.tab.set(usable[next]);
+    queueMicrotask(() =>
+      this.host.nativeElement
+        .querySelector<HTMLElement>(`#${this.leafId}-tab-${usable[next]}`)
+        ?.focus(),
+    );
+  }
 
-  protected toggle(): void {
-    this.expanded.update((value) => !value);
+  protected onEscape(event: Event): void {
+    if (this.embedded() || event.defaultPrevented) return;
+    event.preventDefault();
+    this.closed.emit();
   }
 
   // HP
-
-  protected onDamageAmountChange(value: number | null): void {
-    this.damageAmount.set(value);
-  }
-
-  protected onHealAmountChange(value: number | null): void {
-    this.healAmount.set(value);
-  }
-
-  protected onTempAmountChange(value: number | null): void {
-    this.tempAmount.set(value);
-  }
 
   protected async applyDamage(): Promise<void> {
     const hp = this.hp();
@@ -296,24 +350,12 @@ export class DmEffectsPanelComponent {
 
   // XP / level
 
-  protected onXpAmountChange(value: number | null): void {
-    this.xpAmount.set(value);
-  }
-
-  protected onXpReasonChange(value: string): void {
-    this.xpReason.set(value);
-  }
-
   protected async grantXp(): Promise<void> {
     const amount = this.xpAmount();
     if (amount === null || amount === 0) return;
     const reason = this.xpReason().trim();
     await this.send([xpAwardedDraft(amount, reason || undefined)]);
     this.xpReason.set('');
-  }
-
-  protected onLevelCountChange(value: number | null): void {
-    this.levelCount.set(value);
   }
 
   protected async grantLevel(): Promise<void> {
@@ -324,14 +366,6 @@ export class DmEffectsPanelComponent {
 
   // Item grant
 
-  protected onItemNameChange(value: string): void {
-    this.itemName.set(value);
-  }
-
-  protected onItemQtyChange(value: number | null): void {
-    this.itemQty.set(value);
-  }
-
   protected async grantItem(): Promise<void> {
     const qty = this.itemQty();
     if (qty === null || qty < 1) return;
@@ -341,18 +375,6 @@ export class DmEffectsPanelComponent {
   }
 
   // Override
-
-  protected onOverridePathChange(value: string): void {
-    this.overridePath.set(value);
-  }
-
-  protected onOverrideValueChange(value: string): void {
-    this.overrideValue.set(value);
-  }
-
-  protected onOverrideReasonChange(value: string): void {
-    this.overrideReason.set(value);
-  }
 
   protected async applyOverride(): Promise<void> {
     const path = this.overridePath().trim();
@@ -374,10 +396,8 @@ export class DmEffectsPanelComponent {
 
   /** A free-typed override value: JSON-parsed when it parses cleanly (numbers, booleans, quoted
    * strings, arrays/objects) so a DM can type `18` or `true` and get the right scalar type; falls
-   * back to the raw string verbatim otherwise (a bare word like `str` for a path-shaped value
-   * isn't valid JSON on its own). An empty field becomes `''` (schema-valid — `OverrideAppliedV1.
-   * value` is `z.unknown()`), never `undefined` (that would need an explicit key omission, and
-   * `strictObject` requires every declared key present). */
+   * back to the raw string verbatim otherwise. An empty field becomes `''` (schema-valid:
+   * `OverrideAppliedV1.value` is `z.unknown()`), never `undefined`. */
   private parseOverrideValue(raw: string): unknown {
     const trimmed = raw.trim();
     if (trimmed === '') return trimmed;

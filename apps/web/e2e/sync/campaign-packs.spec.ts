@@ -34,7 +34,7 @@ import {
  * not its species (controller ruling, plan 16 task 8): a species is a creation-time decision that a
  * sheet never re-opens once made, so an already-linked character cannot take the pack's species.
  * The weapon is searched in the character's own library before and after the pin (absent, then
- * present), and it is what the DM's member-sheet dialog names through the member's pins.
+ * present), and it is what the DM's member-sheet drawer names through the member's pins.
  *
  * The DM saves "Full sheets" first: the party card's "View sheet" drill-in needs
  * `partySheets: 'full'`, and the web client reads never-saved settings as `'overview'`.
@@ -172,17 +172,16 @@ test.describe('campaign: content pack relay', () => {
         await gotoParty(page, campaignId);
         const card = partyCardByName(page, CHARACTER_NAME);
         await expect(card).toBeVisible({ timeout: 25_000 });
-        await card.locator('.party-tab__view-sheet').click();
-        const dialog = page.locator('.member-sheet-dialog');
+        await card.locator('.party-tab__view-sheet, .hk-party__open').first().click();
+        const dialog = page.locator('app-member-sheet-drawer [role="dialog"]');
         await expect(dialog).toBeVisible();
         // Resolved through the member's index: under the core-only index this row is the raw
         // `sample-content:item/moonblade-sickle` id.
-        await expect(dialog.locator('.member-sheet-dialog__inventory')).toContainText(
-          `${PACK_WEAPON} × 1`,
-          { timeout: 30_000 },
-        );
-        await expect(dialog.locator('.member-sheet-dialog__missing-packs')).toHaveCount(0);
-        await dialog.locator('.member-sheet-dialog__close').click();
+        await expect(dialog.locator('.msd__inventory')).toContainText(`${PACK_WEAPON} × 1`, {
+          timeout: 30_000,
+        });
+        await expect(dialog.locator('.msd__missing-packs')).toHaveCount(0);
+        await dialog.locator('.hk-drawer__head button').click();
         await expect(dialog).toHaveCount(0);
       });
 

@@ -1,33 +1,29 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal, type WritableSignal } from '@angular/core';
+import { Component, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Event, type Pack } from '@hk/protocol';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of, Subject } from 'rxjs';
-import { DialogService } from '@app/ui/dialog/dialog.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
-import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
-import campaignsRu from '../../../../assets/i18n/campaigns/ru.json';
-import campaignsUk from '../../../../assets/i18n/campaigns/uk.json';
-import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
-import { seedFighter } from '../../characters/sheet/testing/character-fixtures';
-import {
-  MemberSheetDialogComponent,
-  type MemberSheetDialogData,
-} from './member-sheet-dialog.component';
+import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
+import campaignsRu from '../../../../../assets/i18n/campaigns/ru.json';
+import campaignsUk from '../../../../../assets/i18n/campaigns/uk.json';
+import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
+import { seedFighter } from '../../../characters/sheet/testing/character-fixtures';
+import { MemberSheetDrawerComponent } from './member-sheet-drawer.component';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..');
+const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..', '..');
 
 function readPack(path: string): Pack {
   const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
@@ -109,7 +105,11 @@ class FakeSyncService {
 
 class FakeRouter {
   url = '/g/00000000-0000-4000-8000-0000000000c1/party';
-  readonly events = new Subject<NavigationEnd>();
+  readonly events = new Subject<NavigationEnd | NavigationStart>();
+
+  startNavigation(url: string): void {
+    this.events.next(new NavigationStart(1, url));
+  }
 
   navigateTo(url: string): void {
     this.url = url;
@@ -149,12 +149,54 @@ function configure(): {
   return { sync, router, packs };
 }
 
-function openDialog(data: MemberSheetDialogData) {
-  const service = TestBed.inject(DialogService);
-  return service.open(MemberSheetDialogComponent, { data });
+interface DrawerData {
+  readonly campaignId: string;
+  readonly characterId: string;
+  readonly name: string;
 }
 
-describe('MemberSheetDialogComponent', () => {
+/** The party tab's role: render the drawer while a member's sheet is open, drop it on `closed`. */
+@Component({
+  selector: 'app-drawer-host',
+  imports: [MemberSheetDrawerComponent],
+  template: `
+    @if (shown()) {
+      <app-member-sheet-drawer
+        [campaignId]="data().campaignId"
+        [characterId]="data().characterId"
+        [name]="data().name"
+        (closed)="onClosed()"
+      />
+    }
+  `,
+})
+class HostComponent {
+  readonly data = signal<DrawerData>({ campaignId: '', characterId: '', name: '' });
+  readonly shown = signal(true);
+  closedCount = 0;
+  protected onClosed(): void {
+    this.closedCount += 1;
+    this.shown.set(false);
+  }
+}
+
+/** Opens the drawer for `data`; `closed` resolves once the drawer asked to go away. */
+function openDrawer(data: DrawerData) {
+  const fixture = TestBed.createComponent(HostComponent);
+  fixture.componentInstance.data.set(data);
+  fixture.detectChanges();
+  return {
+    fixture,
+    host: fixture.componentInstance,
+    closed: async (): Promise<void> => {
+      TestBed.tick();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    },
+  };
+}
+
+describe('MemberSheetDrawerComponent', () => {
   const campaignId = '00000000-0000-4000-8000-0000000000c1';
   let sync: FakeSyncService;
   let router: FakeRouter;
@@ -178,24 +220,24 @@ describe('MemberSheetDialogComponent', () => {
     TestBed.inject(HkDb).close();
   });
 
-  it('a11y: has an accessible dialog title built from the character name (data-dialog-title wiring)', async () => {
+  it('a11y: the drawer is a dialog named by a title built from the character name', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
-    openDialog({ campaignId, characterId, name: 'Ivan' });
+    openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     await Promise.resolve();
     TestBed.tick();
 
     const dialogEl = document.querySelector('[role="dialog"]');
     expect(dialogEl?.getAttribute('aria-labelledby')).toBeTruthy();
-    const title = document.querySelector('.member-sheet-dialog__title');
+    const title = document.querySelector('.hk-drawer__title');
     expect(title?.textContent).toContain('Ivan');
   });
 
   it('renders a loading status immediately, and sends subscribe with no lastSeq on open', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
-    openDialog({ campaignId, characterId, name: 'Ivan' });
+    openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     await Promise.resolve();
 
@@ -208,7 +250,7 @@ describe('MemberSheetDialogComponent', () => {
     const characterId = streamId.slice('char:'.length);
     const events = await TestBed.inject(EventsRepository).byStream(streamId);
 
-    openDialog({ campaignId, characterId, name: 'Ivan' });
+    openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     sync.emit(campaignId, streamId, events);
     TestBed.tick();
@@ -219,37 +261,35 @@ describe('MemberSheetDialogComponent', () => {
       document.querySelectorAll<HTMLElement>('.hk-stat-tile__value'),
     ).map((el) => el.textContent?.trim());
     expect(statValues).toContain('19'); // AC, straight off the real derived Sheet
-    // Every pip in this dialog is readonly — no click surface for spending a spell slot/resource
-    // that belongs to a character the DM doesn't own.
-    const pipButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.hk-pips__pip'));
-    expect(pipButtons.length).toBeGreaterThan(0);
-    expect(pipButtons.every((b) => b.disabled)).toBe(true);
-    // No damage/heal/rest/cast/equip/remove affordance exists anywhere in this dialog's DOM.
-    const buttonLabels = Array.from(document.querySelectorAll('button')).map((b) =>
-      b.textContent?.trim(),
-    );
+    // Every pip in this drawer is readonly (a wax seal, never a button) — no click surface for
+    // spending a spell slot/resource that belongs to a character the DM doesn't own.
+    const drawer = document.querySelector('app-member-sheet-drawer')!;
+    const pips = drawer.querySelectorAll('hk-pool-bar hk-wax-seal');
+    expect(pips.length).toBeGreaterThan(0);
+    expect(drawer.querySelectorAll('hk-pool-bar button')).toHaveLength(0);
+    // No damage/heal/rest/cast/equip/remove affordance exists anywhere in the SHEET part of the
+    // drawer (the DM tools leaf at its foot is the gateway writer, and is excluded).
+    const buttonLabels = Array.from(drawer.querySelectorAll('button'))
+      .filter((b) => !b.closest('app-quick-effects-leaf'))
+      .map((b) => b.textContent?.trim());
     expect(buttonLabels.some((l) => l === 'Damage' || l === 'Heal' || l === 'Cast')).toBe(false);
   });
 
   // plan-10 task-11-brief.md: the T11 effects-panel seam this component's own class doc reserved.
-  it('mounts app-dm-effects-panel once ready, with the live Sheet HP baseline resolved (no "no baseline" hint)', async () => {
+  it('mounts app-quick-effects-leaf once ready, with the live Sheet HP baseline resolved (no "no baseline" hint)', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
     const events = await TestBed.inject(EventsRepository).byStream(streamId);
 
-    openDialog({ campaignId, characterId, name: 'Ivan' });
+    openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     sync.emit(campaignId, streamId, events);
     TestBed.tick();
     await Promise.resolve();
     TestBed.tick();
 
-    const panel = document.querySelector('app-dm-effects-panel');
+    const panel = document.querySelector('app-quick-effects-leaf');
     expect(panel).toBeTruthy();
-
-    const toggle = panel?.querySelector<HTMLButtonElement>('.dm-effects-panel__toggle');
-    toggle?.click();
-    TestBed.tick();
 
     expect(panel?.textContent).not.toContain(
       'No HP baseline yet for this character — waiting on a party overview or a live sheet.',
@@ -258,7 +298,7 @@ describe('MemberSheetDialogComponent', () => {
 
   it('unauthorized-silent timeout renders the unauthorized status without crashing', async () => {
     // No `seedFighter` needed — this path never reaches `reduce`/`derive`.
-    openDialog({ campaignId, characterId: '11111111-1111-4111-8111-111111111111', name: 'Ghost' });
+    openDrawer({ campaignId, characterId: '11111111-1111-4111-8111-111111111111', name: 'Ghost' });
     TestBed.tick();
     await Promise.resolve();
     // The dialog's own session isn't given a small timeoutMs override in production wiring — this
@@ -267,41 +307,40 @@ describe('MemberSheetDialogComponent', () => {
     expect(document.body.textContent).toContain('Loading');
   });
 
-  it('close(): the Close button closes the dialog and sends unsubscribe', async () => {
+  it('close(): the Close button closes the drawer and sends unsubscribe', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
-    const handle = openDialog({ campaignId, characterId, name: 'Ivan' });
+    const handle = openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     await Promise.resolve();
 
-    const closeButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
-      (b) => b.textContent?.trim() === 'Close',
-    );
-    closeButton?.click();
+    document.querySelector<HTMLButtonElement>('.hk-drawer__head button')?.click();
     TestBed.tick();
-    await handle.closed;
+    await handle.closed();
+    expect(handle.host.closedCount).toBe(1);
 
     expect(sync.unsubscribeCalls).toEqual([{ campaignId, stream: streamId }]);
   });
 
-  it('navigating away from this campaign self-closes the dialog and sends unsubscribe', async () => {
+  it('navigating away from this campaign self-closes the drawer and sends unsubscribe', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
-    const handle = openDialog({ campaignId, characterId, name: 'Ivan' });
+    const handle = openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     await Promise.resolve();
 
     router.navigateTo('/campaigns');
     TestBed.tick();
-    await handle.closed;
+    await handle.closed();
+    expect(handle.host.closedCount).toBe(1);
 
     expect(sync.unsubscribeCalls).toEqual([{ campaignId, stream: streamId }]);
   });
 
-  it('navigating WITHIN the same campaign (a different tab) does NOT close the dialog', async () => {
+  it('a NavigationEnd WITHIN the same campaign (a different tab) does NOT close the drawer', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
-    openDialog({ campaignId, characterId, name: 'Ivan' });
+    openDrawer({ campaignId, characterId, name: 'Ivan' });
     TestBed.tick();
     await Promise.resolve();
 
@@ -311,6 +350,61 @@ describe('MemberSheetDialogComponent', () => {
 
     expect(sync.unsubscribeCalls).toEqual([]);
     expect(document.querySelector('[role="dialog"]')).toBeTruthy();
+  });
+
+  describe('closing the drawer', () => {
+    async function open() {
+      const streamId = await seedFighter('Ivan');
+      const characterId = streamId.slice('char:'.length);
+      const handle = openDrawer({ campaignId, characterId, name: 'Ivan' });
+      TestBed.tick();
+      await Promise.resolve();
+      return { handle, streamId };
+    }
+
+    it('Escape closes it and releases the viewer session', async () => {
+      const { handle, streamId } = await open();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      TestBed.tick();
+      await handle.closed();
+      expect(handle.host.closedCount).toBe(1);
+      expect(sync.unsubscribeCalls).toEqual([{ campaignId, stream: streamId }]);
+    });
+
+    it('a press outside the panel closes it', async () => {
+      const { handle, streamId } = await open();
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      TestBed.tick();
+      await handle.closed();
+      expect(handle.host.closedCount).toBe(1);
+      expect(sync.unsubscribeCalls).toEqual([{ campaignId, stream: streamId }]);
+    });
+
+    it('a router NavigationStart (browser Back, a deep link) closes it like any drawer', async () => {
+      const { handle, streamId } = await open();
+      router.startNavigation(`/g/${campaignId}/log`);
+      TestBed.tick();
+      await handle.closed();
+      expect(handle.host.closedCount).toBe(1);
+      expect(sync.unsubscribeCalls).toEqual([{ campaignId, stream: streamId }]);
+    });
+
+    it('draws the DM tools embedded: no member heading, close button or footer actions', async () => {
+      const streamId = await seedFighter('Ivan');
+      const characterId = streamId.slice('char:'.length);
+      const events = await TestBed.inject(EventsRepository).byStream(streamId);
+      openDrawer({ campaignId, characterId, name: 'Ivan' });
+      TestBed.tick();
+      sync.emit(campaignId, streamId, events);
+      TestBed.tick();
+      await Promise.resolve();
+      TestBed.tick();
+
+      const leaf = document.querySelector('app-quick-effects-leaf')!;
+      expect(leaf.querySelector('.hk-leaf__title-text')?.textContent?.trim()).toBe('DM tools');
+      expect(leaf.querySelector('.qfx__close')).toBeNull();
+      expect(leaf.querySelector('.qfx__footer')).toBeNull();
+    });
   });
 
   // --- plan 16 Task 5, ruling 6: the member's own pack set ---------------------------------------
@@ -337,7 +431,7 @@ describe('MemberSheetDialogComponent', () => {
     }
 
     async function openWith(member: { characterId: string; events: Event[] }): Promise<void> {
-      openDialog({ campaignId, characterId: member.characterId, name: 'Ivan' });
+      openDrawer({ campaignId, characterId: member.characterId, name: 'Ivan' });
       TestBed.tick();
       sync.emit(campaignId, `char:${member.characterId}`, member.events);
       TestBed.tick();
@@ -348,27 +442,25 @@ describe('MemberSheetDialogComponent', () => {
     const text = (selector: string): string[] =>
       Array.from(document.querySelectorAll(selector)).map((el) => el.textContent?.trim() ?? '');
 
-    function expandDmPanel(): HTMLElement {
-      const panel = document.querySelector<HTMLElement>('app-dm-effects-panel')!;
-      panel.querySelector<HTMLButtonElement>('.dm-effects-panel__toggle')?.click();
+    function showLeafConditions(): HTMLElement {
+      const panel = document.querySelector<HTMLElement>('app-quick-effects-leaf')!;
+      panel.querySelector<HTMLButtonElement>('[data-effect-tab="condition"]')?.click();
       TestBed.tick();
       return panel;
     }
 
-    it("names come from the member's index when this device has their pack — the sheet's chips and inventory, and the DM panel's conditions", async () => {
+    it("names come from the member's index when this device has their pack — the sheet's chips and inventory, and the DM leaf's conditions", async () => {
       packs.set([corePack, memberPack]);
       const member = await seedMember();
 
       await openWith(member);
 
-      expect(document.querySelector('.member-sheet-dialog__missing-packs')).toBeNull();
-      expect(text('.member-sheet-dialog__conditions hk-chip')).toEqual(['Moonstruck']);
-      expect(text('.member-sheet-dialog__inventory li')).toContain('Moonblade Sickle × 1');
-      const panel = expandDmPanel();
+      expect(document.querySelector('.msd__missing-packs')).toBeNull();
+      expect(text('.msd__conditions .hk-cond__name')).toEqual(['Moonstruck']);
+      expect(text('.msd__inventory li')).toContain('Moonblade Sickle × 1');
+      const panel = showLeafConditions();
       expect(
-        Array.from(panel.querySelectorAll('.dm-effects-panel__conditions hk-chip')).map((el) =>
-          el.textContent?.trim(),
-        ),
+        Array.from(panel.querySelectorAll('.qfx__cond-name')).map((el) => el.textContent?.trim()),
       ).toEqual([expect.stringContaining('Moonstruck')]);
     });
 
@@ -378,24 +470,20 @@ describe('MemberSheetDialogComponent', () => {
 
       await openWith(member);
 
-      const warning = document.querySelector('.member-sheet-dialog__missing-packs');
+      const warning = document.querySelector('.msd__missing-packs');
       expect(warning).not.toBeNull();
       expect(warning?.getAttribute('role')).toBe('status');
       expect(warning?.textContent).toContain(
         "This character uses a content pack that isn't installed on this device:",
       );
-      expect(text('.member-sheet-dialog__missing-packs li')).toEqual([
-        `${memberPack.id}@${memberPack.version}`,
-      ]);
+      expect(text('.msd__missing-packs li')).toEqual([`${memberPack.id}@${memberPack.version}`]);
       // The sheet itself still renders, its pack references as their raw ids.
       expect(text('.hk-stat-tile__value')).toContain('19');
-      expect(text('.member-sheet-dialog__conditions hk-chip')).toEqual([MOONSTRUCK]);
-      expect(text('.member-sheet-dialog__inventory li')).toContain(`${SICKLE} × 1`);
-      const panel = expandDmPanel();
+      expect(text('.msd__conditions .hk-cond__name')).toEqual([MOONSTRUCK]);
+      expect(text('.msd__inventory li')).toContain(`${SICKLE} × 1`);
+      const panel = showLeafConditions();
       expect(
-        Array.from(panel.querySelectorAll('.dm-effects-panel__conditions hk-chip')).map((el) =>
-          el.textContent?.trim(),
-        ),
+        Array.from(panel.querySelectorAll('.qfx__cond-name')).map((el) => el.textContent?.trim()),
       ).toEqual([expect.stringContaining(MOONSTRUCK)]);
     });
 

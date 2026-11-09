@@ -1,37 +1,46 @@
 <section class="log-tab" *transloco="let t; read: 'campaigns'">
-  <div class="log-tab__header">
-    <h2 class="log-tab__title">{{ t('log.title') }}</h2>
+  <!-- The session strip (board C09): the running session, and the DM's Start / End. -->
+  <div class="log-tab__strip" role="region" [attr.aria-label]="t('shell.session.active')">
+    <span class="log-tab__strip-ring"><hk-icon [icon]="'ui:session'" /></span>
+    <span class="log-tab__strip-status" role="status">
+      @if (sessionActive()) {
+        @if (sessionTitle(); as title) {
+          {{ t('log.session.runningWithTitle', { title }) }}
+        } @else {
+          {{ t('log.session.running') }}
+        }
+      } @else {
+        {{ t('log.session.idle') }}
+      }
+    </span>
 
     @if (isDm()) {
       @if (sessionActive()) {
         <button
           hk-button
           type="button"
-          [variant]="'danger'"
+          [variant]="'ember'"
           class="log-tab__session-end"
-          [disabled]="sessionBusy()"
+          [loading]="sessionBusy()"
           (click)="onEndSession()"
         >
           {{ sessionBusy() ? t('log.session.ending') : t('log.session.end') }}
         </button>
       } @else {
         <form class="log-tab__session-start" (ngSubmit)="onStartSession()">
-          <label class="log-tab__session-start-label" for="log-tab-session-title">{{
-            t('log.session.titleLabel')
-          }}</label>
-          <input
-            id="log-tab-session-title"
-            type="text"
+          <hk-text-field
             class="log-tab__session-start-title"
-            name="sessionTitle"
+            [label]="t('log.session.titleLabel')"
             [ngModel]="sessionTitleDraft()"
+            [ngModelOptions]="{ standalone: true }"
             (ngModelChange)="onSessionTitleChange($event)"
           />
           <button
             hk-button
             type="submit"
+            [variant]="'primary'"
             class="log-tab__session-start-submit"
-            [disabled]="sessionBusy()"
+            [loading]="sessionBusy()"
           >
             {{ sessionBusy() ? t('log.session.starting') : t('log.session.start') }}
           </button>
@@ -40,114 +49,155 @@
     }
   </div>
 
-  <div
-    class="log-tab__log"
-    role="log"
-    [attr.aria-live]="'polite'"
-    [attr.aria-label]="t('log.landmark')"
-    #logContainer
-  >
-    @if (entries().length === 0) {
-      <p class="log-tab__empty">{{ t('log.empty') }}</p>
-    }
-    @for (entry of entries(); track entry.eventId) {
-      @switch (entry.kind) {
-        @case ('session-start') {
-          <div class="log-tab__divider">
-            {{
-              entry.title
-                ? t('log.session.started', { title: entry.title })
-                : t('log.session.startedNoTitle')
-            }}
-          </div>
-        }
-        @case ('session-end') {
-          <div class="log-tab__divider">
-            {{
-              entry.title
-                ? t('log.session.ended', { title: entry.title })
-                : t('log.session.endedNoTitle')
-            }}
-          </div>
-        }
-        @case ('roll') {
-          <div class="log-tab__entry log-tab__entry--roll">
-            <span class="log-tab__entry-actor">{{ actorName(entry.actorUserId) }}</span>
-            <span class="log-tab__entry-label">{{ entry.payload.label }}</span>
-            <hk-dice-result [dice]="diceFor(entry)" [total]="entry.payload.total" />
-            <span class="log-tab__entry-formula">({{ entry.payload.formula }})</span>
-            @if (isOwn(entry.actorUserId) && entry.payload.visibility !== 'everyone') {
-              <span class="log-tab__hint-chip">{{
-                t('log.visibilityHint.' + entry.payload.visibility)
-              }}</span>
-            }
-          </div>
-        }
-        @case ('chat') {
-          <div class="log-tab__entry log-tab__entry--chat">
-            <span class="log-tab__entry-actor">{{ actorName(entry.actorUserId) }}</span>
-            <p class="log-tab__entry-text">{{ entry.payload.text }}</p>
-            @if (isOwn(entry.actorUserId) && entry.payload.visibility !== 'everyone') {
-              <span class="log-tab__hint-chip">{{
-                t('log.visibilityHint.' + entry.payload.visibility)
-              }}</span>
-            }
-          </div>
+  <hk-leaf class="log-tab__feed" [title]="t('log.title')" [icon]="'ui:notes'">
+    <div
+      class="log-tab__log"
+      role="log"
+      [attr.aria-live]="'polite'"
+      [attr.aria-label]="t('log.landmark')"
+      #logContainer
+    >
+      @if (entries().length === 0) {
+        <p class="log-tab__empty">{{ t('log.empty') }}</p>
+      }
+      @for (entry of entries(); track entry.eventId) {
+        @switch (entry.kind) {
+          @case ('session-start') {
+            <div class="log-tab__divider">
+              {{
+                entry.title
+                  ? t('log.session.started', { title: entry.title })
+                  : t('log.session.startedNoTitle')
+              }}
+            </div>
+          }
+          @case ('session-end') {
+            <div class="log-tab__divider">
+              {{
+                entry.title
+                  ? t('log.session.ended', { title: entry.title })
+                  : t('log.session.endedNoTitle')
+              }}
+            </div>
+          }
+          @case ('roll') {
+            <div
+              class="log-tab__entry log-tab__entry--roll"
+              [class.log-tab__entry--dm]="entry.payload.visibility !== 'everyone'"
+            >
+              <span class="log-tab__entry-actor">{{ actorName(entry.actorUserId) }}</span>
+              <span class="log-tab__entry-label">{{ entry.payload.label }}</span>
+              <hk-dice-result [dice]="diceFor(entry)" [total]="entry.payload.total" />
+              <span class="log-tab__entry-formula">({{ entry.payload.formula }})</span>
+              @if (entry.payload.visibility !== 'everyone') {
+                @if (isOwn(entry.actorUserId)) {
+                  <span class="log-tab__badge log-tab__hint-chip">
+                    <hk-icon [icon]="visibilityIcon(entry.payload.visibility)" />
+                    {{ t('log.visibilityHint.' + entry.payload.visibility) }}
+                  </span>
+                } @else {
+                  <span
+                    class="log-tab__badge"
+                    tabindex="0"
+                    [hkTooltip]="t('log.visibilityHint.other')"
+                  >
+                    <hk-icon [icon]="visibilityIcon(entry.payload.visibility)" />
+                    {{ t('log.composer.visibility.' + entry.payload.visibility) }}
+                  </span>
+                }
+              }
+            </div>
+          }
+          @case ('chat') {
+            <div
+              class="log-tab__entry log-tab__entry--chat"
+              [class.log-tab__entry--dm]="entry.payload.visibility !== 'everyone'"
+            >
+              <span class="log-tab__entry-actor">{{ actorName(entry.actorUserId) }}</span>
+              <p class="log-tab__entry-text">{{ entry.payload.text }}</p>
+              @if (entry.payload.visibility !== 'everyone') {
+                @if (isOwn(entry.actorUserId)) {
+                  <span class="log-tab__badge log-tab__hint-chip">
+                    <hk-icon [icon]="visibilityIcon(entry.payload.visibility)" />
+                    {{ t('log.visibilityHint.' + entry.payload.visibility) }}
+                  </span>
+                } @else {
+                  <span
+                    class="log-tab__badge"
+                    tabindex="0"
+                    [hkTooltip]="t('log.visibilityHint.other')"
+                  >
+                    <hk-icon [icon]="visibilityIcon(entry.payload.visibility)" />
+                    {{ t('log.composer.visibility.' + entry.payload.visibility) }}
+                  </span>
+                }
+              }
+            </div>
+          }
         }
       }
-    }
-  </div>
-
-  <form class="log-tab__composer" (ngSubmit)="onSend()">
-    <label class="log-tab__composer-label" for="log-tab-composer-text">{{
-      t('log.composer.label')
-    }}</label>
-    <textarea
-      id="log-tab-composer-text"
-      class="log-tab__composer-text"
-      name="chatText"
-      rows="2"
-      [ngModel]="draftText()"
-      (ngModelChange)="onDraftTextChange($event)"
-      [attr.aria-describedby]="'log-tab-composer-count'"
-    ></textarea>
-
-    <div class="log-tab__composer-row">
-      <span
-        id="log-tab-composer-count"
-        class="log-tab__composer-count"
-        [class.log-tab__composer-count--over]="overLimit()"
-      >
-        {{ t('log.composer.byteCount', { count: draftBytes(), max: 2048 }) }}
-      </span>
-
-      <div
-        class="log-tab__composer-visibility"
-        role="group"
-        [attr.aria-label]="t('log.composer.visibilityGroup')"
-      >
-        @for (option of visibilityOptions(); track option) {
-          <button
-            hk-button
-            type="button"
-            [variant]="draftVisibility() === option ? 'primary' : 'ghost'"
-            [attr.aria-pressed]="draftVisibility() === option"
-            (click)="onDraftVisibilityChange(option)"
-          >
-            {{ t('log.composer.visibility.' + option) }}
-          </button>
-        }
-      </div>
-
-      <button
-        hk-button
-        type="submit"
-        [variant]="'primary'"
-        class="log-tab__composer-send"
-        [disabled]="!canSend()"
-      >
-        {{ t('log.composer.send') }}
-      </button>
     </div>
-  </form>
+
+    <form class="log-tab__composer" (ngSubmit)="onSend()">
+      <hk-textarea
+        class="log-tab__composer-field"
+        [label]="t('log.composer.label')"
+        [rows]="2"
+        [ngModel]="draftText()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onDraftTextChange($event)"
+      />
+
+      <div class="log-tab__composer-row">
+        <div
+          class="log-tab__composer-visibility"
+          role="group"
+          [attr.aria-label]="t('log.composer.visibilityGroup')"
+        >
+          @for (option of visibilityOptions(); track option) {
+            <button
+              type="button"
+              class="log-tab__seg"
+              [attr.aria-pressed]="draftVisibility() === option"
+              (click)="onDraftVisibilityChange(option)"
+            >
+              <hk-icon [icon]="visibilityIcon(option)" />
+              {{ t('log.composer.visibility.' + option) }}
+            </button>
+          }
+        </div>
+
+        <span class="log-tab__composer-hint">{{
+          t('log.visibilityHint.' + draftVisibility())
+        }}</span>
+
+        <span
+          class="log-tab__composer-count"
+          tabindex="0"
+          [class.log-tab__composer-count--over]="overLimit()"
+          [attr.aria-label]="
+            t('log.composer.byteCountAria', { count: draftBytes(), max: maxBytes })
+          "
+          [hkTooltip]="t('log.composer.byteLimit', { max: maxBytes })"
+        >
+          {{ t('log.composer.byteCount', { count: draftBytes(), max: maxBytes }) }}
+        </span>
+
+        <button
+          hk-button
+          type="submit"
+          [variant]="'primary'"
+          class="log-tab__composer-send"
+          [loading]="sending()"
+          [disabledReason]="
+            sendReasonKey()
+              ? t('log.composer.sendReason.' + sendReasonKey(), { max: maxBytes })
+              : null
+          "
+        >
+          <hk-icon [icon]="'ui:cast'" />{{ t('log.composer.send') }}
+        </button>
+      </div>
+    </form>
+  </hk-leaf>
 </section>

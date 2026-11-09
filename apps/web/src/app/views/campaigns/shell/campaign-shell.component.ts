@@ -20,17 +20,16 @@ import { TabBarService, type TabItem } from '../../../ui/tab-bar/tab-bar.service
 import { CampaignExportDialogComponent } from '../settings/campaign-export-dialog.component';
 import { CampaignSelectionService, type DmEffectKind } from './campaign-selection.service';
 import { buildCampaignStrap } from './campaign-strap';
-import { campaignsScopeReady } from './scope-ready';
 
 const TAB_IDS = ['party', 'log', 'lobby', 'settings'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /** Icons and (campaigns-scope) label keys of the tabs; the Table tab keeps the `log` route. */
 const TAB_ITEMS: Record<TabId, Pick<TabItem, 'icon' | 'label'>> = {
-  party: { icon: 'campaigns', label: 'campaigns.shell.tabs.party' },
-  log: { icon: 'notes', label: 'campaigns.shell.tabs.log' },
-  lobby: { icon: 'join', label: 'campaigns.shell.tabs.lobby' },
-  settings: { icon: 'settings', label: 'campaigns.shell.tabs.settings' },
+  party: { icon: 'campaigns', label: 'shell.tabs.campaign-party' },
+  log: { icon: 'notes', label: 'shell.tabs.campaign-table' },
+  lobby: { icon: 'join', label: 'shell.tabs.campaign-lobby' },
+  settings: { icon: 'settings', label: 'shell.tabs.campaign-settings' },
 };
 
 /**
@@ -43,7 +42,7 @@ const TAB_ITEMS: Record<TabId, Pick<TabItem, 'icon' | 'label'>> = {
  *
  * The strap (`buildCampaignStrap`): the DM's Damage · Heal · Condition · XP · Item act on the
  * member picked on the Party tab (`CampaignSelectionService` — the strap posts a request and that
- * member's effects panel runs its own action), Session starts or ends the session, Export opens
+ * member's quick-effects leaf runs its own action), Session starts or ends the session, Export opens
  * the export dialog; a player gets Open my sheet when they have a hero here.
  *
  * ## Follower-mode "stale" notice (task-5-report.md's carried concern; task-6-brief.md ruling)
@@ -79,21 +78,14 @@ export class CampaignShellComponent {
   protected readonly tabIds = TAB_IDS;
   protected readonly tabIcon = (id: TabId): string => `ui:${TAB_ITEMS[id].icon}`;
 
-  /** The strap's and the tab bar's labels live in the `campaigns` scope; see `campaignsScopeReady`. */
-  private readonly labelsReady = campaignsScopeReady([
-    'shell.tabs.party',
-    'shell.tabs.log',
-    'shell.tabs.lobby',
-    'shell.tabs.settings',
-    'shell.strap.item',
-    'shell.strap.sessionStart',
-    'shell.strap.sessionEnd',
-    'shell.strap.openSheet',
-  ]);
-
   /** The one breakpoint signal (`ui/shell/viewport`): phone below 768 px. */
   protected readonly phone = phoneLayout();
-  private readonly routeId = this.route.snapshot.paramMap.get('id') ?? '';
+  /** Reactive: Angular reuses this shell for `/g/a` to `/g/b`, so a snapshot would go stale. */
+  private readonly routeId = toSignal(
+    this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
+    { initialValue: this.route.snapshot.paramMap.get('id') ?? '' },
+  );
+  private lastRouteId = this.routeId();
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
@@ -125,6 +117,15 @@ export class CampaignShellComponent {
     effect(() => this.setStrap());
     effect(() => this.setTabBar());
     effect(() => this.setTopBar());
+    // A selection belongs to one campaign: a reused shell for another campaign starts clean.
+    effect(() => {
+      const id = this.routeId();
+      untracked(() => {
+        if (id === this.lastRouteId) return;
+        this.lastRouteId = id;
+        this.selection.clear();
+      });
+    });
 
     inject(DestroyRef).onDestroy(() => {
       this.strap.clear();
@@ -158,7 +159,7 @@ export class CampaignShellComponent {
     queueMicrotask(() => document.getElementById(`campaign-tab-${TAB_IDS[next]}`)?.focus());
   }
 
-  /** The effects live on the Party tab's panels: from another tab, go there and run it once. */
+  /** The quick-effects leaf lives on the Party tab: from another tab, go there and run it once. */
   private runEffect(kind: DmEffectKind): void {
     if (this.activeTabId() === 'party') {
       this.selection.requestEffect(kind);
@@ -170,15 +171,15 @@ export class CampaignShellComponent {
   }
 
   private setStrap(): void {
-    this.labelsReady();
     const role = this.role();
     const selected = this.selection.selected() !== null;
     const sessionActive = this.state()?.session?.active ?? false;
     const canOpenSheet = this.ownCharacterId() !== undefined;
+    const scope = ['/g', this.routeId()];
     untracked(() =>
       this.strap.set(
         buildCampaignStrap(
-          { role, selected, sessionActive, canOpenSheet, scope: ['/g', this.routeId] },
+          { role, selected, sessionActive, canOpenSheet, scope },
           {
             effect: (kind) => this.runEffect(kind),
             toggleSession: () => void this.toggleSession(),
@@ -194,13 +195,12 @@ export class CampaignShellComponent {
   }
 
   private setTabBar(): void {
-    this.labelsReady();
     this.tabBar.set(
       this.phone()
         ? TAB_IDS.map((id) => ({
             id,
             ...TAB_ITEMS[id],
-            route: ['/g', this.routeId, id],
+            route: ['/g', this.routeId(), id],
           }))
         : null,
     );
@@ -208,11 +208,12 @@ export class CampaignShellComponent {
 
   private setTopBar(): void {
     const name = this.state()?.name;
+    const scope = ['/g', this.routeId()];
     if (!this.phone() || !name) {
       untracked(() => this.topBar.clear());
       return;
     }
-    untracked(() => this.topBar.set({ title: name, scope: ['/g', this.routeId] }));
+    untracked(() => this.topBar.set({ title: name, scope }));
   }
 
   /** Start with no title (the Table tab's own form names a session), or end the running one. */

@@ -1,0 +1,160 @@
+/* Member sheet drawer (board C08): a read-only sheet in the drawer body, the DM tools at its foot.
+   Tokens only. */
+:host {
+  display: contents;
+}
+
+.msd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.msd__subtitle {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.msd__status {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.msd__status--error {
+  color: var(--danger);
+}
+
+.msd__missing-packs {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning-border, var(--border-1));
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.msd__missing-packs-text {
+  margin: 0 0 var(--space-1);
+}
+
+.msd__missing-packs-list {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.msd__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.msd__heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+}
+
+.msd__subheading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.msd__hp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.msd__hp-num {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.msd__gauge {
+  position: relative;
+  display: flex;
+  flex: 1 1 8rem;
+  block-size: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border-1);
+}
+
+.msd__gauge-hp {
+  background: var(--ember);
+}
+
+.msd__gauge-temp {
+  background: var(--accent-strong);
+}
+
+.msd__death-saves {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.msd__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: var(--space-2);
+}
+
+.msd__abilities {
+  padding: var(--space-3);
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--leather), var(--leather-dark));
+  color: var(--text-on-leather);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+.msd__skills,
+.msd__inventory,
+.msd__spell-lists ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.msd__skills {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  column-gap: var(--space-4);
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding-block: 2px;
+    border-block-end: 1px solid var(--border-1);
+  }
+}
+
+.msd__conditions,
+.msd__resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.msd__spellblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.msd__spell-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.msd__empty {
+  margin: 0;
+  color: var(--text-2);
+}

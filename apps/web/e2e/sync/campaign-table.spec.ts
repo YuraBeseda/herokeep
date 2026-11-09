@@ -153,7 +153,7 @@ test.describe('campaign: core table flow', () => {
       await test.step('DM unlinks the now-ownerless character from the roster', async () => {
         await gotoParty(page, campaignId);
         await unlinkCharacter(page, memberCharacterName);
-        await expect(page.locator('.party-tab__unlink')).toHaveCount(0);
+        await expect(page.locator('.qfx__unlink')).toHaveCount(0);
       });
     } finally {
       await memberContext.close();

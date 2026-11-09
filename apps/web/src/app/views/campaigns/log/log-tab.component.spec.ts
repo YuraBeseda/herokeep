@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
+import { hintOf } from '../../../ui/testing/harness';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
 import type { CampaignState, LogEntry } from '@shared/services/campaigns/campaign-projection';
@@ -103,6 +104,11 @@ function chatEntry(
     actorUserId: 'u-player',
     payload: { text: 'Hello party', visibility: 'everyone', ...overrides },
   };
+}
+
+/** `hk-button` keeps a blocked button focusable (its reason is the hint): `aria-disabled`. */
+function isBlocked(button: HTMLButtonElement): boolean {
+  return button.getAttribute('aria-disabled') === 'true';
 }
 
 describe('LogTabComponent', () => {
@@ -288,7 +294,7 @@ describe('LogTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(sendButton(compiled).disabled).toBe(true);
+      expect(isBlocked(sendButton(compiled))).toBe(true);
     });
 
     it('shows the BYTE count (not the char count) for Cyrillic text, and disables send once bytes exceed 2048 even though chars stay under it', async () => {
@@ -311,7 +317,7 @@ describe('LogTabComponent', () => {
           .querySelector('.log-tab__composer-count')
           ?.classList.contains('log-tab__composer-count--over'),
       ).toBe(true);
-      expect(sendButton(compiled).disabled).toBe(true);
+      expect(isBlocked(sendButton(compiled))).toBe(true);
     });
 
     it('enables send once the draft is non-empty and within both caps', async () => {
@@ -324,7 +330,7 @@ describe('LogTabComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
 
       expect(compiled.querySelector('.log-tab__composer-count')?.textContent).toContain('11');
-      expect(sendButton(compiled).disabled).toBe(false);
+      expect(isBlocked(sendButton(compiled))).toBe(false);
     });
   });
 
@@ -491,8 +497,10 @@ describe('LogTabComponent', () => {
       let compiled = fixture.nativeElement as HTMLElement;
 
       expect(compiled.querySelector('.log-tab__session-end')).toBeNull();
-      const titleInput = compiled.querySelector<HTMLInputElement>('#log-tab-session-title')!;
-      const label = compiled.querySelector('label[for="log-tab-session-title"]');
+      const titleInput = compiled.querySelector<HTMLInputElement>(
+        '.log-tab__session-start-title input',
+      )!;
+      const label = compiled.querySelector(`label[for="${titleInput.id}"]`);
       expect(label?.textContent?.trim()).toBe(campaignsEn.log.session.titleLabel);
 
       titleInput.value = 'Session 4: Into the mist';
@@ -568,6 +576,184 @@ describe('LogTabComponent', () => {
       await fixture.whenStable();
 
       expect(showSpy).toHaveBeenCalledWith('campaigns.log.session.errors.generic');
+    });
+  });
+
+  describe('the session strip (board C09)', () => {
+    it('says "No session running" to everyone while idle, and a player gets no controls', async () => {
+      configure({ role: 'player', state: mkState({ session: { active: false } }) });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.log-tab__strip-status')?.textContent?.trim()).toBe(
+        campaignsEn.log.session.idle,
+      );
+      expect(compiled.querySelector('.log-tab__strip button')).toBeNull();
+    });
+
+    it('names the running session with its title', async () => {
+      configure({
+        role: 'player',
+        state: mkState({ session: { active: true, title: 'Session 4' } }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      expect(
+        (fixture.nativeElement as HTMLElement)
+          .querySelector('.log-tab__strip-status')
+          ?.textContent?.trim(),
+      ).toBe('Session in progress — Session 4');
+    });
+
+    it('names the running session without a title when it has none', async () => {
+      configure({ role: 'player', state: mkState({ session: { active: true } }) });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      expect(
+        (fixture.nativeElement as HTMLElement)
+          .querySelector('.log-tab__strip-status')
+          ?.textContent?.trim(),
+      ).toBe(campaignsEn.log.session.running);
+    });
+
+    it('lets the DM end the running session from the strip, and shows Start only while idle', async () => {
+      const { appendTx } = configure({
+        role: 'dm',
+        state: mkState({ session: { active: true, title: 'Session 4' } }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.log-tab__strip .log-tab__session-start')).toBeNull();
+      compiled.querySelector<HTMLButtonElement>('.log-tab__strip .log-tab__session-end')!.click();
+      await fixture.whenStable();
+      expect(appendTx).toHaveBeenCalledWith([{ type: 'session.ended', v: 1, payload: {} }]);
+    });
+  });
+
+  describe('visibility badges', () => {
+    it("badges the viewer's own private chat with the lock and its full explanation", async () => {
+      configure({
+        userId: 'u-player',
+        state: mkState({ log: [chatEntry({ visibility: 'private' })] }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const badge = compiled.querySelector('.log-tab__entry--chat .log-tab__hint-chip')!;
+      expect(badge.textContent?.trim()).toBe(campaignsEn.log.visibilityHint.private);
+      expect(badge.querySelector('hk-icon')).not.toBeNull();
+      expect(compiled.querySelector('.log-tab__entry--chat')?.classList).toContain(
+        'log-tab__entry--dm',
+      );
+    });
+
+    it("badges someone else's DM-only roll for the DM with a short label, the explanation as its hint", async () => {
+      configure({
+        role: 'dm',
+        userId: 'u-dm',
+        state: mkState({ log: [rollEntry({ visibility: 'dm' })] }), // actorUserId: 'u-player'
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const badge = compiled.querySelector<HTMLElement>('.log-tab__entry--roll .log-tab__badge')!;
+      expect(badge.classList).not.toContain('log-tab__hint-chip');
+      expect(badge.textContent?.trim()).toBe(campaignsEn.log.composer.visibility.dm);
+      expect(hintOf(badge)).toBe(campaignsEn.log.visibilityHint.other);
+      expect(compiled.querySelector('.log-tab__entry--roll')?.classList).toContain(
+        'log-tab__entry--dm',
+      );
+    });
+
+    it('draws no badge and no leather slip on an entry for everyone', async () => {
+      configure({
+        userId: 'u-player',
+        state: mkState({ log: [chatEntry({ visibility: 'everyone' })] }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.log-tab__badge')).toBeNull();
+      expect(compiled.querySelector('.log-tab__entry--dm')).toBeNull();
+    });
+  });
+
+  describe('the composer (board C09)', () => {
+    function type(fixture: ReturnType<typeof TestBed.createComponent>, value: string): void {
+      const textarea = (fixture.nativeElement as HTMLElement).querySelector('textarea')!;
+      textarea.value = value;
+      textarea.dispatchEvent(new Event('input'));
+    }
+
+    it('shows the count as "n / 2048" with the byte limit as its hint and the full phrase as its name', async () => {
+      configure({ state: mkState() });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      type(fixture, 'Hello');
+      await fixture.whenStable();
+      const count = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        '.log-tab__composer-count',
+      )!;
+
+      expect(count.textContent?.trim()).toBe('5 / 2048');
+      expect(count.getAttribute('aria-label')).toBe('5 of 2048 bytes');
+      expect(hintOf(count)).toBe('2048 bytes per message');
+    });
+
+    it('says why Send is unavailable in its hint, never beside it: empty, then too long', async () => {
+      configure({ state: mkState() });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const send = compiled.querySelector<HTMLButtonElement>('.log-tab__composer-send')!;
+
+      expect(hintOf(send)).toBe(campaignsEn.log.composer.sendReason.empty);
+      type(fixture, 'п'.repeat(1025));
+      await fixture.whenStable();
+      expect(hintOf(send)).toBe('The message is over 2048 bytes');
+      type(fixture, 'fine');
+      await fixture.whenStable();
+      expect(isBlocked(send)).toBe(false);
+      expect(hintOf(send)).toBeNull();
+    });
+
+    it('explains the chosen visibility beside the picker, and the picker marks one choice', async () => {
+      configure({ state: mkState() });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const hint = (): string | undefined =>
+        compiled.querySelector('.log-tab__composer-hint')?.textContent?.trim();
+
+      expect(hint()).toBe(campaignsEn.log.visibilityHint.everyone);
+      Array.from(
+        compiled.querySelectorAll<HTMLButtonElement>('.log-tab__composer-visibility button'),
+      )
+        .find((b) => b.textContent?.trim() === campaignsEn.log.composer.visibility.private)!
+        .click();
+      await fixture.whenStable();
+      expect(hint()).toBe(campaignsEn.log.visibilityHint.private);
+      expect(
+        compiled.querySelectorAll('.log-tab__composer-visibility [aria-pressed="true"]'),
+      ).toHaveLength(1);
+    });
+
+    it('keeps the textarea inside its leaf: a full-width field in a wrapping row', async () => {
+      configure({ state: mkState() });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const composer = compiled.querySelector('.log-tab__composer')!;
+      expect(composer.closest('hk-leaf')).not.toBeNull();
+      expect(composer.querySelector('.log-tab__composer-field textarea')).not.toBeNull();
+      expect(composer.querySelector('.log-tab__composer-row')).not.toBeNull();
     });
   });
 });

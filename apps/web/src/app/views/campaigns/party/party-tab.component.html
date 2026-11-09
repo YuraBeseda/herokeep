@@ -1,23 +1,33 @@
 <section class="party-tab" *transloco="let t; read: 'campaigns'">
   <div class="party-tab__header">
-    <h2 class="party-tab__title">{{ t('party.title') }}</h2>
+    <h2 class="party-tab__title">
+      <hk-icon [icon]="'ui:campaigns'" />
+      {{ t('party.title') }}
+    </h2>
+    @if (isDm() && cards().length > 0) {
+      <span class="party-tab__hint">{{ t('party.hint') }}</span>
+    }
+    <span class="party-tab__spacer"></span>
     @if (isDm()) {
       <button
         hk-button
         type="button"
-        [variant]="'ghost'"
+        [variant]="'parchment'"
         class="party-tab__add-pregen"
         (click)="addPregen()"
       >
-        {{ t('party.addPregen') }}
+        <hk-icon [icon]="'ui:add'" />{{ t('party.addPregen') }}
       </button>
     }
   </div>
 
+  <!-- The encounter plate (board C06) sits here; its data arrives with plan slice 2. -->
+
   @if (!hasOwnActiveCharacter()) {
-    <div class="party-tab__link-cta">
-      <p class="party-tab__link-cta-body">{{ t('party.linkCta.body') }}</p>
+    <hk-banner class="party-tab__link-cta" [variant]="'info'">
+      <span class="party-tab__link-cta-body">{{ t('party.linkCta.body') }}</span>
       <button
+        hkBannerActions
         hk-button
         type="button"
         [variant]="'primary'"
@@ -26,154 +36,161 @@
       >
         {{ t('party.linkCta.action') }}
       </button>
-    </div>
+    </hk-banner>
   }
 
   @if (!isDm() && partySheetsMode() === 'none') {
-    <p class="party-tab__hidden-notice">{{ t('party.hiddenNotice') }}</p>
+    <hk-banner class="party-tab__hidden-notice" [variant]="'info'">{{
+      t('party.hiddenNotice')
+    }}</hk-banner>
   }
 
   @if (cards().length === 0) {
     <p class="party-tab__empty">{{ t('party.empty') }}</p>
   } @else {
-    <div class="party-tab__grid">
-      @for (card of cards(); track card.characterId) {
-        <div
-          class="party-tab__card"
-          role="group"
-          [attr.aria-label]="card.name"
-          [attr.data-left]="card.left"
-          [attr.data-selected]="isSelected(card)"
-        >
-          @if ((card.overview?.portraitThumb | blobUrl)(); as thumbUrl) {
-            <img
-              class="party-tab__portrait"
-              [src]="thumbUrl"
-              [alt]="t('party.card.portraitAlt', { name: card.name })"
-            />
-          } @else {
-            <div
-              class="party-tab__portrait party-tab__portrait--placeholder"
-              [style.background]="monogram(card.name, card.characterId).background"
-              aria-hidden="true"
-            >
-              {{ monogram(card.name, card.characterId).initials }}
-            </div>
-          }
-
-          <span class="party-tab__name">{{ card.name }}</span>
-
-          @if (isPregen(card)) {
-            <span class="party-tab__pregen-badge">{{ t('party.card.pregenBadge') }}</span>
-          }
-
-          @if (card.left) {
-            <span class="party-tab__left-badge">{{ t('party.card.leftBadge') }}</span>
-          }
-
-          @if (isDm() && !card.left) {
-            <button
-              hk-button
-              type="button"
-              [variant]="isSelected(card) ? 'primary' : 'ghost'"
-              class="party-tab__select"
-              [attr.aria-pressed]="isSelected(card)"
-              [attr.aria-label]="t('party.card.selectAria', { name: card.name })"
-              (click)="toggleSelected(card)"
-            >
-              {{ isSelected(card) ? t('party.card.selected') : t('party.card.select') }}
-            </button>
-          }
-
-          @if (canDrillIn()) {
-            <button
-              hk-button
-              type="button"
-              [variant]="'ghost'"
-              class="party-tab__view-sheet"
-              (click)="openMemberSheet(card)"
-            >
-              {{ t('party.card.viewSheet') }}
-            </button>
-          }
-
-          @if (canUnlink(card)) {
-            <button
-              hk-button
-              type="button"
-              [variant]="'danger'"
-              class="party-tab__unlink"
-              (click)="openUnlink(card)"
-            >
-              {{ t('unlink.action') }}
-            </button>
-          }
-
-          @if (canHandOver(card)) {
-            <button
-              hk-button
-              type="button"
-              [variant]="'primary'"
-              class="party-tab__handover"
-              (click)="openHandover(card)"
-            >
-              {{ t('handover.action') }}
-            </button>
-          }
-
-          @if (showOverviewDetails() && card.overview; as ov) {
-            <div class="party-tab__hp">
-              <hk-hp-bar
-                class="party-tab__hp-bar"
-                [current]="ov.hp"
-                [max]="ov.hpMax"
-                [temp]="ov.temp"
-              />
-              <span class="party-tab__hp-text">
-                @if (ov.temp > 0) {
-                  {{ t('party.card.hpWithTemp', { hp: ov.hp, hpMax: ov.hpMax, temp: ov.temp }) }}
-                } @else {
-                  {{ t('party.card.hp', { hp: ov.hp, hpMax: ov.hpMax }) }}
+    <div class="party-tab__layout" [class.party-tab__layout--leaf]="selectedCard()">
+      <div class="party-tab__grid">
+        @for (card of cards(); track card.characterId) {
+          <div
+            #cell
+            class="party-tab__card"
+            role="group"
+            [attr.aria-label]="card.name"
+            [attr.data-left]="card.left"
+            [attr.data-selected]="isSelected(card)"
+            [attr.data-mine]="isMine(card)"
+            [attr.tabindex]="isDm() && !card.left ? 0 : null"
+            [attr.aria-current]="isSelected(card) ? 'true' : null"
+            (click)="onCellPress($event, card)"
+            (keydown)="onCellKey($event, card)"
+          >
+            @if (isPregen(card) || card.left || isMine(card)) {
+              <div class="party-tab__badges">
+                @if (isMine(card)) {
+                  <span class="party-tab__mine-badge">{{ t('party.card.yours') }}</span>
                 }
-              </span>
-            </div>
-
-            <div class="party-tab__stats">
-              <span class="party-tab__stat">{{ t('party.card.ac', { ac: ov.ac }) }}</span>
-              <span class="party-tab__stat">{{
-                t('party.card.passivePerception', { value: ov.passivePerception })
-              }}</span>
-            </div>
-
-            @if (classLine(t, ov); as line) {
-              <p class="party-tab__classes">{{ line }}</p>
-            }
-
-            @if (ov.concentration) {
-              <span class="party-tab__concentration">
-                <span class="party-tab__concentration-dot" aria-hidden="true"></span>
-                {{ t('party.card.concentrating') }}
-              </span>
-            }
-
-            @if (ov.conditions.length > 0) {
-              <ul class="party-tab__conditions">
-                @for (conditionId of ov.conditions; track conditionId) {
-                  <li class="party-tab__condition">{{ conditionName(conditionId) }}</li>
+                @if (isPregen(card)) {
+                  <span class="party-tab__pregen-badge">{{ t('party.card.pregenBadge') }}</span>
                 }
-              </ul>
+                @if (card.left) {
+                  <span class="party-tab__left-badge">{{ t('party.card.leftBadge') }}</span>
+                }
+              </div>
             }
-          } @else if (!card.left) {
-            <p class="party-tab__no-overview">{{ t('party.card.noOverview') }}</p>
-          }
 
-          @if (isDm() && !card.left) {
-            <app-dm-effects-panel
-              [characterId]="card.characterId"
-              [hp]="hpSnapshot(card)"
-              [activeConditionIds]="activeConditionIds(card)"
-            />
-          }
+            @if (showOverviewDetails() && card.overview; as ov) {
+              <hk-party-card
+                [name]="card.name"
+                [subtitle]="classLine(t, card)"
+                [portraitSrc]="(ov.portraitThumb | blobUrl)() ?? null"
+                [ac]="ov.ac"
+                [hpCurrent]="ov.hp"
+                [hpMax]="ov.hpMax"
+                [hpTemp]="ov.temp"
+                [conditions]="conditions(card)"
+                [concentrating]="ov.concentration"
+                [dying]="ov.hp === 0 && ov.hpMax > 0"
+                [openable]="canDrillIn()"
+                (open)="openFromCard(card, cell)"
+              >
+                @if (isDm() && !card.left) {
+                  <div
+                    hkPartyFx
+                    class="party-tab__fx"
+                    role="group"
+                    [attr.aria-label]="t('party.fx.label', { name: card.name })"
+                  >
+                    @for (kind of fxKinds(); track kind) {
+                      <button
+                        type="button"
+                        class="party-tab__fx-chip"
+                        [attr.data-effect-chip]="kind"
+                        (click)="pickEffect(card, kind)"
+                      >
+                        <hk-icon [icon]="fxIcon(kind)" />
+                        <span>{{ t('dmEffects.tabs.' + kind) }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+              </hk-party-card>
+              <p class="party-tab__stat">
+                {{ t('party.card.passivePerception', { value: ov.passivePerception }) }}
+              </p>
+            } @else {
+              <div class="party-tab__plain">
+                <hk-portrait-frame
+                  [name]="card.name"
+                  [src]="(card.overview?.portraitThumb | blobUrl)() ?? null"
+                  [size]="'s'"
+                />
+                <span class="party-tab__name">{{ card.name }}</span>
+                @if (!card.left) {
+                  <p class="party-tab__no-overview">{{ t('party.card.noOverview') }}</p>
+                }
+                @if (canDrillIn() && !card.left) {
+                  <button
+                    hk-button
+                    type="button"
+                    class="party-tab__view-sheet"
+                    [variant]="'parchment'"
+                    (click)="openMemberSheet(card, $any($event.currentTarget))"
+                  >
+                    {{ t('party.card.viewSheet') }}
+                  </button>
+                }
+                @if (isDm() && !card.left) {
+                  <div
+                    class="party-tab__fx"
+                    role="group"
+                    [attr.aria-label]="t('party.fx.label', { name: card.name })"
+                  >
+                    @for (kind of fxKinds(); track kind) {
+                      <button
+                        type="button"
+                        class="party-tab__fx-chip"
+                        [attr.data-effect-chip]="kind"
+                        (click)="pickEffect(card, kind)"
+                      >
+                        <hk-icon [icon]="fxIcon(kind)" />
+                        <span>{{ t('dmEffects.tabs.' + kind) }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            @if (isMine(card)) {
+              <button
+                hk-button
+                type="button"
+                class="party-tab__open-mine"
+                [variant]="'primary'"
+                (click)="openMySheet(card)"
+              >
+                {{ t('party.card.openMine') }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (selectedCard(); as picked) {
+        <div #leafBox class="party-tab__leaf">
+          <app-quick-effects-leaf
+            [characterId]="picked.characterId"
+            [name]="picked.name"
+            [hp]="hpSnapshot(picked)"
+            [activeConditionIds]="activeConditionIds(picked)"
+            [canOpenSheet]="canDrillIn()"
+            [canHandOver]="canHandOver(picked)"
+            [canUnlink]="canUnlink(picked)"
+            (closed)="closeLeaf()"
+            (openSheet)="openFromLeaf(picked, leafBox)"
+            (handOver)="openHandover(picked)"
+            (unlink)="openUnlink(picked)"
+          />
         </div>
       }
     </div>
@@ -195,5 +212,15 @@
         }
       </ul>
     </div>
+  }
+
+  @if (drawer(); as target) {
+    <app-member-sheet-drawer
+      [campaignId]="campaignId() ?? ''"
+      [characterId]="target.characterId"
+      [name]="target.name"
+      [opener]="target.opener"
+      (closed)="drawer.set(null)"
+    />
   }
 </section>

@@ -170,7 +170,12 @@
     "secondary": "More actions",
     "reason-no-filters": "No filters for this list",
     "add-condition": "Add condition",
-    "roll-log": "Roll log"
+    "roll-log": "Roll log",
+    "campaign-item": "Item",
+    "campaign-session-start": "Start session",
+    "campaign-session-end": "End session",
+    "campaign-open-sheet": "Open my sheet",
+    "campaign-select-member": "Pick a hero on the Party tab first"
   },
   "tabs": {
     "landmark": "Sections of this screen",
@@ -178,7 +183,11 @@
     "spells": "Spells",
     "bag": "Bag",
     "hero": "Hero",
-    "more": "More"
+    "more": "More",
+    "campaign-party": "Party",
+    "campaign-table": "Table",
+    "campaign-lobby": "Lobby",
+    "campaign-settings": "Settings"
   },
   "theme": {
     "menu": "Theme",

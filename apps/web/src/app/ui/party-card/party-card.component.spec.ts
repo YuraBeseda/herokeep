@@ -135,6 +135,13 @@ describe('HkPartyCardComponent', () => {
     expect(opened).toBe(2);
   });
 
+  it('omits the open button when the card is not openable', async () => {
+    const { el } = await mount(HkPartyCardComponent, { ...base, openable: false });
+    expect(el.querySelector('.hk-party__open')).toBeNull();
+    const openable = await mount(HkPartyCardComponent, base);
+    expect(openable.el.querySelector('.hk-party__open')).not.toBeNull();
+  });
+
   it('projects quick-effect chips into the fx row, which is empty (and hidden) without them', async () => {
     @Component({
       imports: [HkPartyCardComponent],

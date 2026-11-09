@@ -8,10 +8,11 @@ import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore, type AckOrReject } from '@shared/stores/campaign.store';
 import type { DraftEvent } from '@shared/stores/character.store';
-import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
-import { CampaignSelectionService } from '../shell/campaign-selection.service';
-import { DmEffectsPanelComponent } from './dm-effects-panel.component';
-import type { ConditionDialogResult } from '../../characters/sheet/play/condition-dialog.component';
+import campaignsEn from '../../../../../assets/i18n/campaigns/en.json';
+import { CampaignSelectionService } from '../../shell/campaign-selection.service';
+import { QuickEffectsLeafComponent } from './quick-effects-leaf.component';
+import { hintOf } from '../../../../ui/testing/harness';
+import type { ConditionDialogResult } from '../../../characters/sheet/play/condition-dialog.component';
 
 const CHARACTER_ID = '00000000-0000-4000-8000-0000000000c1';
 const OK_RESULT: AckOrReject = { acked: [{ id: 'x', seq: 1 }], rejected: [] };
@@ -39,17 +40,29 @@ const LOCALIZER = {
 };
 
 @Component({
-  selector: 'app-dm-effects-panel-host',
-  imports: [DmEffectsPanelComponent],
+  selector: 'app-quick-effects-leaf-host',
+  imports: [QuickEffectsLeafComponent],
   template: `
-    <app-dm-effects-panel
+    <app-quick-effects-leaf
       [characterId]="characterId()"
+      [name]="'Ilyana'"
       [hp]="hp()"
       [activeConditionIds]="activeConditionIds()"
+      [canOpenSheet]="true"
+      [canHandOver]="true"
+      [canUnlink]="true"
+      (closed)="closedCount = closedCount + 1"
+      (openSheet)="openedSheet = openedSheet + 1"
+      (handOver)="handedOver = handedOver + 1"
+      (unlink)="unlinked = unlinked + 1"
     />
   `,
 })
 class HostComponent {
+  closedCount = 0;
+  openedSheet = 0;
+  handedOver = 0;
+  unlinked = 0;
   readonly characterId = signal(CHARACTER_ID);
   readonly hp = signal<HpSnapshot | undefined>({ current: 10, max: 20, temp: 2 });
   readonly activeConditionIds = signal<readonly string[]>([]);
@@ -121,36 +134,66 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
   await fixture.whenStable();
 }
 
-function expand(compiled: HTMLElement): void {
-  compiled.querySelector<HTMLButtonElement>('.dm-effects-panel__toggle')!.click();
+/** Picks an effect tab, the way a click on its chip does. */
+function pick(fixture: { detectChanges(): void }, compiled: HTMLElement, id: string): void {
+  compiled.querySelector<HTMLButtonElement>(`[data-effect-tab="${id}"]`)!.click();
+  fixture.detectChanges();
+}
+
+/** The input a label points at (`hk-text-field` / `hk-number-field` label their input by id). */
+function inputOf(compiled: HTMLElement, labelText: string): HTMLInputElement {
+  const label = Array.from(compiled.querySelectorAll('label')).find((l) =>
+    l.textContent?.includes(labelText),
+  )!;
+  return compiled.querySelector<HTMLInputElement>(`#${label.htmlFor}`)!;
 }
 
 function setNumberField(compiled: HTMLElement, labelText: string, value: number): void {
-  const labels = Array.from(compiled.querySelectorAll('label'));
-  const label = labels.find((l) => l.textContent?.includes(labelText))!;
-  const input = label.querySelector<HTMLInputElement>('input')!;
+  const input = inputOf(compiled, labelText);
   input.value = String(value);
   input.dispatchEvent(new Event('input'));
 }
 
-function clickButtonWithText(compiled: HTMLElement, text: string): void {
-  const buttons = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button'));
-  const button = buttons.find((b) => b.textContent?.trim() === text);
-  button!.click();
+/** A form button by its label (tabs are not form buttons; a button's hidden reason is not its label). */
+function buttonWithText(compiled: HTMLElement, text: string): HTMLButtonElement | undefined {
+  return Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+    (b) =>
+      b.getAttribute('role') !== 'tab' &&
+      (b.querySelector('.hk-button__label')?.textContent ?? b.textContent)?.trim() === text,
+  );
 }
 
-describe('DmEffectsPanelComponent', () => {
-  it('starts collapsed; the toggle expands the body', async () => {
+function clickButtonWithText(compiled: HTMLElement, text: string): void {
+  buttonWithText(compiled, text)!.click();
+}
+
+describe('QuickEffectsLeafComponent', () => {
+  it('shows one effect form at a time: it starts on Damage, and a tab swaps the form', async () => {
     configure({});
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.dm-effects-panel__body')).toBeNull();
-    expand(compiled);
-    fixture.detectChanges();
+    const tabs = Array.from(compiled.querySelectorAll('[role="tab"]'));
+    expect(tabs.map((t) => t.getAttribute('data-effect-tab'))).toEqual([
+      'damage',
+      'heal',
+      'temp',
+      'condition',
+      'xp',
+      'level',
+      'item',
+      'inspiration',
+      'override',
+    ]);
+    expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe('damage');
+    expect(compiled.textContent).toContain(campaignsEn.dmEffects.hp.damageLabel);
+    expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.hp.healLabel);
 
-    expect(compiled.querySelector('.dm-effects-panel__body')).toBeTruthy();
+    pick(fixture, compiled, 'heal');
+    expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe('heal');
+    expect(compiled.textContent).toContain(campaignsEn.dmEffects.hp.healLabel);
+    expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.hp.damageLabel);
   });
 
   it('damage sends a gatewayAppend call with a clamped negative hp.changed delta', async () => {
@@ -158,8 +201,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'damage');
 
     setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 3);
     fixture.detectChanges();
@@ -176,8 +218,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'heal');
 
     setNumberField(compiled, campaignsEn.dmEffects.hp.healLabel, 50);
     fixture.detectChanges();
@@ -195,8 +236,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'temp');
 
     setNumberField(compiled, campaignsEn.dmEffects.hp.tempLabel, 4);
     fixture.detectChanges();
@@ -214,14 +254,11 @@ describe('DmEffectsPanelComponent', () => {
     fixture.componentInstance.hp.set(undefined);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'damage');
 
     expect(compiled.textContent).toContain(campaignsEn.dmEffects.hp.noBaseline);
-    const damageButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
-      (b) => b.textContent?.trim() === campaignsEn.dmEffects.hp.damage,
-    );
-    expect(damageButton!.disabled).toBe(true);
+    const damageButton = buttonWithText(compiled, campaignsEn.dmEffects.hp.damage);
+    expect(damageButton!.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('inspiration grant/revoke send inspiration.changed{value}', async () => {
@@ -229,8 +266,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'inspiration');
 
     clickButtonWithText(compiled, campaignsEn.dmEffects.inspiration.grant);
     await whenStable(fixture);
@@ -256,8 +292,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'condition');
 
     clickButtonWithText(compiled, campaignsEn.dmEffects.conditions.add);
     await whenStable(fixture);
@@ -278,10 +313,9 @@ describe('DmEffectsPanelComponent', () => {
     fixture.componentInstance.activeConditionIds.set(['srd:condition.prone']);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'condition');
 
-    compiled.querySelector<HTMLElement>('[hk-chip-remove]')!.click();
+    compiled.querySelector<HTMLElement>('.qfx__cond-remove')!.click();
     await whenStable(fixture);
 
     expect(gatewayAppend).toHaveBeenCalledWith(CHARACTER_ID, [
@@ -294,8 +328,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'xp');
 
     expect(compiled.textContent).toContain(campaignsEn.dmEffects.xp.grant);
     expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.level.grant);
@@ -315,8 +348,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'level');
 
     expect(compiled.textContent).toContain(campaignsEn.dmEffects.level.grant);
     expect(compiled.textContent).not.toContain(campaignsEn.dmEffects.xp.grant);
@@ -334,13 +366,9 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'item');
 
-    const nameLabel = Array.from(compiled.querySelectorAll('label')).find((l) =>
-      l.textContent?.includes(campaignsEn.dmEffects.item.nameLabel),
-    )!;
-    const nameInput = nameLabel.querySelector<HTMLInputElement>('input')!;
+    const nameInput = inputOf(compiled, campaignsEn.dmEffects.item.nameLabel);
     nameInput.value = 'Potion of Healing';
     nameInput.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -365,30 +393,24 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'override');
 
-    const applyButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
-      (b) => b.textContent?.trim() === campaignsEn.dmEffects.override.apply,
-    )!;
-    expect(applyButton.disabled).toBe(true);
+    const applyButton = buttonWithText(compiled, campaignsEn.dmEffects.override.apply)!;
+    expect(applyButton.getAttribute('aria-disabled')).toBe('true');
 
     const setInput = (labelText: string, value: string): void => {
-      const label = Array.from(compiled.querySelectorAll('label')).find((l) =>
-        l.textContent?.includes(labelText),
-      )!;
-      const input = label.querySelector<HTMLInputElement>('input')!;
+      const input = inputOf(compiled, labelText);
       input.value = value;
       input.dispatchEvent(new Event('input'));
     };
     setInput(campaignsEn.dmEffects.override.pathLabel, 'ac');
     fixture.detectChanges();
-    expect(applyButton.disabled).toBe(true); // reason still empty
+    expect(applyButton.getAttribute('aria-disabled')).toBe('true'); // reason still empty
 
     setInput(campaignsEn.dmEffects.override.valueLabel, '18');
     setInput(campaignsEn.dmEffects.override.reasonLabel, 'story reward');
     fixture.detectChanges();
-    expect(applyButton.disabled).toBe(false);
+    expect(applyButton.getAttribute('aria-disabled')).toBeNull();
 
     applyButton.click();
     await whenStable(fixture);
@@ -411,8 +433,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'inspiration');
 
     clickButtonWithText(compiled, campaignsEn.dmEffects.inspiration.grant);
     await whenStable(fixture);
@@ -426,8 +447,7 @@ describe('DmEffectsPanelComponent', () => {
     const fixture = TestBed.createComponent(HostComponent);
     await whenStable(fixture);
     const compiled = fixture.nativeElement as HTMLElement;
-    expand(compiled);
-    fixture.detectChanges();
+    pick(fixture, compiled, 'inspiration');
 
     clickButtonWithText(compiled, campaignsEn.dmEffects.inspiration.grant);
     await whenStable(fixture);
@@ -447,8 +467,7 @@ describe('DmEffectsPanelComponent', () => {
       // HostComponent's default hp has no `currentWasMax` key at all — genuine overview mode.
       await whenStable(fixture);
       const compiled = fixture.nativeElement as HTMLElement;
-      expand(compiled);
-      fixture.detectChanges();
+      pick(fixture, compiled, 'damage');
 
       setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 1);
       fixture.detectChanges();
@@ -465,8 +484,7 @@ describe('DmEffectsPanelComponent', () => {
       const fixture = TestBed.createComponent(HostComponent);
       await whenStable(fixture);
       const compiled = fixture.nativeElement as HTMLElement;
-      expand(compiled);
-      fixture.detectChanges();
+      pick(fixture, compiled, 'heal');
 
       setNumberField(compiled, campaignsEn.dmEffects.hp.healLabel, 1);
       fixture.detectChanges();
@@ -483,8 +501,7 @@ describe('DmEffectsPanelComponent', () => {
       fixture.componentInstance.hp.set({ current: 10, max: 20, temp: 2, currentWasMax: false });
       await whenStable(fixture);
       const compiled = fixture.nativeElement as HTMLElement;
-      expand(compiled);
-      fixture.detectChanges();
+      pick(fixture, compiled, 'damage');
 
       setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 1);
       fixture.detectChanges();
@@ -504,8 +521,7 @@ describe('DmEffectsPanelComponent', () => {
       const fixture = TestBed.createComponent(HostComponent);
       await whenStable(fixture);
       const compiled = fixture.nativeElement as HTMLElement;
-      expand(compiled);
-      fixture.detectChanges();
+      pick(fixture, compiled, 'damage');
 
       setNumberField(compiled, campaignsEn.dmEffects.hp.damageLabel, 1);
       fixture.detectChanges();
@@ -523,8 +539,7 @@ describe('DmEffectsPanelComponent', () => {
       // inspiration has no sentinel concept, so it must never be caveated.
       await whenStable(fixture);
       const compiled = fixture.nativeElement as HTMLElement;
-      expand(compiled);
-      fixture.detectChanges();
+      pick(fixture, compiled, 'inspiration');
 
       clickButtonWithText(compiled, campaignsEn.dmEffects.inspiration.grant);
       await whenStable(fixture);
@@ -538,18 +553,22 @@ describe('DmEffectsPanelComponent', () => {
     const select = (id = CHARACTER_ID) =>
       TestBed.inject(CampaignSelectionService).select({ characterId: id, name: 'Ilyana' });
 
-    it('expands and focuses the damage field when the strap asks for damage on this member', async () => {
+    it('shows the damage form and focuses its field when the strap asks for damage on this member', async () => {
       configure({});
       const fixture = TestBed.createComponent(HostComponent);
       await whenStable(fixture);
       const compiled = fixture.nativeElement as HTMLElement;
+      pick(fixture, compiled, 'temp');
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe('temp');
       select();
       TestBed.inject(CampaignSelectionService).requestEffect('damage');
       await whenStable(fixture);
       fixture.detectChanges();
       await whenStable(fixture);
 
-      expect(compiled.querySelector('.dm-effects-panel__body')).not.toBeNull();
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe(
+        'damage',
+      );
       const focused = document.activeElement as HTMLElement;
       expect(compiled.querySelector('[data-effect="damage"]')?.contains(focused)).toBe(true);
     });
@@ -566,7 +585,7 @@ describe('DmEffectsPanelComponent', () => {
       expect(dialogOpen).toHaveBeenCalledOnce();
     });
 
-    it('ignores a command addressed to another member', async () => {
+    it('leaves a command addressed to another member on the board', async () => {
       const { dialogOpen } = configure({});
       const fixture = TestBed.createComponent(HostComponent);
       await whenStable(fixture);
@@ -575,10 +594,14 @@ describe('DmEffectsPanelComponent', () => {
       TestBed.inject(CampaignSelectionService).requestEffect('condition');
       await whenStable(fixture);
       expect(dialogOpen).not.toHaveBeenCalled();
-      expect(compiled.querySelector('.dm-effects-panel__body')).toBeNull();
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe(
+        'damage',
+      );
+      // Not this leaf's request: it stays on the board for the leaf it addresses.
+      expect(TestBed.inject(CampaignSelectionService).request()).not.toBeNull();
     });
 
-    it('never replays a request that was already handled when another panel mounts later', async () => {
+    it('never replays a request that was already handled when another leaf mounts later', async () => {
       const { dialogOpen } = configure({
         dialogOpen: vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) }),
       });
@@ -593,6 +616,125 @@ describe('DmEffectsPanelComponent', () => {
       await whenStable(second);
       expect(dialogOpen).toHaveBeenCalledOnce();
       expect(TestBed.inject(CampaignSelectionService).request()).toBeNull();
+    });
+  });
+
+  describe('XP and Level follow the campaign xpMode', () => {
+    it('in XP mode the Level tab is off with its reason as the hint, and clicking it changes nothing', async () => {
+      configure({ xpMode: 'xp' });
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      const level = compiled.querySelector<HTMLElement>('[data-effect-tab="level"]')!;
+      const xp = compiled.querySelector<HTMLElement>('[data-effect-tab="xp"]')!;
+
+      expect(level.getAttribute('aria-disabled')).toBe('true');
+      expect(hintOf(level)).toBe(campaignsEn.dmEffects.tabs.levelOff);
+      expect(xp.getAttribute('aria-disabled')).toBeNull();
+      level.click();
+      fixture.detectChanges();
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe(
+        'damage',
+      );
+    });
+
+    it('in milestone mode the XP tab is off with its reason, and the strap XP lands on Level', async () => {
+      configure({ xpMode: 'milestone' });
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      const xp = compiled.querySelector<HTMLElement>('[data-effect-tab="xp"]')!;
+      expect(xp.getAttribute('aria-disabled')).toBe('true');
+      expect(hintOf(xp)).toBe(campaignsEn.dmEffects.tabs.xpOff);
+
+      const selection = TestBed.inject(CampaignSelectionService);
+      selection.select({ characterId: CHARACTER_ID, name: 'Ilyana' });
+      selection.requestEffect('xp');
+      await whenStable(fixture);
+      fixture.detectChanges();
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe(
+        'level',
+      );
+    });
+  });
+
+  describe('the leaf chrome', () => {
+    it('names the member, closes from its button and from Escape, and offers the footer actions', async () => {
+      configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      const host = fixture.componentInstance;
+
+      expect(compiled.querySelector('.hk-leaf__title-text')?.textContent?.trim()).toBe('Ilyana');
+      expect(compiled.textContent).toContain('Quick effects · 10 / 20 HP');
+      compiled.querySelector<HTMLButtonElement>('.qfx__close')!.click();
+      expect(host.closedCount).toBe(1);
+      compiled
+        .querySelector('.qfx')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(host.closedCount).toBe(2);
+
+      compiled.querySelector<HTMLButtonElement>('.qfx__open-sheet')!.click();
+      compiled.querySelector<HTMLButtonElement>('.qfx__handover')!.click();
+      compiled.querySelector<HTMLButtonElement>('.qfx__unlink')!.click();
+      expect([host.openedSheet, host.handedOver, host.unlinked]).toEqual([1, 1, 1]);
+    });
+
+    it('moves between the tabs with the arrow keys, Home and End', async () => {
+      configure({});
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      // The key goes to the focused tab, the way the browser delivers it.
+      const key = (name: string): void => {
+        compiled
+          .querySelector('[role="tab"][aria-selected="true"]')!
+          .dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+        fixture.detectChanges();
+      };
+      const current = (): string | null | undefined =>
+        compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect');
+
+      key('ArrowRight');
+      expect(current()).toBe('heal');
+      key('End');
+      expect(current()).toBe('override');
+      key('ArrowRight');
+      expect(current()).toBe('damage');
+      key('ArrowLeft');
+      expect(current()).toBe('override');
+    });
+
+    it('skips the off tab when moving along the row', async () => {
+      configure({ xpMode: 'xp' });
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      pick(fixture, compiled, 'xp');
+      compiled
+        .querySelector('[role="tab"][aria-selected="true"]')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      fixture.detectChanges();
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe('item');
+    });
+
+    it('the strap condition request switches to the Condition tab and opens the picker', async () => {
+      const { dialogOpen } = configure({
+        dialogOpen: vi.fn().mockReturnValue({ closed: Promise.resolve(undefined) }),
+      });
+      const fixture = TestBed.createComponent(HostComponent);
+      await whenStable(fixture);
+      const compiled = fixture.nativeElement as HTMLElement;
+      const selection = TestBed.inject(CampaignSelectionService);
+      selection.select({ characterId: CHARACTER_ID, name: 'Ilyana' });
+      selection.requestEffect('condition');
+      await whenStable(fixture);
+      fixture.detectChanges();
+      expect(dialogOpen).toHaveBeenCalledOnce();
+      expect(compiled.querySelector('[role="tabpanel"]')?.getAttribute('data-effect')).toBe(
+        'condition',
+      );
     });
   });
 });

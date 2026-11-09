@@ -1,0 +1,259 @@
+<ng-container *transloco="let t; read: 'campaigns'">
+  <hk-drawer [(open)]="open" [heading]="name()" [opener]="opener()">
+    <div class="msd">
+      @if (levelClassLine(); as line) {
+        <p class="msd__subtitle">{{ line }}</p>
+      }
+
+      @switch (status()) {
+        @case ('loading') {
+          <p class="msd__status" role="status">
+            {{ t('memberSheet.loading', { name: name() }) }}
+          </p>
+        }
+        @case ('unauthorized') {
+          <p class="msd__status msd__status--error" role="alert">
+            {{ t('memberSheet.unauthorized', { name: name() }) }}
+          </p>
+        }
+        @case ('error') {
+          <p class="msd__status msd__status--error" role="alert">
+            {{ t('memberSheet.error', { name: name() }) }}
+          </p>
+        }
+        @default {
+          <!-- 'ready' or 'warning' (plan 16 Task 5, ruling 6): a derived sheet; a warning lists the
+               member's packs this device lacks, whose references below stay raw ids. -->
+          @if (status() === 'warning') {
+            <div class="msd__missing-packs" role="status">
+              <p class="msd__missing-packs-text">
+                {{ t('memberSheet.missingPacks.message', { count: missingPins().length }) }}
+              </p>
+              <ul class="msd__missing-packs-list">
+                @for (pin of missingPins(); track pin.packId) {
+                  <li>
+                    <code>{{
+                      t('memberSheet.missingPacks.entry', {
+                        packId: pin.packId,
+                        version: pin.version,
+                      })
+                    }}</code>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+          @if (sheet(); as s) {
+            <!-- HP + death saves -->
+            <section class="msd__section" [attr.aria-label]="t('memberSheet.hpTitle')">
+              <div class="msd__hp">
+                <span class="msd__hp-num">
+                  @if (s.hp.temp > 0) {
+                    {{
+                      t('memberSheet.hpWithTemp', {
+                        hp: s.hp.current,
+                        hpMax: s.hp.max.value,
+                        temp: s.hp.temp,
+                      })
+                    }}
+                  } @else {
+                    {{ t('memberSheet.hp', { hp: s.hp.current, hpMax: s.hp.max.value }) }}
+                  }
+                </span>
+                <div
+                  class="msd__gauge"
+                  role="meter"
+                  aria-valuemin="0"
+                  [attr.aria-label]="t('memberSheet.hpTitle')"
+                  [attr.aria-valuemax]="s.hp.max.value"
+                  [attr.aria-valuenow]="s.hp.current"
+                >
+                  <div class="msd__gauge-hp" [style.width.%]="hpWidth()"></div>
+                  <div class="msd__gauge-temp" [style.width.%]="tempWidth()"></div>
+                </div>
+              </div>
+              @if (s.hp.current === 0) {
+                <p class="msd__death-saves">
+                  {{
+                    t('memberSheet.deathSaves', {
+                      successes: s.hp.deathSaves.successes,
+                      failures: s.hp.deathSaves.failures,
+                      max: maxDeathSaves,
+                    })
+                  }}
+                </p>
+              }
+            </section>
+
+            <!-- Core stats -->
+            <div class="msd__stats">
+              <hk-stat-tile [label]="t('memberSheet.ac')" [value]="s.ac.value" [icon]="'ui:ac'" />
+              <hk-stat-tile
+                [label]="t('memberSheet.initiative')"
+                [value]="s.initiative.value"
+                [icon]="'ui:initiative'"
+              />
+              <hk-stat-tile
+                [label]="t('memberSheet.passivePerception')"
+                [value]="s.passivePerception"
+              />
+              @for (speed of speedRows(); track speed.mode) {
+                <hk-stat-tile
+                  [label]="t('memberSheet.speed') + ' · ' + speed.mode"
+                  [value]="speed.value"
+                  [icon]="'ui:speed'"
+                />
+              }
+            </div>
+
+            @if (s.concentration; as conc) {
+              <hk-tag-chip
+                class="msd__concentration"
+                [tone]="'arcane'"
+                [icon]="'ui:concentration'"
+                [label]="t('memberSheet.concentratingOn', { name: resolveName(conc.spellId) })"
+              />
+            }
+
+            <!-- Abilities -->
+            <section class="msd__section">
+              <h3 class="msd__heading">{{ t('memberSheet.abilities.title') }}</h3>
+              <div class="msd__abilities">
+                @for (row of abilityRows(); track row.id) {
+                  <hk-ability-seal
+                    [ability]="row.label"
+                    [score]="row.score"
+                    [modifier]="row.mod"
+                    [save]="row.save"
+                    [saveProficient]="row.saveProficient"
+                    [compact]="true"
+                  />
+                }
+              </div>
+            </section>
+
+            <!-- Skills -->
+            <section class="msd__section">
+              <h3 class="msd__heading">{{ t('memberSheet.skills.title') }}</h3>
+              @if (skillRows().length > 0) {
+                <ul class="msd__skills">
+                  @for (skill of skillRows(); track skill.id) {
+                    <li>
+                      <span>{{ skill.label }}</span>
+                      <span>{{ skill.total }}</span>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="msd__empty">{{ t('memberSheet.skills.empty') }}</p>
+              }
+            </section>
+
+            <!-- Conditions -->
+            <section class="msd__section">
+              <h3 class="msd__heading">{{ t('memberSheet.conditions.title') }}</h3>
+              @if (conditions().length > 0) {
+                <div class="msd__conditions">
+                  @for (condition of conditions(); track condition.id) {
+                    <hk-condition-chip [name]="condition.name" [level]="condition.level ?? null" />
+                  }
+                </div>
+              } @else {
+                <p class="msd__empty">{{ t('memberSheet.conditions.empty') }}</p>
+              }
+            </section>
+
+            <!-- Spellcasting -->
+            <section class="msd__section">
+              <h3 class="msd__heading">{{ t('memberSheet.spellcasting.title') }}</h3>
+              @if (spellBlocks().length > 0) {
+                @for (block of spellBlocks(); track block.classId) {
+                  <div class="msd__spellblock">
+                    <h4 class="msd__subheading">{{ resolveName(block.classId) }}</h4>
+                    @for (slot of block.slots; track slot.level) {
+                      <hk-pool-bar
+                        [kind]="'pips'"
+                        [label]="t('memberSheet.spellcasting.slotsLevel', { level: slot.level })"
+                        [value]="slot.max - slot.used"
+                        [max]="slot.max"
+                        [glyph]="'ui:spell-slot'"
+                      />
+                    }
+                    <div class="msd__spell-lists">
+                      <div>
+                        <h4 class="msd__subheading">{{ t('memberSheet.spellcasting.known') }}</h4>
+                        <ul>
+                          @for (spell of block.knownSpells; track spell.id) {
+                            <li>{{ spell.name }}</li>
+                          }
+                        </ul>
+                      </div>
+                      @if (block.preparedSpells.length > 0) {
+                        <div>
+                          <h4 class="msd__subheading">
+                            {{ t('memberSheet.spellcasting.prepared') }}
+                          </h4>
+                          <ul>
+                            @for (spell of block.preparedSpells; track spell.id) {
+                              <li>{{ spell.name }}</li>
+                            }
+                          </ul>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              } @else {
+                <p class="msd__empty">{{ t('memberSheet.spellcasting.empty') }}</p>
+              }
+            </section>
+
+            <!-- Resources -->
+            <section class="msd__section">
+              <h3 class="msd__heading">{{ t('memberSheet.resources.title') }}</h3>
+              @if (resources().length > 0) {
+                <div class="msd__resources">
+                  @for (resourceRow of resources(); track resourceRow.id) {
+                    <hk-pool-bar
+                      [kind]="'pips'"
+                      [label]="resourceLabel(resourceRow)"
+                      [value]="resourceRow.max.value - resourceRow.used"
+                      [max]="resourceRow.max.value"
+                    />
+                  }
+                </div>
+              } @else {
+                <p class="msd__empty">{{ t('memberSheet.resources.empty') }}</p>
+              }
+            </section>
+
+            <!-- Inventory -->
+            <section class="msd__section">
+              <h3 class="msd__heading">{{ t('memberSheet.inventory.title') }}</h3>
+              @if (inventoryRows().length > 0) {
+                <ul class="msd__inventory">
+                  @for (entry of inventoryRows(); track $index) {
+                    <li>
+                      {{ t('memberSheet.inventory.entry', { name: entry.name, qty: entry.qty }) }}
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="msd__empty">{{ t('memberSheet.inventory.empty') }}</p>
+              }
+            </section>
+
+            <!-- DM tools (plan-10 Task 11) -->
+            <app-quick-effects-leaf
+              [characterId]="characterId()"
+              [name]="name()"
+              [hp]="hpSnapshot()"
+              [activeConditionIds]="conditionIds()"
+              [embedded]="true"
+            />
+          }
+        }
+      }
+    </div>
+  </hk-drawer>
+</ng-container>

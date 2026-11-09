@@ -113,8 +113,8 @@ test.describe('campaign: pregen handover and real claim', () => {
         await confirmHandoverTo(page, 'Claimant');
         // The DM's own already-open party tab reflects the roster's new ownerId reactively (the
         // handover sequence's own local echo) — the pregen is no longer THEIRS to hand over again.
-        const card = page.locator('.party-tab__card', { hasText: pregenName });
-        await expect(card.locator('.party-tab__handover')).toHaveCount(0, { timeout: 15_000 });
+        // (The entry leaves the DM's roster, so its leaf goes with it: no hand-over action remains.)
+        await expect(page.locator('.qfx__handover')).toHaveCount(0, { timeout: 15_000 });
       });
 
       await test.step('member: discovers, pulls, and finishes linking the claimed pregen', async () => {

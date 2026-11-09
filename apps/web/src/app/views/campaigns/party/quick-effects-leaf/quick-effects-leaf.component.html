@@ -1,0 +1,337 @@
+<ng-container *transloco="let t; read: 'campaigns'">
+  <div class="qfx">
+    <hk-leaf [title]="embedded() ? t('dmEffects.toggle') : name()" [icon]="'ui:damage'">
+      @if (!embedded()) {
+        <button
+          hkLeafActions
+          type="button"
+          hk-icon-button
+          class="qfx__close"
+          [icon]="'close'"
+          [hint]="'shell.icon.close'"
+          [variant]="'ghost'"
+          [size]="'s'"
+          (click)="closed.emit()"
+        ></button>
+      }
+
+      <p class="qfx__hint">
+        @if (hp(); as snapshot) {
+          {{ t('dmEffects.hint', { hp: snapshot.current, hpMax: snapshot.max }) }}
+        } @else {
+          {{ t('dmEffects.hintNoHp') }}
+        }
+      </p>
+
+      <div
+        hkLeafTabs
+        class="qfx__tabs"
+        role="tablist"
+        [attr.aria-label]="t('dmEffects.tabs.label')"
+      >
+        @for (id of tabIds; track id) {
+          <button
+            type="button"
+            role="tab"
+            class="qfx__tab"
+            [class.qfx__tab--heal]="id === 'heal'"
+            [id]="leafId + '-tab-' + id"
+            [attr.data-effect-tab]="id"
+            [attr.aria-selected]="tab() === id"
+            [attr.aria-controls]="leafId + '-panel'"
+            [attr.aria-disabled]="isOff(id) ? 'true' : null"
+            [attr.tabindex]="tab() === id ? 0 : -1"
+            [hkTooltip]="
+              isOff(id) ? t(id === 'xp' ? 'dmEffects.tabs.xpOff' : 'dmEffects.tabs.levelOff') : ''
+            "
+            (click)="pick(id)"
+            (keydown)="onTabsKey($event)"
+          >
+            <hk-icon [icon]="tabIcon(id)" />
+            <span>{{ t('dmEffects.tabs.' + id) }}</span>
+          </button>
+        }
+      </div>
+
+      <div
+        class="qfx__panel"
+        role="tabpanel"
+        [id]="leafId + '-panel'"
+        [attr.data-effect]="tab()"
+        [attr.aria-labelledby]="leafId + '-tab-' + tab()"
+      >
+        @switch (tab()) {
+          @case ('damage') {
+            <hk-number-field
+              [label]="t('dmEffects.hp.damageLabel')"
+              [variant]="'leaf'"
+              [min]="0"
+              [step]="1"
+              [ngModel]="damageAmount()"
+              (ngModelChange)="damageAmount.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'ember'"
+              [disabled]="busy()"
+              [disabledReason]="canApplyHp() ? null : t('dmEffects.hp.noBaseline')"
+              (click)="applyDamage()"
+            >
+              <hk-icon [icon]="'ui:damage'" />{{ t('dmEffects.hp.damage') }}
+            </button>
+          }
+          @case ('heal') {
+            <hk-number-field
+              [label]="t('dmEffects.hp.healLabel')"
+              [variant]="'leaf'"
+              [min]="0"
+              [step]="1"
+              [ngModel]="healAmount()"
+              (ngModelChange)="healAmount.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'moss'"
+              [disabled]="busy()"
+              [disabledReason]="canApplyHp() ? null : t('dmEffects.hp.noBaseline')"
+              (click)="applyHeal()"
+            >
+              <hk-icon [icon]="'ui:heal'" />{{ t('dmEffects.hp.heal') }}
+            </button>
+          }
+          @case ('temp') {
+            <hk-number-field
+              [label]="t('dmEffects.hp.tempLabel')"
+              [variant]="'leaf'"
+              [min]="0"
+              [step]="1"
+              [ngModel]="tempAmount()"
+              (ngModelChange)="tempAmount.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'parchment'"
+              [disabled]="busy()"
+              (click)="applyTemp()"
+            >
+              <hk-icon [icon]="'ui:temp-hp'" />{{ t('dmEffects.hp.addTemp') }}
+            </button>
+          }
+          @case ('condition') {
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'parchment'"
+              [disabled]="busy()"
+              (click)="onAddCondition()"
+            >
+              <hk-icon [icon]="'ui:condition'" />{{ t('dmEffects.conditions.add') }}
+            </button>
+            @if (activeConditionRows().length > 0) {
+              <ul class="qfx__conditions">
+                @for (row of activeConditionRows(); track row.id) {
+                  <li class="qfx__cond">
+                    <span class="qfx__cond-name">{{ row.name }}</span>
+                    <button
+                      type="button"
+                      class="qfx__cond-remove"
+                      [attr.aria-label]="t('dmEffects.conditions.removeNamed', { name: row.name })"
+                      [hkTooltip]="t('dmEffects.conditions.removeNamed', { name: row.name })"
+                      (click)="onRemoveCondition(row.id)"
+                    >
+                      <hk-icon [icon]="'ui:close'" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          }
+          @case ('xp') {
+            <hk-number-field
+              [label]="t('dmEffects.xp.amountLabel')"
+              [variant]="'leaf'"
+              [step]="1"
+              [ngModel]="xpAmount()"
+              (ngModelChange)="xpAmount.set($event)"
+            />
+            <hk-text-field
+              [label]="t('dmEffects.xp.reasonLabel')"
+              [ngModel]="xpReason()"
+              (ngModelChange)="xpReason.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'primary'"
+              [disabled]="busy()"
+              (click)="grantXp()"
+            >
+              <hk-icon [icon]="'ui:xp'" />{{ t('dmEffects.xp.grant') }}
+            </button>
+          }
+          @case ('level') {
+            <hk-number-field
+              [label]="t('dmEffects.level.countLabel')"
+              [variant]="'leaf'"
+              [min]="1"
+              [step]="1"
+              [ngModel]="levelCount()"
+              (ngModelChange)="levelCount.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'primary'"
+              [disabled]="busy()"
+              (click)="grantLevel()"
+            >
+              <hk-icon [icon]="'ui:level-up'" />{{ t('dmEffects.level.grant') }}
+            </button>
+          }
+          @case ('item') {
+            <hk-text-field
+              [label]="t('dmEffects.item.nameLabel')"
+              [ngModel]="itemName()"
+              (ngModelChange)="itemName.set($event)"
+            />
+            <hk-number-field
+              [label]="t('dmEffects.item.qtyLabel')"
+              [variant]="'leaf'"
+              [min]="1"
+              [step]="1"
+              [ngModel]="itemQty()"
+              (ngModelChange)="itemQty.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'parchment'"
+              [disabled]="busy()"
+              (click)="grantItem()"
+            >
+              <hk-icon [icon]="'ui:bag'" />{{ t('dmEffects.item.grant') }}
+            </button>
+          }
+          @case ('inspiration') {
+            <div class="qfx__row">
+              <button
+                hk-button
+                type="button"
+                [variant]="'primary'"
+                [disabled]="busy()"
+                (click)="grantInspiration(true)"
+              >
+                <hk-icon [icon]="'ui:inspiration'" />{{ t('dmEffects.inspiration.grant') }}
+              </button>
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                [disabled]="busy()"
+                (click)="grantInspiration(false)"
+              >
+                {{ t('dmEffects.inspiration.revoke') }}
+              </button>
+            </div>
+          }
+          @case ('override') {
+            <hk-text-field
+              [label]="t('dmEffects.override.pathLabel')"
+              [hint]="t('dmEffects.override.pathHint')"
+              [ngModel]="overridePath()"
+              (ngModelChange)="overridePath.set($event)"
+            />
+            <hk-text-field
+              [label]="t('dmEffects.override.valueLabel')"
+              [ngModel]="overrideValue()"
+              (ngModelChange)="overrideValue.set($event)"
+            />
+            <hk-text-field
+              [label]="t('dmEffects.override.reasonLabel')"
+              [ngModel]="overrideReason()"
+              (ngModelChange)="overrideReason.set($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="qfx__apply"
+              [variant]="'parchment'"
+              [disabled]="busy()"
+              [disabledReason]="canApplyOverride() ? null : t('dmEffects.override.needsFields')"
+              (click)="applyOverride()"
+            >
+              <hk-icon [icon]="'ui:edit'" />{{ t('dmEffects.override.apply') }}
+            </button>
+          }
+        }
+
+        @if (feedbackOk() !== undefined) {
+          <p
+            class="qfx__feedback"
+            role="status"
+            [class.qfx__feedback--error]="feedbackOk() === false"
+          >
+            {{
+              feedbackOk()
+                ? feedbackCaveated()
+                  ? t('dmEffects.status.appliedCaveat')
+                  : t('dmEffects.status.applied')
+                : t('dmEffects.status.failed')
+            }}
+            @if (feedbackMessage(); as message) {
+              {{ message }}
+            }
+          </p>
+        }
+      </div>
+
+      @if (!embedded() && (canOpenSheet() || canHandOver() || canUnlink())) {
+        <div class="qfx__footer">
+          @if (canOpenSheet()) {
+            <button
+              hk-button
+              type="button"
+              class="qfx__open-sheet"
+              [variant]="'parchment'"
+              (click)="openSheet.emit()"
+            >
+              <hk-icon [icon]="'ui:details'" />{{ t('dmEffects.openSheet') }}
+            </button>
+          }
+          @if (canHandOver()) {
+            <button
+              hk-button
+              type="button"
+              class="qfx__handover"
+              [variant]="'parchment'"
+              (click)="handOver.emit()"
+            >
+              {{ t('handover.action') }}
+            </button>
+          }
+          @if (canUnlink()) {
+            <button
+              hk-button
+              type="button"
+              class="qfx__unlink"
+              [variant]="'ember'"
+              (click)="unlink.emit()"
+            >
+              {{ t('unlink.action') }}
+            </button>
+          }
+        </div>
+      }
+    </hk-leaf>
+  </div>
+</ng-container>

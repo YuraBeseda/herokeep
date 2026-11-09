@@ -1,5 +1,6 @@
-import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { Component, input, output, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -11,17 +12,28 @@ import type { CampaignState } from '@shared/services/campaigns/campaign-projecti
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CampaignStore } from '@shared/stores/campaign.store';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import shellEn from '../../../../assets/i18n/shell/en.json';
 import { CampaignSelectionService } from '../shell/campaign-selection.service';
 import { HandoverCharacterDialogComponent } from './handover-character-dialog.component';
-import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
+import { MemberSheetDrawerComponent } from './member-sheet-drawer/member-sheet-drawer.component';
 import { PartyTabComponent } from './party-tab.component';
 import { UnlinkCharacterDialogComponent } from './unlink-character-dialog.component';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     if (langPath === 'campaigns/en') return of(campaignsEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
+}
+
+@Component({ selector: 'app-member-sheet-drawer', template: '<div class="drawer-stub"></div>' })
+class DrawerStub {
+  readonly campaignId = input.required<string>();
+  readonly characterId = input.required<string>();
+  readonly name = input.required<string>();
+  readonly opener = input<unknown>(null);
+  readonly closed = output<void>();
 }
 
 const CLASS_NAMES: Record<string, string> = { 'srd:class/fighter': 'Fighter' };
@@ -76,6 +88,7 @@ function configure(options: {
           state: signal(options.state ?? mkState()),
           role: signal(options.role ?? 'player'),
           campaignId: signal('00000000-0000-4000-8000-000000000001'),
+          gatewayAppend: vi.fn().mockResolvedValue({ acked: [], rejected: [] }),
         },
       },
       {
@@ -97,9 +110,35 @@ function configure(options: {
       { provide: DialogService, useValue: { open: dialogOpenSpy } },
     ],
   });
+  // The drawer's own DI (sync, packs, the foreign session) is covered by its spec: here it is a
+  // stand-in with the same selector, inputs and output.
+  TestBed.overrideComponent(PartyTabComponent, {
+    remove: { imports: [MemberSheetDrawerComponent] },
+    add: { imports: [DrawerStub] },
+  });
   TestBed.inject(Router).navigate = navigateSpy;
   return { navigateSpy, dialogOpenSpy };
 }
+
+/** A press on a card's body, the way the DM picks a member. */
+function pressCard(compiled: HTMLElement, name: string): void {
+  const card = Array.from(compiled.querySelectorAll<HTMLElement>('.party-tab__card')).find(
+    (c) => c.getAttribute('aria-label') === name,
+  )!;
+  card.click();
+}
+
+const OVERVIEW = {
+  hp: 8,
+  hpMax: 12,
+  temp: 2,
+  ac: 19,
+  level: 1,
+  classes: [{ classId: 'srd:class/fighter', level: 1 }],
+  conditions: ['srd:condition/prone'],
+  concentration: true,
+  passivePerception: 13,
+};
 
 describe('PartyTabComponent', () => {
   it('renders a full overview card (hp bar+text, ac, level/classes, conditions, concentration, passive perception)', async () => {
@@ -107,22 +146,7 @@ describe('PartyTabComponent', () => {
       role: 'player',
       state: mkState({
         roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
-        overviews: new Map([
-          [
-            'char-1',
-            {
-              hp: 8,
-              hpMax: 12,
-              temp: 2,
-              ac: 19,
-              level: 1,
-              classes: [{ classId: 'srd:class/fighter', level: 1 }],
-              conditions: ['srd:condition/prone'],
-              concentration: true,
-              passivePerception: 13,
-            },
-          ],
-        ]),
+        overviews: new Map([['char-1', OVERVIEW]]),
         members: new Map([['u-player', { displayName: 'Bob', role: 'player', removed: false }]]),
       }),
     });
@@ -134,15 +158,21 @@ describe('PartyTabComponent', () => {
     const card = compiled.querySelector('.party-tab__card')!;
     expect(card.getAttribute('role')).toBe('group');
     expect(card.getAttribute('aria-label')).toBe('Ivan');
-    expect(card.querySelector('.party-tab__name')?.textContent?.trim()).toBe('Ivan');
-    expect(card.querySelector('.party-tab__hp-text')?.textContent).toContain('8/12');
-    expect(card.querySelector('.party-tab__hp-text')?.textContent).toContain('2');
-    expect(card.querySelector('.party-tab__stats')?.textContent).toContain('19');
-    expect(card.querySelector('.party-tab__stats')?.textContent).toContain('13');
-    expect(card.querySelector('.party-tab__classes')?.textContent).toContain('Fighter');
-    expect(card.querySelector('.party-tab__classes')?.textContent).toContain('1');
-    expect(card.querySelector('.party-tab__concentration')).not.toBeNull();
-    expect(card.querySelector('.party-tab__condition')?.textContent?.trim()).toBe('Prone');
+    expect(card.querySelector('.hk-party__name-text')?.textContent?.trim()).toBe('Ivan');
+    const meter = card.querySelector('[role="meter"]')!;
+    expect(meter.getAttribute('aria-valuenow')).toBe('8');
+    expect(meter.getAttribute('aria-valuemax')).toBe('12');
+    expect(meter.getAttribute('aria-valuetext')).toBe('8 of 12 hit points, plus 2 temporary');
+    expect(card.querySelector('.hk-party__hp-num')?.textContent).toContain('8');
+    expect(card.querySelector('hk-shield-badge')?.textContent).toContain('19');
+    expect(card.querySelector('.party-tab__stat')?.textContent).toContain('13');
+    expect(card.querySelector('.hk-party__sub')?.textContent).toContain('Fighter');
+    expect(card.querySelector('.hk-party__sub')?.textContent).toContain('1');
+    expect(card.querySelector('.hk-party__sub')?.textContent).toContain('Played by Bob');
+    expect(card.querySelector('.hk-party__orb')).not.toBeNull();
+    expect(card.querySelector('hk-condition-chip .hk-cond__name')?.textContent?.trim()).toBe(
+      'Prone',
+    );
   });
 
   it('renders a name-only card for a roster entry with no overview yet', async () => {
@@ -159,7 +189,7 @@ describe('PartyTabComponent', () => {
 
     const card = compiled.querySelector('.party-tab__card')!;
     expect(card.querySelector('.party-tab__name')?.textContent?.trim()).toBe('Grog');
-    expect(card.querySelector('.party-tab__hp-bar')).toBeNull();
+    expect(card.querySelector('[role="meter"]')).toBeNull();
     expect(card.querySelector('.party-tab__no-overview')).not.toBeNull();
   });
 
@@ -196,6 +226,7 @@ describe('PartyTabComponent', () => {
     expect(card.querySelector('.party-tab__left-badge')?.textContent?.trim()).toBe(
       'Left the party',
     );
+    expect(card.querySelector('[role="meter"]')).not.toBeNull();
   });
 
   describe('partySheets gating (doc-08: not server-filtered — client renders name-only for members under "none")', () => {
@@ -227,6 +258,7 @@ describe('PartyTabComponent', () => {
         state: {
           ...stateWithOverview(),
           settings: {
+            houseRules: { xpMode: 'xp' },
             visibility: { partySheets: 'none', rolls: 'everyone', allowPrivateRolls: true },
           } as unknown as CampaignState['settings'],
         },
@@ -236,7 +268,7 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.party-tab__card .party-tab__hp-bar')).toBeNull();
+      expect(compiled.querySelector('.party-tab__card [role="meter"]')).toBeNull();
       expect(compiled.querySelector('.party-tab__hidden-notice')).not.toBeNull();
     });
 
@@ -246,6 +278,7 @@ describe('PartyTabComponent', () => {
         state: {
           ...stateWithOverview(),
           settings: {
+            houseRules: { xpMode: 'xp' },
             visibility: { partySheets: 'none', rolls: 'everyone', allowPrivateRolls: true },
           } as unknown as CampaignState['settings'],
         },
@@ -255,7 +288,7 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.party-tab__card .party-tab__hp-bar')).not.toBeNull();
+      expect(compiled.querySelector('.party-tab__card [role="meter"]')).not.toBeNull();
       expect(compiled.querySelector('.party-tab__hidden-notice')).toBeNull();
     });
 
@@ -265,6 +298,7 @@ describe('PartyTabComponent', () => {
         state: {
           ...stateWithOverview(),
           settings: {
+            houseRules: { xpMode: 'xp' },
             visibility: { partySheets: 'overview', rolls: 'everyone', allowPrivateRolls: true },
           } as unknown as CampaignState['settings'],
         },
@@ -274,7 +308,7 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.party-tab__card .party-tab__hp-bar')).not.toBeNull();
+      expect(compiled.querySelector('.party-tab__card [role="meter"]')).not.toBeNull();
     });
   });
 
@@ -396,6 +430,7 @@ describe('PartyTabComponent', () => {
       return mkState({
         roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
         settings: {
+          houseRules: { xpMode: 'xp' },
           visibility: { partySheets: 'full', rolls: 'everyone', allowPrivateRolls: true },
         } as unknown as CampaignState['settings'],
       });
@@ -409,30 +444,81 @@ describe('PartyTabComponent', () => {
       );
     }
 
-    it('DM + partySheets "full": renders the "View sheet" button, which opens MemberSheetDialogComponent with the right data', async () => {
-      const { dialogOpenSpy } = configure({ role: 'dm', state: stateWithFullVisibility() });
+    function drawerInputs(fixture: ComponentFixture<PartyTabComponent>) {
+      const found = fixture.debugElement.query(By.directive(DrawerStub));
+      if (!found) return null;
+      const drawer = found.componentInstance as DrawerStub;
+      return {
+        campaignId: drawer.campaignId(),
+        characterId: drawer.characterId(),
+        name: drawer.name(),
+      };
+    }
+
+    it('DM + partySheets "full": renders the "View sheet" button, which opens the member sheet drawer with the right data', async () => {
+      configure({ role: 'dm', state: stateWithFullVisibility() });
 
       const fixture = TestBed.createComponent(PartyTabComponent);
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
+      expect(drawerInputs(fixture)).toBeNull();
       const button = viewSheetButton(compiled);
       expect(button).not.toBeNull();
       button?.click();
+      fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(dialogOpenSpy).toHaveBeenCalledTimes(1);
-      const [component, opts] = dialogOpenSpy.mock.calls[0] as [
-        unknown,
-        { data: unknown; sheet?: boolean },
-      ];
-      expect(component).toBe(MemberSheetDialogComponent);
-      expect(opts.data).toEqual({
+      expect(drawerInputs(fixture)).toEqual({
         campaignId: '00000000-0000-4000-8000-000000000001',
         characterId: 'char-1',
         name: 'Ivan',
       });
-      expect(opts.sheet).toBe(true);
+    });
+
+    it('a card with an overview opens the same drawer from its book button, and the drawer going away removes it', async () => {
+      configure({
+        role: 'dm',
+        state: {
+          ...stateWithFullVisibility(),
+          overviews: new Map([['char-1', OVERVIEW]]),
+        },
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      compiled.querySelector<HTMLButtonElement>('.hk-party__open')!.click();
+      fixture.detectChanges();
+      expect(drawerInputs(fixture)?.characterId).toBe('char-1');
+
+      const drawer = fixture.debugElement.query(By.directive(DrawerStub));
+      (drawer.componentInstance as DrawerStub).closed.emit();
+      fixture.detectChanges();
+      expect(drawerInputs(fixture)).toBeNull();
+    });
+
+    it('the leaf footer opens the same drawer ("Open full sheet") for the selected member', async () => {
+      configure({ role: 'dm', state: stateWithFullVisibility() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      compiled.querySelector<HTMLButtonElement>('.qfx__open-sheet')!.click();
+      fixture.detectChanges();
+      expect(drawerInputs(fixture)?.name).toBe('Ivan');
+    });
+
+    it('a card with an overview has no book button when the DM is not allowed the drill-in', async () => {
+      configure({
+        role: 'player',
+        state: { ...stateWithFullVisibility(), overviews: new Map([['char-1', OVERVIEW]]) },
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.hk-party__open')).toBeNull();
     });
 
     it('DM + partySheets "overview" (not "full"): no "View sheet" button', async () => {
@@ -441,6 +527,7 @@ describe('PartyTabComponent', () => {
         state: mkState({
           roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
           settings: {
+            houseRules: { xpMode: 'xp' },
             visibility: { partySheets: 'overview', rolls: 'everyone', allowPrivateRolls: true },
           } as unknown as CampaignState['settings'],
         }),
@@ -474,12 +561,18 @@ describe('PartyTabComponent', () => {
       });
     }
 
+    /** The Unlink action lives in the leaf footer: select the member first, as a DM does. */
     function unlinkButton(compiled: HTMLElement): HTMLButtonElement | null {
       return (
-        Array.from(compiled.querySelectorAll<HTMLButtonElement>('.party-tab__card button')).find(
+        Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
           (b) => b.textContent?.trim() === 'Unlink character',
         ) ?? null
       );
+    }
+
+    function selectGrog(fixture: { detectChanges(): void }, compiled: HTMLElement): void {
+      pressCard(compiled, 'Grog');
+      fixture.detectChanges();
     }
 
     it('DM sees "Unlink character" on a left:false roster entry whose owner has been removed', async () => {
@@ -488,6 +581,8 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
+      expect(unlinkButton(compiled)).toBeNull();
+      selectGrog(fixture, compiled);
       expect(unlinkButton(compiled)).not.toBeNull();
     });
 
@@ -497,6 +592,7 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
+      selectGrog(fixture, compiled);
       unlinkButton(compiled)!.click();
       await fixture.whenStable();
 
@@ -523,6 +619,9 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      expect(compiled.querySelector('.qfx')).not.toBeNull();
       expect(unlinkButton(compiled)).toBeNull();
     });
 
@@ -538,6 +637,8 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
+      selectGrog(fixture, compiled);
+      expect(compiled.querySelector('.qfx')).toBeNull();
       expect(unlinkButton(compiled)).toBeNull();
     });
 
@@ -547,79 +648,159 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
+      selectGrog(fixture, compiled);
       expect(unlinkButton(compiled)).toBeNull();
     });
   });
 
-  // plan-10 task-11-brief.md: mounted on the party card (works in 'overview' mode), DM-only.
-  describe('DM effects panel mounting', () => {
-    it('mounts app-dm-effects-panel for the DM on an active (not-left) card', async () => {
+  // plan 17 B11b: card selection drives the quick-effects leaf (DM only) and the campaign strap.
+  describe('card selection and the quick-effects leaf', () => {
+    function twoCards(role: 'dm' | 'player' = 'dm') {
       configure({
-        role: 'dm',
-        state: mkState({
-          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
-        }),
-      });
-      const fixture = TestBed.createComponent(PartyTabComponent);
-      await fixture.whenStable();
-      const compiled = fixture.nativeElement as HTMLElement;
-
-      expect(compiled.querySelector('app-dm-effects-panel')).not.toBeNull();
-    });
-
-    it('lets the DM select one card for the strap, marking it pressed, and toggles it off', async () => {
-      configure({
-        role: 'dm',
+        role,
         state: mkState({
           roster: new Map([
             ['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }],
             ['char-2', { ownerId: 'u-player', name: 'Grog', left: false }],
           ]),
+          overviews: new Map([['char-1', OVERVIEW]]),
         }),
       });
-      const fixture = TestBed.createComponent(PartyTabComponent);
+      return TestBed.createComponent(PartyTabComponent);
+    }
+
+    it('pressing a DM card selects it for the strap, marks it, shows the leaf for it, and a second press clears it', async () => {
+      const fixture = twoCards();
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
       const selection = TestBed.inject(CampaignSelectionService);
-      const selectButtons = () =>
-        Array.from(compiled.querySelectorAll<HTMLButtonElement>('.party-tab__select'));
+      const marks = () =>
+        Array.from(compiled.querySelectorAll('.party-tab__card')).map((c) =>
+          c.getAttribute('data-selected'),
+        );
 
-      selectButtons()[0].click();
-      await fixture.whenStable();
+      expect(compiled.querySelector('app-quick-effects-leaf')).toBeNull();
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
       expect(selection.selected()).toEqual({ characterId: 'char-1', name: 'Ivan' });
-      expect(selectButtons().map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
-      selectButtons()[0].click();
+      expect(marks()).toEqual(['true', 'false']);
+      expect(
+        compiled.querySelector('app-quick-effects-leaf .hk-leaf__title-text')?.textContent,
+      ).toBe('Ivan');
+
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      expect(selection.selected()).toBeNull();
+      expect(compiled.querySelector('app-quick-effects-leaf')).toBeNull();
+    });
+
+    it('a focused DM card is a tab stop, and Enter or Space on it selects and clears like a press', async () => {
+      const fixture = twoCards();
       await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const selection = TestBed.inject(CampaignSelectionService);
+      const card = compiled.querySelector<HTMLElement>('.party-tab__card')!;
+      const key = (name: string, el: HTMLElement = card): void => {
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+        fixture.detectChanges();
+      };
+
+      expect(card.getAttribute('tabindex')).toBe('0');
+      key('Enter');
+      expect(selection.selected()?.characterId).toBe('char-1');
+      expect(card.getAttribute('aria-current')).toBe('true');
+      key(' ');
+      expect(selection.selected()).toBeNull();
+      // Enter on a control inside the card is that control's, not the card's.
+      key('Enter', card.querySelector<HTMLElement>('[data-effect-chip="heal"]')!);
       expect(selection.selected()).toBeNull();
     });
 
-    it('offers no select control to a non-DM viewer', async () => {
-      configure({
-        role: 'player',
-        state: mkState({
-          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
-        }),
-      });
-      const fixture = TestBed.createComponent(PartyTabComponent);
+    it('a player card is no tab stop and keys do nothing', async () => {
+      const fixture = twoCards('player');
       await fixture.whenStable();
-      expect((fixture.nativeElement as HTMLElement).querySelector('.party-tab__select')).toBeNull();
+      const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        '.party-tab__card',
+      )!;
+      expect(card.getAttribute('tabindex')).toBeNull();
+      card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
     });
 
-    it('never mounts the panel for a non-DM viewer', async () => {
-      configure({
-        role: 'player',
-        state: mkState({
-          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
-        }),
-      });
-      const fixture = TestBed.createComponent(PartyTabComponent);
+    it("moves the leaf to another card's member when that card is pressed", async () => {
+      const fixture = twoCards();
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('app-dm-effects-panel')).toBeNull();
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      pressCard(compiled, 'Grog');
+      fixture.detectChanges();
+      expect(TestBed.inject(CampaignSelectionService).selected()?.characterId).toBe('char-2');
+      expect(compiled.querySelectorAll('app-quick-effects-leaf')).toHaveLength(1);
+      expect(
+        compiled.querySelector('app-quick-effects-leaf .hk-leaf__title-text')?.textContent,
+      ).toBe('Grog');
     });
 
-    it('never mounts the panel on a left:true card, even for the DM', async () => {
+    it("a press on a card's caption selects like the card, but a press on its own control does not toggle", async () => {
+      const fixture = twoCards();
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const selection = TestBed.inject(CampaignSelectionService);
+
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      compiled
+        .querySelector<HTMLElement>('.party-tab__card[data-selected="true"] .hk-party__sub')!
+        .click();
+      fixture.detectChanges();
+      // The caption is not a control: it is a press on the card.
+      expect(selection.selected()).toBeNull();
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      compiled.querySelector<HTMLElement>('.party-tab__card [data-effect-chip="heal"]')!.click();
+      fixture.detectChanges();
+      expect(selection.selected()?.characterId).toBe('char-1');
+    });
+
+    it('each active DM card carries the effect chips (XP in XP mode), and a chip selects the card and shows that tab', async () => {
+      const fixture = twoCards();
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const card = compiled.querySelectorAll('.party-tab__card')[1];
+
+      expect(
+        Array.from(card.querySelectorAll('[data-effect-chip]')).map((c) =>
+          c.getAttribute('data-effect-chip'),
+        ),
+      ).toEqual(['damage', 'heal', 'temp', 'condition', 'xp', 'item', 'inspiration', 'override']);
+
+      card.querySelector<HTMLElement>('[data-effect-chip="heal"]')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(TestBed.inject(CampaignSelectionService).selected()?.characterId).toBe('char-2');
+      expect(
+        compiled
+          .querySelector('app-quick-effects-leaf [role="tabpanel"]')
+          ?.getAttribute('data-effect'),
+      ).toBe('heal');
+    });
+
+    it('offers a player no chips, no leaf and no selection', async () => {
+      const fixture = twoCards('player');
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('[data-effect-chip]')).toBeNull();
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
+      expect(compiled.querySelector('app-quick-effects-leaf')).toBeNull();
+    });
+
+    it('never offers chips, selection or a leaf on a left:true card, even for the DM', async () => {
       configure({
         role: 'dm',
         state: mkState({
@@ -630,7 +811,174 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('app-dm-effects-panel')).toBeNull();
+      expect(compiled.querySelector('[data-effect-chip]')).toBeNull();
+      pressCard(compiled, 'Departed');
+      fixture.detectChanges();
+      expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
+      expect(compiled.querySelector('app-quick-effects-leaf')).toBeNull();
+    });
+
+    it('a strap request for the selected member lands on its leaf, once', async () => {
+      const fixture = twoCards();
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const selection = TestBed.inject(CampaignSelectionService);
+
+      pressCard(compiled, 'Grog');
+      fixture.detectChanges();
+      selection.requestEffect('item');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(
+        compiled
+          .querySelector('app-quick-effects-leaf [role="tabpanel"]')
+          ?.getAttribute('data-effect'),
+      ).toBe('item');
+      expect(selection.request()).toBeNull();
+    });
+
+    it('closing the leaf clears the selection', async () => {
+      const fixture = twoCards();
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      compiled.querySelector<HTMLButtonElement>('.qfx__close')!.click();
+      fixture.detectChanges();
+      expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
+      expect(compiled.querySelector('app-quick-effects-leaf')).toBeNull();
+    });
+
+    it('the leaf gets the HP baseline of the overview, and none for a card with no overview yet', async () => {
+      const fixture = twoCards();
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      pressCard(compiled, 'Ivan');
+      fixture.detectChanges();
+      expect(compiled.querySelector('.qfx__hint')?.textContent).toContain('8 / 12 HP');
+      pressCard(compiled, 'Grog');
+      fixture.detectChanges();
+      expect(compiled.querySelector('.qfx__hint')?.textContent?.trim()).toBe('Quick effects');
+    });
+
+    // Carry (a) from B11a's review: a request that no leaf can ever take must not linger.
+    describe('requests and selections no leaf can address', () => {
+      it('drops a pending request addressed to a member who left the roster', async () => {
+        configure({
+          role: 'dm',
+          state: mkState({
+            roster: new Map([['char-1', { ownerId: 'u-player', name: 'Departed', left: true }]]),
+          }),
+        });
+        const selection = TestBed.inject(CampaignSelectionService);
+        selection.select({ characterId: 'char-1', name: 'Departed' });
+        selection.requestEffect('damage');
+        const fixture = TestBed.createComponent(PartyTabComponent);
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(selection.request()).toBeNull();
+        expect(selection.selected()).toBeNull();
+      });
+
+      it('drops a pending request and selection for a member absent from the roster', async () => {
+        configure({
+          role: 'dm',
+          state: mkState({
+            roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+          }),
+        });
+        const selection = TestBed.inject(CampaignSelectionService);
+        selection.select({ characterId: 'gone', name: 'Gone' });
+        selection.requestEffect('heal');
+        const fixture = TestBed.createComponent(PartyTabComponent);
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(selection.request()).toBeNull();
+        expect(selection.selected()).toBeNull();
+      });
+
+      it('keeps a request for a member who is on the roster until their leaf takes it', async () => {
+        configure({
+          role: 'dm',
+          state: mkState({
+            roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+          }),
+        });
+        const selection = TestBed.inject(CampaignSelectionService);
+        selection.select({ characterId: 'char-1', name: 'Ivan' });
+        selection.requestEffect('damage');
+        const fixture = TestBed.createComponent(PartyTabComponent);
+        await fixture.whenStable();
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(selection.selected()?.characterId).toBe('char-1');
+        expect(selection.request()).toBeNull(); // taken by the leaf, not dropped
+        expect(
+          (fixture.nativeElement as HTMLElement)
+            .querySelector('app-quick-effects-leaf [role="tabpanel"]')
+            ?.getAttribute('data-effect'),
+        ).toBe('damage');
+      });
+    });
+  });
+
+  // plan 17 B11b (board C07): the player's own hero is highlighted and opens its sheet.
+  describe('the player view', () => {
+    function ownAndOther() {
+      return mkState({
+        members: new Map([
+          ['u-player', { displayName: 'Bob', role: 'player', removed: false }],
+          ['u-other', { displayName: 'Cy', role: 'player', removed: false }],
+        ]),
+        roster: new Map([
+          ['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }],
+          ['char-2', { ownerId: 'u-other', name: 'Grog', left: false }],
+        ]),
+      });
+    }
+
+    it('marks the viewer\'s own hero with a "Your hero" plate and an Open my sheet button that opens it', async () => {
+      const { navigateSpy } = configure({
+        role: 'player',
+        userId: 'u-player',
+        state: ownAndOther(),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const [own, other] = Array.from(compiled.querySelectorAll('.party-tab__card'));
+      expect(own.getAttribute('data-mine')).toBe('true');
+      expect(own.querySelector('.party-tab__mine-badge')?.textContent?.trim()).toBe('Your hero');
+      expect(other.getAttribute('data-mine')).toBe('false');
+      expect(other.querySelector('.party-tab__mine-badge')).toBeNull();
+      expect(other.querySelector('.party-tab__open-mine')).toBeNull();
+
+      own.querySelector<HTMLButtonElement>('.party-tab__open-mine')!.click();
+      expect(navigateSpy).toHaveBeenCalledWith(['/c', 'char-1']);
+    });
+
+    it('shows the DM no "Your hero" plate on a hero they do not own', async () => {
+      configure({ role: 'dm', userId: 'u-dm', state: ownAndOther() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.party-tab__mine-badge'),
+      ).toBeNull();
+    });
+
+    it('draws no encounter plate: that slot stays empty until slice 2', async () => {
+      configure({ role: 'dm', state: ownAndOther() });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.party-tab__encounter')).toBeNull();
     });
   });
 
@@ -700,7 +1048,10 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      const button = compiled.querySelector<HTMLButtonElement>('.party-tab__handover');
+      expect(compiled.querySelector('.qfx__handover')).toBeNull();
+      pressCard(compiled, 'Pregen Paul');
+      fixture.detectChanges();
+      const button = compiled.querySelector<HTMLButtonElement>('.qfx__handover');
       expect(button).not.toBeNull();
       button!.click();
       await fixture.whenStable();
@@ -722,7 +1073,9 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.party-tab__handover')).toBeNull();
+      pressCard(compiled, 'Pregen Paul');
+      fixture.detectChanges();
+      expect(compiled.querySelector('.qfx__handover')).toBeNull();
     });
 
     it('the DM never sees "Hand over to…" on an ordinary MEMBER-owned card (not a pregen)', async () => {
@@ -736,7 +1089,10 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.party-tab__handover')).toBeNull();
+      pressCard(compiled, 'Alice PC');
+      fixture.detectChanges();
+      expect(compiled.querySelector('.qfx')).not.toBeNull();
+      expect(compiled.querySelector('.qfx__handover')).toBeNull();
     });
 
     it('the DM never sees "Hand over to…" on a pregen that has already LEFT the roster', async () => {
@@ -750,7 +1106,10 @@ describe('PartyTabComponent', () => {
       await fixture.whenStable();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.querySelector('.party-tab__handover')).toBeNull();
+      pressCard(compiled, 'Pregen Paul');
+      fixture.detectChanges();
+      expect(compiled.querySelector('.qfx')).toBeNull();
+      expect(compiled.querySelector('.qfx__handover')).toBeNull();
     });
   });
 });

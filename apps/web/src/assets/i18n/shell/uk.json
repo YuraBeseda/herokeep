@@ -170,7 +170,12 @@
     "secondary": "Інші дії",
     "reason-no-filters": "Для цього списку немає фільтрів",
     "add-condition": "Додати стан",
-    "roll-log": "Журнал кидків"
+    "roll-log": "Журнал кидків",
+    "campaign-item": "Предмет",
+    "campaign-session-start": "Почати сесію",
+    "campaign-session-end": "Завершити сесію",
+    "campaign-open-sheet": "Відкрити мій лист",
+    "campaign-select-member": "Спершу оберіть героя на вкладці «Гурт»"
   },
   "tabs": {
     "landmark": "Розділи екрана",
@@ -178,7 +183,11 @@
     "spells": "Закляття",
     "bag": "Сумка",
     "hero": "Герой",
-    "more": "Ще"
+    "more": "Ще",
+    "campaign-party": "Гурт",
+    "campaign-table": "Стіл",
+    "campaign-lobby": "Лобі",
+    "campaign-settings": "Налаштування"
   },
   "theme": {
     "menu": "Тема",

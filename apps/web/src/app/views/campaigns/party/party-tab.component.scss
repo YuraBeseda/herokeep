@@ -1,3 +1,5 @@
+/* Party tab (boards C06, C06-Tablet, C07): a grid of party cards, the quick-effects leaf beside it
+   on a wide desktop and as a sticky sheet above the dock below that. Tokens only. */
 :host {
   display: block;
 }
@@ -6,177 +8,203 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   margin-block-end: var(--space-4);
 }
 
 .party-tab__title {
-  margin: 0;
-  font-family: var(--font-display);
-}
-
-.party-tab__link-cta {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  margin-block-end: var(--space-4);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
-  background: var(--surface-2);
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-weight: 400;
 }
 
-.party-tab__link-cta-body {
-  margin: 0;
+.party-tab__hint {
+  color: var(--text-2);
+  font-size: 0.9375rem;
+}
+
+.party-tab__spacer {
   flex: 1 1 auto;
 }
 
-.party-tab__hidden-notice,
+.party-tab__link-cta,
+.party-tab__hidden-notice {
+  display: block;
+  margin-block-end: var(--space-4);
+}
+
 .party-tab__empty {
+  margin: 0;
   color: var(--text-2);
+}
+
+/* The grid, with the leaf beside it from a wide desktop on. */
+.party-tab__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
 }
 
 .party-tab__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: var(--space-3);
-  margin-block-end: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-4);
+  min-inline-size: 0;
 }
 
-.party-tab__card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-m);
-  background: var(--surface-1);
+@media (min-width: 1200px) {
+  .party-tab__layout--leaf {
+    grid-template-columns: minmax(0, 1fr) 26rem;
+  }
 
-  &[data-left='true'] {
-    opacity: 0.65;
+  .party-tab__leaf {
+    position: sticky;
+    inset-block-start: var(--space-4);
   }
 }
 
-.party-tab__portrait {
+/* Below that the leaf is a sticky sheet that stays above the dock (strap and tab bar). */
+@media (max-width: 1199px) {
+  .party-tab__leaf {
+    position: sticky;
+    z-index: 5;
+    inset-block-end: calc(var(--strap-height) + var(--space-3));
+    max-block-size: 60dvh;
+    overflow-y: auto;
+    border-radius: var(--radius-leaf);
+    box-shadow: var(--shadow-leaf);
+  }
+}
+
+@media (max-width: 767px) {
+  .party-tab__leaf {
+    inset-block-end: calc(var(--strap-height) + var(--tab-bar-height) + var(--space-3));
+    max-block-size: 50dvh;
+  }
+}
+
+.party-tab__card {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  /* Monogram letters sit on a dark per-character hue: on-dark ink, not parchment ink. */
-  color: var(--text-on-leather);
-  font-weight: 600;
-  flex-shrink: 0;
-  object-fit: cover;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  border-radius: var(--radius-leaf);
+
+  &[data-selected='true'] {
+    outline: 3px solid var(--accent-strong);
+    outline-offset: 3px;
+  }
+
+  &[data-left='true'] {
+    opacity: 0.7;
+  }
 }
 
-.party-tab__portrait--placeholder {
-  background: var(--surface-2);
+.party-tab__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.party-tab__name {
-  font-weight: 600;
-}
-
+.party-tab__mine-badge,
+.party-tab__pregen-badge,
 .party-tab__left-badge {
-  color: var(--danger);
+  padding: 2px var(--space-2);
+  border-radius: 4px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border-1);
+  color: var(--text-1);
   font-size: 0.8125rem;
 }
 
-.party-tab__pregen-badge {
-  color: var(--text-2);
-  font-size: 0.8125rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.party-tab__mine-badge {
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
 }
 
-.party-tab__view-sheet,
-.party-tab__unlink,
-.party-tab__handover {
-  align-self: flex-end;
-}
-
-.party-tab__no-overview {
+.party-tab__stat {
+  margin: 0;
   color: var(--text-2);
   font-size: 0.875rem;
 }
 
-.party-tab__hp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  width: 100%;
-}
-
-.party-tab__hp-bar {
-  width: 100%;
-}
-
-.party-tab__hp-text {
-  font-size: 0.8125rem;
-  color: var(--text-2);
-}
-
-.party-tab__stats {
-  display: flex;
-  gap: var(--space-3);
-  font-size: 0.8125rem;
-  color: var(--text-2);
-}
-
-.party-tab__classes {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--text-2);
-}
-
-.party-tab__concentration {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: 0.8125rem;
-}
-
-.party-tab__concentration-dot {
-  display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.party-tab__conditions {
+.party-tab__plain {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-leaf);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-leaf);
 }
 
-.party-tab__condition {
-  padding: 0.125rem var(--space-2);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
-  font-size: 0.75rem;
+.party-tab__name {
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+}
+
+.party-tab__no-overview {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-2);
+}
+
+/* The quick-effect chips on a DM card. */
+.party-tab__fx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+}
+
+.party-tab__fx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  block-size: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border-1);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    box-shadow: 0 0 0 4px var(--focus-ring-outer);
+  }
+}
+
+@media (pointer: coarse) {
+  .party-tab__fx-chip {
+    block-size: var(--control-phone);
+  }
 }
 
 .party-tab__no-character {
-  margin-block-start: var(--space-4);
+  margin-block-start: var(--space-5);
 }
 
 .party-tab__no-character-title {
   margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 400;
 }
 
 .party-tab__no-character-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -189,10 +217,9 @@
 }
 
 .party-tab__no-character-removed-badge {
-  color: var(--danger);
+  padding: 2px var(--space-2);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-2);
   font-size: 0.8125rem;
-}
-
-.party-tab__card[data-selected='true'] {
-  box-shadow: 0 0 0 2px var(--accent);
 }

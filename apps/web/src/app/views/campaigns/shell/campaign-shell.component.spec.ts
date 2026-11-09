@@ -203,10 +203,10 @@ describe('CampaignShellComponent', () => {
         ['/g', ID, 'settings'],
       ]);
       expect(tabs?.map((t) => t.label)).toEqual([
-        'campaigns.shell.tabs.party',
-        'campaigns.shell.tabs.log',
-        'campaigns.shell.tabs.lobby',
-        'campaigns.shell.tabs.settings',
+        'shell.tabs.campaign-party',
+        'shell.tabs.campaign-table',
+        'shell.tabs.campaign-lobby',
+        'shell.tabs.campaign-settings',
       ]);
       expect(campaignsEn.shell.tabs.log).toBe('Table');
     });
@@ -307,6 +307,26 @@ describe('CampaignShellComponent', () => {
       expect(TestBed.inject(ActionStrapService).config()).toBeNull();
       expect(TestBed.inject(TabBarService).tabs()).toBeNull();
       expect(TestBed.inject(CampaignSelectionService).selected()).toBeNull();
+    });
+
+    it('follows the campaign id when the shell is reused for another campaign, and drops the selection', async () => {
+      stubViewport({ phone: true });
+      configure();
+      const other = '00000000-0000-4000-8000-000000000002';
+      const harness = await RouterTestingHarness.create(`/g/${ID}/party`);
+      const selection = TestBed.inject(CampaignSelectionService);
+      selection.toggle({ characterId: 'c1', name: 'Ilyana' });
+      selection.requestEffect('damage');
+      TestBed.tick();
+      expect(TestBed.inject(ActionStrapService).config()?.scope).toEqual(['/g', ID]);
+
+      await harness.navigateByUrl(`/g/${other}/party`);
+      TestBed.tick();
+
+      expect(TestBed.inject(ActionStrapService).config()?.scope).toEqual(['/g', other]);
+      expect(TestBed.inject(TabBarService).tabs()?.[0].route).toEqual(['/g', other, 'party']);
+      expect(selection.selected()).toBeNull();
+      expect(selection.request()).toBeNull();
     });
 
     it('runs a strap effect pressed on another tab by going to Party first, once', async () => {

@@ -1,7 +1,8 @@
 import { Injectable, signal, type Signal } from '@angular/core';
 
-/** The DM quick effects the campaign strap offers for the selected member. */
-export type DmEffectKind = 'damage' | 'heal' | 'condition' | 'xp' | 'item';
+/** The DM quick effects: the strap offers the first five, the party cards' chips all nine. */
+export type DmEffectKind =
+  'damage' | 'heal' | 'temp' | 'condition' | 'xp' | 'level' | 'item' | 'inspiration' | 'override';
 
 export interface SelectedMember {
   readonly characterId: string;
@@ -17,8 +18,8 @@ export interface EffectRequest {
 
 /**
  * Which party member the DM has picked, and the strap's pending request to act on them. The strap
- * (campaign shell, zone 2) cannot reach a card's effects panel, so it posts a request here and the
- * panel of the addressed member picks it up: the same actions the panel's own buttons run. The
+ * (campaign shell, zone 2) cannot reach the quick-effects leaf, so it posts a request here and the
+ * leaf of the addressed member picks it up: the same actions the leaf's own tabs run. The
  * shell clears both when the campaign closes.
  */
 @Injectable({ providedIn: 'root' })
@@ -44,7 +45,7 @@ export class CampaignSelectionService {
     this.requestState.set(null);
   }
 
-  /** A request is acted on once: the panel that handles it takes it off the board. */
+  /** A request is acted on once: the leaf that handles it takes it off the board. */
   consume(request: EffectRequest): void {
     if (this.requestState() === request) this.requestState.set(null);
   }
@@ -54,7 +55,7 @@ export class CampaignSelectionService {
     this.requestState.set(null);
   }
 
-  /** Asks the selected member's effects panel to open `kind`. Nothing happens with no selection. */
+  /** Asks the selected member's quick-effects leaf to open `kind`. Nothing happens with no selection. */
   requestEffect(kind: DmEffectKind): void {
     const member = this.selectedState();
     if (!member) return;

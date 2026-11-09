@@ -228,19 +228,29 @@ export function partyCardByName(page: Page, characterName: string): Locator {
   return page.locator('.party-tab__card', { hasText: characterName });
 }
 
-/** Waits for `characterName`'s party card to show a resolved overview (`.party-tab__hp`) — i.e.
+/** Waits for `characterName`'s party card to show a resolved overview (its HP meter) — i.e.
  * `PartyOverviewPublisherService`'s own debounced publish (>=5s after the owning device's last
  * committed local append, `PARTY_OVERVIEW_PUBLISH_DEBOUNCE_MS`) has landed and synced down to the
  * viewer. Generous timeout: the debounce window itself, plus cold-start/network margin. */
 export async function waitForPartyOverview(page: Page, characterName: string): Promise<void> {
-  await expect(partyCardByName(page, characterName).locator('.party-tab__hp')).toBeVisible({
+  await expect(partyCardByName(page, characterName).locator('[role="meter"]')).toBeVisible({
     timeout: 25_000,
   });
 }
 
-/** Expands (if not already) `characterName`'s DM-effects panel and applies `amount` damage via
- * the FIRST hp row (Damage) — `DmEffectsPanelComponent.applyDamage`, routed through
- * `CampaignStore.gatewayAppend` onto the character's own stream. Waits for the panel's own inline
+/** Picks `characterName`'s card for the DM's quick-effects leaf (a press on the card's name),
+ * unless it is already the picked one. */
+export async function selectPartyCard(page: Page, characterName: string): Promise<void> {
+  const card = partyCardByName(page, characterName);
+  if ((await card.getAttribute('data-selected')) !== 'true') {
+    await card.locator('.hk-party__name-text, .party-tab__name').first().click();
+  }
+  await expect(card).toHaveAttribute('data-selected', 'true');
+}
+
+/** Picks `characterName`'s card, opens the Damage tab of the quick-effects leaf and applies
+ * `amount` damage — `QuickEffectsLeafComponent.applyDamage`, routed through
+ * `CampaignStore.gatewayAppend` onto the character's own stream. Waits for the leaf's own inline
  * feedback (success — never the `--error` modifier) rather than assuming the click alone is
  * enough, since a rejected/failed gateway append must fail the test loudly, not silently. Caller
  * is responsible for having already awaited `waitForPartyOverview` for this card (damage is
@@ -250,17 +260,14 @@ export async function applyPartyCardDamage(
   characterName: string,
   amount: number,
 ): Promise<void> {
-  const card = partyCardByName(page, characterName);
-  const toggle = card.locator('.dm-effects-panel__toggle');
-  if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
-    await toggle.click();
-  }
-  const hpRow = card.locator('.dm-effects-panel__hp-row').first();
-  await hpRow.locator('.hk-number-field__input').fill(String(amount));
-  await hpRow.getByRole('button', { name: 'Damage', exact: true }).click();
-  const feedback = card.locator('.dm-effects-panel__feedback');
+  await selectPartyCard(page, characterName);
+  const leaf = page.locator('app-quick-effects-leaf');
+  await leaf.locator('[data-effect-tab="damage"]').click();
+  await leaf.locator('.hk-numfield__in').fill(String(amount));
+  await leaf.getByRole('button', { name: 'Damage', exact: true }).click();
+  const feedback = leaf.locator('.qfx__feedback');
   await expect(feedback).toBeVisible({ timeout: 15_000 });
-  await expect(feedback).not.toHaveClass(/dm-effects-panel__feedback--error/);
+  await expect(feedback).not.toHaveClass(/qfx__feedback--error/);
 }
 
 // --- Log tab (rolls, chat, sessions) ------------------------------------------------------------
@@ -288,13 +295,13 @@ export async function sendChat(
   if ((await button.getAttribute('aria-pressed')) !== 'true') {
     await button.click();
   }
-  await page.locator('#log-tab-composer-text').fill(text);
+  await page.locator('.log-tab__composer-field textarea').fill(text);
   await page.locator('.log-tab__composer-send').click();
 }
 
 export async function startSession(page: Page, title?: string): Promise<void> {
   if (title) {
-    await page.locator('#log-tab-session-title').fill(title);
+    await page.locator('.log-tab__session-start-title input').fill(title);
   }
   await page.locator('.log-tab__session-start-submit').click();
   await expect(page.locator('.log-tab__session-end')).toBeVisible({ timeout: 15_000 });
@@ -379,8 +386,8 @@ export async function addPregen(page: Page): Promise<void> {
 }
 
 export async function openHandoverDialog(page: Page, characterName: string): Promise<void> {
-  const card = partyCardByName(page, characterName);
-  await card.locator('.party-tab__handover').click();
+  await selectPartyCard(page, characterName);
+  await page.locator('.qfx__handover').click();
   await expect(page.locator('.handover-character-dialog__title')).toBeVisible();
 }
 
@@ -391,8 +398,8 @@ export async function openHandoverDialog(page: Page, characterName: string): Pro
  * `HandoverCharacterDialogComponent.run()` closes the dialog (`dialogRef.close(true)`) in the SAME
  * tick `handedOverOk()` turns true, so `.handover-character-dialog__success` is never actually
  * observable — this waits for the dialog itself to close (its title unmounting) instead. The
- * caller is responsible for asserting the real effect (the DM's own party card losing its
- * `.party-tab__handover` button for this now-reassigned pregen). */
+ * caller is responsible for asserting the real effect (the DM's leaf for this pregen losing its
+ * `.qfx__handover` button for this now-reassigned pregen). */
 export async function confirmHandoverTo(page: Page, memberDisplayName: string): Promise<void> {
   await page.locator('.handover-character-dialog__member', { hasText: memberDisplayName }).click();
   await page.locator('.handover-character-dialog__confirm').click();
@@ -405,11 +412,11 @@ export async function confirmHandoverTo(page: Page, memberDisplayName: string): 
  * `UnlinkCharacterDialogComponent.run()` closes the dialog (`dialogRef.close(true)`) in the SAME
  * tick `unlinkedOk()` turns true, so `.unlink-character-dialog__success` is never observable here
  * either — this waits for the dialog itself to close (its title unmounting) instead. The caller
- * is responsible for asserting the actual effect (the roster card's `.party-tab__unlink` button
+ * is responsible for asserting the actual effect (the leaf's `.qfx__unlink` button
  * disappearing, since `canUnlink` no longer holds for an already-unlinked entry). */
 export async function unlinkCharacter(page: Page, characterName: string): Promise<void> {
-  const card = partyCardByName(page, characterName);
-  await card.locator('.party-tab__unlink').click();
+  await selectPartyCard(page, characterName);
+  await page.locator('.qfx__unlink').click();
   await expect(page.locator('.unlink-character-dialog__title')).toBeVisible();
   await page.locator('.unlink-character-dialog__confirm').click();
   await expect(page.locator('.unlink-character-dialog__title')).toHaveCount(0, {

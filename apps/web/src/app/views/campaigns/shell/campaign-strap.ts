@@ -20,7 +20,7 @@ export interface CampaignStrapState {
   readonly scope: readonly string[];
 }
 
-const NEEDS_MEMBER = 'campaigns.shell.strap.selectMember';
+const NEEDS_MEMBER = 'shell.strap.campaign-select-member';
 
 /**
  * The campaign's action strap (spec §3, boards C06 and C07): the DM gets Damage · Heal ·
@@ -38,7 +38,7 @@ export function buildCampaignStrap(
         ? [
             {
               id: 'open-sheet',
-              label: 'campaigns.shell.strap.openSheet',
+              label: 'shell.strap.campaign-open-sheet',
               icon: 'heroes',
               kind: 'primary',
               run: h.openSheet,
@@ -69,14 +69,14 @@ export function buildCampaignStrap(
       effect('heal', 'shell.icon.heal', 'heal', 'primary'),
       effect('condition', 'shell.icon.condition', 'condition', 'ghost'),
       effect('xp', 'shell.icon.xp', 'xp', 'ghost'),
-      effect('item', 'campaigns.shell.strap.item', 'bag', 'ghost'),
+      effect('item', 'shell.strap.campaign-item', 'bag', 'ghost'),
     ],
     secondary: [
       {
         id: 'session',
         label: state.sessionActive
-          ? 'campaigns.shell.strap.sessionEnd'
-          : 'campaigns.shell.strap.sessionStart',
+          ? 'shell.strap.campaign-session-end'
+          : 'shell.strap.campaign-session-start',
         icon: 'session',
         kind: 'icon',
         run: h.toggleSession,

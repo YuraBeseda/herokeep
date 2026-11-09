@@ -20,8 +20,8 @@ const PORTRAIT_FIXTURE = path.join(__dirname, '..', 'fixtures', 'tiny-portrait.p
  * sees the real thumbnail render on the party card. This can only happen through the campaign's
  * blob relay (`BlobTransferService`'s announce/request/serve protocol, task-13-brief.md) with the
  * DM's own connection acting as super-peer: the DM's device never uploaded or was sent this file
- * out of band, so an `img.party-tab__portrait` (as opposed to the monogram placeholder,
- * `.party-tab__portrait--placeholder`) appearing there is only explainable by the relay actually
+ * out of band, so a portrait `img` in the card's frame (as opposed to the monogram placeholder,
+ * `[role="img"]`) appearing there is only explainable by the relay actually
  * having pulled the bytes across.
  */
 test.describe('campaign: portrait relay', () => {
@@ -84,8 +84,8 @@ test.describe('campaign: portrait relay', () => {
         const card = partyCardByName(page, characterName);
         // Placeholder monogram until the blob relay completes — the thumb replacing it is the
         // proof the DM's super-peer connection actually pulled the bytes from the member's device.
-        await expect(card.locator('img.party-tab__portrait')).toBeVisible({ timeout: 45_000 });
-        await expect(card.locator('.party-tab__portrait--placeholder')).toHaveCount(0);
+        await expect(card.locator('hk-portrait-frame img')).toBeVisible({ timeout: 45_000 });
+        await expect(card.locator('hk-portrait-frame [role="img"]')).toHaveCount(0);
       });
     } finally {
       await memberContext.close();

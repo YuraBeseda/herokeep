@@ -1,21 +1,26 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { MembershipRole } from '@hk/protocol';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { DialogService } from '@app/ui/dialog/dialog.service';
-import { HpBarComponent } from '@shared/components/hp-bar/hp-bar.component';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { AuthService } from '@shared/services/auth/auth.service';
 import type { PartyOverview } from '@shared/services/campaigns/campaign-projection';
 import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
-import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
-import { CampaignSelectionService } from '../shell/campaign-selection.service';
-import { DmEffectsPanelComponent } from './dm-effects-panel.component';
+import { IconComponent } from '../../../shared/icons/icon.component';
+import { HkBannerComponent } from '../../../ui/banner/banner.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { DialogService } from '../../../ui/dialog/dialog.service';
+import {
+  HkPartyCardComponent,
+  type PartyCondition,
+} from '../../../ui/party-card/party-card.component';
+import { HkPortraitFrameComponent } from '../../../ui/portrait-frame/portrait-frame.component';
+import { CampaignSelectionService, type DmEffectKind } from '../shell/campaign-selection.service';
 import { HandoverCharacterDialogComponent } from './handover-character-dialog.component';
-import { MemberSheetDialogComponent } from './member-sheet-dialog.component';
+import { MemberSheetDrawerComponent } from './member-sheet-drawer/member-sheet-drawer.component';
+import { QuickEffectsLeafComponent } from './quick-effects-leaf/quick-effects-leaf.component';
 import { UnlinkCharacterDialogComponent } from './unlink-character-dialog.component';
 
 /** A `visibility.partySheets` mode, resolved with the same default `defaultCampaignSettings`
@@ -25,8 +30,8 @@ type PartySheetsMode = 'none' | 'overview' | 'full';
 
 /** One roster card (task-8-brief.md: "cards from `state.overviews`" + "roster entries with no
  * overview yet -> name-only card (from roster.name)"). `overview` is `undefined` for either
- * reason — no `party.overview_updated` has landed for this character yet, or (below) this
- * viewer isn't shown one at all. */
+ * reason: no `party.overview_updated` has landed for this character yet, or this viewer isn't
+ * shown one at all. */
 interface PartyCardVm {
   readonly characterId: string;
   readonly name: string;
@@ -37,8 +42,7 @@ interface PartyCardVm {
 
 /** One row in the "members without an active character" section (task-8-brief.md interfaces
  * note 16: "members with no characters -> row per member (`state.members` minus roster
- * owners)"). Mirrors `lobby.component.ts`'s own `MemberVm` field set (minus `online` — presence
- * has no bearing on this list). */
+ * owners)"). */
 interface MemberWithoutCharacterVm {
   readonly userId: string;
   readonly displayName: string;
@@ -46,34 +50,84 @@ interface MemberWithoutCharacterVm {
   readonly removed: boolean;
 }
 
+/** The sheet drawer's target while it is open. */
+interface DrawerTarget {
+  readonly characterId: string;
+  readonly name: string;
+  readonly opener: HTMLElement | null;
+}
+
+/** The quick-effect chips on a DM card, in the board's order; the XP / Level pair is one chip. */
+const FX_ORDER: readonly DmEffectKind[] = [
+  'damage',
+  'heal',
+  'temp',
+  'condition',
+  'xp',
+  'level',
+  'item',
+  'inspiration',
+  'override',
+];
+
+const FX_ICONS: Record<DmEffectKind, string> = {
+  damage: 'ui:damage',
+  heal: 'ui:heal',
+  temp: 'ui:temp-hp',
+  condition: 'ui:condition',
+  xp: 'ui:xp',
+  level: 'ui:level-up',
+  item: 'ui:bag',
+  inspiration: 'ui:inspiration',
+  override: 'ui:edit',
+};
+
 /**
- * `/g/:id/party` (plan-10 task-8-brief.md): the party overview grid. Replaces Task 6's
- * placeholder outright. `campaignGuard` (`app.routes.ts`) has already `CampaignStore.open()`'d
- * the stream, so `campaignStore.state()`/`.role()`/`.campaignId()` already point here — same
- * "no own data-loading, the guard already did it" relationship every other campaign tab
- * (`LobbyComponent`, `CampaignSettingsComponent`) has to `CampaignStore`.
+ * `/g/:id/party` (boards C06, C06-Tablet and C07, plan 17 B11b): the party overview grid.
+ * `campaignGuard` (`app.routes.ts`) has already `CampaignStore.open()`'d the stream, so
+ * `campaignStore.state()`/`.role()`/`.campaignId()` already point here: no own data-loading, the
+ * same relationship every other campaign tab has to `CampaignStore`.
+ *
+ * ## The DM view
+ *
+ * A grid of `hk-party-card`s. Pressing a card (or one of its effect chips) selects that member:
+ * the selection (`CampaignSelectionService`) drives the quick-effects leaf beside the grid and the
+ * campaign strap's Damage / Heal / Condition / XP / Item. A chip also picks the leaf's tab. The
+ * card's book button opens the member sheet in a drawer (`partySheets: 'full'` only), and the leaf
+ * footer offers Open full sheet, Hand over to... (the DM's own pregens) and Unlink (a roster entry
+ * whose owner was removed). The encounter plate slot of C06 is empty until plan slice 2.
+ *
+ * ## The player view
+ *
+ * The same grid without the chips, the leaf or the drill-in; the viewer's own hero is highlighted
+ * with a "Your hero" plate and an Open my sheet button.
  *
  * ## `partySheets` gating (doc-08 verification, task-8-brief.md's own instruction)
  *
- * `party.overview_updated` is NOT in doc-08's "Filtering on read" paragraph (only `dm.note_*`
- * and `roll.logged`/`chat.message` visibility are server-filtered) — every member's socket
- * receives every overview event regardless of `visibility.partySheets`. That setting is
- * therefore enforced CLIENT-SIDE here, for non-DM viewers only (`doc-08`'s authorization matrix
- * always lets the DM read everything; "the client renders, never re-enforces" describes the
- * SERVER's posture toward the wire protocol, not this component's own presentation choice):
- * `'none'` renders every card name-only (as if no overview existed at all, even when one has
- * arrived); `'overview'`/`'full'` both render the full card for a member — `'full'`'s ONLY
- * additional effect is enabling a DM-only sheet-subscribe drill-in, which is Task 9's own work,
- * not this component's. The DM always sees full detail, unconditionally.
+ * `party.overview_updated` is NOT in doc-08's "Filtering on read" paragraph, so every member's
+ * socket receives every overview regardless of `visibility.partySheets`. That setting is therefore
+ * enforced CLIENT-SIDE here, for non-DM viewers only: `'none'` renders every card name-only;
+ * `'overview'`/`'full'` both render the full card; `'full'`'s ONLY additional effect is the DM-only
+ * sheet drill-in. The DM always sees full detail.
+ *
+ * ## Requests that cannot land
+ *
+ * A strap request or a selection for a member this tab cannot address (they left the roster, or
+ * are absent from it) is dropped here, so a pending request never lingers for a leaf that will
+ * never mount.
  */
 @Component({
   selector: 'app-party-tab',
   imports: [
     TranslocoDirective,
-    ButtonComponent,
-    HpBarComponent,
     BlobUrlPipe,
-    DmEffectsPanelComponent,
+    IconComponent,
+    HkBannerComponent,
+    HkButtonComponent,
+    HkPartyCardComponent,
+    HkPortraitFrameComponent,
+    MemberSheetDrawerComponent,
+    QuickEffectsLeafComponent,
   ],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './party-tab.component.html',
@@ -83,7 +137,6 @@ export class PartyTabComponent {
   private readonly campaignStore = inject(CampaignStore);
   private readonly authService = inject(AuthService);
   private readonly engineFacade = inject(EngineFacade);
-  private readonly placeholderService = inject(PlaceholderService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly dialogService = inject(DialogService);
@@ -91,27 +144,25 @@ export class PartyTabComponent {
 
   protected readonly state = this.campaignStore.state;
   protected readonly role = this.campaignStore.role;
+  protected readonly campaignId = this.campaignStore.campaignId;
   protected readonly isDm = computed(() => this.role() === 'dm');
+  protected readonly fxIcon = (kind: DmEffectKind): string => FX_ICONS[kind];
 
   protected readonly partySheetsMode = computed<PartySheetsMode>(
     () => this.state()?.settings?.visibility.partySheets ?? 'overview',
   );
 
-  /** [plan-10 Task 9] Gates the party card's "View sheet" drill-in affordance — ruling 8's exact
-   * wording (task-8-report.md carry): "`'full'` additionally enables DM (and only DM) sheet-
-   * subscribe drill-in." */
+  /** [plan-10 Task 9] Gates the DM's sheet drill-in: `'full'` additionally enables DM (and only
+   * DM) sheet-subscribe drill-in. */
   protected readonly canDrillIn = computed(() => this.isDm() && this.partySheetsMode() === 'full');
 
-  /** DM: always full detail. Member: full detail UNLESS `partySheets === 'none'` — see class
-   * doc's "partySheets gating" section. */
+  /** DM: always full detail. Member: full detail UNLESS `partySheets === 'none'`. */
   protected readonly showOverviewDetails = computed(
     () => this.isDm() || this.partySheetsMode() !== 'none',
   );
 
-  /** [plan-10 Task 12] This campaign's own DM userId, derived from `state.members` (design
-   * ruling 3 has no separate `dmId` field client-side — `MemberEntry.role === 'dm'` is the same
-   * live signal every other campaign-role check in this codebase already reads). `undefined` only
-   * before `state` has resolved at all. */
+  /** This campaign's own DM userId, derived from `state.members` (design ruling 3 has no separate
+   * `dmId` field client-side). `undefined` only before `state` has resolved at all. */
   protected readonly dmUserId = computed(() => {
     const state = this.state();
     if (!state) return undefined;
@@ -121,9 +172,8 @@ export class PartyTabComponent {
     return undefined;
   });
 
-  /** A pregen (task-12-brief.md: "NO protocol flag exists — a pregen is just a DM-owned rostered
-   * character") — the badge/handover-eligibility derivation, used by BOTH the template's badge and
-   * `canHandOver` below. */
+  /** A pregen (task-12-brief.md: "NO protocol flag exists: a pregen is just a DM-owned rostered
+   * character"). */
   protected isPregen(card: PartyCardVm): boolean {
     const dmId = this.dmUserId();
     return dmId !== undefined && card.ownerId === dmId;
@@ -161,9 +211,8 @@ export class PartyTabComponent {
   });
 
   /** Whether the SIGNED-IN user already has an active (non-`left`) character in this campaign's
-   * roster — drives the "link a character" empty-state CTA (task-8-brief.md's Task-7-flagged
-   * extra obligation). Defaults to `true` (CTA hidden) while `state`/`user` haven't resolved yet,
-   * so the CTA never flashes on briefly before the real answer is known. */
+   * roster: drives the "link a character" empty-state CTA. Defaults to `true` (CTA hidden) while
+   * `state`/`user` haven't resolved yet, so the CTA never flashes on briefly. */
   protected readonly hasOwnActiveCharacter = computed(() => {
     const state = this.state();
     const userId = this.authService.user()?.userId;
@@ -171,40 +220,87 @@ export class PartyTabComponent {
     return [...state.roster.values()].some((r) => r.ownerId === userId && !r.left);
   });
 
+  /** The chips on a DM card: XP in XP mode, Level in milestone mode (the leaf's pair). */
+  protected readonly fxKinds = computed<readonly DmEffectKind[]>(() => {
+    const xpMode = this.state()?.settings?.houseRules.xpMode ?? 'xp';
+    return FX_ORDER.filter((kind) => (xpMode === 'xp' ? kind !== 'level' : kind !== 'xp'));
+  });
+
+  /** The card the quick-effects leaf is for: the DM's selection, while it can still be addressed. */
+  protected readonly selectedCard = computed<PartyCardVm | undefined>(() => {
+    if (!this.isDm()) return undefined;
+    const id = this.selection.selected()?.characterId;
+    return this.cards().find((card) => card.characterId === id && !card.left);
+  });
+
+  protected readonly drawer = signal<DrawerTarget | null>(null);
+
+  constructor() {
+    // A request or a selection for a member this tab cannot address (left, or absent from the
+    // roster) is dropped: no leaf will ever mount for them, so it must not linger on the board.
+    effect(() => {
+      const state = this.state();
+      const cards = this.cards();
+      const selected = this.selection.selected();
+      const request = this.selection.request();
+      if (!state || !this.isDm()) return;
+      const addressable = (characterId: string): boolean =>
+        cards.some((card) => card.characterId === characterId && !card.left);
+      untracked(() => {
+        if (selected && !addressable(selected.characterId)) {
+          this.selection.clear();
+        } else if (request && !addressable(request.characterId)) {
+          this.selection.consume(request);
+        }
+      });
+    });
+  }
+
   protected classLine(
     t: (key: string, params?: Record<string, unknown>) => string,
-    ov: PartyOverview,
+    card: PartyCardVm,
   ): string {
-    if (ov.classes.length === 0) return '';
+    const ov = card.overview;
+    const parts: string[] = [];
+    if (ov && ov.classes.length > 0) {
+      const localizer = this.engineFacade.localizer();
+      parts.push(
+        ov.classes
+          .map((c) =>
+            t('party.card.classLevel', { class: localizer.name(c.classId), level: c.level }),
+          )
+          .join(' · '),
+      );
+    }
+    const player = this.state()?.members.get(card.ownerId)?.displayName;
+    if (player) parts.push(t('party.card.player', { name: player }));
+    return parts.join(' · ');
+  }
+
+  protected conditions(card: PartyCardVm): PartyCondition[] {
     const localizer = this.engineFacade.localizer();
-    return ov.classes
-      .map((c) => t('party.card.classLevel', { class: localizer.name(c.classId), level: c.level }))
-      .join(' · ');
+    return (card.overview?.conditions ?? []).map((id) => ({
+      id,
+      name: localizer.name(id) || id,
+    }));
   }
 
-  protected conditionName(conditionId: string): string {
-    return this.engineFacade.localizer().name(conditionId) || conditionId;
-  }
-
-  protected monogram(name: string, characterId: string): Monogram {
-    return this.placeholderService.monogram(name, characterId);
+  protected isMine(card: PartyCardVm): boolean {
+    const userId = this.authService.user()?.userId;
+    return userId !== undefined && card.ownerId === userId && !card.left;
   }
 
   protected goToLinkCharacter(): void {
     void this.router.navigate(['../link-character'], { relativeTo: this.route });
   }
 
-  /** [plan-10 Task 12] DM "add pregen" (task-12-brief.md): "runs the existing creation wizard
-   * flagged pregen... auto-join to campaign per ruling 4 via the DM's own sockets" — reuses T7's
-   * OWN `?returnUrl=` mechanism verbatim (`CreateWizardComponent`'s already-shipped, already-tested
-   * pattern), landing the DM back on `/g/:id/link-character` (T7's own screen) where the brand-new
-   * character shows up as `'eligible'` and the DM completes ruling 4's join with ONE more click —
-   * on the DM's own device/sockets, exactly like any owned character joining a campaign (no gateway
-   * involved at all; a pregen is, structurally, nothing but an ordinary DM-owned character joined
-   * to their own campaign). Deliberately NOT a bespoke one-click "auto-join" flow: that would mean
-   * re-deriving T7's own join-sequence wiring a second time inside this already-large task, for a
-   * shared, high-traffic component (`CreateWizardComponent`), for a marginal UX gain over one extra
-   * tap on an already-working screen. */
+  protected openMySheet(card: PartyCardVm): void {
+    void this.router.navigate(['/c', card.characterId]);
+  }
+
+  /** [plan-10 Task 12] DM "add pregen": reuses the creation wizard's own `?returnUrl=` mechanism
+   * verbatim, landing the DM back on `/g/:id/link-character` where the brand-new character shows
+   * up as `'eligible'` and the DM completes the join with one more click. */
   protected addPregen(): void {
     const campaignId = this.campaignStore.campaignId();
     if (!campaignId) return;
@@ -213,9 +309,8 @@ export class PartyTabComponent {
     });
   }
 
-  /** [plan-10 Task 12] "Hand over to…" — DM-only, and only ever on a card this DM themselves
-   * currently owns (`isPregen`) that hasn't already left the roster. Never a general
-   * reassign-any-character tool (mirrors `canUnlink`'s own scope-guard posture). */
+  /** [plan-10 Task 12] "Hand over to…": DM-only, and only ever on a card this DM themselves
+   * currently owns (`isPregen`) that hasn't already left the roster. */
   protected canHandOver(card: PartyCardVm): boolean {
     return this.isDm() && !card.left && this.isPregen(card);
   }
@@ -233,24 +328,25 @@ export class PartyTabComponent {
     });
   }
 
-  /** [plan-10 Task 9] Opens the DM party-sheet drill-in for `card` — the caller (the template)
-   * already gates this behind `canDrillIn()`, so this method trusts it was only ever invoked for
-   * an authorized viewer (same "the opener already checked" posture `MemberSheetDialogComponent`
-   * itself documents). `campaignId()` is guaranteed defined here — this component only ever
-   * renders once `campaignGuard` has already opened a campaign stream. */
-  protected openMemberSheet(card: PartyCardVm): void {
-    const campaignId = this.campaignStore.campaignId();
-    if (!campaignId) return;
-    this.dialogService.open(MemberSheetDialogComponent, {
-      data: { campaignId, characterId: card.characterId, name: card.name },
-      sheet: true,
-    });
+  /** [plan-10 Task 9] Opens the DM party-sheet drill-in for `card` in a drawer. The callers gate
+   * this behind `canDrillIn()`. `opener` is the control that was pressed: focus returns to it. */
+  protected openMemberSheet(card: PartyCardVm, opener: HTMLElement | null): void {
+    if (!this.campaignStore.campaignId()) return;
+    this.drawer.set({ characterId: card.characterId, name: card.name, opener });
   }
 
-  /** [plan-10 Task 11] `DmEffectsPanelComponent`'s HP baseline for THIS card — 'overview' mode
-   * only ever has `PartyOverview.hp/hpMax/temp` (never `currentWasMax`, which only a live `Sheet`
-   * can supply — task-11-report.md's own documented limitation). `undefined` when no overview has
-   * arrived yet at all (the panel renders its own "no baseline" hint in that case). */
+  /** The card's book button: the cell's own button is the drawer's opener. */
+  protected openFromCard(card: PartyCardVm, cell: HTMLElement): void {
+    this.openMemberSheet(card, cell.querySelector<HTMLElement>('.hk-party__open'));
+  }
+
+  protected openFromLeaf(card: PartyCardVm, leaf: HTMLElement): void {
+    this.openMemberSheet(card, leaf.querySelector<HTMLElement>('.qfx__open-sheet'));
+  }
+
+  /** [plan-10 Task 11] The leaf's HP baseline for THIS card: 'overview' mode only ever has
+   * `PartyOverview.hp/hpMax/temp` (never `currentWasMax`, which only a live `Sheet` can supply).
+   * `undefined` when no overview has arrived yet at all. */
   protected hpSnapshot(card: PartyCardVm): HpSnapshot | undefined {
     const ov = card.overview;
     return ov ? { current: ov.hp, max: ov.hpMax, temp: ov.temp } : undefined;
@@ -261,24 +357,11 @@ export class PartyTabComponent {
   }
 
   /** [plan-10 Task 11] Scoped EXACTLY to doc-03's §bye obligation: a roster entry whose character
-   * hasn't left yet (`left: false`) but whose OWNING member has been removed/left the campaign —
-   * `member.removed`/`member.left` unlink the MEMBERSHIP only, never the character, so this is the
-   * ONLY way such a character is ever discoverable/unlinkable again (see
-   * `dm-unlink-sequence.ts`'s own class doc for the full server-rule citation). Deliberately NOT a
-   * general "unlink any character" tool — an active member's own character is never offered this
-   * action here. */
+   * hasn't left yet but whose OWNING member has been removed/left the campaign. Deliberately NOT a
+   * general "unlink any character" tool. */
   protected canUnlink(card: PartyCardVm): boolean {
     if (!this.isDm() || card.left) return false;
     return this.state()?.members.get(card.ownerId)?.removed === true;
-  }
-
-  /** The DM's pick for the campaign strap's quick effects (B11b replaces this with the card grid). */
-  protected isSelected(card: PartyCardVm): boolean {
-    return this.selection.selected()?.characterId === card.characterId;
-  }
-
-  protected toggleSelected(card: PartyCardVm): void {
-    this.selection.toggle({ characterId: card.characterId, name: card.name });
   }
 
   protected openUnlink(card: PartyCardVm): void {
@@ -292,5 +375,42 @@ export class PartyTabComponent {
         characterName: card.name,
       },
     });
+  }
+
+  // --- Selection -------------------------------------------------------------------------------
+
+  protected isSelected(card: PartyCardVm): boolean {
+    return this.selection.selected()?.characterId === card.characterId;
+  }
+
+  /** A press on a DM card's body toggles the selection; presses on its own controls do not. */
+  protected onCellPress(event: Event, card: PartyCardVm): void {
+    if (!this.isDm() || card.left) return;
+    const target = event.target;
+    // A press on one of the card's own controls is that control's, not the card's.
+    const control =
+      target instanceof Element ? target.closest('button, a, [role="img"], [tabindex]') : null;
+    if (control && control !== event.currentTarget) return;
+    this.selection.toggle({ characterId: card.characterId, name: card.name });
+  }
+
+  /** Enter or Space on the focused card itself does what a press on it does. */
+  protected onCellKey(event: KeyboardEvent, card: PartyCardVm): void {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    this.onCellPress(event, card);
+  }
+
+  /** A chip selects the card (when it is not the selection yet) and asks its leaf for `kind`. */
+  protected pickEffect(card: PartyCardVm, kind: DmEffectKind): void {
+    if (!this.isSelected(card)) {
+      this.selection.select({ characterId: card.characterId, name: card.name });
+    }
+    this.selection.requestEffect(kind);
+  }
+
+  protected closeLeaf(): void {
+    this.selection.clear();
   }
 }

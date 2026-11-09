@@ -70,6 +70,9 @@ export class HkPartyCardComponent {
   readonly dyingHint = input<string | null>(null);
 
   // Outputs
+  /** `false` hides the open button, for a viewer who has nothing to open. */
+  readonly openable = input(true);
+
   readonly open = output<void>();
 
   protected readonly nameId = fieldId('hk-party-name');

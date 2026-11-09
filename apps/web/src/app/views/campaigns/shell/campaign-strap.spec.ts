@@ -26,7 +26,7 @@ describe('buildCampaignStrap', () => {
     const strap = buildCampaignStrap(base, handlers());
     for (const action of strap.primary) {
       expect(action.disabled, action.id).toBe(true);
-      expect(action.disabledReason, action.id).toBe('campaigns.shell.strap.selectMember');
+      expect(action.disabledReason, action.id).toBe('shell.strap.campaign-select-member');
     }
   });
 
@@ -52,7 +52,7 @@ describe('buildCampaignStrap', () => {
     const idle = buildCampaignStrap(base, h);
     const session = idle.secondary!.find((a) => a.id === 'session')!;
     expect(session.disabled).toBeFalsy();
-    expect(session.label).toBe('campaigns.shell.strap.sessionStart');
+    expect(session.label).toBe('shell.strap.campaign-session-start');
     session.run();
     idle.secondary!.find((a) => a.id === 'export')!.run();
     expect(h.toggleSession).toHaveBeenCalledOnce();
@@ -60,7 +60,7 @@ describe('buildCampaignStrap', () => {
 
     const live = buildCampaignStrap({ ...base, sessionActive: true }, h);
     expect(live.secondary!.find((a) => a.id === 'session')!.label).toBe(
-      'campaigns.shell.strap.sessionEnd',
+      'shell.strap.campaign-session-end',
     );
   });
 

@@ -27,15 +27,17 @@
     </div>
     <div class="hk-party__side">
       <hk-shield-badge [value]="ac()" [size]="'s'" />
-      <button
-        type="button"
-        class="hk-party__open"
-        [attr.aria-label]="t('ui.party.open', { name: name() })"
-        [hkTooltip]="t('ui.party.open', { name: name() })"
-        (click)="open.emit()"
-      >
-        <hk-icon [icon]="'ui:details'" />
-      </button>
+      @if (openable()) {
+        <button
+          type="button"
+          class="hk-party__open"
+          [attr.aria-label]="t('ui.party.open', { name: name() })"
+          [hkTooltip]="t('ui.party.open', { name: name() })"
+          (click)="open.emit()"
+        >
+          <hk-icon [icon]="'ui:details'" />
+        </button>
+      }
     </div>
     <div class="hk-party__hp">
       <span class="hk-party__hp-num" [class.hk-party__hp-num--dying]="dying()"

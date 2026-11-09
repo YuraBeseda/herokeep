@@ -138,13 +138,6 @@
     "session": {
       "active": "Session in progress",
       "activeWithTitle": "Session in progress — {title}"
-    },
-    "strap": {
-      "selectMember": "Pick a hero on the Party tab first",
-      "item": "Item",
-      "sessionStart": "Start session",
-      "sessionEnd": "End session",
-      "openSheet": "Open my sheet"
     }
   },
   "lobby": {
@@ -299,13 +292,17 @@
       "classLevel": "{class} {level}",
       "concentrating": "Concentrating",
       "viewSheet": "View sheet",
-      "select": "Select",
-      "selectAria": "Select {name} for the quick-effects strap",
-      "selected": "Selected"
+      "player": "Played by {name}",
+      "yours": "Your hero",
+      "openMine": "Open my sheet"
     },
     "membersWithoutCharacter": {
       "title": "No character yet",
       "removedBadge": "Removed"
+    },
+    "hint": "Press a card to pick a hero for the quick effects",
+    "fx": {
+      "label": "Quick effects for {name}"
     }
   },
   "dmEffects": {
@@ -328,7 +325,8 @@
     "conditions": {
       "title": "Conditions",
       "add": "Add condition",
-      "remove": "Remove"
+      "remove": "Remove",
+      "removeNamed": "Remove {name}"
     },
     "xp": {
       "title": "Experience",
@@ -353,13 +351,31 @@
       "pathHint": "e.g. ac, abilities.str.score, speed.walk",
       "valueLabel": "Value",
       "reasonLabel": "Reason (required)",
-      "apply": "Apply override"
+      "apply": "Apply override",
+      "needsFields": "Enter a sheet path and a reason first"
     },
     "status": {
       "applied": "Applied.",
       "appliedCaveat": "Sent — applies once the character's HP is initialized.",
       "failed": "Couldn't apply that change."
-    }
+    },
+    "tabs": {
+      "label": "Effect",
+      "damage": "Damage",
+      "heal": "Heal",
+      "temp": "Temp HP",
+      "condition": "Condition",
+      "xp": "XP",
+      "level": "Level",
+      "item": "Item",
+      "inspiration": "Inspiration",
+      "override": "Override",
+      "xpOff": "This campaign levels up by milestone, so XP is not used",
+      "levelOff": "This campaign levels up by XP, so levels come from XP"
+    },
+    "hint": "Quick effects · {hp} / {hpMax} HP",
+    "hintNoHp": "Quick effects",
+    "openSheet": "Open full sheet"
   },
   "unlink": {
     "action": "Unlink character",
@@ -460,7 +476,7 @@
     }
   },
   "log": {
-    "title": "Log",
+    "title": "Table",
     "landmark": "Campaign log",
     "empty": "Nothing here yet.",
     "session": {
@@ -475,15 +491,20 @@
       "ending": "Ending…",
       "errors": {
         "generic": "Couldn't update the session. Try again."
-      }
+      },
+      "running": "Session in progress",
+      "runningWithTitle": "Session in progress — {title}",
+      "idle": "No session running"
     },
     "visibilityHint": {
       "dm": "Only visible to you and the DM",
-      "private": "Only visible to you"
+      "private": "Only visible to you",
+      "everyone": "Everyone at the table sees it",
+      "other": "Only the sender and the DM see this"
     },
     "composer": {
       "label": "Message",
-      "byteCount": "{count}/{max} bytes",
+      "byteCount": "{count} / {max}",
       "send": "Send",
       "visibilityGroup": "Who can see this message",
       "visibility": {
@@ -493,6 +514,12 @@
       },
       "errors": {
         "generic": "Couldn't send that message. Try again."
+      },
+      "byteLimit": "{max} bytes per message",
+      "byteCountAria": "{count} of {max} bytes",
+      "sendReason": {
+        "empty": "Type a message first",
+        "tooLong": "The message is over {max} bytes"
       }
     }
   },
