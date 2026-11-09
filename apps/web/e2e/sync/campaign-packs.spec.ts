@@ -150,8 +150,10 @@ test.describe('campaign: content pack relay', () => {
         });
         await openTab(memberPage, 'Build');
         await expect(
-          memberPage.locator(`.build-packs__row[data-pack-id="${PACK_ID}"] .build-packs__toggle`),
-        ).toBeChecked();
+          memberPage.locator(
+            `.build-packs__row[data-pack-id="${PACK_ID}"] .build-packs__toggle button[role="switch"]`,
+          ),
+        ).toHaveAttribute('aria-checked', 'true');
         await openTab(memberPage, 'Timeline');
         await expect(memberPage.locator('.timeline-tab')).toContainText(
           `Pinned ${PACK_NAME} v1.0.0.`,
@@ -211,8 +213,10 @@ test.describe('campaign: content pack relay', () => {
 
         await memberPage.goto(`/c/${characterId}/build`);
         await expect(
-          memberPage.locator(`.build-packs__row[data-pack-id="${PACK_ID}"] .build-packs__toggle`),
-        ).toBeChecked();
+          memberPage.locator(
+            `.build-packs__row[data-pack-id="${PACK_ID}"] .build-packs__toggle button[role="switch"]`,
+          ),
+        ).toHaveAttribute('aria-checked', 'true');
         await expect(memberPage.locator('.campaign-packs-banner')).toHaveCount(0);
         await memberPage.goto('/packs');
         await expect(installedPackRow(memberPage, PACK_NAME)).toContainText('1.0.0');

@@ -11,11 +11,13 @@ import { IconComponent } from '../../../../shared/icons/icon.component';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
 import type { FilterChipOption } from '../../../../ui/filter-chips/filter-chip.component';
+import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field.component';
 import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkToggleComponent } from '../../../../ui/toggle/toggle.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { TimelineRevertConfirmComponent } from '../play/revert-dialog.component';
+import { revertPreview } from './revert-preview';
 import {
   eventFamily,
   EventSentencePipe,
@@ -93,6 +95,7 @@ const dayKey = (date: Date): string =>
     TranslocoDirective,
     HkLeafComponent,
     HkFilterChipsComponent,
+    HkSearchFieldComponent,
     HkToggleComponent,
     HkTagChipComponent,
     HkButtonComponent,
@@ -136,6 +139,7 @@ export class TimelineTabComponent {
   // Filter chips (board T01): the chips that are ON narrow the list to their families; with none
   // on, every family shows. `hk-filter-chips` owns the on/off state of each chip.
   protected readonly selectedFamilies = signal<readonly string[]>([]);
+  protected readonly query = signal('');
   protected readonly showReverted = signal(true);
   protected readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
 
@@ -157,10 +161,12 @@ export class TimelineTabComponent {
   protected readonly visibleRows = computed<TimelineRow[]>(() => {
     const picked = this.selectedFamilies();
     const showReverted = this.showReverted();
+    const needle = this.query().trim().toLocaleLowerCase();
     return this.rows().filter(
       (row) =>
         (picked.length === 0 || picked.includes(eventFamily(row.leadType))) &&
-        (showReverted || !this.isReverted(row)),
+        (showReverted || !this.isReverted(row)) &&
+        (needle === '' || this.searchText(row).includes(needle)),
     );
   });
 
@@ -284,6 +290,24 @@ export class TimelineTabComponent {
     return Array.isArray(rolls) && rolls.length > 0 ? (rolls as RollResult[]) : undefined;
   }
 
+  /** Every sentence of the row (a group's members too), lower-cased, for the search field. */
+  private searchText(row: TimelineRow): string {
+    return row.events
+      .map((event) =>
+        this.sentencePipe.transform(
+          event,
+          this.index(),
+          this.localizer(),
+          1,
+          this.grammaticalGender(),
+          this.sheet(),
+          this.installedPacks(),
+        ),
+      )
+      .join(' ')
+      .toLocaleLowerCase();
+  }
+
   /** The row's own sentence, without the group suffix (for the revert confirm and its label). */
   protected sentenceOf(row: TimelineRow): string {
     return this.sentencePipe.transform(
@@ -298,16 +322,27 @@ export class TimelineTabComponent {
   }
 
   protected async onRevert(row: TimelineRow): Promise<void> {
+    const target = row.txId !== undefined ? { txId: row.txId } : { eventId: row.events[0].id };
+    const index = this.characterStore.index();
+    const changes = index
+      ? revertPreview({
+          events: this.characterStore.events(),
+          target,
+          index,
+          rules: this.characterStore.systemRules(),
+          overrides: this.characterStore.campaignOverrides(),
+        })
+      : [];
     const handle = this.dialogService.open(TimelineRevertConfirmComponent, {
       data: {
         name: this.sheet()?.name ?? '',
         sentence: this.sentenceOf(row),
         related: row.events.length - 1,
+        changes,
       },
     });
     const confirmed = await handle.closed;
     if (confirmed !== true) return;
-    const target = row.txId !== undefined ? { txId: row.txId } : { eventId: row.events[0].id };
     await this.characterStore.revert(target);
   }
 }

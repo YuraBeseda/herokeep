@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';
+import type { RevertChange } from '../timeline/revert-preview';
 
 /** What the revert confirm needs, resolved by the caller (the Timeline row). */
 export interface RevertDialogData {
@@ -11,6 +12,8 @@ export interface RevertDialogData {
   readonly sentence: string;
   /** How many OTHER events the same transaction holds (0 for a single event). */
   readonly related: number;
+  /** The sheet values the revert moves (`revertPreview`); empty when nothing visible changes. */
+  readonly changes: readonly RevertChange[];
 }
 
 /**
@@ -51,6 +54,23 @@ export interface RevertDialogData {
           }}
         }
       </p>
+      @if (data.changes.length > 0) {
+        <dl class="timeline-revert-confirm__changes">
+          @for (change of data.changes; track change.key) {
+            <div class="timeline-revert-confirm__change" [attr.data-key]="change.key">
+              <dt>{{ t('characters.timeline.revertConfirm.preview.' + change.key) }}</dt>
+              <dd>
+                {{ change.before }} <span aria-hidden="true">→</span>
+                <b>{{ change.after }}</b>
+              </dd>
+            </div>
+          }
+        </dl>
+      } @else {
+        <p class="timeline-revert-confirm__none">
+          {{ t('characters.timeline.revertConfirm.preview.none') }}
+        </p>
+      }
       <div class="timeline-revert-confirm__actions" data-dialog-actions>
         <button
           hk-button
@@ -77,6 +97,32 @@ export interface RevertDialogData {
     :host {
       display: block;
       min-inline-size: min(100%, 380px);
+    }
+
+    .timeline-revert-confirm__changes {
+      display: grid;
+      gap: 4px;
+      margin: 0 0 12px;
+    }
+
+    .timeline-revert-confirm__change {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 4px 10px;
+    }
+
+    .timeline-revert-confirm__change dt {
+      color: var(--text-2);
+    }
+
+    .timeline-revert-confirm__change dd {
+      margin: 0;
+    }
+
+    .timeline-revert-confirm__none {
+      margin: 0 0 12px;
+      color: var(--text-2);
+      font-style: italic;
     }
 
     .timeline-revert-confirm__body {

@@ -179,7 +179,12 @@ export class BuildIdentitySectionComponent {
     this.appearanceDraft.update((prev) => ({ ...prev, [field]: value }));
   }
 
-  protected save(): void {
+  /** Whether the form holds edits that are not saved (the route's exit guard asks through this). */
+  hasUnsaved(): boolean {
+    return this.dirty();
+  }
+
+  protected async save(): Promise<void> {
     if (!this.canSave() || this.disabled()) return;
     const drafts = [];
     if (this.nameDirty()) {
@@ -201,7 +206,14 @@ export class BuildIdentitySectionComponent {
       drafts.push({ type: 'character.appearance_set' as const, v: 1, payload: appearance });
     }
     if (drafts.length === 0) return;
-    void this.store.appendTx(drafts);
+    try {
+      await this.store.appendTx(drafts);
+    } catch {
+      // The drafts stay (nothing was saved); the generic error toast says so, and Save can be
+      // pressed again.
+      this.toastService.show(GENERIC_PORTRAIT_ERROR_KEY);
+      return;
+    }
     this.nameDraft.set(undefined);
     this.genderDraft.set(undefined);
     this.appearanceDraft.set({});

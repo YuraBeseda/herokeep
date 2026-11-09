@@ -100,10 +100,10 @@ test.describe('auth: register, recovery codes, and cross-device visibility', () 
       await expect(page.locator('.pack-trust-dialog')).toHaveCount(0);
       await page.goto(`/c/${characterId}/build`);
       const pin = page.locator(
-        '.build-packs__row[data-pack-id="sample-content"] .build-packs__toggle',
+        '.build-packs__row[data-pack-id="sample-content"] .build-packs__toggle button[role="switch"]',
       );
       await pin.click();
-      await expect(pin).toBeChecked();
+      await expect(pin).toHaveAttribute('aria-checked', 'true');
       await page.reload();
       await page.goto('/characters');
       await expect(syncBadgeForName(page, characterName)).toHaveAttribute(

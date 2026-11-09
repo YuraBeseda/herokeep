@@ -122,6 +122,12 @@ describe('app routes', () => {
     expect(guarded).toEqual(['register']);
   });
 
+  it("guards the sheet's build child route against leaving unsaved identity edits (canDeactivate)", () => {
+    const sheet = routes.find((route) => route.path === 'c/:id');
+    const build = sheet?.children?.find((route) => route.path === 'build');
+    expect(build?.canDeactivate?.length).toBe(1);
+  });
+
   it('renders the shell rail with the six sections and About using the real translations', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

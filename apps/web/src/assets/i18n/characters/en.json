@@ -384,6 +384,12 @@
         "gender": "Grammatical gender",
         "genderHint": "Used for sentences in languages that inflect by gender, like the Timeline",
         "nameLabel": "Name"
+      },
+      "leaveConfirm": {
+        "title": "Leave without saving?",
+        "body": "Your edits to the name, gender or appearance are not saved yet. Leaving drops them.",
+        "keep": "Keep editing",
+        "discard": "Discard changes"
       }
     },
     "options": {
@@ -841,7 +847,14 @@
       "body": "{name} is recomputed as if “{sentence}” never happened. The events after it stay and are replayed on top.",
       "cancel": "Keep it",
       "confirm": "Revert",
-      "bodyGroup": "{name} is recomputed as if “{sentence}” (and {count} related events) never happened. The events after it stay and are replayed on top."
+      "bodyGroup": "{name} is recomputed as if “{sentence}” (and {count} related events) never happened. The events after it stay and are replayed on top.",
+      "preview": {
+        "hp": "Hit points",
+        "hpMax": "Max hit points",
+        "ac": "Armor class",
+        "level": "Level",
+        "none": "No visible change on the sheet."
+      }
     },
     "character-created": "{name} was created.",
     "character-renamed": "Renamed to {name}.",
@@ -907,7 +920,8 @@
     "collapse": "{count, plural, one {Hide # event} other {Hide # events}}",
     "lockedCreation": "can’t revert",
     "lockedCreationHint": "Creation can’t be reverted; delete the hero instead",
-    "today": "Today"
+    "today": "Today",
+    "searchLabel": "Search events"
   },
   "validation": {
     "generic": "This selection isn't valid yet.",

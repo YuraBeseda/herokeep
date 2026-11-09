@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router, type Routes } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type CampaignSettings, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -29,6 +30,7 @@ import shellEn from '../../../../../assets/i18n/shell/en.json';
 import { hintOf } from '@app/ui/testing/harness';
 import { ChoiceStepComponent } from '../../create-wizard/steps/choice-step.component';
 import { seedFighter } from '../testing/character-fixtures';
+import { buildLeaveGuard } from './build-leave.guard';
 import { BuildTabComponent } from './build-tab.component';
 
 const THUMB_HASH = `sha256:${'a'.repeat(64)}`;
@@ -533,7 +535,6 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
         }),
         provideTranslocoMessageformat(),
         provideRouter([]),
-        provideRouter([]),
         {
           provide: PackStore,
           useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
@@ -642,12 +643,11 @@ describe('BuildTabComponent — campaign edit lock (plan-10 task-14-brief.md, ru
     expect(compiled.querySelector<HTMLInputElement>('[data-field="age"] input')!.disabled).toBe(
       true,
     );
-    expect(
-      compiled
-        .querySelector<HTMLButtonElement>('.build-identity__save')!
-        .getAttribute('aria-disabled') === 'true' ||
-        compiled.querySelector<HTMLButtonElement>('.build-identity__save')!.disabled,
-    ).toBe(true);
+    // The Save is the `hk-button` locked state: `aria-disabled="true"` (it carries the lock's reason
+    // as its hint) on top of the native `disabled` an unedited form has.
+    const save = compiled.querySelector<HTMLButtonElement>('.build-identity__save')!;
+    expect(save.getAttribute('aria-disabled')).toBe('true');
+    expect(save.disabled).toBe(true);
 
     // Portrait
     expect(compiled.querySelector<HTMLButtonElement>('.build-tab__portrait-upload')!.disabled).toBe(
@@ -1021,5 +1021,137 @@ describe('BuildTabComponent — identity: one Save, an unsaved-changes chip (boa
       e.getAttribute('data-field'),
     );
     expect(names).toEqual(['age', 'height', 'weight', 'eyes', 'hair', 'skin']);
+  });
+});
+
+// --- B10b fix round 1 ------------------------------------------------------------------------------
+
+@Component({ selector: 'app-leave-target', template: '' })
+class LeaveTargetComponent {}
+
+const LEAVE_ROUTES: Routes = [
+  { path: 'c/:id/build', component: BuildTabComponent, canDeactivate: [buildLeaveGuard] },
+  { path: 'c/:id/play', component: LeaveTargetComponent },
+  { path: 'c/:id/combat', component: LeaveTargetComponent },
+  { path: 'c/:id/more', component: LeaveTargetComponent },
+  { path: 'c/:id/timeline', component: LeaveTargetComponent },
+];
+
+describe('BuildTabComponent — identity exit guard', () => {
+  beforeEach(async () => {
+    configureReal();
+    TestBed.configureTestingModule({ providers: [provideRouter(LEAVE_ROUTES)] });
+    await clearDb();
+  });
+
+  afterEach(closeOverlays);
+
+  async function editName(harness: RouterTestingHarness): Promise<void> {
+    const input = harness.routeNativeElement!.querySelector<HTMLInputElement>(
+      '[data-field="name"] input',
+    )!;
+    input.value = 'Ivanka';
+    input.dispatchEvent(new Event('input'));
+    await harness.fixture.whenStable();
+  }
+
+  async function dialogButton(selector: string): Promise<HTMLButtonElement> {
+    for (let i = 0; i < 100; i++) {
+      const el = document.querySelector<HTMLButtonElement>(selector);
+      if (el) return el;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    throw new Error(`no ${selector}`);
+  }
+
+  it('a clean form leaves silently', async () => {
+    const id = await seedFighter('Ivan');
+    const harness = await RouterTestingHarness.create(`/${id.replace('char:', 'c/')}/build`);
+    const router = TestBed.inject(Router);
+
+    expect(await router.navigateByUrl(`/${id.replace('char:', 'c/')}/play`)).toBe(true);
+    expect(document.querySelector('.build-leave-confirm__title')).toBeNull();
+    expect(harness).toBeTruthy();
+  });
+
+  // The sheet tab (play), the phone tab bar (combat) and the phone More list (timeline) are all
+  // route changes, so each one runs the same guard.
+  it.each(['play', 'combat', 'more'])(
+    'unsaved edits: leaving to %s asks ONCE; Keep editing stays with the draft, Discard leaves',
+    async (target) => {
+      const id = await seedFighter('Ivan');
+      const base = `/${id.replace('char:', 'c/')}`;
+      const harness = await RouterTestingHarness.create(`${base}/build`);
+      const router = TestBed.inject(Router);
+      await editName(harness);
+
+      // Keep editing: the navigation is cancelled and the draft is still in the field.
+      const stay = router.navigateByUrl(`${base}/${target}`);
+      await dialogButton('.build-leave-confirm__cancel');
+      expect(document.querySelectorAll('.build-leave-confirm__title').length).toBe(1);
+      document.querySelector<HTMLButtonElement>('.build-leave-confirm__cancel')!.click();
+      expect(await stay).toBe(false);
+      expect(router.url).toBe(`${base}/build`);
+      expect(
+        harness.routeNativeElement!.querySelector<HTMLInputElement>('[data-field="name"] input')!
+          .value,
+      ).toBe('Ivanka');
+
+      // Discard: the navigation goes through.
+      const leave = router.navigateByUrl(`${base}/${target}`);
+      (await dialogButton('.build-leave-confirm__confirm')).click();
+      expect(await leave).toBe(true);
+      expect(router.url).toBe(`${base}/${target}`);
+    },
+  );
+
+  it('after Save the form is clean again and leaving does not ask', async () => {
+    const id = await seedFighter('Ivan');
+    const base = `/${id.replace('char:', 'c/')}`;
+    const harness = await RouterTestingHarness.create(`${base}/build`);
+    const router = TestBed.inject(Router);
+    const characterStore = TestBed.inject(CharacterStore);
+    await editName(harness);
+    harness.routeNativeElement!.querySelector<HTMLButtonElement>('.build-identity__save')!.click();
+    await pollUntil(harness.fixture, () => characterStore.sheet()?.name === 'Ivanka');
+
+    expect(await router.navigateByUrl(`${base}/play`)).toBe(true);
+    expect(document.querySelector('.build-leave-confirm__title')).toBeNull();
+  });
+});
+
+describe('BuildTabComponent — Save failure and the locked Save', () => {
+  beforeEach(async () => {
+    configureReal();
+    await clearDb();
+  });
+
+  afterEach(closeOverlays);
+
+  it('a rejected append keeps the drafts, shows the error toast and leaves the chip up', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const toast = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const fixture = TestBed.createComponent(BuildTabComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const name = root.querySelector<HTMLInputElement>('[data-field="name"] input')!;
+    name.value = 'Ivanka';
+    name.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    vi.spyOn(characterStore, 'appendTx').mockRejectedValueOnce(new Error('quota'));
+    root.querySelector<HTMLButtonElement>('.build-identity__save')!.click();
+    await pollUntil(fixture, () => toast.mock.calls.length > 0);
+
+    expect(toast).toHaveBeenCalledWith('characters.validation.generic');
+    expect(name.value).toBe('Ivanka');
+    expect(root.querySelector('.build-identity__unsaved')).not.toBeNull();
+    expect(characterStore.sheet()?.name).toBe('Ivan');
+
+    // The draft is still saveable: the next attempt goes through.
+    root.querySelector<HTMLButtonElement>('.build-identity__save')!.click();
+    await pollUntil(fixture, () => characterStore.sheet()?.name === 'Ivanka');
   });
 });

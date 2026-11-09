@@ -2,6 +2,13 @@
   <hk-leaf [title]="t('timeline.title')" [icon]="'ui:timeline'">
     <p class="timeline-tab__hint">{{ t('timeline.hint') }}</p>
 
+    <hk-search-field
+      class="timeline-tab__search"
+      [label]="t('timeline.searchLabel')"
+      [placeholder]="t('timeline.searchLabel')"
+      [(value)]="query"
+    />
+
     <div class="timeline-tab__filters">
       <hk-filter-chips
         [label]="t('timeline.filterLabel')"

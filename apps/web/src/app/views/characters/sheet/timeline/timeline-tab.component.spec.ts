@@ -16,7 +16,7 @@ import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../../assets/i18n/characters/uk.json';
 import { hintOf } from '@app/ui/testing/harness';
-import { seedFighter } from '../testing/character-fixtures';
+import { levelUpToTwo, seedFighter } from '../testing/character-fixtures';
 import { TimelineTabComponent } from './timeline-tab.component';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling), same fixture-loading
@@ -569,4 +569,135 @@ describe('TimelineTabComponent — the revert dialog (board DL05)', () => {
       expect(keep).not.toBe(confirm);
     },
   );
+});
+
+// --- B10b fix round 1: search and the revert preview ---------------------------------------------
+
+describe('TimelineTabComponent — search (board T01)', () => {
+  beforeEach(async () => {
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    TestBed.inject(HkDb).close();
+  });
+
+  async function typeSearch(
+    fixture: { whenStable(): Promise<unknown> },
+    root: HTMLElement,
+    value: string,
+  ): Promise<void> {
+    const input = root.querySelector<HTMLInputElement>('.timeline-tab__search input')!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    // `hk-search-field` commits 150 ms after the last keystroke.
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    await fixture.whenStable();
+  }
+
+  it('narrows the rows to the sentences that contain the text, and combines with the family chips', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Bram' } }]);
+    await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 50 } }]);
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(rowEls(fixture).length).toBe(3);
+
+    await typeSearch(fixture, root, 'bram');
+    expect(rowEls(fixture).length).toBe(1);
+    expect(sentenceOf(rowEls(fixture)[0])).toContain('Bram');
+
+    // A chip that excludes that row empties the list; clearing the chip brings it back.
+    chipByLabel(root, 'Leveling').click();
+    await fixture.whenStable();
+    expect(rowEls(fixture).length).toBe(0);
+    expect(root.querySelector('.timeline-tab__empty')).not.toBeNull();
+    chipByLabel(root, 'Leveling').click();
+    await fixture.whenStable();
+    expect(rowEls(fixture).length).toBe(1);
+
+    await typeSearch(fixture, root, '');
+    expect(rowEls(fixture).length).toBe(3);
+  });
+
+  it('finds text inside a collapsed group', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([
+      { type: 'character.renamed', v: 1, payload: { name: 'One' } },
+      { type: 'character.renamed', v: 1, payload: { name: 'Zed' } },
+    ]);
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+    await typeSearch(fixture, fixture.nativeElement as HTMLElement, 'zed');
+    expect(rowEls(fixture).length).toBe(1);
+  });
+});
+
+describe('TimelineTabComponent — the revert preview (board DL05)', () => {
+  beforeEach(async () => {
+    configureReal();
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.remove());
+    TestBed.inject(HkDb).close();
+  });
+
+  it('reverting a level up shows the max hit points drop before confirming', async () => {
+    await seedFighter('Ivan');
+    await levelUpToTwo();
+    const characterStore = TestBed.inject(CharacterStore);
+    const before = characterStore.sheet()!.hp.max.value;
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+
+    const levelRow = rowEls(fixture).find(
+      (r) => /level/i.test(sentenceOf(r)) && r.getAttribute('data-family') === 'leveling',
+    )!;
+    levelRow.querySelector<HTMLButtonElement>('.timeline-tab__revert')!.click();
+    TestBed.tick();
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    const change = overlay.querySelector('.timeline-revert-confirm__change[data-key="hpMax"]');
+    expect(change).not.toBeNull();
+    expect(textOf(change)).toContain(String(before));
+    expect(textOf(change)).toContain('12');
+    expect(before).toBeGreaterThan(12);
+    expect(overlay.querySelector('.timeline-revert-confirm__none')).toBeNull();
+    // The preview changes nothing until Revert is confirmed.
+    expect(characterStore.sheet()!.hp.max.value).toBe(before);
+  });
+
+  it('reverting a cosmetic change shows that nothing changes on the sheet', async () => {
+    const characterStore = TestBed.inject(CharacterStore);
+    await characterStore.create('Aria', 'feminine');
+    await characterStore.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'Bram' } }]);
+    const fixture = TestBed.createComponent(TimelineTabComponent);
+    await fixture.whenStable();
+
+    rowEls(fixture)[0].querySelector<HTMLButtonElement>('.timeline-tab__revert')!.click();
+    TestBed.tick();
+    const overlay = document.querySelector('.cdk-overlay-container')!;
+    expect(overlay.querySelectorAll('.timeline-revert-confirm__change').length).toBe(0);
+    expect(textOf(overlay.querySelector('.timeline-revert-confirm__none'))).toBe(
+      charactersEn.timeline.revertConfirm.preview.none,
+    );
+  });
 });

@@ -211,3 +211,9 @@
     grid-row: 2;
   }
 }
+
+.timeline-tab__search {
+  display: block;
+  max-inline-size: 360px;
+  margin-block-end: var(--space-2);
+}

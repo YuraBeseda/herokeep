@@ -1,3 +1,4 @@
+import { buildLeaveGuard } from './views/characters/sheet/build/build-leave.guard';
 import { Injector, inject } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import type { CanActivateFn, CanDeactivateFn, ResolveFn, Routes } from '@angular/router';
@@ -309,6 +310,7 @@ export const routes: Routes = [
       },
       {
         path: 'build',
+        canDeactivate: [buildLeaveGuard],
         loadComponent: () =>
           import('./views/characters/sheet/build/build-tab.component').then(
             (m) => m.BuildTabComponent,

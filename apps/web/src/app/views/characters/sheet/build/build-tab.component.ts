@@ -1,6 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, viewChild } from '@angular/core';
 import { validateSelection } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { DialogService } from '@app/ui/dialog/dialog.service';
 import { CampaignEditLockBannerComponent } from '@shared/components/campaign-edit-lock-banner/campaign-edit-lock-banner.component';
 import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
@@ -15,6 +16,7 @@ import { BuildAbilitiesSectionComponent } from './build-abilities-section.compon
 import { BuildChoicesSectionComponent } from './build-choices-section.component';
 import { BuildIdentitySectionComponent } from './build-identity-section.component';
 import { BuildOptionsSectionComponent } from './build-options-section.component';
+import { BuildLeaveConfirmComponent } from './build-leave-confirm.component';
 import { BuildOriginSectionComponent } from './build-origin-section.component';
 import { BuildPacksSectionComponent } from './build-packs-section.component';
 import { BuildProficienciesSectionComponent } from './build-proficiencies-section.component';
@@ -54,6 +56,8 @@ import { BuildProficienciesSectionComponent } from './build-proficiencies-sectio
 export class BuildTabComponent {
   private readonly characterStore = inject(CharacterStore);
   private readonly engineFacade = inject(EngineFacade);
+  private readonly dialog = inject(DialogService);
+  private readonly identity = viewChild(BuildIdentitySectionComponent);
 
   // --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ----------------------------------
   private readonly campaignEditLockService = inject(CampaignEditLockService);
@@ -87,4 +91,14 @@ export class BuildTabComponent {
       },
     ]);
   };
+
+  /**
+   * The route's `canDeactivate` (`build-leave.guard.ts`): any way out of the tab — a sheet tab, the
+   * phone tab bar, the More list, the rail, browser Back — asks ONCE while the identity form holds
+   * unsaved edits, and stays silent when it is clean. "Keep editing" (or Escape) stays.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    if (!this.identity()?.hasUnsaved()) return true;
+    return this.dialog.open(BuildLeaveConfirmComponent).closed.then((leave) => leave === true);
+  }
 }
