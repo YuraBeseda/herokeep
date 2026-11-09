@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { createFighter } from './helpers/create-fighter';
+import { hpCurrent, hpMax, strapAction } from './helpers/sheet';
 
 const CHARACTER_NAME = 'Aldric Export Import';
 const PORTRAIT_FIXTURE = path.join(__dirname, 'fixtures', 'tiny-portrait.png');
@@ -43,7 +44,7 @@ test.describe('export / import (.hero)', () => {
     await test.step('export: a real browser download, delivered via the <a download> fallback rung', async () => {
       const downloadPromise = page.waitForEvent('download');
       await page.getByRole('tab', { name: 'Play', exact: true }).click();
-      await page.locator('.sheet-shell__export').click();
+      await strapAction(page, 'export').click();
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toBe('Aldric Export Import.hero');
       const savedPath = await download.path();
@@ -84,16 +85,10 @@ test.describe('export / import (.hero)', () => {
       await expect(page).toHaveURL(new RegExp(`/c/${characterId}/play$`));
       await expect(page.locator('.sheet-shell__name')).toHaveText(CHARACTER_NAME);
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 1');
+      await expect(hpCurrent(page)).toHaveText('12');
+      await expect(hpMax(page)).toHaveText('12');
 
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-
-      await expect(page.locator('img.sheet-shell__portrait')).toBeVisible();
+      await expect(page.locator('.sheet-shell__portrait img')).toBeVisible();
     });
   });
 });

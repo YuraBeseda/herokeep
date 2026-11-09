@@ -165,10 +165,17 @@
     "reason-name": "Enter a name first",
     "reason-step": "Finish this step first",
     "secondary": "More actions",
-    "reason-no-filters": "No filters for this list"
+    "reason-no-filters": "No filters for this list",
+    "add-condition": "Add condition",
+    "roll-log": "Roll log"
   },
   "tabs": {
-    "landmark": "Sections of this screen"
+    "landmark": "Sections of this screen",
+    "combat": "Combat",
+    "spells": "Spells",
+    "bag": "Bag",
+    "hero": "Hero",
+    "more": "More"
   },
   "theme": {
     "menu": "Theme",

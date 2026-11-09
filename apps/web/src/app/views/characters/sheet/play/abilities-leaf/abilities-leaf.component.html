@@ -1,0 +1,52 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <ng-template #body>
+    <ul class="abilities" [class.abilities--saves]="mode() === 'saves'">
+      @for (row of rows(); track row.id) {
+        <li class="abilities__item" [attr.data-ability]="row.id">
+          <hk-ability-seal
+            [ability]="row.label"
+            [score]="row.score"
+            [modifier]="row.mod"
+            [save]="row.save"
+            [saveProficient]="row.saveProficient"
+            [compact]="mode() === 'saves'"
+          />
+          <div class="abilities__rolls">
+            @if (mode() === 'full') {
+              <button
+                hk-button
+                type="button"
+                [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
+                [attr.aria-label]="t('sheet.roll.checkNamed', { name: row.label })"
+                (click)="rollCheck(row, t)"
+              >
+                {{ t('sheet.roll.checkShort') }}
+              </button>
+            }
+            <button
+              hk-button
+              type="button"
+              [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
+              [attr.aria-label]="t('sheet.roll.saveNamed', { name: row.label })"
+              (click)="rollSave(row, t)"
+            >
+              {{ t('sheet.roll.saveShort') }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  </ng-template>
+  @let title = mode() === 'saves' ? t('sheet.abilities.savesTitle') : t('sheet.abilities.title');
+  @let icon = mode() === 'saves' ? 'ui:save' : 'ui:str';
+  @if (surface() === 'leather') {
+    <section class="abilities__panel">
+      <h2 class="abilities__title"><hk-icon [icon]="icon" />{{ title }}</h2>
+      <ng-container *ngTemplateOutlet="body" />
+    </section>
+  } @else {
+    <hk-leaf [title]="title" [icon]="icon" [phone]="phone()">
+      <ng-container *ngTemplateOutlet="body" />
+    </hk-leaf>
+  }
+</ng-container>

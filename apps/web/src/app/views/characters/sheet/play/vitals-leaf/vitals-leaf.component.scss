@@ -1,0 +1,33 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+/* A `fieldset` only to disable its controls together while the campaign edit lock is on. */
+.vitals__hp {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.vitals__stats {
+  display: grid;
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.vitals__extras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* On the phone's Combat tab the leaf shows HP, AC, initiative and speed only; the rest of the */
+/* vitals are on the Hero tab and in the rest dialog. */
+:host(.vitals--compact) .vitals__extras {
+  display: none;
+}

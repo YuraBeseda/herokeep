@@ -1,0 +1,23 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: 2px var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  min-inline-size: 0;
+}
+
+.features__empty {
+  margin: 0;
+  color: var(--text-2);
+  font-style: italic;
+}

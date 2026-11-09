@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.prof__subtitle {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+
+  &:first-of-type {
+    margin-block-start: 0;
+  }
+}
+
+.prof__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prof__empty {
+  margin: 0;
+  color: var(--text-2);
+  font-style: italic;
+}

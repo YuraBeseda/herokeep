@@ -1,5 +1,3 @@
-@use 'utilities' as u;
-
 :host {
   display: block;
 }
@@ -14,7 +12,63 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  color: var(--text-2);
+  color: var(--text-on-ground-2);
+}
+
+.sheet-shell__banners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+
+  &:empty {
+    display: none;
+  }
+}
+
+/* The folio column beside the routed tab on tablet and desktop; one column on the phone, where */
+/* the folio is only the identity row and the tab bar switches the Combat · Spells · Bag · Hero · */
+/* More child routes. */
+.sheet-shell__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .sheet-shell__layout {
+    grid-template-columns: minmax(280px, 296px) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .sheet-shell__layout {
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  }
+}
+
+.sheet-shell__folio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.sheet-shell__main {
+  min-inline-size: 0;
+}
+
+.sheet-shell__plate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-strap);
+  background: linear-gradient(180deg, var(--leather-light), var(--leather));
+  box-shadow:
+    inset 0 0 0 1px var(--border-brass),
+    var(--shadow-strap);
+  color: var(--text-on-leather);
 }
 
 .sheet-shell__header {
@@ -24,90 +78,108 @@
 }
 
 .sheet-shell__portrait {
-  @include u.touch-target;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  /* The monogram background is a dark per-character hue, so its letters take the on-dark ink;
-     text-1 is parchment ink since the design-system tokens (plan 17 B1). */
-  color: var(--text-on-leather);
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-// The real portrait (an <img>, filled via BlobUrlPipe) is cropped to cover the same circle the
-// placeholder monogram fills — `object-fit: cover` keeps a non-square source centered/cropped
-// rather than letterboxed or distorted.
-img.sheet-shell__portrait {
-  object-fit: cover;
-}
-
-// `--placeholder`'s own background comes from the component's `[style.background]` binding
-// (`monogramBackground()`, a per-character-id deterministic hue) — this class only supplies the
-// fallback for the brief instant before that binding is first evaluated.
-.sheet-shell__portrait--placeholder {
-  background: var(--surface-2);
+  flex: none;
 }
 
 .sheet-shell__identity {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
 }
 
 .sheet-shell__name {
   margin: 0;
-  font-size: 1.25rem;
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .sheet-shell__class-line {
   margin: 0;
-  color: var(--text-2);
+  color: var(--text-on-leather-2);
 }
 
-// Pushed to the trailing edge of the header row (`.sheet-shell__header` is `display: flex`) —
-// same `<block>__<section>-actions` naming already established by `play-tab.component.scss` for
-// its own per-section action groups (`.play-tab__rest-actions`, `.play-tab__inventory-actions`).
-.sheet-shell__header-actions {
+/* Play · Build · Timeline as brass folio tabs, with the Level up tab-action beside them. */
+.sheet-shell__tabrow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-inline-start: auto;
 }
 
 .sheet-shell__tabs {
-  display: block;
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--space-1);
+}
+
+.sheet-shell__tab {
+  flex: 1 1 auto;
+  min-block-size: var(--touch-target, 44px);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+  background: linear-gradient(180deg, var(--leather-light), var(--leather));
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--text-on-leather);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.sheet-shell__tab--on {
+  background: linear-gradient(180deg, var(--brass-top), var(--brass));
+  color: var(--text-on-brass);
+}
+
+.sheet-shell__level-up-badge {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-target, 44px);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, var(--ember-top), var(--ember));
+  color: var(--text-on-ember);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
 }
 
 .sheet-shell__xp {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 
-.sheet-shell__xp-current {
-  color: var(--text-2);
+.sheet-shell__xp-bar {
+  flex: 1 1 100%;
 }
 
-.sheet-shell__level-up-badge {
-  border-radius: var(--radius-m);
-  background: var(--accent, var(--surface-2));
-  color: var(--text-1);
-  padding: var(--space-1) var(--space-2);
-  text-decoration: none;
-  font-weight: 600;
+.sheet-shell__xp-current {
+  color: var(--text-on-leather-2);
+}
+
+.sheet-shell__xp-field {
+  flex: 0 1 8rem;
 }
 
 /* The frame and colour are `hk-banner` (warning). */
-.sheet-shell__missing-packs {
-  margin: 0 0 var(--space-3);
-}
-
 .sheet-shell__missing-packs-list {
   margin: var(--space-1) 0;
   padding-inline-start: var(--space-4);

@@ -2,22 +2,17 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createFighter, chooseControl } from './helpers/create-fighter';
 import { createWizard, prepareSpell } from './helpers/create-wizard';
 import { chooseOwnClassIfPrompted } from './helpers/level-up';
+import { applyHp, hpCurrent, hpMax, strapAction } from './helpers/sheet';
 
 const FIGHTER_NAME = 'Aldric Rest Actions';
 const WIZARD_NAME = 'Aldric Spellcaster';
 
-/** Locates one `hk-stat-tile__value` out of `.play-tab__hp-stats`, by the tile's own `hasText`
- * label (`'Current'`/`'Max'`/`'Temp'`) — same locator shape `level-up.spec.ts`/
- * `create-fighter.spec.ts` already use for the exact same section, generalized here since this
- * file reads HP repeatedly across one continuous rest flow. Returns the LOCATOR (never a resolved
- * string) so every caller keeps Playwright's own auto-retrying web-first assertions — a plain
- * `.innerText()` read would race the store's async `appendTx` -> derive -> render cycle instead of
- * waiting it out. */
+/** Reads the HP gauge's numerals (the vitals leaf in the folio): `'Current'` is the big numeral,
+ * `'Max'` the vitals "Max" tile. Returns the LOCATOR (never a resolved string) so every caller keeps
+ * Playwright's own auto-retrying web-first assertions — a plain `.innerText()` read would race the
+ * store's async `appendTx` -> derive -> render cycle instead of waiting it out. */
 function hpValueLocator(page: Page, label: 'Current' | 'Max'): Locator {
-  return page
-    .locator('.play-tab__hp-stats')
-    .locator('hk-stat-tile', { hasText: label })
-    .locator('.hk-stat-tile__value');
+  return label === 'Current' ? hpCurrent(page) : hpMax(page);
 }
 
 /** Selects the cast dialog's slot option by its LEVEL, not by the `<select>`'s own `value` — as of
@@ -40,15 +35,6 @@ async function selectCastSlotByLevel(page: Page, level: number): Promise<void> {
   const value = await option.getAttribute('value');
   if (value === null) throw new Error(`no cast-dialog slot option for level ${level}`);
   await page.locator('.cast-dialog__slot-select').selectOption({ value });
-}
-
-/** Fills the shared HP-controls amount field (`hk-number-field`, cleared back to empty by the
- * component itself once a proposal is accepted — see `PlayTabComponent.applyHpChange`) and clicks
- * the named action button (`'Damage'`/`'Heal'`) — mirrors `.sheet-shell__xp-field input` +
- * `.sheet-shell__xp-submit`'s own established fill-then-submit shape (`level-up.spec.ts`). */
-async function applyHp(page: Page, amount: number, action: 'Damage' | 'Heal'): Promise<void> {
-  await page.locator('.play-tab__hp-controls input').fill(String(amount));
-  await page.getByRole('button', { name: action, exact: true }).click();
 }
 
 /**
@@ -153,7 +139,7 @@ test.describe('play actions', () => {
     });
 
     await test.step('short rest: roll the one available hit die (real rng) and confirm', async () => {
-      await page.getByRole('button', { name: 'Short rest', exact: true }).click();
+      await strapAction(page, 'short-rest').click();
       await expect(page.locator('.rest-dialog__title')).toHaveText('Short rest');
       await expect(page.locator('.rest-dialog__hit-die-row', { hasText: 'Fighter' })).toContainText(
         '1 hit die remaining',
@@ -177,7 +163,7 @@ test.describe('play actions', () => {
         .toBeGreaterThan(8);
       const hpAfterRest = Number(await hpValueLocator(page, 'Current').innerText());
       expect(hpAfterRest).toBeLessThanOrEqual(12);
-      await expect(page.locator('.play-tab__hit-dice-list')).toContainText('d10 × 0 / 1');
+      await expect(page.locator('.vitals__hit-dice')).toContainText('0/1 d10');
     });
 
     await test.step('the timeline shows the rest as one grouped, revertible card', async () => {
@@ -194,7 +180,7 @@ test.describe('play actions', () => {
     await test.step('reverting the rest group restores the spent hit die and pre-rest HP', async () => {
       await page.getByRole('tab', { name: 'Play', exact: true }).click();
       await expect(hpValueLocator(page, 'Current')).toHaveText('8');
-      await expect(page.locator('.play-tab__hit-dice-list')).toContainText('d10 × 1 / 1');
+      await expect(page.locator('.vitals__hit-dice')).toContainText('1/1 d10');
     });
   });
 
@@ -219,16 +205,15 @@ test.describe('play actions', () => {
       await prepareSpell(page, 'Sleep');
     });
 
-    const level3Slots = page.locator('.play-tab__slot-row', { hasText: 'Level 3 slots' });
+    const level3Slots = page.locator('.spells__slots', { hasText: 'Level 3 slots' });
 
     await test.step('cast Magic Missile upcast into a 3rd-level slot: the slot pip fills, no concentration chip', async () => {
-      await expect(level3Slots.locator('.hk-pips__pip--filled')).toHaveCount(0);
+      await expect(level3Slots.locator('.hk-wax-seal--spent')).toHaveCount(0);
 
-      const preparedRow = page
-        .locator('.play-tab__spellblock')
-        .locator('li', { hasText: 'Magic Missile' })
-        .filter({ has: page.getByRole('button', { name: 'Cast', exact: true }) });
-      await preparedRow.getByRole('button', { name: 'Cast', exact: true }).click();
+      const preparedRow = page.locator('.spells__prepared .spells__item', {
+        hasText: 'Magic Missile',
+      });
+      await preparedRow.getByRole('button', { name: 'Cast Magic Missile', exact: true }).click();
 
       await expect(page.locator('.cast-dialog__title')).toHaveText('Cast Magic Missile');
       await selectCastSlotByLevel(page, 3);
@@ -238,16 +223,13 @@ test.describe('play actions', () => {
         .click();
       await expect(page.locator('.cast-dialog__title')).toHaveCount(0);
 
-      await expect(level3Slots.locator('.hk-pips__pip--filled')).toHaveCount(1);
-      await expect(page.locator('.play-tab__concentration')).toHaveCount(0);
+      await expect(level3Slots.locator('.hk-wax-seal--spent')).toHaveCount(1);
+      await expect(page.locator('.spells__concentration')).toHaveCount(0);
     });
 
     await test.step('cast Sleep (concentration): a second slot pip fills and the concentration chip appears', async () => {
-      const preparedRow = page
-        .locator('.play-tab__spellblock')
-        .locator('li', { hasText: 'Sleep' })
-        .filter({ has: page.getByRole('button', { name: 'Cast', exact: true }) });
-      await preparedRow.getByRole('button', { name: 'Cast', exact: true }).click();
+      const preparedRow = page.locator('.spells__prepared .spells__item', { hasText: 'Sleep' });
+      await preparedRow.getByRole('button', { name: 'Cast Sleep', exact: true }).click();
 
       await expect(page.locator('.cast-dialog__title')).toHaveText('Cast Sleep');
       await selectCastSlotByLevel(page, 3);
@@ -257,19 +239,17 @@ test.describe('play actions', () => {
         .click();
       await expect(page.locator('.cast-dialog__title')).toHaveCount(0);
 
-      await expect(level3Slots.locator('.hk-pips__pip--filled')).toHaveCount(2);
-      await expect(page.locator('.play-tab__concentration')).toContainText(
-        'Concentrating on Sleep',
-      );
+      await expect(level3Slots.locator('.hk-wax-seal--spent')).toHaveCount(2);
+      await expect(page.locator('.spells__concentration')).toContainText('Concentrating on Sleep');
     });
 
     await test.step('a long rest restores every spent slot', async () => {
-      await page.getByRole('button', { name: 'Long rest', exact: true }).click();
+      await strapAction(page, 'long-rest').click();
       await expect(page.locator('.rest-dialog__title')).toHaveText('Long rest');
       await page.getByRole('button', { name: 'Take long rest', exact: true }).click();
       await expect(page.locator('.rest-dialog__title')).toHaveCount(0);
 
-      await expect(level3Slots.locator('.hk-pips__pip--filled')).toHaveCount(0);
+      await expect(level3Slots.locator('.hk-wax-seal--spent')).toHaveCount(0);
     });
   });
 });

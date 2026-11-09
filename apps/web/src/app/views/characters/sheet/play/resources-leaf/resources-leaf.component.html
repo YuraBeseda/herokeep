@@ -1,0 +1,45 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.resources.title')" [icon]="'ui:recharge-dawn'" [phone]="phone()">
+    @if (resources().length > 0) {
+      <ul class="resources">
+        @for (r of resources(); track r.view.id) {
+          <li class="resources__item" [attr.data-resource]="r.view.id">
+            <hk-pool-bar
+              [kind]="r.kind"
+              [value]="r.remaining"
+              [max]="r.view.max.value"
+              [label]="r.label"
+              [recharge]="r.resetGlyph ? t('sheet.resources.reset.' + r.view.reset) : null"
+              [rechargeGlyph]="r.resetGlyph"
+              [pipHint]="t('sheet.resources.pipHint', { name: r.label })"
+            >
+              <span hkPoolAction class="resources__actions">
+                <button
+                  hk-button
+                  type="button"
+                  [disabled]="actions.editLocked() || r.remaining === 0"
+                  [attr.aria-label]="t('sheet.resources.useNamed', { name: r.label })"
+                  (click)="actions.spendResource(r.view.id)"
+                >
+                  {{ t('sheet.resources.use') }}
+                </button>
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="'ghost'"
+                  [disabled]="actions.editLocked() || r.view.used === 0"
+                  [attr.aria-label]="t('sheet.resources.restoreNamed', { name: r.label })"
+                  (click)="actions.restoreResource(r.view.id)"
+                >
+                  {{ t('sheet.resources.restore') }}
+                </button>
+              </span>
+            </hk-pool-bar>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="resources__empty">{{ t('sheet.resources.empty') }}</p>
+    }
+  </hk-leaf>
+</ng-container>

@@ -1,0 +1,29 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.features.title')" [icon]="'ui:features'" [phone]="phone()">
+    @if (features().length > 0) {
+      <ul class="features">
+        @for (feature of features(); track feature.id) {
+          <li>
+            <hk-feature-row
+              [name]="feature.name"
+              [icon]="feature.icon"
+              [sourceHint]="t('sheet.features.sourceHint', { name: feature.name })"
+              [source]="
+                feature.resource
+                  ? t('sheet.actions.resourceHint', { resource: feature.resource })
+                  : null
+              "
+              (details)="feature.hasEntity ? openDetails(feature.source) : null"
+            />
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="features__empty">{{ t('sheet.actions.empty') }}</p>
+    }
+  </hk-leaf>
+
+  @if (detailsId(); as id) {
+    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
+  }
+</ng-container>

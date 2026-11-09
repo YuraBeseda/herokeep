@@ -12,7 +12,7 @@ import {
   chooseOption,
 } from './helpers/create-fighter';
 import { importPack } from './helpers/packs';
-import { addFromLibrary, openTab } from './helpers/sheet';
+import { addFromLibrary, bagSlot, openTab, selectBagItem, strapAction } from './helpers/sheet';
 
 /**
  * Plan 15 (Phase 4 slice 5) task 9: the custom pack platform end to end, offline, against the real
@@ -61,19 +61,22 @@ async function pickFightingStyleAndMasteries(page: Page): Promise<void> {
 }
 
 function speedTile(page: Page): Locator {
-  return page
-    .locator('.play-tab hk-stat-tile', { hasText: 'Speed' })
-    .locator('.hk-stat-tile__value');
+  return page.locator('.vitals__speed .hk-stat-tile__value').first();
+}
+
+/** The weapon's "nick" mastery chip on its attack row. */
+function masteryTag(page: Page, weapon: string): Locator {
+  return attackRow(page, weapon).locator('hk-tag-chip', { hasText: /^\s*nick\s*$/ });
 }
 
 function attackRow(page: Page, weapon: string): Locator {
-  return page.locator('.play-tab__attacks tbody tr', { hasText: weapon });
+  return page.locator('app-attacks-leaf .attacks__item', { hasText: weapon });
 }
 
 async function equip(page: Page, item: string): Promise<void> {
-  const row = page.locator('.play-tab__inventory-item', { hasText: item });
-  await row.getByRole('button', { name: 'Equip', exact: true }).click();
-  await expect(row.getByRole('button', { name: 'Unequip', exact: true })).toBeVisible();
+  const actions = await selectBagItem(page, item);
+  await actions.getByRole('button', { name: 'Equip', exact: true }).click();
+  await expect(actions.getByRole('button', { name: 'Unequip', exact: true })).toBeVisible();
 }
 
 async function removeInstalledPack(page: Page, version: string): Promise<void> {
@@ -151,7 +154,7 @@ test.describe('custom content packs', () => {
       await addFromLibrary(page, 'Moonblade', 'Moonblade Sickle');
       await equip(page, 'Moonblade Sickle');
       await expect(attackRow(page, 'Moonblade Sickle')).toHaveCount(1);
-      await expect(attackRow(page, 'Moonblade Sickle').locator('td').nth(3)).toHaveText('nick');
+      await expect(masteryTag(page, 'Moonblade Sickle')).toHaveCount(1);
     });
 
     await test.step('import sample-content-v2.hkpack: /packs badges the newer version', async () => {
@@ -196,7 +199,7 @@ test.describe('custom content packs', () => {
       // so the equipped sickle is now the Moonsilver Sickle and its mastery follows the decision.
       await expect(attackRow(page, 'Moonblade Sickle')).toHaveCount(0);
       await expect(attackRow(page, 'Moonsilver Sickle')).toHaveCount(1);
-      await expect(attackRow(page, 'Moonsilver Sickle').locator('td').nth(3)).toHaveText('nick');
+      await expect(masteryTag(page, 'Moonsilver Sickle')).toHaveCount(1);
       await openTab(page, 'Timeline');
       await expect(page.locator('.timeline-tab')).toContainText(
         `Updated ${PACK_NAME} v1.0.0 → v1.1.0.`,
@@ -223,15 +226,13 @@ test.describe('custom content packs', () => {
       await expect(toggle).toBeChecked();
       await openTab(page, 'Play');
       await addFromLibrary(page, 'Starlit', HOMEBREW_ITEM);
-      await expect(
-        page.locator('.play-tab__inventory-item', { hasText: HOMEBREW_ITEM }),
-      ).toBeVisible();
+      await expect(bagSlot(page, HOMEBREW_ITEM)).toBeVisible();
     });
 
     let heroFilePath = '';
     await test.step('export the character as .hero', async () => {
       const downloadPromise = page.waitForEvent('download');
-      await page.locator('.sheet-shell__export').click();
+      await strapAction(page, 'export').click();
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toBe(`${CHARACTER_NAME}.hero`);
       const savedPath = await download.path();
@@ -265,10 +266,8 @@ test.describe('custom content packs', () => {
       await expect(page.locator('.sheet-shell__name')).toHaveText(CHARACTER_NAME);
       await expect(speedTile(page)).toHaveText('30');
       await expect(page.locator('.sheet-shell__missing-packs')).toHaveCount(0);
-      await expect(attackRow(page, 'Moonsilver Sickle').locator('td').nth(3)).toHaveText('nick');
-      await expect(
-        page.locator('.play-tab__inventory-item', { hasText: HOMEBREW_ITEM }),
-      ).toBeVisible();
+      await expect(masteryTag(page, 'Moonsilver Sickle')).toHaveCount(1);
+      await expect(bagSlot(page, HOMEBREW_ITEM)).toBeVisible();
     });
   });
 });

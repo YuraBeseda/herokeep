@@ -1,0 +1,110 @@
+@if (sheet(); as s) {
+  <ng-container *transloco="let t; read: 'characters'">
+    <hk-leaf [title]="t('sheet.conditions.title')" [icon]="'ui:condition'" [phone]="phone()">
+      <div class="conditions__chips">
+        @for (condition of conditions(); track condition.id) {
+          <hk-condition-chip
+            [name]="condition.name"
+            [icon]="condition.icon"
+            [level]="condition.level"
+            [removable]="!actions.editLocked()"
+            (remove)="actions.removeCondition(condition.id)"
+          />
+        } @empty {
+          <p class="conditions__empty">{{ t('sheet.conditions.empty') }}</p>
+        }
+        <button
+          hk-button
+          type="button"
+          class="conditions__add"
+          [variant]="'ghost'"
+          [disabled]="actions.editLocked()"
+          (click)="addCondition()"
+        >
+          {{ t('sheet.conditions.add') }}
+        </button>
+      </div>
+
+      @if (immunities().length > 0) {
+        <h3 class="conditions__subtitle">{{ t('sheet.conditions.immunitiesTitle') }}</h3>
+        <ul class="conditions__tags conditions__immunities">
+          @for (immunity of immunities(); track immunity.id) {
+            <li>
+              <hk-tag-chip
+                [label]="
+                  t('sheet.conditions.immunityChip', {
+                    name: immunity.name,
+                    sources: immunity.sources,
+                  })
+                "
+              />
+            </li>
+          }
+        </ul>
+      }
+      @if (resistances().length > 0) {
+        <h3 class="conditions__subtitle">{{ t('sheet.conditions.resistancesTitle') }}</h3>
+        <ul class="conditions__tags conditions__resistances">
+          @for (resistance of resistances(); track resistance.id) {
+            <li>
+              <hk-tag-chip
+                [label]="
+                  t('sheet.conditions.resistanceChip', {
+                    name: resistance.name,
+                    sources: resistance.sources,
+                  })
+                "
+              />
+            </li>
+          }
+        </ul>
+      }
+    </hk-leaf>
+
+    @if (s.hp.current === 0 || s.hp.deathSaves.successes > 0 || s.hp.deathSaves.failures > 0) {
+      <hk-leaf [title]="t('sheet.hp.deathSaves')" [icon]="'ui:hp'" [phone]="phone()">
+        <fieldset class="conditions__death" [disabled]="actions.editLocked()">
+          <legend class="visually-hidden">{{ t('sheet.hp.deathSaves') }}</legend>
+          <hk-death-saves
+            [successes]="s.hp.deathSaves.successes"
+            [failures]="s.hp.deathSaves.failures"
+            (ringToggle)="
+              onRing(
+                $event,
+                $event.kind === 'success' ? s.hp.deathSaves.successes : s.hp.deathSaves.failures
+              )
+            "
+            (roll)="rollDeathSave(t)"
+          />
+          @if (s.hp.current === 0) {
+            <div class="conditions__death-actions">
+              <button
+                hk-button
+                type="button"
+                [variant]="'ghost'"
+                (click)="actions.deathSave('critSuccess')"
+              >
+                {{ t('sheet.hp.deathSaveCritSuccess') }}
+              </button>
+              <button
+                hk-button
+                type="button"
+                [variant]="'ember'"
+                (click)="actions.deathSave('critFailure')"
+              >
+                {{ t('sheet.hp.deathSaveCritFailure') }}
+              </button>
+            </div>
+          }
+        </fieldset>
+      </hk-leaf>
+    }
+
+    <hk-inspiration-toggle
+      class="conditions__inspiration"
+      [active]="s.inspiration"
+      [disabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+      (activeChange)="actions.toggleInspiration()"
+    />
+  </ng-container>
+}

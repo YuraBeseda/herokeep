@@ -1,0 +1,129 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.spells__concentration {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.spells__block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-4);
+
+  &:last-child {
+    margin-block-end: 0;
+  }
+}
+
+.spells__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spells__class {
+  flex: 1 1 auto;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+.spells__subtitle {
+  margin: var(--space-2) 0 0;
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.spells__slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spells__seals {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* A seal is a button so a slot can be spent or restored without casting; its hit area is the */
+/* 44 px target even though the seal itself is smaller. */
+.spells__seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.spells__slot-label {
+  color: var(--text-2);
+}
+
+.spells__slot-count {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
+.spells__prepared-count {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.spells__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spells__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+
+  hk-spell-row {
+    flex: 1 1 14rem;
+    min-inline-size: 0;
+  }
+}
+
+.spells__note {
+  flex: 1 0 100%;
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.spells__empty {
+  margin: 0;
+  color: var(--text-2);
+  font-style: italic;
+}

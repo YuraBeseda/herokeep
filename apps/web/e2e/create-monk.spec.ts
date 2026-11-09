@@ -10,6 +10,7 @@ import {
   chooseOption,
   option,
 } from './helpers/create-fighter';
+import { acValue, hpCurrent, hpMax, profBonus } from './helpers/sheet';
 
 const CHARACTER_NAME = 'Lian Open Hand';
 
@@ -90,24 +91,10 @@ test.describe('character creation — Monk (slice 2)', () => {
 
     await test.step('the sheet names the class; play tab shows AC 14, HP 10/10, prof +2', async () => {
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Monk 1');
-      const statsSection = page.locator('.play-tab__stats');
-      await expect(
-        statsSection
-          .locator('hk-stat-tile', { hasText: 'Armor Class' })
-          .locator('.hk-stat-tile__value'),
-      ).toHaveText('14');
-      await expect(
-        statsSection
-          .locator('hk-stat-tile', { hasText: 'Proficiency bonus' })
-          .locator('.hk-stat-tile__value'),
-      ).toHaveText('+2');
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('10');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('10');
+      await expect(acValue(page)).toHaveText('14');
+      await expect(profBonus(page)).toHaveText('+2');
+      await expect(hpCurrent(page)).toHaveText('10');
+      await expect(hpMax(page)).toHaveText('10');
     });
   });
 });

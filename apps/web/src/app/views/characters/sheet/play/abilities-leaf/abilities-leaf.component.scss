@@ -1,0 +1,69 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.abilities {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The Combat tab's saves: six compact seals in one row. */
+.abilities--saves {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.abilities__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.abilities__rolls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 767.98px) {
+  .abilities--saves {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* On a parchment leaf the seal's own cream text would vanish, so it takes the ink. */
+hk-ability-seal {
+  color: var(--text-1);
+}
+
+.abilities__panel {
+  padding: var(--space-3);
+  border-radius: var(--radius-strap);
+  background: linear-gradient(180deg, var(--leather-light), var(--leather));
+  box-shadow:
+    inset 0 0 0 1px var(--border-brass),
+    var(--shadow-strap);
+  color: var(--text-on-leather);
+
+  hk-ability-seal {
+    color: var(--text-on-leather);
+  }
+}
+
+.abilities__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+}

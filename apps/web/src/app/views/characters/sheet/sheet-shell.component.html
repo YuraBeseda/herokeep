@@ -5,111 +5,161 @@
       <p>{{ t('sheet.notFound.body') }}</p>
     </div>
   } @else if (sheet(); as s) {
-    <header class="sheet-shell__header">
-      @if ((portraitThumbHash() | blobUrl)(); as portraitUrl) {
-        <img
-          class="sheet-shell__portrait"
-          [src]="portraitUrl"
-          [alt]="t('sheet.portrait.alt', { name: s.name })"
-        />
-      } @else {
-        <div
-          class="sheet-shell__portrait sheet-shell__portrait--placeholder"
-          [style.background]="monogramBackground()"
-          aria-hidden="true"
-        >
-          {{ monogram().initials }}
-        </div>
-      }
-      <div class="sheet-shell__identity">
-        <h1 class="sheet-shell__name">{{ s.name }}</h1>
-        <p class="sheet-shell__class-line">{{ classLine(t) }}</p>
-      </div>
-      <div class="sheet-shell__header-actions">
-        <app-campaign-chip class="sheet-shell__campaign-chip" />
-        <button
-          hk-button
-          type="button"
-          class="sheet-shell__export"
-          [variant]="'ghost'"
-          [disabled]="exporting()"
-          (click)="onExport(t)"
-        >
-          {{ t('sheet.header.export') }}
-        </button>
-      </div>
-    </header>
+    <div class="sheet-shell__banners">
+      <!-- Campaign edit lock (plan-10 task-14-brief.md, ruling 7): purely presentational, renders
+           nothing while `editLock().mode` is undefined (free / session active / DM / solo). -->
+      <app-campaign-edit-lock-banner [mode]="actions.editLock().mode" />
 
-    <!-- Plan 15 Task 4 (ruling 8): pinned packs this device does not have, on every tab. Their
-         entities resolve to nothing; derive reports those as unresolved-reference warnings. -->
-    @if (missingPins().length > 0) {
-      <hk-banner
-        class="sheet-shell__missing-packs"
-        [variant]="'warning'"
-        [heading]="t('sheet.banner.missing-packs.message', { count: missingPins().length })"
-      >
-        <ul class="sheet-shell__missing-packs-list">
-          @for (pin of missingPins(); track pin.packId) {
-            <li>
-              <code>{{
-                t('sheet.banner.missing-packs.entry', { packId: pin.packId, version: pin.version })
-              }}</code>
-            </li>
-          }
-        </ul>
-        <a class="sheet-shell__missing-packs-link" routerLink="/packs">{{
-          t('sheet.banner.missing-packs.link')
-        }}</a>
-      </hk-banner>
-    }
-
-    <!-- Plan 16 Task 5 (ruling 4): the linked campaign's packs this character does not pin yet. -->
-    <app-campaign-packs-banner />
-
-    <div class="sheet-shell__xp">
-      <span class="sheet-shell__xp-current">{{ t('sheet.header.xp', { xp: xp() }) }}</span>
-      <hk-number-field
-        class="sheet-shell__xp-field"
-        [labelKey]="'characters.sheet.header.xpAwardLabel'"
-        [step]="1"
-        [ngModel]="xpAward()"
-        (ngModelChange)="onXpAwardChange($event)"
-      />
-      <button
-        hk-button
-        type="button"
-        class="sheet-shell__xp-submit"
-        [variant]="'ghost'"
-        (click)="onXpAwardSubmit()"
-      >
-        {{ t('sheet.header.xpAward') }}
-      </button>
-      @if (levelUpAvailable()) {
-        <a class="sheet-shell__level-up-badge" [routerLink]="['level-up']">
-          {{ t('sheet.header.levelUpAvailable') }}
-        </a>
-      }
-      @if (undoableLevelUpTarget(); as target) {
-        <button
-          hk-button
-          type="button"
-          class="sheet-shell__undo-level-up"
-          [variant]="'ghost'"
-          (click)="onUndoLevelUp(target)"
+      <!-- Plan 15 Task 4 (ruling 8): pinned packs this device does not have, on every tab. Their
+           entities resolve to nothing; derive reports those as unresolved-reference warnings. -->
+      @if (missingPins().length > 0) {
+        <hk-banner
+          class="sheet-shell__missing-packs"
+          [variant]="'warning'"
+          [heading]="t('sheet.banner.missing-packs.message', { count: missingPins().length })"
         >
-          {{ t('sheet.header.undoLevelUp') }}
-        </button>
+          <ul class="sheet-shell__missing-packs-list">
+            @for (pin of missingPins(); track pin.packId) {
+              <li>
+                <code>{{
+                  t('sheet.banner.missing-packs.entry', {
+                    packId: pin.packId,
+                    version: pin.version,
+                  })
+                }}</code>
+              </li>
+            }
+          </ul>
+          <a class="sheet-shell__missing-packs-link" routerLink="/packs">{{
+            t('sheet.banner.missing-packs.link')
+          }}</a>
+        </hk-banner>
       }
+
+      <!-- Plan 16 Task 5 (ruling 4): the linked campaign's packs this character does not pin yet. -->
+      <app-campaign-packs-banner />
     </div>
 
-    <hk-tabs
-      class="sheet-shell__tabs"
-      [tabs]="tabsFor(t)"
-      [selected]="activeTabId()"
-      (selectedChange)="onTabSelected($event)"
-    />
+    <div class="sheet-shell__layout" [class.sheet-shell__layout--phone]="phone()">
+      <aside class="sheet-shell__folio" [attr.aria-label]="t('sheet.folio')">
+        <div class="sheet-shell__plate">
+          <header class="sheet-shell__header">
+            <hk-portrait-frame
+              class="sheet-shell__portrait"
+              [name]="s.name"
+              [src]="(portraitThumbHash() | blobUrl)() ?? null"
+              [monogram]="monogram().initials"
+              [size]="phone() ? 's' : 'm'"
+              [style.--hk-frame-well]="monogramWell()"
+              [style.--hk-frame-well-ink]="'var(--text-on-leather)'"
+            />
+            <div class="sheet-shell__identity">
+              <h1 class="sheet-shell__name">{{ s.name }}</h1>
+              <p class="sheet-shell__class-line">{{ classLine(t) }}</p>
+              <app-campaign-chip class="sheet-shell__campaign-chip" />
+            </div>
+          </header>
 
-    <router-outlet />
+          @if (!phone()) {
+            <div class="sheet-shell__tabrow">
+              <div
+                class="sheet-shell__tabs"
+                role="tablist"
+                [attr.aria-label]="t('sheet.tabs.label')"
+              >
+                @for (id of tabIds; track id) {
+                  <button
+                    type="button"
+                    role="tab"
+                    class="sheet-shell__tab"
+                    [id]="'sheet-tab-' + id"
+                    [class.sheet-shell__tab--on]="activeTabId() === id"
+                    [attr.aria-selected]="activeTabId() === id"
+                    [tabindex]="activeTabId() === id ? 0 : -1"
+                    (click)="onTabSelected(id)"
+                    (keydown)="onTabsKey($event)"
+                  >
+                    {{ t('sheet.tabs.' + id) }}
+                  </button>
+                }
+              </div>
+              @if (levelUpAvailable()) {
+                <a class="sheet-shell__level-up-badge" [routerLink]="['level-up']">
+                  {{ t('sheet.header.levelUp') }}
+                </a>
+              } @else {
+                <button
+                  hk-button
+                  type="button"
+                  class="sheet-shell__level-up-locked"
+                  [variant]="'ghost-leather'"
+                  [disabledReason]="
+                    xpRange().next === null
+                      ? t('sheet.header.levelUpMax')
+                      : t('sheet.header.levelUpAt', { xp: xpRange().next })
+                  "
+                >
+                  {{ t('sheet.header.levelUp') }}
+                </button>
+              }
+            </div>
+          }
+
+          <div class="sheet-shell__xp">
+            @if (xpRange().next !== null) {
+              <hk-xp-bar
+                class="sheet-shell__xp-bar"
+                [xp]="xp()"
+                [floor]="xpRange().floor"
+                [next]="xpRange().next!"
+              />
+            }
+            <span class="sheet-shell__xp-current">{{ t('sheet.header.xp', { xp: xp() }) }}</span>
+            <hk-number-field
+              class="sheet-shell__xp-field"
+              [label]="t('sheet.header.xpAwardLabel')"
+              [step]="1"
+              [variant]="'leather'"
+              [value]="xpAward()"
+              (valueChange)="onXpAwardChange($event)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="sheet-shell__xp-submit"
+              [variant]="'ghost-leather'"
+              (click)="onXpAwardSubmit()"
+            >
+              {{ t('sheet.header.xpAward') }}
+            </button>
+            @if (undoableLevelUpTarget(); as target) {
+              <button
+                hk-button
+                type="button"
+                class="sheet-shell__undo-level-up"
+                [variant]="'ghost-leather'"
+                (click)="onUndoLevelUp(target)"
+              >
+                {{ t('sheet.header.undoLevelUp') }}
+              </button>
+            }
+          </div>
+        </div>
+
+        @if (!phone()) {
+          <app-vitals-leaf />
+          <app-abilities-leaf [surface]="'leather'" />
+          <app-skills-leaf [surface]="'leather'" />
+          <app-wake-lock-toggle />
+        }
+      </aside>
+
+      <div class="sheet-shell__main">
+        @if (layoutOk()) {
+          <router-outlet />
+        }
+      </div>
+    </div>
   } @else {
     <hk-skeleton [lines]="6" />
   }

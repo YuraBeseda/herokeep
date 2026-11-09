@@ -306,27 +306,31 @@ export async function endSession(page: Page): Promise<void> {
 
 // --- Play tab: campaign-aware roll publishing --------------------------------------------------
 
-/** Sets the (sticky) campaign roll-visibility picker on the character's OWN already-open play
- * tab (`RollLogPanelComponent`'s `.roll-log-panel__visibility` group) — only rendered once
- * `PlayTabComponent.campaignRollStreamId()` resolves (the character is campaign-linked AND that
- * campaign's own sync isn't `'offline'`), so this waits for the picker itself to appear first. */
+/** Sets the (sticky) campaign roll-visibility picker through the roll log (opened from the sheet
+ * strap, B9a: the existing `RollLogPanelComponent` in a dialog) — its `.roll-log-panel__visibility`
+ * group is only rendered once `PlayRollsService` sees the character campaign-linked AND that
+ * campaign's own sync not `'offline'`, so this waits for the picker itself to appear first, then
+ * closes the log again. */
 export async function setCampaignRollVisibility(
   page: Page,
   visibility: 'everyone' | 'dm' | 'private',
 ): Promise<void> {
   const label =
     visibility === 'everyone' ? 'Everyone' : visibility === 'dm' ? 'DM only' : 'Private';
+  await page.locator('[data-action="roll-log"]').click();
   const group = page.locator('.roll-log-panel__visibility');
   await expect(group).toBeVisible({ timeout: 25_000 });
   await group.getByRole('button', { name: label, exact: true }).click();
+  await page.locator('.roll-log-dialog__actions').getByRole('button').click();
+  await expect(group).toHaveCount(0);
 }
 
-/** Rolls the FIRST ability card's "Roll check" button (`PlayTabComponent.onRollAbilityCheck` ->
- * `performD20Roll` -> `publishRoll`) — a real d20 roll, published onto the campaign stream at
- * whatever `setCampaignRollVisibility` last set (default `'everyone'`, ruling 5). */
+/** Rolls the FIRST ability's "Roll check" button (`AbilitiesLeafComponent` -> `PlayRollsService`
+ * -> `publishRoll`) — a real d20 roll, published onto the campaign stream at whatever
+ * `setCampaignRollVisibility` last set (default `'everyone'`, ruling 5). */
 export async function rollFirstAbilityCheck(page: Page): Promise<void> {
-  const card = page.locator('.play-tab__ability-grid hk-card').first();
-  await card.getByRole('button', { name: 'Roll check', exact: true }).click();
+  const ability = page.locator('app-abilities-leaf .abilities__item').first();
+  await ability.getByRole('button', { name: /^Roll .* check$/ }).click();
 }
 
 // --- Lobby: members, removal --------------------------------------------------------------------

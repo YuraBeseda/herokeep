@@ -140,23 +140,21 @@ test.describe('character creation — Rogue with Expertise (slice 3)', () => {
     await test.step('the sheet: expertise skills doubled, proficient skill single', async () => {
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Rogue 1');
       for (const skill of EXPERTISE_PICKS) {
-        const row = page.locator('.play-tab__skill', {
-          has: page.locator('.play-tab__skill-name', { hasText: new RegExp(`^${skill}$`) }),
+        const row = page.locator('hk-skill-row', {
+          has: page.locator('.hk-sk__name', { hasText: new RegExp(`^${skill}$`) }),
         });
-        await expect(row).toContainText('Expertise');
-        await expect(row.locator('.play-tab__skill-total')).toHaveText(EXPERTISE_TOTAL);
+        await expect(row.getByRole('img', { name: 'Expertise', exact: true })).toBeVisible();
+        await expect(row.locator('.hk-sk__mod')).toHaveText(EXPERTISE_TOTAL);
       }
-      const acrobatics = page.locator('.play-tab__skill', {
-        has: page.locator('.play-tab__skill-name', { hasText: /^Acrobatics$/ }),
+      const acrobatics = page.locator('hk-skill-row', {
+        has: page.locator('.hk-sk__name', { hasText: /^Acrobatics$/ }),
       });
-      await expect(acrobatics).toContainText('Proficient');
-      await expect(acrobatics.locator('.play-tab__skill-total')).toHaveText(PROFICIENT_TOTAL);
+      await expect(acrobatics.getByRole('img', { name: 'Proficient', exact: true })).toBeVisible();
+      await expect(acrobatics.locator('.hk-sk__mod')).toHaveText(PROFICIENT_TOTAL);
     });
 
     await test.step("the sheet: Thieves' Tools under Tools", async () => {
-      await expect(page.locator('.play-tab__tools li', { hasText: "Thieves' Tools" })).toHaveCount(
-        1,
-      );
+      await expect(page.locator('.prof__tools li', { hasText: "Thieves' Tools" })).toHaveCount(1);
     });
   });
 });

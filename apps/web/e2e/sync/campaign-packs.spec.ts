@@ -2,7 +2,7 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { assertNoSeriousViolations } from '../helpers/axe';
 import { importPack, installedPackRow } from '../helpers/packs';
-import { addFromLibrary, openTab, searchLibrary } from '../helpers/sheet';
+import { addFromLibrary, bagSlot, openTab, searchLibrary } from '../helpers/sheet';
 import { confirmRecoveryCodesAndContinue, registerToCodesStep, uniqueUsername } from './helpers';
 import {
   createCampaign,
@@ -161,9 +161,7 @@ test.describe('campaign: content pack relay', () => {
       await test.step("member sheet: the pack's weapon is now in the character's library", async () => {
         await openTab(memberPage, 'Play');
         await addFromLibrary(memberPage, 'Moonblade', PACK_WEAPON);
-        await expect(
-          memberPage.locator('.play-tab__inventory-item', { hasText: PACK_WEAPON }),
-        ).toBeVisible();
+        await expect(bagSlot(memberPage, PACK_WEAPON)).toBeVisible();
       });
 
       await test.step("DM party view: the member's sheet derives with the member's pins", async () => {

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createFighter } from './helpers/create-fighter';
 import { chooseOwnClassIfPrompted } from './helpers/level-up';
+import { hpCurrent, hpMax } from './helpers/sheet';
 
 const CHARACTER_NAME = 'Aldric Level Up';
 
@@ -24,13 +25,8 @@ test.describe('level up — XP entry, average HP, and revert', () => {
     await test.step('create the fighter-1 character (level 1, HP 12/12)', async () => {
       await createFighter(page, CHARACTER_NAME);
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 1');
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
+      await expect(hpCurrent(page)).toHaveText('12');
+      await expect(hpMax(page)).toHaveText('12');
     });
 
     await test.step('award 300 XP — the "level up available" badge appears', async () => {
@@ -60,25 +56,15 @@ test.describe('level up — XP entry, average HP, and revert', () => {
 
     await test.step('the sheet shows level 2 and HP 12/20 (leveling does not heal current)', async () => {
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 2');
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('20');
+      await expect(hpCurrent(page)).toHaveText('12');
+      await expect(hpMax(page)).toHaveText('20');
     });
 
     await test.step('a reload persists the level up (IndexedDB, not just in-memory state)', async () => {
       await page.reload();
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 2');
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('20');
+      await expect(hpCurrent(page)).toHaveText('12');
+      await expect(hpMax(page)).toHaveText('20');
     });
 
     await test.step('revert the level up from the Timeline tab, behind its confirm dialog', async () => {
@@ -101,13 +87,8 @@ test.describe('level up — XP entry, average HP, and revert', () => {
     await test.step('the sheet is back to level 1 / HP 12/12', async () => {
       await page.getByRole('tab', { name: 'Play', exact: true }).click();
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 1');
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
+      await expect(hpCurrent(page)).toHaveText('12');
+      await expect(hpMax(page)).toHaveText('12');
     });
   });
 });

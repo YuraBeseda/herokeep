@@ -229,6 +229,33 @@ export const routes: Routes = [
             (m) => m.PlayTabComponent,
           ),
       },
+      // The phone's tabs exist at every width; the sheet shell resolves route vs. width (below 768
+      // px `play` lands on `combat`, from 768 px a phone tab lands on `play`).
+      {
+        path: 'combat',
+        loadComponent: () =>
+          import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.CombatTabComponent),
+      },
+      {
+        path: 'spells',
+        loadComponent: () =>
+          import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.SpellsTabComponent),
+      },
+      {
+        path: 'bag',
+        loadComponent: () =>
+          import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.BagTabComponent),
+      },
+      {
+        path: 'hero',
+        loadComponent: () =>
+          import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.HeroTabComponent),
+      },
+      {
+        path: 'more',
+        loadComponent: () =>
+          import('./views/characters/sheet/play/tabs/phone-tabs').then((m) => m.MoreTabComponent),
+      },
       {
         path: 'build',
         loadComponent: () =>

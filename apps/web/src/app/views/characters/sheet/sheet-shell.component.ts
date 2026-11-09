@@ -1,38 +1,74 @@
-import { Component, computed, inject, signal, type Signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import { ButtonComponent } from '@shared/components/button/button.component';
-import { NumberFieldComponent } from '@shared/components/number-field/number-field.component';
-import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
+import { provideTranslocoScope, TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { CampaignChipComponent } from '@shared/components/campaign-chip/campaign-chip.component';
-import { TabsComponent, type HkTab } from '@shared/components/tabs/tabs.component';
+import { CampaignEditLockBannerComponent } from '@shared/components/campaign-edit-lock-banner/campaign-edit-lock-banner.component';
+import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
-import { HkBannerComponent } from '../../../ui/banner/banner.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
-import { deliverHeroBundle } from '@shared/services/export/hero-delivery';
-import { HeroWriterService } from '@shared/services/export/hero-writer.service';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
-import { filter, map } from 'rxjs';
+import { combineLatest, filter, map, switchMap } from 'rxjs';
+import {
+  ActionStrapService,
+  type StrapAction,
+} from '../../../ui/action-strap/action-strap.service';
+import { HkBannerComponent } from '../../../ui/banner/banner.component';
+import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkNumberFieldComponent } from '../../../ui/number-field/number-field.component';
+import { HkPortraitFrameComponent } from '../../../ui/portrait-frame/portrait-frame.component';
+import { phoneLayout } from '../../../ui/shell/viewport';
+import { TopBarService } from '../../../ui/shell/top-bar.service';
+import { TabBarService, type TabItem } from '../../../ui/tab-bar/tab-bar.service';
+import { HkXpBarComponent } from '../../../ui/xp-bar/xp-bar.component';
+import { AbilitiesLeafComponent } from './play/abilities-leaf/abilities-leaf.component';
+import { PlayActionsService } from './play/play-actions.service';
+import { PlayRollsService } from './play/play-rolls.service';
+import { SkillsLeafComponent } from './play/skills-leaf/skills-leaf.component';
+import { VitalsLeafComponent } from './play/vitals-leaf/vitals-leaf.component';
+import { WakeLockToggleComponent } from './play/wake-lock-toggle/wake-lock-toggle.component';
 import { CampaignPacksBannerComponent } from './campaign-packs-banner.component';
+import { SheetChromeService } from './sheet-chrome.service';
+import { sheetNames } from './play/play-names';
 
+/** The folio's tabs (desktop/tablet); each is a child route of `/c/:id`. */
 const TAB_IDS = ['play', 'build', 'timeline'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
+/** The phone's play tabs: child routes at every width, shown as tabs only below 768 px. */
+export const PHONE_TAB_IDS = ['combat', 'spells', 'bag', 'hero', 'more'] as const;
+type PhoneTabId = (typeof PHONE_TAB_IDS)[number];
+
+/** Icons and (shell-scope) label keys of the phone's tab bar. */
+const PHONE_TAB_ITEMS: Record<PhoneTabId, Pick<TabItem, 'icon' | 'label'>> = {
+  combat: { icon: 'attacks', label: 'shell.tabs.combat' },
+  spells: { icon: 'spells', label: 'shell.tabs.spells' },
+  bag: { icon: 'bag', label: 'shell.tabs.bag' },
+  hero: { icon: 'heroes', label: 'shell.tabs.hero' },
+  more: { icon: 'notes', label: 'shell.tabs.more' },
+};
+
+/** The sheet child routes the strap and the layout resolution apply to (not `level-up`). */
+const SHEET_CHILDREN: ReadonlySet<string> = new Set([...TAB_IDS, ...PHONE_TAB_IDS]);
+
 /**
- * `/c/:id` — the character sheet's shell (plan-5 task-10-brief.md): a header (portrait-placeholder
- * circle with initials, name, level/classes line) plus `hk-tabs` routing between `play`/`build`/
- * `timeline` child routes. `characterResolver` (`app.routes.ts`) has already awaited
- * `CharacterStore.load(id)` (or failed to) before this component is ever created — its
- * `characterFound` route data decides whether the header/tabs/`router-outlet` render at all, or an
- * i18n not-found message instead. Doc-09: "phone-first single column; tablet/desktop uses a CSS
- * grid with container queries" — this shell itself stays a plain single column; the grid lives in
- * `play-tab.component.scss`, scoped to that tab's own content.
+ * `/c/:id` — the character sheet's shell (spec §4.2, board `Main`). On tablet/desktop it is the
+ * folio column — portrait, name plate, the Play · Build · Timeline tabs with the Level up
+ * tab-action and the XP bar, then the vitals (HP strap, AC shield, initiative, speed), the ability
+ * seals and the skills — beside the routed tab. On the phone the folio shrinks to the identity
+ * row, the bottom tab bar (`TabBarService`) switches between the Combat · Spells · Bag · Hero ·
+ * More child routes, and the same leaves are composed by those tabs instead.
+ *
+ * The shell is the ONE place that reconciles route and width: below 768 px `/play` lands on
+ * `/combat`; from 768 px a phone-tab URL resolves to `/play` (deep links and Back keep working
+ * because both are `replaceUrl` redirects). It also sets the action strap — scoped to
+ * `['/c', id]` so it survives tab changes — and, on the phone, the tab bar and top bar.
+ * `characterResolver` (`app.routes.ts`) has already awaited `CharacterStore.load(id)` before this
+ * component is created; its `characterFound` route data decides whether anything renders at all.
  */
 @Component({
   selector: 'app-sheet-shell',
@@ -40,15 +76,20 @@ type TabId = (typeof TAB_IDS)[number];
     TranslocoDirective,
     RouterOutlet,
     RouterLink,
-    TabsComponent,
     SkeletonComponent,
-    FormsModule,
-    NumberFieldComponent,
-    ButtonComponent,
     BlobUrlPipe,
     CampaignChipComponent,
+    CampaignEditLockBannerComponent,
     CampaignPacksBannerComponent,
     HkBannerComponent,
+    HkButtonComponent,
+    HkNumberFieldComponent,
+    HkPortraitFrameComponent,
+    HkXpBarComponent,
+    VitalsLeafComponent,
+    AbilitiesLeafComponent,
+    SkillsLeafComponent,
+    WakeLockToggleComponent,
   ],
   // Plan 15 Task 4: a component-level `EngineFacade` scoped to the loaded character's pins — every
   // tab and level-up (routed children) names and lists against the character's own pack set.
@@ -65,19 +106,28 @@ export class SheetShellComponent {
   private readonly router = inject(Router);
   private readonly engineFacade = inject(EngineFacade);
   private readonly placeholderService = inject(PlaceholderService);
-  private readonly heroWriterService = inject(HeroWriterService);
   private readonly toastService = inject(ToastService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly strap = inject(ActionStrapService);
+  private readonly tabBar = inject(TabBarService);
+  private readonly topBar = inject(TopBarService);
+  private readonly chrome = inject(SheetChromeService);
+  private readonly rolls = inject(PlayRollsService);
+  protected readonly actions = inject(PlayActionsService);
   protected readonly characterStore = inject(CharacterStore);
 
   // `characterResolver` only ever runs again (and this component only ever gets re-created) when
   // `:id` actually changes — Angular's default `RouteReuseStrategy` doesn't reuse a route whose
-  // params differ — so reading the resolved flag once, here, is safe; it can't go stale under this
-  // component's own lifetime.
+  // params differ — so reading the resolved flag once, here, is safe.
   protected readonly found = this.route.snapshot.data['characterFound'] === true;
+  private readonly routeId = this.route.snapshot.paramMap.get('id') ?? '';
 
   protected readonly sheet = this.characterStore.sheet;
   /** Plan 15 Task 4 (ruling 8): pins whose exact version is not installed — the banner's list. */
   protected readonly missingPins = this.characterStore.missingPins;
+
+  /** The one breakpoint signal (`ui/shell/viewport`): phone below 768 px. */
+  protected readonly phone = phoneLayout();
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
@@ -87,46 +137,66 @@ export class SheetShellComponent {
     { initialValue: this.router.url },
   );
 
+  /** The last path segment under `/c/:id` — `play`, `combat`, `build`, `level-up`, … */
+  private readonly childSegment = computed(() => {
+    const path = this.currentUrl().split(/[?#]/)[0];
+    return path.split('/').filter(Boolean).pop() ?? 'play';
+  });
+
+  /** The folio tab that is current: every play tab (`combat`, `spells`, …) is "Play". */
   protected readonly activeTabId = computed<TabId>(() => {
-    const url = this.currentUrl();
-    return TAB_IDS.find((id) => url.endsWith(`/${id}`)) ?? 'play';
+    const segment = this.childSegment();
+    if (segment === 'build' || segment === 'timeline') return segment;
+    return 'play';
+  });
+
+  /** Whether the routed child belongs to this width (`play` on desktop, a phone tab on the phone). */
+  protected readonly layoutOk = computed(() => {
+    const segment = this.childSegment();
+    if (!SHEET_CHILDREN.has(segment)) return true; // level-up and the like
+    return this.phone()
+      ? segment !== 'play'
+      : !(PHONE_TAB_IDS as readonly string[]).includes(segment);
   });
 
   // --- Portrait (plan-6 Task 8) ---------------------------------------------------------------
 
   /** The monogram placeholder shown until (or after) a portrait is set — deterministic per
-   * character id (`PlaceholderService`'s own class doc), not per name, so it never flickers to a
-   * different hue on a rename. */
-  protected readonly monogram: Signal<Monogram> = computed(() =>
+   * character id, not per name, so it never flickers to a different hue on a rename. */
+  protected readonly monogram = computed<Monogram>(() =>
     this.placeholderService.monogram(
       this.sheet()?.name ?? '',
       this.characterStore.streamId() ?? '',
     ),
   );
-
-  // Fix-round 1, finding 4: the `hsl(...)` string is now computed ONCE, centrally, by
-  // `PlaceholderService.monogram` itself (`Monogram.background`) — this just re-exposes it under
-  // the name the template already binds, rather than re-deriving the formula here.
   protected readonly monogramBackground = computed(() => this.monogram().background);
+  /** The per-character hue, darkened a step so the cream monogram ink keeps AA contrast on every hue. */
+  protected readonly monogramWell = computed(
+    () => `linear-gradient(rgb(0 0 0 / 28%), rgb(0 0 0 / 28%)), ${this.monogramBackground()}`,
+  );
 
-  /** `undefined` until `portrait.set` has been appended (design ruling 4: the reducer only ever
-   * stores `{hash, thumbHash}` in `facts.portrait` — no token field lives on the event stream at
-   * all). Feeds `BlobUrlPipe` in the template (`(portraitThumbHash() | blobUrl)()`); a `thumb`
-   * blob missing from `BlobsRepository` (shouldn't happen — `ImagePipelineService` always writes
-   * it before `appendTx`) just resolves to `undefined`, falling back to the monogram again. */
+  /** `undefined` until `portrait.set` has been appended; feeds `BlobUrlPipe` in the template. */
   protected readonly portraitThumbHash = computed(
     () => this.characterStore.facts()?.portrait?.thumbHash,
   );
 
-  // --- XP entry + "level up available" badge (plan-5 task-13-brief.md) -----------------------
+  // --- XP, level up (plan-5 task-13-brief.md) ---------------------------------------------------
 
   protected readonly xp = computed(() => this.characterStore.facts()?.xp ?? 0);
   protected readonly advancements = this.characterStore.advancements;
   protected readonly levelUpAvailable = computed(() => this.advancements().length > 0);
 
-  // `null` between submits — `hk-number-field`'s own CVA contract (its `writeValue`/`onInput` both
-  // traffic in `number | null`, never `undefined`); a plain draft signal, same "no Angular
-  // ReactiveFormsModule" convention every other builder/sheet form in this codebase follows.
+  /** The pack's own XP table (`system.tables.xp[i]` = XP needed to BE level i+1) around the
+   * character's level: the bar's floor and the threshold the Level up tab-action names. */
+  protected readonly xpRange = computed(() => {
+    const table = this.engineFacade.index().system().tables.xp;
+    const level = this.sheet()?.level ?? 1;
+    const floor = table[level - 1] ?? 0;
+    const next = table[level];
+    return { floor, next: next ?? null };
+  });
+
+  // `null` between submits — `hk-number-field`'s model traffics in `number | null`.
   protected readonly xpAward = signal<number | null>(null);
 
   protected onXpAwardChange(value: number | null): void {
@@ -143,11 +213,8 @@ export class SheetShellComponent {
   // --- "Undo level-up" (plan-5 task-13-brief.md) ------------------------------------------------
 
   /** The target `revert()` needs, visible only while the LAST tx group in `characterStore.events()`
-   * is LED by a `level.gained` event — a "tx group" is every event sharing the last event's `txId`
-   * (contiguous by construction: `CharacterStore.appendTx` assigns one txId per call and events are
-   * always appended in seq order), or, when the last event carries no txId at all (a single-event
-   * level-up with no further decisions/spells — e.g. fighter 1→2, which is JUST `level.gained`),
-   * that one event by itself. `undefined` (no undo offered) for any other last event/tx. */
+   * is LED by a `level.gained` event (every event sharing the last event's `txId`, or the last
+   * event alone when it carries none). `undefined` (no undo offered) for any other last event. */
   protected readonly undoableLevelUpTarget = computed<
     { txId?: string; eventId?: string } | undefined
   >(() => {
@@ -165,10 +232,6 @@ export class SheetShellComponent {
     void this.characterStore.revert(target);
   }
 
-  protected tabsFor(t: (key: string) => string): HkTab[] {
-    return TAB_IDS.map((id) => ({ id, label: t(`sheet.tabs.${id}`) }));
-  }
-
   protected classLine(t: (key: string, params?: Record<string, unknown>) => string): string {
     const sheet = this.sheet();
     if (!sheet) return '';
@@ -181,53 +244,258 @@ export class SheetShellComponent {
       .join(' · ');
   }
 
-  protected onTabSelected(id: string | undefined): void {
-    if (!id || id === this.activeTabId()) return;
+  // --- Tabs ---------------------------------------------------------------------------------
+
+  protected readonly tabIds = TAB_IDS;
+
+  protected onTabSelected(id: TabId): void {
+    if (id === this.activeTabId()) return;
     void this.router.navigate([id], { relativeTo: this.route });
   }
 
-  // --- `.hero` export (plan-6 Task 9) -----------------------------------------------------------
+  /** Left/Right/Home/End move between the three folio tabs (the tablist's keyboard contract). */
+  protected onTabsKey(event: KeyboardEvent): void {
+    const index = TAB_IDS.indexOf(this.activeTabId());
+    const last = TAB_IDS.length - 1;
+    const next =
+      event.key === 'ArrowRight'
+        ? (index + 1) % TAB_IDS.length
+        : event.key === 'ArrowLeft'
+          ? (index + last) % TAB_IDS.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? last
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    this.onTabSelected(TAB_IDS[next]);
+    queueMicrotask(() =>
+      document.querySelector<HTMLElement>(`#sheet-tab-${TAB_IDS[next]}`)?.focus(),
+    );
+  }
 
-  /** Guards the Export button against a double-click firing two concurrent exports/deliveries. */
-  protected readonly exporting = signal(false);
+  // --- Export (plan-6 Task 9) -----------------------------------------------------------------
 
-  /** Builds the bundle (`HeroWriterService.export`, pure) then hands it to the delivery ladder
-   * (`deliverHeroBundle`, design ruling 5). A `'cancelled'` outcome — the user backed out of the
-   * save picker or share sheet — is a normal no-op, not a failure: no toast either way. Any other
-   * outcome (`'saved'`/`'shared'`/`'downloaded'`) toasts success; a thrown error (a storage read
-   * failure, an invalid manifest — shouldn't happen, but `HeroWriterService.export` can throw)
-   * toasts the generic failure key instead.
-   *
-   * `t` (fix-wave review, minor finding 5): `deliverHeroBundle`'s save-picker file-type label is
-   * native browser/OS chrome, not this component's own template, so it needs a resolved STRING —
-   * the template passes its own scoped `t` (`*transloco="let t; read: 'characters'"`) in at click
-   * time, same "caller passes its own template-scoped `t()`" convention `play-tab.component.ts`'s
-   * `ScopedT` handlers use, rather than resolving via the injected (global, unscoped)
-   * `TranslocoService` directly. */
-  protected async onExport(
-    t: (key: string, params?: Record<string, unknown>) => string,
-  ): Promise<void> {
-    const characterId = this.characterStore.streamId();
-    if (!characterId || this.exporting()) return;
+  protected readonly exporting = this.chrome.exporting;
 
-    this.exporting.set(true);
-    try {
-      const { blob, fileName, warnings } = await this.heroWriterService.export(characterId);
-      const description = t('sheet.export.pickerDescription');
-      const outcome = await deliverHeroBundle(blob, fileName, description);
-      if (outcome !== 'cancelled') {
-        this.toastService.show('characters.sheet.export.success');
-        // Plan 15 final fix wave C1: a pinned pack the bundle could not carry.
-        for (const warning of warnings) {
-          this.toastService.show(`characters.sheet.export.${warning.code}`, {
-            pack: warning.pack,
-          });
-        }
-      }
-    } catch {
-      this.toastService.show('characters.sheet.export.failure');
-    } finally {
-      this.exporting.set(false);
+  protected onExport(t: (key: string, params?: Record<string, unknown>) => string): void {
+    void this.chrome.exportHero(t);
+  }
+
+  // --- The action strap, tab bar and top bar -------------------------------------------------
+
+  private readonly translationsReady = toSignal(
+    this.transloco.langChanges$.pipe(
+      switchMap(() =>
+        combineLatest([
+          this.transloco.selectTranslate('sheet.hp.concentratingOn', {}, 'characters'),
+          this.transloco.selectTranslate('sheet.roll.plainName', {}, 'characters'),
+        ]),
+      ),
+    ),
+    { initialValue: null },
+  );
+
+  private readonly names = sheetNames(this.engineFacade);
+
+  private readonly concentrationName = computed(() => {
+    const spellId = this.sheet()?.concentration?.spellId;
+    return spellId ? this.names.resolve(spellId) : null;
+  });
+
+  /** The concentration note in the strap's status slot (zone 3, far right). */
+  private readonly statusText = computed(() => {
+    this.translationsReady();
+    const name = this.concentrationName();
+    return name ? this.tr('characters.sheet.hp.concentratingOn', { name }) : undefined;
+  });
+
+  private tr(key: string, params?: Record<string, unknown>): string {
+    return this.transloco.translate(key, params);
+  }
+
+  /** A scoped translator in the shape the roll methods take. */
+  private readonly scopedT = (key: string, params?: Record<string, unknown>): string =>
+    this.tr(`characters.${key}`, params);
+
+  constructor() {
+    if (!this.found) return;
+
+    // Set from effects, not eagerly: a predecessor screen's destroy-time clear can run after this
+    // constructor, and would wipe a config set eagerly. Re-runs on every navigation inside the
+    // sheet so the strap is back when a tab replaced it (e.g. returning from level-up).
+    effect(() => this.setStrap());
+    effect(() => this.setTabBar());
+    effect(() => this.setTopBar());
+    effect(() => this.reconcileLayout());
+
+    inject(DestroyRef).onDestroy(() => {
+      this.strap.clear();
+      this.tabBar.set(null);
+      this.topBar.clear();
+    });
+  }
+
+  private setStrap(): void {
+    const sheet = this.sheet();
+    const segment = this.childSegment();
+    const locked = this.actions.editLocked();
+    const status = this.statusText();
+    this.translationsReady();
+    if (!sheet) return;
+    if (!SHEET_CHILDREN.has(segment)) {
+      // Level up has its own strap (flow strap); the sheet's must not linger under it.
+      untracked(() => {
+        if (this.strap.config()?.primary.some((a) => a.id === 'damage')) this.strap.clear();
+      });
+      return;
     }
+    const reason = locked ? 'characters.sheet.editLocked' : undefined;
+    untracked(() => {
+      const mutating = (action: StrapAction): StrapAction =>
+        locked ? { ...action, disabled: true, disabledReason: reason } : action;
+      this.strap.set({
+        primary: [
+          mutating({
+            id: 'damage',
+            label: 'shell.icon.damage',
+            icon: 'damage',
+            kind: 'ember',
+            run: () => this.focusHpAmount(),
+          }),
+          mutating({
+            id: 'heal',
+            label: 'shell.icon.heal',
+            icon: 'heal',
+            kind: 'primary',
+            run: () => this.focusHpAmount(),
+          }),
+          {
+            id: 'roll',
+            label: 'shell.icon.roll',
+            icon: 'roll',
+            kind: 'primary',
+            run: () => this.rollPlain(),
+          },
+          mutating({
+            id: 'short-rest',
+            label: 'shell.icon.short-rest',
+            icon: 'short-rest',
+            kind: 'ghost',
+            run: () => void this.actions.shortRest(this.names.hitDiceOptions(this.sheet())),
+          }),
+          mutating({
+            id: 'long-rest',
+            label: 'shell.icon.long-rest',
+            icon: 'long-rest',
+            kind: 'ghost',
+            run: () => void this.actions.longRest(),
+          }),
+        ],
+        secondary: [
+          mutating({
+            id: 'add-condition',
+            label: 'shell.strap.add-condition',
+            icon: 'condition',
+            kind: 'icon',
+            run: () => void this.actions.addCondition(this.names.conditionOptions()),
+          }),
+          {
+            id: 'notes',
+            label: 'shell.icon.notes',
+            icon: 'notes',
+            kind: 'icon',
+            run: () => this.chrome.openNotes(),
+          },
+          {
+            id: 'roll-log',
+            label: 'shell.strap.roll-log',
+            icon: 'roll',
+            kind: 'icon',
+            run: () => this.chrome.openRollLog(),
+          },
+          {
+            id: 'export',
+            label: 'shell.icon.export',
+            icon: 'export',
+            kind: 'icon',
+            run: () => void this.chrome.exportHero(this.scopedT),
+          },
+          {
+            id: 'edit',
+            label: 'shell.icon.edit',
+            icon: 'edit',
+            kind: 'icon',
+            run: () => void this.router.navigate(['build'], { relativeTo: this.route }),
+          },
+        ],
+        ...(status ? { status } : {}),
+        scope: ['/c', this.routeId],
+      });
+    });
+  }
+
+  private setTabBar(): void {
+    const show = this.phone() && SHEET_CHILDREN.has(this.childSegment());
+    this.tabBar.set(
+      show
+        ? PHONE_TAB_IDS.map((id) => ({
+            id,
+            ...PHONE_TAB_ITEMS[id],
+            route: ['/c', this.routeId, id],
+          }))
+        : null,
+    );
+  }
+
+  private setTopBar(): void {
+    const sheet = this.sheet();
+    if (!this.phone() || !sheet) {
+      untracked(() => this.topBar.clear());
+      return;
+    }
+    untracked(() =>
+      this.topBar.set({
+        title: sheet.name,
+        action: {
+          id: 'edit',
+          label: 'shell.icon.edit',
+          icon: 'edit',
+          run: () => void this.router.navigate(['build'], { relativeTo: this.route }),
+        },
+        scope: ['/c', this.routeId],
+      }),
+    );
+  }
+
+  /** Below 768 px `/play` lands on `/combat`; from 768 px a phone-tab URL resolves to `/play`. */
+  private reconcileLayout(): void {
+    if (this.layoutOk()) return;
+    const target = this.phone() ? 'combat' : 'play';
+    untracked(
+      () => void this.router.navigate([target], { relativeTo: this.route, replaceUrl: true }),
+    );
+  }
+
+  // The strap's Damage and Heal take the typed amount in the HP gauge: they bring the player to it
+  // (the Combat tab on the phone) and focus its field; the gauge's own buttons apply it.
+  private focusHpAmount(): void {
+    const focus = (): void =>
+      document.querySelector<HTMLInputElement>('.hk-hp-gauge__amount')?.focus();
+    if (document.querySelector('.hk-hp-gauge__amount')) {
+      focus();
+      return;
+    }
+    void this.router.navigate(['combat'], { relativeTo: this.route }).then(() => setTimeout(focus));
+  }
+
+  // The strap's Roll: one plain d20 (advantage-aware), logged; the total comes back as a toast.
+  private rollPlain(): void {
+    const total = this.rolls.rollPlainCheck(
+      this.tr('characters.sheet.roll.plainName'),
+      this.scopedT,
+    );
+    this.toastService.show('characters.sheet.roll.plainResult', { total });
   }
 }

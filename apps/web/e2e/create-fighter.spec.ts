@@ -13,6 +13,7 @@ import {
   pickSpecies,
   option,
 } from './helpers/create-fighter';
+import { acValue, hpCurrent, hpMax, profBonus } from './helpers/sheet';
 
 const CHARACTER_NAME = 'Aldric Golden Path';
 
@@ -83,18 +84,8 @@ test.describe('character creation — golden path', () => {
 
     await test.step('play tab shows AC 19, HP 12/12, and proficiency bonus +2', async () => {
       expect(characterId).not.toBe('');
-
-      const statsSection = page.locator('.play-tab__stats');
-      await expect(
-        statsSection
-          .locator('hk-stat-tile', { hasText: 'Armor Class' })
-          .locator('.hk-stat-tile__value'),
-      ).toHaveText('19');
-      await expect(
-        statsSection
-          .locator('hk-stat-tile', { hasText: 'Proficiency bonus' })
-          .locator('.hk-stat-tile__value'),
-      ).toHaveText('+2');
+      await expect(acValue(page)).toHaveText('19');
+      await expect(profBonus(page)).toHaveText('+2');
 
       // Controller ruling R11: `facts.hp.current` defaults to the literal `0`, not the `'max'`
       // sentinel (`reduce/facts.ts`'s `initialFacts`) — correct ENGINE behavior, since nothing
@@ -102,13 +93,8 @@ test.describe('character creation — golden path', () => {
       // character starts at full HP, so `CreateWizardState.buildTransaction()` now tops it up
       // itself with an explicit `hp.changed {delta: <derived max>, kind: 'set'}` right after
       // `level.gained`. Current and max are therefore both 12 here.
-      const hpSection = page.locator('.play-tab__hp-stats');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Current' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
-      await expect(
-        hpSection.locator('hk-stat-tile', { hasText: 'Max' }).locator('.hk-stat-tile__value'),
-      ).toHaveText('12');
+      await expect(hpCurrent(page)).toHaveText('12');
+      await expect(hpMax(page)).toHaveText('12');
     });
   });
 });

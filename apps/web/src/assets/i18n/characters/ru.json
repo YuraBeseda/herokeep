@@ -239,7 +239,8 @@
     "tabs": {
       "play": "Игра",
       "build": "Билд",
-      "timeline": "Хроника"
+      "timeline": "Хроника",
+      "label": "Разделы листа"
     },
     "build": {
       "outstanding": {
@@ -305,7 +306,10 @@
       "xpAward": "Начислить",
       "levelUpAvailable": "Доступно повышение уровня",
       "undoLevelUp": "Отменить повышение уровня",
-      "export": "Экспорт"
+      "export": "Экспорт",
+      "levelUp": "Повысить уровень",
+      "levelUpAt": "Повышение уровня при {xp} опыта",
+      "levelUpMax": "Достигнут максимальный уровень"
     },
     "export": {
       "success": "Персонаж экспортирован.",
@@ -328,13 +332,15 @@
       "initiative": "Инициатива",
       "prof": "Бонус мастерства",
       "passivePerception": "Пассивная внимательность",
-      "speed": "Скорость"
+      "speed": "Скорость",
+      "acHint": "Класс доспеха {value}"
     },
     "abilities": {
       "title": "Характеристики",
       "score": "Значение",
       "mod": "Модификатор",
-      "save": "Испытание"
+      "save": "Испытание",
+      "savesTitle": "Спасброски"
     },
     "skills": {
       "title": "Навыки",
@@ -342,7 +348,10 @@
         "proficient": "Владение",
         "expertise": "Эксперт",
         "half": "Половина бонуса мастерства"
-      }
+      },
+      "notProficient": "Без владения",
+      "passive": "Пассивное восприятие {value}",
+      "prof": "Мастерство {value}"
     },
     "hp": {
       "title": "Очки здоровья",
@@ -364,7 +373,8 @@
       "deathSaveCritSuccess": "Критический успех",
       "deathSaveCritFailure": "Критический провал",
       "concentratingOn": "Концентрация: {name}",
-      "endConcentration": "Прекратить концентрацию"
+      "endConcentration": "Прекратить концентрацию",
+      "deathSaveRollName": "Смерть"
     },
     "rest": {
       "title": "Отдых",
@@ -443,7 +453,16 @@
         "attackDamage": "Урон {name}: {total}.",
         "spellAttack": "Атака заклинанием {name}: {total}.",
         "manual": "Записано {total}."
-      }
+      },
+      "checkNamed": "Бросить проверку: {name}",
+      "saveNamed": "Бросить спасбросок: {name}",
+      "checkShort": "Проверка",
+      "saveShort": "Спасбросок",
+      "damageNamed": "Бросить урон: {name}",
+      "plainName": "к20",
+      "plainResult": "к20: {total}",
+      "logTitle": "Журнал бросков",
+      "close": "Закрыть"
     },
     "attacks": {
       "title": "Атаки",
@@ -483,13 +502,30 @@
         "cancel": "Отмена",
         "confirm": "Наложить"
       },
-      "empty": "Нет заклинаний."
+      "empty": "Нет заклинаний.",
+      "slotsAria": "Ячейки {level} уровня, {left} из {max}",
+      "slotSpend": "Потратить ячейку {level} уровня",
+      "slotRestore": "Вернуть ячейку {level} уровня",
+      "pactAria": "Ячейки договора, уровень {level}, {left} из {max}",
+      "pactSpend": "Потратить ячейку договора {level} уровня",
+      "pactRestore": "Вернуть ячейку договора {level} уровня",
+      "levelHint": "Заклинание {level} уровня"
     },
     "resources": {
       "title": "Ресурсы",
       "usedOf": "{used} / {max}",
       "pipLabel": "{name}, использование {index} из {max}",
-      "empty": "Нет ресурсов."
+      "empty": "Нет ресурсов.",
+      "use": "Использовать",
+      "restore": "Вернуть",
+      "useNamed": "Использовать: {name}",
+      "restoreNamed": "Вернуть одно использование: {name}",
+      "pipHint": "Использование: {name}",
+      "reset": {
+        "shortRest": "Короткий отдых",
+        "longRest": "Долгий отдых",
+        "dawn": "Рассвет"
+      }
     },
     "actions": {
       "title": "Действия",
@@ -517,7 +553,8 @@
     "proficiencies": {
       "title": "Владения",
       "entry": "{target} ({level})",
-      "empty": "Нет."
+      "empty": "Нет.",
+      "armorWeapons": "Доспехи и оружие"
     },
     "tools": {
       "title": "Инструменты",
@@ -578,7 +615,13 @@
         "body": "Этот предмет будет безвозвратно удалён из инвентаря.",
         "cancel": "Отмена",
         "confirm": "Удалить"
-      }
+      },
+      "use": "Использовать",
+      "details": "Подробнее",
+      "actionsFor": "Действия: {name}",
+      "qtyMinimum": "Чтобы уменьшить меньше одного, удалите предмет",
+      "unitLb": "фнт",
+      "electrum": "Электрумовых монет: {count}"
     },
     "notes": {
       "title": "Заметки",
@@ -622,6 +665,19 @@
         "pin-failed": "Не удалось подключить наборы кампании. Попробуйте снова.",
         "report-title": "Подключить наборы кампании?"
       }
+    },
+    "folio": "Папка героя",
+    "editLocked": "Заблокировано домашними правилами кампании",
+    "vitals": {
+      "title": "Основные показатели",
+      "extras": "Другие показатели"
+    },
+    "features": {
+      "title": "Умения",
+      "sourceHint": "Умение: {name}"
+    },
+    "more": {
+      "packs": "Пакеты контента"
     }
   },
   "timeline": {

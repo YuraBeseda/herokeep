@@ -1,0 +1,73 @@
+@if (sheet(); as s) {
+  <ng-container *transloco="let t; read: 'characters'">
+    <fieldset class="vitals__hp" [disabled]="actions.editLocked()">
+      <legend class="visually-hidden">{{ t('sheet.hp.title') }}</legend>
+      <hk-hp-gauge
+        [current]="s.hp.current"
+        [max]="s.hp.max.value"
+        [temp]="s.hp.temp"
+        (damage)="actions.damage($event)"
+        (heal)="actions.heal($event)"
+        (setTemp)="actions.addTemp($event)"
+      />
+    </fieldset>
+
+    <section class="vitals__stats" [attr.aria-label]="t('sheet.vitals.title')">
+      <hk-shield-badge
+        class="vitals__ac"
+        hkDerived
+        [hkDerivedBreakdown]="s.ac"
+        [value]="s.ac.value"
+        [hint]="t('sheet.stats.acHint', { value: s.ac.value })"
+      />
+      <hk-stat-tile
+        class="vitals__initiative"
+        hkDerived
+        [hkDerivedBreakdown]="s.initiative"
+        [label]="t('sheet.stats.initiative')"
+        [value]="signed(s.initiative.value)"
+        [icon]="'ui:initiative'"
+      />
+      @for (speed of speedRows(); track speed.mode) {
+        <hk-stat-tile
+          class="vitals__speed"
+          hkDerived
+          [hkDerivedBreakdown]="speed.value"
+          [label]="t('sheet.stats.speed')"
+          [value]="speed.value.value"
+          [icon]="'ui:speed'"
+          [hint]="speed.mode"
+        />
+      }
+    </section>
+
+    <section class="vitals__extras" [attr.aria-label]="t('sheet.vitals.extras')">
+      <hk-stat-tile
+        class="vitals__max"
+        hkDerived
+        [hkDerivedBreakdown]="s.hp.max"
+        [label]="t('sheet.hp.max')"
+        [value]="s.hp.max.value"
+        [icon]="'ui:hp'"
+      />
+      <hk-stat-tile
+        class="vitals__prof"
+        [label]="t('sheet.stats.prof')"
+        [value]="signed(s.prof)"
+        [icon]="'ui:proficiency'"
+      />
+      <hk-stat-tile
+        class="vitals__passive"
+        [label]="t('sheet.stats.passivePerception')"
+        [value]="s.passivePerception"
+      />
+      @if (hitDiceRows().length > 0) {
+        <hk-stat-tile
+          class="vitals__hit-dice"
+          [label]="t('sheet.hp.hitDice')"
+          [value]="hitDiceText()"
+        />
+      }
+    </section>
+  </ng-container>
+}

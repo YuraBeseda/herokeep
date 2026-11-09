@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resources__item {
+  min-inline-size: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-slot);
+  background: var(--leaf-sunken);
+}
+
+.resources__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: auto;
+}
+
+.resources__empty {
+  margin: 0;
+  color: var(--text-2);
+  font-style: italic;
+}

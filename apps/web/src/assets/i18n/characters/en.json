@@ -239,7 +239,8 @@
     "tabs": {
       "play": "Play",
       "build": "Build",
-      "timeline": "Timeline"
+      "timeline": "Timeline",
+      "label": "Sheet sections"
     },
     "build": {
       "outstanding": {
@@ -305,7 +306,10 @@
       "xpAward": "Award",
       "levelUpAvailable": "Level up available",
       "undoLevelUp": "Undo level up",
-      "export": "Export"
+      "export": "Export",
+      "levelUp": "Level up",
+      "levelUpAt": "Level up at {xp} XP",
+      "levelUpMax": "Maximum level reached"
     },
     "export": {
       "success": "Character exported.",
@@ -328,13 +332,15 @@
       "initiative": "Initiative",
       "prof": "Proficiency bonus",
       "passivePerception": "Passive Perception",
-      "speed": "Speed"
+      "speed": "Speed",
+      "acHint": "Armor class {value}"
     },
     "abilities": {
       "title": "Ability scores",
       "score": "Score",
       "mod": "Modifier",
-      "save": "Save"
+      "save": "Save",
+      "savesTitle": "Saving throws"
     },
     "skills": {
       "title": "Skills",
@@ -342,7 +348,10 @@
         "proficient": "Proficient",
         "expertise": "Expertise",
         "half": "Half proficiency"
-      }
+      },
+      "notProficient": "Not proficient",
+      "passive": "Passive Perception {value}",
+      "prof": "Proficiency {value}"
     },
     "hp": {
       "title": "Hit points",
@@ -364,7 +373,8 @@
       "deathSaveCritSuccess": "Critical success",
       "deathSaveCritFailure": "Critical failure",
       "concentratingOn": "Concentrating on {name}",
-      "endConcentration": "End concentration"
+      "endConcentration": "End concentration",
+      "deathSaveRollName": "Death"
     },
     "rest": {
       "title": "Rest",
@@ -443,7 +453,16 @@
         "attackDamage": "{name} damage: {total}.",
         "spellAttack": "{name} spell attack: {total}.",
         "manual": "Logged {total}."
-      }
+      },
+      "checkNamed": "Roll {name} check",
+      "saveNamed": "Roll {name} save",
+      "checkShort": "Check",
+      "saveShort": "Save",
+      "damageNamed": "Roll damage: {name}",
+      "plainName": "d20",
+      "plainResult": "d20: {total}",
+      "logTitle": "Roll log",
+      "close": "Close"
     },
     "attacks": {
       "title": "Attacks",
@@ -483,13 +502,30 @@
         "cancel": "Cancel",
         "confirm": "Cast"
       },
-      "empty": "No spellcasting."
+      "empty": "No spellcasting.",
+      "slotsAria": "Level {level} slots, {left} of {max}",
+      "slotSpend": "Spend a level {level} slot",
+      "slotRestore": "Restore a level {level} slot",
+      "pactAria": "Pact slots, level {level}, {left} of {max}",
+      "pactSpend": "Spend a level {level} pact slot",
+      "pactRestore": "Restore a level {level} pact slot",
+      "levelHint": "Level {level} spell"
     },
     "resources": {
       "title": "Resources",
       "usedOf": "{used} / {max}",
       "pipLabel": "{name} use {index} of {max}",
-      "empty": "No resources."
+      "empty": "No resources.",
+      "use": "Use",
+      "restore": "Restore",
+      "useNamed": "Use {name}",
+      "restoreNamed": "Restore one use of {name}",
+      "pipHint": "{name} use",
+      "reset": {
+        "shortRest": "Short rest",
+        "longRest": "Long rest",
+        "dawn": "Dawn"
+      }
     },
     "actions": {
       "title": "Actions",
@@ -517,7 +553,8 @@
     "proficiencies": {
       "title": "Proficiencies",
       "entry": "{target} ({level})",
-      "empty": "None."
+      "empty": "None.",
+      "armorWeapons": "Armor and weapons"
     },
     "tools": {
       "title": "Tools",
@@ -578,7 +615,13 @@
         "body": "This item will be permanently removed from your inventory.",
         "cancel": "Cancel",
         "confirm": "Remove"
-      }
+      },
+      "use": "Use",
+      "details": "Details",
+      "actionsFor": "Actions for {name}",
+      "qtyMinimum": "Remove the item to go below one",
+      "unitLb": "lb",
+      "electrum": "Electrum pieces: {count}"
     },
     "notes": {
       "title": "Notes",
@@ -622,6 +665,19 @@
         "pin-failed": "Couldn't pin the campaign packs. Try again.",
         "report-title": "Pin campaign packs?"
       }
+    },
+    "folio": "Character folio",
+    "editLocked": "Locked by your campaign's house rules",
+    "vitals": {
+      "title": "Vitals",
+      "extras": "More vitals"
+    },
+    "features": {
+      "title": "Features",
+      "sourceHint": "Feature: {name}"
+    },
+    "more": {
+      "packs": "Content packs"
     }
   },
   "timeline": {

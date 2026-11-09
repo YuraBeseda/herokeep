@@ -139,7 +139,7 @@ test.describe('accessibility (axe)', () => {
 
   test('the short-rest dialog (open) has no serious/critical violations', async ({ page }) => {
     await createFighter(page, 'Aldric A11y Rest');
-    await page.getByRole('button', { name: 'Short rest', exact: true }).click();
+    await page.locator('[data-action="short-rest"]').click();
     await expect(page.locator('.rest-dialog__title')).toBeVisible();
     await assertNoSeriousViolations(page, 'play tab — short-rest dialog open');
   });
@@ -147,11 +147,10 @@ test.describe('accessibility (axe)', () => {
   test('the cast dialog (open) has no serious/critical violations', async ({ page }) => {
     await createWizard(page, 'Aldric A11y Cast');
     await prepareSpell(page, 'Magic Missile');
-    const preparedRow = page
-      .locator('.play-tab__spellblock')
-      .locator('li', { hasText: 'Magic Missile' })
-      .filter({ has: page.getByRole('button', { name: 'Cast', exact: true }) });
-    await preparedRow.getByRole('button', { name: 'Cast', exact: true }).click();
+    const preparedRow = page.locator('.spells__prepared .spells__item', {
+      hasText: 'Magic Missile',
+    });
+    await preparedRow.getByRole('button', { name: 'Cast Magic Missile', exact: true }).click();
     await expect(page.locator('.cast-dialog__title')).toBeVisible();
     await assertNoSeriousViolations(page, 'play tab — cast dialog open');
   });
@@ -159,10 +158,12 @@ test.describe('accessibility (axe)', () => {
   test('the roll log with a logged entry has no serious/critical violations', async ({ page }) => {
     await createFighter(page, 'Aldric A11y Roll Log');
     await page
-      .locator('.play-tab__ability')
+      .locator('app-abilities-leaf .abilities__item')
       .first()
-      .getByRole('button', { name: 'Roll check', exact: true })
+      .getByRole('button', { name: /^Roll .* check$/ })
       .click();
+    // The roll log opens from the action strap (zone 3), B9a: still the existing panel, in a dialog.
+    await page.locator('[data-action="roll-log"]').click();
     await expect(page.locator('.roll-log-panel__entries .roll-log-panel__entry')).toHaveCount(1);
     await assertNoSeriousViolations(page, 'play tab — roll log with an entry');
   });

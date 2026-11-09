@@ -1,0 +1,203 @@
+<ng-container *transloco="let t; read: 'characters'">
+  @let items = itemsFor(t);
+  @let lockedReason = actions.editLocked() ? t('sheet.editLocked') : null;
+
+  <ng-template #itemActions>
+    @if (selected(); as entry) {
+      <div
+        class="bag__actions"
+        role="group"
+        [attr.aria-label]="t('sheet.inventory.actionsFor', { name: entry.item.name })"
+      >
+        @if (entry.usable) {
+          <button
+            hk-button
+            type="button"
+            class="bag__use"
+            [disabledReason]="lockedReason"
+            (click)="actions.useOne(entry.row)"
+          >
+            {{ t('sheet.inventory.use') }}
+          </button>
+        }
+        @if (entry.equipEligible) {
+          <button
+            hk-button
+            type="button"
+            class="bag__equip"
+            [variant]="'ghost'"
+            [disabledReason]="lockedReason"
+            (click)="actions.toggleEquip(entry.row)"
+          >
+            {{ entry.row.equipped ? t('sheet.inventory.unequip') : t('sheet.inventory.equip') }}
+          </button>
+        }
+        @if (entry.attuneEligible) {
+          <button
+            hk-button
+            type="button"
+            class="bag__attune"
+            [variant]="'ghost'"
+            [disabledReason]="lockedReason"
+            (click)="actions.toggleAttune(entry.row)"
+          >
+            {{ entry.row.attuned ? t('sheet.inventory.unattune') : t('sheet.inventory.attune') }}
+          </button>
+        }
+        @if (canShowDetails(entry)) {
+          <button
+            hk-button
+            type="button"
+            class="bag__details"
+            [variant]="'ghost'"
+            (click)="openDetails(entry)"
+          >
+            {{ t('sheet.inventory.details') }}
+          </button>
+        }
+        <span class="bag__qty">
+          <button
+            hk-button
+            type="button"
+            class="bag__qty-down"
+            [variant]="'ghost'"
+            [attr.aria-label]="t('sheet.inventory.qtyDecrease')"
+            [disabledReason]="entry.row.qty <= 1 ? t('sheet.inventory.qtyMinimum') : lockedReason"
+            (click)="actions.decreaseQty(entry.row)"
+          >
+            −
+          </button>
+          <span class="bag__qty-value">{{ entry.row.qty }}</span>
+          <button
+            hk-button
+            type="button"
+            class="bag__qty-up"
+            [variant]="'ghost'"
+            [attr.aria-label]="t('sheet.inventory.qtyIncrease')"
+            [disabledReason]="lockedReason"
+            (click)="actions.increaseQty(entry.row)"
+          >
+            +
+          </button>
+        </span>
+        <button
+          hk-button
+          type="button"
+          class="bag__remove"
+          [variant]="'ember'"
+          [disabledReason]="lockedReason"
+          (click)="actions.removeItem(entry.row)"
+        >
+          {{ t('sheet.inventory.remove') }}
+        </button>
+      </div>
+    }
+  </ng-template>
+
+  <hk-leaf [title]="t('sheet.inventory.title')" [icon]="'ui:bag'" [phone]="phone()">
+    <span hkLeafActions class="bag__add">
+      <button
+        hk-button
+        type="button"
+        class="bag__add-library"
+        [disabledReason]="lockedReason"
+        (click)="actions.addFromLibrary()"
+      >
+        {{ t('sheet.inventory.addFromLibrary') }}
+      </button>
+      <button
+        hk-button
+        type="button"
+        class="bag__add-custom"
+        [variant]="'ghost'"
+        [disabledReason]="lockedReason"
+        (click)="actions.addCustomItem()"
+      >
+        {{ t('sheet.inventory.addCustom') }}
+      </button>
+    </span>
+
+    <!-- The satchel's leather flap and brass buckle (decorative). -->
+    <div class="bag__flap" aria-hidden="true"><span class="bag__buckle"></span></div>
+
+    @if (phone()) {
+      <ul class="bag__ledger">
+        @for (entry of rows(); track entry.row.instanceId; let i = $index) {
+          <li>
+            <hk-item-row
+              [item]="items[i]"
+              [selected]="selectedId() === entry.row.instanceId"
+              (select)="select(entry.row.instanceId)"
+              (details)="openDetails(entry)"
+            >
+              <div hkItemActions>
+                <ng-container *ngTemplateOutlet="itemActions" />
+              </div>
+            </hk-item-row>
+          </li>
+        } @empty {
+          <li class="bag__empty">{{ t('sheet.inventory.empty') }}</li>
+        }
+      </ul>
+    } @else {
+      <hk-satchel-grid [items]="items" [selectedId]="selectedId()" (select)="select($event)">
+        <div hkItemActions>
+          <ng-container *ngTemplateOutlet="itemActions" />
+        </div>
+      </hk-satchel-grid>
+      @if (rows().length === 0) {
+        <p class="bag__empty">{{ t('sheet.inventory.empty') }}</p>
+      }
+    }
+
+    @if (rows().length > 0) {
+      <p class="bag__total-weight">
+        {{ t('sheet.inventory.totalWeight', { value: totalWeight() }) }}
+      </p>
+    }
+    @if (carry(); as carry) {
+      <div class="bag__carry">
+        <hk-weight-strap
+          [current]="carry.load"
+          [capacity]="carry.capacity"
+          [unit]="t('sheet.inventory.unitLb')"
+          [state]="weightState()"
+          [stateHint]="
+            carrySpeedPenalty()
+              ? t('sheet.inventory.carry.speedPenalty', { value: carrySpeedPenalty() })
+              : null
+          "
+        />
+        <p class="bag__carry-text">
+          <span class="bag__carry-summary">{{
+            t('sheet.inventory.carry.summary', { load: carry.load, capacity: carry.capacity })
+          }}</span>
+          <span
+            class="bag__carry-state"
+            [class.bag__carry-state--warn]="carry.state !== 'normal'"
+            >{{ t(carryStateKey(carry.state)) }}</span
+          >
+          @if (carrySpeedPenalty(); as penalty) {
+            <span class="bag__carry-penalty">{{
+              t('sheet.inventory.carry.speedPenalty', { value: penalty })
+            }}</span>
+          }
+        </p>
+      </div>
+    }
+
+    <hk-coin-pouch
+      class="bag__coins"
+      [coins]="coins()"
+      [editable]="!actions.editLocked()"
+      (save)="saveCoins($event)"
+    />
+    @if (electrum() > 0) {
+      <p class="bag__electrum">{{ t('sheet.inventory.electrum', { count: electrum() }) }}</p>
+    }
+  </hk-leaf>
+
+  @if (detailsId(); as id) {
+    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
+  }
+</ng-container>

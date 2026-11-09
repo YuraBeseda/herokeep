@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { acValue, applyHp as applyHpImpl, hpCurrent, hpMax } from '../helpers/sheet';
 
 /**
  * Shared plumbing for the `sync` e2e project's real-API scenarios (task-11-brief.md). Unlike
@@ -164,32 +165,21 @@ export function syncBadgeForName(page: Page, name: string) {
   return page.locator('.characters-list__item', { hasText: name }).locator('.hero-card__sync');
 }
 
-/** `.play-tab__hp-stats hk-stat-tile` value locator, by the tile's own `hasText` label — same
- * shape `../play-actions.spec.ts`'s own (unexported) `hpValueLocator` uses for the exact same
- * section. */
+/** The HP gauge's current numeral, or the vitals "Max" tile — see `../helpers/sheet.ts`. */
 export function hpValueLocator(page: Page, label: 'Current' | 'Max') {
-  return page
-    .locator('.play-tab__hp-stats')
-    .locator('hk-stat-tile', { hasText: label })
-    .locator('.hk-stat-tile__value');
+  return label === 'Current' ? hpCurrent(page) : hpMax(page);
 }
 
-/** `.play-tab__stats hk-stat-tile` value locator for Armor Class — same shape
- * `../create-fighter.spec.ts`'s own AC assertion uses. */
+/** The AC shield's number — see `../helpers/sheet.ts`. */
 export function acValueLocator(page: Page) {
-  return page
-    .locator('.play-tab__stats')
-    .locator('hk-stat-tile', { hasText: 'Armor Class' })
-    .locator('.hk-stat-tile__value');
+  return acValue(page);
 }
 
-/** Fills the shared HP-controls amount field and clicks the named action button — same shape
- * `../play-actions.spec.ts`'s own (unexported) `applyHp` uses. */
+/** Types an HP amount into the gauge and presses its Damage / Heal button — see `../helpers/sheet.ts`. */
 export async function applyHp(
   page: Page,
   amount: number,
   action: 'Damage' | 'Heal',
 ): Promise<void> {
-  await page.locator('.play-tab__hp-controls input').fill(String(amount));
-  await page.getByRole('button', { name: action, exact: true }).click();
+  await applyHpImpl(page, amount, action);
 }

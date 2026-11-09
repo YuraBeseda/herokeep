@@ -26,3 +26,54 @@ export async function addFromLibrary(page: Page, search: string, item: string): 
     .click();
   await expect(page.locator('.add-item-dialog__title')).toHaveCount(0);
 }
+
+// --- Locators of the redesigned sheet (plan 17 B9a) -----------------------------------------------
+
+/** Current HP, as the HP gauge's big numeral (the vitals leaf in the folio). */
+export function hpCurrent(page: Page): Locator {
+  return page.locator('.hk-hp-gauge__current');
+}
+
+/** Maximum HP (the vitals leaf's "Max" tile). */
+export function hpMax(page: Page): Locator {
+  return page.locator('.vitals__max .hk-stat-tile__value');
+}
+
+/** Armor class, the number on the AC shield. */
+export function acValue(page: Page): Locator {
+  return page.locator('hk-shield-badge .hk-shield-num');
+}
+
+/** The proficiency bonus tile's value. */
+export function profBonus(page: Page): Locator {
+  return page.locator('.vitals__prof .hk-stat-tile__value');
+}
+
+/** A button of the action strap (zone 2 or 3), by its action id (`data-action`). */
+export function strapAction(page: Page, id: string): Locator {
+  return page.locator(`[data-action="${id}"]`);
+}
+
+/** Types an HP amount into the gauge and presses its Damage / Heal button. */
+export async function applyHp(
+  page: Page,
+  amount: number,
+  action: 'Damage' | 'Heal',
+): Promise<void> {
+  await page.locator('.hk-hp-gauge__amount').fill(String(amount));
+  await page.locator('hk-hp-gauge').getByRole('button', { name: action, exact: true }).click();
+}
+
+/** The satchel slot (desktop) of an item, by the start of its name. */
+export function bagSlot(page: Page, name: string): Locator {
+  return page.locator('.hk-slot').filter({ has: page.locator('.hk-slot__cap', { hasText: name }) });
+}
+
+/** Selects an item in the satchel and returns its action strip. */
+export async function selectBagItem(page: Page, name: string): Promise<Locator> {
+  const slot = bagSlot(page, name).first();
+  if ((await slot.getAttribute('aria-pressed')) !== 'true') await slot.click();
+  const actions = page.locator('.bag__actions');
+  await expect(actions).toBeVisible();
+  return actions;
+}

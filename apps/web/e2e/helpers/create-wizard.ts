@@ -83,20 +83,20 @@ export async function createWizard(page: Page, name: string): Promise<string> {
 }
 
 /** Clicks the Play tab's known-spells list Prepare toggle for `spellName`, then returns a locator
- * for that SAME spell's row in the separate "Prepared spells" list (`play-tab.component.html`'s
+ * for that SAME spell's row in the separate "Prepared spells" list (`spells-leaf.component.html`'s
  * own two-list split — a prepared spell keeps its Known-list `<li>`, now showing Unprepare, AND
  * gains a second `<li>` in the Prepared list, the only one of the two that ever carries a Cast
  * button — `.filter({ has: ... })` on that Cast button is what disambiguates the two same-named
  * rows). */
 export async function prepareSpell(page: Page, spellName: string): Promise<Locator> {
-  const spellBlock = page.locator('.play-tab__spellblock');
+  const spellBlock = page.locator('app-spells-leaf .spells__block');
   await spellBlock
-    .locator('li', { hasText: spellName })
-    .getByRole('button', { name: 'Prepare', exact: true })
+    .locator('.spells__item', { hasText: spellName })
+    .getByRole('button', { name: `Prepare: ${spellName}`, exact: true })
     .click();
   const preparedRow = spellBlock
-    .locator('li', { hasText: spellName })
-    .filter({ has: page.getByRole('button', { name: 'Cast', exact: true }) });
+    .locator('.spells__item', { hasText: spellName })
+    .filter({ has: page.getByRole('button', { name: `Cast ${spellName}`, exact: true }) });
   await expect(preparedRow).toBeVisible();
   return preparedRow;
 }

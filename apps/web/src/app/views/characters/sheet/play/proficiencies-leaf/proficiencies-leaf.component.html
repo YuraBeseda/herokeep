@@ -1,0 +1,55 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.proficiencies.title')" [icon]="'ui:proficiency'" [phone]="phone()">
+    <h3 class="prof__subtitle">{{ t('sheet.proficiencies.armorWeapons') }}</h3>
+    @if (proficiencyRows().length > 0) {
+      <ul class="prof__chips prof__list">
+        @for (p of proficiencyRows(); track p.kind + '|' + p.target) {
+          <li>
+            <hk-tag-chip
+              [label]="t('sheet.proficiencies.entry', { target: p.target, level: p.level })"
+            />
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="prof__empty">{{ t('sheet.proficiencies.empty') }}</p>
+    }
+
+    <h3 class="prof__subtitle">{{ t('sheet.tools.title') }}</h3>
+    @if (toolRows().length > 0) {
+      <ul class="prof__chips prof__tools">
+        @for (tool of toolRows(); track tool.target) {
+          <li><hk-tag-chip [label]="tool.name" /></li>
+        }
+      </ul>
+    } @else {
+      <p class="prof__empty">{{ t('sheet.tools.empty') }}</p>
+    }
+
+    <h3 class="prof__subtitle">{{ t('sheet.senses.title') }}</h3>
+    @if (senseRows().length > 0) {
+      <ul class="prof__chips prof__senses">
+        @for (sense of senseRows(); track sense.sense) {
+          <li>
+            <hk-tag-chip
+              [label]="t('sheet.senses.entry', { sense: sense.sense, range: sense.range })"
+            />
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="prof__empty">{{ t('sheet.senses.empty') }}</p>
+    }
+
+    <h3 class="prof__subtitle">{{ t('sheet.languages.title') }}</h3>
+    @if (languageRows().length > 0) {
+      <ul class="prof__chips prof__languages">
+        @for (language of languageRows(); track language) {
+          <li><hk-tag-chip [label]="language" /></li>
+        }
+      </ul>
+    } @else {
+      <p class="prof__empty">{{ t('sheet.languages.empty') }}</p>
+    }
+  </hk-leaf>
+</ng-container>

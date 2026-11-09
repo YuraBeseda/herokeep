@@ -1,0 +1,282 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <ng-template #slotRows let-slots let-pact="pact">
+    @for (slot of slots; track slot.level) {
+      <div
+        class="spells__slots"
+        role="group"
+        [attr.aria-label]="
+          t('sheet.spellcasting.slotsAria', {
+            level: slot.level,
+            left: slot.max - slot.used,
+            max: slot.max,
+          })
+        "
+      >
+        <span class="spells__seals">
+          @for (i of seals(slot.max); track i) {
+            @let on = available(slot.max, slot.used, i);
+            @let label =
+              on
+                ? t('sheet.spellcasting.slotSpend', { level: slot.level })
+                : t('sheet.spellcasting.slotRestore', { level: slot.level });
+            <button
+              type="button"
+              class="spells__seal"
+              [disabled]="actions.editLocked()"
+              [attr.aria-label]="label"
+              (click)="on ? actions.spendSlot(slot.level) : actions.restoreSlot(slot.level)"
+            >
+              <hk-wax-seal
+                [state]="on ? 'filled' : 'spent'"
+                [numeral]="slot.level"
+                [seed]="i"
+                [hint]="label"
+              />
+            </button>
+          }
+        </span>
+        <span class="spells__slot-label">{{
+          t('sheet.spellcasting.slotsLevel', { level: slot.level })
+        }}</span>
+        <span class="spells__slot-count">{{ slot.max - slot.used }} / {{ slot.max }}</span>
+      </div>
+    }
+  </ng-template>
+
+  @if (blocks().length > 0) {
+    <hk-leaf [title]="t('sheet.spellcasting.title')" [icon]="'ui:spells'" [phone]="phone()">
+      @if (concentration(); as conc) {
+        <div class="spells__concentration" role="status">
+          <hk-tag-chip
+            [label]="t('sheet.hp.concentratingOn', { name: concentrationName() })"
+            [tone]="'arcane'"
+            [icon]="'ui:concentration'"
+          />
+          <button
+            hk-button
+            type="button"
+            [variant]="'ghost'"
+            [disabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+            (click)="actions.endConcentration()"
+          >
+            {{ t('sheet.hp.endConcentration') }}
+          </button>
+        </div>
+      }
+
+      @for (slots of sharedSlotRows(); track $index) {
+        <section class="spells__block spells__shared-slots">
+          <h3 class="spells__subtitle">{{ t('sheet.spellcasting.sharedSlots') }}</h3>
+          <ng-container *ngTemplateOutlet="slotRows; context: { $implicit: slots }" />
+        </section>
+      }
+
+      @for (block of blocks(); track block.classId) {
+        <section class="spells__block" [attr.data-class]="block.classId">
+          <header class="spells__head">
+            <h3 class="spells__class">{{ block.className }}</h3>
+            <hk-stat-tile
+              hkDerived
+              [hkDerivedBreakdown]="block.dc"
+              [label]="t('sheet.spellcasting.dc')"
+              [value]="block.dc.value"
+            />
+            <hk-stat-tile
+              hkDerived
+              [hkDerivedBreakdown]="block.attack"
+              [label]="t('sheet.spellcasting.attack')"
+              [value]="signed(block.attack.value)"
+            />
+            <button hk-button type="button" [variant]="'ghost'" (click)="rollSpellAttack(block, t)">
+              {{ t('sheet.roll.spellAttack') }}
+            </button>
+            @if (block.cantripsKnown !== undefined) {
+              <hk-stat-tile
+                [label]="t('sheet.spellcasting.cantripsKnown')"
+                [value]="block.cantripsKnown"
+              />
+            }
+          </header>
+
+          @if (!block.slotsShared) {
+            <ng-container *ngTemplateOutlet="slotRows; context: { $implicit: block.slots }" />
+          }
+          @if (block.pact; as pact) {
+            <div
+              class="spells__slots spells__pact"
+              role="group"
+              [attr.aria-label]="
+                t('sheet.spellcasting.pactAria', {
+                  level: pact.level,
+                  left: pact.count - pact.used,
+                  max: pact.count,
+                })
+              "
+            >
+              <span class="spells__seals">
+                @for (i of seals(pact.count); track i) {
+                  @let on = available(pact.count, pact.used, i);
+                  @let label =
+                    on
+                      ? t('sheet.spellcasting.pactSpend', { level: pact.level })
+                      : t('sheet.spellcasting.pactRestore', { level: pact.level });
+                  <button
+                    type="button"
+                    class="spells__seal"
+                    [disabled]="actions.editLocked()"
+                    [attr.aria-label]="label"
+                    (click)="
+                      on ? actions.spendPactSlot(pact.level) : actions.restorePactSlot(pact.level)
+                    "
+                  >
+                    <hk-wax-seal
+                      [state]="on ? 'filled' : 'spent'"
+                      [glyph]="'ui:spell-slot'"
+                      [seed]="i"
+                      [hint]="label"
+                    />
+                  </button>
+                }
+              </span>
+              <span class="spells__slot-label">{{
+                t('sheet.spellcasting.pactSlotsLevel', { level: pact.level })
+              }}</span>
+              <span class="spells__slot-count"
+                >{{ pact.count - pact.used }} / {{ pact.count }}</span
+              >
+            </div>
+          }
+          @if (block.preparedMax !== undefined) {
+            <p class="spells__prepared-count">
+              {{
+                t('sheet.spellcasting.preparedOf', {
+                  prepared: preparedCount(block),
+                  max: block.preparedMax,
+                })
+              }}
+            </p>
+          }
+
+          <h4 class="spells__subtitle">{{ t('sheet.spellcasting.known') }}</h4>
+          <ul class="spells__list spells__known">
+            @for (spell of block.knownSpells; track spell.id) {
+              <li class="spells__item">
+                @if (spell.level === 0) {
+                  <hk-spell-row
+                    [name]="spell.name"
+                    [icon]="icon(spell)"
+                    [castDisabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+                    (cast)="cast(block, spell)"
+                  />
+                  @if (spell.concentration && concentration()) {
+                    <span class="spells__note">{{
+                      t('sheet.spellcasting.castDialog.replacesConcentration')
+                    }}</span>
+                  }
+                } @else if (block.preparedMax !== undefined) {
+                  <hk-spell-row
+                    [name]="spell.name"
+                    [icon]="icon(spell)"
+                    [level]="spell.level"
+                    [levelHint]="t('sheet.spellcasting.levelHint', { level: spell.level })"
+                    [prepared]="isPrepared(block, spell.id)"
+                    [castable]="false"
+                  />
+                  @if (isAlwaysPrepared(block, spell.id)) {
+                    <hk-tag-chip
+                      [label]="t('sheet.spellcasting.alwaysPrepared')"
+                      [icon]="'ui:always-prepared'"
+                    />
+                  }
+                  <button
+                    hk-button
+                    type="button"
+                    class="spells__prepare"
+                    [variant]="isPrepared(block, spell.id) ? 'primary' : 'ghost'"
+                    [attr.aria-pressed]="isPrepared(block, spell.id)"
+                    [attr.aria-label]="
+                      (isPrepared(block, spell.id)
+                        ? t('sheet.spellcasting.unprepare')
+                        : t('sheet.spellcasting.prepare')) +
+                      ': ' +
+                      spell.name
+                    "
+                    [disabledReason]="
+                      isAlwaysPrepared(block, spell.id)
+                        ? t('sheet.spellcasting.alwaysPreparedReason')
+                        : actions.editLocked()
+                          ? t('sheet.editLocked')
+                          : null
+                    "
+                    (click)="actions.togglePrepared(block, spell.id)"
+                  >
+                    {{
+                      isPrepared(block, spell.id)
+                        ? t('sheet.spellcasting.unprepare')
+                        : t('sheet.spellcasting.prepare')
+                    }}
+                  </button>
+                } @else {
+                  <hk-spell-row
+                    [name]="spell.name"
+                    [icon]="icon(spell)"
+                    [level]="spell.level"
+                    [levelHint]="t('sheet.spellcasting.levelHint', { level: spell.level })"
+                    [castDisabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+                    (cast)="cast(block, spell)"
+                  />
+                }
+              </li>
+            }
+          </ul>
+
+          @if (block.preparedSpells.length > 0) {
+            <h4 class="spells__subtitle">{{ t('sheet.spellcasting.prepared') }}</h4>
+            <ul class="spells__list spells__prepared">
+              @for (spell of block.preparedSpells; track spell.id) {
+                <li class="spells__item">
+                  <hk-spell-row
+                    [name]="spell.name"
+                    [icon]="icon(spell)"
+                    [level]="spell.level > 0 ? spell.level : null"
+                    [levelHint]="t('sheet.spellcasting.levelHint', { level: spell.level })"
+                    [alwaysPrepared]="
+                      isAlwaysPrepared(block, spell.id)
+                        ? t('sheet.spellcasting.alwaysPrepared')
+                        : null
+                    "
+                    [concentrating]="
+                      concentration()?.spellId === spell.id
+                        ? t('sheet.hp.concentratingOn', { name: spell.name })
+                        : null
+                    "
+                    [castDisabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+                    (cast)="cast(block, spell)"
+                  />
+                  @if (isAlwaysPrepared(block, spell.id)) {
+                    <!-- A granted spell shows its unprepare control DISABLED with the reason,
+                         never none and never a working one. -->
+                    <button
+                      hk-button
+                      type="button"
+                      class="spells__unprepare"
+                      [variant]="'ghost'"
+                      [attr.aria-label]="t('sheet.spellcasting.unprepare') + ': ' + spell.name"
+                      [disabledReason]="t('sheet.spellcasting.alwaysPreparedReason')"
+                    >
+                      {{ t('sheet.spellcasting.unprepare') }}
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    </hk-leaf>
+  } @else {
+    <hk-leaf [title]="t('sheet.spellcasting.title')" [icon]="'ui:spells'" [phone]="phone()">
+      <p class="spells__empty">{{ t('sheet.spellcasting.empty') }}</p>
+    </hk-leaf>
+  }
+</ng-container>

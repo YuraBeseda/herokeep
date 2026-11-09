@@ -20,8 +20,13 @@ import { CampaignsRepository } from '@shared/services/storage/campaigns.reposito
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
+import {
+  ActionStrapService,
+  type StrapAction,
+} from '../../../ui/action-strap/action-strap.service';
 import { routes } from '../../../app.routes';
 import campaignsEn from '../../../../assets/i18n/campaigns/en.json';
+import shellEn from '../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
 import charactersRu from '../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../assets/i18n/characters/uk.json';
@@ -55,6 +60,7 @@ class StubLoader implements TranslocoLoader {
     // plan-10 task-7: `CampaignChipComponent` self-registers the `campaigns` scope from inside
     // the sheet header — needed only for the tests that actually link a character to a campaign.
     if (langPath === 'campaigns/en') return of(campaignsEn);
+    if (langPath === 'shell/en') return of(shellEn);
     return of({});
   }
 }
@@ -71,6 +77,12 @@ async function pollUntil(
     await fixture.whenStable();
   }
   expect(predicate()).toBe(true);
+}
+
+/** One action of the sheet's strap config (primary or secondary zone), by id. */
+function strapAction(id: string): StrapAction | undefined {
+  const config = TestBed.inject(ActionStrapService).config();
+  return [...(config?.primary ?? []), ...(config?.secondary ?? [])].find((a) => a.id === id);
 }
 
 function configureReal(packs: Pack[] = [corePack]): void {
@@ -207,9 +219,7 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const root = harness.routeNativeElement!;
     expect(root.querySelector('.sheet-shell__level-up-badge')).toBeNull();
 
-    const input = root.querySelector<HTMLInputElement>(
-      '.sheet-shell__xp-field .hk-number-field__input',
-    )!;
+    const input = root.querySelector<HTMLInputElement>('.sheet-shell__xp-field .hk-numfield__in')!;
     input.value = '300';
     input.dispatchEvent(new Event('input'));
     await harness.fixture.whenStable();
@@ -235,9 +245,7 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const root = harness.routeNativeElement!;
     expect(root.querySelector('.sheet-shell__xp-current')?.textContent).toContain('300');
 
-    const input = root.querySelector<HTMLInputElement>(
-      '.sheet-shell__xp-field .hk-number-field__input',
-    )!;
+    const input = root.querySelector<HTMLInputElement>('.sheet-shell__xp-field .hk-numfield__in')!;
     input.value = '-350';
     input.dispatchEvent(new Event('input'));
     await harness.fixture.whenStable();
@@ -286,11 +294,14 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
     const root = harness.routeNativeElement!;
 
-    expect(root.querySelector('.sheet-shell__portrait--placeholder')).not.toBeNull();
-    expect(root.querySelector('img.sheet-shell__portrait')).toBeNull();
-    const placeholder = root.querySelector('.sheet-shell__portrait--placeholder')!;
+    const frame = root.querySelector<HTMLElement>('.sheet-shell__portrait')!;
+    expect(frame).not.toBeNull();
+    expect(frame.querySelector('img')).toBeNull();
+    const placeholder = frame.querySelector('[role="img"]')!;
     expect(placeholder.textContent?.trim()).toBe('IP');
-    expect(placeholder.getAttribute('style')).toContain('background');
+    expect(placeholder.getAttribute('aria-label')).toContain('IP');
+    // The per-character hue (`PlaceholderService`) tints the frame's well through its custom property.
+    expect(frame.getAttribute('style')).toContain('--hk-frame-well');
   });
 
   it('once facts.portrait.thumbHash is set, the header renders an <img> from BlobUrlPipe instead of the monogram', async () => {
@@ -317,28 +328,29 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const root = harness.routeNativeElement!;
     await pollUntil(
       harness.fixture,
-      () => root.querySelector('img.sheet-shell__portrait') !== null,
+      () => root.querySelector('.sheet-shell__portrait img') !== null,
     );
 
-    expect(root.querySelector('.sheet-shell__portrait--placeholder')).toBeNull();
-    const img = root.querySelector<HTMLImageElement>('img.sheet-shell__portrait')!;
+    expect(root.querySelector('.sheet-shell__portrait [role="img"]')).toBeNull();
+    const img = root.querySelector<HTMLImageElement>('.sheet-shell__portrait img')!;
     expect(img.getAttribute('src')).toBe('blob:fake-portrait-url');
     expect(img.getAttribute('alt')).toContain('Ivan');
   });
 
   // --- `.hero` export (plan-6 Task 9) ---------------------------------------------------------
 
-  it('the Export button builds a .hero bundle, delivers it (jsdom has neither showSaveFilePicker nor navigator.share, so the ladder falls through to the <a download> fallback), and toasts success', async () => {
+  it('the strap Export action builds a .hero bundle, delivers it (jsdom has neither showSaveFilePicker nor navigator.share, so the ladder falls through to the <a download> fallback), and toasts success', async () => {
     const id = await seedFighter('Ivan');
     const toastService = TestBed.inject(ToastService);
     const showSpy = vi.spyOn(toastService, 'show');
 
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
-    const root = harness.routeNativeElement!;
-    const exportButton = root.querySelector<HTMLButtonElement>('.sheet-shell__export')!;
-    expect(exportButton).not.toBeNull();
+    await pollUntil(harness.fixture, () => strapAction('export') !== undefined);
+    // Export lives in the action strap's secondary zone (spec §3); the strap config is what the
+    // sheet sets, so the click is that action's `run`.
+    expect(strapAction('export')).toBeDefined();
 
-    exportButton.click();
+    strapAction('export')!.run();
     await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 0);
 
     expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.success');
@@ -354,8 +366,8 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
 
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
-    const root = harness.routeNativeElement!;
-    root.querySelector<HTMLButtonElement>('.sheet-shell__export')!.click();
+    await pollUntil(harness.fixture, () => strapAction('export') !== undefined);
+    strapAction('export')!.run();
     await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 1);
 
     expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.success');
@@ -364,7 +376,7 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     });
   });
 
-  it('a HeroWriterService.export failure toasts characters.sheet.export.failure and re-enables the Export button', async () => {
+  it('a HeroWriterService.export failure toasts characters.sheet.export.failure and re-enables the strap Export action', async () => {
     const id = await seedFighter('Ivan');
     const heroWriterService = TestBed.inject(HeroWriterService);
     vi.spyOn(heroWriterService, 'export').mockRejectedValue(new Error('boom'));
@@ -372,18 +384,16 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     const showSpy = vi.spyOn(toastService, 'show');
 
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
-    const root = harness.routeNativeElement!;
-    const exportButton = root.querySelector<HTMLButtonElement>('.sheet-shell__export')!;
-    expect(exportButton).not.toBeNull();
+    await pollUntil(harness.fixture, () => strapAction('export') !== undefined);
 
-    exportButton.click();
+    strapAction('export')!.run();
     await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 0);
 
     expect(showSpy).toHaveBeenCalledWith('characters.sheet.export.failure');
-    // The `finally` block clears `exporting()` regardless of outcome — the button must not be
-    // left stuck disabled after a failed export.
+    // The `finally` block clears `exporting()` regardless of outcome — the strap's Export must not
+    // be left stuck disabled after a failed export.
     await harness.fixture.whenStable();
-    expect(exportButton.disabled).toBe(false);
+    expect(strapAction('export')!.disabled).toBeFalsy();
   });
 });
 

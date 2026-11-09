@@ -1,0 +1,33 @@
+<ng-container *transloco="let t; read: 'characters'">
+  <hk-leaf [title]="t('sheet.attacks.title')" [icon]="'ui:attacks'" [phone]="phone()">
+    @if (attacks().length > 0) {
+      <ul class="attacks">
+        @for (attack of attacks(); track attack.instanceId) {
+          <li class="attacks__item">
+            <hk-attack-row
+              [name]="attack.name"
+              [icon]="attack.icon"
+              [toHit]="attack.toHit"
+              [damage]="attack.damageText"
+              [damageType]="attack.damageType"
+              [tags]="attack.tags"
+              (roll)="rollToHit(attack, t)"
+            />
+            <button
+              hk-button
+              type="button"
+              class="attacks__damage"
+              [variant]="'ghost'"
+              [attr.aria-label]="t('sheet.roll.damageNamed', { name: attack.name })"
+              (click)="rollDamage(attack, t)"
+            >
+              {{ t('sheet.roll.attackDamage') }}
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="attacks__empty">{{ t('sheet.attacks.empty') }}</p>
+    }
+  </hk-leaf>
+</ng-container>

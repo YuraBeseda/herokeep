@@ -239,7 +239,8 @@
     "tabs": {
       "play": "Гра",
       "build": "Білд",
-      "timeline": "Хроніка"
+      "timeline": "Хроніка",
+      "label": "Розділи аркуша"
     },
     "build": {
       "outstanding": {
@@ -305,7 +306,10 @@
       "xpAward": "Нарахувати",
       "levelUpAvailable": "Доступне підвищення рівня",
       "undoLevelUp": "Скасувати підвищення рівня",
-      "export": "Експорт"
+      "export": "Експорт",
+      "levelUp": "Підвищити рівень",
+      "levelUpAt": "Підвищення рівня за {xp} досвіду",
+      "levelUpMax": "Досягнуто максимального рівня"
     },
     "export": {
       "success": "Персонажа експортовано.",
@@ -328,13 +332,15 @@
       "initiative": "Ініціатива",
       "prof": "Бонус майстерності",
       "passivePerception": "Пасивна уважність",
-      "speed": "Швидкість"
+      "speed": "Швидкість",
+      "acHint": "Клас обладунку {value}"
     },
     "abilities": {
       "title": "Характеристики",
       "score": "Значення",
       "mod": "Модифікатор",
-      "save": "Рятівний кидок"
+      "save": "Рятівний кидок",
+      "savesTitle": "Рятівні кидки"
     },
     "skills": {
       "title": "Навички",
@@ -342,7 +348,10 @@
         "proficient": "Володіння",
         "expertise": "Експертиза",
         "half": "Половина бонуса майстерності"
-      }
+      },
+      "notProficient": "Без володіння",
+      "passive": "Пасивне сприйняття {value}",
+      "prof": "Майстерність {value}"
     },
     "hp": {
       "title": "Очки здоров'я",
@@ -364,7 +373,8 @@
       "deathSaveCritSuccess": "Критичний успіх",
       "deathSaveCritFailure": "Критичний провал",
       "concentratingOn": "Концентрація: {name}",
-      "endConcentration": "Припинити концентрацію"
+      "endConcentration": "Припинити концентрацію",
+      "deathSaveRollName": "Смерть"
     },
     "rest": {
       "title": "Відпочинок",
@@ -443,7 +453,16 @@
         "attackDamage": "Шкода {name}: {total}.",
         "spellAttack": "Атака заклинанням {name}: {total}.",
         "manual": "Записано {total}."
-      }
+      },
+      "checkNamed": "Кинути перевірку: {name}",
+      "saveNamed": "Кинути рятівний кидок: {name}",
+      "checkShort": "Перевірка",
+      "saveShort": "Рятівний",
+      "damageNamed": "Кинути шкоду: {name}",
+      "plainName": "к20",
+      "plainResult": "к20: {total}",
+      "logTitle": "Журнал кидків",
+      "close": "Закрити"
     },
     "attacks": {
       "title": "Атаки",
@@ -483,13 +502,30 @@
         "cancel": "Скасувати",
         "confirm": "Накласти"
       },
-      "empty": "Немає заклинань."
+      "empty": "Немає заклинань.",
+      "slotsAria": "Комірки {level} рівня, {left} з {max}",
+      "slotSpend": "Витратити комірку {level} рівня",
+      "slotRestore": "Повернути комірку {level} рівня",
+      "pactAria": "Комірки угоди, рівень {level}, {left} з {max}",
+      "pactSpend": "Витратити комірку угоди {level} рівня",
+      "pactRestore": "Повернути комірку угоди {level} рівня",
+      "levelHint": "Закляття {level} рівня"
     },
     "resources": {
       "title": "Ресурси",
       "usedOf": "{used} / {max}",
       "pipLabel": "{name}, використання {index} з {max}",
-      "empty": "Немає ресурсів."
+      "empty": "Немає ресурсів.",
+      "use": "Використати",
+      "restore": "Повернути",
+      "useNamed": "Використати: {name}",
+      "restoreNamed": "Повернути одне використання: {name}",
+      "pipHint": "Використання: {name}",
+      "reset": {
+        "shortRest": "Короткий відпочинок",
+        "longRest": "Довгий відпочинок",
+        "dawn": "Світанок"
+      }
     },
     "actions": {
       "title": "Дії",
@@ -517,7 +553,8 @@
     "proficiencies": {
       "title": "Володіння",
       "entry": "{target} ({level})",
-      "empty": "Немає."
+      "empty": "Немає.",
+      "armorWeapons": "Обладунки та зброя"
     },
     "tools": {
       "title": "Інструменти",
@@ -578,7 +615,13 @@
         "body": "Цей предмет буде безповоротно видалено з інвентаря.",
         "cancel": "Скасувати",
         "confirm": "Видалити"
-      }
+      },
+      "use": "Використати",
+      "details": "Деталі",
+      "actionsFor": "Дії: {name}",
+      "qtyMinimum": "Щоб зменшити менше одного, вилучіть предмет",
+      "unitLb": "фнт",
+      "electrum": "Електрумових монет: {count}"
     },
     "notes": {
       "title": "Нотатки",
@@ -622,6 +665,19 @@
         "pin-failed": "Не вдалося підключити пакети кампанії. Спробуйте ще раз.",
         "report-title": "Підключити пакети кампанії?"
       }
+    },
+    "folio": "Тека героя",
+    "editLocked": "Заблоковано домашніми правилами кампанії",
+    "vitals": {
+      "title": "Основні показники",
+      "extras": "Інші показники"
+    },
+    "features": {
+      "title": "Вміння",
+      "sourceHint": "Вміння: {name}"
+    },
+    "more": {
+      "packs": "Пакети вмісту"
     }
   },
   "timeline": {

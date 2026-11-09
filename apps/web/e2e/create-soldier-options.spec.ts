@@ -62,10 +62,10 @@ test.describe('character creation — Soldier gaming set + per-character encumbr
     });
 
     await test.step('play tab: Tools lists exactly the chosen gaming set; no carry line yet', async () => {
-      await expect(page.locator('.play-tab__tools li')).toHaveText([GAMING_SET]);
+      await expect(page.locator('.prof__tools li')).toHaveText([GAMING_SET]);
       // Encumbrance defaults to `off` (no campaign, no character option) → no carry summary.
-      await expect(page.locator('.play-tab__inventory-total-weight')).toBeVisible();
-      await expect(page.locator('.play-tab__inventory-carry')).toHaveCount(0);
+      await expect(page.locator('.bag__total-weight')).toBeVisible();
+      await expect(page.locator('.bag__carry')).toHaveCount(0);
     });
 
     await test.step('build tab: Rule options → Encumbrance → Variant', async () => {
@@ -81,12 +81,10 @@ test.describe('character creation — Soldier gaming set + per-character encumbr
 
     await test.step('play tab: carry line shows 129 / 255 lb, Encumbered, Speed −10 ft.', async () => {
       await page.getByRole('tab', { name: 'Play', exact: true }).click();
-      const carry = page.locator('.play-tab__inventory-carry');
-      await expect(carry.locator('.play-tab__inventory-carry-summary')).toHaveText(
-        '129 / 255 lb carried',
-      );
-      await expect(carry.locator('.play-tab__inventory-carry-state')).toHaveText('Encumbered');
-      await expect(carry.locator('.play-tab__inventory-carry-penalty')).toHaveText('Speed −10 ft.');
+      const carry = page.locator('.bag__carry');
+      await expect(carry.locator('.bag__carry-summary')).toHaveText('129 / 255 lb carried');
+      await expect(carry.locator('.bag__carry-state')).toHaveText('Encumbered');
+      await expect(carry.locator('.bag__carry-penalty')).toHaveText('Speed −10 ft.');
     });
   });
 });
