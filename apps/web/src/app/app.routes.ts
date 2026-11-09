@@ -16,6 +16,7 @@ import { CharacterStore } from './shared/stores/character.store';
 import { PackStore } from './shared/stores/pack.store';
 import { sheetLayoutGuard } from './views/characters/sheet/sheet-layout';
 import type { RegisterComponent } from './views/auth/register/register.component';
+import type { LevelUpComponent } from './views/characters/level-up/level-up.component';
 
 /** How long the level-up guard waits for the packs on a cold load before treating the level up as unavailable. */
 const PACKS_READY_TIMEOUT_MS = 15_000;
@@ -66,8 +67,8 @@ export const characterResolver: ResolveFn<boolean> = async (route) => {
  * opened in a new tab) the parent `c/:id` route's `characterResolver` has not loaded the character
  * yet when this runs — `advancements()` would be empty and the player bounced to the heroes list.
  * The guard therefore loads the character itself when the store is not on it yet, and waits for the
- * packs the advancements are derived from. (The resolver loads it again afterwards; a replay is
- * idempotent.)
+ * packs the advancements are derived from. (The resolver replays it once more afterwards; that is
+ * idempotent and only happens on a cold deep link.) A hero that no longer exists goes to the heroes list.
  */
 export const levelUpGuard: CanActivateFn = async (route) => {
   const characterStore = inject(CharacterStore);
@@ -75,15 +76,21 @@ export const levelUpGuard: CanActivateFn = async (route) => {
   const toastService = inject(ToastService);
   const router = inject(Router);
   const injector = inject(Injector);
+  const charactersRepository = inject(CharactersRepository);
   const id = route.parent?.paramMap.get('id') ?? null;
 
-  if (id && characterStore.streamId() !== id) {
+  // A deleted (or never existing) hero: nothing to level up, and never judge it against the hero
+  // the store happens to hold from before.
+  if (!id || !(await charactersRepository.get(id))) return router.createUrlTree(['/characters']);
+  if (characterStore.streamId() !== id) {
     try {
       await characterStore.load(id);
     } catch {
-      // A missing or unreadable character: the sheet's resolver reports it; nothing to level up.
+      // A missing or unreadable hero: never judge a level up against the one loaded before.
+      return router.createUrlTree(['/characters']);
     }
   }
+  if (characterStore.streamId() !== id) return router.createUrlTree(['/characters']);
   if (!packStore.ready()) {
     await firstValueFrom(
       toObservable(packStore.ready, { injector }).pipe(
@@ -99,6 +106,13 @@ export const levelUpGuard: CanActivateFn = async (route) => {
   const streamId = characterStore.streamId();
   return router.createUrlTree(streamId ? ['/c', streamId, 'play'] : ['/characters']);
 };
+
+/**
+ * `/c/:id/level-up`'s deactivation guard: any exit other than Cancel or Finish asks first while
+ * something has been chosen (the component's own `canLeave`, with the dialog Cancel uses).
+ */
+export const levelUpLeaveGuard: CanDeactivateFn<LevelUpComponent> = (component) =>
+  component.canLeave();
 
 /**
  * `/login`, `/register`, `/recover`'s shared guard (task-4-brief.md): redirects an already-authed
@@ -310,6 +324,7 @@ export const routes: Routes = [
       {
         path: 'level-up',
         canActivate: [levelUpGuard],
+        canDeactivate: [levelUpLeaveGuard],
         loadComponent: () =>
           import('./views/characters/level-up/level-up.component').then((m) => m.LevelUpComponent),
       },

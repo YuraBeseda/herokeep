@@ -3,6 +3,7 @@ import {
   derive,
   ENGINE_VERSION,
   findChoice,
+  multiclassStanding,
   outstandingChoices,
   parseRollSpec,
   reduce,
@@ -106,6 +107,15 @@ export class LevelUpState {
     if (all.length <= 1) return all[0];
     const selected = this.selectedClassId();
     return selected === undefined ? undefined : all.find((a) => a.classId === selected);
+  });
+
+  /** Classes the character may NOT start yet (their multiclass prerequisite, or an already-taken
+   * class's own, is unmet), by the engine's own evaluation of the pack's predicates — listed gated
+   * in the which-class step. Only meaningful while that step is offered. */
+  readonly gatedClassIds: Signal<string[]> = computed(() => {
+    const sheet = this.characterStore.sheet();
+    if (!sheet || this.classChoices().length === 0) return [];
+    return multiclassStanding(sheet, this.engineFacade.index()).unmet;
   });
 
   /** The which-class picker's own commit — `LevelUpComponent`'s picker step calls this once the
@@ -364,9 +374,14 @@ export class LevelUpState {
     });
   });
 
-  /** Anything chosen this session (hit points, a decision, a spell): Cancel has to ask before it is lost. */
+  /** Anything chosen this session (the class, hit points, a decision, a spell): leaving has to ask
+   * before it is lost. */
   readonly dirty: Signal<boolean> = computed(
-    () => this.hpRoll() !== undefined || this.decisions().size > 0 || this.extraDrafts().length > 0,
+    () =>
+      this.selectedClassId() !== undefined ||
+      this.hpRoll() !== undefined ||
+      this.decisions().size > 0 ||
+      this.extraDrafts().length > 0,
   );
 
   /** Gates the review step's "Finish" action: an HP choice must be made (always required, see

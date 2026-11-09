@@ -290,16 +290,23 @@ describe('LevelUpComponent', () => {
     const names = Array.from(
       root.querySelectorAll<HTMLButtonElement>('.level-up__class-picker .hk-picker-card__choose'),
     ).map((b) => pickName(b));
-    expect(names.length).toBe(classIds.size);
+    // Eligible classes, then the ones whose prerequisite is unmet (listed gated).
+    expect(names.length).toBeGreaterThan(classIds.size);
+    expect(
+      root.querySelectorAll('.level-up__class-picker hk-picker-card:not(.hk-picker-card--gated)')
+        .length,
+    ).toBe(classIds.size);
     // The character's OWN class is listed first on its own; every other option is a class to start.
     expect(
       Array.from(root.querySelectorAll('.level-up__class-own .hk-picker-card__name')).map((n) =>
         n.textContent?.trim(),
       ),
     ).toEqual(['Fighter']);
-    expect(root.querySelectorAll('.level-up__class-multi .hk-picker-card__name').length).toBe(
-      classIds.size - 1,
-    );
+    expect(
+      root.querySelectorAll(
+        '.level-up__class-multi hk-picker-card:not(.hk-picker-card--gated) .hk-picker-card__name',
+      ).length,
+    ).toBe(classIds.size - 1);
     // No wizard content renders until a class is actually chosen.
     expect(root.querySelector('.level-up__hp-roll')).toBeNull();
   });
@@ -898,22 +905,36 @@ describe('LevelUpComponent', () => {
       expect(strapAction('cancel')).toBeUndefined();
     });
 
-    /** Opens the level-up on Fighter's own class with its dialog service stubbed to answer "keep going". */
-    async function openWithStubbedDialog(id: string) {
+    /** Opens the level-up with its dialog service stubbed to answer `leave` (true: discard and leave). */
+    async function openWithStubbedDialog(
+      id: string,
+      options: { leave?: boolean; pick?: boolean } = {},
+    ) {
+      const { leave = false, pick = true } = options;
       const harness = await visit(`/c/${id}/level-up`);
       const dialog = harness.fixture.debugElement
         .query(By.css('app-level-up'))
         .injector.get(DialogService);
       const open = vi
         .spyOn(dialog, 'open')
-        .mockReturnValue({ closed: Promise.resolve(false) } as ReturnType<DialogService['open']>);
-      await pickClass(harness.routeNativeElement!, harness.fixture, FIGHTER_NAME);
+        .mockReturnValue({ closed: Promise.resolve(leave) } as ReturnType<DialogService['open']>);
+      if (pick) await pickClass(harness.routeNativeElement!, harness.fixture, FIGHTER_NAME);
       return { harness, open };
     }
 
+    const chooseAverage = async (harness: {
+      routeNativeElement: HTMLElement | null;
+      fixture: { whenStable(): Promise<unknown> };
+    }): Promise<void> => {
+      harness
+        .routeNativeElement!.querySelector<HTMLButtonElement>('.level-up__hp-average')!
+        .click();
+      await harness.fixture.whenStable();
+    };
+
     it('Cancel leaves without asking while nothing has been chosen', async () => {
       const id = await seedLevelUp();
-      const { harness, open } = await openWithStubbedDialog(id);
+      const { harness, open } = await openWithStubbedDialog(id, { pick: false });
 
       await pressStrap(harness.fixture, 'cancel');
       await harness.fixture.whenStable();
@@ -922,19 +943,146 @@ describe('LevelUpComponent', () => {
       expect(TestBed.inject(Router).url).toBe(`/c/${id}/play`);
     });
 
-    it('Cancel asks first once something has been chosen, and stays when the answer is to keep going', async () => {
+    it('picking a class already counts as a change: Cancel asks', async () => {
       const id = await seedLevelUp();
       const { harness, open } = await openWithStubbedDialog(id);
-      harness
-        .routeNativeElement!.querySelector<HTMLButtonElement>('.level-up__hp-average')!
-        .click();
-      await harness.fixture.whenStable();
 
       await pressStrap(harness.fixture, 'cancel');
       await harness.fixture.whenStable();
 
       expect(open).toHaveBeenCalledTimes(1);
       expect(TestBed.inject(Router).url).toBe(`/c/${id}/level-up`);
+    });
+
+    it('Cancel asks first once something has been chosen, and stays when the answer is to keep going', async () => {
+      const id = await seedLevelUp();
+      const { harness, open } = await openWithStubbedDialog(id);
+      await chooseAverage(harness);
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(TestBed.inject(Router).url).toBe(`/c/${id}/level-up`);
+    });
+
+    it('Cancel confirmed leaves, and the dialog is shown exactly once', async () => {
+      const id = await seedLevelUp();
+      const { harness, open } = await openWithStubbedDialog(id, { leave: true });
+      await chooseAverage(harness);
+
+      await pressStrap(harness.fixture, 'cancel');
+      await harness.fixture.whenStable();
+      await harness.fixture.whenStable();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(TestBed.inject(Router).url).toBe(`/c/${id}/play`);
+    });
+
+    it('any other way out (a tab link, the rail, browser Back) asks too while something is chosen, and stays on "keep going"', async () => {
+      const id = await seedLevelUp();
+      const router = TestBed.inject(Router);
+      const { harness, open } = await openWithStubbedDialog(id);
+      await chooseAverage(harness);
+
+      await router.navigateByUrl(`/c/${id}/timeline`);
+      await harness.fixture.whenStable();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(router.url).toBe(`/c/${id}/level-up`);
+    });
+
+    it('leaving by a tab link after "discard and leave" goes there, asking once', async () => {
+      const id = await seedLevelUp();
+      const router = TestBed.inject(Router);
+      const { harness, open } = await openWithStubbedDialog(id, { leave: true });
+      await chooseAverage(harness);
+
+      await router.navigateByUrl(`/c/${id}/timeline`);
+      await harness.fixture.whenStable();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(router.url).toBe(`/c/${id}/timeline`);
+    });
+
+    it('a clean level-up is left by any route without asking', async () => {
+      const id = await seedLevelUp();
+      const router = TestBed.inject(Router);
+      const { harness, open } = await openWithStubbedDialog(id, { pick: false });
+
+      await router.navigateByUrl(`/c/${id}/timeline`);
+      await harness.fixture.whenStable();
+
+      expect(open).not.toHaveBeenCalled();
+      expect(router.url).toBe(`/c/${id}/timeline`);
+    });
+
+    it('finishing the level up never asks', async () => {
+      const id = await seedLevelUp();
+      const characterStore = TestBed.inject(CharacterStore);
+      const { harness, open } = await openWithStubbedDialog(id);
+      await chooseAverage(harness);
+      await finishLevelUp(harness.fixture);
+      await pollUntil(harness.fixture, () => characterStore.sheet()?.level === 2);
+      await pollUntil(harness.fixture, () => TestBed.inject(Router).url === `/c/${id}/play`);
+
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('a class whose multiclass prerequisite is unmet is listed gated with its reason, and cannot be picked', async () => {
+      const id = await seedLevelUp();
+      const harness = await visit(`/c/${id}/level-up`);
+      const root = harness.routeNativeElement!;
+      const card = Array.from(
+        root.querySelectorAll<HTMLElement>('.level-up__class-multi hk-picker-card'),
+      ).find((c) => c.querySelector('.hk-picker-card__name')?.textContent?.trim() === 'Wizard');
+      expect(card, 'a gated Wizard card').toBeDefined();
+      expect(card!.classList.contains('hk-picker-card--gated')).toBe(true);
+      expect(card!.querySelector('.hk-picker-card__gate')?.getAttribute('aria-label')).toBe(
+        charactersEn.wizard.picker.gate.prerequisiteFailed,
+      );
+      const choose = card!.querySelector<HTMLButtonElement>('.hk-picker-card__choose')!;
+      expect(choose.getAttribute('aria-disabled') === 'true' || choose.disabled).toBe(true);
+      choose.click();
+      await harness.fixture.whenStable();
+      expect(root.querySelector('.level-up__class-picker')).not.toBeNull();
+      // Eligible classes are unchanged.
+      expect(
+        Array.from(
+          root.querySelectorAll(
+            '.level-up__class-multi hk-picker-card:not(.hk-picker-card--gated) .hk-picker-card__name',
+          ),
+        ).map((n) => n.textContent?.trim()),
+      ).toEqual(expect.arrayContaining(['Barbarian', 'Rogue']));
+    });
+
+    it('the review and the hit point step show what changes as before to after and what stays as "unchanged"', async () => {
+      const id = await seedLevelUp();
+      const harness = await visit(`/c/${id}/level-up`);
+      const root = harness.routeNativeElement!;
+      await pickClass(root, harness.fixture, FIGHTER_NAME);
+      await chooseAverage(harness);
+      const row = (field: string): string =>
+        root.querySelector(`.level-up__changes [data-change="${field}"]`)?.textContent ?? '';
+      // On the hit point step already.
+      expect(row('hitDice')).toContain('2d10');
+      await pressStrap(harness.fixture, 'next');
+
+      expect(root.querySelector('.level-up__review')).not.toBeNull();
+      expect(row('hitDice')).toContain('1d10');
+      expect(row('hitDice')).toContain('2d10');
+      expect(row('proficiency')).toContain('+2');
+      expect(row('proficiency')).toContain(charactersEn.levelUp.review.unchanged);
+      expect(row('currentHp')).toContain(charactersEn.levelUp.review.unchanged);
+    });
+
+    it('a level-up for a deleted hero never judges eligibility against the hero loaded before', async () => {
+      await seedLevelUp(); // this hero is loaded in the store and could level up
+      const router = TestBed.inject(Router);
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/c/char:00000000-0000-7000-8000-000000000000/level-up');
+
+      expect(router.url).toBe('/characters');
     });
 
     it('while the level-up is open the sheet tabs are dimmed and the Level up tab is the active one', async () => {

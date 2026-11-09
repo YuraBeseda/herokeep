@@ -475,7 +475,8 @@ describe('LevelUpState', () => {
     expect(state.hpMaxBefore()).toBe(12);
     expect(state.averageHpGain()).toBe(8); // 6 (half of d10, rounded up) + 2 Constitution
     expect(state.rolledHpGain()).toBeUndefined();
-    expect(state.dirty()).toBe(false);
+    // Picking the class was the only change so far, and it counts.
+    expect(state.dirty()).toBe(true);
 
     state.rollHp(() => 0.45); // 5 on the die
     expect(state.rolledHpGain()).toBe(7);
@@ -508,6 +509,7 @@ describe('LevelUpState', () => {
     const picking = TestBed.runInInjectionContext(() => new LevelUpState());
 
     expect(picking.classChoices().length).toBeGreaterThan(1);
+    expect(picking.dirty()).toBe(false);
     expect(picking.steps()).toEqual([]);
     expect(picking.allSteps().map((step) => step.id)).toEqual(['class']);
 

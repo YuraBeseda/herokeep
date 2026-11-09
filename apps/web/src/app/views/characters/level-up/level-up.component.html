@@ -1,4 +1,20 @@
 <section class="level-up" *transloco="let t; read: 'characters'">
+  <ng-template #changes>
+    @if (sheetChanges().length > 0) {
+      <dl class="level-up__changes">
+        @for (change of sheetChanges(); track change.field) {
+          <dt>{{ t('levelUp.review.change.' + change.field) }}</dt>
+          <dd [attr.data-change]="change.field">
+            @if (change.changed) {
+              {{ change.before || '–' }} → {{ change.after || '–' }}
+            } @else {
+              {{ change.after }} {{ t('levelUp.review.unchanged') }}
+            }
+          </dd>
+        }
+      </dl>
+    }
+  </ng-template>
   <hk-stepper
     class="level-up__stepper"
     [steps]="stepItems()"
@@ -41,6 +57,8 @@
                     [name]="card.name"
                     [description]="card.description"
                     [meta]="card.meta"
+                    [gated]="card.gated"
+                    [reason]="card.gated ? t('wizard.picker.gate.prerequisiteFailed') : null"
                     (choose)="onChooseClass(card.classId)"
                     (details)="onClassDetails(card.classId)"
                   />
@@ -149,6 +167,7 @@
                 {{ t('levelUp.hp.total', { before: state.hpMaxBefore(), after: hpMaxAfter() }) }}
               </p>
             }
+            <ng-container *ngTemplateOutlet="changes" />
           }
         </div>
       }
@@ -215,6 +234,8 @@
               </dd>
             </dl>
           }
+
+          <ng-container *ngTemplateOutlet="changes" />
 
           @if (newFeatureNames().length > 0) {
             <section class="level-up__group level-up__features">

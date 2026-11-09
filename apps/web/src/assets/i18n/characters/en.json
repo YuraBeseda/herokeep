@@ -242,6 +242,14 @@
       "prepared": "Prepared",
       "edit": "Edit",
       "editStep": "Edit: {step}",
+      "unchanged": "unchanged",
+      "change": {
+        "hitDice": "Hit dice",
+        "currentHp": "Current hit points",
+        "spellSlots": "Spell slots, by level",
+        "pactSlots": "Pact slots, count × level",
+        "proficiency": "Proficiency bonus"
+      },
       "incomplete": "Finish every step before leveling up.",
       "toast": {
         "failed": "Couldn't level up. Try again."

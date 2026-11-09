@@ -192,3 +192,23 @@
     block-size: 44px;
   }
 }
+
+/* What changes on the sheet (hit dice, hit points, slots, proficiency): label, then before to after
+   or "unchanged". */
+.level-up__changes {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+
+  dt {
+    color: var(--text-2);
+    overflow-wrap: anywhere;
+  }
+
+  dd {
+    min-inline-size: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}

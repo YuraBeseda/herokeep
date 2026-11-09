@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -27,7 +27,14 @@ import { isRequiredLevelUpStep, levelUpComparator, type LevelUpStep } from '../f
 import { CancelLevelUpDialogComponent } from './cancel-level-up-dialog.component';
 import { LevelUpFlowChrome } from './level-up.flow';
 import { LevelUpState } from './level-up.state';
-import { selectionText } from './level-up.summary';
+import {
+  choiceReviewRows,
+  newFeatureNames,
+  selectionText,
+  sheetChanges,
+  spellReviewRows,
+  type ReviewRow,
+} from './level-up.summary';
 
 const GENERIC_FAILURE_KEY = 'characters.levelUp.review.toast.failed';
 
@@ -43,13 +50,8 @@ interface ClassCard {
   readonly description: string | null;
   readonly meta: readonly string[];
   readonly isNewClass: boolean;
-}
-
-/** A line of the review: what changes, with the step to jump to for changing it. */
-interface ReviewRow {
-  readonly stepId: string;
-  readonly prompt: string;
-  readonly text: string;
+  /** A class the character may not start yet: listed, with its reason, but not choosable. */
+  readonly gated: boolean;
 }
 
 /**
@@ -75,6 +77,7 @@ interface ReviewRow {
   selector: 'app-level-up',
   imports: [
     TranslocoDirective,
+    NgTemplateOutlet,
     HkButtonComponent,
     HkStepperComponent,
     HkPickerCardComponent,
@@ -130,10 +133,28 @@ export class LevelUpComponent {
     dirty: this.state.dirty,
     confirmLeave: async () =>
       (await this.dialog.open(CancelLevelUpDialogComponent).closed) === true,
-    leave: () => this.navHistory.back(this.cancelFallback),
+    leave: () => {
+      // Cancel has already asked (when something was chosen): the route guard must not ask again.
+      this.exitApproved = true;
+      this.navHistory.back(this.cancelFallback);
+    },
   });
 
   protected readonly currentStep = this.flow.current;
+
+  /** Set once the player has confirmed leaving (Cancel) or the level up is committed, so the route's
+   * `canDeactivate` lets the navigation through without asking. */
+  private exitApproved = false;
+
+  /**
+   * The route's `canDeactivate` (`app.routes.ts`): any way out of the level-up other than Cancel or
+   * Finish — a tab link, the rail, browser Back — asks first while something has been chosen, with
+   * the same dialog Cancel uses. A clean level-up leaves without asking.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    if (this.exitApproved || !this.state.dirty()) return true;
+    return this.dialog.open(CancelLevelUpDialogComponent).closed.then((leave) => leave === true);
+  }
 
   /** Next may leave a step once it is answered: hit points rolled or averaged, a choice with an
    * acceptable decision. The class step is left by picking a class, the others are never blocking. */
@@ -186,19 +207,24 @@ export class LevelUpComponent {
   protected readonly classCards = computed<ClassCard[]>(() => {
     const index = this.engineFacade.index();
     const localizer = this.engineFacade.localizer();
-    return this.state.classChoices().map((option) => {
-      const entity = index.get(option.classId);
-      const level = this.chrome.tr('characters.levelUp.classPicker.toLevel', {
-        level: option.toLevel,
-      });
+    const card = (classId: string, toLevel: number, isNewClass: boolean, gated: boolean) => {
+      const entity = index.get(classId);
+      const level = this.chrome.tr('characters.levelUp.classPicker.toLevel', { level: toLevel });
       return {
-        classId: option.classId,
-        name: this.className(option.classId),
-        description: descriptionExcerpt(localizer.text(option.classId, 'description').text),
+        classId,
+        name: this.className(classId),
+        description: descriptionExcerpt(localizer.text(classId, 'description').text),
         meta: [level, ...(entity ? pickerMeta(entity) : [])],
-        isNewClass: option.isNewClass,
+        isNewClass,
+        gated,
       };
-    });
+    };
+    return [
+      ...this.state.classChoices().map((o) => card(o.classId, o.toLevel, o.isNewClass, false)),
+      // Classes the engine says the character does not qualify for stay listed, gated, after the
+      // ones it may start.
+      ...this.state.gatedClassIds().map((classId) => card(classId, 1, true, true)),
+    ];
   });
 
   protected readonly ownClassCards = computed(() =>
@@ -282,66 +308,36 @@ export class LevelUpComponent {
 
   // --- Review (L04) -----------------------------------------------------------------------------
 
-  /** The features the class row for the new level grants outright (a grant with a condition is left
-   * to the sheet to evaluate), by name. Pack data only; no rule is decided here. */
-  protected readonly newFeatureNames = computed<string[]>(() => {
-    const advancement = this.state.advancement();
-    if (!advancement) return [];
-    const index = this.engineFacade.index();
-    const localizer = this.engineFacade.localizer();
-    const entity = index.get(advancement.classId);
-    if (entity?.type !== 'class') return [];
-    const row = entity.levels.find((r) => r.level === advancement.toLevel);
-    const names = (row?.grants ?? [])
-      .filter((grant) => grant.when === undefined && index.has(grant.feature))
-      .map((grant) => localizer.name(grant.feature));
-    return [...new Set(names)];
-  });
+  protected readonly newFeatureNames = computed(() =>
+    newFeatureNames(
+      this.state.advancement(),
+      this.engineFacade.index(),
+      this.engineFacade.localizer(),
+    ),
+  );
 
-  /** The choices made this session, in step order, each with the step that edits it. */
-  protected readonly choiceRows = computed<ReviewRow[]>(() => {
-    const localizer = this.engineFacade.localizer();
-    const texts = this.decisionTexts();
-    return this.state.allSteps().flatMap((step) => {
-      const text = step.choiceId ? texts.get(step.choiceId) : undefined;
-      if (step.kind !== 'choice' || !step.choiceId || !text) return [];
-      return [
-        {
-          stepId: step.id,
-          prompt: localizer.choicePrompt(step.choiceId).text || this.chrome.label(step),
-          text,
-        },
-      ];
-    });
-  });
+  protected readonly choiceRows = computed<ReviewRow[]>(() =>
+    choiceReviewRows(
+      this.state.allSteps(),
+      this.decisionTexts(),
+      this.engineFacade.localizer(),
+      (step) => this.chrome.label(step as LevelUpStep),
+    ),
+  );
 
-  /** The spells learned or prepared this session, by name. */
-  protected readonly spellRows = computed<ReviewRow[]>(() => {
-    const localizer = this.engineFacade.localizer();
-    const names = (type: string): string =>
-      this.state
-        .extraDrafts()
-        .filter((draft) => draft.type === type)
-        .map((draft) => localizer.name((draft.payload as { spellId: string }).spellId))
-        .join(', ');
-    const rows: ReviewRow[] = [];
-    const learned = names('spell.learned');
-    const prepared = names('spell.prepared');
-    if (learned) {
-      rows.push({
-        stepId: 'spells',
-        prompt: this.chrome.tr('characters.levelUp.review.learned'),
-        text: learned,
-      });
-    }
-    if (prepared) {
-      rows.push({
-        stepId: 'spells',
-        prompt: this.chrome.tr('characters.levelUp.review.prepared'),
-        text: prepared,
-      });
-    }
-    return rows;
+  protected readonly spellRows = computed<ReviewRow[]>(() =>
+    spellReviewRows(this.state.extraDrafts(), this.engineFacade.localizer(), {
+      learned: this.chrome.tr('characters.levelUp.review.learned'),
+      prepared: this.chrome.tr('characters.levelUp.review.prepared'),
+    }),
+  );
+
+  /** Hit dice, current hit points, spell slots and the proficiency bonus: changed as before to
+   * after, unchanged as such (empty until a draft exists). */
+  protected readonly sheetChanges = computed(() => {
+    const before = this.characterStore.sheet();
+    const after = this.state.draftSheet();
+    return before && after ? sheetChanges(before, after) : [];
   });
 
   /** Edit on a review row: jump to the step, and Next brings the user back to the review. */
@@ -358,6 +354,7 @@ export class LevelUpComponent {
     this.committing.set(true);
     try {
       await this.characterStore.appendTx(this.state.buildTransaction());
+      this.exitApproved = true;
       await this.router.navigate(['..', 'play'], { relativeTo: this.route });
     } catch (error) {
       const key = error instanceof CharacterStoreNotLeaderError ? error.code : GENERIC_FAILURE_KEY;

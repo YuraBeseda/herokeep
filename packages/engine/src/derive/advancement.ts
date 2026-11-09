@@ -108,6 +108,36 @@ function multiclassPredicateContext(sheet: Sheet, index: ContentIndex): Predicat
 }
 
 /**
+ * Which classes NOT yet on the sheet the character may start (`eligible`) and which it may not
+ * (`unmet`), by `system.multiclass.prerequisites` — the 2024 SRD's both-direction rule (see
+ * `pendingAdvancements`' doc): a class is eligible only when its own prerequisite holds AND every
+ * already-taken class still meets its own. Only classes that exist as class entities appear; both
+ * lists are in the prerequisite map's own order. Empty when the system carries no prerequisites.
+ */
+export function multiclassStanding(sheet: Sheet, index: ContentIndex): { eligible: string[]; unmet: string[] } {
+  const standing = { eligible: [] as string[], unmet: [] as string[] };
+  const prerequisites = index.system().multiclass?.prerequisites;
+  if (!prerequisites) return standing;
+  const taken = new Set(sheet.classes.map((c) => c.classId));
+  const ctx = multiclassPredicateContext(sheet, index);
+  const resolvedPrereqs = new Map<string, Predicate>();
+  for (const [classRef, predicate] of Object.entries(prerequisites)) {
+    resolvedPrereqs.set(index.resolveClassRef(classRef) ?? classRef, predicate);
+  }
+  // A taken class absent from the map bars nothing (compat).
+  const currentClassesQualify = sheet.classes.every((c) => {
+    const predicate = resolvedPrereqs.get(c.classId);
+    return predicate === undefined || evaluatePredicate(predicate, ctx);
+  });
+  for (const [classId, predicate] of resolvedPrereqs) {
+    if (taken.has(classId)) continue;
+    if (index.get(classId)?.type !== 'class') continue;
+    (currentClassesQualify && evaluatePredicate(predicate, ctx) ? standing.eligible : standing.unmet).push(classId);
+  }
+  return standing;
+}
+
+/**
  * Levels the character may take right now. 1b is XP-mode only (task-13-brief.md): for each class
  * already on the sheet, `toLevel = classLevels[classId] + 1` becomes available once
  * `facts.xp >= system.tables.xp[totalLevel]` (`xp[i]` = XP needed to BE level `i+1`). At creation
@@ -162,38 +192,16 @@ export function pendingAdvancements(sheet: Sheet, facts: Facts, index: ContentIn
     });
   }
 
-  const prerequisites = index.system().multiclass?.prerequisites;
-  if (prerequisites) {
-    const taken = new Set(sheet.classes.map((c) => c.classId));
-    const ctx = multiclassPredicateContext(sheet, index);
-    const resolvedPrereqs = new Map<string, Predicate>();
-    for (const [classRef, predicate] of Object.entries(prerequisites)) {
-      resolvedPrereqs.set(index.resolveClassRef(classRef) ?? classRef, predicate);
-    }
-
-    // Both-direction check (2024 SRD, see this function's own doc): every already-taken class
-    // must still meet ITS OWN prerequisite before ANY new class is offered. A taken class absent
-    // from the map bars nothing (compat).
-    const currentClassesQualify = sheet.classes.every((c) => {
-      const predicate = resolvedPrereqs.get(c.classId);
-      return predicate === undefined || evaluatePredicate(predicate, ctx);
+  for (const classId of multiclassStanding(sheet, index).eligible) {
+    const classEntity = index.get(classId);
+    if (classEntity?.type !== 'class') continue;
+    advancements.push({
+      classId,
+      toLevel: 1,
+      steps: rowSteps(classId, classEntity.levels, 1, false, facts, index),
+      hpChoice: false,
+      isNewClass: true,
     });
-
-    if (currentClassesQualify) {
-      for (const [classId, predicate] of resolvedPrereqs) {
-        if (taken.has(classId)) continue;
-        const classEntity = index.get(classId);
-        if (classEntity?.type !== 'class') continue;
-        if (!evaluatePredicate(predicate, ctx)) continue;
-        advancements.push({
-          classId,
-          toLevel: 1,
-          steps: rowSteps(classId, classEntity.levels, 1, false, facts, index),
-          hpChoice: false,
-          isNewClass: true,
-        });
-      }
-    }
   }
 
   return advancements.sort(byExistingFirstThenClassId);
