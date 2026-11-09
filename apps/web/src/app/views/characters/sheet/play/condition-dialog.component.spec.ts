@@ -6,6 +6,9 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { ConditionDialogComponent, type ConditionDialogData } from './condition-dialog.component';
 
+/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
+const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     return langPath === 'characters/en' ? of(charactersEn) : of({});
@@ -38,7 +41,7 @@ const BASE_DATA: ConditionDialogData = {
 };
 
 function buttonNamed(text: string): HTMLButtonElement {
-  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+  const button = Array.from(overlayRoot().querySelectorAll<HTMLButtonElement>('button')).find(
     (b) => b.textContent?.trim() === text,
   );
   if (!button) throw new Error(`no button matching "${text}"`);
@@ -55,7 +58,7 @@ describe('ConditionDialogComponent', () => {
     open(BASE_DATA);
     TestBed.tick();
 
-    const options = Array.from(document.querySelectorAll<HTMLOptionElement>('option'));
+    const options = Array.from(overlayRoot().querySelectorAll<HTMLOptionElement>('option'));
     expect(options.map((o) => o.value)).toEqual([
       'srd-5e-2024:condition/blinded',
       'srd-5e-2024:condition/exhaustion',
@@ -68,7 +71,7 @@ describe('ConditionDialogComponent', () => {
     open(BASE_DATA);
     TestBed.tick();
 
-    expect(document.querySelector('input[type="number"]')).toBeNull();
+    expect(overlayRoot().querySelector('input[type="number"]')).toBeNull();
   });
 
   it('shows a min-1, NO-max level stepper once a level-bearing condition is selected', () => {
@@ -76,12 +79,12 @@ describe('ConditionDialogComponent', () => {
     open(BASE_DATA);
     TestBed.tick();
 
-    const select = document.querySelector<HTMLSelectElement>('select')!;
+    const select = overlayRoot().querySelector<HTMLSelectElement>('select')!;
     select.value = 'srd-5e-2024:condition/exhaustion';
     select.dispatchEvent(new Event('change'));
     TestBed.tick();
 
-    const level = document.querySelector<HTMLInputElement>('input[type="number"]')!;
+    const level = overlayRoot().querySelector<HTMLInputElement>('input[type="number"]')!;
     expect(level).not.toBeNull();
     expect(level.min).toBe('1');
     // Controller ruling (task-4-brief.md): no cap constant, even though the pack's own
@@ -95,7 +98,7 @@ describe('ConditionDialogComponent', () => {
     const handle = open(BASE_DATA);
     TestBed.tick();
 
-    const select = document.querySelector<HTMLSelectElement>('select')!;
+    const select = overlayRoot().querySelector<HTMLSelectElement>('select')!;
     select.value = 'srd-5e-2024:condition/exhaustion';
     select.dispatchEvent(new Event('change'));
     TestBed.tick();
@@ -128,12 +131,12 @@ describe('ConditionDialogComponent', () => {
     const handle = open(BASE_DATA);
     TestBed.tick();
 
-    const select = document.querySelector<HTMLSelectElement>('select')!;
+    const select = overlayRoot().querySelector<HTMLSelectElement>('select')!;
     select.value = 'srd-5e-2024:condition/exhaustion';
     select.dispatchEvent(new Event('change'));
     TestBed.tick();
 
-    const level = document.querySelector<HTMLInputElement>('input[type="number"]')!;
+    const level = overlayRoot().querySelector<HTMLInputElement>('input[type="number"]')!;
     level.value = '3';
     level.dispatchEvent(new Event('input'));
     TestBed.tick();

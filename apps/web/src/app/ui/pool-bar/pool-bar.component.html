@@ -38,6 +38,11 @@
       [class.hk-pool-bar__inspect]="inspectable()"
       [attr.role]="inspectable() ? 'button' : null"
       [attr.tabindex]="inspectable() ? 0 : null"
+      [attr.aria-label]="
+        inspectable()
+          ? t('ui.breakdown.show', { name: label(), value: clamped() + ' / ' + max() })
+          : null
+      "
       (click)="press($event)"
       (keydown.enter)="press($event)"
       (keydown.space)="press($event)"

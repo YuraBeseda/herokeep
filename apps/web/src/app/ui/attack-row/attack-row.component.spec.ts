@@ -68,3 +68,20 @@ describe('HkAttackRowComponent', () => {
     expect(hintOf(el.querySelector('.hk-arow__name')!)).toBe(long);
   });
 });
+
+describe('HkAttackRowComponent breakdown controls', () => {
+  it('names the to-hit and damage controls by weapon, value and "show breakdown"', async () => {
+    const { el } = await mount(HkAttackRowComponent, { ...base, inspectable: true });
+    expect(el.querySelector('.hk-arow__hit')!.getAttribute('aria-label')).toBe(
+      'Longsword to hit +5, show breakdown',
+    );
+    expect(el.querySelector('.hk-arow__dmg')!.getAttribute('aria-label')).toBe(
+      'Longsword damage 1d8+3, show breakdown',
+    );
+  });
+
+  it('carries no label when not inspectable', async () => {
+    const { el } = await mount(HkAttackRowComponent, base);
+    expect(el.querySelector('.hk-arow__hit')!.getAttribute('aria-label')).toBeNull();
+  });
+});

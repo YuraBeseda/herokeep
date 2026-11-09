@@ -1,3 +1,4 @@
+import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CharacterStore } from '@shared/stores/character.store';
 import { seedFighter } from '../testing/character-fixtures';
@@ -11,70 +12,133 @@ import { SkillsLeafComponent } from './skills-leaf/skills-leaf.component';
 // skill totals, attack to-hit and damage bonus, and a resource's maximum. Same pattern as the AC
 // popover spec in `vitals-leaf.component.spec.ts`: activate the value, see the contribution rows
 // (localized source names) in the dialog overlay.
+//
+// WHY the sheet is augmented for save/skill/attack: the engine passes `mod + proficiency` as the
+// BASE of `table.resolve` (abilities.ts saveTotal/skillTotal, attacks.ts toHit), so a derived value's
+// `contributions` list only the modifier-table entries on top (a `save.bonus`, `skill.bonus` or
+// `attack.bonus` effect). A level-1 fighter has none, so its breakdown is the dialog's empty state
+// ("No modifiers") in the old play tab too. These specs therefore give the leaves a sheet whose
+// save, skill, to-hit and damage-bonus values carry real-shaped contributions and assert the leaf
+// hands exactly that value to the dialog. The ability score and the resource maximum keep their
+// genuine engine contributions (background bonus, class feature).
 describe('derived-value breakdown popovers on the sheet leaves', () => {
   setupLeafSpec();
+
+  const FIGHTER = 'srd-5e-2024:class/fighter';
+  const SOLDIER = 'srd-5e-2024:background/soldier';
 
   function overlayRows(): HTMLElement[] {
     return Array.from(
       document.querySelectorAll<HTMLElement>('.cdk-overlay-container .derived-popover__row'),
     );
   }
+  const dialogOpen = (): boolean =>
+    document.querySelector('.cdk-overlay-container .derived-popover__title') !== null;
 
-  /** The breakdown dialog is open (title present); the seeded fighter's save, skill and attack
-   * values have no contributions, so those show the dialog's empty state instead of rows. */
-  function dialogOpen(): boolean {
-    return document.querySelector('.cdk-overlay-container .derived-popover__title') !== null;
+  /** Replaces the store's sheet with a copy whose save/skill/attack values carry contributions. */
+  function withContributions(): void {
+    const store = TestBed.inject(CharacterStore);
+    const real = store.sheet;
+    const augmented = computed(() => {
+      const sheet = real();
+      if (!sheet) return sheet;
+      const copy = structuredClone(sheet);
+      copy.abilities['str'].save.contributions = [
+        { source: FIGHTER, kind: 'save.bonus', amount: 2, key: 'prof' },
+        { source: SOLDIER, kind: 'save.bonus', amount: 1, key: 'bg' },
+      ];
+      copy.skills['athletics'].total.contributions = [
+        { source: FIGHTER, kind: 'skill.bonus', amount: 2, key: 'prof' },
+      ];
+      copy.attacks[0].toHit.contributions = [
+        { source: FIGHTER, kind: 'attack.bonus', amount: 2, key: 'prof' },
+      ];
+      copy.attacks[0].damage.bonus.contributions = [
+        { source: SOLDIER, kind: 'damage.bonus', amount: 3, key: 'str' },
+      ];
+      return copy;
+    });
+    Object.defineProperty(store, 'sheet', { value: augmented });
   }
 
-  async function mount<T>(type: new () => T) {
+  async function mount<T>(type: new () => T, augment = false) {
     await seedFighter('Ivan');
+    if (augment) withContributions();
     const fixture = TestBed.createComponent(type);
     await fixture.whenStable();
     return fixture.nativeElement as HTMLElement;
   }
 
-  function activate(el: Element | null): void {
+  function activate(el: Element | null): HTMLElement {
     expect(el, 'the value must be an activatable control').not.toBeNull();
-    (el as HTMLElement).click();
+    const trigger = el as HTMLElement;
+    trigger.focus();
+    trigger.click();
     TestBed.tick();
+    return trigger;
   }
 
-  it('the ability score opens its breakdown (Strength 15 base + background)', async () => {
+  function expectRows(...sources: string[]): void {
+    const text = overlayRows()
+      .map((r) => r.textContent ?? '')
+      .join('|');
+    expect(overlayRows().length).toBeGreaterThanOrEqual(sources.length);
+    for (const source of sources) expect(text).toContain(source);
+  }
+
+  async function closeWithEscape(trigger: HTMLElement): Promise<void> {
+    document
+      .querySelector('.cdk-overlay-container .derived-popover__title')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    TestBed.tick();
+    expect(dialogOpen(), 'Escape closes the dialog').toBe(false);
+    expect(document.activeElement, 'focus returns to the trigger').toBe(trigger);
+  }
+
+  it('the ability score opens its breakdown rows (genuine engine contributions)', async () => {
     const compiled = await mount(AbilitiesLeafComponent);
     activate(compiled.querySelector('[data-ability="str"] [data-breakdown="score"]'));
     expect(overlayRows().length).toBeGreaterThanOrEqual(1);
   });
 
-  it('the ability save opens its breakdown', async () => {
-    const compiled = await mount(AbilitiesLeafComponent);
-    activate(compiled.querySelector('[data-ability="str"] [data-breakdown="save"]'));
-    expect(dialogOpen()).toBe(true);
+  it('the proficient save lists its contributions; Escape closes and focus returns', async () => {
+    const compiled = await mount(AbilitiesLeafComponent, true);
+    const trigger = activate(
+      compiled.querySelector('[data-ability="str"] [data-breakdown="save"]'),
+    );
+    expectRows('Fighter', 'Soldier');
+    expect(overlayRows().map((r) => r.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('+2'), expect.stringContaining('+1')]),
+    );
+    await closeWithEscape(trigger);
   });
 
-  it('the skill total opens its breakdown and Escape closes it', async () => {
-    const compiled = await mount(SkillsLeafComponent);
-    activate(compiled.querySelector('hk-skill-row [data-breakdown="total"]'));
-    expect(dialogOpen()).toBe(true);
-    document
-      .querySelector('.cdk-overlay-container')!
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    TestBed.tick();
+  it('the proficient skill total lists its contributions; Escape closes and focus returns', async () => {
+    const compiled = await mount(SkillsLeafComponent, true);
+    const trigger = activate(
+      compiled.querySelector('hk-skill-row [data-breakdown="total"][aria-label^="Athletics"]'),
+    );
+    expectRows('Fighter');
+    await closeWithEscape(trigger);
   });
 
-  it('the attack to-hit and damage bonus each open their breakdown', async () => {
-    const compiled = await mount(AttacksLeafComponent);
+  it('the attack to-hit and damage bonus each list their contributions', async () => {
+    const compiled = await mount(AttacksLeafComponent, true);
     expect(TestBed.inject(CharacterStore).sheet()!.attacks.length).toBeGreaterThan(0);
-    activate(compiled.querySelector('[data-breakdown="hit"]'));
-    expect(dialogOpen()).toBe(true);
-    document.querySelectorAll('.cdk-overlay-container').forEach((el) => el.replaceChildren());
-    activate(compiled.querySelector('[data-breakdown="damage"]'));
-    expect(dialogOpen()).toBe(true);
+    const hit = activate(compiled.querySelector('[data-breakdown="hit"]'));
+    expectRows('Fighter');
+    await closeWithEscape(hit);
+    const dmg = activate(compiled.querySelector('[data-breakdown="damage"]'));
+    expectRows('Soldier');
+    await closeWithEscape(dmg);
   });
 
-  it('the resource maximum opens its breakdown', async () => {
+  it('the resource maximum opens its breakdown rows (genuine engine contributions)', async () => {
     const compiled = await mount(ResourcesLeafComponent);
     activate(compiled.querySelector('hk-pool-bar [data-breakdown="max"]'));
-    expect(dialogOpen()).toBe(true);
+    expect(overlayRows().length).toBeGreaterThanOrEqual(1);
   });
 
   it('a breakdown value is keyboard reachable: focusable with the button role', async () => {

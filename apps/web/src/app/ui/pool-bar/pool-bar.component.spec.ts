@@ -1,3 +1,4 @@
+import { mount } from '../testing/harness';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideShellTransloco } from '../testing/transloco-testing';
@@ -113,5 +114,20 @@ describe('HkPoolBarComponent', () => {
     expect(el.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe(
       'Lay on Hands: 0 of 5',
     );
+  });
+});
+
+describe('HkPoolBarComponent breakdown control', () => {
+  it('names the inspectable maximum by resource, count and "show breakdown"', async () => {
+    const { el } = await mount(HkPoolBarComponent, {
+      kind: 'points',
+      value: 3,
+      max: 5,
+      label: 'Lay on Hands',
+      inspectable: true,
+    });
+    const count = el.querySelector('.hk-pool-bar__count')!;
+    expect(count.getAttribute('role')).toBe('button');
+    expect(count.getAttribute('aria-label')).toBe('Lay on Hands 3 / 5, show breakdown');
   });
 });

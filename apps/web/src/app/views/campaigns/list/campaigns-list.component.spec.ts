@@ -67,6 +67,8 @@ function configure(options: { open?: ReturnType<typeof vi.fn> } = {}): {
 describe('CampaignsListComponent', () => {
   it('shows the empty state with no cached rows', async () => {
     configure();
+    // The Dexie fake is shared across spec files: start from no campaign rows.
+    await TestBed.inject(HkDb).campaigns.clear();
     const fixture = TestBed.createComponent(CampaignsListComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -78,6 +80,7 @@ describe('CampaignsListComponent', () => {
   it('lists cached campaigns with a role badge, opening one navigates to /g/:id', async () => {
     configure();
     const db = TestBed.inject(HkDb);
+    await db.campaigns.clear();
     await db.campaigns.put(mkRow());
     await db.campaigns.put(
       mkRow({ id: '00000000-0000-4000-8000-000000000002', name: 'Icewind Dale', role: 'player' }),

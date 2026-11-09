@@ -85,3 +85,19 @@ describe('HkSkillRowComponent', () => {
     expect(el.classList.contains('hk-sk--leather')).toBe(true);
   });
 });
+
+describe('HkSkillRowComponent breakdown control', () => {
+  it('names the inspectable modifier by skill, value and "show breakdown"', async () => {
+    const { el } = await mount(HkSkillRowComponent, { ...base, modifier: 5, inspectable: true });
+    const mod = el.querySelector('.hk-sk__mod')!;
+    expect(mod.getAttribute('role')).toBe('button');
+    expect(mod.getAttribute('aria-label')).toBe('Athletics +5, show breakdown');
+  });
+
+  it('has no role or label when not inspectable', async () => {
+    const { el } = await mount(HkSkillRowComponent, base);
+    const mod = el.querySelector('.hk-sk__mod')!;
+    expect(mod.getAttribute('role')).toBeNull();
+    expect(mod.getAttribute('aria-label')).toBeNull();
+  });
+});

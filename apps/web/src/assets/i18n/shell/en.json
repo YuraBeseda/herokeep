@@ -321,6 +321,11 @@
       "chosen": "Chosen",
       "details": "Details",
       "details-of": "Details: {{name}}"
+    },
+    "breakdown": {
+      "show": "{{name}} {{value}}, show breakdown",
+      "hit": "{{name}} to hit {{value}}, show breakdown",
+      "damage": "{{name}} damage {{value}}, show breakdown"
     }
   }
 }

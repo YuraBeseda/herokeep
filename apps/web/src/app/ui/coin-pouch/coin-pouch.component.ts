@@ -22,8 +22,9 @@ const DISC: Record<CoinMetal, { top: string; shade: string }> = {
   gp: { top: 'var(--coin-gold)', shade: 'var(--coin-gold-shade)' },
   sp: { top: 'var(--coin-silver)', shade: 'var(--coin-silver-shade)' },
   cp: { top: 'var(--coin-copper)', shade: 'var(--coin-copper-shade)' },
-  // Electrum is a gold-silver alloy: no token of its own, so it takes silver over the gold shade.
-  ep: { top: 'var(--coin-silver)', shade: 'var(--coin-gold-shade)' },
+  // Electrum is a gold-silver alloy with no token of its own: gold face over the silver edge, a
+  // pairing neither gp (gold/gold) nor sp (silver/silver) uses, so the stacks stay distinguishable.
+  ep: { top: 'var(--coin-gold)', shade: 'var(--coin-silver-shade)' },
 };
 
 /** Ellipse centres of the six stacked discs, bottom to top. */

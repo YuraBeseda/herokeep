@@ -24,6 +24,9 @@ import { RestDialogComponent, type RestDialogData } from './rest-dialog.componen
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..', '..');
 
+/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
+const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+
 function readPack(path: string): Pack {
   const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
   const result = parsePack(raw);
@@ -74,7 +77,7 @@ function open(data: RestDialogData) {
 }
 
 function buttonNamed(text: string): HTMLButtonElement {
-  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+  const button = Array.from(overlayRoot().querySelectorAll<HTMLButtonElement>('button')).find(
     (b) => b.textContent?.trim() === text,
   );
   if (!button) throw new Error(`no button matching "${text}"`);
@@ -82,17 +85,17 @@ function buttonNamed(text: string): HTMLButtonElement {
 }
 
 function rollButton(): HTMLButtonElement {
-  const button = document.querySelector<HTMLButtonElement>('.rest-dialog__roll');
+  const button = overlayRoot().querySelector<HTMLButtonElement>('.rest-dialog__roll');
   if (!button) throw new Error('no .rest-dialog__roll button');
   return button;
 }
 
 function remainingText(): string {
-  return document.querySelector('.rest-dialog__remaining')?.textContent?.trim() ?? '';
+  return overlayRoot().querySelector('.rest-dialog__remaining')?.textContent?.trim() ?? '';
 }
 
 function rolledEntries(): string[] {
-  return Array.from(document.querySelectorAll('.rest-dialog__die--kept')).map(
+  return Array.from(overlayRoot().querySelectorAll('.rest-dialog__die--kept')).map(
     (el) => el.textContent?.trim() ?? '',
   );
 }
@@ -170,7 +173,7 @@ describe('RestDialogComponent', () => {
     await Promise.resolve();
     TestBed.tick();
 
-    const panel = document.querySelector('[role="dialog"]')!;
+    const panel = overlayRoot().querySelector('[role="dialog"]')!;
     const labelledBy = panel.getAttribute('aria-labelledby');
     expect(labelledBy).toBeTruthy();
     expect(document.getElementById(labelledBy!)?.textContent?.trim()).toBe(
@@ -188,7 +191,7 @@ describe('RestDialogComponent', () => {
     TestBed.tick();
 
     expect(document.body.textContent).toContain(charactersEn.sheet.rest.dialog.longBody);
-    expect(document.querySelector('.rest-dialog__hit-dice')).toBeNull();
+    expect(overlayRoot().querySelector('.rest-dialog__hit-dice')).toBeNull();
 
     buttonNamed(charactersEn.sheet.rest.dialog.confirmLong).click();
     TestBed.tick();

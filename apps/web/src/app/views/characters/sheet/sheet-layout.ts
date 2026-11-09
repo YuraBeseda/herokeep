@@ -43,7 +43,10 @@ export const sheetLayoutGuard: CanActivateFn = (route, state) => {
   layout.note(segment);
   const target = layout.resolve(segment);
   if (target === segment) return true;
-  const [path, rest = ''] = state.url.split(/(?=[?#])/);
+  // Split at the FIRST `?` or `#` so a query and a fragment both survive.
+  const cut = state.url.search(/[?#]/);
+  const path = cut === -1 ? state.url : state.url.slice(0, cut);
+  const rest = cut === -1 ? '' : state.url.slice(cut);
   const parts = path.split('/');
   parts[parts.length - 1] = target;
   return inject(Router).parseUrl(parts.join('/') + rest);

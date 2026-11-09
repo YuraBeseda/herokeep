@@ -384,6 +384,23 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     }
   });
 
+  it('keeps both the query and the fragment when the guard redirects (?a=1#f)', async () => {
+    const id = await seedFighter('Ivan');
+    const router = TestBed.inject(Router);
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    await harness.navigateByUrl(`/c/${id}/bag?a=1#f`);
+    expect(router.url).toBe(`/c/${id}/play?a=1#f`);
+  });
+
+  it('keeps the query and fragment when a phone /play redirects to its tab', async () => {
+    stubViewport({ phone: true });
+    const id = await seedFighter('Ivan');
+    const router = TestBed.inject(Router);
+    const harness = await RouterTestingHarness.create(`/c/${id}/more`);
+    await harness.navigateByUrl(`/c/${id}/play?a=1#f`);
+    expect(router.url).toBe(`/c/${id}/more?a=1#f`);
+  });
+
   it('the phone tab bar marks More current on Build and Timeline, which More lists', async () => {
     stubViewport({ phone: true });
     const id = await seedFighter('Ivan');

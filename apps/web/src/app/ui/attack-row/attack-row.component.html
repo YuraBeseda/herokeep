@@ -20,6 +20,9 @@
     [class.hk-arow__inspect]="inspectable()"
     [attr.role]="inspectable() ? 'button' : null"
     [attr.tabindex]="inspectable() ? 0 : null"
+    [attr.aria-label]="
+      inspectable() ? t('ui.breakdown.hit', { name: name(), value: toHitText() }) : null
+    "
     (click)="press('hit', $event)"
     (keydown.enter)="press('hit', $event)"
     (keydown.space)="press('hit', $event)"
@@ -32,6 +35,9 @@
       [class.hk-arow__inspect]="inspectable()"
       [attr.role]="inspectable() ? 'button' : null"
       [attr.tabindex]="inspectable() ? 0 : null"
+      [attr.aria-label]="
+        inspectable() ? t('ui.breakdown.damage', { name: name(), value: damage() }) : null
+      "
       (click)="press('damage', $event)"
       (keydown.enter)="press('damage', $event)"
       (keydown.space)="press('damage', $event)"

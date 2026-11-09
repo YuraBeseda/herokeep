@@ -7,6 +7,9 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CustomItemDialogComponent } from './custom-item-dialog.component';
 
+/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
+const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     return langPath === 'characters/en' ? of(charactersEn) : of({});
@@ -39,7 +42,7 @@ async function settle(): Promise<void> {
 }
 
 function buttonNamed(text: string): HTMLButtonElement {
-  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+  const button = Array.from(overlayRoot().querySelectorAll<HTMLButtonElement>('button')).find(
     (b) => b.textContent?.trim() === text,
   );
   if (!button) throw new Error(`no button matching "${text}"`);
@@ -64,7 +67,7 @@ describe('CustomItemDialogComponent', () => {
     const handle = open();
     TestBed.tick();
 
-    const nameInput = document.querySelector<HTMLInputElement>('input[type="text"]')!;
+    const nameInput = overlayRoot().querySelector<HTMLInputElement>('input[type="text"]')!;
     nameInput.value = 'Lucky Coin';
     nameInput.dispatchEvent(new Event('input'));
     await settle();
@@ -80,15 +83,15 @@ describe('CustomItemDialogComponent', () => {
     const handle = open();
     TestBed.tick();
 
-    const nameInput = document.querySelector<HTMLInputElement>('input[type="text"]')!;
+    const nameInput = overlayRoot().querySelector<HTMLInputElement>('input[type="text"]')!;
     nameInput.value = '  Rope, 50 ft  ';
     nameInput.dispatchEvent(new Event('input'));
 
-    const qtyInput = document.querySelector<HTMLInputElement>('input[type="number"]')!;
+    const qtyInput = overlayRoot().querySelector<HTMLInputElement>('input[type="number"]')!;
     qtyInput.value = '2';
     qtyInput.dispatchEvent(new Event('input'));
 
-    const notesInput = document.querySelector<HTMLTextAreaElement>('textarea')!;
+    const notesInput = overlayRoot().querySelector<HTMLTextAreaElement>('textarea')!;
     notesInput.value = '  A bit frayed  ';
     notesInput.dispatchEvent(new Event('input'));
     await settle();

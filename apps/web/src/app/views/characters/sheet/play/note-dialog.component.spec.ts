@@ -6,6 +6,9 @@ import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { NoteDialogComponent, type NoteDialogData } from './note-dialog.component';
 
+/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
+const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
     return langPath === 'characters/en' ? of(charactersEn) : of({});
@@ -31,15 +34,15 @@ function open(data: NoteDialogData) {
 }
 
 function titleInput(): HTMLInputElement {
-  return document.querySelector<HTMLInputElement>('input[type="text"]')!;
+  return overlayRoot().querySelector<HTMLInputElement>('input[type="text"]')!;
 }
 
 function bodyInput(): HTMLTextAreaElement {
-  return document.querySelector<HTMLTextAreaElement>('textarea')!;
+  return overlayRoot().querySelector<HTMLTextAreaElement>('textarea')!;
 }
 
 function buttonNamed(text: string): HTMLButtonElement {
-  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+  const button = Array.from(overlayRoot().querySelectorAll<HTMLButtonElement>('button')).find(
     (b) => b.textContent?.trim() === text,
   );
   if (!button) throw new Error(`no button matching "${text}"`);
@@ -100,7 +103,7 @@ describe('NoteDialogComponent', () => {
     bodyInput().dispatchEvent(new Event('input'));
     TestBed.tick();
 
-    const error = document.querySelector('.note-dialog__error');
+    const error = overlayRoot().querySelector('.note-dialog__error');
     expect(error).not.toBeNull();
     expect(error!.textContent).toContain('11');
     expect(error!.textContent).toContain('10');

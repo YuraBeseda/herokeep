@@ -21,6 +21,9 @@ import { AddItemDialogComponent } from './add-item-dialog.component';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..', '..', '..', '..', '..', '..');
 
+/** Queries stay inside the dialog overlay, never a stale element elsewhere in the shared document. */
+const overlayRoot = (): ParentNode => document.querySelector('.cdk-overlay-container') ?? document;
+
 function readPack(path: string): Pack {
   const raw: unknown = JSON.parse(readFileSync(path, 'utf8'));
   const result = parsePack(raw);
@@ -73,7 +76,7 @@ function open() {
 }
 
 function buttonNamed(text: string): HTMLButtonElement {
-  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
+  const button = Array.from(overlayRoot().querySelectorAll<HTMLButtonElement>('button')).find(
     (b) => b.textContent?.trim() === text,
   );
   if (!button) throw new Error(`no button matching "${text}"`);
@@ -84,14 +87,14 @@ function buttonNamed(text: string): HTMLButtonElement {
  * debounce-driven approach as `equipment-step.component.spec.ts`'s own `searchAndFindCard`. */
 function searchAndFindCard(text: string, exactName: string): HTMLElement {
   vi.useFakeTimers();
-  const input = document.querySelector<HTMLInputElement>('input[type="search"]')!;
+  const input = overlayRoot().querySelector<HTMLInputElement>('input[type="search"]')!;
   input.value = text;
   input.dispatchEvent(new Event('input'));
   vi.advanceTimersByTime(150);
   TestBed.tick();
   vi.useRealTimers();
 
-  const card = Array.from(document.querySelectorAll('.entity-picker__row')).find(
+  const card = Array.from(overlayRoot().querySelectorAll('.entity-picker__row')).find(
     (c) => c.querySelector('.entity-picker__name')?.textContent?.trim() === exactName,
   );
   if (!card) throw new Error(`No row found with exact name "${exactName}"`);
@@ -123,7 +126,7 @@ describe('AddItemDialogComponent', () => {
     const handle = open();
     TestBed.tick();
 
-    const qtyInput = document.querySelector<HTMLInputElement>('input[type="number"]')!;
+    const qtyInput = overlayRoot().querySelector<HTMLInputElement>('input[type="number"]')!;
     qtyInput.value = '3';
     qtyInput.dispatchEvent(new Event('input'));
     TestBed.tick();

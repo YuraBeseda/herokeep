@@ -19,6 +19,9 @@
     [class.hk-sk__inspect]="inspectable()"
     [attr.role]="inspectable() ? 'button' : null"
     [attr.tabindex]="inspectable() ? 0 : null"
+    [attr.aria-label]="
+      inspectable() ? t('ui.breakdown.show', { name: name(), value: modifierText() }) : null
+    "
     (click)="press($event)"
     (keydown.enter)="press($event)"
     (keydown.space)="press($event)"

@@ -129,6 +129,20 @@ describe('HkCoinPouchComponent', () => {
       expect(stacks(el).map((st) => st.getAttribute('aria-label'))).toContain('3 electrum pieces');
     });
 
+    it('draws electrum in a face/edge pairing that neither gold nor silver uses', async () => {
+      const { el } = await mount(HkCoinPouchComponent, withEp);
+      const fills = (label: RegExp): string[] =>
+        Array.from(
+          stacks(el)
+            .find((st) => label.test(st.getAttribute('aria-label') ?? ''))!
+            .querySelectorAll<SVGElement>('.hk-coinstack__discs *'),
+        ).map((d) => `${d.style.fill}`);
+      const ep = new Set(fills(/electrum/));
+      expect(ep.size).toBeGreaterThan(0);
+      expect([...ep].sort()).not.toEqual([...new Set(fills(/gold/))].sort());
+      expect([...ep].sort()).not.toEqual([...new Set(fills(/silver/))].sort());
+    });
+
     it('edit mode always offers the electrum field when the caller supplies ep, and saves it back', async () => {
       const m = await mount(HkCoinPouchComponent, { coins: { ...coins, ep: 0 } });
       const saved: unknown[] = [];
