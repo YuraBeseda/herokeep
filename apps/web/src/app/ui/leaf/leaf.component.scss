@@ -23,8 +23,17 @@
 }
 
 :host(.hk-leaf--phone) {
-  padding: 12px;
+  padding: 9px 12px;
   font-size: 16px;
+}
+
+:host(.hk-leaf--phone) .hk-leaf__head {
+  margin-block-end: 4px;
+}
+
+:host(.hk-leaf--phone) .hk-leaf__title {
+  font-size: 18px;
+  line-height: 22px;
 }
 
 .hk-leaf__section {

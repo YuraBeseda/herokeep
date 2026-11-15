@@ -41,9 +41,13 @@ import { SpellsLeafComponent } from './spells-leaf/spells-leaf.component';
             type="button"
             role="tab"
             class="play-tab__section"
+            [id]="'play-tab-' + id"
+            [attr.aria-controls]="'play-panel-' + id"
             [attr.aria-selected]="section() === id"
             [tabindex]="section() === id ? 0 : -1"
             (click)="section.set(id)"
+            (keydown.arrowRight)="move($event, 1)"
+            (keydown.arrowLeft)="move($event, -1)"
           >
             {{
               id === 'combat' ? t('sheet.play.sections.combat') : t('sheet.play.sections.spellsBag')
@@ -51,14 +55,24 @@ import { SpellsLeafComponent } from './spells-leaf/spells-leaf.component';
           </button>
         }
       </div>
-      <div class="play-tab__column play-tab__column--centre">
+      <div
+        class="play-tab__column play-tab__column--centre"
+        id="play-panel-combat"
+        role="tabpanel"
+        [attr.aria-labelledby]="'play-tab-combat'"
+      >
         <app-attacks-leaf />
         <app-resources-leaf />
         <app-conditions-leaf />
         <app-features-leaf />
         <app-proficiencies-leaf />
       </div>
-      <div class="play-tab__column play-tab__column--side">
+      <div
+        class="play-tab__column play-tab__column--side"
+        id="play-panel-spells"
+        role="tabpanel"
+        [attr.aria-labelledby]="'play-tab-spells'"
+      >
         <app-spells-leaf />
         <app-bag-leaf />
       </div>
@@ -137,4 +151,15 @@ import { SpellsLeafComponent } from './spells-leaf/spells-leaf.component';
 export class PlayTabComponent {
   protected readonly sections = ['combat', 'spells'] as const;
   protected readonly section = signal<(typeof this.sections)[number]>('combat');
+
+  /** Arrow keys select and focus the neighbouring tab (wrapping); the others are tabindex -1. */
+  protected move(event: Event, step: 1 | -1): void {
+    event.preventDefault();
+    const next =
+      this.sections[
+        (this.sections.indexOf(this.section()) + step + this.sections.length) % this.sections.length
+      ];
+    this.section.set(next);
+    document.getElementById(`play-tab-${next}`)?.focus();
+  }
 }

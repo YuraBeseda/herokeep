@@ -25,7 +25,7 @@ const STACK = `
   :host {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
     min-inline-size: 0;
   }
 `;

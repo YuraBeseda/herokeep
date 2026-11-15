@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createFighter } from '../helpers/create-fighter';
+import { clickStrapAction } from '../helpers/sheet';
 import { openPhoneTab } from '../helpers/viewport';
 
 test.describe('phone sheet (390 x 844)', () => {
@@ -9,31 +10,37 @@ test.describe('phone sheet (390 x 844)', () => {
 
   test('Combat tab shows HP, AC, speed, saves and attacks above the fold', async ({ page }) => {
     await expect(page).toHaveURL(/\/c\/[^/]+\/combat$/);
-    const height = page.viewportSize()!.height;
+    // The visible area is the viewport minus the pinned action strap (ruling R69).
+    const strap = (await page.locator('.hk-astrap').boundingBox())!;
     const parts = {
       hp: page.locator('.hk-hp-gauge__current'),
       ac: page.locator('hk-shield-badge'),
       speed: page.locator('.vitals__speed').first(),
       saves: page.locator('app-abilities-leaf'),
-      attacks: page.locator('app-attacks-leaf'),
+      firstAttack: page.locator('hk-attack-row').first(),
     };
     for (const [name, part] of Object.entries(parts)) {
       await expect(part, name).toBeVisible();
       const box = (await part.boundingBox())!;
-      expect(box.y, `${name} starts above the fold`).toBeLessThan(height);
+      expect(box.y + box.height, `${name} ends above the strap`).toBeLessThanOrEqual(strap.y);
     }
-    // The attacks' first row starts on screen (the pinned strap covers its lower edge; it scrolls).
-    const firstAttack = (await page.locator('hk-attack-row').first().boundingBox())!;
-    expect(firstAttack.y, 'first attack row').toBeLessThan(height);
-    // Saves are complete above the strap: a save seal and its roll button for each of the six.
-    const saves = (await parts.saves.boundingBox())!;
-    expect(saves.y + saves.height, 'saves end above the fold').toBeLessThanOrEqual(height);
   });
 
   test('bottom tabs switch Combat, Spells, Bag, Hero and More', async ({ page }) => {
     for (const tab of ['Spells', 'Bag', 'Hero', 'More', 'Combat'] as const) {
       await openPhoneTab(page, tab);
     }
+  });
+
+  test('the rest dialog is a bottom sheet with a grip', async ({ page }) => {
+    await clickStrapAction(page, 'short-rest');
+    const dialog = page.locator('.hk-dialog--sheet');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('.hk-dialog__grip')).toBeVisible();
+    const box = (await dialog.boundingBox())!;
+    const { width, height } = page.viewportSize()!;
+    expect(box.width, 'full width').toBeGreaterThanOrEqual(width - 1);
+    expect(box.y + box.height, 'docked to the bottom').toBeGreaterThanOrEqual(height - 1);
   });
 
   test('long-press on an icon button shows its hint', async ({ page }) => {
@@ -45,6 +52,9 @@ test.describe('phone sheet (390 x 844)', () => {
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+    // The hint shows after a 400 ms hold (HINT_DELAY_TOUCH_MS); polling from the first millisecond
+    // under mobile emulation raced the touch, so hold first.
+    await page.waitForTimeout(500);
     await expect(page.getByRole('tooltip').filter({ hasText: label })).toBeVisible();
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   });

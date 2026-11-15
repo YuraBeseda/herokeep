@@ -35,6 +35,33 @@
   align-items: start;
 }
 
+/* The phone's folio is a compact identity plate (board A2-Phone): the Combat tab has to read above
+   the pinned strap. */
+.sheet-shell__layout--phone {
+  gap: var(--space-2);
+
+  .sheet-shell__plate {
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+
+  .sheet-shell__header {
+    gap: var(--space-2);
+  }
+
+  .sheet-shell__name {
+    font-size: 1.5rem;
+  }
+
+  .sheet-shell__xp {
+    gap: var(--space-1);
+  }
+
+  .sheet-shell__identity {
+    gap: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .sheet-shell__layout {
     grid-template-columns: minmax(280px, 296px) minmax(0, 1fr);

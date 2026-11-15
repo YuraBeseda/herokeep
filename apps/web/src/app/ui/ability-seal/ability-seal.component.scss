@@ -7,6 +7,15 @@
   color: var(--text-on-leather);
 }
 
+:host(.hk-ability--compact) {
+  gap: 2px;
+}
+
+:host(.hk-ability--compact) .hk-ability__score,
+:host(.hk-ability--compact) .hk-ability__save {
+  block-size: 20px;
+}
+
 :host(.hk-ability--compact) hk-wax-seal {
   --hk-seal-size: 46px;
 }

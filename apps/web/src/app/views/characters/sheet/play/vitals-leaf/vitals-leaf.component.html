@@ -18,6 +18,7 @@
         hkDerived
         [hkDerivedBreakdown]="s.ac"
         [value]="s.ac.value"
+        [size]="compact() ? 's' : 'm'"
         [hint]="t('sheet.stats.acHint', { value: s.ac.value })"
       />
       <hk-stat-tile

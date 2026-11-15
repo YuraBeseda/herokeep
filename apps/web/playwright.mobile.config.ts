@@ -1,4 +1,4 @@
-﻿import { defineConfig } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
 /**
  * Mobile project: the same production build and static server as `playwright.config.ts`, driven as

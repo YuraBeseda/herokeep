@@ -138,3 +138,33 @@
     block-size: var(--control-phone);
   }
 }
+
+/* Phone: the amount field and the three buttons fit one row, so the strap is two rows, not three. */
+@media (max-width: 767.98px) {
+  :host {
+    gap: 6px 12px;
+    padding-block: 7px;
+  }
+
+  .hk-hp-gauge__buckle {
+    block-size: 38px;
+  }
+
+  .hk-hp-gauge__numerals {
+    font-size: 38px;
+  }
+
+  .hk-hp-gauge__max {
+    font-size: 20px;
+  }
+
+  .hk-hp-gauge__controls {
+    flex: 1 1 100%;
+    gap: 4px;
+  }
+
+  .hk-hp-gauge__amount {
+    inline-size: 52px;
+    padding: 0 4px;
+  }
+}
