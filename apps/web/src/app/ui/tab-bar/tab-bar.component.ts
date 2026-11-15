@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
+import { HkFitLabelDirective } from '../fit-label/fit-label.directive';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import { phoneLayout } from '../shell/viewport';
 import { TabBarService, type TabItem } from './tab-bar.service';
@@ -16,7 +17,7 @@ import { TabBarService, type TabItem } from './tab-bar.service';
  */
 @Component({
   selector: 'hk-tab-bar',
-  imports: [RouterLink, TranslocoDirective, IconComponent, HkTooltipDirective],
+  imports: [RouterLink, TranslocoDirective, IconComponent, HkFitLabelDirective, HkTooltipDirective],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './tab-bar.component.html',
   styleUrl: './tab-bar.component.scss',

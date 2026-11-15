@@ -167,6 +167,7 @@ export class HeroTabComponent {}
     .more__row {
       display: flex;
       align-items: center;
+      box-sizing: border-box;
       inline-size: 100%;
       min-block-size: 52px;
       padding: 0 var(--space-4);

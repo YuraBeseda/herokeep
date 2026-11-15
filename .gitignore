@@ -28,3 +28,5 @@ apps/api/data/
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+# Text-fit harness locale (apps/web/scripts/build-fit-locale.mjs)
+apps/web/.fit-locale/

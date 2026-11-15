@@ -6,7 +6,7 @@
     [attr.aria-label]="proficiencyHint()"
     [hkTooltip]="proficiencyHint()"
   ></span>
-  <span class="hk-sk__name" [id]="nameId" [hkTooltip]="name()">{{ name() }}</span>
+  <span class="hk-sk__name" data-truncate [id]="nameId" [hkTooltip]="name()">{{ name() }}</span>
   @if (disadvantage(); as cause) {
     <span class="hk-dis" tabindex="0" [hkTooltip]="cause">
       <hk-icon [icon]="'ui:disadvantage'" />

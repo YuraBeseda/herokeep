@@ -12,6 +12,7 @@ import {
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { HkButtonComponent, type HkButtonVariant } from '../button/button.component';
+import { HkFitLabelDirective } from '../fit-label/fit-label.directive';
 import { HkIconButtonComponent } from '../icon-button/icon-button.component';
 import { phoneLayout } from '../shell/viewport';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
@@ -47,6 +48,7 @@ const VARIANT: Record<Exclude<StrapAction['kind'], 'icon'>, HkButtonVariant> = {
     CdkTrapFocus,
     IconComponent,
     HkButtonComponent,
+    HkFitLabelDirective,
     HkIconButtonComponent,
     HkTooltipDirective,
   ],

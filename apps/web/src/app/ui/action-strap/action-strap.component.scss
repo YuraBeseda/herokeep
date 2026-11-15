@@ -122,12 +122,22 @@
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
+  position: relative;
 }
 
 .hk-act__label {
   max-inline-size: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Fit rule (hkFitLabel): a label wider than its tile gives way to the icon; it stays in the accessible name. */
+.hk-fit-label--icon-only [data-fit-label] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .hk-act--primary {

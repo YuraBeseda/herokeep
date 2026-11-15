@@ -77,6 +77,12 @@
   white-space: nowrap;
 }
 
+.hk-arow__type {
+  display: flex;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
 .hk-arow__tags {
   display: flex;
   flex-wrap: wrap;

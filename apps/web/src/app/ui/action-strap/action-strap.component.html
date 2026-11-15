@@ -36,6 +36,7 @@
             <button
               #more
               type="button"
+              hkFitLabel
               class="hk-act hk-act--leather hk-astrap__more"
               [attr.aria-haspopup]="'dialog'"
               [attr.aria-expanded]="sheetOpen()"
@@ -47,7 +48,7 @@
                 <circle cx="12" cy="12" r="2" />
                 <circle cx="19" cy="12" r="2" />
               </svg>
-              <span class="hk-act__label">{{ t('shell.strap.more-short') }}</span>
+              <span class="hk-act__label" data-fit-label>{{ t('shell.strap.more-short') }}</span>
             </button>
           } @else {
             <div
@@ -107,6 +108,7 @@
     } @else if (phone()) {
       <button
         type="button"
+        hkFitLabel
         [attr.data-action]="action.id"
         [class]="tileClass(action)"
         [attr.aria-disabled]="action.disabled ? 'true' : null"
@@ -116,7 +118,7 @@
         (click)="activate(action)"
       >
         <hk-icon [icon]="'ui:' + action.icon" />
-        <span class="hk-act__label">{{ t(action.label) }}</span>
+        <span class="hk-act__label" data-fit-label>{{ t(action.label) }}</span>
       </button>
     } @else {
       <button

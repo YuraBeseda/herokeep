@@ -132,6 +132,23 @@ describe('HkActionStrapComponent', () => {
       expect(el.querySelector('[aria-label="Notes"]')).toBeNull();
     });
 
+    it('drops a tile to its icon when the label does not fit, keeping the name and the hint', async () => {
+      // jsdom has no layout: a 60px tile whose label wants 90px.
+      const width = (name: 'clientWidth' | 'scrollWidth', value: number) =>
+        vi.spyOn(HTMLElement.prototype, name, 'get').mockReturnValue(value);
+      width('clientWidth', 60);
+      width('scrollWidth', 90);
+      try {
+        const { el } = await setup(config(), true);
+        const tile = el.querySelector<HTMLElement>('[data-action="damage"]')!;
+        expect(tile.classList.contains('hk-fit-label--icon-only')).toBe(true);
+        expect(tile.querySelector('[data-fit-label]')?.textContent?.trim()).toBe('Damage');
+        expect(hintOf(tile)).toBe('Damage');
+      } finally {
+        vi.restoreAllMocks();
+      }
+    });
+
     it('does not render a More button when the screen has no secondary actions', async () => {
       const { el } = await setup({ primary: [act('roll')] }, true);
       expect(names(el)).toEqual(['Roll']);

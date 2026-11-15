@@ -7,6 +7,7 @@
       @for (tab of tabs(); track tab.id) {
         <a
           class="hk-tabb"
+          hkFitLabel
           [routerLink]="tab.route"
           [class.hk-tabb--on]="active(tab)"
           [attr.aria-current]="active(tab) ? 'page' : null"
@@ -14,7 +15,7 @@
         >
           <span class="hk-tabb__glow" aria-hidden="true"></span>
           <hk-icon [icon]="'ui:' + tab.icon" />
-          <span class="hk-tabb__label">{{ t(tab.label) }}</span>
+          <span class="hk-tabb__label" data-fit-label>{{ t(tab.label) }}</span>
         </a>
       }
     </nav>

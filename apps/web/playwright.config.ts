@@ -21,7 +21,7 @@ export default defineConfig({
   // config starts below (which has no `/api/*` at all): every real-API assertion in there would
   // just fail for the wrong reason. Ruling 7's "the default e2e project stays untouched and
   // offline-pure" is enforced by this line, not just by convention.
-  testIgnore: '**/sync/**',
+  testIgnore: ['**/sync/**', '**/textfit/**'], // textfit has its own config (playwright.textfit.config.ts)
   // A single shared `webServer` (one `serve` process) backs every test below. offline.spec.ts's
   // service-worker install already has its own real, variable-length wait (Angular's driver
   // caches its prefetched assetGroups as a background idle task — see that spec's module doc);
