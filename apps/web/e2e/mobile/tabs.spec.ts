@@ -8,6 +8,12 @@ test.describe('phone sheet (390 x 844)', () => {
     await createFighter(page, 'Aldric Phone');
   });
 
+  // R73: a forward navigation opens the page at the top, whatever the wizard was scrolled to.
+  test('the sheet opens at the top after the wizard', async ({ page }) => {
+    await expect(page.locator('hk-attack-row').first()).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
   // R71: the fold holds in every shipped language, with room to spare, not by a pixel.
   const HEADROOM = 8;
   for (const locale of ['en', 'uk'] as const) {
@@ -19,8 +25,6 @@ test.describe('phone sheet (390 x 844)', () => {
       await expect(page).toHaveURL(/\/c\/[^/]+\/combat$/);
       await expect(page.locator('hk-attack-row').first()).toBeVisible();
       await expect(page.locator('html')).toHaveAttribute('lang', new RegExp(`^${locale}`));
-      // Measure from the top: the sheet can open scrolled, which would hide an overflow.
-      await page.evaluate(() => window.scrollTo(0, 0));
       // The visible area is the viewport minus the pinned action strap (ruling R69).
       const strap = (await page.locator('.hk-astrap').boundingBox())!;
       const parts = {
@@ -78,9 +82,6 @@ test.describe('phone sheet (390 x 844)', () => {
     // The top bar's Edit button is the one icon button on the phone Combat screen.
     const button = page.locator('button[hk-icon-button]').first();
     await expect(button).toBeVisible();
-    // The sheet can open scrolled (the wizard's last click was far down the page); a touch outside
-    // the viewport never reaches the button, so bring it into view before aiming at it.
-    await button.scrollIntoViewIfNeeded();
     const label = (await button.getAttribute('aria-label'))!;
     const box = (await button.boundingBox())!;
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };

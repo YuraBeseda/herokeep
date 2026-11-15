@@ -7,7 +7,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideTransloco } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -22,11 +22,14 @@ import { DisplayPrefsService } from './shared/services/theme/display-prefs.servi
 import { SyncService } from './shared/services/sync/sync.service';
 import { PackStore } from './shared/stores/pack.store';
 
+// R73: the window is the scroller; a forward navigation opens at the top, browser Back restores it.
+export const appRouterScrolling = withInMemoryScrolling({ scrollPositionRestoration: 'enabled' });
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(routes, appRouterScrolling),
     provideHttpClient(withFetch()),
     provideTransloco({
       config: {
