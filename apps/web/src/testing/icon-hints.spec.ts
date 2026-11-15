@@ -31,12 +31,6 @@ describe('findHintViolations', () => {
     );
   });
 
-  it('accepts the legacy icon button that carries a label', () => {
-    expect(
-      findHintViolations(`<button hk-icon-button [icon]="i" [label]="t('x')"></button>`),
-    ).toEqual([]);
-  });
-
   it('flags a button whose only child is an hk-icon and that has no aria-label', () => {
     const bad = `<button type="button" (click)="go()">\n  <hk-icon icon="gi:cog" />\n</button>`;
     expect(findHintViolations(bad).map((v) => v.rule)).toEqual([

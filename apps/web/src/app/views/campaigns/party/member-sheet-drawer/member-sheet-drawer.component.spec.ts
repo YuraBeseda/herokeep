@@ -245,7 +245,7 @@ describe('MemberSheetDrawerComponent', () => {
     expect(sync.subscribeCalls).toEqual([{ campaignId, stream: streamId }]);
   });
 
-  it('readonly rendering: once ready, renders the real Sheet with no mutating controls — every hk-pips is disabled', async () => {
+  it('readonly rendering: once ready, renders the real Sheet with no mutating controls — every pip row is disabled', async () => {
     const streamId = await seedFighter('Ivan');
     const characterId = streamId.slice('char:'.length);
     const events = await TestBed.inject(EventsRepository).byStream(streamId);

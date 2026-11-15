@@ -535,7 +535,7 @@ describe('SpellsLeafComponent — pact slots (phase 4, plan 11, task 12)', () =>
     // the regular slot row already uses) by asserting the pact pip is a real, clickable control for
     // a solo (never-locked) character — the negative (locked) case is exhaustively covered for the
     // regular slot rows already in the "campaign edit lock" describe block using the SAME
-    // `hk-pips[viewReadonly]` binding this pact row reuses verbatim, not a parallel implementation.
+    // readonly pip binding this pact row reuses verbatim, not a parallel implementation.
     await seedWarlock('Kaelen');
     const fixture = TestBed.createComponent(SpellsLeafComponent);
     await fixture.whenStable();

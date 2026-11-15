@@ -9,7 +9,7 @@ near the viewport instead of the whole array.
 ```html
 <hk-virtual-list [items]="spells()" [itemSize]="56" style="height: 480px;">
   <ng-template let-spell>
-    <hk-card>{{ spell.name }}</hk-card>
+    <span>{{ spell.name }}</span>
   </ng-template>
 </hk-virtual-list>
 ```

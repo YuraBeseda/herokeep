@@ -121,7 +121,7 @@ const STANDARD_ARRAY: ReadonlyMap<string, string> = new Map([
   ['Charisma', '8'],
 ]);
 
-/** Step 6: ability scores via the Standard Array method (the tab `hk-tabs` already defaults to,
+/** Step 6: ability scores via the Standard Array method (the tab the method tabs already default to,
  * per `AbilityScoresStepComponent.availableMethods`'s own declared order — clicked explicitly
  * anyway so this stays correct even if that default ever changes). Unlike the pickers, this step
  * does NOT auto-advance when the six scores become valid (it is built over several edits, so the

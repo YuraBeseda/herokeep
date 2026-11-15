@@ -15,8 +15,8 @@ import {
 } from '@angular/cdk/portal';
 
 /** Per-instance suffix for an auto-assigned title id — module-scoped counter, not a UUID; same
- * "deterministic and good enough for an in-page DOM id" convention `SheetSectionComponent`'s own
- * `nextSheetSectionId` already uses. */
+ * "deterministic and good enough for an in-page DOM id" convention `DrawerComponent`'s own
+ * `nextDrawerId` already uses. */
 let nextDialogTitleId = 0;
 
 /** The one CSS attribute selector every dialog CONTENT component's own title heading carries

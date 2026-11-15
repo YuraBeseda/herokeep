@@ -180,7 +180,7 @@ const TAB_CONTENT_SELECTOR: Record<'party' | 'log' | 'settings' | 'lobby', strin
   lobby: '.lobby',
 };
 
-/** Enters `campaignId`'s campaign shell at `tab` — a client-side `hk-tabs` click
+/** Enters `campaignId`'s campaign shell at `tab` — a client-side tab click
  * (`CampaignShellComponent.onTabSelected` -> `router.navigate`, a plain Angular route change,
  * NEVER a browser navigation) when the page is ALREADY somewhere under `/g/<campaignId>/...`, or
  * a real `page.goto` only for the first entry (or when the page is elsewhere entirely, e.g. a

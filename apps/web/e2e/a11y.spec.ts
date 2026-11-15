@@ -151,7 +151,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
 
     // task-12-brief.md scenario (d): the new dialog states plan 6 adds (rest dialog open, cast
     // dialog open) plus the roll log with an actual entry logged (its default-expanded state, per
-    // `SheetSectionComponent`'s own `collapsed = signal(false)` default — but empty/untouched
+    // the leaf's own expanded-by-default state — but empty/untouched
     // already goes unaudited by the play-tab check above, so this exercises it populated instead).
 
     test('the short-rest dialog (open) has no serious/critical violations', async ({ page }) => {

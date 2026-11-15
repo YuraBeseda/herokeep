@@ -36,5 +36,5 @@ Do pass `dice`/`modifier`/`total` straight off an already-computed `RollResult`
 that wants no total row at all just omits `total`, rather than this component guessing when
 to sum). Don't expect an accessible summary from this component alone — pair it with
 translated text stating the roll's purpose (the roll-log panel's own entry label, or a
-dialog's own sentence), the same way `hk-hp-bar` is always paired with separately-accessible
+dialog's own sentence), the same way `hk-hp-gauge` is always paired with separately-accessible
 numeric text.

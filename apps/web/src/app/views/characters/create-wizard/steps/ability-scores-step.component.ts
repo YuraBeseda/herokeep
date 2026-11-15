@@ -97,7 +97,7 @@ export class AbilityScoresStepComponent {
   });
 
   // `undefined` until a tab is explicitly clicked — `activeMethod` falls back to the first
-  // available method, same convention as `hk-tabs`' own `selected` model.
+  // available method, same convention as the tab controls' own selected model.
   protected readonly method = signal<string | undefined>(undefined);
   protected readonly activeMethod = computed<GenerationMethod | undefined>(() => {
     const methods = this.availableMethods();
