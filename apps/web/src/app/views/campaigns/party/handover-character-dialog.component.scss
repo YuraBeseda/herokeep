@@ -42,19 +42,19 @@
 
 .handover-character-dialog__step[data-outcome='rejected'],
 .handover-character-dialog__step[data-outcome='timeout'] {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .handover-character-dialog__step[data-outcome='committed'],
 .handover-character-dialog__step[data-outcome='skipped'] {
-  color: var(--success);
+  color: var(--success-strong);
 }
 
 .handover-character-dialog__error,
 .handover-character-dialog__incomplete {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .handover-character-dialog__success {
-  color: var(--success);
+  color: var(--success-strong);
 }

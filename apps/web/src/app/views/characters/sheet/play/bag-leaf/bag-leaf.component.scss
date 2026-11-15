@@ -26,7 +26,7 @@
   inline-size: var(--space-5);
   block-size: var(--space-4);
   transform: translateX(-50%);
-  border-radius: calc(var(--radius-s) / 2);
+  border-radius: calc(var(--radius-leaf) / 2);
   background: linear-gradient(180deg, var(--brass-top), var(--brass));
   box-shadow: var(--shadow-brass);
 }
@@ -85,7 +85,7 @@
 }
 
 .bag__carry-state--warn {
-  color: var(--danger);
+  color: var(--danger-strong);
   font-weight: 700;
 }
 

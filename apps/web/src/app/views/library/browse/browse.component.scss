@@ -83,7 +83,7 @@
   width: 100%;
   padding: 0 var(--space-3);
   border: 0;
-  border-block-end: 1px solid var(--border-1);
+  border-block-end: 1px solid var(--leaf-edge);
   background: transparent;
   color: var(--text-1);
   font: inherit;
@@ -92,7 +92,7 @@
 }
 
 .library-browse__row:hover {
-  background: var(--surface-2);
+  background: var(--leaf-sunken);
 }
 
 .library-browse__row:focus-visible {
@@ -156,5 +156,5 @@
   background: var(--chip-bg);
   color: inherit;
   font-weight: 700;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-leaf);
 }

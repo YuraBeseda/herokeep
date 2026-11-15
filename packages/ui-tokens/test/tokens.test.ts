@@ -43,7 +43,7 @@ describe('token file', () => {
   });
 
   it('gives every colour token a concrete value in every theme after resolving references', () => {
-    expect(TOKENS.color.tokens).toHaveLength(141);
+    expect(TOKENS.color.tokens).toHaveLength(132);
     for (const token of TOKENS.color.tokens) {
       for (const theme of THEME_IDS) {
         expect(resolveColor(token.name, theme), `${token.name} / ${theme}`).toMatch(
@@ -53,22 +53,13 @@ describe('token file', () => {
     }
   });
 
-  it('keeps every legacy alias name', () => {
+  it('keeps the names the screens still use', () => {
     const colour = new Set(TOKENS.color.tokens.map((t) => t.name));
     for (const name of [
-      'surface-0',
-      'surface-1',
-      'surface-2',
-      'surface-3',
       'text-1',
       'text-2',
       'text-3',
-      'accent',
       'accent-strong',
-      'accent-contrast',
-      'border-1',
-      'danger',
-      'success',
       'warning',
       'overlay',
       'focus-ring',
@@ -91,18 +82,9 @@ describe('token file', () => {
       'space-4',
       'space-5',
       'space-6',
-      'radius-s',
-      'radius-m',
-      'radius-l',
-      'duration-s',
-      'duration-m',
       'touch-target',
-      'font-scale',
       'shadow-1',
       'shadow-2',
-      'accent-h',
-      'accent-s',
-      'motion',
     ]) {
       expect(other.has(name), name).toBe(true);
     }
@@ -144,29 +126,27 @@ describe('contrast (WCAG AA, 4.5:1)', () => {
     }
   }
 
-  // The current screens paint these pairings; the legacy aliases are re-pointed so they stay
-  // readable until the screens are rebuilt (plan 17 B1, ruling R2).
+  // The screens paint these pairings (the retired aliases now point straight at these tokens).
   const legacy: [string, string][] = [
     ...(['text-1', 'text-2', 'text-3'] as const).flatMap((fg): [string, string][] => [
-      [fg, 'surface-0'],
-      [fg, 'surface-1'],
-      [fg, 'surface-2'],
-      [fg, 'surface-3'],
+      [fg, 'leaf-dark'],
+      [fg, 'leaf'],
+      [fg, 'leaf-sunken'],
     ]),
-    ['accent-contrast', 'accent'],
-    ['accent-contrast', 'danger'],
-    ['accent', 'surface-0'],
-    ['accent', 'surface-1'],
-    ['danger', 'surface-0'],
-    ['danger', 'surface-1'],
-    ['success', 'surface-0'],
-    ['success', 'surface-1'],
-    ['warning', 'surface-1'],
-    ['link', 'surface-1'],
+    ['text-on-leather', 'link'],
+    ['text-on-leather', 'danger-strong'],
+    ['link', 'leaf-dark'],
+    ['link', 'leaf'],
+    ['danger-strong', 'leaf-dark'],
+    ['danger-strong', 'leaf'],
+    ['success-strong', 'leaf-dark'],
+    ['success-strong', 'leaf'],
+    ['warning', 'leaf'],
+    ['link', 'leaf'],
   ];
   for (const theme of THEME_IDS) {
     for (const [fg, bg] of legacy) {
-      it(`legacy ${fg} on ${bg} in ${theme}`, () => {
+      it(`screen ${fg} on ${bg} in ${theme}`, () => {
         expect(contrast(fg, bg, theme)).toBeGreaterThanOrEqual(4.5);
       });
     }

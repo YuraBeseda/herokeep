@@ -19,18 +19,18 @@
 
 .leave-campaign-dialog__step[data-outcome='rejected'],
 .leave-campaign-dialog__step[data-outcome='timeout'] {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .leave-campaign-dialog__step[data-outcome='committed'] {
-  color: var(--success);
+  color: var(--success-strong);
 }
 
 .leave-campaign-dialog__error,
 .leave-campaign-dialog__incomplete {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .leave-campaign-dialog__success {
-  color: var(--success);
+  color: var(--success-strong);
 }

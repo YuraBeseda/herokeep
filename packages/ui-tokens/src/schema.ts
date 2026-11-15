@@ -25,7 +25,7 @@ const typeStyle = z.object({
 export const tokenSchema = z.object({
   name: z.string(),
   version: z.number(),
-  meta: z.object({ source: z.string(), aliasesForEngineers: z.string() }),
+  meta: z.object({ source: z.string() }),
   color: z.object({
     themes: z.array(z.object({ id: z.string(), name: z.string() })),
     tokens: z.array(tokenEntry),

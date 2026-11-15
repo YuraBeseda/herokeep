@@ -18,18 +18,18 @@
 }
 
 .unlink-character-dialog__step[data-ok='false'] {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .unlink-character-dialog__step[data-ok='true'] {
-  color: var(--success);
+  color: var(--success-strong);
 }
 
 .unlink-character-dialog__error,
 .unlink-character-dialog__incomplete {
-  color: var(--danger);
+  color: var(--danger-strong);
 }
 
 .unlink-character-dialog__success {
-  color: var(--success);
+  color: var(--success-strong);
 }

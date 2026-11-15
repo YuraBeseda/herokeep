@@ -117,8 +117,8 @@
 .party-tab__left-badge {
   padding: 2px var(--space-2);
   border-radius: 4px;
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--border-1);
+  background: var(--leaf-sunken);
+  box-shadow: inset 0 0 0 1px var(--leaf-edge);
   color: var(--text-1);
   font-size: 0.8125rem;
 }
@@ -140,7 +140,7 @@
   gap: var(--space-2) var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-leaf);
-  background: var(--surface-1);
+  background: var(--leaf);
   box-shadow: var(--shadow-leaf);
 }
 
@@ -171,7 +171,7 @@
   box-sizing: border-box;
   block-size: 30px;
   padding: 0 10px;
-  border: 1px solid var(--border-1);
+  border: 1px solid var(--leaf-edge);
   border-radius: 4px;
   background: transparent;
   color: var(--text-1);
@@ -219,7 +219,7 @@
 .party-tab__no-character-removed-badge {
   padding: 2px var(--space-2);
   border-radius: 4px;
-  background: var(--surface-2);
+  background: var(--leaf-sunken);
   color: var(--text-2);
   font-size: 0.8125rem;
 }

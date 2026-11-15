@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import type { FactValue } from './entity-facts.formatters';
+import type { FactValue } from '../../../ui/entity-facts/entity-facts.formatters';
 
 /**
  * One fact value from the library's formatters, resolved in the library scope: plain text as is, a

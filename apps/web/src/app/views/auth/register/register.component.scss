@@ -37,7 +37,7 @@
 }
 
 .register__strength[data-state='ok'] .register__strength-fill {
-  background: var(--success);
+  background: var(--success-strong);
 }
 
 .register__strength[data-state='ok'] .register__strength-label {
@@ -63,7 +63,7 @@
   margin: 0;
   padding: var(--space-3);
   list-style: none;
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-frame);
   background: var(--leaf-sunken);
   box-shadow: inset 0 0 0 1px var(--leaf-edge);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;

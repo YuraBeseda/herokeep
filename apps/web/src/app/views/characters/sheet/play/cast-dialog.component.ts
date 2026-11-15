@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icons/icon.component';
-import type { FactValue } from '../../../library/detail/entity-facts.formatters';
+import type { FactValue } from '../../../../ui/entity-facts/entity-facts.formatters';
 import { FactValueComponent } from '../../../library/detail/fact-value.component';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';

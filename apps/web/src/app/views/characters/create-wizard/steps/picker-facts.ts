@@ -1,5 +1,5 @@
 import type { Entity } from '@hk/protocol';
-import { factRowsFor } from '../../../library/detail/entity-facts.formatters';
+import { factRowsFor } from '../../../../ui/entity-facts/entity-facts.formatters';
 
 /** One labelled plain-text fact of an option (`Medium`, `d10`, `1d8 slashing`, `Sap`). */
 export interface PickerFact {

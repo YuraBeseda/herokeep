@@ -8,7 +8,7 @@ import {
   formatDuration,
   formatRange,
   formatSchool,
-} from '../../../library/detail/entity-facts.formatters';
+} from '../../../../ui/entity-facts/entity-facts.formatters';
 import type { ConditionDialogOption } from './condition-dialog.component';
 import type { CastDialogSummary } from './cast-dialog.component';
 import type { RestDialogHitDieOption } from './rest-dialog.component';

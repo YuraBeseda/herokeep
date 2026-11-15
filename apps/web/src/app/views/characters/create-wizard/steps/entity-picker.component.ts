@@ -12,8 +12,8 @@ import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { HkWaxSealComponent } from '../../../../ui/wax-seal/wax-seal.component';
-import { formatCost, formatWeight } from '../../../library/detail/entity-facts.formatters';
-import type { FactValue } from '../../../library/detail/entity-facts.formatters';
+import { formatCost, formatWeight } from '../../../../ui/entity-facts/entity-facts.formatters';
+import type { FactValue } from '../../../../ui/entity-facts/entity-facts.formatters';
 import { FactValueComponent } from '../../../library/detail/fact-value.component';
 import { bindPickerTools } from '../picker-tools.service';
 import { descriptionExcerpt, pickerFacet, pickerFacts, pickerMeta } from './picker-facts';

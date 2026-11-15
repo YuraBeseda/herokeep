@@ -29,8 +29,8 @@
 .packs-list__import-details {
   margin-block-end: var(--space-4);
   padding: var(--space-3);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-m);
+  border: 1px solid var(--danger-strong);
+  border-radius: var(--radius-frame);
   background: var(--leaf);
   color: var(--text-1);
   overflow-wrap: anywhere;
@@ -96,7 +96,7 @@
   gap: var(--space-3);
   align-items: center;
   padding-block: var(--space-2);
-  border-block-end: 1px solid var(--border-1);
+  border-block-end: 1px solid var(--leaf-edge);
 }
 
 .packs-list__ring {
@@ -145,7 +145,7 @@
 .packs-list__version {
   padding: 0 var(--space-2);
   border: 1px solid var(--border-brass);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-leaf);
   background: var(--leaf);
   color: var(--text-1);
   font-size: 0.8125rem;
@@ -155,7 +155,7 @@
 .packs-list__update,
 .packs-list__other-device {
   padding: 0 var(--space-2);
-  border-radius: var(--radius-l);
+  border-radius: var(--radius-strap);
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.5rem;
@@ -174,7 +174,7 @@
 }
 
 .packs-list__other-device {
-  border: 1px solid var(--border-1);
+  border: 1px solid var(--leaf-edge);
   background: var(--leaf-dark);
   color: var(--text-1);
 }
@@ -191,7 +191,7 @@
   align-items: center;
   justify-content: center;
   min-inline-size: 2.25rem;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-leaf);
   color: var(--accent-strong);
 }
 
@@ -228,7 +228,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   border: 2px dashed var(--border-brass);
-  border-radius: var(--radius-m);
+  border-radius: var(--radius-frame);
   text-align: center;
 }
 
@@ -249,8 +249,8 @@
   inline-size: 100%;
   block-size: 0.75rem;
   margin-block-end: var(--space-2);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-l);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-strap);
   background: var(--leaf-dark);
   overflow: hidden;
 }

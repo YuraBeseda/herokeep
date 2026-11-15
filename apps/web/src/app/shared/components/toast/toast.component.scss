@@ -24,7 +24,7 @@
 }
 
 hk-toast {
-  animation: hk-toast-in var(--duration-m) ease-out;
+  animation: hk-toast-in var(--duration-base) ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

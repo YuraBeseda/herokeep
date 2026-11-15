@@ -25,7 +25,7 @@ import { HkTagChipComponent } from '../../../ui/tag-chip/tag-chip.component';
 import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { HkSelectComponent, type SelectOption } from '../../../ui/select/select.component';
 import { FactValueComponent } from '../detail/fact-value.component';
-import type { FactValue } from '../detail/entity-facts.formatters';
+import type { FactValue } from '../../../ui/entity-facts/entity-facts.formatters';
 import { levelOf, subLineFor, type LibrarySort } from './library-row';
 import { buildLibraryStrap } from './library-strap';
 

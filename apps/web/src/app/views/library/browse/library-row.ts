@@ -7,7 +7,7 @@ import {
   formatSchool,
   formatWeight,
   type FactValue,
-} from '../detail/entity-facts.formatters';
+} from '../../../ui/entity-facts/entity-facts.formatters';
 
 /** The sort choices of the library list. `match` is the search ranking (name order when browsing). */
 export type LibrarySort = 'match' | 'name' | 'type' | 'level';

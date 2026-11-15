@@ -22,7 +22,7 @@ describe('css emission', () => {
     const tavern = rule(css, ":root, [data-theme='tavern']");
     expect(tavern).toContain('--leaf: #e9dcbb;');
     expect(tavern).toContain('--text-on-brass: #2b2118;');
-    expect(tavern).toContain('--accent-contrast: var(--text-on-leather);');
+    expect(tavern).toContain('--link: ');
     expect(rule(css, "[data-theme='plain']")).toContain('--brass: #e6c45a;');
     for (const token of TOKENS.color.tokens) {
       for (const theme of THEME_IDS) {
@@ -47,7 +47,6 @@ describe('css emission', () => {
     const root = rule(css, ':root');
     expect(root).toContain('--space-4: 16px;');
     expect(root).toContain('--radius-leaf: 6px;');
-    expect(root).toContain('--radius-s: 6px;');
     expect(root).toContain('--duration-base: 240ms;');
     expect(root).toContain('--touch-target: 44px;');
     expect(root).toContain("--font-display: Forum, 'Times New Roman', serif;");
@@ -85,7 +84,7 @@ describe('scss emission', () => {
   });
 
   it('resolves references to concrete values', () => {
-    expect(scss).toContain("accent-contrast: '#f3e6c8'");
+    expect(scss).toContain("text-on-leather: '#f3e6c8'");
     expect(scss).not.toContain('{');
   });
 

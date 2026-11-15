@@ -12,7 +12,7 @@ const SERIOUS_IMPACTS = new Set(['serious', 'critical']);
 export async function assertNoSeriousViolations(page: Page, screen: string): Promise<void> {
   // Let running CSS transitions settle first: `hk-button`'s base style is the accent fill and a
   // ghost/danger variant class lands on first change detection, so a just-rendered ghost button
-  // transitions its background for `--duration-s`. Measured mid-transition, axe reports a
+  // transitions its background for `--duration-fast`. Measured mid-transition, axe reports a
   // contrast failure that no settled screen has (a load-timing race; plan 15 Task 4 fix round 1).
   // Only transitions are awaited — infinite animations (the skeleton shimmer) never finish.
   await page.evaluate(() =>

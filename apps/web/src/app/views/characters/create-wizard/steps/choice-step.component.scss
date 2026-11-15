@@ -76,16 +76,16 @@
 
 .choice-step__diagnostic {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf-sunken);
   color: var(--text-2);
   font-size: 0.875rem;
 }
 
 .choice-step__diagnostic--error {
-  border-color: var(--danger);
-  color: var(--danger);
+  border-color: var(--danger-strong);
+  color: var(--danger-strong);
 }
 
 .choice-step__plain {

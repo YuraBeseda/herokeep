@@ -172,7 +172,7 @@ export class HeroTabComponent {}
       min-block-size: 52px;
       padding: 0 var(--space-4);
       border: 0;
-      border-radius: var(--radius-m);
+      border-radius: var(--radius-frame);
       background: linear-gradient(180deg, var(--leather-light), var(--leather));
       box-shadow: inset 0 0 0 1px var(--border-brass);
       color: var(--text-on-leather);

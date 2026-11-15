@@ -38,7 +38,7 @@
   margin-block-start: var(--space-3);
 }
 
-/* `--danger` as text on the dialog surface measured 3.79:1 in dark theme (axe); the reason reads in
+/* `--danger-strong` as text on the dialog surface measured 3.79:1 in dark theme (axe); the reason reads in
    the body colour and the Install button carries the blocked state. */
 .pack-trust-dialog__reason {
   margin: 0 0 var(--space-3);

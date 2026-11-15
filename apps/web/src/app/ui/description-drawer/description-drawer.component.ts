@@ -22,7 +22,7 @@ import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { CreateWizardState } from '../../views/characters/create-wizard/create-wizard.state';
-import { EntityFactsComponent } from '../../views/library/detail/entity-facts.component';
+import { EntityFactsComponent } from '../entity-facts/entity-facts.component';
 import { HkDrawerComponent } from '../drawer/drawer.component';
 import {
   HkOptionsChipComponent,

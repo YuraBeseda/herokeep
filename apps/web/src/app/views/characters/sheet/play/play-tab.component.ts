@@ -108,7 +108,7 @@ import { SpellsLeafComponent } from './spells-leaf/spells-leaf.component';
       min-block-size: var(--touch-target, 44px);
       padding: 0 var(--space-4);
       border: 0;
-      border-radius: var(--radius-s) var(--radius-s) 0 0;
+      border-radius: var(--radius-leaf) var(--radius-leaf) 0 0;
       background: linear-gradient(180deg, var(--leather-light), var(--leather));
       box-shadow: inset 0 0 0 1px var(--border-brass);
       color: var(--text-on-leather);

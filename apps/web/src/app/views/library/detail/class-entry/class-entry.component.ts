@@ -15,7 +15,7 @@ import {
   type OptionsChipOption,
 } from '../../../../ui/options-chip/options-chip.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
-import { EntityFactsComponent } from '../entity-facts.component';
+import { EntityFactsComponent } from '../../../../ui/entity-facts/entity-facts.component';
 import { summaryOf } from './summary-text';
 
 const CLASS_LEVELS = 20;

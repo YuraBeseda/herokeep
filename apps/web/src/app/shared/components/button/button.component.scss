@@ -9,26 +9,26 @@
   gap: var(--space-2);
   padding: 0 var(--space-4);
   border: 1px solid transparent;
-  border-radius: var(--radius-m);
-  background: var(--accent);
-  color: var(--accent-contrast);
+  border-radius: var(--radius-frame);
+  background: var(--link);
+  color: var(--text-on-leather);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
   transition:
-    background var(--duration-s),
-    opacity var(--duration-s);
+    background var(--duration-fast),
+    opacity var(--duration-fast);
 }
 
 :host(.hk-button--ghost) {
-  border-color: var(--border-1);
+  border-color: var(--leaf-edge);
   background: transparent;
   color: var(--text-1);
 }
 
 :host(.hk-button--danger) {
-  background: var(--danger);
-  color: var(--accent-contrast);
+  background: var(--danger-strong);
+  color: var(--text-on-leather);
 }
 
 :host([disabled]) {

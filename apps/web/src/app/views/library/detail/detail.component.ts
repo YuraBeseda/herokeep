@@ -34,7 +34,7 @@ import { HkTagChipComponent } from '../../../ui/tag-chip/tag-chip.component';
 import { TopBarService } from '../../../ui/shell/top-bar.service';
 import { buildLibraryDetailStrap } from './library-detail-strap';
 import { ClassEntryComponent } from './class-entry/class-entry.component';
-import { EntityFactsComponent } from './entity-facts.component';
+import { EntityFactsComponent } from '../../../ui/entity-facts/entity-facts.component';
 
 type SpellcastingBlock = Sheet['spellcasting'][number];
 

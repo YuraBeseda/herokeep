@@ -11,9 +11,9 @@
 
 .hk-dice-result__die {
   padding: 0 var(--space-2);
-  border: 1px solid var(--border-1);
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
+  border: 1px solid var(--leaf-edge);
+  border-radius: var(--radius-leaf);
+  background: var(--leaf-sunken);
   font-size: 0.75rem;
 }
 

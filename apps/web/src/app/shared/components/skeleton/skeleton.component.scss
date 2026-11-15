@@ -5,15 +5,15 @@
 .hk-skeleton__bar {
   display: block;
   height: 1em;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-leaf);
   background: linear-gradient(
     90deg,
-    var(--surface-2) 25%,
-    var(--surface-3) 50%,
-    var(--surface-2) 75%
+    var(--leaf-sunken) 25%,
+    var(--leaf-dark) 50%,
+    var(--leaf-sunken) 75%
   );
   background-size: 200% 100%;
-  animation: hk-skeleton-shimmer calc(var(--duration-m) * 6) ease-in-out infinite;
+  animation: hk-skeleton-shimmer calc(var(--duration-base) * 6) ease-in-out infinite;
 }
 
 .hk-skeleton__bar + .hk-skeleton__bar {

@@ -6,7 +6,7 @@ import libraryEn from '../../../../assets/i18n/library/en.json';
 import libraryRu from '../../../../assets/i18n/library/ru.json';
 import libraryUk from '../../../../assets/i18n/library/uk.json';
 import { LocaleService } from '@shared/services/i18n/locale.service';
-import type { FactValue } from './entity-facts.formatters';
+import type { FactValue } from '../../../ui/entity-facts/entity-facts.formatters';
 import { FactValueComponent } from './fact-value.component';
 
 class StubLoader implements TranslocoLoader {
