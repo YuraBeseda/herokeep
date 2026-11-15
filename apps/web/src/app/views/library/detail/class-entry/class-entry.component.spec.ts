@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { By } from '@angular/platform-browser';
+import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
@@ -84,6 +86,16 @@ const rowFor = (el: HTMLElement, level: number) =>
   el.querySelector<HTMLElement>(`tr[data-level="${level}"]`)!;
 
 describe('ClassEntryComponent', () => {
+  it('gives the feature links a tooltip, not a native title', async () => {
+    const { fixture } = await mountClass('paladin');
+    const hosts = fixture.debugElement.queryAll(By.css('a[href*="paladin-lay-on-hands"]'));
+    expect(hosts.length).toBeGreaterThan(0);
+    for (const host of hosts) {
+      expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
+      expect(host.nativeElement.hasAttribute('title')).toBe(false);
+    }
+  });
+
   afterEach(() => localStorage.removeItem('hk.locale'));
 
   it('renders a features-by-level row for every level 1-20 from the pack', async () => {

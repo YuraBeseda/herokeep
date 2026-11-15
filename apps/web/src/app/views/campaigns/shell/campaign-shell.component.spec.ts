@@ -1,4 +1,6 @@
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -95,6 +97,18 @@ function strapAction(id: string) {
 }
 
 describe('CampaignShellComponent', () => {
+  it('gives the campaign name a tooltip with the full text, not a native title', async () => {
+    configure();
+    const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');
+    const hosts = harness.fixture.debugElement.queryAll(By.css('.campaign-shell__name'));
+    expect(hosts.length).toBeGreaterThan(0);
+    for (const host of hosts) {
+      expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
+      expect(host.nativeElement.hasAttribute('title')).toBe(false);
+      expect(host.nativeElement.hasAttribute('data-truncate')).toBe(true);
+    }
+  });
+
   it('renders the campaign name and role badge', async () => {
     configure();
     const harness = await RouterTestingHarness.create('/g/00000000-0000-4000-8000-000000000001');

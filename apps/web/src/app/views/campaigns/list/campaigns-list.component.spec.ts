@@ -1,4 +1,6 @@
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -77,6 +79,26 @@ function strapRun(id: string): void {
 }
 
 describe('CampaignsListComponent', () => {
+  it('gives the truncated name and the sync badge a tooltip, not a native title', async () => {
+    configure();
+    const db = TestBed.inject(HkDb);
+    await db.campaigns.clear();
+    await db.campaigns.put(mkRow());
+    const fixture = TestBed.createComponent(CampaignsListComponent);
+    await fixture.whenStable();
+    const hosts = fixture.debugElement.queryAll(
+      By.css('.campaigns-list__name, .campaigns-list__sync-badge'),
+    );
+    expect(hosts.length).toBeGreaterThan(0);
+    for (const host of hosts) {
+      expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
+      expect(host.nativeElement.hasAttribute('title')).toBe(false);
+      if (host.nativeElement.classList.contains('campaigns-list__name')) {
+        expect(host.nativeElement.hasAttribute('data-truncate')).toBe(true);
+      }
+    }
+  });
+
   it('shows the empty state with no cached rows', async () => {
     configure();
     // The Dexie fake is shared across spec files: start from no campaign rows.

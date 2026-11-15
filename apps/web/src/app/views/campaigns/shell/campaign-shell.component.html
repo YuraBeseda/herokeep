@@ -1,6 +1,8 @@
 <div class="campaign-shell" *transloco="let t; read: 'campaigns'">
   <header class="campaign-shell__header">
-    <h1 class="campaign-shell__name" [attr.title]="state()?.name">{{ state()?.name }}</h1>
+    <h1 class="campaign-shell__name" data-truncate [hkTooltip]="state()?.name ?? ''">
+      {{ state()?.name }}
+    </h1>
     @if (role(); as r) {
       <span class="campaign-shell__role" [attr.data-role]="r">{{ t('roles.' + r) }}</span>
     }

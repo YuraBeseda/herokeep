@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import {
   Component,
   DestroyRef,
@@ -59,6 +60,7 @@ interface HeroAdd {
     EntityFactsComponent,
     HkLeafComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('library')],
   templateUrl: './detail.component.html',

@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { DomSanitizer } from '@angular/platform-browser';
+import { By, DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { PACK_ID, PACK_VERSION } from '@hk/content/version';
 import { parsePack, type Pack } from '@hk/protocol';
@@ -107,6 +108,18 @@ function factValue(fixture: { nativeElement: unknown }, label: string): string |
 
 describe('LibraryDetailComponent', () => {
   beforeEach(() => localStorage.removeItem('hk.locale'));
+
+  it('gives the spell-list chips a tooltip, not a native title', async () => {
+    seedStore([corePack], 'srd-5e-2024:spell/fireball');
+    const fixture = TestBed.createComponent(LibraryDetailComponent);
+    await fixture.whenStable();
+    const hosts = fixture.debugElement.queryAll(By.css('a.library-detail__chip'));
+    expect(hosts.length).toBeGreaterThan(0);
+    for (const host of hosts) {
+      expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
+      expect(host.nativeElement.hasAttribute('title')).toBe(false);
+    }
+  });
 
   it('renders the fireball spell: name, fact.level = 3, the school fact, and a rendered description', async () => {
     seedStore([corePack], 'srd-5e-2024:spell/fireball');

@@ -49,7 +49,7 @@
               class="class-entry__link"
               [routerLink]="['/library', feature.id]"
               [queryParamsHandling]="'preserve'"
-              [attr.title]="t('class.openEntry', { name: feature.name })"
+              [hkTooltip]="t('class.openEntry', { name: feature.name })"
               >{{ feature.name }}</a
             >
             @if (feature.summary) {
@@ -107,7 +107,7 @@
                     class="class-entry__link"
                     [routerLink]="['/library', feature.id]"
                     [queryParamsHandling]="'preserve'"
-                    [attr.title]="t('class.openEntry', { name: feature.name })"
+                    [hkTooltip]="t('class.openEntry', { name: feature.name })"
                     >{{ feature.name }}</a
                   >
                   @if (!last) {
@@ -149,7 +149,7 @@
             class="class-entry__link"
             [routerLink]="['/library', subclass.id]"
             [queryParamsHandling]="'preserve'"
-            [attr.title]="t('class.openEntry', { name: subclass.name })"
+            [hkTooltip]="t('class.openEntry', { name: subclass.name })"
             >{{ subclass.name }}</a
           >
           @if (subclass.summary) {

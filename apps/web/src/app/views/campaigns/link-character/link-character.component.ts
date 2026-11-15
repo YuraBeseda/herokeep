@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -105,7 +106,7 @@ export type ClaimPullState = 'pulling' | 'notYetVisible' | 'failed';
  */
 @Component({
   selector: 'app-link-character',
-  imports: [TranslocoDirective, HkButtonComponent, HkPortraitFrameComponent],
+  imports: [TranslocoDirective, HkButtonComponent, HkPortraitFrameComponent, HkTooltipDirective],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './link-character.component.html',
   styleUrl: './link-character.component.scss',

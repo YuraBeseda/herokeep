@@ -61,7 +61,7 @@
               role="img"
               [attr.data-online]="member.online"
               [attr.aria-label]="t('lobby.members.' + (member.online ? 'online' : 'offline'))"
-              [title]="t('lobby.members.' + (member.online ? 'online' : 'offline'))"
+              [hkTooltip]="t('lobby.members.' + (member.online ? 'online' : 'offline'))"
             ></span>
             <span class="lobby__member-name" data-truncate [hkTooltip]="member.displayName">{{
               member.displayName

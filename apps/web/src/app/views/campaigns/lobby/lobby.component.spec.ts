@@ -1,4 +1,6 @@
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { TestBed } from '@angular/core/testing';
 import { provideTransloco, provideTranslocoScope, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
@@ -116,6 +118,21 @@ function configure(options: {
 }
 
 describe('LobbyComponent', () => {
+  it('gives the presence dot a tooltip, not a native title', async () => {
+    configure({
+      role: 'dm',
+      members: [{ userId: 'u-dm', displayName: 'Alice', role: 'dm', online: true }],
+    });
+    const fixture = TestBed.createComponent(LobbyComponent);
+    await fixture.whenStable();
+    const hosts = fixture.debugElement.queryAll(By.css('.lobby__member-dot'));
+    expect(hosts.length).toBeGreaterThan(0);
+    for (const host of hosts) {
+      expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
+      expect(host.nativeElement.hasAttribute('title')).toBe(false);
+    }
+  });
+
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {

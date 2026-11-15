@@ -113,7 +113,7 @@
             [style.--hk-frame-well]="monogram(candidate).background"
             [style.--hk-frame-well-ink]="monogram(candidate).ink"
           />
-          <span class="link-character__name" [attr.title]="candidate.row.name">{{
+          <span class="link-character__name" data-truncate [hkTooltip]="candidate.row.name">{{
             candidate.row.name
           }}</span>
           @switch (eligibility(candidate)) {

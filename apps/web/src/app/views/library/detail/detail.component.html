@@ -91,7 +91,7 @@
                         class="library-detail__chip"
                         [routerLink]="['/library', list.id]"
                         [queryParamsHandling]="'preserve'"
-                        [attr.title]="t('detail.openSpellList', { name: list.name })"
+                        [hkTooltip]="t('detail.openSpellList', { name: list.name })"
                         >{{ list.name }}</a
                       >
                     </li>

@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { Component, DestroyRef, computed, effect, inject, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet, ActivatedRoute } from '@angular/router';
@@ -55,7 +56,7 @@ const TAB_ITEMS: Record<TabId, Pick<TabItem, 'icon' | 'label'>> = {
  */
 @Component({
   selector: 'app-campaign-shell',
-  imports: [TranslocoDirective, RouterOutlet, IconComponent],
+  imports: [TranslocoDirective, RouterOutlet, IconComponent, HkTooltipDirective],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './campaign-shell.component.html',
   styleUrl: './campaign-shell.component.scss',

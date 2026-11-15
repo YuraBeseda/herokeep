@@ -41,7 +41,9 @@
             [attr.aria-label]="t('list.open', { name: row.name, role: t('roles.' + row.role) })"
             (click)="open(row)"
           >
-            <span class="campaigns-list__name" [attr.title]="row.name">{{ row.name }}</span>
+            <span class="campaigns-list__name" data-truncate [hkTooltip]="row.name">{{
+              row.name
+            }}</span>
             <span class="campaigns-list__meta">
               <span class="campaigns-list__role" [attr.data-role]="row.role">
                 <hk-icon [icon]="row.role === 'dm' ? 'ui:dm' : 'ui:heroes'" />
@@ -52,7 +54,7 @@
                 role="img"
                 [attr.data-sync-state]="syncStateBucket(row.id)"
                 [attr.aria-label]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
-                [title]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
+                [hkTooltip]="t(syncTooltipKey(row.id), { count: syncPendingCount(row.id) })"
               >
                 @if (syncStateBucket(row.id) === 'pending') {
                   <span class="campaigns-list__sync-badge-count" aria-hidden="true">{{

@@ -1,3 +1,4 @@
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { Component, DestroyRef, computed, effect, inject, resource } from '@angular/core';
 import { Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -51,6 +52,7 @@ function toBareId(streamId: string): string {
     HkLeafComponent,
     IconComponent,
     SkeletonComponent,
+    HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './campaigns-list.component.html',

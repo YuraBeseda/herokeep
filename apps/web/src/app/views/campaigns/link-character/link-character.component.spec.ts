@@ -1,4 +1,6 @@
 import { signal, type WritableSignal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
@@ -203,6 +205,19 @@ async function whenStable(fixture: { whenStable(): Promise<unknown> }): Promise<
 }
 
 describe('LinkCharacterComponent', () => {
+  it('gives the truncated candidate name a tooltip, not a native title', async () => {
+    configure({ rows: [mkRow(CHAR_A, 'Aria')] });
+    const fixture = TestBed.createComponent(LinkCharacterComponent);
+    await whenStable(fixture);
+    const hosts = fixture.debugElement.queryAll(By.css('.link-character__name'));
+    expect(hosts.length).toBeGreaterThan(0);
+    for (const host of hosts) {
+      expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
+      expect(host.nativeElement.hasAttribute('title')).toBe(false);
+      expect(host.nativeElement.hasAttribute('data-truncate')).toBe(true);
+    }
+  });
+
   it('draws each candidate as a card with a monogram portrait and names the pick action after the hero', async () => {
     configure({ rows: [mkRow(CHAR_A, 'Aria')] });
     const fixture = TestBed.createComponent(LinkCharacterComponent);
