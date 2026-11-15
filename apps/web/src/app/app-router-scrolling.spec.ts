@@ -11,7 +11,9 @@ class Blank {}
 
 // R73: a forward navigation opens the page at the top; only Back restores the old position.
 describe('appRouterScrolling', () => {
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+  // The router scrolls after a timeout/animation frame; wait for the call itself, never a fixed delay.
+  const scrolled = (spy: unknown, ...args: unknown[]) =>
+    vi.waitFor(() => expect(spy).toHaveBeenLastCalledWith(...args));
 
   function setup() {
     TestBed.configureTestingModule({
@@ -49,33 +51,31 @@ describe('appRouterScrolling', () => {
   it('opens a forward navigation at the top', async () => {
     const { router, scrollTo, scrollBy } = setup();
     await router.navigateByUrl('/wizard');
-    await settle();
+    await scrolled(scrollTo, [0, 0]);
+    scrollTo.mockClear();
     scrollBy(293);
     await router.navigateByUrl('/sheet');
-    await settle();
-    expect(scrollTo).toHaveBeenLastCalledWith([0, 0]);
+    await scrolled(scrollTo, [0, 0]);
   });
 
   it('restores the previous position on Back', async () => {
     const { router, location, scrollTo, scrollBy } = setup();
     await router.navigateByUrl('/wizard');
-    await settle();
+    await scrolled(scrollTo, [0, 0]);
     scrollBy(293);
     await router.navigateByUrl('/sheet');
-    await settle();
+    await scrolled(scrollTo, [0, 0]);
     location.back();
-    await settle();
-    expect(scrollTo).toHaveBeenLastCalledWith([0, 293], { behavior: 'instant' });
+    await scrolled(scrollTo, [0, 293], { behavior: 'instant' });
   });
 
   it('scrolls a navigation with a fragment to its anchor, not to the top', async () => {
     const { router, scrollTo, scrollToAnchor } = setup();
     await router.navigateByUrl('/wizard');
-    await settle();
+    await scrolled(scrollTo, [0, 0]);
     scrollTo.mockClear();
     await router.navigateByUrl('/sheet#frag');
-    await settle();
-    expect(scrollToAnchor).toHaveBeenCalledWith('frag');
+    await scrolled(scrollToAnchor, 'frag');
     expect(scrollTo).not.toHaveBeenCalled();
   });
 });
