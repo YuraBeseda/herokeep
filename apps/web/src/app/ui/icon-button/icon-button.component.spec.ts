@@ -74,6 +74,7 @@ describe('HkIconButtonComponent', () => {
 
   it('shows the same translated text as a tooltip on focus', () => {
     button.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     const tip = document.body.querySelector('[role="tooltip"]');
     expect(tip?.textContent).toContain('Roll');
     expect(button.getAttribute('aria-describedby')).toBe(tip?.id);

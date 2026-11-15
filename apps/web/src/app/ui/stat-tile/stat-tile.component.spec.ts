@@ -38,7 +38,10 @@ describe('HkStatTileComponent', () => {
   });
 
   it('carries an optional hint as a described tooltip target', () => {
-    const { el } = make({ label: 'Speed', value: 30, hint: 'Overridden by hand' });
+    const { fixture, el } = make({ label: 'Speed', value: 30, hint: 'Overridden by hand' });
+    expect(el.hasAttribute('aria-describedby')).toBe(false);
+    el.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     expect(el.getAttribute('aria-describedby')).toMatch(/^hk-tip-/);
   });
 });

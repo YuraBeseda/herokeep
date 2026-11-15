@@ -50,6 +50,16 @@ describe('HkTooltipDirective', () => {
     expect(tip()?.textContent).toContain('Roll the dice');
   });
 
+  it('references the slip with aria-describedby only while it is shown', () => {
+    expect(button.hasAttribute('aria-describedby')).toBe(false);
+    button.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    expect(button.getAttribute('aria-describedby')).toBe(tip()!.id);
+    button.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(button.hasAttribute('aria-describedby')).toBe(false);
+  });
+
   it('honours a custom hkTooltipDelay', () => {
     fixture.componentInstance.delay.set(50);
     fixture.detectChanges();
@@ -108,6 +118,7 @@ describe('HkTooltipDirective', () => {
 
   it('links the host to the tooltip with aria-describedby', () => {
     button.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     const id = button.getAttribute('aria-describedby');
     expect(id).toBeTruthy();
     expect(tip()?.id).toBe(id);
@@ -117,6 +128,10 @@ describe('HkTooltipDirective', () => {
     const second = TestBed.createComponent(HostComponent);
     second.detectChanges();
     const other = (second.nativeElement as HTMLElement).querySelector('button')!;
+    button.dispatchEvent(new Event('focus'));
+    other.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    second.detectChanges();
     expect(other.getAttribute('aria-describedby')).not.toBe(
       button.getAttribute('aria-describedby'),
     );

@@ -35,15 +35,18 @@ describe('HkAbilitySealComponent', () => {
   });
 
   it('shows the score on a brass plate with a hint, and no words', async () => {
-    const { el } = await make(base);
+    const { fixture, el } = await make(base);
     const plate = el.querySelector('.hk-ability__score')!;
     expect(plate.textContent?.trim()).toBe('16');
+    expect(plate.hasAttribute('aria-describedby')).toBe(false);
+    plate.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     expect(plate.getAttribute('aria-describedby')).toMatch(/^hk-tip-/);
     expect(plate.getAttribute('aria-label')).toBe('Score 16');
   });
 
   it('shows the save on a leather plate with a shield glyph and the proficiency star as glyphs only', async () => {
-    const { el } = await make(base);
+    const { fixture, el } = await make(base);
     const save = el.querySelector('.hk-ability__save')!;
     expect(save.textContent?.trim()).toBe('+6');
     expect(save.getAttribute('aria-label')).toBe('Saving throw +6');
@@ -53,6 +56,9 @@ describe('HkAbilitySealComponent', () => {
     expect(uses).toEqual(['assets/icons/sprite.svg#ui-save', 'assets/icons/sprite.svg#gi-star']);
     const star = el.querySelector('.hk-ability__star')!;
     expect(star.getAttribute('aria-label')).toBe('Proficient saving throw');
+    expect(star.hasAttribute('aria-describedby')).toBe(false);
+    star.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     expect(star.getAttribute('aria-describedby')).toMatch(/^hk-tip-/);
     // R14: neither glyph prints its hint.
     expect(save.textContent).not.toMatch(/proficient|saving/i);

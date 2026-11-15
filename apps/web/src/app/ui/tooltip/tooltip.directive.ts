@@ -26,8 +26,8 @@ let nextTipId = 0;
 /**
  * `[hkTooltip]` — the hint (design-system Tooltip): a parchment slip naming what a glyph means.
  * Shown after `hkTooltipDelay` (300 ms) on hover, immediately on keyboard focus, and after a
- * 400 ms press on touch; removed on pointer leave, blur or Escape. The host gets
- * `aria-describedby` pointing at the slip. The hint is never the only accessible name: pair it
+ * 400 ms press on touch; removed on pointer leave, blur or Escape. While the slip is shown the host
+ * gets `aria-describedby` pointing at it. The hint is never the only accessible name: pair it
  * with an `aria-label` carrying the same text (`hk-icon-button` does this).
  */
 @Directive({
@@ -68,8 +68,13 @@ export class HkTooltipDirective {
    * is on screen.
    */
   readonly describedByExtra = signal<string | null>(null);
-  protected readonly describedBy = computed(() =>
-    [this.describedByExtra(), this.tipId].filter((id) => id !== null).join(' '),
+  /** The slip exists only while shown, so it is referenced only then (no dead idref). */
+  private readonly shown = signal(false);
+  protected readonly describedBy = computed(
+    () =>
+      [this.describedByExtra(), this.shown() ? this.tipId : null]
+        .filter((id) => id !== null)
+        .join(' ') || null,
   );
 
   private tip: ComponentRef<HkTipComponent> | undefined;
@@ -123,6 +128,7 @@ export class HkTooltipDirective {
     tip.instance.place(this.anchor.getBoundingClientRect());
     document.addEventListener('keydown', this.onDocumentKeydown);
     this.tip = tip;
+    this.shown.set(true);
   }
 
   protected hide(): void {
@@ -134,6 +140,7 @@ export class HkTooltipDirective {
     this.appRef.detachView(this.tip.hostView);
     this.tip.destroy();
     this.tip = undefined;
+    this.shown.set(false);
   }
 
   private schedule(delayMs: number, touch = false): void {

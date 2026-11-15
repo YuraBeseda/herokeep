@@ -22,10 +22,16 @@ describe('HkShieldBadgeComponent', () => {
   });
 
   it('lets the caller supply the full sourced description', async () => {
-    const { el } = await make({ value: 20, hint: 'Armor class 20, +2 from Shield of Faith' });
+    const { fixture, el } = await make({
+      value: 20,
+      hint: 'Armor class 20, +2 from Shield of Faith',
+    });
     expect(el.querySelector('svg')!.getAttribute('aria-label')).toBe(
       'Armor class 20, +2 from Shield of Faith',
     );
+    expect(el.hasAttribute('aria-describedby')).toBe(false);
+    el.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     expect(el.getAttribute('aria-describedby')).toMatch(/^hk-tip-/);
   });
 

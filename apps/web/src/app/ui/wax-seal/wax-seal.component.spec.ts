@@ -67,7 +67,10 @@ describe('HkWaxSealComponent', () => {
   });
 
   it('shows the hint as a tooltip on focus-less hover targets (describedby is set)', () => {
-    const { el } = make({ numeral: 1 });
+    const { fixture, el } = make({ numeral: 1 });
+    expect(el.hasAttribute('aria-describedby')).toBe(false);
+    el.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
     expect(el.getAttribute('aria-describedby')).toMatch(/^hk-tip-/);
   });
 
