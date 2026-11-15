@@ -1,26 +1,30 @@
-# Manual device checklist — Phase 1b wrap (plan 6) + Phase 2 sync (plan 8) + Phase 3 campaigns (plan 10) + Phase 4 engine vocabulary (plan 11) + slice 2 (plan 12) + slice 3 (plan 13) + slice 4 (plan 14) + slice 5 (plan 15) + slice 6 (plan 16)
+# Manual device checklist — rewritten for the redesigned UI (plan 17, Phase 5 slice 1)
 
 This checklist covers what the automated suites deliberately don't: real installs, real
-offline/airplane-mode behavior, a real cross-device file transfer, and a real on-device timing
-number. It supplements, and never replaces, the automated gates:
+offline/airplane-mode behavior, long-press hints on a real touchscreen, real fonts and textures,
+a real cross-device file transfer, and a real on-device timing number. It supplements, and never
+replaces, the automated gates:
 
-- `pnpm check` — format, lint, typecheck, engine + web unit tests (819 web tests as of the plan-8
-  client-sync final fix wave; includes the dev-mode perf-log spec below).
-- `pnpm --filter web e2e` — Playwright against the real production build: 13 spec files, 31 tests
-  as of plan 15 (offline, library/search/locale, character creation (Fighter, Monk, Rogue with
-  Expertise, Soldier options), level-up, multiclassing, play actions, export/import, custom content
-  packs, axe accessibility).
-- `packages/engine/test/perf.test.ts` — an automated perf *tripwire* (median of 5 reduce+derive
-  runs over an extended fixture, budget 150 ms — generous CI headroom, not the real-device number).
-  This is the "automated proxy" the plan's Global Constraints refer to; the device numbers below
-  are the actual measurement it stands in for.
+- `pnpm check` — format, lint, typecheck, engine + web unit tests. (It hangs in the Windows
+  worktree used for plan 17; there the pieces run one by one: `pnpm --filter web lint`,
+  `pnpm --filter web test --watch=false`, root `pnpm typecheck`, root `pnpm vitest run`.)
+- `pnpm --filter web e2e` — Playwright against the real production build, including the axe scan
+  of every screen in all three themes (tavern, scroll, plain).
 - `pnpm --filter web e2e:sync` — a second Playwright project against a real Node API adapter
-  (register/login/recover, cross-device restore, live two-context sync, device revocation, and
-  since plan 16 campaign packs; 9 tests). It
-  proves the same protocol section 6 below walks through by hand, but as two browser contexts on
-  one machine — not two real devices on real Wi‑Fi, which is what section 6 is for.
+  (register/login/recover, cross-device restore, live two-context sync, device revocation,
+  campaign packs). It proves the protocol section 6 walks through by hand, but as two browser
+  contexts on one machine, not two real devices on real Wi-Fi.
+- `pnpm --filter web e2e:mobile` — the phone project at 390 x 844 (phone tabs, create, play,
+  level-up, campaign join).
+- `pnpm --filter web e2e:textfit` — the longest en/ru/uk string of each key at 360 x 640 and at
+  desktop width, with no overflow or clipping.
+- `packages/engine/test/perf.test.ts` — an automated perf _tripwire_ (budget 150 ms); the device
+  numbers in section 4 are the real measurement it stands in for.
 
-Run each pass on an actual phone, not a desktop responsive-mode simulation.
+Run each pass on an actual phone, not a desktop responsive-mode simulation. Since plan 17 the
+controls are icon-first: an icon-only control has an accessible name and a hint. The hint shows on
+hover or keyboard focus, and on a touchscreen on **long-press** (about half a second). Where a step
+below names a control, find it by that hint text.
 
 ---
 
@@ -29,57 +33,90 @@ Run each pass on an actual phone, not a desktop responsive-mode simulation.
 ### Android (Chrome)
 
 1. Open the deployed app URL in Chrome.
-2. Go to the characters list (`/characters`). If the browser qualifies the page for install
-   (`beforeinstallprompt`), the in-app banner shows an **Install** button — tap it, confirm the
-   native install dialog.
-3. If the banner doesn't offer **Install** yet, use Chrome's own menu → *Add to Home screen* /
-   *Install app* instead — either path is a valid pass.
+2. Open the app drawer (the menu icon in the top bar) and go to the heroes list. If the browser
+   qualifies the page for install (`beforeinstallprompt`), the in-app banner shows an **Install**
+   button; tap it and confirm the native install dialog.
+3. If the banner doesn't offer **Install** yet, use Chrome's own menu → _Add to Home screen_ /
+   _Install app_ instead; either path is a valid pass.
 4. Launch the app from the home-screen icon. Confirm it opens **standalone** (no browser
-   address bar/tabs chrome).
+   address bar/tabs chrome) and that the top bar clears the status bar / notch.
 
 ### iPhone (Safari)
 
-Safari never fires `beforeinstallprompt` — there is no native install prompt on iOS, so the app
+Safari never fires `beforeinstallprompt`; there is no native install prompt on iOS, so the app
 falls back to its own instructions sheet.
 
-1. Open the deployed app URL in Safari, go to the characters list.
-2. The banner shows a **How to install** button instead of **Install** — tap it. Confirm the sheet
+1. Open the deployed app URL in Safari, go to the heroes list.
+2. The banner shows a **How to install** button instead of **Install**; tap it. Confirm the sheet
    reads, in order:
    1. "Tap the Share button in Safari's toolbar."
    2. "Scroll down and tap \"Add to Home Screen\"."
    3. "Tap \"Add\" to confirm."
    - and separately warns: "Safari removes a web app's saved data after 7 days without opening
-     it. Installing to your Home Screen keeps your characters from being deleted." — **read this
-     note out loud during the pass**; it's the reason this checklist exists at all for iOS users
-     who don't install.
+     it. Installing to your Home Screen keeps your characters from being deleted." Read this
+     note out loud during the pass; it's the reason this checklist exists for iOS users who
+     don't install.
 3. Follow the three steps via Safari's real Share sheet.
 4. Launch from the home-screen icon. Confirm standalone display (no Safari chrome).
 
 ---
 
-## 2. Airplane-mode pass (create → play → reload, fully offline)
+## 2. Airplane-mode pass (create -> play -> reload through the phone tabs, fully offline)
 
 Do this on the **installed** app (either platform), after it has been opened online at least once
-(the service worker needs one online load to precache the app shell and the core content pack).
+(the service worker needs one online load to precache the app shell, the fonts, the icon sprite
+and the core content pack).
 
-1. Open the installed app once online; let it finish loading (character list or library visible).
-2. Turn on Airplane Mode (or otherwise fully disconnect Wi‑Fi and cellular data).
-3. Relaunch the app from the home-screen icon. Confirm it opens with no network at all.
-4. **Create**: run the full creation wizard (name/gender → species → background → ability scores →
-   class/skills/fighting style → spells → equipment → review) end to end and confirm the character
-   is created (creation is a local, on-device transaction against the SW-cached content pack — no
-   network call is involved).
-5. **Play**: open the new character's Play tab and perform at least one action that appends an
-   event (e.g. apply damage, toggle inspiration, or roll dice) — confirm the sheet updates and the
-   Timeline tab shows the new event.
-6. **Reload**: force-quit the app and relaunch it, still offline. Confirm the character and the
-   action from step 5 are both still there (this proves the write actually landed in the device's
-   own IndexedDB, not just in memory).
-7. Turn networking back on afterward.
+1. Open the installed app once online; let it finish loading (home or library visible).
+2. Turn on Airplane Mode (or otherwise fully disconnect Wi-Fi and cellular data).
+3. Relaunch the app from the home-screen icon. Confirm it opens with no network at all, and that
+   icons and headings render in the theme's own fonts (the faces load on use, so a face you never
+   used online may fall back; note which).
+4. **Create**: run the creation wizard (name/gender, species, background, ability scores,
+   class/skills/fighting style, spells, equipment, review). The action strap at the bottom keeps
+   Cancel/Back on the left and Next on the right in the same place on every step. Confirm the
+   character is created (creation is a local transaction against the SW-cached content pack).
+5. **Play**: the sheet opens with the phone tab bar at the bottom. Walk each tab in turn and
+   confirm each opens at the top of the page. On the play tab apply damage, toggle inspiration or
+   roll dice, and confirm the sheet updates. Open the timeline (from the More tab) and confirm
+   the new event is listed.
+6. **Back**: from a library entry opened from the sheet, press the system Back gesture and
+   confirm you return to the sheet at the scroll position you left it. (The in-app Back button
+   goes forward to the previous screen and opens it at the top by design.)
+7. **Reload**: force-quit the app and relaunch it, still offline. Confirm the character and the
+   action from step 5 are both still there (the write landed in the device's own IndexedDB).
+8. Turn networking back on afterward.
 
 This is deliberately broader than `apps/web/e2e/offline.spec.ts`, which only proves the app shell
-and the Library still render from cache offline — it does not exercise character creation or play
-actions offline.
+and the Library still render from cache offline.
+
+---
+
+## 2b. Themes, hints, languages and text fit (plan 17)
+
+1. **Theme switch.** In the top bar open the theme menu and switch tavern -> scroll -> plain, then
+   reload. Confirm the choice survives the reload, the page never flashes the wrong theme, and in
+   all three the body text, the icons on leather and the focus ring stay readable in bright light
+   and in a dark room. In plain there are no textures or rivets and the brass is flat.
+2. **Textures.** In tavern and scroll scroll a long sheet and the library on the phone; confirm
+   scrolling stays smooth (the textures are SVG filters) and nothing flickers on a low-end phone.
+   If it stutters, note the device; plain is the fallback.
+3. **Long-press hints.** On the sheet's action strap, the tab bar and the stat tiles: long-press an
+   icon-only control and confirm its hint appears next to the finger (not under it) and goes away
+   on release or on a tap elsewhere. A long-press must not also trigger the control. Repeat for a
+   disabled control (a locked pick): the hint states why it is disabled.
+4. **Languages and text fit.** Switch to Russian, then Ukrainian. On the phone, walk home, the
+   wizard, the sheet tabs, the drawer, a campaign and settings. Confirm no label is clipped or
+   wraps over another control. A tile whose label does not fit shows its icon only and keeps the
+   hint; that is the designed behaviour, not a bug.
+5. **Bottom sheets.** Open a description (tap a spell or an item on the phone). It rises as a
+   full-height bottom sheet with a grip. Close it with its Close button, and with the system Back
+   gesture; confirm each lands you back on the same screen. With a hardware keyboard, Escape also
+   closes it and returns focus to the control you opened it from.
+6. **Touch targets.** On the phone every control is comfortably tappable (44 px) in the strap,
+   tab bar, lists and dialogs; note any you miss twice.
+7. **Reduced motion.** With the OS "reduce motion" setting on, confirm drawers and the wizard step
+   changes do not slide.
 
 ---
 
@@ -87,13 +124,13 @@ actions offline.
 
 1. On the iPhone, open a character that has a portrait set (Build tab → set a portrait first if
    needed).
-2. On the sheet header, tap **Export**. iOS has no File System Access API, so the delivery ladder
+2. On the sheet, find **Export** (the hint on its icon) and tap it. iOS has no File System Access API, so the delivery ladder
    falls to `navigator.share({ files })` — the native Share sheet opens with the `<name>.hero`
    file attached.
 3. Transfer that file to the Android device by whatever share target is convenient — AirDrop to a
    Mac then move it over, or share directly to a cloud-storage/messaging app the Android device can
    also reach (e.g. save to Google Drive, or send via email to yourself).
-4. On the Android device, download/save the `.hero` file locally, then open the app's characters
+4. On the Android device, download/save the `.hero` file locally, then open the app's heroes
    list and tap **Import**, and pick that file.
 5. Confirm the character reappears with the same name and HP, and — the specific check this pass
    exists for — the **portrait renders correctly** (not stretched/cropped wrong, not a broken
@@ -131,7 +168,7 @@ the **development** build, not the installed production PWA, to see it.
    - **iOS Safari**: on the iPhone, Settings → Safari → Advanced → turn on **Web Inspector**.
      Connect the iPhone to a Mac via cable, open Safari on the Mac, enable the **Develop** menu
      (Safari → Settings → Advanced → "Show Develop menu" if not already on), then
-     Develop → *(your iPhone's name)* → *(the page)* to open Web Inspector, then its Console tab.
+     Develop → _(your iPhone's name)_ → _(the page)_ to open Web Inspector, then its Console tab.
 5. From the characters list, tap into the level-5 character. This navigates to `/c/:id`, which
    resolves through `CharacterStore.load(id)` before the sheet renders — the `[perf]` line appears
    in the console at that point.
@@ -139,24 +176,24 @@ the **development** build, not the installed production PWA, to see it.
 
 ### Results
 
-| Device | Date | ms |
-| --- | --- | --- |
-| _(e.g. Pixel 7a, Chrome)_ | | |
-| | | |
-| | | |
-| | | |
+| Device                    | Date | ms  |
+| ------------------------- | ---- | --- |
+| _(e.g. Pixel 7a, Chrome)_ |      |     |
+|                           |      |     |
+|                           |      |     |
+|                           |      |     |
 
 ---
 
 ## 5. Accessibility / e2e pointers
 
 - Full suite: `pnpm --filter web e2e` (builds production first via the `pree2e` script, then runs
-  all 9 Playwright spec files against it).
-- Accessibility only: `pnpm --filter web e2e -- e2e/a11y.spec.ts` — runs `apps/web/e2e/a11y.spec.ts`
-  alone (11 axe-core passes: home, library, a library detail, settings, about, the characters list,
-  the ability-scores wizard step, the sheet's play/build/timeline tabs, the short-rest dialog, the
-  cast dialog, and the roll log with a logged entry — each asserted to have no serious/critical
-  violations).
+  all the offline Playwright specs against it).
+- Accessibility only: `pnpm exec playwright test e2e/a11y.spec.ts` from `apps/web` (a `--` through
+  pnpm swallows the flag): 17 axe-core scans (home, library, a library detail, settings, about, the
+  heroes list, the ability-scores wizard step, the sheet's tabs, the rest and cast dialogs, the roll
+  log, ...) in each of the three themes (51 tests), each asserted to have no serious/critical
+  violations.
 - Unit tests only: `pnpm --filter web test --watch=false`.
 - Everything (the pre-commit gate): `pnpm check`.
 
@@ -164,7 +201,7 @@ the **development** build, not the installed production PWA, to see it.
 
 ## 6. Cross-device sync (Phase 2)
 
-**What this proves:** accounts, restore-on-new-device, and *live* sync (not just upload-on-login)
+**What this proves:** accounts, restore-on-new-device, and _live_ sync (not just upload-on-login)
 between two real devices on real Wi‑Fi — the thing `pnpm --filter web e2e:sync` proves with two
 browser contexts on one machine, but never with two actual phones.
 
@@ -180,7 +217,7 @@ LAN interface. For this pass, run the two halves **separately, in two terminals*
    Note the Network URL it prints (or your machine's LAN IP + port 4200).
 
 The API adapter staying on `127.0.0.1` is fine: `apps/web/proxy.conf.json` proxies `/api` and
-`/packs` from *inside* the `ng serve` process, which runs on your desktop and reaches
+`/packs` from _inside_ the `ng serve` process, which runs on your desktop and reaches
 `127.0.0.1:8787` locally regardless of what address a phone used to reach `ng serve` itself. You
 do **not** need to set `HK_HOST` for this pass.
 
@@ -205,7 +242,7 @@ running for longer than one sitting), use the self-host route instead:
    steps 2–4. Repeat in the other direction (edit on B, watch A).
 6. **Devices list**: on either phone, go to **Settings** → **Devices**. Confirm both device
    labels are listed, each with a last-active time, and the current device is tagged "This
-   device". Tap **Revoke** on the *other* device, confirm the dialog; on that other phone, the
+   device". Tap **Revoke** on the _other_ device, confirm the dialog; on that other phone, the
    next action against the server (e.g. any edit) should sign it back out to the login prompt.
 7. **Quota**: on either phone, **Settings** → **Storage quota** shows usage against the account's
    limits once at least one character has synced (before any sync it reads "No synced characters
@@ -213,16 +250,16 @@ running for longer than one sitting), use the self-host route instead:
 8. **Recovery-code reset**: on a signed-out browser (or after logging out on one phone), go to
    `/login` → **Forgot your password?** → enter the username, one of the saved recovery codes, and
    a new password → **Reset password**. Confirm you can log back in with the new password
-   afterward, and that this signs out every *other* device with an active session (per the
+   afterward, and that this signs out every _other_ device with an active session (per the
    recover screen's own "Resetting your password will sign you out of every other device."
    notice) — check a still-open session on another phone gets signed out too.
 
 ### Results
 
-| Devices (A / B) | Date | Restore | Live sync | Revoke | Recovery reset |
-| --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a / iPhone 13, Safari)_ | | | | | |
-| | | | | | |
+| Devices (A / B)                       | Date | Restore | Live sync | Revoke | Recovery reset |
+| ------------------------------------- | ---- | ------- | --------- | ------ | -------------- |
+| _(e.g. Pixel 7a / iPhone 13, Safari)_ |      |         |           |        |                |
+|                                       |      |         |           |        |                |
 
 ---
 
@@ -271,10 +308,10 @@ from that pass, or create fresh ones.
 
 ### Results
 
-| Devices (A / B) | Date | QR join | Roll visibility | DM effect live | Portrait relay | Removal bye |
-| --- | --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a / iPhone 13, Safari)_ | | | | | | |
-| | | | | | | |
+| Devices (A / B)                       | Date | QR join | Roll visibility | DM effect live | Portrait relay | Removal bye |
+| ------------------------------------- | ---- | ------- | --------------- | -------------- | -------------- | ----------- |
+| _(e.g. Pixel 7a / iPhone 13, Safari)_ |      |         |                 |                |                |             |
+|                                       |      |         |                 |                |                |             |
 
 ---
 
@@ -309,10 +346,10 @@ reality-check sections 1–2 already do for install/offline.
 
 ### Results
 
-| Device | Date | Which-class picker | New-class choices | Pact-slot cast/rest |
-| --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a, Chrome)_ | | | | |
-| | | | | |
+| Device                    | Date | Which-class picker | New-class choices | Pact-slot cast/rest |
+| ------------------------- | ---- | ------------------ | ----------------- | ------------------- |
+| _(e.g. Pixel 7a, Chrome)_ |      |                    |                   |                     |
+|                           |      |                    |                   |                     |
 
 ---
 
@@ -343,10 +380,10 @@ slice-2 UI paths (pooled multiclass slots, always-prepared spells).
 
 ### Results
 
-| Device | Date | Monk create/AC | Always-prepared (Paladin) | Pooled slots | Charge long-rest restore |
-| --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a, Chrome)_ | | | | | |
-| | | | | | |
+| Device                    | Date | Monk create/AC | Always-prepared (Paladin) | Pooled slots | Charge long-rest restore |
+| ------------------------- | ---- | -------------- | ------------------------- | ------------ | ------------------------ |
+| _(e.g. Pixel 7a, Chrome)_ |      |                |                           |              |                          |
+|                           |      |                |                           |              |                          |
 
 ---
 
@@ -393,10 +430,10 @@ other steps rely on unit specs and engine goldens (plan-13 task reports 1–10).
 
 ### Results
 
-| Device | Date | Expertise | Tools | Gating/reasons | Pre-seed | Free cast | Rolled regain | Immunities | Disabled unprepare |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | |
-| | | | | | | | | | |
+| Device                    | Date | Expertise | Tools | Gating/reasons | Pre-seed | Free cast | Rolled regain | Immunities | Disabled unprepare |
+| ------------------------- | ---- | --------- | ----- | -------------- | -------- | --------- | ------------- | ---------- | ------------------ |
+| _(e.g. Pixel 7a, Chrome)_ |      |           |       |                |          |           |               |            |                    |
+|                           |      |           |       |                |          |           |               |            |                    |
 
 ---
 
@@ -448,10 +485,10 @@ step 5 automatically; the other steps rely on unit specs and engine goldens (pla
 
 ### Results
 
-| Device | Date | Gaming set | Skilled | Later Bard | Slippers climb | Rule options | Resistances | Regain counts | Provenance | Seeded count |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | | |
-| | | | | | | | | | | |
+| Device                    | Date | Gaming set | Skilled | Later Bard | Slippers climb | Rule options | Resistances | Regain counts | Provenance | Seeded count |
+| ------------------------- | ---- | ---------- | ------- | ---------- | -------------- | ------------ | ----------- | ------------- | ---------- | ------------ |
+| _(e.g. Pixel 7a, Chrome)_ |      |            |         |            |                |              |             |               |            |              |
+|                           |      |            |         |            |                |              |             |               |            |              |
 
 ---
 
@@ -472,7 +509,7 @@ second real device. Fixtures: copy `apps/web/e2e/fixtures/packs/sample-content.h
 1. **Import + trust screen** (tasks 2–3).
    - Open Packs from the nav, tap Import, and pick `sample-content.hkpack` in the native picker.
    - The trust screen shows "Install Sample content?", 1 image, a dependency on `srd-5e-2024
-     ^0.1.0`, the attribution, entity counts (1 each of item, spell, feat and species), and "This
+^0.1.0`, the attribution, entity counts (1 each of item, spell, feat and species), and "This
      pack does not change any existing content." under overrides.
    - With TalkBack/VoiceOver, focus stays inside the dialog and its title is announced.
    - Install: the pack appears under Content.
@@ -517,10 +554,10 @@ second real device. Fixtures: copy `apps/web/e2e/fixtures/packs/sample-content.h
 
 ### Results
 
-| Device | Date | Import + trust | Wizard pin | Pin/unpin | Update report | Missing banner | Homebrew forms | `.hero` packs | Other-device hint |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a, Chrome)_ | | | | | | | | | |
-| | | | | | | | | | |
+| Device                    | Date | Import + trust | Wizard pin | Pin/unpin | Update report | Missing banner | Homebrew forms | `.hero` packs | Other-device hint |
+| ------------------------- | ---- | -------------- | ---------- | --------- | ------------- | -------------- | -------------- | ------------- | ----------------- |
+| _(e.g. Pixel 7a, Chrome)_ |      |                |            |           |               |                |                |               |                   |
+|                           |      |                |            |           |               |                |                |               |                   |
 
 ---
 
@@ -581,10 +618,10 @@ pack.
 
 ### Results
 
-| Devices (A / B) | Date | Enable + quota | Auto-install | Icon relay (devtools) | Banner pin | DM View sheet | Live disable |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| _(e.g. Pixel 7a / iPhone 13, Safari)_ | | | | | | | |
-| | | | | | | | |
+| Devices (A / B)                       | Date | Enable + quota | Auto-install | Icon relay (devtools) | Banner pin | DM View sheet | Live disable |
+| ------------------------------------- | ---- | -------------- | ------------ | --------------------- | ---------- | ------------- | ------------ |
+| _(e.g. Pixel 7a / iPhone 13, Safari)_ |      |                |              |                       |            |               |              |
+|                                       |      |                |              |                       |            |               |              |
 
 ---
 

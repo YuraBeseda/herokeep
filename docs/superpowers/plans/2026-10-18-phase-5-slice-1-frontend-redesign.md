@@ -2,9 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Stage A runs as a design exercise (Claude Design artifacts via the Artifact tool, `quickstart` with `intent: "design"`), gated on explicit OWNER APPROVAL; Stage B then runs with superpowers:subagent-driven-development task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: STAGE A APPROVED 2026-11-03 (owner: "Stage A approved, no need for sketches in app for now, only existing content"). STAGE B WRITTEN 2026-11-03 — NOT STARTED; it must start in a NEW session from this file plus `docs/superpowers/design/2026-11-stage-a/README.md` (the self-contained handoff) and the spec. The approved additions that need engine/protocol/API work are a separate plan: `docs/superpowers/plans/2026-11-03-phase-5-slice-2-approved-additions.md`, which runs after this one merges. The "Later ideas" sketches are out of scope.**
+**STATUS: EXECUTED 2026-11-15 (Stage A approved 2026-11-03; Stage B tasks B1-B16 built on branch `worktree-phase-5-plan17-redesign`, awaiting merge). Deviations: one icon sprite, not one per route group (R11; 168 kB raw, 72.4 kB gzip, async); fonts load on use and are not preloaded; the bundle gate now follows static imports, so the initial bundle measures 371.3 kB gzip (the earlier 368.4 was not like-for-like). Owner-flags and follow-ups: `docs/03-roadmap/phases.md`, "Phase 5 follow-ups". Gate numbers: `docs/README.md`. The approved additions that need engine/protocol/API work are the separate plan `docs/superpowers/plans/2026-11-03-phase-5-slice-2-approved-additions.md`.**
 
 **Stage A progress (2026-11-02):**
+
 - Owner brief captured (batched questions, 18 answers): game-UI level 4.5/5 with textures; desktop → tablet → phone priority; icon-first with hints; screens may be regrouped; "Later" ideas kept light; the DM encounter board is UI-only and last priority.
 - A1 UX audit DONE: 111 screen states × en/uk × 1280/390 captured against the production build with the e2e sync setup; `inventory.md` (10 worst defects, cross-cutting DOM measurements, per-screen findings) and `actions.md` (263 controls with i18n keys) — kept in the session scratchpad `audit/`, summarised in the foundations spec and in the Stage B task rewrite at the gate.
 - A3 visual direction DECIDED: six genuinely different concepts (A Tavern Table, B Illuminated Codex, C Arcane HUD, D Woodcut Chapbook, E Pixel Tavern, F Card Table) were built on the same two pages (desktop Play sheet in en, phone Combat tab in uk) in the canvas "Herokeep UI concepts" (https://claude.ai/artifact/E4qnyAx7vou6m9xSiBbD1Y); **owner chose A** with four fixes (hover-hint rule instead of legends; eye glyph for concentration, level-numeral wax seals for spell slots, weapon glyphs for weapons; condition durations; features grouped by source). B–F were removed from the canvas.
@@ -107,11 +108,13 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B1: Tokens and themes from the design system
 
 **Files:**
+
 - Create: `packages/ui-tokens/src/tokens.json` (copy of the handoff `design-system/tokens.json`), `packages/ui-tokens/src/schema.ts` (Zod schema for the token file: `color.themes[]`, `color.tokens[] {name,value:{[themeId]:string}|string,usage}`, `type.{fonts,families,groups[].styles[]}`, `spacing|radius|shadow|decoration|duration|size .tokens[]`)
 - Modify: `packages/ui-tokens/src/tokens.ts` (export `TOKENS` parsed from the JSON; export `THEME_IDS = ['tavern','scroll','plain'] as const` and `type ThemeId`), `packages/ui-tokens/src/build.ts` (`emitCss()` emits `:root, [data-theme='tavern'] {…}`, `[data-theme='scroll'] {…}`, `[data-theme='plain'] {…}` with one `--<name>` per colour and shadow token, `:root` with spacing/radius/decoration/duration/size and `--font-display`/`--font-body`, and a `.hk-type-<style>` class per type style; `emitScss()` emits the same as a `$hk-tokens` map keyed by theme), `apps/web/src/app/shared/services/theme/theme.service.ts` (`Theme = ThemeId`; stored value migration `dark → tavern`, `light → scroll`; `setTheme` sets `data-theme` on `<html>`), `apps/web/src/styles/typography.scss` (font-face for Forum and Alegreya from `apps/web/src/assets/fonts/` — vendor the woff2 subsets Latin + Cyrillic, OFL files beside them, as `fonts/inter` is vendored today)
 - Test: `packages/ui-tokens/test/tokens.test.ts`, `packages/ui-tokens/test/build.test.ts`, `apps/web/src/app/shared/services/theme/theme.service.spec.ts`
 
 **Interfaces:**
+
 - Produces: CSS variables named exactly as `tokens.json` names (`--leaf`, `--ink-1`, `--brass`, `--ember`, `--moss`, `--arcane`, `--coin-gold`, `--rarity-rare`, `--space-4`, `--radius-leaf`, `--shadow-leaf`, `--texture-wood`, `--duration-base`, …) plus the legacy aliases (`--surface-0..3`, `--text-1..3`, `--accent`, `--accent-strong`, `--accent-contrast`, `--border-1`, `--danger`, `--success`, `--warning`, `--overlay`, `--space-1..6`, `--radius-s/m/l`, `--duration-s/m`, `--focus-ring`); `ThemeId`; `ThemeService.theme: Signal<ThemeId>`, `setTheme(t: ThemeId)`.
 
 - [ ] **Step 1: Failing token tests** — `tokens.json` parses against the schema; every colour token has a value for every theme after inheritance; every legacy alias name exists; a contrast helper (WCAG relative luminance, in the test file) asserts `ink-1` on `leaf`, `ink-2` on `leaf`, `text-on-leather` on `leather`, `text-on-brass` on `brass` ≥ 4.5 in all three themes.
@@ -125,11 +128,13 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B2: Icon vocabulary, tooltip directive, icon button, hint lint
 
 **Files:**
+
 - Create: `apps/web/vendor/game-icons/<author>/<name>.svg` for every name in the union of `docs/superpowers/design/2026-11-stage-a/icons/*-icons-used.json` and the spec §6 vocabulary (fetch from a `--depth 1` clone of https://github.com/game-icons/icons; licence CC BY 3.0; authors land in `assets/icons/authors.json` through the existing tool), `apps/web/src/app/ui/tooltip/tooltip.directive.ts` (`[hkTooltip]`), `apps/web/src/app/ui/icon-button/icon-button.component.ts` (`button[hk-icon-button]`, required input `hint: string` (i18n key) → `aria-label` + tooltip; inputs `icon`, `variant: 'brass' | 'ghost' | 'ember' | 'moss'`, `size: 's' | 'm' | 'l'`), `apps/web/src/app/ui/icons/vocabulary.ts` (`UI_ICONS: Record<UiIconName, { gi: string; hint: string }>` — the spec §6 table, `hint` an i18n key under `shell.icon.*`)
 - Modify: `apps/web/tools/build-sprite.ts` (a `ui` map section from `vocabulary.ts`), `apps/web/src/app/shared/icons/icon.component.ts` (accepts `ui:<name>` ids)
 - Test: `tooltip.directive.spec.ts`, `icon-button.component.spec.ts`, `apps/web/src/testing/icon-hints.spec.ts` (reads every `*.html` under `src/app`, fails on any `hk-icon-button` without a `hint` attribute or any `<button>` whose only child is `hk-icon` without `aria-label`), `apps/web/tools/build-sprite.spec.ts` (ui map symbols present)
 
 **Interfaces:**
+
 - Produces: `HkTooltipDirective` (input `hkTooltip: string` text, optional `hkTooltipDelay` default 300 ms, long-press 400 ms on touch, sets `aria-describedby` to a generated id, closes on Escape and blur); `HkIconButtonComponent`; `UiIconName` union; sprite ids `ui:<name>`.
 
 - [ ] **Step 1: Failing specs** — tooltip appears 300 ms after `mouseenter`, immediately on `focus`, after 400 ms `pointerdown` on touch, is removed on `mouseleave`/`blur`/Escape, and the host carries `aria-describedby`; icon button renders `aria-label` from the translated hint and the tooltip; the hint lint fails on a fixture template without `hint`.
@@ -141,11 +146,13 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B3: Core components I — surfaces and vitals
 
 **Files:**
+
 - Create under `apps/web/src/app/ui/`: `leaf/` (`hk-leaf`: inputs `title`, `icon`, optional header actions slot, optional `tabs`), `button/` (`button[hk-button]`: `variant: 'primary' | 'parchment' | 'ghost' | 'ember'`, `loading`, `disabledReason` → `aria-describedby` + tooltip, never an inline caption), `wax-seal/` (`hk-wax-seal`: `state: 'filled' | 'spent' | 'disabled' | 'selected'`, `size: 's' | 'm' | 'l'`, `glyph?: string`, `numeral?: 1..9`, `hint` required), `stat-tile/`, `shield-badge/` (`hk-shield-badge` AC), `hp-gauge/` (`hk-hp-gauge`: inputs `current`, `max`, `temp`; outputs `damage`, `heal`, `setTemp`; `role="meter"` with `aria-valuenow/min/max` and a text alternative), `pool-bar/` (`hk-pool-bar`: `value`, `max`, `label`, `recharge`), `xp-bar/`, `portrait-frame/` (monogram fallback, `size`), `ability-seal/` (`hk-ability-seal`: `ability`, `score`, `modifier`, `save`, `saveProficient` → star glyph with hint "Proficient saving throw", shield glyph hint "Saving throw +N")
 - Styles: each component's SCSS uses tokens only; textures (wood, parchment fibre, leather) are SVG `feTurbulence` filters defined once in `apps/web/src/styles/textures.scss` as data-free inline SVG in `apps/web/src/app/ui/textures/textures.component.ts` rendered once by the shell, with intensity from `--texture-*` (0 in `plain`)
 - Test: one spec per component asserting states, outputs and the accessibility contract (hint present, no legend text)
 
 **Interfaces:**
+
 - Produces: the selectors and inputs above; `HkWaxSealComponent` is the only pip renderer used by B4, B9, B10.
 
 - [ ] **Step 1: Failing specs** for every component (states render, `hk-hp-gauge` emits `damage` with the typed amount, `hk-wax-seal` with `numeral=2` shows "II", `disabledReason` renders no visible text but an `aria-describedby` target).
@@ -157,6 +164,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B4: Core components II — rows, chips, fields
 
 **Files:**
+
 - Create under `apps/web/src/app/ui/`: `condition-chip/` (`hk-condition-chip`: `name`, `icon`, `level?`, `duration?` badge slot (empty in this plan), `removable`, `locked?` with hint; output `remove`), `filter-chips/`, `tag-chip/`, `skill-row/` (proficient dot with hint, expertise, disadvantage glyph with hint, roll button), `attack-row/`, `spell-row/` (level seal, cast button, always-prepared glyph with hint, concentration orb glyph `ui:concentration`), `feature-row/` (source icon, level badge, details button), `death-saves/`, `inspiration-toggle/`, `options-chip/` (`hk-options-chip`: `count`, `options: { id; name; href }[]`, popover with "See all in library" link — data wired in B13), `number-field/` (−/+ with 44 px targets), `search-field/`, `select/`, `toggle/`, `text-field/`, `textarea/`, `coin-pouch/`, `weight-strap/`, `satchel-grid/` (`hk-satchel-grid`: slots with icon, qty plate, equipped tag hint "Equipped", attuned gem hint "Attuned", rarity rim, selected; output `select`) and `item-row/` (phone list variant), `party-card/` (campaign: portrait, name, class/level, HP strap, AC, conditions, concentration, quick-effect chips slot)
 - Test: one spec per component
 
@@ -167,11 +175,13 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B5: App shell — rail, top bar, drawer, action strap, tab bar, navigation history
 
 **Files:**
+
 - Create: `apps/web/src/app/ui/shell/nav-rail.component.ts` (`hk-nav-rail`: six sections with `ui:` icons, tooltips, campaign chip, account button; mark-only below 1024 px), `top-bar.component.ts` (phone: folio button, title, context action), `app-drawer.component.ts` (phone: six sections, account, theme, language), `action-strap/action-strap.component.ts` + `action-strap.service.ts`, `tab-bar/tab-bar.component.ts` + `tab-bar.service.ts`, `nav/nav-history.service.ts`, `toast/`, `banner/`, `theme-menu/`
 - Modify: `apps/web/src/app/app.html`, `app.ts`, `app.scss` (rail or top bar; `<router-outlet>`; `<hk-action-strap>` once; `<hk-tab-bar>` once; toasts; banners; textures), `apps/web/src/app/app.routes.ts` (`/about` → redirect to `/settings` with fragment `about`; everything else unchanged), `apps/web/src/assets/i18n/shell/*.json`
 - Test: `action-strap.component.spec.ts`, `action-strap.service.spec.ts`, `nav-history.service.spec.ts`, `app.routes.spec.ts`, `app.spec.ts`; e2e: `offline.spec.ts`, `locale.spec.ts`, `a11y.spec.ts` selectors
 
 **Interfaces:**
+
 - Produces: `ActionStrapService.set(config: StrapConfig): void` / `clear(): void` where `StrapConfig = { exit?: StrapAction[]; primary: StrapAction[]; secondary?: StrapAction[]; status?: string }`, `StrapAction = { id: string; label: string (i18n key); icon: UiIconName; kind: 'primary' | 'parchment' | 'ghost' | 'ember' | 'icon'; disabled?: boolean; disabledReason?: string (i18n key); run: () => void }`; zone order is fixed and rendered left to right; on phones (`< 768`) zone 3 collapses into one "More" icon button opening a bottom sheet with the same order. `TabBarService.set(tabs: TabItem[] | null)` with `TabItem = { id; label; icon: UiIconName; route: string[] }`. `NavHistoryService.back(fallback: string[]): void` (returns to the previous in-app path if there is one, else navigates to `fallback`), `push(url)` called from a router events subscription in `app.ts`.
 
 - [ ] **Step 1: Failing specs** — the strap renders zones in order and keeps DOM order across two `set` calls with the same ids; phone width collapses zone 3; `NavHistoryService.back` after `/c/1/play → /c/1/level-up` goes to `/c/1/play` and with no history goes to the fallback (Review Focus 3 pin); `/about` redirects; the rail has `aria-label` from `shell.nav.landmark`.
@@ -182,6 +192,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B6: Overlays — parchment dialog, bottom sheet, drawer, description drawer
 
 **Files:**
+
 - Modify: `apps/web/src/app/shared/components/dialog/dialog.component.*` → move to `apps/web/src/app/ui/dialog/` keeping the focus trap, `data-dialog-title` contract and the `sheet` input (phone bottom sheet), restyled as the parchment dialog with the title seal and a leather action row
 - Create: `apps/web/src/app/ui/drawer/drawer.component.ts` (`hk-drawer`: right-side on ≥ 768, full-height sheet below; closes with its opener, Escape; never changes the URL), `apps/web/src/app/ui/description-drawer/description-drawer.component.ts` (`hk-description-drawer`: input `entity` (any pack entity id), renders name, tags, markdown body through the existing sanitizing markdown service with the character's scoped localizer, an "Open entry" link to `/library/:id`, an optional primary action slot)
 - Test: `dialog.component.spec.ts` (moved), `drawer.component.spec.ts`, `description-drawer.component.spec.ts` (ruling 5 RED: a species, a class feature, a spell, an item and a condition each render their description text)
@@ -193,6 +204,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B7: Home, heroes list, system states
 
 **Files:**
+
 - Modify: `apps/web/src/app/views/home/home.component.*` (board `IA-Home-Desktop/-Phone/-Tablet`: Continue leaf for the last opened hero, Tonight slip when a linked campaign has a live session, heroes row, campaigns row, quick actions; strap zone 2 = New hero · Import · Join by code), `apps/web/src/app/views/characters/list/characters-list.component.*` (board `H01`: cards with HP strap, campaign chip, last played, Open + more menu; install banner; empty state), `apps/web/src/app/shared/services/storage/` (persist `lastOpenedCharacterId` and `lastOpenedAt` in the settings repository — UI state, not an event), a `views/not-found` component (board `X01`), banners (offline, update available, missing packs, campaign packs) on `hk-banner`
 - Test: `home.component.spec.ts` (Continue card shows the last opened hero; first run shows the invitation), `characters-list.component.spec.ts`; e2e `export-import.spec.ts` (Import moved to the strap)
 
@@ -202,6 +214,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B8: Hero creation wizard rebuild
 
 **Files:**
+
 - Create: `apps/web/src/app/ui/stepper/stepper.component.ts` (`hk-stepper`: `steps: StepItem[]`, `current: string`, `variant: 'vertical' | 'strip'`; `StepItem = { id; label; state: 'done' | 'current' | 'todo' | 'locked'; summary?: string; hint?: string }`; done = wax seal; locked = padlock with hint; the strip variant shows "Step N of M · name" and an all-steps sheet), `apps/web/src/app/ui/flow/flow-controller.ts` (`FlowController<TStep>`: `next()` → first unanswered step after the current, never skipping; `back()`; `cancel()` with a dirty check; the step list builder is the existing plan-13 sorted-choice-steps logic lifted out of `create-wizard.component.ts` into `apps/web/src/app/views/characters/flow/steps.ts` and shared with level-up), `apps/web/src/app/ui/picker-card/picker-card.component.ts` (`hk-picker-card`: `selected`, `gated` with `reason` hint, `choose` output, `details` output)
 - Modify: `apps/web/src/app/views/characters/create-wizard/**` — every step on boards `W01`…`W10` desktop and phone: name & concept (grammatical form segment, portrait, packs with pins; core lock hint), species/background/class pickers as full-height responsive grids with search + filter chips and the description drawer (no inner scroll boxes), ability scores with four method tabs and all six seals visible (no auto-advance), skills/tools and style/masteries with counters, spells (tick seals, orb glyph, no captions), equipment (kit A/B; the gold alternative rendered but its house-rule lock arrives in slice 2), review by step with Edit links; the strap: Cancel · Back | Next → "Create hero" on review, pickers add Filter · Search in zone 3, status "Step N of M · name"
 - Test: `create-wizard.component.spec.ts` (RED: next never skips an unanswered step; Back returns to the previous step; the ability step does not auto-advance; every picker option opens its description; the review Edit link jumps to the step and Next returns to review), `stepper.component.spec.ts`, `flow-controller.spec.ts`; e2e `create-fighter`, `create-monk`, `create-rogue`, `create-soldier-options` + `e2e/helpers/create-wizard.ts` updated
@@ -214,6 +227,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B9: Sheet shell and Play tab — desktop leaves, phone tabs, drawers, play dialogs
 
 **Files:**
+
 - Modify: `apps/web/src/app/views/characters/sheet/sheet-shell.component.*` (board `Main`: folio column with portrait, name plate, tabs Play · Build · Timeline + the Level up tab-action with the XP hint, HP strap, AC shield, vitals tiles, ability seals, skills; banners; the strap: Damage · Heal · Roll · Short rest · Long rest | Add condition · Notes · Roll log · Export · Edit; concentration note in the status slot), `play/play-tab.component.*` split into leaves: `play/attacks-leaf`, `play/resources-leaf`, `play/conditions-leaf` (chips + death saves + inspiration), `play/features-leaf` (grouped by source — data in B13), `play/spells-leaf` (slot seals with numerals and the "Level N slots" label, prepared rows, cast), `play/bag-leaf` (satchel grid, selected-item strip, coin pouch, weight strap)
 - Create: phone tab routing under `/c/:id/` — `combat`, `spells`, `bag`, `hero`, `more` children that compose the same leaves (board `A-Phone`, `H-Hero-Phone`); `TabBarService` set by the sheet shell; `more` lists Build, Timeline, Notes, Roll log, Content packs, Export, Level up
 - Move drawers: `play/notes-drawer.component.*` (board `D01`), `play/roll-log-drawer.component.*` (board `D02`: advantage segment, visibility picker when linked, feed, log a roll, clear) opened from the strap through `hk-drawer`
@@ -227,6 +241,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B10: Build tab, Timeline, Level-up on the shared stepper
 
 **Files:**
+
 - Modify: `views/characters/sheet/build/build-tab.component.*` (board `B01`: origin and class, ability table with method, choices made with Re-pick or a lock hint, proficiencies and languages, rule options with the campaign-locked tooltip, content packs with pins and updates, identity fields with one Save), `views/characters/sheet/timeline/timeline-tab.component.*` (board `T01`: sentences grouped by day/session, kind icon, expanders, per-row Revert opening the confirm dialog, filter chips), `views/characters/level-up/level-up.component.*` (boards `L01`…`L04` on `hk-stepper` + `FlowController` from B8: which class, hit points with the rolled result shown before confirming, choices with gated feats and their reasons as hints, review with "Finish level up" in the Next slot; Play/Build/Timeline dimmed and the Level up tab active; Cancel in zone 1), `views/characters/sheet/play/revert-dialog` (board `DL05`), i18n: `characters.timeline.revert` = "Revert" / "Отменить изменение" / "Відкотити" (distinct from Cancel)
 - Test: `level-up.component.spec.ts` (RED: deep link to `/c/:id/level-up` then Back returns to the tab the user came from — Review Focus 3; Next never skips an unanswered choice step; the HP step shows the roll before confirming), `build-tab.component.spec.ts` (the build is shown: species, class levels, subclass, background, each choice), `timeline-tab.component.spec.ts` (Revert and Cancel labels differ in uk); e2e `level-up.spec.ts`, `multiclass.spec.ts`, `custom-packs.spec.ts` (Build → packs) + `e2e/helpers/level-up.ts`
 
@@ -236,6 +251,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B11: Campaign screens
 
 **Files:**
+
 - Modify: `views/campaigns/list/` (board `C01`), `create/` (`C02` on `hk-dialog`), `join/` (`C03`), `link-character/` (`C04`), `lobby/` (`C05`: code plate, QR, copy, rotate, roster), `party/party-tab` (`C06` DM: `hk-party-card` grid with the quick-effects leaf for the selected member — Damage, Heal, Temp HP, Condition, XP, Level, Item, Inspiration, Override; `C07` player view; the encounter plate slot stays empty until slice 2), `party/member-sheet-dialog` → drawer (`C08`), `log/log-tab` (board `C09`, label "Table", route path `log` unchanged: session strip with Start/End session, feed with visibility badges and system lines, composer that fits the width), `settings/campaign-settings` (`C10`: house rules — the existing three; packs with quota and Enable/Disable/Update; party sheets; export; leave/delete), the confirms on `hk-dialog` (`C11`), the campaign tab bar Party · Table · Lobby · Settings on phones, the DM strap zone 2 = Damage · Heal · Condition · XP · Item, zone 3 = Session · Export
 - Test: specs per screen (layout + unchanged behaviours: join by code, link, remove member, DM effects land on the member, roll visibility, chat, packs enable/disable/update); sync e2e `campaign-table`, `campaign-claim`, `campaign-portrait`, `campaign-session-lock`, `campaign-packs` + `e2e/sync/campaign-helpers.ts` updated
 
@@ -245,6 +261,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B12: Library, packs, homebrew, settings, auth
 
 **Files:**
+
 - Modify: `views/library/browse/` (board `LB01`: search with ranking exact → prefix → word so "fire" ranks Fireball first — the ranking function moves to `apps/web/src/app/shared/services/library/library-search.ts` with its own spec; type chips with per-query counts; rows whose type and language pills never overflow), `views/library/detail/` (`LB02` spell entry with "Add to hero" when opened from a sheet via a `?for=<characterId>` query; `LB03` class entry: core traits, level-1 features, features-by-level table from the pack's progression data, subclasses, spell list — a `class-entry.component` renderer; Back to library), `views/packs/` (`PK01`…`PK05`: list, detail, trust dialog, homebrew list, item/spell/feat/species forms on the new fields — the icon field arrives in slice 2), `views/settings/` (`ST01`: left index; Account with devices and quota; Appearance with the three theme cards, density, motion, language; Storage; Content packs; About & licences — the former `/about` content with the game-icons authors from `assets/icons/authors.json`), `views/auth/` (`AU01`: log in, create account, recovery codes, recover as centred leaves; the primary button lives in the form's own strap, the page strap keeps Back and Help)
 - Test: `library-search.spec.ts` (ranking), `browse.component.spec.ts`, `class-entry.component.spec.ts` (renders levels 1–20 from pack data), `settings.component.spec.ts` (about section present; `/about` redirect lands on it), auth specs; e2e `library.spec.ts`, `custom-packs.spec.ts`, sync `auth.spec.ts` + `e2e/helpers/packs.ts`
 
@@ -255,6 +272,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B13: Features by source, choice options, entry links
 
 **Files:**
+
 - Create: `apps/web/src/app/shared/services/engine/feature-groups.ts` (`groupFeaturesBySource(views: FeatureView[]): FeatureGroup[]` in the order Class (with level gained), Subclass, Species, Background, Feats, Chosen options — from each feature view's existing provenance `source`), `apps/web/src/app/shared/services/engine/choice-options.ts` (`optionsForChoice(choice: ChoiceOffer, index: LibraryIndex): { count: number; options: { id; name; href }[] }` — the same candidate evaluation the wizard pickers already use, exposed for the options chip)
 - Modify: `play/features-leaf` (groups + level badges + hover hint "From <source>, level N"), the class picker drawer in the wizard and the library class entry (options chip on every choice feature with the popover and "See all in library"), every feature/spell/item summary that truncates (`hk-description-drawer` link + popover with the full text)
 - Test: `feature-groups.spec.ts` (order and level badges), `choice-options.spec.ts` (Paladin Weapon Mastery counts the pack's mastery-property weapons; Fighting Style lists its options), `features-leaf.component.spec.ts`, `class-entry.component.spec.ts` (chips present on choice rows)
@@ -265,6 +283,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B14: i18n strings pass and the text-fit harness
 
 **Files:**
+
 - Modify: every `apps/web/src/assets/i18n/**/{en,ru,uk}.json` touched by B2–B13 — every new key ×3; uk proposals come from `docs/superpowers/design/2026-11-stage-a/notes/*-notes.md` ("invented uk strings"), ru written consistently with the existing ru files; `apps/web/scripts/check-i18n-keys.mjs` (ru/uk missing keys now FAIL, not warn), `docs/02-architecture/06-i18n.md` (the hint rule and the text-fit rule)
 - Create: `apps/web/scripts/build-fit-locale.mjs` (writes `src/assets/i18n/fit/**` — per key the longest of en/ru/uk — gitignored, generated before the text-fit run), `apps/web/playwright.textfit.config.ts` + `apps/web/e2e/textfit/*.spec.ts` (loads every route of the audit's screen table at 360 × 640 and 1280 × 800 with `lang=fit`, asserts `document.scrollWidth <= clientWidth`, and for every element with `overflow: hidden` that `scrollWidth <= clientWidth` unless it carries `data-truncate` (ellipsis + tooltip)); `package.json` scripts `e2e:textfit`
 - Test: the harness itself (RED on a fixture template with a 600 px string)
@@ -277,6 +296,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B15: Mobile Playwright project, per-theme axe, bundle budget
 
 **Files:**
+
 - Create: `apps/web/playwright.mobile.config.ts` (390 × 844, `hasTouch`, `isMobile`, same static webServer) running `e2e/create-fighter.spec.ts`, `e2e/play-actions.spec.ts`, `e2e/level-up.spec.ts` through the phone tabs (helpers switch on viewport), and `e2e/mobile/tabs.spec.ts` (Combat tab shows HP, AC, speed, saves and attacks above the fold at 390 × 844 — Review Focus 4; long-press on an icon button shows its hint); `package.json` script `e2e:mobile`
 - Modify: `apps/web/e2e/a11y.spec.ts` (the 14 scans × the three themes by setting the stored theme before load — Review Focus 2), `apps/web/tools/check-bundle-budget.ts` thresholds unchanged (gzip ≤ 600 kB; fonts and textures must not push the initial bundle over: fonts preloaded as assets, sprite per route group)
 - Test: the new specs; `pnpm --filter web build` passes the budget gate
@@ -287,6 +307,7 @@ Each artifact is a Claude Design (or Claude Docs for text) artifact created with
 ### Task B16: Docs, checklist, retirement, wrap
 
 **Files:**
+
 - Modify: `docs/02-architecture/09-frontend-architecture.md` (the `ui/` library, the shell, the strap and tab-bar services, navigation history, themes and textures, phone tab routing), `docs/02-architecture/06-i18n.md` (already in B14; cross-check), `docs/README.md` (Phase 5 slice 1 section with the gates' numbers), `docs/03-roadmap/phases.md` (Phase 5 row), `docs/manual-device-checklist.md` (rewritten for the new UI: install, offline create → play → reload through the phone tabs, theme switch, long-press hints), `apps/web/src/app/shared/components/**` (delete every component nothing imports; `rg` proves it), `packages/ui-tokens` (drop the legacy alias block only if no SCSS references remain), this plan's STATUS → EXECUTED
 - Test: `pnpm check` green; `pnpm --filter web e2e`, `e2e:sync`, `e2e:mobile`, `e2e:textfit` green; bundle budget green
 

@@ -1,7 +1,7 @@
 # Herokeep — planning documentation
 
-*Working title. Planning baseline approved 2026-08-30. No application code exists yet;
-the next session writes the Phase 1a implementation plan.*
+_Working title. Planning baseline approved 2026-08-30. No application code exists yet;
+the next session writes the Phase 1a implementation plan._
 
 ## Reading order
 
@@ -48,6 +48,35 @@ memory and are cached locally. Identity is **username + password + recovery code
 browser-side key derivation and no personal data. The UI is an Angular 22 PWA with
 runtime i18n (EN/RU/UK), a token-based SCSS design system, and a fantasy skin planned as
 a theme rather than a rewrite.
+
+## Phase 5 slice 1: frontend redesign (plan 17, executed 2026-11-15)
+
+The Library and builder PWA was redesigned design-first: Stage A (concept "Tavern Table", 119
+boards, a design system) was approved on 2026-11-03, then Stage B rebuilt the presentation in 16
+tasks with no change to events, reducers, schemas or the API. What it shipped is described in
+[09-frontend-architecture](02-architecture/09-frontend-architecture.md) (the `ui/` library, shell,
+action strap, tab bar, navigation history, themes and textures, deviations) and
+[06-i18n](02-architecture/06-i18n.md) (hints, key check, text fit). The owner-flags are the "Phase 5
+follow-ups" list in [03-roadmap/phases](03-roadmap/phases.md). The real-device pass is
+[manual-device-checklist](manual-device-checklist.md).
+
+Gate numbers from the final B16b run (branch `worktree-phase-5-plan17-redesign`):
+
+| Gate                                                | Result                                                                                                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter web lint` (incl. the i18n key check) | pass                                                                                                                                                 |
+| `pnpm --filter web test --watch=false`              | 241 files / 3422 tests                                                                                                                               |
+| `pnpm --filter web build`                           | initial bundle 371.2 kB gzip of 600 (the corrected gate, which follows static imports; B15b measured 371.3, the earlier 368.4 was not like-for-like) |
+| root `pnpm typecheck`                               | pass                                                                                                                                                 |
+| root `pnpm vitest run`                              | 147 files / 2250 tests                                                                                                                               |
+| `pnpm --filter web e2e`                             | 66 / 66 (includes 51 per-theme axe scans: 17 x tavern, scroll, plain)                                                                                |
+| `pnpm --filter web e2e:sync`                        | 10 / 10                                                                                                                                              |
+| `pnpm --filter web e2e:textfit`                     | 9 passed, 1 skipped (`strap.spec` on the `desktop-1280` project)                                                                                     |
+| `pnpm --filter web e2e:mobile`                      | 12 / 12                                                                                                                                              |
+
+Baselines at plan start were root 145 / 2102, web 147 / 1749, offline e2e 31 / 31, sync 8 / 8 and
+344.8 kB gzip under the old gate. The whole `pnpm check` hangs in the Windows worktree, so the
+pieces above ran one by one. No flaky spec fired in this run.
 
 ## Conventions for these docs
 
