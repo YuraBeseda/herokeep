@@ -104,8 +104,8 @@ describe('CampaignShellComponent', () => {
     expect(hosts.length).toBeGreaterThan(0);
     for (const host of hosts) {
       expect(host.injector.get(HkTooltipDirective, null)).not.toBeNull();
-      expect(host.nativeElement.hasAttribute('title')).toBe(false);
-      expect(host.nativeElement.hasAttribute('data-truncate')).toBe(true);
+      expect((host.nativeElement as HTMLElement).hasAttribute('title')).toBe(false);
+      expect((host.nativeElement as HTMLElement).hasAttribute('data-truncate')).toBe(true);
     }
   });
 
