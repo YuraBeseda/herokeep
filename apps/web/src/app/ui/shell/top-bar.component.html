@@ -31,6 +31,6 @@
     </span>
   </header>
   @if (open()) {
-    <hk-app-drawer (keydown.escape)="close(true)" (navigated)="close(false)" />
+    <hk-app-drawer (navigated)="close(false)" />
   }
 </ng-container>

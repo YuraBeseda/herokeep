@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -8,6 +9,7 @@ import {
   viewChild,
   type ElementRef,
 } from '@angular/core';
+import { NavigationStart, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { HkIconButtonComponent } from '../icon-button/icon-button.component';
@@ -20,9 +22,9 @@ import { TopBarService } from './top-bar.service';
  * IA-Home-Phone): a folio button that opens the app drawer, the screen title, and a 44 px slot
  * kept free for the screen's one context action. Render it only on phones.
  *
- * It owns the drawer's dismissal: the same folio button closes it, so do Escape (focus returns to
- * the button), a press outside the drawer, and following a link in it. The drawer never changes
- * the URL.
+ * It owns the drawer's dismissal: the same folio button closes it, so do Escape from the drawer or
+ * the button (focus returns to the button), a press outside the drawer, and any router
+ * `NavigationStart` (a link in it, browser or hardware Back). The drawer never changes the URL.
  */
 @Component({
   selector: 'hk-top-bar',
@@ -34,6 +36,7 @@ import { TopBarService } from './top-bar.service';
     HkAppDrawerComponent,
   ],
   providers: [provideTranslocoScope('shell')],
+  host: { '(keydown.escape)': 'close(true)' },
   templateUrl: './top-bar.component.html',
   styleUrl: './top-bar.component.scss',
 })
@@ -61,6 +64,11 @@ export class HkTopBarComponent {
       document.addEventListener('pointerdown', onPress);
       onCleanup(() => document.removeEventListener('pointerdown', onPress));
     });
+
+    const navigations = inject(Router).events.subscribe((event) => {
+      if (event instanceof NavigationStart) this.close(false);
+    });
+    inject(DestroyRef).onDestroy(() => navigations.unsubscribe());
   }
 
   protected toggle(): void {

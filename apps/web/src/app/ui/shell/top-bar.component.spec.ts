@@ -174,6 +174,28 @@ describe('HkTopBarComponent', () => {
       el.remove();
     });
 
+    it('closes on Escape from the folio button and keeps focus on it', async () => {
+      const { el, settle } = await setup();
+      document.body.append(el);
+      folio(el).focus();
+      press(folio(el));
+      await settle();
+      folio(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await settle();
+      expect(drawer(el)).toBeNull();
+      expect(document.activeElement).toBe(folio(el));
+      el.remove();
+    });
+
+    it('closes when a navigation starts (browser or hardware Back)', async () => {
+      const { el, router, settle } = await setup();
+      press(folio(el));
+      await settle();
+      await router.navigateByUrl('/settings');
+      await settle();
+      expect(drawer(el)).toBeNull();
+    });
+
     it('closes with the same control that opened it', async () => {
       const { el, settle } = await setup();
       press(folio(el));
