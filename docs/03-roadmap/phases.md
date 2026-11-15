@@ -35,7 +35,19 @@ plan. The ledger is `.superpowers/sdd/2026-10-18-phase-5-slice-1-frontend-redesi
 - **B12c, auth gaps:** the leather "Log out" needs a button variant; recovery codes need a mono font token and a bundled font; there is no "N more tries" (the API gives only `retryAfterMs`); username availability has no endpoint; the "granted on" date is unavailable; Export-all has no import path (R61).
 - **B12a, browse default:** the library browse defaults to the Spells chip until another is pressed (LB01 shows only the search state, where All is the default).
 - **B13, features leaf length:** the sheet features leaf can now list 15 to 20 rows (passives and feats); per-feature option chips are impossible from pack data (R55), so they sit on level rows and in the drawer's Choices section.
-- **Shadow tokens:** the `legacy` token group keeps `shadow-1` and `shadow-2`, used by 11 `ui/` components; they alias no design-system token, so a design decision on real elevation tokens is pending.
+- **Shadow tokens:** the `legacy` token group keeps `shadow-1` and `shadow-2`, used by 11 references in 8 `ui/` components; they alias no design-system token, so a design decision on real elevation tokens is pending.
+- **Raw shadow colours:** `ui/inspiration-toggle`, `ui/attack-row` and `views/campaigns/log/log-tab` still use `rgb(0 0 0 / x%)` for inset and text shadows; they need a new shadow token (design work).
+- **Dead exports in `ui/`:** about 25 file-local types and helpers (mostly formatters in `entity-facts.formatters.ts`, and aliases such as `WaxSealState`, `HkToastVariant`, `FlowStep`) are exported but never imported elsewhere; drop the `export` in a later sweep.
+- **Deferred review minors (final review of plan 17), by area:**
+  - Tokens and theme: `ThemeService` has no storage-throws spec; the contrast helper ignores alpha; headings are weight 400 globally; plain theme goes through `:host-context`; electrum shade; `shadow-1/2` legacy.
+  - Tooltip and icons: the slip is not re-placed when its text changes (no 2.5 s or contextmenu spec); the icon-hints regex breaks on `>` inside a binding; the fonts are not preloaded.
+  - Leaf-level `ui/`: wax-seal hard-codes the sprite path; `pool-bar` `pipHint` defaults to `''` and shows "0 of -3" for a negative max; portrait-frame has no image-error fallback; spell-row uses `?? ''` for seal hints; the death-saves Roll is named only "Roll"; the proficiency dot is a tab stop on every skill row (needs roving focus).
+  - Inventory and fields: the satchel needs roving focus; the coin-pouch total is not locale-formatted; number-field accepts a lone "-"; the coin draft does not refresh.
+  - Shell and navigation: `pathOf` has three copies; the More-sheet disabled reasons and duplicate strings; the strap is a `<footer>`; `NavHistoryService.back` pops before a guard resolves; in-app Back and a breakpoint-flip `replaceUrl` reset scroll (R74); `RouterLinkActive` may be unused in nav-rail.
+  - Drawers and dialogs: drawer Escape versus an inline popover; a stacked backdrop; a wrong fallback hint; the drawer-from-dialog Escape case; no `inert` on phone sheets.
+  - Home, library and builder: hero-card menu, a double-announced sync chip and an interim ground; granted-skill rows; the manual-score error; the "Show more" name and focus; the strap Search; the empty "no matches" state; the options-chip `focusout` with a null `relatedTarget`.
+  - Campaigns and packs: campaign dialogs are not in the sync text-fit suite; the identity save failure reuses `validation.generic`; the hkpack round-trip spec needs a built pack.
+  - Spec gaps: dynamic-keys arrays are not `satisfies`; build and level-up guards have no double-ask spec; the plural regex in the text-fit harness is a harmless fallback.
 - **Layering:** `ui/description-drawer` imports `CreateWizardState` from `views/characters/create-wizard`, so `ui/` depends on `views/`; the wizard state should move to `shared/` or `ui/`.
 - **Fonts:** a preload of the tavern heading face only is an option if first paint of headings flashes (see the deviations in `02-architecture/09-frontend-architecture.md`).
 

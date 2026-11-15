@@ -244,14 +244,14 @@ running for longer than one sitting), use the self-host route instead:
    labels are listed, each with a last-active time, and the current device is tagged "This
    device". Tap **Revoke** on the _other_ device, confirm the dialog; on that other phone, the
    next action against the server (e.g. any edit) should sign it back out to the login prompt.
-7. **Quota**: on either phone, **Settings** → **Storage quota** shows usage against the account's
+7. **Quota**: on either phone, **Settings** → **Account storage** shows usage against the account's
    limits once at least one character has synced (before any sync it reads "No synced characters
    yet").
 8. **Recovery-code reset**: on a signed-out browser (or after logging out on one phone), go to
    `/login` → **Forgot your password?** → enter the username, one of the saved recovery codes, and
    a new password → **Reset password**. Confirm you can log back in with the new password
    afterward, and that this signs out every _other_ device with an active session (per the
-   recover screen's own "Resetting your password will sign you out of every other device."
+   recover screen's own "Resetting the password signs out all other devices. This one stays signed in."
    notice) — check a still-open session on another phone gets signed out too.
 
 ### Results
@@ -295,7 +295,7 @@ from that pass, or create fresh ones.
    it appears on the other phone's Log tab live, no reload.
 5. **DM effect lands live**: on phone A's **Party** tab, expand **DM tools** on phone B's
    character's card and apply a small amount of damage. On phone B — sheet already open, no
-   reload — confirm the Play tab's Current HP drops by that amount within a few seconds.
+   reload — confirm the Play tab's Hit points meter drops by that amount within a few seconds.
 6. **Portrait relay**: on phone B, set a portrait (Build tab, if this character doesn't already
    have one). On phone A's **Party** tab, confirm the placeholder monogram on that character's
    card is eventually replaced by the real portrait thumbnail (this is the blob-transfer client
@@ -327,10 +327,10 @@ reality-check sections 1–2 already do for install/offline.
 1. On the installed app, build a Fighter through the creation wizard (as in section 2). Award it
    300 XP (the sheet's Award XP field) and tap the "Level up available" badge.
 2. Confirm a "Which class?" picker appears, offering the character's own next level PLUS at least
-   one "Multiclass into <class>" option (the standard array qualifies for more than one class) —
+   one "Or start a second class" option (the standard array qualifies for more than one class) —
    confirm every option is comfortably tappable at your device's real screen width, with no
    overlap or overflow.
-3. Tap a "Multiclass into <class>" option. Confirm the wizard skips straight into that class's own
+3. Tap a "Or start a second class" option. Confirm the wizard skips straight into that class's own
    level-1 choices with no HP step at all (a brand-new class's own level 1 is priced automatically
    at that class's average hit die — no roll/average choice to make, unlike your very first
    class's own level 1, which took the hit die's max value at character creation), and complete

@@ -150,7 +150,7 @@ render a different DOM.
   forward navigation (R74): it opens the previous screen at the top and does not restore scroll.
 - **Phone tab routing.** The sheet is `/c/:id` with child routes. On a tablet or desktop the tabs
   are Play, Build and Timeline. Below 768 px they are Combat, Spells, Bag, Hero and More, and the
-  same leaves are composed by those tabs. The shell is the one place that reconciles route and
+  same leaves are composed by those tabs. The sheet shell (`SheetShellComponent`) is the one place that reconciles route and
   width: `/play` lands on `/combat` on a phone, and from 768 px a phone-tab URL resolves to
   `/play`, both with `replaceUrl`, so deep links and Back keep working.
 - **Router scrolling (R73).** `appRouterScrolling` in `app.config.ts` is
@@ -216,7 +216,7 @@ dropped the legacy alias block (`surface-0..3`, `border-1`, `accent`, `accent-co
 `motion`) after re-pointing the ~151 references in `apps/web` to the design-system names, and
 removed the unused schema field `meta.aliasesForEngineers`. The Stage A copy is a frozen design
 record and is not updated; the packaged file is the source of truth. A `legacy` group remains
-(`shadow-1`, `shadow-2`, used by `ui/` components), as do `text-1..3`, `space-1..6`, `warning`,
+(`shadow-1`, `shadow-2`, used by 11 references in 8 `ui/` components), as do `text-1..3`, `space-1..6`, `warning`,
 `overlay` and `accent-strong`.
 
 ### Deviations from the plan 17 text
