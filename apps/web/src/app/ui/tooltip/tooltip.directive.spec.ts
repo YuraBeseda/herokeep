@@ -88,6 +88,49 @@ describe('HkTooltipDirective', () => {
     expect(tip()).not.toBeNull();
   });
 
+  // I1: Android focuses a tapped button and then sends a compat mouseenter; neither may show it.
+  it('shows nothing for a short touch tap (pointerdown, focus, pointerup, mouseenter)', () => {
+    pointer(button, 'pointerenter', 'touch');
+    pointer(button, 'pointerdown', 'touch');
+    button.dispatchEvent(new Event('focus'));
+    vi.advanceTimersByTime(100);
+    pointer(button, 'pointerup', 'touch');
+    button.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(1000);
+    expect(tip()).toBeNull();
+  });
+
+  it('still shows on keyboard focus (focus-visible) after a touch', () => {
+    pointer(button, 'pointerdown', 'touch');
+    pointer(button, 'pointerup', 'touch');
+    vi.spyOn(button, 'matches').mockImplementation((selector) => selector === ':focus-visible');
+    button.dispatchEvent(new Event('focus'));
+    expect(tip()).not.toBeNull();
+  });
+
+  it('still shows on a mouse hover after a touch', () => {
+    pointer(button, 'pointerdown', 'touch');
+    pointer(button, 'pointerup', 'touch');
+    pointer(button, 'pointerenter', 'mouse');
+    button.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(300);
+    expect(tip()).not.toBeNull();
+  });
+
+  it('gives a repeated long-press its own 2.5 s window', () => {
+    pointer(button, 'pointerdown', 'touch');
+    vi.advanceTimersByTime(400);
+    pointer(button, 'pointerup', 'touch');
+    vi.advanceTimersByTime(1600);
+    pointer(button, 'pointerdown', 'touch');
+    vi.advanceTimersByTime(400);
+    pointer(button, 'pointerup', 'touch');
+    vi.advanceTimersByTime(600); // past the first press's expiry
+    expect(tip()).not.toBeNull();
+    vi.advanceTimersByTime(1900); // the second press's 2.5 s are up
+    expect(tip()).toBeNull();
+  });
+
   it('does not start the long-press timer for a mouse pointerdown', () => {
     pointer(button, 'pointerdown', 'mouse');
     vi.advanceTimersByTime(500);

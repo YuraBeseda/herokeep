@@ -78,6 +78,21 @@ test.describe('phone sheet (390 x 844)', () => {
     expect(box.y + box.height, 'docked to the bottom').toBeGreaterThanOrEqual(height - 1);
   });
 
+  // I1: a short tap focuses the button and sends a compat mouseenter; neither may leave a hint.
+  test('a short tap on an HP button or a strap tile shows no hint', async ({ page }) => {
+    const targets = [
+      page.locator('hk-hp-gauge button').first(),
+      page.locator('.hk-astrap button').first(),
+    ];
+    for (const target of targets) {
+      await expect(target).toBeVisible();
+      // force: the HP buttons are aria-disabled (with a reason) until an amount is typed.
+      await target.tap({ force: true });
+      await page.waitForTimeout(1000); // past the hover delay a compat mouseenter would start
+      await expect(page.getByRole('tooltip')).toHaveCount(0);
+    }
+  });
+
   test('long-press on an icon button shows its hint', async ({ page }) => {
     // The top bar's Edit button is the one icon button on the phone Combat screen.
     const button = page.locator('button[hk-icon-button]').first();

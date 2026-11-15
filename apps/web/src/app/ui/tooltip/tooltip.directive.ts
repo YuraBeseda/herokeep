@@ -26,7 +26,8 @@ let nextTipId = 0;
 /**
  * `[hkTooltip]` — the hint (design-system Tooltip): a parchment slip naming what a glyph means.
  * Shown after `hkTooltipDelay` (300 ms) on hover, immediately on keyboard focus, and after a
- * 400 ms press on touch; removed on pointer leave, blur or Escape. While the slip is shown the host
+ * 400 ms press on touch; removed on pointer leave, blur or Escape. A short touch tap shows nothing:
+ * the focus and compat `mouseenter` a tap brings are ignored after a touch pointer. While the slip is shown the host
  * gets `aria-describedby` pointing at it. The hint is never the only accessible name: pair it
  * with an `aria-label` carrying the same text (`hk-icon-button` does this).
  */
@@ -36,8 +37,9 @@ let nextTipId = 0;
     '[attr.aria-describedby]': 'describedBy()',
     '(mouseenter)': 'onMouseEnter()',
     '(mouseleave)': 'hide()',
-    '(focus)': 'show()',
+    '(focus)': 'onFocus()',
     '(blur)': 'hide()',
+    '(pointerenter)': 'notePointer($event)',
     '(pointerdown)': 'onPointerDown($event)',
     '(pointerup)': 'cancelPending()',
     '(pointercancel)': 'cancelPending()',
@@ -81,6 +83,8 @@ export class HkTooltipDirective {
   private pending: ReturnType<typeof setTimeout> | undefined;
   private touchExpiry: ReturnType<typeof setTimeout> | undefined;
   private longPressed = false;
+  /** The type of the last pointer seen on the host; a touch one mutes focus and compat mouse. */
+  private lastPointer: string | undefined;
 
   private readonly onDocumentKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') this.hide();
@@ -97,10 +101,21 @@ export class HkTooltipDirective {
   }
 
   protected onMouseEnter(): void {
+    if (this.lastPointer === 'touch') return;
     this.schedule(this.hkTooltipDelay());
   }
 
+  protected onFocus(): void {
+    if (this.lastPointer === 'touch' && !this.focusVisible()) return;
+    this.show();
+  }
+
+  protected notePointer(event: PointerEvent): void {
+    this.lastPointer = event.pointerType;
+  }
+
   protected onPointerDown(event: PointerEvent): void {
+    this.notePointer(event);
     this.longPressed = false;
     if (event.pointerType !== 'touch') return;
     this.schedule(HINT_DELAY_TOUCH_MS, true);
@@ -143,6 +158,14 @@ export class HkTooltipDirective {
     this.shown.set(false);
   }
 
+  private focusVisible(): boolean {
+    try {
+      return this.anchor.matches(':focus-visible');
+    } catch {
+      return false; // an engine without :focus-visible
+    }
+  }
+
   private schedule(delayMs: number, touch = false): void {
     this.cancelPending();
     this.pending = setTimeout(() => {
@@ -150,6 +173,7 @@ export class HkTooltipDirective {
       this.show();
       if (touch) {
         this.longPressed = true;
+        clearTimeout(this.touchExpiry);
         this.touchExpiry = setTimeout(() => this.hide(), TOUCH_HINT_VISIBLE_MS);
       }
     }, delayMs);
