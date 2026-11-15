@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
@@ -10,7 +10,7 @@ import { gzipSync } from 'node:zlib';
  * that raw-size budget from 500 kB/1 MB to 1 MB/1.5 MB just to stop it tripping on a bundle whose
  * real gzip transfer was ~214 kB, comfortably under the roadmap's binding line. This script
  * measures — never estimates — the real gzip bytes of every file the built `index.html`
- * references eagerly (script `src`, `rel="stylesheet"`, and `rel="modulepreload"` links; a lazy
+ * references eagerly, plus every chunk they reach through static `import` edges (script `src`, `rel="stylesheet"`, and `rel="modulepreload"` links; a lazy
  * route/component chunk is fetched later via dynamic `import()` and is never referenced from
  * `index.html`, so it's correctly excluded) and fails if that total exceeds the budget.
  */
@@ -42,6 +42,34 @@ export function parseInitialFiles(indexHtml: string): string[] {
     }
   }
   return [...files];
+}
+
+// Static `import ... from "x"`, `import "x"` and `export ... from "x"`; a dynamic `import("x")`
+// has a paren right after the keyword so it never matches. Relative specifiers only.
+const STATIC_IMPORT_RE = /\b(?:import|export)\s*(?:[^'"();=]*?\bfrom\s*|\s*)["'](\.[^"']+)["']/g;
+
+/**
+ * Walks static import edges transitively from the files `index.html` references (R31): esbuild
+ * hoists shared chunks into the entry via static imports without always adding a modulepreload
+ * link, and such a chunk is still downloaded before the app starts. Dynamic imports stay out.
+ */
+export function collectInitialFiles(
+  entries: readonly string[],
+  readFile: (relativePath: string) => string,
+): string[] {
+  const seen = new Set<string>(entries);
+  const queue = [...entries];
+  for (let file = queue.pop(); file !== undefined; file = queue.pop()) {
+    if (!file.endsWith('.js')) continue;
+    for (const [, spec] of readFile(file).matchAll(STATIC_IMPORT_RE)) {
+      const target = posix.normalize(posix.join(posix.dirname(file), spec!));
+      if (!seen.has(target)) {
+        seen.add(target);
+        queue.push(target);
+      }
+    }
+  }
+  return [...seen];
 }
 
 export interface FileGzipSize {
@@ -86,7 +114,9 @@ function main(): void {
   }
 
   const indexHtml = readFileSync(indexPath, 'utf-8');
-  const initialFiles = parseInitialFiles(indexHtml);
+  const initialFiles = collectInitialFiles(parseInitialFiles(indexHtml), (file) =>
+    readFileSync(join(browserDir, file), 'utf-8'),
+  );
   const result = measureGzipTotal(browserDir, initialFiles);
 
   const sorted = [...result.files].sort((a, b) => b.gzipBytes - a.gzipBytes);

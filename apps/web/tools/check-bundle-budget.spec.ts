@@ -1,6 +1,11 @@
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { BUDGET_BYTES, measureGzipTotal, parseInitialFiles } from './check-bundle-budget';
+import {
+  BUDGET_BYTES,
+  collectInitialFiles,
+  measureGzipTotal,
+  parseInitialFiles,
+} from './check-bundle-budget';
 
 // A trimmed but representative slice of what `ng build` actually emits (captured from this
 // task's own production build): critical CSS inlined, the real stylesheet loaded async via the
@@ -36,6 +41,32 @@ describe('parseInitialFiles', () => {
 
   it('returns an empty list for an index.html with no initial references', () => {
     expect(parseInitialFiles('<html><head></head><body></body></html>')).toEqual([]);
+  });
+});
+
+describe('collectInitialFiles', () => {
+  const sources: Record<string, string> = {
+    'main.js':
+      'import{a as b}from"./chunk-STATIC.js";import"./chunk-SIDE.js";export{x}from"./chunk-RE.js";',
+    'chunk-STATIC.js': 'import{c}from"./chunk-DEEP.js";const l=()=>import("./chunk-LAZY.js");',
+    'chunk-DEEP.js': 'export const c=1;',
+    'chunk-SIDE.js': '',
+    'chunk-RE.js': '',
+    'chunk-LAZY.js': 'import"./chunk-LAZY-ONLY.js";',
+  };
+  const read = (f: string): string => sources[f] ?? '';
+
+  it('counts a static chunk that index.html does not reference, transitively', () => {
+    const files = collectInitialFiles(['main.js'], read);
+    expect([...files].sort()).toEqual(
+      ['chunk-DEEP.js', 'chunk-RE.js', 'chunk-SIDE.js', 'chunk-STATIC.js', 'main.js'].sort(),
+    );
+  });
+
+  it('never follows a dynamic import()', () => {
+    const files = collectInitialFiles(['main.js'], read);
+    expect(files).not.toContain('chunk-LAZY.js');
+    expect(files).not.toContain('chunk-LAZY-ONLY.js');
   });
 });
 
