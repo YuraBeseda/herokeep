@@ -329,7 +329,7 @@
       "increase": "Increase {{label}} by {{step}}"
     },
     "options": {
-      "chip": "{{count}} options",
+      "chip": "{count, plural, one {# option} other {# options}}",
       "see-all": "See all in library"
     },
     "party": {

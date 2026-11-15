@@ -25,6 +25,11 @@ describe('HkOptionsChipComponent', () => {
     expect(popover(el)).toBeNull();
   });
 
+  it('names a single option in the singular', async () => {
+    const { el } = await mount(HkOptionsChipComponent, { ...base, count: 1 });
+    expect(chip(el).getAttribute('aria-label')).toBe('1 option');
+  });
+
   it('opens on click and lists the options as links plus a See all footer link', async () => {
     const { fixture, el } = await mount(HkOptionsChipComponent, base);
     chip(el).click();
