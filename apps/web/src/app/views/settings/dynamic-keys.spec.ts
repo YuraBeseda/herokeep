@@ -126,6 +126,7 @@ describe('dynamic translation keys exist in every language', () => {
       'system', 'species', 'background', 'class', 'subclass', 'feature', 'feat', 'spell', 'item',
       'condition', 'skill', 'ability', 'language', 'tool', 'rule', 'table',
     ]; // prettier-ignore
+    const ABILITY_IDS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
     const HOMEBREW_TYPES = ['item', 'spell', 'feat', 'species'];
     const MARKDOWN_SAMPLES = ['bold', 'italic', 'list', 'heading'];
     const SYNC = ['synced', 'pending', 'connecting', 'offline'];
@@ -197,6 +198,8 @@ describe('dynamic translation keys exist in every language', () => {
       ['characters', 'sheet.build.origin.', ['speciesDetail', 'classDetail', 'subclassDetail', 'backgroundDetail', 'originFeatDetail'], 'build origin section'],
       ['characters', 'sheet.roll.visibility.', ['everyone', 'dm', 'private'], 'roll log drawer'],
       ['characters', 'sheet.resources.reset.', ['shortRest', 'longRest', 'dawn'], 'resources leaf'],
+      ['characters', 'sheet.abilities.abbr.', ABILITY_IDS, 'abilities leaf phone saves abbreviation'],
+      ['shell', 'icon.', ABILITY_IDS, 'abilities leaf phone saves full name'],
       ['characters', 'timeline.revertConfirm.preview.', ['hp', 'hpMax', 'ac', 'level', 'none'], 'revert dialog'],
       ['shell', 'ui.coins.', ['cp', 'sp', 'ep', 'gp', 'pp'], 'coin pouch stack label'],
       ['shell', 'ui.coins.name-', ['cp', 'sp', 'ep', 'gp', 'pp'], 'coin pouch metal name'],

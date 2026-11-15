@@ -34,7 +34,7 @@ const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
     HkTooltipDirective,
     HkWaxSealComponent,
   ],
-  providers: [provideTranslocoScope('characters')],
+  providers: [provideTranslocoScope('characters'), provideTranslocoScope('shell')],
   templateUrl: './abilities-leaf.component.html',
   styleUrl: './abilities-leaf.component.scss',
 })

@@ -158,9 +158,19 @@
     font-size: 20px;
   }
 
+  /* One row in every language: the three actions share the width after the amount field. */
   .hk-hp-gauge__controls {
     flex: 1 1 100%;
+    flex-wrap: nowrap;
     gap: 4px;
+  }
+
+  .hk-hp-gauge__controls button {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    padding-inline: 3px;
+    gap: 4px;
+    font-size: 15px;
   }
 
   .hk-hp-gauge__amount {

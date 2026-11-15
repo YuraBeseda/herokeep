@@ -19,6 +19,8 @@ test.describe('phone sheet (390 x 844)', () => {
       await expect(page).toHaveURL(/\/c\/[^/]+\/combat$/);
       await expect(page.locator('hk-attack-row').first()).toBeVisible();
       await expect(page.locator('html')).toHaveAttribute('lang', new RegExp(`^${locale}`));
+      // Measure from the top: the sheet can open scrolled, which would hide an overflow.
+      await page.evaluate(() => window.scrollTo(0, 0));
       // The visible area is the viewport minus the pinned action strap (ruling R69).
       const strap = (await page.locator('.hk-astrap').boundingBox())!;
       const parts = {
@@ -27,6 +29,10 @@ test.describe('phone sheet (390 x 844)', () => {
         speed: page.locator('.vitals__speed').first(),
         saves: page.locator('app-abilities-leaf'),
         firstAttack: page.locator('hk-attack-row').first(),
+        // R72: the Roll-damage control is part of the row and must clear the strap too.
+        firstAttackRoll: page.locator('hk-attack-row').first().locator('button'),
+        // The HP actions stay on one row: the last button starts at the first one's top.
+        hpActions: page.locator('.hk-hp-gauge__controls'),
       };
       for (const [name, part] of Object.entries(parts)) {
         await expect(part, name).toBeVisible();
@@ -34,6 +40,19 @@ test.describe('phone sheet (390 x 844)', () => {
         expect(box.y + box.height, `${name} ends above the strap`).toBeLessThanOrEqual(
           strap.y - HEADROOM,
         );
+      }
+      const hpButtons = page.locator('.hk-hp-gauge__controls button');
+      expect(await hpButtons.count()).toBe(3);
+      const tops = await hpButtons.evaluateAll((els) =>
+        els.map((e) => Math.round(e.getBoundingClientRect().top)),
+      );
+      expect(new Set(tops).size, `HP buttons share one row (tops ${tops})`).toBe(1);
+      const seals = page.locator('.abilities--saves .abilities__seal');
+      expect(await seals.count()).toBe(6);
+      for (let i = 0; i < 6; i++) {
+        const box = (await seals.nth(i).boundingBox())!;
+        expect(box.width, `save seal ${i} width`).toBeGreaterThanOrEqual(44);
+        expect(box.height, `save seal ${i} height`).toBeGreaterThanOrEqual(44);
       }
     });
   }
@@ -59,6 +78,9 @@ test.describe('phone sheet (390 x 844)', () => {
     // The top bar's Edit button is the one icon button on the phone Combat screen.
     const button = page.locator('button[hk-icon-button]').first();
     await expect(button).toBeVisible();
+    // The sheet can open scrolled (the wizard's last click was far down the page); a touch outside
+    // the viewport never reaches the button, so bring it into view before aiming at it.
+    await button.scrollIntoViewIfNeeded();
     const label = (await button.getAttribute('aria-label'))!;
     const box = (await button.boundingBox())!;
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
