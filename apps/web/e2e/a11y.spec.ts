@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { assertNoSeriousViolations } from './helpers/axe';
 import {
   applyBackgroundAbilities,
@@ -31,27 +31,33 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       await page.addInitScript((id) => localStorage.setItem('hk.theme', id), theme);
     });
 
+    // Proves the theme took effect, so a renamed key or attribute cannot silently scan the default theme.
+    const scan = async (page: Page, name: string) => {
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await assertNoSeriousViolations(page, name);
+    };
+
     test('home has no serious/critical violations', async ({ page }) => {
       await page.goto('/');
-      await assertNoSeriousViolations(page, 'home');
+      await scan(page, 'home');
     });
 
     test('library has no serious/critical violations', async ({ page }) => {
       await page.goto('/library');
       await expect(page.locator('.library-browse__row').first()).toBeVisible();
-      await assertNoSeriousViolations(page, 'library');
+      await scan(page, 'library');
     });
 
     test('a library detail has no serious/critical violations', async ({ page }) => {
       await page.goto('/library');
       await page.locator('.library-browse__row').first().click();
       await expect(page.locator('.library-detail__name')).toBeVisible();
-      await assertNoSeriousViolations(page, 'library detail');
+      await scan(page, 'library detail');
     });
 
     test('settings has no serious/critical violations', async ({ page }) => {
       await page.goto('/settings');
-      await assertNoSeriousViolations(page, 'settings');
+      await scan(page, 'settings');
     });
 
     // Plan 15 Task 3: the packs screens (list, core-pack detail with its rendered attribution
@@ -60,13 +66,13 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
     test('the packs list has no serious/critical violations', async ({ page }) => {
       await page.goto('/packs');
       await expect(page.locator('.packs-list__title')).toBeVisible();
-      await assertNoSeriousViolations(page, 'packs list');
+      await scan(page, 'packs list');
     });
 
     test('the core pack detail has no serious/critical violations', async ({ page }) => {
       await page.goto('/packs/srd-5e-2024@0.1.0');
       await expect(page.locator('.pack-info__attribution-body a').first()).toBeVisible();
-      await assertNoSeriousViolations(page, 'pack detail — core');
+      await scan(page, 'pack detail — core');
     });
 
     test('the pack trust dialog has no serious/critical violations', async ({ page }) => {
@@ -88,7 +94,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       await expect(page.locator('.packs-list__title')).toBeVisible();
       await page.locator('.packs-list__import-input').setInputFiles(file);
       await expect(page.locator('.pack-trust-dialog__title')).toBeVisible();
-      await assertNoSeriousViolations(page, 'pack trust dialog');
+      await scan(page, 'pack trust dialog');
 
       await page.locator('.pack-trust-dialog__install').click();
       await expect(page.locator('.pack-trust-dialog__title')).toHaveCount(0);
@@ -96,7 +102,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
 
       await page.locator('.packs-list__import-input').setInputFiles(file);
       await expect(page.locator('.pack-trust-dialog__installed')).toBeVisible();
-      await assertNoSeriousViolations(page, 'pack trust dialog — already installed');
+      await scan(page, 'pack trust dialog — already installed');
     });
 
     test('about has no serious/critical violations', async ({ page }) => {
@@ -104,7 +110,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       // /about redirects into Settings, About & licences (spec §2.1).
       await expect(page).toHaveURL(/\/settings#about$/);
       await expect(page.locator('#about')).toBeVisible();
-      await assertNoSeriousViolations(page, 'about');
+      await scan(page, 'about');
     });
 
     // task-15-brief.md: extend the axe screens with the characters list, one wizard step (ability
@@ -112,7 +118,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
 
     test('the characters list has no serious/critical violations', async ({ page }) => {
       await page.goto('/characters');
-      await assertNoSeriousViolations(page, 'characters list');
+      await scan(page, 'characters list');
     });
 
     test('the ability-scores creation-wizard step has no serious/critical violations', async ({
@@ -124,7 +130,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       await applyBackgroundAbilities(page);
       await pickClass(page);
       await expect(page.locator('.ability-scores-step')).toBeVisible();
-      await assertNoSeriousViolations(page, 'creation wizard — ability scores step');
+      await scan(page, 'creation wizard — ability scores step');
     });
 
     test('the sheet play/build/timeline tabs have no serious/critical violations', async ({
@@ -132,15 +138,15 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
     }) => {
       await createFighter(page, 'Aldric A11y Sheet');
       await expect(page.locator('.play-tab')).toBeVisible();
-      await assertNoSeriousViolations(page, 'sheet — play tab');
+      await scan(page, 'sheet — play tab');
 
       await page.getByRole('tab', { name: 'Build', exact: true }).click();
       await expect(page.locator('.build-tab')).toBeVisible();
-      await assertNoSeriousViolations(page, 'sheet — build tab');
+      await scan(page, 'sheet — build tab');
 
       await page.getByRole('tab', { name: 'Timeline', exact: true }).click();
       await expect(page.locator('.timeline-tab')).toBeVisible();
-      await assertNoSeriousViolations(page, 'sheet — timeline tab');
+      await scan(page, 'sheet — timeline tab');
     });
 
     // task-12-brief.md scenario (d): the new dialog states plan 6 adds (rest dialog open, cast
@@ -152,7 +158,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       await createFighter(page, 'Aldric A11y Rest');
       await page.locator('[data-action="short-rest"]').click();
       await expect(page.locator('.rest-dialog__title')).toBeVisible();
-      await assertNoSeriousViolations(page, 'play tab — short-rest dialog open');
+      await scan(page, 'play tab — short-rest dialog open');
     });
 
     test('the cast dialog (open) has no serious/critical violations', async ({ page }) => {
@@ -163,7 +169,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       });
       await preparedRow.getByRole('button', { name: 'Cast Magic Missile', exact: true }).click();
       await expect(page.locator('.cast-dialog__title')).toBeVisible();
-      await assertNoSeriousViolations(page, 'play tab — cast dialog open');
+      await scan(page, 'play tab — cast dialog open');
     });
 
     test('the roll log with a logged entry has no serious/critical violations', async ({
@@ -178,7 +184,7 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
       // The roll log is a drawer opened from the action strap (zone 3), board D02.
       await openDrawer(page, 'roll-log');
       await expect(page.locator('.roll-log-drawer__feed .roll-log-drawer__entry')).toHaveCount(1);
-      await assertNoSeriousViolations(page, 'play tab — roll log with an entry');
+      await scan(page, 'play tab — roll log with an entry');
     });
 
     // task-11-brief.md / plan-8 design ruling R-pf3: the auth screens render fully OFFLINE (their
@@ -191,19 +197,19 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
     test('the login screen has no serious/critical violations', async ({ page }) => {
       await page.goto('/login');
       await expect(page.locator('.login__form')).toBeVisible();
-      await assertNoSeriousViolations(page, 'login');
+      await scan(page, 'login');
     });
 
     test('the register screen (form step) has no serious/critical violations', async ({ page }) => {
       await page.goto('/register');
       await expect(page.locator('.register__form')).toBeVisible();
-      await assertNoSeriousViolations(page, 'register — form step');
+      await scan(page, 'register — form step');
     });
 
     test('the recover screen has no serious/critical violations', async ({ page }) => {
       await page.goto('/recover');
       await expect(page.locator('.recover__form')).toBeVisible();
-      await assertNoSeriousViolations(page, 'recover');
+      await scan(page, 'recover');
     });
   });
 }

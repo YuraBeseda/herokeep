@@ -10,7 +10,8 @@ import { gzipSync } from 'node:zlib';
  * that raw-size budget from 500 kB/1 MB to 1 MB/1.5 MB just to stop it tripping on a bundle whose
  * real gzip transfer was ~214 kB, comfortably under the roadmap's binding line. This script
  * measures — never estimates — the real gzip bytes of every file the built `index.html`
- * references eagerly, plus every chunk they reach through static `import` edges (script `src`, `rel="stylesheet"`, and `rel="modulepreload"` links; a lazy
+ * references eagerly (script `src`, `rel="stylesheet"`, and `rel="modulepreload"` links), plus every
+ * chunk those files reach through static `import` edges (a lazy
  * route/component chunk is fetched later via dynamic `import()` and is never referenced from
  * `index.html`, so it's correctly excluded) and fails if that total exceeds the budget.
  */
