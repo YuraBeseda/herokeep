@@ -22,8 +22,12 @@ import { DisplayPrefsService } from './shared/services/theme/display-prefs.servi
 import { SyncService } from './shared/services/sync/sync.service';
 import { PackStore } from './shared/stores/pack.store';
 
-// R73: the window is the scroller; a forward navigation opens at the top, browser Back restores it.
-export const appRouterScrolling = withInMemoryScrolling({ scrollPositionRestoration: 'enabled' });
+// R73: the window is the scroller; a forward navigation opens at the top, browser Back restores it,
+// and a link with a fragment (Settings sections) scrolls to that anchor instead of the top.
+export const appRouterScrolling = withInMemoryScrolling({
+  scrollPositionRestoration: 'enabled',
+  anchorScrolling: 'enabled',
+});
 
 export const appConfig: ApplicationConfig = {
   providers: [

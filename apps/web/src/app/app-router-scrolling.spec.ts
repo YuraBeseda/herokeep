@@ -36,7 +36,9 @@ describe('appRouterScrolling', () => {
     const scrollTo = vi
       .spyOn(scroller, 'scrollToPosition')
       .mockImplementation((p) => (position = [p[0], p[1]]));
+    const scrollToAnchor = vi.spyOn(scroller, 'scrollToAnchor').mockImplementation(() => undefined);
     return {
+      scrollToAnchor,
       router: TestBed.inject(Router),
       location: TestBed.inject(Location),
       scrollTo,
@@ -64,5 +66,16 @@ describe('appRouterScrolling', () => {
     location.back();
     await settle();
     expect(scrollTo).toHaveBeenLastCalledWith([0, 293], { behavior: 'instant' });
+  });
+
+  it('scrolls a navigation with a fragment to its anchor, not to the top', async () => {
+    const { router, scrollTo, scrollToAnchor } = setup();
+    await router.navigateByUrl('/wizard');
+    await settle();
+    scrollTo.mockClear();
+    await router.navigateByUrl('/sheet#frag');
+    await settle();
+    expect(scrollToAnchor).toHaveBeenCalledWith('frag');
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });
