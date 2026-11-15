@@ -19,9 +19,13 @@ function* enFiles(dir) {
 
 function longest(en, others) {
   if (typeof en === 'string') {
-    return [en, ...others]
-      .filter((v) => typeof v === 'string')
-      .reduce((a, b) => (b.length > a.length ? b : a));
+    return (
+      [en, ...others]
+        // The app runs these under `en` plural rules, which only know `one`/`other`: a ru/uk plural with
+        // `few`/`many` branches would make the ICU parser throw, so only en's own form may carry them.
+        .filter((v) => typeof v === 'string' && (v === en || !/(few|many|zero|two)\s*\{/.test(v)))
+        .reduce((a, b) => (b.length > a.length ? b : a))
+    );
   }
   if (en && typeof en === 'object') {
     return Object.fromEntries(

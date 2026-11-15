@@ -1,16 +1,13 @@
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createFighter } from '../helpers/create-fighter';
 import { importPack } from '../helpers/packs';
-import { measureOverflow } from './measure';
+import { createWizard, prepareSpell } from '../helpers/create-wizard';
+import { fitChecker, installFitLocale } from './fit';
 
-// Every offline-reachable route of the audit's screen table, rendered with the `fit` locale (the
-// longest of en/ru/uk per key — `scripts/build-fit-locale.mjs`) at the project's viewport. The `en`
-// i18n files are swapped for the generated ones by request interception, so the app needs no
-// harness-only locale and nothing about it shows in the language picker.
-const FIT_DIR = join(__dirname, '../../.fit-locale');
-const I18N_EN = /\/assets\/i18n\/(.+\/)?en\.json$/;
+// Every offline-reachable route of the audit's screen table, plus the sheet's dialogs and drawer and
+// the homebrew edit form, rendered with the `fit` locale (see `fit.ts`) at the project's viewport.
+// Campaign screens need an account and a server: `e2e/sync/textfit.spec.ts` covers them.
 const SAMPLE_PACK = join(__dirname, '../fixtures/packs/sample-content.hkpack');
 
 const STATIC_ROUTES = [
@@ -35,16 +32,19 @@ const STATIC_ROUTES = [
 ];
 const SHEET_TABS = ['play', 'combat', 'spells', 'bag', 'hero', 'more', 'build', 'timeline'];
 
+/** Opens a strap action: a tile (or icon button) on the strap, or an entry of the phone "More" sheet. */
+async function openStrapAction(page: Page, id: string): Promise<void> {
+  const direct = page.locator(`.hk-astrap__zone [data-action="${id}"]`);
+  if (!(await direct.count())) {
+    await page.locator('.hk-astrap__more').click();
+    await page.locator(`.hk-astrap__sheet [data-action="${id}"]`).click();
+  } else {
+    await direct.click();
+  }
+}
+
 test('every route fits at this width', async ({ page }) => {
-  const violations: string[] = [];
-  const check = async (name: string): Promise<void> => {
-    await page.waitForLoadState('networkidle');
-    for (const line of await measureOverflow(page)) violations.push(`${name}: ${line}`);
-  };
-  const visit = async (path: string): Promise<void> => {
-    await page.goto(path);
-    await check(path);
-  };
+  const { violations, check, visit } = fitChecker(page);
 
   // The seeding helpers drive the desktop layout (a phone lands on a different tab after creation).
   const viewport = page.viewportSize() ?? { width: 1280, height: 800 };
@@ -53,25 +53,47 @@ test('every route fits at this width', async ({ page }) => {
   await page.locator('.sheet-shell__xp-field input').fill('300');
   await page.locator('.sheet-shell__xp-submit').click();
   await expect(page.locator('.sheet-shell__level-up-badge')).toBeVisible();
+  const wizardId = await createWizard(page, 'Mira Fit');
+  await prepareSpell(page, 'Magic Missile');
+  await page.goto('/packs/homebrew');
+  await page.locator('.hb-list__new-link[data-type="item"]').click();
+  await page.locator('.hb-form__name input').fill('Starlit Lantern');
+  await page.locator('[data-action="save-entry"]').click();
+  await expect(page).toHaveURL(/\/packs\/homebrew$/);
+  const editPath = await page.locator('.hb-list__edit').first().getAttribute('href');
 
   await page.setViewportSize(viewport);
-
-  // Only now: the seeding helpers click English labels, the visits below read the fit strings.
-  await page.route(I18N_EN, async (route) => {
-    const rel = new URL(route.request().url()).pathname.replace(/^.*\/assets\/i18n\//, '');
-    await route.fulfill({
-      contentType: 'application/json',
-      body: readFileSync(join(FIT_DIR, rel)),
-    });
-  });
+  await installFitLocale(page);
 
   for (const tab of SHEET_TABS) await visit(`/c/${id}/${tab}`);
   await visit(`/c/${id}/level-up`);
   for (const path of STATIC_ROUTES) await visit(path);
+  await visit(editPath ?? '/packs/homebrew/edit/item/starlit-lantern');
+
+  // Dialogs and the notes drawer, from the seeded sheets.
+  const phone = viewport.width < 600;
+  await visit(`/c/${id}/${phone ? 'combat' : 'play'}`);
+  for (const [name, action, dialog] of [
+    ['short rest dialog', 'short-rest', 'hk-dialog'],
+    ['long rest dialog', 'long-rest', 'hk-dialog'],
+    ['condition dialog', 'add-condition', 'hk-dialog'],
+    ['notes drawer', 'notes', '.hk-drawer__panel'],
+  ] as const) {
+    await check(name, async () => {
+      await openStrapAction(page, action);
+      await expect(page.locator(`${dialog} >> visible=true`).first()).toBeVisible();
+    });
+    await page.keyboard.press('Escape');
+  }
+  await visit(`/c/${wizardId}/${phone ? 'spells' : 'play'}`);
+  await check('cast dialog', async () => {
+    await page.locator('.spells__prepared hk-spell-row button').first().click();
+    await expect(page.locator('.cast-dialog__title')).toBeVisible();
+  });
+  await page.keyboard.press('Escape');
 
   const dialog = await importPack(page, SAMPLE_PACK);
-  await check('/packs (trust dialog)');
-  await expect(dialog).toBeVisible();
+  await check('/packs (trust dialog)', () => expect(dialog).toBeVisible());
 
   expect(violations, violations.join('\n')).toEqual([]);
 });

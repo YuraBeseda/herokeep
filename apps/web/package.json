@@ -18,7 +18,7 @@
     "check:bundle-budget": "node tools/check-bundle-budget.ts",
     "pree2e": "pnpm run build",
     "e2e": "playwright test",
-    "pree2e:sync": "pnpm run build",
+    "pree2e:sync": "pnpm run build && node scripts/build-fit-locale.mjs",
     "e2e:sync": "playwright test --config=playwright.sync.config.ts",
     "pree2e:textfit": "pnpm run build && node scripts/build-fit-locale.mjs",
     "e2e:textfit": "playwright test --config=playwright.textfit.config.ts"

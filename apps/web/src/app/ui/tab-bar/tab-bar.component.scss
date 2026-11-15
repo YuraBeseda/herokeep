@@ -1,3 +1,5 @@
+@use 'field';
+
 /* Phone tab bar (design-system `hk-tabbar`): a 60px leather bar of icon-over-label links. */
 :host {
   display: block;
@@ -67,11 +69,7 @@
 
 /* Fit rule (hkFitLabel): a label wider than its tile gives way to the icon; it stays in the accessible name. */
 .hk-fit-label--icon-only [data-fit-label] {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
+  @include field.visually-hidden;
 }
 
 .hk-tabb__glow {

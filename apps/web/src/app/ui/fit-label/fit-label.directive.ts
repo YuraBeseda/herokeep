@@ -1,5 +1,8 @@
 import { afterNextRender, Directive, ElementRef, inject, DestroyRef } from '@angular/core';
 
+/** Breathing room (px) a label keeps inside its tile: the tile's side padding plus the focus ring. */
+const LABEL_SLACK_PX = 8;
+
 /**
  * `[hkFitLabel]` — the fit rule of an icon-over-label tile (action strap, tab bar). When the label
  * (the child marked `data-fit-label`) is wider than the tile, the host gets `hk-fit-label--icon-only`,
@@ -40,7 +43,7 @@ export class HkFitLabelDirective {
     // An icon-only label is 1px wide but keeps its natural `scrollWidth`, so one measure serves both ways.
     this.host.classList.toggle(
       'hk-fit-label--icon-only',
-      label.scrollWidth > this.host.clientWidth - 8,
+      label.scrollWidth > this.host.clientWidth - LABEL_SLACK_PX,
     );
   }
 

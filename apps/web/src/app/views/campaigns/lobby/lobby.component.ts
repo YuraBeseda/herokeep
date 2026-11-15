@@ -6,6 +6,7 @@ import { DIALOG_DATA, DialogRef, DialogService } from '@app/ui/dialog/dialog.ser
 import { IconComponent } from '../../../shared/icons/icon.component';
 import { HkButtonComponent } from '../../../ui/button/button.component';
 import { HkLeafComponent } from '../../../ui/leaf/leaf.component';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { apiJson } from '@shared/services/api/api-fetch';
 import { LeaderService } from '@shared/services/storage/leader.service';
@@ -107,7 +108,13 @@ function groupJoinCode(code: string): string {
  */
 @Component({
   selector: 'app-lobby',
-  imports: [TranslocoDirective, HkButtonComponent, HkLeafComponent, IconComponent],
+  imports: [
+    TranslocoDirective,
+    HkButtonComponent,
+    HkLeafComponent,
+    HkTooltipDirective,
+    IconComponent,
+  ],
   providers: [provideTranslocoScope('campaigns')],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',

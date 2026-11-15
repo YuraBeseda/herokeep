@@ -61,7 +61,7 @@
               <hk-icon [icon]="row.icon" class="library-browse__row-icon" />
             </span>
             <span class="library-browse__row-text">
-              <span class="library-browse__row-name" [hkTooltip]="row.name">
+              <span class="library-browse__row-name" data-truncate [hkTooltip]="row.name">
                 @for (segment of row.segments; track $index) {
                   @if (segment.hit) {
                     <mark class="library-browse__mark">{{ segment.text }}</mark>
@@ -71,7 +71,11 @@
                 }
               </span>
               @if (row.sub.length > 0) {
-                <span class="library-browse__row-sub" [hkTooltip]="subText(row.sub, t)">
+                <span
+                  class="library-browse__row-sub"
+                  data-truncate
+                  [hkTooltip]="subText(row.sub, t)"
+                >
                   @for (part of row.sub; track $index; let last = $last) {
                     <app-fact-value [value]="part" />
                     @if (!last) {

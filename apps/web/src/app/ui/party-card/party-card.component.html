@@ -17,7 +17,7 @@
         }
       </div>
       <div class="hk-party__line">
-        <span class="hk-party__sub" [hkTooltip]="subtitle()">{{ subtitle() }}</span>
+        <span class="hk-party__sub" data-truncate [hkTooltip]="subtitle()">{{ subtitle() }}</span>
         @if (online() !== null) {
           <span class="hk-party__presence" [class.hk-party__presence--online]="online()">{{
             online() ? t('ui.party.online') : t('ui.party.offline')
