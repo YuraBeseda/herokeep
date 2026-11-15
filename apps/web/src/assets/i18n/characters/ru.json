@@ -454,7 +454,18 @@
       "score": "Значение",
       "mod": "Модификатор",
       "save": "Испытание",
-      "savesTitle": "Спасброски"
+      "savesTitle": "Спасброски",
+      "abbr": {
+        "str": "СИЛ",
+        "dex": "ЛОВ",
+        "con": "ТЕЛ",
+        "int": "ИНТ",
+        "wis": "МДР",
+        "cha": "ХАР"
+      },
+      "saveTip": "Спасбросок: {name} {value}, значение {score}",
+      "saveTipProficient": "Спасбросок: {name} {value}, владение, значение {score}",
+      "saveRoll": "Бросить: {tip}"
     },
     "skills": {
       "title": "Навыки",

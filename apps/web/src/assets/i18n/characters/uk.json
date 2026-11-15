@@ -454,7 +454,18 @@
       "score": "Значення",
       "mod": "Модифікатор",
       "save": "Рятівний кидок",
-      "savesTitle": "Рятівні кидки"
+      "savesTitle": "Рятівні кидки",
+      "abbr": {
+        "str": "СИЛ",
+        "dex": "СПР",
+        "con": "СТА",
+        "int": "ІНТ",
+        "wis": "МДР",
+        "cha": "ХАР"
+      },
+      "saveTip": "Рятівний кидок: {name} {value}, значення {score}",
+      "saveTipProficient": "Рятівний кидок: {name} {value}, майстерність, значення {score}",
+      "saveRoll": "Кинути: {tip}"
     },
     "skills": {
       "title": "Навички",

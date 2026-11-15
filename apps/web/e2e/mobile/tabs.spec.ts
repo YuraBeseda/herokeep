@@ -8,23 +8,35 @@ test.describe('phone sheet (390 x 844)', () => {
     await createFighter(page, 'Aldric Phone');
   });
 
-  test('Combat tab shows HP, AC, speed, saves and attacks above the fold', async ({ page }) => {
-    await expect(page).toHaveURL(/\/c\/[^/]+\/combat$/);
-    // The visible area is the viewport minus the pinned action strap (ruling R69).
-    const strap = (await page.locator('.hk-astrap').boundingBox())!;
-    const parts = {
-      hp: page.locator('.hk-hp-gauge__current'),
-      ac: page.locator('hk-shield-badge'),
-      speed: page.locator('.vitals__speed').first(),
-      saves: page.locator('app-abilities-leaf'),
-      firstAttack: page.locator('hk-attack-row').first(),
-    };
-    for (const [name, part] of Object.entries(parts)) {
-      await expect(part, name).toBeVisible();
-      const box = (await part.boundingBox())!;
-      expect(box.y + box.height, `${name} ends above the strap`).toBeLessThanOrEqual(strap.y);
-    }
-  });
+  // R71: the fold holds in every shipped language, with room to spare, not by a pixel.
+  const HEADROOM = 8;
+  for (const locale of ['en', 'uk'] as const) {
+    test(`Combat tab fits above the strap in ${locale}`, async ({ page }) => {
+      if (locale !== 'en') {
+        await page.evaluate((l) => localStorage.setItem('hk.locale', l), locale);
+        await page.reload();
+      }
+      await expect(page).toHaveURL(/\/c\/[^/]+\/combat$/);
+      await expect(page.locator('hk-attack-row').first()).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('lang', new RegExp(`^${locale}`));
+      // The visible area is the viewport minus the pinned action strap (ruling R69).
+      const strap = (await page.locator('.hk-astrap').boundingBox())!;
+      const parts = {
+        hp: page.locator('.hk-hp-gauge__current'),
+        ac: page.locator('hk-shield-badge'),
+        speed: page.locator('.vitals__speed').first(),
+        saves: page.locator('app-abilities-leaf'),
+        firstAttack: page.locator('hk-attack-row').first(),
+      };
+      for (const [name, part] of Object.entries(parts)) {
+        await expect(part, name).toBeVisible();
+        const box = (await part.boundingBox())!;
+        expect(box.y + box.height, `${name} ends above the strap`).toBeLessThanOrEqual(
+          strap.y - HEADROOM,
+        );
+      }
+    });
+  }
 
   test('bottom tabs switch Combat, Spells, Bag, Hero and More', async ({ page }) => {
     for (const tab of ['Spells', 'Bag', 'Hero', 'More', 'Combat'] as const) {
@@ -52,9 +64,6 @@ test.describe('phone sheet (390 x 844)', () => {
     const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
-    // The hint shows after a 400 ms hold (HINT_DELAY_TOUCH_MS); polling from the first millisecond
-    // under mobile emulation raced the touch, so hold first.
-    await page.waitForTimeout(500);
     await expect(page.getByRole('tooltip').filter({ hasText: label })).toBeVisible();
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   });

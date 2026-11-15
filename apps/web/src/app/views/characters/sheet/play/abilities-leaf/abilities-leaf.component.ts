@@ -7,6 +7,9 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { IconComponent } from '../../../../../shared/icons/icon.component';
 import { HkAbilitySealComponent } from '../../../../../ui/ability-seal/ability-seal.component';
 import { HkButtonComponent } from '../../../../../ui/button/button.component';
+import { HkTooltipDirective } from '../../../../../ui/tooltip/tooltip.directive';
+import { HkWaxSealComponent } from '../../../../../ui/wax-seal/wax-seal.component';
+import { signed } from '../../../../../ui/format';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { breakdownOpener } from '../open-breakdown';
 import { PlayRollsService, type ScopedT } from '../play-rolls.service';
@@ -28,6 +31,8 @@ const ABILITY_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
     HkAbilitySealComponent,
     HkButtonComponent,
     HkLeafComponent,
+    HkTooltipDirective,
+    HkWaxSealComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './abilities-leaf.component.html',
@@ -62,6 +67,7 @@ export class AbilitiesLeafComponent {
     });
   });
 
+  protected readonly signed = signed;
   protected readonly openBreakdown = breakdownOpener();
 
   protected inspect(

@@ -12,7 +12,7 @@
   list-style: none;
 }
 
-/* The Combat tab's saves: six compact seals in one row. */
+/* The Combat tab's saves: six seals in one row, each its own roll button. */
 .abilities--saves {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-1);
@@ -33,15 +33,38 @@
   gap: var(--space-1);
 }
 
-/* Six across even on a phone, so the Combat tab keeps its attacks above the fold: the roll button
-   fills its column and drops the padding that would push it past 44 px of width. */
-.abilities--saves .abilities__rolls {
-  inline-size: 100%;
+/* 46 px seal = the board's size and the touch target. */
+.abilities__seal {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-on-leather);
+  line-height: 0;
+  cursor: pointer;
 
-  button {
-    inline-size: 100%;
-    min-inline-size: 0;
-    padding-inline: 0;
+  hk-wax-seal {
+    --hk-seal-size: 46px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 50%;
+  }
+}
+
+.abilities__abbr {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1;
+
+  hk-icon {
+    color: var(--accent-strong);
+    font-size: 11px;
   }
 }
 

@@ -1,43 +1,78 @@
 <ng-container *transloco="let t; read: 'characters'">
   <ng-template #body>
-    <ul class="abilities" [class.abilities--saves]="mode() === 'saves'">
-      @for (row of rows(); track row.id) {
-        <li class="abilities__item" [attr.data-ability]="row.id">
-          <hk-ability-seal
-            [ability]="row.label"
-            [score]="row.score"
-            [modifier]="row.mod"
-            [save]="row.save"
-            [saveProficient]="row.saveProficient"
-            [compact]="mode() === 'saves'"
-            [inspectable]="true"
-            (inspect)="inspect(row, $event)"
-          />
-          <div class="abilities__rolls">
-            @if (mode() === 'full') {
+    @if (mode() === 'saves') {
+      <!-- Phone saves (board A2-Phone): the seal IS the roll button; the full name, score and
+           proficiency are its hint and accessible name. -->
+      <ul class="abilities abilities--saves" *transloco="let s; read: 'shell'">
+        @for (row of rows(); track row.id) {
+          @let name = s('icon.' + row.id);
+          @let tip =
+            t(
+              row.saveProficient ? 'sheet.abilities.saveTipProficient' : 'sheet.abilities.saveTip',
+              {
+                name,
+                value: signed(row.save),
+                score: row.score,
+              }
+            );
+          <li class="abilities__item" [attr.data-ability]="row.id">
+            <button
+              type="button"
+              class="abilities__seal"
+              [attr.aria-label]="t('sheet.abilities.saveRoll', { tip })"
+              [hkTooltip]="tip"
+              (click)="rollSave(row, t)"
+            >
+              <hk-wax-seal [size]="'l'" [text]="signed(row.save)" [seed]="row.score" [hint]="tip" />
+            </button>
+            <span class="abilities__abbr" aria-hidden="true"
+              >{{ t('sheet.abilities.abbr.' + row.id) }}
+              @if (row.saveProficient) {
+                <hk-icon [icon]="'gi:star'" />
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <ul class="abilities">
+        @for (row of rows(); track row.id) {
+          <li class="abilities__item" [attr.data-ability]="row.id">
+            <hk-ability-seal
+              [ability]="row.label"
+              [score]="row.score"
+              [modifier]="row.mod"
+              [save]="row.save"
+              [saveProficient]="row.saveProficient"
+              [inspectable]="true"
+              (inspect)="inspect(row, $event)"
+            />
+            <div class="abilities__rolls">
+              @if (mode() === 'full') {
+                <button
+                  hk-button
+                  type="button"
+                  [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
+                  [attr.aria-label]="t('sheet.roll.checkNamed', { name: row.label })"
+                  (click)="rollCheck(row, t)"
+                >
+                  {{ t('sheet.roll.checkShort') }}
+                </button>
+              }
               <button
                 hk-button
                 type="button"
                 [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
-                [attr.aria-label]="t('sheet.roll.checkNamed', { name: row.label })"
-                (click)="rollCheck(row, t)"
+                [attr.aria-label]="t('sheet.roll.saveNamed', { name: row.label })"
+                (click)="rollSave(row, t)"
               >
-                {{ t('sheet.roll.checkShort') }}
+                {{ t('sheet.roll.saveShort') }}
               </button>
-            }
-            <button
-              hk-button
-              type="button"
-              [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
-              [attr.aria-label]="t('sheet.roll.saveNamed', { name: row.label })"
-              (click)="rollSave(row, t)"
-            >
-              {{ t('sheet.roll.saveShort') }}
-            </button>
-          </div>
-        </li>
-      }
-    </ul>
+            </div>
+          </li>
+        }
+      </ul>
+    }
   </ng-template>
   @let title = mode() === 'saves' ? t('sheet.abilities.savesTitle') : t('sheet.abilities.title');
   @let icon = mode() === 'saves' ? 'ui:save' : 'ui:str';

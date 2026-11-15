@@ -454,7 +454,18 @@
       "score": "Score",
       "mod": "Modifier",
       "save": "Save",
-      "savesTitle": "Saving throws"
+      "savesTitle": "Saving throws",
+      "abbr": {
+        "str": "STR",
+        "dex": "DEX",
+        "con": "CON",
+        "int": "INT",
+        "wis": "WIS",
+        "cha": "CHA"
+      },
+      "saveTip": "{name} saving throw {value}, score {score}",
+      "saveTipProficient": "{name} saving throw {value}, proficient, score {score}",
+      "saveRoll": "Roll: {tip}"
     },
     "skills": {
       "title": "Skills",

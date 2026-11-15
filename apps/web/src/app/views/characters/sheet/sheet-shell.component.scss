@@ -53,8 +53,34 @@
     font-size: 1.5rem;
   }
 
+  /* Bar and current XP share a row, the award field and button the next: one line each in every
+     language. */
   .sheet-shell__xp {
-    gap: var(--space-1);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-2);
+    align-items: center;
+  }
+
+  .sheet-shell__xp-bar {
+    grid-column: 1;
+  }
+
+  .sheet-shell__xp-current {
+    grid-column: 2;
+  }
+
+  .sheet-shell__xp-field {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .sheet-shell__xp-submit {
+    grid-column: 2;
+  }
+
+  .sheet-shell__undo-level-up {
+    grid-column: 1 / -1;
   }
 
   .sheet-shell__identity {
