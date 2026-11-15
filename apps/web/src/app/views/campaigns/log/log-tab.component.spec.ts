@@ -218,10 +218,14 @@ describe('LogTabComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
 
       const dividers = Array.from(compiled.querySelectorAll('.log-tab__divider')).map((el) =>
-        el.textContent?.trim(),
+        el.textContent?.replace(/\s+/g, ' ').trim(),
       );
-      expect(dividers[0]).toContain('Session 1: The Beginning');
-      expect(dividers[1]?.startsWith(campaignsEn.log.session.endedNoTitle)).toBe(true);
+      const locale = TestBed.inject(LocaleService).locale();
+      const time = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(new Date(TS));
+      expect(dividers[0]).toBe(
+        `${campaignsEn.log.session.started.replace('{title}', 'Session 1: The Beginning')} · ${time}`,
+      );
+      expect(dividers[1]).toBe(`${campaignsEn.log.session.endedNoTitle} · ${time}`);
     });
 
     it('falls back to a truncated raw id when the actor is not (yet) in state.members', async () => {

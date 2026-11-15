@@ -9,7 +9,7 @@
     "postbuild": "node tools/check-bundle-budget.ts",
     "pretest": "pnpm --filter @hk/ui-tokens build:tokens && pnpm --filter @hk/content build:pack && node tools/copy-packs.ts",
     "test": "ng test",
-    "lint": "ng lint && node scripts/check-i18n-keys.mjs",
+    "lint": "ng lint && node --test scripts/check-i18n-keys.test.mjs && node scripts/check-i18n-keys.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "i18n:extract": "transloco-keys-manager extract",
     "i18n:check": "node scripts/check-i18n-keys.mjs",

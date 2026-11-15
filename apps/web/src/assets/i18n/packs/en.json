@@ -50,7 +50,6 @@
     },
     "open": "Open",
     "open-named": "Open {name}",
-    "edit-hint": "Edit the homebrew entries",
     "remove-translation-named": "Remove translation pack {name}",
     "import-title": "Import a pack",
     "drop": "Drop an .hkpack file here",

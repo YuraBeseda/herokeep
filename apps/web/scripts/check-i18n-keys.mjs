@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Wired into `pnpm --filter web lint` (see package.json).
 //
-// Fails the build when the `en` translation files under `src/assets/i18n` are missing keys that
-// templates/components use; only warns (non-blocking) when `ru`/`uk` are missing keys.
+// Fails the build when any translation file under `src/assets/i18n` is missing a key that
+// templates/components use (en, ru and uk alike), when ru/uk and en disagree on their key sets,
+// and when an en key is used by no template or code (see UNUSED_ALLOW below).
 //
 // Why this script exists instead of a bare `transloco-keys-manager find` call: the keys-manager
 // 8.1.1 "detective" (`find`) has no per-language flag — `-l/--langs` only affects the extractor
@@ -47,6 +48,7 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'n
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parityGaps, readSource, unusedKeys } from './i18n-keys-lib.mjs';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const webRoot = dirname(scriptDir);
@@ -86,6 +88,22 @@ function runFind(translationsPath) {
   return result.status ?? 1;
 }
 
+/**
+ * Key families built at run time (a prefix plus a variant), which a static scan cannot see.
+ * Each is enumerated against the real files in `src/app/views/settings/dynamic-keys.spec.ts`.
+ * Format: `<scope>:<key prefix>` -> why it is used.
+ */
+const UNUSED_ALLOW = {
+  'characters:timeline.': 'event-sentence.pipe builds timeline.<event type> from the event',
+  'characters:validation.': 'diagnosticKey builds validation.<diagnostic code>',
+  'characters:sheet.derivedPopover.': 'derived-popover directive reads this scope with short keys',
+  'characters:sheet.export.': 'sheet-chrome builds sheet.export.<warning code>',
+  'library:class.prof.': 'class-entry builds class.prof.<kind>.<slug>',
+  'packs:homebrew.enum.': 'homebrew forms and summary build homebrew.enum.<group>.<value>',
+  'packs:homebrew.validation.': 'the editor maps a diagnostic code to homebrew.validation.<code>',
+  'settings:export.': 'export-all builds export.<warning code>',
+};
+
 // `process.exit()` does not run pending `finally` blocks in Node.js, so the exit code is only
 // captured here — the actual `process.exit()` call happens after the `try`/`finally` below has
 // run to completion, so the scratch directory is always removed regardless of which path exits
@@ -104,15 +122,28 @@ try {
     );
     exitCode = enStatus;
   } else {
-    const warnMirror = join(scratchRoot, 'warn');
-    mkdirSync(warnMirror, { recursive: true });
-    mirrorLangFiles(i18nRoot, warnMirror, ['ru.json', 'uk.json']);
-    const warnStatus = runFind(warnMirror);
-    if (warnStatus !== 0) {
-      console.warn(
-        '\n[i18n:check] Missing ru/uk translation keys detected (non-blocking warning — see table above).\n',
-      );
+    const ruUkMirror = join(scratchRoot, 'ru-uk');
+    mkdirSync(ruUkMirror, { recursive: true });
+    mirrorLangFiles(i18nRoot, ruUkMirror, ['ru.json', 'uk.json']);
+    const ruUkStatus = runFind(ruUkMirror);
+    if (ruUkStatus !== 0) {
+      console.error('\n[i18n:check] ru/uk are missing translation keys (see table above).\n');
+      exitCode = ruUkStatus;
     }
+  }
+  const gaps = parityGaps(i18nRoot);
+  if (gaps.length > 0) {
+    console.error(
+      `\n[i18n:check] key sets differ between en, ru and uk:\n  ${gaps.join('\n  ')}\n`,
+    );
+    exitCode ||= 1;
+  }
+  const unused = unusedKeys(i18nRoot, readSource(join(webRoot, 'src/app')), UNUSED_ALLOW);
+  if (unused.length > 0) {
+    console.error(
+      `\n[i18n:check] en keys no template or code uses (delete them, or allow-list the family in UNUSED_ALLOW with a reason):\n  ${unused.join('\n  ')}\n`,
+    );
+    exitCode ||= 1;
   }
 } finally {
   rmSync(scratchRoot, { recursive: true, force: true });

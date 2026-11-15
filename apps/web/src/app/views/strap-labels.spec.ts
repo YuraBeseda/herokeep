@@ -281,6 +281,18 @@ describe('strap labels resolve through the real strap host (no raw keys)', () =>
     expect(text).toContain('Back');
     expect(config.primary).toEqual([]);
   });
+  it('a sheet locked by house rules renders the edit-locked reason as text, not a key', async () => {
+    const config = buildSheetStrap(
+      { locked: true, exporting: false, scope: ['/c', 'x'] },
+      sheetHandlers,
+    );
+    const reasons = [...config.primary, ...(config.secondary ?? [])].map((a) => a.disabledReason);
+    expect(reasons).toContain('shell.strap.edit-locked');
+    const text = readable(await render(config));
+    expect(text).toContain(shellEn.strap['edit-locked']);
+    expect(text).not.toContain('shell.strap.edit-locked');
+  });
+
   it('a missing hero context outranks the edit lock as the reason Add to hero is unavailable', () => {
     const state = {
       back: noop,

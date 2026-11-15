@@ -1,5 +1,20 @@
 import { THEME_IDS } from '@hk/ui-tokens/themes';
 import { formatBytes } from '@shared/helpers/format-bytes';
+import { EVENT_PAYLOADS } from '@hk/protocol';
+import campaignsEn from '../../../assets/i18n/campaigns/en.json';
+import campaignsRu from '../../../assets/i18n/campaigns/ru.json';
+import campaignsUk from '../../../assets/i18n/campaigns/uk.json';
+import charactersEn from '../../../assets/i18n/characters/en.json';
+import charactersRu from '../../../assets/i18n/characters/ru.json';
+import charactersUk from '../../../assets/i18n/characters/uk.json';
+import libraryEn from '../../../assets/i18n/library/en.json';
+import libraryRu from '../../../assets/i18n/library/ru.json';
+import libraryUk from '../../../assets/i18n/library/uk.json';
+import shellEn from '../../../assets/i18n/shell/en.json';
+import shellRu from '../../../assets/i18n/shell/ru.json';
+import shellUk from '../../../assets/i18n/shell/uk.json';
+import { TIMELINE_FAMILIES } from '../characters/sheet/timeline/event-sentence.pipe';
+import { HOMEBREW_DIAGNOSTIC_CODES } from '../packs/homebrew/homebrew-editor.component';
 import authEn from '../../../assets/i18n/auth/en.json';
 import authRu from '../../../assets/i18n/auth/ru.json';
 import authUk from '../../../assets/i18n/auth/uk.json';
@@ -95,5 +110,84 @@ describe('dynamic translation keys exist in every language', () => {
     it.each(['en', 'ru', 'uk'])('settings language option %s', (language) => {
       expect(has(SETTINGS[locale], `language.${language}`)).toBe(true);
     });
+  });
+
+  describe.each(LOCALES)('every other run-time key family, %s', (locale) => {
+    const scopes: Record<string, Record<string, Tree>> = {
+      auth: AUTH,
+      campaigns: { en: campaignsEn, ru: campaignsRu, uk: campaignsUk },
+      characters: { en: charactersEn, ru: charactersRu, uk: charactersUk },
+      library: { en: libraryEn, ru: libraryRu, uk: libraryUk },
+      packs: PACKS,
+      settings: SETTINGS,
+      shell: { en: shellEn, ru: shellRu, uk: shellUk },
+    };
+    const ENTITY_TYPES = [
+      'system', 'species', 'background', 'class', 'subclass', 'feature', 'feat', 'spell', 'item',
+      'condition', 'skill', 'ability', 'language', 'tool', 'rule', 'table',
+    ]; // prettier-ignore
+    const SYNC = ['synced', 'pending', 'connecting', 'offline'];
+    // The campaign stream's events are never rendered by the character timeline pipe.
+    const CAMPAIGN_EVENT =
+      /^(campaign-(created|renamed|settings|join|archived|character)|pack-(enabled|disabled)|member-|party-|session-|roll-logged|chat-|dm-note)/;
+    const EVENT_KEYS = Object.keys(EVENT_PAYLOADS)
+      .map((k) => k.slice(0, k.lastIndexOf('@')).replace(/[._]/g, '-'))
+      .filter((k) => !CAMPAIGN_EVENT.test(k));
+    /** Each site: [scope, prefix, variants, where the code builds it]. */
+    const sites: [string, string, readonly string[], string][] = [
+      ['packs', 'entity-type.', ENTITY_TYPES, 'pack-info and packs-list rows'],
+      ['library', 'detail.kind.', ENTITY_TYPES, 'library detail trail and tag'],
+      ['library', 'type.', ['background', 'class', 'condition', 'feat', 'feature', 'item', 'language', 'rule', 'skill', 'species', 'spell', 'subclass'], 'library browse type filter'],
+      ['library', 'class.prof.armor.', ['light', 'medium', 'heavy', 'shields'], 'class-entry armor proficiency'],
+      ['library', 'class.prof.weapon.', ['simple', 'martial'], 'class-entry weapon proficiency'],
+      ['packs', 'detail.integrity-', ['installed', 'installing', 'error'], 'pack-detail campaign share state'],
+      ['settings', 'storage.breakdown.', ['images', 'packs', 'other'], 'settings device storage'],
+      ['shell', 'language.', ['en', 'ru', 'uk'], 'app drawer language list'],
+      ['shell', 'theme.', THEME_IDS, 'theme menu'],
+      ['characters', 'list.sync.tooltip.', SYNC, 'hero card sync tooltip'],
+      ['campaigns', 'list.sync.tooltip.', SYNC, 'campaigns list sync tooltip'],
+      ['characters', 'sheet.roll.manual.labels.', ['check', 'save', 'attack', 'damage', 'other'], 'roll log manual kinds'],
+      ['characters', 'sheet.roll.entries.', ['check', 'save', 'skill', 'attackToHit', 'attackDamage', 'spellAttack'], 'play-rolls log entry'],
+      ['characters', 'sheet.roll.announce.', ['check', 'save', 'skill', 'attackToHit', 'attackDamage', 'spellAttack', 'manual'], 'play-rolls announcement'],
+      ['characters', 'sheet.inventory.carry.state.', ['normal', 'encumbered', 'heavilyEncumbered', 'overloaded'], 'bag leaf carry state'],
+      ['characters', 'timeline.family.', TIMELINE_FAMILIES, 'timeline filter and row family'],
+      ['characters', 'timeline.', [...EVENT_KEYS, 'unknown'], 'event-sentence pipe, one per protocol event type'],
+      ['characters', 'validation.', ['generic', 'slot.none-left', 'attune.max', 'resource.none-left', 'spell.always-prepared', 'spell.free-cast-unavailable', 'rest.regain-roll-missing', 'rest.regain-roll-invalid', 'selection.count', 'selection.unresolved', 'selection.notOffered', 'selection.duplicate', 'selection.prerequisiteFailed', 'selection.subclassLevel', 'selection.unknownChoice', 'selection.invalidEntry', 'selection.abilityNotAllowed', 'selection.duplicateAbility', 'selection.abilityImproveShape', 'selection.abilityMax', 'selection.standardArrayMismatch', 'selection.pointBuyRange', 'selection.pointBuyBudget', 'selection.manualRange', 'selection.rollRange', 'selection.abilityGenerationInvalid'], 'diagnosticKey in the wizard steps and diagnostic-toast'],
+      ['packs', 'homebrew.validation.', [...HOMEBREW_DIAGNOSTIC_CODES, 'generic'], 'homebrew editor diagnostics'],
+      ['packs', 'homebrew.enum.category.', ['weapon', 'armor', 'shield', 'gear', 'tool', 'consumable', 'magic'], 'homebrew item category'],
+      ['packs', 'homebrew.enum.rarity.', ['common', 'uncommon', 'rare', 'veryRare', 'legendary', 'artifact'], 'homebrew item rarity'],
+      ['packs', 'homebrew.enum.range-kind.', ['self', 'touch', 'feet', 'miles', 'sight', 'unlimited', 'special'], 'homebrew spell range'],
+      ['packs', 'homebrew.enum.feat-category.', ['origin', 'general', 'fightingStyle', 'epicBoon'], 'homebrew feat category'],
+      ['packs', 'homebrew.enum.weapon-kind.', ['melee', 'ranged'], 'homebrew weapon kind'],
+      ['packs', 'homebrew.enum.weapon-category.', ['simple', 'martial'], 'homebrew weapon category'],
+      ['packs', 'homebrew.enum.armor-category.', ['light', 'medium', 'heavy'], 'homebrew armor category'],
+      ['packs', 'homebrew.enum.time-unit.', ['action', 'bonus', 'reaction', 'minute', 'hour'], 'homebrew casting time'],
+      ['packs', 'homebrew.enum.duration-kind.', ['instantaneous', 'time', 'untilDispelled', 'special'], 'homebrew duration kind'],
+      ['packs', 'homebrew.enum.duration-unit.', ['round', 'minute', 'hour', 'day'], 'homebrew duration unit'],
+      ['packs', 'homebrew.enum.charge-reset.', ['never', 'dawn', 'shortRest', 'longRest'], 'homebrew charges reset'],
+      ['packs', 'homebrew.sub.casting.', ['action', 'bonus', 'reaction', 'minute', 'hour'], 'homebrew summary casting time'],
+      ['campaigns', 'settings.houseRules.xpMode.', ['label', 'xp', 'milestone'], 'campaign-segmented prefix plus id'],
+      ['campaigns', 'settings.houseRules.editOutsideSession.', ['label', 'free', 'dmApproval', 'locked'], 'campaign-segmented prefix plus id'],
+      ['campaigns', 'settings.houseRules.hpOnLevelUp.', ['label', 'roll', 'average', 'choice'], 'campaign-segmented prefix plus id'],
+      ['campaigns', 'settings.houseRules.encumbrance.', ['label', 'off', 'standard', 'variant'], 'campaign-segmented prefix plus id'],
+      ['campaigns', 'settings.visibility.partySheets.', ['label', 'none', 'overview', 'full'], 'campaign-segmented prefix plus id'],
+      ['campaigns', 'settings.visibility.rolls.', ['label', 'everyone', 'dm'], 'campaign-segmented prefix plus id'],
+    ]; // prettier-ignore
+
+    it.each(sites)('%s %s* (%s)', (scope, prefix, variants) => {
+      const missing = variants.filter((v) => !has(scopes[scope][locale], `${prefix}${v}`));
+      expect(missing).toEqual([]);
+    });
+
+    it.each([
+      ['auth', ['title', 'accounts', 'recovery', 'devices', 'close']],
+      ['settings', ['title', 'appearance', 'storage', 'account', 'close']],
+    ] as const)(
+      'help dialog %s: title, topics and close (openHelpDialog builds scope.help.key)',
+      (scope, keys) => {
+        const tree = scope === 'auth' ? AUTH[locale] : SETTINGS[locale];
+        expect(keys.filter((k) => !has(tree, `help.${k}`))).toEqual([]);
+      },
+    );
   });
 });

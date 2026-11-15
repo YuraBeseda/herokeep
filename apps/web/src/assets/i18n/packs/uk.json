@@ -50,7 +50,6 @@
     },
     "open": "Відкрити",
     "open-named": "Відкрити «{name}»",
-    "edit-hint": "Змінити записи homebrew",
     "remove-translation-named": "Видалити пакет перекладу {name}",
     "import-title": "Імпорт пакета",
     "drop": "Перетягніть сюди файл .hkpack",

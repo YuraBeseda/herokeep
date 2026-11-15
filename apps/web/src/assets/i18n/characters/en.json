@@ -296,9 +296,7 @@
         "portraitTitle": "Portrait",
         "save": "Save"
       },
-      "gender": {
-        "title": "Grammatical gender"
-      },
+      "gender": {},
       "packs": {
         "title": "Content packs",
         "intro": "Packs this character uses. Turning one off or updating it shows what would change before anything is saved.",
@@ -508,11 +506,6 @@
         "dieAvailable": "Hit die available",
         "dieSpent": "Hit die spent"
       }
-    },
-    "inspiration": {
-      "title": "Inspiration",
-      "on": "Inspired",
-      "off": "Not inspired"
     },
     "wakeLock": {
       "on": "Screen staying awake",
