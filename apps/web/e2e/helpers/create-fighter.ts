@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { SHEET_HOME } from './viewport';
 
 /**
  * Drives the character-creation wizard through the exact "fighter-1" binding decisions
@@ -257,8 +258,8 @@ export async function finishReviewAndCreate(page: Page): Promise<string> {
   const createButton = page.locator('[data-action="next"]');
   await expect(createButton).toBeEnabled();
   await createButton.click();
-  await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
-  const match = /\/c\/([^/]+)\/play$/.exec(page.url());
+  await expect(page).toHaveURL(SHEET_HOME);
+  const match = /\/c\/([^/]+)\/[a-z]+$/.exec(page.url());
   if (!match) throw new Error(`unexpected URL after character creation: ${page.url()}`);
   return match[1];
 }

@@ -2,7 +2,17 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createFighter, chooseControl } from './helpers/create-fighter';
 import { createWizard, prepareSpell } from './helpers/create-wizard';
 import { chooseOwnClassIfPrompted } from './helpers/level-up';
-import { applyHp, chooseCastSlotLane, hpCurrent, hpMax, strapAction } from './helpers/sheet';
+import {
+  applyHp,
+  chooseCastSlotLane,
+  awardXp,
+  hpCurrent,
+  hpMax,
+  levelUpLink,
+  openTab,
+  strapAction,
+} from './helpers/sheet';
+import { SHEET_HOME } from './helpers/viewport';
 
 const FIGHTER_NAME = 'Aldric Rest Actions';
 const WIZARD_NAME = 'Aldric Spellcaster';
@@ -48,7 +58,7 @@ async function completeLevelUp(page: Page, pickName?: string): Promise<void> {
 
   await expect(page.locator('.level-up__review')).toBeVisible();
   await page.locator('[data-action="next"]').click();
-  await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
+  await expect(page).toHaveURL(SHEET_HOME);
 }
 
 /** Awards enough XP in one submission to reach character level 5 (SRD 5.2.1 Character Advancement
@@ -58,27 +68,26 @@ async function completeLevelUp(page: Page, pickName?: string): Promise<void> {
  * wizard needs character level 5 for its first 3rd-level spell slot (the full-caster slot table),
  * which this scenario's "cast … at level 3" step needs available. */
 async function levelWizardUpToFive(page: Page): Promise<void> {
-  await page.locator('.sheet-shell__xp-field input').fill('6500');
-  await page.locator('.sheet-shell__xp-submit').click();
-  await expect(page.locator('.sheet-shell__level-up-badge')).toBeVisible();
+  await awardXp(page, 6500);
+  await expect(await levelUpLink(page)).toBeVisible();
 
-  await page.locator('.sheet-shell__level-up-badge').click();
+  await (await levelUpLink(page)).click();
   await completeLevelUp(page); // level 2: no class choice
   await expect(page.locator('.sheet-shell__class-line')).toHaveText('Wizard 2');
 
-  await page.locator('.sheet-shell__level-up-badge').click();
+  await (await levelUpLink(page)).click();
   await completeLevelUp(page, 'Evoker'); // level 3: subclass
   await expect(page.locator('.sheet-shell__class-line')).toHaveText('Wizard 3');
 
-  await page.locator('.sheet-shell__level-up-badge').click();
+  await (await levelUpLink(page)).click();
   await completeLevelUp(page, 'Alert'); // level 4: feat (no ability-score sub-choice, unlike ASI)
   await expect(page.locator('.sheet-shell__class-line')).toHaveText('Wizard 4');
 
-  await page.locator('.sheet-shell__level-up-badge').click();
+  await (await levelUpLink(page)).click();
   await completeLevelUp(page); // level 5: no class choice — first 3rd-level slot unlocks here
   await expect(page.locator('.sheet-shell__class-line')).toHaveText('Wizard 5');
 
-  await expect(page.locator('.sheet-shell__level-up-badge')).toHaveCount(0);
+  await expect(await levelUpLink(page)).toHaveCount(0);
 }
 
 test.describe('play actions', () => {
@@ -144,7 +153,7 @@ test.describe('play actions', () => {
     });
 
     await test.step('the timeline shows the rest as one grouped, revertible card', async () => {
-      await page.getByRole('tab', { name: 'Timeline', exact: true }).click();
+      await openTab(page, 'Timeline');
       const restRow = page.locator('.timeline-tab__row[data-family="combat"]').first();
       await expect(restRow.locator('.timeline-tab__expand')).toBeVisible();
 
@@ -155,7 +164,7 @@ test.describe('play actions', () => {
     });
 
     await test.step('reverting the rest group restores the spent hit die and pre-rest HP', async () => {
-      await page.getByRole('tab', { name: 'Play', exact: true }).click();
+      await openTab(page, 'Play');
       await expect(hpValueLocator(page, 'Current')).toHaveText('8');
       await expect(page.locator('.vitals__hit-dice')).toContainText('1/1 d10');
     });

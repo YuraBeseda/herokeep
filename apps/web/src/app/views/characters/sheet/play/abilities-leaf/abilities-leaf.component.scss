@@ -33,9 +33,15 @@
   gap: var(--space-1);
 }
 
-@media (max-width: 767.98px) {
-  .abilities--saves {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* Six across even on a phone, so the Combat tab keeps its attacks above the fold: the roll button
+   fills its column and drops the padding that would push it past 44 px of width. */
+.abilities--saves .abilities__rolls {
+  inline-size: 100%;
+
+  button {
+    inline-size: 100%;
+    min-inline-size: 0;
+    padding-inline: 0;
   }
 }
 

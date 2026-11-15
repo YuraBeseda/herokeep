@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { isPhone, openPhoneTab } from './viewport';
 import {
   applyBackgroundAbilities,
   chooseOption,
@@ -89,6 +90,7 @@ export async function createWizard(page: Page, name: string): Promise<string> {
  * button — `.filter({ has: ... })` on that Cast button is what disambiguates the two same-named
  * rows). */
 export async function prepareSpell(page: Page, spellName: string): Promise<Locator> {
+  if (isPhone(page) && !page.url().endsWith('/spells')) await openPhoneTab(page, 'Spells');
   const spellBlock = page.locator('app-spells-leaf .spells__block');
   await spellBlock
     .locator('.spells__item', { hasText: spellName })

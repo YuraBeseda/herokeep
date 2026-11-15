@@ -272,6 +272,13 @@
       "timeline": "Хроника",
       "label": "Разделы листа"
     },
+    "play": {
+      "sections": {
+        "label": "Разделы листа игры",
+        "combat": "Бой",
+        "spellsBag": "Заклинания и сумка"
+      }
+    },
     "build": {
       "outstanding": {
         "title": "Незавершённые выборы",

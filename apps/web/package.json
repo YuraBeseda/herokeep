@@ -21,7 +21,9 @@
     "pree2e:sync": "pnpm run build && node scripts/build-fit-locale.mjs",
     "e2e:sync": "playwright test --config=playwright.sync.config.ts",
     "pree2e:textfit": "pnpm run build && node scripts/build-fit-locale.mjs",
-    "e2e:textfit": "playwright test --config=playwright.textfit.config.ts"
+    "e2e:textfit": "playwright test --config=playwright.textfit.config.ts",
+    "pree2e:mobile": "pnpm run build",
+    "e2e:mobile": "playwright test --config=playwright.mobile.config.ts"
   },
   "private": true,
   "packageManager": "pnpm@11.24.0",

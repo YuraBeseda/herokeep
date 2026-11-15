@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { createFighter } from './helpers/create-fighter';
 import { chooseOwnClassIfPrompted } from './helpers/level-up';
-import { hpCurrent, hpMax } from './helpers/sheet';
+import { awardXp, hpCurrent, hpMax, levelUpLink, openTab } from './helpers/sheet';
+import { isPhone, openPhoneTab, SHEET_HOME } from './helpers/viewport';
 
 const CHARACTER_NAME = 'Aldric Level Up';
 
@@ -30,27 +31,37 @@ test.describe('level up — XP entry, average HP, and revert', () => {
     });
 
     await test.step('award 300 XP — the "level up available" badge appears', async () => {
-      await page.locator('.sheet-shell__xp-field input').fill('300');
-      await page.locator('.sheet-shell__xp-submit').click();
+      await awardXp(page, 300);
       await expect(page.locator('.sheet-shell__xp-current')).toHaveText('XP: 300');
-      await expect(page.locator('.sheet-shell__level-up-badge')).toBeVisible();
+      await expect(await levelUpLink(page)).toBeVisible();
     });
 
     await test.step('the level-up dims the sheet tabs, and Cancel returns to the tab the player came from', async () => {
-      await page.locator('.sheet-shell__level-up-badge').click();
+      await (await levelUpLink(page)).click();
       await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
-      await expect(page.locator('.sheet-shell__tab[aria-disabled="true"]')).toHaveCount(3);
-      await expect(page.locator('.sheet-shell__level-up-badge')).toHaveAttribute(
-        'aria-current',
-        'page',
-      );
+      if (isPhone(page)) {
+        // The phone has no sheet tabs to dim: the bottom bar keeps More lit for the wizard.
+        await expect(
+          page
+            .getByRole('navigation', { name: 'Sections of this screen' })
+            .getByRole('link', { name: 'More', exact: true }),
+        ).toHaveAttribute('aria-current', 'page');
+      } else {
+        await expect(page.locator('.sheet-shell__tab[aria-disabled="true"]')).toHaveCount(3);
+        await expect(page.locator('.sheet-shell__level-up-badge')).toHaveAttribute(
+          'aria-current',
+          'page',
+        );
+      }
       await page.locator('[data-action="cancel"]').click();
-      await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
-      await expect(page.locator('.sheet-shell__tab[aria-disabled="true"]')).toHaveCount(0);
+      await expect(page).toHaveURL(SHEET_HOME);
+      if (!isPhone(page)) {
+        await expect(page.locator('.sheet-shell__tab[aria-disabled="true"]')).toHaveCount(0);
+      }
     });
 
     await test.step('open the level-up wizard and take the average HP', async () => {
-      await page.locator('.sheet-shell__level-up-badge').click();
+      await (await levelUpLink(page)).click();
       await expect(page).toHaveURL(/\/c\/[^/]+\/level-up$/);
       // Fighter-1's own ability scores clear a multiclass offer (see `chooseOwnClassIfPrompted`'s
       // doc) — keep leveling Fighter.
@@ -66,10 +77,12 @@ test.describe('level up — XP entry, average HP, and revert', () => {
       // The Next slot now reads "Finish level up".
       await expect(page.locator('[data-action="next"]')).toContainText('Finish level up');
       await page.locator('[data-action="next"]').click();
-      await expect(page).toHaveURL(/\/c\/[^/]+\/play$/);
+      await expect(page).toHaveURL(SHEET_HOME);
     });
 
     await test.step('the sheet shows level 2 and HP 12/20 (leveling does not heal current)', async () => {
+      // The phone returns to the tab it left (More); HP lives on Combat.
+      if (isPhone(page)) await openPhoneTab(page, 'Combat');
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 2');
       await expect(hpCurrent(page)).toHaveText('12');
       await expect(hpMax(page)).toHaveText('20');
@@ -77,13 +90,14 @@ test.describe('level up — XP entry, average HP, and revert', () => {
 
     await test.step('a reload persists the level up (IndexedDB, not just in-memory state)', async () => {
       await page.reload();
+      if (isPhone(page)) await openPhoneTab(page, 'Combat'); // the reload may land on another tab
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 2');
       await expect(hpCurrent(page)).toHaveText('12');
       await expect(hpMax(page)).toHaveText('20');
     });
 
     await test.step('revert the level up from the Timeline tab, behind its confirm dialog', async () => {
-      await page.getByRole('tab', { name: 'Timeline', exact: true }).click();
+      await openTab(page, 'Timeline');
       // Scoped to the 'leveling' family (`event-sentence.pipe.ts`'s `FAMILY_BY_PREFIX`, which
       // maps both `level.*` and `xp.*` to it) rather than just "the first row": the XP award is
       // ALSO a 'leveling' row, so `.first()` over that narrower set is what actually picks the
@@ -100,7 +114,7 @@ test.describe('level up — XP entry, average HP, and revert', () => {
     });
 
     await test.step('the sheet is back to level 1 / HP 12/12', async () => {
-      await page.getByRole('tab', { name: 'Play', exact: true }).click();
+      await openTab(page, 'Play');
       await expect(page.locator('.sheet-shell__class-line')).toHaveText('Fighter 1');
       await expect(hpCurrent(page)).toHaveText('12');
       await expect(hpMax(page)).toHaveText('12');

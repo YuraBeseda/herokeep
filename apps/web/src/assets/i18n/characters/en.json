@@ -272,6 +272,13 @@
       "timeline": "Timeline",
       "label": "Sheet sections"
     },
+    "play": {
+      "sections": {
+        "label": "Play sheet sections",
+        "combat": "Combat",
+        "spellsBag": "Spells & bag"
+      }
+    },
     "build": {
       "outstanding": {
         "title": "Outstanding choices",

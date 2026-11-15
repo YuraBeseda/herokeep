@@ -272,6 +272,13 @@
       "timeline": "Хроніка",
       "label": "Розділи аркуша"
     },
+    "play": {
+      "sections": {
+        "label": "Розділи аркуша гри",
+        "combat": "Бій",
+        "spellsBag": "Закляття та сумка"
+      }
+    },
     "build": {
       "outstanding": {
         "title": "Незавершені вибори",

@@ -1,7 +1,16 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { isPhone, openPhoneTab } from './viewport';
 
 /** The character sheet's tab bar: selects `tab` and waits for its panel. */
 export async function openTab(page: Page, tab: 'Play' | 'Build' | 'Timeline'): Promise<void> {
+  if (isPhone(page)) {
+    // The phone has no Play/Build/Timeline tabs: Play is Combat, the others sit behind More.
+    if (tab === 'Play') return openPhoneTab(page, 'Combat');
+    await openPhoneTab(page, 'More');
+    await page.locator(`.more__${tab.toLowerCase()}`).click();
+    await expect(page.locator(`.${tab.toLowerCase()}-tab`)).toBeVisible();
+    return;
+  }
   await page.getByRole('tab', { name: tab, exact: true }).click();
   await expect(page.locator(`.${tab.toLowerCase()}-tab`)).toBeVisible();
 }
@@ -54,6 +63,15 @@ export function strapAction(page: Page, id: string): Locator {
   return page.locator(`[data-action="${id}"]`);
 }
 
+/** Clicks a strap action; on a phone the secondary ones sit in the strap's More sheet. */
+export async function clickStrapAction(page: Page, id: string): Promise<void> {
+  const action = strapAction(page, id);
+  if (isPhone(page) && (await action.count()) === 0) {
+    await page.locator('.hk-astrap__more').click();
+  }
+  await action.click();
+}
+
 /** Types an HP amount into the gauge and presses its Damage / Heal button. */
 export async function applyHp(
   page: Page,
@@ -104,4 +122,20 @@ export async function chooseCastSlotLane(page: Page, level: number): Promise<voi
 /** Chooses the cast dialog's pact slot lane. */
 export async function chooseCastPactLane(page: Page): Promise<void> {
   await page.locator('.cast-dialog__lane[data-kind="pact"]').click();
+}
+
+// --- Viewport-aware sheet chrome (plan 17 B15a) -----------------------------------------------------
+
+/** The entry to the level-up flow: the folio badge on tablet/desktop, the More tab's row on a phone
+ * (which opens More first when the player is not already there). */
+export async function levelUpLink(page: Page): Promise<Locator> {
+  if (!isPhone(page)) return page.locator('.sheet-shell__level-up-badge');
+  if (!page.url().endsWith('/more')) await openPhoneTab(page, 'More');
+  return page.locator('.more__level-up');
+}
+
+/** Awards XP through the folio's award field (the same control at every width). */
+export async function awardXp(page: Page, xp: number): Promise<void> {
+  await page.locator('.sheet-shell__xp-field input').fill(String(xp));
+  await page.locator('.sheet-shell__xp-submit').click();
 }
