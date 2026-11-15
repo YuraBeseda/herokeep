@@ -15,11 +15,10 @@ test('flags a sideways-scrolling document and a clipping element', async ({ page
   expect(found.some((line) => line.includes('clips'))).toBe(true);
 });
 
-// A fake `hkTooltip`: the host carries `aria-describedby="hk-tip-…"` and, on `focus`, a slip with that
-// id appears holding `text` (what the real directive does; see tooltip.directive.ts).
+// A fake `hkTooltip`: on `focus` a `role=tooltip` slip appears holding `text` (what the real directive does; see tooltip.directive.ts).
 const tipHost = (text: string, inner: string): string =>
   `<div id="host" aria-describedby="hk-tip-t"><div data-truncate style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100px">${inner}</div></div>
-   <script>document.getElementById('host').addEventListener('focus',()=>{const t=document.createElement('div');t.id='hk-tip-t';t.textContent=${JSON.stringify(text)};document.body.append(t)});
+   <script>document.getElementById('host').addEventListener('focus',()=>{const t=document.createElement('div');t.id='hk-tip-t';t.setAttribute('role','tooltip');t.textContent=${JSON.stringify(text)};document.body.append(t)});
    document.getElementById('host').addEventListener('blur',()=>document.getElementById('hk-tip-t')?.remove());</script>`;
 
 test('accepts wrapping text and a data-truncate ellipsis that has its tooltip', async ({
