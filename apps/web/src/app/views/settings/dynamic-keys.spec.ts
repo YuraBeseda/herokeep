@@ -126,6 +126,8 @@ describe('dynamic translation keys exist in every language', () => {
       'system', 'species', 'background', 'class', 'subclass', 'feature', 'feat', 'spell', 'item',
       'condition', 'skill', 'ability', 'language', 'tool', 'rule', 'table',
     ]; // prettier-ignore
+    const HOMEBREW_TYPES = ['item', 'spell', 'feat', 'species'];
+    const MARKDOWN_SAMPLES = ['bold', 'italic', 'list', 'heading'];
     const SYNC = ['synced', 'pending', 'connecting', 'offline'];
     // The campaign stream's events are never rendered by the character timeline pipe.
     const CAMPAIGN_EVENT =
@@ -172,6 +174,41 @@ describe('dynamic translation keys exist in every language', () => {
       ['campaigns', 'settings.houseRules.encumbrance.', ['label', 'off', 'standard', 'variant'], 'campaign-segmented prefix plus id'],
       ['campaigns', 'settings.visibility.partySheets.', ['label', 'none', 'overview', 'full'], 'campaign-segmented prefix plus id'],
       ['campaigns', 'settings.visibility.rolls.', ['label', 'everyone', 'dm'], 'campaign-segmented prefix plus id'],
+      // Added in fix round 1: every remaining prefix-plus-variant lookup found by an rg sweep.
+      ['campaigns', 'roles.', ['dm', 'player'], 'campaign shell, lobby and list role badge'],
+      ['shell', 'home.campaigns.role.', ['dm', 'player'], 'home campaign chip'],
+      ['campaigns', 'shell.tabs.', ['party', 'log', 'lobby', 'settings', 'landmark'], 'campaign shell tabs and list tab links'],
+      ['characters', 'sheet.tabs.', ['play', 'build', 'timeline'], 'sheet shell tabs'],
+      ['campaigns', 'lobby.members.', ['online', 'offline'], 'lobby member presence'],
+      ['campaigns', 'link.progress.step.', ['character', 'campaign'], 'link and leave dialogs'],
+      ['campaigns', 'link.progress.outcome.', ['committed', 'rejected', 'timeout', 'skipped'], 'link, leave and handover dialogs'],
+      ['campaigns', 'unlink.progress.step.', ['character', 'campaign'], 'unlink dialog'],
+      ['campaigns', 'handover.progress.step.', ['characterLeave', 'rosterClear', 'characterRejoin', 'rosterRejoin', 'ownerTransfer'], 'handover dialog'],
+      ['campaigns', 'log.visibilityHint.', ['everyone', 'dm', 'private'], 'log entry and composer hint'],
+      ['campaigns', 'log.composer.visibility.', ['everyone', 'dm', 'private'], 'log entry badge and composer options'],
+      ['campaigns', 'log.composer.sendReason.', ['empty', 'tooLong'], 'log composer send reason'],
+      ['campaigns', 'dmEffects.tabs.', ['damage', 'heal', 'temp', 'condition', 'xp', 'level', 'item', 'inspiration', 'override'], 'quick effects and party tab'],
+      ['campaigns', 'settings.packs.status.', ['installed', 'installing'], 'campaign packs section'],
+      ['campaigns', 'edit.', ['locked', 'dmApprovalV1'], 'campaign edit-lock banner'],
+      ['characters', 'wizard.abilityScores.method.', ['standardArray', 'pointBuy', 'manual', 'roll'], 'ability scores step'],
+      ['characters', 'wizard.equipment.currency.', ['cp', 'sp', 'ep', 'gp', 'pp'], 'equipment step'],
+      ['characters', 'levelUp.review.change.', ['hitDice', 'currentHp', 'spellSlots', 'pactSlots', 'proficiency'], 'level-up review'],
+      ['characters', 'sheet.build.proficiencies.', ['armor', 'weapons', 'tools', 'saves', 'skills', 'languages'], 'build proficiencies section'],
+      ['characters', 'sheet.build.origin.', ['speciesDetail', 'classDetail', 'subclassDetail', 'backgroundDetail', 'originFeatDetail'], 'build origin section'],
+      ['characters', 'sheet.roll.visibility.', ['everyone', 'dm', 'private'], 'roll log drawer'],
+      ['characters', 'sheet.resources.reset.', ['shortRest', 'longRest', 'dawn'], 'resources leaf'],
+      ['characters', 'timeline.revertConfirm.preview.', ['hp', 'hpMax', 'ac', 'level', 'none'], 'revert dialog'],
+      ['shell', 'ui.coins.', ['cp', 'sp', 'ep', 'gp', 'pp'], 'coin pouch stack label'],
+      ['shell', 'ui.coins.name-', ['cp', 'sp', 'ep', 'gp', 'pp'], 'coin pouch metal name'],
+      ['shell', 'ui.coins.unit-', ['cp', 'sp', 'ep', 'gp', 'pp'], 'coin pouch unit'],
+      ['shell', 'ui.weight.state-', ['loaded', 'light', 'encumbered', 'heavy', 'over'], 'weight strap'],
+      ['packs', 'homebrew.new.', HOMEBREW_TYPES, 'homebrew chooser, list and editor'],
+      ['packs', 'homebrew.edit-title.', HOMEBREW_TYPES, 'homebrew editor title'],
+      ['packs', 'homebrew.empty-hint.', HOMEBREW_TYPES, 'homebrew list empty hint'],
+      ['packs', 'homebrew.can.', HOMEBREW_TYPES, 'homebrew list capabilities'],
+      ['packs', 'homebrew.markdown.', MARKDOWN_SAMPLES, 'markdown help row'],
+      ['packs', 'homebrew.markdown.sample.', MARKDOWN_SAMPLES, 'markdown help sample'],
+      ['library', 'sort.', ['match', 'name', 'type', 'level'], 'library browse sort'],
     ]; // prettier-ignore
 
     it.each(sites)('%s %s* (%s)', (scope, prefix, variants) => {
