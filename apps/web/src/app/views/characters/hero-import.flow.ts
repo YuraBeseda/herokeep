@@ -27,6 +27,12 @@ const EXPORT_ALL_MAX_HEROES = 500;
 const EXPORT_ALL_MAX_HERO_BYTES = 64 * 1024 * 1024;
 const EXPORT_ALL_MAX_TOTAL_BYTES = 512 * 1024 * 1024;
 
+/** An export-all `.hero` entry, inflated only when `inflate` is called. */
+interface LazyHero {
+  readonly name: string;
+  readonly inflate: () => File;
+}
+
 export interface ImportAllResult {
   readonly imported: string[];
   readonly merged: string[];
@@ -91,7 +97,7 @@ export class HeroImportFlow {
   /** The `.hero` entries of an export-all zip, or `undefined` when `file` is a single `.hero` (a
    * `manifest.json` at the root) or not a zip at all (the reader reports that). Limits are checked
    * on a first pass that inflates nothing; `HeroImportTooLargeError` surfaces as the bad-zip toast. */
-  private async exportAllEntries(file: File): Promise<File[] | undefined> {
+  private async exportAllEntries(file: File): Promise<LazyHero[] | undefined> {
     const { unzipSync } = await import('fflate');
     const bytes = new Uint8Array(await file.arrayBuffer());
     const names: string[] = [];
@@ -102,7 +108,11 @@ export class HeroImportFlow {
         filter: ({ name, size, originalSize }) => {
           // Same all-entries bound the reader applies (a forged directory can claim millions).
           if (names.length >= HKPACK_LIMITS.maxEntries) {
-            throw new HeroImportTooLargeError('entries', names.length + 1, HKPACK_LIMITS.maxEntries);
+            throw new HeroImportTooLargeError(
+              'entries',
+              names.length + 1,
+              HKPACK_LIMITS.maxEntries,
+            );
           }
           names.push(name);
           if (name.endsWith('.hero')) {
@@ -131,19 +141,21 @@ export class HeroImportFlow {
     if (heroNames.length > EXPORT_ALL_MAX_HEROES) {
       throw new HeroImportTooLargeError('entries', heroNames.length, EXPORT_ALL_MAX_HEROES);
     }
-    const wanted = new Set(heroNames);
-    const inflated = unzipSync(bytes, { filter: ({ name }) => wanted.has(name) });
-    return heroNames.map(
-      (name) => new File([inflated[name]], name.slice(name.lastIndexOf('/') + 1)),
-    );
+    // Inflated lazily, one entry per call, so peak memory is one hero rather than the whole archive.
+    return heroNames.map((path) => {
+      const name = path.slice(path.lastIndexOf('/') + 1);
+      const inflate = () =>
+        new File([unzipSync(bytes, { filter: (e) => e.name === path })[path]], name);
+      return { name, inflate };
+    });
   }
 
   /** One `HeroReaderService.import` per entry; a failing entry is recorded, never thrown. */
-  private async importEach(files: File[]): Promise<ImportAllResult> {
+  private async importEach(entries: LazyHero[]): Promise<ImportAllResult> {
     const summary: ImportAllResult = { imported: [], merged: [], skipped: [] };
-    for (const entry of files) {
+    for (const entry of entries) {
       try {
-        const result = await this.heroReaderService.import(entry);
+        const result = await this.heroReaderService.import(entry.inflate());
         (result.mode === 'created' ? summary.imported : summary.merged).push(result.name);
       } catch (error) {
         // Every remaining entry would fail the same way: abort rather than list them all as invalid.

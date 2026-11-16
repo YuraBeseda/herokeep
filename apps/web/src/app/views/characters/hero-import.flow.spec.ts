@@ -88,6 +88,28 @@ describe('HeroImportFlow export-all zip', () => {
     expect(result.imported).toEqual(['b', 'c']);
   });
 
+  it('inflates one entry at a time: a corrupt entry is skipped after the earlier ones imported', async () => {
+    const { zipSync } = await import('fflate');
+    const body = (c: string) => enc(c.repeat(300));
+    const bytes = zipSync(
+      { 'a.hero': body('a'), 'b.hero': body('b'), 'c.hero': body('c') },
+      { level: 9 },
+    );
+    // First deflate byte of b's data → BTYPE=11 (invalid block): only b's inflate can fail.
+    const nameAt = bytes.findIndex(
+      (_, i) => bytes[i] === 0x62 && bytes[i + 1] === 0x2e && bytes[i + 2] === 0x68,
+    );
+    const extraLen = bytes[nameAt - 2]! | (bytes[nameAt - 1]! << 8);
+    bytes[nameAt + 'b.hero'.length + extraLen] = 0xff;
+    const { flow, importFn } = setup((f) => Promise.resolve(outcome(byName(f), 'created')));
+
+    const result = (await flow.importFile(new File([bytes], 'all.zip'))) as ImportAllResult;
+
+    expect(result.imported).toEqual(['a', 'c']);
+    expect(result.skipped).toEqual([{ name: 'b.hero', reason: 'invalid' }]);
+    expect(importFn).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses a zip with neither a manifest nor a .hero entry', async () => {
     const { flow, importFn, show } = setup(() => Promise.reject(new Error('unused')));
     const result = await flow.importFile(await archive({ 'a.png': enc('x'), 'b.png': enc('y') }));
