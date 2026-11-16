@@ -91,10 +91,10 @@ table in [03-roadmap/phases](03-roadmap/phases.md).
 | Gate                                   | Result                                                          |
 | -------------------------------------- | --------------------------------------------------------------- |
 | root `pnpm lint`                       | pass                                                            |
-| `pnpm --filter web test --watch=false` | 245 files / 3497 tests                                          |
-| `pnpm --filter web build`              | initial bundle 372.2 kB gzip of 600                             |
+| `pnpm --filter web test --watch=false` | 245 files / 3501 tests                                          |
+| `pnpm --filter web build`              | initial bundle 372.3 kB gzip of 600                             |
 | root `pnpm typecheck`                  | pass                                                            |
-| root `pnpm vitest run`                 | 150 files / 2281 tests                                          |
+| root `pnpm vitest run`                 | 150 files / 2282 tests                                          |
 | `pnpm --filter api test:cloudflare`    | 47 passed, 1 skipped                                            |
 | `pnpm --filter web e2e`                | 69 / 69                                                         |
 | `pnpm --filter web e2e:sync`           | 11 / 11                                                         |
