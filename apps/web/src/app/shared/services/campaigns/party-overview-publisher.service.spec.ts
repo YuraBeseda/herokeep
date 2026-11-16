@@ -50,12 +50,30 @@ class StubLoader implements TranslocoLoader {
   }
 }
 
-const DEBOUNCE_MS = 15;
-/** Comfortably past `DEBOUNCE_MS` for a real (non-fake) timer — same "small real duration, never
- * `vi.useFakeTimers()`" posture `campaign.store.spec.ts`'s own `CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS`
- * doc explains (fake timers starve real fake-indexeddb microtask scheduling). */
-async function waitPastDebounce(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_MS + 60));
+/** A small REAL duration, never `vi.useFakeTimers()` — same posture `campaign.store.spec.ts`'s own
+ * `CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS` doc explains (fake timers starve real fake-indexeddb microtask
+ * scheduling). Wide enough that the setup a test runs INSIDE one window (a second `appendTx`, a
+ * `seedFighter`) still fits on a loaded machine — 15 ms did not, under a full parallel run. */
+const DEBOUNCE_MS = 250;
+
+interface PublishSeam {
+  publishNow(streamId: string): Promise<void>;
+}
+
+/** Instantiates the publisher (registering its `onLocalAppend` hook) and returns `settle(n)`, which
+ * resolves once the debounce timer's target `publishNow` has run `n` times in total AND every run
+ * has finished its storage work — waiting on the work itself rather than a fixed sleep, so a slow
+ * run cannot reach the assertions early. */
+function startPublisher(): (calls: number) => Promise<void> {
+  const service = TestBed.inject(PartyOverviewPublisherService) as unknown as PublishSeam;
+  const publishNow = vi.spyOn(service, 'publishNow');
+  return async (calls) => {
+    await vi.waitFor(() => expect(publishNow).toHaveBeenCalledTimes(calls), {
+      timeout: 4_000,
+      interval: 20,
+    });
+    await Promise.all(publishNow.mock.results.map((r) => r.value as Promise<void>));
+  };
 }
 
 function configure(): {
@@ -131,12 +149,12 @@ describe('PartyOverviewPublisherService', () => {
   }
 
   it('publishes a party.overview_updated event derived from the real Sheet, after the debounce window, once a campaign-linked character commits a local append', async () => {
-    TestBed.inject(PartyOverviewPublisherService); // instantiate — registers the onLocalAppend hook
+    const settle = startPublisher();
     const characterId = await seedFighter('Ivan');
     const campaignId = '11111111-1111-1111-1111-111111111111';
 
     await linkToOpenCampaign(characterId, campaignId);
-    await waitPastDebounce();
+    await settle(1);
 
     const campaignEvents = await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`);
     const published = campaignEvents.filter((e) => e.type === 'party.overview_updated');
@@ -161,7 +179,7 @@ describe('PartyOverviewPublisherService', () => {
   });
 
   it('collapses multiple commits inside the debounce window into exactly one publish reflecting the LATEST state', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterId = await seedFighter('Ivan');
     const campaignId = '22222222-2222-2222-2222-222222222222';
     const characterStore = TestBed.inject(CharacterStore);
@@ -170,7 +188,7 @@ describe('PartyOverviewPublisherService', () => {
     await characterStore.appendTx([
       { type: 'condition.added', v: 1, payload: { conditionId: 'srd-5e-2024:condition/blinded' } },
     ]);
-    await waitPastDebounce();
+    await settle(1);
 
     const campaignEvents = await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`);
     const published = campaignEvents.filter((e) => e.type === 'party.overview_updated');
@@ -183,13 +201,13 @@ describe('PartyOverviewPublisherService', () => {
   });
 
   it('skips publishing when the derived overview is unchanged (deep-equal) from what is already on the campaign stream', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterId = await seedFighter('Ivan');
     const campaignId = '33333333-3333-3333-3333-333333333333';
     const characterStore = TestBed.inject(CharacterStore);
 
     await linkToOpenCampaign(characterId, campaignId);
-    await waitPastDebounce();
+    await settle(1);
     let published = (await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`)).filter(
       (e) => e.type === 'party.overview_updated',
     );
@@ -199,7 +217,7 @@ describe('PartyOverviewPublisherService', () => {
     await characterStore.appendTx([
       { type: 'character.renamed', v: 1, payload: { name: 'Renamed' } },
     ]);
-    await waitPastDebounce();
+    await settle(2);
 
     published = (await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`)).filter(
       (e) => e.type === 'party.overview_updated',
@@ -208,18 +226,18 @@ describe('PartyOverviewPublisherService', () => {
   });
 
   it('publishes a second, updated overview once a stat actually changes', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterId = await seedFighter('Ivan');
     const campaignId = '44444444-4444-4444-4444-444444444444';
     const characterStore = TestBed.inject(CharacterStore);
 
     await linkToOpenCampaign(characterId, campaignId);
-    await waitPastDebounce();
+    await settle(1);
 
     await characterStore.appendTx([
       { type: 'condition.added', v: 1, payload: { conditionId: 'srd-5e-2024:condition/blinded' } },
     ]);
-    await waitPastDebounce();
+    await settle(2);
 
     const published = (
       await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`)
@@ -231,7 +249,7 @@ describe('PartyOverviewPublisherService', () => {
   });
 
   it('never publishes for a solo character (no campaign link at all)', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterId = await seedFighter('Solo');
     const characterStore = TestBed.inject(CharacterStore);
     characterStore.enterSyncMode(characterId);
@@ -240,13 +258,13 @@ describe('PartyOverviewPublisherService', () => {
     const appendSpy = vi.spyOn(campaignStore, 'appendToStream');
 
     await characterStore.appendTx([{ type: 'character.renamed', v: 1, payload: { name: 'X' } }]);
-    await waitPastDebounce();
+    await settle(1);
 
     expect(appendSpy).not.toHaveBeenCalled();
   });
 
   it('does not publish while the linked campaign has no live session (syncState stays "offline")', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterId = await seedFighter('Ivan');
     const campaignId = '55555555-5555-5555-5555-555555555555';
     const characterStore = TestBed.inject(CharacterStore);
@@ -255,7 +273,7 @@ describe('PartyOverviewPublisherService', () => {
     await characterStore.appendTx([
       { type: 'character.campaign_joined', v: 1, payload: { campaignId } },
     ]);
-    await waitPastDebounce();
+    await settle(1);
 
     const published = (
       await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`)
@@ -264,7 +282,7 @@ describe('PartyOverviewPublisherService', () => {
   });
 
   it('does not publish for a character with no class chosen yet (level 0 — PartyOverviewUpdatedV1.level requires 1..20)', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterStore = TestBed.inject(CharacterStore);
     const characterId = await characterStore.create('Fresh', 'feminine');
     characterStore.enterSyncMode(characterId);
@@ -274,7 +292,7 @@ describe('PartyOverviewPublisherService', () => {
     await characterStore.appendTx([
       { type: 'character.campaign_joined', v: 1, payload: { campaignId } },
     ]);
-    await waitPastDebounce();
+    await settle(1);
 
     const published = (
       await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`)
@@ -283,7 +301,7 @@ describe('PartyOverviewPublisherService', () => {
   });
 
   it('does not publish once the store has moved on to a DIFFERENT character before the debounce window elapses', async () => {
-    TestBed.inject(PartyOverviewPublisherService);
+    const settle = startPublisher();
     const characterStore = TestBed.inject(CharacterStore);
     const characterAId = await seedFighter('A');
     const campaignId = '77777777-7777-7777-7777-777777777777';
@@ -293,7 +311,7 @@ describe('PartyOverviewPublisherService', () => {
     const characterBId = await seedFighter('B');
     characterStore.enterSyncMode(characterBId);
     void characterBId;
-    await waitPastDebounce();
+    await settle(1);
 
     const published = (
       await TestBed.inject(EventsRepository).byStream(`camp:${campaignId}`)
