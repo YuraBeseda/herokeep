@@ -150,8 +150,10 @@ export function buildSprite(
 
   for (const name of uiNames) {
     const { gi } = ui[name];
+    // The nested <use> resolves against an origin-anchored viewport, so keep only the source's size.
+    const [, , w, h] = viewBoxes.get(gi)!.split(' ');
     symbols.push(
-      `<symbol id="${UI_SYMBOL_PREFIX}${name}" viewBox="${viewBoxes.get(gi)}"><use href="#gi-${gi}"/></symbol>`,
+      `<symbol id="${UI_SYMBOL_PREFIX}${name}" viewBox="0 0 ${w} ${h}"><use href="#gi-${gi}"/></symbol>`,
     );
   }
 

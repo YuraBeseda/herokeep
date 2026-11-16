@@ -85,6 +85,20 @@ describe('buildSprite', () => {
       }
     });
 
+    it('wraps a badge source in a viewBox that starts at the origin', () => {
+      buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS);
+      const svgText = readFileSync(join(tmpDir, 'sprite.svg'), 'utf8');
+      const parsed = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+      const size = (el: Element) => el.getAttribute('viewBox')!.split(' ').slice(2).join(' ');
+      for (const [name, entry] of Object.entries(UI_ICONS)) {
+        const wrapper = parsed.querySelector(`symbol[id="ui-${name}"]`)!;
+        const source = parsed.querySelector(`symbol[id="gi-${entry.gi}"]`)!;
+        expect(wrapper.getAttribute('viewBox')!.startsWith('0 0 '), name).toBe(true);
+        expect(size(wrapper), name).toBe(size(source));
+      }
+      expect(parsed.querySelector('symbol[id="ui-settings"]')!.getAttribute('viewBox')).toBe('0 0 216 216');
+    });
+
     it('keeps the gi: ids of the icons map when a ui section is added', () => {
       const withUi = buildSprite(MAP_PATH, VENDOR_DIR, tmpDir, UI_ICONS).ids;
       const without = buildSprite(MAP_PATH, VENDOR_DIR, join(tmpDir, 'plain')).ids;
