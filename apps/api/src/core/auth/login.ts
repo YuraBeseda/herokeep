@@ -4,7 +4,7 @@ import { constantTimeEqual, randomToken, sha256Hex } from '../crypto.ts';
 import { uuidv7 } from '../ids.ts';
 import type { Db } from '../db/index.ts';
 import type { Config, RateLimit } from '../../ports/index.ts';
-import { findUserByFoldedName, insertSession } from '../db/queries.ts';
+import { findUserByFoldedName, insertSession, type User } from '../db/queries.ts';
 import { foldUsername } from './username.ts';
 import { hashVerifier, isValidVerifierShape } from './verifier.ts';
 import { SESSION_TTL_MS } from './sessions.ts';
@@ -50,10 +50,38 @@ export async function loginUser(
   input: LoginInput,
   now = Date.now(),
 ): Promise<LoginResult> {
-  const { username, verifier } = input;
+  const deviceLabel = normalizeDeviceLabel(input.deviceLabel);
+  const user = await verifyPassword(db, config, rateLimit, input.username, input.verifier);
+
+  const token = randomToken(32); // 256-bit session token (ADR-012 §Sessions exact value)
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = now + SESSION_TTL_MS;
+
+  await insertSession(db, {
+    tokenHash,
+    id: uuidv7(),
+    userId: user.id,
+    deviceLabel,
+    createdAt: now,
+    lastSeenAt: now,
+    expiresAt,
+  });
+
+  return { userId: user.id, token, expiresAt, deviceLabel };
+}
+
+/** The password check `/login` runs (lockout peek, constant-shape hash compare, failure scope and
+ * the same 401/429 bodies), shared with `POST /api/auth/recovery-codes` so a re-check of the
+ * password behaves exactly like a login attempt. */
+export async function verifyPassword(
+  db: Db,
+  config: Config,
+  rateLimit: RateLimit,
+  username: string,
+  verifier: string,
+): Promise<User> {
   if (typeof username !== 'string' || username.length === 0) throw badRequest('Invalid username');
   if (typeof verifier !== 'string' || !isValidVerifierShape(verifier)) throw badRequest('Invalid verifier');
-  const deviceLabel = normalizeDeviceLabel(input.deviceLabel);
 
   const folded = foldUsername(username);
   const scope = `user:${folded}:login-fail`;
@@ -88,22 +116,7 @@ export async function loginUser(
   // `matches` is only ever true when `user` is defined (see the `user !== undefined &&` above);
   // this re-check exists purely so TypeScript narrows `user` below without a non-null assertion.
   if (!user) throw unauthorized('Invalid username or password');
-
-  const token = randomToken(32); // 256-bit session token (ADR-012 §Sessions exact value)
-  const tokenHash = await sha256Hex(token);
-  const expiresAt = now + SESSION_TTL_MS;
-
-  await insertSession(db, {
-    tokenHash,
-    id: uuidv7(),
-    userId: user.id,
-    deviceLabel,
-    createdAt: now,
-    lastSeenAt: now,
-    expiresAt,
-  });
-
-  return { userId: user.id, token, expiresAt, deviceLabel };
+  return user;
 }
 
 function normalizeDeviceLabel(label: string | undefined): string {

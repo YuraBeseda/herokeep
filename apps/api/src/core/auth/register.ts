@@ -12,7 +12,7 @@ import { foldUsername, isValidUsername } from './username.ts';
 import { hashVerifier, isValidSalt, isValidVerifierShape } from './verifier.ts';
 import { formatRecoveryCode, normalizeRecoveryCode, randomRecoveryCode } from './recovery-codes.ts';
 
-const RECOVERY_CODE_COUNT = 6;
+export const RECOVERY_CODE_COUNT = 6;
 
 export interface RegisterInput {
   readonly username: string;

@@ -8,6 +8,7 @@ import { createTestApp } from '../helpers/app.ts';
 import { createTestConfig, InMemoryRateLimit } from '../helpers/fake-ports.ts';
 import { openTestDb, type TestDbHandle } from '../helpers/test-db.ts';
 import { MemoryRateLimit } from '../../src/adapters/node/rate-limit.memory.ts';
+import { listAllRecoveryCodes } from '../../src/core/db/queries.ts';
 
 let handle: TestDbHandle;
 let app: Hono;
@@ -300,5 +301,63 @@ describe('POST /api/auth/reset', () => {
     selectSpy.mockRestore();
 
     expect(unknownUserSelectCalls).toBe(knownUserSelectCalls);
+  });
+});
+
+describe('POST /api/auth/recovery-codes (regenerate recovery codes)', () => {
+  async function regenerate(cookie: string | undefined, verifier: string) {
+    return app.request('/api/auth/recovery-codes', {
+      method: 'POST',
+      headers: cookie ? { ...XRW, cookie } : XRW,
+      body: JSON.stringify({ verifier }),
+    });
+  }
+  async function reset(code: string) {
+    return app.request('/api/auth/reset', {
+      method: 'POST',
+      headers: XRW,
+      body: JSON.stringify({ username: 'Rena', recoveryCode: code, newSalt: saltHex('c2'), newVerifier: verifierHex('d2') }),
+    });
+  }
+  async function signUp() {
+    const reg = await register('Rena', verifierHex('a2'));
+    const { userId, recoveryCodes } = (await reg.json()) as { userId: string; recoveryCodes: string[] };
+    const cookie = (await login('Rena', verifierHex('a2'))).headers.get('set-cookie')!.split(';')[0]!;
+    return { userId, oldCodes: recoveryCodes, cookie };
+  }
+
+  it('returns 6 new codes; a new code resets the password and an old code is refused', async () => {
+    const { oldCodes, cookie } = await signUp();
+    const res = await regenerate(cookie, verifierHex('a2'));
+    expect(res.status).toBe(200);
+    const { recoveryCodes } = (await res.json()) as { recoveryCodes: string[] };
+    expect(recoveryCodes).toHaveLength(6);
+    expect(new Set(recoveryCodes).size).toBe(6);
+    for (const code of recoveryCodes) expect(oldCodes).not.toContain(code);
+
+    expect((await reset(oldCodes[0]!)).status).toBe(401);
+    expect((await reset(recoveryCodes[0]!)).status).toBe(200);
+  });
+
+  it('leaves exactly the 6 new code rows for the user (the old rows are gone)', async () => {
+    const { userId, cookie } = await signUp();
+    await regenerate(cookie, verifierHex('a2'));
+    const rows = (await listAllRecoveryCodes(handle.db)).filter((r) => r.userId === userId);
+    expect(rows).toHaveLength(6);
+    expect(rows.every((r) => r.usedAt === null)).toBe(true);
+  });
+
+  it('refuses without a session (401)', async () => {
+    await signUp();
+    expect((await regenerate(undefined, verifierHex('a2'))).status).toBe(401);
+  });
+
+  it('refuses a wrong password with the failed-login body, and the old codes still work', async () => {
+    const { oldCodes, cookie } = await signUp();
+    const failedLogin = await login('Rena', verifierHex('e2'));
+    const res = await regenerate(cookie, verifierHex('e2'));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual(await failedLogin.json());
+    expect((await reset(oldCodes[0]!)).status).toBe(200);
   });
 });

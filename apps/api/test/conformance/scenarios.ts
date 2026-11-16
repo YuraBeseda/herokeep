@@ -519,6 +519,51 @@ async function authLifecycleScenario(driver: ConformanceDriver): Promise<void> {
   });
   expect(newLoginRes.status, 'the NEW verifier works after reset').toBe(200);
 
+  // Regenerate recovery codes (plan-19 Task 10): a FRESH account on its OWN simulated IP, so the
+  // extra `/api/auth/*` calls stay off the shared "unknown" per-IP budget described below.
+  const regen = await registerAndLogin(driver, 'LifecycleRegen');
+  const regenIp = simulatedIp();
+  const regenHeaders = { ...XRW, 'cf-connecting-ip': regenIp };
+  const noSessionRegenRes = await driver.fetch('/api/auth/recovery-codes', {
+    method: 'POST',
+    headers: regenHeaders,
+    body: JSON.stringify({ verifier: verifierHex('LifecycleRegen') }),
+  });
+  expect(noSessionRegenRes.status, 'regenerate without a session -> 401').toBe(401);
+  const wrongRegenRes = await driver.fetch('/api/auth/recovery-codes', {
+    method: 'POST',
+    headers: { ...regenHeaders, cookie: regen.cookie },
+    body: JSON.stringify({ verifier: verifierHex('WrongRegen') }),
+  });
+  expect(wrongRegenRes.status, 'regenerate with a wrong password -> 401').toBe(401);
+  const regenRes = await driver.fetch('/api/auth/recovery-codes', {
+    method: 'POST',
+    headers: { ...regenHeaders, cookie: regen.cookie },
+    body: JSON.stringify({ verifier: verifierHex('LifecycleRegen') }),
+  });
+  expect(regenRes.status, 'regenerate with the right password').toBe(200);
+  const { recoveryCodes: newCodes } = (await regenRes.json()) as { recoveryCodes: string[] };
+  expect(newCodes, 'six new recovery codes').toHaveLength(6);
+  const resetBody = (recoveryCode: string) =>
+    JSON.stringify({
+      username: regen.username,
+      recoveryCode,
+      newSalt: saltHex('RegenSalt'),
+      newVerifier: verifierHex('RegenVerif'),
+    });
+  const oldCodeResetRes = await driver.fetch('/api/auth/reset', {
+    method: 'POST',
+    headers: regenHeaders,
+    body: resetBody(regen.recoveryCodes[0]!),
+  });
+  expect(oldCodeResetRes.status, 'an old code is refused after regenerate').toBe(401);
+  const newCodeResetRes = await driver.fetch('/api/auth/reset', {
+    method: 'POST',
+    headers: regenHeaders,
+    body: resetBody(newCodes[0]!),
+  });
+  expect(newCodeResetRes.status, 'a new code resets the password').toBe(200);
+
   // Lockout: a FRESH account, so this account's own `user:<folded>:login-fail` rate-limit scope
   // starts clean (the wrong-verifier/reset checks above already put 2 failed attempts through the
   // FIRST account's scope, which would otherwise throw the boundary off by those 2 hits).

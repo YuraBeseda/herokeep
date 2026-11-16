@@ -8,6 +8,7 @@ import { resolveSalt } from '../auth/salt.ts';
 import { loginUser, type LoginInput } from '../auth/login.ts';
 import { resetWithRecoveryCode, type ResetInput } from '../auth/recovery.ts';
 import { endAllSessions, endSession } from '../auth/sessions.ts';
+import { regenerateRecoveryCodes } from '../auth/regenerate-recovery-codes.ts';
 import { requireAuth, type AuthEnv } from '../auth/middleware.ts';
 import { setSessionCookie, clearSessionCookie } from '../http/session-cookie.ts';
 import { ipAuthRateLimit } from '../http/rate-limit.ts';
@@ -71,6 +72,18 @@ export function createAuthRoutes(deps: AuthDeps) {
     await endAllSessions(deps.db, user.userId);
     clearSessionCookie(c);
     return c.body(null, 204);
+  });
+
+  app.post('/recovery-codes', requireAuth(deps), async (c) => {
+    const body = await parseJsonBody<{ verifier?: string }>(c);
+    const recoveryCodes = await regenerateRecoveryCodes(
+      deps.db,
+      deps.config,
+      deps.rateLimit,
+      c.get('user').userId,
+      body.verifier ?? '',
+    );
+    return c.json({ recoveryCodes });
   });
 
   app.post('/reset', async (c) => {

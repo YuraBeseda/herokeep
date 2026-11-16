@@ -9,7 +9,7 @@
  * (controller ruling R-pf1) as routes need them — nothing here is meant to be exhaustive of
  * every possible accounts query.
  */
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, notInArray, sql } from 'drizzle-orm';
 import { type Db } from './index.ts';
 import { campaigns, characters, memberships, recoveryCodes, sessions, usageDaily, users } from './schema.ts';
 
@@ -216,6 +216,25 @@ export async function listAllRecoveryCodes(db: Db): Promise<RecoveryCode[]> {
  * `insertRecoveryCodes`. */
 export async function deleteRecoveryCodesForUser(db: Db, userId: string): Promise<void> {
   await db.delete(recoveryCodes).where(eq(recoveryCodes.userId, userId));
+}
+
+/** Replaces a user's recovery codes: inserts the new rows FIRST, then deletes every other code of
+ * this user (matched by stored hash; the table has no stable row id). The `Db` port has no atomic
+ * call usable on both adapters (better-sqlite3 rejects async transaction callbacks, D1 rejects
+ * BEGIN), so this order-safe two-step stands in for one transaction: a failure between the steps
+ * leaves the old codes valid plus unseen random new ones, and the caller errors so a retry is safe. */
+export async function replaceRecoveryCodes(db: Db, userId: string, codes: NewRecoveryCode[]): Promise<void> {
+  if (codes.length === 0) throw new Error('replaceRecoveryCodes needs at least one code');
+  await db.insert(recoveryCodes).values(codes);
+  await db.delete(recoveryCodes).where(
+    and(
+      eq(recoveryCodes.userId, userId),
+      notInArray(
+        recoveryCodes.codeHash,
+        codes.map((c) => c.codeHash),
+      ),
+    ),
+  );
 }
 
 /** Finds a still-usable (`usedAt IS NULL`) recovery code for a user by its hash. */
