@@ -80,8 +80,9 @@ export class ModifierTable {
         ? { policy: e.policy, contribution: { ...e.contribution, amount: evalFormula(e.contribution.formula) } }
         : e,
     );
-    const contributions = [...parts, ...entries.map((e) => e.contribution)];
     let value = base;
+    // A winning replacing entry (formula or set-if-higher) makes `base` irrelevant, so its parts are dropped.
+    let baseReplaced = false;
 
     const formulaEntries = entries.filter((e) => e.policy === 'max-of-formulas');
     if (formulaEntries.length > 0) {
@@ -90,6 +91,7 @@ export class ModifierTable {
         const amount = resolveAmount(e.contribution, evalFormula);
         if (amount > best) best = amount;
       }
+      if (best > base) baseReplaced = true;
       value = best;
     }
 
@@ -109,13 +111,18 @@ export class ModifierTable {
 
     for (const e of entries.filter((x) => x.policy === 'set-if-higher')) {
       const amount = resolveAmount(e.contribution, evalFormula);
-      if (amount > value) value = amount;
+      if (amount > value) {
+        value = amount;
+        baseReplaced = true;
+      }
     }
 
     for (const e of entries.filter((x) => x.policy === 'cap')) {
       const amount = resolveAmount(e.contribution, evalFormula);
       if (value > amount) value = amount;
     }
+
+    const contributions = [...(baseReplaced ? [] : parts), ...entries.map((e) => e.contribution)];
 
     return { value, contributions };
   }

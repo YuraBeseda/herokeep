@@ -13,6 +13,26 @@ describe('ModifierTable', () => {
     expect(d.contributions).toHaveLength(3);
   });
 
+  it('drops the base parts when a replacing entry wins, keeps them when the base stands', () => {
+    const parts = [
+      { source: 'abilityModifier', kind: 'abilityModifier', key: 'str', amount: 3 },
+      { source: 'proficiency', kind: 'proficiency', key: 'proficient', amount: 2 },
+    ];
+    const t = new ModifierTable();
+    t.add('x', { source: 'f', kind: 'k', formula: 'big', policy: 'max-of-formulas' });
+    const won = t.resolve('x', 5, () => 9, parts);
+    expect(won.value).toBe(9);
+    expect(won.contributions.map((c) => c.source)).toEqual(['f']);
+
+    const s = new ModifierTable();
+    s.add('x', { source: 's', kind: 'k', amount: 19, policy: 'set-if-higher' });
+    expect(s.resolve('x', 5, () => 0, parts).contributions.map((c) => c.source)).toEqual(['s']);
+
+    const lost = t.resolve('x', 5, () => 4, parts);
+    expect(lost.value).toBe(5);
+    expect(lost.contributions.map((c) => c.source)).toEqual(['abilityModifier', 'proficiency', 'f']);
+  });
+
   it('a contribution without a key falls back to source#feature as its stacking key', () => {
     const t = new ModifierTable();
     t.add('x', { source: 'a', feature: 'f1', kind: 'k', amount: 5, policy: 'sum-unique-key' });
