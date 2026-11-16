@@ -625,6 +625,27 @@ pack.
 
 ---
 
+## 8g. Owner-decision features on a real phone (plan 19)
+
+1. **Kit pick.** Create a character; on the equipment step choose a kit card (A, B or C). The bag
+   lists that kit's items and the coins match; re-selecting the same card keeps it.
+2. **HP roll lock.** Level up a rolling class and press Roll; the Roll button stays disabled and the
+   result is kept after a reload or a class change.
+3. **Export-all restore.** Settings, Export all heroes, then import that `.zip` on a second browser
+   profile or device: every hero appears; a hero already present is not duplicated.
+4. **New recovery codes.** Signed in, Settings, regenerate recovery codes; the dialog shows the new
+   list once, and an old code no longer recovers the account.
+5. **Library Back.** Scroll the library list, open an entry, press Back (in-app and hardware): the
+   chip, search, sort and scroll are as left.
+
+### Results
+
+| Devices | Date | Kit | HP lock | Export-all | Recovery codes | Back |
+| ------- | ---- | --- | ------- | ---------- | -------------- | ---- |
+|         |      |     |         |            |                |      |
+
+---
+
 ## 9. Known Phase-4 / backlog items
 
 These are known, deliberate scope boundaries or design rulings from plan 5/6 — not bugs to file

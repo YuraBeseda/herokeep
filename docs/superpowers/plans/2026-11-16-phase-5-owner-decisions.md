@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-11-16 — awaiting owner approval. Runs before plan 18 (`2026-11-03-phase-5-slice-2-approved-additions.md`).**
+**STATUS: EXECUTED 2026-11-16. Runs before plan 18 (`2026-11-03-phase-5-slice-2-approved-additions.md`).**
 
 **Goal:** Build every "Build" row of the owner's 2026-11-16 decisions so the default SRD content can be tested at a real table: correct icons, a library that remembers where you were, in-app Back that keeps your place, a one-time HP roll, honest breakdowns, named prerequisites, spell higher-level text and dice, starting equipment kits, a restorable export-all backup, fresh recovery codes, and no prerelease pack updates.
 

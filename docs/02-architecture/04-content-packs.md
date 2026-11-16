@@ -668,6 +668,21 @@ applies any override, a `system` target included (`packages/engine/src/content/i
 Enforcing it is a protocol/engine change for a later plan; the engine's own goldens patch the core
 system through the harness's `systemPatch` field instead (`packages/engine/test/support/golden.ts:30`).
 
+## Starting equipment and higher-level dice (plan 19)
+
+Both fields are `.optional()`, so existing packs parse unchanged.
+
+- `startingEquipment` on class and background entities: 1 to 3 options
+  `{ label: 'A'|'B'|'C', items: [{ item, qty }], notes?, gp? }`. The wizard shows each option as a
+  kit card; the SRD transform fills it from the SRD text. Kit notes localize through the Localizer
+  field path `startingEquipment.<label>.notes.<index>` on the owning entity (for example
+  `class/fighter` + `startingEquipment.A.notes.0`). `pack-tools i18n-extract` does not emit these
+  keys yet, so a translation pack must add them by hand.
+- `higherLevelDice` on spells, parsed from the SRD text (the text stays in `higherLevels`): either
+  `{ perSlot: { dice, aboveLevel } }` (extra dice per slot level above `aboveLevel`) or
+  `{ cantrip: [{ level: 5|11|17, dice }] }`. Spells whose text has no regular pattern carry only
+  the text. The spell screens render the text and, when present, the slot chips.
+
 ## Translation packs
 
 ```jsonc

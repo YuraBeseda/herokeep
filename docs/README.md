@@ -78,6 +78,29 @@ Baselines at plan start were root 145 / 2102, web 147 / 1749, offline e2e 31 / 3
 344.8 kB gzip under the old gate. The whole `pnpm check` hangs in the Windows worktree, so the
 pieces above ran one by one. No flaky spec fired in this run.
 
+## Phase 5 owner decisions (plan 19, executed 2026-11-16)
+
+Built from the owner's answers to the open flags: sprite icon sizing, library state in the URL,
+Back restoring scroll, a one-roll-per-level HP lock, ability and proficiency in breakdowns, named
+unmet prerequisites, higher-level spell text and dice, starting-equipment kits, export-all import,
+recovery-code regeneration and no prerelease pack updates. Details are in
+[04-content-packs](02-architecture/04-content-packs.md),
+[09-frontend-architecture](02-architecture/09-frontend-architecture.md) and the "Owner decisions"
+table in [03-roadmap/phases](03-roadmap/phases.md).
+
+| Gate                                   | Result                                                          |
+| -------------------------------------- | --------------------------------------------------------------- |
+| root `pnpm lint`                       | pass                                                            |
+| `pnpm --filter web test --watch=false` | 245 files / 3497 tests                                          |
+| `pnpm --filter web build`              | initial bundle 372.2 kB gzip of 600                             |
+| root `pnpm typecheck`                  | pass                                                            |
+| root `pnpm vitest run`                 | 150 files / 2281 tests                                          |
+| `pnpm --filter api test:cloudflare`    | 47 passed, 1 skipped                                            |
+| `pnpm --filter web e2e`                | 69 / 69                                                         |
+| `pnpm --filter web e2e:sync`           | 11 / 11                                                         |
+| `pnpm --filter web e2e:textfit`        | 10 passed, 2 skipped                                            |
+| `pnpm --filter web e2e:mobile`         | 14 / 14 (after the spec fix in 058e4e9)                         |
+
 ## Conventions for these docs
 
 - Dates are absolute (`2026-08-29`), never "today".

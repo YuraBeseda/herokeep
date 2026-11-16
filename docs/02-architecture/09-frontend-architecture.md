@@ -157,6 +157,11 @@ render a different DOM.
   `withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' })`: a
   screen opens at the top after a navigation, a browser or hardware Back restores the previous
   position, and a link with a fragment (the Settings sections) scrolls to its anchor.
+- **Library state in the URL (plan 19).** The Library browse screen keeps the type chip, search text
+  and sort in the query string (`?type&q&sort`) and opens on All, so returning from an entry restores
+  them. A normal navigation opens a screen at the top (R73).
+- **Back restores scroll (plan 19).** `NavHistoryService` records the window scroll and the
+  virtual-list offset per entry; the in-app Back button and the browser Back both put them back.
 
 ## Routing
 
