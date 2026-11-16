@@ -1,5 +1,13 @@
+import { ViewportScroller } from '@angular/common';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import {
+  NavigationCancel,
+  NavigationError,
+  NavigationSkipped,
+  NavigationStart,
+  Router,
+  Scroll,
+} from '@angular/router';
 
 const MAX_ENTRIES = 50;
 
@@ -18,6 +26,8 @@ const pathOf = (url: string): string => url.split(/[?#]/, 1)[0];
 @Injectable({ providedIn: 'root' })
 export class NavHistoryService {
   private readonly router = inject(Router);
+  private readonly viewportScroller = inject(ViewportScroller);
+  private readonly scrolls = new Map<string, [number, number]>();
 
   private readonly stack = signal<readonly string[]>([]);
   /** Path (no query or fragment) of the screen the user is on; empty before the first navigation. */
@@ -39,14 +49,50 @@ export class NavHistoryService {
     this.stack.set(stack.slice(-MAX_ENTRIES));
   }
 
+  constructor() {
+    // Remember where each entry was scrolled to when it was left (in memory only).
+    this.router.events.subscribe((event) => {
+      const top = this.stack().at(-1);
+      if (event instanceof NavigationStart && top !== undefined) {
+        this.scrolls.set(top, this.viewportScroller.getScrollPosition());
+      }
+    });
+  }
+
   back(fallback: readonly string[]): void {
     const stack = [...this.stack()];
     if (stack.length > 1) {
       stack.pop();
       this.stack.set(stack);
-      void this.router.navigateByUrl(stack[stack.length - 1]);
+      const target = stack[stack.length - 1];
+      this.restoreScrollAfterNavigation(this.scrolls.get(target));
+      void this.router.navigateByUrl(target);
       return;
     }
     void this.router.navigate([...fallback]);
+  }
+
+  /**
+   * `navigateByUrl` is not a popstate navigation, so the router scrolls to the top. Restores the saved position once
+   * the router has scrolled for this navigation.
+   */
+  private restoreScrollAfterNavigation(position: [number, number] | undefined): void {
+    if (!position) return;
+    let id: number | undefined;
+    const sub = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        id ??= event.id;
+      } else if (event instanceof Scroll && event.routerEvent.id === id) {
+        // A microtask later, so it lands after the router's own scroll-to-top for this event.
+        queueMicrotask(() => this.viewportScroller.scrollToPosition(position));
+        sub.unsubscribe();
+      } else if (
+        event instanceof NavigationCancel ||
+        event instanceof NavigationError ||
+        event instanceof NavigationSkipped
+      ) {
+        sub.unsubscribe();
+      }
+    });
   }
 }

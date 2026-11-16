@@ -1,5 +1,9 @@
+import { ViewportScroller } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
+import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { appRouterScrolling } from '../../app.config';
 import { NavHistoryService } from './nav-history.service';
 
 function setup() {
@@ -8,6 +12,74 @@ function setup() {
   const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   return { service, navigate };
 }
+
+@Component({ selector: 'hk-nav-scroll-root', template: '' })
+class Blank {}
+
+// R74: the in-app Back returns to where the previous screen was scrolled to.
+describe('NavHistoryService scroll restoration', () => {
+  const scrolled = (spy: unknown, ...args: unknown[]) =>
+    vi.waitFor(() => expect(spy).toHaveBeenLastCalledWith(...args));
+
+  function scrollSetup() {
+    TestBed.configureTestingModule({
+      providers: [
+        provideLocationMocks(),
+        provideRouter(
+          [
+            { path: 'a', component: Blank },
+            { path: 'b', component: Blank },
+            { path: 'home', component: Blank },
+          ],
+          appRouterScrolling,
+        ),
+      ],
+    });
+    document.body.appendChild(document.createElement('hk-nav-scroll-root'));
+    TestBed.inject(ApplicationRef).bootstrap(Blank);
+    const service = TestBed.inject(NavHistoryService);
+    const router = TestBed.inject(Router);
+    const scroller = TestBed.inject(ViewportScroller);
+    let position: [number, number] = [0, 0];
+    vi.spyOn(scroller, 'getScrollPosition').mockImplementation(() => position);
+    const scrollTo = vi
+      .spyOn(scroller, 'scrollToPosition')
+      .mockImplementation((p) => (position = [p[0], p[1]]));
+    // The shell records each committed URL (app.ts); do the same here.
+    const go = async (url: string) => {
+      await router.navigateByUrl(url);
+      service.push(router.url);
+    };
+    return { service, scrollTo, go, scrollBy: (y: number) => (position = [0, y]) };
+  }
+
+  it('returns to the scroll position the screen was left at', async () => {
+    const { service, scrollTo, go, scrollBy } = scrollSetup();
+    await go('/a');
+    await scrolled(scrollTo, [0, 0]); // the router's own scroll to the top lands first
+    scrollBy(640);
+    await go('/b');
+    await scrolled(scrollTo, [0, 0]);
+    service.back(['/home']);
+    await scrolled(scrollTo, [0, 640]);
+  });
+
+  it('still opens a forward navigation at the top', async () => {
+    const { scrollTo, go, scrollBy } = scrollSetup();
+    await go('/a');
+    scrollBy(640);
+    await go('/b');
+    await scrolled(scrollTo, [0, 0]);
+  });
+
+  it('opens the fallback at the top when there is nothing to go back to', async () => {
+    const { service, scrollTo, go, scrollBy } = scrollSetup();
+    await go('/a');
+    scrollBy(640);
+    service.back(['/home']);
+    await scrolled(scrollTo, [0, 0]);
+  });
+});
 
 describe('NavHistoryService', () => {
   it('goes back to the sheet tab the user came from (Review Focus 3 pin)', () => {
