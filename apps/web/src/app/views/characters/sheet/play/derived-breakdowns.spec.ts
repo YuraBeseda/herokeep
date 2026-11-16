@@ -1,4 +1,4 @@
-﻿import { computed } from '@angular/core';
+import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CharacterStore } from '@shared/stores/character.store';
 import { seedFighter } from '../testing/character-fixtures';

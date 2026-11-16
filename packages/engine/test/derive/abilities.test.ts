@@ -1,3 +1,4 @@
+import { parsePack } from '@hk/protocol';
 import { describe, expect, it } from 'vitest';
 import { createContentIndex } from '../../src/content/index.ts';
 import { compose } from '../../src/derive/composition.ts';
@@ -149,6 +150,32 @@ describe('deriveAbilities', () => {
       expect.objectContaining({ kind: 'proficiency', key: 'expertise', amount: 4 }),
     ]);
     expect(r.skills['stealth']!.total.value).toBe(7);
+  });
+
+  it('lists half proficiency (Jack of All Trades style) as floor(prof/2) in a skill breakdown, value unchanged', () => {
+    // Re-parse the fixture with an extra feature so the entity has its schema defaults.
+    const raw = JSON.parse(JSON.stringify(loadFixturePack('core-mini')));
+    raw.entities.push({
+      id: 'core-mini:feature/jack-test',
+      type: 'feature',
+      name: 'Jack Test',
+      effects: [{ type: 'proficiency.grant', kind: 'skill', target: 'stealth', level: 'half' }],
+    });
+    const parsed = parsePack(raw);
+    if (!parsed.ok) throw new Error('jack pack');
+    const halfIndex = createContentIndex([parsed.pack, loadFixturePack('content-mini')]);
+    const facts = baseFacts();
+    facts.decisions['core-mini:system/mini@0/ability-scores'] = ['str:10', 'dex:16', 'con:10', 'int:10', 'wis:10', 'cha:10'];
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 5 }]; // prof +3
+    facts.decisions['test:pick@0/expertise'] = ['core-mini:feature/jack-test'];
+    const r = deriveAbilities(facts, compose(facts, halfIndex), halfIndex);
+
+    expect(r.skills['stealth']!.proficiency).toBe('half');
+    expect(r.skills['stealth']!.total.contributions).toEqual([
+      expect.objectContaining({ kind: 'abilityModifier', key: 'dex', amount: 3 }),
+      expect.objectContaining({ kind: 'proficiency', key: 'half', amount: 1 }),
+    ]);
+    expect(r.skills['stealth']!.total.value).toBe(4); // 3 + floor(3/2)
   });
 
   it('computes passive perception as 10 + the perception skill total', () => {

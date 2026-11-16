@@ -26,6 +26,7 @@ export function baseParts(
   rank?: 'proficient' | 'expertise' | 'half',
   profAmount = 0,
 ): Contribution[] {
+  // `source` on these rows is a kind marker, not an entity id.
   const parts: Contribution[] = [];
   if (mod !== 0 || (rank !== undefined && profAmount !== 0)) {
     parts.push({ source: 'abilityModifier', kind: 'abilityModifier', key: abilityId, amount: mod });
