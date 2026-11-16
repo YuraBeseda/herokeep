@@ -29,5 +29,10 @@ describe('prerequisiteText', () => {
     expect(prerequisiteReason([{ hasFeat: 'x' }], t, name)).toBe('Prerequisites not met');
   });
 
+  it('an empty ability or class-level map falls back instead of throwing', () => {
+    expect(prerequisiteText([{ ability: {} }], t, name)).toBe('Prerequisites not met');
+    expect(prerequisiteText([{ classLevel: {} }], t, name)).toBe('Prerequisites not met');
+  });
+
   it('the reason reads "Requires …"', () => expect(prerequisiteReason([str13], t, name)).toBe('Requires Strength 13+'));
 });

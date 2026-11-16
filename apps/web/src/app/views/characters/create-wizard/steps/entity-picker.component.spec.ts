@@ -157,8 +157,8 @@ describe('EntityPickerComponent', () => {
     fixture.componentInstance.selectedIds.set([humanId]);
     fixture.componentInstance.gates.set(
       new Map([
-        [humanId, 'wizard.picker.gate.duplicate'],
-        [elfId, 'wizard.picker.gate.duplicate'],
+        [humanId, 'Already chosen'],
+        [elfId, 'Already chosen'],
       ]),
     );
     await fixture.whenStable();
@@ -300,7 +300,7 @@ describe('EntityPickerComponent — rows, filters and the drawer action (plan 17
 
   it('a gated row stays listed, reads disabled and does not pick', async () => {
     const { fixture, root } = await mountRows();
-    fixture.componentInstance.gates.set(new Map([[weaponIds[0], 'wizard.picker.gate.duplicate']]));
+    fixture.componentInstance.gates.set(new Map([[weaponIds[0], 'Already chosen']]));
     await fixture.whenStable();
     const toggle = root.querySelector<HTMLElement>(
       '.entity-picker__row--gated .entity-picker__toggle',

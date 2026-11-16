@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createContentIndex } from '../../src/content/index.ts';
-import { multiclassStanding, pendingAdvancements } from '../../src/derive/advancement.ts';
+import { multiclassStanding, multiclassUnmetPrerequisites, pendingAdvancements } from '../../src/derive/advancement.ts';
 import { derive } from '../../src/derive/index.ts';
 import { emptyFacts } from '../../src/reduce/facts.ts';
 import { loadFixturePack } from '../support/fixtures.ts';
@@ -101,6 +101,22 @@ describe('pendingAdvancements: ruling 7 — new-class (multiclass) offers gated 
     const facts = withScores(10, 15); // wizard would pass, but fighter (taken) fails str >= 13
     const sheet = derive(facts, mcIndex, mcRules());
     expect(multiclassStanding(sheet, mcIndex)).toEqual({ eligible: [], unmet: [wizard] });
+  });
+
+  it('multiclassUnmetPrerequisites names the target class own failing prerequisite', () => {
+    const sheet = derive(withScores(13, 8), mcIndex, mcRules());
+    expect(multiclassUnmetPrerequisites(sheet, mcIndex, wizard)).toEqual([{ ability: { int: { gte: 13 } } }]);
+  });
+
+  it('multiclassUnmetPrerequisites falls back to the failing prerequisite of an already-taken class', () => {
+    const sheet = derive(withScores(10, 15), mcIndex, mcRules()); // wizard passes; taken fighter fails str >= 13
+    expect(multiclassUnmetPrerequisites(sheet, mcIndex, wizard)).toEqual([{ ability: { str: { gte: 13 } } }]);
+  });
+
+  it('multiclassUnmetPrerequisites is empty when nothing is unmet or the class has no prerequisite', () => {
+    const sheet = derive(withScores(13, 15), mcIndex, mcRules());
+    expect(multiclassUnmetPrerequisites(sheet, mcIndex, wizard)).toEqual([]);
+    expect(multiclassUnmetPrerequisites(sheet, mcIndex, druid)).toEqual([]);
   });
 
   it('bars ALL new-class offers when an already-taken class (fighter) no longer meets its OWN prerequisite (str 10 < 13) — SRD: "...and your current classes"', () => {

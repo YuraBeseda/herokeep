@@ -13,8 +13,9 @@ function comparison(cmp: Comparison, label: string, t: TranslateFn): string | nu
 
 function render(p: Predicate, t: TranslateFn, name: (id: string) => string): string | null {
   if ('ability' in p || 'classLevel' in p) {
-    const [[ref, cmp]] = Object.entries('ability' in p ? p.ability : p.classLevel);
-    if (Object.keys('ability' in p ? p.ability : p.classLevel).length !== 1) return null;
+    const entries = Object.entries('ability' in p ? p.ability : p.classLevel);
+    if (entries.length !== 1) return null;
+    const [[ref, cmp]] = entries;
     const label = 'ability' in p ? name(ref) : t(`${GATE}.classLevel`, { class: name(ref) });
     return comparison(cmp, label, t);
   }

@@ -61,7 +61,7 @@ const KNOWN_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
 
 // Plan 13 task 8 (ruling 10): the PER-OPTION refusals `validateSelection` reports with an
 // `entityId` — an unmet entity prerequisite, or a value an earlier decision of the same choice
-// family already recorded — mapped to the scope-relative reason key the picker renders on that
+// family already recorded — mapped to the (full) i18n key whose text the picker renders on that
 // option's gated card. Selection-level codes (count, a choice-level prerequisite) gate nothing.
 const OPTION_GATE_KEYS: Readonly<Record<string, string>> = {
   'selection.prerequisiteFailed': 'characters.wizard.picker.gate.prerequisiteFailed',
