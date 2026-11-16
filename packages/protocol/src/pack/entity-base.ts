@@ -12,6 +12,19 @@ export const FeatureGrantSchema = z.strictObject({
 });
 export type FeatureGrant = z.infer<typeof FeatureGrantSchema>;
 
+/**
+ * One starting-equipment option (A/B/C) of a class or background: concrete pack items, short notes
+ * for "of your choice" items the player adds themselves, and the gold. Shown on the creation cards.
+ */
+export const StartingOptionSchema = z.strictObject({
+  label: z.enum(['A', 'B', 'C']),
+  items: z.array(z.strictObject({ item: EntityIdSchema, qty: z.int().min(1) })).max(30),
+  notes: z.array(ShortTextSchema).max(10),
+  gp: z.int().min(0),
+});
+export type StartingOption = z.infer<typeof StartingOptionSchema>;
+export const StartingEquipmentSchema = z.array(StartingOptionSchema).min(1).max(3);
+
 export const EntityBaseShape = {
   id: EntityIdSchema,
   name: ShortTextSchema,

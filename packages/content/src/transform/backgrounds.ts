@@ -1,6 +1,7 @@
 import type { Entity } from '@hk/protocol';
 import { backgroundId, featId } from '../ids.ts';
 import { type FixtureRecord, pkSlug, readFixture } from '../upstream.ts';
+import { startingEquipmentFor } from './starting-equipment.ts';
 import { baseEntity, fieldStr, pkStr } from './common.ts';
 
 type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -63,6 +64,12 @@ function loadBenefitsByParent(): Map<string, FixtureRecord[]> {
   return byParent;
 }
 
+function equipmentText(benefits: FixtureRecord[], pk: string): string {
+  const b = benefits.find((x) => pkStr(x.pk).endsWith('_equipment'));
+  if (!b) throw new Error(`backgrounds: "${pk}" has no _equipment benefit`);
+  return fieldStr(b.fields, 'desc', pk);
+}
+
 /**
  * The 4 `Background.json` records as `background` entities. The structured fields
  * (`abilityScores`/`originFeat`/`skillProficiencies`/`toolProficiency`) come from `BACKGROUND_TABLE`
@@ -96,6 +103,7 @@ export function transformBackgrounds(): Entity[] {
       originFeat: featId(row.originFeat),
       skillProficiencies: row.skillProficiencies,
       ...(row.toolProficiency !== undefined ? { toolProficiency: row.toolProficiency } : {}),
+      startingEquipment: startingEquipmentFor(equipmentText(benefits, pk), `background ${slug}`),
     };
   });
 }

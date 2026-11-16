@@ -1,7 +1,8 @@
-import { DiceSchema, ExtraTextSchema, type ClassLevelRow, type Entity } from '@hk/protocol';
+import { DiceSchema, ExtraTextSchema, type ClassLevelRow, type Entity, type StartingOption } from '@hk/protocol';
 import { classId, featureId, subclassId } from '../ids.ts';
 import { MULTICLASS_PREREQUISITES, systemEntity } from '../static/system.ts';
 import { type FixtureRecord, pkSlug, readFixture } from '../upstream.ts';
+import { startingEquipmentFor } from './starting-equipment.ts';
 import { baseEntity, fieldNum, fieldOptionalStr, fieldStr, fieldStrArray, pkStr } from './common.ts';
 
 type AbilityKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
@@ -220,6 +221,14 @@ function buildLevels(
     }));
 }
 
+/** The class's "Starting Equipment" row of its `core-traits` feature, parsed into options. */
+function classStartingEquipment(featureRecords: FixtureRecord[], slug: string): StartingOption[] {
+  const rec = featureRecords.find((r) => pkStr(r.pk) === `srd-2024_${slug}_core-traits`);
+  const m = /Starting Equipment\|([^|]*)\|/.exec(rec ? fieldStr(rec.fields, 'desc', slug) : '');
+  if (!m) throw new Error(`classes: "${slug}" core-traits has no Starting Equipment row`);
+  return startingEquipmentFor(m[1]!, `class ${slug}`);
+}
+
 /**
  * The 12 `class`/12 `subclass` entities from `CharacterClass.json`, one `feature` entity per
  * `ClassFeature.json` record (352 total — including the 24 that grant no `ClassFeatureItem` and so
@@ -293,6 +302,7 @@ export function transformClasses(): { classes: Entity[]; subclasses: Entity[]; f
         toolProficiencies: [],
         skillChoice: { from: skillChoiceFrom, count: 0 },
         subclassLevel: SUBCLASS_LEVEL,
+        startingEquipment: classStartingEquipment(featureRecords, slug),
         levels,
         // Ruling 2/T2 carry (phase 4 plan 11 task 7): the five slice-1 classes' own `multiclass`
         // field. `prerequisites` reuses the SAME predicate `system.multiclass.prerequisites` carries

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { EntityIdSchema, SlugSchema } from '../ids.ts';
 import { ChoiceSchema } from './choice.ts';
-import { FeatureGrantSchema, entity } from './entity-base.ts';
+import { FeatureGrantSchema, StartingEquipmentSchema, entity } from './entity-base.ts';
 import { ExtraValueSchema } from './enums.ts';
 import { AbilityKeySchema, PredicateSchema } from './predicate.ts';
 
@@ -38,6 +38,7 @@ export const ClassEntitySchema = entity('class', {
   toolProficiencies: z.array(SlugSchema).default([]),
   skillChoice: z.strictObject({ from: z.array(SlugSchema).min(1), count: z.int().min(0) }),
   subclassLevel: z.int().min(1).max(20),
+  startingEquipment: StartingEquipmentSchema.optional(),
   levels: z.array(ClassLevelRowSchema).min(1).refine(rowsAscending, { message: 'levels must be ascending and unique' }),
   multiclass: z
     .strictObject({

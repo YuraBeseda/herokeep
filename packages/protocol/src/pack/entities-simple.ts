@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EntityIdSchema, EntityTypeSchema, SlugSchema } from '../ids.ts';
-import { entity } from './entity-base.ts';
+import { StartingEquipmentSchema, entity } from './entity-base.ts';
 import {
   MulticlassProgressionSchema,
   ResetSchema,
@@ -176,6 +176,7 @@ export const BackgroundEntitySchema = entity('background', {
   originFeat: EntityIdSchema,
   skillProficiencies: z.array(SlugSchema).default([]),
   toolProficiency: SlugSchema.optional(),
+  startingEquipment: StartingEquipmentSchema.optional(),
 });
 
 export const FeatEntitySchema = entity('feat', {

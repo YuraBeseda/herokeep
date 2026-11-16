@@ -1,0 +1,24 @@
+{
+  "Holy Symbol": { "note": "A holy symbol of your choice (amulet, emblem or reliquary)" },
+  "Musical Instrument of your choice": { "note": "A musical instrument of your choice" },
+  "Artisan's Tools or Musical Instrument chosen for the tool proficiency above": {
+    "note": "The artisan's tools or musical instrument you chose for your tool proficiency"
+  },
+  "Gaming Set (same as above)": { "note": "The gaming set you chose for your tool proficiency" },
+  "Arcane Focus (crystal)": { "note": "An arcane focus (crystal)" },
+  "Arcane Focus (orb)": { "note": "An arcane focus (orb)" },
+  "Ar cane Focus (orb)": { "note": "An arcane focus (orb)" },
+  "Arcane Focus (Quarterstaff)": "srd-5e-2024:item/quarterstaff",
+  "Druidic Focus (Quarterstaff)": "srd-5e-2024:item/quarterstaff",
+  "Druidic Focus (sprig of mistletoe)": "srd-5e-2024:item/druidic-focus-sprig-of-mistletoe",
+  "Spellbook": { "note": "A spellbook" },
+  "Book (occult lore)": { "note": "A book (occult lore)" },
+  "Book (prayers)": { "note": "A book (prayers)" },
+  "Book (history)": { "note": "A book (history)" },
+  "Parchment (10 sheets)": { "item": "srd-5e-2024:item/parchment", "qty": 10 },
+  "Parchment (8 sheets)": { "item": "srd-5e-2024:item/parchment", "qty": 8 },
+  "Arrows": { "item": "srd-5e-2024:item/arrows-20", "qty": 1 },
+  "Ar rows": { "item": "srd-5e-2024:item/arrows-20", "qty": 1 },
+  "Leather Ar mor": "srd-5e-2024:item/leather-armor",
+  "Traveler's Clothes": "srd-5e-2024:item/clothes-travelers"
+}
