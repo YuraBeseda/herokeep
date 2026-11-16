@@ -27,7 +27,12 @@ const pathOf = (url: string): string => url.split(/[?#]/, 1)[0];
 export class NavHistoryService {
   private readonly router = inject(Router);
   private readonly viewportScroller = inject(ViewportScroller);
-  private readonly scrolls = new Map<string, [number, number]>();
+  private readonly scrolls = new Map<string, { page: [number, number]; list?: number }>();
+  /** The entry on screen (the one a navigation leaves); `back()` pops the stack before it starts. */
+  private shown?: string;
+  private backing = false;
+  private pendingList?: number;
+  private listSource?: () => number;
 
   private readonly stack = signal<readonly string[]>([]);
   /** Path (no query or fragment) of the screen the user is on; empty before the first navigation. */
@@ -36,6 +41,7 @@ export class NavHistoryService {
   readonly canGoBack = computed(() => this.stack().length > 1);
 
   push(url: string, kind: 'push' | 'traverse' = 'push'): void {
+    this.shown = url;
     const stack = [...this.stack()];
     const top = stack.at(-1);
     if (top !== undefined && pathOf(top) === pathOf(url)) {
@@ -50,13 +56,36 @@ export class NavHistoryService {
   }
 
   constructor() {
-    // Remember where each entry was scrolled to when it was left (in memory only).
+    // Remember where each entry was scrolled to when it was left (in memory only), and arm the
+    // list restore for a back or browser-Back arrival; a forward navigation starts at the top.
     this.router.events.subscribe((event) => {
-      const top = this.stack().at(-1);
-      if (event instanceof NavigationStart && top !== undefined) {
-        this.scrolls.set(top, this.viewportScroller.getScrollPosition());
+      if (!(event instanceof NavigationStart)) return;
+      if (this.shown !== undefined) {
+        this.scrolls.set(this.shown, {
+          page: this.viewportScroller.getScrollPosition(),
+          list: this.listSource?.(),
+        });
       }
+      if (event.navigationTrigger === 'popstate')
+        this.pendingList = this.scrolls.get(event.url)?.list;
+      else if (!this.backing) this.pendingList = undefined;
+      this.backing = false;
     });
+  }
+
+  /** A virtual list reports its scroll offset here while it is on screen. */
+  registerListScroll(source: () => number): () => void {
+    this.listSource = source;
+    return () => {
+      if (this.listSource === source) this.listSource = undefined;
+    };
+  }
+
+  /** The list offset to restore for the screen just entered by Back; one-shot. */
+  takeListScroll(): number | undefined {
+    const offset = this.pendingList;
+    this.pendingList = undefined;
+    return offset;
   }
 
   back(fallback: readonly string[]): void {
@@ -65,7 +94,10 @@ export class NavHistoryService {
       stack.pop();
       this.stack.set(stack);
       const target = stack[stack.length - 1];
-      this.restoreScrollAfterNavigation(this.scrolls.get(target));
+      const saved = this.scrolls.get(target);
+      this.backing = true;
+      this.pendingList = saved?.list;
+      this.restoreScrollAfterNavigation(saved?.page);
       void this.router.navigateByUrl(target);
       return;
     }

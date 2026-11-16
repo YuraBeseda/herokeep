@@ -64,6 +64,19 @@ describe('NavHistoryService scroll restoration', () => {
     await scrolled(scrollTo, [0, 640]);
   });
 
+  it('hands the list offset it was left at back to the next list after Back, not after a forward step', async () => {
+    const { service, go } = scrollSetup();
+    await go('/a');
+    service.registerListScroll(() => 300);
+    await go('/b');
+    service.back(['/home']);
+    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/a'));
+    expect(service.takeListScroll()).toBe(300);
+    expect(service.takeListScroll()).toBeUndefined();
+    await go('/b');
+    expect(service.takeListScroll()).toBeUndefined();
+  });
+
   it('still opens a forward navigation at the top', async () => {
     const { scrollTo, go, scrollBy } = scrollSetup();
     await go('/a');

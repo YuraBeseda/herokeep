@@ -98,20 +98,37 @@ test.describe('library', () => {
     );
     await expect(page.getByRole('searchbox')).toHaveValue('fireball');
 
-    // R74: the in-app Back also returns to where the page was scrolled to.
+    // R74: Back (in-app and browser) also returns to where the page and the list were scrolled to.
     await page.locator('.hk-search__clear').click();
     await expect(page).not.toHaveURL(/q=/);
     const rows = page.locator('.library-browse__row');
     await expect(rows.first()).toBeVisible();
+    const viewport = page.locator('.hk-virtual-list__viewport');
+    const listOffset = () => viewport.evaluate((el) => el.scrollTop);
+    await viewport.evaluate((el) => (el.scrollTop = 1500));
     await page.evaluate(() => window.scrollTo(0, 900));
     const before = await page.evaluate(() => window.scrollY);
+    const listBefore = await listOffset();
     expect(before).toBeGreaterThan(20);
+    expect(listBefore).toBeGreaterThan(1000);
+    const expectRestored = async () => {
+      await expect(rows.first()).toBeVisible();
+      await expect
+        .poll(async () => Math.abs((await listOffset()) - listBefore))
+        .toBeLessThanOrEqual(50);
+      await expect
+        .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - before))
+        .toBeLessThanOrEqual(50);
+    };
     // A DOM click, so Playwright does not scroll the page before it.
     await rows.first().evaluate((el) => (el as HTMLElement).click());
     await expect(page.locator('.library-detail__name')).toBeVisible();
     await page.locator('.library-detail__back').click();
-    await expect(rows.first()).toBeVisible();
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before - 50);
-    expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThanOrEqual(50);
+    await expectRestored();
+
+    await rows.first().evaluate((el) => (el as HTMLElement).click());
+    await expect(page.locator('.library-detail__name')).toBeVisible();
+    await page.goBack();
+    await expectRestored();
   });
 });
