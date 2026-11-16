@@ -63,6 +63,17 @@ export class EnvConfig implements Config {
   }
 }
 
+/** `HK_AUTH_IP_LIMIT`: per-IP `/api/auth/*` requests per minute. Unset means the default (30);
+ * raised only by the e2e suites, whose scenarios all share one IP. */
+export function parseAuthIpLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined || raw === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`HK_AUTH_IP_LIMIT must be a positive integer, got "${raw}".`);
+  }
+  return n;
+}
+
 /** Every `ConfigName` the backend core ever reads (`ports/infra.ts`) — kept here as a runtime
  * array (the type itself, `ConfigName`, erases at compile time) purely so `assertConfigured`
  * below has something to iterate. */

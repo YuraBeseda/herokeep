@@ -222,7 +222,9 @@ export async function deleteRecoveryCodesForUser(db: Db, userId: string): Promis
  * this user (matched by stored hash; the table has no stable row id). The `Db` port has no atomic
  * call usable on both adapters (better-sqlite3 rejects async transaction callbacks, D1 rejects
  * BEGIN), so this order-safe two-step stands in for one transaction: a failure between the steps
- * leaves the old codes valid plus unseen random new ones, and the caller errors so a retry is safe. */
+ * leaves the old codes valid plus unseen random new ones, and the caller errors so a retry is safe.
+ * Known race: two concurrent regenerations for one user (two tabs) can each delete the other's new
+ * rows, leaving the user with no valid code; they can regenerate again, so it is not guarded. */
 export async function replaceRecoveryCodes(db: Db, userId: string, codes: NewRecoveryCode[]): Promise<void> {
   if (codes.length === 0) throw new Error('replaceRecoveryCodes needs at least one code');
   await db.insert(recoveryCodes).values(codes);

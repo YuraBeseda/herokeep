@@ -74,6 +74,7 @@ describe('RecoveryCodesDialogComponent', () => {
     );
     expect(el.querySelector('.recovery-codes__copy')).not.toBeNull();
     expect(el.querySelector('.recovery-codes__download')).not.toBeNull();
+    expect(document.activeElement).toBe(el.querySelector('.recovery-codes-dialog__saved'));
     expect(el.querySelector('.recovery-codes-dialog__warning')?.textContent?.trim()).toBe(
       authEn.regenerate.warning,
     );

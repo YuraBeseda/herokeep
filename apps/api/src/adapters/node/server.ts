@@ -71,7 +71,7 @@ import { runDailyMaintenance } from '../../core/maintenance.ts';
 import type { ConnAttachment } from '../../core/streams/stream-actor.ts';
 import { CLIENT_IP_HEADER } from '../../core/http/client-ip.ts';
 import type { WsUpgrade, WsUpgradeContext } from '../../ports/infra.ts';
-import { assertConfigured, EnvConfig, loadEnvFile } from './config.env.ts';
+import { assertConfigured, EnvConfig, loadEnvFile, parseAuthIpLimit } from './config.env.ts';
 import { NodeMaintenanceStreams } from './maintenance-streams.ts';
 import { MemoryRateLimit } from './rate-limit.memory.ts';
 import { IntervalScheduler } from './scheduler.interval.ts';
@@ -317,7 +317,15 @@ export async function startNodeServer(options: NodeServerOptions = {}): Promise<
   const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MESSAGE_BYTES_MAX });
   const wsUpgrade = new NodeWsUpgrade(pending, wss, streamHost);
 
-  const app = createApp({ db: accounts.db, config, rateLimit, streamHost, wsUpgrade, staticAssets });
+  const app = createApp({
+    db: accounts.db,
+    config,
+    rateLimit,
+    authIpLimit: parseAuthIpLimit(process.env['HK_AUTH_IP_LIMIT']),
+    streamHost,
+    wsUpgrade,
+    staticAssets,
+  });
   const listener = getRequestListener(app.fetch);
 
   const httpServer = createServer((req, res) => {

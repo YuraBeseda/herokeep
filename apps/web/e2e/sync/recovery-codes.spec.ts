@@ -1,14 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { registerAndContinue, TEST_PASSWORD, uniqueUsername } from './helpers';
 
-// Every sync scenario shares one client IP, and `/api/auth/*` allows 30 requests a minute per IP
-// (`ipAuthRateLimit`). Earlier scenarios already spend most of that, so this one (last in file
-// order) waits a full window before it starts.
-test.beforeAll(async () => {
-  test.setTimeout(120_000);
-  await new Promise((resolve) => setTimeout(resolve, 61_000));
-});
-
 test('settings: new recovery codes replace the old ones and one of them resets the password', async ({
   page,
 }) => {

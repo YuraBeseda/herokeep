@@ -361,3 +361,32 @@ describe('POST /api/auth/recovery-codes (regenerate recovery codes)', () => {
     expect((await reset(oldCodes[0]!)).status).toBe(200);
   });
 });
+
+describe('per-IP auth rate limit', () => {
+  const ipHeaders = { ...XRW, 'X-Hk-Client-Ip': '203.0.113.9' };
+  async function salts(n: number, authIpLimit?: number): Promise<number[]> {
+    const a = createTestApp({
+      db: handle.db,
+      config: createTestConfig(),
+      rateLimit: new InMemoryRateLimit(),
+      authIpLimit,
+    });
+    const out: number[] = [];
+    for (let i = 0; i < n; i++) {
+      out.push((await a.request('/api/auth/salt?username=nobody', { headers: ipHeaders })).status);
+    }
+    return out;
+  }
+
+  it('defaults to 30 requests per minute', async () => {
+    const statuses = await salts(31);
+    expect(statuses.slice(0, 30).every((s) => s !== 429)).toBe(true);
+    expect(statuses[30]).toBe(429);
+  });
+
+  it('honors a configured limit', async () => {
+    const statuses = await salts(4, 3);
+    expect(statuses.slice(0, 3).every((s) => s !== 429)).toBe(true);
+    expect(statuses[3]).toBe(429);
+  });
+});

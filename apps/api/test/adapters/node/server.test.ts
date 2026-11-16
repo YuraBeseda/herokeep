@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import { WebSocket as WsClient } from 'ws';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startNodeServer, type NodeServerHandle } from '../../../src/adapters/node/server.ts';
+import { parseAuthIpLimit } from '../../../src/adapters/node/config.env.ts';
 
 const XRW = { 'X-Requested-With': 'herokeep', 'Content-Type': 'application/json' };
 
@@ -770,5 +771,16 @@ describe('Node adapter — fails fast at boot on missing secrets (fix round 1)',
       await okHandle.close();
       rmSync(okDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('parseAuthIpLimit (HK_AUTH_IP_LIMIT)', () => {
+  it('is undefined (so the core default of 30 applies) when unset or empty', () => {
+    expect(parseAuthIpLimit(undefined)).toBeUndefined();
+    expect(parseAuthIpLimit('')).toBeUndefined();
+  });
+  it('returns a positive integer and rejects anything else', () => {
+    expect(parseAuthIpLimit('500')).toBe(500);
+    for (const bad of ['0', '-1', '1.5', 'abc']) expect(() => parseAuthIpLimit(bad)).toThrow(/HK_AUTH_IP_LIMIT/);
   });
 });

@@ -1,4 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  type ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { DialogRef } from '@app/ui/dialog/dialog.service';
 import { authErrorKey, AuthService } from '@shared/services/auth/auth.service';
@@ -17,7 +24,7 @@ import { HkTextFieldComponent } from '../../ui/text-field/text-field.component';
       <h2 class="recovery-codes-dialog__title" data-dialog-title>{{ t('regenerate.title') }}</h2>
       <p class="recovery-codes-dialog__warning">{{ t('regenerate.warning') }}</p>
       @if (codes(); as codes) {
-        <p class="recovery-codes-dialog__saved">{{ t('regenerate.saved') }}</p>
+        <p #saved class="recovery-codes-dialog__saved" tabindex="-1">{{ t('regenerate.saved') }}</p>
         <hk-recovery-codes [codes]="codes" />
         <div data-dialog-actions>
           <button hk-button type="button" class="recovery-codes-dialog__done" (click)="close()">
@@ -63,6 +70,14 @@ export class RecoveryCodesDialogComponent {
   protected readonly submitting = signal(false);
   protected readonly errorKey = signal<string | undefined>(undefined);
   protected readonly codes = signal<string[] | null>(null);
+
+  // The form is replaced by the codes, so the focused submit button disappears; move focus to the
+  // saved message (same pattern as the register screen's codes step).
+  private readonly saved = viewChild<ElementRef<HTMLElement>>('saved');
+
+  constructor() {
+    afterRenderEffect(() => this.saved()?.nativeElement.focus());
+  }
 
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();

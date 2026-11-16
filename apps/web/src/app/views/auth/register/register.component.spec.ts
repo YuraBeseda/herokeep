@@ -200,7 +200,7 @@ describe('RegisterComponent', () => {
     });
 
     it('the download button creates a Blob URL and triggers an anchor download', async () => {
-      // jsdom doesn't implement `URL.createObjectURL`/`revokeObjectURL` at all вЂ” assigned
+      // jsdom doesn't implement `URL.createObjectURL`/`revokeObjectURL` at all — assigned
       // directly on the REAL `URL` constructor (never replaced wholesale via `vi.stubGlobal`,
       // which would break Angular's own internal `new URL(...)` usage, e.g. its router/navigation
       // test harness) and restored in `finally` below. Read/written through a property-typed
@@ -312,7 +312,7 @@ describe('RegisterComponent', () => {
       expect(hintOfField('deviceLabel')?.trim()).toBe(authEn.register.deviceLabelHint);
     });
 
-    it('carries the primary button in the formвЂ™s own strap; the page strap keeps Back and Help', async () => {
+    it('carries the primary button in the form’s own strap; the page strap keeps Back and Help', async () => {
       const { compiled } = await mountForm();
 
       expect(compiled.querySelector('form [data-auth-strap] button[type="submit"]')).toBe(
@@ -433,7 +433,7 @@ describe('RegisterComponent', () => {
         );
       });
 
-      it('keeps Continue in the leafвЂ™s strap and explains why it is not available yet', async () => {
+      it('keeps Continue in the leaf’s strap and explains why it is not available yet', async () => {
         const { compiled } = await toCodes();
 
         expect(compiled.querySelector('[data-auth-strap] .register__continue')).not.toBeNull();

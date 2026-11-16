@@ -22,7 +22,7 @@ export function createAuthRoutes(deps: AuthDeps) {
   const app = new Hono<AuthEnv>();
   installErrorHandler(app);
 
-  app.use('*', ipAuthRateLimit(deps.rateLimit));
+  app.use('*', ipAuthRateLimit(deps.rateLimit, deps.authIpLimit));
   app.use('*', requireXRequestedWith());
   app.use(
     '*',

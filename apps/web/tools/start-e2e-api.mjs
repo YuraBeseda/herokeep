@@ -35,6 +35,8 @@ process.env['SALT_HMAC_KEY'] ??= 'e2e-sync-suite-salt-hmac-key-not-a-real-secret
 // The browser's origin in this suite is ALWAYS the proxy's origin (`serve-with-proxy.mjs`), never
 // this server's own `API_PORT` directly — see this file's header comment.
 process.env['APP_ORIGIN'] ??= `http://127.0.0.1:${PROXY_PORT}`;
+// The sync scenarios share one client IP; lift the per-IP auth ceiling (production default 30/min).
+process.env['HK_AUTH_IP_LIMIT'] ??= '10000';
 process.env['HK_HOST'] ??= '127.0.0.1';
 process.env['HK_PORT'] = String(API_PORT);
 // A fresh OS temp dir per run (task-11-brief.md: "creates a fresh temp dir, writes nothing to

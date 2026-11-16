@@ -158,6 +158,7 @@ Leave `HK_HOST=127.0.0.1` and `HK_PORT=8787` as shipped — the Node server shou
 loopback-only; Caddy is the only thing that should ever be reachable from outside this machine.
 `HK_DATA_DIR` and `HK_WEB_DIST_DIR` can stay commented out (defaults) for a first local test; the
 NSSM service step below points `HK_DATA_DIR` at `%ProgramData%\Herokeep\data` explicitly.
+`HK_AUTH_IP_LIMIT` (optional, default 30) is the per-IP `/api/auth/*` requests-per-minute ceiling; leave it unset in production (the e2e suites raise it).
 
 ## 3. First boot and seeding
 

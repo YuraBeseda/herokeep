@@ -8,4 +8,6 @@ export interface AuthDeps {
   readonly db: Db;
   readonly config: Config;
   readonly rateLimit: RateLimit;
+  /** Per-IP `/api/auth/*` requests per minute; omitted means the production default (30). */
+  readonly authIpLimit?: number;
 }
