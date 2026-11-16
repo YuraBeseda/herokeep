@@ -530,6 +530,8 @@ export class CreateWizardState implements EngineScope {
    * both sources' kit gold, keeping the other denominations already entered. */
   chooseKit(source: KitSource, label: KitLabel | null): void {
     const prev = this.kits()[source];
+    // Re-choosing the chosen kit is a no-op: it keeps the kit's equips and any gold edit.
+    if (prev && prev.owner === this.kitOwner(source) && prev.label === label) return;
     const option = label ? this.kitOptions(source).find((o) => o.label === label) : undefined;
     const added: DraftEvent[] = (option?.items ?? []).map(({ item, qty }) => ({
       type: 'item.added',

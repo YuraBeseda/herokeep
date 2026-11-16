@@ -424,5 +424,36 @@ describe('CreateWizardState', () => {
         sp: 3,
       });
     });
+
+    it('choosing the already chosen kit again keeps its equips and a manual gold edit', () => {
+      const state = fighterSoldier();
+      const chain = state
+        .extraDrafts()
+        .find((d) => (d.payload as { itemId?: string }).itemId === 'srd-5e-2024:item/chain-mail')!;
+      state.equipItem((chain.payload as { instanceId: string }).instanceId);
+      state.setCurrency({ gp: 99 });
+      state.chooseKit('class', 'A');
+      expect(state.extraDrafts().some((d) => d.type === 'item.equipped')).toBe(true);
+      expect(addedItemIds(state).filter((id) => id === 'srd-5e-2024:item/chain-mail')).toHaveLength(
+        1,
+      );
+      expect(gp(state)).toBe(99);
+    });
+
+    it('a class and background without starting equipment add no kit and leave the currency alone', () => {
+      const strip = (e: (typeof corePack.entities)[number]) =>
+        e.id === FIGHTER || e.id === SOLDIER ? { ...e, startingEquipment: undefined } : e;
+      const homebrew = { ...corePack, entities: corePack.entities.map(strip) };
+      TestBed.overrideProvider(PackStore, {
+        useValue: { packs: signal([homebrew]), ready: signal(true), corePack: signal(homebrew) },
+      });
+      const state = fighterSoldier();
+      expect(state.kitOptions('class')).toEqual([]);
+      expect(state.kitOptions('background')).toEqual([]);
+      expect(state.kitChoice('class')()).toBeNull();
+      expect(state.kitChoice('background')()).toBeNull();
+      expect(addedItemIds(state)).toEqual([]);
+      expect(state.extraDrafts().some((d) => d.type === 'currency.changed')).toBe(false);
+    });
   });
 });

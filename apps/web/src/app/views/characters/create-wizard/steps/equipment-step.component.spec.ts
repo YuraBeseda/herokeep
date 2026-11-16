@@ -315,6 +315,39 @@ describe('EquipmentStepComponent', () => {
       expect(state.draftSheet()?.currency.gp).toBe(155 + 14);
     });
 
+    it('clicking a card body chooses that kit too', async () => {
+      const state = fighterSoldier();
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      cardsOf(compiled, 'class')[1]
+        .querySelector<HTMLButtonElement>('.hk-picker-card__body')!
+        .click();
+      await fixture.whenStable();
+
+      expect(state.kitChoice('class')()).toBe('B');
+      expect(cardsOf(compiled, 'class')[1].classList).toContain('hk-picker-card--selected');
+    });
+
+    it('shows no kit cards and leaves the currency alone for a class and background without starting equipment', async () => {
+      const strip = (e: (typeof corePack.entities)[number]) =>
+        e.id === 'srd-5e-2024:class/fighter' || e.id === 'srd-5e-2024:background/soldier'
+          ? { ...e, startingEquipment: undefined }
+          : e;
+      const homebrew = { ...corePack, entities: corePack.entities.map(strip) };
+      TestBed.overrideProvider(PackStore, {
+        useValue: { packs: signal([homebrew]), ready: signal(true), corePack: signal(homebrew) },
+      });
+      const state = fighterSoldier();
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('hk-picker-card')).toBeNull();
+      expect(state.extraDrafts().some((d) => d.type === 'currency.changed')).toBe(false);
+    });
+
     it('shows no kit cards when nothing with starting equipment is chosen', async () => {
       createDraft();
       const fixture = TestBed.createComponent(EquipmentStepComponent);

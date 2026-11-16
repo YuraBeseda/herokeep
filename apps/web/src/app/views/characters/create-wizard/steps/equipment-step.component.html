@@ -15,6 +15,7 @@
             [meta]="kitMeta(card, t)"
             [selected]="group.chosen === card.label"
             (choose)="onChooseKit(group.source, card.label)"
+            (details)="onChooseKit(group.source, card.label)"
           />
         }
       </div>
