@@ -46,8 +46,5 @@ test('starting equipment kit cards fit in ru and uk', async ({ page }, testInfo)
       await expect(cards).toHaveCount(5);
     });
   }
-  // Only the kit cards (and any step that threw) are in scope here; the rest of the equipment step has a known overflow, tracked separately.
-  expect(violations.filter((v) => v.includes('hk-picker-card') || v.includes(': threw '))).toEqual(
-    [],
-  );
+  expect(violations).toEqual([]);
 });

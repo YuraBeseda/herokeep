@@ -68,9 +68,7 @@
 .equipment-step__entry-name {
   flex: 1 1 auto;
   min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .equipment-step__entry-qty,
@@ -80,7 +78,8 @@
 
 .equipment-step__currency {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  // A column is never narrower than the phone number field (44 + 88 + 44 px + gaps).
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11.5rem), 1fr));
   gap: var(--space-3);
 }
 

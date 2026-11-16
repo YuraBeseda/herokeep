@@ -75,8 +75,6 @@ the `ui/`→`views/` import) are the implementer's call in a later plan.
 | —   | Icon sizing (owner report)                               | Build: 11 sprite icons (settings, add, remove, build, condition, dm, hp, proficient-save, spend, both theme icons) wrap a 256-unit source with its offset `viewBox`, so they render off-size next to the 512-unit icons. (built, plan 19) |
 
 Rows marked "built, plan 19" shipped in plan 19 (`2026-11-16-phase-5-owner-decisions`).
-Known follow-up from that plan: the wizard equipment step overflows at 360 px in ru/uk (currency
-number field, bag-row names).
 
 ## What is explicitly deferred and why
 
