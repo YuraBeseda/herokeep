@@ -14,6 +14,7 @@ import {
   option,
 } from './helpers/create-fighter';
 import { acValue, hpCurrent, hpMax, profBonus } from './helpers/sheet';
+import { isPhone, openPhoneTab } from './helpers/viewport';
 
 const CHARACTER_NAME = 'Aldric Golden Path';
 
@@ -106,6 +107,7 @@ test.describe('character creation — golden path', () => {
     });
 
     await test.step('bag holds kit C gold (155) + Soldier kit A gold (14) and none of kit A', async () => {
+      if (isPhone(page)) await openPhoneTab(page, 'Bag'); // the phone sheet puts the bag on its own tab
       const bag = page.locator('app-bag-leaf');
       await expect(bag.getByRole('img', { name: '169 gold pieces' })).toBeVisible();
       await expect(bag).toContainText("Healer's Kit");
