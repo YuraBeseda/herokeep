@@ -11,7 +11,6 @@ import { type ClassSkillPick, classSkillPick, findChoice, splitOccurrence } from
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, error } from '../diagnostics.ts';
 import type { PredicateContext } from '../predicate/context.ts';
-import { evaluatePredicate } from '../predicate/evaluate.ts';
 import { unmetPrerequisites } from '../predicate/unmet.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { type AbilitiesPick, abilitiesPickOptions } from './abilities.ts';

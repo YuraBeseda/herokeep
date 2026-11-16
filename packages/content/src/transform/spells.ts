@@ -211,7 +211,7 @@ function mapHigherLevelDice(text: string | undefined) {
     return { perSlot: { dice: slot[1]!, aboveLevel: Number(slot[2]) } };
   }
   const c = CANTRIP_RE.exec(text);
-  if (c && c.slice(1).every((d) => DiceSchema.safeParse(d).success)) {
+  if (c?.slice(1).every((d) => DiceSchema.safeParse(d).success)) {
     return { cantrip: ([5, 11, 17] as const).map((level, i) => ({ level, dice: c[i + 1]! })) };
   }
   return undefined;

@@ -3,8 +3,8 @@ import names from '../overlays/starting-equipment-names.json' with { type: 'json
 import { itemId } from '../ids.ts';
 import { readFixture, pkSlug } from '../upstream.ts';
 
-export type Resolved = { item: string; qty?: number } | { note: string };
-type Overlay = Record<string, string | { note: string } | { item: string; qty: number }>;
+export type Resolved = { item: string; qty?: number; count?: number } | { note: string };
+type Overlay = Record<string, string | { note: string } | { item: string; qty: number; count?: number }>;
 
 /**
  * Parses "Choose A or B: (A) 2 Daggers, Pack, and 15 GP; or (B) 75 GP" into the options.
@@ -27,7 +27,15 @@ export function parseStartingEquipment(text: string, resolve: (name: string) => 
       const m = /^(\d+) (.+)$/.exec(piece);
       const r = resolve(m ? m[2]! : piece);
       if ('note' in r) opt.notes.push(r.note);
-      else opt.items.push({ item: r.item, qty: r.qty ?? (m ? Number(m[1]) : 1) });
+      else {
+        const count = m ? Number(m[1]) : 1;
+        // A fixed overlay qty (bundles) must be for exactly the written count; `count` is the bundle size.
+        if (r.qty !== undefined && count > 1 && r.count !== count)
+          throw new Error(
+            `starting equipment: count ${count} on "${m![2]}" conflicts with its fixed overlay quantity ${r.qty}`,
+          );
+        opt.items.push({ item: r.item, qty: r.qty ?? count });
+      }
     }
     options.push(opt);
   }
@@ -47,15 +55,24 @@ let itemSlugs: Set<string> | undefined;
 export function startingEquipmentFor(text: string, source: string): StartingOption[] {
   itemSlugs ??= new Set(readFixture('Item').map((r) => pkSlug(String(r.pk))));
   const overlay = names as Overlay;
-  const options = parseStartingEquipment(text, (name) => {
-    const o = overlay[name];
-    if (typeof o === 'string') return { item: o };
-    if (o) return o;
-    const slug = slugify(name);
-    for (const s of [slug, slug.replace(/s$/, ''), slug.replace(/es$/, '')])
-      if (itemSlugs!.has(s)) return { item: itemId(s) };
-    throw new Error(`starting equipment: "${name}" (${source}) matches no item and is not in starting-equipment-names.json`);
-  });
+  let options: StartingOption[];
+  try {
+    options = parseStartingEquipment(text, (name) => {
+      const o = overlay[name];
+      if (typeof o === 'string') return { item: o };
+      if (o) return o;
+      const slug = slugify(name);
+      for (const s of [slug, slug.replace(/s$/, ''), slug.replace(/es$/, '')])
+        if (itemSlugs!.has(s)) return { item: itemId(s) };
+      throw new Error(
+        `starting equipment: "${name}" (${source}) matches no item and is not in starting-equipment-names.json`,
+      );
+    });
+  } catch (e) {
+    if (e instanceof Error && !e.message.includes(`(${source})`))
+      throw new Error(`${e.message} (${source})`, { cause: e });
+    throw e;
+  }
   if (options.length === 0) throw new Error(`starting equipment: no options found in "${source}"`);
   return options;
 }

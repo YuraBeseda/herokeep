@@ -154,7 +154,7 @@ describe('deriveAbilities', () => {
 
   it('lists half proficiency (Jack of All Trades style) as floor(prof/2) in a skill breakdown, value unchanged', () => {
     // Re-parse the fixture with an extra feature so the entity has its schema defaults.
-    const raw = JSON.parse(JSON.stringify(loadFixturePack('core-mini')));
+    const raw = JSON.parse(JSON.stringify(loadFixturePack('core-mini'))) as { entities: unknown[] };
     raw.entities.push({
       id: 'core-mini:feature/jack-test',
       type: 'feature',

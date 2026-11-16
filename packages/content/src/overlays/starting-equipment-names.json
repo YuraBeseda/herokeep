@@ -17,8 +17,8 @@
   "Book (history)": { "note": "A book (history)" },
   "Parchment (10 sheets)": { "item": "srd-5e-2024:item/parchment", "qty": 10 },
   "Parchment (8 sheets)": { "item": "srd-5e-2024:item/parchment", "qty": 8 },
-  "Arrows": { "item": "srd-5e-2024:item/arrows-20", "qty": 1 },
-  "Ar rows": { "item": "srd-5e-2024:item/arrows-20", "qty": 1 },
+  "Arrows": { "item": "srd-5e-2024:item/arrows-20", "qty": 1, "count": 20 },
+  "Ar rows": { "item": "srd-5e-2024:item/arrows-20", "qty": 1, "count": 20 },
   "Leather Ar mor": "srd-5e-2024:item/leather-armor",
   "Traveler's Clothes": "srd-5e-2024:item/clothes-travelers"
 }
