@@ -78,7 +78,7 @@
 
 .equipment-step__currency {
   display: grid;
-  // A column is never narrower than the phone number field (44 + 88 + 44 px + gaps).
+  /* A column is never narrower than the phone number field (44 + 88 + 44 px + gaps). */
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 11.5rem), 1fr));
   gap: var(--space-3);
 }

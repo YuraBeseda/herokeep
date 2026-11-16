@@ -99,7 +99,7 @@ describe('HeroImportFlow export-all zip', () => {
     const nameAt = bytes.findIndex(
       (_, i) => bytes[i] === 0x62 && bytes[i + 1] === 0x2e && bytes[i + 2] === 0x68,
     );
-    const extraLen = bytes[nameAt - 2]! | (bytes[nameAt - 1]! << 8);
+    const extraLen = bytes[nameAt - 2] | (bytes[nameAt - 1] << 8);
     bytes[nameAt + 'b.hero'.length + extraLen] = 0xff;
     const { flow, importFn } = setup((f) => Promise.resolve(outcome(byName(f), 'created')));
 
