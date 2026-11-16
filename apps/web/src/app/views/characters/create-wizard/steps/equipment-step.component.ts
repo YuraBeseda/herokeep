@@ -7,10 +7,11 @@ import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/
 import { HkIconButtonComponent } from '../../../../ui/icon-button/icon-button.component';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
+import { HkPickerCardComponent } from '../../../../ui/picker-card/picker-card.component';
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkToggleComponent } from '../../../../ui/toggle/toggle.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
-import { CreateWizardState } from '../create-wizard.state';
+import { CreateWizardState, type KitLabel, type KitSource } from '../create-wizard.state';
 import { EntityPickerComponent } from './entity-picker.component';
 
 type InventoryRow = Sheet['inventory'][number];
@@ -23,6 +24,22 @@ const ITEM_PICKER_LIMIT = 60;
 const EQUIPPABLE_CATEGORIES: ReadonlySet<string> = new Set(['weapon', 'armor', 'shield']);
 
 const DENOMINATIONS: readonly Denomination[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
+
+const KIT_SOURCES: readonly KitSource[] = ['class', 'background'];
+
+interface KitCard {
+  label: KitLabel;
+  items: { name: string; qty: number }[];
+  notes: string[];
+  gp: number;
+}
+
+interface KitGroup {
+  source: KitSource;
+  ownerName: string;
+  chosen: KitLabel | null;
+  cards: KitCard[];
+}
 
 /**
  * The 'equipment' step (task-8-brief.md): add-from-library + currency. Unlike the spells step,
@@ -45,6 +62,7 @@ const DENOMINATIONS: readonly Denomination[] = ['cp', 'sp', 'ep', 'gp', 'pp'];
     HkDescriptionDrawerComponent,
     HkIconButtonComponent,
     HkNumberFieldComponent,
+    HkPickerCardComponent,
     HkTagChipComponent,
     HkToggleComponent,
     HkTooltipDirective,
@@ -79,6 +97,45 @@ export class EquipmentStepComponent {
       .map((entry) => entry.itemId)
       .filter((id): id is string => id !== undefined),
   );
+
+  /** W09 kit cards: one group per chosen class/background that has starting equipment. */
+  protected readonly kitGroups = computed<KitGroup[]>(() => {
+    const localizer = this.engineFacade.localizer();
+    return KIT_SOURCES.flatMap((source) => {
+      const owner = this.state.kitOwner(source);
+      const options = this.state.kitOptions(source);
+      if (!owner || options.length === 0) return [];
+      return [
+        {
+          source,
+          ownerName: localizer.name(owner),
+          chosen: this.state.kitChoice(source)(),
+          cards: options.map((o) => ({
+            label: o.label,
+            items: o.items.map(({ item, qty }) => ({ name: localizer.name(item), qty })),
+            // Notes are pack text; translations key them by their path on the owning entity.
+            notes: o.notes.map(
+              (note, i) =>
+                localizer.text(owner, `startingEquipment.${o.label}.notes.${i}`, note).text,
+            ),
+            gp: o.gp,
+          })),
+        },
+      ];
+    });
+  });
+
+  /** The card's chips: each item (with its count past one), then the gold. */
+  protected kitMeta(card: KitCard, t: (key: string, params: object) => string): string[] {
+    return [
+      ...card.items.map(({ name, qty }) => (qty > 1 ? `${name} ×${qty}` : name)),
+      t('wizard.equipment.kits.gold', { gp: card.gp }),
+    ];
+  }
+
+  protected onChooseKit(source: KitSource, label: KitLabel): void {
+    this.state.chooseKit(source, label);
+  }
 
   protected readonly qty = signal(1);
   /** The library list stays folded until asked for: 960 items are never the first thing on screen. */

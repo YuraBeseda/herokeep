@@ -24,6 +24,12 @@ const GAMING_SET = 'Gaming Set, Playing Cards';
  * `variant` — 129 ≥ 17 × 5 = 85 and < 17 × 10 = 170 → Encumbered, Speed −10 ft. Clicks Next to
  * Review ('equipment' never leaves `steps()`, see the helper module's doc). */
 async function equipKitWithSpareArmor(page: Page): Promise<void> {
+  // The gold-only starting kits (Fighter C, Soldier B) keep the load to the gear added below.
+  await page.getByRole('button', { name: 'Choose: Option C', exact: true }).click();
+  await page
+    .locator('.equipment-step__kits--background')
+    .getByRole('button', { name: 'Choose: Option B', exact: true })
+    .click();
   await addLibraryItems(page, ['Chain Mail', 'Longsword', 'Shield', 'Plate Armor']);
   await equipItems(page, ['Chain Mail', 'Longsword', 'Shield']);
   await page.locator('[data-action="next"]').click();

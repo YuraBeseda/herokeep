@@ -14,7 +14,13 @@ import {
   type Sheet,
   type SystemRules,
 } from '@hk/engine';
-import { parseEvent, type Event, type GrammaticalGender, type Pack } from '@hk/protocol';
+import {
+  parseEvent,
+  type Event,
+  type GrammaticalGender,
+  type Pack,
+  type StartingOption,
+} from '@hk/protocol';
 import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
 import { type DraftEvent } from '@shared/stores/character.store';
@@ -31,6 +37,18 @@ export type { WizardStep } from '../flow/steps.ts';
 const DRAFT_STREAM = 'char:00000000-0000-7000-8000-000000000000';
 const DRAFT_ACTOR: Event['actor'] = { userId: 'local', deviceId: 'draft', role: 'owner' };
 const DRAFT_TS = '2000-01-01T00:00:00.000Z';
+
+export type KitSource = 'class' | 'background';
+export type KitLabel = StartingOption['label'];
+const KIT_SOURCES: readonly KitSource[] = ['class', 'background'];
+
+/** A source's applied kit: whose it is, which option, its gold and the `item.added` drafts it queued. */
+interface AppliedKit {
+  owner: string | undefined;
+  label: KitLabel | null;
+  gp: number;
+  instanceIds: readonly string[];
+}
 
 /**
  * Component-provided (NOT root — `CreateWizardComponent` lists it in its own `providers`) state
@@ -308,6 +326,11 @@ export class CreateWizardState implements EngineScope {
       next.set(choiceId, selection);
       return next;
     });
+    // A new class/background swaps in its own option A (W09: A is preselected).
+    for (const source of KIT_SOURCES) {
+      if (choiceId === this.kitChoiceId(source) && this.kits()[source]?.owner !== selection[0])
+        this.chooseKit(source, 'A');
+    }
     if (context) {
       this.decisionContexts.update((prev) => {
         const next = new Map(prev);
@@ -467,6 +490,73 @@ export class CreateWizardState implements EngineScope {
       ...prev.filter((d) => d.type !== 'currency.changed'),
       { type: 'currency.changed', v: 1, payload: totals },
     ]);
+  }
+
+  // --- starting equipment kits (plan 19 Task 8b) --------------------------------------------
+  // Kit items are ordinary `item.added` drafts; `kits` remembers which instanceIds each source
+  // queued so a kit change drops exactly those (plus their equip drafts) and nothing hand-added.
+
+  private readonly kits = signal<Partial<Record<KitSource, AppliedKit>>>({});
+  private readonly kitLabels: Record<KitSource, Signal<KitLabel | null>> = {
+    class: computed(() => this.kits().class?.label ?? null),
+    background: computed(() => this.kits().background?.label ?? null),
+  };
+
+  kitChoice(source: KitSource): Signal<KitLabel | null> {
+    return this.kitLabels[source];
+  }
+
+  private kitChoiceId(source: KitSource): string | undefined {
+    const systemId = this.systemId();
+    return systemId ? `${systemId}@0/${source}` : undefined;
+  }
+
+  /** The chosen class or background entity id, if any. */
+  kitOwner(source: KitSource): string | undefined {
+    const choiceId = this.kitChoiceId(source);
+    return choiceId ? this.decisions().get(choiceId)?.[0] : undefined;
+  }
+
+  /** The owner's starting-equipment options; `[]` for one without any (homebrew). */
+  kitOptions(source: KitSource): readonly StartingOption[] {
+    const owner = this.kitOwner(source);
+    const entity = owner ? this.draftIndex().get(owner) : undefined;
+    return entity?.type === 'class' || entity?.type === 'background'
+      ? (entity.startingEquipment ?? [])
+      : [];
+  }
+
+  /** Replaces `source`'s kit items with option `label`'s (`null`: none) and sets gp to the sum of
+   * both sources' kit gold, keeping the other denominations already entered. */
+  chooseKit(source: KitSource, label: KitLabel | null): void {
+    const prev = this.kits()[source];
+    const option = label ? this.kitOptions(source).find((o) => o.label === label) : undefined;
+    const added: DraftEvent[] = (option?.items ?? []).map(({ item, qty }) => ({
+      type: 'item.added',
+      v: 1,
+      payload: { instanceId: uuidv7(), itemId: item, qty },
+    }));
+    const dropped = new Set(prev?.instanceIds);
+    this.extraDrafts.update((drafts) => [
+      ...drafts.filter(
+        (d) => !dropped.has((d.payload as { instanceId?: string }).instanceId ?? ''),
+      ),
+      ...added,
+    ]);
+    this.kits.update((kits) => ({
+      ...kits,
+      [source]: {
+        owner: this.kitOwner(source),
+        label: option ? option.label : null,
+        gp: option?.gp ?? 0,
+        instanceIds: added.map((d) => (d.payload as { instanceId: string }).instanceId),
+      },
+    }));
+    // No kit before or after (e.g. a homebrew class): leave the currency alone.
+    if (!option && !prev?.label) return;
+    const current = this.extraDrafts().find((d) => d.type === 'currency.changed')?.payload;
+    const gp = KIT_SOURCES.reduce((sum, s) => sum + (this.kits()[s]?.gp ?? 0), 0);
+    this.setCurrency({ ...(current as object), gp });
   }
 
   /** `character.created` + one `pack.pinned` per checked content pack (plan 15 Task 4) +

@@ -18,6 +18,9 @@ const SOLDIER_TOOLS = 'srd-5e-2024:background/soldier@0/tools';
 const SOLDIER_GAMING_SET = 'srd-5e-2024:item/gaming-set-dice';
 
 async function persist(state: CreateWizardState): Promise<string> {
+  // These fixtures carry their own hand-picked gear: drop the preselected starting kits.
+  state.chooseKit('class', null);
+  state.chooseKit('background', null);
   const characterStore = TestBed.inject(CharacterStore);
   const id = await characterStore.create(state.name().trim(), state.gender());
   const [, ...rest] = state.buildTransaction(); // drop the draft's own `character.created` — `create()` above minted the real one.

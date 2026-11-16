@@ -1,4 +1,29 @@
 <div class="equipment-step" *transloco="let t; read: 'characters'">
+  @for (group of kitGroups(); track group.source) {
+    <section
+      class="equipment-step__section equipment-step__kits"
+      [class]="'equipment-step__kits--' + group.source"
+    >
+      <h3 class="equipment-step__title">
+        {{ t('wizard.equipment.kits.title', { source: group.ownerName }) }}
+      </h3>
+      <div class="equipment-step__kit-grid">
+        @for (card of group.cards; track card.label) {
+          <hk-picker-card
+            [name]="t('wizard.equipment.kits.option', { label: card.label })"
+            [description]="card.notes.length > 0 ? card.notes.join(' · ') : null"
+            [meta]="kitMeta(card, t)"
+            [selected]="group.chosen === card.label"
+            (choose)="onChooseKit(group.source, card.label)"
+          />
+        }
+      </div>
+      @if (group.chosen; as label) {
+        <p class="equipment-step__kit-bag">{{ t('wizard.equipment.kits.inBag', { label }) }}</p>
+      }
+    </section>
+  }
+
   <section class="equipment-step__section equipment-step__bag">
     <header class="equipment-step__head">
       <h3 class="equipment-step__title">{{ t('wizard.equipment.inventoryTitle') }}</h3>

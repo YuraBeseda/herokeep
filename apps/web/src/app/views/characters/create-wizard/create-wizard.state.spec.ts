@@ -331,4 +331,98 @@ describe('CreateWizardState', () => {
 
     expect(tx.at(-1)).toEqual({ type: 'currency.changed', v: 1, payload: { gp: 10 } });
   });
+
+  describe('starting equipment kits', () => {
+    const FIGHTER = 'srd-5e-2024:class/fighter';
+    const WIZARD = 'srd-5e-2024:class/wizard';
+    const SOLDIER = 'srd-5e-2024:background/soldier';
+    const ROPE = 'srd-5e-2024:item/rope';
+
+    const addedItemIds = (state: CreateWizardState): string[] =>
+      state
+        .extraDrafts()
+        .filter((d) => d.type === 'item.added')
+        .map((d) => (d.payload as { itemId: string }).itemId);
+    const gp = (state: CreateWizardState): number | undefined =>
+      (state.extraDrafts().find((d) => d.type === 'currency.changed')?.payload as { gp?: number })
+        ?.gp;
+
+    function fighterSoldier(): CreateWizardState {
+      const state = createState();
+      state.name.set('Aldric');
+      state.setDecision(BACKGROUND_CHOICE, [SOLDIER]);
+      state.setDecision(CLASS_CHOICE, [FIGHTER]);
+      return state;
+    }
+
+    it('preselects option A of the chosen class and background, with their gold summed', () => {
+      const state = fighterSoldier();
+      expect(state.kitChoice('class')()).toBe('A');
+      expect(state.kitChoice('background')()).toBe('A');
+      expect(addedItemIds(state)).toContain('srd-5e-2024:item/chain-mail');
+      expect(addedItemIds(state)).toContain('srd-5e-2024:item/healers-kit');
+      expect(gp(state)).toBe(4 + 14);
+    });
+
+    it('switching the class kit to B swaps its items and gold; background kit and hand-added items stay', () => {
+      const state = fighterSoldier();
+      state.addItem(ROPE, 1);
+      state.chooseKit('class', 'B');
+      const ids = addedItemIds(state);
+      expect(state.kitChoice('class')()).toBe('B');
+      expect(ids).not.toContain('srd-5e-2024:item/chain-mail');
+      expect(ids).toContain('srd-5e-2024:item/studded-leather-armor');
+      expect(ids).toContain('srd-5e-2024:item/healers-kit');
+      expect(ids).toContain(ROPE);
+      expect(gp(state)).toBe(11 + 14);
+      expect(state.draftSheet()?.currency.gp).toBe(25);
+    });
+
+    it('drops equip drafts of removed kit items', () => {
+      const state = fighterSoldier();
+      const chain = state
+        .extraDrafts()
+        .find((d) => (d.payload as { itemId?: string }).itemId === 'srd-5e-2024:item/chain-mail')!;
+      state.equipItem((chain.payload as { instanceId: string }).instanceId);
+      state.chooseKit('class', 'C');
+      expect(state.extraDrafts().some((d) => d.type === 'item.equipped')).toBe(false);
+      expect(gp(state)).toBe(155 + 14);
+    });
+
+    it('changing the class removes the old class kit and preselects the new class A', () => {
+      const state = fighterSoldier();
+      state.addItem(ROPE, 1);
+      state.chooseKit('class', 'B');
+      state.setDecision(CLASS_CHOICE, [WIZARD]);
+      const ids = addedItemIds(state);
+      expect(state.kitChoice('class')()).toBe('A');
+      expect(ids).not.toContain('srd-5e-2024:item/studded-leather-armor');
+      expect(ids).toContain('srd-5e-2024:item/quarterstaff');
+      expect(ids).toContain('srd-5e-2024:item/healers-kit');
+      expect(ids).toContain(ROPE);
+      expect(gp(state)).toBe(5 + 14);
+    });
+
+    it('null removes that source kit; notes add nothing; a manual currency edit stands until the next kit change', () => {
+      const state = fighterSoldier();
+      state.chooseKit('background', null);
+      expect(state.kitChoice('background')()).toBeNull();
+      // Soldier A's only note ("the gaming set you chose") never became an item.
+      expect(addedItemIds(state)).toEqual([
+        'srd-5e-2024:item/chain-mail',
+        'srd-5e-2024:item/greatsword',
+        'srd-5e-2024:item/flail',
+        'srd-5e-2024:item/javelin',
+        'srd-5e-2024:item/dungeoneers-pack',
+      ]);
+      expect(gp(state)).toBe(4);
+      state.setCurrency({ gp: 99, sp: 3 });
+      expect(gp(state)).toBe(99);
+      state.chooseKit('background', 'B');
+      expect(state.extraDrafts().find((d) => d.type === 'currency.changed')?.payload).toEqual({
+        gp: 54,
+        sp: 3,
+      });
+    });
+  });
 });

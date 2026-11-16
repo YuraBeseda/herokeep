@@ -256,4 +256,73 @@ describe('EquipmentStepComponent', () => {
     await fixture.whenStable();
     expect(compiled.querySelector('hk-description-drawer')).not.toBeNull();
   });
+
+  describe('starting equipment kits', () => {
+    const SYSTEM_ID = 'srd-5e-2024:system/5e-2024';
+
+    function fighterSoldier(): CreateWizardState {
+      const state = createDraft();
+      state.setDecision(`${SYSTEM_ID}@0/background`, ['srd-5e-2024:background/soldier']);
+      state.setDecision(`${SYSTEM_ID}@0/class`, ['srd-5e-2024:class/fighter']);
+      return state;
+    }
+
+    const cardsOf = (compiled: HTMLElement, source: string): HTMLElement[] =>
+      Array.from(
+        compiled.querySelectorAll<HTMLElement>(`.equipment-step__kits--${source} hk-picker-card`),
+      );
+
+    it('shows one card per option with item names, notes and gold; A is preselected with the bag line', async () => {
+      fighterSoldier();
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const classCards = cardsOf(compiled, 'class');
+      expect(
+        classCards.map((c) => c.querySelector('.hk-picker-card__name')?.textContent?.trim()),
+      ).toEqual(['Option A', 'Option B', 'Option C']);
+      expect(classCards[0].textContent).toContain('Chain Mail');
+      expect(classCards[0].textContent).toContain('Javelin ×8');
+      expect(classCards[0].textContent).toContain('4 gp');
+      expect(classCards[2].textContent).toContain('155 gp');
+      expect(classCards[0].classList).toContain('hk-picker-card--selected');
+      expect(classCards[1].classList).not.toContain('hk-picker-card--selected');
+      expect(compiled.querySelector('.equipment-step__kits--class')!.textContent).toContain(
+        'Option A is in the bag below',
+      );
+
+      const bgCards = cardsOf(compiled, 'background');
+      expect(bgCards).toHaveLength(2);
+      expect(bgCards[0].textContent).toContain(
+        'The gaming set you chose for your tool proficiency',
+      );
+    });
+
+    it('choosing a card swaps the kit', async () => {
+      const state = fighterSoldier();
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      cardsOf(compiled, 'class')[2]
+        .querySelector<HTMLButtonElement>('.hk-picker-card__choose')!
+        .click();
+      await fixture.whenStable();
+
+      expect(state.kitChoice('class')()).toBe('C');
+      expect(cardsOf(compiled, 'class')[2].classList).toContain('hk-picker-card--selected');
+      expect(state.draftSheet()?.currency.gp).toBe(155 + 14);
+    });
+
+    it('shows no kit cards when nothing with starting equipment is chosen', async () => {
+      createDraft();
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('hk-picker-card')).toBeNull();
+      expect(compiled.querySelector('.equipment-step__library')).not.toBeNull();
+    });
+  });
 });

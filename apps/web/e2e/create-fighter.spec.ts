@@ -72,6 +72,14 @@ test.describe('character creation — golden path', () => {
       await expect(page.locator('.equipment-step')).toBeVisible();
     });
 
+    await test.step('equipment: class kit C (gold only) instead of the preselected A', async () => {
+      await expect(page.getByText('Option A is in the bag below')).toHaveCount(2);
+      await page.getByRole('button', { name: 'Choose: Option C', exact: true }).click();
+      await expect(page.locator('.equipment-step__kits--class')).toContainText(
+        'Option C is in the bag below',
+      );
+    });
+
     await test.step('equipment: add + equip chain mail, longsword, shield', async () => {
       await equipGear(page);
       await expect(page.locator('.create-wizard__review')).toBeVisible();
@@ -95,6 +103,14 @@ test.describe('character creation — golden path', () => {
       // `level.gained`. Current and max are therefore both 12 here.
       await expect(hpCurrent(page)).toHaveText('12');
       await expect(hpMax(page)).toHaveText('12');
+    });
+
+    await test.step('bag holds kit C gold (155) + Soldier kit A gold (14) and none of kit A', async () => {
+      const bag = page.locator('app-bag-leaf');
+      await expect(bag.getByRole('img', { name: '169 gold pieces' })).toBeVisible();
+      await expect(bag).toContainText("Healer's Kit");
+      for (const item of ['Greatsword', 'Flail', 'Javelin', "Dungeoneer's Pack"])
+        await expect(bag).not.toContainText(item);
     });
   });
 });

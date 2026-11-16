@@ -191,7 +191,13 @@
         "pp": "Platinum"
       },
       "addFromLibrary": "Add from library",
-      "hideLibrary": "Hide library"
+      "hideLibrary": "Hide library",
+      "kits": {
+        "title": "Starting equipment: {source}",
+        "option": "Option {label}",
+        "inBag": "Option {label} is in the bag below",
+        "gold": "{gp} gp"
+      }
     },
     "title": "New hero",
     "stepper": {

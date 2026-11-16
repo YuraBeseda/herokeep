@@ -242,10 +242,11 @@ export async function addLibraryItems(page: Page, items: readonly string[]): Pro
   await searchBox.fill('');
 }
 
-/** Switches the bag rows of the given items to equipped. */
+/** Switches the bag rows of the given items to equipped. The last row is the hand-added one: a
+ * preselected starting kit (plan 19 Task 8b) may already hold the same item, unequipped. */
 export async function equipItems(page: Page, items: readonly string[]): Promise<void> {
   for (const item of items) {
-    const row = page.locator('.equipment-step__entry', { hasText: item });
+    const row = page.locator('.equipment-step__entry', { hasText: item }).last();
     await row.getByRole('switch', { name: 'Equip', exact: true }).click();
   }
 }
