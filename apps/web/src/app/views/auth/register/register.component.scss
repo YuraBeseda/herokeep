@@ -56,39 +56,6 @@
   margin: 0;
 }
 
-.register__codes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2) var(--space-3);
-  margin: 0;
-  padding: var(--space-3);
-  list-style: none;
-  border-radius: var(--radius-frame);
-  background: var(--leaf-sunken);
-  box-shadow: inset 0 0 0 1px var(--leaf-edge);
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  font-size: 16px;
-  letter-spacing: 0.04em;
-}
-
-.register__code {
-  min-inline-size: 0;
-  overflow-wrap: anywhere;
-}
-
-.register__codes-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.register__codes-once {
-  margin-inline-start: auto;
-  color: var(--text-2);
-  font-style: italic;
-}
-
 .register__confirm-field {
   display: flex;
   align-items: center;
@@ -109,12 +76,3 @@
   }
 }
 
-@media (max-width: 479.98px) {
-  .register__codes {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .register__codes-once {
-    margin-inline-start: 0;
-  }
-}

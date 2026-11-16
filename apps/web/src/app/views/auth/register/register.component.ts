@@ -10,7 +10,6 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { DialogService } from '@app/ui/dialog/dialog.service';
-import { ToastService } from '@shared/components/toast/toast.service';
 import {
   authErrorKey,
   AuthService,
@@ -21,6 +20,7 @@ import { defaultDeviceLabel } from '@shared/services/auth/device-label';
 import { checkPassword, type PasswordVerdict } from '@shared/services/auth/password-check';
 import { IconComponent } from '../../../shared/icons/icon.component';
 import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkRecoveryCodesComponent } from '../../../ui/recovery-codes/recovery-codes.component';
 import { askOnce } from '../../../ui/nav/ask-once';
 import { HkTextFieldComponent } from '../../../ui/text-field/text-field.component';
 import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
@@ -71,6 +71,7 @@ const PASSWORD_MAX = 128;
     HkTextFieldComponent,
     HkTooltipDirective,
     IconComponent,
+    HkRecoveryCodesComponent,
   ],
   providers: [provideTranslocoScope('auth')],
   templateUrl: './register.component.html',
@@ -80,7 +81,6 @@ export class RegisterComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly dialogService = inject(DialogService);
-  private readonly toastService = inject(ToastService);
 
   // Step state
   protected readonly step = signal<'form' | 'codes'>('form');
@@ -243,28 +243,6 @@ export class RegisterComponent {
       this.errorKey.set(authErrorKey(err));
     } finally {
       this.submitting.set(false);
-    }
-  }
-
-  protected async onCopyCodes(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(this.recoveryCodes().join('\n'));
-      this.toastService.show('auth.register.codesStep.copied');
-    } catch {
-      this.toastService.show('auth.register.codesStep.copy-failed');
-    }
-  }
-
-  protected onDownloadCodes(): void {
-    const blob = new Blob([`${this.recoveryCodes().join('\n')}\n`], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    try {
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'herokeep-recovery-codes.txt';
-      anchor.click();
-    } finally {
-      URL.revokeObjectURL(url);
     }
   }
 

@@ -42,6 +42,7 @@ import { HkSelectComponent, type SelectOption } from '../../ui/select/select.com
 import { TopBarService } from '../../ui/shell/top-bar.service';
 import { HkTagChipComponent } from '../../ui/tag-chip/tag-chip.component';
 import { SettingsAboutComponent } from './settings-about.component';
+import { RecoveryCodesDialogComponent } from './recovery-codes-dialog.component';
 import { SettingsAppearanceComponent } from './settings-appearance.component';
 import { HkTooltipDirective } from '../../ui/tooltip/tooltip.directive';
 import { openHelpDialog } from '../help-dialog/help-dialog.component';
@@ -551,6 +552,10 @@ export class SettingsComponent {
 
   protected async logout(): Promise<void> {
     await this.authService.logout();
+  }
+
+  protected openRecoveryCodes(): void {
+    this.dialogService.open(RecoveryCodesDialogComponent);
   }
 
   protected async logoutAll(): Promise<void> {

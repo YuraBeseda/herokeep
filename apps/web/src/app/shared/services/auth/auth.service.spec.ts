@@ -296,6 +296,59 @@ describe('AuthService', () => {
     });
   });
 
+  describe('regenerateRecoveryCodes', () => {
+    async function loginFirst(): Promise<void> {
+      globalThis.fetch = routedFetch({
+        '/api/auth/salt*': () => jsonResponse(200, { salt: VECTOR_SALT_HEX }),
+        '/api/auth/login': () => jsonResponse(200, { userId: 'u1' }),
+        '/api/me': () => jsonResponse(200, { userId: 'u1', username: 'alice' }),
+      });
+      await authService.login('alice', VECTOR_PASSWORD, 'Device');
+    }
+
+    it('derives the pinned verifier from the signed-in username salt, POSTs it and returns the codes', async () => {
+      await loginFirst();
+      let body: unknown;
+      let saltUrl = '';
+      let postedTo = '';
+      let method: string | undefined;
+      globalThis.fetch = vi.fn<typeof fetch>((input, init) => {
+        const url = requestUrl(input);
+        if (url.startsWith('/api/auth/salt')) {
+          saltUrl = url;
+          return Promise.resolve(jsonResponse(200, { salt: VECTOR_SALT_HEX }));
+        }
+        postedTo = url;
+        method = init?.method;
+        body = JSON.parse(init?.body as string);
+        return Promise.resolve(jsonResponse(200, { recoveryCodes: ['a', 'b'] }));
+      });
+
+      await expect(authService.regenerateRecoveryCodes(VECTOR_PASSWORD)).resolves.toEqual([
+        'a',
+        'b',
+      ]);
+
+      expect(postedTo).toBe('/api/auth/recovery-codes');
+      expect(method).toBe('POST');
+      expect(saltUrl).toBe('/api/auth/salt?username=alice');
+      expect(body).toEqual({ verifier: VECTOR_VERIFIER_HEX });
+    });
+
+    it('a wrong password (401) rejects with ApiError that maps to the login error text', async () => {
+      await loginFirst();
+      globalThis.fetch = routedFetch({
+        '/api/auth/salt*': () => jsonResponse(200, { salt: VECTOR_SALT_HEX }),
+        '/api/auth/recovery-codes': () =>
+          jsonResponse(401, { error: 'unauthorized', message: 'Unauthorized' }),
+      });
+
+      const err = await authService.regenerateRecoveryCodes('wrong').catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(ApiError);
+      expect(authErrorKey(err)).toBe('errors.invalidCredentials');
+    });
+  });
   describe('logout / logoutAll', () => {
     async function loginFirst(): Promise<void> {
       globalThis.fetch = routedFetch({

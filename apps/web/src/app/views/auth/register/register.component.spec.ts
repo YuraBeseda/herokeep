@@ -148,7 +148,7 @@ describe('RegisterComponent', () => {
         expect.any(String),
       );
 
-      const codes = Array.from(compiled.querySelectorAll('.register__code')).map((el) =>
+      const codes = Array.from(compiled.querySelectorAll('.recovery-codes__code')).map((el) =>
         el.textContent?.trim(),
       );
       expect(codes).toEqual(SIX_CODES);
@@ -200,7 +200,7 @@ describe('RegisterComponent', () => {
     });
 
     it('the download button creates a Blob URL and triggers an anchor download', async () => {
-      // jsdom doesn't implement `URL.createObjectURL`/`revokeObjectURL` at all — assigned
+      // jsdom doesn't implement `URL.createObjectURL`/`revokeObjectURL` at all вЂ” assigned
       // directly on the REAL `URL` constructor (never replaced wholesale via `vi.stubGlobal`,
       // which would break Angular's own internal `new URL(...)` usage, e.g. its router/navigation
       // test harness) and restored in `finally` below. Read/written through a property-typed
@@ -312,7 +312,7 @@ describe('RegisterComponent', () => {
       expect(hintOfField('deviceLabel')?.trim()).toBe(authEn.register.deviceLabelHint);
     });
 
-    it('carries the primary button in the form’s own strap; the page strap keeps Back and Help', async () => {
+    it('carries the primary button in the formвЂ™s own strap; the page strap keeps Back and Help', async () => {
       const { compiled } = await mountForm();
 
       expect(compiled.querySelector('form [data-auth-strap] button[type="submit"]')).toBe(
@@ -426,14 +426,14 @@ describe('RegisterComponent', () => {
       it('lists the codes in a labelled list and says each works once', async () => {
         const { compiled } = await toCodes();
 
-        const list = compiled.querySelector('.register__codes')!;
+        const list = compiled.querySelector('.recovery-codes__list')!;
         expect(list.getAttribute('aria-label')).toBe(authEn.register.codesStep.listLabel);
-        expect(compiled.querySelector('.register__codes-once')?.textContent?.trim()).toBe(
+        expect(compiled.querySelector('.recovery-codes__once')?.textContent?.trim()).toBe(
           authEn.register.codesStep.once,
         );
       });
 
-      it('keeps Continue in the leaf’s strap and explains why it is not available yet', async () => {
+      it('keeps Continue in the leafвЂ™s strap and explains why it is not available yet', async () => {
         const { compiled } = await toCodes();
 
         expect(compiled.querySelector('[data-auth-strap] .register__continue')).not.toBeNull();
@@ -450,7 +450,7 @@ describe('RegisterComponent', () => {
           .spyOn(TestBed.inject(ToastService), 'show')
           .mockImplementation(() => undefined);
 
-        compiled.querySelector<HTMLButtonElement>('.register__copy')!.click();
+        compiled.querySelector<HTMLButtonElement>('.recovery-codes__copy')!.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(writeText).toHaveBeenCalledWith(SIX_CODES.join('\n'));
@@ -465,7 +465,7 @@ describe('RegisterComponent', () => {
           .spyOn(TestBed.inject(ToastService), 'show')
           .mockImplementation(() => undefined);
 
-        compiled.querySelector<HTMLButtonElement>('.register__copy')!.click();
+        compiled.querySelector<HTMLButtonElement>('.recovery-codes__copy')!.click();
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(show).toHaveBeenCalledWith('auth.register.codesStep.copy-failed');

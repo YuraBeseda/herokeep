@@ -47,8 +47,8 @@ export async function registerToCodesStep(
   await expect(submit).toBeEnabled();
   await submit.click();
 
-  await expect(page.locator('.register__codes')).toBeVisible();
-  const codes = await page.locator('.register__code').allTextContents();
+  await expect(page.locator('.recovery-codes__list')).toBeVisible();
+  const codes = await page.locator('.recovery-codes__code').allTextContents();
   expect(codes).toHaveLength(6);
   return codes;
 }

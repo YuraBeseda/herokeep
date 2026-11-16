@@ -215,6 +215,16 @@
           >
             <hk-icon [icon]="'ui:leave'" />{{ t('account.logout-all') }}
           </button>
+          <button
+            hk-button
+            [variant]="'ghost'"
+            type="button"
+            class="settings__recovery-codes"
+            [hkTooltip]="t('account.recovery-codes-hint')"
+            (click)="openRecoveryCodes()"
+          >
+            <hk-icon [icon]="'ui:key'" />{{ t('account.recovery-codes') }}
+          </button>
           <span class="settings__hint">{{ t('account.local-note') }}</span>
         </div>
       } @else {

@@ -92,5 +92,15 @@
     "badRequest": "Something about that request wasn't valid.",
     "network": "You're offline — check your connection and try again.",
     "generic": "Something went wrong. Please try again."
+  },
+  "regenerate": {
+    "title": "New recovery codes",
+    "intro": "Enter your password to get six new recovery codes.",
+    "warning": "Your old recovery codes stop working as soon as the new ones are issued.",
+    "passwordLabel": "Password",
+    "submit": "Get new codes",
+    "cancel": "Cancel",
+    "saved": "Save these codes now — they are shown only this once.",
+    "done": "Done"
   }
 }

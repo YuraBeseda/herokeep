@@ -873,13 +873,14 @@ describe('SettingsComponent', () => {
       expect(q(el, '.settings__account-username')).toBeNull();
       expect(q(el, '.settings__logout')).toBeNull();
       expect(q(el, '.settings__logout-all')).toBeNull();
+      expect(q(el, '.settings__recovery-codes')).toBeNull();
       // The signed-out inset says so, as a chip with a hint.
       expect(q(el, '.settings__account-state')?.textContent).toContain(
         settingsEn.account['state-anon'],
       );
     });
 
-    it('authed: shows the username and never a regenerate-recovery-codes button (no server route)', async () => {
+    it('authed: shows the username, logout buttons and the New recovery codes button', async () => {
       await setup({ authStatus: 'authed', authUser: { userId: 'u1', username: 'Aria' } });
       const { el } = await mountSettings();
 
@@ -890,9 +891,9 @@ describe('SettingsComponent', () => {
       expect(q(el, '.settings__account-state')?.textContent).toContain(
         settingsEn.account['state-authed'],
       );
-      // task-9-brief.md's explicit VERIFY result: the server never shipped a
-      // regenerate-recovery-codes route — omitted here, never invented client-side.
-      expect(q(el, '.settings__regenerate-codes')).toBeNull();
+      expect(q(el, '.settings__recovery-codes')?.textContent).toContain(
+        settingsEn.account['recovery-codes'],
+      );
     });
 
     it('authed: says how many heroes sync from how many devices, plural-aware', async () => {

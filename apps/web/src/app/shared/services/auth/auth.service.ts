@@ -223,6 +223,22 @@ export class AuthService {
     await this.login(username, newPassword);
   }
 
+  /** Re-checks the signed-in user's password (`POST /api/auth/recovery-codes`, verified exactly
+   * like `/login`) and returns 6 new recovery codes; the old ones stop working. A wrong password
+   * rejects with the same `ApiError` a failed login does, so `authErrorKey` maps it the same way. */
+  async regenerateRecoveryCodes(password: string): Promise<string[]> {
+    const username = this.userState()?.username ?? '';
+    const { salt } = await apiJson<SaltResponse>(
+      `/api/auth/salt?username=${encodeURIComponent(username)}`,
+    );
+    const verifier = await deriveVerifierHex(password, salt);
+    const result = await apiJson<{ recoveryCodes: string[] }>('/api/auth/recovery-codes', {
+      method: 'POST',
+      body: JSON.stringify({ verifier }),
+    });
+    return result.recoveryCodes;
+  }
+
   /** Ends the current device's session. Tolerates a network failure (or any other server error)
    * by clearing local state anyway — from the user's perspective "log out" must always succeed
    * locally, even offline; a still-valid session cookie left behind on an unreachable server is

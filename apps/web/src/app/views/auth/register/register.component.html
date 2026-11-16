@@ -105,33 +105,7 @@
       <div class="auth-card__body">
         <p class="register__codes-intro">{{ t('register.codesStep.intro') }}</p>
 
-        <ol class="register__codes" [attr.aria-label]="t('register.codesStep.listLabel')">
-          @for (code of recoveryCodes(); track code) {
-            <li class="register__code">{{ code }}</li>
-          }
-        </ol>
-
-        <div class="register__codes-actions">
-          <button
-            hk-button
-            type="button"
-            class="register__copy"
-            [variant]="'ghost'"
-            (click)="onCopyCodes()"
-          >
-            <hk-icon [icon]="'ui:copy'" />{{ t('register.codesStep.copy') }}
-          </button>
-          <button
-            hk-button
-            type="button"
-            class="register__download"
-            [variant]="'ghost'"
-            (click)="onDownloadCodes()"
-          >
-            <hk-icon [icon]="'ui:export'" />{{ t('register.codesStep.download') }}
-          </button>
-          <span class="register__codes-once">{{ t('register.codesStep.once') }}</span>
-        </div>
+        <hk-recovery-codes [codes]="recoveryCodes()" />
 
         <label class="register__confirm-field">
           <input
