@@ -228,7 +228,8 @@
       "total": "Hit point maximum {before} to {after}",
       "rollResult": "Rolled {value}.",
       "averageResult": "Taking the average.",
-      "rolledOnce": "Rolled — one roll per level"
+      "rolledOnce": "Rolled — one roll per level",
+      "saveFailed": "The roll could not be saved on this device"
     },
     "review": {
       "title": "Everything gained at level {level}",

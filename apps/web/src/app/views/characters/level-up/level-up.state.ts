@@ -18,6 +18,7 @@ import {
   type SystemRules,
 } from '@hk/engine';
 import { parseEvent, type Event } from '@hk/protocol';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { cryptoRng } from '@shared/services/engine/rng';
 import { HkDb } from '@shared/services/storage/dexie.db';
@@ -66,6 +67,7 @@ export class LevelUpState {
   private readonly packStore = inject(PackStore);
   private readonly settings = inject(SettingsRepository);
   private readonly db = inject(HkDb);
+  private readonly toastService = inject(ToastService);
 
   readonly decisions = signal<ReadonlyMap<string, string[]>>(new Map());
   readonly decisionContexts = signal<ReadonlyMap<string, Record<string, unknown>>>(new Map());
@@ -134,6 +136,11 @@ export class LevelUpState {
    * ever wires this to `classChoices()`'s own entries). */
   chooseClass(classId: string): void {
     if (!this.classChoices().some((a) => a.classId === classId)) return;
+    if (this.selectedClassId() !== classId) {
+      // Each class's die is rolled once per level: drop the other class's roll (its own, if stored, loads).
+      this.hpRoll.set(undefined);
+      this.hpRollDice.set(undefined);
+    }
     this.selectedClassId.set(classId);
   }
 
@@ -495,7 +502,10 @@ export class LevelUpState {
     const key = this.rollKey();
     if (key) {
       const stored: StoredRoll = { roll: result.total, dice: result.dice.map((d) => d.value) };
-      void this.settings.set(key, stored);
+      // The roll is kept on screen either way, but a failed save means it would be lost on leaving.
+      this.settings
+        .set(key, stored)
+        .catch(() => this.toastService.show('characters.levelUp.hp.saveFailed'));
     }
   }
 

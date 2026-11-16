@@ -8,6 +8,7 @@ import { parsePack, type Pack } from '@hk/protocol';
 import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
+import { ToastService } from '@shared/components/toast/toast.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { CharacterStore } from '@shared/stores/character.store';
@@ -556,10 +557,35 @@ describe('LevelUpState', () => {
       const stream = characterStore.streamId();
       await settings.set(`levelup.hpRoll:${stream}:3:${FIGHTER}`, { roll: 9, dice: [9] });
       await settings.set(`levelup.hpRoll:${stream}:2:${WIZARD}`, { roll: 4, dice: [4] });
+      const read = vi.spyOn(settings, 'get');
       const state = createState(FIGHTER);
       TestBed.tick();
-      await new Promise((r) => setTimeout(r, 50));
+      await vi.waitFor(() => expect(read).toHaveBeenCalled());
+      await read.mock.results[0].value;
       expect(state.hpRoll()).toBeUndefined();
+    });
+
+    it('a failed save is reported, not swallowed', async () => {
+      const { settings } = await ready();
+      vi.spyOn(settings, 'set').mockRejectedValue(new Error('quota'));
+      const toast = vi.spyOn(TestBed.inject(ToastService), 'show').mockImplementation(() => undefined);
+      createState(FIGHTER).rollHp(() => 0.45);
+      await vi.waitFor(() => expect(toast).toHaveBeenCalledWith('characters.levelUp.hp.saveFailed'));
+    });
+
+    it('changing class after a roll resets it and loads the new class own stored roll', async () => {
+      const { characterStore, settings } = await ready();
+      await settings.set(`levelup.hpRoll:${characterStore.streamId()}:2:${BARBARIAN}`, {
+        roll: 11,
+        dice: [11],
+      });
+      const state = createState(FIGHTER);
+      state.rollHp(() => 0.45);
+      expect(state.hpRoll()).toBe(5);
+      state.chooseClass(BARBARIAN);
+      expect(state.hpRoll()).toBeUndefined();
+      TestBed.tick();
+      await vi.waitFor(() => expect(state.hpRoll()).toBe(11));
     });
 
     it('finishing deletes the stored roll', async () => {
