@@ -348,6 +348,36 @@ describe('AuthService', () => {
       expect(err).toBeInstanceOf(ApiError);
       expect(authErrorKey(err)).toBe('errors.invalidCredentials');
     });
+
+    it('an expired session (401 and /api/me also 401) maps to session-expired and signs out locally', async () => {
+      await loginFirst();
+      globalThis.fetch = routedFetch({
+        '/api/auth/salt*': () => jsonResponse(200, { salt: VECTOR_SALT_HEX }),
+        '/api/auth/recovery-codes': () =>
+          jsonResponse(401, { error: 'unauthorized', message: 'Unauthorized' }),
+        '/api/me': () => jsonResponse(401, { error: 'unauthorized', message: 'Unauthorized' }),
+      });
+
+      const err = await authService.regenerateRecoveryCodes('pw').catch((e: unknown) => e);
+
+      expect(authErrorKey(err)).toBe('errors.sessionExpired');
+      expect(authService.status()).toBe('anon');
+    });
+
+    it('a wrong password with a live session (/api/me 200) keeps the login error text', async () => {
+      await loginFirst();
+      globalThis.fetch = routedFetch({
+        '/api/auth/salt*': () => jsonResponse(200, { salt: VECTOR_SALT_HEX }),
+        '/api/auth/recovery-codes': () =>
+          jsonResponse(401, { error: 'unauthorized', message: 'Unauthorized' }),
+        '/api/me': () => jsonResponse(200, { userId: 'u1', username: 'alice' }),
+      });
+
+      const err = await authService.regenerateRecoveryCodes('wrong').catch((e: unknown) => e);
+
+      expect(authErrorKey(err)).toBe('errors.invalidCredentials');
+      expect(authService.status()).toBe('authed');
+    });
   });
   describe('logout / logoutAll', () => {
     async function loginFirst(): Promise<void> {

@@ -93,6 +93,16 @@ describe('RecoveryCodesDialogComponent', () => {
     expect(el.querySelector('.recovery-codes__code')).toBeNull();
   });
 
+  it('an expired session shows the session-expired text, not the login error', async () => {
+    const regenerate = vi.fn().mockRejectedValue(new ApiError(401, 'session_expired', 'expired'));
+    const { el, submit } = await mountDialog(regenerate);
+
+    await submit('pw');
+
+    expect(el.textContent).toContain(authEn.errors.sessionExpired);
+    expect(el.textContent).not.toContain(authEn.errors.invalidCredentials);
+  });
+
   it('Done closes the dialog', async () => {
     const { el, close, submit } = await mountDialog(vi.fn().mockResolvedValue(CODES));
     await submit('pw');

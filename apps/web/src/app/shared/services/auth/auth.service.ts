@@ -232,11 +232,31 @@ export class AuthService {
       `/api/auth/salt?username=${encodeURIComponent(username)}`,
     );
     const verifier = await deriveVerifierHex(password, salt);
-    const result = await apiJson<{ recoveryCodes: string[] }>('/api/auth/recovery-codes', {
-      method: 'POST',
-      body: JSON.stringify({ verifier }),
-    });
-    return result.recoveryCodes;
+    try {
+      const result = await apiJson<{ recoveryCodes: string[] }>('/api/auth/recovery-codes', {
+        method: 'POST',
+        body: JSON.stringify({ verifier }),
+      });
+      return result.recoveryCodes;
+    } catch (err) {
+      // The 401 body is the same for a dead session and a wrong password (kept identical to
+      // /login on purpose), so a 401 from /api/me tells the expired session apart.
+      if (err instanceof ApiError && err.status === 401 && (await this.sessionGone())) {
+        this.userState.set(null);
+        this.statusState.set('anon');
+        throw new ApiError(401, 'session_expired', 'Session expired');
+      }
+      throw err;
+    }
+  }
+
+  private async sessionGone(): Promise<boolean> {
+    try {
+      await apiJson<MeResponse>('/api/me');
+      return false;
+    } catch (err) {
+      return err instanceof ApiError && err.status === 401;
+    }
   }
 
   /** Ends the current device's session. Tolerates a network failure (or any other server error)
@@ -273,6 +293,7 @@ export class AuthService {
 
 const API_ERROR_KEYS: Readonly<Partial<Record<string, string>>> = {
   unauthorized: 'errors.invalidCredentials',
+  session_expired: 'errors.sessionExpired',
   too_many_requests: 'errors.lockout',
   conflict: 'errors.usernameTaken',
   bad_request: 'errors.badRequest',

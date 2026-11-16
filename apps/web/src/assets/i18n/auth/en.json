@@ -87,6 +87,7 @@
   },
   "errors": {
     "invalidCredentials": "Incorrect username or password.",
+    "sessionExpired": "Your session has ended. Log in again to continue.",
     "lockout": "Too many attempts. Please try again later.",
     "usernameTaken": "That username is already taken.",
     "badRequest": "Something about that request wasn't valid.",
