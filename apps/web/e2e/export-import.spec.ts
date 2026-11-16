@@ -91,4 +91,32 @@ test.describe('export / import (.hero)', () => {
       await expect(page.locator('.sheet-shell__portrait img')).toBeVisible();
     });
   });
+  // Plan 19 task 9 (R61): Settings' "Export all heroes" zip imports back through the same Import.
+  test('export all, delete one hero, import the zip: one imported, one merged', async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker = undefined;
+      Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    });
+    const names = ['Aldric Zip One', 'Brenna Zip Two'];
+    for (const name of names) await createFighter(page, name);
+
+    await page.goto('/settings');
+    const downloadPromise = page.waitForEvent('download');
+    await strapAction(page, 'export-all').click();
+    const savedPath = await (await downloadPromise).path();
+    if (!savedPath) throw new Error('download.path() returned null');
+
+    await page.goto('/characters');
+    const row = page.locator('.characters-list__item', { hasText: names[0] });
+    await row.getByRole('button', { name: `More actions for ${names[0]}` }).click();
+    await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+    await page.locator('.characters-delete-confirm__confirm').click();
+    await expect(row).toHaveCount(0);
+
+    await page.locator('.characters-list__import-input').setInputFiles(savedPath);
+    await expect(page.getByText('1 hero imported, 1 merged, 0 skipped')).toBeVisible();
+    for (const name of names) {
+      await expect(page.locator('.characters-list__item', { hasText: name })).toBeVisible();
+    }
+  });
 });

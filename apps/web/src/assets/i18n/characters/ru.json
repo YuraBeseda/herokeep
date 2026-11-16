@@ -25,6 +25,8 @@
       "import-failed-bad-pack": "Набор .hero содержит недопустимый пакет контента ({pack}).",
       "import-failed-pack-conflict": "Набор .hero содержит {pack}, но другой пакет с тем же именем и версией уже установлен.",
       "import-failed-synced": "Импорт недоступен, пока этот персонаж синхронизируется.",
+      "import-failed-not-hero-or-export": "Этот файл не является героем или экспортом героев.",
+      "import-all-summary": "Импорт завершён: импортировано героев — {imported}, объединено — {merged}, пропущено — {skipped}.",
       "import-failed-generic": "Не удалось импортировать файл. Попробуйте снова."
     },
     "installBanner": {

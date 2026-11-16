@@ -247,7 +247,7 @@ describe('HomeComponent', () => {
       });
       const { el, settle } = await setup();
       const input = q<HTMLInputElement>(el, '.home__import-input')!;
-      expect(input.getAttribute('accept')).toBe('.hero');
+      expect(input.getAttribute('accept')).toBe('.hero,.zip');
       const click = vi.spyOn(input, 'click');
 
       strap('import')!.run();

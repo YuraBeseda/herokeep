@@ -560,7 +560,8 @@ describe('CharactersListComponent', () => {
     setInputFiles(input, [new File([new Uint8Array([1])], 'first.hero')]);
     setInputFiles(input, [new File([new Uint8Array([2])], 'second.hero')]);
 
-    expect(importFn).toHaveBeenCalledTimes(1);
+    // The flow peeks at the file's zip directory (async) before handing it to the reader.
+    await vi.waitFor(() => expect(importFn).toHaveBeenCalledTimes(1));
     resolveFirst(mkImportResult());
     await flushDeleteFlow(fixture);
   });

@@ -25,6 +25,8 @@
       "import-failed-bad-pack": "That .hero bundle carries an invalid content pack ({pack}).",
       "import-failed-pack-conflict": "That .hero bundle carries {pack}, but a different pack with the same name and version is already installed.",
       "import-failed-synced": "Import unavailable while this character is syncing.",
+      "import-failed-not-hero-or-export": "That file is not a hero or an export of heroes.",
+      "import-all-summary": "Import finished: {imported, plural, one {# hero imported} other {# heroes imported}}, {merged, plural, one {# merged} other {# merged}}, {skipped, plural, one {# skipped} other {# skipped}}.",
       "import-failed-generic": "Couldn't import that file. Try again."
     },
     "installBanner": {
