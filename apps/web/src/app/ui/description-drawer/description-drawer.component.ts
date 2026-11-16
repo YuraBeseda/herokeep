@@ -28,6 +28,7 @@ import {
   HkOptionsChipComponent,
   type OptionsChipOption,
 } from '../options-chip/options-chip.component';
+import { HkSpellHigherLevelsComponent } from '../spell-higher-levels/spell-higher-levels.component';
 import { HkTagChipComponent } from '../tag-chip/tag-chip.component';
 
 type Opener = ElementRef<HTMLElement> | HTMLElement | null | undefined;
@@ -86,6 +87,7 @@ const POPOVER_OPTION_LIMIT = 24;
     HkTagChipComponent,
     HkOptionsChipComponent,
     EntityFactsComponent,
+    HkSpellHigherLevelsComponent,
   ],
   providers: [provideTranslocoScope('library')],
   templateUrl: './description-drawer.component.html',

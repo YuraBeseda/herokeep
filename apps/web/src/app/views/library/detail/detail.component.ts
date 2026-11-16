@@ -22,6 +22,7 @@ import { ToastService } from '@shared/components/toast/toast.service';
 import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
+import { HkSpellHigherLevelsComponent } from '../../../ui/spell-higher-levels/spell-higher-levels.component';
 import { MarkdownService } from '@shared/services/markdown/markdown.service';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
 import { CharacterStore } from '@shared/stores/character.store';
@@ -60,6 +61,7 @@ interface HeroAdd {
     EntityFactsComponent,
     HkLeafComponent,
     HkTagChipComponent,
+    HkSpellHigherLevelsComponent,
     HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('library')],

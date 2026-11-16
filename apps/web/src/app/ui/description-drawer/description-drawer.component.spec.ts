@@ -148,6 +148,14 @@ describe('HkDescriptionDrawerComponent', () => {
     expect(mastery.textContent).toContain('Level 1');
   });
 
+  it('shows the higher-level text and dice for a spell', async () => {
+    const { el } = await render('srd-5e-2024:spell/fireball');
+    const block = el.querySelector('.hk-higher-levels');
+    expect(block?.textContent).toContain('At higher levels');
+    expect(block?.textContent).toContain('The damage increases by 1d6');
+    expect(block?.textContent).toContain('Slot 4: 9d6');
+  });
+
   it('shows no choices section for an entry that offers none', async () => {
     const { el } = await render('srd-5e-2024:spell/fireball');
     expect(el.querySelector('.hk-description__choice')).toBeNull();

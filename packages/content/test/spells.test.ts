@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { transformSpells } from '../src/transform/spells.ts';
 import { expectAllValid } from './support/valid.ts';
 
+const PER_SLOT = 36;
+const CANTRIP = 11;
+
 describe('spell transform', () => {
   const spells = transformSpells();
   const byId = new Map(spells.map((s) => [s.id, s]));
@@ -66,5 +69,24 @@ describe('spell transform', () => {
       expect(withAttack.filter((s) => s.attack === 'ranged')).toHaveLength(13);
       expect(withAttack.filter((s) => s.attack === 'melee')).toHaveLength(8);
     });
+  });
+
+  it('parses higher-level dice', () => {
+    expect(byId.get('srd-5e-2024:spell/fireball')).toMatchObject({
+      higherLevelDice: { perSlot: { dice: '1d6', aboveLevel: 3 } },
+    });
+    expect(byId.get('srd-5e-2024:spell/acid-splash')).toMatchObject({
+      higherLevelDice: {
+        cantrip: [
+          { level: 5, dice: '2d6' },
+          { level: 11, dice: '3d6' },
+          { level: 17, dice: '4d6' },
+        ],
+      },
+    });
+    expect(byId.get('srd-5e-2024:spell/aid')).not.toHaveProperty('higherLevelDice');
+    const withDice = spells.filter((s) => 'higherLevelDice' in s) as { higherLevelDice: object }[];
+    expect(withDice.filter((s) => 'perSlot' in s.higherLevelDice)).toHaveLength(PER_SLOT);
+    expect(withDice.filter((s) => 'cantrip' in s.higherLevelDice)).toHaveLength(CANTRIP);
   });
 });

@@ -21,6 +21,9 @@
           </section>
         }
       </div>
+      @if (current.type === 'spell') {
+        <hk-spell-higher-levels [spell]="current" />
+      }
       @if (choices().length > 0) {
         <section class="hk-description__choices" [attr.aria-label]="t('detail.choices')">
           <h3 class="hk-description__feature">{{ t('detail.choices') }}</h3>

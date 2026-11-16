@@ -160,4 +160,27 @@ describe('class / subclass / spell / item', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts the two higherLevelDice shapes and refuses aboveLevel 9', () => {
+    const base = {
+      id: `${P}:spell/x`,
+      type: 'spell',
+      name: 'X',
+      level: 3,
+      school: 'evocation',
+      castingTime: { value: 1, unit: 'action' },
+      range: { kind: 'self' },
+      components: { v: true, s: false, m: false },
+      duration: { kind: 'instantaneous' },
+      concentration: false,
+      ritual: false,
+      classes: [],
+    };
+    const parse = (extra: object) => EntitySchema.safeParse({ ...base, ...extra }).success;
+    expect(parse({})).toBe(true);
+    expect(parse({ higherLevelDice: { perSlot: { dice: '1d6', aboveLevel: 3 } } })).toBe(true);
+    expect(parse({ higherLevelDice: { cantrip: [{ level: 5, dice: '2d6' }, { level: 11, dice: '3d6' }] } })).toBe(true);
+    expect(parse({ higherLevelDice: { perSlot: { dice: '1d6', aboveLevel: 9 } } })).toBe(false);
+    expect(parse({ higherLevelDice: { cantrip: [{ level: 6, dice: '2d6' }] } })).toBe(false);
+  });
 });

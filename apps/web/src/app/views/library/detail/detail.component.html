@@ -79,6 +79,10 @@
           }
         </section>
 
+        @if (currentEntity.type === 'spell') {
+          <hk-spell-higher-levels [spell]="currentEntity" />
+        }
+
         @if (spellExtras(); as extras) {
           <div class="library-detail__extras">
             @if (extras.lists.length > 0) {

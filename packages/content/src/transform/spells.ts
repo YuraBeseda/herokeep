@@ -197,6 +197,26 @@ function mapMaterialText(fields: Record<string, unknown>, pk: FixtureRecord['pk'
   return materialText;
 }
 
+const PER_SLOT_RE = /^The damage increases by (\S+) for each spell slot level above (\d)/;
+const CANTRIP_RE = /^The damage increases by \S+ when you reach levels 5 \((\S+)\), 11 \((\S+)\), and 17 \((\S+)\)/;
+
+/**
+ * Reads the two regular SRD `higher_level` phrasings into data; every other phrasing (healing, extra
+ * targets, durations, several damage types) stays text only. Dice that fail `DiceSchema` are skipped.
+ */
+function mapHigherLevelDice(text: string | undefined) {
+  if (!text) return undefined;
+  const slot = PER_SLOT_RE.exec(text);
+  if (slot && DiceSchema.safeParse(slot[1]).success) {
+    return { perSlot: { dice: slot[1]!, aboveLevel: Number(slot[2]) } };
+  }
+  const c = CANTRIP_RE.exec(text);
+  if (c && c.slice(1).every((d) => DiceSchema.safeParse(d).success)) {
+    return { cantrip: ([5, 11, 17] as const).map((level, i) => ({ level, dice: c[i + 1]! })) };
+  }
+  return undefined;
+}
+
 /**
  * The 339 `Spell.json` records as `spell` entities. Every upstream vocabulary (casting_time,
  * school, saving_throw_ability, duration) is matched against an explicit lookup table or pattern;
@@ -212,6 +232,7 @@ export function transformSpells(): Entity[] {
     const save = mapSave(fields, pk);
     const attack = mapAttack(fields, pk);
     const higherLevels = fieldOptionalStr(fields, 'higher_level', pk);
+    const higherLevelDice = mapHigherLevelDice(higherLevels);
     return {
       type: 'spell',
       ...baseEntity(spellId(slug), name, fieldStr(fields, 'desc', pk)),
@@ -233,6 +254,7 @@ export function transformSpells(): Entity[] {
       ...(save ? { save } : {}),
       ...(attack ? { attack } : {}),
       ...(higherLevels ? { higherLevels } : {}),
+      ...(higherLevelDice ? { higherLevelDice } : {}),
     };
   });
 }

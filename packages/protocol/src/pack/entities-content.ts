@@ -36,6 +36,15 @@ export const SpellEntitySchema = entity('spell', {
   save: AbilityKeySchema.optional(),
   attack: z.enum(['melee', 'ranged']).optional(),
   higherLevels: LongTextSchema.optional(),
+  /** Parsed from the SRD `higher_level` text; the text itself stays in `higherLevels`. */
+  higherLevelDice: z
+    .union([
+      z.strictObject({ perSlot: z.strictObject({ dice: DiceSchema, aboveLevel: z.int().min(1).max(8) }) }),
+      z.strictObject({
+        cantrip: z.array(z.strictObject({ level: z.union([z.literal(5), z.literal(11), z.literal(17)]), dice: DiceSchema })),
+      }),
+    ])
+    .optional(),
 });
 
 export const ItemEntitySchema = entity('item', {

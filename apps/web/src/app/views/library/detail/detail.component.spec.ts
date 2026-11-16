@@ -121,6 +121,25 @@ describe('LibraryDetailComponent', () => {
     }
   });
 
+  it.each([
+    ['srd-5e-2024:spell/fireball', true, ['Slot 4: 9d6', 'Slot 9: 14d6']],
+    ['srd-5e-2024:spell/aid', true, []],
+    ['srd-5e-2024:spell/shield', false, []],
+  ])('higher levels of %s: section %s, chips %j', async (id, section, chips) => {
+    seedStore([corePack], id);
+    const fixture = TestBed.createComponent(LibraryDetailComponent);
+    await fixture.whenStable();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const block = el.querySelector('.hk-higher-levels');
+    expect(block !== null).toBe(section);
+    if (section) expect(block?.textContent).toContain('At higher levels');
+    expect(Array.from(el.querySelectorAll('.hk-higher-levels hk-tag-chip')).map((c) => c.textContent?.trim())).toEqual(
+      expect.arrayContaining(chips),
+    );
+    expect(el.querySelectorAll('.hk-higher-levels hk-tag-chip').length).toBe(chips.length ? 6 : 0);
+  });
+
   it('renders the fireball spell: name, fact.level = 3, the school fact, and a rendered description', async () => {
     seedStore([corePack], 'srd-5e-2024:spell/fireball');
     const fixture = TestBed.createComponent(LibraryDetailComponent);
