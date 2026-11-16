@@ -10,7 +10,9 @@ export interface LocalizedText {
 
 export interface Localizer {
   readonly locale: string;
-  text(entityId: string, field: string): LocalizedText;
+  /** `fallback` is the source text for a field path the entity holds no string at (e.g. a nested
+   * `startingEquipment.A.notes.0`). */
+  text(entityId: string, field: string, fallback?: string): LocalizedText;
   name(entityId: string): string;
   choicePrompt(choiceId: string): LocalizedText;
 }
@@ -61,7 +63,7 @@ export function createLocalizer(index: ContentIndex, locale: string): Localizer 
     isFallback: locale !== 'en' && base !== 'en',
   });
 
-  const text = (entityId: string, field: string): LocalizedText => {
+  const text = (entityId: string, field: string, fallback?: string): LocalizedText => {
     const parsed = parseEntityId(entityId);
     const entity = index.get(entityId);
     if (!parsed || !entity) return { text: '', locale: 'en', isFallback: true };
@@ -71,7 +73,7 @@ export function createLocalizer(index: ContentIndex, locale: string): Localizer 
     }
     const rec = entity as unknown as Record<string, unknown>;
     const v = rec[field];
-    return source(typeof v === 'string' ? v : undefined);
+    return source(typeof v === 'string' ? v : fallback);
   };
 
   const choicePrompt = (choiceId: string): LocalizedText => {

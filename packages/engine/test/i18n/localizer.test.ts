@@ -42,4 +42,26 @@ describe('createLocalizer', () => {
     const en = createLocalizer(index, 'en');
     expect(en.text('core-mini:spell/fireball', 'name')).toEqual({ text: 'Fireball', locale: 'en', isFallback: false });
   });
+
+  it('localizes a non-string field path, falling back to the given source text', () => {
+    const t = loadFixturePack('translation-mini');
+    const withNote = {
+      ...t,
+      strings: { ...t.strings, 'class/fighter': { name: 'Воин', 'startingEquipment.A.notes.0': 'Свиток по выбору' } },
+    };
+    const idx = createContentIndex([loadFixturePack('core-mini'), withNote]);
+    const field = 'startingEquipment.A.notes.0';
+    expect(createLocalizer(idx, 'ru').text('core-mini:class/fighter', field, 'A scroll of your choice')).toEqual({
+      text: 'Свиток по выбору',
+      locale: 'ru',
+      isFallback: false,
+    });
+    expect(createLocalizer(idx, 'uk').text('core-mini:class/fighter', field, 'A scroll of your choice')).toEqual({
+      text: 'A scroll of your choice',
+      locale: 'en',
+      isFallback: true,
+    });
+    // A string-valued field still wins over the fallback.
+    expect(createLocalizer(idx, 'en').text('core-mini:class/fighter', 'name', 'x').text).toBe('Fighter');
+  });
 });
