@@ -35,7 +35,7 @@
             class="entity-picker__toggle"
             [attr.aria-pressed]="isSelected(row.id)"
             [attr.aria-disabled]="blocked(row) ? 'true' : null"
-            [attr.aria-description]="row.gate ? t(row.gate) : null"
+            [attr.aria-description]="row.gate ?? null"
             [attr.aria-label]="
               row.detail.length > 0
                 ? null
@@ -43,7 +43,7 @@
                   ? row.name + ' — ' + row.meta.join(', ')
                   : row.name
             "
-            [hkTooltip]="row.gate ? t(row.gate) : ''"
+            [hkTooltip]="row.gate ?? ''"
             (click)="blocked(row) ? null : onToggle(row.id)"
           >
             <hk-icon [icon]="row.icon" class="entity-picker__icon" />
@@ -98,7 +98,7 @@
             [meta]="row.meta"
             [selected]="isSelected(row.id)"
             [gated]="!!row.gate"
-            [reason]="row.gate ? t(row.gate) : null"
+            [reason]="row.gate ?? null"
             (choose)="onToggle(row.id)"
             (details)="onDetails(row.id)"
           />
@@ -122,7 +122,7 @@
           class="entity-picker__drawer-choose"
           [variant]="isSelected(id) ? 'parchment' : 'primary'"
           [attr.aria-pressed]="isSelected(id)"
-          [disabledReason]="blocked(current) ? t(current.gate!) : null"
+          [disabledReason]="blocked(current) ? current.gate! : null"
           (click)="onToggle(id)"
         >
           {{ isSelected(id) ? t('wizard.picker.chosen') : t('wizard.picker.choose') }}

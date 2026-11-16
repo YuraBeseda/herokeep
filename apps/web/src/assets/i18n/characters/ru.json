@@ -117,7 +117,17 @@
       "more": "Ещё {count, plural, one {# вариант} few {# варианта} many {# вариантов} other {# варианта}} — уточните поиск",
       "gate": {
         "prerequisiteFailed": "Требования не выполнены",
-        "duplicate": "Уже выбрано"
+        "duplicate": "Уже выбрано",
+        "requires": "Требуется: {what}",
+        "gte": "{label} {value}+",
+        "lte": "{label} не более {value}",
+        "eq": "{label} {value}",
+        "level": "Уровень персонажа",
+        "classLevel": "Уровень класса {class}",
+        "spellcaster": "Умение накладывать заклинания",
+        "oneOf": "Одно из: {list}",
+        "or": "{a} или {b}",
+        "join": "{a}, {b}"
       },
       "searchLabel": "Поиск вариантов",
       "filterLabel": "Фильтр вариантов",

@@ -7,6 +7,7 @@ export * from './formula/validate.ts';
 export * from './predicate/context.ts';
 export * from './predicate/evaluate.ts';
 export * from './predicate/depth.ts';
+export * from './predicate/unmet.ts';
 export * from './effects/registry.ts';
 export * from './effects/validate.ts';
 export * from './content/patch.ts';

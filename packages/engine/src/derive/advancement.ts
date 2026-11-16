@@ -2,6 +2,7 @@ import type { Choice, Predicate } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import { constantPredicateContext, type PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
+import { unmetPrerequisites } from '../predicate/unmet.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { offeredChoiceCount } from './choice-count.ts';
 import { offeredRowChoices } from './choices.ts';
@@ -135,6 +136,17 @@ export function multiclassStanding(sheet: Sheet, index: ContentIndex): { eligibl
     (currentClassesQualify && evaluatePredicate(predicate, ctx) ? standing.eligible : standing.unmet).push(classId);
   }
   return standing;
+}
+
+/** Why `classId` is in `multiclassStanding(...).unmet`: the failing predicates of its own
+ * prerequisite, else of the already-taken classes that no longer qualify. */
+export function multiclassUnmetPrerequisites(sheet: Sheet, index: ContentIndex, classId: string): Predicate[] {
+  const prerequisites = index.system().multiclass?.prerequisites ?? {};
+  const ctx = multiclassPredicateContext(sheet, index);
+  const forClass = (id: string): Predicate[] =>
+    Object.entries(prerequisites).flatMap(([ref, p]) => ((index.resolveClassRef(ref) ?? ref) === id ? [p] : []));
+  const own = unmetPrerequisites(forClass(classId), ctx);
+  return own.length > 0 ? own : unmetPrerequisites(sheet.classes.flatMap((c) => forClass(c.classId)), ctx);
 }
 
 /**

@@ -9,7 +9,10 @@ import {
   type Sheet,
 } from '@hk/engine';
 import { makeEntityId, parseEntityId } from '@hk/protocol';
-import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { provideTranslocoScope, TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { switchMap } from 'rxjs';
+import { prerequisiteReason } from '@shared/services/engine/prerequisite-text';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
@@ -61,8 +64,8 @@ const KNOWN_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
 // family already recorded — mapped to the scope-relative reason key the picker renders on that
 // option's gated card. Selection-level codes (count, a choice-level prerequisite) gate nothing.
 const OPTION_GATE_KEYS: Readonly<Record<string, string>> = {
-  'selection.prerequisiteFailed': 'wizard.picker.gate.prerequisiteFailed',
-  'selection.duplicate': 'wizard.picker.gate.duplicate',
+  'selection.prerequisiteFailed': 'characters.wizard.picker.gate.prerequisiteFailed',
+  'selection.duplicate': 'characters.wizard.picker.gate.duplicate',
 };
 
 const NO_GATES: ReadonlyMap<string, string> = new Map();
@@ -107,6 +110,15 @@ export class ChoiceStepComponent {
   // tab renders this component with none in context, always passing the overrides below instead.
   private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
+  private readonly transloco = inject(TranslocoService);
+  /** Emits once the `characters` bundle is loaded so the gate reasons (read synchronously) re-run. */
+  private readonly translationsReady = toSignal(
+    this.transloco.langChanges$.pipe(
+      switchMap(() => this.transloco.selectTranslate('wizard.picker.gate.requires', {}, 'characters')),
+    ),
+  );
+  private readonly tr = (key: string, params?: Record<string, unknown>): string =>
+    this.transloco.translate(key, params);
 
   // Inputs
   readonly choiceId = input.required<string>();
@@ -221,6 +233,7 @@ export class ChoiceStepComponent {
    * source (draft / live sheet), so a gate lifts as soon as the character qualifies.
    */
   protected readonly optionGates = computed<ReadonlyMap<string, string>>(() => {
+    this.translationsReady();
     const v = this.view();
     if ((v.kind !== 'query' && v.kind !== 'static') || v.ids.length === 0) return NO_GATES;
     const offered = new Set(v.ids);
@@ -228,7 +241,13 @@ export class ChoiceStepComponent {
     for (const d of this.runValidate(this.choiceId(), v.ids)) {
       const key = OPTION_GATE_KEYS[d.code];
       if (d.severity === 'error' && key && d.entityId && offered.has(d.entityId)) {
-        if (!gates.has(d.entityId)) gates.set(d.entityId, key);
+        if (gates.has(d.entityId)) continue;
+        gates.set(
+          d.entityId,
+          d.unmet?.length
+            ? prerequisiteReason(d.unmet, this.tr, (ref) => this.engineFacade.requirementName(ref))
+            : this.tr(key),
+        );
       }
     }
     return gates;

@@ -5,6 +5,8 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '@shared/icons/icon.component';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { prerequisiteReason } from '@shared/services/engine/prerequisite-text';
+import { multiclassUnmetPrerequisites } from '@hk/engine';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { HkButtonComponent } from '../../../ui/button/button.component';
 import { DialogService } from '../../../ui/dialog/dialog.service';
@@ -53,6 +55,8 @@ interface ClassCard {
   readonly isNewClass: boolean;
   /** A class the character may not start yet: listed, with its reason, but not choosable. */
   readonly gated: boolean;
+  /** Why it is gated, in words ("Requires Strength 13+"). */
+  readonly reason: string | null;
 }
 
 /**
@@ -212,6 +216,7 @@ export class LevelUpComponent {
   protected readonly classCards = computed<ClassCard[]>(() => {
     const index = this.engineFacade.index();
     const localizer = this.engineFacade.localizer();
+    const sheet = this.characterStore.sheet();
     const card = (classId: string, toLevel: number, isNewClass: boolean, gated: boolean) => {
       const entity = index.get(classId);
       const level = this.chrome.tr('characters.levelUp.classPicker.toLevel', { level: toLevel });
@@ -222,6 +227,12 @@ export class LevelUpComponent {
         meta: [level, ...(entity ? pickerMeta(entity) : [])],
         isNewClass,
         gated,
+        reason:
+          gated && sheet
+            ? prerequisiteReason(multiclassUnmetPrerequisites(sheet, index, classId), (k, p) => this.chrome.tr(k, p), (r) =>
+                this.engineFacade.requirementName(r),
+              )
+            : null,
       };
     };
     return [

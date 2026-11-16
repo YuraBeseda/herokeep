@@ -58,7 +58,7 @@
                     [description]="card.description"
                     [meta]="card.meta"
                     [gated]="card.gated"
-                    [reason]="card.gated ? t('wizard.picker.gate.prerequisiteFailed') : null"
+                    [reason]="card.reason"
                     (choose)="onChooseClass(card.classId)"
                     (details)="onClassDetails(card.classId)"
                   />

@@ -117,7 +117,17 @@
       "more": "{count, plural, one {# more option} other {# more options}} — refine your search",
       "gate": {
         "prerequisiteFailed": "Prerequisites not met",
-        "duplicate": "Already chosen"
+        "duplicate": "Already chosen",
+        "requires": "Requires {what}",
+        "gte": "{label} {value}+",
+        "lte": "{label} {value} or less",
+        "eq": "{label} {value}",
+        "level": "Character level",
+        "classLevel": "{class} level",
+        "spellcaster": "Ability to cast spells",
+        "oneOf": "One of: {list}",
+        "or": "{a} or {b}",
+        "join": "{a}, {b}"
       },
       "searchLabel": "Search options",
       "filterLabel": "Filter options",

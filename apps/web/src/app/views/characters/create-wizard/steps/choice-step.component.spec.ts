@@ -64,6 +64,7 @@ function configure(): void {
         },
         loader: StubLoader,
       }),
+      provideTranslocoMessageformat(),
       {
         provide: PackStore,
         useValue: { packs: signal([corePack]), ready: signal(true), corePack: signal(corePack) },
@@ -420,9 +421,8 @@ describe('ChoiceStepComponent', () => {
       );
       for (const boon of boons) {
         expect(isBlocked(boon), nameOf(boon)).toBe(true);
-        expect(reasonOf(compiled, boon), nameOf(boon)).toBe(
-          charactersEn.wizard.picker.gate.prerequisiteFailed,
-        );
+        // The reason names the unmet requirement (an Epic Boon needs character level 19).
+        expect(reasonOf(compiled, boon), nameOf(boon)).toBe('Requires Character level 19+');
       }
       // Level 4 / Str 17 satisfies ASI's and Grappler's own prerequisites: not gated.
       for (const eligible of buttons.filter((b) => !nameOf(b).startsWith('Boon of'))) {

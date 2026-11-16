@@ -28,7 +28,7 @@ interface EntityRow {
   readonly detail: FactValue[];
   /** The facts' values, for the filter chips. */
   readonly facts: ReadonlySet<string>;
-  // Scope-relative i18n key of the reason this option can't be picked (see `gates`), if any.
+  // Already-translated reason this option can't be picked (see `gates`), if any.
   readonly gate: string | undefined;
 }
 
@@ -56,7 +56,7 @@ const SEARCH_THRESHOLD = 8;
  * `limit` (controller ruling, task-6 fix round): when the search-filtered result count exceeds it,
  * only the first `limit` options render, followed by a hint naming how many more are hidden.
  *
- * `gates` (plan 13 task 8, ruling 10): option id -> scope-relative i18n key of the reason the
+ * `gates` (plan 13 task 8, ruling 10): option id -> already-translated reason the
  * caller's validation refuses that option. A gated option stays LISTED (discoverability) with its
  * choose control disabled and the reason as its hint; its details stay openable. A gated option that
  * is already SELECTED keeps its control enabled — the gate only blocks ADDING an option.

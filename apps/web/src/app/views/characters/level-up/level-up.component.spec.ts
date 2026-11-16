@@ -1045,7 +1045,7 @@ describe('LevelUpComponent', () => {
       expect(card, 'a gated Wizard card').toBeDefined();
       expect(card!.classList.contains('hk-picker-card--gated')).toBe(true);
       expect(card!.querySelector('.hk-picker-card__gate')?.getAttribute('aria-label')).toBe(
-        charactersEn.wizard.picker.gate.prerequisiteFailed,
+        'Requires Intelligence 13+',
       );
       const choose = card!.querySelector<HTMLButtonElement>('.hk-picker-card__choose')!;
       expect(choose.getAttribute('aria-disabled') === 'true' || choose.disabled).toBe(true);

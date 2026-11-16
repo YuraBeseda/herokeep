@@ -169,6 +169,15 @@ export class EngineFacade {
     return index;
   }
 
+  /** Localized name of an entity id, a class ref or an ability abbreviation (a prerequisite's subject). */
+  requirementName(ref: string): string {
+    const index = this.index();
+    const id = index.resolveClassRef(ref) ?? ref;
+    const abilityId = index.byType('ability').find((e) => e.type === 'ability' && e.abbreviation === ref)?.id;
+    const target = index.has(id) ? id : abilityId;
+    return target ? this.localizer().name(target) : ref.toUpperCase();
+  }
+
   // Resolution order: the entity's own `gi:`-prefixed icon, then the icons-map `entities`
   // lookup by id, then a category fallback, then the map's own `fallback` entry.
   iconFor(entity: Entity): string {

@@ -12,6 +12,7 @@ import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, error } from '../diagnostics.ts';
 import type { PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
+import { unmetPrerequisites } from '../predicate/unmet.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { type AbilitiesPick, abilitiesPickOptions } from './abilities.ts';
 import { offeredChoiceCount } from './choice-count.ts';
@@ -37,11 +38,13 @@ function checkPrerequisites(
 ): Diagnostic[] {
   const issues: Diagnostic[] = [];
   for (const p of prerequisites) {
-    if (!evaluatePredicate(p, ctx)) {
+    const unmet = unmetPrerequisites([p], ctx);
+    if (unmet.length > 0) {
       issues.push(
         error('selection.prerequisiteFailed', 'Prerequisites are not met', {
           path: choiceId,
           ...(entityId !== undefined ? { entityId } : {}),
+          unmet,
         }),
       );
     }
