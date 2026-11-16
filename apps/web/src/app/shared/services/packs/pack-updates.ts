@@ -23,10 +23,9 @@ const byPackId = (a: PackUpdate, b: PackUpdate): number =>
  * The updates available for a character pinned to `pins` on a device with `installed` packs.
  *
  * - Content: for each pinned content pack, the HIGHEST installed version strictly above the pin,
- *   by semver precedence (the engine's own `selectPackVersions` order, same `semver` package). A
- *   prerelease ranks below its release and above the previous release (`1.0.0 < 1.1.0-beta.1 <
- *   1.1.0`), so it is offered like any other higher version. The pinned version itself need not be
- *   installed.
+ *   by semver precedence (the engine's own `selectPackVersions` order, same `semver` package).
+ *   Prerelease candidates are never offered (owner decision), even to a character pinned to a
+ *   prerelease; the stable release of that line is. The pinned version itself need not be installed.
  * - Core: an update to `shippedCore.version` only when it is strictly NEWER than the pinned core
  *   (the app serves only the shipped core). A pinned core newer than the shipped one (a character
  *   made on a newer app) gets no update: that would be a downgrade; the missing-pack banner reports
@@ -54,7 +53,7 @@ export function updatesFor(
     let to: string | undefined;
     for (const pack of installed) {
       if (pack.id !== packId || pack.kind !== 'content') continue;
-      if (!semver.gt(pack.version, from)) continue;
+      if (semver.prerelease(pack.version) !== null || !semver.gt(pack.version, from)) continue;
       if (to === undefined || semver.gt(pack.version, to)) to = pack.version;
     }
     if (to !== undefined) updates.push({ packId, from, to, kind: 'content' });

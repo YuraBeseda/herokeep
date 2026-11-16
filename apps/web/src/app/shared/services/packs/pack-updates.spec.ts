@@ -55,10 +55,11 @@ describe('updatesFor (plan 15 Task 5)', () => {
     ]);
   });
 
-  it('prerelease rule: semver precedence (1.1.0-beta.1 is above 1.0.0 and below 1.1.0)', () => {
-    expect(updatesFor({ a: '1.0.0' }, [mkPack('a', '1.1.0-beta.1')], CORE)).toEqual([
-      { packId: 'a', from: '1.0.0', to: '1.1.0-beta.1', kind: 'content' },
-    ]);
+  it('prerelease rule: prerelease candidates are never offered; the stable release of the line is', () => {
+    expect(updatesFor({ a: '1.0.0' }, [mkPack('a', '1.1.0-beta.1')], CORE)).toEqual([]);
+    expect(
+      updatesFor({ a: '1.0.0' }, [mkPack('a', '1.1.0-beta.1'), mkPack('a', '1.0.1')], CORE),
+    ).toEqual([{ packId: 'a', from: '1.0.0', to: '1.0.1', kind: 'content' }]);
     expect(updatesFor({ a: '1.1.0' }, [mkPack('a', '1.1.0-beta.1')], CORE)).toEqual([]);
     expect(
       updatesFor({ a: '1.1.0-beta.1' }, [mkPack('a', '1.1.0-beta.2'), mkPack('a', '1.1.0')], CORE),
