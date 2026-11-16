@@ -227,7 +227,8 @@
       "gain": "+{gain} очок здоров'я",
       "total": "Максимум очок здоров'я: {before} → {after}",
       "rollResult": "Випало {value}.",
-      "averageResult": "Взято середнє значення."
+      "averageResult": "Взято середнє значення.",
+      "rolledOnce": "Кинуто — один кидок на рівень"
     },
     "review": {
       "title": "Усе, що ви отримуєте на {level} рівні",

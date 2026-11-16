@@ -121,6 +121,7 @@
                     ? 'parchment'
                     : 'primary'
                 "
+                [disabledReason]="state.hasRolled() ? t('levelUp.hp.rolledOnce') : null"
                 (click)="onRollHp()"
               >
                 {{ t('levelUp.hp.roll') }}
@@ -148,6 +149,7 @@
                 type="button"
                 class="level-up__hp-average"
                 [variant]="state.hpRoll() === 'average' ? 'parchment' : 'primary'"
+                [disabledReason]="state.hasRolled() ? t('levelUp.hp.rolledOnce') : null"
                 (click)="state.chooseAverageHp()"
               >
                 {{ t('levelUp.hp.average') }}

@@ -120,4 +120,32 @@ test.describe('level up — XP entry, average HP, and revert', () => {
       await expect(hpMax(page)).toHaveText('12');
     });
   });
+
+  // R43: one hit point roll per level, kept on the device while the player leaves and returns.
+  test('a rolled hit die survives leaving the level up; Roll and the average stay closed; the sheet max includes the roll', async ({
+    page,
+  }) => {
+    await createFighter(page, CHARACTER_NAME);
+    await awardXp(page, 300);
+    await (await levelUpLink(page)).click();
+    await chooseOwnClassIfPrompted(page);
+    await page.locator('.level-up__hp-roll').click();
+    const die = page.locator('.level-up__hp-die');
+    await expect(die).toHaveCount(1);
+    const rolled = Number((await die.textContent())?.trim());
+
+    // Leave (a reload drops all in-memory state) and come back to the same level up.
+    await page.reload();
+    await chooseOwnClassIfPrompted(page);
+    await expect(die).toHaveText(String(rolled));
+    await expect(page.locator('.level-up__hp-roll')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('.level-up__hp-average')).toHaveAttribute('aria-disabled', 'true');
+
+    await page.locator('[data-action="next"]').click();
+    await expect(page.locator('.level-up__review')).toBeVisible();
+    await page.locator('[data-action="next"]').click();
+    await expect(page).toHaveURL(SHEET_HOME);
+    if (isPhone(page)) await openPhoneTab(page, 'Combat');
+    await expect(hpMax(page)).toHaveText(String(12 + rolled + 2)); // 12 + die + Constitution mod
+  });
 });

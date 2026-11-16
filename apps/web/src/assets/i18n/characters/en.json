@@ -227,7 +227,8 @@
       "gain": "+{gain} hit points",
       "total": "Hit point maximum {before} to {after}",
       "rollResult": "Rolled {value}.",
-      "averageResult": "Taking the average."
+      "averageResult": "Taking the average.",
+      "rolledOnce": "Rolled — one roll per level"
     },
     "review": {
       "title": "Everything gained at level {level}",

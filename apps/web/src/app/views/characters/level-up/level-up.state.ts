@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked, type Signal } from '@angular/core';
 import {
   derive,
   ENGINE_VERSION,
@@ -20,6 +20,8 @@ import {
 import { parseEvent, type Event } from '@hk/protocol';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { cryptoRng } from '@shared/services/engine/rng';
+import { HkDb } from '@shared/services/storage/dexie.db';
+import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { levelUpSteps, type LevelUpStep } from '../flow/steps';
@@ -38,6 +40,13 @@ export type { LevelUpStep };
 const DRAFT_ACTOR: Event['actor'] = { userId: 'local', deviceId: 'draft', role: 'owner' };
 const DRAFT_TS = '2000-01-01T00:00:00.000Z';
 
+interface StoredRoll {
+  roll: number;
+  dice: number[];
+}
+
+const rollKeyPrefix = (streamId: string): string => `levelup.hpRoll:${streamId}:`;
+
 /**
  * Component-provided (NOT root — `LevelUpComponent` lists it in its own `providers`, a fresh
  * session per visit) state for the per-level level-up wizard (plan-5 task-13-brief.md). Mirrors
@@ -55,6 +64,8 @@ export class LevelUpState {
   private readonly characterStore = inject(CharacterStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly packStore = inject(PackStore);
+  private readonly settings = inject(SettingsRepository);
+  private readonly db = inject(HkDb);
 
   readonly decisions = signal<ReadonlyMap<string, string[]>>(new Map());
   readonly decisionContexts = signal<ReadonlyMap<string, Record<string, unknown>>>(new Map());
@@ -443,20 +454,58 @@ export class LevelUpState {
     return found !== undefined && 'abilities' in found.choice.pick;
   }
 
+  /** Device-local key of this level's pending roll: one roll per stream, new character level and class. */
+  private readonly rollKey = computed<string | undefined>(() => {
+    const streamId = this.characterStore.streamId();
+    const level = this.characterStore.sheet()?.level;
+    const a = this.advancement();
+    return streamId && level !== undefined && a
+      ? `${rollKeyPrefix(streamId)}${level + 1}:${a.classId}`
+      : undefined;
+  });
+
+  /** Loads a roll made earlier for this same level and class, so leaving and returning keeps it. */
+  private readonly loadPendingRoll = effect(() => {
+    const key = this.rollKey();
+    const hitDie = this.hitDie();
+    if (!key || hitDie === undefined) return;
+    void this.settings.get<StoredRoll>(key).then((stored) => {
+      if (!stored || key !== this.rollKey() || untracked(() => this.hpRoll()) !== undefined) return;
+      this.hpRollDice.set(stored.dice.map((value) => ({ sides: hitDie, value, kept: true })));
+      this.hpRoll.set(stored.roll);
+    });
+  });
+
+  /** Drops every pending roll of this character; called once `level.gained` is committed. */
+  async clearPendingRoll(): Promise<void> {
+    const streamId = this.characterStore.streamId();
+    if (!streamId) return;
+    await this.db.settings.where('key').startsWith(rollKeyPrefix(streamId)).delete();
+  }
+
   /** Rolls `1d<hitDie>` via the injected `rng` (defaults to the app's `cryptoRng`) — overridable so
    * a spec can drive a scripted, deterministic result (task-13-brief.md Step 1's "hpRoll: 5 from a
    * scripted rng"). A no-op while the class's hit die isn't resolved yet. */
   rollHp(rng: () => number = cryptoRng): void {
     const hitDie = this.hitDie();
-    if (hitDie === undefined) return;
+    if (hitDie === undefined || this.hasRolled()) return;
     const result = roll(parseRollSpec(`1d${hitDie}`), rng);
     this.hpRollDice.set(result.dice);
     this.hpRoll.set(result.total);
+    const key = this.rollKey();
+    if (key) {
+      const stored: StoredRoll = { roll: result.total, dice: result.dice.map((d) => d.value) };
+      void this.settings.set(key, stored);
+    }
   }
+
+  /** True once this level's die is rolled: the roll stays, and the average is no longer offered. */
+  readonly hasRolled: Signal<boolean> = computed(() => typeof this.hpRoll() === 'number');
 
   /** Takes the average hit-die value instead of rolling — the `level.gained.hpRoll` choice lands
    * as the literal string `'average'` (task-13-brief.md), priced by `deriveHp` itself. */
   chooseAverageHp(): void {
+    if (this.hasRolled()) return;
     this.hpRollDice.set(undefined);
     this.hpRoll.set('average');
   }

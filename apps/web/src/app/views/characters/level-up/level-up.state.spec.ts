@@ -9,6 +9,7 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
+import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
@@ -515,5 +516,60 @@ describe('LevelUpState', () => {
 
     picking.chooseClass(FIGHTER);
     expect(picking.allSteps().map((step) => step.id)).toEqual(['hp', 'review']);
+  });
+
+  describe('one hit point roll per level', () => {
+    async function ready() {
+      await seedFighter('Ivan');
+      const characterStore = TestBed.inject(CharacterStore);
+      await awardXp(characterStore, 300);
+      const key = `levelup.hpRoll:${characterStore.streamId()}:2:${FIGHTER}`;
+      return { characterStore, key, settings: TestBed.inject(SettingsRepository) };
+    }
+
+    it('a second roll keeps the first, and the average is refused after a roll', async () => {
+      await ready();
+      const state = createState(FIGHTER);
+      state.rollHp(() => 0.45);
+      state.rollHp(() => 0.95);
+      expect(state.hpRoll()).toBe(5);
+      state.chooseAverageHp();
+      expect(state.hpRoll()).toBe(5);
+    });
+
+    it('a new state for the same stream, level and class loads the stored roll', async () => {
+      const { key, settings } = await ready();
+      createState(FIGHTER).rollHp(() => 0.45);
+      await vi.waitFor(async () => expect(await settings.get(key)).toEqual({ roll: 5, dice: [5] }));
+
+      const again = createState(FIGHTER);
+      TestBed.tick();
+      await vi.waitFor(() => expect(again.hpRoll()).toBe(5));
+      expect(again.hpRollDice()?.map((d) => d.value)).toEqual([5]);
+      expect(again.buildTransaction()).toEqual([
+        { type: 'level.gained', v: 1, payload: { classId: FIGHTER, level: 2, hpRoll: 5 } },
+      ]);
+    });
+
+    it('a roll stored for another level or class is not used', async () => {
+      const { characterStore, settings } = await ready();
+      const stream = characterStore.streamId();
+      await settings.set(`levelup.hpRoll:${stream}:3:${FIGHTER}`, { roll: 9, dice: [9] });
+      await settings.set(`levelup.hpRoll:${stream}:2:${WIZARD}`, { roll: 4, dice: [4] });
+      const state = createState(FIGHTER);
+      TestBed.tick();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(state.hpRoll()).toBeUndefined();
+    });
+
+    it('finishing deletes the stored roll', async () => {
+      const { characterStore, key, settings } = await ready();
+      const state = createState(FIGHTER);
+      state.rollHp(() => 0.45);
+      await vi.waitFor(async () => expect(await settings.get(key)).toBeDefined());
+      await characterStore.appendTx(state.buildTransaction());
+      await state.clearPendingRoll();
+      expect(await settings.get(key)).toBeUndefined();
+    });
   });
 });

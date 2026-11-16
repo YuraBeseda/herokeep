@@ -239,7 +239,7 @@ describe('LevelUpComponent', () => {
     expect(characterStore.sheet()?.hp.max.value).toBe(20); // 12 + 6 (average d10) + 2 (con mod)
   });
 
-  it('the HP step renders the rolled die (T7 kept-die styling) once "Roll" is clicked, and clears it on "Take average"', async () => {
+  it('the HP step renders the rolled die (T7 kept-die styling) once "Roll" is clicked, and closes both choices', async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await characterStore.appendTx([{ type: 'xp.awarded', v: 1, payload: { amount: 300 } }]);
@@ -263,9 +263,15 @@ describe('LevelUpComponent', () => {
     const resultText = root.querySelector('.level-up__hp-result')?.textContent ?? '';
     expect(resultText).toContain(String(shown));
 
-    root.querySelector<HTMLButtonElement>('.level-up__hp-average')!.click();
+    // One roll per level: both choices are now closed, the die stays shown.
+    const rollBtn = root.querySelector<HTMLButtonElement>('.level-up__hp-roll')!;
+    const avgBtn = root.querySelector<HTMLButtonElement>('.level-up__hp-average')!;
+    expect(rollBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(avgBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(root.textContent).toContain(charactersEn.levelUp.hp.rolledOnce);
+    avgBtn.click();
     await harness.fixture.whenStable();
-    expect(root.querySelector('.level-up__hp-dice')).toBeNull();
+    expect(root.querySelectorAll('.level-up__hp-die')).toHaveLength(1);
   });
 
   // --- The which-class picker (phase 4, plan 11, task 12, ADR-007) -----------------------------

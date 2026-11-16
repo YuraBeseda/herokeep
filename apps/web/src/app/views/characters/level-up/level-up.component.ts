@@ -359,6 +359,8 @@ export class LevelUpComponent {
     this.committing.set(true);
     try {
       await this.characterStore.appendTx(this.state.buildTransaction());
+      // The level is committed; a stale pending roll that cannot be deleted must not fail the finish.
+      await this.state.clearPendingRoll().catch(() => undefined);
       this.exitApproved = true;
       await this.router.navigate(['..', 'play'], { relativeTo: this.route });
     } catch (error) {
