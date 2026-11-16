@@ -14,11 +14,12 @@ test.describe('library', () => {
   test('browse, search, and open a detail; switch to Russian, import the demo pack, search in Russian, and sort classes with Cyrillic collation', async ({
     page,
   }) => {
-    await test.step('open /library — the default "Spells" chip is selected and shows rows', async () => {
+    await test.step('open /library — the "All" chip is selected and shows rows', async () => {
       await page.goto('/library');
-      // The chip's name carries its count ("Spells 361"), so match the label at the start.
-      const spellsChip = page.getByRole('button', { name: /^Spells/ });
-      await expect(spellsChip).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('button', { name: /^All/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       await expect(page.locator('.library-browse__row').first()).toBeVisible();
     });
 
@@ -29,6 +30,9 @@ test.describe('library', () => {
 
     await test.step('search "fireball" — the first result is Fireball', async () => {
       await page.getByRole('searchbox').fill('fireball');
+      // The text reaches the URL after the field's debounce; wait for it so the click below
+      // cannot be overtaken by that pending navigation.
+      await expect(page).toHaveURL(/q=fireball/);
       await expect(page.locator('.library-browse__row-name').first()).toHaveText('Fireball');
     });
 
@@ -66,5 +70,32 @@ test.describe('library', () => {
       await expect(names.nth(1)).toHaveText('Варвар');
       await expect(names.nth(2)).toHaveText('Воин');
     });
+  });
+
+  // The chip, search text and sort live in the URL, so both the in-app Back and the browser Back
+  // return to the same list state (plan 19 task 2).
+  test('the chip and search survive opening an entry and going back', async ({ page }) => {
+    await page.goto('/library');
+    await page.getByRole('button', { name: /^Items/ }).click();
+    await page.getByRole('searchbox').fill('fireball');
+    await expect(page).toHaveURL(/type=item.*q=fireball|q=fireball.*type=item/);
+    await page.locator('.library-browse__row').first().click();
+    await expect(page.locator('.library-detail__name')).toBeVisible();
+
+    await page.locator('.library-detail__back').click();
+    await expect(page.getByRole('button', { name: /^Items/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(page.getByRole('searchbox')).toHaveValue('fireball');
+
+    await page.locator('.library-browse__row').first().click();
+    await expect(page.locator('.library-detail__name')).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('button', { name: /^Items/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(page.getByRole('searchbox')).toHaveValue('fireball');
   });
 });

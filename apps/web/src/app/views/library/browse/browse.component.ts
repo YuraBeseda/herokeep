@@ -1,5 +1,6 @@
-import { Component, DestroyRef, ElementRef, computed, effect, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, DestroyRef, ElementRef, computed, effect, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Entity, EntityType } from '@hk/protocol';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
@@ -61,8 +62,7 @@ const TYPE_ICONS: Readonly<Record<string, string>> = {
   rule: 'gi:scroll-unfurled',
 };
 
-/** Until the person picks a chip, browsing a list shows spells (the first thing most look up). */
-const DEFAULT_BROWSE_TYPES: readonly string[] = ['spell'];
+const SORTS: readonly LibrarySort[] = ['match', 'name', 'type', 'level'];
 
 const SKELETON_ROW_COUNT = 6;
 // Search results are capped (browse-mode lists are not): the first 100 ranked hits are plenty and
@@ -105,12 +105,18 @@ export class LibraryBrowseComponent {
   private readonly localeService = inject(LocaleService);
   private readonly packStore = inject(PackStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly strap = inject(ActionStrapService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   // Template-facing state
   protected readonly ready = this.packStore.ready;
-  protected readonly query = signal('');
+  // The list state lives in the URL (`?type=&q=&sort=`, all optional) so leaving for an entry and
+  // coming back keeps the chip, the search text and the sort.
+  private readonly params = toSignal(this.route.queryParamMap, {
+    initialValue: convertToParamMap({}),
+  });
+  protected readonly query = computed(() => this.params().get('q') ?? '');
   protected readonly skeletonRows: readonly number[] = Array.from(
     { length: SKELETON_ROW_COUNT },
     (_, index) => index,
@@ -120,16 +126,11 @@ export class LibraryBrowseComponent {
   // all types" — drives both `rows` below and the results-summary line in the template.
   protected readonly searching = computed(() => this.query().trim().length > 0);
 
-  // The person's own chip choice; `null` until they touch a chip. An EXPLICIT empty list means
-  // "every type".
-  private readonly chosenTypes = signal<readonly string[] | null>(null);
-
-  // Untouched, browsing shows spells and searching shows hits of every type (a search should find
-  // the item "Wand of Fireballs" even while the spell chip is the browse default); once a chip is
-  // pressed the choice holds in both modes.
-  protected readonly selectedTypes = computed<readonly string[]>(
-    () => this.chosenTypes() ?? (this.searching() ? [] : DEFAULT_BROWSE_TYPES),
-  );
+  // One chip at a time; no (or an unknown) `type` means every type.
+  protected readonly selectedTypes = computed<readonly string[]>(() => {
+    const type = this.params().get('type');
+    return LIBRARY_TYPES.find((known) => known === type) ? [type!] : [];
+  });
 
   // `Intl.Collator` construction is the expensive part; recreate it only when the locale changes.
   private readonly collator = computed(() => new Intl.Collator(this.localeService.locale()));
@@ -153,7 +154,10 @@ export class LibraryBrowseComponent {
   });
 
   // The list order. `match` is the search ranking while searching and name order while browsing.
-  protected readonly sort = signal<LibrarySort>('match');
+  protected readonly sort = computed<LibrarySort>(() => {
+    const value = this.params().get('sort');
+    return SORTS.find((mode) => mode === value) ?? 'match';
+  });
 
   // The total the "All" chip counts: every hit while searching, every entry while browsing.
   protected readonly allCount = computed(() => {
@@ -288,9 +292,22 @@ export class LibraryBrowseComponent {
   }
 
   protected setSort(value: string | null): void {
-    if (value === 'match' || value === 'name' || value === 'type' || value === 'level') {
-      this.sort.set(value);
-    }
+    const mode = SORTS.find((known) => known === value);
+    if (mode) this.write({ sort: mode });
+  }
+
+  protected setQuery(text: string): void {
+    this.write({ q: text || null });
+  }
+
+  // Replaces the history entry (one Back leaves the library, not each keystroke); `null` drops a param.
+  private write(queryParams: Record<string, string | null>): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   // Methods
@@ -313,8 +330,7 @@ export class LibraryBrowseComponent {
   // chip that was just switched ON is the one that wins.
   protected setTypes(types: readonly string[]): void {
     const current = this.selectedTypes();
-    const added = types.find((type) => !current.includes(type));
-    this.chosenTypes.set(added === undefined ? [] : [added]);
+    this.write({ type: types.find((type) => !current.includes(type)) ?? null });
   }
 
   // Passes the raw (unencoded) entity id straight through as its own router command segment.

@@ -8,7 +8,8 @@
     <div class="library-browse__tools">
       <hk-search-field
         class="library-browse__search"
-        [(value)]="query"
+        [value]="query()"
+        (valueChange)="setQuery($event)"
         [label]="t('search.label')"
         [placeholder]="t('search.placeholder')"
       />

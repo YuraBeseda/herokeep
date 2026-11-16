@@ -61,6 +61,7 @@ test.describe('offline', () => {
     });
 
     await test.step('a spell detail still opens offline', async () => {
+      await page.getByRole('button', { name: /^Spells/ }).click();
       await page.locator('.library-browse__row').first().click();
       await expect(page.locator('.library-detail__name')).toBeVisible();
       await expect(page.locator('.library-detail__description-body')).toBeVisible();

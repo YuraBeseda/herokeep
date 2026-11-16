@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { signal, type DebugElement } from '@angular/core';
+import { ApplicationRef, signal, type DebugElement } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PRIMARY_OUTLET, Router, provideRouter } from '@angular/router';
@@ -94,7 +94,7 @@ function virtualListItems(fixture: { debugElement: DebugElement }): RowLike[] {
 /** Types `text` into the rendered `hk-search-field` input and flushes the field's 150ms debounce
  * with fake timers — mirrors the pattern in `search-field.component.spec.ts`. Must be called
  * after the fixture has already stabilized once (fake timers make `whenStable()` hang). */
-function typeSearch(fixture: { nativeElement: unknown }, text: string): void {
+async function typeSearch(fixture: { nativeElement: unknown }, text: string): Promise<void> {
   const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
     'input[type="search"]',
   );
@@ -102,6 +102,14 @@ function typeSearch(fixture: { nativeElement: unknown }, text: string): void {
   input!.value = text;
   input!.dispatchEvent(new Event('input'));
   vi.advanceTimersByTime(150);
+  await settle();
+}
+
+/** The list state round-trips through the router (`?type=&q=&sort=`): let the navigation commit,
+ * then re-render. Works with fake timers on (the navigation is promise-driven). */
+async function settle(): Promise<void> {
+  if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(0);
+  else await TestBed.inject(ApplicationRef).whenStable();
   TestBed.tick();
 }
 
@@ -150,6 +158,7 @@ describe('LibraryBrowseComponent', () => {
     const chips = typeChips(fixture);
     // 'class' is first in the fixed type-filter order (see LIBRARY_TYPES).
     chips[0].click();
+    await settle();
     await fixture.whenStable();
 
     expect(virtualListItems(fixture).length).toBe(12);
@@ -164,6 +173,7 @@ describe('LibraryBrowseComponent', () => {
 
     const chips = typeChips(fixture);
     chips[0].click();
+    await settle();
     await fixture.whenStable();
 
     const names = virtualListItems(fixture).map((row) => row.name);
@@ -174,10 +184,11 @@ describe('LibraryBrowseComponent', () => {
 
   it('in ru, an untranslated spell row shows the EN tag and a translated one does not', async () => {
     seedStore([corePack, ruDemoPack]);
+    await TestBed.inject(Router).navigateByUrl('/?type=spell');
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     const localeService = TestBed.inject(LocaleService);
     localeService.setLocale('ru');
-    await fixture.whenStable(); // default selected type is 'spell' — no chip click needed
+    await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const rows = Array.from(compiled.querySelectorAll('.library-browse__row'));
@@ -237,7 +248,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable(); // default selected type is 'spell' — irrelevant once searching
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
 
     const items = virtualListItems(fixture);
     expect(items[0]?.id).toBe('srd-5e-2024:spell/fireball');
@@ -253,7 +264,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fire');
+    await typeSearch(fixture, 'fire');
 
     const items = virtualListItems(fixture);
     expect(items[0]?.id).toBe('srd-5e-2024:spell/fireball');
@@ -272,7 +283,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'огненный');
+    await typeSearch(fixture, 'огненный');
 
     expect(virtualListItems(fixture)[0]?.id).toBe('srd-5e-2024:spell/fireball');
     expect(virtualListItems(fixture).length).toBe(1);
@@ -280,7 +291,7 @@ describe('LibraryBrowseComponent', () => {
 
     // Same pack/locale, a query matching 4 entities (see the golden test above) — ru's "few"
     // category (4 % 10 === 4, 4 % 100 not in 12..14) renders a different plural form.
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
 
     expect(virtualListItems(fixture)[0]?.id).toBe('srd-5e-2024:spell/fireball');
     expect(virtualListItems(fixture).length).toBe(4);
@@ -302,7 +313,7 @@ describe('LibraryBrowseComponent', () => {
     localeService.setLocale('ru');
     await fixture.whenStable();
     vi.useFakeTimers();
-    typeSearch(fixture, 'e');
+    await typeSearch(fixture, 'e');
     expect(virtualListItems(fixture).length).toBe(100);
     expect(summaryText(fixture)).toBe('100 результатов');
     vi.useRealTimers();
@@ -311,15 +322,15 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
     vi.useFakeTimers();
 
-    typeSearch(fixture, 'delayed blast fireball');
+    await typeSearch(fixture, 'delayed blast fireball');
     expect(virtualListItems(fixture).length).toBe(1);
     expect(summaryText(fixture)).toBe('1 результат');
 
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
     expect(virtualListItems(fixture).length).toBe(4);
     expect(summaryText(fixture)).toBe('4 результати');
 
-    typeSearch(fixture, 'e');
+    await typeSearch(fixture, 'e');
     expect(virtualListItems(fixture).length).toBe(100);
     expect(summaryText(fixture)).toBe('100 результатів');
   });
@@ -338,7 +349,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable(); // default selected type is 'spell'
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
     expect(virtualListItems(fixture)[0]?.id).toBe('srd-5e-2024:spell/fireball');
     expect(summaryText(fixture)).not.toBeNull();
 
@@ -347,12 +358,11 @@ describe('LibraryBrowseComponent', () => {
     );
     expect(clearButton).toBeTruthy();
     clearButton!.click();
-    TestBed.tick();
+    await settle();
 
     expect(summaryText(fixture)).toBeNull();
-    const spellCount = corePack.entities.filter((e) => e.type === 'spell').length;
     const restoredRows = virtualListItems(fixture);
-    expect(restoredRows.length).toBe(spellCount);
+    expect(restoredRows.length).toBeGreaterThan(corePack.entities.filter((e) => e.type === 'spell').length);
     expect(restoredRows.some((row) => row.id === 'srd-5e-2024:spell/fireball')).toBe(true);
   });
 
@@ -362,7 +372,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
 
     const compiled = fixture.nativeElement as HTMLElement;
     const rows = Array.from(compiled.querySelectorAll('.library-browse__row'));
@@ -381,7 +391,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
 
     const chips = typeChips(fixture);
     const chipFor = (label: string) => chips.find((chip) => chip.textContent?.includes(label));
@@ -396,22 +406,102 @@ describe('LibraryBrowseComponent', () => {
     expect(hintOf(classes)).toContain('No Classes match “fireball”');
     expect(classes.textContent).not.toContain('No Classes');
     classes.click();
-    TestBed.tick();
+    await settle();
     expect(virtualListItems(fixture).length).toBe(4);
   });
 
-  it('browse counts are the size of each type, and the default Spells chip is the pressed one', async () => {
+  it('browse counts are the size of each type, and the default is the All chip', async () => {
     seedStore([corePack]);
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     await fixture.whenStable();
 
     const chips = typeChips(fixture);
     const spells = chips.find((chip) => chip.textContent?.includes('Spells'))!;
-    expect(spells.getAttribute('aria-pressed')).toBe('true');
-    expect(chips.filter((chip) => chip.getAttribute('aria-pressed') === 'true')).toHaveLength(1);
+    expect(chips.filter((chip) => chip.getAttribute('aria-pressed') === 'true')).toHaveLength(0);
     const spellCount = corePack.entities.filter((e) => e.type === 'spell').length;
     expect(spells.querySelector('.hk-filter-chips__count')?.textContent?.trim()).toBe(
       String(spellCount),
+    );
+  });
+
+  it('untouched, browsing lists every type', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+    const total = LIBRARY_TYPE_IDS.reduce(
+      (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
+      0,
+    );
+    expect(virtualListItems(fixture).length).toBe(total);
+  });
+
+  it('pressing a chip writes ?type= to the URL, replacing the history entry', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await fixture.whenStable();
+
+    typeChips(fixture)
+      .find((chip) => chip.textContent?.includes('Items'))!
+      .click();
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: { type: 'item' },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      }),
+    );
+  });
+
+  it('opens from ?type=&q=&sort= with the chip pressed, the text in the field and that sort', async () => {
+    seedStore([corePack]);
+    await TestBed.inject(Router).navigateByUrl('/?type=item&q=fireball&sort=name');
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+
+    const pressed = typeChips(fixture).filter(
+      (chip) => chip.getAttribute('aria-pressed') === 'true',
+    );
+    expect(pressed.map((chip) => chip.textContent)).toEqual([expect.stringContaining('Items')]);
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      'input[type="search"]',
+    );
+    expect(input?.value).toBe('fireball');
+    expect(virtualListItems(fixture).map((row) => row.name)).toEqual([
+      'Necklace of Fireballs',
+      'Wand of Fireballs',
+    ]);
+  });
+
+  it('an unknown ?type= falls back to All', async () => {
+    seedStore([corePack]);
+    await TestBed.inject(Router).navigateByUrl('/?type=bogus');
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+    expect(typeChips(fixture).some((chip) => chip.getAttribute('aria-pressed') === 'true')).toBe(
+      false,
+    );
+  });
+
+  it('typing writes q and clearing the field drops it', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await fixture.whenStable();
+
+    vi.useFakeTimers();
+    await typeSearch(fixture, 'dragon');
+    expect(navigate).toHaveBeenLastCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { q: 'dragon' }, replaceUrl: true }),
+    );
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.hk-search__clear')!
+      .click();
+    expect(navigate).toHaveBeenLastCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { q: null } }),
     );
   });
 
@@ -421,17 +511,17 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
     expect(virtualListItems(fixture).length).toBe(4);
 
     const items = typeChips(fixture).find((chip) => chip.textContent?.includes('Items'))!;
     items.click();
-    TestBed.tick();
+    await settle();
     expect(virtualListItems(fixture).length).toBe(2);
     expect(summaryText(fixture)).toBe('2 results');
 
     items.click();
-    TestBed.tick();
+    await settle();
     expect(virtualListItems(fixture).length).toBe(4);
   });
 
@@ -441,7 +531,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'delayed blast fireball');
+    await typeSearch(fixture, 'delayed blast fireball');
 
     const row = (fixture.nativeElement as HTMLElement).querySelector('.library-browse__row');
     const name = row?.querySelector('.library-browse__row-name');
@@ -483,14 +573,17 @@ describe('LibraryBrowseComponent', () => {
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
-    const spellCount = corePack.entities.filter((e) => e.type === 'spell').length;
+    const total = LIBRARY_TYPE_IDS.reduce(
+      (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
+      0,
+    );
 
     expect(root.querySelector('.library-browse__count')?.textContent?.trim()).toBe(
-      `${spellCount} entries`,
+      `${total.toLocaleString('en-US')} entries`,
     );
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'delayed blast fireball');
+    await typeSearch(fixture, 'delayed blast fireball');
     expect(root.querySelector('.library-browse__count')).toBeNull();
     expect(summaryText(fixture)).toBe('1 result');
   });
@@ -505,9 +598,12 @@ describe('LibraryBrowseComponent', () => {
       )!;
 
     expect(all().textContent).toContain('All');
-    expect(all().getAttribute('aria-pressed')).toBe('false'); // Spells is the browse default
+    expect(all().getAttribute('aria-pressed')).toBe('true'); // All is the default
+    typeChips(fixture)[0].click();
+    await settle();
+    expect(all().getAttribute('aria-pressed')).toBe('false');
     all().click();
-    TestBed.tick();
+    await settle();
     expect(all().getAttribute('aria-pressed')).toBe('true');
     const total = LIBRARY_TYPE_IDS.reduce(
       (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
@@ -523,10 +619,10 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
     const select = root.querySelector<HTMLSelectElement>('select')!;
-    const choose = (value: string) => {
+    const choose = async (value: string) => {
       select.value = value;
       select.dispatchEvent(new Event('change'));
-      TestBed.tick();
+      await settle();
     };
     const levelOf = (id: string) => {
       const entity = corePack.entities.find((e) => e.id === id);
@@ -540,7 +636,7 @@ describe('LibraryBrowseComponent', () => {
       'Level',
     ]);
 
-    choose('level');
+    await choose('level');
     const byLevel = virtualListItems(fixture).map(
       (row) => levelOf((row as { id: string }).id) ?? 99,
     );
@@ -549,15 +645,15 @@ describe('LibraryBrowseComponent', () => {
 
     // All types, then "type, then name": classes come before spells, each in name order.
     root.querySelector<HTMLButtonElement>('.hk-filter-chips__chip--all')!.click();
-    TestBed.tick();
-    choose('type');
+    await settle();
+    await choose('type');
     const types = virtualListItems(fixture).map(
       (row) => corePack.entities.find((e) => e.id === (row as { id: string }).id)!.type,
     );
     expect(types.indexOf('class')).toBe(0);
     expect(types.lastIndexOf('class')).toBeLessThan(types.indexOf('spell'));
 
-    choose('name');
+    await choose('name');
     const names = virtualListItems(fixture).map((row) => row.name);
     const collator = new Intl.Collator('en');
     expect(names).toEqual([...names].sort((a, b) => collator.compare(a, b)));
@@ -569,7 +665,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
     const rows = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
     );
@@ -583,7 +679,7 @@ describe('LibraryBrowseComponent', () => {
     expect(sub('Fireball')).toBe('Level 3 · Evocation');
     expect(sub('Wand of Fireballs')).toContain('Magic');
 
-    typeSearch(fixture, 'alchemist');
+    await typeSearch(fixture, 'alchemist');
     const alchemist = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
     )[0]?.querySelector('.library-browse__row-sub');
@@ -596,7 +692,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'fireball');
+    await typeSearch(fixture, 'fireball');
     const row = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
     ).find((r) => r.querySelector('.library-browse__row-name')?.textContent?.trim() === 'Fireball');
@@ -611,7 +707,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
 
     vi.useFakeTimers();
-    typeSearch(fixture, 'FIRE');
+    await typeSearch(fixture, 'FIRE');
     const row = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('.library-browse__row'),
     ).find(
