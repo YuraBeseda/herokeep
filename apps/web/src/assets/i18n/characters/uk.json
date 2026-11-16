@@ -807,7 +807,13 @@
     "derivedPopover": {
       "title": "Розрахунок",
       "empty": "Немає модифікаторів.",
-      "close": "Закрити"
+      "close": "Закрити",
+      "abilityModifier": "Модифікатор: {name}",
+      "proficiency": {
+        "proficient": "Бонус майстерності",
+        "expertise": "Компетентність",
+        "half": "Половина бонусу майстерності"
+      }
     },
     "banner": {
       "missing-packs": {

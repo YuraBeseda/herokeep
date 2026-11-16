@@ -461,6 +461,9 @@ describe('planRebase: count-reduced (plan 16 ruling 8)', () => {
   });
 });
 
+const STR_MOD = { source: 'abilityModifier', kind: 'abilityModifier', key: 'str', amount: 3 };
+const PROFICIENT = { source: 'proficiency', kind: 'proficiency', key: 'proficient', amount: 2 };
+
 /**
  * Plan 16 Task 6 (ruling 7): the `pack-updated-v2` golden's update events (seq 13-15) are exactly
  * what `planRebase` commits for its sample-content 1.0.0 → 1.1.0 update — now including the
@@ -515,8 +518,8 @@ describe('planRebase over the pack-updated-v2 golden (plan 16 ruling 7)', () => 
           instanceId: SICKLE_INSTANCE,
           itemId: MOONBLADE,
           name: MOONBLADE,
-          toHit: { value: 5, contributions: [] },
-          damage: { dice: '1d6', bonus: { value: 3, contributions: [] }, type: 'slashing' },
+          toHit: { value: 5, contributions: [STR_MOD, PROFICIENT] },
+          damage: { dice: '1d6', bonus: { value: 3, contributions: [STR_MOD] }, type: 'slashing' },
           properties: ['light'],
           ability: 'str',
         },

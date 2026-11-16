@@ -127,6 +127,30 @@ describe('deriveAbilities', () => {
     expect(r.skills['stealth']!.total.value).toBe(7); // mod(16)=3 + prof(2)*2 = 7
   });
 
+  it('lists the ability modifier and proficiency first in save and skill breakdowns (values unchanged)', () => {
+    const facts = baseFacts();
+    facts.decisions['core-mini:system/mini@0/ability-scores'] = ['str:16', 'dex:16', 'con:14', 'int:10', 'wis:10', 'cha:10'];
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];
+    facts.decisions['core-mini:class/fighter@1/skills'] = ['stealth'];
+    facts.decisions['test:pick@0/expertise'] = ['core-mini:feature/skill-expert'];
+    const r = deriveAbilities(facts, compose(facts, index), index);
+
+    expect(r.abilities['str']!.save.contributions.slice(0, 2)).toEqual([
+      expect.objectContaining({ kind: 'abilityModifier', key: 'str', amount: 3 }),
+      expect.objectContaining({ kind: 'proficiency', key: 'proficient', amount: 2 }),
+    ]);
+    expect(r.abilities['str']!.save.value).toBe(5);
+    // not proficient: only the ability modifier
+    expect(r.abilities['dex']!.save.contributions).toEqual([
+      expect.objectContaining({ kind: 'abilityModifier', key: 'dex', amount: 3 }),
+    ]);
+    expect(r.skills['stealth']!.total.contributions.slice(0, 2)).toEqual([
+      expect.objectContaining({ kind: 'abilityModifier', key: 'dex', amount: 3 }),
+      expect.objectContaining({ kind: 'proficiency', key: 'expertise', amount: 4 }),
+    ]);
+    expect(r.skills['stealth']!.total.value).toBe(7);
+  });
+
   it('computes passive perception as 10 + the perception skill total', () => {
     const facts = baseFacts();
     facts.decisions['core-mini:system/mini@0/ability-scores'] = [

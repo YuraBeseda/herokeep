@@ -1,4 +1,4 @@
-import { computed } from '@angular/core';
+﻿import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CharacterStore } from '@shared/stores/character.store';
 import { seedFighter } from '../testing/character-fixtures';
@@ -13,14 +13,10 @@ import { SkillsLeafComponent } from './skills-leaf/skills-leaf.component';
 // popover spec in `vitals-leaf.component.spec.ts`: activate the value, see the contribution rows
 // (localized source names) in the dialog overlay.
 //
-// WHY the sheet is augmented for save/skill/attack: the engine passes `mod + proficiency` as the
-// BASE of `table.resolve` (abilities.ts saveTotal/skillTotal, attacks.ts toHit), so a derived value's
-// `contributions` list only the modifier-table entries on top (a `save.bonus`, `skill.bonus` or
-// `attack.bonus` effect). A level-1 fighter has none, so its breakdown is the dialog's empty state
-// ("No modifiers") in the old play tab too. These specs therefore give the leaves a sheet whose
-// save, skill, to-hit and damage-bonus values carry real-shaped contributions and assert the leaf
-// hands exactly that value to the dialog. The ability score and the resource maximum keep their
-// genuine engine contributions (background bonus, class feature).
+// WHY the sheet is augmented for save/skill/attack in the specs below: the engine now lists the
+// ability modifier and proficiency first in those breakdowns, but a level-1 fighter has no other
+// `save.bonus`/`skill.bonus`/`attack.bonus` entries, so these specs give the leaves a sheet with
+// real-shaped extra contributions. The ability score and resource maximum keep genuine contributions.
 describe('derived-value breakdown popovers on the sheet leaves', () => {
   setupLeafSpec();
 
@@ -133,6 +129,15 @@ describe('derived-value breakdown popovers on the sheet leaves', () => {
     const dmg = activate(compiled.querySelector('[data-breakdown="damage"]'));
     expectRows('Soldier');
     await closeWithEscape(dmg);
+  });
+
+  it('a level-1 fighter proficient skill lists the ability modifier and proficiency, not "No modifiers."', async () => {
+    const compiled = await mount(SkillsLeafComponent);
+    activate(compiled.querySelector('hk-skill-row [data-breakdown="total"][aria-label^="Athletics"]'));
+    const text = overlayRows().map((r) => r.textContent ?? '').join('|');
+    expect(text).toContain('Strength modifier');
+    expect(text).toContain('Proficiency');
+    expect(document.querySelector('.cdk-overlay-container .derived-popover__empty')).toBeNull();
   });
 
   it('the resource maximum opens its breakdown rows (genuine engine contributions)', async () => {

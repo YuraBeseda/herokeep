@@ -807,7 +807,13 @@
     "derivedPopover": {
       "title": "Расчёт",
       "empty": "Нет модификаторов.",
-      "close": "Закрыть"
+      "close": "Закрыть",
+      "abilityModifier": "Модификатор: {name}",
+      "proficiency": {
+        "proficient": "Бонус мастерства",
+        "expertise": "Компетентность",
+        "half": "Половина бонуса мастерства"
+      }
     },
     "banner": {
       "missing-packs": {

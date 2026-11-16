@@ -46,6 +46,24 @@ describe('deriveAttacks', () => {
     expect(row.properties).toEqual(['versatile']);
   });
 
+  it('lists the ability modifier and proficiency in to-hit, and only the modifier in damage', () => {
+    const facts = withAbilities({ str: 16 });
+    facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];
+    facts.inventory = [
+      { instanceId: 'i1', itemId: 'core-mini:item/longsword', qty: 1, equipped: true, attuned: false },
+    ];
+    const row = deriveAll(facts).result.attacks[0]!;
+    expect(row.toHit.contributions).toEqual([
+      expect.objectContaining({ kind: 'abilityModifier', key: 'str', amount: 3 }),
+      expect.objectContaining({ kind: 'proficiency', key: 'proficient', amount: 2 }),
+    ]);
+    expect(row.damage.bonus.contributions).toEqual([
+      expect.objectContaining({ kind: 'abilityModifier', key: 'str', amount: 3 }),
+    ]);
+    expect(row.toHit.value).toBe(5);
+    expect(row.damage.bonus.value).toBe(3);
+  });
+
   it('normalizes a flat-damage weapon (ruling 6, Blowgun) to a bare numeric dice string, no ability bonus lost', () => {
     // `core-mini:item/blowgun`'s `weapon.damage` is `{ flat: 1 }` (DiceOrFlatSchema), not a Dice
     // string. `AttackRow.damage.dice` stays `string` (unchanged — apps/web's play-tab component and

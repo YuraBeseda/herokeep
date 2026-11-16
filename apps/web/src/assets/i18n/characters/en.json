@@ -807,7 +807,13 @@
     "derivedPopover": {
       "title": "Breakdown",
       "empty": "No modifiers.",
-      "close": "Close"
+      "close": "Close",
+      "abilityModifier": "{name} modifier",
+      "proficiency": {
+        "proficient": "Proficiency",
+        "expertise": "Expertise",
+        "half": "Half proficiency"
+      }
     },
     "banner": {
       "missing-packs": {

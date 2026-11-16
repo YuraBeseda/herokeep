@@ -7,7 +7,7 @@ import type { Facts } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
 import { resolveChoiceCount } from './choice-count.ts';
 import { type ActiveEffect, type Composition, occurrenceKey } from './composition.ts';
-import { type Derived, ModifierTable } from './modifiers.ts';
+import { baseParts, type Derived, ModifierTable } from './modifiers.ts';
 import { offeredRowChoices } from './choices.ts';
 import { classProficiencyGrants, proficiencyBonus } from './proficiency.ts';
 import { bestRowExtra } from './spellcasting.ts';
@@ -389,8 +389,13 @@ export function deriveAttacks(
       }
     }
 
-    const toHit = table.resolve(toHitTarget, mod(ability) + (proficient ? abilities.prof : 0), evalFormula);
-    const damageBonus = table.resolve(damageTarget, mod(ability), evalFormula);
+    const toHit = table.resolve(
+      toHitTarget,
+      mod(ability) + (proficient ? abilities.prof : 0),
+      evalFormula,
+      baseParts(ability, mod(ability), proficient ? 'proficient' : undefined, abilities.prof),
+    );
+    const damageBonus = table.resolve(damageTarget, mod(ability), evalFormula, baseParts(ability, mod(ability)));
     const masteryActive = hasMasteryGrant && masterySelections.has(entity.id);
 
     attacks.push({

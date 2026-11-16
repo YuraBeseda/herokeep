@@ -8,13 +8,20 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 1,
       "ts": "2026-10-18T12:00:01.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "character.created",
       "v": 1,
       "payload": {
         "name": "Hrolf",
         "system": "5e-2024",
-        "corePack": { "id": "srd-5e-2024", "version": "0.1.0" },
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
         "engineVersion": "0.1.0",
         "grammaticalGender": "masculine"
       }
@@ -24,17 +31,28 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 2,
       "ts": "2026-10-18T12:00:02.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:system/5e-2024@0/species", "selection": ["srd-5e-2024:species/human"] }
+      "payload": {
+        "choiceId": "srd-5e-2024:system/5e-2024@0/species",
+        "selection": ["srd-5e-2024:species/human"]
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000003",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 3,
       "ts": "2026-10-18T12:00:03.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
       "payload": {
@@ -47,23 +65,36 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 4,
       "ts": "2026-10-18T12:00:04.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:background/soldier@0/ability-scores", "selection": ["str:+2", "con:+1"] }
+      "payload": {
+        "choiceId": "srd-5e-2024:background/soldier@0/ability-scores",
+        "selection": ["str:+2", "con:+1"]
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000005",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 5,
       "ts": "2026-10-18T12:00:05.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
       "payload": {
         "choiceId": "srd-5e-2024:system/5e-2024@0/ability-scores",
         "selection": ["str:15", "con:14", "dex:13", "wis:12", "int:10", "cha:8"],
-        "context": { "method": "standardArray" }
+        "context": {
+          "method": "standardArray"
+        }
       }
     },
     {
@@ -71,37 +102,62 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 6,
       "ts": "2026-10-18T12:00:06.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 1 }
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 1
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000007",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 7,
       "ts": "2026-10-18T12:00:07.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/skills", "selection": ["perception", "survival"] }
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/skills",
+        "selection": ["perception", "survival"]
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000008",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 8,
       "ts": "2026-10-18T12:00:08.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:class/fighter@1/fighting-style", "selection": ["srd-5e-2024:feat/defense"] }
+      "payload": {
+        "choiceId": "srd-5e-2024:class/fighter@1/fighting-style",
+        "selection": ["srd-5e-2024:feat/defense"]
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000009",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 9,
       "ts": "2026-10-18T12:00:09.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
       "payload": {
@@ -114,7 +170,11 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 10,
       "ts": "2026-10-18T12:00:10.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.added",
       "v": 1,
       "payload": {
@@ -128,17 +188,27 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 11,
       "ts": "2026-10-18T12:00:11.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.equipped",
       "v": 1,
-      "payload": { "instanceId": "58888888-8888-7888-8888-8888888888a1" }
+      "payload": {
+        "instanceId": "58888888-8888-7888-8888-8888888888a1"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-00000000000c",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 12,
       "ts": "2026-10-18T12:00:12.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.added",
       "v": 1,
       "payload": {
@@ -152,17 +222,27 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 13,
       "ts": "2026-10-18T12:00:13.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.equipped",
       "v": 1,
-      "payload": { "instanceId": "58888888-8888-7888-8888-8888888888a2" }
+      "payload": {
+        "instanceId": "58888888-8888-7888-8888-8888888888a2"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-00000000000e",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 14,
       "ts": "2026-10-18T12:00:14.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.added",
       "v": 1,
       "payload": {
@@ -176,17 +256,27 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 15,
       "ts": "2026-10-18T12:00:15.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.equipped",
       "v": 1,
-      "payload": { "instanceId": "58888888-8888-7888-8888-8888888888a3" }
+      "payload": {
+        "instanceId": "58888888-8888-7888-8888-8888888888a3"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000010",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 16,
       "ts": "2026-10-18T12:00:16.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.added",
       "v": 1,
       "payload": {
@@ -200,17 +290,27 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 17,
       "ts": "2026-10-18T12:00:17.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.equipped",
       "v": 1,
-      "payload": { "instanceId": "58888888-8888-7888-8888-8888888888a4" }
+      "payload": {
+        "instanceId": "58888888-8888-7888-8888-8888888888a4"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000012",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 18,
       "ts": "2026-10-18T12:00:18.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.added",
       "v": 1,
       "payload": {
@@ -224,27 +324,45 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 19,
       "ts": "2026-10-18T12:00:19.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "item.equipped",
       "v": 1,
-      "payload": { "instanceId": "58888888-8888-7888-8888-8888888888a5" }
+      "payload": {
+        "instanceId": "58888888-8888-7888-8888-8888888888a5"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000014",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 20,
       "ts": "2026-10-18T12:00:20.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 2, "hpRoll": "average" }
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 2,
+        "hpRoll": "average"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000015",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 21,
       "ts": "2026-10-18T12:00:21.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
       "payload": {
@@ -259,17 +377,29 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 22,
       "ts": "2026-10-18T12:00:22.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 4, "hpRoll": "average" }
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 4,
+        "hpRoll": "average"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000017",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 23,
       "ts": "2026-10-18T12:00:23.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
       "payload": {
@@ -282,37 +412,63 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 24,
       "ts": "2026-10-18T12:00:24.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
-      "payload": { "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores", "selection": ["str:+2"] }
+      "payload": {
+        "choiceId": "srd-5e-2024:feat/ability-score-improvement@4/ability-scores",
+        "selection": ["str:+2"]
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-000000000019",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 25,
       "ts": "2026-10-18T12:00:25.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/fighter", "level": 5, "hpRoll": "average" }
+      "payload": {
+        "classId": "srd-5e-2024:class/fighter",
+        "level": 5,
+        "hpRoll": "average"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-00000000001a",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 26,
       "ts": "2026-10-18T12:00:26.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 1 }
+      "payload": {
+        "classId": "srd-5e-2024:class/barbarian",
+        "level": 1
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-00000000001b",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 27,
       "ts": "2026-10-18T12:00:27.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "decision.made",
       "v": 1,
       "payload": {
@@ -325,17 +481,29 @@
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 28,
       "ts": "2026-10-18T12:00:28.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
-      "payload": { "classId": "srd-5e-2024:class/barbarian", "level": 2, "hpRoll": "average" }
+      "payload": {
+        "classId": "srd-5e-2024:class/barbarian",
+        "level": 2,
+        "hpRoll": "average"
+      }
     },
     {
       "id": "018f7000-0000-7000-8000-00000000001d",
       "stream": "char:58888888-8888-7888-8888-888888888888",
       "seq": 29,
       "ts": "2026-10-18T12:00:29.000Z",
-      "actor": { "userId": "u1", "deviceId": "d1", "role": "owner" },
+      "actor": {
+        "userId": "u1",
+        "deviceId": "d1",
+        "role": "owner"
+      },
       "type": "level.gained",
       "v": 1,
       "payload": {
@@ -366,8 +534,38 @@
       "instanceId": "58888888-8888-7888-8888-8888888888a5",
       "itemId": "srd-5e-2024:item/greataxe",
       "name": "srd-5e-2024:item/greataxe",
-      "toHit": { "value": 7, "contributions": [] },
-      "damage": { "dice": "1d12", "bonus": { "value": 4, "contributions": [] }, "type": "slashing" },
+      "toHit": {
+        "value": 7,
+        "contributions": [
+          {
+            "source": "abilityModifier",
+            "kind": "abilityModifier",
+            "key": "str",
+            "amount": 4
+          },
+          {
+            "source": "proficiency",
+            "kind": "proficiency",
+            "key": "proficient",
+            "amount": 3
+          }
+        ]
+      },
+      "damage": {
+        "dice": "1d12",
+        "bonus": {
+          "value": 4,
+          "contributions": [
+            {
+              "source": "abilityModifier",
+              "kind": "abilityModifier",
+              "key": "str",
+              "amount": 4
+            }
+          ]
+        },
+        "type": "slashing"
+      },
       "properties": ["heavy", "two-handed"],
       "ability": "str"
     }

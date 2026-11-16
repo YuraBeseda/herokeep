@@ -10,6 +10,7 @@ import { EngineFacade } from '../services/engine/engine.facade';
 // the same way `create-wizard.component.ts` recovers `Sheet['inventory'][number]`: an
 // indexed-access alias off a Sheet field that's already typed `Derived<number>`.
 export type DerivedValue = Sheet['ac'];
+type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 export type DerivedContribution = DerivedValue['contributions'][number];
 
 /**
@@ -35,7 +36,7 @@ export type DerivedContribution = DerivedValue['contributions'][number];
             track c.source + '|' + (c.feature ?? '') + '|' + c.kind + '|' + (c.key ?? '')
           ) {
             <li class="derived-popover__row">
-              <span class="derived-popover__source">{{ sourceName(c) }}</span>
+              <span class="derived-popover__source">{{ sourceName(c, t) }}</span>
               <span class="derived-popover__amount" [attr.title]="formulaTitle(c)">{{
                 amountText(c)
               }}</span>
@@ -69,7 +70,18 @@ export class DerivedPopoverContentComponent {
   // `ActiveEffect` doc: `feature` is set only when the effect was reached through a grant hop off
   // `source`, i.e. it's the more specific, more useful-to-show id. Falls back to the raw id for the
   // rare contribution whose id doesn't resolve in the index (e.g. a synthetic 'override' source).
-  protected sourceName(c: DerivedContribution): string {
+  protected sourceName(c: DerivedContribution, t: TranslateFn): string {
+    // Engine base parts (ability modifier / proficiency) are not entities: named by kind + key.
+    if (c.kind === 'abilityModifier' && c.key !== undefined) {
+      const ability = this.engineFacade
+        .index()
+        .byType('ability')
+        .find((e) => e.type === 'ability' && e.abbreviation === c.key);
+      return t('abilityModifier', {
+        name: ability ? this.engineFacade.localizer().name(ability.id) : c.key.toUpperCase(),
+      });
+    }
+    if (c.kind === 'proficiency' && c.key !== undefined) return t(`proficiency.${c.key}`);
     const id = c.feature ?? c.source;
     const index = this.engineFacade.index();
     return index.has(id) ? this.engineFacade.localizer().name(id) : id;

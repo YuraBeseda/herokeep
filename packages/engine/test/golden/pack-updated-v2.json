@@ -332,13 +332,33 @@
       "name": "sample-content:item/moonsilver-sickle",
       "toHit": {
         "value": 5,
-        "contributions": []
+        "contributions": [
+          {
+            "source": "abilityModifier",
+            "kind": "abilityModifier",
+            "key": "str",
+            "amount": 3
+          },
+          {
+            "source": "proficiency",
+            "kind": "proficiency",
+            "key": "proficient",
+            "amount": 2
+          }
+        ]
       },
       "damage": {
         "dice": "1d6",
         "bonus": {
           "value": 3,
-          "contributions": []
+          "contributions": [
+            {
+              "source": "abilityModifier",
+              "kind": "abilityModifier",
+              "key": "str",
+              "amount": 3
+            }
+          ]
         },
         "type": "slashing"
       },
@@ -352,13 +372,33 @@
       "name": "sample-content:item/moonsilver-sickle",
       "toHit": {
         "value": 5,
-        "contributions": []
+        "contributions": [
+          {
+            "source": "abilityModifier",
+            "kind": "abilityModifier",
+            "key": "str",
+            "amount": 3
+          },
+          {
+            "source": "proficiency",
+            "kind": "proficiency",
+            "key": "proficient",
+            "amount": 2
+          }
+        ]
       },
       "damage": {
         "dice": "1d6",
         "bonus": {
           "value": 3,
-          "contributions": []
+          "contributions": [
+            {
+              "source": "abilityModifier",
+              "kind": "abilityModifier",
+              "key": "str",
+              "amount": 3
+            }
+          ]
         },
         "type": "slashing"
       },

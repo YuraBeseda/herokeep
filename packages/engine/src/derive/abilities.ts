@@ -14,7 +14,7 @@ import type { PredicateContext } from '../predicate/context.ts';
 import { evaluatePredicate } from '../predicate/evaluate.ts';
 import type { Facts } from '../reduce/facts.ts';
 import { type ActiveEffect, type Composition, equippedArmor, occurrenceKey } from './composition.ts';
-import { type Derived, ModifierTable } from './modifiers.ts';
+import { baseParts, type Derived, ModifierTable } from './modifiers.ts';
 import {
   type ProficiencyLevel,
   isProficientRank,
@@ -382,7 +382,12 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
     abilities[id] = {
       score: scores.get(id)!,
       mod,
-      save: table.resolve(`saveTotal.${id}`, mod + (saveProficient ? prof : 0), evalFormula),
+      save: table.resolve(
+        `saveTotal.${id}`,
+        mod + (saveProficient ? prof : 0),
+        evalFormula,
+        baseParts(id, mod, saveProficient ? 'proficient' : undefined, prof),
+      ),
       saveProficient,
     };
   }
@@ -407,10 +412,17 @@ export function deriveAbilities(facts: Facts, comp: Composition, index: ContentI
   for (const skillId of idsSorted(system.skills)) {
     const skillDef = system.skills.find((s) => s.id === skillId)!;
     const level = proficiencyLevel(table, `skill.${skillId}`);
-    const base = (mods.get(skillDef.ability) ?? 0) + proficiencyAmount(level, prof);
+    const abilityMod = mods.get(skillDef.ability) ?? 0;
+    const profAmount = proficiencyAmount(level, prof);
+    const base = abilityMod + profAmount;
     const expertiseOwner = level === 'expertise' ? expertiseOwners.get(`skill.${skillId}`) : undefined;
     skills[skillId] = {
-      total: table.resolve(`skillTotal.${skillId}`, base, evalFormula),
+      total: table.resolve(
+        `skillTotal.${skillId}`,
+        base,
+        evalFormula,
+        baseParts(skillDef.ability, abilityMod, level === 'none' ? undefined : level, profAmount),
+      ),
       proficiency: level,
       ...(expertiseOwner !== undefined ? { expertiseOwner } : {}),
     };

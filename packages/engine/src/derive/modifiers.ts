@@ -15,6 +15,27 @@ export interface Derived<T> {
   contributions: Contribution[];
 }
 
+/**
+ * The base parts of a value that folds an ability modifier (and a proficiency amount) into `base`:
+ * listed first in `contributions` so a breakdown can show them. `amount` is the level's amount
+ * (`proficiencyAmount`); zero amounts are omitted, except an ability modifier of 0 beside a rank.
+ */
+export function baseParts(
+  abilityId: string,
+  mod: number,
+  rank?: 'proficient' | 'expertise' | 'half',
+  profAmount = 0,
+): Contribution[] {
+  const parts: Contribution[] = [];
+  if (mod !== 0 || (rank !== undefined && profAmount !== 0)) {
+    parts.push({ source: 'abilityModifier', kind: 'abilityModifier', key: abilityId, amount: mod });
+  }
+  if (rank !== undefined && profAmount !== 0) {
+    parts.push({ source: 'proficiency', kind: 'proficiency', key: rank, amount: profAmount });
+  }
+  return parts;
+}
+
 interface Entry {
   contribution: Contribution;
   policy: StackPolicy;
@@ -46,14 +67,19 @@ export class ModifierTable {
    * its evaluated `amount` stamped next to the kept `formula` (plan 14 ruling 9) — each formula is
    * evaluated exactly once per resolve, and the stamp lands on a copy, never on the stored entry.
    */
-  resolve(target: string, base: number, evalFormula: (f: string) => number): Derived<number> {
+  resolve(
+    target: string,
+    base: number,
+    evalFormula: (f: string) => number,
+    parts: Contribution[] = [],
+  ): Derived<number> {
     const raw = this.byTarget.get(target) ?? [];
     const entries: Entry[] = raw.map((e) =>
       e.contribution.amount === undefined && e.contribution.formula !== undefined && e.policy !== 'union'
         ? { policy: e.policy, contribution: { ...e.contribution, amount: evalFormula(e.contribution.formula) } }
         : e,
     );
-    const contributions = entries.map((e) => e.contribution);
+    const contributions = [...parts, ...entries.map((e) => e.contribution)];
     let value = base;
 
     const formulaEntries = entries.filter((e) => e.policy === 'max-of-formulas');
