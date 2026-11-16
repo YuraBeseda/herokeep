@@ -1,4 +1,5 @@
-﻿import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
+import { HKPACK_LIMITS } from '@hk/protocol';
 import { ToastService } from '@shared/components/toast/toast.service';
 import {
   HeroImportBadEventError,
@@ -95,14 +96,19 @@ export class HeroImportFlow {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const names: string[] = [];
     let total = 0;
+    let heroCount = 0;
     try {
       unzipSync(bytes, {
         filter: ({ name, size, originalSize }) => {
-          if (names.length >= EXPORT_ALL_MAX_HEROES + 1) {
-            throw new HeroImportTooLargeError('entries', names.length, EXPORT_ALL_MAX_HEROES);
+          // Same all-entries bound the reader applies (a forged directory can claim millions).
+          if (names.length >= HKPACK_LIMITS.maxEntries) {
+            throw new HeroImportTooLargeError('entries', names.length + 1, HKPACK_LIMITS.maxEntries);
           }
           names.push(name);
           if (name.endsWith('.hero')) {
+            if (++heroCount > EXPORT_ALL_MAX_HEROES) {
+              throw new HeroImportTooLargeError('entries', heroCount, EXPORT_ALL_MAX_HEROES);
+            }
             const declared = Math.max(size, originalSize);
             total += declared;
             if (declared > EXPORT_ALL_MAX_HERO_BYTES) {
@@ -140,6 +146,7 @@ export class HeroImportFlow {
         const result = await this.heroReaderService.import(entry);
         (result.mode === 'created' ? summary.imported : summary.merged).push(result.name);
       } catch (error) {
+        // Every remaining entry would fail the same way: abort rather than list them all as invalid.
         if (error instanceof CharacterStoreNotLeaderError) throw error;
         summary.skipped.push({
           name: entry.name,
@@ -150,7 +157,7 @@ export class HeroImportFlow {
     return summary;
   }
 
-  /** Maps every `HeroReaderService.import` failure mode to its toast `show(key, params?)` args вЂ”
+  /** Maps every `HeroReaderService.import` failure mode to its toast `show(key, params?)` args —
    * each typed error already carries its own full, global i18n key as `code` (same pattern as
    * `CharacterStoreNotLeaderError`, checked here too: a non-leader tab can't import either).
    * `HeroImportBadEventError`'s 0-based `index` is shown 1-based. */

@@ -1,4 +1,4 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { zipFiles } from '@shared/services/export/zip-files';
 import {
@@ -116,5 +116,13 @@ describe('HeroImportFlow export-all zip', () => {
       'characters.list.toast.import-created',
       expect.objectContaining({ name: 'solo' }),
     );
+  });
+  it('accepts a single .hero with more than 500 entries (the reader allows 2001)', async () => {
+    const { flow, importFn } = setup(() => Promise.resolve(outcome('solo', 'created')));
+    const files: Record<string, Uint8Array> = { 'manifest.json': enc('{}') };
+    for (let i = 0; i < 600; i++) files[`images/${i}.png`] = enc('x');
+    const file = await archive(files);
+    await flow.importFile(file);
+    expect(importFn).toHaveBeenCalledExactlyOnceWith(file);
   });
 });
