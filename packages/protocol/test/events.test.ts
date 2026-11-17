@@ -117,6 +117,7 @@ const NEW_EVENT_CASES: { type: string; accept: Record<string, unknown> }[] = [
   { type: 'currency.changed', accept: { gp: 10, cp: -5 } },
   { type: 'rest.taken', accept: { kind: 'long' } },
   { type: 'inspiration.changed', accept: { value: true } },
+  { type: 'combat.round_advanced', accept: { encounterId: UUID_A, round: 2 } },
   { type: 'note.added', accept: { id: UUID_B, title: 'Session 1', body: 'Met the party.' } },
   { type: 'note.updated', accept: { id: UUID_B, body: 'Updated note.' } },
   { type: 'note.removed', accept: { id: UUID_B } },
@@ -209,7 +210,7 @@ describe('item.updated: additive itemId (inventory item-id migration)', () => {
 // index.ts, which additionally carries the campaign-stream catalog as of plan-9 Task 1) — this
 // describe block is specifically about the Phase-1 character-stream catalog staying complete.
 describe('the complete Phase-1 character event catalog', () => {
-  const CHARACTER_EVENT_COUNT = 54; // 3 phase-1a events above + 50 NEW_EVENT_CASES (plan 14 T5: +character.options.set; plan 15 T1: +pack.unpinned; plan 18 T1: +condition.updated)
+  const CHARACTER_EVENT_COUNT = 55; // 3 phase-1a events above + 51 NEW_EVENT_CASES (plan 14 T5: +character.options.set; plan 15 T1: +pack.unpinned; plan 18 T1: +condition.updated; T2: +combat.round_advanced)
   const CHARACTER_PAYLOAD_COUNT = CHARACTER_EVENT_COUNT + 1; // + condition.added@2 (same type, second version)
 
   it('registers a payload schema for every catalog event', () => {

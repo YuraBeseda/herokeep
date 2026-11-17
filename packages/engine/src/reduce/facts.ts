@@ -117,6 +117,8 @@ export interface Facts {
   inventory: InventoryEntry[];
   currency: { cp: number; sp: number; ep: number; gp: number; pp: number };
   inspiration: boolean;
+  /** Latest solo `combat.round_advanced` (plan 18 task 2); derive's clock when no override is passed. */
+  round?: { encounterId: string; round: number };
   notes: NoteEntry[];
   overrides: { path: string; value: unknown; reason: string }[];
   skipped: SkippedEvent[];

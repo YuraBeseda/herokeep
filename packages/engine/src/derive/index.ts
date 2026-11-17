@@ -222,6 +222,10 @@ function attunementPredicateContext(
   };
 }
 
+/** A solo hero's own latest `combat.round_advanced`; an `overrides.clock` always wins. */
+const soloClock = (facts: Facts) =>
+  facts.round ? { encounter: { id: facts.round.encounterId, round: facts.round.round } } : undefined;
+
 /**
  * Derives the FULL `Sheet` (task-13-brief.md — the integration task over tasks 8-12's per-domain
  * modules). `rules` is optional for compatibility: without it, `deriveHp` prices every level as
@@ -256,7 +260,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   issues.push(...abilities.issues);
   const defense = deriveDefense(abilities, comp, facts, index);
   issues.push(...defense.issues);
-  const hp = deriveHp(abilities, comp, facts, index, rules, overrides?.clock);
+  const hp = deriveHp(abilities, comp, facts, index, rules, overrides?.clock ?? soloClock(facts));
   issues.push(...hp.issues);
   const attacks = deriveAttacks(abilities, comp, facts, index);
   issues.push(...attacks.issues);

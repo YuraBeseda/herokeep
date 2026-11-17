@@ -31,6 +31,9 @@ describe('character-stream EVENT_ACTORS — doc-08 "Append DM events" row (hp.ch
   it('currency.changed: owner + dm', () => {
     expect(EVENT_ACTORS['currency.changed']).toEqual(['owner', 'dm']);
   });
+  it('combat.round_advanced: owner only', () => {
+    expect(EVENT_ACTORS['combat.round_advanced']).toEqual(['owner']);
+  });
   it('inspiration.changed: owner + dm', () => {
     expect(EVENT_ACTORS['inspiration.changed']).toEqual(['owner', 'dm']);
   });

@@ -8,6 +8,7 @@ import {
   type HitDiceRegained,
   type HitDiceSpent,
   type HpChanged,
+  type CombatRoundAdvanced,
   type InspirationChanged,
 } from '@hk/protocol';
 import { DEATH_SAVE_MAX, type ConditionEntry, type Facts, requireCreated } from '../facts.ts';
@@ -177,5 +178,10 @@ export const HANDLERS: Record<string, Handler> = {
   'inspiration.changed@1': (f, e) => {
     const p = e.payload as InspirationChanged;
     return requireCreated(f) ?? { ...f, inspiration: p.value };
+  },
+
+  'combat.round_advanced@1': (f, e) => {
+    const p = e.payload as CombatRoundAdvanced;
+    return requireCreated(f) ?? { ...f, round: { encounterId: p.encounterId, round: p.round } };
   },
 };

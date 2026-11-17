@@ -230,6 +230,7 @@ export const RestTakenV1 = z.strictObject({
   hitDiceSpent: z.array(z.strictObject({ classId: EntityIdSchema, count: z.int().min(1) })).optional(),
 });
 export const InspirationChangedV1 = z.strictObject({ value: z.boolean() });
+export const CombatRoundAdvancedV1 = z.strictObject({ encounterId: z.string().regex(UUID), round: z.int().min(0) });
 
 // --- Notes -----------------------------------------------------------------------------
 
@@ -326,6 +327,7 @@ export const EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'currency.changed@1': CurrencyChangedV1,
   'rest.taken@1': RestTakenV1,
   'inspiration.changed@1': InspirationChangedV1,
+  'combat.round_advanced@1': CombatRoundAdvancedV1,
   'note.added@1': NoteAddedV1,
   'note.updated@1': NoteUpdatedV1,
   'note.removed@1': NoteRemovedV1,
@@ -450,6 +452,8 @@ export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   'rest.taken': ['owner'],
   // doc-08 row 3: "inspiration.changed" named, "Owner ✔ (solo/self)".
   'inspiration.changed': ['owner', 'dm'],
+  // Plan 18 task 2: a solo hero's own round counter (R12); linked heroes use the campaign's.
+  'combat.round_advanced': ['owner'],
   'note.added': ['owner'],
   'note.updated': ['owner'],
   'note.removed': ['owner'],
@@ -512,6 +516,7 @@ export type ItemUpdated = z.infer<typeof ItemUpdatedV1>;
 export type CurrencyChanged = z.infer<typeof CurrencyChangedV1>;
 export type RestTaken = z.infer<typeof RestTakenV1>;
 export type InspirationChanged = z.infer<typeof InspirationChangedV1>;
+export type CombatRoundAdvanced = z.infer<typeof CombatRoundAdvancedV1>;
 export type NoteAdded = z.infer<typeof NoteAddedV1>;
 export type NoteUpdated = z.infer<typeof NoteUpdatedV1>;
 export type NoteRemoved = z.infer<typeof NoteRemovedV1>;
