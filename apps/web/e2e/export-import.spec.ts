@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { createFighter } from './helpers/create-fighter';
-import { hpCurrent, hpMax, strapAction } from './helpers/sheet';
+import { bagSlot, hpCurrent, hpMax, strapAction } from './helpers/sheet';
 
 const CHARACTER_NAME = 'Aldric Export Import';
 const PORTRAIT_FIXTURE = path.join(__dirname, 'fixtures', 'tiny-portrait.png');
@@ -92,7 +92,9 @@ test.describe('export / import (.hero)', () => {
     });
   });
   // Plan 19 task 9 (R61): Settings' "Export all heroes" zip imports back through the same Import.
-  test('export all, delete one hero, import the zip: one imported, one merged', async ({ page }) => {
+  test('export all, delete one hero, import the zip: one imported, one merged', async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker = undefined;
       Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
@@ -118,5 +120,38 @@ test.describe('export / import (.hero)', () => {
     for (const name of names) {
       await expect(page.locator('.characters-list__item', { hasText: name })).toBeVisible();
     }
+  });
+
+  // Plan 18 task 4: an uploaded custom-item icon (an `icon` blob) rides the .hero bundle.
+  test('a custom item with an uploaded icon round-trips in a .hero', async ({ page, browser }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker = undefined;
+      Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    });
+    const name = 'Ilsa Icon Trip';
+    const characterId = await createFighter(page, name);
+
+    await page.locator('.bag__add-custom').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('textbox', { name: 'Name' }).fill('Rune Signet');
+    await dialog.locator('.custom-item-dialog__icon-toggle').click();
+    await dialog.locator('hk-icon-picker input[type="file"]').setInputFiles(PORTRAIT_FIXTURE);
+    await expect(dialog.locator('.custom-item-dialog__icon-slot img')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(bagSlot(page, 'Rune Signet').locator('img.hk-slot__img')).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await strapAction(page, 'export').click();
+    const savedPath = await (await downloadPromise).path();
+    if (!savedPath) throw new Error('download.path() returned null');
+
+    // A fresh context has an empty IndexedDB, so the icon can only come from the bundle.
+    const fresh = await (await browser.newContext()).newPage();
+    await fresh.goto('/characters');
+    await fresh.locator('.characters-list__import-input').setInputFiles(savedPath);
+    await expect(fresh.locator('.characters-list__item', { hasText: name })).toBeVisible();
+    await fresh.goto(`/c/${characterId}/play`);
+    await expect(bagSlot(fresh, 'Rune Signet').locator('img.hk-slot__img')).toBeVisible();
+    await fresh.context().close();
   });
 });
