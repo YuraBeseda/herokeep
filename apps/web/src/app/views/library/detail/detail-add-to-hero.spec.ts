@@ -7,7 +7,11 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { of } from 'rxjs';
 import { HkActionStrapComponent } from '../../../ui/action-strap/action-strap.component';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
-import { linkToCampaign, seedFighter, seedWizard } from '../../characters/sheet/testing/character-fixtures';
+import {
+  linkToCampaign,
+  seedFighter,
+  seedWizard,
+} from '../../characters/sheet/testing/character-fixtures';
 import { pollUntil, setupLeafSpec } from '../../characters/sheet/play/play-spec-support';
 import { LibraryDetailComponent } from './detail.component';
 

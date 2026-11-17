@@ -97,7 +97,6 @@ export class HkActionStrapComponent {
     return `hk-act hk-act--${action.kind}`;
   }
 
-
   protected toggleSheet(): void {
     this.sheetOpen.update((open) => !open);
   }

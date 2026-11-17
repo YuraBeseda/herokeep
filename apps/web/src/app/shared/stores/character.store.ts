@@ -28,7 +28,6 @@ import {
   CampaignEditLockService,
   type CampaignStateSignal,
 } from '../services/campaigns/campaign-edit-lock';
-import type { CampaignState } from '../services/campaigns/campaign-projection';
 import { EngineFacade } from '../services/engine/engine.facade';
 import { StoragePersistService } from '../services/pwa/storage-persist.service';
 import { CharactersRepository } from '../services/storage/characters.repository';

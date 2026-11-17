@@ -376,7 +376,7 @@ export class SheetShellComponent {
     untracked(() => {
       this.strap.set(
         buildSheetStrap(
-          { locked, exporting, status, scope: ['/c', this.routeId] },
+          { locked, conditionsDeniedIn, exporting, status, scope: ['/c', this.routeId] },
           {
             focusHpAmount: () => this.focusHpAmount(),
             rollPlain: () => this.rollPlain(),
