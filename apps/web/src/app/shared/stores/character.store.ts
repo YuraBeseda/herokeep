@@ -23,7 +23,11 @@ import {
   type GrammaticalGender,
 } from '@hk/protocol';
 import { uuidv7 } from '../helpers/uuid';
-import { CampaignEditLockService } from '../services/campaigns/campaign-edit-lock';
+import {
+  campaignDeriveOverridesFromState,
+  CampaignEditLockService,
+} from '../services/campaigns/campaign-edit-lock';
+import type { CampaignState } from '../services/campaigns/campaign-projection';
 import { EngineFacade } from '../services/engine/engine.facade';
 import { StoragePersistService } from '../services/pwa/storage-persist.service';
 import { CharactersRepository } from '../services/storage/characters.repository';
@@ -173,6 +177,12 @@ export class CharacterStore {
   readonly facts: Signal<Facts | undefined> = this.factsState.asReadonly();
   readonly events: Signal<Event[]> = this.eventsState.asReadonly();
 
+  /** Plan 18 task 3: the linked campaign's projected state (`null` for a solo hero or until its
+   * events load), live within one poll — the house-rule gates and `campaignOverrides` read it. */
+  readonly campaign: Signal<CampaignState | null> = this.campaignEditLockService.campaignStateFor(
+    this.events,
+  );
+
   /** Ruling 1 (phase 4, plan 11, task 12 — "overrides plumbing"): for a campaign-linked character,
    * the campaign's OWN settings document's `attunementMax`/`encumbrance` house rules — reactive,
    * cross-stream, same staleness bounds as `CampaignEditLockService.editLockFor`'s own doc (this is
@@ -187,8 +197,8 @@ export class CharacterStore {
    * even `'off'` — beats the character's own `facts.options`, see `derive()`'s precedence) and show
    * the per-character select disabled with a reason. The character option itself needs no extra
    * plumbing: `sheet` below already hands `derive()` the full `facts`, `facts.options` included. */
-  readonly campaignOverrides: Signal<DeriveOverrides> = this.campaignEditLockService.overridesFor(
-    this.events,
+  readonly campaignOverrides: Signal<DeriveOverrides> = computed(() =>
+    campaignDeriveOverridesFromState(this.campaign()),
   );
 
   /** Plan 15 Task 4: the loaded character's OWN content index — `EngineFacade.indexFor(facts.

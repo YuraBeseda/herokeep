@@ -1,4 +1,5 @@
 import { computed, inject, Injectable } from '@angular/core';
+import { houseRuleAllows, type HouseRuleKey } from '@shared/services/campaigns/house-rules';
 import { propose, ProposeError, type NoteEntry, type ProposedEvent, type Sheet } from '@hk/engine';
 import {
   NoteAddedV1,
@@ -102,6 +103,13 @@ export class PlayActionsService {
   readonly editLock = this.campaignEditLockService.editLockFor(this.characterStore.events);
   /** What every mutating control gates on. Rolling dice stays enabled (ruling 7's boundary). */
   readonly editLocked = computed(() => this.editLock().locked);
+
+  /** Plan 18 task 3: whether the linked campaign's house rule denies `rule` (never for a solo hero). */
+  denies(rule: HouseRuleKey): boolean {
+    return !houseRuleAllows(rule, this.characterStore.campaign());
+  }
+  /** The linked campaign's name, for the house-rule hints. */
+  readonly campaignName = computed(() => this.characterStore.campaign()?.name ?? '');
 
   /** `Facts.notes` — freeform stream state with no derived-`Sheet` projection. */
   readonly notes = computed<NoteEntry[]>(() => this.characterStore.facts()?.notes ?? []);

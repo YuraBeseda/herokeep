@@ -36,6 +36,8 @@ export class HkConditionChipComponent {
   readonly tone = input<'danger' | 'arcane'>('danger');
   readonly removable = input(false);
   readonly locked = input(false);
+  /** Translated reason for the lock (a house rule); the plain "Locked" hint when absent. */
+  readonly lockReason = input<string | null>(null);
   /** Translated full story; defaults to the name. */
   readonly hint = input<string | null>(null);
 

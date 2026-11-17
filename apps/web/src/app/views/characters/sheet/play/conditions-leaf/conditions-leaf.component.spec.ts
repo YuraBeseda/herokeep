@@ -3,13 +3,23 @@ import { propose } from '@hk/engine';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../../../assets/i18n/characters/en.json';
-import { seedFighter } from '../../testing/character-fixtures';
+import { linkToCampaign, seedFighter, visibleText } from '../../testing/character-fixtures';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { ConditionsLeafComponent } from './conditions-leaf.component';
 
 // task-2-brief.md (death saves, inspiration) and task-4-brief.md (the condition-add dialog with its
 // localized picker and data-driven level stepper, per-chip remove). Every scenario seeds a REAL
 // fighter-1 stream and drives the rendered DOM and the real `ConditionDialogComponent` overlay.
+
+/** The text of every element `el`'s `aria-describedby` points at. */
+function describedBy(el: Element): string {
+  return (el.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+    .join(' ');
+}
+
 describe('ConditionsLeafComponent — death saves, inspiration, conditions', () => {
   const EXHAUSTION_ID = 'srd-5e-2024:condition/exhaustion';
   const BLINDED_ID = 'srd-5e-2024:condition/blinded';
@@ -352,5 +362,53 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
     expect(badges).toEqual(['Damage type: Poison (Cloak of Arachnida)']);
     expect(compiled.querySelector('.conditions__resistances .hk-cond__end')).toBeNull();
     expect(compiled.textContent).toContain(charactersEn.sheet.conditions.resistancesTitle);
+  });
+  describe('house rule: players manage their own conditions (plan 18 task 3)', () => {
+    const REASON = 'Only your DM manages conditions in The Emberfall Company';
+
+    it('off: the chip has no End, its lock carries the reason, and Add condition is blocked with it', async () => {
+      await seedFighter('Ivan');
+      const characterStore = TestBed.inject(CharacterStore);
+      await characterStore.appendTx(propose.condition(characterStore.sheet()!, BLINDED_ID, true));
+      await linkToCampaign({ playersManageConditions: false });
+
+      const fixture = TestBed.createComponent(ConditionsLeafComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      expect(compiled.querySelector('.hk-cond__end')).toBeNull();
+      expect(compiled.querySelector('.hk-cond__lock')!.getAttribute('aria-label')).toBe(REASON);
+      const add = compiled.querySelector<HTMLButtonElement>('.conditions__add')!;
+      expect(add.getAttribute('aria-disabled')).toBe('true');
+      expect(describedBy(add)).toBe(REASON);
+      expect(visibleText(compiled)).not.toContain(REASON);
+      add.click();
+      await fixture.whenStable();
+      expect(document.querySelector('app-condition-dialog')).toBeNull();
+    });
+
+    it("off: the DM's condition.removed still applies (the DM path is unaffected)", async () => {
+      await seedFighter('Ivan');
+      const characterStore = TestBed.inject(CharacterStore);
+      await characterStore.appendTx(propose.condition(characterStore.sheet()!, BLINDED_ID, true));
+      await linkToCampaign({ playersManageConditions: false });
+      await characterStore.appendTx([
+        { type: 'condition.removed', v: 1, payload: { conditionId: BLINDED_ID } },
+      ]);
+      expect(characterStore.sheet()?.conditions).toEqual([]);
+    });
+
+    it('on: End and Add condition carry no reason', async () => {
+      await seedFighter('Ivan');
+      const characterStore = TestBed.inject(CharacterStore);
+      await characterStore.appendTx(propose.condition(characterStore.sheet()!, BLINDED_ID, true));
+      await linkToCampaign({ playersManageConditions: true });
+
+      const fixture = TestBed.createComponent(ConditionsLeafComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('.hk-cond__end')).not.toBeNull();
+      expect(describedBy(compiled.querySelector('.conditions__add')!)).toBe('');
+    });
   });
 });

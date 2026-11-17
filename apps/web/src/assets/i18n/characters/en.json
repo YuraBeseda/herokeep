@@ -198,7 +198,8 @@
         "title": "Starting equipment: {source}",
         "option": "Option {label}",
         "inBag": "Option {label} is in the bag below",
-        "gold": "{gp} gp"
+        "gold": "{gp} gp",
+        "goldOff": "Starting gold is off in {campaign} — ask your DM"
       }
     },
     "title": "New hero",
@@ -232,7 +233,8 @@
     "stepper": {
       "afterClass": "Choose a class first",
       "classChosen": "Class chosen. Cancel to start over and pick another.",
-      "needsAttention": "This step needs another look"
+      "needsAttention": "This step needs another look",
+      "multiclassOff": "Multiclassing is off in {campaign} — ask your DM"
     },
     "hp": {
       "title": "Hit points for level {level}",
@@ -873,6 +875,10 @@
     },
     "more": {
       "packs": "Content packs"
+    },
+    "houseRules": {
+      "addItems": "Only your DM adds items in {campaign}",
+      "conditions": "Only your DM manages conditions in {campaign}"
     }
   },
   "timeline": {

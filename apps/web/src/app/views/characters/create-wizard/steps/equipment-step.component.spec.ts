@@ -14,6 +14,7 @@ import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
 import { EquipmentStepComponent } from './equipment-step.component';
+import { CAMPAIGN_ID, seedCampaign, visibleText } from '../../sheet/testing/character-fixtures';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — same approach as every
 // other create-wizard step spec.
@@ -313,6 +314,33 @@ describe('EquipmentStepComponent', () => {
       expect(state.kitChoice('class')()).toBe('C');
       expect(cardsOf(compiled, 'class')[2].classList).toContain('hk-picker-card--selected');
       expect(state.draftSheet()?.currency.gp).toBe(155 + 14);
+    });
+
+    // Plan 18 task 3, ruling R6: starting gold off for a hero made for a campaign.
+    it('starting gold off: every gold-only option is blocked with the reason; kits with items stay choosable', async () => {
+      await seedCampaign({ startingGold: false });
+      const state = fighterSoldier();
+      state.campaignId.set(CAMPAIGN_ID);
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const reason = 'Starting gold is off in The Emberfall Company — ask your DM';
+      const [a, b, c] = cardsOf(compiled, 'class');
+      expect(c.classList).toContain('hk-picker-card--gated');
+      const choose = c.querySelector<HTMLButtonElement>('.hk-picker-card__choose')!;
+      expect(choose.getAttribute('aria-disabled')).toBe('true');
+      const describedBy = (choose.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent?.trim())
+        .join(' ');
+      expect(describedBy).toContain(reason);
+      expect(visibleText(compiled)).not.toContain(reason);
+      expect(a.classList).not.toContain('hk-picker-card--gated');
+      expect(b.classList).not.toContain('hk-picker-card--gated');
+      choose.click();
+      await fixture.whenStable();
+      expect(state.kitChoice('class')()).toBe('A');
     });
 
     it('clicking a card body chooses that kit too', async () => {

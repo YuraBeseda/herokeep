@@ -21,8 +21,8 @@
       class="hk-cond__lock"
       role="img"
       tabindex="0"
-      [attr.aria-label]="t('icon.lock')"
-      [hkTooltip]="t('icon.lock')"
+      [attr.aria-label]="lockReason() ?? t('icon.lock')"
+      [hkTooltip]="lockReason() ?? t('icon.lock')"
     >
       <hk-icon [icon]="'ui:lock'" />
     </span>

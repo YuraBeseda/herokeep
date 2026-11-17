@@ -186,7 +186,7 @@ export class CampaignEditLockService {
    * Dexie-read/poll machinery. `null` exactly when `characterEvents` resolves to no campaign link
    * at all — the caller's own pure projection function decides what that means for its own verdict
    * (`campaignEditLockFromState`/`campaignDeriveOverridesFromState` both fail open on `null`). */
-  private campaignStateFor(
+  campaignStateFor(
     characterEvents: Signal<readonly Event[]>,
   ): Signal<CampaignState | null> {
     const streamId = computed<string | undefined>(() => {

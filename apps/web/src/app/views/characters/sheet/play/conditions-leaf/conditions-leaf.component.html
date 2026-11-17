@@ -1,6 +1,10 @@
 @if (sheet(); as s) {
   <ng-container *transloco="let t; read: 'characters'">
     <hk-leaf [title]="t('sheet.conditions.title')" [icon]="'ui:condition'" [phone]="phone()">
+      @let conditionsReason =
+        actions.denies('playersManageConditions')
+          ? t('sheet.houseRules.conditions', { campaign: actions.campaignName() })
+          : null;
       <div class="conditions__chips">
         @for (condition of conditions(); track condition.id) {
           <hk-condition-chip
@@ -15,6 +19,8 @@
                   : null
             "
             [removable]="!actions.editLocked()"
+            [locked]="conditionsReason !== null"
+            [lockReason]="conditionsReason"
             (remove)="actions.removeCondition(condition.id)"
           />
         } @empty {
@@ -26,6 +32,7 @@
           class="conditions__add"
           [variant]="'ghost'"
           [disabled]="actions.editLocked()"
+          [disabledReason]="conditionsReason"
           (click)="addCondition()"
         >
           {{ t('sheet.conditions.add') }}

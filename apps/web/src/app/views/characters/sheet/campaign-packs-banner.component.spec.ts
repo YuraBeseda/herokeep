@@ -186,7 +186,7 @@ function configure(packs: Pack[], dialogResult: unknown): Harness {
       },
       {
         provide: CampaignEditLockService,
-        useValue: { editLockFor: () => harness.lock, overridesFor: () => signal({}) },
+        useValue: { editLockFor: () => harness.lock, overridesFor: () => signal({}), campaignStateFor: () => signal(null) },
       },
       { provide: DialogService, useValue: { open: harness.open } },
     ],

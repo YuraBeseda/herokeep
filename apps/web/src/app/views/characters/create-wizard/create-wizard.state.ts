@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, type Signal } from '@angular/core';
+import { computed, inject, Injectable, resource, signal, type Signal } from '@angular/core';
 import {
   derive,
   ENGINE_VERSION,
@@ -24,6 +24,8 @@ import {
 import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
 import { type DraftEvent } from '@shared/stores/character.store';
+import { projectCampaign, type CampaignState } from '@shared/services/campaigns/campaign-projection';
+import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PackStore } from '@shared/stores/pack.store';
 import { wizardSteps, type WizardStep } from '../flow/steps.ts';
 
@@ -65,6 +67,19 @@ interface AppliedKit {
 export class CreateWizardState implements EngineScope {
   private readonly engineFacade = inject(EngineFacade);
   private readonly packStore = inject(PackStore);
+  private readonly eventsRepository = inject(EventsRepository);
+
+  /** Plan 18 task 3: the campaign this hero is made for (`?campaign=` from the join flow), else
+   * `undefined` for a solo hero. Its projected state feeds the house-rule gates (ruling R6). */
+  readonly campaignId = signal<string | undefined>(undefined);
+  private readonly campaignEvents = resource({
+    params: () => this.campaignId(),
+    loader: async ({ params }) => this.eventsRepository.byStream(`camp:${params}`),
+  });
+  readonly campaign = computed<CampaignState | null>(() => {
+    const events = this.campaignId() === undefined ? undefined : this.campaignEvents.value();
+    return events ? projectCampaign(events) : null;
+  });
 
   // --- Content packs (plan 15 Task 4) ------------------------------------------------------------
   // The draft character pins the core plus the installed content packs checked on the first step

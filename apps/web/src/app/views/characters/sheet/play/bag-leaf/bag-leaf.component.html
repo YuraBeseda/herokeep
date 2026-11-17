@@ -1,6 +1,11 @@
 <ng-container *transloco="let t; read: 'characters'">
   @let items = itemsFor(t);
   @let lockedReason = actions.editLocked() ? t('sheet.editLocked') : null;
+  @let addReason =
+    lockedReason ??
+    (actions.denies('playersAddItems')
+      ? t('sheet.houseRules.addItems', { campaign: actions.campaignName() })
+      : null);
 
   <ng-template #itemActions>
     @if (selected(); as entry) {
@@ -100,7 +105,7 @@
         hk-button
         type="button"
         class="bag__add-library"
-        [disabledReason]="lockedReason"
+        [disabledReason]="addReason"
         (click)="actions.addFromLibrary()"
       >
         {{ t('sheet.inventory.addFromLibrary') }}
@@ -110,7 +115,7 @@
         type="button"
         class="bag__add-custom"
         [variant]="'ghost'"
-        [disabledReason]="lockedReason"
+        [disabledReason]="addReason"
         (click)="actions.addCustomItem()"
       >
         {{ t('sheet.inventory.addCustom') }}

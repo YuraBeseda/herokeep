@@ -339,7 +339,7 @@ export class LinkCharacterComponent {
     const campaignId = this.campaignId();
     if (!campaignId) return;
     void this.router.navigate(['/characters/new'], {
-      queryParams: { returnUrl: `/g/${campaignId}/link-character` },
+      queryParams: { returnUrl: `/g/${campaignId}/link-character`, campaign: campaignId },
     });
   }
 

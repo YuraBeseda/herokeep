@@ -91,6 +91,20 @@ describe('projectCampaign', () => {
       expect(state.settings).toEqual(settings);
     });
 
+    it('campaign.settings_changed @1 then @2: the @2 house rules replace the @1 document', () => {
+      const v1 = mkSettings();
+      const v2 = { ...v1, houseRules: { ...v1.houseRules, startingGold: false } };
+      const events = [
+        mkEvent('campaign.settings_changed', { settings: v1 }, { seq: 1 }),
+        { ...mkEvent('campaign.settings_changed', { settings: v2 }, { seq: 2 }), v: 2 },
+      ];
+
+      const state = projectCampaign(events);
+
+      expect(state.settings).toEqual(v2);
+      expect(state.settings?.houseRules.startingGold).toBe(false);
+    });
+
     it('campaign.join_code_rotated sets joinCode', () => {
       const events = [mkEvent('campaign.join_code_rotated', { joinCode: '7QX4-M2HN' }, { seq: 1 })];
 

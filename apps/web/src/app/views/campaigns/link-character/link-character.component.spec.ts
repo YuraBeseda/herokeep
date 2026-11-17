@@ -501,7 +501,7 @@ describe('LinkCharacterComponent', () => {
     compiled.querySelector<HTMLButtonElement>('.link-character__create-new')!.click();
 
     expect(navigateSpy).toHaveBeenCalledWith(['/characters/new'], {
-      queryParams: { returnUrl: `/g/${CAMPAIGN_ID}/link-character` },
+      queryParams: { returnUrl: `/g/${CAMPAIGN_ID}/link-character`, campaign: CAMPAIGN_ID },
     });
   });
 

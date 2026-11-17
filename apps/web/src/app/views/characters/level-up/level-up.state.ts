@@ -24,6 +24,7 @@ import { cryptoRng } from '@shared/services/engine/rng';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
+import { houseRuleAllows } from '@shared/services/campaigns/house-rules';
 import { PackStore } from '@shared/stores/pack.store';
 import { levelUpSteps, type LevelUpStep } from '../flow/steps';
 
@@ -69,6 +70,19 @@ export class LevelUpState {
   private readonly db = inject(HkDb);
   private readonly toastService = inject(ToastService);
 
+  /** Plan 18 task 3 (Review Focus 3): the "Multiclassing" house rule as it stood when this level-up
+   * started — a DM flipping it mid-flow never changes a flow already under way; the next one reads
+   * it afresh. shortcut: a level-up opened before the campaign's events have loaded (a cold deep
+   * link) snapshots "allowed" (the same fail-open posture as the edit lock). */
+  private readonly campaignAtStart = untracked(this.characterStore.campaign);
+  readonly multiclassAllowed = houseRuleAllows('multiclassing', this.campaignAtStart);
+  /** The campaign's name, for the locked which-class hint. */
+  readonly campaignName = this.campaignAtStart?.name ?? '';
+  /** `CharacterStore.advancements()`, without new classes while multiclassing is off. */
+  private readonly offers = computed(() =>
+    this.characterStore.advancements().filter((a) => this.multiclassAllowed || !a.isNewClass),
+  );
+
   readonly decisions = signal<ReadonlyMap<string, string[]>>(new Map());
   readonly decisionContexts = signal<ReadonlyMap<string, Record<string, unknown>>>(new Map());
   readonly extraDrafts = signal<readonly DraftEvent[]>([]);
@@ -106,7 +120,7 @@ export class LevelUpState {
    * entry/entries it always would have, so `classChoices` stays empty (or single-entry) and no
    * multiclass option is ever shown — no separate barring logic needed here. */
   readonly classChoices: Signal<Advancement[]> = computed(() => {
-    const all = this.characterStore.advancements();
+    const all = this.offers();
     return all.length > 1 ? all : [];
   });
 
@@ -116,7 +130,7 @@ export class LevelUpState {
    * the whole wizard on this being defined, showing the picker instead (see `classChoices`'s
    * doc). */
   readonly advancement: Signal<Advancement | undefined> = computed(() => {
-    const all = this.characterStore.advancements();
+    const all = this.offers();
     if (all.length <= 1) return all[0];
     const selected = this.selectedClassId();
     return selected === undefined ? undefined : all.find((a) => a.classId === selected);

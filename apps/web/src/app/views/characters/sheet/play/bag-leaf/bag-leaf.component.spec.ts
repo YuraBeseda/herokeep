@@ -3,7 +3,7 @@ import { propose } from '@hk/engine';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import charactersEn from '../../../../../../assets/i18n/characters/en.json';
-import { seedFighter } from '../../testing/character-fixtures';
+import { linkToCampaign, seedFighter, visibleText } from '../../testing/character-fixtures';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { BagLeafComponent } from './bag-leaf.component';
 
@@ -13,6 +13,16 @@ import { BagLeafComponent } from './bag-leaf.component';
 // Every scenario seeds the REAL `seedFighter` fixture (chain mail + longsword + shield, all
 // equipped — plan-5 golden) and drives the real `AddItemDialogComponent`/`CustomItemDialogComponent`/
 // `ItemRemoveConfirmComponent` overlays the leaf opens through `DialogService`.
+
+/** The text of every element `el`'s `aria-describedby` points at. */
+function describedBy(el: Element): string {
+  return (el.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+    .join(' ');
+}
+
 describe('BagLeafComponent — inventory and currency controls', () => {
   const DAGGER_ID = 'srd-5e-2024:item/dagger';
   const LONGSWORD_ID = 'srd-5e-2024:item/longsword';
@@ -402,5 +412,32 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     await pollUntil(fixture, () => characterStore.sheet()?.currency.ep === 0);
     changed = characterStore.events().at(-1)!;
     expect(changed).toMatchObject({ type: 'currency.changed', payload: { ep: -4 } });
+  });
+  describe('house rule: players add items themselves (plan 18 task 3)', () => {
+    const REASON = 'Only your DM adds items in The Emberfall Company';
+
+    it('off: both Add item buttons are blocked with the reason, no inline caption', async () => {
+      await seedFighter('Ivan');
+      await linkToCampaign({ playersAddItems: false });
+      const fixture = TestBed.createComponent(BagLeafComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      for (const selector of ['.bag__add-library', '.bag__add-custom']) {
+        const button = compiled.querySelector<HTMLButtonElement>(selector)!;
+        expect(button.getAttribute('aria-disabled')).toBe('true');
+        expect(describedBy(button)).toBe(REASON);
+      }
+      expect(visibleText(compiled)).not.toContain(REASON);
+    });
+
+    it('a solo hero is unaffected', async () => {
+      await seedFighter('Ivan');
+      const fixture = TestBed.createComponent(BagLeafComponent);
+      await fixture.whenStable();
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.bag__add-library')!;
+      expect(button.getAttribute('aria-disabled')).not.toBe('true');
+      expect(describedBy(button)).toBe('');
+    });
   });
 });

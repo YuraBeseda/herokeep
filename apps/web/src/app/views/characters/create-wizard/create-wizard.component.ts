@@ -285,6 +285,7 @@ export class CreateWizardComponent {
     // or a picker step) has nothing to show: such a link opens the name step.
     if (this.state.name().trim().length > 0) {
       this.flow.restore(this.route.snapshot.queryParamMap.get('step'));
+      this.state.campaignId.set(this.route.snapshot.queryParamMap.get('campaign') ?? undefined);
     }
   }
 

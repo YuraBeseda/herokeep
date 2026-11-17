@@ -116,7 +116,11 @@ export class LevelUpFlowChrome {
         label: classLabel,
         state: 'locked',
         ...(className ? { summary: className } : {}),
-        hint: this.tr('characters.levelUp.stepper.classChosen'),
+        hint: this.state.multiclassAllowed
+          ? this.tr('characters.levelUp.stepper.classChosen')
+          : this.tr('characters.levelUp.stepper.multiclassOff', {
+              campaign: this.state.campaignName,
+            }),
       },
     ];
     for (const step of steps) {

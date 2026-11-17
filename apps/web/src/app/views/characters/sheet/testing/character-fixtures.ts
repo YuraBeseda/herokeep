@@ -1,4 +1,8 @@
+import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { Event } from '@hk/protocol';
+import type { HouseRules } from '@shared/services/campaigns/house-rules';
+import { EventsRepository } from '@shared/services/storage/events.repository';
 import { CharacterStore } from '@shared/stores/character.store';
 import { CreateWizardState } from '../../create-wizard/create-wizard.state';
 import { LevelUpState } from '../../level-up/level-up.state';
@@ -174,4 +178,75 @@ export async function levelUpToTwo(hpRoll = 5): Promise<void> {
   }
 
   await characterStore.appendTx(state.buildTransaction());
+}
+
+export const CAMPAIGN_ID = '00000000-0000-4000-8000-0000000000c1';
+export const CAMPAIGN_NAME = 'The Emberfall Company';
+
+/** Seeds the `camp:<id>` stream (name + an @2 settings document carrying `houseRules`). */
+export async function seedCampaign(houseRules: Partial<HouseRules> = {}): Promise<void> {
+  const stream = `camp:${CAMPAIGN_ID}`;
+  const actor = { userId: 'dm1', deviceId: 'd1', role: 'dm' };
+  const settings = {
+    system: 'srd-5e-2024',
+    packs: [],
+    houseRules: {
+      strictValidation: true,
+      allowOverrides: true,
+      editOutsideSession: 'free',
+      xpMode: 'xp',
+      hpOnLevelUp: 'roll',
+      encumbrance: 'off',
+      attunementMax: 3,
+      startingLevel: 1,
+      ...houseRules,
+    },
+    visibility: { partySheets: 'overview', rolls: 'dm', allowPrivateRolls: true },
+    join: { open: true, requireApproval: false },
+  };
+  const existing = await TestBed.inject(EventsRepository).byStream(stream);
+  const seq = existing.length + 1;
+  await TestBed.inject(EventsRepository).append([
+    ...(existing.length === 0
+      ? [
+          {
+            id: `evt-campaign-created`,
+            stream,
+            seq: 1,
+            ts: '2026-01-01T00:00:00.000Z',
+            actor,
+            type: 'campaign.created',
+            v: 1,
+            payload: { name: CAMPAIGN_NAME, system: 'srd-5e-2024' },
+          } as unknown as Event,
+        ]
+      : []),
+    {
+      id: `evt-campaign-settings-${seq}`,
+      stream,
+      seq: existing.length === 0 ? 2 : seq,
+      ts: '2026-01-01T00:00:01.000Z',
+      actor,
+      type: 'campaign.settings_changed',
+      v: 2,
+      payload: { settings },
+    } as unknown as Event,
+  ]);
+}
+
+/** Plan 18 task 3: links the loaded character to the seeded campaign and lets its read settle. */
+export async function linkToCampaign(houseRules: Partial<HouseRules> = {}): Promise<void> {
+  await seedCampaign(houseRules);
+  await TestBed.inject(CharacterStore).appendTx([
+    { type: 'character.campaign_joined', v: 1, payload: { campaignId: CAMPAIGN_ID } },
+  ]);
+  await TestBed.inject(ApplicationRef).whenStable();
+}
+
+/** The text a sighted user sees: `hidden` descriptions (a disabled reason's `aria-describedby`
+ * target) are left out, so a spec can assert "no inline caption". */
+export function visibleText(root: HTMLElement): string {
+  const copy = root.cloneNode(true) as HTMLElement;
+  copy.querySelectorAll('[hidden]').forEach((el) => el.remove());
+  return copy.textContent ?? '';
 }

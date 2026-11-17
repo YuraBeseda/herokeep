@@ -24,7 +24,13 @@ import { hintOf } from '../../../ui/testing/harness';
 import { stubViewport } from '../../../ui/testing/viewport';
 import shellEn from '../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../assets/i18n/characters/en.json';
-import { seedFighter, seedWizard } from '../sheet/testing/character-fixtures';
+import { CAMPAIGN_EDIT_LOCK_POLL_INTERVAL_MS } from '@shared/services/campaigns/campaign-edit-lock';
+import {
+  linkToCampaign,
+  seedCampaign,
+  seedFighter,
+  seedWizard,
+} from '../sheet/testing/character-fixtures';
 import { CreateWizardState } from '../create-wizard/create-wizard.state';
 import { LevelUpState } from './level-up.state';
 
@@ -1232,5 +1238,72 @@ describe('LevelUpComponent', () => {
       expect(strapAction('next')?.label).toBe('shell.strap.finish-level-up');
       expect(strapAction('next')?.disabled).toBeFalsy();
     });
+  });
+});
+
+// Plan 18 task 3: the "Multiclassing" house rule (owner comment 2026-11-03).
+describe('LevelUpComponent — multiclassing house rule', () => {
+  const REASON = 'Multiclassing is off in The Emberfall Company — ask your DM';
+
+  beforeEach(async () => {
+    configureReal();
+    TestBed.overrideProvider(CAMPAIGN_EDIT_LOCK_POLL_INTERVAL_MS, { useValue: 20 });
+    const db = TestBed.inject(HkDb);
+    await Promise.all([
+      db.events.clear(),
+      db.settings.clear(),
+      db.snapshots.clear(),
+      db.characters.clear(),
+    ]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    TestBed.inject(HkDb).close();
+  });
+
+  async function seedLinkedFighter(multiclassing: boolean): Promise<string> {
+    const id = await seedFighter('Ivan');
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'xp.awarded', v: 1, payload: { amount: 300 } },
+    ]);
+    await linkToCampaign({ multiclassing });
+    return id;
+  }
+
+  it('off: skips the which-class step, continues in the hero class, and shows the step locked with the reason', async () => {
+    const id = await seedLinkedFighter(false);
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+
+    expect(root.querySelector('.level-up__class-picker')).toBeNull();
+    expect(root.querySelector('.level-up__hp-average')).not.toBeNull();
+    const first = root.querySelector('.hk-stepper__step')!;
+    expect(first.classList.contains('hk-stepper__step--locked')).toBe(true);
+    expect(hintOf(first)).toBe(REASON);
+    expect(root.textContent).not.toContain(REASON);
+  });
+
+  it('a level-up started while on finishes as started when the DM flips it off; the next one skips', async () => {
+    const id = await seedLinkedFighter(true);
+    const characterStore = TestBed.inject(CharacterStore);
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('.level-up__class-picker')).not.toBeNull();
+
+    await seedCampaign({ multiclassing: false });
+    for (let i = 0; i < 100; i++) {
+      if (characterStore.campaign()?.settings?.houseRules.multiclassing === false) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(characterStore.campaign()?.settings?.houseRules.multiclassing).toBe(false);
+    await harness.fixture.whenStable();
+    expect(root.querySelector('.level-up__class-picker')).not.toBeNull();
+
+    await harness.navigateByUrl(`/c/${id}/play`);
+    await harness.navigateByUrl(`/c/${id}/level-up`);
+    const again = harness.routeNativeElement!;
+    expect(again.querySelector('.level-up__class-picker')).toBeNull();
+    expect(again.querySelector('.level-up__hp-average')).not.toBeNull();
   });
 });
