@@ -101,8 +101,13 @@
         hk-icon-button
         [attr.data-action]="action.id"
         [icon]="action.icon"
-        [hint]="hintKey(action)"
-        [disabled]="!!action.disabled"
+        [hint]="action.label"
+        [disabled]="!!action.disabled && !action.disabledReason"
+        [disabledReason]="
+          action.disabled && action.disabledReason
+            ? t(action.disabledReason, action.disabledReasonParams)
+            : null
+        "
         (click)="action.run()"
       ></button>
     } @else if (phone()) {
@@ -113,7 +118,9 @@
         [class]="tileClass(action)"
         [attr.aria-disabled]="action.disabled ? 'true' : null"
         [hkTooltip]="
-          action.disabled && action.disabledReason ? t(action.disabledReason) : t(action.label)
+          action.disabled && action.disabledReason
+            ? t(action.disabledReason, action.disabledReasonParams)
+            : t(action.label)
         "
         (click)="activate(action)"
       >
@@ -129,7 +136,9 @@
         [size]="'l'"
         [disabled]="!!action.disabled && !action.disabledReason"
         [disabledReason]="
-          action.disabled && action.disabledReason ? t(action.disabledReason) : null
+          action.disabled && action.disabledReason
+            ? t(action.disabledReason, action.disabledReasonParams)
+            : null
         "
         (click)="action.run()"
       >

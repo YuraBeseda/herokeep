@@ -7,7 +7,7 @@ import { CharacterStore } from '@shared/stores/character.store';
 import { of } from 'rxjs';
 import { HkActionStrapComponent } from '../../../ui/action-strap/action-strap.component';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
-import { seedFighter, seedWizard } from '../../characters/sheet/testing/character-fixtures';
+import { linkToCampaign, seedFighter, seedWizard } from '../../characters/sheet/testing/character-fixtures';
 import { pollUntil, setupLeafSpec } from '../../characters/sheet/play/play-spec-support';
 import { LibraryDetailComponent } from './detail.component';
 
@@ -132,6 +132,22 @@ describe('LibraryDetailComponent - Add to hero', () => {
       .join(' ');
     expect(described).toContain('Open this entry from a hero');
     expect(fixture).toBeTruthy();
+  });
+
+  it('draws an item button disabled with the house-rule reason when the DM adds the items', async () => {
+    const heroId = await seedFighter('Ivan');
+    await linkToCampaign({ playersAddItems: false });
+    const store = TestBed.inject(CharacterStore);
+    const { fixture, add } = await open(DAGGER, heroId);
+    await fixture.whenStable();
+
+    expect(add()?.disabled).toBe(true);
+    expect(add()?.disabledReason).toBe('shell.strap.house-rule-add-items');
+    expect(add()?.disabledReasonParams).toEqual({ campaign: store.campaign()!.name });
+    const before = store.events().length;
+    add()?.run();
+    await fixture.whenStable();
+    expect(store.events().length).toBe(before);
   });
 
   it('a reload with ?for= and no loaded hero loads the hero and enables the button', async () => {

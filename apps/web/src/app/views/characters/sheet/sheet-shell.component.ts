@@ -359,6 +359,9 @@ export class SheetShellComponent {
     const sheet = this.sheet();
     const segment = this.childSegment();
     const locked = this.actions.editLocked();
+    const conditionsDeniedIn = this.actions.denies('playersManageConditions')
+      ? this.actions.campaignName()
+      : undefined;
     const exporting = this.chrome.exporting();
     const status = this.statusText();
     this.translationsReady();

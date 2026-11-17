@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+﻿import { TestBed } from '@angular/core/testing';
 import { propose } from '@hk/engine';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
@@ -11,12 +11,13 @@ import {
 } from '../../testing/character-fixtures';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { ConditionsLeafComponent } from './conditions-leaf.component';
+import { PlayActionsService } from '../play-actions.service';
 
 // task-2-brief.md (death saves, inspiration) and task-4-brief.md (the condition-add dialog with its
 // localized picker and data-driven level stepper, per-chip remove). Every scenario seeds a REAL
 // fighter-1 stream and drives the rendered DOM and the real `ConditionDialogComponent` overlay.
 
-describe('ConditionsLeafComponent — death saves, inspiration, conditions', () => {
+describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions', () => {
   const EXHAUSTION_ID = 'srd-5e-2024:condition/exhaustion';
   const BLINDED_ID = 'srd-5e-2024:condition/blinded';
 
@@ -292,7 +293,7 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
   });
 
   // Plan 13 task 5: `sheet.immunities` (condition.immunity) renders as non-removable badges under
-  // an "Immunities" heading in the Conditions leaf — localized condition name plus the granting
+  // an "Immunities" heading in the Conditions leaf вЂ” localized condition name plus the granting
   // feature's name. Display-only: no heading and no list at all while the sheet has none.
   it('renders condition immunities as badges with their granting feature (Aura of Courage, paladin 10)', async () => {
     await seedFighter('Ivan');
@@ -325,7 +326,7 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
   });
 
   // Plan 14 Task 6: `sheet.resistances` (damage.resistance, Task 3) renders beside the immunity
-  // badges — the damage type's pack `rule` entity name through the Localizer plus the granting
+  // badges вЂ” the damage type's pack `rule` entity name through the Localizer plus the granting
   // source's name. Display-only, absent entirely while the sheet has none.
   it('renders damage resistances as badges with their granting source (attuned Cloak of Arachnida)', async () => {
     await seedFighter('Ivan');
@@ -381,6 +382,22 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
       add.click();
       await fixture.whenStable();
       expect(document.querySelector('app-condition-dialog')).toBeNull();
+    });
+
+    it('off: the actions service itself refuses add and remove, so every entry point obeys it', async () => {
+      await seedFighter('Ivan');
+      const characterStore = TestBed.inject(CharacterStore);
+      await characterStore.appendTx(propose.condition(characterStore.sheet()!, BLINDED_ID, true));
+      await linkToCampaign({ playersManageConditions: false });
+      const actions = TestBed.inject(PlayActionsService);
+      const before = characterStore.events().length;
+
+      actions.removeCondition(BLINDED_ID);
+      await actions.addCondition([{ id: BLINDED_ID, name: 'Blinded' } as never]);
+
+      expect(document.querySelector('app-condition-dialog')).toBeNull();
+      expect(characterStore.events().length).toBe(before);
+      expect(characterStore.sheet()?.conditions.map((c) => c.conditionId)).toEqual([BLINDED_ID]);
     });
 
     it("off: the DM's condition.removed still applies (the DM path is unaffected)", async () => {

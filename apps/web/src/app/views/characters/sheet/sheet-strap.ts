@@ -16,6 +16,8 @@ export interface SheetStrapHandlers {
 export interface SheetStrapState {
   /** The campaign edit lock is on: the mutating actions are disabled with the reason. */
   readonly locked: boolean;
+  /** The campaign whose house rule leaves conditions to the DM; Add condition is disabled with it. */
+  readonly conditionsDeniedIn?: string;
   /** An export is in progress: Export is disabled until it settles. */
   readonly exporting: boolean;
   /** Already-translated concentration note for the status slot. */
@@ -34,6 +36,16 @@ export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): 
   const mutating = (action: StrapAction): StrapAction =>
     state.locked
       ? { ...action, disabled: true, disabledReason: 'shell.strap.edit-locked' }
+      : action;
+  // The edit lock outranks the house rule (it blocks more), so a locked action keeps its reason.
+  const houseRule = (action: StrapAction): StrapAction =>
+    state.conditionsDeniedIn !== undefined && !action.disabled
+      ? {
+          ...action,
+          disabled: true,
+          disabledReason: 'shell.strap.house-rule-conditions',
+          disabledReasonParams: { campaign: state.conditionsDeniedIn },
+        }
       : action;
   return {
     primary: [
@@ -68,13 +80,15 @@ export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): 
       }),
     ],
     secondary: [
-      mutating({
-        id: 'add-condition',
-        label: 'shell.strap.add-condition',
-        icon: 'condition',
-        kind: 'icon',
-        run: h.addCondition,
-      }),
+      houseRule(
+        mutating({
+          id: 'add-condition',
+          label: 'shell.strap.add-condition',
+          icon: 'condition',
+          kind: 'icon',
+          run: h.addCondition,
+        }),
+      ),
       { id: 'notes', label: 'shell.icon.notes', icon: 'notes', kind: 'icon', run: h.toggleNotes },
       {
         id: 'roll-log',

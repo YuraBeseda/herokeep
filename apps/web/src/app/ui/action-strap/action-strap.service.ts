@@ -11,6 +11,8 @@ export interface StrapAction {
   readonly disabled?: boolean;
   /** i18n key explaining why the action is unavailable; shown as its hint while `disabled`. */
   readonly disabledReason?: string;
+  /** Interpolation params for `disabledReason` (e.g. the campaign name of a house-rule reason). */
+  readonly disabledReasonParams?: Readonly<Record<string, unknown>>;
   readonly run: () => void;
 }
 

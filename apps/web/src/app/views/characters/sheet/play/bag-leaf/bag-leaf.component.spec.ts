@@ -11,6 +11,7 @@ import {
 } from '../../testing/character-fixtures';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { BagLeafComponent } from './bag-leaf.component';
+import { PlayActionsService } from '../play-actions.service';
 
 // task-5-brief.md: inventory add-from-library/custom, equip/attune toggles, the qty stepper, remove
 // (behind its own confirm dialog), the weight display + total, and the currency editor — now on the
@@ -454,6 +455,20 @@ describe('BagLeafComponent — inventory and currency controls', () => {
         expect(describedBy(button)).toBe(REASON);
       }
       expect(visibleText(compiled)).not.toContain(REASON);
+    });
+
+    it('off: the actions service itself refuses library and custom adds', async () => {
+      await seedFighter('Ivan');
+      await linkToCampaign({ playersAddItems: false });
+      const store = TestBed.inject(CharacterStore);
+      const actions = TestBed.inject(PlayActionsService);
+      const before = store.events().length;
+
+      expect(actions.addLibraryItem('srd-5e-2024:item/dagger')).toBe(false);
+      await actions.addCustomItem();
+
+      expect(document.querySelector('app-custom-item-dialog')).toBeNull();
+      expect(store.events().length).toBe(before);
     });
 
     it('a solo hero is unaffected', async () => {

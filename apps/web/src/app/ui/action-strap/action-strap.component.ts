@@ -97,10 +97,6 @@ export class HkActionStrapComponent {
     return `hk-act hk-act--${action.kind}`;
   }
 
-  /** Key of the hint an icon action shows: its reason while disabled with one, else its label. */
-  protected hintKey(action: StrapAction): string {
-    return action.disabled && action.disabledReason ? action.disabledReason : action.label;
-  }
 
   protected toggleSheet(): void {
     this.sheetOpen.update((open) => !open);

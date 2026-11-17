@@ -12,6 +12,8 @@ export interface LibraryDetailStrapState {
     readonly kind: HeroAddKind;
     readonly run: () => void;
     readonly reason: string | null;
+    /** Params for `reason` (the campaign name of a house-rule reason). */
+    readonly reasonParams?: Readonly<Record<string, unknown>>;
   } | null;
   /** The hero's campaign locks edits. */
   readonly locked: boolean;
@@ -69,7 +71,13 @@ export function buildLibraryDetailStrap(state: LibraryDetailStrapState): StrapCo
             icon: state.add.kind === 'spell' ? 'spells' : 'bag',
             kind: 'primary',
             run: state.add.run,
-            ...(reason ? { disabled: true, disabledReason: reason } : {}),
+            ...(reason
+              ? {
+                  disabled: true,
+                  disabledReason: reason,
+                  disabledReasonParams: state.add.reasonParams,
+                }
+              : {}),
           },
         ]
       : [],

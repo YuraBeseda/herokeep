@@ -198,6 +198,8 @@
     "campaign-new": "New campaign",
     "campaign-join": "Join campaign",
     "edit-locked": "Locked by your campaign's house rules",
+    "house-rule-conditions": "Only your DM manages conditions in {campaign}",
+    "house-rule-add-items": "Only your DM adds items in {campaign}",
     "library-new-homebrew": "New homebrew",
     "library-import-pack": "Import pack",
     "library-add-to-hero": "Add to hero",

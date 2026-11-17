@@ -387,7 +387,8 @@ export class PlayActionsService {
   // --- Conditions, notes ------------------------------------------------------------------------
 
   async addCondition(options: ConditionDialogOption[]): Promise<void> {
-    if (options.length === 0) return;
+    // The house-rule guard sits here so every entry point (leaf, strap, ...) obeys it.
+    if (options.length === 0 || this.denies('playersManageConditions')) return;
     const handle = this.dialogService.open(ConditionDialogComponent, {
       data: {
         options,
@@ -432,6 +433,7 @@ export class PlayActionsService {
   }
 
   removeCondition(conditionId: string): void {
+    if (this.denies('playersManageConditions')) return;
     const sheet = this.sheet();
     if (!sheet) return;
     this.tryPropose(() => propose.condition(sheet, conditionId, false));
@@ -472,6 +474,7 @@ export class PlayActionsService {
   /** Puts a library item (`itemId` is a pack entity id) into the bag; the add-from-library dialog
    * and the library's "Add to hero" share it. Returns whether the proposal was accepted. */
   addLibraryItem(itemId: string, qty = 1): boolean {
+    if (this.denies('playersAddItems')) return false;
     const sheet = this.sheet();
     if (!sheet) return false;
     return this.tryPropose(() => propose.addItem(sheet, { itemId, qty }, uuidv7));
@@ -483,6 +486,7 @@ export class PlayActionsService {
   // `used` (the bag's game-icon slugs, listed first in the picker) comes from the caller, which
   // resolves pack icons through the sheet's scoped `EngineFacade` (see the class doc).
   async addCustomItem(used: readonly string[] = []): Promise<void> {
+    if (this.denies('playersAddItems')) return;
     const handle = this.dialogService.open(CustomItemDialogComponent, {
       data: { used } satisfies CustomItemDialogData,
     });

@@ -47,6 +47,7 @@ interface HeroAdd {
   readonly block?: SpellcastingBlock;
   /** Shell key of why the button is unavailable; `null` when it works. */
   readonly reason: string | null;
+  readonly reasonParams?: Readonly<Record<string, unknown>>;
 }
 
 @Component({
@@ -191,7 +192,15 @@ export class LibraryDetailComponent {
     if (!forId || forId !== this.characterStore.streamId() || !sheet) {
       return { kind, reason: 'shell.strap.library-no-hero' };
     }
-    if (entity.type === 'item') return { kind, reason: null };
+    if (entity.type === 'item') {
+      return this.playActions.denies('playersAddItems')
+        ? {
+            kind,
+            reason: 'shell.strap.house-rule-add-items',
+            reasonParams: { campaign: this.playActions.campaignName() },
+          }
+        : { kind, reason: null };
+    }
     if (entity.level === 0) return { kind, reason: 'shell.strap.library-cantrip' };
     const blocks = sheet.spellcasting;
     const block = blocks.find(
@@ -274,7 +283,14 @@ export class LibraryDetailComponent {
       this.strap.set(
         buildLibraryDetailStrap({
           back: () => this.back(),
-          add: add ? { kind: add.kind, reason: add.reason, run: () => this.addToHero() } : null,
+          add: add
+            ? {
+                kind: add.kind,
+                reason: add.reason,
+                reasonParams: add.reasonParams,
+                run: () => this.addToHero(),
+              }
+            : null,
           locked: this.playActions.editLocked(),
           copy: {
             run: () => void this.copyLink(),

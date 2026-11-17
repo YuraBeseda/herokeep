@@ -198,6 +198,8 @@
     "campaign-new": "Нова кампанія",
     "campaign-join": "Приєднатися до кампанії",
     "edit-locked": "Заблоковано домашніми правилами кампанії",
+    "house-rule-conditions": "У кампанії «{campaign}» станами керує лише майстер",
+    "house-rule-add-items": "У кампанії «{campaign}» предмети видає лише майстер",
     "library-new-homebrew": "Власний контент",
     "library-import-pack": "Імпорт паку",
     "library-add-to-hero": "Додати герою",
