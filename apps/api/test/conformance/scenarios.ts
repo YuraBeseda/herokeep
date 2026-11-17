@@ -1519,6 +1519,62 @@ async function blobRelayForwardingScenario(driver: ConformanceDriver): Promise<v
   requester.close();
 }
 
+/** [plan 18 task 2] Encounter events are DM-only: the DM starts an encounter, advances two rounds and
+ * ends it (all reach a member's catch-up), and a player's append of each type is refused `forbidden`. */
+async function campaignEncounterScenario(driver: ConformanceDriver): Promise<void> {
+  const dm = await registerAndLogin(driver, 'CampEncDm');
+  const member = await registerAndLogin(driver, 'CampEncMember');
+  const campaignId = crypto.randomUUID();
+  const streamId = `camp:${campaignId}`;
+  const created = await createCampaignHttp(driver, dm, campaignId);
+  const joined = await joinCampaignHttp(driver, member, created.joinCode);
+  expect(joined.status).toBe(200);
+
+  const encounterId = crypto.randomUUID();
+  const mk = (type: string, payload: unknown, role: 'dm' | 'member') =>
+    campaignEvent(streamId, type, 1, payload, 'ignored-by-server', role);
+  const dmEvents = [
+    mk('encounter.started', { encounterId, startedAtSeq: 0 }, 'dm'),
+    mk('round.advanced', { encounterId, round: 1 }, 'dm'),
+    mk('round.advanced', { encounterId, round: 2 }, 'dm'),
+    mk('encounter.ended', { encounterId }, 'dm'),
+  ];
+  const dmStream = await driver.openStream({ streamId, session: dm, role: 'dm' });
+  const dmOutcome = await appendAndWait(dmStream, dmEvents);
+  expect(dmOutcome.rejected, 'the DM may append every encounter event').toEqual([]);
+  expect(dmOutcome.acked).toHaveLength(4);
+  dmStream.close();
+
+  // Catch-up (not live push): `filterForConnection` gates both the same way, and the Cloudflare
+  // runner's mocked socket pair cannot observe a push to a second connection.
+  const memberStream = await driver.openStream({ streamId, session: member, role: 'member' });
+  await sendHello(memberStream, streamId, 0);
+  const frames = await memberStream.collect((buf) => {
+    const types = buf.filter((f): f is EventsMsg => isEventsFor(f, streamId)).flatMap((f) => f.events.map((e) => e.type));
+    return types.includes('encounter.ended');
+  }, 10_000);
+  const seen = frames
+    .filter((f): f is EventsMsg => isEventsFor(f, streamId))
+    .flatMap((f) => f.events.map((e) => e.type))
+    .filter((t) => t === 'encounter.started' || t === 'round.advanced' || t === 'encounter.ended');
+  expect(seen, 'the member socket receives all four in order').toEqual([
+    'encounter.started',
+    'round.advanced',
+    'round.advanced',
+    'encounter.ended',
+  ]);
+
+  const forged = [
+    mk('encounter.started', { encounterId: crypto.randomUUID(), startedAtSeq: 0 }, 'member'),
+    mk('round.advanced', { encounterId, round: 3 }, 'member'),
+    mk('encounter.ended', { encounterId }, 'member'),
+  ];
+  const memberOutcome = await appendAndWait(memberStream, forged);
+  expect(memberOutcome.acked).toEqual([]);
+  expect(memberOutcome.rejected.map((r) => r.code)).toEqual(['forbidden', 'forbidden', 'forbidden']);
+  memberStream.close();
+}
+
 export const scenarios: readonly Scenario[] = [
   {
     name: 'auth lifecycle: register -> salt -> login -> wrong-verifier 401 -> reset -> lockout',
@@ -1536,6 +1592,10 @@ export const scenarios: readonly Scenario[] = [
   {
     name: 'campaign lifecycle: create / list / join / rotate-code / remove-member / refused reconnect',
     run: campaignLifecycleScenario,
+  },
+  {
+    name: 'campaign encounters: DM start / two rounds / end fan out to a member; a player append is forbidden',
+    run: campaignEncounterScenario,
   },
   {
     name: 'campaign gap (a): a real member-role action succeeds through the real adapter surface',

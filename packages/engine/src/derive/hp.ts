@@ -4,6 +4,7 @@ import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
 import type { Facts, SystemRules } from '../reduce/facts.ts';
 import type { AbilitiesResult } from './abilities.ts';
+import type { CampaignClock } from './overrides.ts';
 import { type Composition, occurrenceKey } from './composition.ts';
 import { type Derived, ModifierTable } from './modifiers.ts';
 
@@ -22,6 +23,8 @@ export interface HpResult {
     /** Time durations only; `rounds` needs the campaign clock (plan 18 task 2). */
     remaining?: { kind: 'rounds'; value: number } | { kind: 'time'; minutes: number };
     endsAt?: 'shortRest' | 'longRest';
+    /** Rounds condition whose encounter has closed (needs the clock). */
+    ended?: true;
     startedAtRound?: number;
   }[];
   /**
@@ -81,6 +84,7 @@ export function deriveHp(
   facts: Facts,
   index: ContentIndex,
   rules?: SystemRules,
+  clock?: CampaignClock,
 ): HpResult {
   const issues: Diagnostic[] = [];
   let hpRules: HpRules;
@@ -217,7 +221,24 @@ export function deriveHp(
 
   const conditions: HpResult['conditions'] = facts.conditions.map((c) => {
     const d = c.duration;
+    // Rounds need the clock: counts from `startedAtRound` while the condition's encounter is the open
+    // one, 0 + `ended` once that encounter has closed or been replaced (an encounter-less condition
+    // follows the current one).
+    const roundsView =
+      clock && d?.kind === 'rounds'
+        ? c.encounterId !== undefined && c.encounterId !== clock.encounter?.id
+          ? { ended: true as const, remaining: { kind: 'rounds' as const, value: 0 } }
+          : clock.encounter
+            ? {
+                remaining: {
+                  kind: 'rounds' as const,
+                  value: Math.max(0, d.amount - (clock.encounter.round - (c.startedAtRound ?? 0))),
+                },
+              }
+            : { ended: true as const, remaining: { kind: 'rounds' as const, value: 0 } }
+        : {};
     return {
+      ...roundsView,
       conditionId: c.conditionId,
       level: c.level,
       source: c.source,

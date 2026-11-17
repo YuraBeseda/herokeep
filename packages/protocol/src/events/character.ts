@@ -180,6 +180,8 @@ export const ConditionAddedV2 = z.strictObject({
   until: ShortTextSchema.optional(),
   duration: ConditionDurationSchema.optional(),
   startedAtRound: z.int().min(0).optional(),
+  /** The encounter whose round counter `startedAtRound` refers to; lets derive tell when it has closed. */
+  encounterId: z.string().regex(UUID).optional(),
   source: z.string().min(1).max(80).optional(),
 });
 export const ConditionUpdatedV1 = z.strictObject({
@@ -499,7 +501,7 @@ export type ConditionAdded = z.infer<typeof ConditionAddedV1>;
 export type ConditionAddedV2Payload = z.infer<typeof ConditionAddedV2>;
 export type ConditionUpdated = z.infer<typeof ConditionUpdatedV1>;
 export type ConditionDuration = z.infer<typeof ConditionDurationSchema>;
-export type ConditionRemoved =z.infer<typeof ConditionRemovedV1>;
+export type ConditionRemoved = z.infer<typeof ConditionRemovedV1>;
 export type ItemAdded = z.infer<typeof ItemAddedV1>;
 export type ItemRemoved = z.infer<typeof ItemRemovedV1>;
 export type ItemEquipped = z.infer<typeof ItemEquippedV1>;

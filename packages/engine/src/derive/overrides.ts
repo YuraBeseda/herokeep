@@ -17,7 +17,19 @@
  *   over the default `'off'`. An explicit `encumbrance: 'off'` here is a decision too (it holds a
  *   character option off); omit the key to let the character option through.
  */
+/**
+ * Plan 18 task 2: the round counter the caller read from the campaign stream (or, for a solo hero,
+ * from its own stream). `encounter` absent = no encounter is open, so every rounds condition that
+ * belongs to an encounter reads `ended`. A condition tied to an encounter id other than `encounter.id`
+ * is `ended` too (its encounter closed and a new one started), so counts never jump or go negative.
+ */
+export interface CampaignClock {
+  encounter?: { id: string; round: number };
+}
+
 export interface DeriveOverrides {
+  /** Without a clock, `rounds` conditions carry no `remaining`. */
+  clock?: CampaignClock;
   attunementMax?: number;
   encumbrance?: 'off' | 'standard' | 'variant';
 }

@@ -177,6 +177,14 @@ export const PartyOverviewUpdatedV1 = z.strictObject({
 export const SessionStartedV1 = z.strictObject({ title: ShortTextSchema.optional() });
 export const SessionEndedV1 = z.strictObject({ title: ShortTextSchema.optional() });
 
+// --- Encounters (plan 18 task 2) -----------------------------------------------------------
+export const EncounterStartedV1 = z.strictObject({
+  encounterId: z.string().regex(UUID),
+  startedAtSeq: z.int().min(0),
+});
+export const EncounterEndedV1 = z.strictObject({ encounterId: z.string().regex(UUID) });
+export const RoundAdvancedV1 = z.strictObject({ encounterId: z.string().regex(UUID), round: z.int().min(0) });
+
 // --- Rolls & chat --------------------------------------------------------------------------------------
 
 export const RollLoggedV1 = z.strictObject({
@@ -244,6 +252,9 @@ export const CAMPAIGN_EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'party.overview_updated@1': PartyOverviewUpdatedV1,
   'session.started@1': SessionStartedV1,
   'session.ended@1': SessionEndedV1,
+  'encounter.started@1': EncounterStartedV1,
+  'encounter.ended@1': EncounterEndedV1,
+  'round.advanced@1': RoundAdvancedV1,
   'roll.logged@1': RollLoggedV1,
   'chat.message@1': ChatMessageV1,
   'dm.note_added@1': DmNoteAddedV1,
@@ -306,6 +317,9 @@ export const CAMPAIGN_EVENT_ACTORS: Record<string, ActorRole[]> = {
   'party.overview_updated': ['dm', 'member'],
   'session.started': ['dm'],
   'session.ended': ['dm'],
+  'encounter.started': ['dm'],
+  'encounter.ended': ['dm'],
+  'round.advanced': ['dm'],
   'roll.logged': ['dm', 'member'],
   'chat.message': ['dm', 'member'],
   'dm.note_added': ['dm'],
@@ -329,6 +343,9 @@ export type CampaignCharacterLeft = z.infer<typeof CampaignCharacterLeftV1>;
 export type PartyOverviewUpdated = z.infer<typeof PartyOverviewUpdatedV1>;
 export type SessionStarted = z.infer<typeof SessionStartedV1>;
 export type SessionEnded = z.infer<typeof SessionEndedV1>;
+export type EncounterStarted = z.infer<typeof EncounterStartedV1>;
+export type EncounterEnded = z.infer<typeof EncounterEndedV1>;
+export type RoundAdvanced = z.infer<typeof RoundAdvancedV1>;
 export type RollLogged = z.infer<typeof RollLoggedV1>;
 export type ChatMessage = z.infer<typeof ChatMessageV1>;
 export type DmNoteAdded = z.infer<typeof DmNoteAddedV1>;

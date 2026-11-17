@@ -31,6 +31,8 @@ export interface ConditionEntry {
   /** Plan 18 task 1 (`condition.added@2`); absent on v1 entries, which are never auto-removed. */
   duration?: ConditionDuration;
   startedAtRound?: number;
+  /** The encounter `startedAtRound` counts in; absent = follow whatever encounter is current. */
+  encounterId?: string;
 }
 
 export interface InventoryEntry {

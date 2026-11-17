@@ -133,6 +133,7 @@ export const HANDLERS: Record<string, Handler> = {
       ...(p.level !== undefined ? { level: p.level } : {}),
       ...(p.duration !== undefined ? { duration: p.duration } : {}),
       ...(p.startedAtRound !== undefined ? { startedAtRound: p.startedAtRound } : {}),
+      ...(p.encounterId !== undefined ? { encounterId: p.encounterId } : {}),
     };
     return { ...f, conditions: [...f.conditions.filter((c) => c.conditionId !== p.conditionId), entry] };
   },

@@ -256,7 +256,7 @@ export function derive(facts: Facts, index: ContentIndex, rules?: SystemRules, o
   issues.push(...abilities.issues);
   const defense = deriveDefense(abilities, comp, facts, index);
   issues.push(...defense.issues);
-  const hp = deriveHp(abilities, comp, facts, index, rules);
+  const hp = deriveHp(abilities, comp, facts, index, rules, overrides?.clock);
   issues.push(...hp.issues);
   const attacks = deriveAttacks(abilities, comp, facts, index);
   issues.push(...attacks.issues);

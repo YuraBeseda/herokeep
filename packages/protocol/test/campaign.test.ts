@@ -80,6 +80,9 @@ const CAMPAIGN_EVENT_CASES: { type: string; accept: Record<string, unknown> }[] 
   },
   { type: 'session.started', accept: { title: 'Session 12' } },
   { type: 'session.ended', accept: {} },
+  { type: 'encounter.started', accept: { encounterId: UUID_B, startedAtSeq: 12 } },
+  { type: 'encounter.ended', accept: { encounterId: UUID_B } },
+  { type: 'round.advanced', accept: { encounterId: UUID_B, round: 3 } },
   {
     type: 'roll.logged',
     accept: {
@@ -111,7 +114,7 @@ describe.each(CAMPAIGN_EVENT_CASES)('parseEvent $type', ({ type, accept }) => {
 });
 
 describe('the complete campaign-stream event catalog', () => {
-  const CAMPAIGN_EVENT_COUNT = 21;
+  const CAMPAIGN_EVENT_COUNT = 24;
 
   it('registers a payload schema for every catalog event', () => {
     expect(Object.keys(CAMPAIGN_EVENT_PAYLOADS)).toHaveLength(CAMPAIGN_EVENT_COUNT);
@@ -255,6 +258,8 @@ describe('EVENT_ACTORS campaign rows (doc-08 §Authorization matrix)', () => {
     expect(CAMPAIGN_EVENT_ACTORS['pack.disabled']).toEqual(['dm']);
     expect(CAMPAIGN_EVENT_ACTORS['session.started']).toEqual(['dm']);
     expect(CAMPAIGN_EVENT_ACTORS['session.ended']).toEqual(['dm']);
+    for (const t of ['encounter.started', 'encounter.ended', 'round.advanced'])
+      expect(CAMPAIGN_EVENT_ACTORS[t], t).toEqual(['dm']);
     expect(CAMPAIGN_EVENT_ACTORS['member.removed']).toEqual(['dm']);
   });
 

@@ -39,4 +39,10 @@ describe('condition.added@2 / condition.updated@1', () => {
     expect(ok('condition.updated', 1, { conditionId: prone, duration: { kind: 'hours', amount: 1 } })).toBe(true);
     expect(ok('condition.updated', 1, { conditionId: prone })).toBe(false);
   });
+  it('accepts encounterId on v2', () => {
+    const encounterId = '2b7a1f22-1111-4c9d-a8f2-0a1b2c3d4e5f';
+    expect(ok('condition.added', 2, { conditionId: prone, startedAtRound: 1, encounterId })).toBe(true);
+    expect(ok('round.advanced', 1, { encounterId, round: 2 })).toBe(true);
+    expect(ok('round.advanced', 1, { encounterId, round: -1 })).toBe(false);
+  });
 });
