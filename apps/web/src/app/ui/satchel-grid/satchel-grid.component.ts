@@ -1,18 +1,20 @@
 import { Component, computed, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
-import { ItemIconRefSchema } from '@hk/protocol';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { IconComponent } from '../../shared/icons/icon.component';
-import { bagItemSentence, bagItemSub, bagItemWords, type BagItem } from '../bag-item';
+import {
+  bagItemGlyph,
+  bagItemMonogram,
+  bagItemSentence,
+  bagItemSub,
+  bagItemWords,
+  type BagItem,
+  type BagItemGlyph,
+} from '../bag-item';
 import { HkItemMarksComponent } from '../item-marks/item-marks.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
-/** What a slot draws: a sprite id, a local blob hash, or (neither) the monogram. */
-interface Glyph {
-  sprite?: string;
-  blob?: string;
-}
 
 /**
  * `hk-satchel-grid` — the bag as a grid of leather slots on a recessed floor (design-system
@@ -59,17 +61,12 @@ export class HkSatchelGridComponent {
     return bagItemSentence(item, bagItemWords(t));
   }
 
-  /** Pack icon first, else a valid `custom.icon`; an invalid one is a monogram, never a broken image. */
-  protected glyph(item: BagItem): Glyph {
-    if (item.blobIcon) return { blob: item.blobIcon };
-    if (item.customIcon === undefined) return { sprite: item.icon };
-    const ref = ItemIconRefSchema.safeParse(item.customIcon);
-    if (!ref.success) return {};
-    return ref.data.kind === 'gi' ? { sprite: `gi:${ref.data.id}` } : { blob: ref.data.hash };
+  protected glyph(item: BagItem): BagItemGlyph {
+    return bagItemGlyph(item);
   }
 
   protected monogram(item: BagItem): string {
-    return Array.from(item.name.trim())[0]?.toLocaleUpperCase() ?? '';
+    return bagItemMonogram(item);
   }
 
   protected sub(item: BagItem): string {

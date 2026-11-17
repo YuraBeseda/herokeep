@@ -1,7 +1,15 @@
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
-import { bagItemSentence, bagItemSub, bagItemWords, type BagItem } from '../bag-item';
+import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
+import {
+  bagItemGlyph,
+  bagItemMonogram,
+  bagItemSentence,
+  bagItemSub,
+  bagItemWords,
+  type BagItem,
+} from '../bag-item';
 import { HkItemMarksComponent } from '../item-marks/item-marks.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 
@@ -19,7 +27,13 @@ type Translate = (key: string, params?: Record<string, unknown>) => string;
  */
 @Component({
   selector: 'hk-item-row',
-  imports: [TranslocoDirective, IconComponent, HkItemMarksComponent, HkTooltipDirective],
+  imports: [
+    TranslocoDirective,
+    IconComponent,
+    HkItemMarksComponent,
+    HkTooltipDirective,
+    BlobUrlPipe,
+  ],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './item-row.component.html',
   styleUrl: './item-row.component.scss',
@@ -31,6 +45,9 @@ export class HkItemRowComponent {
   // Inputs
   readonly item = input.required<BagItem>();
   readonly selected = input(false);
+
+  protected readonly glyph = computed(() => bagItemGlyph(this.item()));
+  protected readonly monogram = computed(() => bagItemMonogram(this.item()));
 
   // Outputs
   // `select` is the name the bag views ask for; the native `select` event (text selection) is

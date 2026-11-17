@@ -192,8 +192,8 @@ describe('HkSatchelGridComponent item icons', () => {
   });
 
   it('draws a custom gi icon from the sprite', async () => {
-    const { el } = await render({ customIcon: { kind: 'gi', id: 'rope-coil' } });
-    expect(ico(el).querySelector('use')?.getAttribute('href')).toContain('gi-rope-coil');
+    const { el } = await render({ customIcon: { kind: 'gi', id: 'magic-shield' } });
+    expect(ico(el).querySelector('use')?.getAttribute('href')).toContain('gi-magic-shield');
   });
 
   it('a pack blob icon wins over a custom one and shows the monogram while not local', async () => {
@@ -206,6 +206,9 @@ describe('HkSatchelGridComponent item icons', () => {
   it('shows the monogram for an invalid custom icon', async () => {
     const { el } = await render({ customIcon: { kind: 'gi', id: 'Not A Slug' } });
     expect(ico(el).querySelector('use')).toBeNull();
+    const { el: missing } = await render({ customIcon: { kind: 'gi', id: 'no-such-glyph-zz' } });
+    expect(ico(missing).querySelector('use')).toBeNull();
+    expect(ico(missing).querySelector('.hk-slot__mono')?.textContent).toBe('Z');
     expect(ico(el).querySelector('.hk-slot__mono')?.textContent).toBe('Z');
   });
 

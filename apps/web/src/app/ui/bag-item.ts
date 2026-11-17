@@ -1,3 +1,6 @@
+import { ItemIconRefSchema } from '@hk/protocol';
+import { SPRITE_SLUGS } from './sprite-slugs';
+
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'very-rare' | 'legendary';
 
 /**
@@ -79,4 +82,26 @@ export function bagItemWords(t: Translate): BagItemWords {
     attuned: t(WORD_KEYS.attuned),
     unknown: t(WORD_KEYS.unknown),
   };
+}
+
+/** What an item's ring draws: a sprite id, a local blob hash, or (neither) the monogram. */
+export interface BagItemGlyph {
+  readonly sprite?: string;
+  readonly blob?: string;
+}
+
+/** Pack icon first, else a valid `custom.icon`; an invalid one (or a slug the sprite lacks) is a
+ * monogram, never a broken image. The satchel and the phone item row both draw from it. */
+export function bagItemGlyph(item: BagItem): BagItemGlyph {
+  if (item.blobIcon) return { blob: item.blobIcon };
+  if (item.customIcon === undefined) return { sprite: item.icon };
+  const ref = ItemIconRefSchema.safeParse(item.customIcon);
+  if (!ref.success) return {};
+  if (ref.data.kind === 'blob') return { blob: ref.data.hash };
+  return SPRITE_SLUGS.includes(ref.data.id) ? { sprite: `gi:${ref.data.id}` } : {};
+}
+
+/** The fallback glyph: the name's first letter. */
+export function bagItemMonogram(item: BagItem): string {
+  return Array.from(item.name.trim())[0]?.toLocaleUpperCase() ?? '';
 }

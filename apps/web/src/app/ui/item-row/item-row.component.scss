@@ -120,3 +120,16 @@
   gap: 6px;
   padding: 4px 0 8px;
 }
+
+.hk-iring__img {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hk-iring__mono {
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1;
+}

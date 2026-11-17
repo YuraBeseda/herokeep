@@ -1,24 +1,12 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import iconsMapJson from '@hk/content/icons';
 import type { ItemIconRef } from '@hk/protocol';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { ImagePipelineService } from '../../shared/services/images/image-pipeline.service';
 import { fieldId } from '../forms/value-accessor';
-import { UI_ICONS } from '../icons/vocabulary';
 import { HkSearchFieldComponent } from '../search-field/search-field.component';
-
-/** Every `gi-<slug>` in the sprite: the same two sources `tools/build-sprite.ts` builds it from. */
-const SPRITE_SLUGS: readonly string[] = [
-  ...new Set([
-    ...[
-      ...Object.values(iconsMapJson.categories as Record<string, string>),
-      ...Object.values(iconsMapJson.entities as Record<string, string>),
-    ].map((icon) => icon.slice('gi:'.length)),
-    ...Object.values(UI_ICONS).map((entry) => entry.gi),
-  ]),
-].sort();
+import { SPRITE_SLUGS } from '../sprite-slugs';
 
 /**
  * `hk-icon-picker` — the item icon picker (board DL04): the hero's own glyphs first, then every

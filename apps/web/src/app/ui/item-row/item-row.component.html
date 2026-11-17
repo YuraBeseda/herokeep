@@ -11,7 +11,16 @@
       [hkTooltip]="sentence"
       (click)="select.emit()"
     >
-      <span class="hk-iring"><hk-icon [icon]="current.icon" /></span>
+      @let glyph = this.glyph();
+      <span class="hk-iring">
+        @if (glyph.sprite) {
+          <hk-icon [icon]="glyph.sprite" />
+        } @else if (glyph.blob && (glyph.blob | blobUrl)(); as url) {
+          <img class="hk-iring__img" [src]="url" alt="" />
+        } @else {
+          <span class="hk-iring__mono" aria-hidden="true">{{ monogram() }}</span>
+        }
+      </span>
       <span class="hk-item__name">
         <span class="hk-item__title" [class.hk-item__title--unknown]="current.unknown">{{
           current.name

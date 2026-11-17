@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import type { BagItem } from '../bag-item';
 import { hintOf, mount, press } from '../testing/harness';
 import { provideShellTransloco } from '../testing/transloco-testing';
@@ -128,5 +129,56 @@ describe('HkItemRowComponent', () => {
     fixture.componentInstance.on.set(true);
     await fixture.whenStable();
     expect(el.querySelector('#strip')).not.toBeNull();
+  });
+});
+
+describe('HkItemRowComponent item icons (same branches as the satchel)', () => {
+  const hash = `sha256:${'c'.repeat(64)}`;
+
+  async function render(item: Partial<BagItem>, local?: unknown) {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      providers: [
+        provideShellTransloco(),
+        {
+          provide: BlobsRepository,
+          useValue: { get: () => Promise.resolve(local), onArrival: () => () => undefined },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HkItemRowComponent);
+    fixture.componentRef.setInput('item', { id: 'x', name: 'zither', icon: 'ui:bag', ...item });
+    await fixture.whenStable();
+    await new Promise((r) => setTimeout(r));
+    await fixture.whenStable();
+    return (fixture.nativeElement as HTMLElement).querySelector('.hk-iring')!;
+  }
+
+  beforeEach(() => {
+    URL.createObjectURL = () => 'blob:icon';
+    URL.revokeObjectURL = () => undefined;
+  });
+
+  it('draws a custom gi icon from the sprite', async () => {
+    const ring = await render({ customIcon: { kind: 'gi', id: 'magic-shield' } });
+    expect(ring.querySelector('use')?.getAttribute('href')).toContain('gi-magic-shield');
+  });
+
+  it('draws a custom or pack blob icon as an image once it is local, the monogram before', async () => {
+    const local = { hash, mime: 'image/webp', bytes: new Uint8Array([1]), size: 1 };
+    for (const item of [{ customIcon: { kind: 'blob', hash } }, { blobIcon: hash }]) {
+      expect((await render(item)).querySelector('.hk-iring__mono')?.textContent).toBe('Z');
+      expect((await render(item, local)).querySelector('img')?.getAttribute('src')).toBe(
+        'blob:icon',
+      );
+    }
+  });
+
+  it('shows the monogram for an invalid custom icon and for a slug not in the sprite', async () => {
+    for (const id of ['Not A Slug', 'no-such-glyph-zz']) {
+      const ring = await render({ customIcon: { kind: 'gi', id } });
+      expect(ring.querySelector('use')).toBeNull();
+      expect(ring.querySelector('.hk-iring__mono')?.textContent).toBe('Z');
+    }
   });
 });
