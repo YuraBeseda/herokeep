@@ -187,7 +187,7 @@ export class CharacterStore {
   /** Ruling 1 (phase 4, plan 11, task 12 — "overrides plumbing"): for a campaign-linked character,
    * the campaign's OWN settings document's `attunementMax`/`encumbrance` house rules — reactive,
    * cross-stream, same staleness bounds as `CampaignEditLockService.editLockFor`'s own doc (this is
-   * that service's `overridesFor`, built on the identical `campaignStateFor` projection-read
+   * built on the identical `campaignStateFor` projection-read
    * plan-10 established). `{}` (engine defaults) for a solo character — see
    * `campaignDeriveOverridesFromState`'s own doc. Root-lifetime (this store is `providedIn: 'root'`
    * and never destroyed), reactive to `this.events` alone (a fresh `character.campaign_joined`

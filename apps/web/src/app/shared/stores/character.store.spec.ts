@@ -1004,7 +1004,7 @@ describe('CharacterStore', () => {
       ]);
       // No component/fixture here to drive `whenStable()` per-fixture (unlike `campaign-edit-lock
       // .spec.ts`'s own reactive tests) — `ApplicationRef.whenStable()` is the app-wide equivalent:
-      // it awaits every pending task (including `overridesFor`'s own `resource()` fetch) regardless
+      // it awaits every pending task (including `campaignStateFor`'s own `resource()` fetch) regardless
       // of which injector created it.
       await TestBed.inject(ApplicationRef).whenStable();
 

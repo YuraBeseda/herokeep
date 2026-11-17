@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { TranslocoDirective } from '@jsverse/transloco';
+import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { ToastService } from '@shared/components/toast/toast.service';
 import {
   CampaignStore,
@@ -12,11 +12,12 @@ import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
 /**
  * The encounter plate (boards C06 party header, C09 table session strip; plan 18 task 2): "No
  * encounter" or "Encounter 2 · Round 3". The DM gets Start / Advance round / End; a player only
- * reads it. Expects the host to have loaded the `campaigns` transloco scope.
+ * reads it. Provides its own `campaigns` transloco scope.
  */
 @Component({
   selector: 'app-encounter-plate',
   imports: [TranslocoDirective, HkButtonComponent, HkTooltipDirective],
+  providers: [provideTranslocoScope('campaigns')],
   template: `
     <div
       class="encounter-plate"

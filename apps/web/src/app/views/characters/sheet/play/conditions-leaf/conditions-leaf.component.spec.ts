@@ -401,6 +401,24 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
     );
   });
 
+  it('a rounds condition with 0 rounds left reads Ended, like an ended one', async () => {
+    await seedFighter('Ivan');
+    const store = TestBed.inject(CharacterStore);
+    await store.appendTx(
+      propose.condition(store.sheet()!, BLINDED_ID, true, undefined, {
+        duration: { kind: 'rounds', amount: 1 },
+        startedAtRound: 1,
+      }),
+    );
+    TestBed.inject(PlayActionsService).advanceSoloRound();
+    const fixture = TestBed.createComponent(ConditionsLeafComponent);
+    await pollUntil(fixture, () => store.sheet()?.conditions[0]?.remaining !== undefined);
+    await fixture.whenStable();
+
+    const chips = (fixture.nativeElement as HTMLElement).querySelector('.conditions__chips')!;
+    expect(chips.textContent).toContain(charactersEn.sheet.conditions.ended);
+  });
+
   describe('house rule: players manage their own conditions (plan 18 task 3)', () => {
     const REASON = 'Only your DM manages conditions in The Emberfall Company';
 

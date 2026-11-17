@@ -88,7 +88,7 @@ import { projectCampaign } from './campaign-projection';
  * same house rules")
  *
  * This session already knows its own `campaignId` (unlike the general "which campaign is THIS
- * character linked to" case `CampaignEditLockService.overridesFor` solves for a play/build tab) —
+ * character linked to" case `CharacterStore.campaignOverrides` solves for a play/build tab) —
  * so it reads that SAME campaign's settings document directly via the optional `campaignEvents`
  * port, and folds it through the identical pure projection `CampaignEditLockService` uses
  * (`campaignDeriveOverridesFromState` — same pattern, reused, not forked). Not an Angular service
