@@ -10,3 +10,16 @@ export function customIconBlobHashes(
   });
   return [...new Set(hashes)];
 }
+
+/** The same hashes read from a hero's own stream (`item.added` payloads). A snapshot lags the
+ * stream (it is written only every `SNAPSHOT_EVERY` events), so references come from events. A
+ * removed item's icon stays referenced, which only keeps one small blob. */
+export function eventIconBlobHashes(
+  events: readonly { readonly type: string; readonly payload: unknown }[],
+): string[] {
+  return customIconBlobHashes(
+    events.flatMap((e) =>
+      e.type === 'item.added' ? [e.payload as { custom?: Record<string, unknown> }] : [],
+    ),
+  );
+}

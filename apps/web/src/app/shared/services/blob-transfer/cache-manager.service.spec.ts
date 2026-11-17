@@ -1,6 +1,5 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ENGINE_VERSION } from '@hk/engine';
 import type { Event, Pack } from '@hk/protocol';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
@@ -10,14 +9,13 @@ import { HkDb, type CampaignRow, type CharacterRow } from '@shared/services/stor
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PacksRepository } from '@shared/services/storage/packs.repository';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
-import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import {
   CACHE_CAP_DEFAULT_BYTES,
   CACHE_CAP_MAX_BYTES,
   CACHE_CAP_MIN_BYTES,
   CacheManagerService,
 } from './cache-manager.service';
-import { putBlob } from './testing/blob-cache-fixtures';
+import { iconItemAddedEvent, putBlob } from './testing/blob-cache-fixtures';
 
 const CAMPAIGN_STREAM = 'camp:00000000-0000-4000-8000-000000000001';
 
@@ -310,18 +308,12 @@ describe('CacheManagerService', () => {
       expect(await TestBed.inject(BlobsRepository).get('kept')).toBeDefined();
     });
 
-    it("keeps a custom item's uploaded icon a local hero's snapshot references (plan 18)", async () => {
+    it("keeps a custom item's uploaded icon a local hero's events reference, with no snapshot row (plan 18)", async () => {
       const hash = 'sha256:' + 'c3'.repeat(32);
       await TestBed.inject(CharactersRepository).put(mkCharacterRow());
-      await TestBed.inject(SnapshotsRepository).put(mkCharacterRow().id, {
-        seq: 0,
-        engineVersion: ENGINE_VERSION,
-        facts: {
-          inventory: [
-            { instanceId: 'i0', name: 'Signet', qty: 1, custom: { icon: { kind: 'blob', hash } } },
-          ],
-        },
-      } as never);
+      await TestBed.inject(EventsRepository).append([
+        iconItemAddedEvent(mkCharacterRow().id, hash, 1),
+      ]);
       await putBlob(hash, 10);
       const service = TestBed.inject(CacheManagerService);
       await service.ready;

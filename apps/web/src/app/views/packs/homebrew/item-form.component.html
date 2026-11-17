@@ -16,8 +16,10 @@
           />
         </div>
 
-        <div class="hb-form__col hb-form__icon" role="group" aria-labelledby="hb-item-icon-label">
-          <span class="hb-form__icon-label" id="hb-item-icon-label">{{ t('homebrew.field.item.icon') }}</span>
+        <div class="hb-form__col hb-form__icon" role="group" [attr.aria-labelledby]="iconLabelId">
+          <span class="hb-form__icon-label" [id]="iconLabelId">{{
+            t('homebrew.field.item.icon')
+          }}</span>
           <div class="hb-form__icon-row">
             <span class="hb-form__icon-slot" aria-hidden="true">
               @if (iconRef(); as ref) {
@@ -40,7 +42,7 @@
             <button
               type="button"
               class="hb-form__icon-toggle"
-              aria-controls="hb-item-icon-picker"
+              [attr.aria-controls]="iconPickerId"
               [attr.aria-expanded]="iconPickerOpen()"
               (click)="iconPickerOpen.set(!iconPickerOpen())"
             >
@@ -48,7 +50,7 @@
             </button>
           </div>
           @if (iconPickerOpen()) {
-            <hk-icon-picker id="hb-item-icon-picker" [value]="iconRef()" (picked)="pickIcon($event)" />
+            <hk-icon-picker [id]="iconPickerId" [value]="iconRef()" (picked)="pickIcon($event)" />
           }
         </div>
 

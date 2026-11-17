@@ -2,6 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Sheet } from '@hk/engine';
+import { ItemIconRefSchema } from '@hk/protocol';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import type { BagItem } from '../../../../../ui/bag-item';
@@ -114,6 +115,17 @@ export class BagLeafComponent {
         usable: item !== undefined && USABLE_CATEGORIES.has(item.category),
       };
     });
+  });
+
+  /** The game-icon slugs this bag already shows (library items through the sheet's scoped facade,
+   * and picked custom glyphs), in bag order: the custom item's icon picker lists them first. */
+  protected readonly usedGlyphs = computed(() => {
+    const slugs = this.rows().map(({ item }) => {
+      const ref = ItemIconRefSchema.safeParse(item.customIcon);
+      if (!ref.success) return item.icon;
+      return ref.data.kind === 'gi' ? `gi:${ref.data.id}` : '';
+    });
+    return [...new Set(slugs.filter((s) => s.startsWith('gi:')).map((s) => s.slice(3)))];
   });
 
   protected readonly selectedId = signal<string | null>(null);

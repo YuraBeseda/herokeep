@@ -4,7 +4,7 @@ import {
   StoragePersistService,
   type StorageUsageEstimate,
 } from '@shared/services/pwa/storage-persist.service';
-import { customIconBlobHashes } from '@shared/services/images/custom-icons';
+import { eventIconBlobHashes } from '@shared/services/images/custom-icons';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
@@ -151,7 +151,8 @@ export class CacheManagerService {
       if (snapshot?.facts.portrait?.hash) hashes.add(snapshot.facts.portrait.hash);
       if (snapshot?.facts.portrait?.thumbHash) hashes.add(snapshot.facts.portrait.thumbHash);
       // Plan 18: a custom item's uploaded icon is the hero's own data, never an orphan.
-      for (const hash of customIconBlobHashes(snapshot?.facts.inventory)) hashes.add(hash);
+      const events = await this.eventsRepository.byStream(character.id);
+      for (const hash of eventIconBlobHashes(events)) hashes.add(hash);
     }
 
     const campaigns = await this.campaignsRepository.list();

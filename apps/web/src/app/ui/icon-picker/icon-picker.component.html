@@ -6,15 +6,19 @@
       [(value)]="query"
     />
     @if (usedGlyphs().length) {
-      <span class="hk-icon-picker__heading" id="hk-icon-picker-used">{{ t('ui.iconPicker.used') }}</span>
-      <div class="hk-icon-picker__grid hk-icon-picker__used" role="group" aria-labelledby="hk-icon-picker-used">
+      <span class="hk-icon-picker__heading" [id]="usedId">{{ t('ui.iconPicker.used') }}</span>
+      <div
+        class="hk-icon-picker__grid hk-icon-picker__used"
+        role="group"
+        [attr.aria-labelledby]="usedId"
+      >
         @for (slug of usedGlyphs(); track slug) {
           <ng-container *ngTemplateOutlet="glyph; context: { $implicit: slug }" />
         }
       </div>
     }
-    <span class="hk-icon-picker__heading" id="hk-icon-picker-all">{{ t('ui.iconPicker.all') }}</span>
-    <div class="hk-icon-picker__grid" role="group" aria-labelledby="hk-icon-picker-all">
+    <span class="hk-icon-picker__heading" [id]="allId">{{ t('ui.iconPicker.all') }}</span>
+    <div class="hk-icon-picker__grid" role="group" [attr.aria-labelledby]="allId">
       @for (slug of otherGlyphs(); track slug) {
         <ng-container *ngTemplateOutlet="glyph; context: { $implicit: slug }" />
       } @empty {

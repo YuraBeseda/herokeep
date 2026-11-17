@@ -16,8 +16,8 @@
       [value]="name()"
       (valueChange)="name.set($event); nameTouched.set(true)"
     />
-    <div class="custom-item-dialog__icon" role="group" aria-labelledby="custom-item-icon-label">
-      <span class="custom-item-dialog__icon-label" id="custom-item-icon-label">
+    <div class="custom-item-dialog__icon" role="group" [attr.aria-labelledby]="iconLabelId">
+      <span class="custom-item-dialog__icon-label" [id]="iconLabelId">
         {{ t('characters.sheet.inventory.customDialog.iconLabel') }}
       </span>
       <div class="custom-item-dialog__icon-row">
@@ -54,7 +54,7 @@
           hk-button
           type="button"
           class="custom-item-dialog__icon-toggle"
-          aria-controls="custom-item-icon-picker"
+          [attr.aria-controls]="iconPickerId"
           [attr.aria-expanded]="pickerOpen()"
           (click)="pickerOpen.set(!pickerOpen())"
         >
@@ -63,7 +63,7 @@
       </div>
       @if (pickerOpen()) {
         <hk-icon-picker
-          id="custom-item-icon-picker"
+          [id]="iconPickerId"
           [used]="used"
           [value]="icon()"
           (picked)="icon.set($event); pickerOpen.set(false)"

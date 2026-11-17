@@ -116,7 +116,7 @@
         class="bag__add-custom"
         [variant]="'ghost'"
         [disabledReason]="addReason"
-        (click)="actions.addCustomItem()"
+        (click)="actions.addCustomItem(usedGlyphs())"
       >
         {{ t('sheet.inventory.addCustom') }}
       </button>

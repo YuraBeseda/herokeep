@@ -9,7 +9,10 @@ async function mountPicker(inputs: { used?: string[]; value?: ItemIconRef | null
   const encodeIcon = vi.fn().mockResolvedValue({ hash: `sha256:${'a'.repeat(64)}` });
   TestBed.resetTestingModule();
   await TestBed.configureTestingModule({
-    providers: [provideShellTransloco(), { provide: ImagePipelineService, useValue: { encodeIcon } }],
+    providers: [
+      provideShellTransloco(),
+      { provide: ImagePipelineService, useValue: { encodeIcon } },
+    ],
   }).compileComponents();
   const fixture = TestBed.createComponent(IconPickerComponent);
   fixture.componentRef.setInput('used', inputs.used ?? []);
@@ -50,8 +53,13 @@ describe('IconPickerComponent', () => {
   });
 
   it('marks the chosen glyph pressed and emits a gi ref on click', async () => {
-    const { el, picked } = await mountPicker({ used: ['shield'], value: { kind: 'gi', id: 'shield' } });
-    const ring = el.querySelector<HTMLButtonElement>('.hk-icon-picker__glyph[aria-label="shield"]')!;
+    const { el, picked } = await mountPicker({
+      used: ['shield'],
+      value: { kind: 'gi', id: 'shield' },
+    });
+    const ring = el.querySelector<HTMLButtonElement>(
+      '.hk-icon-picker__glyph[aria-label="shield"]',
+    )!;
     expect(ring.getAttribute('aria-pressed')).toBe('true');
     ring.click();
     expect(picked).toEqual([{ kind: 'gi', id: 'shield' }]);

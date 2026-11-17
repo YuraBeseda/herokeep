@@ -3,6 +3,7 @@ import { Component, computed, forwardRef, linkedSignal, signal } from '@angular/
 import { FormulaSchema, RegainDiceSchema, type ItemEntity, type ItemIconRef } from '@hk/protocol';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { IconPickerComponent } from '../../../ui/icon-picker/icon-picker.component';
+import { fieldId } from '../../../ui/forms/value-accessor';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { HkFilterChipsComponent } from '../../../ui/filter-chips/filter-chips.component';
 import type { FilterChipOption } from '../../../ui/filter-chips/filter-chip.component';
@@ -80,6 +81,8 @@ export class ItemFormComponent extends HomebrewFormBase<ItemEntity> {
   /** The entity's `icon` in pack form: `gi:<slug>`, `sha256:<hex>`, or `''` for the default. */
   protected readonly icon = linkedSignal(() => this.entity()?.icon ?? '');
   protected readonly iconPickerOpen = signal(false);
+  protected readonly iconLabelId = fieldId('hb-item-icon-label');
+  protected readonly iconPickerId = fieldId('hb-item-icon-picker');
   protected readonly iconRef = computed<ItemIconRef | null>(() => {
     const icon = this.icon();
     if (icon.startsWith('gi:')) return { kind: 'gi', id: icon.slice(3) };

@@ -1,4 +1,3 @@
-import { ENGINE_VERSION } from '@hk/engine';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +15,6 @@ import { HkDb, type CampaignRow, type CharacterRow } from '@shared/services/stor
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
-import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import type { SyncStateValue } from '@shared/services/sync/sync.service';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CampaignStore } from '@shared/stores/campaign.store';
@@ -32,7 +30,7 @@ import {
   type BlobIdleScheduler,
 } from './blob-transfer.service';
 import { CACHE_CAP_MIN_BYTES, CacheManagerService } from './cache-manager.service';
-import { putBlob } from './testing/blob-cache-fixtures';
+import { iconItemAddedEvent, putBlob } from './testing/blob-cache-fixtures';
 
 // --- fake SyncService — the real one needs a full socket harness (sync.service.spec.ts); this
 // task only needs to verify BlobTransferService calls the RIGHT methods with the RIGHT arguments
@@ -838,23 +836,16 @@ describe('BlobTransferService', () => {
       expect(requestedHashes()).toEqual([SAMPLE_ICON.hash]);
     });
 
-    it("plan 18 Task 4 (Review Focus 4): wants an own hero's custom item icon blob it lacks at P3, and announces one it holds", async () => {
+    it("plan 18 Task 4 (Review Focus 4): wants an own hero's custom item icon blob it lacks at P3, and announces one it holds — read from events, no snapshot row", async () => {
       const missing = 'sha256:' + 'c1'.repeat(32);
       const held = 'sha256:' + 'c2'.repeat(32);
       await TestBed.inject(CharactersRepository).put(mkCharacterRow());
       await putBlobBytes(held, new Uint8Array([2]));
-      const inventory = [missing, held].map((hash, i) => ({
-        instanceId: `i${i}`,
-        name: 'Signet',
-        qty: 1,
-        custom: { icon: { kind: 'blob', hash } },
-      }));
-      await TestBed.inject(SnapshotsRepository).put(mkCharacterRow().id, {
-        seq: 0,
-        engineVersion: ENGINE_VERSION,
-        facts: { inventory },
-      } as never);
-      await TestBed.inject(EventsRepository).append([mkJoinedEvent(CHARACTER_ID)]);
+      await TestBed.inject(EventsRepository).append([
+        iconItemAddedEvent(CHARACTER_STREAM, missing, 1),
+        iconItemAddedEvent(CHARACTER_STREAM, held, 2),
+        mkJoinedEvent(CHARACTER_ID),
+      ]);
 
       await connectCampaign();
       expect(announcedHashes()).toContain(held);

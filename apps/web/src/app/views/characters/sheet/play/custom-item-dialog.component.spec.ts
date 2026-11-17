@@ -200,7 +200,9 @@ describe('CustomItemDialogComponent', () => {
     TestBed.tick();
     expect(overlayRoot().querySelector('hk-icon-picker')).toBeNull();
 
-    const change = overlayRoot().querySelector<HTMLButtonElement>('.custom-item-dialog__icon-toggle')!;
+    const change = overlayRoot().querySelector<HTMLButtonElement>(
+      '.custom-item-dialog__icon-toggle',
+    )!;
     expect(change.getAttribute('aria-expanded')).toBe('false');
     change.click();
     await settle();

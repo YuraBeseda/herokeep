@@ -9,6 +9,7 @@ import { DIALOG_DATA, DialogRef } from '../../../../ui/dialog/dialog.service';
 import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
 import { HkTextFieldComponent } from '../../../../ui/text-field/text-field.component';
 import { HkTextareaComponent } from '../../../../ui/textarea/textarea.component';
+import { fieldId } from '../../../../ui/forms/value-accessor';
 
 export interface CustomItemDialogResult {
   readonly name: string;
@@ -55,6 +56,8 @@ export interface CustomItemDialogData {
 })
 export class CustomItemDialogComponent {
   private readonly dialogRef = inject(DialogRef);
+  protected readonly iconLabelId = fieldId('custom-item-icon-label');
+  protected readonly iconPickerId = fieldId('custom-item-icon-picker');
   protected readonly used =
     (inject(DIALOG_DATA, { optional: true }) as CustomItemDialogData | null)?.used ?? [];
 

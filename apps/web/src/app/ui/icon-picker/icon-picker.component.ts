@@ -5,6 +5,7 @@ import type { ItemIconRef } from '@hk/protocol';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { ImagePipelineService } from '../../shared/services/images/image-pipeline.service';
+import { fieldId } from '../forms/value-accessor';
 import { UI_ICONS } from '../icons/vocabulary';
 import { HkSearchFieldComponent } from '../search-field/search-field.component';
 
@@ -39,12 +40,18 @@ export class IconPickerComponent {
   readonly value = input<ItemIconRef | null>(null);
   readonly picked = output<ItemIconRef>();
 
+  protected readonly usedId = fieldId('hk-icon-picker-used');
+  protected readonly allId = fieldId('hk-icon-picker-all');
   protected readonly query = signal('');
   protected readonly uploading = signal(false);
   protected readonly uploadFailed = signal(false);
 
   private readonly matches = computed(() => {
-    const words = this.query().trim().toLowerCase().split(/[\s-]+/).filter(Boolean);
+    const words = this.query()
+      .trim()
+      .toLowerCase()
+      .split(/[\s-]+/)
+      .filter(Boolean);
     return (slug: string) => words.every((word) => slug.includes(word));
   });
   protected readonly usedGlyphs = computed(() =>
