@@ -10,6 +10,10 @@ export interface BagItem {
   readonly id: string;
   readonly name: string;
   readonly icon: string;
+  /** A pack item's own `sha256:` icon blob; wins over `icon` (the satchel shows it when local). */
+  readonly blobIcon?: string;
+  /** A custom item's raw `custom.icon`; the satchel validates it (`ItemIconRefSchema`) on read. */
+  readonly customIcon?: unknown;
   readonly qty?: number;
   readonly equipped?: boolean;
   readonly attuned?: boolean;

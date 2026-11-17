@@ -32,7 +32,7 @@ import type { BlobRow } from '@shared/services/storage/dexie.db';
 
 // --- Caps & ladder (doc-07 "Caps (ADR-010)" + Global Constraints — binding, verbatim) ----------
 
-export type PortraitBlobKind = 'portrait' | 'thumb' | 'token';
+export type PortraitBlobKind = 'portrait' | 'thumb' | 'token' | 'icon';
 
 /** Portrait: 1024px long edge. Thumb & token: 256x256 (a square "cover" crop — see
  * `BrowserImageCodec.encode`'s doc for why the SAME cover-fit draw works for both the portrait box
@@ -40,6 +40,8 @@ export type PortraitBlobKind = 'portrait' | 'thumb' | 'token';
  * box (which does crop the source's longer axis). */
 export const PORTRAIT_LONG_EDGE = 1024;
 export const THUMB_TOKEN_SIZE = 256;
+/** Item icons (plan 18 R9): a 128x128 cover box under its own 32 KB cap. */
+export const ICON_SIZE = 128;
 
 /** Exported (fix-wave review, minor finding 2): `HeroReaderService.readAndVerifyImages`
  * (`apps/web/.../export/hero-reader.service.ts`) enforces these SAME caps on an imported bundle's
@@ -51,6 +53,7 @@ export const IMAGE_BYTE_CAPS: Record<PortraitBlobKind, number> = {
   portrait: 400 * 1024,
   thumb: 64 * 1024,
   token: 64 * 1024,
+  icon: 32 * 1024,
 };
 
 /** doc-07 step 4: "Quality ladder 0.85 → 0.7 → 0.55 ... if still over, reduce dimensions by 0.8
@@ -420,6 +423,20 @@ export class ImagePipelineService {
       w: portrait.width,
       h: portrait.height,
     };
+  }
+
+  /** Item icon (plan 18 R9): one 128x128 cover encode under the `icon` cap, content-addressed and
+   * stored as a `kind: 'icon'` blob row. The caller keeps `hash` as `{kind:'blob', hash}`. */
+  async encodeIcon(file: File): Promise<{ hash: string; mime: string; w: number; h: number }> {
+    assertAcceptableFile(file);
+    const decoded = await this.codec.decode(file);
+    const mime = chooseMime(detectHasAlpha(file), await this.codec.supportsWebp());
+    const icon = await encodeWithinCap('icon', mime, ICON_SIZE, ICON_SIZE, (m, q, w, h) =>
+      this.codec.encode(decoded, m, q, w, h),
+    );
+    const hash = await sha256Hex(icon.bytes);
+    await this.putBlob(hash, icon, 'icon');
+    return { hash, mime: icon.mime, w: icon.width, h: icon.height };
   }
 
   private async putBlob(

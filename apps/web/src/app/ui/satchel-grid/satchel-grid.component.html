@@ -14,7 +14,16 @@
           [hkTooltip]="sentence"
           (click)="select.emit(item.id)"
         >
-          <span class="hk-slot__ico"><hk-icon [icon]="item.icon" /></span>
+          @let glyph = this.glyph(item);
+          <span class="hk-slot__ico">
+            @if (glyph.sprite) {
+              <hk-icon [icon]="glyph.sprite" />
+            } @else if (glyph.blob && (glyph.blob | blobUrl)(); as url) {
+              <img class="hk-slot__img" [src]="url" alt="" />
+            } @else {
+              <span class="hk-slot__mono" aria-hidden="true">{{ monogram(item) }}</span>
+            }
+          </span>
           <span class="hk-slot__cap" [class.hk-slot__cap--unknown]="item.unknown">{{
             item.name
           }}</span>

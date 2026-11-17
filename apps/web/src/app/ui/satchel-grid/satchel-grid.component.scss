@@ -94,6 +94,19 @@ li {
   font-size: 18px;
 }
 
+.hk-slot__img {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hk-slot__mono {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1;
+}
+
 .hk-slot__cap,
 .hk-slot__sub {
   display: -webkit-box;

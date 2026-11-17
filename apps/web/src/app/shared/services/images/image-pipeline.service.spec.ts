@@ -3,6 +3,7 @@ import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import {
   chooseMime,
   encodeWithinCap,
+  ICON_SIZE,
   fitPortraitDimensions,
   IMAGE_CODEC,
   ImageInvalidTypeError,
@@ -232,5 +233,23 @@ describe('ImagePipelineService', () => {
 
     const file = new File([new Uint8Array([1])], 'huge.png', { type: 'image/png' });
     await expect(service.processPortrait(file)).rejects.toBeInstanceOf(ImageTooLargeError);
+  });
+
+  it('encodeIcon resizes to a 128 px box, content-addresses and stores an icon blob', async () => {
+    const codec = makeFakeCodec();
+    const { put } = configure(codec);
+    const service = TestBed.inject(ImagePipelineService);
+
+    const file = new File([new Uint8Array([1, 2, 3])], 'rune.png', { type: 'image/png' });
+    const result = await service.encodeIcon(file);
+
+    expect(ICON_SIZE).toBe(128);
+    expect(result).toMatchObject({ w: 128, h: 128, mime: 'image/webp' });
+    expect(result.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(put).toHaveBeenCalledWith(result.hash, 'image/webp', expect.any(Uint8Array), {
+      kind: 'icon',
+      width: 128,
+      height: 128,
+    });
   });
 });

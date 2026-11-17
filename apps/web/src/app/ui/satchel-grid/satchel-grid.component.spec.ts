@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { provideShellTransloco } from '../testing/transloco-testing';
 import type { BagItem } from '../bag-item';
 import { hintOf, mount, press } from '../testing/harness';
@@ -146,5 +147,77 @@ describe('HkSatchelGridComponent selected-item actions', () => {
     fixture.componentInstance.selected.set('arrows');
     await fixture.whenStable();
     expect(el.querySelector('.hk-satchel__strip #strip')).not.toBeNull();
+  });
+});
+
+describe('HkSatchelGridComponent item icons', () => {
+  const hash = `sha256:${'b'.repeat(64)}`;
+  let rows: Map<string, unknown>;
+  let arrive: (h: string) => void;
+
+  async function render(item: Partial<BagItem>) {
+    rows = new Map();
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      providers: [
+        provideShellTransloco(),
+        {
+          provide: BlobsRepository,
+          useValue: {
+            get: (h: string) => Promise.resolve(rows.get(h)),
+            onArrival: (cb: (h: string) => void) => {
+              arrive = cb;
+              return () => undefined;
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HkSatchelGridComponent);
+    const base: BagItem = { id: 'x', name: 'Zither', icon: 'ui:bag', ...item };
+    fixture.componentRef.setInput('items', [base]);
+    await fixture.whenStable();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+  const ico = (el: HTMLElement) => el.querySelector('.hk-slot__ico')!;
+
+  beforeEach(() => {
+    URL.createObjectURL = () => 'blob:icon';
+    URL.revokeObjectURL = () => undefined;
+  });
+
+  it('draws the item default glyph when there is no custom icon', async () => {
+    const { el } = await render({ icon: 'gi:ring' });
+    expect(ico(el).querySelector('use')?.getAttribute('href')).toContain('gi-ring');
+  });
+
+  it('draws a custom gi icon from the sprite', async () => {
+    const { el } = await render({ customIcon: { kind: 'gi', id: 'rope-coil' } });
+    expect(ico(el).querySelector('use')?.getAttribute('href')).toContain('gi-rope-coil');
+  });
+
+  it('a pack blob icon wins over a custom one and shows the monogram while not local', async () => {
+    const { el } = await render({ blobIcon: hash, customIcon: { kind: 'gi', id: 'rope' } });
+    expect(ico(el).querySelector('use')).toBeNull();
+    expect(ico(el).querySelector('img')).toBeNull();
+    expect(ico(el).querySelector('.hk-slot__mono')?.textContent).toBe('Z');
+  });
+
+  it('shows the monogram for an invalid custom icon', async () => {
+    const { el } = await render({ customIcon: { kind: 'gi', id: 'Not A Slug' } });
+    expect(ico(el).querySelector('use')).toBeNull();
+    expect(ico(el).querySelector('.hk-slot__mono')?.textContent).toBe('Z');
+  });
+
+  it('shows the monogram while a custom blob is missing, then the image once it arrives', async () => {
+    const { fixture, el } = await render({ customIcon: { kind: 'blob', hash } });
+    expect(ico(el).querySelector('img')).toBeNull();
+    expect(ico(el).querySelector('.hk-slot__mono')).not.toBeNull();
+    rows.set(hash, { hash, mime: 'image/webp', bytes: new Uint8Array([1]), size: 1 });
+    arrive(hash);
+    await new Promise((r) => setTimeout(r));
+    await fixture.whenStable();
+    expect(ico(el).querySelector('img')?.getAttribute('src')).toBe('blob:icon');
+    expect(ico(el).querySelector('.hk-slot__mono')).toBeNull();
   });
 });

@@ -191,6 +191,14 @@ export const ConditionUpdatedV1 = z.strictObject({
 
 // --- Inventory & currency --------------------------------------------------------------
 
+/** A custom item's icon, stored at `item.added@1.custom.icon` and validated on read (R8): a bundled
+ * game-icons slug (the sprite symbol `gi-<id>`) or a content-addressed `icon` blob. */
+export const ItemIconRefSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('gi'), id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/) }),
+  z.strictObject({ kind: z.literal('blob'), hash: BlobHashSchema }),
+]);
+export type ItemIconRef = z.infer<typeof ItemIconRefSchema>;
+
 export const ItemAddedV1 = z.strictObject({
   instanceId: z.string().regex(UUID),
   itemId: EntityIdSchema.optional(), // absent for fully custom items

@@ -96,6 +96,10 @@ export class BagLeafComponent {
           id: row.instanceId,
           name: this.names.itemName(row),
           icon: row.itemId ? this.names.iconOf(row.itemId, 'ui:bag') : 'ui:bag',
+          ...(entity?.icon?.startsWith('sha256:') ? { blobIcon: entity.icon } : {}),
+          ...(!row.itemId && row.custom?.['icon'] !== undefined
+            ? { customIcon: row.custom['icon'] }
+            : {}),
           qty: row.qty,
           equipped: row.equipped,
           attuned: row.attuned,
