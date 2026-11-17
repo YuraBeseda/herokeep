@@ -397,6 +397,8 @@ export class PlayActionsService {
     });
     const result = (await handle.closed) as ConditionDialogResult | undefined;
     if (!result) return;
+    // The campaign read polls every 15 s; read the DM's clock fresh so a round just advanced counts.
+    await this.characterStore.campaign.refresh();
     const sheet = this.sheet();
     if (!sheet) return;
     const clock = this.clock();

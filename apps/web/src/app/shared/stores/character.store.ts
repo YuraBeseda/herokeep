@@ -26,6 +26,7 @@ import { uuidv7 } from '../helpers/uuid';
 import {
   campaignDeriveOverridesFromState,
   CampaignEditLockService,
+  type CampaignStateSignal,
 } from '../services/campaigns/campaign-edit-lock';
 import type { CampaignState } from '../services/campaigns/campaign-projection';
 import { EngineFacade } from '../services/engine/engine.facade';
@@ -179,7 +180,7 @@ export class CharacterStore {
 
   /** Plan 18 task 3: the linked campaign's projected state (`null` for a solo hero or until its
    * events load), live within one poll — the house-rule gates and `campaignOverrides` read it. */
-  readonly campaign: Signal<CampaignState | null> = this.campaignEditLockService.campaignStateFor(
+  readonly campaign: CampaignStateSignal = this.campaignEditLockService.campaignStateFor(
     this.events,
   );
 

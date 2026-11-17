@@ -6,6 +6,7 @@ import {
   InjectionToken,
   resource,
   type Signal,
+  untracked,
 } from '@angular/core';
 import type { DeriveOverrides } from '@hk/engine';
 import type { Event } from '@hk/protocol';
@@ -95,6 +96,12 @@ export function campaignDeriveOverridesFromState(state: CampaignState | null): D
 
 const DEFAULT_POLL_MS = 15_000;
 
+/** The campaign projection plus a fresh read: `refresh` re-reads the stream from Dexie now (no
+ * waiting for the poll) and resolves once the signal holds it. */
+export type CampaignStateSignal = Signal<CampaignState | null> & {
+  refresh(): Promise<void>;
+};
+
 /** DI seam over the poll interval below (mirrors `CAMPAIGN_GATEWAY_ACK_TIMEOUT_MS`'s own pattern,
  * `campaign.store.ts`) — production code never overrides this; specs override it to a small real
  * duration. */
@@ -169,7 +176,7 @@ export class CampaignEditLockService {
    * Dexie-read/poll machinery. `null` exactly when `characterEvents` resolves to no campaign link
    * at all — the caller's own pure projection function decides what that means for its own verdict
    * (`campaignEditLockFromState`/`campaignDeriveOverridesFromState` both fail open on `null`). */
-  campaignStateFor(characterEvents: Signal<readonly Event[]>): Signal<CampaignState | null> {
+  campaignStateFor(characterEvents: Signal<readonly Event[]>): CampaignStateSignal {
     const streamId = computed<string | undefined>(() => {
       const campaignId = campaignIdOfCharacter(characterEvents());
       return campaignId ? `camp:${campaignId}` : undefined;
@@ -198,10 +205,15 @@ export class CampaignEditLockService {
       });
     });
 
-    return computed<CampaignState | null>(() => {
+    const state = computed<CampaignState | null>(() => {
       if (streamId() === undefined) return null;
       const events = campaignEvents.value();
       return events === undefined ? null : projectCampaign(events);
     });
+    const refresh = async (): Promise<void> => {
+      const id = untracked(streamId);
+      if (id !== undefined) campaignEvents.set(await this.eventsRepository.byStream(id));
+    };
+    return Object.assign(state, { refresh });
   }
 }

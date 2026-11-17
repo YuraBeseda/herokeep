@@ -1,7 +1,10 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { propose } from '@hk/engine';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
+import { DialogService } from '@app/ui/dialog/dialog.service';
+import { EventsRepository } from '@shared/services/storage/events.repository';
+import type { Event } from '@hk/protocol';
 import charactersEn from '../../../../../../assets/i18n/characters/en.json';
 import {
   linkToCampaign,
@@ -360,6 +363,44 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
     expect(compiled.querySelector('.conditions__resistances .hk-cond__end')).toBeNull();
     expect(compiled.textContent).toContain(charactersEn.sheet.conditions.resistancesTitle);
   });
+  it('a rounds condition added right after the DM advances starts on the new round, not the polled one', async () => {
+    await seedFighter('Ivan');
+    await linkToCampaign();
+    const store = TestBed.inject(CharacterStore);
+    const encounterId = '0190a000-0000-7000-8000-00000000e001';
+    const actor = { userId: 'dm1', deviceId: 'd1', role: 'dm' };
+    const stream = 'camp:00000000-0000-4000-8000-0000000000c1';
+    const seq = (await TestBed.inject(EventsRepository).byStream(stream)).length;
+    const campaignEvent = (n: number, type: string, payload: object) =>
+      ({
+        id: `evt-enc-${n}`,
+        stream,
+        seq: seq + n,
+        ts: '2026-01-01T00:01:00.000Z',
+        actor,
+        type,
+        v: 1,
+        payload,
+      }) as unknown as Event;
+    // Written straight to Dexie, as sync does, well inside the 15 s poll.
+    await TestBed.inject(EventsRepository).append([
+      campaignEvent(1, 'encounter.started', { encounterId }),
+      campaignEvent(2, 'round.advanced', { encounterId, round: 2 }),
+    ]);
+    vi.spyOn(TestBed.inject(DialogService), 'open').mockReturnValue({
+      closed: Promise.resolve({ conditionId: BLINDED_ID, rounds: 3 }),
+    } as never);
+
+    await TestBed.inject(PlayActionsService).addCondition([{ id: BLINDED_ID } as never]);
+
+    await vi.waitFor(() =>
+      expect(store.events().at(-1)).toMatchObject({
+        type: 'condition.added',
+        payload: { conditionId: BLINDED_ID, startedAtRound: 2, encounterId },
+      }),
+    );
+  });
+
   describe('house rule: players manage their own conditions (plan 18 task 3)', () => {
     const REASON = 'Only your DM manages conditions in The Emberfall Company';
 
