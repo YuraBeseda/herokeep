@@ -154,6 +154,15 @@ the campaign routes at `apps/api/src/core/app.ts:51`).
   booleans, `playersManageConditions`, `startingGold`, `multiclassing` and `playersAddItems`;
   absent means true. `@1` is unchanged and clients read both. The server does not enforce them:
   clients do, and the DM's override path (doc 08) audits. A rule flips live for connected members.
+- **Starting gold and multiclassing gates.** With `startingGold=false`, a hero made for a
+  campaign (the wizard's `?campaign=<id>`) has its gold-only kit options disabled, with the reason
+  "Starting gold is off in <campaign> - ask your DM"; kits that contain items stay choosable. The
+  multiclassing rule is snapshotted when level-up starts, so a flow finishes as started.
+- **Item icons.** `item.added@1.custom.icon` is an `ItemIconRef`, `{kind:'gi', id}` or
+  `{kind:'blob', hash}`, validated on read with `ItemIconRefSchema`. An invalid or missing icon
+  falls back to the monogram; there is no new event version. The `icon` image is a 128 px blob
+  (32 KB cap) that travels in `.hero` bundles and over the blob relay; the hashes it needs are read
+  from events.
 - **Compatibility (release note).** As with the plan 16 `welcome` field above, a client built
   before this slice ignores `campaign.settings_changed@2` and the three new campaign events (the
   house rules and round counter do not show), and it rejects a `.hero` bundle that carries an item

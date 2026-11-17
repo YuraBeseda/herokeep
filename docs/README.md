@@ -83,7 +83,7 @@ pieces above ran one by one. No flaky spec fired in this run.
 Condition durations with a round counter inside encounters, four campaign house rules and item
 icons. Protocol: [03-sync-protocol](02-architecture/03-sync-protocol.md) section "Encounters, rounds
 and house rules" (including the strict-client release note); engine:
-[05-rules-engine](02-architecture/05-rules-engine.md) section "Condition durations"; permissions:
+[05-rules-engine](02-architecture/05-rules-engine.md) section "Condition durations and the campaign clock"; permissions:
 [08-security-permissions-quotas](02-architecture/08-security-permissions-quotas.md). Item icons ride
 the blob relay as a 128 px `icon` kind with a 32 KB cap and travel in `.hero` bundles. The two-phone
 pass is section 8g of [manual-device-checklist](manual-device-checklist.md).

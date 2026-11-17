@@ -6,6 +6,7 @@ Decision record: ADR-010. This document is the how.
 
 ```
 { hash: "sha256:<hex>", mime, size, width, height, kind: icon|portrait|thumb|banner|token,
+  (the item-icon kind is also `icon`, but 128² / 32 KB, see the caps below),
   bytes: Blob, addedAt, lastUsedAt, pinned: boolean, origin: upload|peer|import|pack }
 ```
 
@@ -26,7 +27,7 @@ Decision record: ADR-010. This document is the how.
 5. `hash(bytes)` — `crypto.subtle.digest('SHA-256')`.
 6. Store; return `{hash, thumbHash?, tokenHash?, mime, w, h}` for the emitting event.
 
-Caps (ADR-010): icon 256² / 64 KB; portrait 1024 long edge / 400 KB; banner 1600×600 /
+Caps (ADR-010): pack/spell icon 256² / 64 KB; item icon (plan 18, kind `icon` for a custom or homebrew item) 128² / 32 KB; portrait 1024 long edge / 400 KB; banner 1600×600 /
 400 KB; token & thumb 256² / 64 KB.
 
 ## Blob transfer protocol (over the sync socket)
@@ -51,7 +52,7 @@ Caps (ADR-010): icon 256² / 64 KB; portrait 1024 long edge / 400 KB; banner 160
 
 | Priority | What | When |
 |----------|------|------|
-| 1 | own character's portrait thumb + token; icons of equipped items and prepared spells | immediately on connect |
+| 1 | own character's portrait thumb + token; icons of equipped items and prepared spells (item icons are the 128² kind, spell and pack icons 256²) | immediately on connect |
 | 2 | party tokens; campaign banner | after 1 |
 | 3 | full portrait; remaining own icons; every asset of the campaign's enabled packs (plan 16: pack icons travel here as a whole, including the "equipped/prepared" ones row 1 names — §Pack assets) | when idle (`requestIdleCallback` or 2 s after 2) |
 | 4 (DM only) | every announced blob in the campaign | idle, continuous (super-peer) |

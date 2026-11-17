@@ -637,14 +637,13 @@ pack.
    list once, and an old code no longer recovers the account.
 5. **Library Back.** Scroll the library list, open an entry, press Back (in-app and hardware): the
    chip, search, sort and scroll are as left.
-
 6. **Round counter (two phones, DM and member).** DM starts an encounter and applies a 3-round
    condition to the member's hero. The member's chip shows 3 rounds left; the DM advances a round
    and the chip reads 2 on the member's phone without a reload. Ending the encounter clears the
    countdown. A linked hero with no open encounter has the rounds field disabled, with the reason read out.
 7. **House rule flips live.** DM turns off Starting gold (then Multiclassing, Players manage
    conditions, Players add items, one at a time). On the member's phone the matching control is
-   locked with its reason within one poll, and unlocks when the DM turns it back on. A flow already
+   locked with its reason within ~15 s (next poll), and unlocks when the DM turns it back on. A flow already
    started (a wizard, a level-up) finishes as started.
 8. **Item icon.** Add a custom item, pick an icon and upload an image; it shows in the satchel,
    survives a reload, and round-trips in a `.hero` export/import and to the other phone.

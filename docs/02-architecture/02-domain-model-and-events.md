@@ -114,6 +114,9 @@ generated, e.g. quota notices — none in v1).
 | `spell.cast` | O | `{spellId, level, slotUsed?: boolean, concentration?: boolean}` | convenience event that folds to slot + concentration. **`level` semantics differ per lane:** a Pact Magic cast records the spell's BASE level (the pact slot's own level is implied by the caster's pact table, and pact casts are always cast at that slot level), while a regular-slot cast records the CAST-AT level (an upcast of a level-1 spell into a level-3 slot records `3`). A free cast (plan 13 task 4, `spell.grant.uses`) records `slotUsed: false` at the grant's level and travels with a `resource.spent` for its counter in the same transaction. **Flagged future protocol candidate (no schema change in v1):** the event carries no `classId`, so for a multiclass character whose classes share a spell list (e.g. Cleric + Paladin both preparing the same spell) a cast cannot be attributed to a specific class's spellcasting block; `propose.cast` likewise takes no class/spell-ownership parameter. Adding an optional `classId` is deferred until a rule actually needs per-class attribution. |
 | `concentration.started` / `concentration.ended` | O, D | `{spellId?}` | |
 | `condition.added` / `condition.removed` | O, D | `{conditionId, source?, until?, level?}` | exhaustion uses `level` |
+| `condition.added@2` | O, D | `@1` fields + `{duration?, startedAtRound?, source? (<= 80), encounterId?}` | plan 18; `@1` replays unchanged |
+| `condition.updated@1` | O, D | `{conditionId, ...changed fields}` | plan 18 |
+| `combat.round_advanced@1` | O | `{encounterId, round}` | plan 18; a solo hero's round counter |
 | `item.added` | O, D | `{instanceId, itemId, qty, name?, custom?}` | `custom` = inline homebrew item definition (quick homebrew) |
 | `item.removed` | O, D | `{instanceId, qty?}` | |
 | `item.equipped` / `item.unequipped` | O | `{instanceId, slot?}` | |
@@ -185,6 +188,10 @@ Actor: **D** DM, **M** member (any role), **S** system.
 | `campaign.created` | D | `{name, system, corePack: {id, version}}` |
 | `campaign.renamed` | D | `{name}` |
 | `campaign.settings_changed` | D | `{settings}` (full document, see below) |
+| `campaign.settings_changed@2` | D | `{settings}` with four optional house-rule booleans `playersManageConditions`, `startingGold`, `multiclassing`, `playersAddItems` (absent = true); plan 18, `@1` unchanged |
+| `encounter.started` | D | `{encounterId, startedAtSeq}` (plan 18) |
+| `encounter.ended` | D | `{}` (plan 18) |
+| `round.advanced` | D | `{}` (plan 18; advances the encounter round) |
 | `campaign.join_code_rotated` | D | `{joinCode}` (also updates D1) |
 | `campaign.archived` | D | `{}` |
 | `pack.enabled` / `pack.disabled` | D | `{packId, version, sha256}` (bare hex). Since plan 16 the pack JSON is stored on the campaign stream: the DM uploads it first (`PUT /api/campaigns/:id/packs/:packId/:version`), and `pack.enabled` is accepted only when a stored body with that version and sha256 exists. One version per `packId` (a new version is a version change); `pack.disabled` matches by `packId` and deletes the body (`apps/api/src/core/streams/campaign-actor.ts:580-603`, `:903-942`). Members install the enabled packs automatically (doc 03 §Campaign packs, doc 04 "Campaign packs") |
