@@ -3,7 +3,12 @@ import { propose } from '@hk/engine';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import charactersEn from '../../../../../../assets/i18n/characters/en.json';
-import { linkToCampaign, seedFighter, visibleText } from '../../testing/character-fixtures';
+import {
+  linkToCampaign,
+  seedFighter,
+  describedBy,
+  visibleText,
+} from '../../testing/character-fixtures';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { BagLeafComponent } from './bag-leaf.component';
 
@@ -13,15 +18,6 @@ import { BagLeafComponent } from './bag-leaf.component';
 // Every scenario seeds the REAL `seedFighter` fixture (chain mail + longsword + shield, all
 // equipped — plan-5 golden) and drives the real `AddItemDialogComponent`/`CustomItemDialogComponent`/
 // `ItemRemoveConfirmComponent` overlays the leaf opens through `DialogService`.
-
-/** The text of every element `el`'s `aria-describedby` points at. */
-function describedBy(el: Element): string {
-  return (el.getAttribute('aria-describedby') ?? '')
-    .split(' ')
-    .filter(Boolean)
-    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
-    .join(' ');
-}
 
 describe('BagLeafComponent — inventory and currency controls', () => {
   const DAGGER_ID = 'srd-5e-2024:item/dagger';

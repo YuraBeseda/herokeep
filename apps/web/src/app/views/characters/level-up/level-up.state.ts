@@ -78,6 +78,10 @@ export class LevelUpState {
   readonly multiclassAllowed = houseRuleAllows('multiclassing', this.campaignAtStart);
   /** The campaign's name, for the locked which-class hint. */
   readonly campaignName = this.campaignAtStart?.name ?? '';
+  /** True when the house rule actually hid a new-class offer (drives the stepper hint). */
+  readonly multiclassFiltered = computed(
+    () => !this.multiclassAllowed && this.characterStore.advancements().some((a) => a.isNewClass),
+  );
   /** `CharacterStore.advancements()`, without new classes while multiclassing is off. */
   private readonly offers = computed(() =>
     this.characterStore.advancements().filter((a) => this.multiclassAllowed || !a.isNewClass),

@@ -3,22 +3,18 @@ import { propose } from '@hk/engine';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import charactersEn from '../../../../../../assets/i18n/characters/en.json';
-import { linkToCampaign, seedFighter, visibleText } from '../../testing/character-fixtures';
+import {
+  linkToCampaign,
+  seedFighter,
+  describedBy,
+  visibleText,
+} from '../../testing/character-fixtures';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { ConditionsLeafComponent } from './conditions-leaf.component';
 
 // task-2-brief.md (death saves, inspiration) and task-4-brief.md (the condition-add dialog with its
 // localized picker and data-driven level stepper, per-chip remove). Every scenario seeds a REAL
 // fighter-1 stream and drives the rendered DOM and the real `ConditionDialogComponent` overlay.
-
-/** The text of every element `el`'s `aria-describedby` points at. */
-function describedBy(el: Element): string {
-  return (el.getAttribute('aria-describedby') ?? '')
-    .split(' ')
-    .filter(Boolean)
-    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
-    .join(' ');
-}
 
 describe('ConditionsLeafComponent — death saves, inspiration, conditions', () => {
   const EXHAUSTION_ID = 'srd-5e-2024:condition/exhaustion';

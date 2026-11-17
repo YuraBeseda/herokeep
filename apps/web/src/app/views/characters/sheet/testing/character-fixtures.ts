@@ -250,3 +250,12 @@ export function visibleText(root: HTMLElement): string {
   copy.querySelectorAll('[hidden]').forEach((el) => el.remove());
   return copy.textContent ?? '';
 }
+
+/** The text of every element `el`'s `aria-describedby` points at. */
+export function describedBy(el: Element): string {
+  return (el.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+    .join(' ');
+}

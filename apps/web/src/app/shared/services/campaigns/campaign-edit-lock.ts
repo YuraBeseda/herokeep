@@ -163,32 +163,13 @@ export class CampaignEditLockService {
     );
   }
 
-  /**
-   * Ruling 1 (phase 4, plan 11, task 12 — "overrides plumbing"): the `DeriveOverrides` a
-   * campaign-linked character's `derive()` call should thread through — REUSES `campaignStateFor`
-   * (the exact same cross-stream projection read `editLockFor` above is built on, plan-10's
-   * edit-lock pattern) rather than forking a second Dexie-polling mechanism; only the pure
-   * projection function on the end differs (`campaignDeriveOverridesFromState` vs.
-   * `campaignEditLockFromState`). Same staleness bounds as `editLockFor`'s own doc (immediate on a
-   * `characterEvents` change, bounded `CAMPAIGN_EDIT_LOCK_POLL_INTERVAL_MS` poll otherwise) — a
-   * campaign's house-rule change (encumbrance mode, attunement cap) reaches a linked character's
-   * `Sheet` within one poll interval, same as a lock-state change already does. Solo characters
-   * (ruling 1) get `{}` (engine defaults) — see `campaignDeriveOverridesFromState`'s own doc. Same
-   * injection-context requirement as `editLockFor`. */
-  overridesFor(characterEvents: Signal<readonly Event[]>): Signal<DeriveOverrides> {
-    const state = this.campaignStateFor(characterEvents);
-    return computed<DeriveOverrides>(() => campaignDeriveOverridesFromState(state()));
-  }
-
-  /** The shared cross-stream projection read both `editLockFor` and `overridesFor` build on — see
+  /** The shared cross-stream projection read `editLockFor` and `CharacterStore.campaign` build on — see
    * `editLockFor`'s own doc (staleness bounds, poll mechanics, injection-context requirement) for
    * the full design; factored out here purely so the two public methods never duplicate this
    * Dexie-read/poll machinery. `null` exactly when `characterEvents` resolves to no campaign link
    * at all — the caller's own pure projection function decides what that means for its own verdict
    * (`campaignEditLockFromState`/`campaignDeriveOverridesFromState` both fail open on `null`). */
-  campaignStateFor(
-    characterEvents: Signal<readonly Event[]>,
-  ): Signal<CampaignState | null> {
+  campaignStateFor(characterEvents: Signal<readonly Event[]>): Signal<CampaignState | null> {
     const streamId = computed<string | undefined>(() => {
       const campaignId = campaignIdOfCharacter(characterEvents());
       return campaignId ? `camp:${campaignId}` : undefined;
@@ -198,7 +179,8 @@ export class CampaignEditLockService {
     // (a linked hero would flicker to "solo"); the poll uses `reload()`, which keeps the old value.
     const campaignEvents = resource({
       params: () => streamId(),
-      loader: async ({ params }) => (params === undefined ? [] : await this.eventsRepository.byStream(params)),
+      loader: async ({ params }) =>
+        params === undefined ? [] : await this.eventsRepository.byStream(params),
     });
 
     let timer: ReturnType<typeof setInterval> | undefined;

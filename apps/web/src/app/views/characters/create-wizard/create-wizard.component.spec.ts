@@ -32,6 +32,7 @@ import shellUk from '../../../../assets/i18n/shell/uk.json';
 import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
 import { CreateWizardComponent } from './create-wizard.component';
 import { CreateWizardState } from './create-wizard.state';
+import { CAMPAIGN_ID, describedBy, seedCampaign } from '../sheet/testing/character-fixtures';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — `pretest`
 // (apps/web/package.json) builds it before this file ever runs.
@@ -1515,6 +1516,27 @@ describe('CreateWizardComponent — rebuilt steps (plan 17 B8b)', () => {
     await pressStrap(fixture, 'next');
     expect(currentLabel(fixture)).toBe('Review');
     expect(state.doneSteps().has('equipment')).toBe(true);
+  });
+
+  // Plan 18 task 3 fix round 1: the wizard reads `?campaign=` at start (the draft name is still
+  // empty then), so a hero made for a campaign with starting gold off gets the gold-only kit gated.
+  it('?campaign= with starting gold off gates the gold-only kit on the equipment step, with its reason', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ campaign: CAMPAIGN_ID }) } },
+    });
+    await seedCampaign({ startingGold: false });
+    const { fixture } = await startFull();
+    await advanceToStep(fixture, 'Equipment');
+
+    const reason = 'Starting gold is off in The Emberfall Company — ask your DM';
+    const cards = Array.from(
+      root(fixture).querySelectorAll<HTMLElement>('.equipment-step__kits--class hk-picker-card'),
+    );
+    const gated = cards.filter((c) => c.classList.contains('hk-picker-card--gated'));
+    expect(gated).toHaveLength(1);
+    const choose = gated[0].querySelector<HTMLButtonElement>('.hk-picker-card__choose')!;
+    expect(choose.getAttribute('aria-disabled')).toBe('true');
+    expect(describedBy(choose)).toContain(reason);
   });
 
   it('the review groups by step, each with an Edit link; the abilities are seals in the system order', async () => {

@@ -1284,6 +1284,19 @@ describe('LevelUpComponent — multiclassing house rule', () => {
     expect(root.textContent).not.toContain(REASON);
   });
 
+  it('off, but no new class was on offer: the locked step keeps its usual hint, not the house-rule reason', async () => {
+    // `seedWizard` (int 10) fails Wizard's own multiclass prerequisite, so nothing was filtered out.
+    const id = await seedWizard('Elowen');
+    await TestBed.inject(CharacterStore).appendTx([
+      { type: 'xp.awarded', v: 1, payload: { amount: 300 } },
+    ]);
+    await linkToCampaign({ multiclassing: false });
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    const first = harness.routeNativeElement!.querySelector('.hk-stepper__step')!;
+    expect(first.classList.contains('hk-stepper__step--locked')).toBe(true);
+    expect(hintOf(first)).toBe('Class chosen. Cancel to start over and pick another.');
+  });
+
   it('a level-up started while on finishes as started when the DM flips it off; the next one skips', async () => {
     const id = await seedLinkedFighter(true);
     const characterStore = TestBed.inject(CharacterStore);
