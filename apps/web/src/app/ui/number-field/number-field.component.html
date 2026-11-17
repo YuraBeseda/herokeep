@@ -37,7 +37,6 @@
         [attr.aria-disabled]="disabledReason() ? 'true' : null"
         [hkTooltip]="disabledReason() ?? ''"
         [attr.aria-invalid]="error() ? 'true' : null"
-        [attr.aria-describedby]="describedBy()"
         (input)="onInput(field)"
         (change)="onCommit(field)"
         (blur)="onBlur()"
@@ -53,6 +52,9 @@
         <hk-icon [icon]="'ui:add'" />
       </button>
     </div>
+    @if (disabledReason(); as reason) {
+      <span hidden [id]="reasonId">{{ reason }}</span>
+    }
     @if (error(); as message) {
       <span class="hk-field__msg hk-field__msg--error" [id]="messageId">
         <hk-icon [icon]="'ui:close'" />{{ message }}

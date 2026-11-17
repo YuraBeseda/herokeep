@@ -66,10 +66,17 @@ export class HkNumberFieldComponent extends HkValueAccessor<number | null> {
   protected readonly blocked = computed(
     () => this.isDisabled() || (this.disabledReason() ?? '') !== '',
   );
-  protected readonly describedBy = computed(() =>
-    this.error() || this.hint() ? this.messageId : null,
+  protected readonly reasonId = `${this.inputId}-reason`;
+  protected readonly describedBy = computed(
+    () =>
+      [
+        this.error() || this.hint() ? this.messageId : null,
+        (this.disabledReason() ?? '') !== '' ? this.reasonId : null,
+      ]
+        .filter((id) => id !== null)
+        .join(' ') || null,
   );
-  // The input's tooltip owns its `aria-describedby`, so the hint/error id is handed to it.
+  // The input's tooltip owns its `aria-describedby`, so the hint/error/reason ids are handed to it.
   private readonly inputTip = viewChild('field', { read: HkTooltipDirective });
   private readonly keepDescription = effect(() =>
     this.inputTip()?.describedByExtra.set(this.describedBy()),

@@ -184,4 +184,18 @@ describe('HkNumberFieldComponent', () => {
     press(plus(el));
     expect(fixture.componentInstance.ctl.value).toBe(9);
   });
+
+  it('describes a blocked field by its hidden reason without focus, next to the hint', async () => {
+    const { el } = await mount(HkNumberFieldComponent, {
+      ...base,
+      hint: 'Range 0 to 5',
+      disabledReason: 'Not yet',
+    });
+    const target = el.querySelector<HTMLElement>('[hidden]')!;
+    expect(target.textContent).toBe('Not yet');
+    const ids = input(el).getAttribute('aria-describedby')!.split(' ');
+    expect(ids).toContain(target.id);
+    expect(ids).toContain(el.querySelector('.hk-field__msg')!.id);
+    expect(input(el).readOnly).toBe(true);
+  });
 });
