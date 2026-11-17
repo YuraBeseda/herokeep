@@ -136,6 +136,16 @@
           <span class="campaign-settings__value">{{ current().houseRules.startingLevel }}</span>
         }
       </div>
+
+      @for (r of ruleToggles; track r.rule) {
+        <hk-toggle
+          [label]="t(r.label)"
+          [description]="t(r.hint)"
+          [value]="current().houseRules[r.rule] !== false"
+          [disabled]="!canEdit()"
+          (valueChange)="setHouseRule(r.rule, $event)"
+        />
+      }
     </hk-leaf>
 
     <app-campaign-packs-section />

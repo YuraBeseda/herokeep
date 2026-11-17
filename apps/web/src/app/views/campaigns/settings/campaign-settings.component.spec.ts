@@ -275,6 +275,34 @@ describe('CampaignSettingsComponent', () => {
     });
   });
 
+  it('shows the four house-rule toggles on by default; switching one off saves campaign.settings_changed@2', async () => {
+    const { appendTx } = configure({ role: 'dm', isLeader: true });
+    const fixture = TestBed.createComponent(CampaignSettingsComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const label = campaignsEn.settings.houseRules.rules.playersAddItems.label;
+    const toggles = Array.from(compiled.querySelectorAll<HTMLElement>('hk-toggle')).filter((el) =>
+      Object.values(campaignsEn.settings.houseRules.rules).some((r) =>
+        el.textContent?.includes(r.label),
+      ),
+    );
+    expect(toggles).toHaveLength(4);
+    toggles.forEach((el) =>
+      expect(el.querySelector('[role="switch"]')!.getAttribute('aria-checked')).toBe('true'),
+    );
+
+    toggles.find((el) => el.textContent?.includes(label))!.querySelector('button')!.click();
+    await fixture.whenStable();
+    compiled.querySelector<HTMLButtonElement>('.campaign-settings__save')!.click();
+    await fixture.whenStable();
+
+    const [[drafts]] = appendTx.mock.calls as [
+      [{ type: string; v: number; payload: { settings: { houseRules: object } } }[]],
+    ];
+    expect(drafts[0]).toMatchObject({ type: 'campaign.settings_changed', v: 2 });
+    expect(drafts[0].payload.settings.houseRules).toMatchObject({ playersAddItems: false });
+  });
+
   it('toasts the not-leader error code (verbatim, no generic fallback) when appendTx rejects that way', async () => {
     const appendTx = vi.fn().mockRejectedValue(new CampaignStoreNotLeaderError());
     const { toastShow } = configure({ role: 'dm', isLeader: true, appendTx });
@@ -657,6 +685,7 @@ describe('CampaignSettingsComponent', () => {
       ).toEqual([
         campaignsEn.settings.houseRules.strictValidation,
         campaignsEn.settings.houseRules.allowOverrides,
+        ...Object.values(campaignsEn.settings.houseRules.rules).map((r) => r.label),
         campaignsEn.settings.visibility.allowPrivateRolls,
         campaignsEn.settings.join.open,
         campaignsEn.settings.join.requireApproval,
@@ -698,7 +727,7 @@ describe('CampaignSettingsComponent', () => {
           'button[role="switch"]',
         ),
       );
-      expect(switches.length).toBe(5);
+      expect(switches.length).toBe(9);
       expect(switches.every((b) => b.disabled)).toBe(true);
     });
   });

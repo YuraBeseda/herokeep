@@ -212,7 +212,25 @@
         "variant": "Variant (encumbered tiers)"
       },
       "attunementMax": "Attunement limit",
-      "startingLevel": "Starting level"
+      "startingLevel": "Starting level",
+      "rules": {
+        "playersManageConditions": {
+          "label": "Players manage their own conditions",
+          "hint": "On: a player can end or edit their own conditions. Off: only the DM can, and the player's chips show a lock."
+        },
+        "startingGold": {
+          "label": "Starting gold instead of equipment",
+          "hint": "On: a new hero may take the class's starting gold and buy gear in the wizard instead of the equipment kit. Off: the wizard offers the kit only."
+        },
+        "multiclassing": {
+          "label": "Multiclassing",
+          "hint": "When off, level-ups skip the class choice and continue in the hero's class."
+        },
+        "playersAddItems": {
+          "label": "Players add items themselves",
+          "hint": "Off: only the DM grants items; players' Add item is locked."
+        }
+      }
     },
     "packs": {
       "title": "Content packs",

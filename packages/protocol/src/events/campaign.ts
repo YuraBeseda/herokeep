@@ -94,6 +94,18 @@ export const CampaignSettingsSchema = z.strictObject({
 });
 export type CampaignSettings = z.infer<typeof CampaignSettingsSchema>;
 
+/** Plan 18: `campaign.settings_changed@2`'s document — V1 plus four optional house-rule booleans
+ * (absent = true, i.e. allowed). `CampaignSettingsSchema` itself stays untouched for @1 replay. */
+export const CampaignSettingsV2Schema = CampaignSettingsSchema.extend({
+  houseRules: CampaignSettingsSchema.shape.houseRules.extend({
+    playersManageConditions: z.boolean().optional(),
+    startingGold: z.boolean().optional(),
+    multiclassing: z.boolean().optional(),
+    playersAddItems: z.boolean().optional(),
+  }),
+});
+export type CampaignSettingsV2 = z.infer<typeof CampaignSettingsV2Schema>;
+
 // --- Campaign lifecycle --------------------------------------------------------------------
 
 export const CampaignCreatedV1 = z.strictObject({
@@ -103,6 +115,7 @@ export const CampaignCreatedV1 = z.strictObject({
 });
 export const CampaignRenamedV1 = z.strictObject({ name: ShortTextSchema });
 export const CampaignSettingsChangedV1 = z.strictObject({ settings: CampaignSettingsSchema });
+export const CampaignSettingsChangedV2 = z.strictObject({ settings: CampaignSettingsV2Schema });
 export const CampaignJoinCodeRotatedV1 = z.strictObject({ joinCode: JoinCodeSchema });
 export const CampaignArchivedV1 = z.strictObject({});
 
@@ -239,6 +252,7 @@ export const CAMPAIGN_EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'campaign.created@1': CampaignCreatedV1,
   'campaign.renamed@1': CampaignRenamedV1,
   'campaign.settings_changed@1': CampaignSettingsChangedV1,
+  'campaign.settings_changed@2': CampaignSettingsChangedV2,
   'campaign.join_code_rotated@1': CampaignJoinCodeRotatedV1,
   'campaign.archived@1': CampaignArchivedV1,
   'pack.enabled@1': PackEnabledV1,
@@ -330,6 +344,7 @@ export const CAMPAIGN_EVENT_ACTORS: Record<string, ActorRole[]> = {
 export type CampaignCreated = z.infer<typeof CampaignCreatedV1>;
 export type CampaignRenamed = z.infer<typeof CampaignRenamedV1>;
 export type CampaignSettingsChanged = z.infer<typeof CampaignSettingsChangedV1>;
+export type CampaignSettingsChangedV2Payload = z.infer<typeof CampaignSettingsChangedV2>;
 export type CampaignJoinCodeRotated = z.infer<typeof CampaignJoinCodeRotatedV1>;
 export type CampaignArchived = z.infer<typeof CampaignArchivedV1>;
 export type PackEnabled = z.infer<typeof PackEnabledV1>;

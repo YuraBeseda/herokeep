@@ -5,8 +5,8 @@ import type {
   CampaignCreated,
   CampaignJoinCodeRotated,
   CampaignRenamed,
-  CampaignSettings,
-  CampaignSettingsChanged,
+  CampaignSettingsChangedV2Payload,
+  CampaignSettingsV2,
   ChatMessage,
   DmNoteAdded,
   DmNoteRemoved,
@@ -172,7 +172,7 @@ export type LogEntry =
 export interface CampaignState {
   name: string;
   system: string;
-  settings: CampaignSettings | null;
+  settings: CampaignSettingsV2 | null;
   joinCode?: string;
   members: Map<string, MemberEntry>;
   roster: Map<string, RosterEntry>;
@@ -269,7 +269,8 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
         break;
       }
       case 'campaign.settings_changed': {
-        const p = e.payload as CampaignSettingsChanged;
+        // @1 and @2 payloads fold the same way: @1 is a subset of @2 (the new house rules are optional).
+        const p = e.payload as CampaignSettingsChangedV2Payload;
         settings = p.settings;
         break;
       }

@@ -116,8 +116,8 @@ describe.each(CAMPAIGN_EVENT_CASES)('parseEvent $type', ({ type, accept }) => {
 describe('the complete campaign-stream event catalog', () => {
   const CAMPAIGN_EVENT_COUNT = 24;
 
-  it('registers a payload schema for every catalog event', () => {
-    expect(Object.keys(CAMPAIGN_EVENT_PAYLOADS)).toHaveLength(CAMPAIGN_EVENT_COUNT);
+  it('registers a payload schema for every catalog event (plus settings_changed@2)', () => {
+    expect(Object.keys(CAMPAIGN_EVENT_PAYLOADS)).toHaveLength(CAMPAIGN_EVENT_COUNT + 1);
   });
 
   it('declares an actor list for every catalog event', () => {
@@ -186,6 +186,35 @@ describe('CampaignSettingsSchema', () => {
   it('rejects startingLevel above the 5e level cap (20)', () => {
     const bad = { ...VALID_SETTINGS, houseRules: { ...VALID_SETTINGS.houseRules, startingLevel: 21 } };
     expect(CampaignSettingsSchema.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe('campaign.settings_changed@2 (house rules, plan 18)', () => {
+  const v2 = (rules: Record<string, unknown>) => ({
+    ...base,
+    v: 2,
+    type: 'campaign.settings_changed',
+    payload: { settings: { ...VALID_SETTINGS, houseRules: { ...VALID_SETTINGS.houseRules, ...rules } } },
+  });
+  const four = { playersManageConditions: false, startingGold: false, multiclassing: true, playersAddItems: false };
+
+  it('accepts the four optional booleans, and their absence', () => {
+    expect(parseEvent(v2(four)).ok).toBe(true);
+    expect(parseEvent(v2({})).ok).toBe(true);
+  });
+
+  it('rejects a non-boolean house rule and an unknown house-rule key', () => {
+    expect(parseEvent(v2({ startingGold: 'no' })).ok).toBe(false);
+    expect(parseEvent(v2({ bogus: true })).ok).toBe(false);
+  });
+
+  it('keeps @1 strict: the new keys are still unknown there', () => {
+    const r = parseEvent({ ...v2(four), v: 1 });
+    expect(r.ok).toBe(false);
+  });
+
+  it('shares the DM-only actor row with @1', () => {
+    expect(CAMPAIGN_EVENT_ACTORS['campaign.settings_changed']).toEqual(['dm']);
   });
 });
 

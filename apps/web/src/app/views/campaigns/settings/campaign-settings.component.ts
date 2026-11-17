@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
-import type { CampaignSettings } from '@hk/protocol';
+import type { CampaignSettingsV2 } from '@hk/protocol';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { ToastService } from '@shared/components/toast/toast.service';
+import type { HouseRuleKey } from '@shared/services/campaigns/house-rules';
 import { LeaderService } from '@shared/services/storage/leader.service';
 import {
   CampaignStore,
@@ -26,7 +27,7 @@ import { CampaignPacksSectionComponent } from './campaign-packs-section.componen
  * Used ONLY the very first time a campaign's DM opens this screen before ANY
  * `campaign.settings_changed` event exists yet (`CampaignState.settings` is `null` until then,
  * campaign-projection.ts) — saving these once establishes the real document going forward. */
-function defaultCampaignSettings(system: string): CampaignSettings {
+function defaultCampaignSettings(system: string): CampaignSettingsV2 {
   return {
     system,
     // Superseded (plan-16 ruling 1): a campaign's enabled content packs are the `pack.enabled` /
@@ -52,12 +53,12 @@ function defaultCampaignSettings(system: string): CampaignSettings {
   };
 }
 
-type HouseRules = CampaignSettings['houseRules'];
-type Visibility = CampaignSettings['visibility'];
-type Join = CampaignSettings['join'];
+type HouseRules = CampaignSettingsV2['houseRules'];
+type Visibility = CampaignSettingsV2['visibility'];
+type Join = CampaignSettingsV2['join'];
 
 /**
- * `/g/:id/settings` (plan-10 task-6-brief.md): renders `CampaignSettings` — DM-editable (appends
+ * `/g/:id/settings` (plan-10 task-6-brief.md): renders `CampaignSettingsV2` — DM-editable (appends
  * the FULL document via `campaign.settings_changed`, per the brief's binding "Settings edit"
  * carry: "the form edits a copy of state.settings and appends the whole settings object"),
  * read-only for everyone else. Enum VALUES are the schema's own constants
@@ -106,7 +107,7 @@ export class CampaignSettingsComponent {
   protected readonly canEdit = computed(() => this.isDm() && this.leaderService.isLeader());
 
   protected readonly saving = signal(false);
-  private readonly draft = signal<CampaignSettings | null>(null);
+  private readonly draft = signal<CampaignSettingsV2 | null>(null);
 
   // Enum option lists the template iterates for each field's chip row (edit mode) — the VALUES
   // are the schema's own literal unions verbatim (task-6-brief.md: "values from the schema
@@ -130,14 +131,14 @@ export class CampaignSettingsComponent {
   protected readonly partySheetsOptions: Visibility['partySheets'][] = ['none', 'overview', 'full'];
   protected readonly rollsOptions: Visibility['rolls'][] = ['everyone', 'dm'];
 
-  protected readonly effective = computed<CampaignSettings>(() => {
+  protected readonly effective = computed<CampaignSettingsV2>(() => {
     const state = this.campaignStore.state();
     return state?.settings ?? defaultCampaignSettings(state?.system ?? '');
   });
 
-  protected readonly current = computed<CampaignSettings>(() => this.draft() ?? this.effective());
+  protected readonly current = computed<CampaignSettingsV2>(() => this.draft() ?? this.effective());
 
-  private setField(mutate: (s: CampaignSettings) => CampaignSettings): void {
+  private setField(mutate: (s: CampaignSettingsV2) => CampaignSettingsV2): void {
     if (!this.canEdit()) return;
     this.draft.set(mutate(structuredClone(this.current())));
   }
@@ -152,6 +153,34 @@ export class CampaignSettingsComponent {
 
   private setJoin(mutate: (j: Join) => Join): void {
     this.setField((s) => ({ ...s, join: mutate(s.join) }));
+  }
+
+  // Literal keys (not built at run time) so the i18n unused-key check sees them.
+  protected readonly ruleToggles: readonly { rule: HouseRuleKey; label: string; hint: string }[] = [
+    {
+      rule: 'playersManageConditions',
+      label: 'settings.houseRules.rules.playersManageConditions.label',
+      hint: 'settings.houseRules.rules.playersManageConditions.hint',
+    },
+    {
+      rule: 'startingGold',
+      label: 'settings.houseRules.rules.startingGold.label',
+      hint: 'settings.houseRules.rules.startingGold.hint',
+    },
+    {
+      rule: 'multiclassing',
+      label: 'settings.houseRules.rules.multiclassing.label',
+      hint: 'settings.houseRules.rules.multiclassing.hint',
+    },
+    {
+      rule: 'playersAddItems',
+      label: 'settings.houseRules.rules.playersAddItems.label',
+      hint: 'settings.houseRules.rules.playersAddItems.hint',
+    },
+  ];
+
+  protected setHouseRule(rule: HouseRuleKey, value: boolean): void {
+    this.setHouseRules((h) => ({ ...h, [rule]: value }));
   }
 
   protected setStrictValidation(value: boolean): void {
@@ -215,7 +244,7 @@ export class CampaignSettingsComponent {
     this.saving.set(true);
     try {
       await this.campaignStore.appendTx([
-        { type: 'campaign.settings_changed', v: 1, payload: { settings } },
+        { type: 'campaign.settings_changed', v: 2, payload: { settings } },
       ]);
       this.draft.set(null);
       this.toastService.show('campaigns.settings.toast.saved');
