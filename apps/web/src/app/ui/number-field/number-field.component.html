@@ -16,7 +16,7 @@
         type="button"
         class="hk-numfield__step hk-numfield__minus"
         [attr.aria-label]="minusLabel"
-        [attr.aria-disabled]="atMin() || isDisabled()"
+        [attr.aria-disabled]="atMin() || blocked()"
         [hkTooltip]="atMin() ? t('ui.number.at-min', { label: name, min: min() }) : minusLabel"
         (click)="stepBy(-1)"
       >
@@ -33,6 +33,9 @@
         [attr.step]="step()"
         [value]="value() ?? ''"
         [disabled]="isDisabled()"
+        [readOnly]="!!disabledReason()"
+        [attr.aria-disabled]="disabledReason() ? 'true' : null"
+        [hkTooltip]="disabledReason() ?? ''"
         [attr.aria-invalid]="error() ? 'true' : null"
         [attr.aria-describedby]="describedBy()"
         (input)="onInput(field)"
@@ -43,7 +46,7 @@
         type="button"
         class="hk-numfield__step hk-numfield__plus"
         [attr.aria-label]="plusLabel"
-        [attr.aria-disabled]="atMax() || isDisabled()"
+        [attr.aria-disabled]="atMax() || blocked()"
         [hkTooltip]="atMax() ? t('ui.number.at-max', { label: name, max: max() }) : plusLabel"
         (click)="stepBy(1)"
       >

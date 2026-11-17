@@ -379,16 +379,22 @@ describe('ConditionDialogComponent', () => {
     ]);
   });
 
-  it('replaces the rounds field with a hint for a linked hero outside an encounter', async () => {
+  it('keeps the rounds field but blocked (read-only, reason as its hint) for a linked hero outside an encounter', async () => {
     configure();
     open({ ...BASE_DATA, roundsWaitForEncounter: true });
     TestBed.tick();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(overlayRoot().querySelector('.condition-dialog__rounds')).toBeNull();
-    expect(overlayRoot().querySelector('.condition-dialog__rounds-hint')?.textContent?.trim()).toBe(
+    const input = overlayRoot().querySelector<HTMLInputElement>('.condition-dialog__rounds input')!;
+    expect(input.readOnly).toBe(true);
+    expect(input.getAttribute('aria-disabled')).toBe('true');
+    input.focus();
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(document.body.textContent).toContain(
       charactersEn.sheet.conditions.addDialog.roundsWaitHint,
     );
+    expect(overlayRoot().querySelector('.condition-dialog__rounds-hint')).toBeNull();
   });
 
   // --- Board DL03: the condition's effect text ----------------------------------------------------

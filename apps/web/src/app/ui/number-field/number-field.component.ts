@@ -1,4 +1,4 @@
-import { Component, computed, forwardRef, input, model } from '@angular/core';
+import { Component, computed, effect, forwardRef, input, model, viewChild } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
@@ -46,6 +46,8 @@ export class HkNumberFieldComponent extends HkValueAccessor<number | null> {
   readonly variant = input<'leather' | 'leaf'>('leather');
   readonly hint = input<string | null>(null);
   readonly error = input<string | null>(null);
+  /** Translated reason the field is unavailable: it turns read-only and the reason shows as a hover/focus hint. */
+  readonly disabledReason = input<string | null>(null);
 
   protected readonly inputId = fieldId('hk-number');
   protected readonly messageId = `${this.inputId}-msg`;
@@ -61,8 +63,16 @@ export class HkNumberFieldComponent extends HkValueAccessor<number | null> {
     const max = this.max();
     return value !== null && max !== undefined && value >= max;
   });
+  protected readonly blocked = computed(
+    () => this.isDisabled() || (this.disabledReason() ?? '') !== '',
+  );
   protected readonly describedBy = computed(() =>
     this.error() || this.hint() ? this.messageId : null,
+  );
+  // The input's tooltip owns its `aria-describedby`, so the hint/error id is handed to it.
+  private readonly inputTip = viewChild('field', { read: HkTooltipDirective });
+  private readonly keepDescription = effect(() =>
+    this.inputTip()?.describedByExtra.set(this.describedBy()),
   );
 
   private clamp(value: number): number {
@@ -75,7 +85,7 @@ export class HkNumberFieldComponent extends HkValueAccessor<number | null> {
   }
 
   protected stepBy(direction: 1 | -1): void {
-    if (this.isDisabled()) return;
+    if (this.blocked()) return;
     if (direction === 1 ? this.atMax() : this.atMin()) return;
     this.commit(this.clamp((this.value() ?? 0) + direction * this.step()));
   }
