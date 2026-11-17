@@ -6,7 +6,11 @@ import { prerequisiteReason, prerequisiteText } from './prerequisite-text';
 const gate = charactersEn.wizard.picker.gate as Record<string, string>;
 const t = (key: string, params: Record<string, unknown> = {}): string =>
   (gate[key.split('.').pop()!] ?? key).replace(/\{(\w+)\}/g, (_, k: string) => String(params[k]));
-const names: Record<string, string> = { str: 'Strength', dex: 'Dexterity', 'p:class/fighter': 'Fighter' };
+const names: Record<string, string> = {
+  str: 'Strength',
+  dex: 'Dexterity',
+  'p:class/fighter': 'Fighter',
+};
 const name = (id: string) => names[id] ?? id;
 
 const str13: Predicate = { ability: { str: { gte: 13 } } };
@@ -34,5 +38,6 @@ describe('prerequisiteText', () => {
     expect(prerequisiteText([{ classLevel: {} }], t, name)).toBe('Prerequisites not met');
   });
 
-  it('the reason reads "Requires …"', () => expect(prerequisiteReason([str13], t, name)).toBe('Requires Strength 13+'));
+  it('the reason reads "Requires …"', () =>
+    expect(prerequisiteReason([str13], t, name)).toBe('Requires Strength 13+'));
 });

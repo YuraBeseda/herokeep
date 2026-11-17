@@ -114,7 +114,9 @@ export class ChoiceStepComponent {
   /** Emits once the `characters` bundle is loaded so the gate reasons (read synchronously) re-run. */
   private readonly translationsReady = toSignal(
     this.transloco.langChanges$.pipe(
-      switchMap(() => this.transloco.selectTranslate('wizard.picker.gate.requires', {}, 'characters')),
+      switchMap(() =>
+        this.transloco.selectTranslate('wizard.picker.gate.requires', {}, 'characters'),
+      ),
     ),
   );
   private readonly tr = (key: string, params?: Record<string, unknown>): string =>

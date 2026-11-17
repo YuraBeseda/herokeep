@@ -24,7 +24,10 @@ import {
 import { uuidv7 } from '@shared/helpers/uuid';
 import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
 import { type DraftEvent } from '@shared/stores/character.store';
-import { projectCampaign, type CampaignState } from '@shared/services/campaigns/campaign-projection';
+import {
+  projectCampaign,
+  type CampaignState,
+} from '@shared/services/campaigns/campaign-projection';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PackStore } from '@shared/stores/pack.store';
 import { wizardSteps, type WizardStep } from '../flow/steps.ts';

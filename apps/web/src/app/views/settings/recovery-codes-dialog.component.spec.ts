@@ -82,9 +82,7 @@ describe('RecoveryCodesDialogComponent', () => {
   });
 
   it('a wrong password shows the login error text and no codes', async () => {
-    const regenerate = vi
-      .fn()
-      .mockRejectedValue(new ApiError(401, 'unauthorized', 'Unauthorized'));
+    const regenerate = vi.fn().mockRejectedValue(new ApiError(401, 'unauthorized', 'Unauthorized'));
     const { el, submit } = await mountDialog(regenerate);
 
     await submit('nope');

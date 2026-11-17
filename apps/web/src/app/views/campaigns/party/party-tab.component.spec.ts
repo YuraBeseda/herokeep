@@ -1037,7 +1037,6 @@ describe('PartyTabComponent', () => {
         (fixture.nativeElement as HTMLElement).querySelector('.party-tab__mine-badge'),
       ).toBeNull();
     });
-
   });
 
   // plan-10 task-12-brief.md: pregens + claiming (ruling 6). A pregen has NO protocol flag — it is

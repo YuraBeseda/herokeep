@@ -55,15 +55,7 @@ describe('token file', () => {
 
   it('keeps the names the screens still use', () => {
     const colour = new Set(TOKENS.color.tokens.map((t) => t.name));
-    for (const name of [
-      'text-1',
-      'text-2',
-      'text-3',
-      'accent-strong',
-      'warning',
-      'overlay',
-      'focus-ring',
-    ]) {
+    for (const name of ['text-1', 'text-2', 'text-3', 'accent-strong', 'warning', 'overlay', 'focus-ring']) {
       expect(colour.has(name), name).toBe(true);
     }
     const other = new Set(

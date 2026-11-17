@@ -82,7 +82,8 @@ export function condition(
 ): ProposedEvent[] {
   if (add) {
     const payload = { conditionId, ...(level !== undefined ? { level } : {}) } satisfies ConditionAdded;
-    if (timing) return [{ type: 'condition.added', v: 2, payload: { ...payload, ...timing } satisfies ConditionAddedV2Payload }];
+    if (timing)
+      return [{ type: 'condition.added', v: 2, payload: { ...payload, ...timing } satisfies ConditionAddedV2Payload }];
     return [mk('condition.added', payload)];
   }
   return [mk('condition.removed', { conditionId } satisfies ConditionRemoved)];

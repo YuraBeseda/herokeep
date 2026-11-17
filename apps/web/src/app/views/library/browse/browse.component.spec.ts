@@ -362,7 +362,9 @@ describe('LibraryBrowseComponent', () => {
 
     expect(summaryText(fixture)).toBeNull();
     const restoredRows = virtualListItems(fixture);
-    expect(restoredRows.length).toBeGreaterThan(corePack.entities.filter((e) => e.type === 'spell').length);
+    expect(restoredRows.length).toBeGreaterThan(
+      corePack.entities.filter((e) => e.type === 'spell').length,
+    );
     expect(restoredRows.some((row) => row.id === 'srd-5e-2024:spell/fireball')).toBe(true);
   });
 

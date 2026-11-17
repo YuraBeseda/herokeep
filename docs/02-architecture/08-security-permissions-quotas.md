@@ -55,7 +55,9 @@ hot paths.
 |--------|-------|----------------------------------|--------|-------|
 | Read character stream | ✔ | ✔ | per `visibility.partySheets` (`full` only) | ✖ |
 | Append owner events (`decision.*`, in-play, `note.*`, `portrait.*`, `pack.pinned`) | ✔ | only if `houseRules.allowOverrides` (as `override.applied`) | ✖ | ✖ |
-| Append DM events (`dm.*`: `hp.changed`, `condition.*`, `xp.awarded`, `item.added/removed`, `level.granted`, `currency.changed`, `inspiration.changed`) | ✔ (solo/self) | ✔ | ✖ | ✖ |
+| Append DM events (`dm.*`: `hp.changed`, `condition.added/updated/removed`, `xp.awarded`, `item.added/removed`, `level.granted`, `currency.changed`, `inspiration.changed`) | ✔ (solo/self) | ✔ | ✖ | ✖ |
+| Campaign: `encounter.started`, `encounter.ended`, `round.advanced` | ✖ | ✔ (DM only) | ✖ | ✖ |
+| Campaign: `campaign.settings_changed@2` house rules | ✖ | ✔ | ✖ | ✖ |
 | `override.applied` | ✔ (solo) | ✔ | ✖ | ✖ |
 | `event.reverted` | own events | any | ✖ | ✖ |
 | `character.owner_transferred` | ✔ | ✔ (pregens) | ✖ | ✖ |
@@ -118,3 +120,8 @@ Stored server-side: username, password verifier hash, recovery-code hashes, sess
 records, your characters' and campaigns' event streams (game data and notes you typed).
 Not stored: email, name, images, IP addresses beyond short-lived rate-limit counters, any
 analytics. Data can be exported and deleted by you at any time.
+
+**House rules (plan 18).** The four toggles (`playersManageConditions`, `startingGold`,
+`multiclassing`, `playersAddItems`) are enforced by clients, not the server, which still accepts
+the underlying events from their usual actors; a DM who disagrees uses the override path. A solo
+hero's `combat.round_advanced` is owner-only.

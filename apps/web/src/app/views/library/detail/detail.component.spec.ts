@@ -134,9 +134,11 @@ describe('LibraryDetailComponent', () => {
     const block = el.querySelector('.hk-higher-levels');
     expect(block !== null).toBe(section);
     if (section) expect(block?.textContent).toContain('At higher levels');
-    expect(Array.from(el.querySelectorAll('.hk-higher-levels hk-tag-chip')).map((c) => c.textContent?.trim())).toEqual(
-      expect.arrayContaining(chips),
-    );
+    expect(
+      Array.from(el.querySelectorAll('.hk-higher-levels hk-tag-chip')).map((c) =>
+        c.textContent?.trim(),
+      ),
+    ).toEqual(expect.arrayContaining(chips));
     expect(el.querySelectorAll('.hk-higher-levels hk-tag-chip').length).toBe(chips.length ? 6 : 0);
   });
 

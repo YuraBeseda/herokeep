@@ -78,6 +78,16 @@ Baselines at plan start were root 145 / 2102, web 147 / 1749, offline e2e 31 / 3
 344.8 kB gzip under the old gate. The whole `pnpm check` hangs in the Windows worktree, so the
 pieces above ran one by one. No flaky spec fired in this run.
 
+## Phase 5 slice 2: approved additions (plan 18)
+
+Condition durations with a round counter inside encounters, four campaign house rules and item
+icons. Protocol: [03-sync-protocol](02-architecture/03-sync-protocol.md) section "Encounters, rounds
+and house rules" (including the strict-client release note); engine:
+[05-rules-engine](02-architecture/05-rules-engine.md) section "Condition durations"; permissions:
+[08-security-permissions-quotas](02-architecture/08-security-permissions-quotas.md). Item icons ride
+the blob relay as a 128 px `icon` kind with a 32 KB cap and travel in `.hero` bundles. The two-phone
+pass is section 8g of [manual-device-checklist](manual-device-checklist.md).
+
 ## Phase 5 owner decisions (plan 19, executed 2026-11-16)
 
 Built from the owner's answers to the open flags: sprite icon sizing, library state in the URL,

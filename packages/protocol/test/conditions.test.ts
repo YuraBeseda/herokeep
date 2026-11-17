@@ -31,7 +31,9 @@ describe('condition.added@2 / condition.updated@1', () => {
     expect(ok('condition.added', 2, { conditionId: prone, duration: { kind: 'minutes', amount } })).toBe(false);
   });
   it('rejects an amount on a rest duration, a long source and a negative round', () => {
-    expect(ok('condition.added', 2, { conditionId: prone, duration: { kind: 'untilLongRest', amount: 1 } })).toBe(false);
+    expect(ok('condition.added', 2, { conditionId: prone, duration: { kind: 'untilLongRest', amount: 1 } })).toBe(
+      false,
+    );
     expect(ok('condition.added', 2, { conditionId: prone, source: 'x'.repeat(81) })).toBe(false);
     expect(ok('condition.added', 2, { conditionId: prone, startedAtRound: -1 })).toBe(false);
   });

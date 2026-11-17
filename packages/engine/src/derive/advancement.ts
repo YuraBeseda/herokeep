@@ -146,7 +146,12 @@ export function multiclassUnmetPrerequisites(sheet: Sheet, index: ContentIndex, 
   const forClass = (id: string): Predicate[] =>
     Object.entries(prerequisites).flatMap(([ref, p]) => ((index.resolveClassRef(ref) ?? ref) === id ? [p] : []));
   const own = unmetPrerequisites(forClass(classId), ctx);
-  return own.length > 0 ? own : unmetPrerequisites(sheet.classes.flatMap((c) => forClass(c.classId)), ctx);
+  return own.length > 0
+    ? own
+    : unmetPrerequisites(
+        sheet.classes.flatMap((c) => forClass(c.classId)),
+        ctx,
+      );
 }
 
 /**

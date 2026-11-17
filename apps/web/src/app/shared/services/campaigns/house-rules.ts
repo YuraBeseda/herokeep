@@ -4,7 +4,8 @@ import type { CampaignSettingsV2 } from '@hk/protocol';
 export type HouseRules = CampaignSettingsV2['houseRules'];
 
 /** The four boolean house rules a hero-side gate can read. */
-export type HouseRuleKey = 'playersManageConditions' | 'startingGold' | 'multiclassing' | 'playersAddItems';
+export type HouseRuleKey =
+  'playersManageConditions' | 'startingGold' | 'multiclassing' | 'playersAddItems';
 
 /** Whether `rule` allows the action. No campaign context (solo hero) or no settings document yet
  * → allowed; a rule key absent from the document (older @1 settings) → allowed. */

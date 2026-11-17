@@ -138,6 +138,28 @@ the campaign routes at `apps/api/src/core/app.ts:51`).
   the player's choice (a sheet banner offers it). Pack ASSETS ride the blob relay, see
   `07-images-and-blobs.md` §Pack assets.
 
+## Encounters, rounds and house rules (plan 18)
+
+- **Campaign events** (campaign stream): `encounter.started@1 {encounterId, startedAtSeq}`,
+  `encounter.ended@1` and `round.advanced@1`, all DM-only. The campaign clock is derived from
+  them: the open encounter and its round count.
+- **Solo heroes** have no campaign stream, so a solo round is a character-stream event,
+  `combat.round_advanced@1 {encounterId, round}`, actors `['owner']`. It is named differently
+  because the protocol event tables are keyed by bare type name, and a same-named campaign and
+  character event would collide.
+- **Conditions.** `condition.added@2` adds `duration?`, `startedAtRound?`, `source?` (at most 80
+  characters) and `encounterId?` to the `@1` fields; `condition.updated@1` edits a condition in
+  place. Both are actors owner + dm. `@1` events replay unchanged.
+- **House rules.** `campaign.settings_changed@2` extends `houseRules` with four optional
+  booleans, `playersManageConditions`, `startingGold`, `multiclassing` and `playersAddItems`;
+  absent means true. `@1` is unchanged and clients read both. The server does not enforce them:
+  clients do, and the DM's override path (doc 08) audits. A rule flips live for connected members.
+- **Compatibility (release note).** As with the plan 16 `welcome` field above, a client built
+  before this slice ignores `campaign.settings_changed@2` and the three new campaign events (the
+  house rules and round counter do not show), and it rejects a `.hero` bundle that carries an item
+  icon image, because the bundle manifest's image `kind` is a strict enum that gains `'icon'`.
+  Members and the DM should reload to the new build before using these features.
+
 ## Ordering and commit rules
 
 - The DO assigns `seq` strictly increasing per stream; `events` frames are always in

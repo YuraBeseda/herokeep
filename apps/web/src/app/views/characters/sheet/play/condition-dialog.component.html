@@ -75,9 +75,7 @@
     [max]="999"
     [step]="1"
     [disabledReason]="
-      data.roundsWaitForEncounter
-        ? t('characters.sheet.conditions.addDialog.roundsWaitHint')
-        : null
+      data.roundsWaitForEncounter ? t('characters.sheet.conditions.addDialog.roundsWaitHint') : null
     "
     [(value)]="rounds"
   />

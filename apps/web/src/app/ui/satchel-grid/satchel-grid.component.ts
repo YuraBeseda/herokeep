@@ -28,7 +28,13 @@ interface Glyph {
  */
 @Component({
   selector: 'hk-satchel-grid',
-  imports: [TranslocoDirective, BlobUrlPipe, IconComponent, HkItemMarksComponent, HkTooltipDirective],
+  imports: [
+    TranslocoDirective,
+    BlobUrlPipe,
+    IconComponent,
+    HkItemMarksComponent,
+    HkTooltipDirective,
+  ],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './satchel-grid.component.html',
   styleUrl: './satchel-grid.component.scss',

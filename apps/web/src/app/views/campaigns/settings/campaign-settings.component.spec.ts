@@ -291,7 +291,10 @@ describe('CampaignSettingsComponent', () => {
       expect(el.querySelector('[role="switch"]')!.getAttribute('aria-checked')).toBe('true'),
     );
 
-    toggles.find((el) => el.textContent?.includes(label))!.querySelector('button')!.click();
+    toggles
+      .find((el) => el.textContent?.includes(label))!
+      .querySelector('button')!
+      .click();
     await fixture.whenStable();
     compiled.querySelector<HTMLButtonElement>('.campaign-settings__save')!.click();
     await fixture.whenStable();

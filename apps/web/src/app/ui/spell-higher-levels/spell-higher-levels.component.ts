@@ -21,7 +21,10 @@ function chipsFor(spell: Spell): readonly Chip[] {
   const dice = spell.higherLevelDice;
   if (!dice) return [];
   if ('cantrip' in dice) {
-    return dice.cantrip.map((row) => ({ key: 'detail.cantripLevel', params: { level: row.level, dice: row.dice } }));
+    return dice.cantrip.map((row) => ({
+      key: 'detail.cantripLevel',
+      params: { level: row.level, dice: row.dice },
+    }));
   }
   const { dice: step, aboveLevel } = dice.perSlot;
   const [, baseCount, baseDie] = DICE_RE.exec(spell.damage?.dice ?? '') ?? [];
@@ -32,7 +35,10 @@ function chipsFor(spell: Spell): readonly Chip[] {
   const slots = Array.from({ length: MAX_SLOT - aboveLevel }, (_, i) => aboveLevel + 1 + i);
   return slots.map((slot) => ({
     key: 'detail.slotTotal',
-    params: { slot, dice: `${Number(baseCount) + (slot - aboveLevel) * Number(addCount)}d${baseDie}` },
+    params: {
+      slot,
+      dice: `${Number(baseCount) + (slot - aboveLevel) * Number(addCount)}d${baseDie}`,
+    },
   }));
 }
 

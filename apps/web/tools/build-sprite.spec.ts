@@ -96,7 +96,9 @@ describe('buildSprite', () => {
         expect(wrapper.getAttribute('viewBox')!.startsWith('0 0 '), name).toBe(true);
         expect(size(wrapper), name).toBe(size(source));
       }
-      expect(parsed.querySelector('symbol[id="ui-settings"]')!.getAttribute('viewBox')).toBe('0 0 216 216');
+      expect(parsed.querySelector('symbol[id="ui-settings"]')!.getAttribute('viewBox')).toBe(
+        '0 0 216 216',
+      );
     });
 
     it('keeps the gi: ids of the icons map when a ui section is added', () => {

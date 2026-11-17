@@ -1,4 +1,12 @@
-import { computed, effect, inject, Injectable, signal, untracked, type Signal } from '@angular/core';
+import {
+  computed,
+  effect,
+  inject,
+  Injectable,
+  signal,
+  untracked,
+  type Signal,
+} from '@angular/core';
 import {
   derive,
   ENGINE_VERSION,

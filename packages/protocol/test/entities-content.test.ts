@@ -179,7 +179,16 @@ describe('class / subclass / spell / item', () => {
     const parse = (extra: object) => EntitySchema.safeParse({ ...base, ...extra }).success;
     expect(parse({})).toBe(true);
     expect(parse({ higherLevelDice: { perSlot: { dice: '1d6', aboveLevel: 3 } } })).toBe(true);
-    expect(parse({ higherLevelDice: { cantrip: [{ level: 5, dice: '2d6' }, { level: 11, dice: '3d6' }] } })).toBe(true);
+    expect(
+      parse({
+        higherLevelDice: {
+          cantrip: [
+            { level: 5, dice: '2d6' },
+            { level: 11, dice: '3d6' },
+          ],
+        },
+      }),
+    ).toBe(true);
     expect(parse({ higherLevelDice: { perSlot: { dice: '1d6', aboveLevel: 9 } } })).toBe(false);
     expect(parse({ higherLevelDice: { cantrip: [{ level: 6, dice: '2d6' }] } })).toBe(false);
   });

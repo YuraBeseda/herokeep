@@ -568,9 +568,13 @@ describe('LevelUpState', () => {
     it('a failed save is reported, not swallowed', async () => {
       const { settings } = await ready();
       vi.spyOn(settings, 'set').mockRejectedValue(new Error('quota'));
-      const toast = vi.spyOn(TestBed.inject(ToastService), 'show').mockImplementation(() => undefined);
+      const toast = vi
+        .spyOn(TestBed.inject(ToastService), 'show')
+        .mockImplementation(() => undefined);
       createState(FIGHTER).rollHp(() => 0.45);
-      await vi.waitFor(() => expect(toast).toHaveBeenCalledWith('characters.levelUp.hp.saveFailed'));
+      await vi.waitFor(() =>
+        expect(toast).toHaveBeenCalledWith('characters.levelUp.hp.saveFailed'),
+      );
     });
 
     it('changing class after a roll resets it and loads the new class own stored roll', async () => {

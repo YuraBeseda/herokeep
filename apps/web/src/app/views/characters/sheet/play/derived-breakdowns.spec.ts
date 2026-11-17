@@ -133,8 +133,12 @@ describe('derived-value breakdown popovers on the sheet leaves', () => {
 
   it('a level-1 fighter proficient skill lists the ability modifier and proficiency, not "No modifiers."', async () => {
     const compiled = await mount(SkillsLeafComponent);
-    activate(compiled.querySelector('hk-skill-row [data-breakdown="total"][aria-label^="Athletics"]'));
-    const text = overlayRows().map((r) => r.textContent ?? '').join('|');
+    activate(
+      compiled.querySelector('hk-skill-row [data-breakdown="total"][aria-label^="Athletics"]'),
+    );
+    const text = overlayRows()
+      .map((r) => r.textContent ?? '')
+      .join('|');
     expect(text).toContain('Strength modifier');
     expect(text).toContain('Proficiency');
     expect(document.querySelector('.cdk-overlay-container .derived-popover__empty')).toBeNull();

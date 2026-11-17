@@ -29,19 +29,31 @@ function render(p: Predicate, t: TranslateFn, name: (id: string) => string): str
   return null;
 }
 
-function renderAll(unmet: readonly Predicate[], t: TranslateFn, name: (id: string) => string): string | null {
+function renderAll(
+  unmet: readonly Predicate[],
+  t: TranslateFn,
+  name: (id: string) => string,
+): string | null {
   const parts = unmet.map((p) => render(p, t, name));
   if (parts.length === 0 || parts.some((s) => s === null)) return null;
   return (parts as string[]).reduce((a, b) => t(`${GATE}.join`, { a, b }));
 }
 
 /** The unmet requirement in words ("Strength 13+"); unsupported predicates fall back to the generic text. */
-export function prerequisiteText(unmet: readonly Predicate[], t: TranslateFn, name: (id: string) => string): string {
+export function prerequisiteText(
+  unmet: readonly Predicate[],
+  t: TranslateFn,
+  name: (id: string) => string,
+): string {
   return renderAll(unmet, t, name) ?? t(`${GATE}.prerequisiteFailed`);
 }
 
 /** The gate reason on a card: "Requires Strength 13+", or the generic text. */
-export function prerequisiteReason(unmet: readonly Predicate[], t: TranslateFn, name: (id: string) => string): string {
+export function prerequisiteReason(
+  unmet: readonly Predicate[],
+  t: TranslateFn,
+  name: (id: string) => string,
+): string {
   const what = renderAll(unmet, t, name);
   return what === null ? t(`${GATE}.prerequisiteFailed`) : t(`${GATE}.requires`, { what });
 }

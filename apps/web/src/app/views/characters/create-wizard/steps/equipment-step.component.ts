@@ -142,7 +142,8 @@ export class EquipmentStepComponent {
   }
 
   protected onChooseKit(source: KitSource, label: KitLabel): void {
-    const goldOnly = this.state.kitOptions(source).find((o) => o.label === label)?.items.length === 0;
+    const goldOnly =
+      this.state.kitOptions(source).find((o) => o.label === label)?.items.length === 0;
     if (goldOnly && !houseRuleAllows('startingGold', this.state.campaign())) return;
     this.state.chooseKit(source, label);
   }

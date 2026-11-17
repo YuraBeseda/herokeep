@@ -173,7 +173,9 @@ export class EngineFacade {
   requirementName(ref: string): string {
     const index = this.index();
     const id = index.resolveClassRef(ref) ?? ref;
-    const abilityId = index.byType('ability').find((e) => e.type === 'ability' && e.abbreviation === ref)?.id;
+    const abilityId = index
+      .byType('ability')
+      .find((e) => e.type === 'ability' && e.abbreviation === ref)?.id;
     const target = index.has(id) ? id : abilityId;
     return target ? this.localizer().name(target) : ref.toUpperCase();
   }

@@ -88,6 +88,17 @@ finally builds one transaction (`level.gained` + `decision.made`s + HP roll/aver
 A class-row choice's `scope` (`initial` | `later`, plan 14 task 1) filters both lists by whether
 the owning class is the character's first; see doc 04, "Choice scope".
 
+## Condition durations and the campaign clock (plan 18)
+
+A condition may carry a `duration` (rounds, minutes, hours or until a rest) and the round it
+started at. `derive` reads the clock through `DeriveOverrides.clock` (`CampaignClock`: the open
+encounter and its current round), the same fourth parameter as the other overrides, so derive
+stays a pure function with no wall time. Remaining rounds are the duration minus the rounds elapsed
+since `startedAtRound`; a condition whose encounter has ended reads as ended. A rounds condition
+with no encounter yet shows its full remaining time rather than ended. The clock comes from the
+campaign stream when the hero is linked, and from the hero's own `combat.round_advanced` events
+when solo. Item icons (`item.added@1.custom.icon`) are display data and do not enter derive.
+
 ## Rule options
 
 The 4th `derive()` parameter, `overrides` (`derive/overrides.ts`), carries a campaign's house rules

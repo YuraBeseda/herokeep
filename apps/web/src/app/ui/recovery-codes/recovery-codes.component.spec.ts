@@ -79,7 +79,9 @@ describe('HkRecoveryCodesComponent', () => {
   it('Download saves the codes as a .txt file', async () => {
     const createObjectURL = vi.fn(() => 'blob:codes');
     Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
     const { el } = await mountCodes();
 
     el.querySelector<HTMLButtonElement>('.recovery-codes__download')!.click();

@@ -229,8 +229,10 @@ export class LevelUpComponent {
         gated,
         reason:
           gated && sheet
-            ? prerequisiteReason(multiclassUnmetPrerequisites(sheet, index, classId), (k, p) => this.chrome.tr(k, p), (r) =>
-                this.engineFacade.requirementName(r),
+            ? prerequisiteReason(
+                multiclassUnmetPrerequisites(sheet, index, classId),
+                (k, p) => this.chrome.tr(k, p),
+                (r) => this.engineFacade.requirementName(r),
               )
             : null,
       };

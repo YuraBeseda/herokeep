@@ -25,7 +25,13 @@ const created = ev(1, 'character.created', {
 const rules: SystemRules = {
   restRules: {
     shortRest: { allowHitDice: true },
-    longRest: { hpToMax: true, restoreAllSlots: true, hitDiceRegainDivisor: 2, hitDiceRegainMin: 1, exhaustionReduce: 1 },
+    longRest: {
+      hpToMax: true,
+      restoreAllSlots: true,
+      hitDiceRegainDivisor: 2,
+      hitDiceRegainMin: 1,
+      exhaustionReduce: 1,
+    },
   },
   hpRules: { firstLevelMaxHitDie: true, averageRounding: 'up' },
 };

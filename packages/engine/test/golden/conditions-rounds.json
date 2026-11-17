@@ -1,8 +1,6 @@
 {
   "name": "conditions-rounds",
-  "packs": [
-    "dist:srd-5e-2024"
-  ],
+  "packs": ["dist:srd-5e-2024"],
   "events": [
     {
       "id": "018f9000-0000-7000-8000-000000000001",

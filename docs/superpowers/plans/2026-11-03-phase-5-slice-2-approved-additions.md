@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**STATUS: WRITTEN 2026-11-03 — NOT STARTED. Starts after plan 17 Stage B (the presentation-only rebuild) has merged; its tasks assume the new `apps/web/src/app/ui/` component library and the new views exist.**
+**STATUS: EXECUTED 2026-11-17 on branch `worktree-plan18-approved-additions` (tasks 1-5; release note in `docs/02-architecture/03-sync-protocol.md`).**
 
 **Goal:** Ship the rule and campaign additions the owner approved in the Stage A designs that need engine, protocol or API work: condition durations with a round counter inside encounters, four new campaign house rules that gate the wizard, level-up and sheet, and item icons for custom and homebrew items.
 

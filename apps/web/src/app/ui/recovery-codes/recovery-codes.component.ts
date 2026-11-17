@@ -19,10 +19,22 @@ import { HkButtonComponent } from '../button/button.component';
         }
       </ol>
       <div class="recovery-codes__actions">
-        <button hk-button type="button" class="recovery-codes__copy" [variant]="'ghost'" (click)="copy()">
+        <button
+          hk-button
+          type="button"
+          class="recovery-codes__copy"
+          [variant]="'ghost'"
+          (click)="copy()"
+        >
           <hk-icon [icon]="'ui:copy'" />{{ t('copy') }}
         </button>
-        <button hk-button type="button" class="recovery-codes__download" [variant]="'ghost'" (click)="download()">
+        <button
+          hk-button
+          type="button"
+          class="recovery-codes__download"
+          [variant]="'ghost'"
+          (click)="download()"
+        >
           <hk-icon [icon]="'ui:export'" />{{ t('download') }}
         </button>
         <span class="recovery-codes__once">{{ t('once') }}</span>

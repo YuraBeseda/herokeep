@@ -694,10 +694,18 @@ describe('projectCampaign', () => {
 
     it('is null with no encounter, round 1 once started, and follows round.advanced', () => {
       expect(projectCampaign([]).encounter).toBeNull();
-      const started = mkEvent('encounter.started', { encounterId: E1, startedAtSeq: 0 }, { seq: 1 });
+      const started = mkEvent(
+        'encounter.started',
+        { encounterId: E1, startedAtSeq: 0 },
+        { seq: 1 },
+      );
       expect(projectCampaign([started]).encounter).toEqual({ id: E1, round: 1, number: 1 });
       const advanced = mkEvent('round.advanced', { encounterId: E1, round: 3 }, { seq: 2 });
-      expect(projectCampaign([started, advanced]).encounter).toEqual({ id: E1, round: 3, number: 1 });
+      expect(projectCampaign([started, advanced]).encounter).toEqual({
+        id: E1,
+        round: 3,
+        number: 1,
+      });
     });
 
     it('closes on encounter.ended and numbers the next encounter in the campaign', () => {

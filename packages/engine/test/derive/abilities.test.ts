@@ -130,7 +130,14 @@ describe('deriveAbilities', () => {
 
   it('lists the ability modifier and proficiency first in save and skill breakdowns (values unchanged)', () => {
     const facts = baseFacts();
-    facts.decisions['core-mini:system/mini@0/ability-scores'] = ['str:16', 'dex:16', 'con:14', 'int:10', 'wis:10', 'cha:10'];
+    facts.decisions['core-mini:system/mini@0/ability-scores'] = [
+      'str:16',
+      'dex:16',
+      'con:14',
+      'int:10',
+      'wis:10',
+      'cha:10',
+    ];
     facts.classes = [{ classId: 'core-mini:class/fighter', level: 1 }];
     facts.decisions['core-mini:class/fighter@1/skills'] = ['stealth'];
     facts.decisions['test:pick@0/expertise'] = ['core-mini:feature/skill-expert'];
@@ -165,7 +172,14 @@ describe('deriveAbilities', () => {
     if (!parsed.ok) throw new Error('jack pack');
     const halfIndex = createContentIndex([parsed.pack, loadFixturePack('content-mini')]);
     const facts = baseFacts();
-    facts.decisions['core-mini:system/mini@0/ability-scores'] = ['str:10', 'dex:16', 'con:10', 'int:10', 'wis:10', 'cha:10'];
+    facts.decisions['core-mini:system/mini@0/ability-scores'] = [
+      'str:10',
+      'dex:16',
+      'con:10',
+      'int:10',
+      'wis:10',
+      'cha:10',
+    ];
     facts.classes = [{ classId: 'core-mini:class/fighter', level: 5 }]; // prof +3
     facts.decisions['test:pick@0/expertise'] = ['core-mini:feature/jack-test'];
     const r = deriveAbilities(facts, compose(facts, halfIndex), halfIndex);

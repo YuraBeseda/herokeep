@@ -316,7 +316,12 @@ describe('POST /api/auth/recovery-codes (regenerate recovery codes)', () => {
     return app.request('/api/auth/reset', {
       method: 'POST',
       headers: XRW,
-      body: JSON.stringify({ username: 'Rena', recoveryCode: code, newSalt: saltHex('c2'), newVerifier: verifierHex('d2') }),
+      body: JSON.stringify({
+        username: 'Rena',
+        recoveryCode: code,
+        newSalt: saltHex('c2'),
+        newVerifier: verifierHex('d2'),
+      }),
     });
   }
   async function signUp() {

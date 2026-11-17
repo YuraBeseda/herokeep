@@ -1550,7 +1550,9 @@ async function campaignEncounterScenario(driver: ConformanceDriver): Promise<voi
   const memberStream = await driver.openStream({ streamId, session: member, role: 'member' });
   await sendHello(memberStream, streamId, 0);
   const frames = await memberStream.collect((buf) => {
-    const types = buf.filter((f): f is EventsMsg => isEventsFor(f, streamId)).flatMap((f) => f.events.map((e) => e.type));
+    const types = buf
+      .filter((f): f is EventsMsg => isEventsFor(f, streamId))
+      .flatMap((f) => f.events.map((e) => e.type));
     return types.includes('encounter.ended');
   }, 10_000);
   const seen = frames

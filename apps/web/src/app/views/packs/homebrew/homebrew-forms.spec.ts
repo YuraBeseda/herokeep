@@ -281,7 +281,9 @@ describe('ItemFormComponent icon (plan 18 Task 4)', () => {
     const { installContent } = configure([
       {
         provide: ImagePipelineService,
-        useValue: { encodeIcon: vi.fn().mockResolvedValue({ hash, mime: 'image/png', w: 128, h: 128 }) },
+        useValue: {
+          encodeIcon: vi.fn().mockResolvedValue({ hash, mime: 'image/png', w: 128, h: 128 }),
+        },
       },
       {
         provide: BlobsRepository,
@@ -296,7 +298,9 @@ describe('ItemFormComponent icon (plan 18 Task 4)', () => {
     el<HTMLButtonElement>(root, '.hb-form__icon-toggle').click();
     await settle(fixture);
     const input = el<HTMLInputElement>(root, 'hk-icon-picker input[type="file"]');
-    Object.defineProperty(input, 'files', { value: [new File([bytes], 'r.png', { type: 'image/png' })] });
+    Object.defineProperty(input, 'files', {
+      value: [new File([bytes], 'r.png', { type: 'image/png' })],
+    });
     input.dispatchEvent(new Event('change'));
     await settle(fixture);
     await save(fixture, root);

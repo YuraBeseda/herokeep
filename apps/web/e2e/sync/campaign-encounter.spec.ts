@@ -87,7 +87,9 @@ test.describe('campaign: encounter round counter', () => {
 
       await test.step('DM ends the encounter; the chip shows the ended state', async () => {
         await plate.getByRole('button', { name: 'End encounter', exact: true }).click();
-        await expect(plate.getByRole('button', { name: 'Start encounter', exact: true })).toBeVisible({
+        await expect(
+          plate.getByRole('button', { name: 'Start encounter', exact: true }),
+        ).toBeVisible({
           timeout: 15_000,
         });
         await expect(chip).toContainText('Ended', { timeout: 20_000 });
