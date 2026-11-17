@@ -1,3 +1,4 @@
+import type { ConditionDuration } from '@hk/protocol';
 import type { ContentIndex } from '../content/index.ts';
 import { type Diagnostic, warning } from '../diagnostics.ts';
 import { type FormulaContext, evalFormulaString } from '../formula/evaluate.ts';
@@ -13,7 +14,16 @@ export interface HpResult {
   /** `remaining` = `total - spent`, computed here (derivation's job, not a UI consumer's). */
   hitDice: Record<string, { die: number; total: number; spent: number; remaining: number }>;
   deathSaves: { successes: number; failures: number };
-  conditions: { conditionId: string; level?: number; source?: string }[];
+  conditions: {
+    conditionId: string;
+    level?: number;
+    source?: string;
+    duration?: ConditionDuration;
+    /** Time durations only; `rounds` needs the campaign clock (plan 18 task 2). */
+    remaining?: { kind: 'rounds'; value: number } | { kind: 'time'; minutes: number };
+    endsAt?: 'shortRest' | 'longRest';
+    startedAtRound?: number;
+  }[];
   /**
    * Not in task-10-brief.md's literal `HpResult` snippet, added here: the controller ruling
    * (R-pf2) requires `deriveHp` to push a `'derive.noSystemRules'` warning when `rules` is
@@ -205,11 +215,21 @@ export function deriveHp(
 
   const current = Math.max(0, Math.min(max.value, facts.hp.current === 'max' ? max.value : facts.hp.current));
 
-  const conditions = facts.conditions.map((c) => ({
-    conditionId: c.conditionId,
-    level: c.level,
-    source: c.source,
-  }));
+  const conditions: HpResult['conditions'] = facts.conditions.map((c) => {
+    const d = c.duration;
+    return {
+      conditionId: c.conditionId,
+      level: c.level,
+      source: c.source,
+      ...(d ? { duration: d } : {}),
+      ...(c.startedAtRound !== undefined ? { startedAtRound: c.startedAtRound } : {}),
+      ...(d && (d.kind === 'minutes' || d.kind === 'hours')
+        ? { remaining: { kind: 'time' as const, minutes: d.kind === 'hours' ? d.amount * 60 : d.amount } }
+        : {}),
+      ...(d?.kind === 'untilShortRest' ? { endsAt: 'shortRest' as const } : {}),
+      ...(d?.kind === 'untilLongRest' ? { endsAt: 'longRest' as const } : {}),
+    };
+  });
 
   return {
     max,

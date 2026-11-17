@@ -126,6 +126,7 @@ describe('the audit is exhaustive over every dm-granting character-stream entry'
       'concentration.started',
       'concentration.ended',
       'condition.added',
+      'condition.updated',
       'condition.removed',
       'item.added',
       'item.removed',

@@ -1,7 +1,9 @@
 import {
   type ConcentrationStarted,
   type ConditionAdded,
+  type ConditionAddedV2Payload,
   type ConditionRemoved,
+  type ConditionUpdated,
   type DeathSaveRecorded,
   type HitDiceRegained,
   type HitDiceSpent,
@@ -117,6 +119,33 @@ export const HANDLERS: Record<string, Handler> = {
       ...(p.level !== undefined ? { level: p.level } : {}),
     };
     return { ...f, conditions: [...f.conditions.filter((c) => c.conditionId !== p.conditionId), entry] };
+  },
+
+  // Same replace-by-conditionId as v1, plus the duration/start round that rest.taken and derive read.
+  'condition.added@2': (f, e) => {
+    const p = e.payload as ConditionAddedV2Payload;
+    const skip = requireCreated(f);
+    if (skip) return skip;
+    const entry: ConditionEntry = {
+      conditionId: p.conditionId,
+      sinceEventId: e.id,
+      ...(p.source !== undefined ? { source: p.source } : {}),
+      ...(p.level !== undefined ? { level: p.level } : {}),
+      ...(p.duration !== undefined ? { duration: p.duration } : {}),
+      ...(p.startedAtRound !== undefined ? { startedAtRound: p.startedAtRound } : {}),
+    };
+    return { ...f, conditions: [...f.conditions.filter((c) => c.conditionId !== p.conditionId), entry] };
+  },
+
+  'condition.updated@1': (f, e) => {
+    const p = e.payload as ConditionUpdated;
+    const skip = requireCreated(f);
+    if (skip) return skip;
+    if (!f.conditions.some((c) => c.conditionId === p.conditionId)) return 'condition-not-present';
+    return {
+      ...f,
+      conditions: f.conditions.map((c) => (c.conditionId === p.conditionId ? { ...c, duration: p.duration } : c)),
+    };
   },
 
   'condition.removed@1': (f, e) => {

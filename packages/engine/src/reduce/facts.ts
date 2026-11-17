@@ -1,4 +1,4 @@
-import type { CharacterOptionsSet, SystemEntity } from '@hk/protocol';
+import type { CharacterOptionsSet, ConditionDuration, SystemEntity } from '@hk/protocol';
 
 /**
  * Death-save cap (3 successes = stable, 3 failures = dead) — a doc-02 ENGINE-CONTRACT rule
@@ -28,6 +28,9 @@ export interface ConditionEntry {
   source?: string;
   sinceEventId: string;
   level?: number;
+  /** Plan 18 task 1 (`condition.added@2`); absent on v1 entries, which are never auto-removed. */
+  duration?: ConditionDuration;
+  startedAtRound?: number;
 }
 
 export interface InventoryEntry {

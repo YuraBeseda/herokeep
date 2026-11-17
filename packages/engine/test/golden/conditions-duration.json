@@ -1,0 +1,160 @@
+{
+  "name": "conditions-duration",
+  "packs": [
+    "dist:srd-5e-2024"
+  ],
+  "events": [
+    {
+      "id": "018f9000-0000-7000-8000-000000000001",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 1,
+      "ts": "2026-11-17T12:00:01.000Z",
+      "actor": {
+        "userId": "u",
+        "deviceId": "d",
+        "role": "owner"
+      },
+      "type": "character.created",
+      "v": 1,
+      "payload": {
+        "name": "Zara",
+        "system": "5e-2024",
+        "corePack": {
+          "id": "srd-5e-2024",
+          "version": "0.1.0"
+        },
+        "engineVersion": "0.1.0",
+        "grammaticalGender": "feminine"
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000002",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 2,
+      "ts": "2026-11-17T12:00:02.000Z",
+      "actor": {
+        "userId": "u",
+        "deviceId": "d",
+        "role": "owner"
+      },
+      "type": "condition.added",
+      "v": 2,
+      "payload": {
+        "conditionId": "srd-5e-2024:condition/poisoned",
+        "source": "Spiked trap",
+        "duration": {
+          "kind": "minutes",
+          "amount": 30
+        }
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000003",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 3,
+      "ts": "2026-11-17T12:00:03.000Z",
+      "actor": {
+        "userId": "u",
+        "deviceId": "d",
+        "role": "owner"
+      },
+      "type": "condition.added",
+      "v": 2,
+      "payload": {
+        "conditionId": "srd-5e-2024:condition/charmed",
+        "source": "Hold Person",
+        "startedAtRound": 2,
+        "duration": {
+          "kind": "rounds",
+          "amount": 10
+        }
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000004",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 4,
+      "ts": "2026-11-17T12:00:04.000Z",
+      "actor": {
+        "userId": "u",
+        "deviceId": "d",
+        "role": "owner"
+      },
+      "type": "condition.added",
+      "v": 2,
+      "payload": {
+        "conditionId": "srd-5e-2024:condition/frightened",
+        "duration": {
+          "kind": "untilLongRest"
+        }
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000005",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 5,
+      "ts": "2026-11-17T12:00:05.000Z",
+      "actor": {
+        "userId": "u",
+        "deviceId": "d",
+        "role": "owner"
+      },
+      "type": "condition.added",
+      "v": 2,
+      "payload": {
+        "conditionId": "srd-5e-2024:condition/blinded",
+        "duration": {
+          "kind": "untilShortRest"
+        }
+      }
+    },
+    {
+      "id": "018f9000-0000-7000-8000-000000000006",
+      "stream": "char:44444444-4444-7444-8444-444444440000",
+      "seq": 6,
+      "ts": "2026-11-17T12:00:06.000Z",
+      "actor": {
+        "userId": "u",
+        "deviceId": "d",
+        "role": "owner"
+      },
+      "type": "rest.taken",
+      "v": 1,
+      "payload": {
+        "kind": "short"
+      }
+    }
+  ],
+  "expect": {
+    "sheet.conditions": [
+      {
+        "conditionId": "srd-5e-2024:condition/poisoned",
+        "source": "Spiked trap",
+        "duration": {
+          "kind": "minutes",
+          "amount": 30
+        },
+        "remaining": {
+          "kind": "time",
+          "minutes": 30
+        }
+      },
+      {
+        "conditionId": "srd-5e-2024:condition/charmed",
+        "source": "Hold Person",
+        "duration": {
+          "kind": "rounds",
+          "amount": 10
+        },
+        "startedAtRound": 2
+      },
+      {
+        "conditionId": "srd-5e-2024:condition/frightened",
+        "duration": {
+          "kind": "untilLongRest"
+        },
+        "endsAt": "longRest"
+      }
+    ]
+  }
+}

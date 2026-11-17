@@ -140,12 +140,20 @@ export const HANDLERS: Record<string, Handler> = {
       : { ...f, slotsUsed };
   },
 
-  'rest.taken@1': (f, e, ctx) => {
+  'rest.taken@1': (before, e, ctx) => {
     const p = e.payload as RestTaken;
-    const skip = requireCreated(f);
+    const skip = requireCreated(before);
     if (skip) return skip;
     if (!ctx?.rules) return 'no-system-rules';
     const { restRules } = ctx.rules;
+
+    // Duration-based expiry (condition.added@2): a long rest ends both rest kinds, a short rest only its own.
+    const f = {
+      ...before,
+      conditions: before.conditions.filter(
+        (c) => !(c.duration?.kind === 'untilShortRest' || (p.kind === 'long' && c.duration?.kind === 'untilLongRest')),
+      ),
+    };
 
     if (p.kind === 'long') {
       const { longRest } = restRules;

@@ -170,6 +170,22 @@ export const ConditionRemovedV1 = z.strictObject({
   until: ShortTextSchema.optional(),
   level: z.int().min(1).optional(),
 });
+export const ConditionDurationSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.enum(['rounds', 'minutes', 'hours']), amount: z.int().min(1).max(999) }),
+  z.strictObject({ kind: z.enum(['untilShortRest', 'untilLongRest', 'untilRemoved']) }),
+]);
+export const ConditionAddedV2 = z.strictObject({
+  conditionId: EntityIdSchema,
+  level: z.int().min(1).optional(),
+  until: ShortTextSchema.optional(),
+  duration: ConditionDurationSchema.optional(),
+  startedAtRound: z.int().min(0).optional(),
+  source: z.string().min(1).max(80).optional(),
+});
+export const ConditionUpdatedV1 = z.strictObject({
+  conditionId: EntityIdSchema,
+  duration: ConditionDurationSchema,
+});
 
 // --- Inventory & currency --------------------------------------------------------------
 
@@ -295,6 +311,8 @@ export const EVENT_PAYLOADS: Record<string, z.ZodType> = {
   'concentration.started@1': ConcentrationStartedV1,
   'concentration.ended@1': ConcentrationEndedV1,
   'condition.added@1': ConditionAddedV1,
+  'condition.added@2': ConditionAddedV2,
+  'condition.updated@1': ConditionUpdatedV1,
   'condition.removed@1': ConditionRemovedV1,
   'item.added@1': ItemAddedV1,
   'item.removed@1': ItemRemovedV1,
@@ -415,6 +433,7 @@ export const EVENT_ACTORS: Record<string, ActorRole[]> = {
   'concentration.ended': ['owner', 'dm'],
   // doc-08 row 3: "condition.*" named, "Owner ✔ (solo/self)".
   'condition.added': ['owner', 'dm'],
+  'condition.updated': ['owner', 'dm'],
   'condition.removed': ['owner', 'dm'],
   // doc-08 row 3: "item.added/removed" named, "Owner ✔ (solo/self)".
   'item.added': ['owner', 'dm'],
@@ -477,7 +496,10 @@ export type SpellCast = z.infer<typeof SpellCastV1>;
 export type ConcentrationStarted = z.infer<typeof ConcentrationStartedV1>;
 export type ConcentrationEnded = z.infer<typeof ConcentrationEndedV1>;
 export type ConditionAdded = z.infer<typeof ConditionAddedV1>;
-export type ConditionRemoved = z.infer<typeof ConditionRemovedV1>;
+export type ConditionAddedV2Payload = z.infer<typeof ConditionAddedV2>;
+export type ConditionUpdated = z.infer<typeof ConditionUpdatedV1>;
+export type ConditionDuration = z.infer<typeof ConditionDurationSchema>;
+export type ConditionRemoved =z.infer<typeof ConditionRemovedV1>;
 export type ItemAdded = z.infer<typeof ItemAddedV1>;
 export type ItemRemoved = z.infer<typeof ItemRemovedV1>;
 export type ItemEquipped = z.infer<typeof ItemEquippedV1>;
