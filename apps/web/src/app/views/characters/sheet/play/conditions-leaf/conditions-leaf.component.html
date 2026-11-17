@@ -32,20 +32,22 @@
         </button>
       </div>
 
-      @if (actions.solo()) {
+      @if (actions.solo() || actions.clock()) {
         <div class="conditions__round">
           @if (actions.clock(); as clock) {
             <span role="status">{{ t('sheet.conditions.round', { round: clock.round }) }}</span>
           }
-          <button
-            hk-button
-            type="button"
-            [variant]="'ghost'"
-            [disabled]="actions.editLocked()"
-            (click)="actions.advanceSoloRound()"
-          >
-            {{ t('sheet.conditions.advanceRound') }}
-          </button>
+          @if (actions.solo()) {
+            <button
+              hk-button
+              type="button"
+              [variant]="'ghost'"
+              [disabled]="actions.editLocked()"
+              (click)="actions.advanceSoloRound()"
+            >
+              {{ t('sheet.conditions.advanceRound') }}
+            </button>
+          }
         </div>
       }
 
