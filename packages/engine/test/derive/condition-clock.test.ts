@@ -38,6 +38,11 @@ describe('condition rounds from the campaign clock', () => {
     const noEnc = { duration: rounds3.duration, startedAtRound: rounds3.startedAtRound };
     expect(conditions({ encounter: { id: E2, round: 3 } }, noEnc)?.remaining).toEqual({ kind: 'rounds', value: 2 });
   });
+  it('an encounter-less rounds condition waits (full amount, not ended) while no encounter is open', () => {
+    const c = conditions({}, { duration: rounds3.duration });
+    expect(c?.ended).toBeUndefined();
+    expect(c?.remaining).toEqual({ kind: 'rounds', value: 3 });
+  });
   it('lets overrides.clock win over the solo facts.round clock', () => {
     const facts = emptyFacts('char:test');
     facts.conditions = [{ conditionId: 'core-mini:condition/prone', sinceEventId: 'e', ...rounds3 }];

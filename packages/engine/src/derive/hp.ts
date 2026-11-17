@@ -223,7 +223,7 @@ export function deriveHp(
     const d = c.duration;
     // Rounds need the clock: counts from `startedAtRound` while the condition's encounter is the open
     // one, 0 + `ended` once that encounter has closed or been replaced (an encounter-less condition
-    // follows the current one).
+    // follows the current one, and waits at its full amount while none is open).
     const roundsView =
       clock && d?.kind === 'rounds'
         ? c.encounterId !== undefined && c.encounterId !== clock.encounter?.id
@@ -235,7 +235,8 @@ export function deriveHp(
                   value: Math.max(0, d.amount - (clock.encounter.round - (c.startedAtRound ?? 0))),
                 },
               }
-            : { ended: true as const, remaining: { kind: 'rounds' as const, value: 0 } }
+            : // Not started yet: no encounter has been opened since this condition was added.
+              { remaining: { kind: 'rounds' as const, value: d.amount } }
         : {};
     return {
       ...roundsView,
