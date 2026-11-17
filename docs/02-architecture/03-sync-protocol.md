@@ -167,7 +167,13 @@ the campaign routes at `apps/api/src/core/app.ts:51`).
   before this slice ignores `campaign.settings_changed@2` and the three new campaign events (the
   house rules and round counter do not show), and it rejects a `.hero` bundle that carries an item
   icon image, because the bundle manifest's image `kind` is a strict enum that gains `'icon'`.
-  Members and the DM should reload to the new build before using these features.
+  Members and the DM should reload to the new build before using these features. In detail:
+  - An old build skips `condition.added@2`, so a condition with a duration is invisible there.
+  - An old build's `.hero` import rejects a bundle whose events include `condition.added@2`,
+    `condition.updated@1` or `combat.round_advanced@1`.
+  - A DM device on an old build that saves campaign settings writes `@1`, which drops the four new
+    house rules and so turns all four back on (absent = allowed).
+  - Deploy order: the API first, then the web client.
 
 ## Ordering and commit rules
 

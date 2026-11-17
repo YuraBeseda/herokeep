@@ -637,8 +637,9 @@ pack.
    list once, and an old code no longer recovers the account.
 5. **Library Back.** Scroll the library list, open an entry, press Back (in-app and hardware): the
    chip, search, sort and scroll are as left.
-6. **Round counter (two phones, DM and member).** DM starts an encounter and applies a 3-round
-   condition to the member's hero. The member's chip shows 3 rounds left; the DM advances a round
+6. **Round counter (two phones, DM and member).** DM starts an encounter; the member adds a
+   3-round condition to their own hero (DM quick effects carry no duration). The member's chip shows
+   3 rounds left; the DM advances a round
    and the chip reads 2 on the member's phone without a reload. Ending the encounter clears the
    countdown. A linked hero with no open encounter has the rounds field disabled, with the reason read out.
 7. **House rule flips live.** DM turns off Starting gold (then Multiclassing, Players manage
