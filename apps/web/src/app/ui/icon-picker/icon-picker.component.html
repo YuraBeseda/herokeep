@@ -1,0 +1,56 @@
+<ng-container *transloco="let t; read: 'shell'">
+  <div class="hk-icon-picker">
+    <hk-search-field
+      [label]="t('ui.iconPicker.search')"
+      [placeholder]="t('ui.iconPicker.searchPlaceholder')"
+      [(value)]="query"
+    />
+    @if (usedGlyphs().length) {
+      <span class="hk-icon-picker__heading" id="hk-icon-picker-used">{{ t('ui.iconPicker.used') }}</span>
+      <div class="hk-icon-picker__grid hk-icon-picker__used" role="group" aria-labelledby="hk-icon-picker-used">
+        @for (slug of usedGlyphs(); track slug) {
+          <ng-container *ngTemplateOutlet="glyph; context: { $implicit: slug }" />
+        }
+      </div>
+    }
+    <span class="hk-icon-picker__heading" id="hk-icon-picker-all">{{ t('ui.iconPicker.all') }}</span>
+    <div class="hk-icon-picker__grid" role="group" aria-labelledby="hk-icon-picker-all">
+      @for (slug of otherGlyphs(); track slug) {
+        <ng-container *ngTemplateOutlet="glyph; context: { $implicit: slug }" />
+      } @empty {
+        <span class="hk-icon-picker__empty">{{ t('ui.iconPicker.none') }}</span>
+      }
+    </div>
+    <label class="hk-icon-picker__upload" [class.hk-icon-picker__upload--busy]="uploading()">
+      <hk-icon [icon]="'ui:cloud'" />
+      <span>
+        <b>{{ t('ui.iconPicker.upload') }}</b>
+        <span class="hk-icon-picker__hint">{{ t('ui.iconPicker.uploadHint') }}</span>
+      </span>
+      <input
+        #file
+        class="hk-visually-hidden"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        [disabled]="uploading()"
+        (change)="upload(file)"
+      />
+    </label>
+    @if (uploadFailed()) {
+      <p class="hk-icon-picker__error" role="alert">{{ t('ui.iconPicker.uploadFailed') }}</p>
+    }
+  </div>
+
+  <ng-template #glyph let-slug>
+    <button
+      type="button"
+      class="hk-icon-picker__glyph"
+      [attr.aria-label]="slug"
+      [attr.aria-pressed]="chosen(slug)"
+      [title]="slug"
+      (click)="pick(slug)"
+    >
+      <hk-icon [icon]="'gi:' + slug" />
+    </button>
+  </ng-template>
+</ng-container>

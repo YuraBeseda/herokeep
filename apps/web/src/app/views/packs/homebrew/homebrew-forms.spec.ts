@@ -17,6 +17,8 @@ import { HomebrewIdService } from '@shared/services/packs/homebrew-id';
 import { HomebrewService, HomebrewValidationError } from '@shared/services/packs/homebrew.service';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { PackStore } from '@shared/stores/pack.store';
+import { ImagePipelineService } from '@shared/services/images/image-pipeline.service';
+import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import packsEn from '../../../../assets/i18n/packs/en.json';
 import { PACKS_ROUTES } from '../packs.routes';
@@ -269,6 +271,55 @@ describe('ItemFormComponent', () => {
     await save(fixture, root);
     expect(emitted[0]).toEqual(armor);
     await expectSavable(emitted[0], installContent);
+  });
+});
+
+describe('ItemFormComponent icon (plan 18 Task 4)', () => {
+  it('an uploaded icon becomes the sha256 entity icon and is stored with the pack assets', async () => {
+    const hash = `sha256:${'b'.repeat(64)}`;
+    const bytes = new Uint8Array([1, 2, 3]);
+    const { installContent } = configure([
+      {
+        provide: ImagePipelineService,
+        useValue: { encodeIcon: vi.fn().mockResolvedValue({ hash, mime: 'image/png', w: 128, h: 128 }) },
+      },
+      {
+        provide: BlobsRepository,
+        useValue: {
+          get: vi.fn().mockResolvedValue({ hash, mime: 'image/png', bytes, size: 3, kind: 'icon' }),
+          onArrival: () => () => undefined,
+        },
+      },
+    ]);
+    const { fixture, root, emitted } = await renderForm(ItemFormComponent);
+    await type(fixture, root, '.hb-form__name', 'Rune Stone');
+    el<HTMLButtonElement>(root, '.hb-form__icon-toggle').click();
+    await settle(fixture);
+    const input = el<HTMLInputElement>(root, 'hk-icon-picker input[type="file"]');
+    Object.defineProperty(input, 'files', { value: [new File([bytes], 'r.png', { type: 'image/png' })] });
+    input.dispatchEvent(new Event('change'));
+    await settle(fixture);
+    await save(fixture, root);
+
+    expect(emitted[0]).toMatchObject({ name: 'Rune Stone', icon: hash });
+    const result = await TestBed.inject(HomebrewService).save(emitted[0]);
+    expect(result.pack.assets).toEqual([{ hash, kind: 'icon', mime: 'image/png', size: 3 }]);
+    expect(installContent).toHaveBeenCalledWith(
+      result.pack,
+      new Map([[hash, { bytes, kind: 'icon', mime: 'image/png' }]]),
+    );
+  });
+
+  it('a picked game icon is stored as a gi: icon with no asset', async () => {
+    configure();
+    const { fixture, root, emitted } = await renderForm(ItemFormComponent);
+    await type(fixture, root, '.hb-form__name', 'Rune Stone');
+    el<HTMLButtonElement>(root, '.hb-form__icon-toggle').click();
+    await settle(fixture);
+    el<HTMLButtonElement>(root, '.hk-icon-picker__glyph[aria-label="shield"]').click();
+    await settle(fixture);
+    await save(fixture, root);
+    expect(emitted[0]).toMatchObject({ icon: 'gi:shield' });
   });
 });
 

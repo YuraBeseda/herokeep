@@ -391,6 +391,16 @@
       "show": "{{name}} {{value}}, show breakdown",
       "hit": "{{name}} to hit {{value}}, show breakdown",
       "damage": "{{name}} damage {{value}}, show breakdown"
+    },
+    "iconPicker": {
+      "search": "Search icons",
+      "searchPlaceholder": "Search game icons",
+      "used": "Used by your items",
+      "all": "Game icons",
+      "none": "No icon matches",
+      "upload": "Upload your own",
+      "uploadHint": "PNG, JPEG or WebP, resized on this device",
+      "uploadFailed": "That image could not be used. Try a smaller PNG, JPEG or WebP."
     }
   }
 }

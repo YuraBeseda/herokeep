@@ -1,6 +1,8 @@
 import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
-import { Component, computed, forwardRef, linkedSignal } from '@angular/core';
-import { FormulaSchema, RegainDiceSchema, type ItemEntity } from '@hk/protocol';
+import { Component, computed, forwardRef, linkedSignal, signal } from '@angular/core';
+import { FormulaSchema, RegainDiceSchema, type ItemEntity, type ItemIconRef } from '@hk/protocol';
+import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
+import { IconPickerComponent } from '../../../ui/icon-picker/icon-picker.component';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { HkFilterChipsComponent } from '../../../ui/filter-chips/filter-chips.component';
 import type { FilterChipOption } from '../../../ui/filter-chips/filter-chip.component';
@@ -38,7 +40,8 @@ type Reset = NonNullable<ItemEntity['charges']>['reset'];
  * Quick homebrew item (board PK05): name, description, category, rarity, weight, cost, attunement,
  * charges, plus the structural block its category needs — a weapon's damage dice/type/properties/
  * mastery/range, an armor's category/AC/Dex cap/Strength/Stealth, a shield's AC bonus. Everything
- * else about the item is description text. The icon field arrives with slice 2 and is not here.
+ * else about the item is description text. The Icon field (plan 18) stores a picked game icon as
+ * `gi:<slug>` and an upload as its `sha256:` blob, which `HomebrewService` lists in `pack.assets`.
  * Beside the form, a preview reads the item the way a sheet row would.
  */
 @Component({
@@ -55,6 +58,8 @@ type Reset = NonNullable<ItemEntity['charges']>['reset'];
     HkTagChipComponent,
     HkTooltipDirective,
     IconComponent,
+    IconPickerComponent,
+    BlobUrlPipe,
   ],
   providers: [
     provideTranslocoScope('packs'),
@@ -71,6 +76,19 @@ export class ItemFormComponent extends HomebrewFormBase<ItemEntity> {
   protected readonly weaponCategories = WEAPON_CATEGORIES;
   protected readonly armorCategories = ARMOR_CATEGORIES;
   protected readonly chargeResets = CHARGE_RESETS;
+
+  /** The entity's `icon` in pack form: `gi:<slug>`, `sha256:<hex>`, or `''` for the default. */
+  protected readonly icon = linkedSignal(() => this.entity()?.icon ?? '');
+  protected readonly iconPickerOpen = signal(false);
+  protected readonly iconRef = computed<ItemIconRef | null>(() => {
+    const icon = this.icon();
+    if (icon.startsWith('gi:')) return { kind: 'gi', id: icon.slice(3) };
+    return icon.startsWith('sha256:') ? { kind: 'blob', hash: icon } : null;
+  });
+  protected pickIcon(ref: ItemIconRef): void {
+    this.icon.set(ref.kind === 'gi' ? `gi:${ref.id}` : ref.hash);
+    this.iconPickerOpen.set(false);
+  }
 
   protected readonly category = linkedSignal<Category>(() => this.entity()?.category ?? 'gear');
   protected readonly rarity = linkedSignal<Rarity | ''>(() => this.entity()?.rarity ?? '');
@@ -131,6 +149,7 @@ export class ItemFormComponent extends HomebrewFormBase<ItemEntity> {
 
   protected snapshot(): string {
     return JSON.stringify([
+      this.icon(),
       this.category(),
       this.rarity(),
       this.weight(),
@@ -318,6 +337,7 @@ export class ItemFormComponent extends HomebrewFormBase<ItemEntity> {
     const item: ItemEntity = {
       ...entityShell(id, this.name(), this.description()),
       type: 'item',
+      ...(this.icon() ? { icon: this.icon() } : {}),
       category,
       ...(rarity ? { rarity } : {}),
       ...(weight !== null ? { weight } : {}),

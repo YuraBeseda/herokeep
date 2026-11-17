@@ -786,7 +786,12 @@
         "notesLabel": "Нотатки",
         "cancel": "Скасувати",
         "confirm": "Додати",
-        "nameRequired": "Введіть назву предмета."
+        "nameRequired": "Введіть назву предмета.",
+        "iconLabel": "Іконка",
+        "iconChange": "Змінити",
+        "iconHint": "Видно в комірці сумки",
+        "iconDefault": "Звичайна іконка сумки",
+        "iconUploaded": "Ваше зображення"
       },
       "deleteConfirm": {
         "title": "Видалити предмет?",

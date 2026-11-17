@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ENGINE_VERSION } from '@hk/engine';
 import type { Event, Pack } from '@hk/protocol';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
@@ -9,6 +10,7 @@ import { HkDb, type CampaignRow, type CharacterRow } from '@shared/services/stor
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PacksRepository } from '@shared/services/storage/packs.repository';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
+import { SnapshotsRepository } from '@shared/services/storage/snapshots.repository';
 import {
   CACHE_CAP_DEFAULT_BYTES,
   CACHE_CAP_MAX_BYTES,
@@ -306,6 +308,25 @@ describe('CacheManagerService', () => {
       await service.ready;
       await service.runOrphanSweep();
       expect(await TestBed.inject(BlobsRepository).get('kept')).toBeDefined();
+    });
+
+    it("keeps a custom item's uploaded icon a local hero's snapshot references (plan 18)", async () => {
+      const hash = 'sha256:' + 'c3'.repeat(32);
+      await TestBed.inject(CharactersRepository).put(mkCharacterRow());
+      await TestBed.inject(SnapshotsRepository).put(mkCharacterRow().id, {
+        seq: 0,
+        engineVersion: ENGINE_VERSION,
+        facts: {
+          inventory: [
+            { instanceId: 'i0', name: 'Signet', qty: 1, custom: { icon: { kind: 'blob', hash } } },
+          ],
+        },
+      } as never);
+      await putBlob(hash, 10);
+      const service = TestBed.inject(CacheManagerService);
+      await service.ready;
+      await service.runOrphanSweep();
+      expect(await TestBed.inject(BlobsRepository).get(hash)).toBeDefined();
     });
 
     it('refreshes pins FIRST, so a STALE pinned flag on a genuinely unreferenced row is corrected and then swept (pinned is always derived, never a standalone flag)', async () => {

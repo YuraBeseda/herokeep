@@ -283,7 +283,11 @@
         "regain-all": "All charges",
         "charges-invalid": "Use a whole number or a short formula.",
         "attunement-hint": "Takes one of the hero's attunement slots. Shown as a gem on the bag slot.",
-        "regain-hint": "Dice, for example 1d4+1; leave empty to restore every charge"
+        "regain-hint": "Dice, for example 1d4+1; leave empty to restore every charge",
+        "icon": "Icon",
+        "icon-change": "Change",
+        "icon-default": "Default item icon",
+        "icon-uploaded": "Your image"
       },
       "spell": {
         "level": "Level (0 is a cantrip)",

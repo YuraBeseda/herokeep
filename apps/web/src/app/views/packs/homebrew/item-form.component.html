@@ -16,6 +16,42 @@
           />
         </div>
 
+        <div class="hb-form__col hb-form__icon" role="group" aria-labelledby="hb-item-icon-label">
+          <span class="hb-form__icon-label" id="hb-item-icon-label">{{ t('homebrew.field.item.icon') }}</span>
+          <div class="hb-form__icon-row">
+            <span class="hb-form__icon-slot" aria-hidden="true">
+              @if (iconRef(); as ref) {
+                @if (ref.kind === 'gi') {
+                  <hk-icon [icon]="'gi:' + ref.id" />
+                } @else if ((icon() | blobUrl)(); as url) {
+                  <img [src]="url" alt="" />
+                }
+              } @else {
+                <hk-icon [icon]="'ui:bag'" />
+              }
+            </span>
+            <span class="hb-form__icon-name">
+              @if (iconRef(); as ref) {
+                {{ ref.kind === 'gi' ? ref.id : t('homebrew.field.item.icon-uploaded') }}
+              } @else {
+                {{ t('homebrew.field.item.icon-default') }}
+              }
+            </span>
+            <button
+              type="button"
+              class="hb-form__icon-toggle"
+              aria-controls="hb-item-icon-picker"
+              [attr.aria-expanded]="iconPickerOpen()"
+              (click)="iconPickerOpen.set(!iconPickerOpen())"
+            >
+              {{ t('homebrew.field.item.icon-change') }}
+            </button>
+          </div>
+          @if (iconPickerOpen()) {
+            <hk-icon-picker id="hb-item-icon-picker" [value]="iconRef()" (picked)="pickIcon($event)" />
+          }
+        </div>
+
         <div class="hb-form__col">
           <div class="hb-form__pair">
             <hk-select

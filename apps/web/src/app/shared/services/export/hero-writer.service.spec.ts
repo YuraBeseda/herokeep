@@ -148,6 +148,35 @@ describe('HeroWriterService', () => {
     expect(manifest.images).toHaveLength(2);
   });
 
+  it("includes a custom item's uploaded icon blob as an icon image (plan 18 Task 4)", async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const blobsRepository = TestBed.inject(BlobsRepository);
+    const hash = `sha256:${'c'.repeat(64)}`;
+    await blobsRepository.put(hash, 'image/png', new Uint8Array([7, 8, 9]), { kind: 'icon' });
+    await eventsRepository.append([
+      mkEvent(uuid(40), 'character.created', createdPayload('Ivan')),
+      mkEvent(uuid(41), 'item.added', {
+        instanceId: uuid(42),
+        name: 'Signet',
+        qty: 1,
+        custom: { icon: { kind: 'blob', hash } },
+      }),
+      mkEvent(uuid(43), 'item.added', {
+        instanceId: uuid(44),
+        name: 'Ring',
+        qty: 1,
+        custom: { icon: { kind: 'gi', id: 'ring' } },
+      }),
+    ]);
+
+    const { blob } = await TestBed.inject(HeroWriterService).export(streamId);
+    const zip = await unzipBlob(blob);
+
+    expect(Array.from(zip[`images/${'c'.repeat(64)}.png`])).toEqual([7, 8, 9]);
+    const manifest = JSON.parse(strFromU8(zip['manifest.json'])) as { images: unknown[] };
+    expect(manifest.images).toEqual([{ hash, mime: 'image/png', size: 3, kind: 'icon' }]);
+  });
+
   it('skips a portrait/thumb hash with no local blob row (best-effort export — tokens are never exported, scope cut)', async () => {
     const eventsRepository = TestBed.inject(EventsRepository);
     await eventsRepository.append([

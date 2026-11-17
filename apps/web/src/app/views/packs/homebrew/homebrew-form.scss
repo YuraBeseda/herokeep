@@ -187,3 +187,30 @@
   margin: 0 0 var(--space-2);
   font-size: 1rem;
 }
+
+.hb-form__icon {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hb-form__icon-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.hb-form__icon-slot {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  font-size: 22px;
+
+  img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+  }
+}

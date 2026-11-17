@@ -13,6 +13,7 @@ import { projectCampaign, type EnabledPack } from '@shared/services/campaigns/ca
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { Backoff } from '@shared/services/sync/backoff';
 import { SyncService } from '@shared/services/sync/sync.service';
+import { customIconBlobHashes } from '@shared/services/images/custom-icons';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { CharactersRepository } from '@shared/services/storage/characters.repository';
@@ -504,6 +505,10 @@ export class BlobTransferService {
       const snapshot = await this.snapshotsRepository.get(character.id);
       if (snapshot?.facts.portrait?.hash) {
         p3.push({ hash: snapshot.facts.portrait.hash, tier: 3, kind: 'portrait' });
+      }
+      // Plan 18: uploaded custom-item icons ride P3 too (a hero imported without them fetches them).
+      for (const hash of customIconBlobHashes(snapshot?.facts.inventory)) {
+        p3.push({ hash, tier: 3, kind: 'icon' });
       }
     }
 

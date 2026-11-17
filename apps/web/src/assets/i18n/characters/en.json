@@ -786,7 +786,12 @@
         "notesLabel": "Notes",
         "cancel": "Cancel",
         "confirm": "Add",
-        "nameRequired": "Enter a name for the item."
+        "nameRequired": "Enter a name for the item.",
+        "iconLabel": "Icon",
+        "iconChange": "Change",
+        "iconHint": "Shown on the bag slot",
+        "iconDefault": "Default bag icon",
+        "iconUploaded": "Your image"
       },
       "deleteConfirm": {
         "title": "Remove item?",

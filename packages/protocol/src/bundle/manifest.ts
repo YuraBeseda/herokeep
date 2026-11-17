@@ -42,7 +42,8 @@ export const HeroBundleImageSchema = z.strictObject({
   hash: BlobHashSchema,
   mime: z.enum(['image/webp', 'image/jpeg', 'image/png']),
   size: z.int().min(0),
-  kind: z.enum(['portrait', 'thumb', 'token']),
+  // `icon` (plan 18): an uploaded custom-item icon (`custom.icon` blob ref).
+  kind: z.enum(['portrait', 'thumb', 'token', 'icon']),
 });
 export type HeroBundleImage = z.infer<typeof HeroBundleImageSchema>;
 

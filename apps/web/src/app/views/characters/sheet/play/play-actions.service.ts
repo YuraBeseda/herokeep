@@ -2,6 +2,7 @@ import { computed, inject, Injectable } from '@angular/core';
 import { houseRuleAllows, type HouseRuleKey } from '@shared/services/campaigns/house-rules';
 import { propose, ProposeError, type NoteEntry, type ProposedEvent, type Sheet } from '@hk/engine';
 import {
+  ItemIconRefSchema,
   NoteAddedV1,
   type ConcentrationEnded,
   type ItemRemoved,
@@ -12,6 +13,7 @@ import {
   type SpellPrepared,
 } from '@hk/protocol';
 import { DialogService } from '@app/ui/dialog/dialog.service';
+import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
@@ -39,8 +41,10 @@ import {
 } from './condition-dialog.component';
 import {
   CustomItemDialogComponent,
+  type CustomItemDialogData,
   type CustomItemDialogResult,
 } from './custom-item-dialog.component';
+import { sheetNames } from './play-names';
 import type { NoteEditorResult } from './notes-drawer/note-editor.component';
 import { ItemRemoveConfirmComponent, NoteDeleteConfirmComponent } from './play-confirms';
 import {
@@ -96,6 +100,7 @@ export class PlayActionsService {
   private readonly characterStore = inject(CharacterStore);
   private readonly toastService = inject(ToastService);
   private readonly dialogService = inject(DialogService);
+  private readonly names = sheetNames(inject(EngineFacade));
 
   // --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ---------------------------------
   private readonly campaignEditLockService = inject(CampaignEditLockService);
@@ -482,7 +487,9 @@ export class PlayActionsService {
   // not part of `ItemAdded`, so a non-blank notes field becomes a SECOND `item.updated` draft
   // sharing the SAME `instanceId`, concatenated into one `tryPropose` call (one `txId`).
   async addCustomItem(): Promise<void> {
-    const handle = this.dialogService.open(CustomItemDialogComponent);
+    const handle = this.dialogService.open(CustomItemDialogComponent, {
+      data: { used: this.usedGlyphs() } satisfies CustomItemDialogData,
+    });
     const result = (await handle.closed) as CustomItemDialogResult | undefined;
     if (!result) return;
     const sheet = this.sheet();
@@ -491,7 +498,7 @@ export class PlayActionsService {
     this.tryPropose(() => {
       const drafts = propose.addItem(
         sheet,
-        { name: result.name, qty: result.qty, custom: {} },
+        { name: result.name, qty: result.qty, custom: result.icon ? { icon: result.icon } : {} },
         () => instanceId,
       );
       if (result.notes) {
@@ -503,6 +510,17 @@ export class PlayActionsService {
       }
       return drafts;
     });
+  }
+
+  /** The game-icon slugs this hero's bag already shows (library items and picked custom glyphs),
+   * in bag order: the icon picker lists them first. */
+  private usedGlyphs(): string[] {
+    const slugs = (this.sheet()?.inventory ?? []).map((row) => {
+      if (row.itemId) return this.names.iconOf(row.itemId, 'ui:bag');
+      const ref = ItemIconRefSchema.safeParse(row.custom?.['icon']);
+      return ref.success && ref.data.kind === 'gi' ? `gi:${ref.data.id}` : '';
+    });
+    return [...new Set(slugs.filter((s) => s.startsWith('gi:')).map((s) => s.slice(3)))];
   }
 
   toggleEquip(row: InventoryRow): void {

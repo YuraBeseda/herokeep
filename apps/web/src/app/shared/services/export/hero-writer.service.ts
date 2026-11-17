@@ -10,6 +10,7 @@ import { APP_VERSION } from '@app/version';
 import { sha256Hex } from '@shared/services/images/image-pipeline.service';
 import { canonicalJson } from '@shared/services/packs/canonical-json';
 import { packAssetEntry } from '@shared/services/packs/pack-assets';
+import { customIconBlobHashes } from '@shared/services/images/custom-icons';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { PackStore } from '@shared/stores/pack.store';
@@ -112,7 +113,7 @@ export class HeroWriterService {
   async export(characterId: string): Promise<HeroBundleResult> {
     const events = await this.eventsRepository.byStream(characterId);
     const facts = reduce(events);
-    const images = await this.resolveImages(facts.portrait);
+    const images = await this.resolveImages(facts.portrait, customIconBlobHashes(facts.inventory));
     const warnings: HeroExportWarning[] = [];
     const packs = await this.resolvePacks(facts.pins, warnings);
 
@@ -203,18 +204,22 @@ export class HeroWriterService {
 
   /**
    * Resolves the (at most two) blob hashes `facts.portrait` can reference — `hash` (the full
-   * portrait) and `thumbHash` — to their stored `BlobsRepository` rows. A hash with no local row is
+   * portrait) and `thumbHash` — plus the custom items' uploaded icons (plan 18) to their stored
+   * `BlobsRepository` rows. A hash with no local row is
    * silently SKIPPED, not an error: a bundle built against partial/corrupted local storage still
    * exports everything it CAN find rather than failing the whole export outright.
    */
   private async resolveImages(
     portrait: { hash: string; thumbHash: string } | undefined,
+    iconHashes: readonly string[],
   ): Promise<ResolvedImage[]> {
-    if (!portrait) return [];
-    const kindByHash = new Map<string, HeroBundleImage['kind']>([
-      [portrait.hash, 'portrait'],
-      [portrait.thumbHash, 'thumb'],
-    ]);
+    const kindByHash = new Map<string, HeroBundleImage['kind']>(
+      iconHashes.map((hash) => [hash, 'icon']),
+    );
+    if (portrait) {
+      kindByHash.set(portrait.hash, 'portrait');
+      kindByHash.set(portrait.thumbHash, 'thumb');
+    }
     const rows = await Promise.all(
       [...kindByHash.keys()].map((hash) => this.blobsRepository.get(hash)),
     );
@@ -231,12 +236,9 @@ export class HeroWriterService {
       // documents for a hash with no local row at all, rather than failing the whole export.
       const mime = HeroBundleImageSchema.shape.mime.safeParse(row.mime);
       if (!mime.success) continue;
-      // Plan-10 Task 2 widened `BlobRow.kind` to include `icon`/`banner` (doc-07's full set),
-      // but this method only ever resolves the two portrait-related hashes above, so a stored
-      // `icon`/`banner` kind here would only ever mean corrupted/legacy local data — treated the
-      // same as "no kind stored" (fall through to the positional guess from `kindByHash`) rather
-      // than widening `HeroBundleImage`'s own schema (bundles never carry icon/banner images).
-      const storedKind = row.kind === 'icon' || row.kind === 'banner' ? undefined : row.kind;
+      // A stored `banner` kind never belongs to a hero, so it falls through to the positional
+      // guess from `kindByHash`; `icon` is carried since plan 18 (custom-item uploads).
+      const storedKind = row.kind === 'banner' ? undefined : row.kind;
       const kind = storedKind ?? kindByHash.get(row.hash) ?? 'portrait';
       resolved.push({ hash: row.hash, mime: mime.data, size: row.size, kind, bytes: row.bytes });
     }

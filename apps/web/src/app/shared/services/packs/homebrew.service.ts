@@ -16,6 +16,7 @@ import {
   makeEntityId,
   parseEntityId,
   parsePack,
+  type Asset,
   type Entity,
   type EntityType,
   type Pack,
@@ -30,6 +31,8 @@ import { LocaleService } from '../i18n/locale.service';
 import { CharactersRepository } from '../storage/characters.repository';
 import { EventsRepository } from '../storage/events.repository';
 import { SnapshotsRepository } from '../storage/snapshots.repository';
+import { BlobsRepository } from '../storage/blobs.repository';
+import type { PackImportAsset } from './pack-assets';
 import { HomebrewIdService } from './homebrew-id';
 import { slugify, uniqueSlug } from './slug';
 
@@ -137,6 +140,7 @@ export class HomebrewService {
   private readonly translocoService = inject(TranslocoService);
   private readonly localeService = inject(LocaleService);
   private readonly homebrewIds = inject(HomebrewIdService);
+  private readonly blobsRepository = inject(BlobsRepository);
 
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -206,6 +210,30 @@ export class HomebrewService {
     return run;
   }
 
+  /** Plan 18: the pack's assets are exactly its entities' uploaded (`sha256:`) icons, read from
+   * the blob store (an upload lands there first) or kept from the previous version's list. */
+  private async iconAssets(
+    entities: readonly Entity[],
+    previous: readonly Asset[],
+  ): Promise<{ assets: Asset[]; bytes: Map<string, PackImportAsset> }> {
+    const assets: Asset[] = [];
+    const bytes = new Map<string, PackImportAsset>();
+    const hashes = new Set(
+      entities.flatMap((e) => ('icon' in e && e.icon?.startsWith('sha256:') ? [e.icon] : [])),
+    );
+    for (const hash of hashes) {
+      const row = await this.blobsRepository.get(hash);
+      if (row) {
+        assets.push({ hash, kind: 'icon', mime: row.mime as Asset['mime'], size: row.size });
+        bytes.set(hash, { bytes: row.bytes, kind: 'icon', mime: row.mime });
+      } else {
+        const kept = previous.find((a) => a.hash === hash);
+        if (kept) assets.push(kept);
+      }
+    }
+    return { assets, bytes };
+  }
+
   private async commit(edit: (entities: Entity[]) => Entity[]): Promise<HomebrewSaveResult> {
     const core = this.packStore.corePack();
     if (!core) throw new Error('HomebrewService: the core pack is not loaded');
@@ -222,7 +250,8 @@ export class HomebrewService {
       dependencies: [{ id: core.id, range: `^${core.version}` }],
       entities,
     };
-    const parsed = parsePack(candidate);
+    const icons = await this.iconAssets(entities, previous?.assets ?? []);
+    const parsed = parsePack({ ...candidate, assets: icons.assets });
     if (!parsed.ok) throw new HomebrewValidationError(formatIssues(parsed.issues), []);
     const pack = parsed.pack;
     const others = this.packStore.installedContent().filter((p) => p.id !== packId);
@@ -230,7 +259,7 @@ export class HomebrewService {
     const errors = diagnostics.filter((d) => d.severity === 'error');
     if (errors.length > 0) throw new HomebrewValidationError([], errors);
 
-    await this.packStore.installContent(pack, new Map());
+    await this.packStore.installContent(pack, icons.bytes);
     // From here on the new version IS installed, so the save is never reported as failed (plan 15
     // final fix wave B5): a planning failure leaves the affected characters pending (the Build
     // tab's Update badge still offers the update) and flags `updateCheckFailed` for the editor's

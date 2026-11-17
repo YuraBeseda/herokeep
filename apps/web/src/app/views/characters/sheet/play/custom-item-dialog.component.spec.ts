@@ -5,13 +5,17 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
+import shellEn from '../../../../../assets/i18n/shell/en.json';
 import { CustomItemDialogComponent } from './custom-item-dialog.component';
+import { ImagePipelineService } from '../../../../shared/services/images/image-pipeline.service';
 
 import { overlayRoot } from '../../../../ui/testing/overlay';
 
 class StubLoader implements TranslocoLoader {
   getTranslation(langPath: string) {
-    return langPath === 'characters/en' ? of(charactersEn) : of({});
+    if (langPath === 'characters/en') return of(charactersEn);
+    if (langPath === 'shell/en') return of(shellEn);
+    return of({});
   }
 }
 
@@ -24,13 +28,14 @@ function configure(): void {
       }),
       provideTranslocoMessageformat(),
       provideTranslocoScope('characters'),
+      { provide: ImagePipelineService, useValue: { encodeIcon: vi.fn() } },
     ],
   });
 }
 
-function open() {
+function open(data?: { used: string[] }) {
   const service = TestBed.inject(DialogService);
-  return service.open(CustomItemDialogComponent);
+  return service.open(CustomItemDialogComponent, data ? { data } : undefined);
 }
 
 /** `ngModel` writes its value on a microtask; let it land (and the view refresh) before clicking.
@@ -160,7 +165,7 @@ describe('CustomItemDialogComponent', () => {
     ]);
   });
 
-  it('has a name, a quantity and notes and no icon field (that arrives with plan slice 2)', () => {
+  it('has a name, a quantity and notes, and the icon picker stays closed until asked', () => {
     configure();
     open();
     TestBed.tick();
@@ -185,5 +190,38 @@ describe('CustomItemDialogComponent', () => {
     buttonNamed(charactersEn.sheet.inventory.customDialog.confirm).click();
     TestBed.tick();
     expect(await handle.closed).toMatchObject({ name: 'Coin', qty: 1 });
+  });
+
+  // --- Plan 18 Task 4 (board DL04): the Icon row opens the picker; Save carries the pick --------
+
+  it('the Icon row opens the picker with the hero glyphs first, and confirm carries the pick', async () => {
+    configure();
+    const handle = open({ used: ['shield'] });
+    TestBed.tick();
+    expect(overlayRoot().querySelector('hk-icon-picker')).toBeNull();
+
+    const change = overlayRoot().querySelector<HTMLButtonElement>('.custom-item-dialog__icon-toggle')!;
+    expect(change.getAttribute('aria-expanded')).toBe('false');
+    change.click();
+    await settle();
+    expect(change.getAttribute('aria-expanded')).toBe('true');
+    const first = overlayRoot().querySelector<HTMLButtonElement>('.hk-icon-picker__glyph')!;
+    expect(first.getAttribute('aria-label')).toBe('shield');
+    first.click();
+    await settle();
+
+    const nameInput = overlayRoot().querySelector<HTMLInputElement>('input[type="text"]')!;
+    nameInput.value = 'Signet';
+    nameInput.dispatchEvent(new Event('input'));
+    await settle();
+    buttonNamed(charactersEn.sheet.inventory.customDialog.confirm).click();
+    TestBed.tick();
+
+    expect(await handle.closed).toEqual({
+      name: 'Signet',
+      qty: 1,
+      notes: undefined,
+      icon: { kind: 'gi', id: 'shield' },
+    });
   });
 });

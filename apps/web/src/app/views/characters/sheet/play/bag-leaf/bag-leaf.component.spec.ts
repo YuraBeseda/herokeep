@@ -136,6 +136,35 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     expect(actions.querySelector('.bag__details')).toBeNull();
   });
 
+  it("a custom item's picked icon (the hero's own glyphs listed first) lands at item.added custom.icon", async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+
+    const fixture = TestBed.createComponent(BagLeafComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.inventory.addCustom).click();
+    TestBed.tick();
+    overlay().querySelector<HTMLButtonElement>('.custom-item-dialog__icon-toggle')!.click();
+    await fixture.whenStable();
+    const usedGroup = overlay().querySelector<HTMLElement>('.hk-icon-picker__used')!;
+    const first = usedGroup.querySelector<HTMLButtonElement>('.hk-icon-picker__glyph')!;
+    const id = first.getAttribute('aria-label')!;
+    first.click();
+    const nameInput = overlay().querySelector<HTMLInputElement>('input[type="text"]')!;
+    nameInput.value = 'Signet';
+    nameInput.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    buttonNamed(overlay(), charactersEn.sheet.inventory.customDialog.confirm).click();
+
+    await pollUntil(fixture, () => characterStore.events().at(-1)?.type === 'item.added');
+    expect(characterStore.events().at(-1)!.payload).toMatchObject({
+      name: 'Signet',
+      custom: { icon: { kind: 'gi', id } },
+    });
+  });
+
   it('a custom item with notes appends item.added then a second item.updated{notes} sharing the same instanceId and txId (one appendTx call)', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);

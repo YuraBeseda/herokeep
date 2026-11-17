@@ -81,6 +81,10 @@ module.exports = defineConfig([
             'in2',
             'operator',
             'inputmode',
+            // Element ids and MIME types, never user-visible text.
+            'aria-labelledby',
+            'aria-controls',
+            'accept',
           ],
         },
       ],

@@ -4,6 +4,7 @@ import {
   chooseMime,
   encodeWithinCap,
   ICON_SIZE,
+  IMAGE_BYTE_CAPS,
   fitPortraitDimensions,
   IMAGE_CODEC,
   ImageInvalidTypeError,
@@ -251,5 +252,19 @@ describe('ImagePipelineService', () => {
       width: 128,
       height: 128,
     });
+  });
+
+  it('encodeIcon rejects with image.too-large when no encode fits the icon cap', async () => {
+    const encode: ImageCodec['encode'] = vi
+      .fn<ImageCodec['encode']>()
+      .mockImplementation((_decoded, mime) =>
+        Promise.resolve<EncodedImage>({ bytes: new Uint8Array(IMAGE_BYTE_CAPS.icon + 1), mime }),
+      );
+    const { put } = configure(makeFakeCodec({ encode }));
+    const service = TestBed.inject(ImagePipelineService);
+
+    const file = new File([new Uint8Array([1])], 'huge.png', { type: 'image/png' });
+    await expect(service.encodeIcon(file)).rejects.toBeInstanceOf(ImageTooLargeError);
+    expect(put).not.toHaveBeenCalled();
   });
 });

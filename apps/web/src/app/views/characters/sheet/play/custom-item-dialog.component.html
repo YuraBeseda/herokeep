@@ -4,7 +4,6 @@
   </h2>
 
   <div class="custom-item-dialog__fields">
-    <!-- The icon field arrives with plan slice 2; the slot is left empty on purpose. -->
     <hk-text-field
       [label]="t('characters.sheet.inventory.customDialog.nameLabel')"
       [maxLength]="200"
@@ -17,6 +16,60 @@
       [value]="name()"
       (valueChange)="name.set($event); nameTouched.set(true)"
     />
+    <div class="custom-item-dialog__icon" role="group" aria-labelledby="custom-item-icon-label">
+      <span class="custom-item-dialog__icon-label" id="custom-item-icon-label">
+        {{ t('characters.sheet.inventory.customDialog.iconLabel') }}
+      </span>
+      <div class="custom-item-dialog__icon-row">
+        <span class="custom-item-dialog__icon-slot" aria-hidden="true">
+          @switch (icon()?.kind) {
+            @case ('gi') {
+              <hk-icon [icon]="'gi:' + $any(icon()).id" />
+            }
+            @case ('blob') {
+              @if (($any(icon()).hash | blobUrl)(); as url) {
+                <img [src]="url" alt="" />
+              }
+            }
+            @default {
+              <hk-icon [icon]="'ui:bag'" />
+            }
+          }
+        </span>
+        <span class="custom-item-dialog__icon-name">
+          @switch (icon()?.kind) {
+            @case ('gi') {
+              {{ $any(icon()).id }}
+            }
+            @case ('blob') {
+              {{ t('characters.sheet.inventory.customDialog.iconUploaded') }}
+            }
+            @default {
+              {{ t('characters.sheet.inventory.customDialog.iconDefault') }}
+            }
+          }
+          <small>{{ t('characters.sheet.inventory.customDialog.iconHint') }}</small>
+        </span>
+        <button
+          hk-button
+          type="button"
+          class="custom-item-dialog__icon-toggle"
+          aria-controls="custom-item-icon-picker"
+          [attr.aria-expanded]="pickerOpen()"
+          (click)="pickerOpen.set(!pickerOpen())"
+        >
+          {{ t('characters.sheet.inventory.customDialog.iconChange') }}
+        </button>
+      </div>
+      @if (pickerOpen()) {
+        <hk-icon-picker
+          id="custom-item-icon-picker"
+          [used]="used"
+          [value]="icon()"
+          (picked)="icon.set($event); pickerOpen.set(false)"
+        />
+      }
+    </div>
     <hk-textarea
       [label]="t('characters.sheet.inventory.customDialog.notesLabel')"
       [rows]="3"
