@@ -201,6 +201,69 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
     });
   });
 
+  it('a solo hero advances its own round counter: combat.round_advanced, round 2 then 3 on one encounter', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const fixture = TestBed.createComponent(ConditionsLeafComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonNamed(compiled, charactersEn.sheet.conditions.advanceRound).click();
+    await pollUntil(fixture, () => characterStore.facts()?.round?.round === 2);
+    const first = characterStore.events().at(-1)!;
+    expect(first).toMatchObject({ type: 'combat.round_advanced', v: 1, payload: { round: 2 } });
+
+    buttonNamed(compiled, charactersEn.sheet.conditions.advanceRound).click();
+    await pollUntil(fixture, () => characterStore.facts()?.round?.round === 3);
+    expect(characterStore.events().at(-1)!.payload).toEqual({
+      encounterId: (first.payload as { encounterId: string }).encounterId,
+      round: 3,
+    });
+    expect(compiled.textContent).toContain('Round 3');
+  });
+
+  it('a rounds condition records the clock (condition.added@2) and its chip badge counts down per round', async () => {
+    await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const fixture = TestBed.createComponent(ConditionsLeafComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    buttonNamed(compiled, charactersEn.sheet.conditions.advanceRound).click();
+    await pollUntil(fixture, () => characterStore.facts()?.round?.round === 2);
+    const encounterId = characterStore.facts()!.round!.encounterId;
+
+    buttonNamed(compiled, charactersEn.sheet.conditions.add).click();
+    TestBed.tick();
+    overlay()
+      .querySelector<HTMLElement>(`.condition-dialog__chip[data-id="${BLINDED_ID}"]`)!
+      .click();
+    TestBed.tick();
+    const rounds = overlay().querySelector<HTMLInputElement>('input[type="number"]')!;
+    rounds.value = '3';
+    rounds.dispatchEvent(new Event('input'));
+    TestBed.tick();
+    buttonNamed(overlay(), charactersEn.sheet.conditions.addDialog.confirm).click();
+
+    await pollUntil(fixture, () => (characterStore.sheet()?.conditions.length ?? 0) === 1);
+    expect(characterStore.events().at(-1)).toMatchObject({
+      type: 'condition.added',
+      v: 2,
+      payload: {
+        conditionId: BLINDED_ID,
+        duration: { kind: 'rounds', amount: 3 },
+        startedAtRound: 2,
+        encounterId,
+      },
+    });
+    await fixture.whenStable();
+    expect(compiled.querySelector('hk-condition-chip')!.textContent).toContain('3 rounds');
+
+    buttonNamed(compiled, charactersEn.sheet.conditions.advanceRound).click();
+    await pollUntil(fixture, () => characterStore.facts()?.round?.round === 3);
+    await fixture.whenStable();
+    expect(compiled.querySelector('hk-condition-chip')!.textContent).toContain('2 rounds');
+  });
+
   it('removing a condition via the chip clears it from sheet.conditions', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);

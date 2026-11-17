@@ -33,6 +33,8 @@ export interface ConditionDialogData {
 export interface ConditionDialogResult {
   readonly conditionId: string;
   readonly level?: number;
+  /** A `rounds` duration (plan 18 task 2); absent = no duration. */
+  readonly rounds?: number;
 }
 
 /**
@@ -77,6 +79,7 @@ export class ConditionDialogComponent {
   protected readonly query = signal('');
   private readonly pickedId = signal<string | undefined>(this.data.options[0]?.id);
   protected readonly level = signal<number | null>(1);
+  protected readonly rounds = signal<number | null>(null);
 
   protected readonly visibleOptions = computed(() => {
     const needle = this.query().trim().toLocaleLowerCase();
@@ -146,6 +149,11 @@ export class ConditionDialogComponent {
         ? wanted
         : Math.min(wanted, cap)
       : undefined;
-    this.dialogRef.close({ conditionId, level } satisfies ConditionDialogResult);
+    const rounds = this.rounds();
+    this.dialogRef.close({
+      conditionId,
+      level,
+      ...(rounds !== null && rounds >= 1 ? { rounds: Math.min(999, Math.trunc(rounds)) } : {}),
+    } satisfies ConditionDialogResult);
   }
 }

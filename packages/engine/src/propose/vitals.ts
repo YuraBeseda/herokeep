@@ -1,5 +1,6 @@
 import type {
   ConditionAdded,
+  ConditionAddedV2Payload,
   ConditionRemoved,
   DeathSaveRecorded,
   HitDiceSpent,
@@ -71,9 +72,18 @@ export function deathSave(
 }
 
 /** Replace-by-conditionId (handlers/vitals.ts): re-adding with a new `level` is how a level changes. */
-export function condition(_sheet: Sheet, conditionId: string, add: boolean, level?: number): ProposedEvent[] {
+/** `timing` (a duration plus the clock reading it started at) makes the event `condition.added@2`. */
+export function condition(
+  _sheet: Sheet,
+  conditionId: string,
+  add: boolean,
+  level?: number,
+  timing?: Pick<ConditionAddedV2Payload, 'duration' | 'startedAtRound' | 'encounterId'>,
+): ProposedEvent[] {
   if (add) {
-    return [mk('condition.added', { conditionId, ...(level !== undefined ? { level } : {}) } satisfies ConditionAdded)];
+    const payload = { conditionId, ...(level !== undefined ? { level } : {}) } satisfies ConditionAdded;
+    if (timing) return [{ type: 'condition.added', v: 2, payload: { ...payload, ...timing } satisfies ConditionAddedV2Payload }];
+    return [mk('condition.added', payload)];
   }
   return [mk('condition.removed', { conditionId } satisfies ConditionRemoved)];
 }

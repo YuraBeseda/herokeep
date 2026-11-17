@@ -674,6 +674,29 @@ describe('projectCampaign', () => {
     });
   });
 
+  describe('encounters (plan 18 task 2)', () => {
+    const E1 = '11111111-1111-4111-8111-111111111111';
+    const E2 = '22222222-2222-4222-8222-222222222222';
+
+    it('is null with no encounter, round 1 once started, and follows round.advanced', () => {
+      expect(projectCampaign([]).encounter).toBeNull();
+      const started = mkEvent('encounter.started', { encounterId: E1, startedAtSeq: 0 }, { seq: 1 });
+      expect(projectCampaign([started]).encounter).toEqual({ id: E1, round: 1, number: 1 });
+      const advanced = mkEvent('round.advanced', { encounterId: E1, round: 3 }, { seq: 2 });
+      expect(projectCampaign([started, advanced]).encounter).toEqual({ id: E1, round: 3, number: 1 });
+    });
+
+    it('closes on encounter.ended and numbers the next encounter in the campaign', () => {
+      const events = [
+        mkEvent('encounter.started', { encounterId: E1, startedAtSeq: 0 }, { seq: 1 }),
+        mkEvent('encounter.ended', { encounterId: E1 }, { seq: 2 }),
+      ];
+      expect(projectCampaign(events).encounter).toBeNull();
+      events.push(mkEvent('encounter.started', { encounterId: E2, startedAtSeq: 2 }, { seq: 3 }));
+      expect(projectCampaign(events).encounter).toEqual({ id: E2, round: 1, number: 2 });
+    });
+  });
+
   describe('unknown/future event types', () => {
     it('are skipped silently, without throwing, and do not affect other state', () => {
       const events = [

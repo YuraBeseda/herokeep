@@ -716,8 +716,13 @@
         "search": "Поиск состояний",
         "noMatch": "Подходящих состояний нет.",
         "levelHint": "Уровень от 1 до {max}",
-        "effect": "Действие"
-      }
+        "effect": "Действие",
+        "roundsLabel": "Раунды (необязательно)"
+      },
+      "roundsLeft": "{count, plural, one {# раунд} few {# раунда} many {# раундов} other {# раунда}}",
+      "ended": "Закончилось",
+      "advanceRound": "Следующий раунд",
+      "round": "Раунд {round}"
     },
     "proficiencies": {
       "title": "Владения",
@@ -964,7 +969,9 @@
     "lockedCreation": "нельзя отменить",
     "lockedCreationHint": "Создание нельзя отменить; удалите героя",
     "today": "Сегодня",
-    "searchLabel": "Поиск по событиям"
+    "searchLabel": "Поиск по событиям",
+    "condition-updated": "Изменена длительность состояния {conditionId}.",
+    "combat-round-advanced": "Наступил раунд {round}."
   },
   "validation": {
     "generic": "Этот выбор пока недействителен.",

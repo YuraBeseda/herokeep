@@ -12,6 +12,7 @@ import { apiJson } from '../services/api/api-fetch';
 import { AuthService } from '../services/auth/auth.service';
 import {
   projectCampaign,
+  type CampaignEncounter,
   type CampaignState,
   type EnabledPack,
   type PackSeed,
@@ -366,6 +367,33 @@ export class CampaignStore {
    * `CampaignsRepository` row on a plain `open()` of an already-known campaign — see class doc's
    * `upsertCampaignRow` note for the one defensive fallback case. */
   readonly role: Signal<MembershipRole | undefined> = this.roleState.asReadonly();
+  /** Plan 18 task 2: the open encounter of the loaded campaign (`CampaignState.encounter`). */
+  readonly encounter: Signal<CampaignEncounter | null> = computed(
+    () => this.stateState()?.encounter ?? null,
+  );
+
+  /** DM only (the server refuses a player). The new encounter starts at round 1. */
+  startEncounter(): Promise<void> {
+    const startedAtSeq = this.eventsState().reduce((max, e) => Math.max(max, e.seq ?? 0), 0);
+    return this.appendTx([
+      { type: 'encounter.started', v: 1, payload: { encounterId: uuidv7(), startedAtSeq } },
+    ]);
+  }
+
+  async advanceRound(): Promise<void> {
+    const encounter = this.encounter();
+    if (!encounter) return;
+    const payload = { encounterId: encounter.id, round: encounter.round + 1 };
+    await this.appendTx([{ type: 'round.advanced', v: 1, payload }]);
+  }
+
+  async endEncounter(): Promise<void> {
+    const encounter = this.encounter();
+    if (!encounter) return;
+    await this.appendTx([
+      { type: 'encounter.ended', v: 1, payload: { encounterId: encounter.id } },
+    ]);
+  }
   /** [plan-16 Task 2] Every campaign this store has projected (opened, or touched by a sync session
    * — not only the open one) → its enabled content packs (`CampaignState.packs`: `welcome.packs`
    * seed + folded `pack.enabled`/`pack.disabled`), keyed by BARE campaign id. What

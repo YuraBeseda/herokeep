@@ -221,6 +221,7 @@ describe('CampaignStore', () => {
       log: [],
       dmNotes: new Map(),
       archived: false,
+      encounter: null,
     });
 
     // Defensive fallback (class doc's `upsertCampaignRow` note): a row is seeded even though this

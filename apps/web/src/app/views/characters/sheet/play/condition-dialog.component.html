@@ -67,6 +67,16 @@
     />
   }
 
+  <hk-number-field
+    class="condition-dialog__rounds"
+    [variant]="'leaf'"
+    [label]="t('characters.sheet.conditions.addDialog.roundsLabel')"
+    [min]="1"
+    [max]="999"
+    [step]="1"
+    [(value)]="rounds"
+  />
+
   <div class="condition-dialog__actions" data-dialog-actions>
     <button hk-button type="button" [variant]="'ghost-leather'" (click)="cancel()">
       {{ t('characters.sheet.conditions.addDialog.cancel') }}

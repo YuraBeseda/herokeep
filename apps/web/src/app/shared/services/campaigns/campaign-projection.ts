@@ -11,6 +11,8 @@ import type {
   DmNoteAdded,
   DmNoteRemoved,
   DmNoteUpdated,
+  EncounterEnded,
+  EncounterStarted,
   Event,
   MemberJoined,
   MemberLeft,
@@ -21,6 +23,7 @@ import type {
   PackEnabled,
   PartyOverviewUpdated,
   RollLogged,
+  RoundAdvanced,
   SessionEnded,
   SessionStarted,
   WelcomeMsg,
@@ -179,6 +182,15 @@ export interface CampaignState {
   log: LogEntry[];
   dmNotes: Map<string, DmNoteEntry>;
   archived: boolean;
+  /** The open encounter (plan 18 task 2): `round` starts at 1 and follows `round.advanced`;
+   * `number` is the encounter's 1-based place in the campaign ("Encounter 2"). */
+  encounter: CampaignEncounter | null;
+}
+
+export interface CampaignEncounter {
+  id: string;
+  round: number;
+  number: number;
 }
 
 function emptyState(): CampaignState {
@@ -194,6 +206,7 @@ function emptyState(): CampaignState {
     log: [],
     dmNotes: new Map(),
     archived: false,
+    encounter: null,
   };
 }
 
@@ -239,6 +252,8 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
   let joinCode = state.joinCode;
   let session = state.session;
   let archived = state.archived;
+  let encounter = state.encounter;
+  let encounterCount = 0;
 
   for (const e of orderEvents(events)) {
     switch (e.type) {
@@ -372,11 +387,26 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
         dmNotes.delete(p.id);
         break;
       }
+      case 'encounter.started': {
+        const p = e.payload as EncounterStarted;
+        encounter = { id: p.encounterId, round: 1, number: ++encounterCount };
+        break;
+      }
+      case 'round.advanced': {
+        const p = e.payload as RoundAdvanced;
+        if (encounter?.id === p.encounterId) encounter = { ...encounter, round: p.round };
+        break;
+      }
+      case 'encounter.ended': {
+        const p = e.payload as EncounterEnded;
+        if (encounter?.id === p.encounterId) encounter = null;
+        break;
+      }
       default:
         // Unknown/future event type: skip silently (forward compatibility).
         break;
     }
   }
 
-  return { ...state, name, system, settings, joinCode, session, archived };
+  return { ...state, name, system, settings, joinCode, session, archived, encounter };
 }

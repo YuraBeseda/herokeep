@@ -60,11 +60,18 @@ function mkState(overrides: Partial<CampaignState> = {}): Partial<CampaignState>
   };
 }
 
+const encounterSpies = {
+  start: vi.fn().mockResolvedValue(undefined),
+  advance: vi.fn().mockResolvedValue(undefined),
+  end: vi.fn().mockResolvedValue(undefined),
+};
+
 function configure(options: {
   role?: MembershipRole;
   state?: Partial<CampaignState>;
   userId?: string | null;
   live?: { userId: string; displayName: string; role: string; online: boolean }[] | null;
+  encounter?: { id: string; round: number; number: number } | null;
 }): { navigateSpy: ReturnType<typeof vi.fn>; dialogOpenSpy: ReturnType<typeof vi.fn> } {
   const navigateSpy = vi.fn().mockResolvedValue(true);
   const dialogOpenSpy = vi
@@ -91,6 +98,10 @@ function configure(options: {
           role: signal(options.role ?? 'player'),
           campaignId: signal('00000000-0000-4000-8000-000000000001'),
           gatewayAppend: vi.fn().mockResolvedValue({ acked: [], rejected: [] }),
+          encounter: signal(options.encounter ?? null),
+          startEncounter: encounterSpies.start,
+          advanceRound: encounterSpies.advance,
+          endEncounter: encounterSpies.end,
         },
       },
       {
@@ -1027,13 +1038,6 @@ describe('PartyTabComponent', () => {
       ).toBeNull();
     });
 
-    it('draws no encounter plate: that slot stays empty until slice 2', async () => {
-      configure({ role: 'dm', state: ownAndOther() });
-      const fixture = TestBed.createComponent(PartyTabComponent);
-      await fixture.whenStable();
-      const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.querySelector('.party-tab__encounter')).toBeNull();
-    });
   });
 
   // plan-10 task-12-brief.md: pregens + claiming (ruling 6). A pregen has NO protocol flag — it is
@@ -1164,6 +1168,48 @@ describe('PartyTabComponent', () => {
       fixture.detectChanges();
       expect(compiled.querySelector('.qfx')).toBeNull();
       expect(compiled.querySelector('.qfx__handover')).toBeNull();
+    });
+  });
+
+  describe('encounter plate (plan 18 task 2)', () => {
+    const plate = (c: HTMLElement) => c.querySelector<HTMLElement>('.encounter-plate')!;
+    const named = (c: HTMLElement, label: string) =>
+      Array.from(plate(c).querySelectorAll<HTMLButtonElement>('button')).find(
+        (b) => b.textContent?.trim() === label,
+      );
+
+    it('shows "No encounter" with Start encounter for the DM, and Start calls the store', async () => {
+      configure({ role: 'dm' });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(plate(compiled).textContent).toContain(campaignsEn.encounter.none);
+      named(compiled, campaignsEn.encounter.start)!.click();
+      expect(encounterSpies.start).toHaveBeenCalled();
+      expect(named(compiled, campaignsEn.encounter.advance)).toBeUndefined();
+    });
+
+    it('shows "Encounter 2 · Round 3" with Advance round and End encounter while one is open', async () => {
+      configure({ role: 'dm', encounter: { id: 'e2', round: 3, number: 2 } });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(plate(compiled).textContent).toContain('Encounter 2 · Round 3');
+      named(compiled, campaignsEn.encounter.advance)!.click();
+      expect(encounterSpies.advance).toHaveBeenCalled();
+      await fixture.whenStable();
+      named(compiled, campaignsEn.encounter.end)!.click();
+      expect(encounterSpies.end).toHaveBeenCalled();
+      expect(named(compiled, campaignsEn.encounter.start)).toBeUndefined();
+    });
+
+    it('gives a player the reading without the controls', async () => {
+      configure({ role: 'player', encounter: { id: 'e2', round: 3, number: 2 } });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(plate(compiled).textContent).toContain('Encounter 2 · Round 3');
+      expect(plate(compiled).querySelectorAll('button')).toHaveLength(0);
     });
   });
 });

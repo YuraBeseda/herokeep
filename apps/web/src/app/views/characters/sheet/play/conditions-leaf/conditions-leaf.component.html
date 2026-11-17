@@ -7,6 +7,13 @@
             [name]="condition.name"
             [icon]="condition.icon"
             [level]="condition.level"
+            [duration]="
+              condition.ended
+                ? t('sheet.conditions.ended')
+                : condition.rounds !== null
+                  ? t('sheet.conditions.roundsLeft', { count: condition.rounds })
+                  : null
+            "
             [removable]="!actions.editLocked()"
             (remove)="actions.removeCondition(condition.id)"
           />
@@ -24,6 +31,23 @@
           {{ t('sheet.conditions.add') }}
         </button>
       </div>
+
+      @if (actions.solo()) {
+        <div class="conditions__round">
+          @if (actions.clock(); as clock) {
+            <span role="status">{{ t('sheet.conditions.round', { round: clock.round }) }}</span>
+          }
+          <button
+            hk-button
+            type="button"
+            [variant]="'ghost'"
+            [disabled]="actions.editLocked()"
+            (click)="actions.advanceSoloRound()"
+          >
+            {{ t('sheet.conditions.advanceRound') }}
+          </button>
+        </div>
+      }
 
       @if (immunities().length > 0) {
         <h3 class="conditions__subtitle">{{ t('sheet.conditions.immunitiesTitle') }}</h3>

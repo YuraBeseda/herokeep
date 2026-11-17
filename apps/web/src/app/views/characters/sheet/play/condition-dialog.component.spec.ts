@@ -119,7 +119,7 @@ describe('ConditionDialogComponent', () => {
     open(BASE_DATA);
     TestBed.tick();
 
-    expect(overlayRoot().querySelector('input[type="number"]')).toBeNull();
+    expect(overlayRoot().querySelector('.condition-dialog__level')).toBeNull();
   });
 
   it("shows a level stepper from 1 to the pack's own level count once a level-bearing condition is selected", () => {
@@ -362,7 +362,7 @@ describe('ConditionDialogComponent', () => {
     });
   });
 
-  it('has no duration fields yet (slice 2 fills that slot) and keeps its actions on the leather strap', async () => {
+  it('offers one optional rounds field next to the level (plan 18 task 2) and keeps its actions on the leather strap', async () => {
     configure();
     open(BASE_DATA);
     TestBed.tick();
@@ -370,8 +370,8 @@ describe('ConditionDialogComponent', () => {
     chipFor('srd-5e-2024:condition/exhaustion').click();
     TestBed.tick();
 
-    expect(overlayRoot().querySelectorAll('input[type="number"]')).toHaveLength(1); // the level only
-    expect(overlayRoot().querySelector('[class*="duration"]')).toBeNull();
+    expect(overlayRoot().querySelectorAll('input[type="number"]')).toHaveLength(2); // level + rounds
+    expect(overlayRoot().querySelector('.condition-dialog__rounds')).not.toBeNull();
     const strap = overlayRoot().querySelector('[data-dialog-actions]')!;
     expect(Array.from(strap.querySelectorAll('button')).map((b) => b.textContent?.trim())).toEqual([
       charactersEn.sheet.conditions.addDialog.cancel,

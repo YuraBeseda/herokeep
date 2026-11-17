@@ -386,7 +386,39 @@ export class PlayActionsService {
     if (!result) return;
     const sheet = this.sheet();
     if (!sheet) return;
-    this.tryPropose(() => propose.condition(sheet, result.conditionId, true, result.level));
+    const clock = this.clock();
+    const timing =
+      result.rounds === undefined
+        ? undefined
+        : {
+            duration: { kind: 'rounds' as const, amount: result.rounds },
+            // A solo hero before its first Advance round is implicitly in round 1.
+            ...(clock ? { startedAtRound: clock.round, encounterId: clock.id } : {}),
+            ...(!clock && this.solo() ? { startedAtRound: 1 } : {}),
+          };
+    this.tryPropose(() =>
+      propose.condition(sheet, result.conditionId, true, result.level, timing),
+    );
+  }
+
+  /** Plan 18 task 2: a solo (unlinked) hero keeps its own round counter. */
+  readonly solo = computed(() => this.characterStore.campaignOverrides().clock === undefined);
+
+  /** The clock a new rounds condition starts on: the campaign's open encounter, or the solo hero's. */
+  readonly clock = computed<{ id: string; round: number } | null>(() => {
+    const campaignClock = this.characterStore.campaignOverrides().clock;
+    if (campaignClock) return campaignClock.encounter ?? null;
+    const round = this.characterStore.facts()?.round;
+    return round ? { id: round.encounterId, round: round.round } : null;
+  });
+
+  /** Solo "Advance round": round 1 is implicit, so the first advance mints the encounter at round 2. */
+  advanceSoloRound(): void {
+    const round = this.characterStore.facts()?.round;
+    const payload = { encounterId: round?.encounterId ?? uuidv7(), round: (round?.round ?? 1) + 1 };
+    this.submitAppendTx(
+      this.characterStore.appendTx([{ type: 'combat.round_advanced', v: 1, payload }]),
+    );
   }
 
   removeCondition(conditionId: string): void {

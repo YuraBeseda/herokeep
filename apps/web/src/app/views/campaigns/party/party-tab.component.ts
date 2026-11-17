@@ -1,3 +1,4 @@
+import { EncounterPlateComponent } from '../encounter-plate/encounter-plate.component';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -121,6 +122,7 @@ const FX_ICONS: Record<DmEffectKind, string> = {
 @Component({
   selector: 'app-party-tab',
   imports: [
+    EncounterPlateComponent,
     TranslocoDirective,
     BlobUrlPipe,
     IconComponent,

@@ -14,7 +14,7 @@ function conditions(clock: CampaignClock | undefined, entry: object) {
   facts.conditions = [{ conditionId: 'core-mini:condition/prone', sinceEventId: 'e', ...entry }];
   return derive(facts, index, undefined, clock ? { clock } : undefined).conditions[0];
 }
-const rounds3 = { duration: { kind: 'rounds', amount: 3 }, startedAtRound: 2, encounterId: E1 };
+const rounds3 = { duration: { kind: 'rounds', amount: 3 }, startedAtRound: 2, encounterId: E1 } as const;
 
 describe('condition rounds from the campaign clock', () => {
   it('counts down from the round the condition started in', () => {
@@ -37,6 +37,14 @@ describe('condition rounds from the campaign clock', () => {
     expect(conditions(undefined, rounds3)?.remaining).toBeUndefined();
     const noEnc = { duration: rounds3.duration, startedAtRound: rounds3.startedAtRound };
     expect(conditions({ encounter: { id: E2, round: 3 } }, noEnc)?.remaining).toEqual({ kind: 'rounds', value: 2 });
+  });
+  it('lets overrides.clock win over the solo facts.round clock', () => {
+    const facts = emptyFacts('char:test');
+    facts.conditions = [{ conditionId: 'core-mini:condition/prone', sinceEventId: 'e', ...rounds3 }];
+    facts.round = { encounterId: E1, round: 3 };
+    expect(derive(facts, index).conditions[0]?.remaining).toEqual({ kind: 'rounds', value: 2 });
+    const linked = derive(facts, index, undefined, { clock: { encounter: { id: E1, round: 4 } } });
+    expect(linked.conditions[0]?.remaining).toEqual({ kind: 'rounds', value: 1 });
   });
   it('derives hours as minutes x 60 and leaves untilRemoved without remaining', () => {
     expect(conditions(undefined, { duration: { kind: 'hours', amount: 2 } })?.remaining).toEqual({

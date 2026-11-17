@@ -80,13 +80,18 @@ export function campaignEditLockFromState(
  * as `campaignEditLockFromState`: `state: null` (no campaign context — a genuinely solo character,
  * ruling 1's "solo defaults", or a linked character whose campaign events haven't synced down yet)
  * and `state.settings === null` (campaign exists but no settings document has ever been posted)
- * BOTH return `{}` — the engine's own `derive()` defaults (no attunement override, encumbrance
+ * BOTH carry no house rules — the engine's own `derive()` defaults (no attunement override, encumbrance
  * `'off'`), never a half-applied guess.
  */
 export function campaignDeriveOverridesFromState(state: CampaignState | null): DeriveOverrides {
-  const houseRules = state?.settings?.houseRules;
-  if (!houseRules) return {};
-  return { attunementMax: houseRules.attunementMax, encumbrance: houseRules.encumbrance };
+  if (!state) return {};
+  // Plan 18 task 2: a linked hero always runs on the campaign's clock (`{}` = no encounter open),
+  // which also keeps the hero's own solo round counter out of derive.
+  const { encounter } = state;
+  const clock = encounter ? { encounter: { id: encounter.id, round: encounter.round } } : {};
+  const houseRules = state.settings?.houseRules;
+  if (!houseRules) return { clock };
+  return { clock, attunementMax: houseRules.attunementMax, encumbrance: houseRules.encumbrance };
 }
 
 const DEFAULT_POLL_MS = 15_000;

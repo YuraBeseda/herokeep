@@ -156,6 +156,15 @@ describe('propose.condition', () => {
     ]);
   });
 
+  it('add:true with a timing emits condition.added@2 carrying the duration and the clock reading', () => {
+    const encounterId = '11111111-1111-4111-8111-111111111111';
+    const timing = { duration: { kind: 'rounds', amount: 3 } as const, startedAtRound: 2, encounterId };
+    const events = propose.condition(baseSheet(), 'core-mini:condition/poisoned', true, undefined, timing);
+    expect(events).toEqual([
+      { type: 'condition.added', v: 2, payload: { conditionId: 'core-mini:condition/poisoned', ...timing } },
+    ]);
+  });
+
   it('add:false emits condition.removed{conditionId}', () => {
     const events = propose.condition(baseSheet(), 'core-mini:condition/poisoned', false);
     expect(events).toEqual([

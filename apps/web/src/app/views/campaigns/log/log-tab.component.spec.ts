@@ -60,6 +60,7 @@ function configure(options: {
           role: signal(options.role ?? 'player'),
           campaignId: signal('00000000-0000-4000-8000-000000000001'),
           appendTx,
+          encounter: signal(null),
         },
       },
       {

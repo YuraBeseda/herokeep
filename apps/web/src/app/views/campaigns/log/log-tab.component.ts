@@ -1,3 +1,4 @@
+import { EncounterPlateComponent } from '../encounter-plate/encounter-plate.component';
 import {
   Component,
   computed,
@@ -107,6 +108,7 @@ type RollLogEntry = Extract<LogEntry, { kind: 'roll' }>;
 @Component({
   selector: 'app-log-tab',
   imports: [
+    EncounterPlateComponent,
     TranslocoDirective,
     FormsModule,
     DiceResultComponent,

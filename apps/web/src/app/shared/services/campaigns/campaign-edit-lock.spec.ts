@@ -29,6 +29,7 @@ function mkState(overrides: Partial<CampaignState> = {}): CampaignState {
     log: [],
     dmNotes: new Map(),
     archived: false,
+    encounter: null,
     ...overrides,
   };
 }
@@ -155,13 +156,21 @@ describe('campaignDeriveOverridesFromState — ruling 1 (overrides plumbing)', (
     expect(campaignDeriveOverridesFromState(null)).toEqual({});
   });
 
-  it('returns {} when the campaign exists but no settings document has been posted yet', () => {
-    expect(campaignDeriveOverridesFromState(mkState())).toEqual({});
+  it('returns only the (encounter-less) clock when the campaign exists but has no settings yet', () => {
+    expect(campaignDeriveOverridesFromState(mkState())).toEqual({ clock: {} });
+  });
+
+  it("hands the campaign's open encounter to derive as the clock", () => {
+    const encounter = { id: '22222222-2222-4222-8222-222222222222', round: 3, number: 2 };
+    expect(campaignDeriveOverridesFromState(mkState({ encounter })).clock).toEqual({
+      encounter: { id: encounter.id, round: 3 },
+    });
   });
 
   it('passes houseRules.attunementMax/encumbrance straight through for a settings-having campaign', () => {
     const state = mkState({ settings: settingsWith('free') });
     expect(campaignDeriveOverridesFromState(state)).toEqual({
+      clock: {},
       attunementMax: 3,
       encumbrance: 'standard',
     });
@@ -176,6 +185,7 @@ describe('campaignDeriveOverridesFromState — ruling 1 (overrides plumbing)', (
       },
     });
     expect(campaignDeriveOverridesFromState(state)).toEqual({
+      clock: {},
       attunementMax: 5,
       encumbrance: 'variant',
     });
@@ -187,6 +197,7 @@ describe('campaignDeriveOverridesFromState — ruling 1 (overrides plumbing)', (
       settings: { ...base, houseRules: { ...base.houseRules, allowOverrides: false } },
     });
     expect(campaignDeriveOverridesFromState(state)).toEqual({
+      clock: {},
       attunementMax: 3,
       encumbrance: 'standard',
     });
@@ -467,6 +478,7 @@ describe('CampaignEditLockService.overridesFor', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.overrides()).toEqual({
+      clock: {},
       attunementMax: 5,
       encumbrance: 'variant',
     });
@@ -488,6 +500,7 @@ describe('CampaignEditLockService.overridesFor', () => {
     fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
     await fixture.whenStable();
     expect(fixture.componentInstance.overrides()).toEqual({
+      clock: {},
       attunementMax: 3,
       encumbrance: 'standard',
     });
@@ -504,6 +517,6 @@ describe('CampaignEditLockService.overridesFor', () => {
     await waitPastPoll();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.overrides()).toEqual({ attunementMax: 3, encumbrance: 'off' });
+    expect(fixture.componentInstance.overrides()).toEqual({ clock: {}, attunementMax: 3, encumbrance: 'off' });
   });
 });

@@ -10,7 +10,7 @@ import * as vitals from './vitals.ts';
 /** An envelope-less payload draft: what a `propose.*` function returns, one per event it drafts. */
 export interface ProposedEvent {
   type: string;
-  v: 1;
+  v: 1 | 2;
   payload: unknown;
 }
 

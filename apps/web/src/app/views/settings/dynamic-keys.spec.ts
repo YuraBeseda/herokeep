@@ -132,7 +132,7 @@ describe('dynamic translation keys exist in every language', () => {
     const SYNC = ['synced', 'pending', 'connecting', 'offline'];
     // The campaign stream's events are never rendered by the character timeline pipe.
     const CAMPAIGN_EVENT =
-      /^(campaign-(created|renamed|settings|join|archived|character)|pack-(enabled|disabled)|member-|party-|session-|roll-logged|chat-|dm-note)/;
+      /^(campaign-(created|renamed|settings|join|archived|character)|pack-(enabled|disabled)|member-|party-|session-|roll-logged|chat-|dm-note|encounter-|round-advanced)/;
     const EVENT_KEYS = Object.keys(EVENT_PAYLOADS)
       .map((k) => k.slice(0, k.lastIndexOf('@')).replace(/[._]/g, '-'))
       .filter((k) => !CAMPAIGN_EVENT.test(k));

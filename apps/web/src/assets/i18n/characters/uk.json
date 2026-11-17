@@ -716,8 +716,13 @@
         "search": "Пошук станів",
         "noMatch": "Відповідних станів немає.",
         "levelHint": "Рівень від 1 до {max}",
-        "effect": "Дія"
-      }
+        "effect": "Дія",
+        "roundsLabel": "Раунди (необовʼязково)"
+      },
+      "roundsLeft": "{count, plural, one {# раунд} few {# раунди} many {# раундів} other {# раунду}}",
+      "ended": "Закінчився",
+      "advanceRound": "Наступний раунд",
+      "round": "Раунд {round}"
     },
     "proficiencies": {
       "title": "Володіння",
@@ -964,7 +969,9 @@
     "lockedCreation": "не відкотити",
     "lockedCreationHint": "Створення не можна відкотити; видаліть героя",
     "today": "Сьогодні",
-    "searchLabel": "Пошук подій"
+    "searchLabel": "Пошук подій",
+    "condition-updated": "Змінено тривалість стану {conditionId}.",
+    "combat-round-advanced": "Настав раунд {round}."
   },
   "validation": {
     "generic": "Цей вибір ще недійсний.",

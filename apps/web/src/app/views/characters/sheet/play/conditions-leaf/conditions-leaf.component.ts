@@ -58,6 +58,14 @@ export class ConditionsLeafComponent {
       name: this.names.resolve(c.conditionId),
       level: c.level ?? null,
       icon: this.names.iconOf(c.conditionId, 'ui:condition'),
+      ended: c.ended === true,
+      // A rounds badge: the clock's remaining count, else the full duration (no clock yet).
+      rounds:
+        c.remaining?.kind === 'rounds'
+          ? c.remaining.value
+          : c.duration?.kind === 'rounds'
+            ? c.duration.amount
+            : null,
     })),
   );
 

@@ -528,5 +528,16 @@
     "body": "What you changed here is not saved yet.",
     "keep": "Keep editing",
     "confirm": "Discard"
+  },
+  "encounter": {
+    "label": "Encounter",
+    "none": "No encounter",
+    "running": "Encounter {number} · Round {round}",
+    "start": "Start encounter",
+    "advance": "Advance round",
+    "end": "End encounter",
+    "endHint": "Ends the fight; durations keep running",
+    "dmOnly": "Rounds and encounters are run by the DM",
+    "error": "Could not update the encounter. Try again."
   }
 }

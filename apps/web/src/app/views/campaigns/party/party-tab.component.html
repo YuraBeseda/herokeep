@@ -21,7 +21,8 @@
     }
   </div>
 
-  <!-- The encounter plate (board C06) sits here; its data arrives with plan slice 2. -->
+  <!-- The encounter plate (board C06). -->
+  <app-encounter-plate class="party-tab__encounter" />
 
   @if (!hasOwnActiveCharacter()) {
     <hk-banner class="party-tab__link-cta" [variant]="'info'">

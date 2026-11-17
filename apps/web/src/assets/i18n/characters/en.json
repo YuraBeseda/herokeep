@@ -716,8 +716,13 @@
         "search": "Search conditions",
         "noMatch": "No condition matches.",
         "levelHint": "Level 1 to {max}",
-        "effect": "Effect"
-      }
+        "effect": "Effect",
+        "roundsLabel": "Rounds (optional)"
+      },
+      "roundsLeft": "{count, plural, one {# round} other {# rounds}}",
+      "ended": "Ended",
+      "advanceRound": "Advance round",
+      "round": "Round {round}"
     },
     "proficiencies": {
       "title": "Proficiencies",
@@ -964,7 +969,9 @@
     "lockedCreation": "can’t revert",
     "lockedCreationHint": "Creation can’t be reverted; delete the hero instead",
     "today": "Today",
-    "searchLabel": "Search events"
+    "searchLabel": "Search events",
+    "condition-updated": "Changed the {conditionId} condition's duration.",
+    "combat-round-advanced": "Advanced to round {round}."
   },
   "validation": {
     "generic": "This selection isn't valid yet.",
