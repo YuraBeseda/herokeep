@@ -5,7 +5,6 @@ import {
   Injectable,
   InjectionToken,
   resource,
-  signal,
   type Signal,
 } from '@angular/core';
 import type { DeriveOverrides } from '@hk/engine';
@@ -195,7 +194,13 @@ export class CampaignEditLockService {
       return campaignId ? `camp:${campaignId}` : undefined;
     });
 
-    const pollTick = signal(0);
+    // Params is just the stream id: a changed params object would clear the value while loading
+    // (a linked hero would flicker to "solo"); the poll uses `reload()`, which keeps the old value.
+    const campaignEvents = resource({
+      params: () => streamId(),
+      loader: async ({ params }) => (params === undefined ? [] : await this.eventsRepository.byStream(params)),
+    });
+
     let timer: ReturnType<typeof setInterval> | undefined;
     effect((onCleanup) => {
       const id = streamId();
@@ -204,24 +209,11 @@ export class CampaignEditLockService {
         timer = undefined;
       }
       if (id === undefined) return;
-      timer = setInterval(() => pollTick.update((n) => n + 1), this.pollMs);
+      timer = setInterval(() => campaignEvents.reload(), this.pollMs);
       onCleanup(() => {
         if (timer !== undefined) clearInterval(timer);
         timer = undefined;
       });
-    });
-
-    const campaignEvents = resource({
-      params: () => {
-        const id = streamId();
-        // A fresh object every tick (even for the SAME `id`) is deliberate — `resource()` refetches
-        // whenever `params()` fails reference equality against its previous value, which a plain
-        // repeated primitive would never do on its own; this is what makes the poll trigger #2
-        // above actually cause a refetch.
-        return id === undefined ? undefined : { id, tick: pollTick() };
-      },
-      loader: async ({ params }) =>
-        params === undefined ? [] : await this.eventsRepository.byStream(params.id),
     });
 
     return computed<CampaignState | null>(() => {

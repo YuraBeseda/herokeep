@@ -519,4 +519,24 @@ describe('CampaignEditLockService.overridesFor', () => {
 
     expect(fixture.componentInstance.overrides()).toEqual({ clock: {}, attunementMax: 3, encumbrance: 'off' });
   });
+
+  it('keeps the previous state while a poll reloads (a linked hero never reads as solo)', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    await eventsRepository.append([
+      campaignEvent('campaign.settings_changed', { settings: settingsWith('free') }, DM_ID, 'dm'),
+    ]);
+    const fixture = TestBed.createComponent(TestOverridesHostComponent);
+    fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.overrides().clock).toBeDefined();
+
+    const seen: unknown[] = [];
+    const deadline = Date.now() + POLL_MS * 8;
+    while (Date.now() < deadline) {
+      seen.push(fixture.componentInstance.overrides().clock);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(seen.length).toBeGreaterThan(3);
+    expect(seen.every((clock) => clock !== undefined)).toBe(true);
+  });
 });

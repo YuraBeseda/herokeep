@@ -380,7 +380,10 @@ export class PlayActionsService {
   async addCondition(options: ConditionDialogOption[]): Promise<void> {
     if (options.length === 0) return;
     const handle = this.dialogService.open(ConditionDialogComponent, {
-      data: { options } satisfies ConditionDialogData,
+      data: {
+        options,
+        roundsWaitForEncounter: !this.solo() && !this.clock(),
+      } satisfies ConditionDialogData,
     });
     const result = (await handle.closed) as ConditionDialogResult | undefined;
     if (!result) return;

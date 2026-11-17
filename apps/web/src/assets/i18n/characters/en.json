@@ -717,7 +717,8 @@
         "noMatch": "No condition matches.",
         "levelHint": "Level 1 to {max}",
         "effect": "Effect",
-        "roundsLabel": "Rounds (optional)"
+        "roundsLabel": "Rounds (optional)",
+        "roundsWaitHint": "Rounds start with the DM's next encounter"
       },
       "roundsLeft": "{count, plural, one {# round} other {# rounds}}",
       "ended": "Ended",

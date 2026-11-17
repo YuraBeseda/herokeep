@@ -67,6 +67,11 @@
     />
   }
 
+  @if (data.roundsWaitForEncounter) {
+    <p class="condition-dialog__rounds-hint">
+      {{ t('characters.sheet.conditions.addDialog.roundsWaitHint') }}
+    </p>
+  } @else {
   <hk-number-field
     class="condition-dialog__rounds"
     [variant]="'leaf'"
@@ -76,6 +81,7 @@
     [step]="1"
     [(value)]="rounds"
   />
+  }
 
   <div class="condition-dialog__actions" data-dialog-actions>
     <button hk-button type="button" [variant]="'ghost-leather'" (click)="cancel()">

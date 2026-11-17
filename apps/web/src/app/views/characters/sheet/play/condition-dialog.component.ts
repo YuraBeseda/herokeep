@@ -28,6 +28,8 @@ export interface ConditionDialogOption {
 
 export interface ConditionDialogData {
   readonly options: readonly ConditionDialogOption[];
+  /** A linked hero with no open encounter: rounds only count inside an encounter, so no rounds field. */
+  readonly roundsWaitForEncounter?: boolean;
 }
 
 export interface ConditionDialogResult {

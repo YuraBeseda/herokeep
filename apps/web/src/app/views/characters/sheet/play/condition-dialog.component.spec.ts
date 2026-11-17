@@ -379,6 +379,18 @@ describe('ConditionDialogComponent', () => {
     ]);
   });
 
+  it('replaces the rounds field with a hint for a linked hero outside an encounter', async () => {
+    configure();
+    open({ ...BASE_DATA, roundsWaitForEncounter: true });
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(overlayRoot().querySelector('.condition-dialog__rounds')).toBeNull();
+    expect(overlayRoot().querySelector('.condition-dialog__rounds-hint')?.textContent?.trim()).toBe(
+      charactersEn.sheet.conditions.addDialog.roundsWaitHint,
+    );
+  });
+
   // --- Board DL03: the condition's effect text ----------------------------------------------------
 
   describe('effect text', () => {
