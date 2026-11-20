@@ -67,7 +67,10 @@ export function sheetNames(engineFacade: EngineFacade) {
       const index = engineFacade.index();
       const packId = parseEntityId(index.system().id)?.packId;
       const ruleId = packId ? makeEntityId(packId, 'rule', `damage-type-${slug}`) : undefined;
-      return ruleId && index.has(ruleId) ? engineFacade.localizer().name(ruleId) : slug;
+      // The rule entity is named "Damage type: Slashing"; show only the type.
+      return ruleId && index.has(ruleId)
+        ? engineFacade.localizer().name(ruleId).split(': ').pop()!
+        : slug;
     },
     /** The entity's sprite id (`EngineFacade.iconFor`), or `fallback` for a stale id. */
     iconOf: (id: string, fallback: string): string => {

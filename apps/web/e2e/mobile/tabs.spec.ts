@@ -53,6 +53,14 @@ test.describe('phone sheet (390 x 844)', () => {
       );
       expect(caret!.top, 'HP caret shares the main button row').toBeGreaterThanOrEqual(main!.top - 1);
       expect(caret!.bottom, 'HP caret shares the main button row').toBeLessThanOrEqual(main!.bottom + 1);
+      // The caret is a 28px disc with a >= 44px hit area (a ::before extension on coarse pointers).
+      const caretHit = await hpButtons.nth(1).evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = (dx: number, dy: number) =>
+          el.contains(document.elementFromPoint(r.left + r.width / 2 + dx, r.top + r.height / 2 + dy));
+        return [hit(0, -21), hit(0, 21)];
+      });
+      expect(caretHit, 'HP caret hit area reaches 44px vertically').toEqual([true, true]);
       const seals = page.locator('.abilities--saves .abilities__seal');
       expect(await seals.count()).toBe(6);
       for (let i = 0; i < 6; i++) {

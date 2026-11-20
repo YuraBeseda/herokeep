@@ -77,7 +77,7 @@ export class HkAttackRowComponent {
       id: 'damage',
       labelKey: 'shell.ui.attack.menu.damage',
       icon: 'ui:roll',
-      detail: [this.damage(), this.damageType()?.label].filter(Boolean).join(' '),
+      detail: [this.damage(), this.damageType()?.label.toLowerCase()].filter(Boolean).join(' '),
       run: () => this.rollDamage.emit(),
     },
   ];

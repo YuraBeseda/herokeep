@@ -318,7 +318,7 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
       compiled.querySelectorAll('.conditions__resistances li hk-tag-chip'),
       (el) => el.textContent?.trim(),
     );
-    expect(badges).toEqual(['Damage type: Poison (Cloak of Arachnida)']);
+    expect(badges).toEqual(['Poison (Cloak of Arachnida)']);
     expect(compiled.querySelector('.conditions__resistances .hk-cond__end')).toBeNull();
     expect(compiled.textContent).toContain(charactersEn.sheet.conditions.resistancesTitle);
   });
