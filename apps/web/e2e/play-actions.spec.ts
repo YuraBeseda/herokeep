@@ -10,7 +10,7 @@ import {
   hpCurrent,
   hpMax,
   levelUpLink,
-  openDrawer,
+  clickStrapAction,
   openTab,
   strapAction,
 } from './helpers/sheet';
@@ -309,7 +309,7 @@ test.describe('play actions', () => {
     await expect(menu.getByRole('menuitem').nth(1)).toContainText('Damage');
     await page.keyboard.press('Enter');
     await expect(menu).toHaveCount(0);
-    await openDrawer(page, 'roll-log');
+    await clickStrapAction(page, 'roll-log'); // on a phone it sits in the strap's More sheet
     await expect(page.locator('.roll-log-drawer__entry').first()).toContainText('damage');
   });
 });
