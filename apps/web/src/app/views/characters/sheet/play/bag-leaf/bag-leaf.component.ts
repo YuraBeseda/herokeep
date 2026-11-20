@@ -275,6 +275,11 @@ export class BagLeafComponent {
   }
 
   /** The satchel's per-slot menu, by item id. */
+  /** The row's menu, built when it opens rather than on every render. */
+  protected menuThunk(entry: BagRow): () => HkMenuItem[] {
+    return () => this.menuFor(entry);
+  }
+
   protected readonly menuOf = (id: string): HkMenuItem[] => {
     const entry = this.rows().find((r) => r.row.instanceId === id);
     return entry ? this.menuFor(entry) : [];

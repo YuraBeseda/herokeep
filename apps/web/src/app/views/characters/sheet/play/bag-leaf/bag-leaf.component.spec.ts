@@ -12,6 +12,7 @@ import {
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { BagLeafComponent } from './bag-leaf.component';
 import { PlayActionsService } from '../play-actions.service';
+import { PeekService } from '../../../../../ui/description-drawer/peek.service';
 
 // task-5-brief.md: inventory add-from-library/custom, equip/attune toggles, the qty stepper, remove
 // (behind its own confirm dialog), the weight display + total, and the currency editor — now on the
@@ -53,6 +54,25 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     await fixture.whenStable();
     return compiled.querySelector<HTMLElement>('.bag__actions')!;
   }
+
+  it("Details from a row's menu opens the peek with the menu button as its opener", async () => {
+    await seedFighter('Ivan');
+    const fixture = TestBed.createComponent(BagLeafComponent);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const actions = await select(fixture, compiled, 'Longsword');
+    const button = actions.querySelector<HTMLButtonElement>('hk-menu-button button')!;
+    button.focus();
+    button.click();
+    await fixture.whenStable();
+    overlay().querySelector<HTMLButtonElement>('[data-menu-item="details"]')!.click();
+    await fixture.whenStable();
+
+    const peek = TestBed.inject(PeekService).current();
+    expect(peek?.entityId).toBe(LONGSWORD_ID);
+    // Closing the peek returns focus here, not to a detached menu item.
+    expect(peek?.opener).toBe(button);
+  });
 
   it('add-from-library appends item.added with a fresh uuid instanceId and renders the new slot', async () => {
     await seedFighter('Ivan');

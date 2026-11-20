@@ -35,8 +35,8 @@ test('starting equipment kit cards fit in ru and uk', async ({ page }, testInfo)
 
   const { violations, check } = fitChecker(page);
   for (const [locale, bag] of [
-    ['ru', 'Р’Р°СЂРёР°РЅС‚ A СѓР¶Рµ РІ СЃСѓРјРєРµ РЅРёР¶Рµ'],
-    ['uk', 'Р’Р°СЂС–Р°РЅС‚ A СѓР¶Рµ РІ СЃСѓРјС†С– РЅРёР¶С‡Рµ'],
+    ['ru', 'Вариант A уже в сумке ниже'],
+    ['uk', 'Варіант A уже в сумці нижче'],
   ] as const) {
     await check(`kit cards (${locale})`, async () => {
       await page.locator('.hk-topbar__folio').click();

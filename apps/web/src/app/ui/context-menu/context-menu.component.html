@@ -8,7 +8,7 @@
         class="hk-menu__item"
         [attr.data-menu-item]="item.id"
         [cdkMenuItemDisabled]="!!item.disabledReasonKey"
-        (cdkMenuItemTriggered)="item.run()"
+        (cdkMenuItemTriggered)="runLater(item)"
       >
         @if (item.icon) {
           <hk-icon class="hk-menu__icon" [icon]="item.icon" />

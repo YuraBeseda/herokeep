@@ -19,4 +19,10 @@ import type { HkMenuItem } from './context-menu.types';
 export class HkContextMenuComponent {
   readonly items = signal<readonly HkMenuItem[]>([]);
   readonly template = viewChild.required<TemplateRef<unknown>>('panel');
+
+  /** After the CDK closed the menu and focus is back on the opener, which the item may need (the
+   * peek and dialogs return focus to `document.activeElement`). */
+  protected runLater(item: HkMenuItem): void {
+    queueMicrotask(() => item.run());
+  }
 }

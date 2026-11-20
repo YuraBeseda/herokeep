@@ -5,6 +5,7 @@ import {
   createComponent,
   DestroyRef,
   Directive,
+  effect,
   ElementRef,
   EnvironmentInjector,
   inject,
@@ -22,13 +23,13 @@ const LONG_PRESS_SLOP_PX = 10;
  * at the finger (a 10 px move cancels; the native callout is suppressed), and the `ContextMenu` key
  * or Shift+F10 opens it under the focused element with the first item focused. Escape or picking an
  * item returns focus to where it was. Pair it with one visible `<hk-menu-button>` per row or block:
- * a menu is never the only way to reach an action.
+ * a menu is never the only way to reach an action. `null` items leave the native context menu.
  */
 @Directive({
   selector: '[hkContextMenu]',
   hostDirectives: [CdkContextMenuTrigger],
   host: {
-    class: 'hk-context-menu-host',
+    '[class.hk-context-menu-host]': 'hkContextMenu() !== null',
     '(keydown)': 'onKeydown($event)',
     '(pointerdown)': 'onPointerDown($event)',
     '(pointermove)': 'onPointerMove($event)',
@@ -38,7 +39,7 @@ const LONG_PRESS_SLOP_PX = 10;
   },
 })
 export class HkContextMenuDirective {
-  readonly hkContextMenu = input.required<HkMenuItems>();
+  readonly hkContextMenu = input.required<HkMenuItems | null>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly trigger = inject(CdkContextMenuTrigger, { self: true });
@@ -50,6 +51,7 @@ export class HkContextMenuDirective {
   private swallowTouchEnd = false;
 
   constructor() {
+    effect(() => (this.trigger.disabled = this.hkContextMenu() === null));
     // `opened` fires before the CDK attaches the panel, so the items are fresh for every opening.
     this.trigger.opened.subscribe(() => {
       const active = document.activeElement;
@@ -60,7 +62,7 @@ export class HkContextMenuDirective {
         this.appRef.attachView(this.menu.hostView);
         this.menu.changeDetectorRef.detectChanges();
       }
-      this.menu.instance.items.set(resolveMenuItems(this.hkContextMenu()));
+      this.menu.instance.items.set(resolveMenuItems(this.hkContextMenu() ?? []));
       this.trigger.menuTemplateRef = this.menu.instance.template();
     });
     this.trigger.closed.subscribe(() => {
@@ -76,6 +78,7 @@ export class HkContextMenuDirective {
   }
 
   protected onKeydown(event: KeyboardEvent): void {
+    if (this.hkContextMenu() === null) return;
     if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
     event.preventDefault();
     const target = event.target instanceof HTMLElement ? event.target : this.host;
@@ -84,7 +87,7 @@ export class HkContextMenuDirective {
   }
 
   protected onPointerDown(event: PointerEvent): void {
-    if (event.pointerType !== 'touch') return;
+    if (event.pointerType !== 'touch' || this.hkContextMenu() === null) return;
     this.cancelPress();
     const { clientX: x, clientY: y } = event;
     const timer = setTimeout(() => {

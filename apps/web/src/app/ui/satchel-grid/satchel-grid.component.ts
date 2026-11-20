@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { HkContextMenuDirective } from '../context-menu/context-menu.directive';
-import type { HkMenuItem } from '../context-menu/context-menu.types';
+import type { HkMenuItem, HkMenuItems } from '../context-menu/context-menu.types';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { IconComponent } from '../../shared/icons/icon.component';
@@ -49,8 +49,14 @@ export class HkSatchelGridComponent {
   readonly items = input.required<readonly BagItem[]>();
   readonly selectedId = input<string | null>(null);
   readonly minSlots = input(16);
-  /** The context menu of a slot, by item id (`[hkContextMenu]`). */
-  readonly menu = input<(id: string) => HkMenuItem[]>(() => []);
+  /** The context menu of a slot, by item id (`[hkContextMenu]`); `null` keeps the native menu. */
+  readonly menu = input<((id: string) => HkMenuItem[]) | null>(null);
+
+  /** A thunk, so a slot's menu is built when it opens, not on every render. */
+  protected menuOf(id: string): HkMenuItems | null {
+    const menu = this.menu();
+    return menu ? () => menu(id) : null;
+  }
 
   // Outputs
   // `select` is the name the bag views ask for; the native `select` event (text selection) is

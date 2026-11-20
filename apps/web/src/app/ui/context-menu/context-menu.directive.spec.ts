@@ -2,14 +2,14 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideShellTransloco } from '../testing/transloco-testing';
 import { overlayRoot } from '../testing/overlay';
-import type { HkMenuItem } from './context-menu.types';
+import type { HkMenuItem, HkMenuItems } from './context-menu.types';
 import { HkContextMenuDirective } from './context-menu.directive';
 import { HkMenuButtonComponent } from './menu-button.component';
 
 @Component({
   selector: 'app-menu-host',
   imports: [HkContextMenuDirective, HkMenuButtonComponent],
-  template: `<div class="row" [hkContextMenu]="items">
+  template: `<div class="row" [hkContextMenu]="rowItems()">
       <button type="button" class="inner">{{ name }}</button>
     </div>
     <hk-menu-button [items]="items" />`,
@@ -17,13 +17,18 @@ import { HkMenuButtonComponent } from './menu-button.component';
 class HostComponent {
   protected readonly name = 'Longsword';
   readonly ran = signal<string[]>([]);
+  /** Where focus was when an item ran: the peek and dialogs take it as their opener. */
+  focusAtRun: Element | null = null;
   readonly items = (): HkMenuItem[] => [
     {
       id: 'use',
       labelKey: 'shell.icon.use',
       icon: 'ui:use',
       detail: '+5',
-      run: () => this.ran.update((r) => [...r, 'use']),
+      run: () => {
+        this.focusAtRun = document.activeElement;
+        this.ran.update((r) => [...r, 'use']);
+      },
     },
     {
       id: 'equip',
@@ -38,6 +43,7 @@ class HostComponent {
       run: () => this.ran.update((r) => [...r, 'attune']),
     },
   ];
+  readonly rowItems = signal<HkMenuItems | null>(this.items);
 }
 
 const menuItems = () =>
@@ -169,5 +175,37 @@ describe('HkContextMenuDirective', () => {
     button.click();
     await settle();
     expect(menuItems()).toHaveLength(3);
+  });
+
+  it('an item runs after the menu closed and focus is back on the opener', async () => {
+    inner.focus();
+    key(inner, { key: 'F10', shiftKey: true, keyCode: 121 });
+    await settle();
+    menuItems()[0].click();
+    await settle();
+    expect(fixture.componentInstance.focusAtRun).toBe(inner);
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      'hk-menu-button button',
+    )!;
+    button.focus();
+    button.click();
+    await settle();
+    menuItems()[0].click();
+    await settle();
+    expect(fixture.componentInstance.focusAtRun).toBe(button);
+  });
+
+  it('with no items the native context menu is left alone', async () => {
+    fixture.componentInstance.rowItems.set(null);
+    await settle();
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 });
+    row.dispatchEvent(event);
+    inner.focus();
+    key(inner, { key: 'F10', shiftKey: true, keyCode: 121 });
+    await settle();
+    expect(event.defaultPrevented).toBe(false);
+    expect(menuItems()).toHaveLength(0);
+    expect(row.classList).not.toContain('hk-context-menu-host');
   });
 });

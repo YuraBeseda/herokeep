@@ -45,6 +45,21 @@ describe('HkSatchelGridComponent', () => {
     expect(Array.from(empty).every((e) => e.getAttribute('aria-hidden') === 'true')).toBe(true);
   });
 
+  it('a slot has a context menu only when given one, built when it opens', async () => {
+    const hosts = (el: HTMLElement) => el.querySelectorAll('li.hk-context-menu-host');
+    expect(hosts((await mount(HkSatchelGridComponent, { items })).el)).toHaveLength(0);
+
+    const menu = vi.fn((id: string) => [{ id, labelKey: 'shell.icon.use', run: () => undefined }]);
+    const { el } = await mount(HkSatchelGridComponent, { items, menu });
+    expect(hosts(el)).toHaveLength(3);
+    expect(menu).not.toHaveBeenCalled();
+    slots(el)[1].dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }),
+    );
+    expect(menu).toHaveBeenCalledExactlyOnceWith('arrows');
+    document.querySelector('.cdk-overlay-container')?.replaceChildren();
+  });
+
   it('does not pad past the items when there are more than the minimum', async () => {
     const many = Array.from({ length: 20 }, (_, i) => ({
       id: `i${i}`,
