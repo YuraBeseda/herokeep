@@ -48,19 +48,6 @@
   padding: var(--space-2);
 }
 
-.bag__qty {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.bag__qty-value {
-  min-inline-size: 2ch;
-  text-align: center;
-  font-family: var(--font-display);
-  font-variant-numeric: tabular-nums;
-}
-
 .bag__total-weight,
 .bag__electrum,
 .bag__empty {

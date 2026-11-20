@@ -55,6 +55,17 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     return compiled.querySelector<HTMLElement>('.bag__actions')!;
   }
 
+  /** Opens the selected row's menu and returns its item (by id), or null when it has none. */
+  async function menuItem(
+    fixture: { whenStable(): Promise<unknown> },
+    actions: HTMLElement,
+    id: string,
+  ): Promise<HTMLButtonElement | null> {
+    actions.querySelector<HTMLButtonElement>('hk-menu-button button')!.click();
+    await fixture.whenStable();
+    return overlay().querySelector<HTMLButtonElement>(`[data-menu-item="${id}"]`);
+  }
+
   it("Details from a row's menu opens the peek with the menu button as its opener", async () => {
     await seedFighter('Ivan');
     const fixture = TestBed.createComponent(BagLeafComponent);
@@ -153,8 +164,8 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     expect(slot.getAttribute('aria-label')).not.toContain('Unknown');
     // No itemId -> no resolved item entity -> nothing to gate an Attune toggle (or Details) on.
     const actions = await select(fixture, compiled, 'Lucky Coin');
-    expect(actions.querySelector('.bag__attune')).toBeNull();
-    expect(actions.querySelector('.bag__details')).toBeNull();
+    expect(await menuItem(fixture, actions, 'attune')).toBeNull();
+    expect(overlay().querySelector('[data-menu-item="details"]')).toBeNull();
   });
 
   it("a custom item's picked icon (the hero's own glyphs listed first) lands at item.added custom.icon", async () => {
@@ -232,7 +243,7 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     const actions = await select(fixture, compiled, 'Chain Mail');
-    buttonNamed(actions, charactersEn.sheet.inventory.unequip).click();
+    (await menuItem(fixture, actions, 'equip'))!.click();
 
     await pollUntil(fixture, () => characterStore.sheet()!.ac.value !== acBefore);
     expect(characterStore.sheet()!.ac.value).toBeLessThan(acBefore);
@@ -265,7 +276,7 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     const eventsBefore = characterStore.events().length;
 
     const actions = await select(fixture, compiled, 'Amulet of Health');
-    buttonNamed(actions, charactersEn.sheet.inventory.attune).click();
+    (await menuItem(fixture, actions, 'attune'))!.click();
     await fixture.whenStable();
 
     expect(characterStore.events().length).toBe(eventsBefore);
@@ -281,10 +292,11 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     for (const name of ['Chain Mail', 'Longsword', 'Shield']) {
       const actions = await select(fixture, compiled, name);
       expect(actions, `expected the "${name}" action strip`).not.toBeNull();
-      const attuneButton = Array.from(actions.querySelectorAll<HTMLButtonElement>('button')).find(
-        (b) => b.textContent?.trim() === charactersEn.sheet.inventory.attune,
-      );
-      expect(attuneButton, `expected no Attune button on the "${name}" slot`).toBeUndefined();
+      expect(await menuItem(fixture, actions, 'attune'), `no Attune item on "${name}"`).toBeNull();
+      overlay()
+        .querySelector<HTMLElement>('[data-menu-item="qty-up"]')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+      await fixture.whenStable();
     }
   });
 
@@ -304,7 +316,7 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     const actions = await select(fixture, compiled, 'Amulet of Health');
-    expect(() => buttonNamed(actions, charactersEn.sheet.inventory.attune)).not.toThrow();
+    expect(await menuItem(fixture, actions, 'attune')).not.toBeNull();
   });
 
   it('the qty stepper increments/decrements via item.updated{qty}, decrement blocked at qty 1', async () => {
@@ -316,17 +328,11 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     const actions = await select(fixture, compiled, 'Longsword');
-    const decreaseButton = (): HTMLButtonElement =>
-      compiled.querySelector<HTMLButtonElement>(
-        `[aria-label="${charactersEn.sheet.inventory.qtyDecrease}"]`,
-      )!;
-    // qty starts at 1: blocked (`aria-disabled`, with the reason as its hint)
-    expect(decreaseButton().getAttribute('aria-disabled')).toBe('true');
-
-    const increaseButton = actions.querySelector<HTMLButtonElement>(
-      `[aria-label="${charactersEn.sheet.inventory.qtyIncrease}"]`,
-    )!;
-    increaseButton.click();
+    // qty starts at 1: the decrease item is disabled, with the reason as its hint
+    expect((await menuItem(fixture, actions, 'qty-down'))!.getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    overlay().querySelector<HTMLElement>('[data-menu-item="qty-up"]')!.click();
     await pollUntil(
       fixture,
       () => characterStore.sheet()?.inventory.find((i) => i.itemId === LONGSWORD_ID)?.qty === 2,
@@ -337,8 +343,9 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     });
 
     await fixture.whenStable();
-    expect(decreaseButton().getAttribute('aria-disabled')).toBeNull();
-    decreaseButton().click();
+    const down = (await menuItem(fixture, actions, 'qty-down'))!;
+    expect(down.getAttribute('aria-disabled')).toBeNull();
+    down.click();
     await pollUntil(
       fixture,
       () => characterStore.sheet()?.inventory.find((i) => i.itemId === LONGSWORD_ID)?.qty === 1,
@@ -359,8 +366,8 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     const eventsBefore = characterStore.events().length;
 
     let actions = await select(fixture, compiled, 'Shield');
-    buttonNamed(actions, charactersEn.sheet.inventory.remove).click();
-    TestBed.tick();
+    (await menuItem(fixture, actions, 'remove'))!.click();
+    await pollUntil(fixture, () => overlay().querySelector('.item-remove-confirm__title') !== null);
     buttonNamed(overlay(), charactersEn.sheet.inventory.deleteConfirm.cancel).click();
     await fixture.whenStable();
 
@@ -368,8 +375,8 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     expect(characterStore.sheet()!.inventory.some((i) => i.itemId === SHIELD_ID)).toBe(true);
 
     actions = await select(fixture, compiled, 'Shield');
-    buttonNamed(actions, charactersEn.sheet.inventory.remove).click();
-    TestBed.tick();
+    (await menuItem(fixture, actions, 'remove'))!.click();
+    await pollUntil(fixture, () => overlay().querySelector('.item-remove-confirm__title') !== null);
     buttonNamed(overlay(), charactersEn.sheet.inventory.deleteConfirm.confirm).click();
 
     await pollUntil(

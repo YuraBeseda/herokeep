@@ -57,7 +57,9 @@ describe('FeaturesLeafComponent — name localization', () => {
     compiled.querySelector<HTMLButtonElement>('hk-feature-row button')!.click();
     await fixture.whenStable();
 
-    expect(TestBed.inject(PeekService).current()?.entityId).toMatch(/^srd-5e-2024:feature\/fighter-/);
+    expect(TestBed.inject(PeekService).current()?.entityId).toMatch(
+      /^srd-5e-2024:feature\/fighter-/,
+    );
   });
 });
 
@@ -184,7 +186,7 @@ describe('FeaturesLeafComponent — every granted feature (R64)', () => {
     expect(rowNamed(groupOf(el, 'Barbarian'), 'Unarmored Defense')).toBeTruthy();
   });
 
-  it('lists a feature that has no action with its level badge, a summary and a details button', async () => {
+  it('lists a feature that has no action with its level badge and a details button, and no summary line', async () => {
     const el = await mountBarbarianFighter();
 
     const rage = rowNamed(groupOf(el, 'Barbarian'), 'Rage')!;
@@ -193,9 +195,7 @@ describe('FeaturesLeafComponent — every granted feature (R64)', () => {
       'From Barbarian, level 1',
     );
     expect(rage.querySelector('button')).not.toBeNull();
-    expect(rage.parentElement?.querySelector('.features__summary')?.textContent).toContain(
-      'primal power',
-    );
+    expect(rage.parentElement?.querySelector('.features__summary')).toBeNull();
   });
 
   it('opens the description peek from a feature that has no action', async () => {

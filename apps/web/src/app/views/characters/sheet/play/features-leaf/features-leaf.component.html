@@ -53,11 +53,6 @@
                     [detailsDisabledReason]="feature.hasEntity ? null : t('sheet.features.noEntry')"
                     (details)="openDetails(feature.source)"
                   />
-                  @if (feature.summary) {
-                    <p class="features__summary" data-truncate [hkTooltip]="feature.summary">
-                      {{ feature.summary }}
-                    </p>
-                  }
                 </li>
               }
             </ul>

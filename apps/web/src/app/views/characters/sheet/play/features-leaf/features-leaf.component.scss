@@ -37,13 +37,3 @@ li {
   color: var(--text-2);
   font-style: italic;
 }
-
-.features__summary {
-  margin: 0;
-  padding-inline-start: calc(18px + 8px);
-  overflow: hidden;
-  color: var(--text-2);
-  font-size: 0.8125rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}

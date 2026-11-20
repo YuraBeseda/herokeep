@@ -98,6 +98,16 @@ function strapIds(): { primary: string[]; secondary: string[] } {
   };
 }
 
+async function runMenuItem(
+  fixture: { whenStable(): Promise<unknown> },
+  root: HTMLElement,
+  id: string,
+): Promise<void> {
+  root.querySelector<HTMLButtonElement>('.bag__actions button')!.click();
+  await fixture.whenStable();
+  document.querySelector<HTMLButtonElement>(`[data-menu-item="${id}"]`)!.click();
+}
+
 describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
@@ -156,7 +166,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(leavesIn(root.querySelector('.sheet-shell__folio')!)).toEqual([
       'app-vitals-leaf',
       'app-abilities-leaf',
-        ]);
+    ]);
     expect(leavesIn(mainOf(root))).toEqual([
       'app-attacks-leaf',
       'app-resources-leaf',
@@ -239,10 +249,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     ],
     ['spells', ['app-spells-leaf']],
     ['bag', ['app-bag-leaf']],
-    [
-      'hero',
-      ['app-abilities-leaf', 'app-features-leaf', 'app-proficiencies-leaf'],
-    ],
+    ['hero', ['app-abilities-leaf', 'app-features-leaf', 'app-proficiencies-leaf']],
     ['more', []],
   ])('the %s tab renders only its own leaves', async (tab, expected) => {
     stubViewport({ phone: true });
@@ -456,7 +463,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(document.activeElement).toBe(document.querySelector('.hk-hp-gauge__amount'));
   });
 
-  it("the satchel shows the selected item's Unequip / Details / quantity / Remove actions, and Unequip round-trips into the sheet", async () => {
+  it("the satchel shows the selected item's action menu, and Unequip round-trips into the sheet", async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
 
@@ -473,20 +480,17 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
 
     slot.click();
     await harness.fixture.whenStable();
-    const actionLabels = Array.from(root.querySelectorAll('.bag__actions button')).map(
-      (b) => b.getAttribute('aria-label') ?? b.textContent?.trim(),
+    // The strip is just the row's menu button; every item action lives in its menu.
+    const strip = Array.from(root.querySelectorAll('.bag__actions button')).map((b) =>
+      b.getAttribute('aria-label'),
     );
-    expect(actionLabels).toEqual([
-      charactersEn.sheet.inventory.unequip,
-      charactersEn.sheet.inventory.details,
-      charactersEn.sheet.inventory.qtyDecrease,
-      charactersEn.sheet.inventory.qtyIncrease,
-      // The row's context menu opener (the same actions as this strip).
+    expect(strip).toEqual([
       charactersEn.sheet.inventory.actionsFor.replace('{name}', 'Chain Mail'),
-      charactersEn.sheet.inventory.remove,
     ]);
 
-    root.querySelector<HTMLButtonElement>('.bag__equip')!.click();
+    root.querySelector<HTMLButtonElement>('.bag__actions button')!.click();
+    await harness.fixture.whenStable();
+    document.querySelector<HTMLButtonElement>('[data-menu-item="equip"]')!.click();
     await pollUntil(harness.fixture, () => characterStore.sheet()!.ac.value < acBefore);
     expect(characterStore.events().at(-1)).toMatchObject({ type: 'item.unequipped' });
   });
@@ -513,13 +517,16 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
       .click();
     await harness.fixture.whenStable();
 
-    root.querySelector<HTMLButtonElement>('.bag__use')!.click();
+    await runMenuItem(harness.fixture, root, 'use');
     await pollUntil(harness.fixture, () => stack() === 1);
 
     // Using the LAST one removes the entry, so it asks first (like Remove): cancel keeps it...
     const eventsBefore = characterStore.events().length;
-    root.querySelector<HTMLButtonElement>('.bag__use')!.click();
-    TestBed.tick();
+    await runMenuItem(harness.fixture, root, 'use');
+    await pollUntil(
+      harness.fixture,
+      () => document.querySelector('.item-remove-confirm__title') !== null,
+    );
     const overlay = document.querySelector<HTMLElement>('.cdk-overlay-container')!;
     expect(overlay.querySelector('.item-remove-confirm__title')).not.toBeNull();
     overlay.querySelector<HTMLButtonElement>('.item-remove-confirm__actions button')!.click();
@@ -528,8 +535,11 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(characterStore.events().length).toBe(eventsBefore);
 
     // ...and confirming removes it.
-    root.querySelector<HTMLButtonElement>('.bag__use')!.click();
-    TestBed.tick();
+    await runMenuItem(harness.fixture, root, 'use');
+    await pollUntil(
+      harness.fixture,
+      () => document.querySelector('.item-remove-confirm__title') !== null,
+    );
     overlay.querySelectorAll<HTMLButtonElement>('.item-remove-confirm__actions button')[1].click();
     await pollUntil(harness.fixture, () => stack() === undefined);
     expect(characterStore.events().at(-1)).toMatchObject({ type: 'item.removed' });

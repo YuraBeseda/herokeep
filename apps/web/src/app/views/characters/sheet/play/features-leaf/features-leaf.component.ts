@@ -14,7 +14,6 @@ import { PeekService } from '../../../../../ui/description-drawer/peek.service';
 import { HkFeatureRowComponent } from '../../../../../ui/feature-row/feature-row.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { summaryOf } from '../../../../library/detail/class-entry/summary-text';
-import { HkTooltipDirective } from '../../../../../ui/tooltip/tooltip.directive';
 import { sheetNames } from '../play-names';
 
 interface LeafView {
@@ -45,12 +44,7 @@ type LeafGroup = FeatureGroup<LeafView> & { readonly headingName: string | null 
  */
 @Component({
   selector: 'app-features-leaf',
-  imports: [
-    TranslocoDirective,
-    HkLeafComponent,
-    HkFeatureRowComponent,
-    HkTooltipDirective,
-  ],
+  imports: [TranslocoDirective, HkLeafComponent, HkFeatureRowComponent],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './features-leaf.component.html',
   styleUrl: './features-leaf.component.scss',

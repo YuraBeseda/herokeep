@@ -232,12 +232,13 @@ describe('sheet — campaign edit lock (plan-10 task-14-brief.md, ruling 7)', ()
     )!;
     slot.click();
     await fixture.whenStable();
-    expect(isBlocked(buttonNamed(compiled, charactersEn.sheet.inventory.remove))).toBe(true);
-    expect(
-      isBlocked(
-        compiled.querySelector(`[aria-label="${charactersEn.sheet.inventory.qtyIncrease}"]`),
-      ),
-    ).toBe(true);
+    // Every item action sits in the row's menu, disabled with the lock reason.
+    compiled.querySelector<HTMLButtonElement>('.bag__actions hk-menu-button button')!.click();
+    await fixture.whenStable();
+    for (const id of ['remove', 'qty-up']) {
+      const item = document.querySelector(`[data-menu-item="${id}"]`);
+      expect(item?.getAttribute('aria-disabled')).toBe('true');
+    }
     // The coin pouch cannot be edited
     expect(compiled.querySelector('.hk-pouch__edit')).toBeNull();
     // Notes (opened from the strap): adding is blocked

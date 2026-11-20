@@ -75,8 +75,13 @@ function attackRow(page: Page, weapon: string): Locator {
 
 async function equip(page: Page, item: string): Promise<void> {
   const actions = await selectBagItem(page, item);
-  await actions.getByRole('button', { name: 'Equip', exact: true }).click();
-  await expect(actions.getByRole('button', { name: 'Unequip', exact: true })).toBeVisible();
+  const menu = page.getByRole('menu');
+  await actions.locator('hk-menu-button button').click();
+  await menu.getByRole('menuitem', { name: 'Equip', exact: true }).click();
+  await expect(menu).toHaveCount(0);
+  await actions.locator('hk-menu-button button').click();
+  await expect(menu.getByRole('menuitem', { name: 'Unequip', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
 }
 
 async function removeInstalledPack(page: Page, version: string): Promise<void> {
