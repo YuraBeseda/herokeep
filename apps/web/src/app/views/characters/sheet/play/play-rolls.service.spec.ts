@@ -16,7 +16,6 @@ import { AbilitiesLeafComponent } from './abilities-leaf/abilities-leaf.componen
 import { AttacksLeafComponent } from './attacks-leaf/attacks-leaf.component';
 import { configureReal as configureBase, mountSheetParts } from './play-spec-support';
 import { RollLogDrawerComponent } from './roll-log-drawer/roll-log-drawer.component';
-import { SkillsLeafComponent } from './skills-leaf/skills-leaf.component';
 
 // Every roll button on the sheet (ability checks and saves, skills, attack damage, the roll log's
 // manual entry) goes through `PlayRollsService`; these specs drive the real leaves and the roll-log
@@ -40,6 +39,21 @@ async function rollAttackDamageFromMenu(compiled: HTMLElement): Promise<void> {
   document.querySelector<HTMLElement>('.hk-menu [data-menu-item="damage"]')!.click();
   await Promise.resolve();
   TestBed.tick();
+}
+
+/** An ability's dice opens its menu; "Ability check" or "Saving throw" runs once it has closed. */
+async function rollAbility(
+  compiled: HTMLElement,
+  ability: string,
+  kind: 'check' | 'save',
+): Promise<void> {
+  const label = charactersEn.sheet.roll.abilityNamed.replace('{name}', ability);
+  const dice = compiled.querySelector<HTMLButtonElement>(`hk-menu-button button[aria-label="${label}"]`);
+  if (!dice) throw new Error(`no "${label}" button`);
+  dice.click();
+  TestBed.tick();
+  document.querySelector<HTMLElement>(`.hk-menu [data-menu-item="${kind}"]`)!.click();
+  await Promise.resolve();
 }
 
 describe('PlayRollsService — dice roller and roll log', () => {
@@ -67,20 +81,6 @@ describe('PlayRollsService — dice roller and roll log', () => {
       (b) => b.textContent?.trim() === text,
     );
     if (!button) throw new Error(`no button matching "${text}"`);
-    return button;
-  }
-
-  /** The Check / Save roll button of an ability (each carries the ability's name in its label). */
-  function abilityRollButton(
-    compiled: HTMLElement,
-    ability: string,
-    kind: 'check' | 'save',
-  ): HTMLButtonElement {
-    const label = (
-      kind === 'check' ? charactersEn.sheet.roll.checkNamed : charactersEn.sheet.roll.saveNamed
-    ).replace('{name}', ability);
-    const button = compiled.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
-    if (!button) throw new Error(`no "${label}" button`);
     return button;
   }
 
@@ -117,7 +117,6 @@ describe('PlayRollsService — dice roller and roll log', () => {
 
     const { compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -152,7 +151,6 @@ describe('PlayRollsService — dice roller and roll log', () => {
 
     const { compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -166,7 +164,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
       { value: 3, sides: 20 },
     ]);
 
-    abilityRollButton(compiled, 'Strength', 'check').click();
+    await rollAbility(compiled, 'Strength', 'check');
     TestBed.tick();
     expect(rollLogService.entries()[0]).toMatchObject({
       labelKey: 'sheet.roll.entries.check',
@@ -174,7 +172,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
       total: 9 + strMod,
     });
 
-    abilityRollButton(compiled, 'Strength', 'save').click();
+    await rollAbility(compiled, 'Strength', 'save');
     TestBed.tick();
     expect(rollLogService.entries()[0]).toMatchObject({
       labelKey: 'sheet.roll.entries.save',
@@ -190,7 +188,6 @@ describe('PlayRollsService — dice roller and roll log', () => {
 
     const { compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -209,7 +206,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
     buttonNamed(compiled, charactersEn.sheet.roll.advantage.advantage).click();
     TestBed.tick();
 
-    abilityRollButton(compiled, 'Strength', 'check').click();
+    await rollAbility(compiled, 'Strength', 'check');
     TestBed.tick();
 
     expect(rollLogService.entries()[0]).toMatchObject({
@@ -228,7 +225,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
     buttonNamed(compiled, charactersEn.sheet.roll.advantage.disadvantage).click();
     TestBed.tick();
 
-    abilityRollButton(compiled, 'Strength', 'check').click();
+    await rollAbility(compiled, 'Strength', 'check');
     TestBed.tick();
 
     expect(rollLogService.entries()[0]).toMatchObject({
@@ -250,7 +247,6 @@ describe('PlayRollsService — dice roller and roll log', () => {
 
     const { compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -284,7 +280,6 @@ describe('PlayRollsService — dice roller and roll log', () => {
 
     const { compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -360,20 +355,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
     return button;
   }
 
-  /** The Check / Save roll button of an ability (each carries the ability's name in its label). */
-  function abilityRollButton(
-    compiled: HTMLElement,
-    ability: string,
-    kind: 'check' | 'save',
-  ): HTMLButtonElement {
-    const label = (
-      kind === 'check' ? charactersEn.sheet.roll.checkNamed : charactersEn.sheet.roll.saveNamed
-    ).replace('{name}', ability);
-    const button = compiled.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
-    if (!button) throw new Error(`no "${label}" button`);
-    return button;
-  }
-
   // Same exact scripting technique the "dice roller" describe block above documents in full.
   function scriptRolls(targets: { value: number; sides: number }[]): void {
     let i = 0;
@@ -437,7 +418,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
     await seedFighter('Ivan');
     const { fixture, compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -447,7 +427,7 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
     const appendSpy = vi.spyOn(campaignStore, 'appendToStream');
 
     scriptRolls([{ value: 10, sides: 20 }]);
-    abilityRollButton(compiled, 'Strength', 'check').click();
+    await rollAbility(compiled, 'Strength', 'check');
     await fixture.whenStable();
 
     expect(appendSpy).not.toHaveBeenCalled();
@@ -464,14 +444,13 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
     const { fixture, compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
     expect(compiled.querySelector('.roll-log-drawer__visibility')).toBeNull();
 
     scriptRolls([{ value: 10, sides: 20 }]);
-    abilityRollButton(compiled, 'Strength', 'check').click();
+    await rollAbility(compiled, 'Strength', 'check');
     await fixture.whenStable();
 
     const published = (await TestBed.inject(EventsRepository).byStream(CAMPAIGN_STREAM)).filter(
@@ -494,7 +473,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
     const { fixture, compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -511,7 +489,7 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
       { value: 5, sides: 20 },
       { value: 17, sides: 20 },
     ]);
-    abilityRollButton(compiled, 'Strength', 'check').click();
+    await rollAbility(compiled, 'Strength', 'check');
     await fixture.whenStable();
     await settle();
 
@@ -539,7 +517,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
     const { fixture, compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -548,7 +525,7 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
     await fixture.whenStable();
 
     scriptRolls([{ value: 9, sides: 20 }]);
-    abilityRollButton(compiled, 'Strength', 'save').click();
+    await rollAbility(compiled, 'Strength', 'save');
     await fixture.whenStable();
     await settle();
 
@@ -564,7 +541,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
     const { fixture, compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -594,7 +570,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
     const { fixture, compiled } = await mountSheetParts(
       AbilitiesLeafComponent,
-      SkillsLeafComponent,
       AttacksLeafComponent,
       RollLogOpenHost,
     );
@@ -629,7 +604,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
       const { compiled } = await mountSheetParts(
         AbilitiesLeafComponent,
-        SkillsLeafComponent,
         AttacksLeafComponent,
         RollLogOpenHost,
       );
@@ -649,7 +623,6 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
 
       const { compiled } = await mountSheetParts(
         AbilitiesLeafComponent,
-        SkillsLeafComponent,
         AttacksLeafComponent,
         RollLogOpenHost,
       );

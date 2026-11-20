@@ -35,40 +35,49 @@
         }
       </ul>
     } @else {
-      <ul class="abilities">
+      <ul class="abilities abilities--full">
         @for (row of rows(); track row.id) {
+          @let menu = menuOf(row, t);
           <li class="abilities__item" [attr.data-ability]="row.id">
-            <hk-ability-seal
-              [ability]="row.label"
-              [score]="row.score"
-              [modifier]="row.mod"
-              [save]="row.save"
-              [saveProficient]="row.saveProficient"
-              [inspectable]="true"
-              (inspect)="inspect(row, $event)"
-            />
-            <div class="abilities__rolls">
-              @if (mode() === 'full') {
-                <button
-                  hk-button
-                  type="button"
-                  [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
-                  [attr.aria-label]="t('sheet.roll.checkNamed', { name: row.label })"
-                  (click)="rollCheck(row, t)"
-                >
-                  {{ t('sheet.roll.checkShort') }}
-                </button>
-              }
-              <button
-                hk-button
-                type="button"
-                [variant]="surface() === 'leather' ? 'ghost-leather' : 'ghost'"
-                [attr.aria-label]="t('sheet.roll.saveNamed', { name: row.label })"
-                (click)="rollSave(row, t)"
-              >
-                {{ t('sheet.roll.saveShort') }}
-              </button>
+            <div class="abilities__head" [hkContextMenu]="menu">
+              <hk-ability-seal
+                [ability]="row.label"
+                [score]="row.score"
+                [modifier]="row.mod"
+                [save]="row.save"
+                [saveProficient]="row.saveProficient"
+                [compact]="true"
+                [inspectable]="true"
+                (inspect)="inspect(row, $event)"
+              />
+              <hk-menu-button
+                [items]="menu"
+                [icon]="'ui:roll'"
+                [label]="t('sheet.roll.abilityNamed', { name: row.label })"
+              />
             </div>
+            @if (row.skills.length > 0) {
+              <ul class="abilities__skills">
+                @for (skill of row.skills; track skill.id) {
+                  <li>
+                    <hk-skill-row
+                      [name]="skill.label"
+                      [modifier]="skill.total"
+                      [proficiency]="skill.proficiency"
+                      [proficiencyHint]="t(skill.hintKey)"
+                      [modifierHint]="breakdownHint(skill.totalDerived, t)"
+                      [dotTabindex]="dotTabindex(row, skill.id)"
+                      [density]="phone() ? 'comfortable' : null"
+                      [surface]="surface()"
+                      [inspectable]="true"
+                      (inspect)="openBreakdown(skill.totalDerived)"
+                      (roll)="rollSkill(skill, t)"
+                      (keydown)="moveDot(row, $event)"
+                    />
+                  </li>
+                }
+              </ul>
+            }
           </li>
         }
       </ul>
@@ -83,6 +92,12 @@
     </section>
   } @else {
     <hk-leaf [title]="title" [icon]="icon" [phone]="phone()">
+      @if (showPassive() && sheet(); as s) {
+        <span hkLeafActions>
+          <hk-tag-chip [label]="t('sheet.skills.passive', { value: s.passivePerception })" />
+          <hk-tag-chip [label]="t('sheet.skills.prof', { value: signed(s.prof) })" />
+        </span>
+      }
       <ng-container *ngTemplateOutlet="body" />
     </hk-leaf>
   }

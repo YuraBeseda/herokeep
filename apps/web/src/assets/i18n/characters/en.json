@@ -498,7 +498,13 @@
       },
       "notProficient": "Not proficient",
       "passive": "Passive Perception {value}",
-      "prof": "Proficiency {value}"
+      "prof": "Proficiency {value}",
+      "part": "{name} {value}",
+      "partRank": {
+        "proficient": "proficiency {value}",
+        "expertise": "expertise {value}",
+        "half": "half proficiency {value}"
+      }
     },
     "hp": {
       "title": "Hit points",
@@ -599,10 +605,6 @@
         "spellAttack": "{name} spell attack: {total}.",
         "manual": "Logged {total}."
       },
-      "checkNamed": "Roll {name} check",
-      "saveNamed": "Roll {name} save",
-      "checkShort": "Check",
-      "saveShort": "Save",
       "damageNamed": "Roll damage: {name}",
       "plainName": "d20",
       "plainResult": "d20: {total}",
@@ -618,6 +620,12 @@
         "body": "This removes the rolls kept on this device. Rolls already shared with the campaign stay on its table.",
         "cancel": "Keep",
         "confirm": "Clear"
+      },
+      "abilityNamed": "Roll {name}",
+      "menu": {
+        "check": "Ability check",
+        "save": "Saving throw",
+        "saveProficient": "Saving throw, proficient"
       }
     },
     "attacks": {
@@ -880,6 +888,10 @@
     "houseRules": {
       "addItems": "Only your DM adds items in {campaign}",
       "conditions": "Only your DM manages conditions in {campaign}"
+    },
+    "explain": {
+      "abilityCheck": "when you try something that might fail",
+      "savingThrow": "when an effect such as a spell or a trap asks you to resist it"
     }
   },
   "timeline": {

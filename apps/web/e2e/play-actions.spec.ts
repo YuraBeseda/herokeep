@@ -14,7 +14,7 @@ import {
   openTab,
   strapAction,
 } from './helpers/sheet';
-import { isPhone, SHEET_HOME } from './helpers/viewport';
+import { isPhone, openPhoneTab, SHEET_HOME } from './helpers/viewport';
 
 const FIGHTER_NAME = 'Aldric Rest Actions';
 const WIZARD_NAME = 'Aldric Spellcaster';
@@ -311,5 +311,20 @@ test.describe('play actions', () => {
     await expect(menu).toHaveCount(0);
     await clickStrapAction(page, 'roll-log'); // on a phone it sits in the strap's More sheet
     await expect(page.locator('.roll-log-drawer__entry').first()).toContainText('damage');
+  });
+
+  // Plan 20 task 8: skills sit under their ability; the ability's dice holds the check and the save.
+  test('an ability block lists its skills and rolls a save from its dice menu', async ({ page }) => {
+    await createFighter(page, 'Aldric Ability Dice');
+    if (isPhone(page)) await openPhoneTab(page, 'Hero');
+    const strength = page.locator('app-abilities-leaf .abilities__item[data-ability="str"]');
+    await expect(strength.locator('hk-skill-row')).toContainText('Athletics');
+    await strength.locator('hk-menu-button button').click();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem').first()).toContainText('when you try something');
+    await menu.getByRole('menuitem', { name: /^Saving throw/ }).click();
+    await expect(menu).toHaveCount(0);
+    await clickStrapAction(page, 'roll-log');
+    await expect(page.locator('.roll-log-drawer__entry').first()).toContainText('Strength save');
   });
 });

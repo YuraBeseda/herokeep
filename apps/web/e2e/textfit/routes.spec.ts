@@ -85,6 +85,13 @@ test('every route fits at this width', async ({ page }) => {
     });
     await page.keyboard.press('Escape');
   }
+  // The ability's dice: check and save with their hints (on a phone the full blocks are on Hero).
+  await visit(`/c/${id}/${phone ? 'hero' : 'play'}`);
+  await check('ability dice menu', async () => {
+    await page.locator('app-abilities-leaf .abilities__item hk-menu-button button').first().click();
+    await expect(page.getByRole('menu')).toBeVisible();
+  });
+  await page.keyboard.press('Escape');
   await visit(`/c/${wizardId}/${phone ? 'spells' : 'play'}`);
   await check('cast dialog', async () => {
     await page.locator('.spells__prepared hk-spell-row button').first().click();

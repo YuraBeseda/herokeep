@@ -9,7 +9,6 @@ import { ConditionsLeafComponent } from '../conditions-leaf/conditions-leaf.comp
 import { FeaturesLeafComponent } from '../features-leaf/features-leaf.component';
 import { ProficienciesLeafComponent } from '../proficiencies-leaf/proficiencies-leaf.component';
 import { ResourcesLeafComponent } from '../resources-leaf/resources-leaf.component';
-import { SkillsLeafComponent } from '../skills-leaf/skills-leaf.component';
 import { SpellsLeafComponent } from '../spells-leaf/spells-leaf.component';
 import { VitalsLeafComponent } from '../vitals-leaf/vitals-leaf.component';
 import { SheetChromeService } from '../../sheet-chrome.service';
@@ -69,18 +68,16 @@ export class SpellsTabComponent {}
 })
 export class BagTabComponent {}
 
-/** Hero: abilities, saves, skills, proficiencies, languages and features. */
+/** Hero: abilities with their saves and skills, proficiencies, languages and features. */
 @Component({
   selector: 'app-hero-tab',
   imports: [
     AbilitiesLeafComponent,
-    SkillsLeafComponent,
     ProficienciesLeafComponent,
     FeaturesLeafComponent,
   ],
   template: `
-    <app-abilities-leaf [mode]="'full'" [phone]="true" />
-    <app-skills-leaf [showPassive]="true" [phone]="true" />
+    <app-abilities-leaf [mode]="'full'" [showPassive]="true" [phone]="true" />
     <app-proficiencies-leaf [phone]="true" />
     <app-features-leaf [phone]="true" />
   `,

@@ -335,12 +335,12 @@ export async function setCampaignRollVisibility(
   await closeDrawer(page);
 }
 
-/** Rolls the FIRST ability's "Roll check" button (`AbilitiesLeafComponent` -> `PlayRollsService`
+/** Rolls the FIRST ability's check from its dice menu (`AbilitiesLeafComponent` -> `PlayRollsService`
  * -> `publishRoll`) — a real d20 roll, published onto the campaign stream at whatever
  * `setCampaignRollVisibility` last set (default `'everyone'`, ruling 5). */
 export async function rollFirstAbilityCheck(page: Page): Promise<void> {
-  const ability = page.locator('app-abilities-leaf .abilities__item').first();
-  await ability.getByRole('button', { name: /^Roll .* check$/ }).click();
+  await page.locator('app-abilities-leaf .abilities__item hk-menu-button button').first().click();
+  await page.getByRole('menuitem', { name: /^Ability check/ }).click();
 }
 
 // --- Lobby: members, removal --------------------------------------------------------------------

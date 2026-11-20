@@ -26,11 +26,34 @@
   min-inline-size: 0;
 }
 
-.abilities__rolls {
+/* Each ability a block: the seal and its dice, then its skills. */
+.abilities--full {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-3);
+
+  .abilities__item {
+    align-items: stretch;
+  }
+}
+
+.abilities__head {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-1);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.abilities__skills {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    min-inline-size: 0;
+  }
 }
 
 /* 46 px seal = the board's size and the touch target. */

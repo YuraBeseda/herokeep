@@ -35,6 +35,10 @@ export class HkSkillRowComponent {
   readonly proficiency = input<SkillProficiency>('none');
   /** Translated hint of the proficiency dot, such as "Expertise (+6)". */
   readonly proficiencyHint = input.required<string>();
+  /** Translated hint on the modifier saying how it is built ("Dexterity +2, proficiency +2"). */
+  readonly modifierHint = input('');
+  /** The dot's tab stop; a list of rows sets `-1` on all but one and moves focus with arrow keys. */
+  readonly dotTabindex = input(0);
   /** Translated cause of a disadvantage ("Disadvantage: chain mail"); `null` for none. */
   readonly disadvantage = input<string | null>(null);
   /** `null` follows the saved Settings preference; a caller can pin a density (the phone sheet pins comfortable). */

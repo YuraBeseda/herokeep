@@ -177,10 +177,10 @@ for (const theme of ['tavern', 'scroll', 'plain']) {
     }) => {
       await createFighter(page, 'Aldric A11y Roll Log');
       await page
-        .locator('app-abilities-leaf .abilities__item')
+        .locator('app-abilities-leaf .abilities__item hk-menu-button button')
         .first()
-        .getByRole('button', { name: /^Roll .* check$/ })
         .click();
+      await page.getByRole('menuitem', { name: /^Ability check/ }).click();
       // The roll log is a drawer opened from the action strap (zone 3), board D02.
       await openDrawer(page, 'roll-log');
       await expect(page.locator('.roll-log-drawer__feed .roll-log-drawer__entry')).toHaveCount(1);

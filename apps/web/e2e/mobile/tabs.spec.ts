@@ -69,6 +69,15 @@ test.describe('phone sheet (390 x 844)', () => {
     }
   });
 
+  // Plan 20 task 8: no separate skills leaf; each ability block on Hero carries its skills.
+  test('the Hero tab shows each ability with its skills', async ({ page }) => {
+    await openPhoneTab(page, 'Hero');
+    await expect(page.locator('app-skills-leaf')).toHaveCount(0);
+    const strength = page.locator('app-abilities-leaf .abilities__item[data-ability="str"]');
+    await expect(strength.locator('hk-skill-row')).toContainText('Athletics');
+    await expect(strength.locator('hk-menu-button button')).toBeVisible();
+  });
+
   test('the rest dialog is a bottom sheet with a grip', async ({ page }) => {
     await clickStrapAction(page, 'short-rest');
     const dialog = page.locator('.hk-dialog--sheet');

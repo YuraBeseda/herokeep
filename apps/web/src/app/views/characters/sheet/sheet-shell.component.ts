@@ -31,7 +31,6 @@ import { NotesDrawerComponent } from './play/notes-drawer/notes-drawer.component
 import { PlayActionsService } from './play/play-actions.service';
 import { PlayRollsService } from './play/play-rolls.service';
 import { RollLogDrawerComponent } from './play/roll-log-drawer/roll-log-drawer.component';
-import { SkillsLeafComponent } from './play/skills-leaf/skills-leaf.component';
 import { VitalsLeafComponent } from './play/vitals-leaf/vitals-leaf.component';
 import { CampaignPacksBannerComponent } from './campaign-packs-banner.component';
 import { SheetChromeService } from './sheet-chrome.service';
@@ -68,7 +67,7 @@ const SHEET_CHILDREN: ReadonlySet<string> = new Set([...TAB_IDS, ...PHONE_TAB_ID
  * `/c/:id` — the character sheet's shell (spec §4.2, board `Main`). On tablet/desktop it is the
  * folio column — portrait, name plate, the Play · Build · Timeline tabs with the Level up
  * tab-action and the XP bar, then the vitals (HP strap, AC shield, initiative, speed), the ability
- * seals and the skills — beside the routed tab. On the phone the folio shrinks to the identity
+ * * seals with their skills — beside the routed tab. On the phone the folio shrinks to the identity
  * row, the bottom tab bar (`TabBarService`) switches between the Combat · Spells · Bag · Hero ·
  * More child routes, and the same leaves are composed by those tabs instead.
  *
@@ -97,7 +96,6 @@ const SHEET_CHILDREN: ReadonlySet<string> = new Set([...TAB_IDS, ...PHONE_TAB_ID
     HkXpBarComponent,
     VitalsLeafComponent,
     AbilitiesLeafComponent,
-    SkillsLeafComponent,
     HkInspirationToggleComponent,
     HkIconButtonComponent,
     HkTooltipDirective,

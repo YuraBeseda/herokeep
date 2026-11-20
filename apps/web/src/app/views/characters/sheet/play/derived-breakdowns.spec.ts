@@ -6,7 +6,6 @@ import { AbilitiesLeafComponent } from './abilities-leaf/abilities-leaf.componen
 import { AttacksLeafComponent } from './attacks-leaf/attacks-leaf.component';
 import { setupLeafSpec } from './play-spec-support';
 import { ResourcesLeafComponent } from './resources-leaf/resources-leaf.component';
-import { SkillsLeafComponent } from './skills-leaf/skills-leaf.component';
 
 // R37: the provenance popover (`hkDerived`) that the old play tab had on ability scores and saves,
 // skill totals, attack to-hit and damage bonus, and a resource's maximum. Same pattern as the AC
@@ -112,7 +111,7 @@ describe('derived-value breakdown popovers on the sheet leaves', () => {
   });
 
   it('the proficient skill total lists its contributions; Escape closes and focus returns', async () => {
-    const compiled = await mount(SkillsLeafComponent, true);
+    const compiled = await mount(AbilitiesLeafComponent, true);
     const trigger = activate(
       compiled.querySelector('hk-skill-row [data-breakdown="total"][aria-label^="Athletics"]'),
     );
@@ -132,7 +131,7 @@ describe('derived-value breakdown popovers on the sheet leaves', () => {
   });
 
   it('a level-1 fighter proficient skill lists the ability modifier and proficiency, not "No modifiers."', async () => {
-    const compiled = await mount(SkillsLeafComponent);
+    const compiled = await mount(AbilitiesLeafComponent);
     activate(
       compiled.querySelector('hk-skill-row [data-breakdown="total"][aria-label^="Athletics"]'),
     );

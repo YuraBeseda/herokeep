@@ -73,7 +73,6 @@ const ANTITOXIN_STACK = '00000000-0000-4000-8000-0000000000a1';
 const LEAVES = [
   'app-vitals-leaf',
   'app-abilities-leaf',
-  'app-skills-leaf',
   'app-attacks-leaf',
   'app-resources-leaf',
   'app-conditions-leaf',
@@ -147,7 +146,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     TestBed.inject(HkDb).close();
   });
 
-  it('at tablet/desktop width the folio holds the vitals, abilities and skills and the Play tab every other leaf, once each', async () => {
+  it('at tablet/desktop width the folio holds the vitals and the abilities with their skills and the Play tab every other leaf, once each', async () => {
     const id = await seedWizard('Elowen');
 
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
@@ -157,8 +156,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(leavesIn(root.querySelector('.sheet-shell__folio')!)).toEqual([
       'app-vitals-leaf',
       'app-abilities-leaf',
-      'app-skills-leaf',
-    ]);
+        ]);
     expect(leavesIn(mainOf(root))).toEqual([
       'app-attacks-leaf',
       'app-resources-leaf',
@@ -243,7 +241,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     ['bag', ['app-bag-leaf']],
     [
       'hero',
-      ['app-abilities-leaf', 'app-skills-leaf', 'app-features-leaf', 'app-proficiencies-leaf'],
+      ['app-abilities-leaf', 'app-features-leaf', 'app-proficiencies-leaf'],
     ],
     ['more', []],
   ])('the %s tab renders only its own leaves', async (tab, expected) => {

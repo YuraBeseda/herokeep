@@ -54,6 +54,13 @@ export function sheetNames(engineFacade: EngineFacade) {
       return entity ? engineFacade.localizer().name(entity.id) : key.toUpperCase();
     },
     skillName: (slug: string): string => slugEntityName('skill', slug),
+    /** The ability a skill keys off, read from the pack's own `skill` entity. */
+    skillAbility: (slug: string): string | undefined => {
+      const index = engineFacade.index();
+      const packId = parseEntityId(index.system().id)?.packId;
+      const entity = packId ? index.get(makeEntityId(packId, 'skill', slug)) : undefined;
+      return entity?.type === 'skill' ? entity.ability : undefined;
+    },
     toolName: (slug: string): string => slugEntityName('item', slug),
     /** A damage type is a plain slug named through the pack's `rule/damage-type-<slug>` entity. */
     damageTypeName: (slug: string): string => {

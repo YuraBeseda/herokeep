@@ -2,7 +2,7 @@
   <span
     [class]="'hk-dot hk-dot--' + proficiency()"
     role="img"
-    tabindex="0"
+    [tabindex]="dotTabindex()"
     [attr.aria-label]="proficiencyHint()"
     [hkTooltip]="proficiencyHint()"
   ></span>
@@ -17,6 +17,7 @@
     class="hk-sk__mod"
     [attr.data-breakdown]="'total'"
     [class.hk-sk__inspect]="inspectable()"
+    [hkTooltip]="modifierHint()"
     [attr.role]="inspectable() ? 'button' : null"
     [attr.tabindex]="inspectable() ? 0 : null"
     [attr.aria-label]="
