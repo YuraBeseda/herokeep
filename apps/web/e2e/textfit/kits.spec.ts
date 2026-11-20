@@ -10,7 +10,10 @@ import {
   pickSkills,
   pickSpecies,
 } from '../helpers/create-fighter';
-import { fitChecker } from './fit';
+import { createFighter } from '../helpers/create-fighter';
+import { bagRow } from '../helpers/sheet';
+import { isPhone } from '../helpers/viewport';
+import { fitChecker, installFitLocale } from './fit';
 
 // The starting-equipment kit cards (Fighter + Soldier) on the wizard's equipment step, in real ru
 // and uk. The wizard is driven in English (the helpers click English labels), then the language is
@@ -32,8 +35,8 @@ test('starting equipment kit cards fit in ru and uk', async ({ page }, testInfo)
 
   const { violations, check } = fitChecker(page);
   for (const [locale, bag] of [
-    ['ru', 'Вариант A уже в сумке ниже'],
-    ['uk', 'Варіант A уже в сумці нижче'],
+    ['ru', 'Р’Р°СЂРёР°РЅС‚ A СѓР¶Рµ РІ СЃСѓРјРєРµ РЅРёР¶Рµ'],
+    ['uk', 'Р’Р°СЂС–Р°РЅС‚ A СѓР¶Рµ РІ СЃСѓРјС†С– РЅРёР¶С‡Рµ'],
   ] as const) {
     await check(`kit cards (${locale})`, async () => {
       await page.locator('.hk-topbar__folio').click();
@@ -46,5 +49,30 @@ test('starting equipment kit cards fit in ru and uk', async ({ page }, testInfo)
       await expect(cards).toHaveCount(5);
     });
   }
+  expect(violations).toEqual([]);
+});
+
+// The bag row's context menu (labels, hints, disabled reasons) in the `fit` locale at this width.
+test('the bag row context menu fits', async ({ page }) => {
+  const viewport = page.viewportSize() ?? { width: 1280, height: 800 };
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const id = await createFighter(page, 'Aldric Menu Fit');
+  await page.setViewportSize(viewport);
+  await installFitLocale(page);
+  await page.goto(`/c/${id}/${isPhone(page) ? 'bag' : 'play'}`);
+
+  const { violations, check } = fitChecker(page);
+  await check('bag row menu', async () => {
+    // The phone route already is the Bag tab (its tab label is in the fit locale, so no tab click).
+    const row = isPhone(page)
+      ? page
+          .locator('.bag__ledger li')
+          .filter({ hasText: "Healer's Kit" })
+          .locator('.hk-item__select')
+      : await bagRow(page, "Healer's Kit");
+    await row.focus();
+    await page.keyboard.press('Shift+F10');
+    await expect(page.getByRole('menuitem').first()).toBeFocused();
+  });
   expect(violations).toEqual([]);
 });

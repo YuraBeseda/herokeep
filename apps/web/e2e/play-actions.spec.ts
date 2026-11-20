@@ -6,13 +6,14 @@ import {
   applyHp,
   chooseCastSlotLane,
   awardXp,
+  bagRow,
   hpCurrent,
   hpMax,
   levelUpLink,
   openTab,
   strapAction,
 } from './helpers/sheet';
-import { SHEET_HOME } from './helpers/viewport';
+import { isPhone, SHEET_HOME } from './helpers/viewport';
 
 const FIGHTER_NAME = 'Aldric Rest Actions';
 const WIZARD_NAME = 'Aldric Spellcaster';
@@ -237,5 +238,60 @@ test.describe('play actions', () => {
 
       await expect(level3Slots.locator('.hk-wax-seal--spent')).toHaveCount(0);
     });
+  });
+
+  // Plan 20 task 4: a bag row's actions sit in a context menu reachable without a mouse.
+  test('a bag row opens its menu by keyboard, by right-click at the pointer, and by long-press on touch', async ({
+    page,
+  }) => {
+    await createFighter(page, 'Aldric Menus');
+    const row = await bagRow(page, "Healer's Kit");
+    const menu = page.getByRole('menu');
+    const items = menu.getByRole('menuitem');
+
+    await test.step('Shift+F10 opens with the first item focused; Escape returns focus', async () => {
+      await row.focus();
+      await page.keyboard.press('Shift+F10');
+      await expect(items.first()).toBeFocused();
+      await expect(menu).toContainText('Remove item');
+      await page.keyboard.press('Escape');
+      await expect(menu).toHaveCount(0);
+      await expect(row).toBeFocused();
+    });
+
+    if (!isPhone(page)) {
+      await test.step('right-click opens at the pointer', async () => {
+        const box = (await row.boundingBox())!;
+        await row.click({ button: 'right', position: { x: 10, y: 10 } });
+        const menuBox = (await menu.boundingBox())!;
+        // A corner of the menu sits on the pointer (the CDK flips it when it would overflow).
+        const px = box.x + 10;
+        const py = box.y + 10;
+        const near = (a: number, b: number): boolean => Math.abs(a - b) <= 4;
+        expect(
+          near(menuBox.x, px) || near(menuBox.x + menuBox.width, px),
+          `x ${JSON.stringify(menuBox)} vs ${px}`,
+        ).toBe(true);
+        expect(
+          near(menuBox.y, py) || near(menuBox.y + menuBox.height, py),
+          `y ${JSON.stringify(menuBox)} vs ${py}`,
+        ).toBe(true);
+        await page.keyboard.press('Escape');
+        await expect(menu).toHaveCount(0);
+      });
+    } else {
+      await test.step('a 500 ms long-press opens it and survives the finger lifting', async () => {
+        const box = (await row.boundingBox())!;
+        const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+        await expect(items.first()).toBeVisible();
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(300); // a click from the lifted finger would close it
+        await expect(menu).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(menu).toHaveCount(0);
+      });
+    }
   });
 });

@@ -87,6 +87,14 @@ export function bagSlot(page: Page, name: string): Locator {
   return page.locator('.hk-slot').filter({ has: page.locator('.hk-slot__cap', { hasText: name }) });
 }
 
+/** The focusable control of a bag row: the satchel slot (desktop) or the ledger row's select
+ * button (phone). Opens the phone Bag tab first. */
+export async function bagRow(page: Page, name: string): Promise<Locator> {
+  if (!isPhone(page)) return bagSlot(page, name).first();
+  await openPhoneTab(page, 'Bag');
+  return page.locator('.bag__ledger li').filter({ hasText: name }).locator('.hk-item__select');
+}
+
 /** Selects an item in the satchel and returns its action strip. */
 export async function selectBagItem(page: Page, name: string): Promise<Locator> {
   const slot = bagSlot(page, name).first();
