@@ -4,9 +4,11 @@ import {
   inject,
   Injectable,
   InjectionToken,
-  resource,
+  PendingTasks,
+  signal,
   type Signal,
   untracked,
+  type WritableSignal,
 } from '@angular/core';
 import type { DeriveOverrides } from '@hk/engine';
 import type { Event } from '@hk/protocol';
@@ -158,6 +160,7 @@ export class CampaignEditLockService {
   private readonly eventsRepository = inject(EventsRepository);
   private readonly authService = inject(AuthService);
   private readonly pollMs = inject(CAMPAIGN_EDIT_LOCK_POLL_INTERVAL_MS);
+  private readonly pendingTasks = inject(PendingTasks);
 
   /** Must be called from within an injection context (a component's own field initializer/
    * constructor, or `runInInjectionContext`) — the `effect()`/`resource()` it creates attach to
@@ -182,38 +185,79 @@ export class CampaignEditLockService {
       return campaignId ? `camp:${campaignId}` : undefined;
     });
 
-    // Params is just the stream id: a changed params object would clear the value while loading
-    // (a linked hero would flicker to "solo"); the poll uses `reload()`, which keeps the old value.
-    const campaignEvents = resource({
-      params: () => streamId(),
-      loader: async ({ params }) =>
-        params === undefined ? [] : await this.eventsRepository.byStream(params),
-    });
-
-    let timer: ReturnType<typeof setInterval> | undefined;
+    // Plan 20 task 12.7: one ref-counted poll per stream, shared by every caller linked to it.
+    const poll = signal<SharedPoll | undefined>(undefined);
     effect((onCleanup) => {
       const id = streamId();
-      if (timer !== undefined) {
-        clearInterval(timer);
-        timer = undefined;
+      if (id === undefined) {
+        poll.set(undefined);
+        return;
       }
-      if (id === undefined) return;
-      timer = setInterval(() => campaignEvents.reload(), this.pollMs);
-      onCleanup(() => {
-        if (timer !== undefined) clearInterval(timer);
-        timer = undefined;
-      });
+      poll.set(this.acquire(id));
+      onCleanup(() => this.release(id));
     });
 
     const state = computed<CampaignState | null>(() => {
-      if (streamId() === undefined) return null;
-      const events = campaignEvents.value();
+      const id = streamId();
+      const shared = poll();
+      // Until the effect swaps in the new stream's poll, keep the old value off screen.
+      if (id === undefined || shared?.streamId !== id) return null;
+      const events = shared.events();
       return events === undefined ? null : projectCampaign(events);
     });
     const refresh = async (): Promise<void> => {
-      const id = untracked(streamId);
-      if (id !== undefined) campaignEvents.set(await this.eventsRepository.byStream(id));
+      const shared = untracked(poll);
+      if (shared !== undefined) await this.load(shared);
     };
     return Object.assign(state, { refresh });
   }
+
+  private readonly polls = new Map<string, SharedPoll>();
+
+  private acquire(streamId: string): SharedPoll {
+    let shared = this.polls.get(streamId);
+    if (shared === undefined) {
+      const created: SharedPoll = {
+        streamId,
+        events: signal<readonly Event[] | undefined>(undefined),
+        refs: 0,
+        timer: setInterval(() => this.poll(created), this.pollMs),
+      };
+      this.polls.set(streamId, created);
+      shared = created;
+    }
+    shared.refs += 1;
+    // A new reader still gets a fresh read (it may have just written to the stream).
+    this.poll(shared);
+    return shared;
+  }
+
+  /** A background read that fails keeps the last value; the next tick retries. */
+  private poll(shared: SharedPoll): void {
+    this.load(shared).catch(() => undefined);
+  }
+
+  private release(streamId: string): void {
+    const shared = this.polls.get(streamId);
+    if (shared === undefined || --shared.refs > 0) return;
+    clearInterval(shared.timer);
+    this.polls.delete(streamId);
+  }
+
+  /** Runs as a pending task so `whenStable()` waits for the read, as it did for `resource()`. */
+  private async load(shared: SharedPoll): Promise<void> {
+    const done = this.pendingTasks.add();
+    try {
+      shared.events.set(await this.eventsRepository.byStream(shared.streamId));
+    } finally {
+      done();
+    }
+  }
+}
+
+interface SharedPoll {
+  readonly streamId: string;
+  readonly events: WritableSignal<readonly Event[] | undefined>;
+  refs: number;
+  readonly timer: ReturnType<typeof setInterval>;
 }

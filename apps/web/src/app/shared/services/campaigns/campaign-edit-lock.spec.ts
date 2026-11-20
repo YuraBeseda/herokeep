@@ -266,6 +266,7 @@ describe('CampaignEditLockService.editLockFor', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     TestBed.inject(HkDb).close();
   });
 
@@ -385,6 +386,45 @@ describe('CampaignEditLockService.editLockFor', () => {
   // component is destroyed — an un-torn-down interval would otherwise leak for the lifetime of
   // the whole app (every play/build tab visit adds one), the exact "cleaned up via `effect()`'s
   // own injector-scoped cleanup" claim the class doc makes.
+  // Plan 20 task 12.7: every sheet part linked to the same campaign shares ONE poll.
+  it('shares one poll (one interval, one read per tick) across hosts linked to the same campaign', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    await eventsRepository.append([
+      campaignEvent('campaign.settings_changed', { settings: settingsWith('locked') }, DM_ID, 'dm'),
+    ]);
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+
+    const hosts = [1, 2, 3].map(() => {
+      const fixture = TestBed.createComponent(TestEditLockHostComponent);
+      fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
+      return fixture;
+    });
+    await Promise.all(hosts.map((f) => f.whenStable()));
+
+    const ownCalls = setIntervalSpy.mock.calls.filter((call) => call[1] === POLL_MS);
+    expect(ownCalls).toHaveLength(1);
+
+    const byStreamSpy = vi.spyOn(eventsRepository, 'byStream');
+    ownCalls[0][0]();
+    await Promise.all(hosts.map((f) => f.whenStable()));
+    expect(byStreamSpy).toHaveBeenCalledTimes(1);
+
+    // The poll lives while any host does, and stops with the last one.
+    const ownTimer: unknown = setIntervalSpy.mock.results.find(
+      (_, i) => setIntervalSpy.mock.calls[i][1] === POLL_MS,
+    )!.value;
+    hosts[0].destroy();
+    hosts[1].destroy();
+    expect(clearIntervalSpy.mock.calls.some((call) => call[0] === ownTimer)).toBe(false);
+    hosts[2].destroy();
+    expect(clearIntervalSpy.mock.calls.some((call) => call[0] === ownTimer)).toBe(true);
+
+    byStreamSpy.mockRestore();
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
+  });
+
   it('tears down the poll interval when the hosting component is destroyed', async () => {
     const eventsRepository = TestBed.inject(EventsRepository);
     await eventsRepository.append([
