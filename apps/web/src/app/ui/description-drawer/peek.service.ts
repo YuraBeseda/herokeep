@@ -29,15 +29,21 @@ export interface Peek {
 export class PeekService {
   private readonly state = signal<Peek | null>(null);
   readonly current = this.state.asReadonly();
+  /** Unregisters the close-on-destroy hook of the caller now shown (one at a time, never piling up). */
+  private unwatch: (() => void) | undefined;
 
   open(entityId: EntityId, opener?: HTMLElement, ctx?: PeekContext): void {
+    this.unwatch?.();
     this.state.update((open) => ({ entityId, opener: opener ?? open?.opener, ctx }));
-    ctx?.injector?.get(DestroyRef, null)?.onDestroy(() => {
-      if (this.state()?.ctx === ctx) this.close();
+    this.unwatch = ctx?.injector?.get(DestroyRef, null)?.onDestroy(() => {
+      this.unwatch = undefined;
+      this.close();
     });
   }
 
   close(): void {
+    this.unwatch?.();
+    this.unwatch = undefined;
     this.state.set(null);
   }
 }

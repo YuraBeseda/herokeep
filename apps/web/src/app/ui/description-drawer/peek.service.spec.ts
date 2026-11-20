@@ -1,6 +1,26 @@
-import { createEnvironmentInjector, EnvironmentInjector, Injector } from '@angular/core';
+import {
+  Component,
+  createEnvironmentInjector,
+  EnvironmentInjector,
+  inject,
+  Injector,
+  signal,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PeekService } from './peek.service';
+
+@Component({ selector: 'app-peek-caller', template: '' })
+class Caller {
+  readonly injector = inject(Injector);
+  constructor() {
+    inject(PeekService).open('pack:feature/a', undefined, { injector: this.injector });
+  }
+}
+
+@Component({ imports: [Caller], template: `@if (shown()) { <app-peek-caller /> }` })
+class Page {
+  readonly shown = signal(true);
+}
 
 describe('PeekService', () => {
   const setup = () => TestBed.inject(PeekService);
@@ -48,5 +68,24 @@ describe('PeekService', () => {
     peek.open('pack:feature/a', undefined, { injector });
     injector.destroy();
     expect(peek.current()).toBeNull();
+  });
+
+  it('closes when the component that opened it leaves the page (its @if flips)', async () => {
+    const fixture = TestBed.createComponent(Page);
+    await fixture.whenStable();
+    const peek = TestBed.inject(PeekService);
+    expect(peek.current()?.entityId).toBe('pack:feature/a');
+    fixture.componentInstance.shown.set(false);
+    await fixture.whenStable();
+    expect(peek.current()).toBeNull();
+  });
+
+  it('a later open drops the earlier caller hook: destroying it no longer closes the peek', () => {
+    const peek = setup();
+    const first = createEnvironmentInjector([], TestBed.inject(EnvironmentInjector));
+    peek.open('pack:feature/a', undefined, { injector: first });
+    peek.open('pack:feature/b');
+    first.destroy();
+    expect(peek.current()?.entityId).toBe('pack:feature/b');
   });
 });

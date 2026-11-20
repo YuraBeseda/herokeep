@@ -19,6 +19,8 @@ import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
 import { HkPeekHostComponent } from '../../../../ui/description-drawer/peek-host.component';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
+import { DialogRef } from '../../../../ui/dialog/dialog.service';
 import { EntityPickerComponent } from './entity-picker.component';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — `pretest`
@@ -342,6 +344,33 @@ describe('EntityPickerComponent — rows, filters and the drawer action (plan 17
     fixture.detectChanges();
     await fixture.whenStable();
     expect(action().getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+describe('EntityPickerComponent — inside a dialog (the add-item picker)', () => {
+  beforeEach(() => {
+    configure();
+    TestBed.overrideProvider(DialogRef, { useValue: new DialogRef(() => undefined) });
+  });
+
+  it('keeps its description drawer local (not the app-root peek), and its Choose button picks', async () => {
+    const weaponIds = corePack.entities
+      .filter((e) => e.type === 'item' && e.weapon?.mastery)
+      .map((e) => e.id);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.ids.set(weaponIds);
+    fixture.componentInstance.layout.set('rows');
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+
+    press(root.querySelector<HTMLElement>('.entity-picker__info')!);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(TestBed.inject(PeekService).current()).toBeNull();
+    expect(root.querySelector('hk-peek-host hk-description-drawer')).toBeNull();
+    expect(root.querySelector('hk-entity-picker hk-description-drawer [role="dialog"]')).not.toBeNull();
+    press(root.querySelector<HTMLElement>('hk-entity-picker .entity-picker__drawer-choose')!);
+    expect(fixture.componentInstance.toggled).toEqual([weaponIds[0]]);
   });
 });
 

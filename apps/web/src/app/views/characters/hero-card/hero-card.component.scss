@@ -34,8 +34,7 @@
 }
 
 .hero-card__name,
-.hero-card__classes,
-.hero-card__played {
+.hero-card__classes {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -53,6 +52,9 @@
 }
 
 .hero-card__played {
+  margin: 0;
+  // A localized date has no fixed length: the line wraps rather than clipping it.
+  overflow-wrap: anywhere;
   color: var(--text-3);
   font-size: 0.875rem;
 }

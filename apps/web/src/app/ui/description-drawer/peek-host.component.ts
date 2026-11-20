@@ -9,6 +9,8 @@ import { PeekService } from './peek.service';
  * hero's or the wizard's scope (pinned packs, `?for=`, proficiency-gated counts) still applies;
  * the caller's `ctx.actions` template fills the footer.
  */
+// The drawer's node-injector chain (this host's ancestors) is consulted BEFORE `ctx.injector`:
+// never provide a scoped token (engine scope, wizard state) on `hk-peek-host`'s ancestors.
 @Component({
   selector: 'hk-peek-host',
   imports: [HkDescriptionDrawerComponent, NgTemplateOutlet],
