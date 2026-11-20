@@ -51,6 +51,7 @@
             [label]="t('sheet.hp.concentratingOn', { name: concentrationName() })"
             [tone]="'arcane'"
             [icon]="'ui:concentration'"
+            [hkTooltip]="t('sheet.explain.concentration')"
           />
           <button
             hk-button
@@ -80,12 +81,14 @@
               [hkDerivedBreakdown]="block.dc"
               [label]="t('sheet.spellcasting.dc')"
               [value]="block.dc.value"
+              [hint]="t('sheet.explain.spellSaveDc')"
             />
             <hk-stat-tile
               hkDerived
               [hkDerivedBreakdown]="block.attack"
               [label]="t('sheet.spellcasting.attack')"
               [value]="signed(block.attack.value)"
+              [hint]="t('sheet.explain.spellAttackBonus')"
             />
             <button hk-button type="button" [variant]="'ghost'" (click)="rollSpellAttack(block, t)">
               {{ t('sheet.roll.spellAttack') }}

@@ -6,7 +6,7 @@
     [attr.aria-pressed]="active()"
     [attr.aria-disabled]="disabledReason() ? 'true' : null"
     [attr.aria-label]="t('icon.inspiration')"
-    [hkTooltip]="disabledReason() || hint"
+    [hkTooltip]="disabledReason() || (explain() ? explain() + ' ' + hint : hint)"
     (click)="press()"
   >
     <hk-icon [icon]="'ui:inspiration'" />

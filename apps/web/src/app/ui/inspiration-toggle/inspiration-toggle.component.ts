@@ -22,6 +22,8 @@ export class HkInspirationToggleComponent {
   readonly active = input.required<boolean>();
   /** Translated reason the toggle is blocked; `null` when it can be pressed. */
   readonly disabledReason = input<string | null>(null);
+  /** Optional translated explanation shown before the press hint. */
+  readonly explain = input<string | null>(null);
 
   // Outputs
   readonly activeChange = output<boolean>();

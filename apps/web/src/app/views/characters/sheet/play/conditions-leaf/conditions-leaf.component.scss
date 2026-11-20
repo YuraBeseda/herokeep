@@ -47,6 +47,13 @@
   border: 0;
 }
 
+.conditions__death-hint {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
 .conditions__death-actions {
   display: flex;
   flex-wrap: wrap;

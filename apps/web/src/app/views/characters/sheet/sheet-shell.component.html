@@ -61,6 +61,7 @@
             <hk-inspiration-toggle
               class="sheet-shell__inspiration"
               [active]="s.inspiration"
+              [explain]="t('sheet.explain.heroicInspiration')"
               [disabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
               (activeChange)="actions.toggleInspiration()"
             />

@@ -5,7 +5,7 @@
     [seed]="score()"
     [hint]="t('ui.ability.meter', { name: ability(), score: score(), modifier: modifierText() })"
   />
-  <span class="hk-ability__name">{{ ability() }}</span>
+  <span class="hk-ability__name" [hkTooltip]="nameHint() ?? ''">{{ ability() }}</span>
   <span
     class="hk-ability__score"
     [attr.data-breakdown]="'score'"

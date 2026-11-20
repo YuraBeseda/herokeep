@@ -891,7 +891,20 @@
     },
     "explain": {
       "abilityCheck": "when you try something that might fail",
-      "savingThrow": "when an effect such as a spell or a trap asks you to resist it"
+      "savingThrow": "when an effect such as a spell or a trap asks you to resist it",
+      "initiative": "Rolled when a fight starts to decide who acts first.",
+      "armorClass": "How hard you are to hit. An attack has to meet or beat it.",
+      "speed": "How far you can move on your turn.",
+      "proficiencyBonus": "A bonus added to everything you are trained in. It grows as you level up.",
+      "passivePerception": "What you notice without actively looking, used when the DM does not ask for a roll.",
+      "hitDice": "Dice you spend during a short rest to recover hit points.",
+      "deathSaves": "Rolled each turn while you are at zero hit points. Enough successes stabilize you, enough failures are fatal.",
+      "spellSaveDc": "The number a target must meet or beat to resist your spells.",
+      "spellAttackBonus": "Added to the roll when a spell needs an attack roll.",
+      "concentration": "Some spells last only while you focus on them. Casting another such spell or taking a hit can end it.",
+      "heroicInspiration": "A reward from the DM. Spend it to gain an edge on a roll.",
+      "temporaryHp": "A buffer of extra hit points that absorbs damage first and does not stack with itself.",
+      "ability": {"str": "Physical power: lifting, climbing, hitting hard.", "dex": "Agility, reflexes and balance.", "con": "Health and stamina.", "int": "Reasoning and memory.", "wis": "Awareness and insight.", "cha": "Force of personality and persuasion."}
     }
   },
   "timeline": {

@@ -98,6 +98,7 @@
       <hk-leaf [title]="t('sheet.hp.deathSaves')" [icon]="'ui:hp'" [phone]="phone()">
         <fieldset class="conditions__death" [disabled]="actions.editLocked()">
           <legend class="visually-hidden">{{ t('sheet.hp.deathSaves') }}</legend>
+          <p class="conditions__death-hint">{{ t('sheet.explain.deathSaves') }}</p>
           <hk-death-saves
             [successes]="s.hp.deathSaves.successes"
             [failures]="s.hp.deathSaves.failures"

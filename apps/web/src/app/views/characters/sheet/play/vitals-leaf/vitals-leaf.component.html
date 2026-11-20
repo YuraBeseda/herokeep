@@ -6,6 +6,7 @@
         [current]="s.hp.current"
         [max]="s.hp.max.value"
         [temp]="s.hp.temp"
+        [tempHint]="t('sheet.explain.temporaryHp')"
         (damage)="actions.damage($event)"
         (heal)="actions.heal($event)"
         (setTemp)="actions.addTemp($event)"
@@ -19,7 +20,7 @@
         [hkDerivedBreakdown]="s.ac"
         [value]="s.ac.value"
         [size]="compact() ? 's' : 'm'"
-        [hint]="t('sheet.stats.acHint', { value: s.ac.value })"
+        [hint]="t('sheet.stats.acHint', { value: s.ac.value }) + ' ' + t('sheet.explain.armorClass')"
       />
       <hk-stat-tile
         class="vitals__initiative"
@@ -28,6 +29,7 @@
         [label]="t('sheet.stats.initiative')"
         [value]="signed(s.initiative.value)"
         [icon]="'ui:initiative'"
+        [hint]="t('sheet.explain.initiative')"
       />
       @for (speed of speedRows(); track speed.mode) {
         <hk-stat-tile
@@ -37,7 +39,7 @@
           [label]="t('sheet.stats.speed')"
           [value]="speed.value.value"
           [icon]="'ui:speed'"
-          [hint]="speed.mode"
+          [hint]="t('sheet.explain.speed') + ' ' + speed.mode"
         />
       }
     </section>
@@ -56,17 +58,20 @@
         [label]="t('sheet.stats.prof')"
         [value]="signed(s.prof)"
         [icon]="'ui:proficiency'"
+        [hint]="t('sheet.explain.proficiencyBonus')"
       />
       <hk-stat-tile
         class="vitals__passive"
         [label]="t('sheet.stats.passivePerception')"
         [value]="s.passivePerception"
+        [hint]="t('sheet.explain.passivePerception')"
       />
       @if (hitDiceRows().length > 0) {
         <hk-stat-tile
           class="vitals__hit-dice"
           [label]="t('sheet.hp.hitDice')"
           [value]="hitDiceText()"
+          [hint]="t('sheet.explain.hitDice')"
         />
       }
     </section>

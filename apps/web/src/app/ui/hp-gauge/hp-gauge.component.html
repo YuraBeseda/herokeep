@@ -5,7 +5,7 @@
     <span class="hk-hp-gauge__current">{{ current() }}</span>
     <span class="hk-hp-gauge__max">/ {{ max() }}</span>
     @if (temp() > 0) {
-      <span class="hk-hp-gauge__temp">
+      <span class="hk-hp-gauge__temp" [hkTooltip]="tempHint() ?? ''">
         <hk-icon [icon]="'ui:temp-hp'" />{{ t('ui.hp.temp-chip', { temp: temp() }) }}
       </span>
     }

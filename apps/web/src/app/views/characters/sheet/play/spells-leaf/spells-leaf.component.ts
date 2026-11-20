@@ -9,6 +9,7 @@ import { HkButtonComponent } from '../../../../../ui/button/button.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { HkSpellRowComponent } from '../../../../../ui/spell-row/spell-row.component';
 import { HkStatTileComponent } from '../../../../../ui/stat-tile/stat-tile.component';
+import { HkTooltipDirective } from '@app/ui/tooltip/tooltip.directive';
 import { HkTagChipComponent } from '../../../../../ui/tag-chip/tag-chip.component';
 import { HkWaxSealComponent } from '../../../../../ui/wax-seal/wax-seal.component';
 import { signed } from '../../../../../ui/format';
@@ -48,6 +49,7 @@ interface SpellBlockView extends SpellcastingBlock {
     HkButtonComponent,
     HkStatTileComponent,
     HkTagChipComponent,
+    HkTooltipDirective,
     DerivedPopoverDirective,
   ],
   providers: [provideTranslocoScope('characters')],

@@ -42,6 +42,7 @@
             <div class="abilities__head" [hkContextMenu]="menu">
               <hk-ability-seal
                 [ability]="row.label"
+                [nameHint]="t('sheet.explain.ability.' + row.id)"
                 [score]="row.score"
                 [modifier]="row.mod"
                 [save]="row.save"

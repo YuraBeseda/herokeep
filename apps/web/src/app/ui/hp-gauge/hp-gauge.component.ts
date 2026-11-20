@@ -13,6 +13,7 @@ import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import type { HkMenuItem } from '../context-menu/context-menu.types';
 import { HkSplitActionComponent } from '../split-action/split-action.component';
+import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 
 /** Share of the track for `part`, as a percentage clamped to 0..100. */
 function percent(part: number, whole: number): number {
@@ -32,7 +33,7 @@ function percent(part: number, whole: number): number {
  */
 @Component({
   selector: 'hk-hp-gauge',
-  imports: [TranslocoDirective, HkSplitActionComponent, IconComponent],
+  imports: [TranslocoDirective, HkSplitActionComponent, IconComponent, HkTooltipDirective],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './hp-gauge.component.html',
   styleUrl: './hp-gauge.component.scss',
@@ -42,6 +43,8 @@ export class HkHpGaugeComponent {
   readonly current = input.required<number>();
   readonly max = input.required<number>();
   readonly temp = input(0);
+  /** Optional translated explanation of temporary hit points, a tooltip on the temp chip. */
+  readonly tempHint = input<string | null>(null);
 
   // Outputs
   readonly damage = output<number>();

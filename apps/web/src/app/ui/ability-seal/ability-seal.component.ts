@@ -36,6 +36,8 @@ export class HkAbilitySealComponent {
   readonly modifier = input.required<number>();
   readonly save = input.required<number>();
   readonly saveProficient = input(false);
+  /** Optional translated explanation of the ability, shown as a tooltip on its name. */
+  readonly nameHint = input<string | null>(null);
   readonly compact = input(false);
   /** Makes the score plate and the save plate activatable (keyboard too) so a caller can show how
    * each number is built; `inspect` says which one was pressed. */
