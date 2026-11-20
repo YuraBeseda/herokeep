@@ -54,7 +54,7 @@ describe('VitalsLeafComponent', () => {
     // AC: the shield badge draws the number and is named "Armor class 19".
     const shield = compiled.querySelector('hk-shield-badge')!;
     expect(shield.querySelector('.hk-shield-num')?.textContent?.trim()).toBe('19');
-    expect(shield.querySelector('svg')?.getAttribute('aria-label')).toContain('Armor class 19');
+    expect(shield.querySelector('svg')?.getAttribute('aria-label')).toBe('Armor class 19');
     expect(compiled.querySelector('.vitals__prof .hk-stat-tile__value')?.textContent?.trim()).toBe(
       '+2',
     );

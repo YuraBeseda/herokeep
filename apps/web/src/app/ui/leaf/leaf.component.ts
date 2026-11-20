@@ -1,5 +1,6 @@
 import { Component, input } from '@angular/core';
 import { IconComponent } from '../../shared/icons/icon.component';
+import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 
 let nextLeafId = 0;
 
@@ -16,7 +17,7 @@ let nextLeafId = 0;
  */
 @Component({
   selector: 'hk-leaf',
-  imports: [IconComponent],
+  imports: [IconComponent, HkTooltipDirective],
   templateUrl: './leaf.component.html',
   styleUrl: './leaf.component.scss',
   host: {
@@ -30,6 +31,8 @@ export class HkLeafComponent {
   readonly title = input.required<string>();
   /** A sprite id (`ui:<name>` or `gi:<slug>`) for the section glyph. */
   readonly icon = input<string | null>(null);
+  /** Optional translated hint shown as a tooltip on the heading. */
+  readonly titleHint = input<string | null>(null);
   /** Phone density: 12px padding and a 16px body. */
   readonly phone = input(false);
 

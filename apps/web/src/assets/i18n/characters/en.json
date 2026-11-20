@@ -892,6 +892,7 @@
     "explain": {
       "abilityCheck": "when you try something that might fail",
       "savingThrow": "when an effect such as a spell or a trap asks you to resist it",
+      "conditionLevel": "Some conditions get worse in steps; each level makes the effect stronger.",
       "initiative": "Rolled when a fight starts to decide who acts first.",
       "armorClass": "How hard you are to hit. An attack has to meet or beat it.",
       "speed": "How far you can move on your turn.",

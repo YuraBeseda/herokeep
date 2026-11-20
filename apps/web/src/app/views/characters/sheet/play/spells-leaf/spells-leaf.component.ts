@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Sheet } from '@hk/engine';
-import { DerivedPopoverDirective } from '@shared/directives/derived-popover.directive';
+import { DerivedPopoverDirective, type DerivedValue } from '@shared/directives/derived-popover.directive';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import { HkButtonComponent } from '../../../../../ui/button/button.component';
@@ -14,6 +14,7 @@ import { HkTagChipComponent } from '../../../../../ui/tag-chip/tag-chip.componen
 import { HkWaxSealComponent } from '../../../../../ui/wax-seal/wax-seal.component';
 import { signed } from '../../../../../ui/format';
 import { PlayActionsService, type SpellRow } from '../play-actions.service';
+import { breakdownText } from '../breakdown-hint';
 import { PlayRollsService, type ScopedT } from '../play-rolls.service';
 import { sheetNames } from '../play-names';
 
@@ -64,6 +65,12 @@ export class SpellsLeafComponent {
   private readonly names = sheetNames(inject(EngineFacade));
   private readonly sheet = inject(CharacterStore).sheet;
   protected readonly signed = signed;
+
+  /** The explanation, then the live breakdown of the value when the sheet derived one. */
+  protected hintWith(explain: string, value: DerivedValue, t: ScopedT): string {
+    const parts = breakdownText(value, t, this.names);
+    return parts ? `${explain} ${parts}` : explain;
+  }
 
   protected readonly concentration = computed(() => this.sheet()?.concentration);
   protected readonly concentrationName = computed(() => {

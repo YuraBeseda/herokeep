@@ -27,12 +27,14 @@ export class HkShieldBadgeComponent {
   readonly value = input.required<number>();
   readonly size = input<'s' | 'm'>('m');
   readonly hint = input<string | null>(null);
+  /** Optional translated explanation: in the tooltip and the description, never in the name. */
+  readonly explain = input<string | null>(null);
 
   protected readonly gradientId = `hkShieldBrass${nextShieldId++}`;
   protected readonly width = computed(() => (this.size() === 's' ? 56 : 82));
   protected readonly height = computed(() => (this.size() === 's' ? 66 : 96));
 
   constructor() {
-    effect(() => this.tooltip.text.set(this.hint() ?? ''));
+    effect(() => this.tooltip.text.set([this.hint(), this.explain()].filter(Boolean).join(' ')));
   }
 }

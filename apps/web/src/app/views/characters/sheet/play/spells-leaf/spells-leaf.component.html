@@ -81,14 +81,14 @@
               [hkDerivedBreakdown]="block.dc"
               [label]="t('sheet.spellcasting.dc')"
               [value]="block.dc.value"
-              [hint]="t('sheet.explain.spellSaveDc')"
+              [hint]="hintWith(t('sheet.explain.spellSaveDc'), block.dc, t)"
             />
             <hk-stat-tile
               hkDerived
               [hkDerivedBreakdown]="block.attack"
               [label]="t('sheet.spellcasting.attack')"
               [value]="signed(block.attack.value)"
-              [hint]="t('sheet.explain.spellAttackBonus')"
+              [hint]="hintWith(t('sheet.explain.spellAttackBonus'), block.attack, t)"
             />
             <button hk-button type="button" [variant]="'ghost'" (click)="rollSpellAttack(block, t)">
               {{ t('sheet.roll.spellAttack') }}

@@ -4,6 +4,7 @@ import charactersRu from '../../../../../assets/i18n/characters/ru.json';
 import charactersUk from '../../../../../assets/i18n/characters/uk.json';
 import { hintOf } from '../../../../ui/testing/harness';
 import { seedFighter } from '../testing/character-fixtures';
+import { breakdownText } from './breakdown-hint';
 import { setupLeafSpec } from './play-spec-support';
 import { VitalsLeafComponent } from './vitals-leaf/vitals-leaf.component';
 
@@ -34,11 +35,24 @@ describe('rules hints (sheet.explain.*)', () => {
     const root = fixture.nativeElement as HTMLElement;
     const hint = (selector: string): string | null => hintOf(root.querySelector(selector)!);
 
+    // A fighter's initiative / speed carry no derived contributions, so the hint is the explanation alone.
     expect(hint('.vitals__initiative')).toBe(explain.initiative);
     expect(hint('.vitals__prof')).toBe(explain.proficiencyBonus);
     expect(hint('.vitals__passive')).toBe(explain.passivePerception);
     expect(hint('.vitals__hit-dice')).toBe(explain.hitDice);
-    expect(hint('.vitals__speed')).toContain(explain.speed);
-    expect(hint('.vitals__ac')).toContain(explain.armorClass);
+    expect(hint('.vitals__speed')).toBe(explain.speed);
+    expect(hint('.vitals__ac')).toBe(`Armor class 19 ${explain.armorClass}`);
+  });
+});
+
+describe('breakdownText', () => {
+  it('lists the contributions of a derived value', () => {
+    const t = ((key: string, p?: Record<string, unknown>) =>
+      `${key}:${String(p?.['value'])}`) as never;
+    const names = { abilityName: (id: string) => id, resolve: (id: string) => id } as never;
+    const value = {
+      contributions: [{ kind: 'effect', source: 'ring', amount: 1 }],
+    } as never;
+    expect(breakdownText(value, t, names)).toBe('sheet.skills.part:+1');
   });
 });

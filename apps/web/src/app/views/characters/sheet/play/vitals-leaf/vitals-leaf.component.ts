@@ -1,13 +1,15 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { CharacterStore } from '@shared/stores/character.store';
-import { DerivedPopoverDirective } from '@shared/directives/derived-popover.directive';
+import { DerivedPopoverDirective, type DerivedValue } from '@shared/directives/derived-popover.directive';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { HkHpGaugeComponent } from '../../../../../ui/hp-gauge/hp-gauge.component';
 import { HkShieldBadgeComponent } from '../../../../../ui/shield-badge/shield-badge.component';
 import { HkStatTileComponent } from '../../../../../ui/stat-tile/stat-tile.component';
 import { signed } from '../../../../../ui/format';
+import { breakdownText } from '../breakdown-hint';
 import { PlayActionsService } from '../play-actions.service';
+import type { ScopedT } from '../play-rolls.service';
 import { sheetNames } from '../play-names';
 
 /**
@@ -39,6 +41,12 @@ export class VitalsLeafComponent {
   private readonly names = sheetNames(inject(EngineFacade));
   protected readonly sheet = inject(CharacterStore).sheet;
   protected readonly signed = signed;
+
+  /** The explanation, then the live breakdown of the value when the sheet derived one. */
+  protected hintWith(explain: string, value: DerivedValue, t: ScopedT): string {
+    const parts = breakdownText(value, t, this.names);
+    return parts ? `${explain} ${parts}` : explain;
+  }
 
   protected readonly speedRows = computed(() =>
     Object.entries(this.sheet()?.speed ?? {}).map(([mode, value]) => ({ mode, value })),

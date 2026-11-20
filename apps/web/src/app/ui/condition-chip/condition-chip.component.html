@@ -1,6 +1,6 @@
 <ng-container *transloco="let t; read: 'shell'">
   @let named = { name: name(), level: level(), duration: duration() };
-  @let story =
+  @let base =
     hint() ??
     (level() !== null && duration()
       ? t('ui.condition.story-level-duration', named)
@@ -9,6 +9,7 @@
         : duration()
           ? t('ui.condition.story-duration', named)
           : name());
+  @let story = level() !== null && levelHint() ? base + ' ' + levelHint() : base;
   <span class="hk-cond__main" role="img" tabindex="0" [attr.aria-label]="story" [hkTooltip]="story">
     <hk-icon [icon]="icon()" />
     <span class="hk-cond__name">{{ name() }}</span>

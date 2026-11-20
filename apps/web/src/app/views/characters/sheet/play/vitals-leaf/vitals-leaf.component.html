@@ -20,7 +20,8 @@
         [hkDerivedBreakdown]="s.ac"
         [value]="s.ac.value"
         [size]="compact() ? 's' : 'm'"
-        [hint]="t('sheet.stats.acHint', { value: s.ac.value }) + ' ' + t('sheet.explain.armorClass')"
+        [hint]="t('sheet.stats.acHint', { value: s.ac.value })"
+        [explain]="t('sheet.explain.armorClass')"
       />
       <hk-stat-tile
         class="vitals__initiative"
@@ -29,7 +30,7 @@
         [label]="t('sheet.stats.initiative')"
         [value]="signed(s.initiative.value)"
         [icon]="'ui:initiative'"
-        [hint]="t('sheet.explain.initiative')"
+        [hint]="hintWith(t('sheet.explain.initiative'), s.initiative, t)"
       />
       @for (speed of speedRows(); track speed.mode) {
         <hk-stat-tile
@@ -39,7 +40,7 @@
           [label]="t('sheet.stats.speed')"
           [value]="speed.value.value"
           [icon]="'ui:speed'"
-          [hint]="t('sheet.explain.speed') + ' ' + speed.mode"
+          [hint]="hintWith(t('sheet.explain.speed'), speed.value, t)"
         />
       }
     </section>

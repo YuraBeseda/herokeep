@@ -18,6 +18,7 @@ import { HkTooltipDirective } from '../../../../../ui/tooltip/tooltip.directive'
 import { HkWaxSealComponent } from '../../../../../ui/wax-seal/wax-seal.component';
 import { signed } from '../../../../../ui/format';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
+import { breakdownText } from '../breakdown-hint';
 import { breakdownOpener } from '../open-breakdown';
 import { PlayRollsService, type ScopedT } from '../play-rolls.service';
 import { sheetNames } from '../play-names';
@@ -167,19 +168,7 @@ export class AbilitiesLeafComponent {
 
   /** "Dexterity +2, proficiency +2": the skill total's parts, as the sheet derived them. */
   protected breakdownHint(value: DerivedValue, t: ScopedT): string {
-    return value.contributions
-      .map((c) => {
-        const amount = c.amount === undefined ? (c.formula ?? '') : signed(c.amount);
-        if (c.kind === 'proficiency' && c.key !== undefined) {
-          return t(`sheet.skills.partRank.${c.key}`, { value: amount });
-        }
-        const name =
-          c.kind === 'abilityModifier' && c.key !== undefined
-            ? this.names.abilityName(c.key)
-            : this.names.resolve(c.feature ?? c.source);
-        return t('sheet.skills.part', { name, value: amount });
-      })
-      .join(', ');
+    return breakdownText(value, t, this.names);
   }
 
   protected dotTabindex(row: AbilityRow, skillId: string): number {

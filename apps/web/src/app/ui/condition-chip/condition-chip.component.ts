@@ -40,6 +40,8 @@ export class HkConditionChipComponent {
   readonly lockReason = input<string | null>(null);
   /** Translated full story; defaults to the name. */
   readonly hint = input<string | null>(null);
+  /** Translated explanation of levelled conditions, appended to the story when there is a level. */
+  readonly levelHint = input<string | null>(null);
 
   // Outputs
   readonly remove = output<void>();

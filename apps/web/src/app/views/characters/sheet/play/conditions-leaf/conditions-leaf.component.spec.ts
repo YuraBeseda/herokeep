@@ -11,6 +11,7 @@ import {
   describedBy,
   visibleText,
 } from '../../testing/character-fixtures';
+import { hintOf } from '../../../../../ui/testing/harness';
 import { buttonNamed, pollUntil, setupLeafSpec } from '../play-spec-support';
 import { ConditionsLeafComponent } from './conditions-leaf.component';
 import { PlayActionsService } from '../play-actions.service';
@@ -168,6 +169,12 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
       conditionId: EXHAUSTION_ID,
       level: 2,
     });
+
+    // The level badge's chip explains levelled conditions, from the data-driven level alone.
+    await pollUntil(fixture, () => compiled.querySelector('.hk-cond__main') !== null);
+    expect(hintOf(compiled.querySelector('.hk-cond__main')!)).toContain(
+      charactersEn.sheet.explain.conditionLevel,
+    );
   });
 
   it('a solo hero advances its own round counter: combat.round_advanced, round 2 then 3 on one encounter', async () => {

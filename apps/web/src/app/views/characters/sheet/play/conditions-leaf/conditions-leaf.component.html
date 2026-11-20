@@ -11,6 +11,7 @@
             [name]="condition.name"
             [icon]="condition.icon"
             [level]="condition.level"
+            [levelHint]="t('sheet.explain.conditionLevel')"
             [duration]="
               condition.ended
                 ? t('sheet.conditions.ended')
@@ -95,7 +96,9 @@
     </hk-leaf>
 
     @if (s.hp.current === 0 || s.hp.deathSaves.successes > 0 || s.hp.deathSaves.failures > 0) {
-      <hk-leaf [title]="t('sheet.hp.deathSaves')" [icon]="'ui:hp'" [phone]="phone()">
+      <hk-leaf
+        [title]="t('sheet.hp.deathSaves')"
+        [titleHint]="t('sheet.explain.deathSaves')" [icon]="'ui:hp'" [phone]="phone()">
         <fieldset class="conditions__death" [disabled]="actions.editLocked()">
           <legend class="visually-hidden">{{ t('sheet.hp.deathSaves') }}</legend>
           <p class="conditions__death-hint">{{ t('sheet.explain.deathSaves') }}</p>
