@@ -535,6 +535,19 @@ describe('PartyTabComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelector('.hk-party__open')).toBeNull();
     });
 
+    it('DM + never-saved settings: reads the server default "full" and offers "View sheet"', async () => {
+      configure({
+        role: 'dm',
+        state: mkState({
+          roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+          settings: null,
+        }),
+      });
+      const fixture = TestBed.createComponent(PartyTabComponent);
+      await fixture.whenStable();
+      expect(viewSheetButton(fixture.nativeElement as HTMLElement)).not.toBeNull();
+    });
+
     it('DM + partySheets "overview" (not "full"): no "View sheet" button', async () => {
       configure({
         role: 'dm',

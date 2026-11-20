@@ -45,7 +45,8 @@ function defaultCampaignSettings(system: string): CampaignSettingsV2 {
       startingLevel: 1,
     },
     visibility: {
-      partySheets: 'overview',
+      // The server's own default (campaign-actor.ts) for a never-saved document.
+      partySheets: 'full',
       rolls: 'everyone',
       allowPrivateRolls: true,
     },

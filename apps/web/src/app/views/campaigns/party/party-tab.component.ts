@@ -154,7 +154,7 @@ export class PartyTabComponent {
   protected readonly fxIcon = (kind: DmEffectKind): string => FX_ICONS[kind];
 
   protected readonly partySheetsMode = computed<PartySheetsMode>(
-    () => this.state()?.settings?.visibility.partySheets ?? 'overview',
+    () => this.state()?.settings?.visibility.partySheets ?? 'full',
   );
 
   /** [plan-10 Task 9] Gates the DM's sheet drill-in: `'full'` additionally enables DM (and only

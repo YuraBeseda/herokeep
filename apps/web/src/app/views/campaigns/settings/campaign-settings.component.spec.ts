@@ -328,6 +328,21 @@ describe('CampaignSettingsComponent', () => {
     expect(value).not.toBeNull();
   });
 
+  it('never-saved settings read the server default party sheets mode (full)', async () => {
+    const { appendTx } = configure({ role: 'dm', isLeader: true, settings: null });
+    const fixture = TestBed.createComponent(CampaignSettingsComponent);
+    await fixture.whenStable();
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.campaign-settings__save')!
+      .click();
+    await fixture.whenStable();
+
+    const [[drafts]] = appendTx.mock.calls as [
+      [{ payload: { settings: { visibility: { partySheets: string } } } }[]],
+    ];
+    expect(drafts[0].payload.settings.visibility.partySheets).toBe('full');
+  });
+
   // --- campaign export (plan-10 Task 15) ------------------------------------------------------
 
   it('shows the Export campaign button for the DM, even on a NON-leader tab (export is DM-gated, not leader-gated)', async () => {
