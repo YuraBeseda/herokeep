@@ -372,7 +372,7 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
     await seedFighter('Ivan');
     const store = TestBed.inject(CharacterStore);
     vi.spyOn(store.campaign, 'refresh').mockRejectedValue(new Error('read failed'));
-    const toast = vi.spyOn(TestBed.inject(ToastService), 'show').mockImplementation(() => {});
+    const toast = vi.spyOn(TestBed.inject(ToastService), 'show').mockReturnValue(undefined);
     vi.spyOn(TestBed.inject(DialogService), 'open').mockReturnValue({
       closed: Promise.resolve({ conditionId: BLINDED_ID }),
     } as never);
