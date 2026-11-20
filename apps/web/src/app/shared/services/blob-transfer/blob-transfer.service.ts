@@ -577,6 +577,18 @@ export class BlobTransferService {
     });
   }
 
+  /** Asks the relay for `hashes` (a DM viewing a member's hero: its custom item icons, which this
+   * device never stores as events). Held or already-queued hashes are skipped. */
+  async requestHashes(campaignId: string, hashes: readonly string[]): Promise<void> {
+    const watcher = this.watchers.get(campaignId);
+    if (!watcher) return;
+    await this.enqueueMissing(
+      watcher,
+      hashes.map((hash) => ({ hash, tier: 3 as const, kind: 'icon' as const })),
+    );
+    this.pump(campaignId);
+  }
+
   private startDmSuperPeerLoop(campaignId: string): void {
     const watcher = this.watchers.get(campaignId);
     if (!watcher || watcher.dmLoopActive) return;

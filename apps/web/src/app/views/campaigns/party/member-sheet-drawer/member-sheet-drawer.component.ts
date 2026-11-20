@@ -20,6 +20,8 @@ import { ForeignCharacterSession } from '@shared/services/campaigns/foreign-char
 import type { HpSnapshot } from '@shared/services/campaigns/dm-effects';
 import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
 import { EngineFacade, type EngineScope } from '@shared/services/engine/engine.facade';
+import { BlobTransferService } from '@shared/services/blob-transfer/blob-transfer.service';
+import { customIconBlobHashes } from '@shared/services/images/custom-icons';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { PackStore } from '@shared/stores/pack.store';
@@ -110,6 +112,7 @@ export class MemberSheetDrawerComponent implements EngineScope, OnInit {
   private readonly packStore = inject(PackStore);
   private readonly engineFacade = inject(EngineFacade);
   private readonly eventsRepository = inject(EventsRepository);
+  private readonly blobTransferService = inject(BlobTransferService);
 
   /** Bare campaign uuid (no `camp:` prefix). */
   readonly campaignId = input.required<string>();
@@ -244,6 +247,13 @@ export class MemberSheetDrawerComponent implements EngineScope, OnInit {
     // The drawer closing itself (Close, Escape, a press outside, a navigation) reports once.
     effect(() => {
       if (!this.open()) untracked(() => this.closed.emit());
+    });
+    // The member's custom item icons are blobs only the relay can fetch.
+    effect(() => {
+      const hashes = customIconBlobHashes(this.sheet()?.inventory);
+      if (hashes.length > 0) {
+        untracked(() => void this.blobTransferService.requestHashes(this.campaignId(), hashes));
+      }
     });
   }
 

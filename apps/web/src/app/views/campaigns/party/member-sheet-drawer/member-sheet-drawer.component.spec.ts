@@ -12,6 +12,8 @@ import { of, Subject } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
+import { BlobTransferService } from '@shared/services/blob-transfer/blob-transfer.service';
+import { iconItemAddedEvent } from '@shared/services/blob-transfer/testing/blob-cache-fixtures';
 import { SyncService } from '@shared/services/sync/sync.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
@@ -117,6 +119,8 @@ class FakeRouter {
   }
 }
 
+const requestHashes = vi.fn();
+
 function configure(): {
   sync: FakeSyncService;
   router: FakeRouter;
@@ -143,6 +147,7 @@ function configure(): {
         useValue: { requestPersist: vi.fn().mockResolvedValue(true) },
       },
       { provide: SyncService, useValue: sync },
+      { provide: BlobTransferService, useValue: { requestHashes } },
       { provide: Router, useValue: router },
     ],
   });
@@ -294,6 +299,24 @@ describe('MemberSheetDrawerComponent', () => {
     expect(panel?.textContent).not.toContain(
       'No HP baseline yet for this character — waiting on a party overview or a live sheet.',
     );
+  });
+
+  it("requests the member's custom item icons over the blob relay", async () => {
+    const streamId = await seedFighter('Ivan');
+    const characterId = streamId.slice('char:'.length);
+    const events = await TestBed.inject(EventsRepository).byStream(streamId);
+    const hash = 'sha256:' + 'c'.repeat(64);
+    const icon = { ...iconItemAddedEvent(streamId, hash, 1), seq: events.length + 1 };
+    requestHashes.mockClear();
+
+    openDrawer({ campaignId, characterId, name: 'Ivan' });
+    TestBed.tick();
+    sync.emit(campaignId, streamId, [...events, icon]);
+    TestBed.tick();
+    await Promise.resolve();
+    TestBed.tick();
+
+    expect(requestHashes).toHaveBeenCalledWith(campaignId, [hash]);
   });
 
   it('unauthorized-silent timeout renders the unauthorized status without crashing', async () => {
