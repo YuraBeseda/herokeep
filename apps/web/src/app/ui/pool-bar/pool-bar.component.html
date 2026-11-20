@@ -10,7 +10,7 @@
     <div
       class="hk-pool-bar__pips"
       role="group"
-      [attr.aria-label]="t('ui.pool.meter', { label: label(), value: clamped(), max: max() })"
+      [attr.aria-label]="t('ui.pool.meter', { label: label(), value: clamped(), max: cap() })"
     >
       @for (index of pips(); track index) {
         <hk-wax-seal
@@ -26,7 +26,7 @@
     <div
       class="hk-gauge"
       role="img"
-      [attr.aria-label]="t('ui.pool.meter', { label: label(), value: clamped(), max: max() })"
+      [attr.aria-label]="t('ui.pool.meter', { label: label(), value: clamped(), max: cap() })"
     >
       <div class="hk-gauge__brass" [style.width.%]="width()"></div>
     </div>
@@ -40,14 +40,14 @@
       [attr.tabindex]="inspectable() ? 0 : null"
       [attr.aria-label]="
         inspectable()
-          ? t('ui.breakdown.show', { name: label(), value: clamped() + ' / ' + max() })
+          ? t('ui.breakdown.show', { name: label(), value: clamped() + ' / ' + cap() })
           : null
       "
       (click)="press($event)"
       (keydown.enter)="press($event)"
       (keydown.space)="press($event)"
     >
-      {{ clamped() }} / {{ max() }}
+      {{ clamped() }} / {{ cap() }}
       @if (unit(); as unitText) {
         <span class="hk-pool-bar__unit">{{ unitText }}</span>
       }

@@ -47,14 +47,14 @@ export class HkPoolBarComponent {
   /** The sprite id embossed on each pip. */
   readonly pipGlyph = input('ui:use');
 
-  protected readonly clamped = computed(() =>
-    Math.min(Math.max(0, this.max()), Math.max(0, this.value())),
-  );
+  /** The shown maximum never goes below 0 (a negative derived max reads "0 / 0", not "0 / -3"). */
+  protected readonly cap = computed(() => Math.max(0, this.max()));
+  protected readonly clamped = computed(() => Math.min(this.cap(), Math.max(0, this.value())));
   protected readonly width = computed(() =>
-    this.max() > 0 ? (this.clamped() / this.max()) * 100 : 0,
+    this.cap() > 0 ? (this.clamped() / this.cap()) * 100 : 0,
   );
   protected readonly pips = computed(() =>
-    Array.from({ length: Math.max(0, Math.min(this.max(), 99)) }, (_, index) => index),
+    Array.from({ length: Math.min(this.cap(), 99) }, (_, index) => index),
   );
-  protected readonly pipSize = computed(() => (this.max() >= 5 ? 's' : 'm'));
+  protected readonly pipSize = computed(() => (this.cap() >= 5 ? 's' : 'm'));
 }

@@ -46,11 +46,13 @@ test.describe('phone sheet (390 x 844)', () => {
         );
       }
       const hpButtons = page.locator('.hk-hp-gauge__controls button');
-      expect(await hpButtons.count()).toBe(3);
-      const tops = await hpButtons.evaluateAll((els) =>
-        els.map((e) => Math.round(e.getBoundingClientRect().top)),
+      expect(await hpButtons.count()).toBe(2); // the split action's main button and its caret
+      // One row: the caret sits inside the main button's vertical span (it is centred, not top-aligned).
+      const [main, caret] = await hpButtons.evaluateAll((els) =>
+        els.map((e) => e.getBoundingClientRect()).map((r) => ({ top: r.top, bottom: r.bottom })),
       );
-      expect(new Set(tops).size, `HP buttons share one row (tops ${tops})`).toBe(1);
+      expect(caret!.top, 'HP caret shares the main button row').toBeGreaterThanOrEqual(main!.top - 1);
+      expect(caret!.bottom, 'HP caret shares the main button row').toBeLessThanOrEqual(main!.bottom + 1);
       const seals = page.locator('.abilities--saves .abilities__seal');
       expect(await seals.count()).toBe(6);
       for (let i = 0; i < 6; i++) {

@@ -15,8 +15,20 @@ describe('VitalsLeafComponent', () => {
   setupLeafSpec();
 
   const damageLabel = shellEn.ui.hp.damage;
-  const healLabel = shellEn.ui.hp.heal;
-  const tempLabel = shellEn.ui.hp.temp;
+
+  // The remembered Damage / Heal / Temp action is per viewer storage: every scenario starts on Damage.
+  beforeEach(() => localStorage.clear());
+
+  /** Picks an item of the HP split action's caret menu (it runs with the typed amount). */
+  async function chooseFromSplit(
+    fixture: { whenStable(): Promise<unknown> },
+    compiled: HTMLElement,
+    id: string,
+  ): Promise<void> {
+    compiled.querySelector<HTMLButtonElement>('.hk-split__caret button')!.click();
+    await fixture.whenStable();
+    document.querySelector<HTMLButtonElement>(`[data-menu-item="${id}"]`)!.click();
+  }
 
   function amountInput(compiled: HTMLElement): HTMLInputElement {
     return compiled.querySelector<HTMLInputElement>('.hk-hp-gauge__amount')!;
@@ -115,7 +127,7 @@ describe('VitalsLeafComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     await typeAmount(fixture, amountInput(compiled), 100);
-    buttonNamed(compiled, healLabel).click();
+    await chooseFromSplit(fixture, compiled, 'heal');
     await pollUntil(fixture, () => characterStore.sheet()?.hp.current === 12);
 
     expect(characterStore.sheet()?.hp.current).toBe(12);
@@ -130,7 +142,7 @@ describe('VitalsLeafComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     await typeAmount(fixture, amountInput(compiled), 4);
-    buttonNamed(compiled, tempLabel).click();
+    await chooseFromSplit(fixture, compiled, 'setTemp');
     await pollUntil(fixture, () => characterStore.sheet()?.hp.temp === 4);
 
     expect(characterStore.events().at(-1)).toMatchObject({

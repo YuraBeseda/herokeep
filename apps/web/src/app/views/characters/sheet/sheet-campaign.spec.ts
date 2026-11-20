@@ -202,12 +202,10 @@ describe('sheet — campaign edit lock (plan-10 task-14-brief.md, ruling 7)', ()
     expect(banner?.textContent?.trim()).toBe(campaignsEn.edit.locked);
 
     // HP (the gauge's controls sit in a disabled fieldset)
-    for (const label of ['Damage', 'Heal', 'Temp HP']) {
-      expect(isBlocked(buttonNamed(compiled, label)), label).toBe(true);
-    }
-    // Rest, Damage / Heal and Add condition on the action strap
+    expect(isBlocked(compiled.querySelector('hk-hp-gauge .hk-split__main'))).toBe(true);
+    // Rest, HP and Add condition on the action strap
     await pollUntil(fixture, () => strapActions().length > 0);
-    for (const id of ['damage', 'heal', 'short-rest', 'long-rest', 'add-condition']) {
+    for (const id of ['hp', 'short-rest', 'long-rest', 'add-condition']) {
       expect(strapActions().find((a) => a.id === id)?.disabled, id).toBe(true);
     }
     // Rolling the plain d20 and opening the roll log stay available

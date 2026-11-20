@@ -378,7 +378,7 @@ export class SheetShellComponent {
     if (!SHEET_CHILDREN.has(segment)) {
       // Level up has its own strap (flow strap); the sheet's must not linger under it.
       untracked(() => {
-        if (this.strap.config()?.primary.some((a) => a.id === 'damage')) this.strap.clear();
+        if (this.strap.config()?.primary.some((a) => a.id === 'hp')) this.strap.clear();
       });
       return;
     }
@@ -460,7 +460,7 @@ export class SheetShellComponent {
     );
   }
 
-  // The strap's Damage and Heal take the typed amount in the HP gauge: they bring the player to it
+  // The strap's HP action takes the typed amount in the HP gauge: they bring the player to it
   // (the Combat tab on the phone) and focus its field; the gauge's own buttons apply it.
   private focusHpAmount(): void {
     const focus = (): void =>

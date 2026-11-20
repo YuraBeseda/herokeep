@@ -76,3 +76,26 @@ test('the bag row context menu fits', async ({ page }) => {
   });
   expect(violations).toEqual([]);
 });
+
+// The HP split action (main button, caret menu with its items and disabled reason) in the `fit`
+// locale at this width: the caret opens with and without a typed amount.
+test('the HP split action and its menu fit', async ({ page }) => {
+  const viewport = page.viewportSize() ?? { width: 1280, height: 800 };
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const id = await createFighter(page, 'Aldric Split Fit');
+  await page.setViewportSize(viewport);
+  await installFitLocale(page);
+  await page.goto(`/c/${id}/${isPhone(page) ? 'combat' : 'play'}`);
+
+  const { violations, check } = fitChecker(page);
+  const gauge = page.locator('hk-hp-gauge');
+  for (const amount of ['', '3']) {
+    await check(`HP split menu (${amount === '' ? 'no amount' : 'amount'})`, async () => {
+      await gauge.locator('.hk-hp-gauge__amount').fill(amount);
+      await gauge.locator('.hk-split__caret button').click();
+      await expect(page.getByRole('menuitem')).toHaveCount(3);
+    });
+    await page.keyboard.press('Escape');
+  }
+  expect(violations).toEqual([]);
+});

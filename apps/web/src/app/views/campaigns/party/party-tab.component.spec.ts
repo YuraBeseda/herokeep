@@ -176,7 +176,7 @@ describe('PartyTabComponent', () => {
     const meter = card.querySelector('[role="meter"]')!;
     expect(meter.getAttribute('aria-valuenow')).toBe('8');
     expect(meter.getAttribute('aria-valuemax')).toBe('12');
-    expect(meter.getAttribute('aria-valuetext')).toBe('8 of 12 hit points, plus 2 temporary');
+    expect(meter.getAttribute('aria-valuetext')).toBe('8 of 12 hit points, 2 temporary');
     expect(card.querySelector('.hk-party__hp-num')?.textContent).toContain('8');
     expect(card.querySelector('hk-shield-badge')?.textContent).toContain('19');
     expect(card.querySelector('.party-tab__stat')?.textContent).toContain('13');

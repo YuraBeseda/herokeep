@@ -900,7 +900,7 @@ describe('LevelUpComponent', () => {
       const id = await seedLevelUp();
       const harness = await RouterTestingHarness.create(`/c/${id}/play`);
       TestBed.inject(NavHistoryService).push(`/c/${id}/play`);
-      expect(strapAction('damage'), 'sheet strap before').toBeDefined();
+      expect(strapAction('hp'), 'sheet strap before').toBeDefined();
       expect(strapAction('cancel')).toBeUndefined();
 
       await harness.navigateByUrl(`/c/${id}/level-up`);
@@ -909,11 +909,11 @@ describe('LevelUpComponent', () => {
       expect(strapAction('cancel'), 'level-up strap').toBeDefined();
       expect(strapAction('back')).toBeDefined();
       expect(strapAction('next')).toBeDefined();
-      expect(strapAction('damage')).toBeUndefined();
+      expect(strapAction('hp')).toBeUndefined();
 
       await pressStrap(harness.fixture, 'cancel');
       await harness.fixture.whenStable();
-      expect(strapAction('damage'), 'sheet strap after').toBeDefined();
+      expect(strapAction('hp'), 'sheet strap after').toBeDefined();
       expect(strapAction('cancel')).toBeUndefined();
     });
 

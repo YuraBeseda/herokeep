@@ -1,0 +1,10 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.hk-split__main {
+  min-inline-size: 0;
+}

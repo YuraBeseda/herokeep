@@ -1,7 +1,18 @@
-import { Component, DestroyRef, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  type ElementRef,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
-import { HkButtonComponent } from '../button/button.component';
+import type { HkMenuItem } from '../context-menu/context-menu.types';
+import { HkSplitActionComponent } from '../split-action/split-action.component';
 
 /** Share of the track for `part`, as a percentage clamped to 0..100. */
 function percent(part: number, whole: number): number {
@@ -21,7 +32,7 @@ function percent(part: number, whole: number): number {
  */
 @Component({
   selector: 'hk-hp-gauge',
-  imports: [TranslocoDirective, HkButtonComponent, IconComponent],
+  imports: [TranslocoDirective, HkSplitActionComponent, IconComponent],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './hp-gauge.component.html',
   styleUrl: './hp-gauge.component.scss',
@@ -44,6 +55,27 @@ export class HkHpGaugeComponent {
     if (!/^\d+$/.test(text)) return null;
     const value = Number(text);
     return value > 0 ? value : null;
+  });
+
+  /** Coarse pointers (touch) get the 44px phone button, like the amount field. */
+  private readonly field = viewChild.required<ElementRef<HTMLInputElement>>('field');
+  private readonly split = viewChild.required(HkSplitActionComponent);
+
+  /** Damage / Heal / Temp HP as one split action; all disabled (with the reason) until an amount is typed. */
+  protected readonly actions = computed<HkMenuItem[]>(() => {
+    const disabledReasonKey = this.amount() === null ? 'shell.ui.hp.amount-needed' : undefined;
+    const item = (id: 'damage' | 'heal' | 'setTemp', labelKey: string, icon: string): HkMenuItem => ({
+      id,
+      labelKey,
+      icon,
+      ...(disabledReasonKey ? { disabledReasonKey } : {}),
+      run: () => this.emit(id),
+    });
+    return [
+      item('damage', 'shell.ui.hp.damage', 'ui:damage'),
+      item('heal', 'shell.ui.hp.heal', 'ui:heal'),
+      item('setTemp', 'shell.ui.hp.temp', 'ui:temp-hp'),
+    ];
   });
 
   /** Coarse pointers (touch) get the 44px phone button, like the amount field. */
@@ -73,11 +105,16 @@ export class HkHpGaugeComponent {
     this.typed.set((event.target as HTMLInputElement).value);
   }
 
-  protected emit(kind: 'damage' | 'heal' | 'setTemp', field: HTMLInputElement): void {
+  /** Enter in the amount field applies the action the split button shows. */
+  protected applyCurrent(): void {
+    this.split().runCurrent();
+  }
+
+  private emit(kind: 'damage' | 'heal' | 'setTemp'): void {
     const amount = this.amount();
     if (amount === null) return;
     this[kind].emit(amount);
-    field.value = '';
+    this.field().nativeElement.value = '';
     this.typed.set('');
   }
 }

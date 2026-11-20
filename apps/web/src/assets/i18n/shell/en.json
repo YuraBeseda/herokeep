@@ -312,8 +312,9 @@
       "heal": "Heal",
       "label": "Hit points",
       "meter": "{{current}} of {{max}} hit points",
-      "meter-temp": "{{current}} of {{max}} hit points, plus {{temp}} temporary",
-      "temp": "Temp HP"
+      "meter-temp": "{{current}} of {{max}} hit points, {{temp}} temporary",
+      "temp": "Temp HP",
+      "temp-chip": "+{{temp}} temp"
     },
     "inspiration": {
       "press-grant": "Heroic inspiration: none. Press to mark a grant.",
@@ -376,6 +377,9 @@
     "xp": {
       "label": "XP",
       "meter": "{{xp}} of {{next}} XP"
+    },
+    "split": {
+      "switch": "Choose another action"
     },
     "stepper": {
       "all": "All steps",

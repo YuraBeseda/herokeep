@@ -53,7 +53,7 @@ describe('HkPartyCardComponent', () => {
   it('mentions temporary hit points in the meter text and draws them', async () => {
     const { el } = await mount(HkPartyCardComponent, { ...base, hpTemp: 5 });
     expect(el.querySelector('[role="meter"]')!.getAttribute('aria-valuetext')).toBe(
-      '14 of 22 hit points, plus 5 temporary',
+      '14 of 22 hit points, 5 temporary',
     );
     expect(el.querySelector('.hk-gauge__temp')).not.toBeNull();
   });

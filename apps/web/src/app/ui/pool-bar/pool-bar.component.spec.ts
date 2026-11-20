@@ -105,7 +105,7 @@ describe('HkPoolBarComponent', () => {
     await fixture.whenStable();
     expect(el.querySelector('.hk-pool-bar__count')!.textContent).toMatch(/^\s*0 \//);
     expect(el.querySelector('[role="img"]')!.getAttribute('aria-label')).toBe(
-      'Lay on Hands: 0 of -3',
+      'Lay on Hands: 0 of 0',
     );
     expect(el.querySelector<HTMLElement>('.hk-gauge__brass')!.style.width).toBe('0%');
     fixture.componentInstance.max.set(5);

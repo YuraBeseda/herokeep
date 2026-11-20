@@ -72,14 +72,22 @@ export async function clickStrapAction(page: Page, id: string): Promise<void> {
   await action.click();
 }
 
-/** Types an HP amount into the gauge and presses its Damage / Heal button. */
+/** Types an HP amount into the gauge and applies Damage or Heal (main button or caret menu). */
 export async function applyHp(
   page: Page,
   amount: number,
   action: 'Damage' | 'Heal',
 ): Promise<void> {
   await page.locator('.hk-hp-gauge__amount').fill(String(amount));
-  await page.locator('hk-hp-gauge').getByRole('button', { name: action, exact: true }).click();
+  const gauge = page.locator('hk-hp-gauge');
+  const main = gauge.locator('.hk-split__main');
+  if ((await main.textContent())?.trim() === action) {
+    await main.click();
+    return;
+  }
+  // The main button repeats the last-used action; any other one is chosen from the caret menu.
+  await gauge.locator('.hk-split__caret button').click();
+  await page.getByRole('menuitem', { name: action, exact: true }).click();
 }
 
 /** The satchel slot (desktop) of an item, by the start of its name. */

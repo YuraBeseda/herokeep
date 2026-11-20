@@ -282,7 +282,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(labels().at(-1)).toBe(charactersEn.sheet.header.levelUp);
   });
 
-  it('the sheet strap is Damage · Heal · Roll · Short rest · Long rest | Add condition · Notes · Roll log · Export · Edit, scoped to the sheet so it survives tab changes', async () => {
+  it('the sheet strap is HP · Roll · Short rest · Long rest | Add condition · Notes · Roll log · Export · Edit, scoped to the sheet so it survives tab changes', async () => {
     const id = await seedFighter('Ivan');
     const router = TestBed.inject(Router);
 
@@ -290,7 +290,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     await pollUntil(harness.fixture, () => strapIds().primary.length > 0);
 
     expect(strapIds()).toEqual({
-      primary: ['damage', 'heal', 'roll', 'short-rest', 'long-rest'],
+      primary: ['hp', 'roll', 'short-rest', 'long-rest'],
       secondary: ['add-condition', 'notes', 'roll-log', 'export', 'edit'],
     });
     expect(TestBed.inject(ActionStrapService).config()?.scope).toEqual([
@@ -300,10 +300,10 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
 
     await harness.navigateByUrl(`/c/${id}/build`);
     await harness.fixture.whenStable();
-    expect(strapIds().primary).toEqual(['damage', 'heal', 'roll', 'short-rest', 'long-rest']);
+    expect(strapIds().primary).toEqual(['hp', 'roll', 'short-rest', 'long-rest']);
     await harness.navigateByUrl(`/c/${id}/timeline`);
     await harness.fixture.whenStable();
-    expect(strapIds().primary).toEqual(['damage', 'heal', 'roll', 'short-rest', 'long-rest']);
+    expect(strapIds().primary).toEqual(['hp', 'roll', 'short-rest', 'long-rest']);
   });
 
   it('the sheet strap does not linger on the level-up screen (which sets its own), and comes back with the sheet', async () => {
@@ -320,7 +320,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
 
     await harness.navigateByUrl(`/c/${id}/play`);
     await pollUntil(harness.fixture, () => strapIds().primary.length > 0);
-    expect(strapIds().primary).toEqual(['damage', 'heal', 'roll', 'short-rest', 'long-rest']);
+    expect(strapIds().primary).toEqual(['hp', 'roll', 'short-rest', 'long-rest']);
   });
 
   /** A `matchMedia` stub whose phone query can be flipped, firing the change listeners (a resize). */
@@ -444,7 +444,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     await pollUntil(harness.fixture, () => !exportAction().disabled);
   });
 
-  it('the strap Damage action brings the player to the HP amount field', async () => {
+  it('the strap HP action brings the player to the HP amount field', async () => {
     const id = await seedFighter('Ivan');
     const harness = await RouterTestingHarness.create(`/c/${id}/play`);
     document.body.append(harness.routeNativeElement!);
@@ -452,7 +452,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
 
     TestBed.inject(ActionStrapService)
       .config()!
-      .primary.find((a) => a.id === 'damage')!
+      .primary.find((a) => a.id === 'hp')!
       .run();
 
     expect(document.activeElement).toBe(document.querySelector('.hk-hp-gauge__amount'));

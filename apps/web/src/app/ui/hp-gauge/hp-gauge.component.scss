@@ -69,6 +69,20 @@
   font-size: 22px;
 }
 
+.hk-hp-gauge__temp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--recess);
+  box-shadow: inset 0 0 0 1px var(--border-brass);
+  color: var(--brass);
+  font-family: var(--font-body, inherit);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .hk-hp-gauge__body {
   display: flex;
   flex: 1 1 140px;
@@ -165,12 +179,10 @@
     gap: 4px;
   }
 
-  .hk-hp-gauge__controls button {
+  .hk-hp-gauge__controls hk-split-action {
     flex: 1 1 0;
     min-inline-size: 0;
-    padding-inline: 3px;
-    gap: 4px;
-    font-size: 15px;
+    justify-content: space-between;
   }
 
   .hk-hp-gauge__amount {

@@ -30,7 +30,7 @@ export interface SheetStrapState {
 }
 
 /**
- * The sheet's action strap (spec §3, board `IA-ActionStrap`): Damage · Heal · Roll · Short rest ·
+ * The sheet's action strap (spec §3, board `IA-ActionStrap`): HP · Roll · Short rest ·
  * Long rest | Add condition · Notes · Roll log · Export · Edit, with the concentration note in the
  * status slot. A pure builder: the shell calls it from an effect and hands the result to
  * `ActionStrapService`.
@@ -52,18 +52,12 @@ export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): 
       : action;
   return {
     primary: [
+      // One entry for HP: it brings the player to the gauge, whose split action applies the amount.
       mutating({
-        id: 'damage',
-        label: 'shell.icon.damage',
-        icon: 'damage',
+        id: 'hp',
+        label: 'shell.icon.hp',
+        icon: 'hp',
         kind: 'ember',
-        run: h.focusHpAmount,
-      }),
-      mutating({
-        id: 'heal',
-        label: 'shell.icon.heal',
-        icon: 'heal',
-        kind: 'primary',
         run: h.focusHpAmount,
       }),
       { id: 'roll', label: 'shell.icon.roll', icon: 'roll', kind: 'primary', run: h.rollPlain },

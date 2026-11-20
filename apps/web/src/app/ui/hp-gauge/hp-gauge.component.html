@@ -4,6 +4,11 @@
   <div class="hk-hp-gauge__numerals" aria-hidden="true">
     <span class="hk-hp-gauge__current">{{ current() }}</span>
     <span class="hk-hp-gauge__max">/ {{ max() }}</span>
+    @if (temp() > 0) {
+      <span class="hk-hp-gauge__temp">
+        <hk-icon [icon]="'ui:temp-hp'" />{{ t('ui.hp.temp-chip', { temp: temp() }) }}
+      </span>
+    }
   </div>
   <div class="hk-hp-gauge__body">
     <span class="hk-hp-gauge__label">
@@ -28,7 +33,6 @@
     </div>
   </div>
   <div class="hk-hp-gauge__controls">
-    @let reason = amount() === null ? t('ui.hp.amount-needed') : null;
     <input
       #field
       class="hk-hp-gauge__amount"
@@ -38,34 +42,13 @@
       [attr.aria-label]="t('ui.hp.amount')"
       [value]="typed()"
       (input)="onInput($event)"
-      (keydown.enter)="emit('damage', field)"
+      (keydown.enter)="applyCurrent()"
     />
-    <button
-      hk-button
-      [variant]="'ember'"
+    <hk-split-action
+      [items]="actions()"
+      [storageKey]="'hp'"
+      [defaultId]="'damage'"
       [size]="buttonSize()"
-      [disabledReason]="reason"
-      (click)="emit('damage', field)"
-    >
-      <hk-icon [icon]="'ui:damage'" />{{ t('ui.hp.damage') }}
-    </button>
-    <button
-      hk-button
-      [variant]="'moss'"
-      [size]="buttonSize()"
-      [disabledReason]="reason"
-      (click)="emit('heal', field)"
-    >
-      <hk-icon [icon]="'ui:heal'" />{{ t('ui.hp.heal') }}
-    </button>
-    <button
-      hk-button
-      [variant]="'ghost-leather'"
-      [size]="buttonSize()"
-      [disabledReason]="reason"
-      (click)="emit('setTemp', field)"
-    >
-      {{ t('ui.hp.temp') }}
-    </button>
+    />
   </div>
 </ng-container>
