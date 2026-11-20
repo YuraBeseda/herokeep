@@ -9,6 +9,8 @@ export interface StrapAction {
   readonly icon: UiIconName;
   readonly kind: 'primary' | 'parchment' | 'ghost' | 'ember' | 'icon';
   readonly disabled?: boolean;
+  /** Toggle actions (icon kind): the pressed state, shown as `aria-pressed`. */
+  readonly pressed?: boolean;
   /** i18n key explaining why the action is unavailable; shown as its hint while `disabled`. */
   readonly disabledReason?: string;
   /** Interpolation params for `disabledReason` (e.g. the campaign name of a house-rule reason). */

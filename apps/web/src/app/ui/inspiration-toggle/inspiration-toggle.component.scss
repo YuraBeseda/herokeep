@@ -1,4 +1,4 @@
-/* InspirationToggle (design-system): 44x24 track, 20px knob sliding over duration-fast. */
+/* InspirationToggle as a header icon: a round brass-rimmed button, lit brass while inspiration is available. */
 :host {
   display: inline-block;
 }
@@ -6,16 +6,19 @@
 .hk-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-block-size: 32px;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-seal);
-  background: transparent;
-  color: inherit;
-  font-family: var(--font-body);
-  font-size: 15px;
+  border-radius: 50%;
+  background: var(--recess);
+  box-shadow:
+    var(--shadow-inset-slot),
+    inset 0 0 0 1px var(--border-brass);
+  color: var(--accent-strong);
   cursor: pointer;
+  transition: background var(--duration-fast);
 
   &:focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -26,68 +29,21 @@
     opacity: 0.55;
     cursor: not-allowed;
   }
+
+  &[aria-pressed='true'] {
+    background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
+    box-shadow: inset 0 0 0 1.5px var(--brass-shadow);
+    color: var(--leather-dark);
+  }
 }
 
 hk-icon {
-  flex: none;
-  color: var(--accent-strong);
-  font-size: 20px;
-}
-
-.hk-toggle__track {
-  position: relative;
-  flex: none;
-  inline-size: 44px;
-  block-size: 24px;
-  border-radius: 12px;
-  background: var(--recess);
-  box-shadow:
-    inset 0 2px 3px rgb(0 0 0 / 80%),
-    inset 0 0 0 1px var(--border-brass);
-  transition: background var(--duration-fast);
-}
-
-.hk-toggle__knob {
-  position: absolute;
-  inset-block-start: 2px;
-  inset-inline-start: 2px;
-  inline-size: 20px;
-  block-size: 20px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--leather-highlight), var(--leather-dark) 75%);
-  box-shadow:
-    inset 0 0 0 1.5px var(--brass),
-    0 1px 2px rgb(0 0 0 / 60%);
-  transition: inset-inline-start var(--duration-fast);
-}
-
-.hk-toggle[aria-pressed='true'] {
-  hk-icon {
-    color: var(--brass);
-  }
-
-  .hk-toggle__track {
-    background: linear-gradient(180deg, var(--brass-mid), var(--brass));
-  }
-
-  .hk-toggle__knob {
-    inset-inline-start: 22px;
-    background: linear-gradient(180deg, var(--brass-top), var(--brass) 55%, var(--brass-mid));
-    box-shadow:
-      inset 0 0 0 1.5px var(--brass-shadow),
-      0 1px 2px rgb(0 0 0 / 60%);
-  }
+  font-size: 22px;
 }
 
 @media (pointer: coarse) {
   .hk-toggle {
-    min-block-size: var(--control-phone);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hk-toggle__track,
-  .hk-toggle__knob {
-    transition: none;
+    inline-size: var(--control-phone);
+    block-size: var(--control-phone);
   }
 }

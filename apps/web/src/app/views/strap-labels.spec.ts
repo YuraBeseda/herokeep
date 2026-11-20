@@ -90,6 +90,7 @@ const sheetHandlers = {
   toggleNotes: noop,
   toggleRollLog: noop,
   exportHero: noop,
+  toggleWakeLock: noop,
   edit: noop,
 };
 

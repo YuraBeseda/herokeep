@@ -58,6 +58,12 @@
               <p class="sheet-shell__class-line">{{ classLine(t) }}</p>
               <app-campaign-chip class="sheet-shell__campaign-chip" />
             </div>
+            <hk-inspiration-toggle
+              class="sheet-shell__inspiration"
+              [active]="s.inspiration"
+              [disabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
+              (activeChange)="actions.toggleInspiration()"
+            />
           </header>
 
           @if (!phone()) {
@@ -91,23 +97,25 @@
                   [class.sheet-shell__level-up-badge--on]="levelUpOpen()"
                   [attr.aria-current]="levelUpOpen() ? 'page' : null"
                   [routerLink]="['level-up']"
+                  [attr.aria-label]="t('sheet.header.levelUp')"
+                  [hkTooltip]="t('sheet.header.levelUp')"
                 >
-                  {{ t('sheet.header.levelUp') }}
+                  <hk-icon [icon]="'ui:level-up'" />
                 </a>
               } @else {
                 <button
-                  hk-button
+                  hk-icon-button
                   type="button"
                   class="sheet-shell__level-up-locked"
-                  [variant]="'ghost-leather'"
+                  [icon]="'level-up'"
+                  [hint]="'shell.icon.level-up'"
+                  [variant]="'ghost'"
                   [disabledReason]="
                     xpRange().next === null
                       ? t('sheet.header.levelUpMax')
                       : t('sheet.header.levelUpAt', { xp: xpRange().next })
                   "
-                >
-                  {{ t('sheet.header.levelUp') }}
-                </button>
+                ></button>
               }
             </div>
           }
@@ -158,7 +166,6 @@
           <app-vitals-leaf />
           <app-abilities-leaf [surface]="'leather'" />
           <app-skills-leaf [surface]="'leather'" />
-          <app-wake-lock-toggle />
         }
       </aside>
 

@@ -199,7 +199,7 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
     expect(leavesIn(root.querySelector('.sheet-shell__folio')!)).toEqual([]);
   });
 
-  it("the Combat tab's DOM order is HP, AC/initiative/speed, saves, attacks, resources, conditions, death saves, inspiration", async () => {
+  it("the Combat tab's DOM order is HP, AC/initiative/speed, saves, attacks, resources, conditions, death saves", async () => {
     stubViewport({ phone: true });
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
@@ -220,7 +220,6 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
       'app-resources-leaf',
       'app-conditions-leaf .conditions__add',
       'hk-death-saves',
-      'hk-inspiration-toggle',
     ].map((selector) => main.querySelector(selector));
     order.forEach((el, i) => expect(el, `element #${i}`).not.toBeNull());
     for (let i = 1; i < order.length; i++) {

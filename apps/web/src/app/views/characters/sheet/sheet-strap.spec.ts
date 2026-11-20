@@ -10,6 +10,7 @@ const handlers: SheetStrapHandlers = {
   toggleNotes: noop,
   toggleRollLog: noop,
   exportHero: noop,
+  toggleWakeLock: noop,
   edit: noop,
 };
 const addCondition = (state: SheetStrapState) =>
@@ -33,5 +34,20 @@ describe('buildSheetStrap — house rule: players manage their own conditions', 
     expect(addCondition(both)?.disabledReason).toBe('shell.strap.edit-locked');
     const free = { locked: false, exporting: false, scope: ['/c', '1'] };
     expect(addCondition(free)?.disabled).toBeFalsy();
+  });
+});
+
+describe('buildSheetStrap — keep screen awake', () => {
+  const wake = (state: Partial<SheetStrapState>) =>
+    buildSheetStrap({ locked: false, exporting: false, scope: ['/c', '1'], ...state }, handlers)
+      .secondary?.find((a) => a.id === 'wake-lock');
+
+  it('is a pressed-state icon button when the Wake Lock API exists', () => {
+    expect(wake({ wakeLock: { active: false } })).toMatchObject({ kind: 'icon', pressed: false });
+    expect(wake({ wakeLock: { active: true } })?.pressed).toBe(true);
+  });
+
+  it('is absent when the API is unavailable', () => {
+    expect(wake({})).toBeUndefined();
   });
 });

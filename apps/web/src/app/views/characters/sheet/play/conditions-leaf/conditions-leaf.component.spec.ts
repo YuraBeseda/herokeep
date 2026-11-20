@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { propose } from '@hk/engine';
-import { ToastService } from '@shared/components/toast/toast.service';
-import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
+import { CharacterStore } from '@shared/stores/character.store';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { EventsRepository } from '@shared/services/storage/events.repository';
 import type { Event } from '@hk/protocol';
@@ -97,51 +96,11 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
     });
   });
 
-  it('the inspiration toggle appends inspiration.changed and flips sheet.inspiration both ways', async () => {
+  it('has no inspiration row (the toggle lives in the sheet header)', async () => {
     await seedFighter('Ivan');
-    const characterStore = TestBed.inject(CharacterStore);
-
     const fixture = TestBed.createComponent(ConditionsLeafComponent);
     await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(characterStore.sheet()?.inspiration).toBe(false);
-
-    const toggle = compiled.querySelector<HTMLButtonElement>('hk-inspiration-toggle button')!;
-    expect(toggle.getAttribute('aria-pressed')).toBe('false');
-
-    toggle.click();
-    await pollUntil(fixture, () => characterStore.sheet()?.inspiration === true);
-    expect(characterStore.events().at(-1)).toMatchObject({
-      type: 'inspiration.changed',
-      payload: { value: true },
-    });
-    expect(characterStore.sheet()?.inspiration).toBe(true);
-    await fixture.whenStable();
-    expect(toggle.getAttribute('aria-pressed')).toBe('true');
-
-    toggle.click();
-    await pollUntil(fixture, () => characterStore.sheet()?.inspiration === false);
-    expect(characterStore.sheet()?.inspiration).toBe(false);
-    await fixture.whenStable();
-    expect(toggle.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('the tryPropose funnel (inspiration toggle) shows the not-leader toast on a rejected appendTx', async () => {
-    await seedFighter('Ivan');
-    const characterStore = TestBed.inject(CharacterStore);
-    const notLeaderError = new CharacterStoreNotLeaderError();
-    vi.spyOn(characterStore, 'appendTx').mockRejectedValue(notLeaderError);
-
-    const fixture = TestBed.createComponent(ConditionsLeafComponent);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const toastService = TestBed.inject(ToastService);
-    const showSpy = vi.spyOn(toastService, 'show');
-
-    compiled.querySelector<HTMLButtonElement>('hk-inspiration-toggle button')!.click();
-    await pollUntil(fixture, () => showSpy.mock.calls.length > 0);
-
-    expect(showSpy).toHaveBeenCalledWith(notLeaderError.code);
+    expect((fixture.nativeElement as HTMLElement).querySelector('hk-inspiration-toggle')).toBeNull();
   });
 
   it('adding a non-level condition round-trips into sheet.conditions and renders a localized chip', async () => {

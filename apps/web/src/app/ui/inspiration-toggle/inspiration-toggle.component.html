@@ -1,18 +1,14 @@
 <ng-container *transloco="let t; read: 'shell'">
-  @let label = active() ? t('ui.inspiration.press-spend') : t('ui.inspiration.press-grant');
+  @let hint = active() ? t('ui.inspiration.press-spend') : t('ui.inspiration.press-grant');
   <button
     type="button"
     class="hk-toggle"
     [attr.aria-pressed]="active()"
     [attr.aria-disabled]="disabledReason() ? 'true' : null"
-    [attr.aria-label]="label"
-    [hkTooltip]="disabledReason() || label"
+    [attr.aria-label]="t('icon.inspiration')"
+    [hkTooltip]="disabledReason() || hint"
     (click)="press()"
   >
     <hk-icon [icon]="'ui:inspiration'" />
-    <span class="hk-toggle__track"><span class="hk-toggle__knob"></span></span>
-    <span class="hk-toggle__word">{{
-      active() ? t('ui.inspiration.available') : t('ui.inspiration.none')
-    }}</span>
   </button>
 </ng-container>

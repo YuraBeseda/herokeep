@@ -10,6 +10,7 @@ export interface SheetStrapHandlers {
   readonly toggleNotes: () => void;
   readonly toggleRollLog: () => void;
   readonly exportHero: () => void;
+  readonly toggleWakeLock: () => void;
   readonly edit: () => void;
 }
 
@@ -20,6 +21,8 @@ export interface SheetStrapState {
   readonly conditionsDeniedIn?: string;
   /** An export is in progress: Export is disabled until it settles. */
   readonly exporting: boolean;
+  /** Keep-screen-awake state; absent when the Wake Lock API is unavailable (the button is hidden). */
+  readonly wakeLock?: { readonly active: boolean };
   /** Already-translated concentration note for the status slot. */
   readonly status?: string;
   /** The sheet's path prefix (`['/c', id]`) so the strap survives tab changes inside it. */
@@ -105,6 +108,18 @@ export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): 
         disabled: state.exporting,
         run: h.exportHero,
       },
+      ...(state.wakeLock
+        ? [
+            {
+              id: 'wake-lock',
+              label: 'shell.strap.wake-lock',
+              icon: 'theme-scroll',
+              kind: 'icon',
+              pressed: state.wakeLock.active,
+              run: h.toggleWakeLock,
+            } satisfies StrapAction,
+          ]
+        : []),
       { id: 'edit', label: 'shell.icon.edit', icon: 'edit', kind: 'icon', run: h.edit },
     ],
     ...(state.status ? { status: state.status } : {}),

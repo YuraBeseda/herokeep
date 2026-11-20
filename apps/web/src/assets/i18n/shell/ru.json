@@ -189,6 +189,7 @@
     "secondary": "Другие действия",
     "reason-no-filters": "Для этого списка нет фильтров",
     "add-condition": "Добавить состояние",
+    "wake-lock": "Не выключать экран",
     "roll-log": "Журнал бросков",
     "campaign-item": "Предмет",
     "campaign-session-start": "Начать сессию",

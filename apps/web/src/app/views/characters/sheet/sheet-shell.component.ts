@@ -8,6 +8,7 @@ import { SkeletonComponent } from '@shared/components/skeleton/skeleton.componen
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { provideEngineScope } from '@shared/services/engine/engine-scope.providers';
+import { WakeLockService } from '@shared/services/pwa/wake-lock.service';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { PlaceholderService, type Monogram } from '@shared/services/images/placeholder.service';
 import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
@@ -16,6 +17,10 @@ import { combineLatest, filter, map, switchMap } from 'rxjs';
 import { ActionStrapService } from '../../../ui/action-strap/action-strap.service';
 import { HkBannerComponent } from '../../../ui/banner/banner.component';
 import { HkButtonComponent } from '../../../ui/button/button.component';
+import { HkIconButtonComponent } from '../../../ui/icon-button/icon-button.component';
+import { HkInspirationToggleComponent } from '../../../ui/inspiration-toggle/inspiration-toggle.component';
+import { HkTooltipDirective } from '../../../ui/tooltip/tooltip.directive';
+import { IconComponent } from '../../../shared/icons/icon.component';
 import { HkNumberFieldComponent } from '../../../ui/number-field/number-field.component';
 import { HkPortraitFrameComponent } from '../../../ui/portrait-frame/portrait-frame.component';
 import { TopBarService } from '../../../ui/shell/top-bar.service';
@@ -28,7 +33,6 @@ import { PlayRollsService } from './play/play-rolls.service';
 import { RollLogDrawerComponent } from './play/roll-log-drawer/roll-log-drawer.component';
 import { SkillsLeafComponent } from './play/skills-leaf/skills-leaf.component';
 import { VitalsLeafComponent } from './play/vitals-leaf/vitals-leaf.component';
-import { WakeLockToggleComponent } from './play/wake-lock-toggle/wake-lock-toggle.component';
 import { CampaignPacksBannerComponent } from './campaign-packs-banner.component';
 import { SheetChromeService } from './sheet-chrome.service';
 import { PHONE_TAB_IDS, SheetLayoutService } from './sheet-layout';
@@ -94,7 +98,10 @@ const SHEET_CHILDREN: ReadonlySet<string> = new Set([...TAB_IDS, ...PHONE_TAB_ID
     VitalsLeafComponent,
     AbilitiesLeafComponent,
     SkillsLeafComponent,
-    WakeLockToggleComponent,
+    HkInspirationToggleComponent,
+    HkIconButtonComponent,
+    HkTooltipDirective,
+    IconComponent,
     NotesDrawerComponent,
     RollLogDrawerComponent,
   ],
@@ -116,6 +123,7 @@ export class SheetShellComponent {
   private readonly toastService = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
   private readonly strap = inject(ActionStrapService);
+  private readonly wakeLock = inject(WakeLockService);
   private readonly tabBar = inject(TabBarService);
   private readonly topBar = inject(TopBarService);
   private readonly chrome = inject(SheetChromeService);
@@ -363,6 +371,7 @@ export class SheetShellComponent {
       ? this.actions.campaignName()
       : undefined;
     const exporting = this.chrome.exporting();
+    const wakeLock = this.wakeLock.supported ? { active: this.wakeLock.active() } : undefined;
     const status = this.statusText();
     this.translationsReady();
     if (!sheet) return;
@@ -376,7 +385,7 @@ export class SheetShellComponent {
     untracked(() => {
       this.strap.set(
         buildSheetStrap(
-          { locked, conditionsDeniedIn, exporting, status, scope: ['/c', this.routeId] },
+          { locked, conditionsDeniedIn, exporting, wakeLock, status, scope: ['/c', this.routeId] },
           {
             focusHpAmount: () => this.focusHpAmount(),
             rollPlain: () => this.rollPlain(),
@@ -386,6 +395,8 @@ export class SheetShellComponent {
             toggleNotes: () => this.chrome.toggleNotes(strapButton('notes')),
             toggleRollLog: () => this.chrome.toggleRollLog(strapButton('roll-log')),
             exportHero: () => void this.chrome.exportHero(this.scopedT),
+            toggleWakeLock: () =>
+              void (this.wakeLock.active() ? this.wakeLock.disable() : this.wakeLock.enable()),
             edit: () => void this.router.navigate(['build'], { relativeTo: this.route }),
           },
         ),

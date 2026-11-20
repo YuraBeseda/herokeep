@@ -132,12 +132,5 @@
         </fieldset>
       </hk-leaf>
     }
-
-    <hk-inspiration-toggle
-      class="conditions__inspiration"
-      [active]="s.inspiration"
-      [disabledReason]="actions.editLocked() ? t('sheet.editLocked') : null"
-      (activeChange)="actions.toggleInspiration()"
-    />
   </ng-container>
 }

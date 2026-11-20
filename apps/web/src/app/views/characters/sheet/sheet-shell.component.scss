@@ -130,6 +130,11 @@
   gap: var(--space-3);
 }
 
+.sheet-shell__inspiration {
+  flex: none;
+  margin-inline-start: auto;
+}
+
 .sheet-shell__portrait {
   flex: none;
 }
@@ -210,9 +215,11 @@
 .sheet-shell__level-up-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex: none;
   min-block-size: var(--touch-target, 44px);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-frame);
+  min-inline-size: var(--touch-target, 44px);
+  border-radius: 50%;
   background: linear-gradient(180deg, var(--ember-top), var(--ember));
   color: var(--text-on-ember);
   font-family: var(--font-display);

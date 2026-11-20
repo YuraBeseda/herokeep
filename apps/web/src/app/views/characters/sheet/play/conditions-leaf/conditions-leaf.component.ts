@@ -8,7 +8,6 @@ import {
   HkDeathSavesComponent,
   type DeathSaveKind,
 } from '../../../../../ui/death-saves/death-saves.component';
-import { HkInspirationToggleComponent } from '../../../../../ui/inspiration-toggle/inspiration-toggle.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { HkTagChipComponent } from '../../../../../ui/tag-chip/tag-chip.component';
 import { PlayActionsService } from '../play-actions.service';
@@ -37,7 +36,6 @@ interface ListedSource {
     HkButtonComponent,
     HkTagChipComponent,
     HkDeathSavesComponent,
-    HkInspirationToggleComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './conditions-leaf.component.html',

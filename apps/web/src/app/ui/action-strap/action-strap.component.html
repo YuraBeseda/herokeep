@@ -102,6 +102,7 @@
         [attr.data-action]="action.id"
         [icon]="action.icon"
         [hint]="action.label"
+        [attr.aria-pressed]="action.pressed ?? null"
         [disabled]="!!action.disabled && !action.disabledReason"
         [disabledReason]="
           action.disabled && action.disabledReason

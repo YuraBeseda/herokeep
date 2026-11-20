@@ -546,10 +546,6 @@
         "dieSpent": "Hit die spent"
       }
     },
-    "wakeLock": {
-      "on": "Screen staying awake",
-      "off": "Keep screen awake"
-    },
     "roll": {
       "title": "Dice roller",
       "check": "Roll check",

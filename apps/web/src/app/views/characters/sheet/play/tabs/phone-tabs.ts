@@ -12,7 +12,6 @@ import { ResourcesLeafComponent } from '../resources-leaf/resources-leaf.compone
 import { SkillsLeafComponent } from '../skills-leaf/skills-leaf.component';
 import { SpellsLeafComponent } from '../spells-leaf/spells-leaf.component';
 import { VitalsLeafComponent } from '../vitals-leaf/vitals-leaf.component';
-import { WakeLockToggleComponent } from '../wake-lock-toggle/wake-lock-toggle.component';
 import { SheetChromeService } from '../../sheet-chrome.service';
 
 /**
@@ -93,7 +92,7 @@ export class HeroTabComponent {}
  * up. The wake-lock toggle lives here too, since the phone's folio has no room for it. */
 @Component({
   selector: 'app-more-tab',
-  imports: [TranslocoDirective, RouterLink, WakeLockToggleComponent],
+  imports: [TranslocoDirective, RouterLink],
   providers: [provideTranslocoScope('characters')],
   template: `
     <ng-container *transloco="let t; read: 'characters'">
@@ -145,7 +144,6 @@ export class HeroTabComponent {}
           </li>
         }
       </ul>
-      <app-wake-lock-toggle />
     </ng-container>
   `,
   styles: `

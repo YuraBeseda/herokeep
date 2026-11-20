@@ -211,6 +211,38 @@ describe('SheetShellComponent (route resolver + shell)', () => {
     expect(root.querySelector('.play-tab')).not.toBeNull();
   });
 
+  it('the header holds a heroic-inspiration icon toggle that flips inspiration both ways', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const root = harness.routeNativeElement!;
+
+    const toggle = root.querySelector<HTMLButtonElement>(
+      '.sheet-shell__header hk-inspiration-toggle button',
+    )!;
+    expect(toggle.getAttribute('aria-label')).toBe('Heroic inspiration');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    toggle.click();
+    await pollUntil(harness.fixture, () => characterStore.sheet()?.inspiration === true);
+    await harness.fixture.whenStable();
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    toggle.click();
+    await pollUntil(harness.fixture, () => characterStore.sheet()?.inspiration === false);
+  });
+
+  it('the level-up control is an icon with the name "Level up", locked with its reason below the threshold', async () => {
+    const id = await seedFighter('Ivan');
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+    const locked = harness.routeNativeElement!.querySelector<HTMLButtonElement>(
+      '.sheet-shell__level-up-locked',
+    )!;
+    expect(locked.getAttribute('aria-label')).toBe('Level up');
+    expect(locked.getAttribute('aria-disabled')).toBe('true');
+    expect(locked.textContent).toContain('Level up at 300 XP');
+  });
+
   it('awarding XP up to the level-2 threshold shows the "level up available" badge', async () => {
     const id = await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
@@ -229,7 +261,9 @@ describe('SheetShellComponent (route resolver + shell)', () => {
 
     await pollUntil(harness.fixture, () => characterStore.advancements().length > 0);
 
-    expect(root.querySelector('.sheet-shell__level-up-badge')).not.toBeNull();
+    const badge = root.querySelector('.sheet-shell__level-up-badge');
+    expect(badge).not.toBeNull();
+    expect(badge!.getAttribute('aria-label')).toBe('Level up');
     const lastEvent = characterStore.events().at(-1)!;
     expect(lastEvent.type).toBe('xp.awarded');
     expect(lastEvent.payload).toEqual({ amount: 300 });

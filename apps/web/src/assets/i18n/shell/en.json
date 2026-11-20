@@ -189,6 +189,7 @@
     "secondary": "More actions",
     "reason-no-filters": "No filters for this list",
     "add-condition": "Add condition",
+    "wake-lock": "Keep screen awake",
     "roll-log": "Roll log",
     "campaign-item": "Item",
     "campaign-session-start": "Start session",
