@@ -6,6 +6,7 @@ import { Location } from '@angular/common';
 import { provideRouter, Router } from '@angular/router';
 import { DialogService } from '@app/ui/dialog/dialog.service';
 import { hintOf, press } from '../testing/harness';
+import { stubViewport } from '../testing/viewport';
 import { provideShellTransloco } from '../testing/transloco-testing';
 import { HkDrawerComponent } from './drawer.component';
 
@@ -46,7 +47,7 @@ class DrawerInDialog {
       {{ openerText }}
     </button>
     <button type="button" class="elsewhere">{{ elsewhereText }}</button>
-    <hk-drawer [(open)]="open" [heading]="heading" [opener]="openerRef()">
+    <hk-drawer [(open)]="open" [heading]="heading" [opener]="openerRef()" [peek]="peek()">
       <p class="body">{{ bodyText }}</p>
       <button hkDrawerAction type="button" class="act" (click)="dialogs.open(Inner)">
         {{ actionText }}
@@ -58,6 +59,7 @@ class Host {
   protected readonly dialogs = inject(DialogService);
   protected readonly Inner = InnerDialog;
   readonly open = signal(false);
+  readonly peek = signal(false);
   readonly openerRef = viewChild<ElementRef<HTMLElement>>('opener');
   protected readonly openerText = 'Open';
   protected readonly elsewhereText = 'Elsewhere';
@@ -345,6 +347,41 @@ describe('HkDrawerComponent', () => {
       await fixture.whenStable();
       expect(drawerPanel()).toBeNull();
       expect(dialog()).not.toBeNull();
+    });
+  });
+
+  describe('as the description peek', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    async function openPeek(phone: boolean) {
+      stubViewport({ phone });
+      const { fixture, el } = await setup();
+      fixture.componentInstance.peek.set(true);
+      await openIt(fixture);
+      return { fixture, el };
+    }
+
+    it('is non-modal at >= 900 px: no scrim, and a press outside leaves it open', async () => {
+      const { fixture, el } = await openPeek(false);
+      expect(panel(el)!.getAttribute('aria-modal')).toBe('false');
+      expect(el.querySelector('.hk-drawer__scrim')).toBeNull();
+      press(el.querySelector('.elsewhere')!);
+      await fixture.whenStable();
+      expect(panel(el)).not.toBeNull();
+    });
+
+    it('still closes on Escape and returns focus to the opener', async () => {
+      const { fixture, el } = await openPeek(false);
+      key(document.body, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).toBeNull();
+      expect(document.activeElement).toBe(el.querySelector('.opener'));
+    });
+
+    it('is a modal sheet with a scrim below 900 px', async () => {
+      const { el } = await openPeek(true);
+      expect(panel(el)!.getAttribute('aria-modal')).toBe('true');
+      expect(el.querySelector('.hk-drawer__scrim')).not.toBeNull();
     });
   });
 });

@@ -6,10 +6,10 @@ export const PHONE_QUERY = '(max-width: 767.98px)';
 /**
  * Whether the viewport is phone-width (< 768 px), kept live. Call in an injection context. Layout
  * differences that only CSS needs stay in CSS; this is for the places where a different DOM is
- * rendered (a different landmark, a More button instead of icon buttons).
+ * rendered (a different landmark, a More button instead of icon buttons). `media` overrides the query.
  */
-export function phoneLayout(): Signal<boolean> {
-  const query = typeof matchMedia === 'function' ? matchMedia(PHONE_QUERY) : null;
+export function phoneLayout(media = PHONE_QUERY): Signal<boolean> {
+  const query = typeof matchMedia === 'function' ? matchMedia(media) : null;
   const phone = signal(query?.matches ?? false);
   if (query) {
     const onChange = (event: MediaQueryListEvent): void => phone.set(event.matches);

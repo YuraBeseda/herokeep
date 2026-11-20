@@ -22,6 +22,7 @@ import { CharacterEngineScope } from '@shared/stores/character-engine-scope';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { CreateWizardState } from '../../views/characters/create-wizard/create-wizard.state';
+import { IconComponent } from '../../shared/icons/icon.component';
 import { EntityFactsComponent } from '../entity-facts/entity-facts.component';
 import { HkDrawerComponent } from '../drawer/drawer.component';
 import {
@@ -30,6 +31,7 @@ import {
 } from '../options-chip/options-chip.component';
 import { HkSpellHigherLevelsComponent } from '../spell-higher-levels/spell-higher-levels.component';
 import { HkTagChipComponent } from '../tag-chip/tag-chip.component';
+import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 
 type Opener = ElementRef<HTMLElement> | HTMLElement | null | undefined;
 
@@ -88,6 +90,8 @@ const POPOVER_OPTION_LIMIT = 24;
     HkOptionsChipComponent,
     EntityFactsComponent,
     HkSpellHigherLevelsComponent,
+    IconComponent,
+    HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('library')],
   templateUrl: './description-drawer.component.html',
@@ -111,6 +115,8 @@ export class HkDescriptionDrawerComponent {
   readonly open = model(false);
   /** The control that opened the drawer (focus returns to it). */
   readonly opener = input<Opener>(null);
+  /** The app's one non-modal peek (`PeekService`, hosted in `app.html`). */
+  readonly peek = input(false);
 
   protected readonly ready = this.packStore.ready;
   /** Opened from a hero's sheet, the library entry is opened for that hero (`?for=`), so it can

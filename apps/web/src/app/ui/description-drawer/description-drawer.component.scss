@@ -61,6 +61,29 @@
   }
 }
 
+.hk-description__open-page {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  color: var(--accent-strong);
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+
+  @media (pointer: coarse) {
+    inline-size: var(--touch-target);
+    block-size: var(--touch-target);
+  }
+}
+
 .hk-description__not-found {
   margin: 0;
 }

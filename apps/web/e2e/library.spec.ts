@@ -131,4 +131,72 @@ test.describe('library', () => {
     await page.goBack();
     await expectRestored();
   });
+  test('peek drawer opens without layout shift and scrolls itself', async ({ page }) => {
+    // Short enough that the subclass text overflows the panel; still the desktop (>= 900 px) layout.
+    await page.setViewportSize({ width: 1280, height: 400 });
+    await page.goto(`/library/${encodeURIComponent('srd-5e-2024:class/paladin')}`);
+    const button = page
+      .locator('li', { hasText: 'Oath of Devotion' })
+      .locator('.class-entry__more')
+      .first();
+    await expect(button).toBeAttached();
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+
+    // Sample the main column's x and the page scroll every frame while the drawer opens.
+    const samples = await button.evaluate(async (el) => {
+      const main = document.querySelector('.app-shell__main')!;
+      const root = document.scrollingElement!;
+      const out: { x: number; top: number }[] = [];
+      (el as HTMLElement).click();
+      const end = performance.now() + 600;
+      while (performance.now() < end) {
+        out.push({ x: main.getBoundingClientRect().x, top: root.scrollTop });
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      return out;
+    });
+    const first = samples[0]!;
+    expect(samples.every((s) => s.x === first.x && s.top === 600)).toBe(true);
+
+    const panel = page.locator('.hk-drawer__panel');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('h2')).toHaveText('Oath of Devotion');
+    // Non-modal on desktop: no backdrop.
+    await expect(page.locator('.hk-drawer__scrim')).toBeHidden();
+
+    // Above the strap and the nav: once it has slid in, the point at its centre is inside it.
+    await expect.poll(() => panel.evaluate((el) => el.getAnimations().length)).toBe(0);
+    const onTop = await panel.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return !!hit && el.contains(hit);
+    });
+    expect(onTop).toBe(true);
+
+    // The drawer scrolls itself; the page does not move with it.
+    const body = panel.locator('.hk-drawer__body');
+    expect(await body.evaluate((el) => getComputedStyle(el).overflowY)).toBe('auto');
+    // The rendered text arrives a tick after the heading.
+    await expect
+      .poll(() => body.evaluate((el) => el.scrollHeight - el.clientHeight))
+      .toBeGreaterThan(0);
+    const pageTop = () => page.evaluate(() => window.scrollY);
+    const panelBox = (await panel.boundingBox())!;
+    await page.mouse.move(panelBox.x + panelBox.width / 2, panelBox.y + panelBox.height / 2);
+    await page.mouse.wheel(0, 200);
+    await expect.poll(() => body.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(await pageTop()).toBe(600);
+
+    // The wheel over the page still scrolls the page while the drawer stays open.
+    await page.mouse.move(panelBox.x / 2, 200);
+    await page.mouse.wheel(0, 200);
+    await expect.poll(pageTop).toBeGreaterThan(600);
+    await expect(panel).toBeVisible();
+
+    // Escape closes it; focus returns to the opener.
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+    await expect(button).toBeFocused();
+  });
 });

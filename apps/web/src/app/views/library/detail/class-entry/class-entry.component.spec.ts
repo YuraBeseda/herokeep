@@ -17,6 +17,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import libraryEn from '../../../../../assets/i18n/library/en.json';
 import libraryRu from '../../../../../assets/i18n/library/ru.json';
 import libraryUk from '../../../../../assets/i18n/library/uk.json';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { ClassEntryComponent } from './class-entry.component';
 import { summaryOf } from './summary-text';
 
@@ -348,21 +349,24 @@ describe('ClassEntryComponent', () => {
     },
   );
 
-  it('opens a feature in full from its Full text button, in the description drawer', async () => {
+  it('opens a feature in full from its Full text button, in the one peek drawer', async () => {
     const { fixture, el } = await mountClass('paladin');
     const button = Array.from(el.querySelectorAll<HTMLButtonElement>('.class-entry__more')).find(
       (b) => b.closest('li')?.textContent?.includes('Lay On Hands'),
     )!;
     expect(button).toBeTruthy();
-    expect(el.querySelector('hk-description-drawer')).toBeNull();
+    const peek = TestBed.inject(PeekService);
+    expect(peek.current()).toBeNull();
 
     button.click();
     await fixture.whenStable();
-    await fixture.whenStable();
 
-    const drawer = el.querySelector('hk-description-drawer');
-    expect(drawer?.querySelector('h2')?.textContent?.trim()).toBe('Lay On Hands');
-    expect(drawer?.textContent).toContain('pool of healing power');
+    // The drawer itself is hosted once in app.html, never inside the (tilted) leaf.
+    expect(el.querySelector('hk-description-drawer')).toBeNull();
+    expect(peek.current()).toEqual({
+      entityId: 'srd-5e-2024:feature/paladin-lay-on-hands',
+      opener: button,
+    });
   });
   it('names a choice prompt and individual weapons in the active language from the installed translation', async () => {
     const ukPack: Pack = {

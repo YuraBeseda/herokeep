@@ -1,6 +1,7 @@
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import {
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -11,6 +12,10 @@ import {
 } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { HkIconButtonComponent } from '../icon-button/icon-button.component';
+import { phoneLayout } from '../shell/viewport';
+
+/** Below this width a peek drawer is a modal bottom sheet; at or above it, a non-modal side panel. */
+const PEEK_SHEET_QUERY = '(max-width: 899.98px)';
 
 let nextDrawerId = 0;
 
@@ -27,12 +32,17 @@ type Opener = ElementRef<HTMLElement> | HTMLElement | null | undefined;
  * opener toggles it) and a router `NavigationStart` (a deep link or browser Back must not leave it
  * open over the next screen). Focus moves in on open and stays trapped. The document listeners
  * exist only while it is open.
+ *
+ * `peek`: the description peek (one host, `PeekService`). At >= 900 px it is non-modal: a fixed
+ * right panel with no scrim, no focus trap and no outside-press close, so the page under it keeps
+ * scrolling; below 900 px it is a modal bottom sheet. A `[hkDrawerHeadAction]` sits in the header.
  */
 @Component({
   selector: 'hk-drawer',
   imports: [CdkTrapFocus, HkIconButtonComponent],
   templateUrl: './drawer.component.html',
   styleUrl: './drawer.component.scss',
+  host: { '[class.hk-drawer--peek]': 'peek()' },
 })
 export class HkDrawerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -45,6 +55,11 @@ export class HkDrawerComponent {
   readonly heading = input.required<string>();
   /** The control that opens the drawer: focus returns to it, and pressing it never counts as outside. */
   readonly opener = input<Opener>(null);
+  /** The non-modal description peek (see the class doc). */
+  readonly peek = input(false);
+
+  private readonly sheet = phoneLayout(PEEK_SHEET_QUERY);
+  protected readonly modal = computed(() => !this.peek() || this.sheet());
 
   protected readonly titleId = `hk-drawer-title-${nextDrawerId++}`;
   private returnTo: HTMLElement | null = null;
@@ -90,7 +105,7 @@ export class HkDrawerComponent {
 
   private onOutsidePress(event: Event): void {
     const target = event.target;
-    if (!(target instanceof Node)) return;
+    if (!(target instanceof Node) || !this.modal()) return;
     // Inside the panel is inside; the scrim (also in the host) is the outside under the pointer.
     if (this.host.nativeElement.querySelector('.hk-drawer__panel')?.contains(target)) return;
     // A dialog or sheet stacked above the drawer lives in the CDK overlay container: not outside.

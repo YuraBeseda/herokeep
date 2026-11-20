@@ -1,11 +1,13 @@
 @if (open()) {
-  <div class="hk-drawer__scrim" aria-hidden="true"></div>
+  @if (modal()) {
+    <div class="hk-drawer__scrim" aria-hidden="true"></div>
+  }
   <div
     class="hk-drawer__panel"
     role="dialog"
-    aria-modal="true"
+    [attr.aria-modal]="modal()"
     [attr.aria-labelledby]="titleId"
-    cdkTrapFocus
+    [cdkTrapFocus]="modal()"
     cdkTrapFocusAutoCapture
   >
     <svg class="hk-tex hk-tex--paper" aria-hidden="true" focusable="false">
@@ -14,6 +16,7 @@
     <span class="hk-drawer__grip" aria-hidden="true"></span>
     <header class="hk-drawer__head">
       <h2 class="hk-drawer__title" [id]="titleId" tabindex="-1" cdkFocusInitial>{{ heading() }}</h2>
+      <ng-content select="[hkDrawerHeadAction]" />
       <button
         type="button"
         hk-icon-button

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Sheet } from '@hk/engine';
@@ -8,7 +8,7 @@ import { needsSheet, optionsForChoice } from '@shared/services/engine/choice-opt
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { sheetNames } from '../../../characters/sheet/play/play-names';
-import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
 import {
   HkOptionsChipComponent,
@@ -79,7 +79,6 @@ function slugText(slug: string): string {
     TranslocoDirective,
     RouterLink,
     EntityFactsComponent,
-    HkDescriptionDrawerComponent,
     HkLeafComponent,
     HkOptionsChipComponent,
     HkTooltipDirective,
@@ -99,10 +98,7 @@ export class ClassEntryComponent {
   /** The hero's sheet when it is loaded: a proficiency-gated pick (Expertise) is then counted from it, as the wizard step does. */
   readonly heroSheet = input<Pick<Sheet, 'skills'> | undefined>(undefined);
 
-  // The feature whose full text is open in the description drawer.
-  protected readonly drawerEntity = signal<string | null>(null);
-  protected readonly drawerOpen = signal(false);
-  protected readonly drawerOpener = signal<HTMLElement | null>(null);
+  private readonly peek = inject(PeekService);
 
   protected readonly levels: readonly number[] = Array.from(
     { length: CLASS_LEVELS },
@@ -335,8 +331,6 @@ export class ClassEntryComponent {
   /** Opens a feature's full text in the description drawer (it ends with an Open entry link). */
   protected showFullText(event: Event, id: string): void {
     const target = event.currentTarget;
-    this.drawerOpener.set(target instanceof HTMLElement ? target : null);
-    this.drawerEntity.set(id);
-    this.drawerOpen.set(true);
+    this.peek.open(id, target instanceof HTMLElement ? target : undefined);
   }
 }

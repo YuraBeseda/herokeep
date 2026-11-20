@@ -4,7 +4,19 @@
   (openChange)="open.set($event)"
   [heading]="name()"
   [opener]="opener()"
+  [peek]="peek()"
 >
+  @if (resolved(); as current) {
+    <a
+      hkDrawerHeadAction
+      class="hk-description__open-page"
+      [routerLink]="['/library', current.id]"
+      [queryParams]="libraryQuery()"
+      [attr.aria-label]="t('detail.open-entry')"
+      [hkTooltip]="t('detail.open-entry')"
+      ><hk-icon [icon]="'ui:library'"
+    /></a>
+  }
   @if (resolved(); as current) {
     <div class="hk-description">
       <div class="hk-description__meta">

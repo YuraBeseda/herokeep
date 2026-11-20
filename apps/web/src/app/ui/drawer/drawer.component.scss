@@ -1,4 +1,6 @@
-/* The side drawer: parchment from the right on >= 768 px, a full-height bottom sheet below. */
+/* The side drawer: parchment from the right on >= 768 px, a full-height bottom sheet below.
+   It must be hosted outside any transformed ancestor (a tilted leaf): a transform makes that
+   ancestor the containing block of `position: fixed`, so the panel would size to and scroll with it. */
 :host {
   display: contents;
 }
@@ -97,6 +99,34 @@
   }
 
   .hk-drawer__grip {
+    display: block;
+    flex: none;
+    align-self: center;
+    inline-size: 40px;
+    block-size: 4px;
+    border-radius: 2px;
+    background: var(--text-2);
+    opacity: 0.45;
+  }
+}
+
+/* The description peek: a non-modal right panel at >= 900 px, a modal bottom sheet below. */
+:host(.hk-drawer--peek) .hk-drawer__panel {
+  inline-size: min(28rem, 40vw);
+}
+
+@media (max-width: 899.98px) {
+  :host(.hk-drawer--peek) .hk-drawer__panel {
+    inset-block: auto 0;
+    inset-inline: 0;
+    inline-size: auto;
+    max-block-size: 85dvh;
+    border-radius: var(--radius-strap) var(--radius-strap) 0 0;
+    padding-block-start: 10px;
+    animation-name: hk-sheet-in;
+  }
+
+  :host(.hk-drawer--peek) .hk-drawer__grip {
     display: block;
     flex: none;
     align-self: center;
