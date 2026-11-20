@@ -118,7 +118,7 @@ export class LevelUpFlowChrome {
         ...(className ? { summary: className } : {}),
         hint: this.state.multiclassFiltered()
           ? this.tr('characters.levelUp.stepper.multiclassOff', {
-              campaign: this.state.campaignName,
+              campaign: this.state.campaignName(),
             })
           : this.tr('characters.levelUp.stepper.classChosen'),
       },

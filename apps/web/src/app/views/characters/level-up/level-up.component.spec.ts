@@ -13,6 +13,7 @@ import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat'
 import { of } from 'rxjs';
 import { StoragePersistService } from '@shared/services/pwa/storage-persist.service';
 import { HkDb } from '@shared/services/storage/dexie.db';
+import { EventsRepository } from '@shared/services/storage/events.repository';
 import { CharacterStore } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import { routes } from '../../../app.routes';
@@ -1282,6 +1283,33 @@ describe('LevelUpComponent — multiclassing house rule', () => {
     expect(first.classList.contains('hk-stepper__step--locked')).toBe(true);
     expect(hintOf(first)).toBe(REASON);
     expect(root.textContent).not.toContain(REASON);
+  });
+
+  it('off, opened by a cold deep link (store on another hero): offers no other class', async () => {
+    const id = await seedLinkedFighter(false);
+    await seedFighter('Other'); // the store now holds a different, solo hero
+    expect(TestBed.inject(CharacterStore).streamId()).not.toBe(id);
+    // The campaign read lands only after the wizard has opened, as on a slow cold load.
+    const repository = TestBed.inject(EventsRepository);
+    const byStream = repository.byStream.bind(repository);
+    let slowed = false;
+    vi.spyOn(repository, 'byStream').mockImplementation(async (stream) => {
+      if (stream.startsWith('camp:') && !slowed) {
+        slowed = true;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return byStream(stream);
+    });
+
+    const harness = await RouterTestingHarness.create(`/c/${id}/level-up`);
+    for (let i = 0; i < 100; i++) {
+      if (TestBed.inject(CharacterStore).campaign() !== null) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await harness.fixture.whenStable();
+    const root = harness.routeNativeElement!;
+    expect(root.querySelector('.level-up__class-picker')).toBeNull();
+    expect(root.querySelector('.level-up__hp-average')).not.toBeNull();
   });
 
   it('off, but no new class was on offer: the locked step keeps its usual hint, not the house-rule reason', async () => {

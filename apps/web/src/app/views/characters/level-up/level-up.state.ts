@@ -3,6 +3,7 @@ import {
   effect,
   inject,
   Injectable,
+  linkedSignal,
   signal,
   untracked,
   type Signal,
@@ -33,6 +34,7 @@ import { HkDb } from '@shared/services/storage/dexie.db';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
 import { AuthService } from '@shared/services/auth/auth.service';
+import type { CampaignState } from '@shared/services/campaigns/campaign-projection';
 import { houseRuleAllows } from '@shared/services/campaigns/house-rules';
 import { PackStore } from '@shared/stores/pack.store';
 import { levelUpSteps, type LevelUpStep } from '../flow/steps';
@@ -82,23 +84,29 @@ export class LevelUpState {
 
   /** Plan 18 task 3 (Review Focus 3): the "Multiclassing" house rule as it stood when this level-up
    * started — a DM flipping it mid-flow never changes a flow already under way; the next one reads
-   * it afresh. shortcut: a level-up opened before the campaign's events have loaded (a cold deep
-   * link) snapshots "allowed" (the same fail-open posture as the edit lock). */
-  private readonly campaignAtStart = untracked(this.characterStore.campaign);
-  readonly multiclassAllowed = houseRuleAllows(
-    'multiclassing',
-    this.campaignAtStart,
-    untracked(this.authService.user)?.userId,
+   * it afresh. A level-up opened before the campaign's events have loaded (a cold deep link) takes
+   * its snapshot the moment they do; until then it fails open, like the edit lock. */
+  private readonly campaignAtStart = linkedSignal<CampaignState | null, CampaignState | null>({
+    source: this.characterStore.campaign,
+    computation: (campaign, previous) => previous?.value ?? campaign,
+  });
+  readonly multiclassAllowed = computed(() =>
+    houseRuleAllows(
+      'multiclassing',
+      this.campaignAtStart(),
+      untracked(this.authService.user)?.userId,
+    ),
   );
   /** The campaign's name, for the locked which-class hint. */
-  readonly campaignName = this.campaignAtStart?.name ?? '';
+  readonly campaignName = computed(() => this.campaignAtStart()?.name ?? '');
   /** True when the house rule actually hid a new-class offer (drives the stepper hint). */
   readonly multiclassFiltered = computed(
-    () => !this.multiclassAllowed && this.characterStore.advancements().some((a) => a.isNewClass),
+    () =>
+      !this.multiclassAllowed() && this.characterStore.advancements().some((a) => a.isNewClass),
   );
   /** `CharacterStore.advancements()`, without new classes while multiclassing is off. */
   private readonly offers = computed(() =>
-    this.characterStore.advancements().filter((a) => this.multiclassAllowed || !a.isNewClass),
+    this.characterStore.advancements().filter((a) => this.multiclassAllowed() || !a.isNewClass),
   );
 
   readonly decisions = signal<ReadonlyMap<string, string[]>>(new Map());
