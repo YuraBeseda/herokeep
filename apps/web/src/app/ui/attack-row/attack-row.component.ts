@@ -1,8 +1,8 @@
 import { Component, computed, input, output } from '@angular/core';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
-import { HkButtonComponent } from '../button/button.component';
-import { coarsePointer } from '../coarse-pointer';
+import { HkMenuButtonComponent } from '../context-menu/menu-button.component';
+import type { HkMenuItem } from '../context-menu/context-menu.types';
 import { signed } from '../format';
 import { HkTagChipComponent, type TagChipTone } from '../tag-chip/tag-chip.component';
 import type { DamageInk } from '../tag-chip/damage-type';
@@ -30,7 +30,7 @@ export interface AttackTag {
   imports: [
     TranslocoDirective,
     IconComponent,
-    HkButtonComponent,
+    HkMenuButtonComponent,
     HkTagChipComponent,
     HkTooltipDirective,
   ],
@@ -51,7 +51,9 @@ export class HkAttackRowComponent {
   readonly attuned = input<string | null>(null);
 
   // Outputs
+  /** To-hit roll (menu: "Attack roll"). */
   readonly roll = output<void>();
+  readonly rollDamage = output<void>();
   /** To-hit and damage become activatable (keyboard too) so a caller can show how they are built. */
   readonly inspectable = input(false);
   readonly inspect = output<'hit' | 'damage'>();
@@ -62,7 +64,23 @@ export class HkAttackRowComponent {
     this.inspect.emit(kind);
   }
 
-  private readonly coarse = coarsePointer();
-  protected readonly buttonSize = computed(() => (this.coarse() ? 'phone' : 'm'));
+  /** The dice menu; also bound by the caller to `[hkContextMenu]` on the row (`#row`). */
+  readonly menuItems = (): HkMenuItem[] => [
+    {
+      id: 'hit',
+      labelKey: 'shell.ui.attack.menu.hit',
+      icon: 'ui:roll',
+      detail: this.toHitText(),
+      run: () => this.roll.emit(),
+    },
+    {
+      id: 'damage',
+      labelKey: 'shell.ui.attack.menu.damage',
+      icon: 'ui:roll',
+      detail: [this.damage(), this.damageType()?.label].filter(Boolean).join(' '),
+      run: () => this.rollDamage.emit(),
+    },
+  ];
+
   protected readonly toHitText = computed(() => signed(this.toHit()));
 }

@@ -5,6 +5,8 @@
         @for (attack of attacks(); track attack.instanceId) {
           <li class="attacks__item">
             <hk-attack-row
+              #row
+              [hkContextMenu]="row.menuItems"
               [name]="attack.name"
               [icon]="attack.icon"
               [toHit]="attack.toHit"
@@ -16,17 +18,8 @@
                 openBreakdown($event === 'hit' ? attack.toHitDerived : attack.bonusDerived)
               "
               (roll)="rollToHit(attack, t)"
+              (rollDamage)="rollDamage(attack, t)"
             />
-            <button
-              hk-button
-              type="button"
-              class="attacks__damage"
-              [variant]="'ghost'"
-              [attr.aria-label]="t('sheet.roll.damageNamed', { name: attack.name })"
-              (click)="rollDamage(attack, t)"
-            >
-              {{ t('sheet.roll.attackDamage') }}
-            </button>
           </li>
         }
       </ul>

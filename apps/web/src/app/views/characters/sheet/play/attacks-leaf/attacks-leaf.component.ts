@@ -7,7 +7,7 @@ import {
   HkAttackRowComponent,
   type AttackTag,
 } from '../../../../../ui/attack-row/attack-row.component';
-import { HkButtonComponent } from '../../../../../ui/button/button.component';
+import { HkContextMenuDirective } from '../../../../../ui/context-menu/context-menu.directive';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import type { DamageInk } from '../../../../../ui/tag-chip/damage-type';
 import { signed } from '../../../../../ui/format';
@@ -47,13 +47,13 @@ interface AttackView {
 
 /**
  * Attacks (spec §4.2): `hk-attack-row` per weapon — ring glyph, to-hit and damage numerals, the
- * damage type as a tinted tag, property / mastery chips and a Roll (to hit) button — plus a
- * "Roll damage" button under each row. Every number is the row's already-derived value; nothing
+ * damage type as a tinted tag, property / mastery chips and one dice button whose menu (also the
+ * row's context menu) rolls to hit or damage. Every number is the row's already-derived value; nothing
  * is recomputed here. Rolling stays enabled under the campaign edit lock (ruling 7).
  */
 @Component({
   selector: 'app-attacks-leaf',
-  imports: [TranslocoDirective, HkLeafComponent, HkAttackRowComponent, HkButtonComponent],
+  imports: [TranslocoDirective, HkLeafComponent, HkAttackRowComponent, HkContextMenuDirective],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './attacks-leaf.component.html',
   styleUrl: './attacks-leaf.component.scss',

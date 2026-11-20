@@ -33,6 +33,15 @@ class RollLogOpenHost {}
 
 const configureReal = configureBase;
 
+/** The attack row's dice button opens its menu; "Damage" runs once the menu has closed (a microtask). */
+async function rollAttackDamageFromMenu(compiled: HTMLElement): Promise<void> {
+  compiled.querySelector<HTMLButtonElement>('hk-attack-row hk-menu-button button')!.click();
+  TestBed.tick();
+  document.querySelector<HTMLElement>('.hk-menu [data-menu-item="damage"]')!.click();
+  await Promise.resolve();
+  TestBed.tick();
+}
+
 describe('PlayRollsService — dice roller and roll log', () => {
   beforeEach(async () => {
     // Same locale-leak guard every other describe block in this file documents.
@@ -252,9 +261,7 @@ describe('PlayRollsService — dice roller and roll log', () => {
     TestBed.tick();
 
     scriptRolls([{ value: 6, sides: 8 }]);
-    const attackRow = compiled.querySelector<HTMLButtonElement>('.attacks__damage')!;
-    attackRow.click();
-    TestBed.tick();
+    await rollAttackDamageFromMenu(compiled);
 
     const [entry] = rollLogService.entries();
     expect(entry).toMatchObject({
@@ -565,8 +572,7 @@ describe('PlayRollsService — campaign roll publishing (plan-10 task-10-brief.m
     const bonus = longsword.damage.bonus.value;
 
     scriptRolls([{ value: 6, sides: 8 }]);
-    const attackRow = compiled.querySelector<HTMLButtonElement>('.attacks__damage')!;
-    attackRow.click();
+    await rollAttackDamageFromMenu(compiled);
     await fixture.whenStable();
     await settle();
 

@@ -10,6 +10,7 @@ import {
   hpCurrent,
   hpMax,
   levelUpLink,
+  openDrawer,
   openTab,
   strapAction,
 } from './helpers/sheet';
@@ -293,5 +294,22 @@ test.describe('play actions', () => {
         await expect(menu).toHaveCount(0);
       });
     }
+  });
+
+  // Plan 20 task 6: an attack's to-hit and damage rolls share one dice button that opens a menu.
+  test('an attack rolls damage by keyboard through its dice menu', async ({ page }) => {
+    await createFighter(page, 'Aldric Dice Menu');
+    const dice = page.locator('hk-attack-row hk-menu-button button').first();
+    const menu = page.getByRole('menu');
+    await dice.focus();
+    await page.keyboard.press('Enter');
+    await expect(menu.getByRole('menuitem').first()).toBeFocused();
+    await expect(menu).toContainText('Attack roll');
+    await page.keyboard.press('ArrowDown');
+    await expect(menu.getByRole('menuitem').nth(1)).toContainText('Damage');
+    await page.keyboard.press('Enter');
+    await expect(menu).toHaveCount(0);
+    await openDrawer(page, 'roll-log');
+    await expect(page.locator('.roll-log-drawer__entry').first()).toContainText('damage');
   });
 });

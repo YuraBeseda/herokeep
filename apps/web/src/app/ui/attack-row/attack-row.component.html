@@ -49,15 +49,11 @@
       </span>
     }
   </span>
-  <button
-    hk-button
-    [variant]="'primary'"
-    [size]="buttonSize()"
-    [attr.aria-label]="t('ui.attack.roll', { name: name() })"
-    (click)="roll.emit()"
-  >
-    <hk-icon [icon]="'ui:roll'" />
-  </button>
+  <hk-menu-button
+    [items]="menuItems"
+    [icon]="'ui:roll'"
+    [label]="t('ui.attack.roll', { name: name() })"
+  />
   @if (tags().length > 0) {
     <span class="hk-arow__tags">
       @for (tag of tags(); track $index) {

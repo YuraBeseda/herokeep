@@ -259,6 +259,10 @@
       "score": "Score {{score}}"
     },
     "attack": {
+      "menu": {
+        "damage": "Damage",
+        "hit": "Attack roll"
+      },
       "roll": "Roll {{name}}"
     },
     "coins": {

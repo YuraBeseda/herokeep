@@ -52,14 +52,26 @@ describe('HkAttackRowComponent', () => {
     expect(gem.textContent?.trim()).toBe('');
   });
 
-  it('has a Roll button named after the weapon that emits roll', async () => {
+  it('has one dice button named after the weapon; its menu rolls to-hit or damage', async () => {
     const { fixture, el } = await mount(HkAttackRowComponent, base);
-    const button = el.querySelector<HTMLButtonElement>('button')!;
-    expect(button.getAttribute('aria-label')).toBe('Roll Longsword');
-    let rolled = 0;
-    fixture.componentInstance.roll.subscribe(() => rolled++);
-    button.click();
-    expect(rolled).toBe(1);
+    const buttons = el.querySelectorAll<HTMLButtonElement>('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].getAttribute('aria-label')).toBe('Roll Longsword');
+    buttons[0].click();
+    await fixture.whenStable();
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>('.cdk-overlay-container .hk-menu [role="menuitem"]'),
+    );
+    expect(items.map((i) => `${i.querySelector('.hk-menu__label')?.textContent?.trim()} ${i.querySelector('.hk-menu__detail')?.textContent?.trim()}`)).toEqual([
+      'Attack roll +5',
+      'Damage 1d8+3 slashing',
+    ]);
+    const rolled: string[] = [];
+    fixture.componentInstance.roll.subscribe(() => rolled.push('hit'));
+    fixture.componentInstance.rollDamage.subscribe(() => rolled.push('damage'));
+    fixture.componentInstance.menuItems()[0].run();
+    fixture.componentInstance.menuItems()[1].run();
+    expect(rolled).toEqual(['hit', 'damage']);
   });
 
   it('ellipsises a long name and keeps the full text in a hint', async () => {

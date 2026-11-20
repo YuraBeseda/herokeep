@@ -1,6 +1,7 @@
 import { CdkMenuTrigger } from '@angular/cdk/menu';
 import { Component, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
+import { IconComponent } from '../../shared/icons/icon.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import { HkContextMenuComponent } from './context-menu.component';
 import { type HkMenuItems, resolveMenuItems } from './context-menu.types';
@@ -13,7 +14,7 @@ import { type HkMenuItems, resolveMenuItems } from './context-menu.types';
  */
 @Component({
   selector: 'hk-menu-button',
-  imports: [CdkMenuTrigger, HkTooltipDirective, HkContextMenuComponent, TranslocoDirective],
+  imports: [CdkMenuTrigger, IconComponent, HkTooltipDirective, HkContextMenuComponent, TranslocoDirective],
   providers: [provideTranslocoScope('shell')],
   template: `
     <hk-context-menu #menu />
@@ -27,11 +28,15 @@ import { type HkMenuItems, resolveMenuItems } from './context-menu.types';
         [attr.aria-label]="name"
         [hkTooltip]="name"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="5" cy="12" r="2" />
-          <circle cx="12" cy="12" r="2" />
-          <circle cx="19" cy="12" r="2" />
-        </svg>
+        @if (icon(); as glyph) {
+          <hk-icon [icon]="glyph" />
+        } @else {
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
+        }
       </button>
     </ng-container>
   `,
@@ -41,6 +46,8 @@ export class HkMenuButtonComponent {
   readonly items = input.required<HkMenuItems>();
   /** Translated accessible name and hint; `null` uses "More actions". */
   readonly label = input<string | null>(null);
+  /** Sprite id shown instead of the dots (the attack row's dice button). */
+  readonly icon = input<string | null>(null);
 
   protected resolve() {
     return resolveMenuItems(this.items());
