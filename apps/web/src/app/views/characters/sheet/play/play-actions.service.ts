@@ -12,6 +12,7 @@ import {
   type SpellPrepared,
 } from '@hk/protocol';
 import { DialogService } from '@app/ui/dialog/dialog.service';
+import { AuthService } from '@shared/services/auth/auth.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { CampaignEditLockService } from '@shared/services/campaigns/campaign-edit-lock';
 import { diagnosticKey } from '@shared/helpers/diagnostic-toast';
@@ -96,6 +97,7 @@ const KNOWN_PROPOSE_DIAGNOSTIC_CODES: ReadonlySet<string> = new Set([
 export class PlayActionsService {
   private readonly characterStore = inject(CharacterStore);
   private readonly toastService = inject(ToastService);
+  private readonly authService = inject(AuthService);
   private readonly dialogService = inject(DialogService);
 
   // --- Campaign edit lock (plan-10 task-14-brief.md, ruling 7) ---------------------------------
@@ -107,7 +109,7 @@ export class PlayActionsService {
 
   /** Plan 18 task 3: whether the linked campaign's house rule denies `rule` (never for a solo hero). */
   denies(rule: HouseRuleKey): boolean {
-    return !houseRuleAllows(rule, this.characterStore.campaign());
+    return !houseRuleAllows(rule, this.characterStore.campaign(), this.authService.user()?.userId);
   }
   /** The linked campaign's name, for the house-rule hints. */
   readonly campaignName = computed(() => this.characterStore.campaign()?.name ?? '');

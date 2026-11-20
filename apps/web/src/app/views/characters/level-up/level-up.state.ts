@@ -32,6 +32,7 @@ import { cryptoRng } from '@shared/services/engine/rng';
 import { HkDb } from '@shared/services/storage/dexie.db';
 import { SettingsRepository } from '@shared/services/storage/settings.repository';
 import { CharacterStore, type DraftEvent } from '@shared/stores/character.store';
+import { AuthService } from '@shared/services/auth/auth.service';
 import { houseRuleAllows } from '@shared/services/campaigns/house-rules';
 import { PackStore } from '@shared/stores/pack.store';
 import { levelUpSteps, type LevelUpStep } from '../flow/steps';
@@ -77,13 +78,18 @@ export class LevelUpState {
   private readonly settings = inject(SettingsRepository);
   private readonly db = inject(HkDb);
   private readonly toastService = inject(ToastService);
+  private readonly authService = inject(AuthService);
 
   /** Plan 18 task 3 (Review Focus 3): the "Multiclassing" house rule as it stood when this level-up
    * started — a DM flipping it mid-flow never changes a flow already under way; the next one reads
    * it afresh. shortcut: a level-up opened before the campaign's events have loaded (a cold deep
    * link) snapshots "allowed" (the same fail-open posture as the edit lock). */
   private readonly campaignAtStart = untracked(this.characterStore.campaign);
-  readonly multiclassAllowed = houseRuleAllows('multiclassing', this.campaignAtStart);
+  readonly multiclassAllowed = houseRuleAllows(
+    'multiclassing',
+    this.campaignAtStart,
+    untracked(this.authService.user)?.userId,
+  );
   /** The campaign's name, for the locked which-class hint. */
   readonly campaignName = this.campaignAtStart?.name ?? '';
   /** True when the house rule actually hid a new-class offer (drives the stepper hint). */

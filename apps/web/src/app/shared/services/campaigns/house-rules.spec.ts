@@ -28,4 +28,14 @@ describe('houseRuleAllows', () => {
     expect(houseRuleAllows('multiclassing', rules({ multiclassing: false }))).toBe(false);
     expect(houseRuleAllows('playersAddItems', rules({ multiclassing: false }))).toBe(true);
   });
+  it('never binds the campaign DM', () => {
+    const state = {
+      ...rules({ multiclassing: false, playersAddItems: false }),
+      members: new Map([['dm1', { role: 'dm' }], ['p1', { role: 'player' }]]),
+    };
+    expect(houseRuleAllows('multiclassing', state, 'dm1')).toBe(true);
+    expect(houseRuleAllows('playersAddItems', state, 'dm1')).toBe(true);
+    expect(houseRuleAllows('multiclassing', state, 'p1')).toBe(false);
+    expect(houseRuleAllows('multiclassing', state, undefined)).toBe(false);
+  });
 });

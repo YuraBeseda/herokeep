@@ -11,7 +11,13 @@ export type HouseRuleKey =
  * → allowed; a rule key absent from the document (older @1 settings) → allowed. */
 export function houseRuleAllows(
   rule: HouseRuleKey,
-  campaign: { settings: { houseRules: HouseRules } | null } | null | undefined,
+  campaign:
+    | { settings: { houseRules: HouseRules } | null; members?: ReadonlyMap<string, { role: string }> }
+    | null
+    | undefined,
+  userId?: string,
 ): boolean {
+  // The campaign DM's own hero is never bound by the players' rules.
+  if (userId !== undefined && campaign?.members?.get(userId)?.role === 'dm') return true;
   return campaign?.settings?.houseRules[rule] !== false;
 }
