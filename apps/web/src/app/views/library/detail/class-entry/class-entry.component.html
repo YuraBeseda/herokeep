@@ -48,6 +48,7 @@
             <a
               class="class-entry__link"
               [routerLink]="['/library', feature.id]"
+              [hkPeek]="feature.id"
               [queryParamsHandling]="'preserve'"
               [hkTooltip]="t('class.openEntry', { name: feature.name })"
               >{{ feature.name }}</a
@@ -106,6 +107,7 @@
                   <a
                     class="class-entry__link"
                     [routerLink]="['/library', feature.id]"
+                    [hkPeek]="feature.id"
                     [queryParamsHandling]="'preserve'"
                     [hkTooltip]="t('class.openEntry', { name: feature.name })"
                     >{{ feature.name }}</a
@@ -148,6 +150,7 @@
           <a
             class="class-entry__link"
             [routerLink]="['/library', subclass.id]"
+            [hkPeek]="subclass.id"
             [queryParamsHandling]="'preserve'"
             [hkTooltip]="t('class.openEntry', { name: subclass.name })"
             >{{ subclass.name }}</a
@@ -190,6 +193,7 @@
               <a
                 class="class-entry__spell"
                 [routerLink]="['/library', spell.id]"
+                [hkPeek]="spell.id"
                 [queryParamsHandling]="'preserve'"
                 >{{ spell.name }}</a
               >
@@ -199,5 +203,4 @@
       }
     </hk-leaf>
   }
-
 </div>

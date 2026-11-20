@@ -131,6 +131,18 @@ test.describe('library', () => {
     await page.goBack();
     await expectRestored();
   });
+  test('a subclass link in the class entry opens the side panel and keeps the URL', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const url = `/library/${encodeURIComponent('srd-5e-2024:class/paladin')}`;
+    await page.goto(url);
+    await expect(page.locator('a.class-entry__link').first()).toBeVisible();
+    const before = page.url();
+    await page.locator('a.class-entry__link', { hasText: 'Oath of Devotion' }).first().click();
+    await expect(page.locator('.hk-drawer__panel h2')).toHaveText('Oath of Devotion');
+    expect(page.url()).toBe(before);
+  });
   test('peek drawer opens without layout shift and scrolls itself', async ({ page }) => {
     // Short enough that the subclass text overflows the panel; still the desktop (>= 900 px) layout.
     await page.setViewportSize({ width: 1280, height: 400 });

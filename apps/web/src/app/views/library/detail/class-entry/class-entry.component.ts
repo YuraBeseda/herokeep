@@ -1,3 +1,4 @@
+import { HkPeekLinkDirective } from '../../../../ui/description-drawer/peek-link.directive';
 import { Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -82,6 +83,7 @@ function slugText(slug: string): string {
     HkLeafComponent,
     HkOptionsChipComponent,
     HkTooltipDirective,
+    HkPeekLinkDirective,
   ],
   providers: [provideTranslocoScope('library')],
   templateUrl: './class-entry.component.html',
