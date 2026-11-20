@@ -353,9 +353,9 @@ describe('HkDrawerComponent', () => {
   describe('as the description peek', () => {
     // jsdom has no layout: CDK's tabbable check needs client rects to move focus into the panel.
     beforeEach(() =>
-      vi.spyOn(HTMLElement.prototype, 'getClientRects').mockReturnValue([
-        {},
-      ] as unknown as DOMRectList),
+      vi
+        .spyOn(HTMLElement.prototype, 'getClientRects')
+        .mockReturnValue([{}] as unknown as DOMRectList),
     );
     afterEach(() => {
       vi.unstubAllGlobals();

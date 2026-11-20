@@ -42,7 +42,9 @@ const SCOPED_ID = 'sample-content:feat/lunar-insight';
 
 class Loader implements TranslocoLoader {
   getTranslation(langPath: string) {
-    return of(({ 'library/en': libraryEn, 'shell/en': shellEn } as Record<string, object>)[langPath] ?? {});
+    return of(
+      ({ 'library/en': libraryEn, 'shell/en': shellEn } as Record<string, object>)[langPath] ?? {},
+    );
   }
 }
 

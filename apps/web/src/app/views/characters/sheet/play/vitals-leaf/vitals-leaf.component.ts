@@ -1,7 +1,10 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { CharacterStore } from '@shared/stores/character.store';
-import { DerivedPopoverDirective, type DerivedValue } from '@shared/directives/derived-popover.directive';
+import {
+  DerivedPopoverDirective,
+  type DerivedValue,
+} from '@shared/directives/derived-popover.directive';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { HkHpGaugeComponent } from '../../../../../ui/hp-gauge/hp-gauge.component';
 import { HkShieldBadgeComponent } from '../../../../../ui/shield-badge/shield-badge.component';

@@ -906,7 +906,14 @@
       "concentration": "Some spells last only while you focus on them. Casting another such spell or taking a hit can end it.",
       "heroicInspiration": "A reward from the DM. Spend it to gain an edge on a roll.",
       "temporaryHp": "A buffer of extra hit points that absorbs damage first and does not stack with itself.",
-      "ability": {"str": "Physical power: lifting, climbing, hitting hard.", "dex": "Agility, reflexes and balance.", "con": "Health and stamina.", "int": "Reasoning and memory.", "wis": "Awareness and insight.", "cha": "Force of personality and persuasion."}
+      "ability": {
+        "str": "Physical power: lifting, climbing, hitting hard.",
+        "dex": "Agility, reflexes and balance.",
+        "con": "Health and stamina.",
+        "int": "Reasoning and memory.",
+        "wis": "Awareness and insight.",
+        "cha": "Force of personality and persuasion."
+      }
     }
   },
   "timeline": {

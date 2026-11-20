@@ -368,7 +368,9 @@ describe('EntityPickerComponent — inside a dialog (the add-item picker)', () =
     await fixture.whenStable();
     expect(TestBed.inject(PeekService).current()).toBeNull();
     expect(root.querySelector('hk-peek-host hk-description-drawer')).toBeNull();
-    expect(root.querySelector('hk-entity-picker hk-description-drawer [role="dialog"]')).not.toBeNull();
+    expect(
+      root.querySelector('hk-entity-picker hk-description-drawer [role="dialog"]'),
+    ).not.toBeNull();
     press(root.querySelector<HTMLElement>('hk-entity-picker .entity-picker__drawer-choose')!);
     expect(fixture.componentInstance.toggled).toEqual([weaponIds[0]]);
   });

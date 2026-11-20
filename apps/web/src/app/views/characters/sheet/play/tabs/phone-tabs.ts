@@ -71,11 +71,7 @@ export class BagTabComponent {}
 /** Hero: abilities with their saves and skills, proficiencies, languages and features. */
 @Component({
   selector: 'app-hero-tab',
-  imports: [
-    AbilitiesLeafComponent,
-    ProficienciesLeafComponent,
-    FeaturesLeafComponent,
-  ],
+  imports: [AbilitiesLeafComponent, ProficienciesLeafComponent, FeaturesLeafComponent],
   template: `
     <app-abilities-leaf [mode]="'full'" [showPassive]="true" [phone]="true" />
     <app-proficiencies-leaf [phone]="true" />

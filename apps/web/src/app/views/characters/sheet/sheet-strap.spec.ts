@@ -39,8 +39,10 @@ describe('buildSheetStrap — house rule: players manage their own conditions', 
 
 describe('buildSheetStrap — keep screen awake', () => {
   const wake = (state: Partial<SheetStrapState>) =>
-    buildSheetStrap({ locked: false, exporting: false, scope: ['/c', '1'], ...state }, handlers)
-      .secondary?.find((a) => a.id === 'wake-lock');
+    buildSheetStrap(
+      { locked: false, exporting: false, scope: ['/c', '1'], ...state },
+      handlers,
+    ).secondary?.find((a) => a.id === 'wake-lock');
 
   it('is a pressed-state icon button when the Wake Lock API exists', () => {
     expect(wake({ wakeLock: { active: false } })).toMatchObject({ kind: 'icon', pressed: false });

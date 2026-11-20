@@ -11,7 +11,9 @@ const items: HkMenuItem[] = ['damage', 'heal', 'temp'].map((id) => ({
 }));
 
 async function make(): Promise<ComponentFixture<HkSplitActionComponent>> {
-  await TestBed.configureTestingModule({ providers: [provideShellTransloco()] }).compileComponents();
+  await TestBed.configureTestingModule({
+    providers: [provideShellTransloco()],
+  }).compileComponents();
   const fixture = TestBed.createComponent(HkSplitActionComponent);
   fixture.componentRef.setInput('items', items);
   fixture.componentRef.setInput('storageKey', 'test-hp');

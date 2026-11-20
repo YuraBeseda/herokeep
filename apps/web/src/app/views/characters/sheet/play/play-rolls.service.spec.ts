@@ -48,7 +48,9 @@ async function rollAbility(
   kind: 'check' | 'save',
 ): Promise<void> {
   const label = charactersEn.sheet.roll.abilityNamed.replace('{name}', ability);
-  const dice = compiled.querySelector<HTMLButtonElement>(`hk-menu-button button[aria-label="${label}"]`);
+  const dice = compiled.querySelector<HTMLButtonElement>(
+    `hk-menu-button button[aria-label="${label}"]`,
+  );
   if (!dice) throw new Error(`no "${label}" button`);
   dice.click();
   TestBed.tick();

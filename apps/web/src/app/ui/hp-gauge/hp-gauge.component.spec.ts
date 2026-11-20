@@ -63,7 +63,9 @@ describe('HkHpGaugeComponent', () => {
       '23 of 31 hit points, 5 temporary',
     );
     TestBed.resetTestingModule();
-    expect((await make({ current: 23, max: 31, temp: 0 })).el.querySelector('.hk-hp-gauge__temp')).toBeNull();
+    expect(
+      (await make({ current: 23, max: 31, temp: 0 })).el.querySelector('.hk-hp-gauge__temp'),
+    ).toBeNull();
   });
 
   it('sizes the ember and hatch segments against max + temp', async () => {

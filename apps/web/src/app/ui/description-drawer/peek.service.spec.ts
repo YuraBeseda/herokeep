@@ -17,7 +17,12 @@ class Caller {
   }
 }
 
-@Component({ imports: [Caller], template: `@if (shown()) { <app-peek-caller /> }` })
+@Component({
+  imports: [Caller],
+  template: `@if (shown()) {
+    <app-peek-caller />
+  }`,
+})
 class Page {
   readonly shown = signal(true);
 }

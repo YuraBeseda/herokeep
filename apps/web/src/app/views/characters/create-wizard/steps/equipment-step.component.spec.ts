@@ -354,7 +354,11 @@ describe('EquipmentStepComponent', () => {
       });
       await seedCampaign({ startingGold: false });
       await TestBed.inject(CampaignStore).appendToStream(`camp:${CAMPAIGN_ID}`, [
-        { type: 'member.joined', v: 1, payload: { userId: 'dm1', displayName: 'Dana', role: 'dm' } },
+        {
+          type: 'member.joined',
+          v: 1,
+          payload: { userId: 'dm1', displayName: 'Dana', role: 'dm' },
+        },
       ]);
       const state = fighterSoldier();
       state.campaignId.set(CAMPAIGN_ID);

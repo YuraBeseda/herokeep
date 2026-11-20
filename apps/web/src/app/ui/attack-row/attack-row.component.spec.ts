@@ -62,10 +62,12 @@ describe('HkAttackRowComponent', () => {
     const items = Array.from(
       document.querySelectorAll<HTMLElement>('.cdk-overlay-container .hk-menu [role="menuitem"]'),
     );
-    expect(items.map((i) => `${i.querySelector('.hk-menu__label')?.textContent?.trim()} ${i.querySelector('.hk-menu__detail')?.textContent?.trim()}`)).toEqual([
-      'Attack roll +5',
-      'Damage 1d8+3 slashing',
-    ]);
+    expect(
+      items.map(
+        (i) =>
+          `${i.querySelector('.hk-menu__label')?.textContent?.trim()} ${i.querySelector('.hk-menu__detail')?.textContent?.trim()}`,
+      ),
+    ).toEqual(['Attack roll +5', 'Damage 1d8+3 slashing']);
     const rolled: string[] = [];
     fixture.componentInstance.roll.subscribe(() => rolled.push('hit'));
     fixture.componentInstance.rollDamage.subscribe(() => rolled.push('damage'));

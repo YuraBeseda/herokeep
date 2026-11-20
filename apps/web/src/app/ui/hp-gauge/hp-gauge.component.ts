@@ -67,7 +67,11 @@ export class HkHpGaugeComponent {
   /** Damage / Heal / Temp HP as one split action; all disabled (with the reason) until an amount is typed. */
   protected readonly actions = computed<HkMenuItem[]>(() => {
     const disabledReasonKey = this.amount() === null ? 'shell.ui.hp.amount-needed' : undefined;
-    const item = (id: 'damage' | 'heal' | 'setTemp', labelKey: string, icon: string): HkMenuItem => ({
+    const item = (
+      id: 'damage' | 'heal' | 'setTemp',
+      labelKey: string,
+      icon: string,
+    ): HkMenuItem => ({
       id,
       labelKey,
       icon,

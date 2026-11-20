@@ -102,7 +102,9 @@ describe('ConditionsLeafComponent — death saves, inspiration, conditions', () 
     await seedFighter('Ivan');
     const fixture = TestBed.createComponent(ConditionsLeafComponent);
     await fixture.whenStable();
-    expect((fixture.nativeElement as HTMLElement).querySelector('hk-inspiration-toggle')).toBeNull();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('hk-inspiration-toggle'),
+    ).toBeNull();
   });
 
   it('adding a non-level condition round-trips into sheet.conditions and renders a localized chip', async () => {

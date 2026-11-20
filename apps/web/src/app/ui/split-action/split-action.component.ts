@@ -1,6 +1,10 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { TranslocoPipe, provideTranslocoScope } from '@jsverse/transloco';
-import { HkButtonComponent, type HkButtonSize, type HkButtonVariant } from '../button/button.component';
+import {
+  HkButtonComponent,
+  type HkButtonSize,
+  type HkButtonVariant,
+} from '../button/button.component';
 import { HkMenuButtonComponent } from '../context-menu/menu-button.component';
 import type { HkMenuItem } from '../context-menu/context-menu.types';
 import { IconComponent } from '../../shared/icons/icon.component';

@@ -1233,7 +1233,9 @@ describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
       await fixture.whenStable();
       await peekHost.whenStable();
       expect(
-        root(peekHost).querySelector('hk-description-drawer .hk-drawer__title')?.textContent?.trim(),
+        root(peekHost)
+          .querySelector('hk-description-drawer .hk-drawer__title')
+          ?.textContent?.trim(),
         `option ${i}`,
       ).toBe(names[i]);
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

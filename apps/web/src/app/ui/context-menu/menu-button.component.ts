@@ -14,7 +14,13 @@ import { type HkMenuItems, resolveMenuItems } from './context-menu.types';
  */
 @Component({
   selector: 'hk-menu-button',
-  imports: [CdkMenuTrigger, IconComponent, HkTooltipDirective, HkContextMenuComponent, TranslocoDirective],
+  imports: [
+    CdkMenuTrigger,
+    IconComponent,
+    HkTooltipDirective,
+    HkContextMenuComponent,
+    TranslocoDirective,
+  ],
   providers: [provideTranslocoScope('shell')],
   template: `
     <hk-context-menu #menu />

@@ -149,7 +149,10 @@ describe('scrollbar tokens', () => {
   for (const theme of THEME_IDS) {
     it(`defines thumb, hover and track with 3:1 thumb-vs-track in ${theme}`, () => {
       for (const n of ['scrollbar-thumb', 'scrollbar-thumb-hover', 'scrollbar-track']) {
-        expect(TOKENS.color.tokens.some((t) => t.name === n), n).toBe(true);
+        expect(
+          TOKENS.color.tokens.some((t) => t.name === n),
+          n,
+        ).toBe(true);
       }
       expect(contrast('scrollbar-thumb', 'scrollbar-track', theme)).toBeGreaterThanOrEqual(3);
       expect(contrast('scrollbar-thumb-hover', 'scrollbar-track', theme)).toBeGreaterThanOrEqual(3);
