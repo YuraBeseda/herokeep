@@ -53,9 +53,15 @@ describe('HkOptionsChipComponent', () => {
     el.dispatchEvent(new Event('mouseenter'));
     await fixture.whenStable();
     expect(popover(el)).not.toBeNull();
-    el.dispatchEvent(new Event('mouseleave'));
-    await fixture.whenStable();
-    expect(popover(el)).toBeNull();
+    vi.useFakeTimers();
+    try {
+      el.dispatchEvent(new Event('mouseleave'));
+      vi.advanceTimersByTime(150);
+      fixture.detectChanges();
+      expect(popover(el)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('opens on keyboard focus and closes when focus leaves', async () => {
@@ -186,7 +192,10 @@ describe('HkOptionsChipComponent', () => {
     const removed = vi.spyOn(document, 'removeEventListener');
     chip(el).click();
     fixture.detectChanges();
+    vi.useFakeTimers();
     el.dispatchEvent(new Event('mouseleave'));
+    vi.advanceTimersByTime(150);
+    vi.useRealTimers();
     fixture.detectChanges();
     expect(removed.mock.calls.filter(([type]) => type === 'pointerdown')).toHaveLength(1);
     chip(el).click();
@@ -294,6 +303,39 @@ describe('HkOptionsChipComponent', () => {
       await fixture.whenStable();
       return popover(el)!;
     }
+
+    describe.each([
+      ['below', 844],
+      ['above', 320], // the chip is at top 300, so there is no room below it
+    ])('hover bridge, popover placed %s', (_where, viewportHeight) => {
+      async function leaveAndReturn(returnAfterMs: number): Promise<HTMLElement | null> {
+        Object.defineProperty(window, 'innerHeight', { value: viewportHeight, configurable: true });
+        layOut(100);
+        const { fixture, el } = await mount(HkOptionsChipComponent, base);
+        el.dispatchEvent(new Event('mouseenter'));
+        await fixture.whenStable();
+        await fixture.whenStable();
+        vi.useFakeTimers();
+        try {
+          el.dispatchEvent(new Event('mouseleave'));
+          vi.advanceTimersByTime(returnAfterMs);
+          popover(el)?.dispatchEvent(new Event('mouseenter'));
+          vi.advanceTimersByTime(500);
+          fixture.detectChanges();
+          return popover(el);
+        } finally {
+          vi.useRealTimers();
+        }
+      }
+
+      it('keeps the popover open when the pointer reaches it within 150 ms', async () => {
+        expect(await leaveAndReturn(100)).not.toBeNull();
+      });
+
+      it('closes it when the pointer does not arrive within the grace period', async () => {
+        expect(await leaveAndReturn(200)).toBeNull();
+      });
+    });
 
     it('keeps the popover on screen for a chip at the left edge', async () => {
       const pop = await openAt(2);

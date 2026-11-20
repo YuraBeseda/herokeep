@@ -137,10 +137,27 @@ describe('HkTooltipDirective', () => {
     expect(tip()).toBeNull();
   });
 
-  it('is removed on mouseleave', () => {
+  it('is removed 150 ms after mouseleave', () => {
     button.dispatchEvent(new Event('mouseenter'));
     vi.advanceTimersByTime(300);
     button.dispatchEvent(new Event('mouseleave'));
+    vi.advanceTimersByTime(149);
+    expect(tip()).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(tip()).toBeNull();
+  });
+
+  it('stays when the pointer reaches the slip within the grace period, and goes when it leaves', () => {
+    button.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(300);
+    const slip = tip()!;
+    button.dispatchEvent(new Event('mouseleave'));
+    vi.advanceTimersByTime(100);
+    slip.dispatchEvent(new Event('mouseenter'));
+    vi.advanceTimersByTime(500);
+    expect(tip()).not.toBeNull();
+    slip.dispatchEvent(new Event('mouseleave'));
+    vi.advanceTimersByTime(150);
     expect(tip()).toBeNull();
   });
 

@@ -13,6 +13,7 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
+import { hoverBridge } from '../hover-bridge/hover-bridge';
 import { HkTipComponent } from './tooltip.component';
 
 /** Design-system tokens `hint-delay-hover` / `hint-delay-touch` (the same values, in ms). */
@@ -36,7 +37,7 @@ let nextTipId = 0;
   host: {
     '[attr.aria-describedby]': 'describedBy()',
     '(mouseenter)': 'onMouseEnter()',
-    '(mouseleave)': 'hide()',
+    '(mouseleave)': 'cancelPending()',
     '(focus)': 'onFocus()',
     '(blur)': 'hide()',
     '(pointerenter)': 'notePointer($event)',
@@ -91,7 +92,15 @@ export class HkTooltipDirective {
   };
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.hide());
+    const unbridge = hoverBridge(
+      this.anchor,
+      () => (this.tip?.location.nativeElement as HTMLElement | undefined) ?? null,
+      () => this.hide(),
+    );
+    inject(DestroyRef).onDestroy(() => {
+      unbridge();
+      this.hide();
+    });
     effect(() => {
       const text = this.text();
       if (!this.tip) return;

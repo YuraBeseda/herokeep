@@ -14,6 +14,7 @@ import { Router } from '@angular/router';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icons/icon.component';
 import { uniqueId } from '../format';
+import { hoverBridge } from '../hover-bridge/hover-bridge';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 import { placePopover } from './popover-placement';
 
@@ -45,7 +46,6 @@ const LONG_PRESS_MS = 400;
   styleUrl: './options-chip.component.scss',
   host: {
     '(mouseenter)': 'open.set(true)',
-    '(mouseleave)': 'open.set(false)',
     '(focusin)': 'onFocusIn()',
     '(focusout)': 'onFocusOut($event)',
     '(keydown.escape)': 'onEscape()',
@@ -73,7 +73,15 @@ export class HkOptionsChipComponent {
   private longPressTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.longPressTimer));
+    const unbridge = hoverBridge(
+      this.host,
+      () => this.popoverEl()?.nativeElement ?? null,
+      () => this.open.set(false),
+    );
+    inject(DestroyRef).onDestroy(() => {
+      unbridge();
+      clearTimeout(this.longPressTimer);
+    });
 
     // Opening places the popover (it first renders hidden, then moves into view).
     effect(() => {
