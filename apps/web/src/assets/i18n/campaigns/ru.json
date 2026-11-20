@@ -497,6 +497,11 @@
     "title": "Стол",
     "landmark": "Журнал кампании",
     "empty": "Здесь пока пусто.",
+    "encounter": {
+      "start": "Начало схватки {number}",
+      "round": "Схватка {number}, раунд {round}",
+      "end": "Конец схватки {number}"
+    },
     "session": {
       "started": "Сессия началась — {title}",
       "startedNoTitle": "Сессия началась",

@@ -12,7 +12,10 @@ export type HouseRuleKey =
 export function houseRuleAllows(
   rule: HouseRuleKey,
   campaign:
-    | { settings: { houseRules: HouseRules } | null; members?: ReadonlyMap<string, { role: string }> }
+    | {
+        settings: { houseRules: HouseRules } | null;
+        members?: ReadonlyMap<string, { role: string }>;
+      }
     | null
     | undefined,
   userId?: string,

@@ -160,6 +160,16 @@ export type LogEntry =
       eventId: string;
       ts: string;
       title: string | undefined;
+    }
+  | {
+      /** An encounter marker: `round` is set only for `phase: 'round'`. */
+      kind: 'encounter';
+      phase: 'start' | 'round' | 'end';
+      number: number;
+      round?: number;
+      seq: number | undefined;
+      eventId: string;
+      ts: string;
     };
 
 /**
@@ -391,16 +401,45 @@ export function projectCampaign(events: readonly Event[], seed?: PackSeed): Camp
       case 'encounter.started': {
         const p = e.payload as EncounterStarted;
         encounter = { id: p.encounterId, round: 1, number: ++encounterCount };
+        log.push({
+          kind: 'encounter',
+          phase: 'start',
+          number: encounter.number,
+          seq: e.seq,
+          eventId: e.id,
+          ts: e.ts,
+        });
         break;
       }
       case 'round.advanced': {
         const p = e.payload as RoundAdvanced;
-        if (encounter?.id === p.encounterId) encounter = { ...encounter, round: p.round };
+        if (encounter?.id === p.encounterId) {
+          encounter = { ...encounter, round: p.round };
+          log.push({
+            kind: 'encounter',
+            phase: 'round',
+            number: encounter.number,
+            round: p.round,
+            seq: e.seq,
+            eventId: e.id,
+            ts: e.ts,
+          });
+        }
         break;
       }
       case 'encounter.ended': {
         const p = e.payload as EncounterEnded;
-        if (encounter?.id === p.encounterId) encounter = null;
+        if (encounter?.id === p.encounterId) {
+          log.push({
+            kind: 'encounter',
+            phase: 'end',
+            number: encounter.number,
+            seq: e.seq,
+            eventId: e.id,
+            ts: e.ts,
+          });
+          encounter = null;
+        }
         break;
       }
       default:

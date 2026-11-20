@@ -497,6 +497,11 @@
     "title": "Table",
     "landmark": "Campaign log",
     "empty": "Nothing here yet.",
+    "encounter": {
+      "start": "Encounter {number} started",
+      "round": "Encounter {number}, round {round}",
+      "end": "Encounter {number} ended"
+    },
     "session": {
       "started": "Session started — {title}",
       "startedNoTitle": "Session started",

@@ -229,6 +229,35 @@ describe('LogTabComponent', () => {
       expect(dividers[1]).toBe(`${campaignsEn.log.session.endedNoTitle} · ${time}`);
     });
 
+    it('renders encounter start, round and end as dividers', async () => {
+      configure({
+        state: mkState({
+          log: [
+            { kind: 'encounter', phase: 'start', number: 2, seq: 1, eventId: 'e1', ts: TS },
+            {
+              kind: 'encounter',
+              phase: 'round',
+              number: 2,
+              round: 3,
+              seq: 2,
+              eventId: 'e2',
+              ts: TS,
+            },
+            { kind: 'encounter', phase: 'end', number: 2, seq: 3, eventId: 'e3', ts: TS },
+          ],
+        }),
+      });
+      const fixture = TestBed.createComponent(LogTabComponent);
+      await fixture.whenStable();
+
+      const dividers = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.log-tab__divider'),
+      ).map((el) => el.textContent?.replace(/\s+/g, ' ').trim());
+      expect(dividers[0]).toContain('Encounter 2 started');
+      expect(dividers[1]).toContain('Encounter 2, round 3');
+      expect(dividers[2]).toContain('Encounter 2 ended');
+    });
+
     it('falls back to a truncated raw id when the actor is not (yet) in state.members', async () => {
       const unknownUserId = 'usr_ABCDEFGHIJKLMNOPQRSTUV';
       configure({

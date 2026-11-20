@@ -31,7 +31,10 @@ describe('houseRuleAllows', () => {
   it('never binds the campaign DM', () => {
     const state = {
       ...rules({ multiclassing: false, playersAddItems: false }),
-      members: new Map([['dm1', { role: 'dm' }], ['p1', { role: 'player' }]]),
+      members: new Map([
+        ['dm1', { role: 'dm' }],
+        ['p1', { role: 'player' }],
+      ]),
     };
     expect(houseRuleAllows('multiclassing', state, 'dm1')).toBe(true);
     expect(houseRuleAllows('playersAddItems', state, 'dm1')).toBe(true);

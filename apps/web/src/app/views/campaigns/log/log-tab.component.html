@@ -84,6 +84,16 @@
               · <time [attr.datetime]="entry.ts">{{ clock(entry.ts) }}</time>
             </div>
           }
+          @case ('encounter') {
+            <div class="log-tab__divider">
+              {{
+                entry.phase === 'round'
+                  ? t('log.encounter.round', { number: entry.number, round: entry.round })
+                  : t('log.encounter.' + entry.phase, { number: entry.number })
+              }}
+              · <time [attr.datetime]="entry.ts">{{ clock(entry.ts) }}</time>
+            </div>
+          }
           @case ('roll') {
             <div
               class="log-tab__entry log-tab__entry--roll"

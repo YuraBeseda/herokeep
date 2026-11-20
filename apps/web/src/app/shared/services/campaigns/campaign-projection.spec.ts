@@ -593,6 +593,25 @@ describe('projectCampaign', () => {
       ]);
     });
 
+    it('encounter.started / round.advanced / encounter.ended append encounter log entries', () => {
+      const events = [
+        mkEvent('encounter.started', { encounterId: 'enc-1' }, { seq: 1, id: 'e1' }),
+        mkEvent('round.advanced', { encounterId: 'enc-1', round: 2 }, { seq: 2, id: 'e2' }),
+        mkEvent('round.advanced', { encounterId: 'other', round: 9 }, { seq: 3, id: 'e3' }),
+        mkEvent('encounter.ended', { encounterId: 'enc-1' }, { seq: 4, id: 'e4' }),
+      ];
+
+      expect(
+        projectCampaign(events).log.map((l) =>
+          l.kind === 'encounter' ? [l.phase, l.number, l.round] : l.kind,
+        ),
+      ).toEqual([
+        ['start', 1, undefined],
+        ['round', 1, 2],
+        ['end', 1, undefined],
+      ]);
+    });
+
     it('session.started/ended append session-start/session-end markers', () => {
       const events = [
         mkEvent('session.started', { title: 'Session 1' }, { seq: 1, id: 'evt-start-1' }),

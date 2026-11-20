@@ -497,6 +497,11 @@
     "title": "Стіл",
     "landmark": "Журнал кампанії",
     "empty": "Тут поки що порожньо.",
+    "encounter": {
+      "start": "Початок сутички {number}",
+      "round": "Сутичка {number}, раунд {round}",
+      "end": "Кінець сутички {number}"
+    },
     "session": {
       "started": "Сесія почалася — {title}",
       "startedNoTitle": "Сесія почалася",
