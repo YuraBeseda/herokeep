@@ -14,6 +14,7 @@ import { hintOf, press } from '../../../../ui/testing/harness';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { SpellsStepComponent } from './spells-step.component';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — same approach as every
@@ -187,7 +188,7 @@ describe('SpellsStepComponent', () => {
     expect(compiled.querySelector('.spells-step__helper, .spells-step__cap-message')).toBeNull();
   });
 
-  it('an info button opens the spell in the description drawer without learning it', async () => {
+  it('an info button opens the spell in the description peek without learning it', async () => {
     const state = createWizardDraft();
     const fixture = TestBed.createComponent(SpellsStepComponent);
     await fixture.whenStable();
@@ -196,7 +197,7 @@ describe('SpellsStepComponent', () => {
     press(info);
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(compiled.querySelector('hk-description-drawer [role="dialog"]')).not.toBeNull();
+    expect(TestBed.inject(PeekService).current()?.entityId).toMatch(/:spell\//);
     expect(state.draftSheet()!.spellcasting[0].known).toHaveLength(0);
   });
 

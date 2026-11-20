@@ -328,7 +328,7 @@ export class ClassEntryComponent {
     this.spellGroups().reduce((total, group) => total + group.spells.length, 0),
   );
 
-  /** Opens a feature's full text in the description drawer (it ends with an Open entry link). */
+  /** Opens a feature's full text in the description drawer (its header links to the full entry). */
   protected showFullText(event: Event, id: string): void {
     const target = event.currentTarget;
     this.peek.open(id, target instanceof HTMLElement ? target : undefined);

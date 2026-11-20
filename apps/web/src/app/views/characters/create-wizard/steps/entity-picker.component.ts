@@ -1,11 +1,24 @@
-import { DOCUMENT } from '@angular/common';
-import { Component, computed, ElementRef, inject, input, output, signal } from '@angular/core';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  output,
+  signal,
+  viewChild,
+  type TemplateRef,
+} from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '@shared/icons/icon.component';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
+import { DialogRef } from '../../../../ui/dialog/dialog.service';
 import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
 import { HkPickerCardComponent } from '../../../../ui/picker-card/picker-card.component';
 import { HkSearchFieldComponent } from '../../../../ui/search-field/search-field.component';
@@ -68,6 +81,7 @@ const SEARCH_THRESHOLD = 8;
     FactValueComponent,
     HkButtonComponent,
     HkDescriptionDrawerComponent,
+    NgTemplateOutlet,
     HkFilterChipsComponent,
     HkPickerCardComponent,
     HkSearchFieldComponent,
@@ -101,7 +115,15 @@ export class EntityPickerComponent {
   // Template-facing state
   protected readonly query = signal('');
   protected readonly activeFilters = signal<readonly string[]>([]);
-  /** The option whose description the drawer shows (kept after closing, so the drawer can animate out). */
+  /**
+   * Inside a dialog (the add-item picker) the description drawer stays local: the app-root peek
+   * would render under the dialog's overlay. On a page it opens in the shared peek.
+   */
+  protected readonly inDialog = inject(DialogRef, { optional: true }) !== null;
+  private readonly peek = inject(PeekService);
+  private readonly injector = inject(Injector);
+  private readonly drawerActions = viewChild.required<TemplateRef<unknown>>('drawerActions');
+  /** The option whose description the local drawer shows (kept after closing, so it can animate out). */
   protected readonly detailsId = signal<string | undefined>(undefined);
   protected readonly detailsOpen = signal(false);
   protected readonly detailsOpener = signal<HTMLElement | null>(null);
@@ -195,7 +217,12 @@ export class EntityPickerComponent {
 
   /** The row the open drawer is about, for its Choose button. */
   protected readonly detailsRow = computed(() => {
-    const id = this.detailsId();
+    const peeked = this.peek.current();
+    const id = this.inDialog
+      ? this.detailsId()
+      : peeked?.ctx?.injector === this.injector
+        ? peeked.entityId
+        : undefined;
     return id === undefined ? undefined : this.allRows().find((row) => row.id === id);
   });
 
@@ -218,6 +245,13 @@ export class EntityPickerComponent {
   // picker's own pack scope.
   protected onDetails(id: string, event?: Event): void {
     const opener = (event?.currentTarget as HTMLElement | null) ?? this.document.activeElement;
+    if (!this.inDialog) {
+      this.peek.open(id, opener instanceof HTMLElement ? opener : undefined, {
+        injector: this.injector,
+        actions: this.drawerActions(),
+      });
+      return;
+    }
     this.detailsOpener.set(opener instanceof HTMLElement ? opener : null);
     this.detailsId.set(id);
     this.detailsOpen.set(true);

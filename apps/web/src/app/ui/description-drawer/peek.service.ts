@@ -1,27 +1,40 @@
-import { Injectable, signal } from '@angular/core';
+import { DestroyRef, Injectable, signal, type Injector, type TemplateRef } from '@angular/core';
 
 /** A pack entity id, e.g. `srd-5e-2024:feature/paladin-lay-on-hands`. */
 export type EntityId = string;
+
+/** Where the peek is read from: the caller's injector (hero or wizard scope) and its actions. */
+export interface PeekContext {
+  /** The drawer resolves its providers here first (`CharacterEngineScope`, `CreateWizardState`, the engine scope). */
+  readonly injector?: Injector;
+  /** Rendered in the drawer's footer, in the caller's own template context. */
+  readonly actions?: TemplateRef<unknown>;
+}
 
 export interface Peek {
   readonly entityId: EntityId;
   /** The control that opened the peek: focus returns to it when the drawer closes. */
   readonly opener?: HTMLElement;
+  readonly ctx?: PeekContext;
 }
 
 /**
  * The one description peek: `app.html` hosts the only `hk-description-drawer` and renders
- * `current`. Opening another entity while one is open replaces the content (never a second drawer)
- * and keeps the first opener unless a new one is given. The host lives at the app root, so no
- * transformed ancestor (a tilted leaf) can become the fixed panel's containing block.
+ * `current` under `ctx.injector`. Opening another entity while one is open replaces the content
+ * (never a second drawer) and keeps the first opener unless a new one is given. The host lives at
+ * the app root, so no transformed ancestor (a tilted leaf) can become the fixed panel's containing
+ * block. A peek whose caller is destroyed (a wizard step left) closes with it.
  */
 @Injectable({ providedIn: 'root' })
 export class PeekService {
   private readonly state = signal<Peek | null>(null);
   readonly current = this.state.asReadonly();
 
-  open(entityId: EntityId, opener?: HTMLElement): void {
-    this.state.update((open) => ({ entityId, opener: opener ?? open?.opener }));
+  open(entityId: EntityId, opener?: HTMLElement, ctx?: PeekContext): void {
+    this.state.update((open) => ({ entityId, opener: opener ?? open?.opener, ctx }));
+    ctx?.injector?.get(DestroyRef, null)?.onDestroy(() => {
+      if (this.state()?.ctx === ctx) this.close();
+    });
   }
 
   close(): void {

@@ -30,6 +30,7 @@ import shellEn from '../../../../assets/i18n/shell/en.json';
 import shellRu from '../../../../assets/i18n/shell/ru.json';
 import shellUk from '../../../../assets/i18n/shell/uk.json';
 import sampleJson from '../../../../testing/fixtures/packs/sample-content.json';
+import { HkPeekHostComponent } from '../../../ui/description-drawer/peek-host.component';
 import { CreateWizardComponent } from './create-wizard.component';
 import { CreateWizardState } from './create-wizard.state';
 import { CAMPAIGN_ID, describedBy, seedCampaign } from '../sheet/testing/character-fixtures';
@@ -1213,8 +1214,9 @@ describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
     expect(currentLabel(fixture)).toBe('Skills');
   });
 
-  it('every picker option opens its description in the description drawer', async () => {
+  it('every picker option opens its description in the description peek', async () => {
     const { fixture } = await start();
+    const peekHost = TestBed.createComponent(HkPeekHostComponent);
     await pressStrap(fixture, 'next');
     expect(currentLabel(fixture)).toBe('Species');
     const names = Array.from(
@@ -1229,8 +1231,9 @@ describe('CreateWizardComponent — flow navigation (plan 17 B8a)', () => {
       press(button);
       fixture.detectChanges();
       await fixture.whenStable();
+      await peekHost.whenStable();
       expect(
-        root(fixture).querySelector('hk-description-drawer .hk-drawer__title')?.textContent?.trim(),
+        root(peekHost).querySelector('hk-description-drawer .hk-drawer__title')?.textContent?.trim(),
         `option ${i}`,
       ).toBe(names[i]);
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

@@ -1,9 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, Injector, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
-import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { HkIconButtonComponent } from '../../../../ui/icon-button/icon-button.component';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
 import { HkNumberFieldComponent } from '../../../../ui/number-field/number-field.component';
@@ -60,7 +60,6 @@ interface KitGroup {
     FormsModule,
     EntityPickerComponent,
     HkButtonComponent,
-    HkDescriptionDrawerComponent,
     HkIconButtonComponent,
     HkNumberFieldComponent,
     HkPickerCardComponent,
@@ -156,16 +155,15 @@ export class EquipmentStepComponent {
     () => this.state.draftSheet()?.currency ?? { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   );
 
-  protected readonly detailsId = signal<string | undefined>(undefined);
-  protected readonly detailsOpen = signal(false);
-  protected readonly detailsOpener = signal<HTMLElement | null>(null);
+  private readonly peek = inject(PeekService);
+  private readonly injector = inject(Injector);
 
   /** Opens an item's full description (the bag row's name may be cut short). */
   protected openDetails(event: Event, itemId: string): void {
     const target = event.currentTarget;
-    this.detailsOpener.set(target instanceof HTMLElement ? target : null);
-    this.detailsId.set(itemId);
-    this.detailsOpen.set(true);
+    this.peek.open(itemId, target instanceof HTMLElement ? target : undefined, {
+      injector: this.injector,
+    });
   }
 
   protected entryName(entry: InventoryRow): string {

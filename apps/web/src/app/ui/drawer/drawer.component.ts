@@ -78,6 +78,8 @@ export class HkDrawerComponent {
           // its handler has already run (it prevents default) or it is still open above us, so
           // one Escape closes only the topmost overlay.
           if (this.overlayOpenAbove()) return;
+          // A non-modal peek leaves the page usable: Escape there (a search field, a menu) is not ours.
+          if (!this.modal() && !this.ownsFocus()) return;
           event.preventDefault();
           event.stopPropagation();
           this.dismiss(true);
@@ -130,6 +132,15 @@ export class HkDrawerComponent {
     ).some((pane) => !pane.contains(this.host.nativeElement));
   }
 
+  private ownsFocus(): boolean {
+    const active = document.activeElement;
+    return (
+      !active ||
+      active === document.body ||
+      !!this.host.nativeElement.querySelector('.hk-drawer__panel')?.contains(active)
+    );
+  }
+
   private openerElement(): HTMLElement | null {
     const opener = this.opener();
     if (!opener) return null;
@@ -139,6 +150,9 @@ export class HkDrawerComponent {
   private dismiss(restoreFocus: boolean): void {
     if (!this.open()) return;
     this.open.set(false);
-    if (restoreFocus) (this.openerElement() ?? this.returnTo)?.focus();
+    if (!restoreFocus) return;
+    // An opener that left the DOM (its row re-rendered, its step closed) cannot take focus back.
+    const target = [this.openerElement(), this.returnTo].find((el) => el?.isConnected);
+    target?.focus();
   }
 }

@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, Injector, input, signal } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { Sheet } from '@hk/engine';
 import { ItemIconRefSchema } from '@hk/protocol';
@@ -11,7 +11,7 @@ import {
   HkCoinPouchComponent,
   type CoinPurse,
 } from '../../../../../ui/coin-pouch/coin-pouch.component';
-import { HkDescriptionDrawerComponent } from '../../../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../../../ui/description-drawer/peek.service';
 import { HkItemRowComponent } from '../../../../../ui/item-row/item-row.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { HkSatchelGridComponent } from '../../../../../ui/satchel-grid/satchel-grid.component';
@@ -65,7 +65,6 @@ interface BagRow {
     HkItemRowComponent,
     HkCoinPouchComponent,
     HkWeightStrapComponent,
-    HkDescriptionDrawerComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './bag-leaf.component.html',
@@ -160,9 +159,8 @@ export class BagLeafComponent {
     return thresholds.find((t) => t.state === carry.state)?.speedPenalty;
   });
 
-  protected readonly detailsId = signal<string | undefined>(undefined);
-  protected readonly detailsOpen = signal(false);
-  protected readonly detailsOpener = signal<HTMLElement | null>(null);
+  private readonly peek = inject(PeekService);
+  private readonly injector = inject(Injector);
 
   // A bag item's sub-caption is translated text (the weight), so the display items are built with
   // the template's `t`; cached on (rows, t) so the grid's input is stable between renders.
@@ -188,9 +186,9 @@ export class BagLeafComponent {
   protected openDetails(entry: BagRow): void {
     if (!entry.itemId || !this.engineFacade.index().has(entry.itemId)) return;
     const active = document.activeElement;
-    this.detailsOpener.set(active instanceof HTMLElement ? active : null);
-    this.detailsId.set(entry.itemId);
-    this.detailsOpen.set(true);
+    this.peek.open(entry.itemId, active instanceof HTMLElement ? active : undefined, {
+      injector: this.injector,
+    });
   }
 
   protected canShowDetails(entry: BagRow): boolean {

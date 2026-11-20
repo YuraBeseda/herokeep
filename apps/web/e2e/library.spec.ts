@@ -143,21 +143,28 @@ test.describe('library', () => {
     await page.evaluate(() => window.scrollTo(0, 600));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
 
-    // Sample the main column's x and the page scroll every frame while the drawer opens.
+    // Sample the main column's x and the page scroll every frame while the drawer opens, until
+    // the panel is attached and its slide-in has finished (the deferred host loads on demand).
     const samples = await button.evaluate(async (el) => {
       const main = document.querySelector('.app-shell__main')!;
       const root = document.scrollingElement!;
       const out: { x: number; top: number }[] = [];
       (el as HTMLElement).click();
-      const end = performance.now() + 600;
-      while (performance.now() < end) {
+      const settled = () => {
+        const panel = document.querySelector('.hk-drawer__panel');
+        return !!panel && panel.getAnimations({ subtree: true }).length === 0;
+      };
+      const end = performance.now() + 5000;
+      do {
         out.push({ x: main.getBoundingClientRect().x, top: root.scrollTop });
         await new Promise((resolve) => requestAnimationFrame(resolve));
-      }
-      return out;
+      } while (!settled() && performance.now() < end);
+      out.push({ x: main.getBoundingClientRect().x, top: root.scrollTop });
+      return { out, settled: settled() };
     });
-    const first = samples[0]!;
-    expect(samples.every((s) => s.x === first.x && s.top === 600)).toBe(true);
+    expect(samples.settled).toBe(true);
+    const first = samples.out[0]!;
+    expect(samples.out.every((s) => s.x === first.x && s.top === 600)).toBe(true);
 
     const panel = page.locator('.hk-drawer__panel');
     await expect(panel).toBeVisible();

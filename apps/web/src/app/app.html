@@ -47,16 +47,10 @@
     <hk-action-strap />
     <hk-tab-bar />
   </div>
-  @if (peek.current(); as peeked) {
+  @if (peek.current()) {
     <!-- Deferred: the drawer (markdown, facts, choices) stays out of the initial bundle. -->
     @defer (on immediate) {
-      <hk-description-drawer
-        [peek]="true"
-        [entity]="peeked.entityId"
-        [opener]="peeked.opener"
-        [open]="true"
-        (openChange)="$event || peek.close()"
-      />
+      <hk-peek-host />
     }
   }
 </ng-container>

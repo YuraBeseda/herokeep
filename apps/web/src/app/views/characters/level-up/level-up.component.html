@@ -66,13 +66,6 @@
               }
             </ul>
           }
-          @if (detailsId(); as id) {
-            <hk-description-drawer
-              [entity]="id"
-              [(open)]="detailsOpen"
-              [opener]="detailsOpener()"
-            />
-          }
         </div>
       }
       @case ('hp') {

@@ -13,6 +13,7 @@ import { PackStore } from '@shared/stores/pack.store';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { EquipmentStepComponent } from './equipment-step.component';
 import {
   CAMPAIGN_ID,
@@ -244,7 +245,7 @@ describe('EquipmentStepComponent', () => {
     expect(equip.getAttribute('aria-checked')).toBe('true');
   });
 
-  it('a bag row\x27s details button opens the item\x27s full description in the drawer', async () => {
+  it('a bag row\x27s details button opens the item\x27s full description in the peek', async () => {
     createDraft();
     const fixture = TestBed.createComponent(EquipmentStepComponent);
     await fixture.whenStable();
@@ -253,14 +254,14 @@ describe('EquipmentStepComponent', () => {
     card.querySelector<HTMLButtonElement>('.entity-picker__toggle')!.click();
     await fixture.whenStable();
 
-    expect(compiled.querySelector('.equipment-step__entry hk-description-drawer')).toBeNull();
+    expect(TestBed.inject(PeekService).current()).toBeNull();
     const details = compiled.querySelector<HTMLButtonElement>('.equipment-step__details')!;
     expect(
       details.getAttribute('aria-label') ?? details.getAttribute('aria-labelledby'),
     ).toBeTruthy();
     details.click();
     await fixture.whenStable();
-    expect(compiled.querySelector('hk-description-drawer')).not.toBeNull();
+    expect(TestBed.inject(PeekService).current()?.entityId).toBe('srd-5e-2024:item/chain-mail');
   });
 
   describe('starting equipment kits', () => {

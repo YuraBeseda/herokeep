@@ -6,6 +6,7 @@ import { LocaleService } from '@shared/services/i18n/locale.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { seedFighter } from '../../testing/character-fixtures';
 import { RU_ACTION_SURGE_NAME, ruTranslationPack, setupLeafSpec } from '../play-spec-support';
+import { PeekService } from '../../../../../ui/description-drawer/peek.service';
 import { FeaturesLeafComponent } from './features-leaf.component';
 
 // `ActionView.name` is baked English; `.source` is a resolvable entity id the leaf prefers.
@@ -37,7 +38,7 @@ describe('FeaturesLeafComponent — name localization', () => {
     expect(text).not.toContain('Action Surge');
   });
 
-  it('lists a feature row per action with a Details button that opens the description drawer', async () => {
+  it('lists a feature row per action with a Details button that opens the description peek', async () => {
     await seedFighter('Ivan');
     const characterStore = TestBed.inject(CharacterStore);
     await characterStore.appendTx([
@@ -51,12 +52,12 @@ describe('FeaturesLeafComponent — name localization', () => {
     const fixture = TestBed.createComponent(FeaturesLeafComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('hk-description-drawer')).toBeNull();
+    expect(TestBed.inject(PeekService).current()).toBeNull();
 
     compiled.querySelector<HTMLButtonElement>('hk-feature-row button')!.click();
     await fixture.whenStable();
 
-    expect(compiled.querySelector('hk-description-drawer')).not.toBeNull();
+    expect(TestBed.inject(PeekService).current()?.entityId).toMatch(/^srd-5e-2024:feature\/fighter-/);
   });
 });
 
@@ -197,14 +198,16 @@ describe('FeaturesLeafComponent — every granted feature (R64)', () => {
     );
   });
 
-  it('opens the description drawer from a feature that has no action', async () => {
+  it('opens the description peek from a feature that has no action', async () => {
     const el = await mountBarbarianFighter();
-    expect(el.querySelector('hk-description-drawer')).toBeNull();
+    expect(TestBed.inject(PeekService).current()).toBeNull();
 
     rowNamed(groupOf(el, 'Barbarian'), 'Rage')!.querySelector('button')!.click();
     await current.whenStable();
 
-    expect(el.querySelector('hk-description-drawer')).not.toBeNull();
+    expect(TestBed.inject(PeekService).current()?.entityId).toBe(
+      'srd-5e-2024:feature/barbarian-rage',
+    );
   });
 
   it('leaves out the class-table column features, which are table data with no prose', async () => {
@@ -262,6 +265,6 @@ describe('FeaturesLeafComponent — a feature whose entry is missing (M3)', () =
     expect(button.getAttribute('aria-disabled')).toBe('true');
     button.click();
     await fixture.whenStable();
-    expect(el.querySelector('hk-description-drawer')).toBeNull();
+    expect(TestBed.inject(PeekService).current()).toBeNull();
   });
 });

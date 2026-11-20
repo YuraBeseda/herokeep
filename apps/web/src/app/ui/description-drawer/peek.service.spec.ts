@@ -1,3 +1,4 @@
+import { createEnvironmentInjector, EnvironmentInjector, Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PeekService } from './peek.service';
 
@@ -32,10 +33,20 @@ describe('PeekService', () => {
     expect(peek.current()?.opener).toBe(second);
   });
 
-  it('close clears it', () => {
+  it('carries the context, and close clears it', () => {
     const peek = setup();
-    peek.open('pack:feature/a');
+    const ctx = { injector: Injector.create({ providers: [] }) };
+    peek.open('pack:feature/a', undefined, ctx);
+    expect(peek.current()?.ctx).toBe(ctx);
     peek.close();
+    expect(peek.current()).toBeNull();
+  });
+
+  it('closes when the caller that opened it is destroyed', () => {
+    const peek = setup();
+    const injector = createEnvironmentInjector([], TestBed.inject(EnvironmentInjector));
+    peek.open('pack:feature/a', undefined, { injector });
+    injector.destroy();
     expect(peek.current()).toBeNull();
   });
 });

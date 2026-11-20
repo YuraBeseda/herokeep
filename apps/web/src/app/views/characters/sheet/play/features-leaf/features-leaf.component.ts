@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, Injector, input } from '@angular/core';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { CharacterStore } from '@shared/stores/character.store';
 import { parseEntityId } from '@hk/protocol';
@@ -10,7 +10,7 @@ import {
   type FeatureGroup,
   type FeatureOrigin,
 } from '@shared/services/engine/feature-groups';
-import { HkDescriptionDrawerComponent } from '../../../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../../../ui/description-drawer/peek.service';
 import { HkFeatureRowComponent } from '../../../../../ui/feature-row/feature-row.component';
 import { HkLeafComponent } from '../../../../../ui/leaf/leaf.component';
 import { summaryOf } from '../../../../library/detail/class-entry/summary-text';
@@ -49,7 +49,6 @@ type LeafGroup = FeatureGroup<LeafView> & { readonly headingName: string | null 
     TranslocoDirective,
     HkLeafComponent,
     HkFeatureRowComponent,
-    HkDescriptionDrawerComponent,
     HkTooltipDirective,
   ],
   providers: [provideTranslocoScope('characters')],
@@ -152,14 +151,13 @@ export class FeaturesLeafComponent {
     }));
   });
 
-  protected readonly detailsId = signal<string | undefined>(undefined);
-  protected readonly detailsOpen = signal(false);
-  protected readonly detailsOpener = signal<HTMLElement | null>(null);
+  private readonly peek = inject(PeekService);
+  private readonly injector = inject(Injector);
 
   protected openDetails(sourceId: string): void {
     const active = document.activeElement;
-    this.detailsOpener.set(active instanceof HTMLElement ? active : null);
-    this.detailsId.set(sourceId);
-    this.detailsOpen.set(true);
+    this.peek.open(sourceId, active instanceof HTMLElement ? active : undefined, {
+      injector: this.injector,
+    });
   }
 }

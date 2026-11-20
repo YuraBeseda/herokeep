@@ -9,7 +9,7 @@ import { ActionStrapService } from './ui/action-strap/action-strap.service';
 import { HkActionStrapComponent } from './ui/action-strap/action-strap.component';
 import { HkBannerComponent } from './ui/banner/banner.component';
 import { HkButtonComponent } from './ui/button/button.component';
-import { HkDescriptionDrawerComponent } from './ui/description-drawer/description-drawer.component';
+import { HkPeekHostComponent } from './ui/description-drawer/peek-host.component';
 import { PeekService } from './ui/description-drawer/peek.service';
 import { NavHistoryService } from './ui/nav/nav-history.service';
 import { currentSection } from './ui/shell/current-section';
@@ -32,7 +32,7 @@ import { HkTexturesComponent } from './ui/textures/textures.component';
     HkTabBarComponent,
     HkBannerComponent,
     HkButtonComponent,
-    HkDescriptionDrawerComponent,
+    HkPeekHostComponent,
   ],
   // `provideTranslocoScope('sync')` lives HERE (the app-root, always-loaded shell) rather than on
   // any single view: `SyncService`'s toasts (task-8-brief.md) can fire from a background session
@@ -52,7 +52,7 @@ export class App {
   // core-pack fetch fails (a rejected `init()` used to leave `bootstrapApplication` unresolved).
   protected readonly packStore = inject(PackStore);
   protected readonly topBar = inject(TopBarService);
-  // The one description peek drawer, hosted here out of every transformed ancestor.
+  // The one description peek drawer (`hk-peek-host`), hosted here out of every transformed ancestor.
   protected readonly peek = inject(PeekService);
   private readonly router = inject(Router);
   private readonly reload = inject(WINDOW_RELOAD);

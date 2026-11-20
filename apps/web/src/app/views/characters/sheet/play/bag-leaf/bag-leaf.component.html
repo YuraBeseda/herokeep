@@ -198,8 +198,4 @@
       (save)="saveCoins($event)"
     />
   </hk-leaf>
-
-  @if (detailsId(); as id) {
-    <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
-  }
 </ng-container>

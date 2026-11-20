@@ -127,8 +127,8 @@ describe('HkDescriptionDrawerComponent', () => {
 
   it('links to the full library entry', async () => {
     const { el } = await render('srd-5e-2024:spell/fireball');
-    const link = el.querySelector<HTMLAnchorElement>('a.hk-description__open')!;
-    expect(link.textContent?.trim()).toBe('Open entry');
+    const link = el.querySelector<HTMLAnchorElement>('a.hk-description__open-page')!;
+    expect(link.getAttribute('aria-label')).toBe('Open entry');
     expect(decodeURIComponent(link.getAttribute('href')!)).toBe(
       '/library/srd-5e-2024:spell/fireball',
     );
@@ -278,7 +278,7 @@ describe('HkDescriptionDrawerComponent inside a character scope (R30)', () => {
     await scoped.whenStable();
     await scoped.whenStable();
     const link = (scoped.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
-      'a.hk-description__open',
+      'a.hk-description__open-page',
     )!;
     expect(decodeURIComponent(link.getAttribute('href')!)).toBe(
       `/library/${SCOPED_ID}?for=char:hero-1`,
@@ -289,7 +289,7 @@ describe('HkDescriptionDrawerComponent inside a character scope (R30)', () => {
     await plain.whenStable();
     await plain.whenStable();
     const plainLink = (plain.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
-      'a.hk-description__open',
+      'a.hk-description__open-page',
     )!;
     expect(decodeURIComponent(plainLink.getAttribute('href')!)).toBe(
       '/library/srd-5e-2024:spell/fireball',

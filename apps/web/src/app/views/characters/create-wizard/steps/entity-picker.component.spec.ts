@@ -18,6 +18,7 @@ import { PickerToolsService } from '../picker-tools.service';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import sampleJson from '../../../../../testing/fixtures/packs/sample-content.json';
+import { HkPeekHostComponent } from '../../../../ui/description-drawer/peek-host.component';
 import { EntityPickerComponent } from './entity-picker.component';
 
 // Real built SRD pack (task-2-brief.md's "prefer the real pack" ruling) — `pretest`
@@ -54,8 +55,9 @@ class StubLoader implements TranslocoLoader {
 
 @Component({
   selector: 'app-entity-picker-host',
-  imports: [EntityPickerComponent],
+  imports: [EntityPickerComponent, HkPeekHostComponent],
   template: `
+    <hk-peek-host />
     <hk-entity-picker
       [ids]="ids()"
       [selectedIds]="selectedIds()"
@@ -438,9 +440,9 @@ describe('EntityPickerComponent — cross-links inside a character scope (plan 1
 
   @Component({
     selector: 'app-scoped-picker-host',
-    imports: [EntityPickerComponent],
+    imports: [EntityPickerComponent, HkPeekHostComponent],
     providers: [CharacterEngineScope, provideEngineScope(CharacterEngineScope)],
-    template: `<hk-entity-picker [ids]="ids" />`,
+    template: `<hk-entity-picker [ids]="ids" /><hk-peek-host />`,
   })
   class ScopedHostComponent {
     readonly ids = [MOONKIN];

@@ -351,13 +351,23 @@ describe('HkDrawerComponent', () => {
   });
 
   describe('as the description peek', () => {
-    afterEach(() => vi.unstubAllGlobals());
+    // jsdom has no layout: CDK's tabbable check needs client rects to move focus into the panel.
+    beforeEach(() =>
+      vi.spyOn(HTMLElement.prototype, 'getClientRects').mockReturnValue([
+        {},
+      ] as unknown as DOMRectList),
+    );
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
 
     async function openPeek(phone: boolean) {
       stubViewport({ phone });
       const { fixture, el } = await setup();
       fixture.componentInstance.peek.set(true);
       await openIt(fixture);
+      await fixture.whenStable();
       return { fixture, el };
     }
 
@@ -370,12 +380,38 @@ describe('HkDrawerComponent', () => {
       expect(panel(el)).not.toBeNull();
     });
 
-    it('still closes on Escape and returns focus to the opener', async () => {
+    it('moves focus into the panel, and Escape there closes it and returns focus to the opener', async () => {
       const { fixture, el } = await openPeek(false);
-      key(document.body, 'Escape');
+      expect(panel(el)!.contains(document.activeElement)).toBe(true);
+      key(document.activeElement!, 'Escape');
       await fixture.whenStable();
       expect(panel(el)).toBeNull();
       expect(document.activeElement).toBe(el.querySelector('.opener'));
+    });
+
+    it('leaves Escape to the page while focus is in the page, not the panel', async () => {
+      const { fixture, el } = await openPeek(false);
+      const elsewhere = el.querySelector<HTMLElement>('.elsewhere')!;
+      elsewhere.focus();
+      key(elsewhere, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).not.toBeNull();
+    });
+
+    it('returns focus past an opener that has left the DOM', async () => {
+      stubViewport({ phone: false });
+      const { fixture, el } = await setup();
+      fixture.componentInstance.peek.set(true);
+      const elsewhere = el.querySelector<HTMLElement>('.elsewhere')!;
+      elsewhere.focus();
+      fixture.componentInstance.open.set(true);
+      await fixture.whenStable();
+      await fixture.whenStable();
+      el.querySelector('.opener')!.remove();
+      key(document.activeElement ?? document.body, 'Escape');
+      await fixture.whenStable();
+      expect(panel(el)).toBeNull();
+      expect(document.activeElement).toBe(elsewhere);
     });
 
     it('is a modal sheet with a scrim below 900 px', async () => {

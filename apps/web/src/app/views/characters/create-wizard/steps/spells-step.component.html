@@ -109,10 +109,6 @@
         {{ t('wizard.spells.continue') }}
       </button>
     }
-
-    @if (detailsId(); as id) {
-      <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()" />
-    }
   }
   <ng-template #tools let-view="view">
     @if (view.showSearch() || (filtersVisible() && view.filterOptions().length > 0)) {

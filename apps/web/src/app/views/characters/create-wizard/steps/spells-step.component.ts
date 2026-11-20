@@ -1,10 +1,10 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, ElementRef, inject, input, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, Injector, input } from '@angular/core';
 import type { Sheet } from '@hk/engine';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { HkButtonComponent } from '../../../../ui/button/button.component';
-import { HkDescriptionDrawerComponent } from '../../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { CreateWizardState } from '../create-wizard.state';
 import { HkFilterChipsComponent } from '../../../../ui/filter-chips/filter-chips.component';
@@ -55,7 +55,6 @@ const SPELLBOOK_RECOMMENDED = 6;
   imports: [
     TranslocoDirective,
     HkButtonComponent,
-    HkDescriptionDrawerComponent,
     HkFilterChipsComponent,
     HkSearchFieldComponent,
     NgTemplateOutlet,
@@ -75,10 +74,8 @@ export class SpellsStepComponent {
   private readonly state = inject(CreateWizardState, { optional: true });
   private readonly engineFacade = inject(EngineFacade);
 
-  /** The spell whose description the drawer shows (kept after closing, so the drawer can animate out). */
-  protected readonly detailsId = signal<string | undefined>(undefined);
-  protected readonly detailsOpen = signal(false);
-  protected readonly detailsOpener = signal<HTMLElement | null>(null);
+  private readonly peek = inject(PeekService);
+  private readonly injector = inject(Injector);
 
   // Override trio + two more (task-13-brief.md): `spellcasting` overrides which block this step
   // reads (`CreateWizardState.draftSheet()?.spellcasting[0]` otherwise); `learn`/`unlearn`/
@@ -222,9 +219,7 @@ export class SpellsStepComponent {
   }
 
   protected onDetails(id: string, opener: HTMLElement): void {
-    this.detailsOpener.set(opener);
-    this.detailsId.set(id);
-    this.detailsOpen.set(true);
+    this.peek.open(id, opener, { injector: this.injector });
   }
 
   /** Why a prepared row cannot be toggled: granted by the class, or every slot is taken. */

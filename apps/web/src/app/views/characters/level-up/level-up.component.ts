@@ -1,5 +1,5 @@
 import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, Injector, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import { IconComponent } from '@shared/icons/icon.component';
@@ -11,7 +11,7 @@ import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/cha
 import { HkButtonComponent } from '../../../ui/button/button.component';
 import { DialogService } from '../../../ui/dialog/dialog.service';
 import { FlowController } from '../../../ui/flow/flow-controller';
-import { HkDescriptionDrawerComponent } from '../../../ui/description-drawer/description-drawer.component';
+import { PeekService } from '../../../ui/description-drawer/peek.service';
 import { NavHistoryService } from '../../../ui/nav/nav-history.service';
 import { askOnce } from '../../../ui/nav/ask-once';
 import { phoneLayout } from '../../../ui/shell/viewport';
@@ -86,7 +86,6 @@ interface ClassCard {
     HkButtonComponent,
     HkStepperComponent,
     HkPickerCardComponent,
-    HkDescriptionDrawerComponent,
     HkTooltipDirective,
     HkWaxSealComponent,
     IconComponent,
@@ -252,15 +251,14 @@ export class LevelUpComponent {
     this.classCards().filter((card) => card.isNewClass),
   );
 
-  protected readonly detailsId = signal<string | undefined>(undefined);
-  protected readonly detailsOpen = signal(false);
-  protected readonly detailsOpener = signal<HTMLElement | null>(null);
+  private readonly peek = inject(PeekService);
+  private readonly injector = inject(Injector);
 
   protected onClassDetails(classId: string): void {
     const opener = this.document.activeElement;
-    this.detailsOpener.set(opener instanceof HTMLElement ? opener : null);
-    this.detailsId.set(classId);
-    this.detailsOpen.set(true);
+    this.peek.open(classId, opener instanceof HTMLElement ? opener : undefined, {
+      injector: this.injector,
+    });
   }
 
   protected onChooseClass(classId: string): void {

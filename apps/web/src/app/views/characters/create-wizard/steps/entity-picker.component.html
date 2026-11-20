@@ -112,22 +112,26 @@
     </p>
   }
 
-  @if (detailsId(); as id) {
+  <!-- The description's Choose button: in the app-root peek, or in the local drawer of a dialog. -->
+  <ng-template #drawerActions>
+    @if (detailsRow(); as current) {
+      <button
+        hkDrawerAction
+        hk-button
+        type="button"
+        class="entity-picker__drawer-choose"
+        [variant]="isSelected(current.id) ? 'parchment' : 'primary'"
+        [attr.aria-pressed]="isSelected(current.id)"
+        [disabledReason]="blocked(current) ? current.gate! : null"
+        (click)="onToggle(current.id)"
+      >
+        {{ isSelected(current.id) ? t('wizard.picker.chosen') : t('wizard.picker.choose') }}
+      </button>
+    }
+  </ng-template>
+  @if (inDialog && detailsId(); as id) {
     <hk-description-drawer [entity]="id" [(open)]="detailsOpen" [opener]="detailsOpener()">
-      @if (detailsRow(); as current) {
-        <button
-          hkDrawerAction
-          hk-button
-          type="button"
-          class="entity-picker__drawer-choose"
-          [variant]="isSelected(id) ? 'parchment' : 'primary'"
-          [attr.aria-pressed]="isSelected(id)"
-          [disabledReason]="blocked(current) ? current.gate! : null"
-          (click)="onToggle(id)"
-        >
-          {{ isSelected(id) ? t('wizard.picker.chosen') : t('wizard.picker.choose') }}
-        </button>
-      }
+      <ng-container ngProjectAs="[hkDrawerAction]" [ngTemplateOutlet]="drawerActions" />
     </hk-description-drawer>
   }
 </div>
