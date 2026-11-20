@@ -15,6 +15,30 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  // Themed scrollbars, page and containers alike (Firefox/Chromium 121+).
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  // Safari: no scrollbar-color support.
+  @supports not (scrollbar-color: auto) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+      background: var(--scrollbar-track);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+    }
+  }
+
   // Visible keyboard-focus indicator everywhere; mouse/touch interaction never
   // triggers `:focus-visible`, so this does not add a ring on every click.
   :focus-visible {

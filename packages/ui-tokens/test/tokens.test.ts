@@ -43,7 +43,7 @@ describe('token file', () => {
   });
 
   it('gives every colour token a concrete value in every theme after resolving references', () => {
-    expect(TOKENS.color.tokens).toHaveLength(132);
+    expect(TOKENS.color.tokens).toHaveLength(135);
     for (const token of TOKENS.color.tokens) {
       for (const theme of THEME_IDS) {
         expect(resolveColor(token.name, theme), `${token.name} / ${theme}`).toMatch(
@@ -142,5 +142,17 @@ describe('contrast (WCAG AA, 4.5:1)', () => {
         expect(contrast(fg, bg, theme)).toBeGreaterThanOrEqual(4.5);
       });
     }
+  }
+});
+
+describe('scrollbar tokens', () => {
+  for (const theme of THEME_IDS) {
+    it(`defines thumb, hover and track with 3:1 thumb-vs-track in ${theme}`, () => {
+      for (const n of ['scrollbar-thumb', 'scrollbar-thumb-hover', 'scrollbar-track']) {
+        expect(TOKENS.color.tokens.some((t) => t.name === n), n).toBe(true);
+      }
+      expect(contrast('scrollbar-thumb', 'scrollbar-track', theme)).toBeGreaterThanOrEqual(3);
+      expect(contrast('scrollbar-thumb-hover', 'scrollbar-track', theme)).toBeGreaterThanOrEqual(3);
+    });
   }
 });
