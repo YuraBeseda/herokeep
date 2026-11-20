@@ -89,7 +89,9 @@
               {{
                 entry.phase === 'round'
                   ? t('log.encounter.round', { number: entry.number, round: entry.round })
-                  : t('log.encounter.' + entry.phase, { number: entry.number })
+                  : entry.phase === 'start'
+                    ? t('log.encounter.start', { number: entry.number })
+                    : t('log.encounter.end', { number: entry.number })
               }}
               · <time [attr.datetime]="entry.ts">{{ clock(entry.ts) }}</time>
             </div>
