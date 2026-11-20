@@ -21,7 +21,7 @@ import { PlayActionsService } from '../play-actions.service';
 // localized picker and data-driven level stepper, per-chip remove). Every scenario seeds a REAL
 // fighter-1 stream and drives the rendered DOM and the real `ConditionDialogComponent` overlay.
 
-describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions', () => {
+describe('ConditionsLeafComponent — death saves, inspiration, conditions', () => {
   const EXHAUSTION_ID = 'srd-5e-2024:condition/exhaustion';
   const BLINDED_ID = 'srd-5e-2024:condition/blinded';
 
@@ -263,7 +263,7 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
   });
 
   // Plan 13 task 5: `sheet.immunities` (condition.immunity) renders as non-removable badges under
-  // an "Immunities" heading in the Conditions leaf вЂ” localized condition name plus the granting
+  // an "Immunities" heading in the Conditions leaf — localized condition name plus the granting
   // feature's name. Display-only: no heading and no list at all while the sheet has none.
   it('renders condition immunities as badges with their granting feature (Aura of Courage, paladin 10)', async () => {
     await seedFighter('Ivan');
@@ -296,7 +296,7 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
   });
 
   // Plan 14 Task 6: `sheet.resistances` (damage.resistance, Task 3) renders beside the immunity
-  // badges вЂ” the damage type's pack `rule` entity name through the Localizer plus the granting
+  // badges — the damage type's pack `rule` entity name through the Localizer plus the granting
   // source's name. Display-only, absent entirely while the sheet has none.
   it('renders damage resistances as badges with their granting source (attuned Cloak of Arachnida)', async () => {
     await seedFighter('Ivan');
