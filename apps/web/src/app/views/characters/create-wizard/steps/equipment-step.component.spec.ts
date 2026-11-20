@@ -10,6 +10,8 @@ import { provideTransloco, type TranslocoLoader } from '@jsverse/transloco';
 import { provideTranslocoMessageformat } from '@jsverse/transloco-messageformat';
 import { of } from 'rxjs';
 import { PackStore } from '@shared/stores/pack.store';
+import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
+import { CampaignStore } from '@shared/stores/campaign.store';
 import shellEn from '../../../../../assets/i18n/shell/en.json';
 import charactersEn from '../../../../../assets/i18n/characters/en.json';
 import { CreateWizardState } from '../create-wizard.state';
@@ -343,6 +345,28 @@ describe('EquipmentStepComponent', () => {
       choose.click();
       await fixture.whenStable();
       expect(state.kitChoice('class')()).toBe('A');
+    });
+
+    // Plan 20 task 12.1: the campaign DM making a hero in their own campaign is not bound.
+    it('starting gold off does not bind the campaign DM', async () => {
+      TestBed.overrideProvider(AuthService, {
+        useValue: { user: signal<AuthUser | null>({ userId: 'dm1', username: 'Dana' }) },
+      });
+      await seedCampaign({ startingGold: false });
+      await TestBed.inject(CampaignStore).appendToStream(`camp:${CAMPAIGN_ID}`, [
+        { type: 'member.joined', v: 1, payload: { userId: 'dm1', displayName: 'Dana', role: 'dm' } },
+      ]);
+      const state = fighterSoldier();
+      state.campaignId.set(CAMPAIGN_ID);
+      const fixture = TestBed.createComponent(EquipmentStepComponent);
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      const c = cardsOf(compiled, 'class')[2];
+      expect(c.classList).not.toContain('hk-picker-card--gated');
+      c.querySelector<HTMLButtonElement>('.hk-picker-card__choose')!.click();
+      await fixture.whenStable();
+      expect(state.kitChoice('class')()).toBe('C');
     });
 
     it('clicking a card body chooses that kit too', async () => {

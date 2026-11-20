@@ -12,6 +12,7 @@ import { HkTagChipComponent } from '../../../../ui/tag-chip/tag-chip.component';
 import { HkToggleComponent } from '../../../../ui/toggle/toggle.component';
 import { HkTooltipDirective } from '../../../../ui/tooltip/tooltip.directive';
 import { houseRuleAllows } from '@shared/services/campaigns/house-rules';
+import { AuthService } from '@shared/services/auth/auth.service';
 import { CreateWizardState, type KitLabel, type KitSource } from '../create-wizard.state';
 import { EntityPickerComponent } from './entity-picker.component';
 
@@ -74,6 +75,7 @@ interface KitGroup {
 export class EquipmentStepComponent {
   private readonly state = inject(CreateWizardState);
   private readonly engineFacade = inject(EngineFacade);
+  private readonly authService = inject(AuthService);
 
   protected readonly itemPickerLimit = ITEM_PICKER_LIMIT;
   protected readonly denominations = DENOMINATIONS;
@@ -128,7 +130,7 @@ export class EquipmentStepComponent {
   /** Plan 18 ruling R6: the reason a gold-only option is blocked, or `null` when starting gold is
    * allowed (a solo hero, or the campaign's house rule is on). */
   protected readonly goldOffReason = (t: (key: string, params: object) => string): string | null =>
-    houseRuleAllows('startingGold', this.state.campaign())
+    houseRuleAllows('startingGold', this.state.campaign(), this.authService.user()?.userId)
       ? null
       : t('wizard.equipment.kits.goldOff', { campaign: this.state.campaign()?.name ?? '' });
 
@@ -143,7 +145,8 @@ export class EquipmentStepComponent {
   protected onChooseKit(source: KitSource, label: KitLabel): void {
     const goldOnly =
       this.state.kitOptions(source).find((o) => o.label === label)?.items.length === 0;
-    if (goldOnly && !houseRuleAllows('startingGold', this.state.campaign())) return;
+    const userId = this.authService.user()?.userId;
+    if (goldOnly && !houseRuleAllows('startingGold', this.state.campaign(), userId)) return;
     this.state.chooseKit(source, label);
   }
 
