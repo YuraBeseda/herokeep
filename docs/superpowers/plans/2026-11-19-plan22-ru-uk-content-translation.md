@@ -16,6 +16,7 @@
 
 - Full en/ru/uk for all shipped content. The owner asked to reuse existing fan translations (dnd.su, 5esrd.kyiv.ua). Their sentences are their translators' copyrighted work (dnd.su states no reuse licence; 5esrd.kyiv.ua claims its translation as protected), and this repo is public, so **we translate the text ourselves** from our English source: the SRD is CC-BY-4.0 (translation allowed, with attribution and a "translated" notice), and the book-pack descriptions are our own words (plan 21).
 - **Terms** (names of classes, subclasses, spells, races, skills, conditions, items, game terms) follow the established names players know — official Russian book names where they exist, otherwise the most widely used community name. A single established term is not a copied text; record each choice with its source in the glossary.
+- Quality bar (owner, 2026-11-20: "normal text similar to original sources"): a faithful, sentence-by-sentence translation of our English source in official-rulebook style — nothing summarised, simplified or reordered; the same terms the official Russian books use. Not a paraphrase.
 - The owner reviews samples (Task 4) before a pack's translation is accepted.
 
 ## Global Constraints
