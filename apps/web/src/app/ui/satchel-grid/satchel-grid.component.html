@@ -2,7 +2,7 @@
   <ul class="hk-satchel__grid" role="list" [attr.aria-label]="t('ui.satchel.items')">
     @for (item of items(); track item.id) {
       @let sentence = this.sentence(item, t);
-      <li>
+      <li [hkContextMenu]="menu()(item.id)">
         <button
           type="button"
           class="hk-slot"

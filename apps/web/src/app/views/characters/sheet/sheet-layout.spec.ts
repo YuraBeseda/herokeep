@@ -484,6 +484,8 @@ describe('play sheet leaves, phone tabs and strap (plan 17 B9a)', () => {
       charactersEn.sheet.inventory.details,
       charactersEn.sheet.inventory.qtyDecrease,
       charactersEn.sheet.inventory.qtyIncrease,
+      // The row's context menu opener (the same actions as this strip).
+      charactersEn.sheet.inventory.actionsFor.replace('{name}', 'Chain Mail'),
       charactersEn.sheet.inventory.remove,
     ]);
 

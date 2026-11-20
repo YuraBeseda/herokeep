@@ -1,4 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
+import { HkContextMenuDirective } from '../context-menu/context-menu.directive';
+import type { HkMenuItem } from '../context-menu/context-menu.types';
 import { TranslocoDirective, provideTranslocoScope } from '@jsverse/transloco';
 import { BlobUrlPipe } from '@shared/pipes/blob-url.pipe';
 import { IconComponent } from '../../shared/icons/icon.component';
@@ -36,6 +38,7 @@ type Translate = (key: string, params?: Record<string, unknown>) => string;
     IconComponent,
     HkItemMarksComponent,
     HkTooltipDirective,
+    HkContextMenuDirective,
   ],
   providers: [provideTranslocoScope('shell')],
   templateUrl: './satchel-grid.component.html',
@@ -46,6 +49,8 @@ export class HkSatchelGridComponent {
   readonly items = input.required<readonly BagItem[]>();
   readonly selectedId = input<string | null>(null);
   readonly minSlots = input(16);
+  /** The context menu of a slot, by item id (`[hkContextMenu]`). */
+  readonly menu = input<(id: string) => HkMenuItem[]>(() => []);
 
   // Outputs
   // `select` is the name the bag views ask for; the native `select` event (text selection) is

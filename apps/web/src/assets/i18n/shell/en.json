@@ -403,6 +403,9 @@
       "upload": "Upload your own",
       "uploadHint": "PNG, JPEG or WebP, resized on this device",
       "uploadFailed": "That image could not be used. Try a smaller PNG, JPEG or WebP."
+    },
+    "menu": {
+      "more": "More actions"
     }
   }
 }

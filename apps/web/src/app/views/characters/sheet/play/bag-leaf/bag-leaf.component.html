@@ -85,6 +85,11 @@
             +
           </button>
         </span>
+        <hk-menu-button
+          class="bag__menu"
+          [items]="menuFor(entry)"
+          [label]="t('sheet.inventory.actionsFor', { name: entry.item.name })"
+        />
         <button
           hk-button
           type="button"
@@ -128,7 +133,7 @@
     @if (phone()) {
       <ul class="bag__ledger">
         @for (entry of rows(); track entry.row.instanceId; let i = $index) {
-          <li>
+          <li [hkContextMenu]="menuFor(entry)">
             <hk-item-row
               [item]="items[i]"
               [selected]="selectedId() === entry.row.instanceId"
@@ -145,7 +150,12 @@
         }
       </ul>
     } @else {
-      <hk-satchel-grid [items]="items" [selectedId]="selectedId()" (select)="select($event)">
+      <hk-satchel-grid
+        [items]="items"
+        [selectedId]="selectedId()"
+        [menu]="menuOf"
+        (select)="select($event)"
+      >
         <div hkItemActions>
           <ng-container *ngTemplateOutlet="itemActions" />
         </div>

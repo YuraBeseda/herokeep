@@ -12,6 +12,11 @@
     border: 0;
     padding: 0;
   }
+
+  // `[hkContextMenu]` hosts: a long-press opens the app's menu, not the iOS link/text callout.
+  .hk-context-menu-host {
+    -webkit-touch-callout: none;
+  }
 }
 
 // Not layered: a mixin has no CSS of its own until `@include`d, so its output

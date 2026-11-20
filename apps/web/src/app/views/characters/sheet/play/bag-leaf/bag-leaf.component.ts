@@ -7,6 +7,9 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { CharacterStore } from '@shared/stores/character.store';
 import type { BagItem } from '../../../../../ui/bag-item';
 import { HkButtonComponent } from '../../../../../ui/button/button.component';
+import { HkContextMenuDirective } from '../../../../../ui/context-menu/context-menu.directive';
+import type { HkMenuItem } from '../../../../../ui/context-menu/context-menu.types';
+import { HkMenuButtonComponent } from '../../../../../ui/context-menu/menu-button.component';
 import {
   HkCoinPouchComponent,
   type CoinPurse,
@@ -65,6 +68,8 @@ interface BagRow {
     HkItemRowComponent,
     HkCoinPouchComponent,
     HkWeightStrapComponent,
+    HkContextMenuDirective,
+    HkMenuButtonComponent,
   ],
   providers: [provideTranslocoScope('characters')],
   templateUrl: './bag-leaf.component.html',
@@ -190,6 +195,90 @@ export class BagLeafComponent {
       injector: this.injector,
     });
   }
+
+  /** A row's context menu: the same actions as its strip (keys are full `characters.` keys). */
+  protected menuFor(entry: BagRow): HkMenuItem[] {
+    const k = 'characters.sheet.inventory.';
+    const locked = this.actions.editLocked() ? 'characters.sheet.editLocked' : undefined;
+    const row = entry.row;
+    const lock = (item: HkMenuItem): HkMenuItem =>
+      locked ? { ...item, disabledReasonKey: locked } : item;
+    const items: HkMenuItem[] = [];
+    if (entry.usable) {
+      items.push(
+        lock({
+          id: 'use',
+          labelKey: `${k}use`,
+          icon: 'ui:use',
+          run: () => this.actions.useOne(row),
+        }),
+      );
+    }
+    if (entry.equipEligible) {
+      items.push(
+        lock({
+          id: 'equip',
+          labelKey: `${k}${row.equipped ? 'unequip' : 'equip'}`,
+          icon: row.equipped ? 'ui:unequip' : 'ui:equip',
+          run: () => this.actions.toggleEquip(row),
+        }),
+      );
+    }
+    if (entry.attuneEligible) {
+      items.push(
+        lock({
+          id: 'attune',
+          labelKey: `${k}${row.attuned ? 'unattune' : 'attune'}`,
+          icon: 'ui:attune',
+          run: () => this.actions.toggleAttune(row),
+        }),
+      );
+    }
+    if (this.canShowDetails(entry)) {
+      items.push({
+        id: 'details',
+        labelKey: `${k}details`,
+        icon: 'ui:details',
+        run: () => this.openDetails(entry),
+      });
+    }
+    items.push(
+      lock({
+        id: 'qty-up',
+        labelKey: `${k}qtyIncrease`,
+        icon: 'ui:add',
+        detail: String(row.qty),
+        run: () => this.actions.increaseQty(row),
+      }),
+      row.qty <= 1
+        ? {
+            id: 'qty-down',
+            labelKey: `${k}qtyDecrease`,
+            icon: 'ui:remove',
+            disabledReasonKey: `${k}qtyMinimum`,
+            run: () => undefined,
+          }
+        : lock({
+            id: 'qty-down',
+            labelKey: `${k}qtyDecrease`,
+            icon: 'ui:remove',
+            run: () => this.actions.decreaseQty(row),
+          }),
+      lock({
+        id: 'remove',
+        labelKey: `${k}remove`,
+        icon: 'ui:close',
+        run: () => void this.actions.removeItem(row),
+      }),
+    );
+    return items;
+  }
+
+  /** The satchel's per-slot menu, by item id. */
+  protected readonly menuOf = (id: string): HkMenuItem[] => {
+    const entry = this.rows().find((r) => r.row.instanceId === id);
+    return entry ? this.menuFor(entry) : [];
+  };
 
   protected canShowDetails(entry: BagRow): boolean {
     return !!entry.itemId && this.engineFacade.index().has(entry.itemId);

@@ -1,0 +1,54 @@
+/* The `⋯` opener: a small ghost disc, sized like `hk-icon-button--s` with the same touch hit area. */
+:host {
+  display: inline-flex;
+  flex: none;
+}
+
+.hk-menu-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: var(--icon-button-s);
+  block-size: var(--icon-button-s);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-seal);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+  color: var(--accent-strong);
+  cursor: pointer;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+  }
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--leaf-sunken);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px var(--accent-strong),
+      0 0 0 2px var(--focus-ring),
+      0 0 0 4px var(--focus-ring-outer);
+  }
+
+  svg {
+    inline-size: 16px;
+    block-size: 16px;
+    fill: currentColor;
+  }
+}
+
+@media (pointer: coarse) {
+  .hk-menu-button::before {
+    inset: calc((var(--control-phone) - var(--icon-button-s)) / -2);
+  }
+}

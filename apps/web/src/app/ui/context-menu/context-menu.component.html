@@ -1,0 +1,28 @@
+<ng-template #panel>
+  <div cdkMenu class="hk-menu">
+    @for (item of items(); track item.id) {
+      @let hint = item.disabledReasonKey ?? item.hintKey;
+      <button
+        cdkMenuItem
+        type="button"
+        class="hk-menu__item"
+        [attr.data-menu-item]="item.id"
+        [cdkMenuItemDisabled]="!!item.disabledReasonKey"
+        (cdkMenuItemTriggered)="item.run()"
+      >
+        @if (item.icon) {
+          <hk-icon class="hk-menu__icon" [icon]="item.icon" />
+        }
+        <span class="hk-menu__text">
+          <span class="hk-menu__label">{{ item.labelKey | transloco }}</span>
+          @if (hint) {
+            <span class="hk-menu__hint">{{ hint | transloco }}</span>
+          }
+        </span>
+        @if (item.detail) {
+          <span class="hk-menu__detail">{{ item.detail }}</span>
+        }
+      </button>
+    }
+  </div>
+</ng-template>
