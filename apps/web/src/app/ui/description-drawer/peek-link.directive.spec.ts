@@ -42,9 +42,16 @@ describe('HkPeekLinkDirective', () => {
 
   it('ctrl and shift clicks leave navigation alone', () => {
     const { link, peek } = setup();
-    click(link, { ctrlKey: true });
-    click(link, { shiftKey: true });
-    click(link, { metaKey: true });
+    // dispatchEvent returns true when nothing prevented the default: the browser still navigates.
+    expect(click(link, { ctrlKey: true })).toBe(true);
+    expect(click(link, { shiftKey: true })).toBe(true);
+    expect(click(link, { metaKey: true })).toBe(true);
     expect(peek.current()).toBeNull();
+  });
+
+  it('Enter on the focused link peeks (the browser turns Enter into a plain click)', () => {
+    const { link, peek } = setup();
+    link.click();
+    expect(peek.current()?.entityId).toBe('p:x/a');
   });
 });

@@ -1,4 +1,3 @@
-import { HkPeekLinkDirective } from '../../../../ui/description-drawer/peek-link.directive';
 import { Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
@@ -9,6 +8,7 @@ import { needsSheet, optionsForChoice } from '@shared/services/engine/choice-opt
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import { sheetNames } from '../../../characters/sheet/play/play-names';
+import { HkPeekLinkDirective } from '../../../../ui/description-drawer/peek-link.directive';
 import { PeekService } from '../../../../ui/description-drawer/peek.service';
 import { HkLeafComponent } from '../../../../ui/leaf/leaf.component';
 import {
