@@ -112,8 +112,8 @@ export function buildSheetStrap(state: SheetStrapState, h: SheetStrapHandlers): 
         ? [
             {
               id: 'wake-lock',
-              label: 'shell.strap.wake-lock',
-              icon: 'theme-scroll',
+              label: 'shell.icon.wake-lock',
+              icon: 'wake-lock',
               kind: 'icon',
               pressed: state.wakeLock.active,
               run: h.toggleWakeLock,

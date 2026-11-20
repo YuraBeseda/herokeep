@@ -4,10 +4,8 @@ import { IconComponent } from '../../shared/icons/icon.component';
 import { HkTooltipDirective } from '../tooltip/tooltip.directive';
 
 /**
- * `hk-inspiration-toggle` — the heroic-inspiration toggle (design-system InspirationToggle): a
- * brass-knobbed leather track with the inspiration glyph and the state word beside it
- * ("available" / "none"). On means available and pressing it spends it; off means none and
- * pressing it marks a grant.
+ * `hk-inspiration-toggle` — the heroic-inspiration toggle as a header icon button: pressed means
+ * available and pressing it spends it; unpressed means none and pressing it marks a grant.
  *
  * It reports intent only: `activeChange` carries the next state. `disabledReason` (translated) blocks
  * the control while keeping it focusable; the reason lives in the hint, never beside the toggle.

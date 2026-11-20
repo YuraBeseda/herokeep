@@ -211,6 +211,7 @@
   <symbol id="ui-timeline" viewBox="0 0 512 512"><use href="#gi-hourglass"/></symbol>
   <symbol id="ui-unequip" viewBox="0 0 512 512"><use href="#gi-gauntlet"/></symbol>
   <symbol id="ui-use" viewBox="0 0 512 512"><use href="#gi-hand-ok"/></symbol>
+  <symbol id="ui-wake-lock" viewBox="0 0 512 512"><use href="#gi-candle-flame"/></symbol>
   <symbol id="ui-warning" viewBox="0 0 512 512"><use href="#gi-hazard-sign"/></symbol>
   <symbol id="ui-weight" viewBox="0 0 512 512"><use href="#gi-weight"/></symbol>
   <symbol id="ui-wis" viewBox="0 0 512 512"><use href="#gi-owl"/></symbol>

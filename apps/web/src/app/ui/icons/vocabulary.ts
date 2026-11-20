@@ -20,6 +20,7 @@ export const UI_ICONS = {
   join: { gi: 'entry-door', hint: 'shell.icon.join' },
   leave: { gi: 'exit-door', hint: 'shell.icon.leave' },
   qr: { gi: 'treasure-map', hint: 'shell.icon.qr' },
+  'wake-lock': { gi: 'candle-flame', hint: 'shell.icon.wake-lock' },
   'theme-scroll': { gi: 'sun', hint: 'shell.icon.theme-scroll' },
   'theme-tavern': { gi: 'moon', hint: 'shell.icon.theme-tavern' },
   language: { gi: 'conversation', hint: 'shell.icon.language' },

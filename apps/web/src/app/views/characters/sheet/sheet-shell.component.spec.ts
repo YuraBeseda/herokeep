@@ -18,7 +18,7 @@ import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { BlobsRepository } from '@shared/services/storage/blobs.repository';
 import { CampaignsRepository } from '@shared/services/storage/campaigns.repository';
 import { HkDb } from '@shared/services/storage/dexie.db';
-import { CharacterStore } from '@shared/stores/character.store';
+import { CharacterStore, CharacterStoreNotLeaderError } from '@shared/stores/character.store';
 import { PackStore } from '@shared/stores/pack.store';
 import {
   ActionStrapService,
@@ -230,6 +230,22 @@ describe('SheetShellComponent (route resolver + shell)', () => {
 
     toggle.click();
     await pollUntil(harness.fixture, () => characterStore.sheet()?.inspiration === false);
+  });
+
+  it('the header inspiration toggle shows the not-leader toast on a rejected appendTx', async () => {
+    const id = await seedFighter('Ivan');
+    const characterStore = TestBed.inject(CharacterStore);
+    const notLeaderError = new CharacterStoreNotLeaderError();
+    vi.spyOn(characterStore, 'appendTx').mockRejectedValue(notLeaderError);
+    const showSpy = vi.spyOn(TestBed.inject(ToastService), 'show');
+    const harness = await RouterTestingHarness.create(`/c/${id}/play`);
+
+    harness
+      .routeNativeElement!.querySelector<HTMLButtonElement>('hk-inspiration-toggle button')!
+      .click();
+    await pollUntil(harness.fixture, () => showSpy.mock.calls.length > 0);
+
+    expect(showSpy).toHaveBeenCalledWith(notLeaderError.code);
   });
 
   it('the level-up control is an icon with the name "Level up", locked with its reason below the threshold', async () => {

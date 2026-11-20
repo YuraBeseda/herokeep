@@ -139,6 +139,7 @@
     "str": "Strength",
     "temp-hp": "Temporary HP",
     "theme-scroll": "Theme: scroll",
+    "wake-lock": "Keep screen awake",
     "theme-tavern": "Theme: tavern",
     "timeline": "Timeline",
     "unequip": "Unequip",
@@ -189,7 +190,6 @@
     "secondary": "More actions",
     "reason-no-filters": "No filters for this list",
     "add-condition": "Add condition",
-    "wake-lock": "Keep screen awake",
     "roll-log": "Roll log",
     "campaign-item": "Item",
     "campaign-session-start": "Start session",
@@ -312,8 +312,6 @@
       "temp": "Temp HP"
     },
     "inspiration": {
-      "available": "available",
-      "none": "none",
       "press-grant": "Heroic inspiration: none. Press to mark a grant.",
       "press-spend": "Heroic inspiration: available. Press to spend it."
     },
