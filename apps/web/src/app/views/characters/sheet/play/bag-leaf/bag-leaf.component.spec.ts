@@ -332,6 +332,10 @@ describe('BagLeafComponent — inventory and currency controls', () => {
     expect((await menuItem(fixture, actions, 'qty-down'))!.getAttribute('aria-disabled')).toBe(
       'true',
     );
+    // both stepper items show the current quantity
+    for (const id of ['qty-up', 'qty-down']) {
+      expect(overlay().querySelector(`[data-menu-item="${id}"]`)!.textContent).toContain('1');
+    }
     overlay().querySelector<HTMLElement>('[data-menu-item="qty-up"]')!.click();
     await pollUntil(
       fixture,

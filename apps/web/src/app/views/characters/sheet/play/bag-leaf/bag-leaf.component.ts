@@ -255,6 +255,7 @@ export class BagLeafComponent {
             id: 'qty-down',
             labelKey: `${k}qtyDecrease`,
             icon: 'ui:remove',
+            detail: String(row.qty),
             disabledReasonKey: `${k}qtyMinimum`,
             run: () => undefined,
           }
@@ -262,6 +263,7 @@ export class BagLeafComponent {
             id: 'qty-down',
             labelKey: `${k}qtyDecrease`,
             icon: 'ui:remove',
+            detail: String(row.qty),
             run: () => this.actions.decreaseQty(row),
           }),
       lock({
