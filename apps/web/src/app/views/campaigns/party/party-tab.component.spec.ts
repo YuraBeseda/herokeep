@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, type WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -187,6 +187,26 @@ describe('PartyTabComponent', () => {
     expect(card.querySelector('hk-condition-chip .hk-cond__name')?.textContent?.trim()).toBe(
       'Prone',
     );
+  });
+
+  // Plan 20 task 12.6: a condition chip's accessible name is the localized name, not the id.
+  it('names a condition chip in the active language (ru)', async () => {
+    configure({
+      state: mkState({
+        roster: new Map([['char-1', { ownerId: 'u-player', name: 'Ivan', left: false }]]),
+        overviews: new Map([['char-1', OVERVIEW]]),
+      }),
+    });
+    (TestBed.inject(EngineFacade).localizer as unknown as WritableSignal<unknown>).set({
+      locale: 'ru',
+      name: (id: string) => (id === 'srd:condition/prone' ? 'Лежащий' : ''),
+    });
+
+    const fixture = TestBed.createComponent(PartyTabComponent);
+    await fixture.whenStable();
+    const chip = (fixture.nativeElement as HTMLElement).querySelector('.hk-cond__main')!;
+    expect(chip.getAttribute('aria-label')).toBe('Лежащий');
+    expect(chip.getAttribute('aria-label')).not.toContain('prone');
   });
 
   it('renders a name-only card for a roster entry with no overview yet', async () => {
