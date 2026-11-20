@@ -727,6 +727,7 @@
         "roundsWaitHint": "Rounds start with the DM's next encounter"
       },
       "roundsLeft": "{count, plural, one {# round} other {# rounds}}",
+      "refreshFailed": "Could not read the encounter clock; the condition was added with the last known round.",
       "ended": "Ended",
       "advanceRound": "Advance round",
       "round": "Round {round}"

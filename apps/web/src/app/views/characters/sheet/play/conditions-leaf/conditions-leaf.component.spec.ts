@@ -1,3 +1,4 @@
+import { ToastService } from '@shared/components/toast/toast.service';
 import { TestBed } from '@angular/core/testing';
 import { propose } from '@hk/engine';
 import { CharacterStore } from '@shared/stores/character.store';
@@ -364,6 +365,23 @@ describe('ConditionsLeafComponent вЂ” death saves, inspiration, conditions',
         type: 'condition.added',
         payload: { conditionId: BLINDED_ID, startedAtRound: 2, encounterId },
       }),
+    );
+  });
+
+  it('a failed clock refresh still adds the condition and reports the failure', async () => {
+    await seedFighter('Ivan');
+    const store = TestBed.inject(CharacterStore);
+    vi.spyOn(store.campaign, 'refresh').mockRejectedValue(new Error('read failed'));
+    const toast = vi.spyOn(TestBed.inject(ToastService), 'show').mockImplementation(() => {});
+    vi.spyOn(TestBed.inject(DialogService), 'open').mockReturnValue({
+      closed: Promise.resolve({ conditionId: BLINDED_ID }),
+    } as never);
+
+    await TestBed.inject(PlayActionsService).addCondition([{ id: BLINDED_ID } as never]);
+
+    expect(toast).toHaveBeenCalledWith('characters.sheet.conditions.refreshFailed');
+    await vi.waitFor(() =>
+      expect(store.sheet()?.conditions.map((c) => c.conditionId)).toEqual([BLINDED_ID]),
     );
   });
 
