@@ -221,14 +221,16 @@ export class CampaignEditLockService {
         streamId,
         events: signal<readonly Event[] | undefined>(undefined),
         refs: 0,
+        seq: 0,
         timer: setInterval(() => this.poll(created), this.pollMs),
       };
       this.polls.set(streamId, created);
       shared = created;
     }
     shared.refs += 1;
-    // A new reader still gets a fresh read (it may have just written to the stream).
-    this.poll(shared);
+    // A joining reader reuses the shared value; only the first one triggers the initial read.
+    // `untracked`: acquire runs inside the caller's effect, which must not re-run on every read.
+    if (untracked(shared.events) === undefined) this.poll(shared);
     return shared;
   }
 
@@ -247,8 +249,11 @@ export class CampaignEditLockService {
   /** Runs as a pending task so `whenStable()` waits for the read, as it did for `resource()`. */
   private async load(shared: SharedPoll): Promise<void> {
     const done = this.pendingTasks.add();
+    const seq = ++shared.seq;
     try {
-      shared.events.set(await this.eventsRepository.byStream(shared.streamId));
+      const events = await this.eventsRepository.byStream(shared.streamId);
+      // Latest read wins: an older read resolving late must not overwrite a newer one.
+      if (seq === shared.seq) shared.events.set(events);
     } finally {
       done();
     }
@@ -259,5 +264,7 @@ interface SharedPoll {
   readonly streamId: string;
   readonly events: WritableSignal<readonly Event[] | undefined>;
   refs: number;
+  /** Bumped per read; only the latest read's result is kept. */
+  seq: number;
   readonly timer: ReturnType<typeof setInterval>;
 }

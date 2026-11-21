@@ -1,4 +1,4 @@
-import { Component, inject, signal, type WritableSignal } from '@angular/core';
+import { ApplicationRef, Component, inject, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { CampaignSettings, Event } from '@hk/protocol';
 import { AuthService, type AuthUser } from '@shared/services/auth/auth.service';
@@ -381,18 +381,19 @@ describe('CampaignEditLockService.editLockFor', () => {
     expect(fixture.componentInstance.editLock()).toEqual({ locked: false });
   });
 
-  // [Fix round 1, Minor fold-in] The bounded poll (this file's own class doc: "a plain
-  // `setInterval` scoped to this signal's own lifetime") must actually stop when the hosting
-  // component is destroyed — an un-torn-down interval would otherwise leak for the lifetime of
-  // the whole app (every play/build tab visit adds one), the exact "cleaned up via `effect()`'s
-  // own injector-scoped cleanup" claim the class doc makes.
   // Plan 20 task 12.7: every sheet part linked to the same campaign shares ONE poll.
   it('shares one poll (one interval, one read per tick) across hosts linked to the same campaign', async () => {
     const eventsRepository = TestBed.inject(EventsRepository);
     await eventsRepository.append([
       campaignEvent('campaign.settings_changed', { settings: settingsWith('locked') }, DM_ID, 'dm'),
     ]);
-    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+    // The service's own interval never fires on its own here: the test calls its callback
+    // directly, so a real 15 ms tick under load cannot add a read.
+    const realSetInterval = globalThis.setInterval;
+    const setIntervalSpy = vi
+      .spyOn(globalThis, 'setInterval')
+      .mockImplementation(((handler: () => void, ms?: number) =>
+        ms === POLL_MS ? 987654 : realSetInterval(handler, ms)) as typeof setInterval);
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
 
     const hosts = [1, 2, 3].map(() => {
@@ -400,14 +401,17 @@ describe('CampaignEditLockService.editLockFor', () => {
       fixture.componentInstance.characterEvents.set([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
       return fixture;
     });
+    // Every mount-time read has landed before the count's baseline below.
     await Promise.all(hosts.map((f) => f.whenStable()));
+    await TestBed.inject(ApplicationRef).whenStable();
 
     const ownCalls = setIntervalSpy.mock.calls.filter((call) => call[1] === POLL_MS);
     expect(ownCalls).toHaveLength(1);
 
     const byStreamSpy = vi.spyOn(eventsRepository, 'byStream');
+    byStreamSpy.mockClear();
     ownCalls[0][0]();
-    await Promise.all(hosts.map((f) => f.whenStable()));
+    await TestBed.inject(ApplicationRef).whenStable();
     expect(byStreamSpy).toHaveBeenCalledTimes(1);
 
     // The poll lives while any host does, and stops with the last one.
@@ -425,6 +429,11 @@ describe('CampaignEditLockService.editLockFor', () => {
     clearIntervalSpy.mockRestore();
   });
 
+  // [Fix round 1, Minor fold-in] The bounded poll (this file's own class doc: "a plain
+  // `setInterval` scoped to this signal's own lifetime") must actually stop when the hosting
+  // component is destroyed — an un-torn-down interval would otherwise leak for the lifetime of
+  // the whole app (every play/build tab visit adds one), the exact "cleaned up via `effect()`'s
+  // own injector-scoped cleanup" claim the class doc makes.
   it('tears down the poll interval when the hosting component is destroyed', async () => {
     const eventsRepository = TestBed.inject(EventsRepository);
     await eventsRepository.append([
