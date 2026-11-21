@@ -53,7 +53,7 @@
 
 .hero-card__played {
   margin: 0;
-  // A localized date has no fixed length: the line wraps rather than clipping it.
+  /* A localized date has no fixed length: the line wraps rather than clipping it. */
   overflow-wrap: anywhere;
   color: var(--text-3);
   font-size: 0.875rem;
