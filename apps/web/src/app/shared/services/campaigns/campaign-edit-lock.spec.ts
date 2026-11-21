@@ -470,4 +470,57 @@ describe('CampaignEditLockService.editLockFor', () => {
     setIntervalSpy.mockRestore();
     clearIntervalSpy.mockRestore();
   });
+
+  // Newest-applied guard: an older read finishing late never overwrites a newer applied one.
+  it('keeps the newest applied read whichever order the poll and refresh reads finish in', async () => {
+    const eventsRepository = TestBed.inject(EventsRepository);
+    const tick: { run?: () => void } = {};
+    const realSetInterval = globalThis.setInterval;
+    vi.spyOn(globalThis, 'setInterval').mockImplementation(((handler: () => void, ms?: number) => {
+      if (ms !== POLL_MS) return realSetInterval(handler, ms);
+      tick.run = handler;
+      return 987654;
+    }) as typeof setInterval);
+    const reads: ((events: Event[]) => void)[] = [];
+    vi.spyOn(eventsRepository, 'byStream').mockImplementation(
+      () => new Promise<Event[]>((resolve) => reads.push(resolve)),
+    );
+    const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+    const locked = [
+      campaignEvent('campaign.settings_changed', { settings: settingsWith('locked') }, DM_ID, 'dm'),
+    ];
+    const free = [
+      campaignEvent('campaign.settings_changed', { settings: settingsWith('free') }, DM_ID, 'dm'),
+    ];
+
+    const events = signal<Event[]>([campaignJoinedEvent('char:c1', CAMPAIGN_ID)]);
+    const state = TestBed.runInInjectionContext(() =>
+      TestBed.inject(CampaignEditLockService).campaignStateFor(events),
+    );
+    const ruleOf = () => state()?.settings?.houseRules.editOutsideSession;
+    TestBed.tick();
+    reads[0]([]); // the mount read
+    await settle();
+
+    // (a) a poll read is pending when a refresh starts and ends: the refresh result applies, the
+    // late older poll result is dropped.
+    tick.run!();
+    const refreshA = state.refresh();
+    reads[2](free);
+    await refreshA;
+    expect(ruleOf()).toBe('free');
+    reads[1](locked);
+    await settle();
+    expect(ruleOf()).toBe('free');
+
+    // (b) a poll started after a refresh finishes after it: its result applies.
+    const refreshB = state.refresh();
+    tick.run!();
+    reads[3](locked);
+    await refreshB;
+    expect(ruleOf()).toBe('locked');
+    reads[4](free);
+    await settle();
+    expect(ruleOf()).toBe('free');
+  });
 });
