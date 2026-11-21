@@ -110,6 +110,13 @@ hk-ability-seal {
   }
 }
 
+.abilities__other {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
 .abilities__title {
   display: flex;
   align-items: center;

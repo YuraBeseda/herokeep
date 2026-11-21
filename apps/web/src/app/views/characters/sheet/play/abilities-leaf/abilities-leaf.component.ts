@@ -4,6 +4,7 @@ import { provideTranslocoScope, TranslocoDirective } from '@jsverse/transloco';
 import type { DerivedValue } from '@shared/directives/derived-popover.directive';
 import { CharacterStore } from '@shared/stores/character.store';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import { IconComponent } from '../../../../../shared/icons/icon.component';
 import { HkAbilitySealComponent } from '../../../../../ui/ability-seal/ability-seal.component';
 import { HkContextMenuDirective } from '../../../../../ui/context-menu/context-menu.directive';
@@ -42,7 +43,12 @@ interface SkillRow {
   readonly hintKey: string;
 }
 
-interface AbilityRow {
+interface SkillBlock {
+  readonly id: string;
+  readonly skills: readonly SkillRow[];
+}
+
+interface AbilityRow extends SkillBlock {
   readonly id: string;
   readonly label: string;
   readonly score: number;
@@ -51,7 +57,6 @@ interface AbilityRow {
   readonly mod: number;
   readonly save: number;
   readonly saveProficient: boolean;
-  readonly skills: readonly SkillRow[];
 }
 
 /**
@@ -93,13 +98,38 @@ export class AbilitiesLeafComponent {
   private readonly rolls = inject(PlayRollsService);
   private readonly engine = inject(EngineFacade);
   private readonly names = sheetNames(this.engine);
+  private readonly locale = inject(LocaleService).locale;
+  // Recreated only when the app locale changes (the library browse's pattern).
+  private readonly collator = computed(() => new Intl.Collator(this.locale()));
   protected readonly sheet = inject(CharacterStore).sheet;
   /** Per ability, the skill whose proficiency dot is the block's one tab stop (roving focus). */
   private readonly activeDot = signal<Record<string, string>>({});
 
+  private readonly skillRows = computed<readonly (readonly [string, SkillRow])[]>(() => {
+    const collator = this.collator();
+    return Object.entries(this.sheet()?.skills ?? {})
+      .map(
+        ([slug, skill]) =>
+          [
+            slug,
+            {
+              id: slug,
+              label: this.names.skillName(slug),
+              total: skill.total.value,
+              totalDerived: skill.total,
+              proficiency: DOT[skill.proficiency] ?? 'none',
+              hintKey:
+                skill.proficiency === 'none'
+                  ? 'sheet.skills.notProficient'
+                  : `sheet.skills.proficiencyLevel.${skill.proficiency}`,
+            },
+          ] as const,
+      )
+      .sort(([, a], [, b]) => collator.compare(a.label, b.label));
+  });
+
   protected readonly rows = computed<AbilityRow[]>(() => {
     const abilities = this.sheet()?.abilities ?? {};
-    const skills = Object.entries(this.sheet()?.skills ?? {});
     const order = this.engine
       .index()
       .system()
@@ -117,22 +147,23 @@ export class AbilitiesLeafComponent {
           mod: block.mod,
           save: block.save.value,
           saveProficient: block.saveProficient,
-          skills: skills
+          skills: this.skillRows()
             .filter(([slug]) => this.names.skillAbility(slug) === id)
-            .map(([slug, skill]) => ({
-              id: slug,
-              label: this.names.skillName(slug),
-              total: skill.total.value,
-              totalDerived: skill.total,
-              proficiency: DOT[skill.proficiency] ?? 'none',
-              hintKey:
-                skill.proficiency === 'none'
-                  ? 'sheet.skills.notProficient'
-                  : `sheet.skills.proficiencyLevel.${skill.proficiency}`,
-            }))
-            .sort((a, b) => a.label.localeCompare(b.label)),
+            .map(([, row]) => row),
         };
       });
+  });
+
+  /** Skills whose ability cannot be resolved to a block above: listed apart so none vanish. */
+  protected readonly otherSkills = computed<SkillBlock>(() => {
+    const shown = new Set(this.rows().map((row) => row.id));
+    const ability = this.names.skillAbility;
+    return {
+      id: 'other',
+      skills: this.skillRows()
+        .filter(([slug]) => !shown.has(ability(slug) ?? ''))
+        .map(([, row]) => row),
+    };
   });
 
   protected readonly signed = signed;
@@ -171,12 +202,12 @@ export class AbilitiesLeafComponent {
     return breakdownText(value, t, this.names);
   }
 
-  protected dotTabindex(row: AbilityRow, skillId: string): number {
+  protected dotTabindex(row: SkillBlock, skillId: string): number {
     return (this.activeDot()[row.id] ?? row.skills[0]?.id) === skillId ? 0 : -1;
   }
 
   /** Roving focus over one block's proficiency dots: arrow keys move, Home/End jump. */
-  protected moveDot(row: AbilityRow, event: KeyboardEvent): void {
+  protected moveDot(row: SkillBlock, event: KeyboardEvent): void {
     const target = event.target as HTMLElement;
     if (!target.classList.contains('hk-dot')) return;
     const dots = Array.from(

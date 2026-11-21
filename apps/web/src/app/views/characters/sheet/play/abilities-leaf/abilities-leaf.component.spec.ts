@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { RollLogService } from '@shared/services/roll-log/roll-log.service';
 import { CharacterStore } from '@shared/stores/character.store';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
+import { LocaleService } from '@shared/services/i18n/locale.service';
 import { signed } from '../../../../../ui/format';
 import { hintOf } from '../../../../../ui/testing/harness';
 import { seedFighter } from '../../testing/character-fixtures';
@@ -42,6 +43,49 @@ describe('AbilitiesLeafComponent mode="full" (abilities with their skills)', () 
     expect(skillNames(block(root, 'con'))).toEqual([]);
     const total = Array.from(root.querySelectorAll('hk-skill-row')).length;
     expect(total).toBe(Object.keys(TestBed.inject(CharacterStore).sheet()!.skills).length);
+  });
+
+  it('sorts a block’s skills with the app-locale collator, not the runtime default', async () => {
+    const collators: unknown[] = [];
+    const RealCollator = Intl.Collator;
+    vi.spyOn(Intl, 'Collator').mockImplementation(function (locales?: string | string[]) {
+      collators.push(locales);
+      return new RealCollator(locales);
+    } as unknown as typeof Intl.Collator);
+    await seedFighter('Ivan');
+    TestBed.inject(LocaleService).setLocale('uk');
+    const fixture = TestBed.createComponent(AbilitiesLeafComponent);
+    await fixture.whenStable();
+    expect(collators).toContain('uk');
+    vi.restoreAllMocks();
+  });
+
+  it('a skill whose ability cannot be resolved is listed in a fallback block, not dropped', async () => {
+    await seedFighter('Ivan');
+    const engine = TestBed.inject(EngineFacade);
+    const real = engine.index();
+    // The pack "forgets" one skill entity: its ability can no longer be read.
+    vi.spyOn(engine, 'index').mockReturnValue(
+      new Proxy(real, {
+        get: (target, key) => {
+          const value = Reflect.get(target, key) as unknown;
+          if (key === 'get') {
+            return (id: string) => (id.endsWith('skill/stealth') ? undefined : target.get(id));
+          }
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      }),
+    );
+    const fixture = TestBed.createComponent(AbilitiesLeafComponent);
+    document.body.append(fixture.nativeElement as HTMLElement);
+    await fixture.whenStable();
+    const root = fixture.nativeElement as HTMLElement;
+    const other = root.querySelector<HTMLElement>('.abilities__item[data-ability="other"]')!;
+    expect(other.querySelectorAll('hk-skill-row')).toHaveLength(1);
+    expect(root.querySelectorAll('hk-skill-row')).toHaveLength(
+      Object.keys(TestBed.inject(CharacterStore).sheet()!.skills).length,
+    );
+    vi.restoreAllMocks();
   });
 
   it('a skill row shows its bonus, its proficiency mark and a breakdown hint built from the sheet', async () => {
