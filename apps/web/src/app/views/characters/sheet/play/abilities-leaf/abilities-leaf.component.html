@@ -86,7 +86,7 @@
         }
         @if (otherSkills(); as other) {
           @if (other.skills.length > 0) {
-            <li class="abilities__item" data-ability="other">
+            <li class="abilities__item" [attr.data-ability]="'other'">
               <h3 class="abilities__other">{{ t('sheet.skills.title') }}</h3>
               <ng-container *ngTemplateOutlet="skillList; context: { $implicit: other }" />
             </li>

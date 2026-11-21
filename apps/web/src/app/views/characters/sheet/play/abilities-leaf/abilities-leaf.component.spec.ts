@@ -72,7 +72,7 @@ describe('AbilitiesLeafComponent mode="full" (abilities with their skills)', () 
           if (key === 'get') {
             return (id: string) => (id.endsWith('skill/stealth') ? undefined : target.get(id));
           }
-          return typeof value === 'function' ? value.bind(target) : value;
+          return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
         },
       }),
     );
