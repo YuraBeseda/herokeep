@@ -43,7 +43,11 @@
   line-height: 1.1;
 }
 
-.hk-party__name-text,
+.hk-party__name-text {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
 .hk-party__sub {
   overflow: hidden;
   text-overflow: ellipsis;
