@@ -142,6 +142,12 @@ const LIBRARY_TYPE_IDS = [
   'rule',
 ] as const;
 
+/** The pack's entities of a type that the library lists (class-table column features are not). */
+const listedOf = (type: string) =>
+  corePack.entities.filter(
+    (e) => e.type === type && !(e.type === 'feature' && e.description === '[Column data]'),
+  );
+
 describe('LibraryBrowseComponent', () => {
   beforeEach(() => localStorage.removeItem('hk.locale'));
 
@@ -426,12 +432,29 @@ describe('LibraryBrowseComponent', () => {
     );
   });
 
+  it('a "[Column data]" feature is neither listed nor counted', async () => {
+    seedStore([corePack]);
+    const fixture = TestBed.createComponent(LibraryBrowseComponent);
+    await fixture.whenStable();
+    const columns = corePack.entities.filter(
+      (e) => e.type === 'feature' && /^\[Column data\]$/.test(String(e.description ?? '')),
+    );
+    expect(columns.length).toBeGreaterThan(0);
+    const ids = new Set(virtualListItems(fixture).map((row) => row.id));
+    for (const column of columns) expect(ids.has(column.id)).toBe(false);
+    const features = corePack.entities.filter((e) => e.type === 'feature').length;
+    const chip = typeChips(fixture).find((c) => c.textContent?.includes('Features'))!;
+    expect(chip.querySelector('.hk-filter-chips__count')?.textContent?.trim()).toBe(
+      String(features - columns.length),
+    );
+  });
+
   it('untouched, browsing lists every type', async () => {
     seedStore([corePack]);
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     await fixture.whenStable();
     const total = LIBRARY_TYPE_IDS.reduce(
-      (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
+      (sum, type) => sum + listedOf(type).length,
       0,
     );
     expect(virtualListItems(fixture).length).toBe(total);
@@ -576,7 +599,7 @@ describe('LibraryBrowseComponent', () => {
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
     const total = LIBRARY_TYPE_IDS.reduce(
-      (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
+      (sum, type) => sum + listedOf(type).length,
       0,
     );
 
@@ -608,7 +631,7 @@ describe('LibraryBrowseComponent', () => {
     await settle();
     expect(all().getAttribute('aria-pressed')).toBe('true');
     const total = LIBRARY_TYPE_IDS.reduce(
-      (sum, type) => sum + corePack.entities.filter((e) => e.type === type).length,
+      (sum, type) => sum + listedOf(type).length,
       0,
     );
     expect(virtualListItems(fixture).length).toBe(total);

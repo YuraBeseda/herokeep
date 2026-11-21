@@ -6,6 +6,7 @@ import type { Entity, EntityType } from '@hk/protocol';
 import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 import { VirtualListComponent } from '@shared/components/virtual-list/virtual-list.component';
 import { IconComponent } from '@shared/icons/icon.component';
+import { hasProse } from '@shared/services/engine/class-columns';
 import { EngineFacade } from '@shared/services/engine/engine.facade';
 import { LocaleService } from '@shared/services/i18n/locale.service';
 import {
@@ -135,6 +136,13 @@ export class LibraryBrowseComponent {
   // `Intl.Collator` construction is the expensive part; recreate it only when the locale changes.
   private readonly collator = computed(() => new Intl.Collator(this.localeService.locale()));
 
+  // Class-table column features ("[Column data]") stay in the pack but are not library entries.
+  private readonly listed = computed(() => {
+    const localizer = this.engineFacade.localizer();
+    return (entity: Entity): boolean =>
+      entity.type !== 'feature' || hasProse(localizer.text(entity.id, 'description').text);
+  });
+
   // Every ranked hit for the query, before the type chips narrow it: the chips' counts come from
   // here, so a count is "how many of this type match the query".
   private readonly rankedHits = computed(() => {
@@ -142,7 +150,13 @@ export class LibraryBrowseComponent {
     if (!text) return [];
     const index = this.engineFacade.index();
     const hits = this.engineFacade.search().query(text);
-    return rankLibraryHits(hits, text, (id) => index.get(id)?.name, this.collator());
+    const listed = this.listed();
+    return rankLibraryHits(hits, text, (id) => index.get(id)?.name, this.collator()).filter(
+      (hit) => {
+        const entity = index.get(hit.id);
+        return !entity || listed(entity);
+      },
+    );
   });
 
   // Per-type counts: how many entries each chip would show. While searching, the hits per type;
@@ -150,7 +164,10 @@ export class LibraryBrowseComponent {
   protected readonly typeCounts = computed<ReadonlyMap<string, number>>(() => {
     if (this.searching()) return countByType(this.rankedHits());
     const index = this.engineFacade.index();
-    return new Map(LIBRARY_TYPES.map((type) => [type, index.byType(type).length]));
+    const listed = this.listed();
+    return new Map(
+      LIBRARY_TYPES.map((type) => [type, index.byType(type).filter(listed).length]),
+    );
   });
 
   // The list order. `match` is the search ranking while searching and name order while browsing.
@@ -192,6 +209,7 @@ export class LibraryBrowseComponent {
       bases = LIBRARY_TYPES.filter((type) => narrow(type)).flatMap((type) =>
         index
           .byType(type)
+          .filter(this.listed())
           .map((entity) => ({ entity, name: localizer.text(entity.id, 'name').text })),
       );
     }
