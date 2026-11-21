@@ -222,6 +222,7 @@ export class CampaignEditLockService {
         events: signal<readonly Event[] | undefined>(undefined),
         refs: 0,
         seq: 0,
+        applied: 0,
         timer: setInterval(() => this.poll(created), this.pollMs),
       };
       this.polls.set(streamId, created);
@@ -251,8 +252,12 @@ export class CampaignEditLockService {
     const seq = ++shared.seq;
     try {
       const events = await this.eventsRepository.byStream(shared.streamId);
-      // Latest read wins: an older read resolving late must not overwrite a newer one.
-      if (seq === shared.seq) shared.events.set(events);
+      // Only a read STARTED before the last applied one is stale. A newer read still in flight
+      // must not drop this result: `refresh()` reads the value right after it resolves.
+      if (seq > shared.applied) {
+        shared.applied = seq;
+        shared.events.set(events);
+      }
     } finally {
       done();
     }
@@ -263,7 +268,9 @@ interface SharedPoll {
   readonly streamId: string;
   readonly events: WritableSignal<readonly Event[] | undefined>;
   refs: number;
-  /** Bumped per read; only the latest read's result is kept. */
+  /** Bumped per read started. */
   seq: number;
+  /** The `seq` of the newest read whose result was applied; older results are dropped. */
+  applied: number;
   readonly timer: ReturnType<typeof setInterval>;
 }
