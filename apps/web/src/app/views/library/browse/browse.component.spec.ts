@@ -453,10 +453,7 @@ describe('LibraryBrowseComponent', () => {
     seedStore([corePack]);
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     await fixture.whenStable();
-    const total = LIBRARY_TYPE_IDS.reduce(
-      (sum, type) => sum + listedOf(type).length,
-      0,
-    );
+    const total = LIBRARY_TYPE_IDS.reduce((sum, type) => sum + listedOf(type).length, 0);
     expect(virtualListItems(fixture).length).toBe(total);
   });
 
@@ -598,10 +595,7 @@ describe('LibraryBrowseComponent', () => {
     const fixture = TestBed.createComponent(LibraryBrowseComponent);
     await fixture.whenStable();
     const root = fixture.nativeElement as HTMLElement;
-    const total = LIBRARY_TYPE_IDS.reduce(
-      (sum, type) => sum + listedOf(type).length,
-      0,
-    );
+    const total = LIBRARY_TYPE_IDS.reduce((sum, type) => sum + listedOf(type).length, 0);
 
     expect(root.querySelector('.library-browse__count')?.textContent?.trim()).toBe(
       `${total.toLocaleString('en-US')} entries`,
@@ -630,10 +624,7 @@ describe('LibraryBrowseComponent', () => {
     all().click();
     await settle();
     expect(all().getAttribute('aria-pressed')).toBe('true');
-    const total = LIBRARY_TYPE_IDS.reduce(
-      (sum, type) => sum + listedOf(type).length,
-      0,
-    );
+    const total = LIBRARY_TYPE_IDS.reduce((sum, type) => sum + listedOf(type).length, 0);
     expect(virtualListItems(fixture).length).toBe(total);
     expect(all().querySelector('.hk-filter-chips__count')?.textContent?.trim()).toBe(String(total));
   });

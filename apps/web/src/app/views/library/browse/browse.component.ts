@@ -165,9 +165,7 @@ export class LibraryBrowseComponent {
     if (this.searching()) return countByType(this.rankedHits());
     const index = this.engineFacade.index();
     const listed = this.listed();
-    return new Map(
-      LIBRARY_TYPES.map((type) => [type, index.byType(type).filter(listed).length]),
-    );
+    return new Map(LIBRARY_TYPES.map((type) => [type, index.byType(type).filter(listed).length]));
   });
 
   // The list order. `match` is the search ranking while searching and name order while browsing.
