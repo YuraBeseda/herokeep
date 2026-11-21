@@ -228,9 +228,8 @@ export class CampaignEditLockService {
       shared = created;
     }
     shared.refs += 1;
-    // A joining reader reuses the shared value; only the first one triggers the initial read.
-    // `untracked`: acquire runs inside the caller's effect, which must not re-run on every read.
-    if (untracked(shared.events) === undefined) this.poll(shared);
+    // A new reader still gets a fresh read (it may have just written to the stream).
+    this.poll(shared);
     return shared;
   }
 
